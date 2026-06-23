@@ -1,6 +1,4 @@
-#
-# Tests for the Thevenin equivalant circuit model
-#
+"""Tests for the Thevenin equivalent circuit model."""
 
 import pytest
 

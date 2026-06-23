@@ -1,6 +1,4 @@
-#
-# Solve the transient heat equation with a spatially-dependent source term
-#
+"""Solve the transient heat equation with a spatially-dependent source term."""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,9 +10,7 @@ import pybamm
 # Start with a base model
 model = pybamm.BaseModel()
 
-# Define the variables and parameters
-# Note: we need to define the spatial variable x here too, so we can use it
-# to write down the source term
+# Define variables and parameters (include spatial variable x for the source term)
 x = pybamm.SpatialVariable("x", domain="rod", coord_sys="cartesian")
 T = pybamm.Variable("Temperature", domain="rod")
 k = pybamm.Parameter("Thermal diffusivity")

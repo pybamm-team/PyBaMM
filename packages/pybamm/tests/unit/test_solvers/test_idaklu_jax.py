@@ -817,10 +817,8 @@ class TestIDAKLUJax:
         # Use surrogate for experimental data
         data = sim["v"](t_eval)
 
-        # Define SSE function
-        #
-        # Note that although f returns a vector over time, sse() returns a scalar so
-        # that it can be passed to grad() directly using time-vector inputs.
+        # f returns a vector over time, but sse() collapses it to a scalar so grad() can
+        # be applied directly with time-vector inputs.
         def sse(t, inputs):
             vf = idaklu_jax_solver.get_var("v")
             return jnp.sum((vf(t_eval, inputs) - data) ** 2)

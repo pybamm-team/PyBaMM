@@ -1,6 +1,4 @@
-#
 # Variable class
-#
 from __future__ import annotations
 
 import numbers
@@ -171,9 +169,8 @@ class VariableBase(pybamm.Symbol):
             scale, reference, lower, upper = children
             bounds = (lower, upper)
         else:
-            # Legacy compact shape: scale/reference defaulted, bounds stored as a
-            # top-level [lower, upper] pair of (undecoded) nodes, or None for the
-            # default. The kernel only decodes "children", so decode bounds here.
+            # Legacy compact shape: scale/reference defaulted, bounds stored as
+            # top-level [lower, upper] (kernel only decodes "children", so decode bounds here)
             from pybamm.expression_tree.operations.serialise_kernel import decode
 
             scale = reference = None

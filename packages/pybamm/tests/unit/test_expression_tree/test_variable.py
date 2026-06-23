@@ -1,6 +1,4 @@
-#
-# Tests for the Variable class
-#
+"""Tests for the Variable class."""
 
 import numpy as np
 import pytest

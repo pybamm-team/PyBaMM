@@ -177,10 +177,7 @@ class TestExperimentMemory:
 
     def test_cycle_count_memory_scaling(self):
         """Memory should NOT scale linearly with cycle count."""
-        # Time-bounded steps (no event terminations) with a fixed period so
-        # each cycle produces the same number of stored samples; this isolates
-        # the cycle-count effect on _setup/Solution scaling from per-step
-        # variability in IDA's adaptive step count.
+        # Time-bounded steps with fixed period isolate cycle-count scaling from IDA adaptive step variability.
         cycle = [
             "Discharge at C/4 for 30 minutes",
             "Rest for 5 minutes",
@@ -219,10 +216,7 @@ class TestExperimentMemory:
         mem_20_cycles, _ = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
-        # 4x more cycles should grow memory sub-linearly (linear would be
-        # 4x, indicating each step rebuilds the model). The 1.3x bound is
-        # loose enough to tolerate cross-platform allocator noise on the
-        # small absolute footprint left after a period=1M endpoint solve.
+        # 4x cycles → sub-linear memory growth (<1.3x) to detect per-step model rebuilds; 1.3x bound tolerates allocator noise.
         ratio = mem_20_cycles / mem_5_cycles
         assert ratio < 1.3, (
             f"Memory grew {ratio:.1f}x for 4x more cycles. "
@@ -291,10 +285,7 @@ class TestExperimentMemory:
         assert peak_mb < 6, f"Peak memory {peak_mb:.1f} MB for GITT is excessive."
 
     def test_processed_variable_computed_initialise_is_lazy(self):
-        # initialise_* (np.concatenate / flatten / xr.DataArray build) must
-        # defer until the data is actually read, otherwise per-step
-        # ProcessedVariableComputed instances in discarded cycles do work nobody
-        # ever reads.
+        # initialise_* must defer until data read; otherwise discarded cycles waste work.
         unroll_calls = 0
         original = pybamm.ProcessedVariableComputed.unroll_0D
 
@@ -369,10 +360,7 @@ class TestExperimentMemory:
         finally:
             pybamm.StateVector._base_evaluate = original
 
-        # Solve-time setup paths legitimately call _base_evaluate (initial
-        # conditions, event setup) — those scale with the model, not the
-        # cycle count. Per-step re-evaluation pushes the count past 1000 on
-        # a 5-cycle SPM run; the fix keeps it under 200.
+        # Solve-time setup legitimately calls _base_evaluate (scales with model); per-step re-eval should stay <300 for 5-cycle SPM.
         assert call_count < 300, (
             f"StateVector._base_evaluate was called {call_count} times during "
             f"a 5-cycle solve. IDAKLUSolver should set closest_event_idx so "

@@ -1,6 +1,5 @@
-#
-# Tests for the Unary Operator classes
-#
+"""Tests for the Unary Operator classes."""
+
 import numpy as np
 import pytest
 import sympy
@@ -830,9 +829,7 @@ class TestUnaryOperators:
         ind_json["children"] = [vec]
         assert pybamm.Index._from_json(ind_json) == ind
 
-        # SpatialOperator now serialises its name and domains (subclasses extend
-        # this via _json_extra_fields); a concrete subclass round-trips via the
-        # generic hook.
+        # SpatialOperator serialises name+domains (subclasses extend via _json_extra_fields); round-trips via generic hook
         grad = pybamm.Gradient(pybamm.Variable("u", domain=["negative electrode"]))
 
         grad_json = {

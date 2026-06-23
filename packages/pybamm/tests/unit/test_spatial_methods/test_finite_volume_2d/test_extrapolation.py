@@ -201,12 +201,7 @@ class TestExtrapolationFiniteVolume2D:
         directions_LR = ["left", "right"]
         directions_TB = ["top", "bottom"]
 
-        # For linear x function:
-        # - left/right boundaries: normal gradient (lr direction) should be 1
-        # - top/bottom boundaries: normal gradient (tb direction) should be 0
-        # For linear z function:
-        # - left/right boundaries: normal gradient (lr direction) should be 0
-        # - top/bottom boundaries: normal gradient (tb direction) should be 1
+        # d/dx(x) = 1 on left/right, 0 on top/bottom; d/dz(z) = 1 on top/bottom, 0 on left/right
         solutions_LR = {
             "left": np.ones(submesh.nodes_tb.shape),  # normal gradient d/dx of x = 1
             "right": np.ones(submesh.nodes_tb.shape),  # normal gradient d/dx of x = 1
@@ -376,14 +371,7 @@ class TestExtrapolationFiniteVolume2D:
         directions_LR = ["left", "right"]
         directions_TB = ["top", "bottom"]
 
-        # For quadratic x^2 function:
-        # - gradient is d/dx(x^2) = 2x
-        # - at left boundary (x=0): gradient = 0
-        # - at right boundary (x=1): gradient = 2
-        # For quadratic z^2 function:
-        # - gradient is d/dz(z^2) = 2z
-        # - at top boundary (z=0): gradient = 0
-        # - at bottom boundary (z=1): gradient = 2
+        # d/dx(x²) = 2x, so 0 at left (x=0) and 2 at right (x=1); same pattern for z²
         solutions_LR = {
             "left": np.zeros(submesh.nodes_tb.shape),  # gradient of x^2 at x=0 is 0
             "right": 2 * np.ones(submesh.nodes_tb.shape),  # gradient of x^2 at x=1 is 2
@@ -485,9 +473,7 @@ class TestExtrapolationFiniteVolume2D:
         lr = LR.flatten()
         tb = TB.flatten()
 
-        # For constant extrapolation:
-        # - Left boundary: should return constant value 1 (leftmost column value)
-        # - Right boundary: should return constant value len(submesh.nodes_lr) (rightmost column value)
+        # Constant extrapolation: left=leftmost column, right=rightmost column value
         expected_left = np.full(len(submesh.nodes_tb), submesh.nodes_lr[0])
         expected_right = np.full(len(submesh.nodes_tb), submesh.nodes_lr[-1])
         expected_top = np.full(len(submesh.nodes_lr), submesh.nodes_tb[-1])

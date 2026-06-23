@@ -1,6 +1,4 @@
-#
 # Base inverse kinetics class
-#
 import pybamm
 from pybamm.models.submodels.interface.base_interface import BaseInterface
 
@@ -55,12 +53,8 @@ class BaseInverseKinetics(BaseInterface):
             T = variables[f"{Domain} electrode temperature [K]"]
             u = variables[f"{Domain} electrode interface utilisation"]
 
-        # eta_r is the overpotential from inverting Butler-Volmer, regardless of any
-        # additional SEI resistance. What changes is how delta_phi is defined in terms
-        # of eta_r
-        # We use the total resistance to calculate eta_r, but this only introduces
-        # negligible errors. For the exact answer, the surface form submodels should
-        # be used instead
+        # eta_r is the Butler-Volmer inversion overpotential; total resistance is used
+        # (negligible error; use surface form submodels for exact answer)
         eta_r = self._get_overpotential(j_tot, j0, ne, T, u)
 
         # With SEI resistance (distributed and averaged have the same effect here)

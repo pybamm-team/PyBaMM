@@ -1,6 +1,4 @@
-#
 # Diffusion-limited kinetics
-#
 
 import pybamm
 from pybamm.models.submodels.interface.base_interface import BaseInterface

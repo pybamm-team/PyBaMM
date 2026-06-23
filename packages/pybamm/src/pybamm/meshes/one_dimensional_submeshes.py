@@ -1,6 +1,4 @@
-#
 # One-dimensional submeshes
-#
 import itertools
 
 import numpy as np
@@ -61,9 +59,7 @@ class SubMesh1D(SubMesh):
             self.tabs = tabs
 
     def read_lims(self, lims):
-        # Separate limits and tabs
-        # Read and remove tabs. If "tabs" is not a key in "lims", then tabs is set to
-        # "None" and nothing is removed from lims
+        # Separate limits and tabs; if "tabs" not in lims, set to None.
         tabs = lims.pop("tabs", None)
 
         # check that only one variable passed in
@@ -445,7 +441,6 @@ class SpectralVolume1DSubMesh(SubMesh1D):
         self.d_sv_edges = np.diff(self.sv_edges)
         self.d_sv_nodes = np.diff(self.sv_nodes)
         self.order = 2
-        # The Control Volume edges and nodes are assigned to the
-        # "edges" and "nodes" properties. This makes some of the
-        # code of FiniteVolume directly applicable.
+        # CV edges/nodes assigned to "edges"/"nodes" properties, making some
+        # FiniteVolume code directly applicable.
         super().__init__(cv_edges, coord_sys=coord_sys, tabs=tabs)

@@ -1,6 +1,4 @@
-#
 # Base class for lithium plating models.
-#
 import pybamm
 from pybamm.models.submodels.interface.base_interface import BaseInterface
 

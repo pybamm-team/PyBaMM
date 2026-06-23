@@ -1,6 +1,4 @@
-#
 # Linear kinetics
-#
 
 from .base_kinetics import BaseKinetics
 

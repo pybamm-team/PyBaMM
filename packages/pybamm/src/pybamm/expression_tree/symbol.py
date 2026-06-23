@@ -1,6 +1,4 @@
-#
 # Base Symbol Class for the expression tree
-#
 from __future__ import annotations
 
 import numbers
@@ -496,11 +494,8 @@ class Symbol:
         return self._id
 
     def __setstate__(self, state):
-        # Python's hash() of strings is randomised per process (PYTHONHASHSEED),
-        # so a Symbol's cached _id from the pickling process is invalid in the
-        # unpickling process. Refresh it here so that dicts keyed on Symbols
-        # (e.g. Discretisation.y_slices) are rebuilt with hashes consistent
-        # with this process when pickle restores them.
+        # PYTHONHASHSEED randomises Python string hashes per process, so Symbol's
+        # cached _id from pickling is invalid; refresh via set_id() on unpickle
         self.__dict__.update(state)
         self.set_id()
 

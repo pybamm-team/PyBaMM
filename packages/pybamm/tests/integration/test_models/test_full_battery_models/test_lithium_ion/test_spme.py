@@ -1,6 +1,5 @@
-#
-# Tests for the lithium-ion SPMe model
-#
+"""Tests for the lithium-ion SPMe model."""
+
 import pytest
 
 import pybamm

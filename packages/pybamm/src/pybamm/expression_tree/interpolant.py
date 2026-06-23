@@ -1,6 +1,4 @@
-#
 # Interpolating class
-#
 from __future__ import annotations
 
 import numbers
@@ -187,9 +185,8 @@ class Interpolant(pybamm.Function):
 
     @entries_string.setter
     def entries_string(self, value):
-        # We must include the entries in the hash, since different arrays can be
-        # indistinguishable by class, name and domain alone
-        # Slightly different syntax for sparse and non-sparse matrices
+        # Include entries in the hash since different arrays can be indistinguishable
+        # by class, name, and domain alone.
         if value is not None:
             self._entries_string = value
         else:
@@ -300,9 +297,8 @@ class Interpolant(pybamm.Function):
 
     def _cubic_to_casadi(self, converted_children):
         if self.dimension == 1:
-            # A cubic differentiated three or more times gives a degree-0
-            # (piecewise-constant) spline, which CasADi mis-evaluates at the
-            # knots (returns 0), so refuse rather than return wrong values (#5582).
+            # 3+ differentiations of cubic gives degree-0 spline; CasADi mis-evaluates
+            # at knots (returns 0) -- refuse rather than return wrong values (#5582).
             if self._num_derivatives >= 3:
                 raise NotImplementedError(
                     "CasADi cannot evaluate the degree-0 spline produced by "
@@ -342,10 +338,8 @@ class Interpolant(pybamm.Function):
         d_2d = d_np if d_np.ndim > 1 else d_np[:, np.newaxis]
         m = y_2d.shape[1]
 
-        # Precompute Hermite cubic coefficients per interval, pre-divided by h^k.
-        # p(dx) = c0 + c1*dx + c2*dx² + c3*dx³,  dx = x - x_lo
-        # For non-uniform grids x_lo is stored as a 5th table entry;
-        # for uniform grids x_lo is computed from the index via scalar arithmetic.
+        # Hermite cubic coeffs per interval (pre-divided by h^k): p(dx)=c0+c1·dx+c2·dx²+c3·dx³,
+        # dx=x-x_lo; non-uniform grids append x_lo as a 5th entry, uniform grids derive it
         stride = 4
         if not uniform:
             stride += 1
@@ -364,9 +358,8 @@ class Interpolant(pybamm.Function):
         if not uniform:
             coeffs[:, 4, :] = x_np[:-1, np.newaxis]
 
-        # Honour _num_derivatives (#5582): since dx = x - x_lo, d/dx == d/d(dx),
-        # so differentiating just shifts/scales the coeffs (x_lo row untouched).
-        # Each row reads the next one up, so this is safe to do in place.
+        # Honour _num_derivatives (#5582): d/dx == d/d(dx), so differentiating shifts
+        # and scales coeffs in place (x_lo row untouched).
         for _ in range(self._num_derivatives):
             coeffs[:, 0, :] = coeffs[:, 1, :]
             coeffs[:, 1, :] = 2 * coeffs[:, 2, :]

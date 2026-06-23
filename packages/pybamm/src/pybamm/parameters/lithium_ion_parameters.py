@@ -1,6 +1,4 @@
-#
 # Standard parameters for lithium-ion battery models
-#
 
 import numpy as np
 
@@ -113,9 +111,7 @@ class LithiumIonParameters(BaseParameters):
             "Lithium metal partial molar volume [m3.mol-1]"
         )
 
-        # Initial conditions
-        # Note: the initial concentration in the electrodes can be set as a function
-        # of through-cell position, so is defined later as a function
+        # Initial conditions (electrode concentration may vary with through-cell position, defined later)
         self.c_e_init = pybamm.Parameter(
             "Initial concentration in electrolyte [mol.m-3]"
         )
@@ -463,10 +459,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             coord_sys="spherical polar",
         )
 
-        # Microscale geometry
-        # Note: the surface area to volume ratio is defined later with the function
-        # parameters. The particle size as a function of through-cell position is
-        # already defined in geometric_parameters.py
+        # Microscale geometry (surface area/volume defined via function params; particle size vs position in geometric_parameters.py)
         self.R = self.geo.R
         self.R_typ = self.geo.R_typ
         # Particle-size distribution parameters
@@ -638,9 +631,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             "Temperature [K]": T,
         }
 
-        # Regularise all powers of c_e, c_s_surf, and c_max - c_s_surf to
-        # make their derivative well behaved when the concentrations
-        # approach 0/c_max.
+        # Regularise c_e, c_s_surf, c_max-c_s_surf powers for well-behaved derivatives near 0/c_max
         regulariser = pybamm.RegulariseSqrtAndPower(
             scales={
                 c_e: self.c_e_init,
@@ -722,9 +713,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         U(x,T) = U_ref(x) + dUdT(x) * (T - T_ref). See the documentation for
         dUdT for more details.
         """
-        # bound stoichiometry between tol and 1-tol. Adding 1/sto + 1/(sto-1) later
-        # will ensure that ocp goes to +- infinity if sto goes into that region
-        # anyway
+        # Bound stoichiometry; 1/sto + 1/(sto-1) ensures OCP → ±∞ at boundaries
         Domain = self.domain.capitalize()
         tol = pybamm.settings.tolerances["U__c_s"]
         sto_clipped = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
@@ -740,10 +729,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         dudt_func = self.dUdT(sto_clipped)
         u_ref = u_ref + (T - self.main_param.T_ref) * dudt_func
 
-        # Add a term to the OCPs to ensure they approach a large positive value
-        # as sto -> 0 and a large negative value as sto -> 1. This will not affect
-        # the OCP for most values of sto.
-        # see #1435 and #5371 for discussion on OCP asymptotes.
+        # OCP asymptotes: large positive as sto→0, large negative as sto→1 (see #1435, #5371)
         out = u_ref + U_asymptotes(sto)
 
         if self.domain == "negative":
@@ -854,16 +840,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             {"Temperature [K]": T},
         )
 
-        # Equation 16, Baker et al 2018. The original formulation would be implemented
-        # as:
-        # j0_j = (
-        #    j0_ref_j
-        #    * xj ** (wj * aj)
-        #    * (Xj - xj) ** (wj * (1 - aj))
-        #    * (c_e / c_e_ref) ** (1 - aj)
-        # )
-        # However, we reformulate in terms of potential to avoid singularity as x_j
-        # approaches X_j
+        # Eq. 16 Baker 2018, reformulated via potential to avoid singularity at x_j → X_j
         j0_j = (
             j0_ref_j
             * xj**wj
@@ -967,9 +944,7 @@ def U_asymptote_approaching_zero(sto):
     max_safe_exp = np.log(2.0 / np.finfo(np.float64).eps)  # = 53*ln2 ~= 36.737
     sto_limit = c - max_safe_exp / b
 
-    # For sto >= sto_limit: use log(1 + exp(...))
-    # For sto < sto_limit: continue linearly with slope -b -- this is an exact floating
-    # point match for large sto values.
+    # log(1+exp(...)) for sto≥sto_limit; linear slope -b below (bit-exact softplus match)
     out = pybamm.log(1 + pybamm.exp(-b * (pybamm.maximum(sto_limit, sto) - c))) + -b * (
         pybamm.minimum(0, sto - sto_limit)
     )

@@ -1,6 +1,5 @@
-#
-# Test that the model works with an example parameter set
-#
+"""Test that the model works with an example parameter set."""
+
 import numpy as np
 
 import pybamm

@@ -1,6 +1,4 @@
-#
 # Solver class using Scipy's adaptive time stepper
-#
 import warnings
 
 import casadi

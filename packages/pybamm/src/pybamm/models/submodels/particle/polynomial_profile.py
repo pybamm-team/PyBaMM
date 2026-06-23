@@ -1,6 +1,4 @@
-#
 # Class for many particles with polynomial concentration profile
-#
 import pybamm
 
 from .base_particle import BaseParticle
@@ -100,10 +98,8 @@ class PolynomialProfile(BaseParticle):
                 )
             )
 
-            # Standard size-averaged variables. Average concentrations using
-            # the volume-weighted distribution since they are volume-based
-            # quantities. Necessary for output variables "Total lithium in
-            # negative electrode [mol]", etc, to be calculated correctly
+            # Standard size-averaged variables: average concentrations using
+            # volume-weighted distribution (volume-based quantities).
             f_v_dist = variables[
                 f"{Domain} volume-weighted particle-size distribution [m-1]"
             ]
@@ -134,11 +130,8 @@ class PolynomialProfile(BaseParticle):
                 scale=self.phase_param.c_max,
             )
         if self.name == "quartic profile":
-            # For the fourth order polynomial approximation we also solve an
-            # equation for the average concentration gradient. Note: in the original
-            # paper this quantity is referred to as the flux, but here we make the
-            # distinction between the flux defined as N = -D*dc/dr and the
-            # concentration gradient q = dc/dr
+            # Fourth-order polynomial: also solve for avg concentration gradient.
+            # Original paper calls this "flux"; we distinguish flux N=-D*dc/dr from gradient q=dc/dr.
             q_s_rav = pybamm.Variable(
                 f"R-averaged {domain} particle concentration gradient [mol.m-4]",
                 domain=f"{domain} electrode",

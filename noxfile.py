@@ -59,9 +59,7 @@ def install_locked(session, *, extras=None, groups=None):
     if wheels:
         wheels_path = Path(wheels)
         if wheels_path.is_dir():
-            # The per-OS artifact holds wheels for every Python version; pick the
-            # one whose interpreter tag matches this cell. The trailing dash in
-            # "*-cpXY-*" avoids matching free-threaded "cpXYt-" builds.
+            # Per-OS artifact has all Python versions; pick matching tag (dash avoids free-threaded cpXYt-)
             tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
             matches = sorted(wheels_path.glob(f"*-{tag}-*.whl"))
             if not matches:
@@ -245,9 +243,7 @@ def build_docs(session):
             ".",
             f"{envbindir}/../tmp/html",
         )
-    # Runs in CI only, treating warnings as errors
-    # Run in single-threaded mode, see
-    # https://github.com/pydata/pydata-sphinx-theme/issues/1643
+    # CI-only with -W; single-threaded to avoid pydata-sphinx-theme#1643
     else:
         session.run(
             "sphinx-build",

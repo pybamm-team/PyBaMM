@@ -1,6 +1,4 @@
-#
 # Many-Particle Model (MPM)
-#
 import pybamm
 
 from .spm import SPM

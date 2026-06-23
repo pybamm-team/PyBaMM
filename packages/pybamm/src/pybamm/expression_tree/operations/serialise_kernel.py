@@ -257,18 +257,15 @@ class DefaultCodec:
     def from_json(self, node, decode, cls):
         children = [decode(c) for c in node.get("children", [])]
         param_names = set(inspect.signature(cls.__init__).parameters)
-        # Forward only real __init__ params; ignore bookkeeping/legacy extras
-        # (e.g. the legacy format's always-present "name") rather than as kwargs.
-        # "domains" is excluded here and handled separately below.
+        # Forward only real __init__ params; ignore bookkeeping/legacy extras (e.g.
+        # legacy "name") and "domains" (handled separately below).
         kwargs = {
             key: decode(raw)
             for key, raw in node.items()
             if key not in (TAG, "children", "domains") and key in param_names
         }
-        # to_json always writes node["domains"]; map it onto whichever param the
-        # signature accepts -- `domains` (full dict), `domain` (primary list), or
-        # neither (class infers domain from children). Prevents the silent
-        # domain-drop for `domain`-param classes like CoupledVariable.
+        # Map node["domains"] onto whichever param the signature accepts (full dict,
+        # primary list, or inferred) to prevent silent domain-drops (e.g. CoupledVariable).
         domains = node.get("domains")
         if domains:
             if "domains" in param_names:
@@ -385,19 +382,14 @@ class HookCodec:
 _hook_codec = HookCodec()
 
 
-# Bases whose concrete subclasses are serialisable through the kernel. Symbol is
-# the introspection-default home; Event/Mesh define hooks on the base; SubMesh has
-# none at the base -- its concrete subclasses do, and the no-hook guard in
-# _lookup_codec raises loudly if a subclass missing a hook is ever encoded.
+# Bases serialisable through the kernel; Symbol is introspection-default home,
+# Event/Mesh define hooks on base, SubMesh subclasses define hooks.
 _KNOWN_BASES = (pybamm.Symbol, pybamm.Event, pybamm.Mesh, pybamm.SubMesh)
 
 
 def _overrides_hooks(cls: type) -> bool:
-    # Asymmetric on purpose: to_json is a regular method, so `cls.to_json` is a
-    # plain function comparable by identity; _from_json is a classmethod, so
-    # `cls._from_json` is bound and we compare the underlying `.__func__`. Do not
-    # "simplify" either branch to match the other.
-    # Non-Symbol bases may have no hooks at all; treat absence as "not overriding".
+    # Asymmetric: to_json is a regular method (identity-comparable),
+    # _from_json is a classmethod (compare __func__). Non-Symbol bases may lack hooks.
     if not hasattr(cls, "to_json") or not hasattr(cls, "_from_json"):
         return False
     if issubclass(cls, pybamm.Symbol):
@@ -414,9 +406,8 @@ def _lookup_codec(cls: type):
         return None
     if _overrides_hooks(cls):
         return _hook_codec
-    # DefaultCodec requires a Symbol-shaped __init__ (children/domains); a non-Symbol
-    # known base missing a hook cannot round-trip, surfaced loudly rather than
-    # mis-introspected.
+    # Non-Symbol known bases missing hooks can't round-trip; raise loudly rather
+    # than mis-introspect.
     if not issubclass(cls, pybamm.Symbol):
         missing = " and ".join(
             h for h in ("to_json", "_from_json") if not hasattr(cls, h)

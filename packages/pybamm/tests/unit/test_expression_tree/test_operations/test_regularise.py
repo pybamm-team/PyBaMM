@@ -1,6 +1,4 @@
-#
-# Tests for the RegulariseSqrtAndPower class
-#
+"""Tests for the RegulariseSqrtAndPower class."""
 
 import pytest
 

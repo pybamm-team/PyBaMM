@@ -362,10 +362,8 @@ class SpatialMethod:
             raise TypeError("Cannot process BoundaryGradient in base spatial method")
         n = sum(self.mesh[dom].npts for dom in discretised_child.domain)
         if symbol.side == "left":
-            # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
-            # (row[i], col[i]) for each index of data. Here we just want a single point
-            # with value 1 at (0,0).
-            # Convert to a csr_matrix to allow indexing and other functionality
+            # coo_matrix(data, (row, col)) places data[i] at (row[i], col[i]).
+            # Convert to csr_matrix to allow indexing and other functionality.
             left_vector = csr_matrix(coo_matrix(([1.0], ([0], [0])), shape=(1, n)))
             bv_vector = pybamm.Matrix(left_vector)
         elif symbol.side == "right":
@@ -416,9 +414,8 @@ class SpatialMethod:
         :class:`pybamm.Matrix`
             The (sparse) mass matrix for the spatial method.
         """
-        # NOTE: for different spatial methods the matrix may need to be adjusted
-        # to account for Dirichlet boundary conditions. Here, we just have the default
-        # behaviour that the mass matrix is the identity.
+        # For different spatial methods the matrix may need adjustment for Dirichlet
+        # BCs. Here, the default behaviour is that the mass matrix is the identity.
 
         # Get submesh
         submesh = self.mesh[symbol.domain]

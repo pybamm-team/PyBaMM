@@ -861,10 +861,8 @@ class IDAKLUJax:
         def f_jvp_transpose(y_bar, *args):
             """Transpose rule for JVP primitive"""
 
-            # Note: y_bar indexes the OUTPUT variable, e.g. [1, 0, 0] is the
-            # first of three outputs. The function returns primals and tangents
-            # corresponding to how each of the inputs derives that output, e.g.
-            #   (..., dout/din1, dout/din2)
+            # y_bar indexes the OUTPUT variable; returns primals/tangents for how each
+            # input derives that output: (..., dout/din1, dout/din2)
             logger.info("f_jvp_transpose")
             primals = args[: len(args) // 2]
 

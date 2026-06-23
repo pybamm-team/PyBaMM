@@ -1,6 +1,5 @@
-#
-# Compare lithium-ion battery models
-#
+"""Compare lithium-ion battery models with different surface temperature options."""
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

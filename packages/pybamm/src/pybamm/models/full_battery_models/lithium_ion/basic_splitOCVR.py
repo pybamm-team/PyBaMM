@@ -1,6 +1,4 @@
-#
 # Equivalent Circuit Model with split OCV
-#
 import pybamm
 
 
@@ -19,11 +17,7 @@ class SplitOCVR(pybamm.BaseModel):
     def __init__(self, name="ECM with split OCV"):
         super().__init__(name)
 
-        ######################
-        # Variables
-        ######################
-        # All variables are only time-dependent
-        # No domain definition needed
+        # === Variables === (all time-dependent, no domain definition needed)
 
         theta_n = pybamm.Variable("Negative particle stoichiometry")
         theta_p = pybamm.Variable("Positive particle stoichiometry")

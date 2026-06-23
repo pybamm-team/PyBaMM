@@ -1,6 +1,4 @@
-#
 # Base model for the external circuit
-#
 import pybamm
 
 

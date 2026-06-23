@@ -1,6 +1,4 @@
-#
 # Base class for Ohm's law submodels
-#
 import pybamm
 from pybamm.models.submodels.electrode.base_electrode import BaseElectrode
 

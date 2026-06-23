@@ -1,6 +1,4 @@
-#
 # Base class for convection submodels
-#
 import pybamm
 
 

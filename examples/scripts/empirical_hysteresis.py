@@ -1,6 +1,5 @@
-#
-# Empirical hysteresis modelling
-#
+"""Empirical hysteresis modelling."""
+
 from numpy import array
 
 import pybamm
@@ -15,9 +14,8 @@ options = {
 }
 model = pybamm.lithium_ion.SPMe(options)
 
-# Load parameter values and add (de)lithiation OCPs, exchange-current densities,
-# and diffusion coefficients for the negative electrode. Note: these are only intended
-# to be illustrative, and are not based on any particular data.
+# Add (de)lithiation OCPs, exchange-current densities, and diffusivity for negative
+# electrode (illustrative values, not based on particular data)
 parameter_values = pybamm.ParameterValues("Chen2020")
 
 

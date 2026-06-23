@@ -1,6 +1,4 @@
-#
 # Basic lead-acid model
-#
 import pybamm
 
 from .base_lead_acid_model import BaseModel
@@ -24,14 +22,8 @@ class BasicFull(BaseModel):
 
     def __init__(self, name="Basic full model"):
         super().__init__({}, name)
-        # `param` is a class containing all the relevant parameters and functions for
-        # this model. These are purely symbolic at this stage, and will be set by the
-        # `ParameterValues` class when the model is processed.
 
-        ######################
-        # Variables
-        ######################
-        # Variables that depend on time only are created without a domain
+        # === Variables ===
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
@@ -49,8 +41,7 @@ class BasicFull(BaseModel):
             domain="positive electrode",
             scale=self.param.c_e_init,
         )
-        # Concatenations combine several variables into a single variable, to simplify
-        # implementing equations that hold over several domains
+        # Concatenations combine variables over several domains into one
         c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
 
         # Electrolyte potential
@@ -94,9 +85,7 @@ class BasicFull(BaseModel):
         # Constant temperature
         T = self.param.T_init
 
-        ######################
-        # Other set-up
-        ######################
+        # === Other set-up ===
 
         # Current density
         i_cell = self.param.current_density_with_time
@@ -122,19 +111,14 @@ class BasicFull(BaseModel):
         a_j_p = a_p * j_p
         a_j = pybamm.concatenation(a_j_n, j_s, a_j_p)
 
-        ######################
-        # State of Charge
-        ######################
+        # === State of Charge ===
         I = self.param.current_with_time
-        # The `rhs` dictionary contains differential equations, with the key being the
-        # variable in the d/dt
+        # rhs: dict of ODEs keyed by the differentiated variable
         self.rhs[Q] = I / 3600
         # Initial conditions must be provided for the ODEs
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
-        ######################
-        # Current in the electrolyte
-        ######################
+        # === Current in the electrolyte ===
         i_e = (self.param.kappa_e(c_e, T) * tor) * (
             self.param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
@@ -146,9 +130,7 @@ class BasicFull(BaseModel):
         }
         self.initial_conditions[phi_e] = -self.param.n.prim.U_init
 
-        ######################
-        # Current in the solid
-        ######################
+        # === Current in the solid ===
         i_s_n = (
             -self.param.n.sigma(None, T)
             * (1 - eps_n) ** self.param.n.b_s
@@ -156,9 +138,7 @@ class BasicFull(BaseModel):
         )
         sigma_eff_p = self.param.p.sigma(None, T) * (1 - eps_p) ** self.param.p.b_s
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
-        # The `algebraic` dictionary contains differential equations, with the key being
-        # the main scalar variable of interest in the equation
-        # multiply by Lx**2 to improve conditioning
+        # algebraic: DAE equations scaled by Lx**2 for conditioning
         self.algebraic[phi_s_n] = (pybamm.div(i_s_n) + a_j_n) * self.param.L_x**2
         self.algebraic[phi_s_p] = (pybamm.div(i_s_p) + a_j_p) * self.param.L_x**2
         self.boundary_conditions[phi_s_n] = {
@@ -169,15 +149,11 @@ class BasicFull(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (i_cell / pybamm.boundary_value(-sigma_eff_p, "right"), "Neumann"),
         }
-        # Initial conditions must also be provided for algebraic equations, as an
-        # initial guess for a root-finding algorithm which calculates consistent initial
-        # conditions
+        # Initial guesses for consistent initial conditions (root-finding)
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
         self.initial_conditions[phi_s_p] = self.param.ocv_init
 
-        ######################
-        # Porosity
-        ######################
+        # === Porosity ===
         DeltaVsurf = pybamm.concatenation(
             pybamm.PrimaryBroadcast(self.param.n.DeltaVsurf, "negative electrode"),
             pybamm.PrimaryBroadcast(0, "separator"),
@@ -203,9 +179,7 @@ class BasicFull(BaseModel):
             ]
         )
 
-        ######################
-        # Electrolyte concentration
-        ######################
+        # === Electrolyte concentration ===
         N_e = (
             -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
             + self.param.t_plus(c_e, T) * i_e / self.param.F
@@ -229,12 +203,9 @@ class BasicFull(BaseModel):
             )
         )
 
-        ######################
-        # (Some) variables
-        ######################
+        # === (Some) variables ===
         voltage = pybamm.boundary_value(phi_s_p, "right")
-        # The `variables` dictionary contains all variables that might be useful for
-        # visualising the solution of the model
+        # variables: all output variables for solution visualization
         self.variables = {
             "Electrolyte concentration [mol.m-3]": c_e,
             "Current [A]": I,

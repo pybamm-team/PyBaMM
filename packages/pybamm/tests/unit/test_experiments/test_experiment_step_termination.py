@@ -1,6 +1,4 @@
-#
-# Test the experiment step termination classes
-#
+"""Test the experiment step termination classes."""
 
 import copy
 import re

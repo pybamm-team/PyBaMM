@@ -1,6 +1,5 @@
-#
-# Constant-current constant-voltage charge with US06 Drive Cycle using Experiment Class.
-#
+"""CCCV charge with US06 Drive Cycle using Experiment Class."""
+
 import pandas as pd
 
 import pybamm

@@ -44,12 +44,9 @@ jobs:
 
       - name: Fetch base branch
         run: |
-          # This workflow also runs for merge commits
-          # on main. In this case, we don't want to be
-          # fetching the main branch.
+          # Merge commits on main: fetch current branch, not main
           current_branch=$(git rev-parse --abbrev-ref HEAD)
-          # This workflow should also run on forks; hence,
-          # we should fetch the upstream main branch.
+          # Forks: fetch upstream main
           git remote add upstream https://github.com/pybamm-team/PyBaMM/
           if [ $current_branch != "main" ]; then
               git fetch upstream main:main

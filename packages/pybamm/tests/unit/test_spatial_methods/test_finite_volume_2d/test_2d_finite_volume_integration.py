@@ -1,6 +1,4 @@
-#
-# Tests for integration using Finite Volume method
-#
+"""Tests for integration using Finite Volume method."""
 
 import numpy as np
 import pytest

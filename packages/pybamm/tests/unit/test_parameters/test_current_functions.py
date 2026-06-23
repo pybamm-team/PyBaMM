@@ -1,6 +1,4 @@
-#
-# Tests for current input functions
-#
+"""Tests for current input functions."""
 
 import numbers
 

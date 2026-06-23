@@ -1,6 +1,5 @@
-#
-# Standard basic tests for any model
-#
+"""Standard basic tests for any model."""
+
 import tempfile
 
 import numpy as np
@@ -23,11 +22,7 @@ class StandardModelTest:
         solver=None,
     ):
         self.model = model
-        # Set parameters, geometry, spatial methods etc
-        # The code below is equivalent to:
-        #    if parameter_values is None:
-        #       self.parameter_values = model.default_parameter_values
-        #    else:
+        # Equivalent to: use model defaults if parameter_values is None
         #       self.parameter_values = parameter_values
         self.parameter_values = parameter_values or model.default_parameter_values
         geometry = geometry or model.default_geometry

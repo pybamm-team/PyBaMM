@@ -52,9 +52,8 @@ class EISSimulation(BaseSimulation):
         pybamm.logger.info(f"Setting up {model_name} for EIS")
         eis_model = self._set_up_model_for_eis(model)
 
-        # Compute impedance scale factor after model transformation: the
-        # external-circuit FunctionControl swap rescales "Current [A]" by
-        # the nominal cell capacity, which must be reflected in z = V/I.
+        # External-circuit FunctionControl swap rescales "Current [A]" by nominal
+        # capacity, which must be reflected in z = V/I
         V_scale = getattr(eis_model.variables["Voltage [V]"], "scale", 1)
         I_scale = getattr(eis_model.variables["Current [A]"], "scale", 1)
         self._z_scale = parameter_values.evaluate(V_scale / I_scale)

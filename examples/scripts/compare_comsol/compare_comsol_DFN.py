@@ -12,9 +12,7 @@ os.chdir(pybamm.root_dir())
 "-----------------------------------------------------------------------------"
 "Pick C_rate and load comsol data"
 
-# C_rate
-# NOTE: the results in pybamm stop when a voltage cutoff is reached, so
-# for higher C-rate the pybamm solution may stop before the comsol solution
+# NOTE: pybamm stops at voltage cutoff, so higher C-rate may stop before comsol
 C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
 C_rate = "1"  # choose the key from the above dictionary of available results
 

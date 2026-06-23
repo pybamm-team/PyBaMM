@@ -1,6 +1,4 @@
-#
 # Standard parameters for lead-acid battery models
-#
 
 import pybamm
 
@@ -312,11 +310,8 @@ class DomainLeadAcidParameters(BaseParameters):
 
         self.Q_max = pybamm.Parameter(f"{Domain} electrode volumetric capacity [C.m-3]")
 
-        # In lead-acid the current collector and electrodes are the same (same
-        # conductivity) but we correct here for Bruggeman. Note that because for
-        # lithium-ion we allow electrode conductivity to be a function of temperature,
-        # but not the current collector conductivity, here the latter is evaluated at
-        # T_ref.
+        # Lead-acid current collector shares the electrode conductivity (Bruggeman-corrected),
+        # but is held at T_ref since only lithium-ion makes electrode conductivity T-dependent
         self.sigma_cc = self.sigma(None, main.T_ref) * (1 - self.eps_max) ** self.b_s
 
     def C_dl(self, T):

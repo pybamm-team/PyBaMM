@@ -1,6 +1,4 @@
-#
-# Tests for DiffSLExport class
-#
+"""Tests for DiffSLExport class."""
 
 import csv
 import importlib.util
@@ -291,8 +289,5 @@ class TestDiffSLExport:
             fig.savefig(figure_path, dpi=150)
             plt.close(fig)
 
-        # Note this tolerance is quite loose, for SPM and SPMe (not DFN) with experiment
-        # there are often 1-2 points with higher error just after events,
-        # unsure why the discrepancy occurs, maybe interpolation near events.
-        # Error away from events is below solver tolerances.
+        # Loose tolerance: SPM/SPMe have 1-2 high-error points after events (interpolation); away from events error < solver tolerances
         np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=2e-3)

@@ -125,10 +125,7 @@ def make_exponential_decay_solver(
     # Create RHS function: t, y, inputs
     rhs_alg = casadi.Function("rhs_alg", [t_sym, y_sym, p_sym], [rhs])
 
-    # Jacobian: PyBaMM computes jac_rhs - cj * mass_matrix
-    # For rhs = -k*y: jac_rhs = d(rhs)/dy = -k
-    # mass_matrix = 1 (identity for ODE)
-    # So: jac_times_cjmass = -k - cj * 1 = -k - cj
+    # Jacobian: jac_rhs - cj*mass_matrix = -k - cj (ODE: mass_matrix=identity)
     cj_sym = casadi.MX.sym("cj")
     jac_result = casadi.vertcat(-p_sym - cj_sym)
     jac_times_cjmass = casadi.Function(
@@ -283,10 +280,7 @@ def make_exponential_decay_solver(
         alg_jac_func,
     )
 
-    # Initial conditions need to be 2D: [number_of_groups, n_coeffs]
-    # where n_coeffs = number_of_states * (1 + number_of_sensitivity_parameters)
-    # When n_sensitivity_params = 0: n_coeffs = n_states
-    # When n_sensitivity_params > 0: [state_0, d(state_0)/dp_0, d(state_0)/dp_1, ...]
+    # ICs 2D: [n_groups, n_coeffs] where n_coeffs = n_states * (1 + n_sensitivity_params)
     n_coeffs = n_states * (1 + n_sensitivity_params)
     y0_2d = np.zeros((len(decay_constants), n_coeffs), dtype=np.float64)
     y0_2d[:, 0] = y0  # state value

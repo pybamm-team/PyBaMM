@@ -1,6 +1,4 @@
-#
 # Concatenation classes
-#
 from __future__ import annotations
 
 import copy
@@ -38,9 +36,7 @@ class Concatenation(pybamm.Symbol):
         check_domain=True,
         concat_fun=None,
     ):
-        # The second condition checks whether this is the base Concatenation class
-        # or a subclass of Concatenation
-        # (ConcatenationVariable, NumpyConcatenation, ...)
+        # Check if this is the base Concatenation class (not a subclass like ConcatenationVariable)
         if all(isinstance(child, pybamm.Variable) for child in children) and issubclass(
             Concatenation, type(self)
         ):
@@ -292,10 +288,8 @@ class DomainConcatenation(Concatenation):
         from `copy_this`. `mesh` is not used in this case
     """
 
-    # full_mesh is a construction input used only to derive slices/size; those are
-    # serialised directly and _from_json never re-stores the mesh, so it is not
-    # itself serialised (copy_this is defaulted-and-unstored, covered by the guard
-    # grace).
+    # full_mesh is used only to derive slices/size; those are serialised directly so
+    # full_mesh itself is not serialised (copy_this is defaulted-and-unstored).
     _serialise_derived_params = Concatenation._serialise_derived_params | frozenset(
         {"full_mesh"}
     )

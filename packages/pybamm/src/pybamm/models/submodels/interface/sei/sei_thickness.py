@@ -1,6 +1,4 @@
-#
 # Class for converting SEI concentration into thickness
-#
 import pybamm
 
 from .base_sei import BaseModel

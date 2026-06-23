@@ -1,6 +1,5 @@
-#
-# Compare basic models with full models
-#
+"""Compare basic models with full models."""
+
 import numpy as np
 
 import pybamm

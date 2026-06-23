@@ -1,6 +1,5 @@
-#
-# Tests for the polynomial profile submodel
-#
+"""Tests for the polynomial profile submodel."""
+
 import pytest
 
 import pybamm

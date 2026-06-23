@@ -1,6 +1,4 @@
-#
 # Processed Variable Computed class
-#
 from __future__ import annotations
 
 import casadi
@@ -135,8 +133,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
 
     def _materialise(self):
         # Not thread-safe: concurrent first reads may run initialise twice.
-        # Instances are constructed and read on the same thread in the standard
-        # solve flow, so callers parallelising reads must serialise them.
+        # Callers parallelising reads must serialise them.
         if not self._initialised:
             self._initialise_method()
             self._initialised = True
@@ -155,9 +152,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         return self
 
     def add_sensitivity(self, param, data):
-        # unroll from sparse representation into n-d matrix
-        # then flatten for consistency with full state-vector
-        # ProcessedVariable sensitivities
+        # Unroll from sparse to n-d matrix, then flatten for consistency with
+        # ProcessedVariable full state-vector sensitivities.
         self._sensitivities[param] = self.unroll(data).flatten()
 
     def _unroll_nnz(self, realdata=None):

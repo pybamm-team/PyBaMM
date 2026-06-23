@@ -36,9 +36,8 @@ def process_float_function_table(value, name):
     if isinstance(value, Function):
         value = value.to_python_function(preamble=preamble)
     elif isinstance(value, InterpolatedTable):
-        # return (name, (x, y)) to match the output of
-        # `pybamm.parameters.process_1D_data` we will create an interpolant on a
-        # case-by-case basis to get the correct argument for each parameter
+        # Return (name, (x, y)) to match process_1D_data output; create interpolants
+        # case-by-case for correct arguments per parameter.
         x = np.array(value.x)
         y = np.array(value.y)
         # sort the arrays as CasADi requires x to be in ascending order
@@ -324,9 +323,8 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     def _arrhenius(Ea, T):
         return exp(Ea / constants.R * (1 / T_ref - 1 / T))
 
-    # reaction rates in pybamm exchange current is defined j0 = k * sqrt(ce * cs *
-    # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
-    # (cs/cs_max) * (1-cs/cs_max))
+    # PyBaMM: j0 = k * sqrt(ce * cs * (cs-cs_max)); BPX: j0 = F * k_norm *
+    # sqrt((ce/ce0) * (cs/cs_max) * (1-cs/cs_max)).
     c_e = pybamm_dict["Initial concentration in electrolyte [mol.m-3]"]
     F = pybamm.constants.F.value
 
@@ -385,9 +383,8 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
                 + "reaction rate constant activation energy [J.mol-1]"
             ] = Ea_k
 
-            # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))...
-            # *sinh(),
-            # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh()
+            # BPX: j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh();
+            # PyBaMM: j = 2*k*sqrt(ce*c*(c_max - c))*sinh().
             k = k_norm * F / (c_max * c_e**0.5)
             pybamm_dict[phase_domain_pre_name + "exchange-current density [A.m-2]"] = (
                 partial(_exchange_current_density, k_ref=k, Ea=Ea_k)
@@ -478,10 +475,8 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
             else:
                 pybamm_dict[name] = value
 
-    # The only tuples left in the dict are (name, (x, y)) interpolant placeholders
-    # from process_float_function_table (OCP, entropic change, hysteresis branches);
-    # temperature-dependent params are already wrapped into partials above. Convert
-    # them generically so new 1:1 table params need no hand-maintained list.
+    # Remaining (name, (x, y)) tuples are interpolant placeholders; convert them
+    # generically since temperature-dependent params are already wrapped as partials.
     for key, value in pybamm_dict.items():
         if isinstance(value, tuple):
             pybamm_dict[key] = _table_to_interpolant(value)

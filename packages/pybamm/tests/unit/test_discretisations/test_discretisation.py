@@ -1,6 +1,4 @@
-#
-# Tests for the base model class
-#
+"""Tests for the base model class."""
 
 import numpy as np
 import pytest

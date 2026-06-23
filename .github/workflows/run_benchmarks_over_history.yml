@@ -1,9 +1,4 @@
-# GitHub actions workflow that runs the benchmark suite in benchmarks/
-# from "commit_start" to "commit_end".  It pushes the results to the
-# pybamm-bench repo and updates the display website.
-
-# This workflow is meant to be triggered manually, see
-# https://docs.github.com/en/enterprise-server@3.0/actions/managing-workflow-runs/manually-running-a-workflow
+# Manual workflow: runs benchmarks/ from commit_start to commit_end, pushes results to pybamm-bench
 
 name: Manual benchmarks
 on:
@@ -49,9 +44,7 @@ jobs:
         run: pip install -U pip nox asv
 
       - name: Fetch main branch
-        # Not required when workflow triggered
-        # on main, but useful when
-        # experimenting/developing on another branch.
+        # Not needed on main, but useful for branch development
         if: github.ref != 'refs/heads/main'
         run: |
           git fetch origin main:main

@@ -1,7 +1,4 @@
-#
-# Class summing up contributions to the lithium plating reaction
-# for cases with primary, secondary, ... reactions e.g. silicon-graphite
-#
+# Class summing lithium plating reaction contributions for multi-reaction cases (e.g. silicon-graphite)
 import pybamm
 
 

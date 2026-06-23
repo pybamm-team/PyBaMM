@@ -1,6 +1,4 @@
-#
-# Tests for the Function classes
-#
+"""Tests for the Function classes."""
 
 import itertools
 

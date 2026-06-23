@@ -1,6 +1,4 @@
-#
-# Test the base experiment class
-#
+"""Test the base experiment class."""
 
 import os
 from datetime import datetime

@@ -149,10 +149,7 @@ class BaseModel:
         self.y_slices = None
         self.len_rhs_and_alg = None
 
-        # Names of variables whose algebraic equation is a switching control residual --
-        # a pybamm.Conditional over per-step control laws, set by the unified-experiment
-        # setup. A structural attribute (like y_slices) that build_casadi_jacobian
-        # consumes to give those rows a sparse treatment; empty for ordinary models.
+        # Variables with switching control residuals (set by unified-experiment setup)
         self.switching_control_variables = set()
 
         # Non-lithium ion models shouldn't calculate eSOH parameters
@@ -1213,14 +1210,10 @@ class BaseModel:
         self._built_fundamental = True
 
     def build_coupled_variables(self):
-        # Note: pybamm will try to get the coupled variables for the submodels in the
-        # order they are set by the user. If this fails for a particular submodel,
-        # return to it later and try again. If setting coupled variables fails and
-        # there are no more submodels to try, raise an error.
+        # Iterate submodels until all coupled variables are set or no progress is possible
         submodels = list(self.submodels.keys())
         count = 0
-        # For this part the FuzzyDict of variables is briefly converted back into a
-        # normal dictionary for speed with KeyErrors
+        # Convert FuzzyDict to dict temporarily for faster KeyError handling
         self._variables = dict(self._variables)
         while len(submodels) > 0:
             count += 1
@@ -1482,9 +1475,7 @@ class BaseModel:
                     "Variable must have type 'Variable' or 'Concatenation'"
                 )
 
-            # If the model is already discretised, then the initial conditions must
-            # be scaled and offset (otherwise, this is done when the model is
-            # discretised)
+            # Scale/offset ICs only if already discretised (otherwise done at discretisation)
             if self.is_discretised:
                 scale, reference = var.scale, var.reference
             else:
@@ -1493,8 +1484,7 @@ class BaseModel:
                 pybamm.Vector(final_state_eval) - reference
             ) / scale.evaluate(inputs=inputs)
 
-        # Also update the concatenated initial conditions if the model is already
-        # discretised
+        # Update concatenated ICs when already discretised
         if self.is_discretised:
             # Unpack slices for sorting
             y_slices = {var: slce for var, slce in self.y_slices.items()}
@@ -1651,14 +1641,12 @@ class BaseModel:
         self.check_algebraic_equations(post_discretisation)
         self.check_ics_bcs()
         self.check_no_repeated_keys()
-        # Can't check variables after discretising, since Variable objects get replaced
-        # by StateVector objects
-        # Checking variables is slow, so only do it in debug mode
+        # Skip variable check after discretisation (Variables become StateVectors); debug mode only
         if pybamm.settings.debug_mode is True and post_discretisation is False:
             self.check_variables()
 
     def check_for_time_derivatives(self):
-        # Check that no variable time derivatives exist in the rhs equations
+        # Reject time derivatives of variables in rhs equations
         for key, eq in self.rhs.items():
             for node in eq.pre_order():
                 if isinstance(node, pybamm.VariableDot):
@@ -1693,11 +1681,7 @@ class BaseModel:
         all_vars_in_rhs_keys = set()
         all_vars_in_algebraic_keys = set()
         all_vars_in_eqns = set()
-        # Get all variables ids from rhs and algebraic keys and equations, and
-        # from boundary conditions
-        # For equations we look through the whole expression tree.
-        # "Variables" can be Concatenations so we also have to look in the whole
-        # expression tree
+        # Collect variable IDs from keys, equations, and boundary conditions
         unpacker = pybamm.SymbolUnpacker((pybamm.Variable, pybamm.VariableDot))
 
         for var, eqn in self.rhs.items():
@@ -1705,7 +1689,7 @@ class BaseModel:
             vars_in_rhs_keys = unpacker.unpack_symbol(var)
             vars_in_eqns = unpacker.unpack_symbol(eqn)
 
-            # Look only for Variable (not VariableDot) in rhs keys
+            # Filter: only Variable (not VariableDot) in rhs keys
             all_vars_in_rhs_keys.update(
                 [var for var in vars_in_rhs_keys if isinstance(var, pybamm.Variable)]
             )
@@ -1730,20 +1714,14 @@ class BaseModel:
                 vars_in_eqns = unpacker.unpack_symbol(eqn)
                 all_vars_in_eqns.update(vars_in_eqns)
 
-        # If any keys are repeated between rhs and algebraic then the model is
-        # overdetermined
+        # Overdetermined if rhs and algebraic keys overlap
         if not set(all_vars_in_rhs_keys).isdisjoint(all_vars_in_algebraic_keys):
             raise pybamm.ModelError("model is overdetermined (repeated keys)")
-        # If any algebraic keys don't appear in the eqns (or bcs) then the model is
-        # overdetermined (but rhs keys can be absent from the eqns, e.g. dcdt = -1 is
-        # fine)
-        # Skip this step after discretisation, as any variables in the equations will
-        # have been discretised to slices but keys will still be variables
+        # Extra algebraic keys = overdetermined (rhs keys may be absent from eqns, e.g. dcdt = -1)
         extra_algebraic_keys = all_vars_in_algebraic_keys.difference(all_vars_in_eqns)
         if extra_algebraic_keys and not post_discretisation:
             raise pybamm.ModelError("model is overdetermined (extra algebraic keys)")
-        # If any variables in the equations don't appear in the keys then the model is
-        # underdetermined
+        # Variables in equations but not keys indicate an underdetermined model
         all_vars_in_keys = all_vars_in_rhs_keys.union(all_vars_in_algebraic_keys)
         extra_variables_in_equations = all_vars_in_eqns.difference(all_vars_in_keys)
 
@@ -1781,9 +1759,7 @@ class BaseModel:
         unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
         all_vars = unpacker.unpack_list_of_symbols(self.variables.values())
 
-        # Build a set of names for keys to allow matching by name
-        # instead of by object identity (handles cases where Variables may have different
-        # _id values due to scale/reference processing)
+        # Match keys by name (not identity) to handle Variables with different _id values from scaling
         var_names_in_keys = set()
 
         model_keys = list(self.rhs.keys()) + list(self.algebraic.keys())
@@ -1791,7 +1767,7 @@ class BaseModel:
         for var in model_keys:
             if isinstance(var, pybamm.Variable):
                 var_names_in_keys.add(var.name)
-            # Key can be a concatenation
+            # Keys can also be Concatenations (check children)
             elif isinstance(var, pybamm.Concatenation):
                 for child in var.children:
                     if isinstance(child, pybamm.Variable):
@@ -2276,13 +2252,10 @@ class BaseModel:
                 model_config["options"] = dict(self.options)
 
             # Detect user modifications to variables and events.
-            # A fresh reference model is instantiated with the same options
-            # so we can diff against it. Only added/removed variable *keys*
-            # are tracked; overwriting an existing variable's expression is
-            # NOT detected (out of scope for v1).
+            # Diff against fresh reference model; tracks only added/removed variable keys (not overwrites)
             self.serialise_builtin_overrides(model_config)
         else:
-            # Custom / user-defined model — full serialised format
+            # Custom model: full serialised format
             model_config = {
                 "type": "custom",
                 "model": Serialise.serialise_custom_model(self, compress=compress),
@@ -2535,10 +2508,7 @@ class EquationDict(dict):
                     f"variable and equation in '{self.name}' must have the same domain"
                 )
 
-        # For initial conditions, check that the equation doesn't contain any
-        # Variable objects
-        # skip this if the dictionary has no "name" attribute (which will be the case
-        # after pickling)
+        # Skip Variable check if pickled (no "name" attribute); reject Variables in initial conditions
         if hasattr(self, "name") and self.name == "initial_conditions":
             for var, eqn in equations.items():
                 if eqn.has_symbol_of_classes(pybamm.Variable):

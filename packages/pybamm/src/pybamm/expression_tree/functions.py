@@ -1,6 +1,4 @@
-#
 # Function classes and methods
-#
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
@@ -305,9 +303,8 @@ class SpecificFunction(Function):
         """
         Method to serialise a SpecificFunction object into JSON.
         """
-        # Concrete subclasses (Sin, Exp, ...) restore their callable in _from_json
-        # via the class itself. The bare base class only stores the function name,
-        # which cannot be turned back into a callable, so refuse to serialise it.
+        # Concrete subclasses restore their callable in _from_json. Bare base class
+        # only stores function name (not callable), so refuse to serialise it.
         if self.__class__ is SpecificFunction:
             raise NotImplementedError("SpecificFunction is not supported directly")
 
@@ -964,17 +961,11 @@ class RegPower(Function):
             # d/da = reg_val * (log(x^2 + d^2) / 2 + log(scale))
             return reg_val * (pybamm.log(x2_d2) / 2 + pybamm.log(scale))
         elif idx == 2:
-            # Derivative w.r.t. scale
-            # y = x * (x^2 + d^2)^((a-1)/2) * scale^a, where x = base/scale
-            # Using quotient rule and chain rule:
-            # dy/dscale = -base/scale^2 * (x^2+d^2)^((a-3)/2) * (a*x^2 + d^2) * scale^a
-            #           + x * (x^2+d^2)^((a-1)/2) * a * scale^(a-1)
-            # Simplified:
+            # Derivative w.r.t. scale; y = x * (x^2 + d^2)^((a-1)/2) * scale^a,
+            # where x = base/scale. Simplified via quotient + chain rule.
             reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
             dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
-            # dy/dscale = reg_val * a / scale - dreg_dx * x * scale^(a-1)
-            #           = reg_val * a / scale - dreg_dx * base / scale * scale^(a-1) / scale
-            #           = (reg_val * a - base * dreg_dx * scale^(a-1)) / scale
+            # dy/dscale = (reg_val * a - base * dreg_dx * scale^(a-1)) / scale
             return (
                 reg_val * exponent - base * dreg_dx * (scale ** (exponent - 1))
             ) / scale

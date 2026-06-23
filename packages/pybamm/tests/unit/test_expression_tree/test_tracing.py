@@ -1,6 +1,5 @@
-#
-# Tests for the tracing module
-#
+"""Tests for the tracing module."""
+
 import threading
 
 import numpy as np

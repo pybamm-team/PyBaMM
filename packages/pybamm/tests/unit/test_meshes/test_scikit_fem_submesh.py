@@ -1,6 +1,4 @@
-#
-# Test for the scikit-fem Finite Element Mesh class
-#
+"""Test for the scikit-fem Finite Element Mesh class."""
 
 import numpy as np
 import pytest

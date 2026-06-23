@@ -156,9 +156,7 @@ class TestCasadiSolver:
         solver = pybamm.CasadiSolver(
             dt_max=1e-3, return_solution_if_failed_early=True, max_step_decrease_count=2
         )
-        # Solve with failure at t=2
-        # Solution fails early but manages to take some steps so we return it anyway
-        # Check that the final solution does indeed stop before t=20
+        # Solve with failure at t=2 (fails early but returns partial solution; verify stops before t=20)
         t_eval = np.linspace(0, 20, 100)
         with pytest.warns(pybamm.SolverWarning):
             solution = solver.solve(model_disc, t_eval)
@@ -514,9 +512,7 @@ class TestCasadiSolver:
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
-        # FV discretisation has identity mass. Manually set the mass matrix to
-        # be a diag of 10s here for testing. Note that the algebraic part is all
-        # zeros
+        # Manually set mass matrix to diag(10s) for testing (FV has identity mass; algebraic part is zeros)
         mass_matrix = 10 * model.mass_matrix.entries
         model.mass_matrix = pybamm.Matrix(mass_matrix)
 

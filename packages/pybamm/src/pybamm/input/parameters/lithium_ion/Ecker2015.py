@@ -212,9 +212,8 @@ def nco_ocp_Ecker2015(sto):
 
     """
 
-    # LiNiCo from Ecker, Kabitz, Laresgoiti et al.
-    # Analytical fit (WebPlotDigitizer + gnuplot)
-    # Parameter m modified by Simon O'Kane to improve fit
+    # LiNiCo OCP from Ecker et al.; analytical fit (WebPlotDigitizer + gnuplot),
+    # parameter m modified by Simon O'Kane
     a = -2.35211
     c = 0.0747061
     d = 31.886

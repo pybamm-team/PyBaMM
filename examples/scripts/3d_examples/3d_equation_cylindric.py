@@ -44,18 +44,12 @@ geometry = {
     }
 }
 
-# For unstructured 3D FEM meshes, we control the density and quality using a
-# characteristic length parameter 'h'. The generator will try to create
-# tetrahedral elements with edge lengths around this value.
+# 3D FEM mesh controlled by characteristic length 'h' for tetrahedral elements
 submesh_types = {
     "current collector": ScikitFemGenerator3D(geom_type="cylinder", h=0.08)
 }
 
-# The 'var_pts' dictionary is required by the pybamm.Mesh class for validation,
-# but our ScikitFemGenerator3D completely IGNORES it. The number of points
-# is determined by the meshing algorithm based on 'h', not by 'var_pts'.
-# We pass placeholder values to satisfy the class constructor.
-# We may want to pass var_pts anyway since other domains may not be in 3D in a simulation
+# var_pts required by Mesh class but ignored by ScikitFemGenerator3D (uses 'h' instead)
 var_pts = {r: None, theta: None, z: None}
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 spatial_methods = {"current collector": ScikitFiniteElement3D()}

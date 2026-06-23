@@ -32,11 +32,7 @@ if(NOT WIN32 AND NOT DEFINED SUNDIALS_ROOT)
     set(SUNDIALS_ROOT "${CMAKE_SOURCE_DIR}/.idaklu")
 endif()
 
-# Auto-build the vendored SUNDIALS/SuiteSparse on a from-source build, so a clean
-# checkout with submodules needs no manual pre-step. Skipped on Windows (vcpkg),
-# and skipped once the libraries already exist — under editable.rebuild CMake
-# reconfigures on every import, and re-requiring the submodules (or re-running the
-# bootstrap) for an already-built tree would needlessly fail or repeat work.
+# Auto-build vendored SUNDIALS/SuiteSparse on from-source builds; skipped on Windows (vcpkg) or if libs exist.
 if(NOT WIN32 AND NOT DEFINED VCPKG_ROOT_DIR)
     file(GLOB _sundials_prebuilt
         "${SUNDIALS_ROOT}/lib/libsundials_idas.*"
@@ -179,11 +175,7 @@ if (${USE_PYTHON_CASADI})
         message("Found Python CasADi library directory: ${CASADI_LIB_DIR}")
         target_link_directories(idaklu PRIVATE ${CASADI_LIB_DIR})
 
-        # RPATH entries for `pybammsolvers/idaklu.<abi>.so`:
-        #   @loader_path/../casadi / $ORIGIN/../casadi: finds libcasadi at
-        #     runtime.  .idaklu/{lib,lib64}: vendored SUNDIALS/SuiteSparse
-        #     (used at runtime and by auditwheel/delocate at repair time).
-        #     Windows uses vcpkg static linking; no RPATH needed.
+        # RPATH: @loader_path/../casadi + .idaklu/{lib,lib64} for runtime + wheel repair; Windows uses vcpkg static.
         if (APPLE)
             set(IDAKLU_INSTALL_RPATH
                 "@loader_path/../casadi"
@@ -224,11 +216,8 @@ else ()
     endif()
 endif ()
 
-# Match idaklu's libstdc++ std::string ABI to the linked libcasadi (GNU only;
-# no-op for MSVC and macOS/libc++). CasADi's PyPI casadi-config.cmake forces
-# `_GLIBCXX_USE_CXX11_ABI=0` on consumers: correct for the x86_64 wheel (legacy
-# ABI) but wrong for the aarch64 wheel (C++11 ABI), leaving casadi's std::string
-# symbols unresolved. Detect libcasadi's real ABI and override CasADi's guess.
+# Match idaklu's libstdc++ std::string ABI to libcasadi (GNU only). CasADi's PyPI
+# config forces `_GLIBCXX_USE_CXX11_ABI=0`, wrong for the aarch64 C++11-ABI wheel.
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Drop CasADi's hard-coded (and, on aarch64, wrong) ABI interface definition.
     if (TARGET casadi::casadi)
@@ -241,9 +230,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         endif ()
     endif ()
 
-    # Key off casadi::Function::deserialize(const std::string&): the C++11-ABI
-    # build exports the __cxx11 mangling, the legacy build the `Ss` mangling.
-    # Default to the legacy ABI if the probe cannot run (never worse than before).
+    # Key off casadi::Function::deserialize(const std::string&): C++11-ABI builds
+    # export the __cxx11 mangling. Default to legacy ABI if the probe cannot run.
     set(_casadi_cxx11_abi 0)
     set(_nm "${CMAKE_NM}")
     if (NOT _nm)
@@ -264,9 +252,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_definitions(idaklu PRIVATE _GLIBCXX_USE_CXX11_ABI=${_casadi_cxx11_abi})
 endif ()
 
-# Math flags for the IDAKLU target.
-# -fno-math-errno: allows inlining fabs/fmax/sqrt without errno-setting overhead.
-# -fno-trapping-math: allows reordering around potential FP exceptions.
+# Math flags: -fno-math-errno (inline fabs/fmax/sqrt), -fno-trapping-math (reorder around FP exceptions).
 if (NOT MSVC)
     target_compile_options(idaklu PRIVATE
         -fno-math-errno
@@ -301,10 +287,8 @@ message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
 
-# link suitesparse
-# With vcpkg, SuiteSparse is split into per-component ports with no combined
-# config; find KLU directly (its target pulls in AMD/COLAMD/BTF/config).
-# Otherwise, use the FindSuiteSparse module.
+# vcpkg splits SuiteSparse into per-component ports with no combined config; find
+# KLU directly (pulls in AMD/COLAMD/BTF/config). Otherwise use FindSuiteSparse.
 if (DEFINED VCPKG_ROOT_DIR)
     find_package(KLU CONFIG REQUIRED)
     target_link_libraries(idaklu PRIVATE SuiteSparse::KLU)

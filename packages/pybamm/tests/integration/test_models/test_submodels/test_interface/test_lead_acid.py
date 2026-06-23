@@ -1,6 +1,5 @@
-#
-# Tests for the electrode-electrolyte interface equations for lead-acid models
-#
+"""Tests for the electrode-electrolyte interface equations for lead-acid models."""
+
 import pytest
 
 import pybamm

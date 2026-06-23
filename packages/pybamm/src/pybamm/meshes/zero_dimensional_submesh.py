@@ -1,6 +1,4 @@
-#
 # Zero dimensional submesh
-#
 import numpy as np
 
 import pybamm

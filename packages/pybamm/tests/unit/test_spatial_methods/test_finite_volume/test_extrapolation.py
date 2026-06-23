@@ -1,6 +1,4 @@
-#
-# Test for the extrapolations in the finite volume class
-#
+"""Test for the extrapolations in the finite volume class."""
 
 import numpy as np
 import pytest

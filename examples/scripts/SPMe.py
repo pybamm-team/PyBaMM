@@ -1,6 +1,4 @@
-#
-# Example showing how to load and solve the SPMe
-#
+"""Example showing how to load and solve the SPMe."""
 
 import numpy as np
 

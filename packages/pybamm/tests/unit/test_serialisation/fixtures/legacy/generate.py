@@ -84,9 +84,7 @@ if "py/object" not in serialised or '"$type"' in serialised:
 (out / "discretised_model.json").write_text(serialised)
 print("wrote discretised_model.json")
 
-# 2b. Coarse-mesh variant: same format, small enough to track in git, so CI
-# always exercises this path. gzip mtime=0 keeps the header timestamp-free
-# (the payload still varies per run -- see module docstring).
+# 2b. Coarse-mesh variant: small enough for git, CI always exercises this path; gzip mtime=0 timestamp-free
 coarse = pybamm.Simulation(
     pybamm.lithium_ion.SPM(),
     var_pts=dict.fromkeys(model.default_var_pts, 5),

@@ -1,7 +1,5 @@
-#
-# Tests for the thermal lithium-ion models produce consistent
-# thermal response
-#
+"""Tests for the thermal lithium-ion models produce consistent thermal response."""
+
 import numpy as np
 import pytest
 
@@ -177,9 +175,7 @@ class TestThermal:
         avg_cell_temp = sols[0]["X-averaged cell temperature [K]"].entries
         avg_cell_temp_cr = sols[1]["X-averaged cell temperature [K]"].entries
 
-        # check that the cell temperature of the lumped thermal model
-        # with contact resistance is higher than without contact resistance
-        # skip the first entry because they are the same due to initial conditions
+        # Lumped thermal with contact resistance > without; skip first entry (same IC)
         np.testing.assert_array_less(avg_cell_temp[1:], avg_cell_temp_cr[1:])
 
     @pytest.mark.parametrize("thermal", ["isothermal", "lumped", "x-full"])

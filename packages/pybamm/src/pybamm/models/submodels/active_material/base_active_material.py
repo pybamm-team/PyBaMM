@@ -1,6 +1,4 @@
-#
 # Base class for active material volume fraction
-#
 import pybamm
 
 
@@ -72,10 +70,8 @@ class BaseModel(pybamm.BaseSubModel):
                     {f"{Domain} electrode {phase_name}phase capacity [A.h]": C}
                 )
 
-            # If a single particle size at every x, use the parameters
-            # R_n, R_p. For a size distribution, calculate the area-weighted
-            # mean using the distribution instead. Then the surface area is
-            # calculated the same way
+            # Single particle size: use R_n, R_p parameters; size distribution:
+            # area-weighted mean from distribution, same surface area calculation
             domain_options = getattr(self.options, domain)
             if domain_options["particle size"] == "single":
                 R = self.phase_param.R

@@ -1,6 +1,4 @@
-#
-# Tests for the parameter processing functions
-#
+"""Tests for the parameter processing functions."""
 
 from pathlib import Path
 

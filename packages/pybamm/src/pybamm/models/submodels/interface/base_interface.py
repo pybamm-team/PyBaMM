@@ -1,6 +1,4 @@
-#
 # Base interface class
-#
 
 import pybamm
 

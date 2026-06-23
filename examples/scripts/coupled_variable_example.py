@@ -1,11 +1,4 @@
-"""
-Example script demonstrating how to add new variables to a model
-using CoupledVariable.
-
-CoupledVariables allow you to reference existing model variables in new
-expressions. They are resolved lazily when the variable is accessed from
-the solution.
-"""
+"""Demonstrate adding new variables to a model using CoupledVariable."""
 
 import pybamm
 
@@ -14,9 +7,7 @@ if __name__ == "__main__":
     # Create a simple battery model
     model = pybamm.lithium_ion.SPM()
 
-    # Add a new variable that references an existing variable via CoupledVariable
-    # The CoupledVariable("Voltage [V]") will be resolved to the actual Voltage [V]
-    # when the variable is accessed from the solution
+    # Add variable referencing existing one via CoupledVariable (resolved lazily)
     model.variables["Double voltage [V]"] = 2 * pybamm.CoupledVariable("Voltage [V]")
 
     print("Added 'Double voltage [V]' variable to model")

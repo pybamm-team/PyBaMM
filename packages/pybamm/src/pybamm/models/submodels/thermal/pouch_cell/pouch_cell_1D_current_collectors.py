@@ -1,6 +1,4 @@
-#
 # Class for one-dimensional thermal submodel for use in the "1+1D" pouch cell model
-#
 import pybamm
 from pybamm.models.submodels.thermal.base_thermal import BaseThermal
 
@@ -113,9 +111,8 @@ class CurrentCollector1D(BaseThermal):
             - pos_tab_area * pos_tab_bottom_bool
         )
 
-        # Calculate heat fluxes weighted by area
-        # Note: can't do y-average of h_edge here since y isn't meshed. Evaluate at
-        # midpoint.
+        # Heat fluxes weighted by area; y-average of h_edge skipped since y isn't
+        # meshed, evaluated at midpoint instead.
         q_tab_n = -self.param.n.h_tab * (T_av - T_surf)
         q_tab_p = -self.param.p.h_tab * (T_av - T_surf)
         q_edge_top = -self.param.h_edge(L_y / 2, L_z) * (T_av - T_surf)
@@ -131,9 +128,7 @@ class CurrentCollector1D(BaseThermal):
             + q_edge_bottom * non_tab_bottom_area
         ) / total_area
 
-        # just use left and right for clarity
-        # left = bottom of cell (z=0)
-        # right = top of cell (z=L_z)
+        # left = bottom of cell (z=0), right = top of cell (z=L_z)
         lambda_eff = self.param.lambda_eff(T_av)
         self.boundary_conditions = {
             T_av: {

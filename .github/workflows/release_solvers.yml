@@ -1,13 +1,4 @@
-# Build and publish pybammsolvers wheels + sdist to PyPI.
-#
-# Monorepo notes:
-# - The wheel/sdist build logic lives in the reusable workflow
-#   `_build_solver_wheels.yml`, shared with PR-time CI (test_on_push.yml). This
-#   workflow only adds the release trigger, the tag-namespace guard, and the
-#   PyPI publish step.
-# - Releases are discriminated by tag namespace (`pybammsolvers-v*`); the old
-#   `github.repository == 'pybamm-team/pybammsolvers'` guard no longer works now
-#   that pybamm and pybammsolvers share a repository.
+# Build and publish pybammsolvers wheels + sdist to PyPI (monorepo: tag namespace `pybammsolvers-v*` distinguishes from pybamm)
 name: Build solver wheels
 
 on:

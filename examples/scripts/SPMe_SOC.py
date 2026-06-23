@@ -1,13 +1,6 @@
-#
-#  Example to show the state of charge of a battery using the SPMe model
-#  Initial conditions are specified to start each electrode in 1/2 charged
-#  state. A charge and discharge are performed with current chosen to be
-#  1C rate when electrode dimensions are euqal.
-#  Coulomb counting is performed to calculate the capacity of the
-#  battery within the operating voltage limits and maximum particle concs.
-#  The negative electrode thickness is varied to highlight the importance of electrode
-#  sizing to enable full lithium utilization
-#
+"""Show battery SOC using SPMe: charge/discharge at 1C rate with varying negative
+electrode thickness to highlight importance of electrode sizing for lithium utilization."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 

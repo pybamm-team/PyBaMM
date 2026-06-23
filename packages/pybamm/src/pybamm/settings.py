@@ -1,6 +1,4 @@
-#
 # Settings class for PyBaMM
-#
 
 
 class Settings:

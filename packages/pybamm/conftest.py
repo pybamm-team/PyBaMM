@@ -6,10 +6,7 @@ from hypothesis import settings as hypothesis_settings
 
 import pybamm
 
-# Hypothesis auto-loads its built-in "ci" profile in CI, which derandomizes
-# every run (the same inputs forever). Re-register it with randomisation
-# enabled so CI explores new inputs each run; the inherited print_blob=True
-# keeps any failure reproducible locally via @reproduce_failure.
+# Re-register CI profile with derandomize=False so CI explores new inputs each run (print_blob=True keeps failures reproducible)
 hypothesis_settings.register_profile(
     "ci", parent=hypothesis_settings.get_profile("ci"), derandomize=False
 )

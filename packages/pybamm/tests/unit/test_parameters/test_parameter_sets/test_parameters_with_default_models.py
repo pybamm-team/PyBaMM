@@ -1,6 +1,4 @@
-#
-# Tests each parameter set with the standard model associated with that parameter set
-#
+"""Tests each parameter set with the standard model associated with that parameter set."""
 
 import pybamm
 

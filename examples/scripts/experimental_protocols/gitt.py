@@ -1,6 +1,5 @@
-#
-# GITT discharge
-#
+"""GITT discharge."""
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

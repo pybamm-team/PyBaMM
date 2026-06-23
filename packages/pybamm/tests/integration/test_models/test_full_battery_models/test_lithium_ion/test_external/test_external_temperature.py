@@ -1,6 +1,5 @@
-#
-# Tests for inputting a temperature profile
-#
+"""Tests for inputting a temperature profile."""
+
 import numpy as np
 
 import pybamm

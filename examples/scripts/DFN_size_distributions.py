@@ -1,7 +1,5 @@
-#
-# Compare the DFN with particle size distributions (MP-DFN)
-# to the DFN with a single particle size, and the MPM
-#
+"""Compare DFN with particle size distributions (MP-DFN) to single-size DFN and MPM."""
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

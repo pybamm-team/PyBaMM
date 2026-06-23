@@ -1,6 +1,4 @@
-#
 # Bulter volmer class
-#
 
 import pybamm
 

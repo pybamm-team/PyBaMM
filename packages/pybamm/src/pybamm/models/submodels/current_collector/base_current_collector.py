@@ -1,6 +1,4 @@
-#
 # Base class for current collector submodels
-#
 import pybamm
 
 

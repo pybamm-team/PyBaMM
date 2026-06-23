@@ -1,6 +1,4 @@
-#
 # Bulter volmer class for the MSMR formulation
-#
 
 import pybamm
 

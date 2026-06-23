@@ -1,6 +1,4 @@
-#
 # Base unit tests for the lithium-ion models
-#
 import pytest
 
 import pybamm
@@ -590,11 +588,7 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_psd_hysteresis_thermal(self):
-        # Regression test: hysteresis OCP + particle size distribution + a
-        # non-isothermal thermal submodel previously raised a DomainError in
-        # the thermal hysteresis-heating term because the "equilibrium
-        # open-circuit potential [V]" variable was left on the particle-size
-        # domain while "open-circuit potential [V]" was size-averaged.
+        # Regression: hysteresis OCP + PSD + thermal previously raised DomainError (equilibrium OCP on wrong domain).
         options = {
             "open-circuit potential": "one-state hysteresis",
             "particle size": "distribution",
@@ -604,12 +598,7 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_psd_single_ocp_thermal(self):
-        # Regression test: for "single" OCP + particle size distribution, the
-        # "equilibrium open-circuit potential [V]" variable used to be
-        # published on the particle-size domain. The thermal submodel skips
-        # the hysteresis branch for "single" so this did not raise today, but
-        # the variable itself was on the wrong domain; this test pins the
-        # corrected electrode-domain shape.
+        # Regression: "single" OCP + PSD previously published equilibrium OCP on particle-size domain.
         options = {
             "particle size": "distribution",
             "surface form": "algebraic",
@@ -621,9 +610,7 @@ class BaseUnitTestLithiumIon:
         assert v.domains["primary"] == ["positive electrode"]
 
     def test_well_posed_psd_msmr_thermal(self):
-        # Regression test: MSMR + particle size distribution + thermal
-        # previously failed building Q_hys because "equilibrium open-circuit
-        # potential [V]" was on the particle-size domain.
+        # Regression: MSMR + PSD + thermal previously failed Q_hys build (equilibrium OCP on particle-size domain).
         options = {
             "open-circuit potential": "MSMR",
             "particle": "MSMR",

@@ -16,11 +16,7 @@ def build_solvers():
             shutil.rmtree(path)
 
     def install_suitesparse():
-        # The SuiteSparse KLU module has 4 dependencies:
-        # - suitesparseconfig
-        # - AMD
-        # - COLAMD
-        # - BTF
+        # SuiteSparse KLU has 4 dependencies: suitesparseconfig, AMD, COLAMD, BTF.
         suitesparse_src = pathlib.Path("SuiteSparse")
         print("-" * 10, "Building SuiteSparse_config", "-" * 40)
         make_cmd = [
@@ -37,9 +33,7 @@ def build_solvers():
         env = os.environ.copy()
         for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
             build_dir = os.path.join(suitesparse_src, libdir)
-            # We want to ensure that libsuitesparseconfig.dylib is not repeated in
-            # multiple paths at the time of wheel repair. Therefore, it should not be
-            # built with an RPATH since it is copied to the install prefix.
+            # libsuitesparseconfig.dylib must not have RPATH (copied to install prefix, not runtime).
             if libdir == "SuiteSparse_config":
                 # if in CI, set RPATH to the install directory for SuiteSparse_config
                 # dylibs to find libomp.dylib when repairing the wheel
@@ -52,10 +46,7 @@ def build_solvers():
                         f"-DCMAKE_INSTALL_PREFIX={DEFAULT_INSTALL_DIR}"
                     )
             else:
-                # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
-                # INSTALL RPATH in order to ensure that the dynamic libraries are found
-                # at runtime just once. Otherwise, delocate complains about multiple
-                # references to the SuiteSparse_config dynamic library (auditwheel does not).
+                # AMD/COLAMD/BTF/KLU use INSTALL RPATH (not BUILD) so delocate/auditwheel find libs once.
                 env["CMAKE_OPTIONS"] = (
                     f"-DCMAKE_INSTALL_PREFIX={DEFAULT_INSTALL_DIR} -DCMAKE_INSTALL_RPATH={DEFAULT_INSTALL_DIR}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
                 )
@@ -106,13 +97,7 @@ def build_solvers():
                     "Only 'arm' and 'i386' architectures are supported."
                 )
 
-            # Don't pass the following args to CMake when building wheels. We set a custom
-            # OpenMP installation for macOS wheels in the wheel build script.
-            # This is because we can't use Homebrew's OpenMP dylib due to the wheel
-            # repair process, where Homebrew binaries are not built for distribution and
-            # break MACOSX_DEPLOYMENT_TARGET. We use a custom OpenMP binary as described
-            # in CIBW_BEFORE_ALL in the wheel builder CI job.
-            # Check for CI environment variable to determine if we are building a wheel
+            # Skip Homebrew OpenMP args when CIBUILDWHEEL=1 (custom OpenMP binary in CI).
             if os.environ.get("CIBUILDWHEEL") != "1":
                 print("Using Homebrew OpenMP for macOS build")
                 cmake_args += [

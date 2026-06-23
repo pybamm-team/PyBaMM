@@ -1,25 +1,5 @@
-# Reusable workflow: build pybammsolvers wheels (+ optional sdist) from the
-# in-repo source.
-#
-# Single definition of "how to build the solver", called by:
-#   * release_solvers.yml   — on a pybammsolvers-v* release (build + sdist, no
-#                             cache, then the caller publishes to PyPI).
-#   * test_on_push.yml      — on PRs (build + cache so PyBaMM's matrix can test
-#                             against the in-repo solver without rebuilding it
-#                             per cell).
-#
-# Platform selection: callers pass `platforms` / `macos_runners` to build only the
-# wheels their downstream jobs consume; both default to all platforms.
-#
-# Windows is built here via cibuildwheel + vcpkg — the ONLY way this solver has
-# ever been built on Windows. PyBaMM's matrix must not invent a from-source
-# Windows build; it consumes these wheels.
-#
-# Caching (cache_wheels=true): each platform job keys actions/cache on the solver
-# subtree's git-tree hash (`git rev-parse HEAD:packages/pybammsolvers`), which
-# captures every tracked file AND the SUNDIALS/SuiteSparse submodule pin SHAs.
-# On a cache hit (e.g. a PyBaMM-only PR whose solver source equals main's) the
-# build is skipped and the cached wheels are uploaded as-is.
+# Reusable workflow: build pybammsolvers wheels (+ optional sdist) from in-repo source.
+# Called by release_solvers.yml (no cache) and test_on_push.yml (cached on solver git-tree hash).
 name: Build solver wheels (reusable)
 
 on:
@@ -95,11 +75,8 @@ jobs:
           path: packages/pybammsolvers/wheelhouse
           key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
 
-      # Persist vcpkg's binary cache (built ports: casadi, sundials, suitesparse,
-      # openblas) across runs, so a PR that only changes solver source rebuilds
-      # the solver, not its dependencies. Gated to the cached (PR/periodic) path;
-      # releases build fresh (no cache). restore-keys lets a new branch reuse
-      # main's ports — vcpkg rebuilds only ABI-mismatched ones.
+      # Persist vcpkg's binary cache (built ports) across runs so a solver-only PR
+      # skips rebuilding deps. Gated to the cached path; releases build fresh.
       - name: Cache vcpkg binary artifacts
         id: vcpkgcache
         if: ${{ inputs.cache_wheels && steps.cache.outputs.cache-hit != 'true' }}
@@ -128,14 +105,13 @@ jobs:
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
-          # VCPKG_DEFAULT_BINARY_CACHE points vcpkg's default files cache at a
-          # pinned dir that actions/cache persists across runs (see the cache
-          # step); ports are shared across the 5 Python builds AND across runs,
-          # so only a dependency change rebuilds from source.
-          # No CMAKE_GENERATOR pin: CMake resolves the image's installed VS
-          # (year-pins break when runner images drop that VS release).
-          # Forward-slash paths: cibuildwheel shell-parses these values, so a
-          # backslash path arrives drive-relative (C:vcpkg) and breaks vcpkg's children.
+          # VCPKG_DEFAULT_BINARY_CACHE pins vcpkg's files cache to a dir actions/cache
+          # persists (see cache step): ports shared across the 5 builds and across runs.
+
+          # No CMAKE_GENERATOR pin: CMake resolves the image's installed VS.
+
+          # Forward-slash paths: cibuildwheel shell-parses these, so a backslash arrives
+          # drive-relative (C:vcpkg) and breaks vcpkg's children.
           CIBW_ENVIRONMENT: >
             VCPKG_ROOT_DIR=C:/vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
@@ -182,9 +158,8 @@ jobs:
             before_all: >
               yum -y --disablerepo=epel install openblas-devel lapack-devel &&
               python install_KLU_Sundials.py
-          # aarch64 needs manylinux_2_34: CasADi's aarch64 wheel is built with
-          # the C++11 ABI and requires a GCC>=11 libstdc++, which manylinux2014
-          # and manylinux_2_28 lack. openblas/lapack live in AlmaLinux 9's CRB.
+          # aarch64 needs manylinux_2_34: CasADi's aarch64 wheel wants a GCC>=11
+          # libstdc++ (C++11 ABI) older images lack; openblas/lapack come from CRB.
           - arch: aarch64
             runner: ubuntu-24.04-arm
             artifact: wheels_manylinux_aarch64
@@ -340,9 +315,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-latest' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install delocate
-          # libcasadi ships as a pip dep (resolved at runtime via
-          # @loader_path/../casadi); delocate can't locate it at repair time
-          # since it lives in the build venv — hence --exclude + --ignore-missing-dependencies.
+          # libcasadi in build venv not visible to delocate; exclude it
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --exclude libcasadi --ignore-missing-dependencies

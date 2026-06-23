@@ -1,6 +1,5 @@
-#
-# Tests for the lithium-ion MSMR model
-#
+"""Tests for the lithium-ion MSMR model."""
+
 import pybamm
 
 

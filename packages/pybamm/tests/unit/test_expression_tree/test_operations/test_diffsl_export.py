@@ -1,6 +1,5 @@
-#
-# Tests for DiffSLExport class
-#
+"""Tests for DiffSLExport class."""
+
 from datetime import datetime
 
 import numpy as np

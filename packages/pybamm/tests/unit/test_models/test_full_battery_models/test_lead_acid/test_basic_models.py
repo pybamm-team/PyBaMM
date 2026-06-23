@@ -1,6 +1,5 @@
-#
-# Tests for the basic lead acid models
-#
+"""Tests for the basic lead acid models."""
+
 import pybamm
 
 

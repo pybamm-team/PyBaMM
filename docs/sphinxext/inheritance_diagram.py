@@ -1,6 +1,4 @@
-# Sphinx extension to add an inheritance diagram in the docstring of a class built upon
-# the built-in sphinxext.inheritance_diagram extension. The inheritance diagram is
-# generated via graphviz and the fully qualified name of the class.
+# Sphinx extension: adds inheritance diagram to class docstrings via graphviz and FQCN
 
 from inspect import getmro, isclass
 
@@ -20,10 +18,7 @@ def add_diagram(app, what, name, obj, options, lines):
                 # do nothing if it is not a derived class
                 return
 
-            # Append the inheritance diagram to the docstring. Note: we do this
-            # for HTML output only because SVG output creates multiple PDFs which
-            # are not supported by Read the Docs.
-            # https://github.com/readthedocs/readthedocs.org/issues/2045
+            # HTML only: SVG creates multiple PDFs unsupported by Read the Docs (#2045)
             lines.append("\n")
             lines.append(".. only:: not latex\n")
             lines.append("\n")

@@ -198,9 +198,7 @@ class TestFiniteVolume2D:
             * pybamm.VectorField(pybamm.Scalar(2), pybamm.Scalar(2)),
             pybamm.UpwindDownwind2D(var, None, None) * pybamm.VectorField(var, var),
         ]:
-            # Check that the equation can be evaluated for different combinations
-            # of boundary conditions
-            # Dirichlet
+            # Equation evaluable for different BC combinations (Dirichlet)
             disc.bcs = {
                 var: {
                     "left": (pybamm.Scalar(0), "Dirichlet"),
@@ -259,9 +257,7 @@ class TestFiniteVolume2D:
             pybamm.Inner(pybamm.grad(var), var),
             pybamm.Inner(var, pybamm.grad(var)),
         ]:
-            # Check that the equation can be evaluated for different combinations
-            # of boundary conditions
-            # Dirichlet
+            # Equation evaluable for different BC combinations (Dirichlet)
             disc.bcs = {
                 var: {
                     "left": (pybamm.Scalar(0), "Dirichlet"),

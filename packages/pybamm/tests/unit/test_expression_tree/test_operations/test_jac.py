@@ -1,6 +1,4 @@
-#
-# Tests for the jacobian methods
-#
+"""Tests for the jacobian methods."""
 
 import numpy as np
 import pytest
