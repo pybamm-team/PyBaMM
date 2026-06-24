@@ -1,5 +1,3 @@
-"""Tests for the thermal lithium-ion models produce consistent thermal response."""
-
 import numpy as np
 import pytest
 

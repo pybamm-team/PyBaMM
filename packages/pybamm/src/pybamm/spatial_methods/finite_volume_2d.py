@@ -1,4 +1,3 @@
-# Finite Volume discretisation class
 import numpy as np
 from scipy.sparse import (
     block_diag,

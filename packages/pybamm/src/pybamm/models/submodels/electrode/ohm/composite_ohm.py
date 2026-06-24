@@ -1,4 +1,3 @@
-# Composite model for Ohm's law in the electrode
 import pybamm
 
 from .base_ohm import BaseModel

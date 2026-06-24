@@ -1,5 +1,3 @@
-"""Tests comparing model outputs for standard variables."""
-
 import numpy as np
 
 import pybamm

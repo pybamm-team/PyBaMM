@@ -1,5 +1,3 @@
-"""Integration tests for stoichiometry-dependent electrode conductivity (sigma) paths."""
-
 import pytest
 
 import pybamm

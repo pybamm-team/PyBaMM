@@ -1,4 +1,3 @@
-# Base class for active material volume fraction
 import pybamm
 
 

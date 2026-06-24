@@ -1,5 +1,3 @@
-"""Tests for DiffSLExport class."""
-
 import csv
 import importlib.util
 import logging

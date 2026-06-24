@@ -1,5 +1,3 @@
-# Standard parameters for lithium-ion battery models
-
 import numpy as np
 
 import pybamm

@@ -1,5 +1,3 @@
-"""Tests for the Base Solver class."""
-
 import re
 
 import casadi

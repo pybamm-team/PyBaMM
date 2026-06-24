@@ -1,5 +1,3 @@
-# Tests for the lithium-ion electrode-specific SOH model
-
 import pytest
 
 import pybamm

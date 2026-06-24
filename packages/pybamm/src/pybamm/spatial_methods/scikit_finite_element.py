@@ -1,4 +1,3 @@
-# Finite Element discretisation class which uses scikit-fem
 import numpy as np
 from scipy.sparse import csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv

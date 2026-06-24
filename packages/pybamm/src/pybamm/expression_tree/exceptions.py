@@ -1,6 +1,3 @@
-# Exception classes
-
-
 class DomainError(Exception):
     """Domain error: an operation was attempted on nodes with un-matched domains."""
 

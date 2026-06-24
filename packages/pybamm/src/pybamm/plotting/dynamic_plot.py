@@ -1,4 +1,3 @@
-# Method for creating a dynamic plot
 import pybamm
 
 

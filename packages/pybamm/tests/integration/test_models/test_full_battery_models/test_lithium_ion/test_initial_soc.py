@@ -1,5 +1,3 @@
-"""Test edge cases for initial SOC."""
-
 import pytest
 
 import pybamm

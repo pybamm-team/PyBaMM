@@ -1,4 +1,3 @@
-# Class for quick plotting of variables from models
 from collections import defaultdict
 
 import numpy as np

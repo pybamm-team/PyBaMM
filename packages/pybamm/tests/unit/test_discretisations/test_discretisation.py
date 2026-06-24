@@ -1,5 +1,3 @@
-"""Tests for the base model class."""
-
 import numpy as np
 import pytest
 from scipy.sparse import block_diag, issparse

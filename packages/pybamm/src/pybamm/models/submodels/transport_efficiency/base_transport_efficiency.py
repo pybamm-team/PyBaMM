@@ -1,4 +1,3 @@
-# Base class for transport_efficiency
 import pybamm
 
 

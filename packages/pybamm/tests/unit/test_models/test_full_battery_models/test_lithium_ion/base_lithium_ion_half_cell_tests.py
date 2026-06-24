@@ -1,5 +1,3 @@
-"""Base unit tests for lithium-ion half-cell models (working electrode: positive)."""
-
 import pytest
 
 import pybamm

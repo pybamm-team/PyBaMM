@@ -1,5 +1,3 @@
-"""Tests for the LRUDict class."""
-
 from collections import OrderedDict
 
 import pytest

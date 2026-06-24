@@ -1,5 +1,3 @@
-# Bulter volmer class
-
 import pybamm
 
 from .base_kinetics import BaseKinetics

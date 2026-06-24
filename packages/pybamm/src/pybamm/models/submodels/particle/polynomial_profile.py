@@ -1,4 +1,3 @@
-# Class for many particles with polynomial concentration profile
 import pybamm
 
 from .base_particle import BaseParticle

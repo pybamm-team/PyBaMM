@@ -1,5 +1,3 @@
-"""Tests for the InputParameter class."""
-
 import numpy as np
 import pytest
 

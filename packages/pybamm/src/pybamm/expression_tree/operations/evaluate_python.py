@@ -1,4 +1,3 @@
-# Write a symbol to python
 from __future__ import annotations
 
 import numbers

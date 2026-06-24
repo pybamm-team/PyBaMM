@@ -1,5 +1,3 @@
-"""Tests for the lithium-ion DFN model."""
-
 import pybamm
 
 

@@ -1,5 +1,3 @@
-# Marcus and Asymptotic Marcus-Hush-Chidsey classes
-
 import numpy as np
 
 import pybamm

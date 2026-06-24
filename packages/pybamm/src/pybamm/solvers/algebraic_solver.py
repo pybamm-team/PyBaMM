@@ -1,4 +1,3 @@
-# Algebraic solver class
 import casadi
 import numpy as np
 from scipy import optimize

@@ -1,4 +1,3 @@
-# Method for plotting voltage components
 import numpy as np
 
 from pybamm.simulation import BaseSimulation

@@ -1,5 +1,3 @@
-"""Tests for the symbolic differentiation methods."""
-
 import numpy as np
 import pytest
 from numpy import testing

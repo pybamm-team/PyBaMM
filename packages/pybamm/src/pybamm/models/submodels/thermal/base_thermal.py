@@ -1,4 +1,3 @@
-# Base class for thermal effects
 import numpy as np
 
 import pybamm

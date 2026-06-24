@@ -1,4 +1,3 @@
-# Tests for the lithium-ion DFN model
 import numpy as np
 import pytest
 

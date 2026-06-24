@@ -1,4 +1,3 @@
-# Single Particle Model (SPM)
 import pybamm
 
 from .base_lithium_ion_model import BaseModel

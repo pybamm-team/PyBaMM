@@ -1,4 +1,3 @@
-# Tafel classes
 import pybamm
 
 from .base_kinetics import BaseKinetics

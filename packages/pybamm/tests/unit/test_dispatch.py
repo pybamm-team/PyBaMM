@@ -1,5 +1,3 @@
-"""Test dispatching mechanism in entry points."""
-
 import pybamm
 
 

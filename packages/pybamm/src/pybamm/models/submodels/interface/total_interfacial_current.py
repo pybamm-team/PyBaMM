@@ -1,4 +1,3 @@
-# Total interfacial current class, summing up contributions from all reactions
 import pybamm
 
 

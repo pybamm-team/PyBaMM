@@ -1,5 +1,3 @@
-# Unit tests for the spectral_volume spatial method operator class
-
 import numpy as np
 import pytest
 

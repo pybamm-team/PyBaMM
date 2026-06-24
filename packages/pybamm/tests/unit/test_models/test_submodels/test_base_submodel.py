@@ -1,5 +1,3 @@
-"""Test base submodel."""
-
 import pytest
 
 import pybamm

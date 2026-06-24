@@ -1,5 +1,3 @@
-"""Tests for the Dummy Solver class."""
-
 import numpy as np
 
 import pybamm

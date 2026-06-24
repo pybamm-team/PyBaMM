@@ -1,4 +1,3 @@
-# Tests for the Solution class
 import io
 import json
 import logging

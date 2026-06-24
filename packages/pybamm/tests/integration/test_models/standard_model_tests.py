@@ -1,5 +1,3 @@
-"""Standard basic tests for any model."""
-
 import tempfile
 
 import numpy as np

@@ -1,4 +1,3 @@
-# Class for particles with Fickian diffusion
 import pybamm
 
 from .base_particle import BaseParticle

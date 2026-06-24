@@ -1,5 +1,3 @@
-"""Tests for Chayambuka et al (2022) parameter set."""
-
 import pytest
 
 import pybamm

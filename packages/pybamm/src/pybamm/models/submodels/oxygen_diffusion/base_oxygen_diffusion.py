@@ -1,4 +1,3 @@
-# Base class for oxygen diffusion
 import pybamm
 
 

@@ -1,4 +1,3 @@
-# Lithium-ion base model class
 import pybamm
 
 

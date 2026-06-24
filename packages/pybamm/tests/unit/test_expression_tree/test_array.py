@@ -1,5 +1,3 @@
-"""Tests for the Array class."""
-
 import numpy as np
 import sympy
 

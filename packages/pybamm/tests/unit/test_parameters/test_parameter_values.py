@@ -1,5 +1,3 @@
-"""Tests for the Base Parameter Values class."""
-
 import os
 import re
 import warnings

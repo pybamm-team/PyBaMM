@@ -1,5 +1,3 @@
-"""Tests for the lithium-ion Newman-Tobias model."""
-
 import pytest
 
 import pybamm

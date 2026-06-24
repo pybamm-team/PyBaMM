@@ -1,4 +1,3 @@
-# Class for varying active material volume fraction
 import pybamm
 
 from .base_active_material import BaseModel

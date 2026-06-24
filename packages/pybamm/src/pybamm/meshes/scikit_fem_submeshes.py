@@ -1,4 +1,3 @@
-# scikit-fem meshes for use in PyBaMM
 import numpy as np
 
 import pybamm

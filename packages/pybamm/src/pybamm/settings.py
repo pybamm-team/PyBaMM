@@ -1,6 +1,3 @@
-# Settings class for PyBaMM
-
-
 class Settings:
     _debug_mode = False
     _simplify = True

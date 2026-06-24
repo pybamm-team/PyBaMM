@@ -1,5 +1,3 @@
-"""Tests for the base battery model class."""
-
 import io
 import os
 from contextlib import redirect_stdout

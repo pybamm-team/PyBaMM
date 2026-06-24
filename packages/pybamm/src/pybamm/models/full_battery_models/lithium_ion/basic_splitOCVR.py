@@ -1,4 +1,3 @@
-# Equivalent Circuit Model with split OCV
 import pybamm
 
 

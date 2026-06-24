@@ -1,4 +1,3 @@
-# Class for uniform current collectors
 import pybamm
 
 from .base_current_collector import BaseModel

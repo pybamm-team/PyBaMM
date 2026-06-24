@@ -1,4 +1,3 @@
-# Dummy solver class, for empty models
 import numpy as np
 
 import pybamm

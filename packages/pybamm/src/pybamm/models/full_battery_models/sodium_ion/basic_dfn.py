@@ -1,4 +1,3 @@
-# Basic Doyle-Fuller-Newman (DFN) Model
 import pybamm
 
 

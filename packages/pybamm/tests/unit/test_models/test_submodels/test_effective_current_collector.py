@@ -1,5 +1,3 @@
-"""Tests for the Effective Current Collector Resistance models."""
-
 import numpy as np
 import pytest
 

@@ -1,5 +1,3 @@
-"""Test for the Finite Volume Mesh class."""
-
 import numpy as np
 import pytest
 

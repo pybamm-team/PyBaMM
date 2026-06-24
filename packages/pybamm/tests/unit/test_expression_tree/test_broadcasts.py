@@ -1,5 +1,3 @@
-"""Tests for the Broadcast class."""
-
 import numpy as np
 import pytest
 

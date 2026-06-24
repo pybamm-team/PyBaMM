@@ -1,4 +1,3 @@
-# Spatial method for zero dimensional meshes
 import numpy as np
 
 import pybamm
