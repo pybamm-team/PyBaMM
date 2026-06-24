@@ -42,34 +42,27 @@ def _json_body(text: str, ensure_ascii: bool) -> str:
     return json.dumps(text, ensure_ascii=ensure_ascii)[1:-1]
 
 
+def _coalesce(value: object) -> str | None:
+    # nbformat stores an output string as either a list of lines or one string.
+    if isinstance(value, list):
+        return "".join(value)
+    return value if isinstance(value, str) else None
+
+
 def _iter_output_texts(output: dict) -> list[tuple[str, str]]:
     texts: list[tuple[str, str]] = []
 
-    text = output.get("text")
-    if isinstance(text, list):
-        texts.append(("text", "".join(text)))
-    elif isinstance(text, str):
-        texts.append(("text", text))
-
-    traceback = output.get("traceback")
-    if isinstance(traceback, list):
-        texts.append(("traceback", "".join(traceback)))
-    elif isinstance(traceback, str):
-        texts.append(("traceback", traceback))
-
-    evalue = output.get("evalue")
-    if isinstance(evalue, list):
-        texts.append(("evalue", "".join(evalue)))
-    elif isinstance(evalue, str):
-        texts.append(("evalue", evalue))
+    for field in ("text", "traceback", "evalue"):
+        joined = _coalesce(output.get(field))
+        if joined is not None:
+            texts.append((field, joined))
 
     data = output.get("data")
     if isinstance(data, dict):
         for key, value in data.items():
-            if isinstance(value, list):
-                texts.append((f"data:{key}", "".join(value)))
-            elif isinstance(value, str):
-                texts.append((f"data:{key}", value))
+            joined = _coalesce(value)
+            if joined is not None:
+                texts.append((f"data:{key}", joined))
 
     return texts
 
