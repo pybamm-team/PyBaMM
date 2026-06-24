@@ -9,6 +9,7 @@ ALLOWED_SUBSECTIONS = {
     "## Breaking changes",
     "## Deprecated",
     "## Features",
+    "## Optimizations",
     "## Bug fixes",
 }
 TRAILING_PR_LINK = re.compile(
