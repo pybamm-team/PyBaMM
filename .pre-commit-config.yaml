@@ -49,7 +49,7 @@ repos:
         types_or: [python, pyi, cmake, dockerfile, yaml]
       - id: check-notebook-output-leaks
         name: check notebook output leaks
-        entry: python scripts/check_notebook_output_leaks.py
+        entry: python scripts/check_notebook_output_leaks.py --fix
         language: python
         types: [jupyter]
       - id: check-changelog
