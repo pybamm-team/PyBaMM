@@ -1,4 +1,3 @@
-# Calculate the Jacobian of a symbol
 from __future__ import annotations
 
 import pybamm

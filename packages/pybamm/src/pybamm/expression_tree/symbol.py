@@ -1,4 +1,3 @@
-# Base Symbol Class for the expression tree
 from __future__ import annotations
 
 import numbers

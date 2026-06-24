@@ -1,4 +1,3 @@
-# Standard constants
 from scipy import constants
 
 from pybamm import Constant

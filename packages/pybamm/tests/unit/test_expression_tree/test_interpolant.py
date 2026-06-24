@@ -1,5 +1,3 @@
-"""Tests for the Function classes."""
-
 import re
 
 import casadi

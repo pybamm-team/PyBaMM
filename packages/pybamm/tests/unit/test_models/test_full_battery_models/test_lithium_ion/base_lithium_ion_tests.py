@@ -1,4 +1,3 @@
-# Base unit tests for the lithium-ion models
 import pytest
 
 import pybamm

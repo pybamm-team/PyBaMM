@@ -1,4 +1,3 @@
-# One-dimensional submeshes
 import itertools
 
 import numpy as np

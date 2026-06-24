@@ -1,5 +1,3 @@
-"""Tests for the base lead acid model class."""
-
 import os
 
 import pytest

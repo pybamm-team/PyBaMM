@@ -1,5 +1,3 @@
-"""Tests for the Thevenin equivalent circuit model."""
-
 import pytest
 
 import pybamm

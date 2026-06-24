@@ -1,5 +1,3 @@
-"""Test for the ecm split-OCV model."""
-
 import pybamm
 
 

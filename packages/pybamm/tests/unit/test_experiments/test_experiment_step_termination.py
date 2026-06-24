@@ -1,5 +1,3 @@
-"""Test the experiment step termination classes."""
-
 import copy
 import re
 from types import SimpleNamespace

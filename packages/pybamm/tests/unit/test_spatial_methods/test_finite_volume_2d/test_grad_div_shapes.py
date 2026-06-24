@@ -1,5 +1,3 @@
-"""Test for the gradient and divergence in Finite Volumes."""
-
 import numpy as np
 import pytest
 from tests import DummyDiscretisationClass

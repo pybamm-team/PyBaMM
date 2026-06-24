@@ -1,4 +1,3 @@
-# Class for lumped thermal submodel
 import pybamm
 
 from .base_thermal import BaseThermal

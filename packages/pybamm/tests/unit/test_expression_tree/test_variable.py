@@ -1,5 +1,3 @@
-"""Tests for the Variable class."""
-
 import numpy as np
 import pytest
 import sympy

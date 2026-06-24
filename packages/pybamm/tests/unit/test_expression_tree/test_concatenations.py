@@ -1,5 +1,3 @@
-"""Tests for the Concatenation class and subclasses."""
-
 import numpy as np
 import pytest
 import sympy

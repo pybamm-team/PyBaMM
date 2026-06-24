@@ -1,5 +1,3 @@
-"""Tests for the symbol unpacker."""
-
 import pybamm
 
 

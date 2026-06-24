@@ -1,5 +1,3 @@
-"""Test for the Symbol class."""
-
 import pickle  # nosec B403 - used in tests with trusted input
 import re
 

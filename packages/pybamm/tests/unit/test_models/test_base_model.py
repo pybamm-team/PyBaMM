@@ -1,5 +1,3 @@
-"""Tests for the base model class."""
-
 import os
 import platform
 import subprocess  # nosec

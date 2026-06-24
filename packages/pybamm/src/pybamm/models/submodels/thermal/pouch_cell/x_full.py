@@ -1,4 +1,3 @@
-# Class for one-dimensional (x-direction) thermal submodel
 import pybamm
 from pybamm.models.submodels.thermal.base_thermal import BaseThermal
 

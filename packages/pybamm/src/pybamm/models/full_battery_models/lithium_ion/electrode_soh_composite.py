@@ -1,4 +1,3 @@
-# A model to calculate electrode-specific SOH, adapted for composite electrodes
 from __future__ import annotations
 
 import warnings

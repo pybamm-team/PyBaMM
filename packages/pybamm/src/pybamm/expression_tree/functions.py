@@ -1,4 +1,3 @@
-# Function classes and methods
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence

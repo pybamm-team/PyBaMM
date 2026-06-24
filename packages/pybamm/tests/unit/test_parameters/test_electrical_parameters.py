@@ -1,5 +1,3 @@
-"""Tests for the electrical parameters."""
-
 import pytest
 
 import pybamm

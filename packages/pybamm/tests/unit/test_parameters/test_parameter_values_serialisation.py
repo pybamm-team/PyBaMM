@@ -1,5 +1,3 @@
-# Tests for ParameterValues JSON serialisation (to_json / from_json)
-
 import json
 
 import numpy as np

@@ -1,4 +1,3 @@
-# Standard thermal parameters
 import pybamm
 
 from .base_parameters import BaseParameters

@@ -1,4 +1,3 @@
-# Standard tests on the standard set of model outputs
 import numpy as np
 
 import pybamm

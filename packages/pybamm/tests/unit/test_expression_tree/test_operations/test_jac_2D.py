@@ -1,5 +1,3 @@
-"""Tests for the jacobian methods for two-dimensional objects."""
-
 import numpy as np
 import pytest
 from scipy.sparse import eye

@@ -1,5 +1,3 @@
-"""Tests for current input functions."""
-
 import numbers
 
 import numpy as np

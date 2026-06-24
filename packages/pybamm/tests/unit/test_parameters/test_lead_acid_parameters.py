@@ -1,5 +1,3 @@
-"""Test for the standard lead acid parameters."""
-
 import pytest
 
 import pybamm

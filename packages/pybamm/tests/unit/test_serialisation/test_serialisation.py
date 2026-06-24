@@ -1,5 +1,3 @@
-"""Tests for the serialisation class."""
-
 import json
 import os
 import re

@@ -1,5 +1,3 @@
-"""Tests for the Parameter class."""
-
 import pytest
 import sympy
 

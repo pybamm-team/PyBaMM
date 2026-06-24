@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# Solution class
 import json
 import numbers
 import pickle

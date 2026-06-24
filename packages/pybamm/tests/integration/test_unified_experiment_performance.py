@@ -1,4 +1,3 @@
-# Performance/scaling guards: compile/runtime cost independent of experiment length; wall-clock ratios warn-only (env-dependent)
 import time
 import warnings
 

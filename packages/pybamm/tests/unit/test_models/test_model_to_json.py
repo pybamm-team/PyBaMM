@@ -1,5 +1,3 @@
-"""Tests for BaseModel.to_json and BaseModel.from_json round-trip."""
-
 import json
 
 import numpy as np

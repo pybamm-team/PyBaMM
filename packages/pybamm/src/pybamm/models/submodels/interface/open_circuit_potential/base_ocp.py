@@ -1,4 +1,3 @@
-# Base class for open-circuit potential
 import pybamm
 from pybamm.models.submodels.interface.base_interface import BaseInterface
 

@@ -1,4 +1,3 @@
-# Tests for the Unary Operator classes
 import numpy as np
 import pytest
 from hypothesis import given

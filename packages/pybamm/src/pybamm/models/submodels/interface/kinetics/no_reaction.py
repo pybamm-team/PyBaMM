@@ -1,5 +1,3 @@
-# Bulter volmer class
-
 import pybamm
 from pybamm.models.submodels.interface.base_interface import BaseInterface
 

@@ -1,4 +1,3 @@
-# Prettify print_name
 PRINT_NAME_OVERRIDES = {
     "current_with_time": "I",
     "current_density_with_time": r"i_{\mathrm{cell}}",

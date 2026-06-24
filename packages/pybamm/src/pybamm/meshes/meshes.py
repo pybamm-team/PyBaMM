@@ -1,4 +1,3 @@
-# Native PyBaMM Meshes
 import numbers
 import warnings
 

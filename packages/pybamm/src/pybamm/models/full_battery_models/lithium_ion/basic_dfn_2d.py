@@ -1,4 +1,3 @@
-# Basic Doyle-Fuller-Newman (DFN) Model
 import pybamm
 from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
     BaseModel,

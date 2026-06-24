@@ -1,4 +1,3 @@
-# SymPy overrides
 import re
 
 from sympy.printing.latex import LatexPrinter

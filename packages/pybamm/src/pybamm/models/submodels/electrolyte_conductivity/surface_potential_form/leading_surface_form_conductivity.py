@@ -1,4 +1,3 @@
-# Class for leading-order surface form electrolyte conductivity employing stefan-maxwell
 import pybamm
 from pybamm.models.submodels.electrolyte_conductivity.leading_order_conductivity import (
     LeadingOrder,

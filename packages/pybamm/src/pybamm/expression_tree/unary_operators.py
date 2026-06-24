@@ -1,4 +1,3 @@
-# Unary operator classes and methods
 from __future__ import annotations
 
 import casadi

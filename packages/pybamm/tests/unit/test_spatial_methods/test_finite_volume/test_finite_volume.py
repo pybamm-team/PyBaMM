@@ -1,5 +1,3 @@
-"""Tests for the Finite Volume Method."""
-
 import numpy as np
 import pytest
 from scipy.sparse import eye, kron

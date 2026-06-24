@@ -1,5 +1,3 @@
-"""Test for the Simplify class."""
-
 import casadi
 import numpy as np
 import pytest

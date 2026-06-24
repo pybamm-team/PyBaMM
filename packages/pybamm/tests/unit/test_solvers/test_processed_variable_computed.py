@@ -1,5 +1,3 @@
-"""Tests for the Processed Variable Computed class (container for IDAKLU-calculated variables)."""
-
 import casadi
 import numpy as np
 import pytest

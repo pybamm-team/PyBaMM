@@ -1,4 +1,3 @@
-# Interface for discretisation
 import itertools
 from collections import OrderedDict, defaultdict
 

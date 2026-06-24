@@ -1,4 +1,3 @@
-# Base class for electrode submodels
 import pybamm
 
 

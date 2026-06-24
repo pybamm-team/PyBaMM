@@ -1,4 +1,3 @@
-# Two-dimensional submeshes
 import numpy as np
 
 import pybamm

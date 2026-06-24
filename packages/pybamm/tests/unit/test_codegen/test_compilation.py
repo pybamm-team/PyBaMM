@@ -1,5 +1,3 @@
-"""Tests for ahead-of-time (AOT) compilation of casadi functions."""
-
 import logging
 import os
 import shutil

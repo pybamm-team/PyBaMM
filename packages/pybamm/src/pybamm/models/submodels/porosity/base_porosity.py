@@ -1,4 +1,3 @@
-# Base class for porosity
 import pybamm
 
 

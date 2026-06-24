@@ -1,4 +1,3 @@
-# Class for SEI growth
 import pybamm
 
 from .base_sei import BaseModel

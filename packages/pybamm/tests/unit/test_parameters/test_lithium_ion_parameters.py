@@ -1,5 +1,3 @@
-"""Tests lithium-ion parameters load and give expected values."""
-
 import numpy as np
 import pytest
 

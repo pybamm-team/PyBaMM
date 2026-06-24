@@ -1,5 +1,3 @@
-"""Base integration tests for lithium-ion half-cell battery models."""
-
 import numpy as np
 
 import pybamm

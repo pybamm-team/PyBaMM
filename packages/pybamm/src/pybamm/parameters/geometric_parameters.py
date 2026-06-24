@@ -1,4 +1,3 @@
-# Geometric Parameters
 import pybamm
 
 from .base_parameters import BaseParameters

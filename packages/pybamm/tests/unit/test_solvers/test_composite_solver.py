@@ -1,5 +1,3 @@
-"""Tests for the CompositeSolver class."""
-
 import numpy as np
 import pytest
 

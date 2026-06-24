@@ -1,5 +1,3 @@
-"""Tests Event class."""
-
 import numpy as np
 
 import pybamm

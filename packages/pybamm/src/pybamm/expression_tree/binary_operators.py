@@ -1,4 +1,3 @@
-# Binary operator classes
 from __future__ import annotations
 
 import functools

@@ -1,5 +1,3 @@
-# Standard parameters for lead-acid battery models
-
 import pybamm
 
 from .base_parameters import BaseParameters, NullParameters

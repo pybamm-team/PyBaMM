@@ -1,4 +1,3 @@
-# Class for oxygen diffusion
 import pybamm
 
 from .base_oxygen_diffusion import BaseModel

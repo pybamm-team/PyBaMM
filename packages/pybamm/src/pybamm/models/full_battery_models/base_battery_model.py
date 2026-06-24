@@ -1,5 +1,3 @@
-# Base battery model class
-
 from functools import cached_property
 
 import pybamm
