@@ -113,6 +113,7 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
     # For property based testing
     "hypothesis",
+    "pytest-benchmark>=5.2.3",
 ]
 
 [project.entry-points."pybamm_parameter_sets"]
