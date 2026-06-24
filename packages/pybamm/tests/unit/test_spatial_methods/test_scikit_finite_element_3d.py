@@ -448,9 +448,7 @@ class TestScikitFiniteElement3D:
         np.testing.assert_array_equal(z_disc.evaluate(), z_actual)
 
     def test_pure_neumann_poisson_3d(self):
-        # Solves grad^2 u = 1, with du/dz = Lz at z=Lz, and du/dn=0 elsewhere.
-        # The solution is constrained to have zero average value.
-        # Exact solution for this case: u(z) = z^2 / 2 - Lz^2 / 6
+        # Solves grad^2 u = 1, du/dz=Lz at z=Lz, du/dn=0 elsewhere; exact: u(z) = z^2/2 - Lz^2/6
 
         u = pybamm.Variable("u", domain="current collector")
         c = pybamm.Variable("c")

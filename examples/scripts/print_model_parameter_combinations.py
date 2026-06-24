@@ -1,7 +1,5 @@
-#
-# Loop through all combinations of models and parameters and print whether that
-# model can be parameterized by those parameters
-#
+"""Loop through all model/parameter combinations and print compatibility."""
+
 import pybamm
 
 all_options = pybamm.BatteryModelOptions({}).possible_options

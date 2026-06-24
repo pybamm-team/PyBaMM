@@ -189,9 +189,7 @@ def _binary_branch(
     child_strategy: st.SearchStrategy[pybamm.Symbol],
     cls: type[pybamm.BinaryOperator],
 ) -> st.SearchStrategy[pybamm.BinaryOperator]:
-    # Pair an arbitrary left child with a domain-free right leaf: a domain-free
-    # operand is compatible with any other (see Symbol.get_children_domains), so
-    # every pair constructs cleanly without filtering.
+    # Domain-free right leaf is compatible with any left child (Symbol.get_children_domains).
     return st.builds(cls, child_strategy, _domain_free_leaves())
 
 
@@ -218,9 +216,7 @@ _NONEMPTY_DOMAINS = st.sampled_from(
 def _full_broadcast_branch(
     child_strategy: st.SearchStrategy[pybamm.Symbol],
 ) -> st.SearchStrategy[pybamm.FullBroadcast]:
-    # FullBroadcast rejects children on 'current collector', which the recursive
-    # pool can produce (e.g. Gradient over a cc Variable); mirror the
-    # constructor's check with a narrow filter.
+    # Filter out 'current collector' domain (FullBroadcast rejects it).
     return st.builds(
         pybamm.FullBroadcast,
         child_strategy.filter(lambda c: c.domain != ["current collector"]),
@@ -290,9 +286,7 @@ def _secondary_broadcast_branch(
     _child_strategy: st.SearchStrategy[pybamm.Symbol],
 ) -> st.SearchStrategy[pybamm.SecondaryBroadcast]:
     """SecondaryBroadcast: child in 'negative particle' → broadcasts to electrode."""
-    # SecondaryBroadcast requires a non-empty child domain and has strict
-    # rules about which (child_domain, broadcast_domain) pairs are valid.
-    # Simplest safe case: particle → electrode.
+    # Simplest safe case: particle → electrode with non-empty child domain.
     return st.builds(
         pybamm.SecondaryBroadcast,
         _neg_particle_leaves(),
@@ -304,9 +298,7 @@ def _conditional_branch(
     _child_strategy: st.SearchStrategy[pybamm.Symbol],
 ) -> st.SearchStrategy[pybamm.Conditional]:
     """Conditional(selector, branch1, branch2) — selector must be 0-D scalar."""
-    # Always use a plain Scalar for the selector: Variable nodes may have
-    # non-empty domains, giving them a non-() shape_for_testing which causes
-    # Conditional.__init__ to raise ValueError("selector must evaluate to a scalar").
+    # Plain Scalar for selector avoids Variable domain shape issues.
     return st.builds(
         pybamm.Conditional,
         scalar_strategy(),
@@ -1002,15 +994,9 @@ _STRATEGIES.update(
 )
 
 
-# Concrete Symbol subclasses excluded from the round-trip property test, split
-# by why they are excluded. Both sets feed ``_EXEMPT`` (consumed by the
-# coverage meta-test); the split keeps permanent exemptions apart from classes
-# with a known serialiser bug.
+# Concrete Symbol subclasses excluded from round-trip tests, split by exclusion reason.
 
-# Permanently not expected to round-trip via convert_symbol_to_json /
-# convert_symbol_from_json: abstract-in-spirit bases (concrete, but their usable
-# subclasses are covered), functions that raise by design, and classes that
-# cannot be constructed without a mesh. These stay here for good.
+# Permanently not round-trippable: abstract bases, functions that raise by design, and mesh-required classes.
 _NOT_ROUND_TRIPPABLE: frozenset[type[pybamm.Symbol]] = frozenset(
     {
         pybamm.UnaryOperator,  # abstract base; all usable subclasses are covered
@@ -1031,10 +1017,7 @@ _NOT_ROUND_TRIPPABLE: frozenset[type[pybamm.Symbol]] = frozenset(
     }
 )
 
-# Concrete classes known not to round-trip, tracked so the coverage meta-test
-# tolerates them. Empty: every concrete Symbol subclass has a strategy in
-# _STRATEGIES and round-trips losslessly (#5548). A class that regresses here
-# should be fixed, not re-added.
+# Concrete classes known not to round-trip (empty: all concrete subclasses round-trip #5548).
 _KNOWN_FAILING: frozenset[type[pybamm.Symbol]] = frozenset()
 
 # Union consumed by the coverage meta-test: every concrete Symbol subclass must

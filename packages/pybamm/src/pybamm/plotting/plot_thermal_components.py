@@ -1,7 +1,3 @@
-#
-# Method for plotting voltage components
-#
-
 from scipy.integrate import cumulative_trapezoid
 
 from pybamm.simulation import BaseSimulation

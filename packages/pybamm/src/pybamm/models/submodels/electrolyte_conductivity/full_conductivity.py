@@ -1,6 +1,3 @@
-#
-# Class for electrolyte conductivity employing stefan-maxwell
-#
 import pybamm
 
 from .base_electrolyte_conductivity import BaseElectrolyteConductivity

@@ -1,6 +1,5 @@
-#
-# Compare models for diffusion within the electrode particles
-#
+"""Compare models for diffusion within the electrode particles."""
+
 import pybamm
 
 # load models

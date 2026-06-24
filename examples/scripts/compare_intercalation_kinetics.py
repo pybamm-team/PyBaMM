@@ -1,6 +1,5 @@
-#
-# Compare different models for intercalation kinetics.
-#
+"""Compare different models for intercalation kinetics."""
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

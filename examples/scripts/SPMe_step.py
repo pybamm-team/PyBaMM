@@ -1,6 +1,5 @@
-#
-# Example to compare solving for all times against stepping individually
-#
+"""Compare solving for all times against stepping individually."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 

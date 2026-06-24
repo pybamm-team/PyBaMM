@@ -333,9 +333,7 @@ class BaseIntegrationTestLithiumIon:
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_psd_hysteresis_thermal(self):
-        # Regression test: hysteresis OCP + particle size distribution + a
-        # non-isothermal thermal submodel previously raised a DomainError when
-        # the thermal submodel built the hysteresis heating term.
+        # Regression: hysteresis OCP + PSD + thermal submodel previously raised DomainError in heating term
         options = {
             "open-circuit potential": ("one-state hysteresis", "single"),
             "particle size": "distribution",

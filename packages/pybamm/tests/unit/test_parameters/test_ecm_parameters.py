@@ -1,7 +1,3 @@
-#
-# Tests for the equivalent circuit parameters
-#
-
 import pybamm
 
 values = {

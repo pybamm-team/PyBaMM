@@ -1,6 +1,3 @@
-#
-# Tests for the basic lead acid models
-#
 import pybamm
 
 

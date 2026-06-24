@@ -1,6 +1,3 @@
-#
-# Test for the operator class
-#
 import numpy as np
 
 import pybamm
@@ -134,9 +131,7 @@ class TestSpectralVolumeConvergence:
         # Get errors
         ns = 100 * 2 ** np.arange(5)
         errs = {n: get_error(int(n)) for n in ns}
-        # expect linear convergence at internal points
-        # (the higher-order convergence is in the integral means,
-        #  not in the edge values)
+        # Expect linear convergence at internal points (higher-order in integral means)
         errs_internal = np.array([np.linalg.norm(errs[n][1:-1], np.inf) for n in ns])
         rates = np.log2(errs_internal[:-1] / errs_internal[1:])
         np.testing.assert_array_less(0.99 * np.ones_like(rates), rates)

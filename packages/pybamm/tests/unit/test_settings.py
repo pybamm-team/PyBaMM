@@ -1,7 +1,3 @@
-#
-# Tests the settings class.
-#
-
 import pytest
 
 import pybamm

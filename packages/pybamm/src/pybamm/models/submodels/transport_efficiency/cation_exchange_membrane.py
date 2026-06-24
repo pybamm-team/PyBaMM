@@ -1,6 +1,3 @@
-#
-# Class for cation-exchange membrane transport_efficiency
-#
 import pybamm
 
 from .base_transport_efficiency import BaseModel

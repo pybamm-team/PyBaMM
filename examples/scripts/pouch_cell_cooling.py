@@ -1,6 +1,5 @@
-#
-# Example showing how to customize thermal boundary conditions in a pouch cell model
-#
+"""Example showing how to customize thermal boundary conditions in a pouch cell model."""
+
 import numpy as np
 
 import pybamm
@@ -12,9 +11,7 @@ model = pybamm.lithium_ion.SPM(
     {"current collector": "potential pair", "dimensionality": 2, "thermal": "x-lumped"}
 )
 
-# update parameter values, to use a spatially-varying ambient temperature and a
-# spatially-varying edge heat transfer coefficient that is zero everywhere except
-# at the right edge of the cell
+# Use spatially-varying ambient temperature and edge heat transfer (zero except right edge)
 param = model.param
 L_y = param.L_y
 L_z = param.L_z

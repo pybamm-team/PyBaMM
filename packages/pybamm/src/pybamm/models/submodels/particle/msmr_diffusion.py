@@ -1,6 +1,3 @@
-#
-# Class for particles using the MSMR model
-#
 import pybamm
 
 from .base_particle import BaseParticle
@@ -45,11 +42,8 @@ class MSMRDiffusion(BaseParticle):
 
         variables = {}
 
-        # Define "particle" potential variables. In the MSMR model, we solve for the
-        # potential as a function of position within the electrode and particles (and
-        # particle-size distribution, if applicable). The potential is then used to
-        # calculate the stoichiometry, which is used to calculate the particle
-        # concentration.
+        # MSMR model: solve for potential as function of position within electrode
+        # and particles, then use it to calculate stoichiometry and concentration.
         if self.size_distribution is False:
             if self.x_average is False:
                 U = pybamm.Variable(
@@ -121,10 +115,8 @@ class MSMRDiffusion(BaseParticle):
                 self._get_standard_potential_distribution_variables(U_distribution)
             )
 
-            # Standard size-averaged variables. Average potentials using
-            # the volume-weighted distribution since they are volume-based
-            # quantities. Necessary for output variables "Total lithium in
-            # negative electrode [mol]", etc, to be calculated correctly
+            # Standard size-averaged variables: average potentials using
+            # volume-weighted distribution (volume-based quantities).
             U = pybamm.Integral(f_v_dist * U_distribution, R)
             if self.x_average is True:
                 U = pybamm.SecondaryBroadcast(U, [f"{domain} electrode"])

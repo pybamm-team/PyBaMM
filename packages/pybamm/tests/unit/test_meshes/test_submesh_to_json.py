@@ -1,8 +1,3 @@
-#
-# Tests for SubMesh and MeshGenerator to_config / from_config
-#
-
-
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 

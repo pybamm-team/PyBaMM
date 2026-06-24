@@ -1,6 +1,3 @@
-#
-# Class for reaction driven porosity changes as a multiple of SEI/plating thicknesses
-#
 import pybamm
 
 from .base_porosity import BaseModel
@@ -71,10 +68,8 @@ class ReactionDriven(BaseModel):
                         + L_sei_cr_k * (roughness_k - 1)
                     )
 
-                    # This assumes a thin film so curvature effects are neglected.
-                    # They could be included (e.g. for a sphere it is
-                    # a_n * (L_tot + L_tot ** 2 / R_n + L_tot ** # 3 / (3 * R_n ** 2)))
-                    # but it is not clear if it is relevant or not.
+                    # Thin film assumption neglects curvature effects (e.g. sphere:
+                    # a_n*(L_tot + L_tot^2/R_n + ...)); relevance unclear
                     delta_eps_k += -a_k * L_tot
 
             domain_param = self.param.domain_params[domain.split()[0]]

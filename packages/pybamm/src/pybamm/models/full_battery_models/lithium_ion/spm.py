@@ -1,6 +1,3 @@
-#
-# Single Particle Model (SPM)
-#
 import pybamm
 
 from .base_lithium_ion_model import BaseModel
@@ -25,9 +22,8 @@ class SPM(BaseModel):
         # this is set by "x-average side reactions"
         self.x_average = True
 
-        # Use 'algebraic' surface form when the explicit-current closure is
-        # unavailable: non-default kinetics have no inverse form, and
-        # particle-size distributions require a surface formulation.
+        # Use 'algebraic' surface form when explicit-current closure unavailable:
+        # non-default kinetics have no inverse form, particle-size distributions require it
         options = options or {}
         if options.get("surface form") is None and (
             options.get("intercalation kinetics") is not None

@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-#
-# Solution class
-#
 import json
 import numbers
 import pickle
@@ -326,9 +323,7 @@ class Solution(SolutionBase):
 
         self._variables = {}
 
-        # Sub-solutions concatenated into this one. Empty list means "just
-        # self"; storing self here would create a refcount cycle that the
-        # cyclic GC would have to reap, delaying release of large solutions.
+        # Sub-solutions (empty = just self; avoids refcount cycle with cyclic GC)
         self._sub_solutions = []
 
         # initialize empty cycles
@@ -467,9 +462,7 @@ class Solution(SolutionBase):
             self._sensitivities[key] = np.vstack(sens)
 
     def check_ys_are_not_too_large(self):
-        # Only check last one so that it doesn't take too long
-        # We only care about the cases where y is growing too large without any
-        # restraint, so if y gets large in the middle then comes back down that is ok
+        # Check only last timestep to avoid O(n) cost; mid-solution spikes that recover are fine
         t, y, model = self.all_ts[-1], self.all_ys[-1], self.all_models[-1]
         t = t[-1]
         y = y[:, -1]
@@ -833,10 +826,7 @@ class Solution(SolutionBase):
 
         opts = {opt: self.options[opt] for opt in self._CASADI_FUNCTION_OPTIONS}
 
-        # Casadi has a bug where it does not correctly handle arrays with
-        # zeros padded at the beginning or end. To avoid this, we add and
-        # subtract the same number to the variable to reinforce the
-        # variable bounds. This does not affect the answer
+        # Add/subtract epsilon to work around CasADi bug with zero-padded arrays
         epsilon = 1.0
         var_sym = (var_sym - epsilon) + epsilon
 
@@ -847,9 +837,7 @@ class Solution(SolutionBase):
             opts,
         )
 
-        # Skip the SX expansion on the aot path: it only exists to give the
-        # vm interpreter a faster bytecode form, and compiled code doesn't
-        # need it.
+        # Skip SX expansion on AOT path (compiled code doesn't need vm bytecode optimization)
         if self._options["compile"]:
             return aot_compile(var_casadi)
 
@@ -1011,11 +999,7 @@ class Solution(SolutionBase):
                 raise ValueError("matlab format must be written to a file")
             # Check all the variable names only contain a-z, A-Z or _ or numbers
             for name in data.keys():
-                # Check the string only contains the following ASCII:
-                # a-z (97-122)
-                # A-Z (65-90)
-                # _ (95)
-                # 0-9 (48-57) but not in the first position
+                # MATLAB names: a-z, A-Z, _, 0-9 (not first position)
                 for i, s in enumerate(name):
                     if not (
                         97 <= ord(s) <= 122
@@ -1115,10 +1099,7 @@ class Solution(SolutionBase):
         all_yps = self.all_yps + yps if hermite_interpolation else None
         all_t_evals = self._all_t_evals + tev if t_evals_present else None
 
-        # Validate only the newly-joined region (self's last segment + other's
-        # contribution), not the whole accumulation. self's earlier segments
-        # were already validated when self was built, so this stays O(size of
-        # other) per add, i.e. O(N) total instead of O(N^2).
+        # Validate only the newly-joined region (self's last + other's contribution)
         n = len(self.all_ts)
         self._ensure_sorted_t([self.all_ts[-1], *all_ts[n:]], "all_ts")
         if all_t_evals is not None:
@@ -1127,8 +1108,7 @@ class Solution(SolutionBase):
                 all_t_evals=[self._all_t_evals[-1], *all_t_evals[n:]],
             )
 
-        # sensitivities are a dict of {parameter: [sensitivities]}; start from a
-        # fresh copy of self's lists so the in-place merge never aliases them
+        # Fresh copy of sensitivity lists to avoid aliasing during in-place merge
         all_sensitivities = {
             key: list(value) for key, value in self._all_sensitivities.items()
         }
@@ -1201,12 +1181,7 @@ class Solution(SolutionBase):
         if len(sols) == 1:
             return sols[0].copy()
 
-        # Decide once which segments contribute. __add__ short-circuits a
-        # single-sample segment whose only sample duplicates the running
-        # boundary to a copy, so it contributes nothing to the merge: skip it
-        # here and derive every quantity below from the kept segments only.
-        # `repeated` records whether a kept segment's leading sample duplicates
-        # the previous boundary (dropped once on concatenation).
+        # Match __add__ logic: skip single-sample segments duplicating the running boundary
         kept = []
         prev_last_t = None
         for s in sols:
@@ -1266,9 +1241,7 @@ class Solution(SolutionBase):
             _validate_time_structure=True,
         )
 
-        # last kept segment, not sols[-1]: __add__'s single-sample short-circuit
-        # keeps the running closest_event_idx, so a trailing duplicate must not
-        # overwrite it.
+        # Use last kept segment (not sols[-1]) to preserve closest_event_idx per __add__ short-circuit
         new_sol.closest_event_idx = segments[-1].closest_event_idx
         # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
         new_sol._sub_solutions = sub_sols
@@ -1278,7 +1251,7 @@ class Solution(SolutionBase):
             if all(v is not None for v in vals):
                 setattr(new_sol, attr, sum(vals))
 
-        # output_variables path: reproduce __add__'s pairwise left-fold.
+        # Reproduce __add__'s pairwise left-fold for output_variables
         if any(s.variables_returned for s in segments):
             keys = set().union(*[s._variables.keys() for s in segments])
             merged = {}

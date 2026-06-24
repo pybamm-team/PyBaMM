@@ -1,7 +1,3 @@
-#
-# Tests particle size distribution parameters are loaded into a parameter set
-# and give expected values
-#
 import numpy as np
 import pytest
 

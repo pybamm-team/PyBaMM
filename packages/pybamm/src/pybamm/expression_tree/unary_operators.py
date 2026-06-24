@@ -1,6 +1,3 @@
-#
-# Unary operator classes and methods
-#
 from __future__ import annotations
 
 import casadi
@@ -410,10 +407,8 @@ class Index(UnaryOperator):
     def _unary_jac(self, child_jac):
         """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
 
-        # if child.jac returns a matrix of zeros, this subsequently gives a bug
-        # when trying to simplify the node Index(child_jac). Instead, search the
-        # tree for StateVectors and return a matrix of zeros of the correct size
-        # if none are found.
+        # child.jac returning zeros causes bugs in Index(child_jac) simplification;
+        # search for StateVectors and return a zero matrix if none found.
         if not self.has_symbol_of_classes(pybamm.StateVector):
             jac = csr_matrix((1, child_jac.shape[1]))
             return pybamm.Matrix(jac)
@@ -1163,9 +1158,7 @@ class BoundaryOperator(SpatialOperator):
                     f"'current collector', but {child} has domain {child.domain[0]}"
                 )
         self.side = side
-        # boundary value of a child takes the primary domain from secondary domain
-        # of the child
-        # tertiary auxiliary domain shift down to secondary, quarternary to tertiary
+        # Child primary domain from secondary; tertiary/quarternary shift down.
         domains = {
             "primary": child.domains["secondary"],
             "secondary": child.domains["tertiary"],
@@ -1346,9 +1339,7 @@ class EvaluateAt(SpatialOperator):
     def __init__(self, child, position):
         self.position = position
 
-        # "evaluate at" of a child takes the primary domain from secondary domain
-        # of the child
-        # tertiary auxiliary domain shift down to secondary, quarternary to tertiary
+        # Child primary domain from secondary; tertiary/quarternary shift down.
         domains = {
             "primary": child.domains["secondary"],
             "secondary": child.domains["tertiary"],
@@ -1549,9 +1540,7 @@ class NotConstant(UnaryOperator):
         return False
 
 
-#
 # Methods to call Gradient, Divergence, Laplacian and GradientSquared
-#
 
 
 def grad(symbol):
@@ -1578,9 +1567,8 @@ def grad(symbol):
             new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcastToEdges(new_child, symbol.domain)
     elif isinstance(symbol, pybamm.SecondaryBroadcast):
-        # Take gradient of the child
-        # then broadcast back to the originalsymbol's secondary domain
-        # We can do this because gradient only acts on the primary domain
+        # Gradient of child (acts on primary domain only), then broadcast to
+        # original symbol's secondary domain.
         return pybamm.SecondaryBroadcast(grad(symbol.child), symbol.secondary_domain)
     elif isinstance(symbol, pybamm.FullBroadcast):
         return pybamm.FullBroadcastToEdges(0, broadcast_domains=symbol.domains)
@@ -1674,9 +1662,7 @@ def downwind(symbol):
     return Downwind(symbol)
 
 
-#
 # Method to call SurfaceValue
-#
 
 
 def surf(symbol):

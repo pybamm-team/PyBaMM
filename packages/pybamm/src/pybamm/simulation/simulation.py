@@ -269,15 +269,7 @@ class Simulation(BaseSimulation):
     def _set_up_unified_experiment_model(self, parameter_values):
         self._experiment_uses_unified_model = True
 
-        # Branch the switching Conditionals over unique steps, not instances: one
-        # branch per instance is O(n_steps) per timestep -> O(n_steps**2) overall.
-        # A step is "collapsible" if its control target is a constant (a fixed current,
-        # voltage, power, ...): such steps are solved with the target supplied as a
-        # shared per-step input, so steps differing only in their value share a single
-        # branch. This keeps the branch count -- and hence compile and runtime cost --
-        # tied to the number of structurally distinct control laws, not to the number of
-        # distinct values or cycles. Drive cycles and solution-dependent custom steps are
-        # not collapsible and keep their own branch.
+        # Branch Conditionals by unique structurally distinct control laws (not values/cycles) to keep O(n_laws) cost
         value_input = pybamm.InputParameter(self._STEP_VALUE_INPUT)
 
         def is_collapsible(step):
@@ -323,9 +315,7 @@ class Simulation(BaseSimulation):
         # ambient temperature from step-level inputs instead of baking in one value.
         new_parameter_values[self._AMBIENT_TEMPERATURE_INPUT] = "[input]"
 
-        # One conditional control residual selects the active step's control law via the
-        # experiment step index input; collapsible steps read their target from the
-        # shared per-step value input instead of baking it.
+        # One Conditional residual selects active step's control law; collapsible steps read target from shared per-step input
         step_control_builders = [control_builder(step) for step in unique_steps]
         if self._experiment_includes_padding_rest:
             padding_rest_step = pybamm.step.Rest(duration=1)
@@ -343,11 +333,7 @@ class Simulation(BaseSimulation):
             submodel,
             new_parameter_values,
         )
-        # The control submodel owns the one Conditional residual (the switch over the
-        # per-step control laws). Record its variable so the solver builds that row's
-        # jacobian sparsely instead of via CasADi's dense Switch -- see
-        # BaseModel.build_casadi_jacobian. The attribute rides this same model object
-        # (in-place parameter processing and discretisation) through to solver.process.
+        # Record Conditional residual variables for sparse jacobian; attribute rides model through to solver.process
         new_model.switching_control_variables = {var.name for var in submodel.algebraic}
 
         # Combine each step's local termination expression into one experiment event,
@@ -432,10 +418,7 @@ class Simulation(BaseSimulation):
     def _evaluate_step_termination_expression_from_solution(
         self, term, step_solution, step
     ):
-        # Some custom terminations reference symbols that are not directly evaluable
-        # from the raw event expression, but are available as processed solution
-        # variables. Rebuild a minimal variables dict from the solved step state and
-        # re-run the termination expression against that view of the solution.
+        # Rebuild minimal variables dict from step state to evaluate custom termination expressions
         if step_solution.t_event is not None:
             t = float(np.asarray(step_solution.t_event).reshape(-1)[0])
         else:
@@ -480,9 +463,7 @@ class Simulation(BaseSimulation):
             try:
                 value = event.expression.evaluate(t=t, y=y, inputs=inputs)
             except NotImplementedError:  # pragma: no cover
-                # If the raw expression still contains unevaluated symbols, fall back to
-                # the processed variables on the solved step. This is slower, but it works
-                # for custom terminations built from model outputs.
+                # Fall back to processed variables for unevaluated custom termination expressions
                 value = self._evaluate_step_termination_expression_from_solution(
                     term, step_solution, step
                 )
@@ -558,12 +539,7 @@ class Simulation(BaseSimulation):
                     )
                     break
 
-        # Set the initial temperature to be the temperature of the first step
-        # We can set this globally for all steps since any subsequent steps will either
-        # start at the temperature at the end of the previous step (if non-isothermal
-        # model), or will use the "Ambient temperature" input (if isothermal model).
-        # In either case, the initial temperature is not used for any steps except
-        # the first.
+        # Initial temperature only used for first step; subsequent steps use previous end temp or ambient input
         init_temp = self.experiment.steps[0].temperature
         if init_temp is not None:
             parameter_values[self._INITIAL_TEMPERATURE_INPUT] = init_temp
@@ -1117,11 +1093,7 @@ class Simulation(BaseSimulation):
 
                 steps.append(step_solution)
 
-                # If there haven't been any successful steps yet in this cycle, then
-                # carry the solution over from the previous cycle (but
-                # `step_solution` should still be an EmptySolution so that in the
-                # list of returned step solutions we can see which steps were
-                # skipped)
+                # Carry previous cycle's solution when no steps succeeded yet (EmptySolution marks skipped steps)
                 if (
                     cycle_solution is None
                     and isinstance(step_solution, pybamm.EmptySolution)

@@ -1,7 +1,3 @@
-#
-# Base battery model class
-#
-
 from functools import cached_property
 
 import pybamm
@@ -506,10 +502,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
         SEI_cr_option = extra_options.get("SEI on cracks", "false")
         plating_option = extra_options.get("lithium plating", "none")
-        # For the full cell model, if "SEI", "SEI on cracks" and "lithium plating"
-        # options are not provided as tuples, change them to tuples with "none" or
-        # "false" on the positive electrode. To use these options on the positive
-        # electrode of a full cell, the tuple must be provided by the user
+        # Full cell: wrap non-tuple SEI/plating options as ("X", "none/false") for positive electrode
         if working_electrode_option == "both":
             if not (isinstance(SEI_option, tuple)) and SEI_option != "none":
                 extra_options["SEI"] = (SEI_option, "none")
@@ -518,37 +511,28 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             if not (isinstance(plating_option, tuple)) and plating_option != "none":
                 extra_options["lithium plating"] = (plating_option, "none")
 
-        # Change the default for cell geometry based on the current collector
-        # dimensionality
-        # return "none" if option not given
+        # Set pouch geometry default for 1D/2D current collectors
         dimensionality_option = extra_options.get("dimensionality", "none")
         if dimensionality_option in [1, 2]:
             default_options["cell geometry"] = "pouch"
-        # The "cell geometry" option will still be overridden by extra_options if
-        # provided
+        # extra_options can still override cell geometry
 
         # Change the default for cell geometry based on the thermal model
         # return "none" if option not given
         thermal_option = extra_options.get("thermal", "none")
         if thermal_option == "x-full":
             default_options["cell geometry"] = "pouch"
-        # The "cell geometry" option will still be overridden by extra_options if
-        # provided
+        # extra_options can still override cell geometry
 
-        # Change the default for SEI film resistance based on which SEI option is
-        # provided
-        # return "none" if option not given
+        # Set SEI film resistance default based on SEI option
         sei_option = extra_options.get("SEI", "none")
         if sei_option == "none":
             default_options["SEI film resistance"] = "none"
         else:
             default_options["SEI film resistance"] = "distributed"
-        # The "SEI film resistance" option will still be overridden by extra_options if
-        # provided
+        # extra_options can still override SEI film resistance
 
-        # Change the default for particle mechanics based on which half-cell,
-        # SEI on cracks and LAM options are provided
-        # return "false", "false" and "none" respectively if options not given
+        # Default particle mechanics based on SEI cracks and LAM options
         SEI_cracks_option = extra_options.get("SEI on cracks", "false")
         LAM_opt = extra_options.get("loss of active material", "none")
         if SEI_cracks_option == "true":
@@ -588,11 +572,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "particle mechanics" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for stress-induced diffusion based on which particle
-        # mechanics option is provided. If the user doesn't supply a particle mechanics
-        # option set the default stress-induced diffusion option based on the default
-        # particle mechanics option which may change depending on other options
-        # (e.g. for stress-driven LAM the default mechanics option is "swelling only")
+        # Default stress-induced diffusion based on particle mechanics option
         mechanics_option = extra_options.get("particle mechanics", "none")
         if (
             mechanics_option == "none"
@@ -601,23 +581,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             default_options["stress-induced diffusion"] = "false"
         else:
             default_options["stress-induced diffusion"] = "true"
-        # The "stress-induced diffusion" option will still be overridden by
-        # extra_options if provided
+        # extra_options can still override stress-induced diffusion
 
-        # Change the default for surface form based on which particle
-        # phases option is provided.
-        # return "1" if option not given
+        # Default surface form based on particle phases option
         phases_option = extra_options.get("particle phases", "1")
         if phases_option == "1":
             default_options["surface form"] = "false"
         else:
             default_options["surface form"] = "algebraic"
-        # The "surface form" option will still be overridden by
-        # extra_options if provided
+        # extra_options can still override surface form
 
-        # Explicit power/resistance control requires voltage as a state:
-        # I = P/V (or I = V/R) is circular when V is an expression that
-        # itself depends on I.
+        # Explicit power/resistance requires voltage as a state to break I=P/V circular dependency
         mode_option = extra_options.get("operating mode", "current")
         if mode_option in ("explicit power", "explicit resistance"):
             default_options["voltage as a state"] = "true"
@@ -649,9 +623,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                     )
 
-        # All-or-nothing on full cells: if any of OCP/particle/intercalation
-        # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.
-        # Half-cells are loosened -- a tuple sets MSMR in the working electrode.
+        # Full cells: MSMR must be set consistently across OCP/particle/kinetics; half-cells allow per-electrode tuples
         msmr_check_list = [
             _is_msmr(options[opt])
             for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
@@ -666,8 +638,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "'intercalation kinetics' is 'MSMR' then all of them must be 'MSMR'"
             )
 
-        # Validate per electrode so a mixed full cell (MSMR in one electrode,
-        # conventional in the other) is accepted.
+        # Validate per-electrode so mixed MSMR/full cells are accepted
         if options["working electrode"] == "both":
             electrode_domains = [("negative", 0), ("positive", 1)]
         else:
@@ -732,9 +703,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "Contact resistance not yet supported for explicit resistance."
                 )
 
-        # Explicit power/resistance need voltage as a state variable because
-        # I = P/V (or I = V/R) creates a circular dependency when V is an
-        # expression that itself depends on I.
+        # Explicit power/resistance need voltage as a state to break I=P/V circular dependency
         if options["voltage as a state"] == "false" and options["operating mode"] in (
             "explicit power",
             "explicit resistance",
@@ -745,7 +714,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "resistance control require voltage as an algebraic state."
             )
 
-        # Options not yet compatible with particle-size distributions
+        # Options incompatible with particle-size distributions
         if options["particle size"] == "distribution":
             if options["lithium plating porosity change"] != "false":
                 raise pybamm.OptionError(
@@ -1193,15 +1162,13 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @options.setter
     def options(self, extra_options):
-        # if extra_options is a dict then process it into a BatteryModelOptions
-        # this does not catch cases that subclass the dict type
-        # so other submodels can pass in their own options class if needed
+        # Wrap bare dicts in BatteryModelOptions; submodels may pass custom option classes
         if extra_options is None or type(extra_options) == dict:  # noqa: E721
             options = BatteryModelOptions(extra_options)
         else:
             options = extra_options
 
-        # Options that are incompatible with models
+        # Model-specific option incompatibilities
         if isinstance(self, pybamm.lithium_ion.BaseModel):
             if options["convection"] != "none":
                 raise pybamm.OptionError(
@@ -1751,9 +1718,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # ECM overvoltage is OCV minus voltage
         v_ecm = ocv_bulk - V
 
-        # Hack to avoid division by zero if i_cc is exactly zero
-        # If i_cc is zero, i_cc_not_zero becomes 1. But multiplying by sign(i_cc) makes
-        # the local resistance 'zero' (really, it's not defined when i_cc is zero)
+        # Avoid division by zero: x_not_zero maps 0 to 1 (the sign() factor zeroes the result)
         def x_not_zero(x):
             return ((x > 0) + (x < 0)) * x + (x >= 0) * (x <= 0)
 
@@ -1769,7 +1734,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             }
         )
 
-        # Cut-off voltage
+        # Cut-off voltage events
         self.events.append(
             pybamm.Event(
                 "Minimum voltage [V]",

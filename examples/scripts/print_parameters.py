@@ -1,6 +1,5 @@
-#
-# Example for printing the parameters of a parameter set
-#
+"""Example for printing the parameters of a parameter set."""
+
 import pybamm
 
 parameters = pybamm.LithiumIonParameters()

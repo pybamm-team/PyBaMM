@@ -1,7 +1,3 @@
-#
-# Tests for the Function classes
-#
-
 import re
 
 import casadi
@@ -186,9 +182,7 @@ class TestInterpolant:
         interp = pybamm.Interpolant(x_in, data, (var1, var2), interpolator="cubic")
         interp.test_shape()
 
-        # test with inconsistent children shapes
-        # (this can occur is one child is a scaler and the others
-        # are variables)
+        # test with inconsistent children shapes (scaler + variables)
         evaluated_children = [np.array([[1]]), 4]
         value = interp._function_evaluate(evaluated_children)
 
@@ -293,9 +287,7 @@ class TestInterpolant:
         )
         interp.test_shape()
 
-        # test with inconsistent children shapes
-        # (this can occur is one child is a scaler and the others
-        # are vaiables)
+        # test with inconsistent children shapes (scaler + variables)
         evaluated_children = [np.array([[1]]), 4, np.array([[7]])]
         value = interp._function_evaluate(evaluated_children)
 

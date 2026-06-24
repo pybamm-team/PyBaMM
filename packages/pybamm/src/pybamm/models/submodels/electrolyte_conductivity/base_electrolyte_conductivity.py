@@ -1,7 +1,3 @@
-#
-# Base class for electrolyte conductivity
-#
-
 import pybamm
 
 

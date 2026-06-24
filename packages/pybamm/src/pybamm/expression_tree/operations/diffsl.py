@@ -983,9 +983,7 @@ class DiffSLExport:
                     activestep_tensor_name, stop_branch_order
                 )
 
-                # equality tensor of length equal to the number of steps
-                # in a cycle. with a 1 at the index of the active step
-                # and 0 elsewhere.
+                # Equality tensor with 1 at the active step index and 0 elsewhere
                 equality_tensor_name = f"event{tensor_index}"
                 tensor_index += 1
                 a = f"{activestep_tensor_name}_i"
@@ -1234,10 +1232,7 @@ def _equation_to_diffeq(
             x = f"({x} / {args[2]})"
             return f"({x} * pow((pow({x}, 2) + {delta**2:.{float_precision}g}), {inner_exp})) * pow({args[2]}, {a})"
         elif name == "_arcsinh2_evaluate":
-            # Two-argument arcsinh function for arcsinh(a/b) that avoids division by zero
-            # by adding a small regularisation term to the denominator.
-            # Computes arcsinh(a / b_eff) where b_eff = sign(b) * hypot(b, eps), where hypot = sqrt(b^2 + eps^2)
-            # Note: the sign(b) function treats sign(0) as 1 for numerical stability.
+            # Two-argument arcsinh(a / b_eff) with b_eff = sign(b) * hypot(b, eps) to avoid division by zero
             a = args[0]
             b = args[1]
             eps2 = equation.eps**2

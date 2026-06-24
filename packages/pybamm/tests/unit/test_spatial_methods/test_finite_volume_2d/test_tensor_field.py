@@ -566,11 +566,7 @@ class TestTensorAccuracy:
         # Compute tensor product
         disc_tp = fin_vol._tensor_product(grad_var, grad_var, disc_grad, disc_grad)
 
-        # Tensor product should be [[1, 0], [0, 0]] after edge-to-node conversion
-        # T[0,0] = lr * lr = 1 * 1 = 1
-        # T[0,1] = lr * tb = 1 * 0 = 0
-        # T[1,0] = tb * lr = 0 * 1 = 0
-        # T[1,1] = tb * tb = 0 * 0 = 0
+        # T[i,j] = component_i * component_j, giving [[1,0],[0,0]] since only x-component is nonzero
         np.testing.assert_allclose(
             disc_tp[0, 0].evaluate(None, linear_x).flatten(),
             np.ones(n_lr * n_tb),

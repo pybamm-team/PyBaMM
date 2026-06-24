@@ -1,7 +1,3 @@
-#
-# Base unit tests for lithium-ion half-cell models
-# This is achieved by using the {"working electrdode": "positive"} option
-#
 import pytest
 
 import pybamm

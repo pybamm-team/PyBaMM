@@ -206,9 +206,7 @@ class TestEISSimulationSolve:
             }
         )
         parameter_values = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
-        # Active material volume fraction depends on an InputParameter, so
-        # ``Q_init`` (which depends on it) is non-constant and must be
-        # evaluated with the corresponding input supplied.
+        # Q_init depends on InputParameter via active material volume fraction; must supply input
         eps = parameter_values["Positive electrode porosity"]
         parameter_values.update(
             {

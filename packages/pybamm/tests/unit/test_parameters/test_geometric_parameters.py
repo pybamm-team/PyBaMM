@@ -1,6 +1,3 @@
-#
-# Tests for the standard parameters
-#
 import pybamm
 
 

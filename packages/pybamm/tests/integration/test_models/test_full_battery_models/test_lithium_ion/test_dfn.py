@@ -1,6 +1,3 @@
-#
-# Tests for the lithium-ion DFN model
-#
 import numpy as np
 import pytest
 
@@ -29,16 +26,12 @@ class TestDFN(BaseIntegrationTestLithiumIon):
 
         param["Negative particle radius [m]"] = negative_radius
         param["Positive particle radius [m]"] = positive_radius
-        # Only get 3dp of accuracy in some tests at 1C with particle distribution
-        # TODO: investigate if there is a bug or some way to improve the
-        # implementation
+        # Particle distribution at 1C gives only 3dp accuracy; TODO: investigate bug or improvement.
         param["Current function [A]"] = 0.5 * param["Nominal cell capacity [A.h]"]
         self.run_basic_processing_test({}, parameter_values=param)
 
     def test_cycling_extreme_conditions(self):
-        # test cycling with difficult conditions: full discharge and very low
-        # current cutoff. This exercises the regularised expressions (RegPower,
-        # Arcsinh2) and OCP asymptotes at extreme stoichiometries.
+        # Test cycling with extreme conditions: full discharge, low current cutoff, exercises RegPower/Arcsinh2/OCP asymptotes.
         model = pybamm.lithium_ion.DFN()
         param = pybamm.ParameterValues("Chen2020")
         experiment = pybamm.Experiment(
@@ -146,10 +139,7 @@ class TestDFNWithSizeDistribution:
         modeltest.test_all(skip_output_tests=True)
 
     def test_conservation_each_electrode(self):
-        # Test that surface areas are being calculated from the distribution correctly
-        # for any discretization in the size domain.
-        # We test that the amount of lithium removed or added to each electrode
-        # is the same as for the standard DFN with the same parameters
+        # Surface areas from distribution must match standard DFN lithium balance for any size-domain discretization.
         models = [
             pybamm.lithium_ion.DFN(),
             pybamm.lithium_ion.DFN(options={"particle size": "distribution"}),

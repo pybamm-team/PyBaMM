@@ -1,6 +1,3 @@
-#
-# Geometric Parameters
-#
 import pybamm
 
 from .base_parameters import BaseParameters
@@ -125,10 +122,8 @@ class ParticleGeometricParameters(BaseParameters):
         Domain = self.domain.capitalize()
         pref = self.phase_prefactor
 
-        # Microscale geometry
-        # Note: for li-ion cells, the definition of the surface area to
-        # volume ratio is overwritten in lithium_ion_parameters.py to be computed
-        # based on the assumed particle shape
+        # Microscale geometry; surface area to volume ratio overwritten in
+        # lithium_ion_parameters.py based on assumed particle shape
         self.a = pybamm.Parameter(
             f"{pref}{Domain} electrode surface area to volume ratio [m-1]"
         )

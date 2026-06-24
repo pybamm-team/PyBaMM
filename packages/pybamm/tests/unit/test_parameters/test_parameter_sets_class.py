@@ -1,6 +1,3 @@
-#
-# Tests for the ParameterSets class
-#
 import re
 
 import pytest

@@ -1,7 +1,3 @@
-#
-# Tests for the Finite Volume Method
-#
-
 import numpy as np
 import pytest
 from scipy.sparse import eye, kron
@@ -136,9 +132,7 @@ class TestFiniteVolume:
             -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
             pybamm.laplacian(var),
         ]:
-            # Check that the equation can be evaluated for different combinations
-            # of boundary conditions
-            # Dirichlet
+            # Equation evaluable for different BC combinations (Dirichlet)
             disc.bcs = {
                 var: {
                     "left": (pybamm.Scalar(0), "Dirichlet"),

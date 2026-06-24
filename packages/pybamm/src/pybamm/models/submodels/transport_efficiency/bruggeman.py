@@ -1,6 +1,3 @@
-#
-# Class for Bruggeman transport_efficiency
-#
 import pybamm
 
 from .base_transport_efficiency import BaseModel

@@ -1,6 +1,3 @@
-#
-# Basic Doyle-Fuller-Newman (DFN) Half Cell Model
-#
 import pybamm
 
 from .base_lithium_ion_model import BaseModel
@@ -34,17 +31,11 @@ class BasicDFNHalfCell(BaseModel):
         options = {"working electrode": "positive"}
         super().__init__(options, name)
         pybamm.citations.register("Marquis2019")
-        # `param` is a class containing all the relevant parameters and functions for
-        # this model. These are purely symbolic at this stage, and will be set by the
-        # `ParameterValues` class when the model is processed.
 
-        ######################
-        # Variables
-        ######################
-        # Variables that depend on time only are created without a domain
+        # === Variables ===
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
-        # Variables that vary spatially are created with a domain.
+        # Spatially-varying variables created with domain.
         c_e_s = pybamm.Variable(
             "Separator electrolyte concentration [mol.m-3]", domain="separator"
         )
@@ -71,23 +62,18 @@ class BasicDFNHalfCell(BaseModel):
         # Constant temperature
         T = self.param.T_init
 
-        ######################
-        # Other set-up
-        ######################
+        # === Other set-up ===
 
-        # Current density
+        # Current density (time-dependent)
         i_cell = self.param.current_density_with_time
 
-        # Define particle surface concentration
-        # Surf takes the surface value of a variable, i.e. its boundary value on the
-        # right side. This is also accessible via `boundary_value(x, "right")`, with
-        # "left" providing the boundary value of the left side
+        # Define particle surface concentration via surf() (right-boundary value)
         c_s_surf_w = pybamm.surf(c_s_w)
 
         # Define parameters. We need to assemble them differently depending on the
         # working electrode
 
-        # Porosity and Transport_efficiency
+        # Porosity (function of x and through-cell distance) and Transport_efficiency
         eps_s = pybamm.PrimaryBroadcast(
             pybamm.Parameter("Separator porosity"), "separator"
         )
@@ -132,26 +118,18 @@ class BasicDFNHalfCell(BaseModel):
         a_j_s = pybamm.PrimaryBroadcast(0, "separator")
         a_j = pybamm.concatenation(a_j_s, a_j_w)
 
-        ######################
-        # State of Charge
-        ######################
+        # === State of Charge ===
         I = self.param.current_with_time
-        # The `rhs` dictionary contains differential equations, with the key being the
-        # variable in the d/dt
+        # rhs: dict of ODEs keyed by the differentiated variable
         self.rhs[Q] = I / 3600
-        # Initial conditions must be provided for the ODEs
+        # Initial conditions for ODEs
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
-        ######################
-        # Particles
-        ######################
-        # The div and grad operators will be converted to the appropriate matrix
-        # multiplication at the discretisation stage
+        # === Particles ===
         N_s_w = -D_w(c_s_w, T) * pybamm.grad(c_s_w)
         self.rhs[c_s_w] = -pybamm.div(N_s_w)
 
-        # Boundary conditions must be provided for equations with spatial
-        # derivatives
+        # Boundary conditions required for equations with spatial derivatives
         self.boundary_conditions[c_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (-j_w / pybamm.surf(D_w(c_s_w, T)) / self.param.F, "Neumann"),
@@ -170,9 +148,7 @@ class BasicDFNHalfCell(BaseModel):
             ),
         ]
 
-        ######################
-        # Current in the solid
-        ######################
+        # === Current in the solid ===
         sigma_eff_w = sigma_w(sto_surf_w, T) * eps_s_w**b_s_w
         i_s_w = -sigma_eff_w * pybamm.grad(phi_s_w)
         self.boundary_conditions[phi_s_w] = {
@@ -184,14 +160,10 @@ class BasicDFNHalfCell(BaseModel):
         }
         # multiply by Lx**2 to improve conditioning
         self.algebraic[phi_s_w] = self.param.L_x**2 * (pybamm.div(i_s_w) + a_j_w)
-        # Initial conditions must also be provided for algebraic equations, as an
-        # initial guess for a root-finding algorithm which calculates consistent
-        # initial conditions
+        # Initial guesses for consistent initial conditions (root-finding)
         self.initial_conditions[phi_s_w] = self.param.p.prim.U_init
 
-        ######################
-        # Electrolyte concentration
-        ######################
+        # === Electrolyte concentration ===
         N_e = -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
             -pybamm.div(N_e) + (1 - self.param.t_plus(c_e, T)) * a_j / self.param.F
@@ -214,9 +186,7 @@ class BasicDFNHalfCell(BaseModel):
             )
         )
 
-        ######################
-        # Current in the electrolyte
-        ######################
+        # === Current in the electrolyte ===
         i_e = (self.param.kappa_e(c_e, T) * tor) * (
             self.param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
@@ -241,9 +211,7 @@ class BasicDFNHalfCell(BaseModel):
 
         self.initial_conditions[phi_e] = -self.param.n.prim.U_init
 
-        ######################
-        # (Some) variables
-        ######################
+        # === (Some) variables ===
         vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential
         vdrop_Li = -eta_Li - delta_phis_Li
         voltage = vdrop_cell + vdrop_Li

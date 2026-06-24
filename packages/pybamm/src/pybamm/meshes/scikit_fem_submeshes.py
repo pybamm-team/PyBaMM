@@ -1,6 +1,3 @@
-#
-# scikit-fem meshes for use in PyBaMM
-#
 import numpy as np
 
 import pybamm
@@ -72,9 +69,7 @@ class ScikitSubMesh2D(SubMesh):
         )
 
     def read_lims(self, lims):
-        # Separate limits and tabs
-        # Read and remove tabs. If "tabs" is not a key in "lims", then tabs is set to
-        # "None" and nothing is removed from lims
+        # Separate limits and tabs; pop "tabs" from lims (defaults to None if absent)
         tabs = lims.pop("tabs", None)
 
         # check that two variables have been passed in

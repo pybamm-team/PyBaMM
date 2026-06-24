@@ -1,6 +1,3 @@
-#
-# Class for current-driven ODE for interface utilisation
-#
 import pybamm
 
 from .base_utilisation import BaseModel

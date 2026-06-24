@@ -1,7 +1,3 @@
-#
-# Integration tests for stoichiometry-dependent electrode conductivity, exercising
-# every electrode-conductivity (sigma) path in the lithium-ion models.
-#
 import pytest
 
 import pybamm

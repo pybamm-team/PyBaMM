@@ -1,7 +1,3 @@
-#
-# Tests for the parameter processing functions
-#
-
 from pathlib import Path
 
 import numpy as np

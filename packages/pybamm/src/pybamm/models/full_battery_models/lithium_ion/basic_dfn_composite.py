@@ -1,6 +1,3 @@
-#
-# Basic Doyle-Fuller-Newman (DFN) Model
-#
 import pybamm
 
 from .base_lithium_ion_model import BaseModel
@@ -26,14 +23,11 @@ class BasicDFNComposite(BaseModel):
         options = {"particle phases": ("2", "1")}
         super().__init__(options, name)
         pybamm.citations.register("Ai2022")
-        # `param` is a class containing all the relevant parameters and functions for
-        # this model. These are purely symbolic at this stage, and will be set by the
-        # `ParameterValues` class when the model is processed.
+        # `self.param` holds this model's parameters/functions as symbols; they are
+        # substituted with values by ParameterValues when the model is processed
 
-        ######################
-        # Variables
-        ######################
-        # Variables that depend on time only are created without a domain
+        # === Variables ===
+        # Variables that depend only on time are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
@@ -51,8 +45,7 @@ class BasicDFNComposite(BaseModel):
             domain="positive electrode",
             scale=self.param.c_e_init_av,
         )
-        # Concatenations combine several variables into a single variable, to simplify
-        # implementing equations that hold over several domains
+        # Concatenations combine variables over several domains into one
         c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
 
         # Electrolyte potential
@@ -82,9 +75,7 @@ class BasicDFNComposite(BaseModel):
             domain="positive electrode",
             reference=self.param.ocv_init,
         )
-        # Particle concentrations are variables on the particle domain, but also vary in
-        # the x-direction (electrode domain) and so must be provided with auxiliary
-        # domains
+        # Particle concentrations vary in particle and electrode (x) domains
         c_s_n_p1 = pybamm.Variable(
             "Negative primary particle concentration [mol.m-3]",
             domain="negative primary particle",
@@ -107,16 +98,12 @@ class BasicDFNComposite(BaseModel):
         # Constant temperature
         T = self.param.T_init
 
-        ######################
-        # Other set-up
-        ######################
+        # === Other set-up ===
 
-        # Current density
+        # Current density (time-dependent)
         i_cell = self.param.current_density_with_time
 
-        # Porosity
-        # Primary broadcasts are used to broadcast scalar quantities across a domain
-        # into a vector of the right shape, for multiplying with other vectors
+        # Porosity - PrimaryBroadcast lifts scalars across a domain for multiplication
         eps_n = pybamm.PrimaryBroadcast(
             pybamm.Parameter("Negative electrode porosity"), "negative electrode"
         )
@@ -159,10 +146,7 @@ class BasicDFNComposite(BaseModel):
         sto_surf_p = c_s_surf_p / self.param.p.prim.c_max
         ocp_p = self.param.p.prim.U(sto_surf_p, T)
 
-        # Interfacial reactions
-        # Surf takes the surface value of a variable, i.e. its boundary value on the
-        # right side. This is also accessible via `boundary_value(x, "right")`, with
-        # "left" providing the boundary value of the left side
+        # Interfacial reactions - surf() returns the right-boundary value
         F_RT = self.param.F / (self.param.R * T)
         j0_n_p1 = self.param.n.prim.j0(c_e_n, c_s_surf_n_p1, T)
         j_n_p1 = (
@@ -198,22 +182,16 @@ class BasicDFNComposite(BaseModel):
         a_j_p = a_p * j_p
         a_j = pybamm.concatenation(a_j_n, a_j_s, a_j_p)
 
-        ######################
-        # State of Charge
-        ######################
+        # === State of Charge ===
         I = self.param.current_with_time
-        # The `rhs` dictionary contains differential equations, with the key being the
-        # variable in the d/dt
+        # rhs: dict of ODEs keyed by the differentiated variable
         self.rhs[Q] = I / 3600
-        # Initial conditions must be provided for the ODEs
+        # Initial conditions for ODEs
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
-        ######################
-        # Particles
-        ######################
+        # === Particles ===
 
-        # The div and grad operators will be converted to the appropriate matrix
-        # multiplication at the discretisation stage
+        # div/gradients become matrix multiplications at discretisation
         N_s_n_p1 = -self.param.n.prim.D(c_s_n_p1, T) * pybamm.grad(c_s_n_p1)
         N_s_n_p2 = -self.param.n.sec.D(c_s_n_p2, T) * pybamm.grad(c_s_n_p2)
         N_s_p = -self.param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
@@ -273,16 +251,12 @@ class BasicDFNComposite(BaseModel):
                 (1 - tolerance) - pybamm.max(sto_surf_p),
             ),
         ]
-        ######################
-        # Current in the solid
-        ######################
+        # === Current in the solid ===
         sigma_eff_n = self.param.n.sigma(sto_surf_n_p1, T) * eps_s_n**self.param.n.b_s
         i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
         sigma_eff_p = self.param.p.sigma(sto_surf_p, T) * eps_s_p**self.param.p.b_s
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
-        # The `algebraic` dictionary contains differential equations, with the key being
-        # the main scalar variable of interest in the equation
-        # multiply by Lx**2 to improve conditioning
+        # algebraic: DAE equations scaled by Lx**2 for conditioning
         self.algebraic[phi_s_n] = self.param.L_x**2 * (pybamm.div(i_s_n) + a_j_n)
         self.algebraic[phi_s_p] = self.param.L_x**2 * (pybamm.div(i_s_p) + a_j_p)
         self.boundary_conditions[phi_s_n] = {
@@ -293,17 +267,11 @@ class BasicDFNComposite(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (i_cell / pybamm.boundary_value(-sigma_eff_p, "right"), "Neumann"),
         }
-        # Initial conditions must also be provided for algebraic equations, as an
-        # initial guess for a root-finding algorithm which calculates consistent initial
-        # conditions
-        # We evaluate c_n_init at x=0 and c_p_init at x=1 (this is just an initial
-        # guess so actual value is not too important)
+        # Initial guesses for consistent initial conditions (root-finding)
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
         self.initial_conditions[phi_s_p] = self.param.ocv_init
 
-        ######################
-        # Current in the electrolyte
-        ######################
+        # === Current in the electrolyte ===
         i_e = (self.param.kappa_e(c_e, T) * tor) * (
             self.param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
@@ -315,9 +283,7 @@ class BasicDFNComposite(BaseModel):
         }
         self.initial_conditions[phi_e] = -self.param.n.prim.U_init
 
-        ######################
-        # Electrolyte concentration
-        ######################
+        # === Electrolyte concentration ===
         N_e = -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
             -pybamm.div(N_e) + (1 - self.param.t_plus(c_e, T)) * a_j / self.param.F
@@ -328,9 +294,7 @@ class BasicDFNComposite(BaseModel):
         }
         self.initial_conditions[c_e] = self.param.c_e_init
 
-        ######################
-        # (Some) variables
-        ######################
+        # === (Some) variables ===
         voltage = pybamm.boundary_value(phi_s_p, "right")
         c_s_rav_n_p1 = pybamm.r_average(c_s_n_p1)
         c_s_rav_n_p2 = pybamm.r_average(c_s_n_p2)
@@ -348,8 +312,7 @@ class BasicDFNComposite(BaseModel):
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
-        # The `variables` dictionary contains all variables that might be useful for
-        # visualising the solution of the model
+        # variables: all output variables for solution visualization
         self.variables = {
             "Negative primary particle concentration [mol.m-3]": c_s_n_p1,
             "Negative secondary particle concentration [mol.m-3]": c_s_n_p2,

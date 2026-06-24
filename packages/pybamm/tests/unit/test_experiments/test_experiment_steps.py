@@ -1,6 +1,3 @@
-#
-# Test the experiment steps
-#
 from datetime import datetime
 
 import numpy as np

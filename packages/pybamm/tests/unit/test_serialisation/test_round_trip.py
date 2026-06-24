@@ -508,10 +508,7 @@ class TestSymbolRoundTrip:
         )
 
 
-# Generative option round-trip fuzzing. JSON has no tuple type, so a tuple option
-# (e.g. "particle phases": ("2", "1")) deserialises as a list, which validation
-# rejects. Fuzzes the build-free to_json/from_json path; the deterministic
-# fixtures below cover to_config/from_config (which builds the model).
+# Generative option round-trip fuzzing; tuple options deserialize as lists (rejected by validation).
 
 # Option registry, sourced from pybamm so the strategy never hardcodes values.
 _POSSIBLE_OPTIONS = BatteryModelOptions({}).possible_options
@@ -521,9 +518,7 @@ _STRING_VALUES = {
     for key, values in _POSSIBLE_OPTIONS.items()
 }
 
-# Drawable keys. "dimensionality" (the only int option) is excluded: a non-zero
-# value needs companion geometry options the random strategy can't assemble; its
-# int round-trip is covered by test_int_option_survives_json_round_trip_as_int.
+# Drawable keys: "dimensionality" excluded (needs companion geometry options; int round-trip covered separately).
 _STRING_OPTION_KEYS = sorted(
     key for key, values in _STRING_VALUES.items() if key != "dimensionality" and values
 )
@@ -564,11 +559,7 @@ def _assert_param_matches_options(model):
             f"param built from {dict(model.param.options)!r} != restored options "
             f"{dict(model.options)!r}; load_custom_model must rebuild param."
         )
-        # Symptom-level guard: a two-phase negative electrode names its primary
-        # active-material fraction "Primary: ..."; a param left built from
-        # single-phase options would not. Only meaningful on a full cell -- a
-        # half cell's negative electrode is lithium metal with no porous
-        # particle, so ``param.n.prim`` has no ``epsilon_s``.
+        # Two-phase negative electrode must have "Primary:" prefix on active-material fraction.
         if (
             model.options["working electrode"] == "both"
             and model.options.negative["particle phases"] == "2"
@@ -663,9 +654,7 @@ class TestModelOptionsRoundTrip:
             # (pybamm mutates the dict).
             model = model_cls(dict(options), build=False)
         except (pybamm.OptionError, NotImplementedError):
-            # Invalid/unsupported option set -> discard. Any other exception is a
-            # real bug that must surface (a broad except here once hid an MSMR
-            # int('none') crash).
+            # Invalid options → discard; other exceptions are real bugs.
             reject()
 
         expected = dict(model.options)
@@ -737,9 +726,7 @@ class TestTupleOptionRoundTripRegression:
         assert isinstance(via_config.options[key], tuple)
 
 
-# Discretised-model round-trip (save_model/load_model): previously only checked
-# "load and solve". These verify structural identity and solution equivalence
-# (mesh transitively: same equations + solution => same mesh).
+# Discretised-model round-trip: verify structural identity and solution equivalence.
 
 _DISCRETISED_MODEL_CLASSES = [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN]
 

@@ -26,11 +26,7 @@ _SOLVER_EXEMPT: set[type] = {
     pybamm.JaxSolver,  # requires optional jax/jaxlib dep; not installed in CI
 }
 
-# A submesh is round-trippable only if it (or an ancestor below the bare SubMesh
-# base) defines its OWN _from_json. Most SubMesh subclasses inherit to_json but
-# define no _from_json -- the kernel refuses to encode them, since they could
-# never be decoded. They are NOT silently "covered"; each must be listed here
-# with a reason.
+# SubMesh round-trippable only if defines OWN _from_json; most inherit to_json but no _from_json, kernel refuses to encode
 _SUBMESH_EXEMPT: set[type] = {
     pybamm.Chebyshev1DSubMesh,  # cannot serialise (no _from_json)
     pybamm.Exponential1DSubMesh,  # cannot serialise (no _from_json)

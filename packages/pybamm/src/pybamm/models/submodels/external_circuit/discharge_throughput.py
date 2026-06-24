@@ -1,6 +1,3 @@
-#
-# Variables related to discharge and throughput capacity and energy
-#
 import pybamm
 
 from .base_external_circuit import BaseModel

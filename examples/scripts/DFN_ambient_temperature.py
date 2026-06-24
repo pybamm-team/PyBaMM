@@ -1,6 +1,4 @@
-#
-# Example showing how to solve the DFN with a varying ambient temperature
-#
+"""Example showing how to solve the DFN with a varying ambient temperature."""
 
 import pybamm
 

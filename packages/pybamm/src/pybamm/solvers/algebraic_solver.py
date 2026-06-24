@@ -1,6 +1,3 @@
-#
-# Algebraic solver class
-#
 import casadi
 import numpy as np
 from scipy import optimize
@@ -114,11 +111,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
             y0 = y0.full()
         y0 = y0.flatten()
 
-        # The casadi algebraic solver can read rhs equations, but leaves them unchanged
-        # i.e. the part of the solution vector that corresponds to the differential
-        # equations will be equal to the initial condition provided. This allows this
-        # solver to be used for initialising the DAE solvers
-        # Split y0 into differential and algebraic
+        # CasADi algebraic solver leaves RHS unchanged (differential parts = initial conditions);
+        # split y0 into differential and algebraic parts
         if model.rhs == {}:
             len_rhs = 0
         else:

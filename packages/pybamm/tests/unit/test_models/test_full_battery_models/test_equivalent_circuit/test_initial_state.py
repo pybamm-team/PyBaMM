@@ -1,7 +1,3 @@
-#
-# Tests for equivalent circuit model (ECM) initial states
-#
-
 import pytest
 
 import pybamm

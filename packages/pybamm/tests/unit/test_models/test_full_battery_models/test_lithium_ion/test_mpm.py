@@ -1,7 +1,3 @@
-#
-# Tests for the lithium-ion MPM model
-#
-
 import pytest
 
 import pybamm
@@ -112,9 +108,7 @@ class TestMPM:
         model.check_well_posedness()
 
     def test_one_state_hysteresis_ocp_lumped_thermal(self):
-        # Regression test: MPM always uses particle size distribution, and
-        # combining hysteresis OCP with a non-isothermal thermal submodel
-        # previously raised a DomainError in the hysteresis heating term.
+        # Regression: hysteresis OCP + thermal submodel previously raised DomainError in hysteresis heating term
         options = {
             "open-circuit potential": "one-state hysteresis",
             "thermal": "lumped",

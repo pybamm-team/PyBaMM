@@ -1,7 +1,3 @@
-#
-# Tests for the Function classes
-#
-
 import itertools
 
 import casadi

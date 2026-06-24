@@ -1,6 +1,3 @@
-#
-# Finite Volume discretisation class
-#
 import numpy as np
 from scipy.sparse import (
     coo_matrix,
@@ -231,11 +228,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # number of repeats
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
-        # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+        # generate full matrix from submatrix (convert to csr_matrix for row-slicing)
         matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64)), sub_matrix
         )
@@ -452,11 +445,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             matrix = pybamm.kronecker_product(
                 pybamm.Matrix(eye(higher_repeats)), int_matrix
             )
-        # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+        # generate full matrix from submatrix (convert to csr_matrix for row-slicing)
         return matrix
 
     def indefinite_integral(self, child, discretised_child, direction):
@@ -469,10 +458,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                 child.domains, direction
             )
         else:
-            # Check coordinate system is not cylindrical or spherical polar for
-            # the case where child evaluates on edges
-            # If it becomes necessary to implement this, will need to think about what
-            # the cylindrical/spherical polar indefinite integral should be
+            # Reject cylindrical/spherical polar: the indefinite integral operator
+            # itself differs in polar coordinates and is not yet worked out
             submesh = self.mesh[child.domain]
             if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
                 raise NotImplementedError(
@@ -483,9 +470,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 child.domains, direction
             )
 
-        # Don't need to check for cylindrical/spherical domains as we have ruled
-        # these out in the case that involves integrating a divergence
-        # (child evaluates on nodes)
+        # No cylindrical/spherical check needed (ruled out for node-evaluating divergence)
         out = integration_matrix @ discretised_child
 
         out.copy_domains(child)
@@ -603,10 +588,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix_transposed = pybamm.Transpose(sub_matrix)
         sub_matrix = pybamm.SparseStack(zero_col, sub_matrix_transposed, zero_col)
         sub_matrix = pybamm.Transpose(sub_matrix)
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+        # Convert to csr_matrix for row-slicing (not supported by default kron format)
         matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64)), sub_matrix
         )
@@ -650,10 +632,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = d_edges_matrix * pybamm.Matrix(
             spdiags(du_entries, offset, n + 1, n)
         )
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+        # Convert to csr_matrix for row-slicing (not supported by default kron format)
         matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64)), sub_matrix
         )
@@ -710,10 +689,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             domain_width = pybamm.Scalar(submesh.edges[-1] - submesh.edges[0])
         # Generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+        # Convert to csr_matrix for row-slicing (not supported by default kron format)
         matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64).toarray()),
             sub_matrix,
@@ -883,14 +859,10 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
 
         bcs_vector = lbc_vector + rbc_vector
-        # Need to match the domain. E.g. in the case of the boundary condition
-        # on the particle, the gradient has domain particle but the bcs_vector
-        # has domain electrode, since it is a function of the macroscopic variables
+        # Match domain (e.g., particle gradient has electrode-domain bcs_vector)
         bcs_vector.copy_domains(discretised_symbol)
 
-        # Make matrix to calculate ghost nodes
-        # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
-        # (row[i], col[i]) for each index of data.
+        # Make ghost node matrix (coo_matrix takes data, (row, col) inputs)
         if lbc_type == "Dirichlet":
             left_ghost_vector = coo_matrix(([-1.0], ([0], [0])), shape=(1, n))
         else:
@@ -904,10 +876,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         )
 
         # repeat matrix for secondary dimensions
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+        # Convert to csr_matrix for row-slicing (not supported by default kron format)
         matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
 
         new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
@@ -997,15 +966,10 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
 
         bcs_vector = lbc_vector + rbc_vector
-        # Need to match the domain. E.g. in the case of the boundary condition
-        # on the particle, the gradient has domain particle but the bcs_vector
-        # has domain electrode, since it is a function of the macroscopic variables
+        # Match domain (e.g., particle gradient has electrode-domain bcs_vector)
         bcs_vector.copy_domains(discretised_gradient)
 
-        # Make matrix which makes "gaps" in the the discretised gradient into
-        # which the known Neumann values will be added. E.g. in 1D if the left
-        # boundary condition is Dirichlet and the right Neumann, this matrix will
-        # act to append a zero to the end of the discretised gradient
+        # Make matrix to insert Neumann values into discretised gradient gaps
         if lbc_type == "Neumann":
             left_vector = csr_matrix((1, n))
         else:
@@ -1017,10 +981,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = vstack([left_vector, eye(n, dtype=np.float64), right_vector])
 
         # repeat matrix for secondary dimensions
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+        # Convert to csr_matrix for row-slicing (not supported by default kron format)
         matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
 
         new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
@@ -1090,9 +1051,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         child = symbol.child
 
-        # Create submatrix to compute boundary values or fluxes
-        # Derivation of extrapolation formula can be found at:
-        # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
+        # Create submatrix for boundary values/fluxes (extrapolation derivation:
+        # github.com/Scottmar93/extrapolation-coefficents/tree/master)
         if isinstance(symbol, pybamm.BoundaryMeshSize):
             return self._boundary_mesh_size(child, symbol.side)
         elif isinstance(symbol, pybamm.BoundaryValue):
@@ -1345,10 +1305,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     raise NotImplementedError
 
         # Generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+        # Convert to csr_matrix for row-slicing (not supported by default kron format)
         matrix = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
 
         # Return boundary value with domain given by symbol
@@ -1451,18 +1408,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         # no need to do any averaging
         elif left_evaluates_on_edges == right_evaluates_on_edges:
             pass
-        # If only left child evaluates on edges, map right child onto edges
-        # using the harmonic mean if the left child is a gradient (i.e. this
-        # binary operator represents a flux)
+        # Map right child to edges (use harmonic mean if left is gradient/flux)
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
             if isinstance(left, pybamm.Gradient):
                 method = "harmonic"
             else:
                 method = "arithmetic"
             disc_right = self.node_to_edge(disc_right, method=method)
-        # If only right child evaluates on edges, map left child onto edges
-        # using the harmonic mean if the right child is a gradient (i.e. this
-        # binary operator represents a flux)
+        # Map left child to edges (use harmonic mean if right is gradient/flux)
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
             if isinstance(right, pybamm.Gradient):
                 method = "harmonic"
@@ -1574,11 +1527,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 discretised_symbol.domains
             )
 
-            # Generate full matrix from the submatrix
-            # Convert to csr_matrix so that we can take the index (row-slicing), which
-            # is not supported by the default kron format
-            # Note that this makes column-slicing inefficient, but this should not be an
-            # issue
+            # Generate full matrix from submatrix (convert to csr_matrix for row-slicing)
             matrix = csr_matrix(
                 kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix)
             )
@@ -1636,18 +1585,12 @@ class FiniteVolume(pybamm.SpatialMethod):
                     ]
                 )
 
-                # Generate full matrix from the submatrix
-                # Convert to csr_matrix so that we can take the index (row-slicing),
-                # which is not supported by the default kron format
-                # Note that this makes column-slicing inefficient, but this should
-                # not be an issue
+                # Generate full matrix from submatrix (convert to csr_matrix for row-slicing)
                 edges_matrix = csr_matrix(
                     kron(eye(second_dim_repeats, dtype=np.float64), edges_sub_matrix)
                 )
 
-                # Matrix to extract the node values running from the first node
-                # to the penultimate node in the primary dimension (D_1 in the
-                # definiton of the harmonic mean)
+                # Matrix to extract node values from first to penultimate node (D_1)
                 sub_matrix_D1 = hstack(
                     [eye(n - 1, dtype=np.float64), csr_matrix((n - 1, 1))]
                 )
@@ -1656,9 +1599,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
                 D1 = pybamm.Matrix(matrix_D1) @ array
 
-                # Matrix to extract the node values running from the second node
-                # to the final node in the primary dimension  (D_2 in the
-                # definiton of the harmonic mean)
+                # Matrix to extract node values from second to final node (D_2)
                 sub_matrix_D2 = hstack(
                     [csr_matrix((n - 1, 1)), eye(n - 1, dtype=np.float64)]
                 )
@@ -1698,11 +1639,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     [csr_matrix((1, n - 1)), eye(n - 1), csr_matrix((1, n - 1))]
                 )
 
-                # Generate full matrix from the submatrix
-                # Convert to csr_matrix so that we can take the index (row-slicing),
-                # which is not supported by the default kron format
-                # Note that this makes column-slicing inefficient, but this should
-                # not be an issue
+                # Generate full matrix from submatrix (convert to csr_matrix for row-slicing)
                 matrix = csr_matrix(
                     kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix)
                 )
@@ -1712,18 +1649,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
             elif shift_key == "edge to node":
-                # Matrix to extract the edge values running from the first edge
-                # to the penultimate edge in the primary dimension (D_1 in the
-                # definiton of the harmonic mean)
+                # Matrix to extract edge values from first to penultimate edge (D_1)
                 sub_matrix_D1 = hstack([eye(n, dtype=np.float64), csr_matrix((n, 1))])
                 matrix_D1 = csr_matrix(
                     kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D1)
                 )
                 D1 = pybamm.Matrix(matrix_D1) @ array
 
-                # Matrix to extract the edge values running from the second edge
-                # to the final edge in the primary dimension  (D_2 in the
-                # definiton of the harmonic mean)
+                # Matrix to extract edge values from second to final edge (D_2)
                 sub_matrix_D2 = hstack([csr_matrix((n, 1)), eye(n, dtype=np.float64)])
                 matrix_D2 = csr_matrix(
                     kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D2)

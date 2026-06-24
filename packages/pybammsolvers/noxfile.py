@@ -36,9 +36,7 @@ def set_environment_variables(env_dict, session):
         session.env[key] = value
 
 
-# Load [build-system].requires from pyproject.toml and add cmake/ninja which
-# scikit-build-core provides during isolated builds but we need explicitly for
-# --no-build-isolation editable installs.
+# Build deps from pyproject.toml + cmake/ninja (scikit-build-core provides them isolated but needed for --no-build-isolation)
 _pyproject = nox.project.load_toml("pyproject.toml")
 BUILD_DEPS = (*_pyproject["build-system"]["requires"], "cmake>=3.13", "ninja")
 

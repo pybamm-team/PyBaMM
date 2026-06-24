@@ -1,6 +1,3 @@
-#
-# Test basic model classes
-#
 import pytest
 
 import pybamm

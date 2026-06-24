@@ -1,6 +1,5 @@
-#
-# Simulate drive cycle loaded from csv file
-#
+"""Simulate drive cycle loaded from CSV file."""
+
 import pandas as pd
 
 import pybamm

@@ -1,7 +1,3 @@
-#
-# Tests for the surface formulation
-#
-
 import numpy as np
 
 import pybamm

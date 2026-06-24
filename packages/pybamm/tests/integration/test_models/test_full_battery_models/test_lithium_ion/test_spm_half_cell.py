@@ -1,6 +1,3 @@
-#
-# Tests for the half-cell lithium-ion SPM model
-#
 import pytest
 
 import pybamm

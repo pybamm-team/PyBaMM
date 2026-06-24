@@ -1,7 +1,3 @@
-#
-# Tests for the Summary Variables class
-#
-
 import numpy as np
 import pytest
 

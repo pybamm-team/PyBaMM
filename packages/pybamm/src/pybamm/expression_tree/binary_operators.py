@@ -1,6 +1,3 @@
-#
-# Binary operator classes
-#
 from __future__ import annotations
 
 import functools
@@ -515,9 +512,7 @@ class MatrixMultiplication(BinaryOperator):
 
     def _binary_jac(self, left_jac, right_jac):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
-        # We only need the case where left is an array and right
-        # is a (slice of a) state vector, e.g. for discretised spatial
-        # operators of the form D @ u (also catch cases of (-D) @ u)
+        # Handle D @ u (and -D @ u) cases for discretised spatial operators
         left, _right = self.orphans
         if isinstance(left, pybamm.Array) or (
             isinstance(left, pybamm.Negate) and isinstance(left.child, pybamm.Array)
@@ -1073,9 +1068,7 @@ def _simplify_elementwise_binary_broadcasts(
                     return out
         return symbol
 
-    # No need to broadcast if the other symbol already has the shape that is being
-    # broadcasted to
-    # Do this recursively
+    # Skip broadcast if shapes already match; unpack recursively
     if left.domains == right.domains:
         if isinstance(left, pybamm.Broadcast) and left.broadcasts_to_nodes:
             left = unpack_broadcast_recursive(left)
@@ -1100,10 +1093,7 @@ def _simplified_binary_broadcast_concatenation(
     elif isinstance(right, pybamm.Broadcast) and left.domain == []:
         return right.create_copy([operator(left, right.orphans[0])])
 
-    # Concatenation commutes with elementwise operators
-    # If one of the sides is constant then commute concatenation with the operator
-    # Don't do this for ConcatenationVariable objects as these will
-    # be simplified differently later on
+    # Commute concatenation with elementwise operators (skip ConcatenationVariable)
     if isinstance(left, pybamm.Concatenation) and not isinstance(
         left, pybamm.ConcatenationVariable
     ):
@@ -1205,10 +1195,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
     if pybamm.is_matrix_zero(left):
         if right.evaluates_to_number():
             return right * pybamm.ones_like(left)
-        # If left object is zero and has size smaller than or equal to right object in
-        # all dimensions, we can safely return the right object. For example, adding a
-        # zero vector a matrix, we can just return the matrix.
-        # When checking evaluation on edges, check dimensions of left object only
+        # Zero + right = right when left fits in all dimensions and edge evaluations match
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
@@ -1224,9 +1211,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
     if left.is_constant() and right.is_constant():
         return pybamm.simplify_if_constant(Addition(left, right))
 
-    # Simplify A @ c + B @ c to (A + B) @ c if (A + B) is constant
-    # This is a common construction that appears from discretisation of spatial
-    # operators
+    # Simplify A@c + B@c → (A+B)@c when (A+B) is constant (common from spatial discretisation)
     elif (
         isinstance(left, MatrixMultiplication)
         and isinstance(right, MatrixMultiplication)
@@ -1389,11 +1374,7 @@ def multiply(
     if left.is_constant() and right.is_constant():
         return pybamm.simplify_if_constant(Multiplication(left, right))
 
-    # anything multiplied by a matrix one returns itself if
-    # - the shapes are the same
-    # - both left and right evaluate on edges, or both evaluate on nodes, in all
-    # dimensions
-    # (and possibly more generally, but not implemented here)
+    # Matrix-one multiplication returns itself when shapes and edge evaluations match
     try:
         if left.shape_for_testing == right.shape_for_testing and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
@@ -1436,11 +1417,7 @@ def multiply(
                     r_left, r_right = right.orphans
                     return (left * r_left) / r_right
 
-            # Simplify a * (b + c) to (a * b) + (a * c) if (a * b) is constant
-            # This is a common construction that appears from discretisation of
-            # spatial operators
-            # Also do this for cases like a * (b @ c + d) where (a * b) is
-            # constant
+            # Simplify a*(b+c) to (a*b)+(a*c) when (a*b) is constant (common from discretisation)
             elif isinstance(right, Addition | Subtraction):
                 mul_classes = (Multiplication, MatrixMultiplication)
                 if (
@@ -1572,9 +1549,7 @@ def matmul(
             r_left, r_right = right.orphans
             return (left * r_left) @ r_right
 
-    # Simplify A @ (B @ c) to (A @ B) @ c if (A @ B) is constant
-    # This is a common construction that appears from discretisation of spatial
-    # operators
+    # Simplify A@(B@c) → (A@B)@c when (A@B) is constant (common from spatial discretisation)
     if (
         isinstance(right, MatrixMultiplication)
         and right.left.is_constant()
@@ -1582,19 +1557,13 @@ def matmul(
     ):
         r_left, r_right = right.orphans
         new_left = left @ r_left
-        # be careful about domains to avoid weird errors
-        new_left.clear_domains()
+        new_left.clear_domains()  # avoid domain errors before re-multiplying
         new_mul = new_left @ r_right
-        # Keep the domain of the old right
-        new_mul.copy_domains(right)
+        new_mul.copy_domains(right)  # keep the domain of the old right
         return new_mul
 
     elif left.is_constant() and isinstance(right, Addition | Subtraction):
-        # Simplify A @ (b +- c) to (A @ b) +- (A @ c) if (A @ b) or (A @ c) is constant
-        # This is a common construction that appears from discretisation of spatial
-        # operators
-        # Or simplify A @ (B @ b +- C @ c) to (A @ B @ b) +- (A @ C @ c) if (A @ B)
-        # and (A @ C) are constant
+        # Simplify A@(b±c) when (A@b) or (A@c) constant; A@(B@b±C@c) when (A@B)/(A@C) constant
         # Don't do this if either b or c is a number as this will lead to matmul errors
         if (
             (right.left.is_constant() or right.right.is_constant())
@@ -1696,17 +1665,10 @@ def _heaviside(left: ChildSymbol, right: ChildSymbol, equal):
         if isinstance(right, Addition):
             # simplify heaviside(a, b + var) to heaviside(a - b, var)
             return _heaviside(left - right.left, right.right, equal=equal)
-        # elif isinstance(right, Multiplication):
-        #     # simplify heaviside(a, b * var) to heaviside(a/b, var)
-        #     if right.left.evaluate() > 0:
-        #         return _heaviside(left / right.left, right.right, equal=equal)
-        #     else:
-        #         # maintain the sign of each side
-        #         return _heaviside(left / -right.left, -right.right, equal=equal)
+        # elif: heaviside(a, b*var) -> heaviside(a/b, var) respecting sign
 
     k = pybamm.settings.heaviside_smoothing
-    # Return exact approximation if that is the setting or the outcome is a constant
-    # (i.e. no need for smoothing)
+    # Return exact Heaviside when configured or both operands are constant
     if k == "exact" or (left.is_constant() and right.is_constant()):
         if equal is True:
             out: pybamm.EqualHeaviside = pybamm.EqualHeaviside(left, right)

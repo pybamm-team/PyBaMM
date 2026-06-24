@@ -85,9 +85,7 @@ def test_exemption_sets_are_disjoint():
     )
 
 
-# One exemplar child per constraint axis a constructor may check: each primary
-# domain the recursive pool can produce, an auxiliary (secondary) domain, and
-# branch-rooted / edge-evaluating children.
+# One exemplar child per constraint axis: primary domain, secondary domain, branch-rooted/edge-evaluating children
 _EXEMPLAR_CHILDREN: dict[str, object] = {
     "empty-domain": lambda: pybamm.Scalar(1.5),
     "negative-electrode": lambda: pybamm.Variable(

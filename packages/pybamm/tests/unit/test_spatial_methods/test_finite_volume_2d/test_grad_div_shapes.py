@@ -1,7 +1,3 @@
-#
-# Test for the gradient and divergence in Finite Volumes
-#
-
 import numpy as np
 import pytest
 from tests import DummyDiscretisationClass
@@ -799,9 +795,7 @@ class TestFiniteVolume2DGradDiv:
             var_n_disc, var_s_disc, submesh_n, submesh_s
         )
 
-        # For a linear x function, the internal Neumann condition computes:
-        # (first_value_of_separator - last_value_of_neg_electrode) / dx
-        # This should equal the slope of the linear function (which is 1)
+        # Linear x: Neumann = (sep_first - neg_last) / dx = slope (1)
         result = internal_neumann.evaluate(
             None, np.concatenate([linear_x_n, linear_x_s, linear_x_p])
         )

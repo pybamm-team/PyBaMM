@@ -1,6 +1,3 @@
-#
-# Inverse Butler-Volmer class
-#
 import pybamm
 
 from .base_inverse import BaseInverseKinetics

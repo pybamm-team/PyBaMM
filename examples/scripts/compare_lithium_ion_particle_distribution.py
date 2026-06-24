@@ -1,6 +1,5 @@
-#
-# Compare lithium-ion battery models with and without particle size distibution
-#
+"""Compare lithium-ion models with and without particle size distribution."""
+
 import numpy as np
 
 import pybamm

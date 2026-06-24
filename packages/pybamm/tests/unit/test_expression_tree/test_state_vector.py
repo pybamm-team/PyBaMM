@@ -1,7 +1,3 @@
-#
-# Tests for the State Vector class
-#
-
 import numpy as np
 import pytest
 

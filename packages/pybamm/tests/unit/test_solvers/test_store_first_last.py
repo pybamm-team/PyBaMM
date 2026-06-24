@@ -1,6 +1,3 @@
-#
-# Tests for the `store_first_last` solver kwarg.
-#
 import json
 import warnings
 

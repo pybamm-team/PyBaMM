@@ -1,6 +1,3 @@
-#
-# Class for isothermal submodel
-#
 import pybamm
 
 from .base_thermal import BaseThermal

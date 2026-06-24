@@ -1,6 +1,3 @@
-#
-# Different OCPs for charge and discharge, based on current
-#
 import pybamm
 
 from . import BaseHysteresisOpenCircuitPotential

@@ -1,6 +1,3 @@
-#
-# Native PyBaMM Meshes
-#
 import numbers
 import warnings
 
@@ -122,9 +119,7 @@ class Mesh(dict):
                     if var != "tabs":
                         if isinstance(var, str):
                             var = getattr(pybamm.standard_spatial_vars, var)
-                        # Raise error if the number of points for a particular
-                        # variable haven't been provided, unless that variable
-                        # doesn't appear in the geometry
+                        # Raise error if points missing for a variable not in geometry.
                         if (
                             var.name not in var_name_pts.keys()
                             and var.domain[0] in geometry.keys()
@@ -209,9 +204,8 @@ class Mesh(dict):
         """
         if submeshnames == ():
             raise ValueError("Submesh domains being combined cannot be empty")
-        # Check that the final edge of each submesh is the same as the first edge of the
-        # next submesh
-        # TODO: We need a more robust way to check whether the submeshes are being combined lr or tb
+        # Verify final edge of each submesh matches first edge of next submesh.
+        # TODO: More robust lr/tb detection.
         for i in range(len(submeshnames) - 1):
             if self[submeshnames[i]].dimension != self[submeshnames[i + 1]].dimension:
                 raise pybamm.GeometryError(
@@ -407,9 +401,8 @@ class Mesh(dict):
         self._geometry = geometry
 
     def to_json(self):
-        # Non-ghost single-domain sub-meshes travel through children (each is a
-        # kernel-serialisable SubMesh); their domain keys ride alongside so
-        # _from_json can re-key them.
+        # Non-ghost single-domain sub-meshes travel through children; domain keys
+        # ride alongside for _from_json re-keying.
         domains = [k for k in self if len(k) == 1 and "ghost cell" not in k[0]]
         return {
             "submesh_pts": self.submesh_pts,
@@ -438,9 +431,8 @@ class SubMesh:
     (optionally) information about the tab locations.
     """
 
-    # Construction inputs re-derived from edges/coord_sys on decode, so the coverage
-    # guard waives them. Inherited by all SubMesh subclasses. `tabs` is excluded: it
-    # is handled by the kernel guard's missing-defaulted grace.
+    # Construction inputs re-derived from edges/coord_sys on decode (coverage
+    # waived). `tabs` excluded: handled by kernel guard's missing-defaulted grace.
     _serialise_derived_params = frozenset({"lims", "npts", "position"})
 
     def __init__(self):

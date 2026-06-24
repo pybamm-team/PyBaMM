@@ -122,9 +122,7 @@ class TestSimulationExperiment:
         ]
 
     def test_unified_allows_drive_cycle_and_algebraic_implicit(self):
-        # Drive-cycle steps are explicit current steps with a time-varying value; they
-        # share the generic current residual, so unified mode must accept them. An
-        # algebraic-control implicit step (voltage hold) is also eligible.
+        # Drive-cycle and algebraic-control implicit steps are eligible in unified mode.
         drive_cycle = np.column_stack([[0, 5, 10], [1.0, 0.5, 1.0]])
         experiment = pybamm.Experiment(
             [
@@ -284,9 +282,7 @@ class TestSimulationExperiment:
         assert len({id(s) for s in sim.steps_to_built_solvers.values()}) == 1
 
     def test_unified_constant_current_steps_collapse_to_one_branch(self):
-        # CC/C-rate steps differing only in current value share one branch: the value
-        # is supplied as a per-step input, so the number of branches (and therefore
-        # compile/runtime cost) does not grow with the number of distinct currents.
+        # CC/C-rate steps share one branch; per-step input prevents branch count from growing.
         currents = [0.1, 0.2, 0.5, 1.0]
         steps = [pybamm.step.c_rate(c, duration=1) for c in currents]
         sim = pybamm.Simulation(
@@ -320,10 +316,7 @@ class TestSimulationExperiment:
         assert len(set(sim._experiment_step_indices)) == 3
 
     def test_unified_voltage_per_step_matches_legacy(self):
-        # Generalised value-as-input must be correct for implicit control too: two
-        # voltage holds at distinct targets collapse to one branch but must each hold
-        # their own target and match legacy. Sample settled points (end of each fixed
-        # 300 s window) on a common time grid to avoid transient/grid-alignment noise.
+        # Two voltage holds at distinct targets collapse to one branch; sample settled points on common grid.
         steps = [
             pybamm.step.c_rate(0.5, duration=300),
             pybamm.step.voltage(3.9, duration=300),
@@ -699,10 +692,7 @@ class TestSimulationExperiment:
         assert voltage("unified") == pytest.approx(voltage("legacy"), abs=1e-6)
 
     def test_unified_control_row_jacobian_is_sparse(self):
-        # CasADi declares a Switch's jacobian structurally dense, so the control
-        # equation would otherwise be a full-bandwidth row and balloon KLU work. The
-        # solver projects it back onto the true (union-of-branches) sparsity; assert no
-        # jacobian row spans the full bandwidth.
+        # Control-row union-sparsity projection must prevent full-bandwidth jacobian rows.
         from collections import Counter
 
         sim = pybamm.Simulation(
@@ -723,10 +713,7 @@ class TestSimulationExperiment:
         )
 
     def test_unified_records_switching_control_variable_not_voltage(self):
-        # The unified setup records the control variable (its one Conditional residual) by
-        # name, so build_casadi_jacobian gives only that row the sparse switch treatment.
-        # With "voltage as a state" the algebraic block also holds a "Voltage [V]" row,
-        # which is physics and must NOT be picked up as a switch row.
+        # Unified setup records the control variable by name; physics Voltage [V] row must not be picked up as switch.
         sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
             experiment=pybamm.Experiment(
@@ -1048,10 +1035,7 @@ class TestSimulationExperiment:
             [("Charge at C/3 until 4.1 V", "Hold at 4.1 V until C/20")]
         )
 
-        # Tolerances tight enough that event-crossing times are resolved to
-        # better than the assertion tolerances below; at default tolerances
-        # the shallow dV/dt near the voltage cut-off lets the two modes land
-        # seconds apart while both remain within integration tolerance.
+        # Tight tolerances ensure event-crossing times are resolved precisely for comparison.
         legacy_sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
             experiment=experiment,

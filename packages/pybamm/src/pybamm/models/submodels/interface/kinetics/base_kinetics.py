@@ -1,6 +1,3 @@
-#
-# Base kinetics class
-#
 import pybamm
 from pybamm.models.submodels.interface.base_interface import BaseInterface
 
@@ -77,11 +74,8 @@ class BaseKinetics(BaseInterface):
                 delta_phi, [f"{domain} {phase_name}particle size"]
             )
 
-        # Get exchange-current density. For MSMR models we calculate the exchange
-        # current density for each reaction, then sum these to give a total exchange
-        # current density. Note: this is only used for the "exchange current density"
-        # variables. For the interfacial current density variables, we sum the
-        # interfacial currents from each reaction.
+        # MSMR: calculate exchange current per reaction then sum. Only used for
+        # "exchange current density" variables; interfacial current sums separately.
         if domain_options["intercalation kinetics"] == "MSMR":
             N = int(domain_options["number of MSMR reactions"])
             j0 = 0
@@ -107,9 +101,8 @@ class BaseKinetics(BaseInterface):
             ocp = variables[
                 f"{Domain} electrode {reaction_name}open-circuit potential [V]"
             ]
-        # If ocp was broadcast, and the reaction is lithium metal plating OR
-        # delta_phi's secondary domain is "current collector", then take only the
-        # orphan.
+        # If ocp was broadcast and reaction is lithium metal plating OR delta_phi
+        # secondary domain is "current collector", take only the orphan.
         if isinstance(ocp, pybamm.Broadcast):
             if self.reaction == "lithium metal plating":
                 ocp = ocp.orphans[0]
@@ -182,11 +175,8 @@ class BaseKinetics(BaseInterface):
             T = variables[f"{Domain} electrode temperature [K]"]
             u = variables[f"{Domain} electrode interface utilisation"]
 
-        # Update j, except in the "distributed SEI resistance" model, where j will be
-        # found by solving an algebraic equation.
-        # (In the "distributed SEI resistance" model, we have already defined j)
-        # For MSMR model we calculate the total current density by summing the current
-        # densities from each reaction
+        # Update j; except in "distributed SEI resistance" model (already defined).
+        # For MSMR, total current density is the sum from each reaction.
         if domain_options["intercalation kinetics"] == "MSMR":
             j = 0
             for i in range(N):

@@ -1,7 +1,3 @@
-#
-# Tests for the Binary Operator classes
-#
-
 import numpy as np
 import pytest
 import sympy
