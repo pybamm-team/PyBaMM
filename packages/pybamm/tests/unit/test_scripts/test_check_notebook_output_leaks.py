@@ -9,8 +9,8 @@ ROOT_DIR = Path(__file__).parents[5]
 SCRIPT_PATH = ROOT_DIR / "scripts" / "check_notebook_output_leaks.py"
 
 
-class TestCheckNotebookOutputLeaks:
-    def _run_checker(self, path, *extra_args):
+class _NotebookScriptHarness:
+    def _run_script(self, path, *extra_args):
         return subprocess.run(
             [sys.executable, str(SCRIPT_PATH), *extra_args, str(path)],
             capture_output=True,
@@ -18,7 +18,12 @@ class TestCheckNotebookOutputLeaks:
             check=False,
         )
 
-    def _write_notebook(self, path, output):
+    def _run_checker(self, path):
+        return self._run_script(path)
+
+    def _write_notebook(
+        self, path, output, source=("print('x')\n",), ensure_ascii=True
+    ):
         path.write_text(
             json.dumps(
                 {
@@ -28,16 +33,20 @@ class TestCheckNotebookOutputLeaks:
                             "execution_count": 1,
                             "metadata": {},
                             "outputs": [output],
-                            "source": ["print('x')\n"],
+                            "source": list(source),
                         }
                     ],
                     "metadata": {},
                     "nbformat": 4,
                     "nbformat_minor": 5,
-                }
-            )
+                },
+                ensure_ascii=ensure_ascii,
+            ),
+            encoding="utf-8",
         )
 
+
+class TestCheckNotebookOutputLeaks(_NotebookScriptHarness):
     def test_rejects_users_path_in_stream_output(self, tmp_path):
         notebook = tmp_path / "users.ipynb"
         self._write_notebook(
@@ -163,46 +172,9 @@ class TestCheckNotebookOutputLeaks:
         assert "/Users/" in result.stderr
 
 
-class TestFixNotebookOutputLeaks:
+class TestFixNotebookOutputLeaks(_NotebookScriptHarness):
     def _run_fixer(self, path):
-        return subprocess.run(
-            [sys.executable, str(SCRIPT_PATH), "--fix", str(path)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-    def _run_checker(self, path):
-        return subprocess.run(
-            [sys.executable, str(SCRIPT_PATH), str(path)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-    def _write_notebook(
-        self, path, output, source=("print('x')\n",), ensure_ascii=True
-    ):
-        path.write_text(
-            json.dumps(
-                {
-                    "cells": [
-                        {
-                            "cell_type": "code",
-                            "execution_count": 1,
-                            "metadata": {},
-                            "outputs": [output],
-                            "source": list(source),
-                        }
-                    ],
-                    "metadata": {},
-                    "nbformat": 4,
-                    "nbformat_minor": 5,
-                },
-                ensure_ascii=ensure_ascii,
-            ),
-            encoding="utf-8",
-        )
+        return self._run_script(path, "--fix")
 
     def test_fix_redacts_non_ascii_path_escaped(self, tmp_path):
         # Tools that escape non-ASCII store the path as \uXXXX; the fixer must
@@ -219,7 +191,9 @@ class TestFixNotebookOutputLeaks:
 
         self._run_fixer(notebook)
 
-        value = json.loads(notebook.read_text())["cells"][0]["outputs"][0]["text"][0]
+        value = json.loads(notebook.read_text(encoding="utf-8"))["cells"][0]["outputs"][
+            0
+        ]["text"][0]
         assert value == "<path>/café.py loaded\n"
         assert self._run_checker(notebook).returncode == 0
 
@@ -239,7 +213,9 @@ class TestFixNotebookOutputLeaks:
 
         self._run_fixer(notebook)
 
-        value = json.loads(notebook.read_text())["cells"][0]["outputs"][0]["text"][0]
+        value = json.loads(notebook.read_text(encoding="utf-8"))["cells"][0]["outputs"][
+            0
+        ]["text"][0]
         assert value == "<path>/café.py loaded\n"
         assert self._run_checker(notebook).returncode == 0
 
@@ -256,7 +232,7 @@ class TestFixNotebookOutputLeaks:
 
         result = self._run_fixer(notebook)
 
-        text = notebook.read_text()
+        text = notebook.read_text(encoding="utf-8")
         assert "/Users/" not in text
         assert "<path>/file.py:1: warning" in text
         assert result.returncode == 1
@@ -279,10 +255,10 @@ class TestFixNotebookOutputLeaks:
 
         self._run_fixer(notebook)
 
-        assert "/home/" not in notebook.read_text()
-        value = json.loads(notebook.read_text())["cells"][0]["outputs"][0]["traceback"][
+        assert "/home/" not in notebook.read_text(encoding="utf-8")
+        value = json.loads(notebook.read_text(encoding="utf-8"))["cells"][0]["outputs"][
             0
-        ]
+        ]["traceback"][0]
         assert value == 'File "<path>/simulation.py", line 472, in solve\n'
 
     def test_fix_redacts_vscode_uri_to_placeholder(self, tmp_path):
@@ -302,7 +278,7 @@ class TestFixNotebookOutputLeaks:
 
         self._run_fixer(notebook)
 
-        text = notebook.read_text()
+        text = notebook.read_text(encoding="utf-8")
         assert "vscode-notebook-cell:" not in text
         assert "/Users/" not in text
         assert "<a href='<path>'>6</a>" in text
@@ -321,7 +297,9 @@ class TestFixNotebookOutputLeaks:
 
         self._run_fixer(notebook)
 
-        text = json.loads(notebook.read_text())["cells"][0]["outputs"][0]["text"][0]
+        text = json.loads(notebook.read_text(encoding="utf-8"))["cells"][0]["outputs"][
+            0
+        ]["text"][0]
         assert "C:\\Users\\" not in text
         assert text == "<path>\\model.py loaded\n"
         assert self._run_checker(notebook).returncode == 0
@@ -340,9 +318,9 @@ class TestFixNotebookOutputLeaks:
 
         self._run_fixer(notebook)
 
-        value = json.loads(notebook.read_text())["cells"][0]["outputs"][0]["data"][
-            "text/plain"
-        ][0]
+        value = json.loads(notebook.read_text(encoding="utf-8"))["cells"][0]["outputs"][
+            0
+        ]["data"]["text/plain"][0]
         assert value == "PosixPath('<path>/Ecker_1C.csv')"
 
     def test_fix_redacts_path_after_ansi_colour_code(self, tmp_path):
@@ -359,9 +337,9 @@ class TestFixNotebookOutputLeaks:
 
         self._run_fixer(notebook)
 
-        value = json.loads(notebook.read_text())["cells"][0]["outputs"][0]["traceback"][
+        value = json.loads(notebook.read_text(encoding="utf-8"))["cells"][0]["outputs"][
             0
-        ]
+        ]["traceback"][0]
         assert value == "\x1b[1;32m<path>/quick_plot.py\x1b[0m\n"
         assert self._run_checker(notebook).returncode == 0
 
@@ -398,11 +376,11 @@ class TestFixNotebookOutputLeaks:
             '   "source": [\n    "print(1)"\n   ]\n  }\n ],\n'
             '  "metadata": {},\n "nbformat": 4,\n "nbformat_minor": 5\n}\n'
         )
-        notebook.write_text(raw)
+        notebook.write_text(raw, encoding="utf-8")
 
         self._run_fixer(notebook)
 
-        text = notebook.read_text()
+        text = notebook.read_text(encoding="utf-8")
         assert "/Users/" not in text
         assert "\\u001B[0;31mAttributeError\\u001B[0m: boom" in text
         assert (
