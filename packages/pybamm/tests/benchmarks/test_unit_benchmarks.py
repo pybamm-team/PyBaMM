@@ -1,6 +1,9 @@
 import numpy as np
+import pytest
 
 import pybamm
+
+pytestmark = pytest.mark.speed_bench
 
 
 def _create_expression():

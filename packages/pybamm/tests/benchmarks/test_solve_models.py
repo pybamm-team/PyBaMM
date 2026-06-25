@@ -4,15 +4,17 @@ import pytest
 
 import pybamm
 
+pytestmark = pytest.mark.speed_bench
+
 _PARAMS = [
     "Marquis2019",
-    pytest.param("ORegan2022", marks=pytest.mark.slow_bench),
-    pytest.param("NCA_Kim2011", marks=pytest.mark.slow_bench),  # Not DFN
-    pytest.param("Prada2013", marks=pytest.mark.slow_bench),
-    pytest.param("Ai2020", marks=pytest.mark.slow_bench),  # DFN only
-    pytest.param("Ramadass2004", marks=pytest.mark.slow_bench),
+    "ORegan2022",
+    "NCA_Kim2011",  # Not DFN
+    "Prada2013",
+    "Ai2020",  # DFN only
+    "Ramadass2004",
     "Chen2020",
-    pytest.param("Ecker2015", marks=pytest.mark.slow_bench),
+    "Ecker2015",
 ]
 
 

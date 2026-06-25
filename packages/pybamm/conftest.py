@@ -40,7 +40,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "unit: mark test as a unit test")
     config.addinivalue_line("markers", "integration: mark test as an integration test")
     config.addinivalue_line("markers", "memory: mark test as a memory stress test")
-    config.addinivalue_line("markers", "slow_bench: mark test as a slow benchmark")
+    config.addinivalue_line("markers", "speed_bench: mark test as a speed benchmark")
     config.addinivalue_line("markers", "memory_bench: mark test as a memory benchmark")
 
 

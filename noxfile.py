@@ -169,9 +169,9 @@ def run_memory(session):
     )
 
 
-@nox.session(name="benchmark-fast", default=False)
-def run_benchmark_fast(session):
-    """Run fast benchmark tests."""
+@nox.session(name="benchmark-speed", default=False)
+def run_benchmark_speed(session):
+    """Run speed benchmark tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     install_locked(session, groups=["dev"])
     session.run(
@@ -179,28 +179,8 @@ def run_benchmark_fast(session):
         "-m",
         "pytest",
         "packages/pybamm/tests/benchmarks/",
-        "-v",
-        "-o",
-        "addopts=",
         "-m",
-        "not slow_bench",
-        "--benchmark-group-by",
-        "func",
-        "--benchmark-disable-gc",
-        *session.posargs,
-    )
-
-
-@nox.session(name="benchmark-all", default=False)
-def run_benchmark_all(session):
-    """Run all benchmark tests."""
-    set_environment_variables(PYBAMM_ENV, session=session)
-    install_locked(session, groups=["dev"])
-    session.run(
-        "python",
-        "-m",
-        "pytest",
-        "packages/pybamm/tests/benchmarks/",
+        "speed_bench",
         "-v",
         "-o",
         "addopts=",

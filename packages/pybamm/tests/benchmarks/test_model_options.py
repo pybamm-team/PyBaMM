@@ -10,8 +10,7 @@ import pytest
 
 import pybamm
 
-# Mark whole module as a "slow" benchmark
-pytestmark = pytest.mark.slow_bench
+pytestmark = pytest.mark.speed_bench
 
 _MODELS = [
     pytest.param(pybamm.lithium_ion.SPM, id="spm"),

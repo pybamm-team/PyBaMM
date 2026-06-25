@@ -2,6 +2,8 @@ import pytest
 
 import pybamm
 
+pytestmark = pytest.mark.speed_bench
+
 _EXPERIMENT_DESCRIPTIONS = {
     "CCCV": [
         "Discharge at C/5 for 10 hours or until 3.3 V",
@@ -29,7 +31,6 @@ def _setup_sim(experiment, parameters, model_class):
     )
 
 
-# @pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("parameters", ["Marquis2019", "Chen2020"])
 @pytest.mark.parametrize("experiment", ["CCCV", "GITT"])
