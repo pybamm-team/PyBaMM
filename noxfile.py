@@ -211,6 +211,28 @@ def run_benchmark_all(session):
     )
 
 
+@nox.session(name="benchmark-memory", default=False)
+def run_benchmark_memory(session):
+    """Run memory benchmarks with memray (Linux/macOS only)."""
+    if sys.platform == "win32":
+        session.skip("memray is not supported on Windows")
+    set_environment_variables(PYBAMM_ENV, session=session)
+    install_locked(session, groups=["dev"])
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "packages/pybamm/tests/benchmarks/",
+        "-m",
+        "memory_bench",
+        "-v",
+        "-o",
+        "addopts=",
+        "--memray",
+        "--benchmark-disable",
+    )
+
+
 @nox.session(name="examples", default=False)
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""

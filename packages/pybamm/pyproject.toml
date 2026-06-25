@@ -114,6 +114,8 @@ dev = [
     # For property based testing
     "hypothesis",
     "pytest-benchmark>=5.2.3",
+    # For memory benchmarking (Linux/macOS only)
+    "pytest-memray>=1.7.0; sys_platform != 'win32'",
 ]
 
 [project.entry-points."pybamm_parameter_sets"]
