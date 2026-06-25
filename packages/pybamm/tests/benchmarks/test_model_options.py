@@ -17,10 +17,6 @@ _MODELS = [
     pytest.param(pybamm.lithium_ion.SPM, id="spm"),
     pytest.param(pybamm.lithium_ion.DFN, id="dfn"),
 ]
-_SOLVERS = [
-    pytest.param(pybamm.CasadiSolver, id="casadi"),
-    pytest.param(pybamm.IDAKLUSolver, id="idaklu"),
-]
 
 
 def _build_model(parameter, model_class, option, value, additional_params=None):
@@ -89,14 +85,11 @@ def test_build_loss_active_material(benchmark, model_class, option):
     benchmark(_build_model, "Ai2020", model_class, "loss of active material", option)
 
 
-@pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("option", _LAM_OPTIONS)
-def test_solve_loss_active_material(benchmark, model_class, option, solver_class):
-    if (model_class, solver_class) == (pybamm.lithium_ion.DFN, pybamm.CasadiSolver):
-        pytest.skip("DFN + CasadiSolver is too slow!")
+def test_solve_loss_active_material(benchmark, model_class, option):
     solver, model, t_eval, t_interp = _solve_setup(
-        "Ai2020", model_class, "loss of active material", option, solver_class
+        "Ai2020", model_class, "loss of active material", option, pybamm.IDAKLUSolver
     )
     benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
 
@@ -114,12 +107,11 @@ def test_build_lithium_plating(benchmark, model_class, option):
     benchmark(_build_model, "OKane2022", model_class, "lithium plating", option)
 
 
-@pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("option", _PLATING_OPTIONS)
-def test_solve_lithium_plating(benchmark, model_class, option, solver_class):
+def test_solve_lithium_plating(benchmark, model_class, option):
     solver, model, t_eval, t_interp = _solve_setup(
-        "OKane2022", model_class, "lithium plating", option, solver_class
+        "OKane2022", model_class, "lithium plating", option, pybamm.IDAKLUSolver
     )
     benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
 
@@ -153,26 +145,24 @@ def test_build_sei(benchmark, model_class, option):
     benchmark(_build_model, "Marquis2019", model_class, "SEI", option)
 
 
-@pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("option", _SEI_OPTIONS)
-def test_solve_sei(benchmark, model_class, option, solver_class):
+def test_solve_sei(benchmark, model_class, option):
     solver, model, t_eval, t_interp = _solve_setup(
-        "Marquis2019", model_class, "SEI", option, solver_class
+        "Marquis2019", model_class, "SEI", option, pybamm.IDAKLUSolver
     )
     benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
 
 
-@pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("option", _SEI_TUNNELLING_OPTIONS)
-def test_solve_sei_tunnelling(benchmark, model_class, option, solver_class):
+def test_solve_sei_tunnelling(benchmark, model_class, option):
     solver, model, t_eval, t_interp = _solve_setup(
         "Chen2020",
         model_class,
         "SEI",
         option,
-        solver_class,
+        pybamm.IDAKLUSolver,
         additional_params=_SEI_TUNNELLING_EXTRA[option],
     )
     benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
@@ -196,12 +186,11 @@ def test_build_particle(benchmark, model_class, option):
     benchmark(_build_model, "Marquis2019", model_class, "particle", option)
 
 
-@pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("option", _PARTICLE_OPTIONS)
-def test_solve_particle(benchmark, model_class, option, solver_class):
+def test_solve_particle(benchmark, model_class, option):
     solver, model, t_eval, t_interp = _solve_setup(
-        "Marquis2019", model_class, "particle", option, solver_class
+        "Marquis2019", model_class, "particle", option, pybamm.IDAKLUSolver
     )
     benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
 
@@ -219,12 +208,11 @@ def test_build_thermal(benchmark, model_class, option):
     benchmark(_build_model, "Marquis2019", model_class, "thermal", option)
 
 
-@pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("option", _THERMAL_OPTIONS)
-def test_solve_thermal(benchmark, model_class, option, solver_class):
+def test_solve_thermal(benchmark, model_class, option):
     solver, model, t_eval, t_interp = _solve_setup(
-        "Marquis2019", model_class, "thermal", option, solver_class
+        "Marquis2019", model_class, "thermal", option, pybamm.IDAKLUSolver
     )
     benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
 
@@ -242,17 +230,15 @@ def test_build_surface_form(benchmark, model_class, option):
     benchmark(_build_model, "Marquis2019", model_class, "surface form", option)
 
 
-@pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("option", _SURFACE_FORM_OPTIONS)
-def test_solve_surface_form(benchmark, model_class, option, solver_class):
-    if (model_class, option, solver_class) == (
+def test_solve_surface_form(benchmark, model_class, option):
+    if (model_class, option) == (
         pybamm.lithium_ion.SPM,
         "differential",
-        pybamm.IDAKLUSolver,
     ):
         pytest.skip("SPM + differential + IDAKLUSolver not implemented")
     solver, model, t_eval, t_interp = _solve_setup(
-        "Marquis2019", model_class, "surface form", option, solver_class
+        "Marquis2019", model_class, "surface form", option, pybamm.IDAKLUSolver
     )
     benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)

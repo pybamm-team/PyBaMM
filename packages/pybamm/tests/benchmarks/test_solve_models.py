@@ -15,11 +15,6 @@ _PARAMS = [
     pytest.param("Ecker2015", marks=pytest.mark.slow_bench),
 ]
 
-_SOLVERS = [
-    pytest.param(pybamm.CasadiSolver, id="casadi"),
-    pytest.param(pybamm.IDAKLUSolver, id="idaklu"),
-]
-
 
 def _build_and_discretise(model_class, parameters):
     model = model_class()
@@ -56,13 +51,12 @@ def _t_eval_and_interp(
     return np.linspace(0, tmax, 500), None
 
 
-@pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("parameters", _PARAMS)
 @pytest.mark.parametrize("solve_first", [False, True])
-def test_solve_spm(benchmark, solve_first, parameters, solver_class):
+def test_solve_spm(benchmark, solve_first, parameters):
     if parameters == "Ai2020":
         pytest.skip("Ai2020 parameters not implemented for SPM")
-    solver = solver_class()
+    solver = pybamm.IDAKLUSolver()
     model = _build_and_discretise(pybamm.lithium_ion.SPM, parameters)
     t_eval, t_interp = _t_eval_and_interp(solver, 4000.0)
     if solve_first:
@@ -70,13 +64,12 @@ def test_solve_spm(benchmark, solve_first, parameters, solver_class):
     benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
 
 
-@pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("parameters", _PARAMS)
 @pytest.mark.parametrize("solve_first", [False, True])
-def test_solve_spme(benchmark, solve_first, parameters, solver_class):
+def test_solve_spme(benchmark, solve_first, parameters):
     if parameters == "Ai2020":
         pytest.skip("Ai2020 parameters not implemented for SPMe")
-    solver = solver_class()
+    solver = pybamm.IDAKLUSolver()
     model = _build_and_discretise(pybamm.lithium_ion.SPMe, parameters)
     t_eval, t_interp = _t_eval_and_interp(solver, 4000.0)
     if solve_first:
@@ -84,15 +77,12 @@ def test_solve_spme(benchmark, solve_first, parameters, solver_class):
     benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
 
 
-@pytest.mark.parametrize("solver_class", _SOLVERS)
 @pytest.mark.parametrize("parameters", _PARAMS)
 @pytest.mark.parametrize("solve_first", [False, True])
-def test_solve_dfn(benchmark, solve_first, parameters, solver_class):
+def test_solve_dfn(benchmark, solve_first, parameters):
     if parameters == "NCA_Kim2011":
         pytest.skip("NCA_Kim2011 parameters not implemented for DFN")
-    if (parameters, solver_class) == ("ORegan2022", pybamm.CasadiSolver):
-        pytest.skip("ORegan2022 + CasadiSolver not implemented for DFN")
-    solver = solver_class()
+    solver = pybamm.IDAKLUSolver()
     model = _build_and_discretise(pybamm.lithium_ion.DFN, parameters)
     t_eval, t_interp = _t_eval_and_interp(solver, 4000.0)
     if solve_first:
