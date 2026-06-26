@@ -159,19 +159,20 @@ jobs:
           path: solver-wheels-pr
 
       - name: Run baseline benchmarks at main HEAD
+        continue-on-error: true
         env:
           PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels-main
-        # Exit code 5 means no tests collected (benchmarks don't exist on main yet);
-        # treat that as success so the PR step still runs.
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin main
-          git checkout origin/main -- packages/pybamm/ uv.lock pyproject.toml
-          nox -s benchmark-speed -- --benchmark-save=main-baseline || [ "$?" -eq 5 ]
+          git fetch origin "$BASE_REF"
+          git checkout "origin/$BASE_REF" -- packages/pybamm/ uv.lock pyproject.toml
+          nox -s benchmark-speed -- --benchmark-save=main-baseline
 
       - name: Run PR benchmarks and compare against main
         env:
           PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels-pr
-        # Only pass --benchmark-compare if the baseline step actually saved results.
+        # Only compare if the baseline step saved results (it won't on the first PR
+        # that introduces benchmarks, since they don't exist on main yet).
         run: |
           git checkout HEAD -- packages/pybamm/ uv.lock pyproject.toml
           if ls .benchmarks/*/main-baseline*.json 1>/dev/null 2>&1; then
