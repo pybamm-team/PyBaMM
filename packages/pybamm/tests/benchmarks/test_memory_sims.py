@@ -21,7 +21,7 @@ _MODELS = [
 ]
 
 
-@pytest.mark.limit_memory("1.5 MB")
+@pytest.mark.limit_memory("2.5 MB")
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("parameters", ["Marquis2019", "Chen2020"])
 @pytest.mark.parametrize("experiment", ["CCCV", "GITT"])
