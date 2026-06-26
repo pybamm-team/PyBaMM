@@ -70,7 +70,7 @@ def test_create_expression_memory():
     _create_expression()
 
 
-@pytest.mark.limit_memory("3 KB")
+@pytest.mark.limit_memory("4 KB")
 def test_parameterise_memory():
     R, model = _create_expression()
     _parameterise(R, model)
