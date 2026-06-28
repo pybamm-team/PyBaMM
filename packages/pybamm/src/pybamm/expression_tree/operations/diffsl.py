@@ -50,6 +50,8 @@ class DiffSLExport:
             raise ValueError("float_precision must be a positive integer")
         self.float_precision = float_precision
         self._schedule_to_model_branch_order = None
+        self._input_names = None
+        self._nstates = None
         self._preprocess_model()
 
     def _preprocess_model(self) -> None:
@@ -710,7 +712,8 @@ class DiffSLExport:
         new_line = "\n"
 
         # inputs, find all pybamm.InputParameters in the model
-        inputs = [vn for _, vn in self._collect_input_names(all_vars, outputs)]
+        self._input_names = self._collect_input_names(all_vars, outputs)
+        inputs = [vn for _, vn in self._input_names]
 
         if len(inputs) > 0:
             lines = ["in_i {"]
@@ -795,6 +798,7 @@ class DiffSLExport:
             + new_line
             + "}"
         )
+        self._nstates = start_index
 
         # diff of state vector u
         if not is_ode:
@@ -1070,7 +1074,41 @@ class DiffSLExport:
 
         return "\n".join(all_lines) + "\n"
 
-    def map_inputs(self, inputs: dict, outputs: list[str] | None = None) -> np.ndarray:
+    def default_inputs(self) -> dict:
+        """
+        Return a dict of default input values for the model.
+
+        Returns
+        -------
+        dict
+            PyBaMM-style parameter dict mapping parameter names to scalar values.
+            The keys are the original PyBaMM parameter names (e.g. ``"Lower voltage cut-off [V]"``).
+        """
+        return {original_name: 1.0 for original_name, _ in self._input_names}
+
+    def input_names(self) -> list[tuple[str, str]]:
+        """
+        Return a list of input parameter names for the model.
+
+        Returns
+        -------
+        list[tuple[str, str]]
+            List of tuples containing the original PyBaMM parameter name and its diffsl-transformed form (e.g. ``("Lower voltage cut-off [V]", "lowervoltagecutoffv")``).
+        """
+        return self._input_names
+
+    def nstates(self) -> int | None:
+        """
+        Return the number of states in the model.
+
+        Returns
+        -------
+        int
+            The number of states in the model.
+        """
+        return self._nstates
+
+    def map_inputs(self, inputs: dict) -> np.ndarray:
         """
         Map a PyBaMM inputs dict to the ordered array expected by the DiffSL model.
 
@@ -1099,24 +1137,7 @@ class DiffSLExport:
         KeyError
             If a required input parameter is not present in *inputs*.
         """
-        if outputs is None:
-            outputs = []
-
-        model = self.model
-
-        # Build all_vars for the output expressions (same logic as to_diffeq)
-        all_vars = self._all_vars.copy()
-        for out in outputs:
-            if out not in all_vars:
-                raise ValueError(f"output {out} not in model")
-            if model.symbol_processor:
-                try:
-                    all_vars[out] = model.get_processed_variable(out)
-                except KeyError:  # pragma: no cover
-                    pass
-
-        # Reconstruct the ordered input list the same way to_diffeq does
-        ordered_names = self._collect_input_names(all_vars, outputs)
+        ordered_names = self._input_names
 
         if not ordered_names:
             return np.array([], dtype=float)

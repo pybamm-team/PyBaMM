@@ -212,7 +212,7 @@ class TestDiffSLExport:
         map_inputs_dict = dict(pv_inputs)
         if experiment is not None:
             map_inputs_dict["Ambient temperature [K]"] = pv["Ambient temperature [K]"]
-        ds_inputs = exporter.map_inputs(map_inputs_dict, outputs=[output_variable])
+        ds_inputs = exporter.map_inputs(map_inputs_dict)
         logger = logging.getLogger()
         logger.info(f"DiffSL export time: {time.perf_counter() - t0:.5f} seconds")
 

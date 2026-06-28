@@ -369,7 +369,6 @@ class BaseSolver:
             processed_time_integral = (
                 pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
                     model.get_processed_variable_or_event(key),
-                    model.len_rhs_and_alg,
                 )
             )
             # We will evaluate the sum node in the solver and sum it afterwards
