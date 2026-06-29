@@ -140,6 +140,43 @@ class TestSimulationExperiment:
             resumed_full.integration_time.value
         )
 
+    def test_solve_time_counts_starting_solution_padding_rest(self, monkeypatch):
+        """A start_time gap on resume inserts a padding rest that is counted (#2484)."""
+        monkeypatch.setattr(pybamm.Timer, "time", lambda self: pybamm.TimerTime(1.0))
+        model = pybamm.lithium_ion.SPM()
+
+        def resume_solve_time(second_start_time):
+            exp1 = pybamm.Experiment(
+                [
+                    pybamm.step.string(
+                        "Discharge at 1C for 10 minutes",
+                        start_time=datetime(2023, 1, 1, 8, 0, 0),
+                    ),
+                ]
+            )
+            start = pybamm.Simulation(model, experiment=exp1).solve(calc_esoh=False)
+            exp2 = pybamm.Experiment(
+                [
+                    pybamm.step.string(
+                        "Discharge at 1C for 10 minutes",
+                        start_time=second_start_time,
+                    ),
+                ]
+            )
+            resumed = pybamm.Simulation(model, experiment=exp2).solve(
+                starting_solution=start, calc_esoh=False
+            )
+            return resumed.solve_time.value
+
+        # No gap: the second step starts exactly when the first run ended (8:10).
+        no_gap = resume_solve_time(datetime(2023, 1, 1, 8, 10, 0))
+        # Gap: the second step starts an hour later, so solve() runs a padding rest.
+        with_gap = resume_solve_time(datetime(2023, 1, 1, 9, 10, 0))
+
+        # The only extra work is the padding-rest solve, whose time must be
+        # included (one extra pinned 1.0 measurement).
+        assert with_gap == no_gap + 1.0
+
     def test_unified_model_mode_validation_and_blockers(self):
         with pytest.raises(ValueError, match="experiment_model_mode must be one of"):
             pybamm.Simulation(
