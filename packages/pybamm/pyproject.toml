@@ -188,6 +188,7 @@ minversion = "9.0"
 required_plugins = ["pytest-xdist", "pytest-mock"]
 addopts = ["-nauto", "-vra", "--strict-config", "--strict-markers", "--benchmark-disable"]
 testpaths = ["tests"]
+norecursedirs = ["benchmarks"]
 console_output_style = "progress"
 xfail_strict = true
 filterwarnings = [
