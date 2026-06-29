@@ -18,6 +18,12 @@ class TestParameterValuesWithModel:
                     "open-circuit potential": (("single", "current sigmoid"), "single"),
                 }
             ),
+            "Chen2020_composite_BMW_SN16755": pybamm.lithium_ion.DFN(
+                {
+                    "particle phases": ("2", "1"),
+                    "open-circuit potential": (("single", "current sigmoid"), "single"),
+                }
+            ),
             "Ecker2015": pybamm.lithium_ion.DFN(),
             "Ecker2015_graphite_halfcell": pybamm.lithium_ion.DFN(
                 {"working electrode": "positive"}
