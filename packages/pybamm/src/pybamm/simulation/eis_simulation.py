@@ -28,7 +28,7 @@ class EISSimulation(BaseSimulation):
     spatial_methods : dict, optional
         A dictionary of the types of spatial method to use on each domain.
     skip_surface_form_check : bool, optional
-        If True, skip the 'surface form' model option validation.
+        If True, skip the 'surface form' model option validation. Defaults to False.
     """
 
     def __init__(
