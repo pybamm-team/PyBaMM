@@ -46,7 +46,9 @@ def pytest_configure(config):
 
 def pytest_collection_modifyitems(items):
     for item in items:
-        if "unit" in item.nodeid:
+        if "benchmarks" in item.nodeid:
+            pass  # benchmarks carry speed_bench/memory_bench markers explicitly
+        elif "unit" in item.nodeid:
             item.add_marker(pytest.mark.unit)
         elif "integration" in item.nodeid:
             item.add_marker(pytest.mark.integration)

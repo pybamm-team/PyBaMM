@@ -186,7 +186,7 @@ ignore = [
 [tool.pytest.ini_options]
 minversion = "9.0"
 required_plugins = ["pytest-xdist", "pytest-mock"]
-addopts = ["-nauto", "-vra", "--strict-config", "--strict-markers"]
+addopts = ["-nauto", "-vra", "--strict-config", "--strict-markers", "--benchmark-disable"]
 testpaths = ["tests"]
 console_output_style = "progress"
 xfail_strict = true
