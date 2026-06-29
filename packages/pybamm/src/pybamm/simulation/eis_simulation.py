@@ -27,6 +27,8 @@ class EISSimulation(BaseSimulation):
         A dictionary of the number of points used by each spatial variable.
     spatial_methods : dict, optional
         A dictionary of the types of spatial method to use on each domain.
+    skip_surface_form_check : bool, optional
+        If True, skip the 'surface form' model option validation.
     """
 
     def __init__(
@@ -37,6 +39,7 @@ class EISSimulation(BaseSimulation):
         submesh_types=None,
         var_pts=None,
         spatial_methods=None,
+        skip_surface_form_check=False,
     ):
         timer = pybamm.Timer()
         model_name = model.name
@@ -44,7 +47,7 @@ class EISSimulation(BaseSimulation):
         parameter_values = parameter_values or model.default_parameter_values
 
         # Validate required variables and surface form before any processing
-        self._validate_model_for_eis(model)
+        self._validate_model_for_eis(model, skip_surface_form_check)
 
         pybamm.logger.info(f"Setting up {model_name} for EIS")
         eis_model = self._set_up_model_for_eis(model)
@@ -75,7 +78,7 @@ class EISSimulation(BaseSimulation):
         pybamm.citations.register("Hallemans2025")
 
     @staticmethod
-    def _validate_model_for_eis(model):
+    def _validate_model_for_eis(model, skip_surface_form_check=False):
         """Validate that a model is suitable for frequency-domain EIS.
 
         Raises
@@ -90,6 +93,8 @@ class EISSimulation(BaseSimulation):
                     f"Model must contain variable '{var}' for EIS simulation"
                 )
 
+        if skip_surface_form_check:
+            return
         surface_form = model.options.get("surface form", "false")
         if surface_form not in ("differential", "algebraic"):
             raise ValueError(
