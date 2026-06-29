@@ -102,7 +102,7 @@ class TestDiffSLExport:
         t0 = time.perf_counter()
         exporter = pybamm.DiffSLExport(model_disc)
         diffsl_code = exporter.to_diffeq(outputs=[output_variable])
-        ds_inputs = exporter.map_inputs(pv_inputs, outputs=[output_variable])
+        ds_inputs = exporter.map_inputs(pv_inputs)
         logger.info(f"DiffSL export time: {time.perf_counter() - t0:.5f} seconds")
 
         t0 = time.perf_counter()

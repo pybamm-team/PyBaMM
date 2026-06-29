@@ -349,6 +349,7 @@ class TestDiffSLExport:
 
     def test_map_inputs_basic(self, model):
         exporter = pybamm.DiffSLExport(model)
+        exporter.to_diffeq(outputs=["x"])
         result = exporter.map_inputs({"p": 3.14})
         assert isinstance(result, np.ndarray)
         assert result.shape == (1,)
@@ -356,7 +357,8 @@ class TestDiffSLExport:
 
     def test_map_inputs_no_outputs(self, model):
         exporter = pybamm.DiffSLExport(model)
-        result = exporter.map_inputs({"p": 1.0}, outputs=None)
+        exporter.to_diffeq(outputs=["x"])
+        result = exporter.map_inputs({"p": 1.0})
         assert result[0] == 1.0
 
     def test_map_inputs_empty_model(self):
@@ -372,6 +374,7 @@ class TestDiffSLExport:
 
     def test_map_inputs_missing_key_raises(self, model):
         exporter = pybamm.DiffSLExport(model)
+        exporter.to_diffeq(outputs=["x"])
         with pytest.raises(KeyError, match="not found in inputs dict"):
             exporter.map_inputs({})
 
@@ -385,7 +388,8 @@ class TestDiffSLExport:
         disc = pybamm.Discretisation()
         disc.process_model(model)
         exporter = pybamm.DiffSLExport(model)
-        result = exporter.map_inputs({"extra_param": 2.0}, outputs=["extra_out"])
+        exporter.to_diffeq(outputs=["extra_out"])
+        result = exporter.map_inputs({"extra_param": 2.0})
         assert result[0] == 2.0
 
     def test_reg_power_with_non_scalar_exponent(self):
@@ -404,11 +408,12 @@ class TestDiffSLExport:
     def test_map_inputs_invalid_output_raises(self, model):
         exporter = pybamm.DiffSLExport(model)
         with pytest.raises(ValueError, match="output nonexistent not in model"):
-            exporter.map_inputs({}, outputs=["nonexistent"])
+            exporter.to_diffeq(outputs=["nonexistent"])
 
     def test_map_inputs_processed_variable_path(self, model):
         exporter = pybamm.DiffSLExport(model)
-        result = exporter.map_inputs({"p": 1.0}, outputs=["x"])
+        exporter.to_diffeq(outputs=["x"])
+        result = exporter.map_inputs({"p": 1.0})
         assert result[0] == 1.0
 
     def test_map_inputs_with_symbol_processor(self):
@@ -418,7 +423,8 @@ class TestDiffSLExport:
         )
         sim.build()
         exporter = pybamm.DiffSLExport(sim)
-        result = exporter.map_inputs({}, outputs=["Terminal voltage [V]"])
+        exporter.to_diffeq(outputs=["Terminal voltage [V]"])
+        result = exporter.map_inputs({})
         assert len(result) >= 0
 
     def test_map_inputs_diffsl_transformed_name(self):
@@ -431,6 +437,7 @@ class TestDiffSLExport:
         disc = pybamm.Discretisation()
         disc.process_model(model)
         exporter = pybamm.DiffSLExport(model)
+        exporter.to_diffeq(outputs=["x"])
         result = exporter.map_inputs({"testparam": 2.0})
         assert result[0] == 2.0
 

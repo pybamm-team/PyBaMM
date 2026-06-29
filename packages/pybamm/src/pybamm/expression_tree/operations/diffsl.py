@@ -1112,8 +1112,9 @@ class DiffSLExport:
         """
         Map a PyBaMM inputs dict to the ordered array expected by the DiffSL model.
 
-        The ordering matches the ``in_i {}`` block produced by :meth:`to_diffeq`.
-        Each key in ``inputs`` may be either the original PyBaMM parameter name
+        The ordering matches the ``in_i {}`` block produced by the most recent
+        call to :meth:`to_diffeq`, which must be called first. Each key in
+        ``inputs`` may be either the original PyBaMM parameter name
         (e.g. ``"Lower voltage cut-off [V]"``) or its DiffSL-transformed form
         (e.g. ``"lowervoltagecutoffv"``).
 
@@ -1121,9 +1122,6 @@ class DiffSLExport:
         ----------
         inputs : dict
             PyBaMM-style parameter dict mapping parameter names to scalar values.
-        outputs : list[str] or None, optional
-            Output variable names, used to scan for ``InputParameter`` nodes that
-            appear only inside output expressions.  Defaults to an empty list.
 
         Returns
         -------
@@ -1155,6 +1153,40 @@ class DiffSLExport:
                     f"Available keys: {list(inputs.keys())}"
                 )
         return np.array(values, dtype=float)
+
+    def inverse_map_inputs(self, values: np.ndarray) -> dict:
+        """
+        Map an ordered DiffSL parameter array back to a PyBaMM inputs dict.
+
+        This is the inverse of :meth:`map_inputs`: the ``i``-th value is assigned
+        to the ``i``-th input parameter in the order of the ``in_i {}`` block
+        produced by :meth:`to_diffeq`.
+
+        Parameters
+        ----------
+        values : array_like
+            1-D array of parameter values ordered to match the ``in_i {}`` block.
+
+        Returns
+        -------
+        dict
+            PyBaMM-style parameter dict keyed by the original parameter names.
+
+        Raises
+        ------
+        ValueError
+            If the number of values does not match the number of input parameters.
+        """
+        ordered_names = self._input_names
+        values = np.asarray(values, dtype=float).reshape(-1)
+        if len(values) != len(ordered_names):
+            raise ValueError(
+                f"Expected {len(ordered_names)} parameter values, got {len(values)}."
+            )
+        return {
+            original_name: float(value)
+            for (original_name, _), value in zip(ordered_names, values, strict=True)
+        }
 
 
 def _equation_to_diffeq(
