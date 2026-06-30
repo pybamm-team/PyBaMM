@@ -316,7 +316,9 @@ class TestSimulationExperiment:
 
         steps = [
             pybamm.step.c_rate(0.5, duration=10, termination=lower_voltage_termination),
-            pybamm.step.c_rate(1.0, duration=10, termination=higher_voltage_termination),
+            pybamm.step.c_rate(
+                1.0, duration=10, termination=higher_voltage_termination
+            ),
         ]
         sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
