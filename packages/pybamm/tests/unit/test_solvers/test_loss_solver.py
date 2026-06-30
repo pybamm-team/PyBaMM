@@ -210,6 +210,22 @@ class TestLossSolver:
         restored = pickle.loads(pickle.dumps(continuous_solver))
         np.testing.assert_allclose(restored.loss(p), expected)
 
+    def test_pickle_round_trip_restores_pool(self):
+        sequential = _make_loss_solver(_continuous_loss_function())
+        p = sequential.inputs_to_parameters([{"k": K_TRUE}, {"k": K_OTHER}])
+        expected = sequential.loss(p)
+
+        parallel = _make_loss_solver(_continuous_loss_function(), max_workers=2)
+        blob = pickle.dumps(parallel)
+        parallel.close()
+
+        restored = pickle.loads(blob)
+        try:
+            assert restored._pool is not None
+            np.testing.assert_allclose(restored.loss(p), expected)
+        finally:
+            restored.close()
+
     def test_parallel_matches_sequential(self):
         inputs = [{"k": k} for k in (0.4, 0.6, 0.8, 1.0)]
         sequential = _make_loss_solver(_continuous_loss_function())

@@ -98,14 +98,109 @@ class LossSolver:
 
         # set up the process pool for the batched methods, if requested
         if self._max_workers is not None and self._max_workers > 1:
-            # spawn (not fork) avoids deadlocks with the native threadpools used
-            # by the matrix backend; pickling self ships the compiled Ode cheaply.
-            self._pool = concurrent.futures.ProcessPoolExecutor(
-                max_workers=self._max_workers,
-                mp_context=multiprocessing.get_context("spawn"),
-                initializer=_init_worker,
-                initargs=(pickle.dumps(self),),
+            self._pool = self._start_pool()
+
+    def inputs_to_parameters(self, inputs: list[dict]) -> np.ndarray:
+        """Converts a standard set of pybamm input dictionaries to a 2D parameter array (n_batch, n_params) for use in the functions below."""
+        return np.array([self._exporter.map_inputs(single) for single in inputs])
+
+    def parameters_to_inputs(self, p: np.ndarray) -> list[dict]:
+        """Converts a 2D parameter array (n_batch, n_params) to a standard set of pybamm input dictionaries."""
+        return [self._exporter.inverse_map_inputs(row) for row in np.atleast_2d(p)]
+
+    def predict(self, p: np.ndarray) -> list[pybamm.Solution]:
+        """Calculate the solution of the ODE for each set of parameters in inputs.
+
+        The parameter sets are solved together in a single batched solve, so any
+        ``num_threads`` parallelism configured on the wrapped solver is used.
+        """
+        solutions = self._sim.solve(
+            t_eval=[0, self._final_time], inputs=self.parameters_to_inputs(p)
+        )
+        # a single-element batch is returned as a bare Solution
+        if not isinstance(solutions, list):
+            solutions = [solutions]
+        return solutions
+
+    def loss(self, p: np.ndarray) -> np.ndarray:
+        """
+        Calculate the loss function for each set of parameters in inputs.
+        Returns a 1D array of loss values of length n_batch.
+        """
+        rows = list(np.atleast_2d(p))
+        if self._pool is not None:
+            values = list(self._pool.map(_worker_loss, rows))
+        else:
+            values = [self._single_loss(row) for row in rows]
+        return np.array(values)
+
+    def loss_and_gradient(
+        self, p: np.ndarray, mode: "LossSolverGradientMode"
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Calculate the loss and gradient of the loss function with respect to the parameters for each set of parameters in inputs.
+        Returns a tuple of arrays, where the first contains the loss values as a 1D array of length n_batch and the second contains the gradients as a 2D array of shape (n_batch, n_params)
+        """
+        rows = list(np.atleast_2d(p))
+        if self._pool is not None:
+            items = [(row, mode.value) for row in rows]
+            results = list(self._pool.map(_worker_loss_and_gradient, items))
+        else:
+            results = [self._single_loss_and_gradient(row, mode) for row in rows]
+        losses = np.array([loss for loss, _ in results])
+        gradients = np.array([gradient for _, gradient in results])
+        return losses, gradients
+
+    def finite_difference_gradient(self, p: np.ndarray, h: float = 1e-5) -> np.ndarray:
+        """
+        Calculate the gradient of the loss function with respect to the parameters for each set of parameters in inputs using finite differencing.
+        Returns a 2D array of gradients, with shape (n_batch, n_params), where each row corresponds to the gradient for a given input parameter set.
+        """
+        p = np.atleast_2d(p).astype(float)
+        n_batch, n_params = p.shape
+        gradient = np.zeros((n_batch, n_params))
+        for j in range(n_params):
+            p_plus = p.copy()
+            p_plus[:, j] += h
+            p_minus = p.copy()
+            p_minus[:, j] -= h
+            gradient[:, j] = (self.loss(p_plus) - self.loss(p_minus)) / (2 * h)
+        return gradient
+
+    def close(self) -> None:
+        """Shut down the process pool, if one was created."""
+        if self._pool is not None:
+            self._pool.shutdown(wait=True)
+            self._pool = None
+
+    def __enter__(self) -> "LossSolver":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
+
+    def __getstate__(self) -> dict:
+        state = self.__dict__.copy()
+        # the live process pool and casadi functions are not picklable; the pool
+        # is recreated on unpickle (except inside worker processes) and the
+        # casadi functions are rebuilt
+        state["_pool"] = None
+        state["_post_sum_node_present"] = self._post_sum is not None
+        state["_post_sum"] = None
+        state["_post_sum_sens"] = None
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        rebuild = state.pop("_post_sum_node_present", False)
+        self.__dict__.update(state)
+        if rebuild:
+            self._post_sum, self._post_sum_sens = self._make_post_sum_functions(
+                self._processed_loss.post_sum_node
             )
+        # recreate the pool on unpickle, but never inside a worker process,
+        # which would spawn nested pools
+        if not _IN_WORKER and self._max_workers and self._max_workers > 1:
+            self._pool = self._start_pool()
 
     def _make_post_sum_functions(
         self, post_sum_node: pybamm.Symbol | None
@@ -145,27 +240,15 @@ class LossSolver:
         )
         return post_sum, post_sum_sens
 
-    def inputs_to_parameters(self, inputs: list[dict]) -> np.ndarray:
-        """Converts a standard set of pybamm input dictionaries to a 2D parameter array (n_batch, n_params) for use in the functions below."""
-        return np.array([self._exporter.map_inputs(single) for single in inputs])
-
-    def parameters_to_inputs(self, p: np.ndarray) -> list[dict]:
-        """Converts a 2D parameter array (n_batch, n_params) to a standard set of pybamm input dictionaries."""
-        return [self._exporter.inverse_map_inputs(row) for row in np.atleast_2d(p)]
-
-    def predict(self, p: np.ndarray) -> list[pybamm.Solution]:
-        """Calculate the solution of the ODE for each set of parameters in inputs.
-
-        The parameter sets are solved together in a single batched solve, so any
-        ``num_threads`` parallelism configured on the wrapped solver is used.
-        """
-        solutions = self._sim.solve(
-            t_eval=[0, self._final_time], inputs=self.parameters_to_inputs(p)
+    def _start_pool(self) -> concurrent.futures.ProcessPoolExecutor:
+        # spawn (not fork) avoids deadlocks with the native threadpools used by
+        # the matrix backend; pickling self ships the compiled Ode cheaply.
+        return concurrent.futures.ProcessPoolExecutor(
+            max_workers=self._max_workers,
+            mp_context=multiprocessing.get_context("spawn"),
+            initializer=_init_worker,
+            initargs=(pickle.dumps(self),),
         )
-        # a single-element batch is returned as a bare Solution
-        if not isinstance(solutions, list):
-            solutions = [solutions]
-        return solutions
 
     def _apply_post_sum(
         self, the_integral: np.ndarray, params: np.ndarray
@@ -237,92 +320,18 @@ class LossSolver:
         )
         return loss, gradient
 
-    def loss(self, p: np.ndarray) -> np.ndarray:
-        """
-        Calculate the loss function for each set of parameters in inputs.
-        Returns a 1D array of loss values of length n_batch.
-        """
-        rows = list(np.atleast_2d(p))
-        if self._pool is not None:
-            values = list(self._pool.map(_worker_loss, rows))
-        else:
-            values = [self._single_loss(row) for row in rows]
-        return np.array(values)
-
-    def loss_and_gradient(
-        self, p: np.ndarray, mode: "LossSolverGradientMode"
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Calculate the loss and gradient of the loss function with respect to the parameters for each set of parameters in inputs.
-        Returns a tuple of arrays, where the first contains the loss values as a 1D array of length n_batch and the second contains the gradients as a 2D array of shape (n_batch, n_params)
-        """
-        rows = list(np.atleast_2d(p))
-        if self._pool is not None:
-            items = [(row, mode.value) for row in rows]
-            results = list(self._pool.map(_worker_loss_and_gradient, items))
-        else:
-            results = [self._single_loss_and_gradient(row, mode) for row in rows]
-        losses = np.array([loss for loss, _ in results])
-        gradients = np.array([gradient for _, gradient in results])
-        return losses, gradients
-
-    def finite_difference_gradient(self, p: np.ndarray, h: float = 1e-5) -> np.ndarray:
-        """
-        Calculate the gradient of the loss function with respect to the parameters for each set of parameters in inputs using finite differencing.
-        Returns a 2D array of gradients, with shape (n_batch, n_params), where each row corresponds to the gradient for a given input parameter set.
-        """
-        p = np.atleast_2d(p).astype(float)
-        n_batch, n_params = p.shape
-        gradient = np.zeros((n_batch, n_params))
-        for j in range(n_params):
-            p_plus = p.copy()
-            p_plus[:, j] += h
-            p_minus = p.copy()
-            p_minus[:, j] -= h
-            gradient[:, j] = (self.loss(p_plus) - self.loss(p_minus)) / (2 * h)
-        return gradient
-
-    def close(self) -> None:
-        """Shut down the process pool, if one was created."""
-        if self._pool is not None:
-            self._pool.shutdown(wait=True)
-            self._pool = None
-
-    def __enter__(self) -> "LossSolver":
-        return self
-
-    def __exit__(self, *exc) -> None:
-        self.close()
-
-    def __getstate__(self) -> dict:
-        state = self.__dict__.copy()
-        # the live process pool and casadi functions are not picklable; the
-        # unpickled copy runs sequentially (this also keeps the copies sent to
-        # worker processes pool-less), and the casadi functions are rebuilt
-        state["_pool"] = None
-        state["_post_sum_node_present"] = self._post_sum is not None
-        state["_post_sum"] = None
-        state["_post_sum_sens"] = None
-        return state
-
-    def __setstate__(self, state: dict) -> None:
-        rebuild = state.pop("_post_sum_node_present", False)
-        self.__dict__.update(state)
-        if rebuild:
-            self._post_sum, self._post_sum_sens = self._make_post_sum_functions(
-                self._processed_loss.post_sum_node
-            )
-
     class LossSolverGradientMode(Enum):
         FORWARD_SENSITIVITY = "forward_sensitivity"
         ADJOINT_SENSITIVITY = "adjoint_sensitivity"
 
 
 _WORKER_SOLVER = None
+_IN_WORKER = False
 
 
 def _init_worker(solver_bytes: bytes) -> None:
-    global _WORKER_SOLVER
+    global _WORKER_SOLVER, _IN_WORKER
+    _IN_WORKER = True
     _WORKER_SOLVER = pickle.loads(solver_bytes)
 
 
