@@ -169,9 +169,9 @@ def run_memory(session):
     )
 
 
-@nox.session(name="benchmark-speed", default=False)
-def run_benchmark_speed(session):
-    """Run speed benchmark tests."""
+@nox.session(name="benchmark-time", default=False)
+def run_benchmark_time(session):
+    """Run timing benchmark tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     install_locked(session, groups=["dev"])
     session.run(
@@ -180,7 +180,7 @@ def run_benchmark_speed(session):
         "pytest",
         "packages/pybamm/tests/benchmarks/",
         "-m",
-        "speed_bench",
+        "time_bench",
         "-v",
         "-o",
         "addopts=",

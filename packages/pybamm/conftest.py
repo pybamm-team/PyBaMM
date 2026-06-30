@@ -40,14 +40,14 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "unit: mark test as a unit test")
     config.addinivalue_line("markers", "integration: mark test as an integration test")
     config.addinivalue_line("markers", "memory: mark test as a memory stress test")
-    config.addinivalue_line("markers", "speed_bench: mark test as a speed benchmark")
+    config.addinivalue_line("markers", "time_bench: mark test as a timing benchmark")
     config.addinivalue_line("markers", "memory_bench: mark test as a memory benchmark")
 
 
 def pytest_collection_modifyitems(items):
     for item in items:
         if "benchmarks" in item.nodeid:
-            pass  # benchmarks carry speed_bench/memory_bench markers explicitly
+            pass  # benchmarks carry time_bench/memory_bench markers explicitly
         elif "unit" in item.nodeid:
             item.add_marker(pytest.mark.unit)
         elif "integration" in item.nodeid:

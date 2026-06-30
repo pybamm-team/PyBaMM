@@ -1,7 +1,5 @@
 """
 Benchmarks for different model option combinations.
-
-All tests here are marked `slow` — the full option sweep is large.
 """
 
 import numpy as np
@@ -10,7 +8,7 @@ import pytest
 
 import pybamm
 
-pytestmark = pytest.mark.speed_bench
+pytestmark = pytest.mark.time_bench
 
 _MODELS = [
     pytest.param(pybamm.lithium_ion.SPM, id="spm"),

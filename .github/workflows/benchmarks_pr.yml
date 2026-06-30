@@ -106,13 +106,13 @@ jobs:
       platforms: '["linux"]'
       macos_runners: '[]'
 
-  benchmark_speed:
+  benchmark_time:
     needs: [changes, build_solver_main, build_solver_pr]
     if: ${{ needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    name: Speed benchmarks (vs main)
+    name: Timing benchmarks (vs main)
 
     steps:
       - name: Check out PyBaMM repository
@@ -166,7 +166,7 @@ jobs:
         run: |
           git fetch origin "$BASE_REF"
           git checkout "origin/$BASE_REF" -- packages/pybamm/ uv.lock pyproject.toml
-          nox -s benchmark-speed -- --benchmark-save=main-baseline
+          nox -s benchmark-time -- --benchmark-save=main-baseline
 
       - name: Run PR benchmarks and compare against main
         env:
@@ -176,11 +176,11 @@ jobs:
         run: |
           git checkout HEAD -- packages/pybamm/ uv.lock pyproject.toml
           if ls .benchmarks/*/main-baseline*.json 1>/dev/null 2>&1; then
-            nox -s benchmark-speed -- \
+            nox -s benchmark-time -- \
               --benchmark-compare=main-baseline \
               --benchmark-compare-fail=mean:125%
           else
-            nox -s benchmark-speed
+            nox -s benchmark-time
           fi
 
   benchmark_memory:

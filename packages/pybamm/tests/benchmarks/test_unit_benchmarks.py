@@ -3,7 +3,7 @@ import pytest
 
 import pybamm
 
-pytestmark = pytest.mark.speed_bench
+pytestmark = pytest.mark.time_bench
 
 
 def _create_expression():

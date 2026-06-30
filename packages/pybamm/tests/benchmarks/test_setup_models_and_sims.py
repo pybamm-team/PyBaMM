@@ -2,7 +2,7 @@ import pytest
 
 import pybamm
 
-pytestmark = pytest.mark.speed_bench
+pytestmark = pytest.mark.time_bench
 
 _PARAMS = [
     "Marquis2019",
