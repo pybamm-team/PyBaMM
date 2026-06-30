@@ -92,7 +92,7 @@ def test_solve(benchmark):
     _discretise(r, geometry, model)
 
     def run():
-        solver = pybamm.ScipySolver()
+        solver = pybamm.IDAKLUSolver()
         t = np.linspace(0, 3600, 600)
         solver.solve(model, t)
 
