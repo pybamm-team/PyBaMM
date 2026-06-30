@@ -298,6 +298,36 @@ class TestSimulationExperiment:
         sim.build_for_experiment()
         assert len(set(sim._experiment_step_indices)) == 1
 
+    def test_unified_custom_termination_functions_get_distinct_branches(self):
+        def lower_voltage_limit(variables):
+            return variables["Battery voltage [V]"] - 3.8
+
+        def higher_voltage_limit(variables):
+            return variables["Battery voltage [V]"] - 3.9
+
+        lower_voltage_termination = pybamm.step.CustomTermination(
+            name="shared custom cut-off", event_function=lower_voltage_limit
+        )
+        higher_voltage_termination = pybamm.step.CustomTermination(
+            name="shared custom cut-off", event_function=higher_voltage_limit
+        )
+
+        assert lower_voltage_termination != higher_voltage_termination
+
+        steps = [
+            pybamm.step.c_rate(0.5, duration=10, termination=lower_voltage_termination),
+            pybamm.step.c_rate(1.0, duration=10, termination=higher_voltage_termination),
+        ]
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(steps),
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+        sim.build_for_experiment()
+
+        assert sim._experiment_step_indices[0] != sim._experiment_step_indices[1]
+
     def test_unified_collapses_every_control_kind_by_value(self):
         # Value-as-input is general: steps of ANY control kind that differ only in their
         # target value share one branch, and distinct control kinds get separate branches.
