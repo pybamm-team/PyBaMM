@@ -90,10 +90,16 @@ class LossSolver:
         self._ode.integrate_out = self._processed_loss.method == "continuous"
         self._ode.rtol = self._sim.solver.rtol
         self._ode.atol = self._sim.solver.atol
+        self._ode.sens_rtol = self._sim.solver.rtol
+        self._ode.sens_atol = self._sim.solver.atol
+        self._ode.out_rtol = self._sim.solver.rtol
+        self._ode.out_atol = self._sim.solver.atol
+        self._ode.param_rtol = self._sim.solver.rtol
+        self._ode.param_atol = self._sim.solver.atol
 
         # generate casadi functions for the post-sum node and its sensitivities
-        self._post_sum, self._post_sum_sens = self._make_post_sum_functions(
-            self._processed_loss.post_sum_node
+        self._post_sum, self._post_sum_sens, self._post_sum_dy = (
+            self._make_post_sum_functions(self._processed_loss.post_sum_node)
         )
 
         # set up the process pool for the batched methods, if requested
@@ -188,14 +194,15 @@ class LossSolver:
         state["_post_sum_node_present"] = self._post_sum is not None
         state["_post_sum"] = None
         state["_post_sum_sens"] = None
+        state["_post_sum_dy"] = None
         return state
 
     def __setstate__(self, state: dict) -> None:
         rebuild = state.pop("_post_sum_node_present", False)
         self.__dict__.update(state)
         if rebuild:
-            self._post_sum, self._post_sum_sens = self._make_post_sum_functions(
-                self._processed_loss.post_sum_node
+            self._post_sum, self._post_sum_sens, self._post_sum_dy = (
+                self._make_post_sum_functions(self._processed_loss.post_sum_node)
             )
         # recreate the pool on unpickle, but never inside a worker process,
         # which would spawn nested pools
@@ -204,10 +211,10 @@ class LossSolver:
 
     def _make_post_sum_functions(
         self, post_sum_node: pybamm.Symbol | None
-    ) -> tuple[casadi.Function | None, casadi.Function | None]:
+    ) -> tuple[casadi.Function | None, casadi.Function | None, casadi.Function | None]:
         """Build casadi functions for the post-sum node and its sensitivities."""
         if post_sum_node is None:
-            return None, None
+            return None, None, None
 
         input_names = self._exporter.input_names()
         sum_size = self._processed_loss.sum_node.evaluate_for_shape().shape[0]
@@ -238,7 +245,12 @@ class LossSolver:
             [t_casadi, sum_casadi, p_casadi_stacked, sens_casadi],
             [sens],
         )
-        return post_sum, post_sum_sens
+        post_sum_dy = casadi.Function(
+            "post_sum_dy",
+            [t_casadi, sum_casadi, p_casadi_stacked],
+            [dpost_dy],
+        )
+        return post_sum, post_sum_sens, post_sum_dy
 
     def _start_pool(self) -> concurrent.futures.ProcessPoolExecutor:
         # spawn (not fork) avoids deadlocks with the native threadpools used by
@@ -285,9 +297,7 @@ class LossSolver:
                     params, self._processed_loss.discrete_times
                 )
                 return self._discrete_sum_to_gradient(sol, params)
-            raise NotImplementedError(
-                "Adjoint sensitivity for discrete sum is not yet implemented"
-            )
+            return self._discrete_adjoint_gradient(params)
 
         if mode == self.LossSolverGradientMode.FORWARD_SENSITIVITY:
             raise NotImplementedError(
@@ -319,6 +329,22 @@ class LossSolver:
             self._post_sum_sens(0.0, ys_sum, params, sens_sum.T).full().reshape(-1)
         )
         return loss, gradient
+
+    def _discrete_adjoint_gradient(
+        self, params: np.ndarray
+    ) -> tuple[float, np.ndarray]:
+        times = self._processed_loss.discrete_times
+        sol, checkpoint = self._ode.solve_adjoint_fwd(params, times)
+        the_sum = np.sum(sol.ys, axis=1)
+        loss = float(self._apply_post_sum(the_sum, params).reshape(-1)[0])
+
+        if self._post_sum is None:
+            dgdu = np.ones((sol.ys.shape[0], len(sol.ts)))
+        else:
+            df_dS = self._post_sum_dy(0.0, the_sum, params).full()  # (1, sum_size)
+            dgdu = np.tile(df_dS.T, (1, len(sol.ts)))  # (sum_size, n_discrete)
+        gradient = self._ode.solve_adjoint_bkwd(sol, checkpoint, dgdu)
+        return loss, np.asarray(gradient).reshape(-1)
 
     class LossSolverGradientMode(Enum):
         FORWARD_SENSITIVITY = "forward_sensitivity"

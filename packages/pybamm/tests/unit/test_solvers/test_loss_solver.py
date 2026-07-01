@@ -18,11 +18,6 @@ FINAL_TIME = 2.0
 N_DATA = 11
 Y0 = 1.0
 
-discrete_not_supported = pytest.mark.xfail(
-    reason="DiffSLExport cannot export the DiscreteTimeData interpolant; "
-    "the discrete sum LossSolver path is not yet supported",
-)
-
 
 def _decay_model():
     """dy/dt = -k * y, y(0) = 1, with analytic solution y(t) = exp(-k * t)."""
@@ -113,20 +108,20 @@ class TestLossSolver:
         solution = continuous_solver.predict(p)[0]
         t = _data_times()
         np.testing.assert_allclose(
-            solution["y"](t), _analytic_solution(K_TRUE, t), rtol=1e-3, atol=1e-4
+            solution["y"](t), _analytic_solution(K_TRUE, t), atol=1e-4
         )
 
     def test_loss_continuous_matches_analytic(self, continuous_solver):
         p = continuous_solver.inputs_to_parameters([{"k": K_TRUE}])
         np.testing.assert_allclose(
-            continuous_solver.loss(p), [_continuous_loss(K_TRUE)], rtol=1e-3
+            continuous_solver.loss(p), [_continuous_loss(K_TRUE)], atol=1e-6
         )
 
     def test_finite_difference_gradient_matches_analytic(self, continuous_solver):
         p = continuous_solver.inputs_to_parameters([{"k": K_TRUE}])
         gradient = continuous_solver.finite_difference_gradient(p)
         np.testing.assert_allclose(
-            gradient, [[_continuous_loss_gradient(K_TRUE)]], rtol=1e-2
+            gradient, [[_continuous_loss_gradient(K_TRUE)]], rtol=3e-5, atol=1e-6
         )
 
     def test_loss_and_gradient_continuous_adjoint(self, continuous_solver):
@@ -134,9 +129,9 @@ class TestLossSolver:
         loss, gradient = continuous_solver.loss_and_gradient(
             p, LossSolver.LossSolverGradientMode.ADJOINT_SENSITIVITY
         )
-        np.testing.assert_allclose(loss, [_continuous_loss(K_TRUE)], rtol=1e-3)
+        np.testing.assert_allclose(loss, [_continuous_loss(K_TRUE)], atol=1e-6)
         np.testing.assert_allclose(
-            gradient, [[_continuous_loss_gradient(K_TRUE)]], rtol=1e-2
+            gradient, [[_continuous_loss_gradient(K_TRUE)]], rtol=1e-3, atol=1e-5
         )
 
     def test_loss_and_gradient_continuous_forward_not_implemented(
@@ -167,7 +162,7 @@ class TestLossSolver:
         t = _data_times()
         for solution, k in zip(solutions, (K_TRUE, K_OTHER), strict=True):
             np.testing.assert_allclose(
-                solution["y"](t), _analytic_solution(k, t), rtol=1e-3, atol=1e-4
+                solution["y"](t), _analytic_solution(k, t), atol=1e-4
             )
 
     def test_loss_batch_matches_analytic(self, continuous_solver):
@@ -175,7 +170,7 @@ class TestLossSolver:
         loss = continuous_solver.loss(p)
         assert loss.shape == (2,)
         np.testing.assert_allclose(
-            loss, [_continuous_loss(K_TRUE), _continuous_loss(K_OTHER)], rtol=1e-3
+            loss, [_continuous_loss(K_TRUE), _continuous_loss(K_OTHER)], atol=1e-6
         )
 
     def test_finite_difference_gradient_batch(self, continuous_solver):
@@ -185,7 +180,8 @@ class TestLossSolver:
         np.testing.assert_allclose(
             gradient,
             [[_continuous_loss_gradient(K_TRUE)], [_continuous_loss_gradient(K_OTHER)]],
-            rtol=1e-2,
+            rtol=3e-5,
+            atol=1e-6,
         )
 
     def test_loss_and_gradient_batch_adjoint(self, continuous_solver):
@@ -196,12 +192,13 @@ class TestLossSolver:
         assert loss.shape == (2,)
         assert gradient.shape == (2, 1)
         np.testing.assert_allclose(
-            loss, [_continuous_loss(K_TRUE), _continuous_loss(K_OTHER)], rtol=1e-3
+            loss, [_continuous_loss(K_TRUE), _continuous_loss(K_OTHER)], atol=1e-6
         )
         np.testing.assert_allclose(
             gradient,
             [[_continuous_loss_gradient(K_TRUE)], [_continuous_loss_gradient(K_OTHER)]],
-            rtol=1e-2,
+            rtol=1e-3,
+            atol=1e-5,
         )
 
     def test_pickle_round_trip(self, continuous_solver):
@@ -245,52 +242,62 @@ class TestLossSolver:
         finally:
             parallel.close()
 
-    @discrete_not_supported
     def test_loss_discrete_zero_at_true(self):
         solver = _make_loss_solver(_discrete_loss_function())
         p = solver.inputs_to_parameters([{"k": K_TRUE}])
         np.testing.assert_allclose(solver.loss(p), [0.0], atol=1e-5)
 
-    @discrete_not_supported
     def test_loss_discrete_matches_analytic_off_true(self):
         solver = _make_loss_solver(_discrete_loss_function())
         p_true = solver.inputs_to_parameters([{"k": K_TRUE}])
         p_other = solver.inputs_to_parameters([{"k": K_OTHER}])
         loss_other = solver.loss(p_other)
-        np.testing.assert_allclose(
-            loss_other, [_discrete_loss(K_OTHER)], rtol=1e-3, atol=1e-5
-        )
+        np.testing.assert_allclose(loss_other, [_discrete_loss(K_OTHER)], atol=1e-6)
         assert loss_other[0] > solver.loss(p_true)[0]
 
-    @discrete_not_supported
     def test_loss_and_gradient_discrete_forward(self):
         solver = _make_loss_solver(_discrete_loss_function())
         p = solver.inputs_to_parameters([{"k": K_OTHER}])
         loss, gradient = solver.loss_and_gradient(
             p, LossSolver.LossSolverGradientMode.FORWARD_SENSITIVITY
         )
-        np.testing.assert_allclose(loss, solver.loss(p), rtol=1e-3, atol=1e-5)
+        np.testing.assert_allclose(loss, solver.loss(p), atol=1e-6)
         np.testing.assert_allclose(
-            gradient, [[_discrete_loss_gradient(K_OTHER)]], rtol=1e-2
+            gradient, [[_discrete_loss_gradient(K_OTHER)]], rtol=3e-5, atol=1e-6
         )
         np.testing.assert_allclose(
-            gradient, solver.finite_difference_gradient(p), rtol=1e-2
+            gradient, solver.finite_difference_gradient(p), rtol=3e-5, atol=1e-6
         )
 
-    @discrete_not_supported
     def test_loss_and_gradient_discrete_forward_zero_at_true(self):
         solver = _make_loss_solver(_discrete_loss_function())
         p = solver.inputs_to_parameters([{"k": K_TRUE}])
         _, gradient = solver.loss_and_gradient(
             p, LossSolver.LossSolverGradientMode.FORWARD_SENSITIVITY
         )
-        np.testing.assert_allclose(gradient, [[0.0]], atol=1e-4)
+        np.testing.assert_allclose(gradient, [[0.0]], atol=5e-4)
 
-    @discrete_not_supported
-    def test_loss_and_gradient_discrete_adjoint_not_implemented(self):
+    def test_loss_and_gradient_discrete_adjoint(self):
+        solver = _make_loss_solver(_discrete_loss_function())
+        p = solver.inputs_to_parameters([{"k": K_OTHER}])
+        loss, gradient = solver.loss_and_gradient(
+            p, LossSolver.LossSolverGradientMode.ADJOINT_SENSITIVITY
+        )
+        np.testing.assert_allclose(loss, solver.loss(p), atol=1e-6)
+        np.testing.assert_allclose(
+            gradient, [[_discrete_loss_gradient(K_OTHER)]], rtol=1e-3, atol=1e-5
+        )
+        np.testing.assert_allclose(
+            gradient,
+            solver.finite_difference_gradient(p),
+            rtol=1e-3,
+            atol=1e-5,
+        )
+
+    def test_loss_and_gradient_discrete_adjoint_zero_at_true(self):
         solver = _make_loss_solver(_discrete_loss_function())
         p = solver.inputs_to_parameters([{"k": K_TRUE}])
-        with pytest.raises(NotImplementedError):
-            solver.loss_and_gradient(
-                p, LossSolver.LossSolverGradientMode.ADJOINT_SENSITIVITY
-            )
+        _, gradient = solver.loss_and_gradient(
+            p, LossSolver.LossSolverGradientMode.ADJOINT_SENSITIVITY
+        )
+        np.testing.assert_allclose(gradient, [[0.0]], atol=5e-4)

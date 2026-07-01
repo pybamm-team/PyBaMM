@@ -641,3 +641,62 @@ class TestDiffSLExport:
         pos0 = export.index(s0)
         pos1 = export.index(s1)
         assert pos0 < pos1
+
+    def test_interpolant_linear_exports_interp1d(self):
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x")
+        model.rhs = {x: -x}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {
+            "data": pybamm.DiscreteTimeData(
+                np.array([0.0, 0.5, 1.0]),
+                np.array([1.0, 2.0, 3.0]),
+                "test",
+            ),
+        }
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        export = pybamm.DiffSLExport(model).to_diffeq(outputs=["data"])
+
+        assert "interp1d(constant" in export
+        assert "(0:1): 0," in export
+        assert "(1:2): 0.5," in export
+        assert "(2:3): 1," in export
+
+    def test_interpolant_pchip_raises(self):
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x")
+        model.rhs = {x: -x}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {
+            "out": pybamm.Interpolant(
+                np.array([0, 1, 2]),
+                np.array([1, 2, 3]),
+                pybamm.t,
+                interpolator="pchip",
+            ),
+        }
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        msg = r"DiffSL export only supports 'linear' interpolants"
+        with pytest.raises(ValueError, match=msg):
+            pybamm.DiffSLExport(model).to_diffeq(outputs=["out"])
+
+    def test_interpolant_cubic_raises(self):
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x")
+        model.rhs = {x: -x}
+        model.initial_conditions = {x: pybamm.Scalar(1)}
+        model.variables = {
+            "out": pybamm.Interpolant(
+                np.array([0, 1, 2]),
+                np.array([1, 2, 3]),
+                pybamm.t,
+                interpolator="cubic",
+            ),
+        }
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        msg = r"DiffSL export only supports 'linear' interpolants"
+        with pytest.raises(ValueError, match=msg):
+            pybamm.DiffSLExport(model).to_diffeq(outputs=["out"])

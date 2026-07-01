@@ -593,6 +593,24 @@ class DiffSLExport:
                     num_terminal_states=num_terminal_states,
                 )
                 continue
+            # register Interpolant x/y data as constant tensors, store the
+            # Vector symbols on the Interpolant for later lookup
+            if (
+                isinstance(symbol, pybamm.Interpolant)
+                and symbol not in symbol_to_tensor_name
+                and symbol.dimension == 1
+            ):
+                x_vec = pybamm.Vector(np.asarray(symbol.x[0], dtype=float))
+                y_vec = pybamm.Vector(np.asarray(symbol.y, dtype=float))
+                for vec in (x_vec, y_vec):
+                    t_name, t_def = DiffSLExport.vector_to_diffeq(
+                        vec, tensor_index, float_precision=self.float_precision
+                    )
+                    tensor_index += 1
+                    symbol_to_tensor_name[vec] = t_name
+                    diffeq[t_name] = t_def
+                symbol_to_tensor_name[symbol] = (x_vec, y_vec)
+                continue
             # extract any binary operators that occur more than two times and dont involve scalars
             if (
                 isinstance(
@@ -1200,6 +1218,29 @@ def _equation_to_diffeq(
     if isinstance(equation, pybamm.Conditional) and equation in symbol_to_tensor_name:
         index = "j" if transpose else "i"
         return f"{symbol_to_tensor_name[equation]}_{index}[N]"
+    if isinstance(equation, pybamm.Interpolant):
+        if equation.interpolator != "linear":
+            raise ValueError(
+                "DiffSL export only supports 'linear' interpolants; "
+                f"got '{equation.interpolator}'"
+            )
+        if equation.dimension != 1:
+            raise ValueError(
+                f"DiffSL export only supports 1-D interpolants; "
+                f"got {equation.dimension}-D"
+            )
+        x_vec, y_vec = symbol_to_tensor_name[equation]
+        x_name = symbol_to_tensor_name[x_vec]
+        y_name = symbol_to_tensor_name[y_vec]
+        probe = _equation_to_diffeq(
+            equation.children[0],
+            y_slice_to_label,
+            symbol_to_tensor_name,
+            float_precision=float_precision,
+            transpose=transpose,
+            use_model_index=use_model_index,
+        )
+        return f"interp1d({x_name}_i, {y_name}_i, {probe})"
     if equation in symbol_to_tensor_name:
         if isinstance(equation, pybamm.Matrix):
             index = "ji" if transpose else "ij"
