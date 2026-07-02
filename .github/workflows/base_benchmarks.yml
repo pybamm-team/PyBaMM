@@ -1,0 +1,59 @@
+name: Benchmarks (baseline)
+
+on:
+  push:
+    branches: main
+
+permissions: {}
+
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+  FORCE_COLOR: 3
+
+concurrency:
+  # github.workflow: name of the workflow, so that we don't cancel other workflows
+  # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Cancel in-progress runs when a new workflow with the same group name is triggered
+  # This avoids workflow runs on both pushes and PRs
+  cancel-in-progress: true
+
+jobs:
+  # Build the solver wheels once (like test_on_push.yml) and download them per
+  # job; otherwise every nox/uv sync would compile the solver from source and fail.
+  build_solver:
+    # Pass contents:read to the reusable workflow (top-level permissions are {},
+    # so its checkout would otherwise get no token scope).
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: true
+      build_sdist: false
+
+  benchmark_base_branch:
+    name: Continuous Benchmarking with Bencher
+    permissions:
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: bencherdev/bencher@5f9d4cf890255c35e0354af1ed325108a6a0babd # v0.6.8
+      - name: Track base branch benchmarks with Bencher
+        run: |
+          nox -s benchmark-time -- \
+          --project pybamm \
+          --key '${{ secrets.BENCHER_API_KEY }}' \
+          --branch main \
+          --testbed ubuntu-latest \
+          --threshold-measure latency \
+          --threshold-test percentage \
+          --threshold-upper-boundary 0.1 \
+          --threshold-max-sample-size 50 \
+          --thresholds-reset \
+          --error-on-alert \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}'
