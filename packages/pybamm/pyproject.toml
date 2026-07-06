@@ -30,7 +30,7 @@ dependencies = [
     "pybammsolvers>=0.8.0,<0.9.0",
     "black",
     "numpy",
-    "scipy>=1.11.4",
+    "scipy>=1.11.4,!=1.18.0", # 1.18.0 breaks pickling/deepcopy of interpolators, fixed in 1.18.1 (scipy#25489)
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
     "sympy>=1.12",
