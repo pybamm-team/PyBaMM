@@ -732,10 +732,17 @@ class ParameterValues:
                     DeprecationWarning,
                     stacklevel=2,
                 )
-                # current name takes precedence; drop the deprecated alias so the
-                # two names can never coexist and clobber each other later
+                if new_param in values:
+                    warn(
+                        f"Both the deprecated '{param}' and its current name "
+                        f"'{new_param}' are set; using '{new_param}' and leaving "
+                        f"the deprecated '{param}' untouched.",
+                        stacklevel=2,
+                    )
+                # current name takes precedence so the deprecated alias can no
+                # longer silently overwrite it; the deprecated key is kept for
+                # backward compatibility (custom models may still reference it)
                 values.setdefault(new_param, values[param])
-                del values[param]
             if is_deprecated_msmr_name(param):
                 new_param = replace_deprecated_msmr_name(param)
                 warn(
@@ -743,9 +750,6 @@ class ParameterValues:
                     DeprecationWarning,
                     stacklevel=2,
                 )
-                # unlike the diffusivity alias above, do not delete `param`:
-                # is_deprecated_msmr_name matches legitimate composite electrode-SOH
-                # input names (e.g. "Q_n_1"), and dropping them breaks those solves
                 values[new_param] = values.get(param)
 
         return values

@@ -5,6 +5,7 @@
 
 import os
 import re
+import warnings
 
 import casadi
 import numpy as np
@@ -267,25 +268,32 @@ class TestParameterValues:
             pybamm.ParameterValues({"1 + dlnf/dlnc": 1})
 
     def test_deprecated_electrode_diffusivity_migration(self):
-        # the deprecated name migrates to the current name, and the deprecated
-        # key is removed so the two can never coexist
+        # the deprecated name populates the current name (and, for backward
+        # compatibility, is itself kept) with a deprecation warning
         with pytest.warns(DeprecationWarning, match=r"renamed"):
             param = pybamm.ParameterValues(
                 {"Negative electrode diffusivity [m2.s-1]": 3.3e-14}
             )
-        assert "Negative electrode diffusivity [m2.s-1]" not in param
+        assert param["Negative electrode diffusivity [m2.s-1]"] == 3.3e-14
         assert param["Negative particle diffusivity [m2.s-1]"] == 3.3e-14
 
-        # when both names are present, the current name wins (regression: the
-        # deprecated alias used to silently clobber the current value)
-        with pytest.warns(DeprecationWarning, match=r"renamed"):
+        # supplying only the current name is untouched and warning-free
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            param = pybamm.ParameterValues(
+                {"Negative particle diffusivity [m2.s-1]": 1e-17}
+            )
+        assert param["Negative particle diffusivity [m2.s-1]"] == 1e-17
+
+        # when both names are present the current name wins (regression: the
+        # deprecated alias used to silently clobber it) and a conflict is warned
+        with pytest.warns(UserWarning, match=r"Both the deprecated"):
             param = pybamm.ParameterValues(
                 {
                     "Negative electrode diffusivity [m2.s-1]": 3.3e-14,
                     "Negative particle diffusivity [m2.s-1]": 1e-17,
                 }
             )
-        assert "Negative electrode diffusivity [m2.s-1]" not in param
         assert param["Negative particle diffusivity [m2.s-1]"] == 1e-17
 
     def test_process_symbol(self):
