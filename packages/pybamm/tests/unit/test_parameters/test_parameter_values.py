@@ -266,6 +266,28 @@ class TestParameterValues:
         with pytest.raises(ValueError, match=r"Thermodynamic factor"):
             pybamm.ParameterValues({"1 + dlnf/dlnc": 1})
 
+    def test_deprecated_electrode_diffusivity_migration(self):
+        # the deprecated name migrates to the current name, and the deprecated
+        # key is removed so the two can never coexist
+        with pytest.warns(DeprecationWarning, match=r"renamed"):
+            param = pybamm.ParameterValues(
+                {"Negative electrode diffusivity [m2.s-1]": 3.3e-14}
+            )
+        assert "Negative electrode diffusivity [m2.s-1]" not in param
+        assert param["Negative particle diffusivity [m2.s-1]"] == 3.3e-14
+
+        # when both names are present, the current name wins (regression: the
+        # deprecated alias used to silently clobber the current value)
+        with pytest.warns(DeprecationWarning, match=r"renamed"):
+            param = pybamm.ParameterValues(
+                {
+                    "Negative electrode diffusivity [m2.s-1]": 3.3e-14,
+                    "Negative particle diffusivity [m2.s-1]": 1e-17,
+                }
+            )
+        assert "Negative electrode diffusivity [m2.s-1]" not in param
+        assert param["Negative particle diffusivity [m2.s-1]"] == 1e-17
+
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3})
         # process parameter

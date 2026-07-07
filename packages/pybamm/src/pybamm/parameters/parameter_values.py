@@ -732,7 +732,10 @@ class ParameterValues:
                     DeprecationWarning,
                     stacklevel=2,
                 )
-                values[new_param] = values.get(param)
+                # current name takes precedence; drop the deprecated alias so the
+                # two names can never coexist and clobber each other later
+                values.setdefault(new_param, values[param])
+                del values[param]
             if is_deprecated_msmr_name(param):
                 new_param = replace_deprecated_msmr_name(param)
                 warn(

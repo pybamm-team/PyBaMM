@@ -1,6 +1,7 @@
 import copy
 import json
 import math
+import warnings
 from typing import Any
 
 import numpy as np
@@ -156,6 +157,34 @@ class TestBPX:
 
         params = pybamm.ParameterValues.create_from_bpx(temp_file)
         assert "check_already_exists" not in params.keys()
+
+    def test_bpx_emits_current_particle_diffusivity_name(self, tmp_path):
+        # a BPX-derived set must use only the current "particle diffusivity" name;
+        # emitting the deprecated "electrode diffusivity" alias too would let it
+        # silently clobber the current value on any later re-normalisation
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(copy.deepcopy(self.base)))
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            param = pybamm.ParameterValues.create_from_bpx(temp_file)
+        assert not [
+            w
+            for w in caught
+            if "diffusivity" in str(w.message) and "renamed" in str(w.message)
+        ]
+
+        for electrode in ["Negative", "Positive"]:
+            assert f"{electrode} particle diffusivity [m2.s-1]" in param
+            assert f"{electrode} electrode diffusivity [m2.s-1]" not in param
+            assert (
+                f"{electrode} particle diffusivity activation energy [J.mol-1]"
+                in param
+            )
+            assert (
+                f"{electrode} electrode diffusivity activation energy [J.mol-1]"
+                not in param
+            )
 
     def test_constant_functions(self, tmp_path):
         bpx_obj = copy.deepcopy(self.base)

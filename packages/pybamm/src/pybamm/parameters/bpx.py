@@ -349,25 +349,32 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
                 partial(_exchange_current_density, k_ref=k, Ea=Ea_k)
             )
 
-            # diffusivity
+            # diffusivity — emit under the current "particle" name; the deprecated
+            # "electrode diffusivity" name would otherwise duplicate and clobber it
+            particle_pre_name = phase_pre_name + domain.pre_name.replace(
+                "electrode ", "particle "
+            )
             Ea_D = _get_activation_energy(
                 phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
             )
+            pybamm_dict.pop(
+                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]", None
+            )
             pybamm_dict[
-                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
+                particle_pre_name + "diffusivity activation energy [J.mol-1]"
             ] = Ea_D
-            D_ref = pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"]
+            D_ref = pybamm_dict.pop(phase_domain_pre_name + "diffusivity [m2.s-1]")
 
             if callable(D_ref):
-                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                pybamm_dict[particle_pre_name + "diffusivity [m2.s-1]"] = partial(
                     _diffusivity, D_ref=D_ref, Ea=Ea_D
                 )
             elif isinstance(D_ref, tuple):
-                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                pybamm_dict[particle_pre_name + "diffusivity [m2.s-1]"] = partial(
                     _diffusivity, D_ref=_table_to_interpolant(D_ref), Ea=Ea_D
                 )
             else:
-                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                pybamm_dict[particle_pre_name + "diffusivity [m2.s-1]"] = partial(
                     _diffusivity, D_ref=D_ref, Ea=Ea_D, constant=True
                 )
 
