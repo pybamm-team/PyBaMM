@@ -105,7 +105,7 @@ disc.process_model(model)
 
 # solve model
 t_eval = np.linspace(0, 3600, 100)
-solver = pybamm.CasadiSolver()
+solver = pybamm.IDAKLUSolver()
 solution = solver.solve(model, t_eval)
 
 # plot

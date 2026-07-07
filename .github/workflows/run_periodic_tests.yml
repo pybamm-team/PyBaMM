@@ -22,21 +22,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Build the solver wheels once (like test_on_push.yml) and download them per
+  # job; otherwise every nox/uv sync would compile the solver from source and fail.
+  build_solver:
+    # Pass contents:read to the reusable workflow (top-level permissions are {},
+    # so its checkout would otherwise get no token scope).
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: true
+      build_sdist: false
+
   run_unit_integration_and_coverage_tests:
+    needs: build_solver
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
 
     strategy:
       fail-fast: false
+      # Full sweep: every OS x Python. Complements test_on_push.yml's sparse PR matrix;
+      # keep the Python list in sync with it.
       matrix:
         os: [ ubuntu-latest, macos-15-intel, macos-latest, windows-latest ]
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
+
+    env:
+      # noxfile install_locked installs the matching prebuilt solver wheel from
+      # this directory instead of building the solver from source.
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -66,17 +86,23 @@ jobs:
         run: winget install --id Graphviz.Graphviz --exact --accept-source-agreements --accept-package-agreements
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           version: "latest"
           enable-cache: true
 
       - name: Install nox
         run: uv tool install nox
+
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ matrix.os == 'ubuntu-latest' && 'wheels_manylinux' || matrix.os == 'windows-latest' && 'wheels_windows' || format('wheels_{0}', matrix.os) }}
+          path: solver-wheels
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.13'
@@ -88,7 +114,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -96,16 +122,19 @@ jobs:
         run: nox -s integration
 
   run_doctests:
+    needs: build_solver
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
     name: Doctests (ubuntu-latest / Python 3.13)
+    env:
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -117,17 +146,23 @@ jobs:
           sudo apt-get install texlive-latex-extra dvipng
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           version: "latest"
           enable-cache: true
 
       - name: Install nox
         run: uv tool install nox
+
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
 
       - name: Install docs dependencies and run doctests for GNU/Linux
         run: nox -s doctests
@@ -136,16 +171,19 @@ jobs:
         run: nox -s docs
 
   run_example_tests:
+    needs: build_solver
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
     name: Example notebooks (ubuntu-latest / Python 3.13)
+    env:
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -156,11 +194,11 @@ jobs:
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           version: "latest"
           enable-cache: true
@@ -168,20 +206,29 @@ jobs:
       - name: Install nox
         run: uv tool install nox
 
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
+
       - name: Run example notebooks tests for GNU/Linux with Python 3.13
         run: nox -s examples
 
   run_scripts_tests:
+    needs: build_solver
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
     name: Example scripts (ubuntu-latest / Python 3.13)
+    env:
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -192,17 +239,23 @@ jobs:
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           version: "latest"
           enable-cache: true
 
       - name: Install nox
         run: uv tool install nox
+
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
 
       - name: Run example scripts tests for GNU/Linux with Python 3.13
         run: nox -s scripts

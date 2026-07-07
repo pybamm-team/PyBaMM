@@ -1,0 +1,24 @@
+.idea
+.vscode
+cmake-build-*
+*.egg-info
+__pycache__
+.venv
+.env
+.nox
+.DS_Store
+
+setup.log
+build_sundials
+.idaklu
+*.so
+build
+dist
+
+# Extra directories for local work
+workspace
+deploy
+PyBaMM
+
+# benchmark results
+performance_results.json

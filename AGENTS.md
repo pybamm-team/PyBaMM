@@ -9,6 +9,22 @@ PyBaMM (Python Battery Mathematical Modelling) is a battery simulation package. 
 computer algebra system for writing systems of (partial) differential equations, plus a library
 of battery models, parameters, solvers, and post-processing tools.
 
+## Repository layout
+
+This repository is a [`uv` workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/) (a
+monorepo) with two members under `packages/`:
+
+- **`packages/pybamm/`** — the `pybamm` package: source in `packages/pybamm/src/pybamm/`, tests in
+  `packages/pybamm/tests/`. Almost all work happens here.
+- **`packages/pybammsolvers/`** — the `pybammsolvers` C++/pybind11 IDAKLU solver, with its own
+  `pyproject.toml`, `ruff.toml`, and `scikit-build-core` build. `pybamm` depends on it via a
+  workspace source, so a workspace sync installs it editable automatically.
+
+Both packages release independently to PyPI. The repo root holds shared config — the workspace
+`pyproject.toml` (which also carries the repo-wide Ruff and repo-review config), `noxfile.py`,
+`uv.lock` — plus `docs/`. Unqualified module paths in the **Architecture** section below are
+relative to `packages/pybamm/src/pybamm/`.
+
 ## Environment and commands
 
 The project is managed with `uv`. Run all Python and tooling through `uv run` (never bare
@@ -19,14 +35,14 @@ uv sync --extra all --group dev        # create/refresh the dev environment
 ```
 
 Testing uses `pytest`; `unit`/`integration`/`memory` markers are assigned automatically from a
-test's path (see `conftest.py`), so select suites by marker. Default `addopts` run in parallel
+test's path (see `packages/pybamm/conftest.py`), so select suites by marker. Default `addopts` run in parallel
 (`-nauto`) and treat warnings as errors.
 
 ```bash
-uv run --group dev pytest -m unit                              # full unit suite
-uv run --group dev pytest -m integration                       # integration suite
-uv run --group dev pytest tests/unit/test_solvers/test_solution.py   # one file
-uv run --group dev pytest "tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model"  # one test
+uv run --group dev pytest -m unit packages/pybamm/tests        # full unit suite
+uv run --group dev pytest -m integration packages/pybamm/tests # integration suite
+uv run --group dev pytest packages/pybamm/tests/unit/test_solvers/test_solution.py   # one file
+uv run --group dev pytest "packages/pybamm/tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model"  # one test
 nox -s unit | nox -s tests | nox -s integration | nox -s doctests   # sessions used in CI
 ```
 
@@ -58,15 +74,24 @@ Model (symbolic) -> ParameterValues -> Geometry -> Mesh -> Discretisation -> Sol
   algebraic system.
 - **Parameters** (`parameters/`) — symbolic `Parameter`/`FunctionParameter` nodes; concrete
   values come from `ParameterValues`, which substitutes them into the tree. Parameter sets and
-  named models are also discoverable via entry points (`dispatch/`, see `pyproject.toml`).
+  named models are also discoverable via entry points (`dispatch/`, see `packages/pybamm/pyproject.toml`).
 - **Geometry / Meshes / Spatial methods** — `discretisations/discretisation.py` walks the tree
   and replaces spatial operators with matrices and `Variable`s with `StateVector`s, using the
   `spatial_methods/` for each domain (finite volume is the default; spectral volume and
   scikit-fem elements also exist).
-- **Solvers** (`solvers/`) — wrap third-party integrators (`casadi_solver`, `idaklu_solver`,
+- **Solvers** (`solvers/`) — wrap third-party integrators (`idaklu_solver`, `casadi_solver`,
   `scipy_solver`, `jax_*`). They consume the discretised model and return a `Solution`;
-  `processed_variable*.py` turns raw solver output into the named, interpolatable variables users
-  access via `solution["variable name"].data`.
+  `processed_variable*.py` turns raw solver output into the named, interpolatable variables.
+  **Always use `pybamm.IDAKLUSolver`** (the default for every model): it is the fastest,
+  safest, most reliable, most featureful, and only actively developed solver. `CasadiSolver`,
+  `ScipySolver`, and
+  `CasadiAlgebraicSolver` are deprecated — never reach for them in new code, examples, or docs.
+  **Don't pass `solver=` to `pybamm.Simulation` without a concrete reason — leave it bare** so
+  the model's default `IDAKLUSolver` is used; only override when a specific option or behaviour
+  genuinely requires it.
+  **Read solution values through the interpolating call interface — `solution["Voltage [V]"](t)`
+  for a value at time(s) `t` — not the raw `.data` / `.entries` arrays**, which bypass
+  interpolation and are tied to the solver's internal time points.
 - **Experiment / Simulation** (`experiment/`, `simulation.py`) — `Experiment` parses
   English-like step instructions; `Simulation` runs the pipeline, drives multi-step experiments,
   and computes summary variables.
@@ -103,15 +128,16 @@ gets wrong:
 
 - Standard scientific-Python style (PEP 8, NumPy/SciPy idioms). Ruff lint+format is authoritative;
   do not hand-fight it or manually wrap lines to dodge warnings.
-- **Inline comments must be concise — never more than two lines.** Comment the non-obvious *why*,
-  not the *what*.
+- **Inline comments must be concise — never more than two lines**, repo-wide
+  (Python, CMake, YAML/CI workflows, Dockerfiles, and any other source). Comment
+  the non-obvious *why*, not the *what*.
 - **Docstrings are concise and follow the NumPy convention** (`Parameters`/`Returns`/`Raises`
   sections). Document only the object itself; do not describe callers, related code, or
   surrounding behaviour.
 - Naming is descriptive: prefer full words over abbreviations (`mean`, not `mu`); avoid
   abbreviating class/argument names.
 - Imports are absolute (relative imports are linted out), ruff-sorted (don't reorder by hand), and
-  use Python 3.10+ syntax (`X | Y`, `dict[...]`). No bare `assert` in `src/`; validate and raise.
+  use Python 3.10+ syntax (`X | Y`, `dict[...]`). No bare `assert` in `packages/pybamm/src/`; validate and raise.
 - Type-hint public functions; start new modules with `from __future__ import annotations`, type
   arrays as `npt.NDArray[np.float64]`, and reuse the aliases in `type_definitions.py`.
 - **Raise PyBaMM's own exceptions for framework errors** — `OptionError`, `ModelError`,
@@ -121,7 +147,7 @@ gets wrong:
 - **Import optional dependencies inside the function that uses them, never at module level** — via
   `pybamm.import_optional_dependency(...)` or guarded by `pybamm.has_jax()`. A top-level
   `import matplotlib` breaks `import pybamm` for minimal installs.
-- Public, user-facing objects are re-exported through `src/pybamm/__init__.py` (users write
+- Public, user-facing objects are re-exported through `packages/pybamm/src/pybamm/__init__.py` (users write
   `pybamm.X`) and get a `docs/source/api/*.rst` entry.
 - Every feature or fix adds a `CHANGELOG.md` bullet under `# [Unreleased]` (Keep a Changelog
   format), ending with the PR link, e.g. `([#1234](https://github.com/pybamm-team/PyBaMM/pull/1234))`.
@@ -129,7 +155,7 @@ gets wrong:
 ### Tests
 
 - Write idiomatic, well-tested code: every feature or fix ships with tests, matching the structure
-  of the nearest existing test. Tests under `tests/unit/` mirror the `src/pybamm/` layout.
+  of the nearest existing test. Tests under `packages/pybamm/tests/unit/` mirror the `packages/pybamm/src/pybamm/` layout.
 - Tests are class-based (`class TestX:` with `test_*` methods). Mirroring the path assigns the
   `unit`/`integration`/`memory` marker automatically — never add `@pytest.mark.unit` by hand.
 - Compare numbers with `np.testing.assert_allclose(a, b, rtol=, atol=)` (floats),
@@ -139,5 +165,5 @@ gets wrong:
 - The suite is strict: warnings are errors, `xfail_strict` is on, and it runs in parallel
   (`-nauto`). Suppress expected warnings explicitly, and drop the marker from an `xfail` that
   starts passing.
-- Reuse builders in `tests/shared.py` (`get_discretisation_for_testing`, `assert_domain_equal`, …);
-  property-based tests use Hypothesis strategies in `tests/strategies/`.
+- Reuse builders in `packages/pybamm/tests/shared.py` (`get_discretisation_for_testing`, `assert_domain_equal`, …);
+  property-based tests use Hypothesis strategies in `packages/pybamm/tests/strategies/`.

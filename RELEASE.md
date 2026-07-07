@@ -29,6 +29,24 @@ PyBaMM versions take the form `YY.MM.N.P`:
 
 **Cutover.** The first feature release tagged after the policy lands is the first to use `YY.MM.N.P`. Earlier tags (`v26.x.N`) remain in their original form; we do not retroactively retag.
 
+## Monorepo: independent package releases
+
+PyBaMM and `pybammsolvers` live in one repository (a UV workspace under
+`packages/`) but release **independently to PyPI**, discriminated by tag
+namespace. See `docs/superpowers/specs/2026-06-11-pybamm-monorepo-design.md` for
+the full design.
+
+- Each package's publish workflow fires only for its own tag namespace (the
+  pre-monorepo `github.repository` guard no longer distinguishes them).
+- `pybammsolvers` releases use the `pybammsolvers-v*` namespace.
+- **Legacy solver tags** (`v0.8.0`, `v0.8.1`, `v0.8.2`) carried over from the
+  standalone `pybammsolvers` repo are **not** part of PyBaMM's release history and
+  must not drive PyBaMM's computed version. They are either dropped or re-tagged
+  under `pybammsolvers-v*` during the migration.
+- The migration was integrated with a **merge commit (not a squash)** so the full
+  commit history of both packages is preserved; PyBaMM's existing commit SHAs are
+  unchanged (no history rewrite).
+
 ## Release cadence
 
 - We release when there's a meaningful body of work to ship. No fixed monthly or quarterly schedule.
@@ -120,7 +138,7 @@ A feature release is `YY.MM.N.0` — the patch component is `0`. The first featu
 2. Create and check out a release branch from `main`: `git checkout -b release/vYY.MM.N.0`.
 3. Run `uv run python scripts/update_version.py YY.MM.N.0` to update `CITATION.cff` and prepend a dated heading to `CHANGELOG.md`.
 4. Push the branch and open a PR to `main`. Ensure CI passes, then merge.
-5. From `main` at the merge commit, create a GitHub _release_ with the tag `vYY.MM.N.0`. Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml` and creates the PyPI release automatically.
+5. From `main` at the merge commit, create a GitHub _release_ with the tag `pybamm-vYY.MM.N.0`. Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml` and creates the PyPI release automatically. (Monorepo: PyBaMM release tags use the `pybamm-v` prefix so they are distinct from `pybammsolvers-v*`; see "Monorepo: independent package releases" above.)
 6. Verify the release installs cleanly: `pip install pybamm==YY.MM.N.0`.
 
 ### Cutting a patch release
@@ -128,13 +146,13 @@ A feature release is `YY.MM.N.0` — the patch component is `0`. The first featu
 A patch release is `YY.MM.N.P` where `P >= 1`. Patches are cut from the previous tag in the same feature line so the release contains only the bug fixes, not unrelated changes that have landed on `main` since the feature release.
 
 1. Ensure all bug fixes are merged to `main` first via normal PRs.
-2. Create a new branch from the previous tag in the same feature line: `git checkout -b release/vYY.MM.N.P vYY.MM.N.{P-1}` (e.g. `release/v27.1.0.1` from `v27.1.0.0`).
+2. Create a new branch from the previous tag in the same feature line: `git checkout -b release/vYY.MM.N.P pybamm-vYY.MM.N.{P-1}` (e.g. `release/v27.1.0.1` from `pybamm-v27.1.0.0`).
 3. Cherry-pick the bug fixes onto the new branch, recording the original SHA with `-x`:
    ```bash
    git cherry-pick -x <commit-sha-from-main>
    ```
 4. Run `uv run python scripts/update_version.py YY.MM.N.P` to update `CITATION.cff` and prepend a dated heading to `CHANGELOG.md`. Commit the result on the release branch.
-5. Create a GitHub _release_ with the tag `vYY.MM.N.P` from the `release/vYY.MM.N.P` branch (NOT from `main`). Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml`.
+5. Create a GitHub _release_ with the tag `pybamm-vYY.MM.N.P` from the `release/vYY.MM.N.P` branch (NOT from `main`). Copy the relevant `CHANGELOG.md` block into the release description. This triggers `publish_pypi.yml`.
 6. Verify the release installs cleanly: `pip install pybamm==YY.MM.N.P`.
 7. Update the changelog on `main` separately. **Do not merge the release branch back to `main`** — that would duplicate commits with new hashes. Instead:
    ```bash
@@ -143,6 +161,14 @@ A patch release is `YY.MM.N.P` where `P >= 1`. Patches are cut from the previous
    ```
    Edit `CHANGELOG.md` to add the new dated `vYY.MM.N.P` block (moving the entries out of `# [Unreleased]`), and update `CITATION.cff`. Open a PR to `main`.
 8. Delete the release branch after tagging — it is no longer needed.
+
+### Cutting a `pybammsolvers` release
+
+`pybammsolvers` releases independently of PyBaMM. **Its published version is read from `packages/pybammsolvers/src/pybammsolvers/version.py`** (via the regex in `packages/pybammsolvers/pyproject.toml`), *not* from the release tag — the `pybammsolvers-v*` tag namespace only routes the workflow. Keep the tag and `version.py` in lockstep, or the wrong version ships.
+
+1. Bump `__version__` in `packages/pybammsolvers/src/pybammsolvers/version.py` and record the change in `CHANGELOG.md`. Open a PR to `main`, ensure CI passes, then merge.
+2. From `main` at the merge commit, create a GitHub _release_ with the tag `pybammsolvers-vX.Y.Z`, where `X.Y.Z` **exactly matches** the new `version.py` value. This triggers `release_solvers.yml`, which builds wheels + sdist and publishes to PyPI. The `check_version` job in that workflow fails the release if the tag and `version.py` disagree; PyPI separately rejects a re-upload of an already-published version.
+3. Verify the release installs cleanly: `pip install pybammsolvers==X.Y.Z`.
 
 ### Conda-forge
 
