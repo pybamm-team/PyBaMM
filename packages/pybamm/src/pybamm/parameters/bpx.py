@@ -351,15 +351,17 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
 
             # diffusivity — emit under the current "particle" name; the deprecated
             # "electrode diffusivity" name would otherwise duplicate and clobber it
-            particle_pre_name = phase_pre_name + domain.pre_name.replace(
-                "electrode ", "particle "
+            particle = (
+                negative_particle
+                if domain.name == "negative electrode"
+                else positive_particle
             )
-            Ea_D = _get_activation_energy(
+            particle_pre_name = phase_pre_name + particle.pre_name
+            old_Ea_D_name = (
                 phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
             )
-            pybamm_dict.pop(
-                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]", None
-            )
+            Ea_D = _get_activation_energy(old_Ea_D_name)
+            pybamm_dict.pop(old_Ea_D_name, None)
             pybamm_dict[
                 particle_pre_name + "diffusivity activation energy [J.mol-1]"
             ] = Ea_D

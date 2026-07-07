@@ -743,6 +743,9 @@ class ParameterValues:
                     DeprecationWarning,
                     stacklevel=2,
                 )
+                # unlike the diffusivity alias above, do not delete `param`:
+                # is_deprecated_msmr_name matches legitimate composite electrode-SOH
+                # input names (e.g. "Q_n_1"), and dropping them breaks those solves
                 values[new_param] = values.get(param)
 
         return values
