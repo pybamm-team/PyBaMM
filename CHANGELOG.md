@@ -12,6 +12,7 @@
 
 ## Bug fixes
 
+- Fixed `ParameterValues.to_json` (and `Serialise` of parameter values) raising `TypeError: ... got multiple values for argument` on `create_from_bpx` outputs, whose functional parameters are `functools.partial` objects with keyword-bound arguments (e.g. constant diffusivity, tabular OCPs, exchange-current density). The serialiser now only creates symbols for a partial's remaining required arguments, leaving bound and defaulted arguments in place. ([#5641](https://github.com/pybamm-team/PyBaMM/pull/5641))
 - Fixed the `pybammsolvers` source distribution bundling the SUNDIALS/SuiteSparse submodule trees (~291 MB, over PyPI's per-file limit) when built from a checkout with the submodules initialised; the sdist now excludes them. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
 - Fixed the `pybammsolvers` editable auto-rebuild failing to configure when the SUNDIALS/SuiteSparse submodules are absent even though the libraries were already built in `.idaklu`; the from-source bootstrap (and its submodule requirement) is now skipped once the libraries exist. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
 
