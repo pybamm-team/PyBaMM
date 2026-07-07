@@ -178,8 +178,7 @@ class TestBPX:
             assert f"{electrode} particle diffusivity [m2.s-1]" in param
             assert f"{electrode} electrode diffusivity [m2.s-1]" not in param
             assert (
-                f"{electrode} particle diffusivity activation energy [J.mol-1]"
-                in param
+                f"{electrode} particle diffusivity activation energy [J.mol-1]" in param
             )
             assert (
                 f"{electrode} electrode diffusivity activation energy [J.mol-1]"
