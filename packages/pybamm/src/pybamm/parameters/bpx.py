@@ -349,25 +349,34 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
                 partial(_exchange_current_density, k_ref=k, Ea=Ea_k)
             )
 
-            # diffusivity
-            Ea_D = _get_activation_energy(
+            # diffusivity — emit under the current "particle" name; the deprecated
+            # "electrode diffusivity" name would otherwise duplicate and clobber it
+            particle = (
+                negative_particle
+                if domain.name == "negative electrode"
+                else positive_particle
+            )
+            particle_pre_name = phase_pre_name + particle.pre_name
+            old_Ea_D_name = (
                 phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
             )
+            Ea_D = _get_activation_energy(old_Ea_D_name)
+            pybamm_dict.pop(old_Ea_D_name, None)
             pybamm_dict[
-                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
+                particle_pre_name + "diffusivity activation energy [J.mol-1]"
             ] = Ea_D
-            D_ref = pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"]
+            D_ref = pybamm_dict.pop(phase_domain_pre_name + "diffusivity [m2.s-1]")
 
             if callable(D_ref):
-                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                pybamm_dict[particle_pre_name + "diffusivity [m2.s-1]"] = partial(
                     _diffusivity, D_ref=D_ref, Ea=Ea_D
                 )
             elif isinstance(D_ref, tuple):
-                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                pybamm_dict[particle_pre_name + "diffusivity [m2.s-1]"] = partial(
                     _diffusivity, D_ref=_table_to_interpolant(D_ref), Ea=Ea_D
                 )
             else:
-                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                pybamm_dict[particle_pre_name + "diffusivity [m2.s-1]"] = partial(
                     _diffusivity, D_ref=D_ref, Ea=Ea_D, constant=True
                 )
 
