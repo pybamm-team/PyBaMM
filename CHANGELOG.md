@@ -10,6 +10,8 @@
 - Added `skip_surface_form_check` option to `EISSimulation` to bypass the surface form validation. ([#5632](https://github.com/pybamm-team/PyBaMM/pull/5632))
 - Added ability to export pybamm.Simulation with experiments to DiffSL format ([#5557)](https://github.com/pybamm-team/PyBaMM/pull/5557))
 - PyBaMM and `pybammsolvers` now develop in a single repository — a UV workspace under `packages/` — while continuing to release independently to PyPI. Release tags are namespaced (`pybamm-v*` and `pybammsolvers-v*`), and PyBaMM's CI now tests against the in-repo solver on every platform. The published `pybamm` package and its dependency on `pybammsolvers` are unchanged for users. See `RELEASE.md` for the release model. ([#5512](https://github.com/pybamm-team/PyBaMM/issues/5512))
+- Legacy BPX v0.x files/objects now load again: `bpx` itself detects and converts them to the v1.x schema on a best-effort basis (with a `UserWarning`), so `ParameterValues.create_from_bpx`/`create_from_bpx_obj` no longer raise a `ValidationError`. PyBaMM officially supports `bpx>=1`. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
+- `create_from_bpx`/`create_from_bpx_obj` now also accept BPX files that omit `State` fields (or the whole `State` section): the ambient/initial temperatures default to the reference temperature and the initial electrolyte concentration to 1000 mol.m-3 (logged), while opt-in fields (initial hysteresis state, heat transfer coefficient) are left for the model to default. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
 
 ## Bug fixes
 
@@ -43,6 +45,8 @@
 ## Features
 
 - The "voltage as a state" option is now registered centrally in `BaseBatteryModel` and supports all operating modes. SPM/SPMe promote "surface form" to "algebraic" automatically when a particle-size distribution is used (previously an error) as well as for non-default kinetics. `CasadiSolver` integrator failures on DAE models solved without algebraic initial-condition perturbation now include an actionable hint. ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
+- Legacy BPX v0.x files/objects now load again: `bpx` itself detects and converts them to the v1.x schema on a best-effort basis (with a `UserWarning`), so `ParameterValues.create_from_bpx`/`create_from_bpx_obj` no longer raise a `ValidationError`. PyBaMM officially supports `bpx>=1`. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
+- `create_from_bpx`/`create_from_bpx_obj` now support BPX files that omit `State` fields (or the whole `State` section): the ambient/initial temperatures default to the reference temperature and the initial electrolyte concentration to 1000 mol.m-3 (logged), while opt-in fields (initial hysteresis state, heat transfer coefficient) are left for the model to default. A BPX `State` initial state-of-charge, when provided, is now applied (via `set_initial_state`, supporting blended electrodes) instead of being ignored. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
 
 ## Bug fixes
 
@@ -81,6 +85,7 @@
 
 ## Breaking changes
 
+- The `bpx` dependency was upgraded from `0.5.0` to `1.1.0` ([#5469](https://github.com/pybamm-team/PyBaMM/pull/5469)), adopting the BPX v1.x schema (which adds a required `State` block and moves the initial temperature, ambient temperature and initial electrolyte concentration out of `Parameterisation`). As a result, BPX v0.x files no longer validate and `ParameterValues.create_from_bpx`/`create_from_bpx_obj` raise a `ValidationError` for them. Backward-compatible conversion of v0.x files was subsequently added (see [Unreleased]). ([#5571](https://github.com/pybamm-team/PyBaMM/issues/5571), [#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
 - `Simulation.solve` now always clears `Simulation.solution` before solving, so a failed solve leaves it as `None` rather than retaining the previous result. ([#5528](https://github.com/pybamm-team/PyBaMM/pull/5528))
 - The `bpx` dependency was upgraded from `0.5.0` to `1.1.0` ([#5469](https://github.com/pybamm-team/PyBaMM/pull/5469)), adopting the BPX v1.x schema (which adds a `State` block and moves the initial temperature, ambient temperature and initial electrolyte concentration out of `Parameterisation`). As a result, BPX v0.x files no longer validate and `ParameterValues.create_from_bpx`/`create_from_bpx_obj` raise a `ValidationError` for them. ([#5571](https://github.com/pybamm-team/PyBaMM/issues/5571))
 
