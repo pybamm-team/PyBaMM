@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 =============================================================================
 自定义用户参数文件 — 消费锂离子电池 (LFP / Graphite 体系)
@@ -37,12 +36,13 @@ LFP 体系特点:
 """
 
 import numpy as np
-import pybamm
 
+import pybamm
 
 # =============================================================================
 # 负极 — Graphite (石墨)
 # =============================================================================
+
 
 def graphite_ocp_Custom(sto):
     """
@@ -87,8 +87,8 @@ def graphite_diffusivity_Custom(sto, T):
     pybamm.Symbol  扩散系数 [m^2·s^-1]
     """
     # ---- 用户需要替换 ----
-    D_ref = 3.3e-14          # [用户需要测定]
-    E_D_s = 0.0              # [用户需要测定]
+    D_ref = 3.3e-14  # [用户需要测定]
+    E_D_s = 0.0  # [用户需要测定]
     arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
     return D_ref * arrhenius
 
@@ -111,10 +111,10 @@ def graphite_exchange_current_density_Custom(c_e, c_s_surf, c_s_max, T):
     pybamm.Symbol  交换电流密度 [A·m^-2]
     """
     # ---- 用户需要替换 ----
-    m_ref = 6.48e-7            # [用户需要测定]
-    E_r   = 35000              # [用户需要测定]
+    m_ref = 6.48e-7  # [用户需要测定]
+    E_r = 35000  # [用户需要测定]
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
-    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf)**0.5
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def graphite_entropic_change_Custom(sto):
@@ -135,6 +135,7 @@ def graphite_entropic_change_Custom(sto):
 # =============================================================================
 # 正极 — LFP (磷酸铁锂, LiFePO₄)
 # =============================================================================
+
 
 def lfp_ocp_Custom(sto):
     """
@@ -159,8 +160,8 @@ def lfp_ocp_Custom(sto):
     # ---- 用户需要替换为实测 OCP 数据拟合公式 ----
     U = (
         3.42
-        - 0.05 * np.tanh(50.0 * (sto - 0.02))   # 低 sto 端单相区
-        + 0.05 * np.tanh(50.0 * (sto - 0.98))   # 高 sto 端单相区
+        - 0.05 * np.tanh(50.0 * (sto - 0.02))  # 低 sto 端单相区
+        + 0.05 * np.tanh(50.0 * (sto - 0.98))  # 高 sto 端单相区
     )
     return U
 
@@ -186,8 +187,8 @@ def lfp_diffusivity_Custom(sto, T):
     pybamm.Symbol  扩散系数 [m^2·s^-1]
     """
     # ---- 用户需要替换 ----
-    D_ref = 1.0e-15          # [用户需要测定] LFP 典型 10^-14 ~ 10^-16 m^2/s
-    E_D_s = 0.0              # [用户需要测定]
+    D_ref = 1.0e-15  # [用户需要测定] LFP 典型 10^-14 ~ 10^-16 m^2/s
+    E_D_s = 0.0  # [用户需要测定]
     arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
     return D_ref * arrhenius
 
@@ -212,10 +213,10 @@ def lfp_exchange_current_density_Custom(c_e, c_s_surf, c_s_max, T):
     pybamm.Symbol  交换电流密度 [A·m^-2]
     """
     # ---- 用户需要替换 ----
-    m_ref = 1.0e-5             # [用户需要测定] LFP 通常 > NMC
-    E_r   = 20000              # [用户需要测定]
+    m_ref = 1.0e-5  # [用户需要测定] LFP 通常 > NMC
+    E_r = 20000  # [用户需要测定]
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
-    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf)**0.5
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def lfp_entropic_change_Custom(sto):
@@ -237,6 +238,7 @@ def lfp_entropic_change_Custom(sto):
 # 电解液
 # =============================================================================
 
+
 def electrolyte_diffusivity_Custom(c_e, T):
     """
     电解液 Li+ 扩散系数 D_e(c_e, T)。
@@ -253,9 +255,7 @@ def electrolyte_diffusivity_Custom(c_e, T):
     pybamm.Symbol  扩散系数 [m^2·s^-1]
     """
     # ---- 用户需要根据电解液配方替换 ----
-    D_c_e = (8.794e-11 * (c_e / 1000)**2
-             - 3.972e-10 * (c_e / 1000)
-             + 4.862e-10)
+    D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
     return D_c_e
 
 
@@ -275,15 +275,16 @@ def electrolyte_conductivity_Custom(c_e, T):
     pybamm.Symbol  电导率 [S·m^-1]
     """
     # ---- 用户需要根据电解液配方替换 ----
-    sigma_e = (0.1297 * (c_e / 1000)**3
-               - 2.51 * (c_e / 1000)**1.5
-               + 3.329 * (c_e / 1000))
+    sigma_e = (
+        0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
+    )
     return sigma_e
 
 
 # =============================================================================
 # 参数字典
 # =============================================================================
+
 
 def get_parameter_values():
     """
@@ -309,7 +310,6 @@ def get_parameter_values():
     """
     return {
         "chemistry": "lithium_ion",
-
         # ==================================================================
         # SEI — 可保留默认值
         # ==================================================================
@@ -330,7 +330,6 @@ def get_parameter_values():
         "SEI growth activation energy [J.mol-1]": 0.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
-
         # ==================================================================
         # 电芯几何尺寸  [需要用户测定]
         # ==================================================================
@@ -339,12 +338,11 @@ def get_parameter_values():
         "Separator thickness [m]": 2.0e-05,
         "Positive electrode thickness [m]": 6.5e-05,
         "Positive current collector thickness [m]": 1.5e-05,
-        "Electrode height [m]": 0.1,                           # [测定]
-        "Electrode width [m]": 1.0,                            # [测定]
-        "Cell cooling surface area [m2]": 0.01,                # [测定]
-        "Cell volume [m3]": 1.5e-05,                           # [测定]
+        "Electrode height [m]": 0.1,  # [测定]
+        "Electrode width [m]": 1.0,  # [测定]
+        "Cell cooling surface area [m2]": 0.01,  # [测定]
+        "Cell volume [m3]": 1.5e-05,  # [测定]
         "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
-
         # 集流体 — 标准值
         "Negative current collector conductivity [S.m-1]": 58411000.0,
         "Positive current collector conductivity [S.m-1]": 36914000.0,
@@ -354,10 +352,9 @@ def get_parameter_values():
         "Positive current collector specific heat capacity [J.kg-1.K-1]": 897.0,
         "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
-        "Nominal cell capacity [A.h]": 2.5,                    # [测定]
-        "Current function [A]": 2.5,                           # [设定]
+        "Nominal cell capacity [A.h]": 2.5,  # [测定]
+        "Current function [A]": 2.5,  # [设定]
         "Contact resistance [Ohm]": 0,
-
         # ==================================================================
         # 负极 — Graphite  [需要测定]
         # ==================================================================
@@ -365,63 +362,59 @@ def get_parameter_values():
         "Maximum concentration in negative electrode [mol.m-3]": 33133.0,  # [测定]
         "Negative particle diffusivity [m2.s-1]": graphite_diffusivity_Custom,
         "Negative electrode OCP [V]": graphite_ocp_Custom,
-        "Negative electrode porosity": 0.28,                    # [测定]
-        "Negative electrode active material volume fraction": 0.72,         # [测定]
-        "Negative particle radius [m]": 8.0e-06,                # [测定] PSD D50
+        "Negative electrode porosity": 0.28,  # [测定]
+        "Negative electrode active material volume fraction": 0.72,  # [测定]
+        "Negative particle radius [m]": 8.0e-06,  # [测定] PSD D50
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 0,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode exchange-current density [A.m-2]"
         "": graphite_exchange_current_density_Custom,
-        "Negative electrode density [kg.m-3]": 1600.0,          # [测定]
+        "Negative electrode density [kg.m-3]": 1600.0,  # [测定]
         "Negative electrode specific heat capacity [J.kg-1.K-1]": 700.0,
         "Negative electrode thermal conductivity [W.m-1.K-1]": 1.7,
         "Negative electrode OCP entropic change [V.K-1]": graphite_entropic_change_Custom,
-
         # ==================================================================
         # 正极 — LFP  [需要测定]
         # LFP: 低电导率 → 大量导电剂; 低压实 → 高孔隙; 纳米颗粒
         # ==================================================================
-        "Positive electrode conductivity [S.m-1]": 0.5,         # [测定] 碳包覆 + 导电剂
+        "Positive electrode conductivity [S.m-1]": 0.5,  # [测定] 碳包覆 + 导电剂
         "Maximum concentration in positive electrode [mol.m-3]": 22806.0,
         # c_max = ρ * Q_theoretical / (F * 3.6)
         # LFP: ρ≈3.6 (晶体), Q_theo=170 → 理论 ~17600
         # 实际二次颗粒 ρ≈2.2-2.3 (含碳包覆) → c_max ≈ 11000-12000
         "Positive particle diffusivity [m2.s-1]": lfp_diffusivity_Custom,
         "Positive electrode OCP [V]": lfp_ocp_Custom,
-        "Positive electrode porosity": 0.30,                    # [测定]
+        "Positive electrode porosity": 0.30,  # [测定]
         "Positive electrode active material volume fraction": 0.55,  # [测定] 较低, 导电剂占体积
-        "Positive particle radius [m]": 1.0e-06,                # [测定] 一次颗粒 100-500 nm
+        "Positive particle radius [m]": 1.0e-06,  # [测定] 一次颗粒 100-500 nm
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 0,
         "Positive electrode charge transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"
         "": lfp_exchange_current_density_Custom,
-        "Positive electrode density [kg.m-3]": 2200.0,          # [测定] 压实密度 2.0-2.4
+        "Positive electrode density [kg.m-3]": 2200.0,  # [测定] 压实密度 2.0-2.4
         "Positive electrode specific heat capacity [J.kg-1.K-1]": 800.0,
         "Positive electrode thermal conductivity [W.m-1.K-1]": 1.2,
         "Positive electrode OCP entropic change [V.K-1]": lfp_entropic_change_Custom,
-
         # ==================================================================
         # 隔膜  [需要测定]
         # ==================================================================
-        "Separator porosity": 0.45,                             # [测定]
+        "Separator porosity": 0.45,  # [测定]
         "Separator Bruggeman coefficient (electrolyte)": 1.5,
-        "Separator density [kg.m-3]": 450.0,                    # [测定]
+        "Separator density [kg.m-3]": 450.0,  # [测定]
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.2,
-
         # ==================================================================
         # 电解液  [需要测定]
         # ==================================================================
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
-        "Cation transference number": 0.26,                     # [测定]
+        "Cation transference number": 0.26,  # [测定]
         "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Custom,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Custom,
-
         # ==================================================================
         # 实验 / 仿真条件  [需要设定]
         # ==================================================================
@@ -430,13 +423,12 @@ def get_parameter_values():
         "Ambient temperature [K]": 298.15,
         "Number of electrodes connected in parallel to make a cell": 1.0,
         "Number of cells connected in series to make a battery": 1.0,
-        "Lower voltage cut-off [V]": 2.5,                       # LFP 通常 2.5-2.8V
-        "Upper voltage cut-off [V]": 3.65,                      # LFP 充电截止 ~3.6-3.7V
+        "Lower voltage cut-off [V]": 2.5,  # LFP 通常 2.5-2.8V
+        "Upper voltage cut-off [V]": 3.65,  # LFP 充电截止 ~3.6-3.7V
         "Open-circuit voltage at 0% SOC [V]": 2.5,
         "Open-circuit voltage at 100% SOC [V]": 3.45,
-        "Initial concentration in negative electrode [mol.m-3]": 29866.0,   # [测定]
-        "Initial concentration in positive electrode [mol.m-3]": 8000.0,    # [测定]
+        "Initial concentration in negative electrode [mol.m-3]": 29866.0,  # [测定]
+        "Initial concentration in positive electrode [mol.m-3]": 8000.0,  # [测定]
         "Initial temperature [K]": 298.15,
-
         "citations": ["Chen2020"],
     }
