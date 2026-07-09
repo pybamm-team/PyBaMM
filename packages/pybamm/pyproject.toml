@@ -62,7 +62,7 @@ cite = ["pybtex>=0.25.0"]
 # For diffsl export integration tests
 pydiffsol = ["pydiffsol>=0.5.2"]
 # Battery Parameter eXchange format
-bpx = ["bpx>=1.1.0,<1.2.0"]
+bpx = ["bpx>=1.1.1,<1.2.0"]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
 jax = ["jax>=0.7.0, <0.9.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
