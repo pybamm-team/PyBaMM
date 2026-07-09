@@ -232,7 +232,99 @@ PyBaMM 支持多种电池体系：
 | 钠离子电池 | `pybamm.sodium_ion` | BasicDFN |
 | 锂金属电池 | `src/pybamm/models/full_battery_models/lithium_metal/dfn.py` | DFN |
 
-### 1.4 模型选择决策图
+### 1.4 PyBaMM 仿真领域总览
+
+PyBaMM 的主战场是"电芯级"和"机理驱动"的电池仿真。它不是整车动力学软件，也不是整包 CFD 平台，但非常适合下面这些领域。
+
+#### 子模型"积木"架构
+
+PyBaMM 的电池模型不是一块铁板，而是由 ~17 个物理子模型像积木一样**组合装配**而成的。你在 1.6 节看到的 `options` 字典，本质上就是在选择每个子模型用什么配方。源码中，这些子模型的实现位于 `src/pybamm/models/submodels/` 下。
+
+| 子模型分类 | 源码目录 | 控制的 options 键 | 典型选项 | 物理描述 |
+|-----------|---------|------------------|---------|---------|
+| **颗粒固相扩散** | `submodels/particle/` | `"particle"` | `Fickian diffusion`, `quadratic profile`, `MSMR` | 活性材料颗粒内部的锂离子扩散。理论上用 Fick 第二定律 $\partial c/\partial t = D \nabla^2 c$；`quadratic profile` 假设径向为抛物线分布，无需 PDE 求解，计算更快 |
+| **界面反应动力学** | `submodels/interface/kinetics/` | `"intercalation kinetics"` | `Butler-Volmer`, `asymmetric Butler-Volmer`, `Marcus`, `Tafel`, `diffusion-limited` | 电极/电解液界面上的电化学反应速率。经典 Butler-Volmer 方程 $j = j_0 [\exp(\alpha_a F\eta/RT) - \exp(-\alpha_c F\eta/RT)]$；Marcus 理论则提供了强电场下的修正 |
+| **电解液扩散** | `submodels/electrolyte_diffusion/` | （随模型层级自动选择） | `full`, `leading order`, `constant concentration` | 电解液相中锂盐浓度的空间分布。SPM 默认 `constant`（恒浓）——速度快但忽略浓差扩散；SPMe 升级为 `full`（完整 PDE）。高 C-rate 下浓差极化显著 |
+| **电解液电导率** | `submodels/electrolyte_conductivity/` | （随模型层级自动选择） | `full`, `composite`, `integrated`, `leading order` | 电解液相的离子电导率和电位分布。`full` 求解 Ohm 定律获取液相电位 $\phi_e(x,t)$；`leading order` 用零阶近似 |
+| **SEI 膜生长** | `submodels/interface/sei/` | `"SEI"` | `none`, `constant`, `reaction limited`, `solvent-diffusion limited`, `stress-driven` | 模拟固体电解质界面膜的生长。`reaction limited` 考虑电子隧穿限制；`stress-driven` 与颗粒机械应力耦合；`solvent-diffusion limited` 考虑溶剂扩散到 SEI 内部的限制 |
+| **锂沉积/析锂** | `submodels/interface/lithium_plating/` | `"lithium plating"` | `none`, `reversible`, `irreversible` | 模拟充电时锂金属在负极表面的沉积。`reversible` 沉积锂可逆向剥离回电解液；`irreversible` 沉积为永久死锂 |
+| **机械应力与裂纹** | `submodels/particle_mechanics/` | `"particle mechanics"` | `none`, `swelling only`, `crack propagation` | 颗粒体积膨胀/收缩产生的应力。`crack propagation` 会产生新表面 → 新 SEI 生长 → 加速容量损失，是循环老化的关键路径之一 |
+| **活性材料损失** | `submodels/active_material/` | `"loss of active material"` | `none`, `stress-driven`, `reaction-driven` | 活性材料不可逆减少导致的容量损失。可由应力驱动（颗粒破碎失去电接触）或反应驱动（直接化学消耗） |
+| **孔隙率演变** | `submodels/porosity/` | `"SEI porosity change"` 等 | `none`, `reaction driven`（ODE / PDE） | SEI 生长或反应产物占据孔隙空间导致孔隙率降低，进而影响传输效率和阻抗 |
+| **热模型** | `submodels/thermal/` | `"thermal"` | `isothermal`, `lumped`, `x-lumped`, `x-full`, `3D` | 从 0D（等温/集总）到 3D（FEM，scikit-fem 后端）、从单温度到包含面内温度梯度的多层级热模型。3D 模型支持方柱（pouch）和圆柱几何 |
+| **集流体与电流分配** | `submodels/current_collector/` | `"current collector"` + `"dimensionality"` | `homogeneous`, `potential pair`, `effective resistance` | `homogeneous` 假设电流均匀分布（0D）；`potential pair` 求解集流体上的电位分布（2D/3D），用于分析空间不均匀性、涂布缺陷、tab 设计等 |
+| **OCV / 开路电位** | `submodels/interface/open_circuit_potential/` | `"open-circuit potential"` | `single`, `MSMR`, `hysteresis` | OCV vs SOC 曲线。`single` 为标准单条 OCP 曲线；`MSMR` 为多位点模型独立 OCP；`hysteresis` 模拟充放电 OCV 不重合的滞回效应 |
+| **界面利用率** | `submodels/interface/interface_utilisation/` | `"interface utilisation"` | `constant`, `full`, `current driven` | 控制有益的界面面积比例（区别于孔面积和活性面积） |
+| **外部电路控制** | `submodels/external_circuit/` | `"operating mode"` | `current`, `voltage`, `power`, `CCCV`, `resistance`, `function` | 电池外部的工作模式：恒流、恒压、恒功率、CCCV 充电、恒电阻、自定义函数 |
+| **对流** | `submodels/convection/` | `"convection"` | `none`, `through-cell`, `transverse` | 电解液流动效应。`through-cell` 为全电池对流；`transverse` 为横向对流。一般锂离子电池对流传导弱，铅酸电池中更常用 |
+| **传输效率 / 曲折因子** | `submodels/transport_efficiency/` | （参数级配置，非 options 键） | `Bruggeman`, `ordered packing`, `overlapping spheres`, `random overlapping cylinders`, `tortuosity factor`, `hyperbola of revolution`, `cation exchange membrane`, `heterogeneous catalyst` | 孔隙传输效率模型，将有效传输系数与孔隙率、曲折因子关联。`Bruggeman`（$\varepsilon^{1.5}$）最常用 |
+| **电极欧姆** | `submodels/electrode/ohm/` | （随模型层级自动选择） | 固相电位求解 | 活性材料固相中的电子传导方程，计算固相电位 $\phi_s(x,t)$ |
+
+> **理解这个架构的意义**：当你需要某个仿真能力时，可以先定位它属于哪个子模型，再查找对应的 options 键名。例如"想仿真循环老化"→ 需要开启 `"SEI"`（SEI 生长）、`"lithium plating"`（析锂）、`"particle mechanics"`（应力→裂纹→新 SEI）这三个子模型。
+
+#### 应用领域一览（8 大方向）
+
+| 仿真领域 | 典型问题 | 在 PyBaMM 中对应的能力 |
+|---------|---------|------------------------|
+| **电芯性能与倍率能力** | 不同 C-rate 下的容量、极化、电压平台、倍率性能对比 | `SPM/SPMe/DFN/MPM`，`rate_capability.py`，`compare_lithium_ion.py` |
+| **充放电策略与实验协议设计** | CCCV、GITT、脉冲工况、formation、storage loss 等实验流程 | `pybamm.Experiment`，`experimental_protocols/cccv.py`，`experimental_protocols/gitt.py` |
+| **工况复现与控制导向仿真** | Drive cycle、电流/功率跟踪、BMS 原型算法验证 | `drive_cycle.py`，`experiment_drive_cycle.py`，`pybamm.equivalent_circuit.Thevenin()`，`run_ecm.py` |
+| **热管理与温升评估** | 环境温度变化、散热边界、软包冷却、热源分解 | 热模型选项 `thermal=*`，`DFN_ambient_temperature.py`，`pouch_cell_cooling.py`，`plot_thermal_components` |
+| **老化与寿命预测** | SEI 生长、锂沉积、日历老化、循环老化、容量衰减 | `"SEI"` / `"lithium plating"` / `"loss of active material"` / `"particle mechanics"` 相关选项，`calendar_ageing.py`，`cycling_ageing.py` |
+| **诊断与状态分析** | EIS 阻抗谱、电压损失拆解、半电池/电极状态分析 | `pybamm.EISSimulation`，`plot_voltage_components`，半电池配置，相关 notebooks |
+| **参数化、实验校验与批量研究** | 内置参数集替换、BPX 导入、实验数据对比、批量扫参 | `ParameterValues`，`create_from_bpx`，`InputParameter`，`BatchStudy` |
+| **新机理与学术建模** | 粒径分布、多位点反应、不同化学体系、自定义 PDE / submodel | `MPM`，`MSMR`，`lead_acid`，`sodium_ion`，锂金属模型，`create_model.py`，`custom_model.py` |
+
+#### 应用领域 ↔ 子模型映射速查
+
+当你有一个具体的仿真需求时，下面的映射可以帮你快速定位需要开启哪些子模型（options 键）：
+
+| 你想做什么... | 需要关注的子模型 | 对应 options 键 | 说明 |
+|-------------|----------------|----------------|------|
+| 仿真基础电压/充放电曲线 | 固相扩散 + 动力学 + 电解液（自动） | `"particle"` + `"intercalation kinetics"` | 任何模型默认就包含这些，无需额外配置 |
+| 大倍率/高精度电化学分析 | ↑ 基础 + 电解液浓差 + 电极厚度方向空间分辨 | 直接选 **DFN**（自动包含 Full diffusion + Full conductivity） | SPM 忽略浓差，SPMe 有浓差但无厚度方向空间分辨 |
+| 考虑粒径分布的影响 | ↑ 基础 + 多颗粒粒径分布 | `"particle size": "distribution"` + `"surface form": "algebraic"` | 或直接选 MPM（更简单），MP-DFN（更精确） |
+| 仿真循环老化/容量衰减 | ↑ 基础 + SEI + [析锂] + [应力裂纹] + [活性材料损失] | `"SEI"` + `"SEI porosity change"` + `"lithium plating"` + `"particle mechanics"` + `"loss of active material"` | SEI 是最常见的退化机制，其余可选配 |
+| 做热管理/冷却方案设计 | ↑ 基础 + 热方程 + [空间维度] | `"thermal": "isothermal"/"lumped"/"x-full"` + `"dimensionality": 0/2/3` | 0D 集总最快，2D/3D 能捕捉空间温度梯度 |
+| 分析集流体电流分配/涂布缺陷 | ↑ 基础 + 集流体电位对 | `"current collector": "potential pair"` + `"dimensionality": 2` | `potential pair` 求解 y-z 面的电位和电流密度分布 |
+| 3D 热管理（软包/圆柱电池） | ↑ 基础 + 3D 热方程 + `Basic3DThermalSPM` 模型 | `"cell geometry": "pouch"/"cylindrical"` + `"dimensionality": 3` | 需安装 scikit-fem，6 面独立设置换热系数 |
+| EIS 阻抗谱分析 | ↑ 基础 + 表面形式 | `"surface form": "differential"` + `pybamm.EISSimulation` | 时域仿真不需要 `surface form`，仅 EIS 需要 |
+| 多电压平台/温度依赖热力学 | ↑ 基础 + 多位点 OCP | 直接选 **MSMR** + `"number of MSMR reactions": ("6", "4")` | dU/dT 从 Boltzmann 分布自然产生 |
+| BMS 快速外特性原型 | 不需要电化学场方程 | 直接用 `pybamm.equivalent_circuit.Thevenin()` | 毫秒级求解，无内部物理场 |
+| 模拟制造缺陷（烘干/涂布不均） | ↑ 基础 + 空间集流体分布 + 空间参数函数 | `"current collector": "potential pair"` + `dimensionality: 2` + 空间孔隙率函数 | 参见 `dried_out_pouch.py` 示例 |
+| 半电池/电极状态分析 | ↑ 基础 + 工作电极配置 | `"working electrode": "positive"` 或 `"working electrode": "negative"` | 参考 `compare_lithium_ion_half_cell.py` |
+
+上述子模型可以自由组合。例如一个完整的 **"大倍率 DFN + 循环老化 + 集总热"** 配置如下：
+
+```python
+model = pybamm.lithium_ion.DFN(options={
+    # —— 颗粒与动力学（DFN 默认已是 Fickian + Butler-Volmer，这里显式写出来）——
+    "particle": "Fickian diffusion",
+    "intercalation kinetics": "asymmetric Butler-Volmer",
+    # —— 退化路径 1：SEI 生长（反应速率限制，考虑溶剂扩散和电子隧穿）——
+    "SEI": "reaction limited",
+    "SEI porosity change": "true",        # SEI 占据孔隙 → 孔隙率下降 → 传输变差 → 阻抗增大
+    # —— 退化路径 2：可逆锂沉积（快充时负极表面锂堆积）——
+    "lithium plating": "reversible",
+    # —— 退化路径 3：应力 → 裂纹 → 新 SEI（加速容量损失）——
+    "particle mechanics": "crack propagation",
+    "loss of active material": "stress-driven",
+    # —— 热模型（集总参数，适合系统级分析）——
+    "thermal": "lumped",
+})
+```
+
+#### 适用边界
+
+如果按应用边界来概括，PyBaMM 最擅长的是"**电芯内部机理 + 实验工况 + 参数化验证**"的闭环研究：
+
+- ✅ **擅长**：电芯级电化学仿真、老化机理研究、热管理设计、充放电协议优化、EIS 诊断、参数化与实验校验
+- ⚠️ **可做但非专长**：整包热网络（可作为电芯子模型嵌入）、结构力学（仅颗粒级别的应力模型）
+- ❌ **不适合**：整车动力学、结构碰撞、流场 CFD、电机控制、电池包级布置优化
+
+对于整包热网络、结构力学、整车能量管理这类更高层系统问题，PyBaMM 更适合作为其中的电芯子模型，而不是唯一仿真平台。
+
+### 1.5 模型选择决策图
 
 ```
 你的需求是什么？
@@ -252,7 +344,7 @@ PyBaMM 支持多种电池体系：
 └─ 只需外特性 / BMS ─────────→ Thevenin
 ```
 
-### 1.5 模型配置选项 (options)
+### 1.6 模型配置选项 (options)
 
 模型通过 `options` 字典进行细粒度配置：
 
@@ -302,7 +394,9 @@ options = {
 all_options = pybamm.BatteryModelOptions({}).possible_options
 ```
 
-### 1.6 代码示例：选择并创建模型
+> 💡 上表中每个选项的源码实现位于 `src/pybamm/models/submodels/` 下对应的子目录，完整映射关系见 1.4 节"子模型积木架构"表格。
+
+### 1.7 代码示例：选择并创建模型
 
 ```python
 import pybamm
@@ -370,7 +464,7 @@ sim.plot()
 | 📉 **老化仿真** | `cycling_ageing.py` → `calendar_ageing.py` | 循环老化、日历老化 |
 | ⚡ **特殊模型** | `MSMR.py` → `DFN_size_distributions.py` | 反应动力学、粒径分布 |
 | 🔋 **等效电路** | `run_ecm.py` | Thevenin 等效电路快速仿真 |
-| 📐 **3D 仿真** | `3d_examples/` 目录 | 三维几何、圆柱/软包/方形电池 |
+| 📐 **3D 仿真** | `3d_examples/` 目录 | 三维几何、圆柱/软包/方形电池——涉及 thermal（3D 热方程）和 current_collector（集流体电位对）两个子模型，需 ScikitFEM 后端 |
 | 🧪 **实验协议** | `experimental_protocols/cccv.py` → `gitt.py` | CCCV 循环、GITT 脉冲 |
 | 📊 **模型对比** | `compare_dae_solver.py` → `compare_intercalation_kinetics.py` | 求解器、动力学模型对比 |
 | 🏗️ **自定义模型** | `create_model.py` → `custom_model.py` | 从零搭建自定义物理模型 |
@@ -586,7 +680,7 @@ disc.process_model(processed_model)
 ```python
 import pybamm
 
-# 根据需求选择（参考 1.4 节的决策图）
+# 根据需求选择（参考 1.5 节的决策图）
 model = pybamm.lithium_ion.DFN()
 ```
 
@@ -887,9 +981,9 @@ param.update({
 # ============ 4. 定义工况 ============
 experiment = pybamm.Experiment([
     ("Charge at 1A until 4.2V",
-     "Hold at 4.2V until 50mA",
+     "Hold at 4.2V until 50mA",           # CC-CV 充电
      "Rest for 30 minutes",
-     "Discharge at 5A until 2.8V",
+     "Discharge at 5A until 2.8V",         # 恒流放电
      "Rest for 30 minutes"),
 ])
 
