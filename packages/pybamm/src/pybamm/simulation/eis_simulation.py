@@ -29,6 +29,10 @@ class EISSimulation(BaseSimulation):
         A dictionary of the types of spatial method to use on each domain.
     skip_surface_form_check : bool, optional
         If True, skip the 'surface form' model option validation. Defaults to False.
+    three_electrodes: bool, optional
+        Whether to use a three-electrode model. If True, the model must have a
+        reference electrode inserted. Default is False. If True, returns the impedance
+        of both the working and counter electrodes, as well as the cell impedance.
     """
 
     def __init__(
@@ -40,17 +44,28 @@ class EISSimulation(BaseSimulation):
         var_pts=None,
         spatial_methods=None,
         skip_surface_form_check=False,
+        three_electrodes=False,
     ):
         timer = pybamm.Timer()
         model_name = model.name
 
         parameter_values = parameter_values or model.default_parameter_values
 
+        self.three_electrodes = three_electrodes
+        if three_electrodes and (
+            "Positive electrode 3E potential [V]" not in model.variables
+            or "Negative electrode 3E potential [V]" not in model.variables
+        ):
+            reference_position = (
+                parameter_values["Negative electrode thickness [m]"]
+                + parameter_values["Separator thickness [m]"] / 2
+            )
+            model.insert_reference_electrode(reference_position)
         # Validate required variables and surface form before any processing
-        self._validate_model_for_eis(model, skip_surface_form_check)
+        self._validate_model_for_eis(model, skip_surface_form_check, three_electrodes)
 
         pybamm.logger.info(f"Setting up {model_name} for EIS")
-        eis_model = self._set_up_model_for_eis(model)
+        eis_model = self._set_up_model_for_eis(model, three_electrodes)
 
         # Compute impedance scale factor after model transformation: the
         # external-circuit FunctionControl swap rescales "Current [A]" by
@@ -78,7 +93,7 @@ class EISSimulation(BaseSimulation):
         pybamm.citations.register("Hallemans2025")
 
     @staticmethod
-    def _validate_model_for_eis(model, skip_surface_form_check=False):
+    def _validate_model_for_eis(model, skip_surface_form_check=False, three_electrodes=False):
         """Validate that a model is suitable for frequency-domain EIS.
 
         Raises
@@ -87,6 +102,14 @@ class EISSimulation(BaseSimulation):
             If the model is missing required variables or options.
         """
         required_vars = ["Voltage [V]", "Current [A]"]
+        if three_electrodes:
+            required_vars.extend(
+                [
+                    "Positive electrode 3E potential [V]",
+                    "Negative electrode 3E potential [V]",
+                ]
+            )
+            
         for var in required_vars:
             if var not in model.variables:
                 raise ValueError(
@@ -105,7 +128,7 @@ class EISSimulation(BaseSimulation):
             )
 
     @staticmethod
-    def _set_up_model_for_eis(model):
+    def _set_up_model_for_eis(model, three_electrodes=False):
         """Prepare a model for frequency-domain EIS.
 
         Creates a copy of the model with voltage and current as algebraic
@@ -131,6 +154,27 @@ class EISSimulation(BaseSimulation):
         V = new_model.variables["Voltage [V]"]
         new_model.algebraic[V_cell] = V_cell - V
         new_model.initial_conditions[V_cell] = new_model.param.ocv_init
+
+        if three_electrodes:
+            V_pos_3e = new_model.variables["Positive electrode 3E potential [V]"]
+            V_pos_3e_var = pybamm.Variable(
+                "Positive electrode 3E potential variable [V]"
+            )
+            new_model.variables["Positive electrode 3E potential variable [V]"] = (
+                V_pos_3e_var
+            )
+            new_model.algebraic[V_pos_3e_var] = V_pos_3e_var - V_pos_3e
+            new_model.initial_conditions[V_pos_3e_var] = new_model.param.p.prim.U_init
+
+            V_neg_3e = new_model.variables["Negative electrode 3E potential [V]"]
+            V_neg_3e_var = pybamm.Variable(
+                "Negative electrode 3E potential variable [V]"
+            )
+            new_model.variables["Negative electrode 3E potential variable [V]"] = (
+                V_neg_3e_var
+            )
+            new_model.algebraic[V_neg_3e_var] = V_neg_3e_var - V_neg_3e
+            new_model.initial_conditions[V_neg_3e_var] = new_model.param.n.prim.U_init
 
         # Replace current with a FunctionControl variable
         external_circuit_variables = pybamm.external_circuit.FunctionControl(
@@ -212,7 +256,7 @@ class EISSimulation(BaseSimulation):
         return self._cached_M, neg_J, self._cached_b
 
     @staticmethod
-    def _calculate_impedance(frequency, M, neg_J, b):
+    def _calculate_impedance(frequency, M, neg_J, b, three_electrodes=False):
         """Calculate impedance at a single frequency.
 
         Parameters
@@ -233,9 +277,15 @@ class EISSimulation(BaseSimulation):
         """
         A = 1.0j * 2 * np.pi * frequency * M + neg_J
         x = spsolve(A, b)
-        # Voltage is penultimate, current is last (by construction in
-        # _set_up_model_for_eis)
-        return -x[-2] / x[-1]
+        if three_electrodes:
+            z_cell = -x[-4] / x[-1]
+            z_pos = -x[-3] / x[-1]
+            z_neg = -x[-2] / x[-1]
+            return z_cell, z_pos, z_neg
+        else:
+            # Voltage is penultimate, current is last (by construction in
+            # _set_up_model_for_eis)
+            return -x[-2] / x[-1]
 
     def solve(self, frequencies, inputs=None, initial_soc=None):
         """Compute impedance at the given frequencies.
@@ -269,9 +319,20 @@ class EISSimulation(BaseSimulation):
 
         M, neg_J, b = self._build_matrix_problem(inputs_dict=inputs)
 
-        zs = [self._calculate_impedance(f, M, neg_J, b) for f in frequencies]
+        zs = [
+            self._calculate_impedance(f, M, neg_J, b, self.three_electrodes)
+            for f in frequencies
+        ]
         impedance = np.array(zs) * self._z_scale
-        self._solution = pybamm.EISSolution(frequencies, impedance)
+        if self.three_electrodes:
+            self._solution = pybamm.EISSolution(frequencies, impedance[:, 0])
+            self._solution._data["Cell impedance [Ohm]"] = impedance[:, 0]
+            self._solution._data["Positive electrode impedance [Ohm]"] = impedance[:, 1]
+            self._solution._data["Negative electrode impedance [Ohm]"] = -impedance[
+                :, 2
+            ]
+        else:
+            self._solution = pybamm.EISSolution(frequencies, impedance)
         self._solution.set_up_time = self.set_up_time
 
         self.solve_time = timer.time()

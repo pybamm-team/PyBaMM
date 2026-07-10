@@ -28,6 +28,14 @@ class TestEISSimulationClassHierarchy:
         pybamm.EISSimulation._validate_model_for_eis(
             model, skip_surface_form_check=True
         )
+    
+    def test_three_electrode_inserts_reference_electrode(self):
+        model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
+        pybamm.EISSimulation(
+            model, three_electrodes=True
+        )
+        assert "Positive electrode 3E potential [V]" in model.variables
+        assert "Negative electrode 3E potential [V]" in model.variables
 
 
 class TestEISSolution:
@@ -251,6 +259,25 @@ class TestEISSimulationSolve:
         assert high_freq_z.real == pytest.approx(1.0, abs=1e-3)
         assert abs(high_freq_z.imag) < 1e-3
 
+    @pytest.mark.parametrize(
+        "model_class",
+        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
+    )
+    def test_three_electrode_impedances_sum_to_cell_impedance(self, model_class):
+        model = model_class(options={"surface form": "differential"})
+        eis_sim = pybamm.EISSimulation(
+            model, three_electrodes=True
+        )
+        frequencies = np.logspace(-2, 2, 5)
+
+        result = eis_sim.solve(frequencies)
+        z_cell = result["Cell impedance [Ohm]"]
+        z_pos = result["Positive electrode impedance [Ohm]"]
+        z_neg = result["Negative electrode impedance [Ohm]"]
+
+        np.testing.assert_allclose(z_pos + z_neg, z_cell, rtol=1e-6, atol=1e-8)
+        np.testing.assert_allclose(result.impedance, z_cell)
+
 
 class TestNyquistPlot:
     """Tests for Nyquist plotting."""
@@ -289,6 +316,27 @@ class TestNyquistPlot:
         fig, ax = eis_sim.nyquist_plot()
         assert fig is not None
         assert ax is not None
+
+    def test_eis_nyquist_plot_components(self):
+        import matplotlib
+
+        matplotlib.use("Agg")
+
+        impedance = np.array([1 + 0.5j, 2 + 1j, 3 + 1.5j])
+        solution = pybamm.EISSolution(np.array([1.0, 10.0, 100.0]), impedance)
+        solution._data["Cell impedance [Ohm]"] = impedance
+        solution._data["Positive electrode impedance [Ohm]"] = 0.4 * impedance
+        solution._data["Negative electrode impedance [Ohm]"] = 0.6 * impedance
+
+        fig, ax = solution.nyquist_plot(show_plot=False)
+
+        assert fig is not None
+        assert [line.get_label() for line in ax.get_lines()] == [
+            "Cell",
+            "Positive electrode",
+            "Negative electrode",
+        ]
+
 
     def test_nyquist_plot_before_solve_raises(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
