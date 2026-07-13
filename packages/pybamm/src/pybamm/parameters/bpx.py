@@ -1,6 +1,7 @@
 import math
 from dataclasses import dataclass
 from functools import partial
+from warnings import warn
 
 import numpy as np
 from bpx import BPX, Function, InterpolatedTable
@@ -93,6 +94,9 @@ experiment = Domain(name="experiment", pre_name="", short_pre_name="")
 
 PHASE_NAMES = ["Primary: ", "Secondary: "]
 
+# 1 M, the conventional BPX reference electrolyte concentration.
+_DEFAULT_ELECTROLYTE_CONCENTRATION = 1000
+
 
 def _get_phase_names(domain):
     """
@@ -152,43 +156,83 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
         bpx.parameterisation.separator, pybamm_dict, experiment
     )
 
-    # Extract parameters from BPX State section (BPX 1.1.0+)
-    if bpx.state is not None:
-        # Initial conditions
-        ic = bpx.state.initial_conditions
-        pybamm_dict["Initial concentration in electrolyte [mol.m-3]"] = (
-            ic.initial_electrolyte_concentration
-        )
-        pybamm_dict["Initial temperature [K]"] = ic.initial_temperature
-        for domain_str, bpx_value, bpx_electrode in (
-            (
-                "negative",
-                ic.initial_hysteresis_state_negative,
-                bpx.parameterisation.negative_electrode,
-            ),
-            (
-                "positive",
-                ic.initial_hysteresis_state_positive,
-                bpx.parameterisation.positive_electrode,
-            ),
+    # BPX State section (optional in bpx>=1.1.1, and may be absent entirely).
+    state = bpx.state
+    ic = state.initial_conditions if state is not None else None
+    te = state.thermal_environment if state is not None else None
+
+    # Fields PyBaMM always needs: temperatures default to the (always-present)
+    # reference temperature, the electrolyte concentration to 1 M (the reference
+    # c_e0 that normalises the exchange-current density).
+    T_ref = pybamm_dict["Reference temperature [K]"]
+    defaulted: list[str] = []
+    for target, bpx_value, default in (
+        (
+            "Ambient temperature [K]",
+            te.ambient_temperature if te is not None else None,
+            T_ref,
+        ),
+        (
+            "Initial temperature [K]",
+            ic.initial_temperature if ic is not None else None,
+            T_ref,
+        ),
+        (
+            "Initial concentration in electrolyte [mol.m-3]",
+            ic.initial_electrolyte_concentration if ic is not None else None,
+            _DEFAULT_ELECTROLYTE_CONCENTRATION,
+        ),
+    ):
+        if bpx_value is not None:
+            pybamm_dict[target] = bpx_value
+        else:
+            pybamm_dict[target] = default
+            defaulted.append(f"{target} = {default}")
+            pybamm.logger.info(
+                f"BPX 'State' omits '{target}'; PyBaMM is defaulting it to {default}."
+            )
+
+    # Initial hysteresis state: opt-in, left unset when absent.
+    for domain_str, bpx_value, bpx_electrode in (
+        (
+            "negative",
+            ic.initial_hysteresis_state_negative if ic is not None else None,
+            bpx.parameterisation.negative_electrode,
+        ),
+        (
+            "positive",
+            ic.initial_hysteresis_state_positive if ic is not None else None,
+            bpx.parameterisation.positive_electrode,
+        ),
+    ):
+        target = f"Initial hysteresis state in {domain_str} electrode"
+        if bpx_value is None:
+            continue
+        if not isinstance(bpx_value, dict):
+            pybamm_dict[target] = bpx_value
+            continue
+        phase_prefixes = domain_phases[f"{domain_str} electrode"]
+        if phase_prefixes == [""]:
+            continue
+        for bpx_phase, pybamm_prefix in zip(
+            bpx_electrode.particle.keys(), phase_prefixes, strict=True
         ):
-            target = f"Initial hysteresis state in {domain_str} electrode"
-            if not isinstance(bpx_value, dict):
-                pybamm_dict[target] = bpx_value
-                continue
-            phase_prefixes = domain_phases[f"{domain_str} electrode"]
-            if phase_prefixes == [""]:
-                continue
-            for bpx_phase, pybamm_prefix in zip(
-                bpx_electrode.particle.keys(), phase_prefixes, strict=True
-            ):
-                if bpx_phase in bpx_value:
-                    pybamm_dict[f"{pybamm_prefix}{target}"] = bpx_value[bpx_phase]
-        # Thermal environment
-        te = bpx.state.thermal_environment
-        pybamm_dict["Ambient temperature [K]"] = te.ambient_temperature
+            if bpx_phase in bpx_value:
+                pybamm_dict[f"{pybamm_prefix}{target}"] = bpx_value[bpx_phase]
+
+    # Heat transfer coefficient: opt-in; the setdefault below applies the
+    # adiabatic default (0) when absent.
+    if te is not None and te.heat_transfer_coefficient is not None:
         pybamm_dict["Total heat transfer coefficient [W.m-2.K-1]"] = (
             te.heat_transfer_coefficient
+        )
+
+    if defaulted:
+        warn(
+            "The BPX 'State' section did not provide the following field(s); "
+            f"PyBaMM applied defaults (see the info log): {', '.join(defaulted)}.",
+            UserWarning,
+            stacklevel=2,
         )
 
     # set a default current function and typical current based on the nominal capacity
@@ -349,25 +393,34 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
                 partial(_exchange_current_density, k_ref=k, Ea=Ea_k)
             )
 
-            # diffusivity
-            Ea_D = _get_activation_energy(
+            # diffusivity — emit under the current "particle" name; the deprecated
+            # "electrode diffusivity" name would otherwise duplicate and clobber it
+            particle = (
+                negative_particle
+                if domain.name == "negative electrode"
+                else positive_particle
+            )
+            particle_pre_name = phase_pre_name + particle.pre_name
+            old_Ea_D_name = (
                 phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
             )
+            Ea_D = _get_activation_energy(old_Ea_D_name)
+            pybamm_dict.pop(old_Ea_D_name, None)
             pybamm_dict[
-                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
+                particle_pre_name + "diffusivity activation energy [J.mol-1]"
             ] = Ea_D
-            D_ref = pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"]
+            D_ref = pybamm_dict.pop(phase_domain_pre_name + "diffusivity [m2.s-1]")
 
             if callable(D_ref):
-                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                pybamm_dict[particle_pre_name + "diffusivity [m2.s-1]"] = partial(
                     _diffusivity, D_ref=D_ref, Ea=Ea_D
                 )
             elif isinstance(D_ref, tuple):
-                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                pybamm_dict[particle_pre_name + "diffusivity [m2.s-1]"] = partial(
                     _diffusivity, D_ref=_table_to_interpolant(D_ref), Ea=Ea_D
                 )
             else:
-                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                pybamm_dict[particle_pre_name + "diffusivity [m2.s-1]"] = partial(
                     _diffusivity, D_ref=D_ref, Ea=Ea_D, constant=True
                 )
 

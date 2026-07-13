@@ -153,12 +153,15 @@ class ParameterValues:
 
         Notes
         -----
-        PyBaMM officially supports ``bpx>=1``.
+        PyBaMM officially supports ``bpx>=1``. Legacy BPX v0.x files are detected
+        and converted to the v1.x schema by ``bpx`` itself on a best-effort basis
+        (a ``UserWarning`` is raised describing the conversion's limitations).
         """
         from bpx import parse_bpx_file
 
         if target_soc is not None:
             cls._warn_target_soc_deprecation()
+
         bpx = parse_bpx_file(str(filename))
         return cls._create_from_bpx(bpx, target_soc)
 
@@ -193,13 +196,16 @@ class ParameterValues:
 
         Notes
         -----
-        PyBaMM officially supports ``bpx>=1``. The passed ``bpx_obj`` is not
-        mutated.
+        PyBaMM officially supports ``bpx>=1``. Legacy BPX v0.x objects are
+        detected and converted to the v1.x schema by ``bpx`` itself on a
+        best-effort basis (a ``UserWarning`` is raised describing the
+        conversion's limitations). The passed ``bpx_obj`` is not mutated.
         """
         from bpx import parse_bpx_obj
 
         if target_soc is not None:
             cls._warn_target_soc_deprecation()
+
         bpx = parse_bpx_obj(bpx_obj)
         return cls._create_from_bpx(bpx, target_soc)
 
@@ -732,7 +738,17 @@ class ParameterValues:
                     DeprecationWarning,
                     stacklevel=2,
                 )
-                values[new_param] = values.get(param)
+                if new_param in values:
+                    warn(
+                        f"Both the deprecated '{param}' and its current name "
+                        f"'{new_param}' are set; using '{new_param}' and leaving "
+                        f"the deprecated '{param}' untouched.",
+                        stacklevel=2,
+                    )
+                # current name takes precedence so the deprecated alias can no
+                # longer silently overwrite it; the deprecated key is kept for
+                # backward compatibility (custom models may still reference it)
+                values.setdefault(new_param, values[param])
             if is_deprecated_msmr_name(param):
                 new_param = replace_deprecated_msmr_name(param)
                 warn(

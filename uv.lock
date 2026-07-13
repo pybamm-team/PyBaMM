@@ -292,16 +292,16 @@ css = [
 
 [[package]]
 name = "bpx"
-version = "1.1.0"
+version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "pyparsing" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cc/b4/cdbe99b2fc9b1411f65017f4a3bfa19d0ad75099554060aa404260d4141f/bpx-1.1.0.tar.gz", hash = "sha256:5ac3ca84bee5541d22c449d5fd3c30f2a45016ae5e6f678955deff40ed2410a9", size = 74228, upload-time = "2026-02-20T12:28:00.438Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/77/c9/b432b4b8d65a17b3a8db746829b581b5b529014695a0aae313ea25befacb/bpx-1.1.1.tar.gz", hash = "sha256:dac34347032be4e40d246b1f0fff54511ea4fb05e1e79f05dc79298badbb584c", size = 79418, upload-time = "2026-07-07T14:49:29.021Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/12/d44c11ece43c754b12de4ff8662b99bb86421b4dd1e18d0ac165b29bc154/bpx-1.1.0-py3-none-any.whl", hash = "sha256:1d938f4965ae5e91749b7f75ebabbd3738e8aa41fc402a042cdb240a3ed766fb", size = 17703, upload-time = "2026-02-20T12:27:58.988Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/34/5b594178d051a159ea7d5778d1ebc3e1413b5e37daa79953987fc6e30ba8/bpx-1.1.1-py3-none-any.whl", hash = "sha256:66723f0c10c8a0880f5faee7577a38be164a77f3652c6965a4d5e4dbd05a6532", size = 20884, upload-time = "2026-07-07T14:49:27.768Z" },
 ]
 
 [[package]]
@@ -3059,8 +3059,8 @@ docs = [
 requires-dist = [
     { name = "anytree", specifier = ">=2.8.0" },
     { name = "black" },
-    { name = "bpx", marker = "extra == 'all'", specifier = ">=1.1.0,<1.2.0" },
-    { name = "bpx", marker = "extra == 'bpx'", specifier = ">=1.1.0,<1.2.0" },
+    { name = "bpx", marker = "extra == 'all'", specifier = ">=1.1.1,<1.2.0" },
+    { name = "bpx", marker = "extra == 'bpx'", specifier = ">=1.1.1,<1.2.0" },
     { name = "jax", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64' and extra == 'jax') or (python_full_version >= '3.11' and sys_platform != 'darwin' and extra == 'jax')", specifier = ">=0.7.0,<0.9.0" },
     { name = "jupyter", marker = "extra == 'all'" },
     { name = "jupyter", marker = "extra == 'examples'" },
