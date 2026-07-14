@@ -2,7 +2,7 @@
 
 ## Features
 
-- Added three-electrode EIS support to `pybamm.EISSimulation`, including automatic default reference-electrode insertion, named positive/negative electrode impedance outputs, and component-aware Nyquist plotting. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- Added three-electrode EIS support to `pybamm.EISSimulation`, including automatic default reference-electrode insertion, named positive/negative electrode impedance outputs, and component-aware Nyquist plotting. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/#5648))
 
 
 ## Breaking changes
