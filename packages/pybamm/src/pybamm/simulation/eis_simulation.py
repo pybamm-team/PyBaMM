@@ -93,7 +93,9 @@ class EISSimulation(BaseSimulation):
         pybamm.citations.register("Hallemans2025")
 
     @staticmethod
-    def _validate_model_for_eis(model, skip_surface_form_check=False, three_electrodes=False):
+    def _validate_model_for_eis(
+        model, skip_surface_form_check=False, three_electrodes=False
+    ):
         """Validate that a model is suitable for frequency-domain EIS.
 
         Raises
@@ -109,7 +111,7 @@ class EISSimulation(BaseSimulation):
                     "Negative electrode 3E potential [V]",
                 ]
             )
-            
+
         for var in required_vars:
             if var not in model.variables:
                 raise ValueError(
