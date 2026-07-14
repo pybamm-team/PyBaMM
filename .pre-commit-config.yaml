@@ -29,8 +29,11 @@ repos:
         - id: check-yaml
         - id: debug-statements
         - id: end-of-file-fixer
+          exclude: "vcpkg-overlays/.*\\.patch$"
         - id: mixed-line-ending
+          exclude: "vcpkg-overlays/.*\\.patch$"
         - id: trailing-whitespace
+          exclude: "vcpkg-overlays/.*\\.patch$"
 
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0

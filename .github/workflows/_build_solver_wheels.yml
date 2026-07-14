@@ -91,14 +91,14 @@ jobs:
           path: packages/pybammsolvers/wheelhouse
           key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
 
-      # Pin to 2025.01.13 to avoid issues with finding SuiteSparse in manifest mode
-      # after SuiteSparse was split into subpackages in recent vcpkg releases.
+      # vcpkg 2025.10.17 (post SuiteSparse split; blas->openblas built NOFORTRAN):
+      # overlay narrows sundials[klu] to suitesparse-klu, so no gfortran/MSYS2 download.
       - name: Install vcpkg on Windows
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg --branch 2025.01.13
+          git clone https://github.com/microsoft/vcpkg --branch 2025.10.17
           cd vcpkg
           .\bootstrap-vcpkg.bat
 

@@ -3,6 +3,7 @@
     "kind": "builtin",
     "baseline": ""
   },
+  "overlay-ports": ["./vcpkg-overlays"],
   "registries": [
     {
       "kind": "git",
