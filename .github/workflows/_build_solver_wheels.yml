@@ -102,6 +102,24 @@ jobs:
           cd vcpkg
           .\bootstrap-vcpkg.bat
 
+      # vcpkg's vcpkg-gfortran port (via lapack-reference) fetches a pruned MSYS2
+      # snapshot that 404s; an on-PATH gfortran makes vcpkg_find_fortran skip it.
+      - name: Install MinGW gfortran for vcpkg
+        id: msys2
+        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2.32.0
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc-fortran
+      - name: Put gfortran on PATH
+        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
+        shell: pwsh
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+        run: |
+          "$env:MSYS2_LOCATION\mingw64\bin" |
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Build wheels on Windows
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: pipx run cibuildwheel --output-dir wheelhouse
