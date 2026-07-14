@@ -2,7 +2,7 @@
 
 ## Features
 
-- Added `three_electrodes=True` in `EISSimulation` to compute the EIS of both Negative and Positive electrode independently. This is done by using `model.insert_reference_electrode` inside the class and computing the mass matrix of both Positive and Negative electrode. The `.nyquist_plot()` is updated accordingly.
+- Added three-electrode EIS support to `pybamm.EISSimulation`, including automatic default reference-electrode insertion, named positive/negative electrode impedance outputs, and component-aware Nyquist plotting. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
 
 ## Breaking changes
