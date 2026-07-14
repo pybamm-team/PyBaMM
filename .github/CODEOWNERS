@@ -1,2 +1,5 @@
 # Automatically request reviews from maintainers
 * @pybamm-team/maintainers
+
+# The pybammsolvers package is owned by the IDAKLU maintainers (last match wins)
+/packages/pybammsolvers/ @pybamm-team/idaklu-maintainers

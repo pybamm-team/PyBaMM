@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.1",
+  "pybamm_version": "26.5.1.dev3+g50075c64c",
+  "submesh_types": {
+    "negative electrode": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "separator": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "positive electrode": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "negative particle": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "positive particle": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "negative primary particle": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "positive primary particle": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "negative secondary particle": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "positive secondary particle": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "negative particle size": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "positive particle size": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "negative primary particle size": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "positive primary particle size": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "negative secondary particle size": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "positive secondary particle size": {
+      "class": "Uniform1DSubMesh",
+      "module": "pybamm.meshes.one_dimensional_submeshes"
+    },
+    "current collector": {
+      "class": "SubMesh0D",
+      "module": "pybamm.meshes.zero_dimensional_submesh"
+    }
+  }
+}

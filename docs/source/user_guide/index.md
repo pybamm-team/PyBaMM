@@ -31,6 +31,7 @@ caption: Contributing guide
 maxdepth: 1
 ---
 contributing
+release
 ```
 
 # Example notebooks

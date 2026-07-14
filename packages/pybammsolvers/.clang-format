@@ -1,0 +1,3 @@
+# Visual Studio format
+BasedOnStyle: LLVM
+BreakBeforeBraces: Allman

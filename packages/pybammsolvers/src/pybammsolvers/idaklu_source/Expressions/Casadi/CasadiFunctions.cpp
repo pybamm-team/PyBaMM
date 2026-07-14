@@ -1,0 +1,150 @@
+#include "CasadiFunctions.hpp"
+#include <casadi/core/sparsity.hpp>
+#include <stdexcept>
+
+namespace {
+
+casadi::Function clone_casadi_function(
+  const CasadiFunction::BaseFunctionType &f,
+  bool deep_copy,
+  const std::string *serialized)
+{
+  if (!deep_copy) {
+    return f;
+  }
+  if (serialized != nullptr) {
+    return CasadiFunction::BaseFunctionType::deserialize(*serialized);
+  }
+  return CasadiFunction::BaseFunctionType::deserialize(f.serialize());
+}
+
+} // namespace
+
+SerializedCasadiFunctions serialize_casadi_functions(
+  const casadi::Function &rhs_alg,
+  const casadi::Function &jac_times_cjmass,
+  const casadi::Function &jac_action,
+  const casadi::Function &mass_action,
+  const casadi::Function &sens,
+  const casadi::Function &events,
+  const std::vector<casadi::Function*>& var_fcns,
+  const std::vector<casadi::Function*>& dvar_dy_fcns,
+  const std::vector<casadi::Function*>& dvar_dp_fcns)
+{
+  SerializedCasadiFunctions serialized;
+  serialized.rhs_alg = rhs_alg.serialize();
+  serialized.jac_times_cjmass = jac_times_cjmass.serialize();
+  serialized.jac_action = jac_action.serialize();
+  serialized.mass_action = mass_action.serialize();
+  serialized.sens = sens.serialize();
+  serialized.events = events.serialize();
+
+  serialized.var_fcns.reserve(var_fcns.size());
+  for (const auto *var : var_fcns) {
+    serialized.var_fcns.push_back(var->serialize());
+  }
+
+  serialized.dvar_dy_fcns.reserve(dvar_dy_fcns.size());
+  for (const auto *var : dvar_dy_fcns) {
+    serialized.dvar_dy_fcns.push_back(var->serialize());
+  }
+
+  serialized.dvar_dp_fcns.reserve(dvar_dp_fcns.size());
+  for (const auto *var : dvar_dp_fcns) {
+    serialized.dvar_dp_fcns.push_back(var->serialize());
+  }
+
+  return serialized;
+}
+
+CasadiFunction::CasadiFunction(
+  const BaseFunctionType &f,
+  bool deep_copy,
+  const std::string *serialized)
+    : Expression(),
+      m_func(clone_casadi_function(f, deep_copy, serialized))
+{
+  if (m_func.is_null()) {
+    return;
+  }
+
+  DEBUG("CasadiFunction constructor" << (deep_copy ? " (deep copy)" : "") << ": " << m_func.name());
+
+  size_t sz_arg;
+  size_t sz_res;
+  size_t sz_iw;
+  size_t sz_w;
+  m_func.sz_work(sz_arg, sz_res, sz_iw, sz_w);
+
+  int nnz = (sz_res>0) ? m_func.nnz_out() : 0;  // cppcheck-suppress unreadVariable
+  DEBUG("name = "<< m_func.name() << " arg = " << sz_arg << " res = "
+    << sz_res << " iw = " << sz_iw << " w = " << sz_w << " nnz = " << nnz);
+
+  m_arg.resize(sz_arg, nullptr);
+  m_res.resize(sz_res, nullptr);
+  m_iw.resize(sz_iw, 0);
+  m_w.resize(sz_w, 0);
+
+  if (m_func.n_out() > 0) {
+    casadi::Sparsity casadi_sparsity = m_func.sparsity_out(0);
+    m_rows = casadi_sparsity.get_row();
+    m_cols = casadi_sparsity.get_col();
+  }
+}
+
+// Contract: nnz_out() == 0 means "no function provided; do not call operator()"
+void CasadiFunction::operator()()
+{
+  if (m_func.is_null()) {
+    throw std::runtime_error("Cannot call operator() on a null CasadiFunction");
+  }
+  DEBUG("CasadiFunction operator(): " << m_func.name());
+  int mem = m_func.checkout();
+  m_func(m_arg.data(), m_res.data(), m_iw.data(), m_w.data(), mem);
+  m_func.release(mem);
+}
+
+expr_int CasadiFunction::out_shape(int k) {
+  if (m_func.is_null()) return 0;
+  DEBUG("CasadiFunctions out_shape(): " << m_func.name() << " " << m_func.nnz_out());
+  return static_cast<expr_int>(m_func.nnz_out());
+}
+
+expr_int CasadiFunction::nnz() {
+  if (m_func.is_null()) return 0;
+  DEBUG("CasadiFunction nnz(): " << m_func.name() << " " << static_cast<expr_int>(m_func.nnz_out()));
+  return static_cast<expr_int>(m_func.nnz_out());
+}
+
+expr_int CasadiFunction::nnz_out() {
+  if (m_func.is_null()) return 0;
+  DEBUG("CasadiFunction nnz_out(): " << m_func.name() << " " << static_cast<expr_int>(m_func.nnz_out()));
+  return static_cast<expr_int>(m_func.nnz_out());
+}
+
+const std::vector<expr_int>& CasadiFunction::get_row() {
+  DEBUG("CasadiFunction get_row(): " << m_func.name());
+  return m_rows;
+}
+
+const std::vector<expr_int>& CasadiFunction::get_col() {
+  DEBUG("CasadiFunction get_col(): " << m_func.name());
+  return m_cols;
+}
+
+void CasadiFunction::operator()(const std::vector<sunrealtype*>& inputs,
+                                const std::vector<sunrealtype*>& results)
+{
+  if (m_func.is_null()) {
+    throw std::runtime_error("Cannot call operator() on a null CasadiFunction");
+  }
+  DEBUG("CasadiFunction operator() with inputs and results: " << m_func.name());
+
+  // Set-up input arguments, provide result vector, then execute function
+  // Example call: fcn({in1, in2, in3}, {out1})
+  for(size_t k=0; k<inputs.size(); k++)
+    m_arg[k] = inputs[k];
+  for(size_t k=0; k<results.size(); k++)
+    m_res[k] = results[k];
+  operator()();
+}

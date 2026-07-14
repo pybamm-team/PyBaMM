@@ -16,3 +16,7 @@ file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/fundamentals/pybam
 
 # Telemetry
 https://us.i.posthog.com
+
+# Live site behind a LiteSpeed anti-bot WAF that returns 415 to CI/datacenter
+# IPs (works fine from browsers and locally) — false positive, not a dead link
+https://bpxstandard.com/

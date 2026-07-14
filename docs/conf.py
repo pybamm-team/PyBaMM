@@ -95,6 +95,16 @@ linkcheck_ignore = [
     "https://docs.scipy.org/doc/scipy",  # SciPy docs timeout intermittently
     "https://chemrxiv.org",  # ChemRxiv blocks automated link checking
     "https://pubs.acs.org",  # ACS blocks automated link checking
+    "https://doi.org/10.1021/acsaem.2c02047",  # ACS DOI 403s automated checkers
+    "https://realpython.com",  # Real Python (Cloudflare) blocks automated link checking
+]
+
+# GitHub prefixes Markdown heading anchors with "user-content-" in the rendered
+# HTML (e.g. id="user-content-versioning"), which linkcheck cannot match against
+# the "#versioning" fragment, so skip anchor verification for github.com URLs.
+# The page itself is still checked for existence.
+linkcheck_anchors_ignore_for_url = [
+    r"https://github\.com/.*",
 ]
 
 
@@ -301,7 +311,7 @@ intersphinx_mapping = {
 
 # -- sphinxcontrib-bibtex configuration --------------------------------------
 
-bibtex_bibfiles = ["../src/pybamm/CITATIONS.bib"]
+bibtex_bibfiles = ["../packages/pybamm/src/pybamm/CITATIONS.bib"]
 bibtex_style = "unsrt"
 bibtex_footbibliography_header = """.. rubric:: References"""
 bibtex_reference_style = "author_year"
