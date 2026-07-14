@@ -64,6 +64,8 @@ include = [
     "install_KLU_Sundials.py",
     "vcpkg.json",
     "vcpkg-configuration.json",
+    # Referenced by vcpkg-configuration.json overlay-ports; source builds fail without it.
+    "vcpkg-overlays/**",
 ]
 # The SUNDIALS/SuiteSparse submodules are gitlink pins, not tracked files, so a
 # git-based sdist omits them. But `python -m build` copies the working tree to a
