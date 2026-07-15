@@ -65,7 +65,7 @@ jobs:
   build_windows_wheels:
     name: Wheels (Windows)
     if: ${{ contains(fromJSON(inputs.platforms), 'windows') }}
-    runs-on: windows-2025
+    runs-on: windows-2022
     permissions:
       contents: read
     steps:
