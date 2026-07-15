@@ -1,0 +1,51 @@
+# TEMPORARY diagnostic harness for the Windows wheel modernisation (PR #5650);
+# branch-scoped, deleted before merge. Probes the two observed failures directly:
+# vcpkg 2026.06.24's detect_compiler ninja acquire, and the VS generator available
+# on the windows-2025 (VS 2026) image.
+name: Windows vcpkg debug (temporary)
+
+on:
+  push:
+    branches: [fix-windows-wheel-suitesparse-klu]
+
+permissions: {}
+
+env:
+  FORCE_COLOR: 3
+
+jobs:
+  vcpkg_probe:
+    name: Probe vcpkg 2026.06.24 on windows-2025
+    runs-on: windows-2025
+    steps:
+      - name: List Visual Studio instances (vswhere)
+        run: |
+          & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -all -products '*' -format json |
+            ConvertFrom-Json | ForEach-Object { "$($_.installationVersion)  $($_.displayName)  $($_.installationPath)" }
+
+      - name: List CMake generators on the image
+        run: |
+          cmake --version
+          cmake --help | Select-String "Visual Studio"
+
+      - name: Install vcpkg 2026.06.24
+        run: |
+          git clone --depth 1 --branch 2026.06.24 https://github.com/microsoft/vcpkg C:\vcpkg-dbg
+          cd C:\vcpkg-dbg
+          .\bootstrap-vcpkg.bat
+
+      - name: vcpkg fetch ninja (reproduces the detect_compiler acquire)
+        run: C:\vcpkg-dbg\vcpkg.exe fetch ninja
+
+      - name: Probe detect_compiler and a tiny port build
+        run: C:\vcpkg-dbg\vcpkg.exe install zlib --triplet x64-windows-static-md
+
+      - name: Upload vcpkg debug logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vcpkg-debug-logs
+          path: |
+            C:\vcpkg-dbg\buildtrees\detect_compiler\*.log
+            C:\vcpkg-dbg\buildtrees\zlib\*.log
+          if-no-files-found: ignore
