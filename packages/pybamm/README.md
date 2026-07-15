@@ -97,9 +97,9 @@ Note that the examples on the `main` branch are tested on the latest commit. If 
 
 PyBaMM uses [CalVer](https://calver.org/). Version numbers take the form `YY.MM.N.P`, where `YY.MM` is the year and month of the release, `N` is the feature release within that month (`0` for the first), and `P` is the patch level (`0` for the feature release itself). For example, `27.1.0.1` is the first patch of the first feature release in January 2027.
 
-Releases ship when there's something worth releasing, not on a fixed schedule. Any release may contain breaking changes; when it does, they appear under a `## Breaking changes` section at the top of [`CHANGELOG.md`](CHANGELOG.md). Public APIs that are removed or renamed ship a `DeprecationWarning` for at least two prior feature releases first, where technically possible.
+Releases ship when there's something worth releasing, not on a fixed schedule. Any release may contain breaking changes; when it does, they appear under a `## Breaking changes` section at the top of [`CHANGELOG.md`](../../CHANGELOG.md). Public APIs that are removed or renamed ship a `DeprecationWarning` for at least two prior feature releases first, where technically possible.
 
-See [`RELEASE.md`](RELEASE.md) for the full release policy, including how we define "public API" and what counts as a breaking change.
+See [`RELEASE.md`](../../RELEASE.md) for the full release policy, including how we define "public API" and what counts as a breaking change.
 
 ## 🚀 Installing PyBaMM
 
@@ -171,7 +171,7 @@ We would be grateful if you could also cite the relevant papers. These will chan
 pybamm.print_citations()
 ```
 
-to the end of your script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead. A list of all citations can also be found in the [citations file](https://github.com/pybamm-team/PyBaMM/blob/main/src/pybamm/CITATIONS.bib). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
+to the end of your script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead. A list of all citations can also be found in the [citations file](https://github.com/pybamm-team/PyBaMM/blob/main/packages/pybamm/src/pybamm/CITATIONS.bib). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
 See [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/main/CONTRIBUTING.md#citations) for information on how to add your own citations when you contribute.
 
 ## 🛠️ Contributing to PyBaMM
