@@ -91,14 +91,14 @@ jobs:
           path: packages/pybammsolvers/wheelhouse
           key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
 
-      # vcpkg 2026.06.24: sundials comes from the pybamm-team registry; its klu
-      # feature needs only suitesparse-klu (no LAPACK/Fortran/MSYS2 chain).
+      # vcpkg 2025.10.17 (2026.06.24 fails its detect_compiler ninja acquire): sundials
+      # comes from the pybamm-team registry; klu needs only suitesparse-klu (no Fortran).
       - name: Install vcpkg on Windows
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg --branch 2026.06.24
+          git clone https://github.com/microsoft/vcpkg --branch 2025.10.17
           cd vcpkg
           .\bootstrap-vcpkg.bat
 
