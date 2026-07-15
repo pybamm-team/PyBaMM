@@ -123,9 +123,9 @@ jobs:
       contents: read
     uses: ./.github/workflows/_build_solver_wheels.yml
     with:
-      cache_wheels: true
+      # cache off + logs on: temporary while validating the modern Windows build; restore before merge.
+      cache_wheels: false
       build_sdist: false
-      # Temporary while validating the patch-free registry port; remove after merge-readiness.
       save_vcpkg_logs: true
       # Build only the wheels the triggered jobs consume (see the changes job's route step).
       platforms: ${{ needs.changes.outputs.platforms }}
