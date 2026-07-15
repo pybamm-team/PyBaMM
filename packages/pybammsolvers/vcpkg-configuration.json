@@ -3,13 +3,12 @@
     "kind": "builtin",
     "baseline": ""
   },
-  "overlay-ports": ["./vcpkg-overlays"],
   "registries": [
     {
       "kind": "git",
       "repository": "https://github.com/pybamm-team/sundials-vcpkg-registry",
-      "baseline": "3bf2b8842b2ed30ce517ec4f1e8b50901ba25550",
-      "reference": "3bf2b8842b2ed30ce517ec4f1e8b50901ba25550",
+      "baseline": "6397ba7567b8443552d3b16ac9267bfd6ffdc521",
+      "reference": "6397ba7567b8443552d3b16ac9267bfd6ffdc521",
       "packages": ["sundials"]
     },
     {
