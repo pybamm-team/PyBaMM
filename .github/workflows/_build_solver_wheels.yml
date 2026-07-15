@@ -65,7 +65,7 @@ jobs:
   build_windows_wheels:
     name: Wheels (Windows)
     if: ${{ contains(fromJSON(inputs.platforms), 'windows') }}
-    runs-on: windows-2022
+    runs-on: windows-2025
     permissions:
       contents: read
     steps:
@@ -91,14 +91,14 @@ jobs:
           path: packages/pybammsolvers/wheelhouse
           key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
 
-      # vcpkg 2025.10.17 (post SuiteSparse split; blas->openblas built NOFORTRAN):
-      # overlay narrows sundials[klu] to suitesparse-klu, so no gfortran/MSYS2 download.
+      # vcpkg 2026.06.24: sundials comes from the pybamm-team registry; its klu
+      # feature needs only suitesparse-klu (no LAPACK/Fortran/MSYS2 chain).
       - name: Install vcpkg on Windows
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg --branch 2025.10.17
+          git clone https://github.com/microsoft/vcpkg --branch 2026.06.24
           cd vcpkg
           .\bootstrap-vcpkg.bat
 

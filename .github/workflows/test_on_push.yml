@@ -125,6 +125,8 @@ jobs:
     with:
       cache_wheels: true
       build_sdist: false
+      # Temporary while validating the patch-free registry port; remove after merge-readiness.
+      save_vcpkg_logs: true
       # Build only the wheels the triggered jobs consume (see the changes job's route step).
       platforms: ${{ needs.changes.outputs.platforms }}
       macos_runners: ${{ needs.changes.outputs.macos_runners }}
