@@ -2,7 +2,7 @@
     "name": "sundials",
     "port-version": 1,
     "version-semver": "7.6.0",
-    "homepage": "https://computation.llnl.gov/projects/sundials",
+    "homepage": "https://computing.llnl.gov/projects/sundials",
     "description": "SUNDIALS (SUite of Nonlinear and DIfferential/ALgebraic equation Solvers)",
     "dependencies": [
         {
