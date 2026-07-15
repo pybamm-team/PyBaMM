@@ -40,6 +40,38 @@ jobs:
       - name: Probe detect_compiler and a tiny port build
         run: C:\vcpkg-dbg\vcpkg.exe install zlib --triplet x64-windows-static-md
 
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # Faithful repro of the wheel build's vcpkg invocation: manifest mode from the
+      # solver dir with cibuildwheel's env. detect_compiler runs in the first minute.
+      - name: Manifest-mode repro with cibuildwheel env
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          VCPKG_ROOT_DIR: C:\vcpkg-dbg
+          VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
+          VCPKG_FEATURE_FLAGS: manifests,registries
+          CMAKE_GENERATOR: Visual Studio 17 2022
+          CMAKE_GENERATOR_PLATFORM: x64
+        run: |
+          cd packages\pybammsolvers
+          C:\vcpkg-dbg\vcpkg.exe install --triplet x64-windows-static-md --debug --x-install-root=C:\vcpkg-dbg-installed
+
+      # Same, driven through the vcpkg CMake toolchain (as scikit-build-core does),
+      # with no generator pin so CMake resolves the image's installed VS.
+      - name: CMake-toolchain repro (default generator)
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          VCPKG_ROOT_DIR: C:\vcpkg-dbg
+          VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
+          VCPKG_FEATURE_FLAGS: manifests,registries
+          CMAKE_GENERATOR_PLATFORM: x64
+        run: |
+          cmake -S packages\pybammsolvers -B C:\cfg-probe -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg-dbg\scripts\buildsystems\vcpkg.cmake -DVCPKG_ROOT_DIR=C:\vcpkg-dbg
+
       - name: Upload vcpkg debug logs
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
