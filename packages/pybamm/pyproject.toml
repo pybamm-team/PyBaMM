@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.13.0", "hatch-vcs>=0.3.0"]
+requires = ["hatchling>=1.30.1", "hatch-vcs>=0.5.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -30,7 +30,7 @@ dependencies = [
   "pybammsolvers>=0.8.0,<0.9.0",
   "black",
   "numpy",
-  "scipy>=1.11.4",
+  "scipy>=1.11.4,!=1.18.0",      # 1.18.0 breaks pickling/deepcopy of interpolators, fixed in 1.18.1 (scipy#25489)
   "xarray>=2022.6.0",
   "anytree>=2.8.0",
   "sympy>=1.12",
@@ -62,7 +62,7 @@ cite = ["pybtex>=0.25.0"]
 # For diffsl export integration tests
 pydiffsol = ["pydiffsol>=0.6.1"]
 # Battery Parameter eXchange format
-bpx = ["bpx>=1.1.0,<1.2.0"]
+bpx = ["bpx>=1.1.1,<1.2.0"]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
 jax = [

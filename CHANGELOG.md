@@ -7,11 +7,15 @@
 
 ## Features
 
+- Added `skip_surface_form_check` option to `EISSimulation` to bypass the surface form validation. ([#5632](https://github.com/pybamm-team/PyBaMM/pull/5632))
 - Added ability to export pybamm.Simulation with experiments to DiffSL format ([#5557)](https://github.com/pybamm-team/PyBaMM/pull/5557))
 - PyBaMM and `pybammsolvers` now develop in a single repository — a UV workspace under `packages/` — while continuing to release independently to PyPI. Release tags are namespaced (`pybamm-v*` and `pybammsolvers-v*`), and PyBaMM's CI now tests against the in-repo solver on every platform. The published `pybamm` package and its dependency on `pybammsolvers` are unchanged for users. See `RELEASE.md` for the release model. ([#5512](https://github.com/pybamm-team/PyBaMM/issues/5512))
+- Legacy BPX v0.x files/objects now load again: `bpx` itself detects and converts them to the v1.x schema on a best-effort basis (with a `UserWarning`), so `ParameterValues.create_from_bpx`/`create_from_bpx_obj` no longer raise a `ValidationError`. PyBaMM officially supports `bpx>=1`. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
+- `create_from_bpx`/`create_from_bpx_obj` now also accept BPX files that omit `State` fields (or the whole `State` section): the ambient/initial temperatures default to the reference temperature and the initial electrolyte concentration to 1000 mol.m-3 (logged), while opt-in fields (initial hysteresis state, heat transfer coefficient) are left for the model to default. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
 
 ## Bug fixes
 
+- Fixed the deprecated `"<X> electrode diffusivity [m2.s-1]"` alias silently overriding the current `"<X> particle diffusivity [m2.s-1]"`: the current name now takes precedence in `ParameterValues` (instead of being overwritten by the deprecated alias), and a warning is raised when both are set, so setting or fitting `particle diffusivity` is no longer a silent no-op. The deprecated key is retained for backward compatibility, and `create_from_bpx` now emits only the current `particle diffusivity` name. ([#5642](https://github.com/pybamm-team/PyBaMM/pull/5642))
 - Fixed the `pybammsolvers` source distribution bundling the SUNDIALS/SuiteSparse submodule trees (~291 MB, over PyPI's per-file limit) when built from a checkout with the submodules initialised; the sdist now excludes them. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
 - Fixed the `pybammsolvers` editable auto-rebuild failing to configure when the SUNDIALS/SuiteSparse submodules are absent even though the libraries were already built in `.idaklu`; the from-source bootstrap (and its submodule requirement) is now skipped once the libraries exist. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
 
@@ -41,6 +45,8 @@
 ## Features
 
 - The "voltage as a state" option is now registered centrally in `BaseBatteryModel` and supports all operating modes. SPM/SPMe promote "surface form" to "algebraic" automatically when a particle-size distribution is used (previously an error) as well as for non-default kinetics. `CasadiSolver` integrator failures on DAE models solved without algebraic initial-condition perturbation now include an actionable hint. ([#5572](https://github.com/pybamm-team/PyBaMM/pull/5572))
+- Legacy BPX v0.x files/objects now load again: `bpx` itself detects and converts them to the v1.x schema on a best-effort basis (with a `UserWarning`), so `ParameterValues.create_from_bpx`/`create_from_bpx_obj` no longer raise a `ValidationError`. PyBaMM officially supports `bpx>=1`. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
+- `create_from_bpx`/`create_from_bpx_obj` now support BPX files that omit `State` fields (or the whole `State` section): the ambient/initial temperatures default to the reference temperature and the initial electrolyte concentration to 1000 mol.m-3 (logged), while opt-in fields (initial hysteresis state, heat transfer coefficient) are left for the model to default. A BPX `State` initial state-of-charge, when provided, is now applied (via `set_initial_state`, supporting blended electrodes) instead of being ignored. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
 
 ## Bug fixes
 
@@ -79,6 +85,7 @@
 
 ## Breaking changes
 
+- The `bpx` dependency was upgraded from `0.5.0` to `1.1.0` ([#5469](https://github.com/pybamm-team/PyBaMM/pull/5469)), adopting the BPX v1.x schema (which adds a required `State` block and moves the initial temperature, ambient temperature and initial electrolyte concentration out of `Parameterisation`). As a result, BPX v0.x files no longer validate and `ParameterValues.create_from_bpx`/`create_from_bpx_obj` raise a `ValidationError` for them. Backward-compatible conversion of v0.x files was subsequently added (see [Unreleased]). ([#5571](https://github.com/pybamm-team/PyBaMM/issues/5571), [#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
 - `Simulation.solve` now always clears `Simulation.solution` before solving, so a failed solve leaves it as `None` rather than retaining the previous result. ([#5528](https://github.com/pybamm-team/PyBaMM/pull/5528))
 - The `bpx` dependency was upgraded from `0.5.0` to `1.1.0` ([#5469](https://github.com/pybamm-team/PyBaMM/pull/5469)), adopting the BPX v1.x schema (which adds a `State` block and moves the initial temperature, ambient temperature and initial electrolyte concentration out of `Parameterisation`). As a result, BPX v0.x files no longer validate and `ParameterValues.create_from_bpx`/`create_from_bpx_obj` raise a `ValidationError` for them. ([#5571](https://github.com/pybamm-team/PyBaMM/issues/5571))
 
@@ -912,7 +919,7 @@ package to install PyBaMM with only the required dependencies. ([conda-forge/pyb
 - Removed `get_infinite_nested_dict`, `BaseModel.check_default_variables_dictionaries`, and `Discretisation.create_jacobian` methods, which were not used by any other functionality in the repository ([#2384](https://github.com/pybamm-team/PyBaMM/pull/2384))
 - Dropped support for Python 3.7 after the release of Numpy v1.22.0 ([#2379](https://github.com/pybamm-team/PyBaMM/pull/2379))
 - Removed parameter cli tools (add/edit/remove parameters). Parameter sets can now more easily be added via python scripts. ([#2342](https://github.com/pybamm-team/PyBaMM/pull/2342))
-- Parameter sets should now be provided as single python files containing all parameters and functions. Parameters provided as "data" (e.g. OCP vs SOC) can still be csv files, but must be either in the same folder as the parameter file or in a subfolder called "data/". See for example [Ai2020](https://github.com/pybamm-team/PyBaMM/blob/develop/src/pybamm/input/parameters/lithium_ion/Ai2020.py) ([#2342](https://github.com/pybamm-team/PyBaMM/pull/2342))
+- Parameter sets should now be provided as single python files containing all parameters and functions. Parameters provided as "data" (e.g. OCP vs SOC) can still be csv files, but must be either in the same folder as the parameter file or in a subfolder called "data/". See for example [Ai2020](https://github.com/pybamm-team/PyBaMM/blob/develop/packages/pybamm/src/pybamm/input/parameters/lithium_ion/Ai2020.py) ([#2342](https://github.com/pybamm-team/PyBaMM/pull/2342))
 
 # [v22.9](https://github.com/pybamm-team/PyBaMM/tree/v22.9) - 2022-09-30
 
