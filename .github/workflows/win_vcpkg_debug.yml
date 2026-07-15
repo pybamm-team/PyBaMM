@@ -45,7 +45,7 @@ jobs:
           # fetch ninja where stderr is visible, then dump the exact env vcpkg sees
           CIBW_BEFORE_BUILD: C:\vcpkg-dbg\vcpkg.exe fetch ninja & set
           CIBW_ENVIRONMENT: >
-            VCPKG_ROOT_DIR=C:\vcpkg-dbg
+            VCPKG_ROOT_DIR=C:/vcpkg-dbg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
             VCPKG_FEATURE_FLAGS=manifests,registries
             CMAKE_GENERATOR_PLATFORM=x64

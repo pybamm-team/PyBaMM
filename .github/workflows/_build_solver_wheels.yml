@@ -112,8 +112,10 @@ jobs:
           # source for each Python version.
           # No CMAKE_GENERATOR pin: CMake resolves the image's installed VS
           # (year-pins break when runner images drop that VS release).
+          # Forward-slash VCPKG_ROOT_DIR: cibuildwheel shell-parses this value, so a
+          # backslash path arrives drive-relative (C:vcpkg) and breaks vcpkg's children.
           CIBW_ENVIRONMENT: >
-            VCPKG_ROOT_DIR=C:\vcpkg
+            VCPKG_ROOT_DIR=C:/vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
             VCPKG_FEATURE_FLAGS=manifests,registries
             CMAKE_GENERATOR_PLATFORM=x64
