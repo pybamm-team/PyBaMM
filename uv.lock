@@ -3075,7 +3075,7 @@ requires-dist = [
     { name = "pybammsolvers", editable = "packages/pybammsolvers" },
     { name = "pybtex", marker = "extra == 'all'", specifier = ">=0.25.0" },
     { name = "pybtex", marker = "extra == 'cite'", specifier = ">=0.25.0" },
-    { name = "pydiffsol", marker = "extra == 'pydiffsol'", specifier = ">=0.6.0" },
+    { name = "pydiffsol", marker = "extra == 'pydiffsol'", specifier = ">=0.6.1" },
     { name = "pyyaml" },
     { name = "scikit-fem", marker = "extra == 'all'", specifier = ">=8.1.0" },
     { name = "scipy", specifier = ">=1.11.4" },
@@ -3359,17 +3359,18 @@ wheels = [
 
 [[package]]
 name = "pydiffsol"
-version = "0.6.0"
+version = "0.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ba/2e/f4f2d601b9adf57abd77f31410204fc966eb293969afda4560eb8279d8be/pydiffsol-0.6.0.tar.gz", hash = "sha256:131e75a7f84684a05208b8e0b0995f2bb8961908596d0a7dd3bab91469f5d59e", size = 241146, upload-time = "2026-07-01T16:20:00.691Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/28/810dacc6082e7a0c5819ba6763ae42a5e8137019aca89a3eb9fb364daaee/pydiffsol-0.6.1.tar.gz", hash = "sha256:f665d3be7864b76b2b51b14d38ff24d53270a4a5448b34f1aebfc7f52e962c34", size = 240958, upload-time = "2026-07-10T10:12:59.491Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/6a/948b1c8c28f9470c1219428479a9d7afd9cdf1fe2de70e7d6c139c48ff1e/pydiffsol-0.6.0-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:41fee4f0017cfc77912d0663e0e73fb26b230105dacaa1abb2212fbfda0d314f", size = 36853699, upload-time = "2026-07-01T16:19:57.783Z" },
-    { url = "https://files.pythonhosted.org/packages/a4/ed/54632e673365c196b0bedfe5da9535b4a3ed9cbe46900c43842444476f5d/pydiffsol-0.6.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:57d0cceca92e066b196fa6edd54d4159b274020688e05611977153ced7f60bfd", size = 46887687, upload-time = "2026-07-01T16:20:02.033Z" },
-    { url = "https://files.pythonhosted.org/packages/e2/13/1d5be91d143ea6b22ee4ef0e99dc29bec39331892c549124a9c53c616f8a/pydiffsol-0.6.0-cp310-abi3-win_amd64.whl", hash = "sha256:772a7b5fe4583cd7dd0b6f5242294f3e599b51e24dca6a97176f5cc2611f26b1", size = 4508733, upload-time = "2026-07-01T16:20:04.547Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/cf/b5c7154c4f8cb314abb02181ca1a2648de6a0862a3ecee3fcb29cf9f4d5a/pydiffsol-0.6.1-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:fa49c985d5d7f41f433b835ad0b4c3b40904882c633ddba3dd3dbc526ed3f786", size = 44040271, upload-time = "2026-07-10T10:12:57.207Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/f8/056bf2f4b8823e7d145a3ff298ab982a0a395bd9fe7f259bbb22e10302fe/pydiffsol-0.6.1-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:52cad8a9db84f5a226bad5312e42c15804191c793d2f448c7211eb4be5e20d48", size = 50969068, upload-time = "2026-07-10T10:13:01.162Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/38/ac3480f5802830a3bb8c4b49aa0d3df5a8f3176e8544e08bd394f2a984ee/pydiffsol-0.6.1-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:9b7568cdda902c904dada2d3f0a7e5e08979472e425f8b55641a39d3cc37e31a", size = 54362150, upload-time = "2026-07-10T10:13:04.603Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/c2/53c44583e97ab14b1ec417a22977d7f983558825fd8d7cdeab8129ee2e87/pydiffsol-0.6.1-cp310-abi3-win_amd64.whl", hash = "sha256:20eb8ba8ee45dee27a8d2277da0e307d1dd07c9374543577194863b6bc4cf35f", size = 4506091, upload-time = "2026-07-10T10:13:07.376Z" },
 ]
 
 [[package]]

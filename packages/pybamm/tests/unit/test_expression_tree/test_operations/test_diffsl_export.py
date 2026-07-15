@@ -700,3 +700,27 @@ class TestDiffSLExport:
         msg = r"DiffSL export only supports 'linear' interpolants"
         with pytest.raises(ValueError, match=msg):
             pybamm.DiffSLExport(model).to_diffeq(outputs=["out"])
+
+    @pytest.mark.parametrize(
+        "reserved_name",
+        ["u", "dudt", "in", "out"],
+    )
+    def test_export_handles_reserved_state_names(self, reserved_name):
+        """DiffSL export renames states with reserved names so the
+        generated code compiles without name collisions."""
+        model = pybamm.BaseModel()
+        x = pybamm.Variable(reserved_name)
+        k = pybamm.InputParameter("k")
+        model.rhs = {x: -k * x}
+        model.initial_conditions = {x: pybamm.Scalar(1.0)}
+        model.variables = {reserved_name: x}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        export = pybamm.DiffSLExport(model).to_diffeq(outputs=[reserved_name])
+
+        renamed = f"x{reserved_name}"
+        assert renamed in export
+        assert f"{renamed}_i" in export
+        assert f"  {reserved_name} =" not in export

@@ -42,6 +42,11 @@ class LossSolver:
         across a process pool of this many workers. Defaults to ``None``
         (sequential). ``predict`` is unaffected; its parallelism comes from the
         wrapped solver's ``num_threads`` option.
+    ode_solver : str, optional
+        The diffsol ODE solver to use. One of ``"bdf"``, ``"tr_bdf2"``,
+        ``"esdirk34"``, ``"tsit45"``. Defaults to ``"bdf"``.  ``"tr_bdf2"``
+        or ``"esdirk34"`` can be more stable than BDF for large DAE systems
+        with forward sensitivity.
     """
 
     INNER_LOSS_FUNCTION_NAME = "inner loss function"
@@ -52,6 +57,7 @@ class LossSolver:
         loss_function: pybamm.Symbol,
         final_time: float,
         max_workers: int | None = None,
+        ode_solver: str = "bdf",
     ):
         ds = pybamm.import_optional_dependency("pydiffsol")
 
@@ -85,17 +91,20 @@ class LossSolver:
             matrix_type=ds.faer_sparse,
             scalar_type=ds.f64,
             linear_solver=ds.lu,
-            ode_solver=ds.bdf,
+            ode_solver=getattr(ds, ode_solver, ds.bdf),
         )
         self._ode.integrate_out = self._processed_loss.method == "continuous"
         self._ode.rtol = self._sim.solver.rtol
         self._ode.atol = self._sim.solver.atol
-        self._ode.sens_rtol = self._sim.solver.rtol
-        self._ode.sens_atol = self._sim.solver.atol
-        self._ode.out_rtol = self._sim.solver.rtol
-        self._ode.out_atol = self._sim.solver.atol
-        self._ode.param_rtol = self._sim.solver.rtol
-        self._ode.param_atol = self._sim.solver.atol
+        self._ode.sens_rtol = None
+        self._ode.sens_atol = None
+
+        # match PyBaMM's Newton solver resilience for large DAE systems
+        self._ode.options.max_nonlinear_solver_iterations = 100
+        self._ode.options.max_error_test_failures = 200
+        self._ode.ic_options.max_newton_iterations = 100
+        self._ode.ic_options.max_linear_solver_setups = 8
+        self._ode.ic_options.max_linesearch_iterations = 20
 
         # generate casadi functions for the post-sum node and its sensitivities
         self._post_sum, self._post_sum_sens, self._post_sum_dy = (

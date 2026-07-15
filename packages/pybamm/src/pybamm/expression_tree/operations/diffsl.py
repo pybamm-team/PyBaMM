@@ -1397,6 +1397,11 @@ def equation_to_diffeq(
     )
 
 
+_DIFFSL_RESERVED = frozenset(
+    {"in", "u", "dudt", "M", "F", "out", "stop", "reset", "constant", "varying"}
+)
+
+
 def to_variable_name(name: str) -> str:
     """Convert a name to a valid diffeq variable name"""
     if name == pybamm.Simulation._STEP_VALUE_INPUT:
@@ -1405,6 +1410,8 @@ def to_variable_name(name: str) -> str:
     name = name.lower()
     for char in convert_to_underscore:
         name = name.replace(char, "")
+    if name in _DIFFSL_RESERVED:
+        name = f"x{name}"
     return name
 
 
