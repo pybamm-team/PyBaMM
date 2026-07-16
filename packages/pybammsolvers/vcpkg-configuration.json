@@ -7,8 +7,8 @@
     {
       "kind": "git",
       "repository": "https://github.com/pybamm-team/sundials-vcpkg-registry",
-      "baseline": "6397ba7567b8443552d3b16ac9267bfd6ffdc521",
-      "reference": "6397ba7567b8443552d3b16ac9267bfd6ffdc521",
+      "baseline": "76ada14d18fdf7e9c68f0eca257b33986cda5653",
+      "reference": "76ada14d18fdf7e9c68f0eca257b33986cda5653",
       "packages": ["sundials"]
     },
     {
