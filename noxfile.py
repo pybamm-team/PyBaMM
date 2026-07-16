@@ -147,7 +147,7 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    install_locked(session, extras=["all", "jax"], groups=["dev"])
+    install_locked(session, extras=["all", "jax", "pydiffsol"], groups=["dev"])
     session.run("python", "-m", "pytest", "-m", "unit", "packages/pybamm/tests")
 
 
