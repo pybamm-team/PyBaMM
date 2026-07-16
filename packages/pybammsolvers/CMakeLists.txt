@@ -262,15 +262,17 @@ target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
 
 # link suitesparse
-# if using vcpkg, use config mode to
-# find suitesparse. Otherwise, use FindSuiteSparse module
+# With vcpkg, SuiteSparse is split into per-component ports with no combined
+# config; find KLU directly (its target pulls in AMD/COLAMD/BTF/config).
+# Otherwise, use the FindSuiteSparse module.
 if (DEFINED VCPKG_ROOT_DIR)
-    find_package(SuiteSparse CONFIG REQUIRED)
+    find_package(KLU CONFIG REQUIRED)
+    target_link_libraries(idaklu PRIVATE SuiteSparse::KLU)
 else ()
     find_package(SuiteSparse REQUIRED)
     message("SuiteSparse found in ${SuiteSparse_INCLUDE_DIRS}: ${SuiteSparse_LIBRARIES}")
+    target_include_directories(idaklu PRIVATE ${SuiteSparse_INCLUDE_DIRS})
+    target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
 endif ()
-include_directories(${SuiteSparse_INCLUDE_DIRS})
-target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
 
 install(TARGETS idaklu LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})

@@ -15,6 +15,7 @@
 
 ## Bug fixes
 
+- Fixed the `pybammsolvers` Windows wheels failing to build: vcpkg's transitive reference-LAPACK/Fortran toolchain chain broke on a pruned upstream MSYS2 download (a 404). The Windows build now avoids that chain, using a `suitesparse-klu`-only sundials port and vcpkg 2026.06.24 on a `windows-2025` runner. ([#5650](https://github.com/pybamm-team/PyBaMM/pull/5650))
 - Fixed the deprecated `"<X> electrode diffusivity [m2.s-1]"` alias silently overriding the current `"<X> particle diffusivity [m2.s-1]"`: the current name now takes precedence in `ParameterValues` (instead of being overwritten by the deprecated alias), and a warning is raised when both are set, so setting or fitting `particle diffusivity` is no longer a silent no-op. The deprecated key is retained for backward compatibility, and `create_from_bpx` now emits only the current `particle diffusivity` name. ([#5642](https://github.com/pybamm-team/PyBaMM/pull/5642))
 - Fixed the `pybammsolvers` source distribution bundling the SUNDIALS/SuiteSparse submodule trees (~291 MB, over PyPI's per-file limit) when built from a checkout with the submodules initialised; the sdist now excludes them. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
 - Fixed the `pybammsolvers` editable auto-rebuild failing to configure when the SUNDIALS/SuiteSparse submodules are absent even though the libraries were already built in `.idaklu`; the from-source bootstrap (and its submodule requirement) is now skipped once the libraries exist. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))

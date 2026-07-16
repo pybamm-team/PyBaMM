@@ -65,7 +65,7 @@ jobs:
   build_windows_wheels:
     name: Wheels (Windows)
     if: ${{ contains(fromJSON(inputs.platforms), 'windows') }}
-    runs-on: windows-2022
+    runs-on: windows-2025
     permissions:
       contents: read
     steps:
@@ -91,14 +91,14 @@ jobs:
           path: packages/pybammsolvers/wheelhouse
           key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
 
-      # Pin to 2025.01.13 to avoid issues with finding SuiteSparse in manifest mode
-      # after SuiteSparse was split into subpackages in recent vcpkg releases.
+      # vcpkg 2026.06.24: sundials comes from the pybamm-team registry; its klu
+      # feature needs only suitesparse-klu (no LAPACK/Fortran/MSYS2 chain).
       - name: Install vcpkg on Windows
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg --branch 2025.01.13
+          git clone https://github.com/microsoft/vcpkg --branch 2026.06.24
           cd vcpkg
           .\bootstrap-vcpkg.bat
 
@@ -110,11 +110,14 @@ jobs:
           # (%LOCALAPPDATA%\vcpkg\archives) so the per-wheel CMake configures
           # within this job share built ports instead of rebuilding from
           # source for each Python version.
+          # No CMAKE_GENERATOR pin: CMake resolves the image's installed VS
+          # (year-pins break when runner images drop that VS release).
+          # Forward-slash VCPKG_ROOT_DIR: cibuildwheel shell-parses this value, so a
+          # backslash path arrives drive-relative (C:vcpkg) and breaks vcpkg's children.
           CIBW_ENVIRONMENT: >
-            VCPKG_ROOT_DIR=C:\vcpkg
+            VCPKG_ROOT_DIR=C:/vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
             VCPKG_FEATURE_FLAGS=manifests,registries
-            CMAKE_GENERATOR="Visual Studio 17 2022"
             CMAKE_GENERATOR_PLATFORM=x64
           CIBW_ARCHS: AMD64
           CIBW_BEFORE_BUILD: python -m pip install delvewheel
@@ -127,7 +130,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: vcpkg-logs-windows
-          path: C:\vcpkg\buildtrees\sundials\*.log
+          path: |
+            C:\vcpkg\buildtrees\sundials\*.log
+            C:\vcpkg\buildtrees\detect_compiler\*.log
           if-no-files-found: ignore
       - name: Upload Windows wheels
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
