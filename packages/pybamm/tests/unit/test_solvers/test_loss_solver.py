@@ -3,6 +3,7 @@
 #
 import importlib.util
 import pickle
+import sys
 
 import numpy as np
 import pytest
@@ -11,6 +12,7 @@ import pybamm
 from pybamm.simulation.loss_solver import LossSolver
 
 has_pydiffsol = importlib.util.find_spec("pydiffsol") is not None
+is_windows = sys.platform == "win32"
 
 K_TRUE = 0.5
 K_OTHER = 0.8
@@ -124,6 +126,9 @@ class TestLossSolver:
             gradient, [[_continuous_loss_gradient(K_TRUE)]], rtol=3e-5, atol=1e-6
         )
 
+    @pytest.mark.skipif(
+        is_windows, reason="adjoint sensitivity not available on Windows"
+    )
     def test_loss_and_gradient_continuous_adjoint(self, continuous_solver):
         p = continuous_solver.inputs_to_parameters([{"k": K_TRUE}])
         loss, gradient = continuous_solver.loss_and_gradient(
@@ -134,6 +139,9 @@ class TestLossSolver:
             gradient, [[_continuous_loss_gradient(K_TRUE)]], rtol=1e-3, atol=1e-5
         )
 
+    @pytest.mark.skipif(
+        is_windows, reason="forward sensitivity not available on Windows"
+    )
     def test_loss_and_gradient_continuous_forward_not_implemented(
         self, continuous_solver
     ):
@@ -184,6 +192,9 @@ class TestLossSolver:
             atol=1e-6,
         )
 
+    @pytest.mark.skipif(
+        is_windows, reason="adjoint sensitivity not available on Windows"
+    )
     def test_loss_and_gradient_batch_adjoint(self, continuous_solver):
         p = continuous_solver.inputs_to_parameters([{"k": K_TRUE}, {"k": K_OTHER}])
         loss, gradient = continuous_solver.loss_and_gradient(
@@ -201,12 +212,14 @@ class TestLossSolver:
             atol=1e-5,
         )
 
+    @pytest.mark.skipif(is_windows, reason="pickling not supported on Windows")
     def test_pickle_round_trip(self, continuous_solver):
         p = continuous_solver.inputs_to_parameters([{"k": K_TRUE}, {"k": K_OTHER}])
         expected = continuous_solver.loss(p)
         restored = pickle.loads(pickle.dumps(continuous_solver))
         np.testing.assert_allclose(restored.loss(p), expected)
 
+    @pytest.mark.skipif(is_windows, reason="pickling not supported on Windows")
     def test_pickle_round_trip_restores_pool(self):
         sequential = _make_loss_solver(_continuous_loss_function())
         p = sequential.inputs_to_parameters([{"k": K_TRUE}, {"k": K_OTHER}])
@@ -223,6 +236,9 @@ class TestLossSolver:
         finally:
             restored.close()
 
+    @pytest.mark.skipif(
+        is_windows, reason="adjoint sensitivity not available on Windows"
+    )
     def test_parallel_matches_sequential(self):
         inputs = [{"k": k} for k in (0.4, 0.6, 0.8, 1.0)]
         sequential = _make_loss_solver(_continuous_loss_function())
@@ -255,6 +271,9 @@ class TestLossSolver:
         np.testing.assert_allclose(loss_other, [_discrete_loss(K_OTHER)], atol=1e-6)
         assert loss_other[0] > solver.loss(p_true)[0]
 
+    @pytest.mark.skipif(
+        is_windows, reason="forward sensitivity not available on Windows"
+    )
     def test_loss_and_gradient_discrete_forward(self):
         solver = _make_loss_solver(_discrete_loss_function())
         p = solver.inputs_to_parameters([{"k": K_OTHER}])
@@ -269,6 +288,9 @@ class TestLossSolver:
             gradient, solver.finite_difference_gradient(p), rtol=3e-5, atol=1e-6
         )
 
+    @pytest.mark.skipif(
+        is_windows, reason="forward sensitivity not available on Windows"
+    )
     def test_loss_and_gradient_discrete_forward_zero_at_true(self):
         solver = _make_loss_solver(_discrete_loss_function())
         p = solver.inputs_to_parameters([{"k": K_TRUE}])
@@ -277,6 +299,9 @@ class TestLossSolver:
         )
         np.testing.assert_allclose(gradient, [[0.0]], atol=5e-4)
 
+    @pytest.mark.skipif(
+        is_windows, reason="adjoint sensitivity not available on Windows"
+    )
     def test_loss_and_gradient_discrete_adjoint(self):
         solver = _make_loss_solver(_discrete_loss_function())
         p = solver.inputs_to_parameters([{"k": K_OTHER}])
@@ -294,6 +319,9 @@ class TestLossSolver:
             atol=1e-5,
         )
 
+    @pytest.mark.skipif(
+        is_windows, reason="adjoint sensitivity not available on Windows"
+    )
     def test_loss_and_gradient_discrete_adjoint_zero_at_true(self):
         solver = _make_loss_solver(_discrete_loss_function())
         p = solver.inputs_to_parameters([{"k": K_TRUE}])
