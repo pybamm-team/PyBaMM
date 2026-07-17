@@ -142,11 +142,33 @@ jobs:
           if-no-files-found: error
 
   build_manylinux_wheels:
-    name: Wheels (Linux)
+    name: Wheels (Linux ${{ matrix.arch }})
     if: ${{ contains(fromJSON(inputs.platforms), 'linux') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x86_64 uses the default manylinux2014; CasADi's x86_64 wheel is
+          # built with the legacy libstdc++ ABI (CentOS 7, EPEL disabled).
+          - arch: x86_64
+            runner: ubuntu-latest
+            artifact: wheels_manylinux
+            before_all: >
+              yum -y --disablerepo=epel install openblas-devel lapack-devel &&
+              python install_KLU_Sundials.py
+          # aarch64 needs manylinux_2_34: CasADi's aarch64 wheel is built with
+          # the C++11 ABI and requires a GCC>=11 libstdc++, which manylinux2014
+          # and manylinux_2_28 lack. openblas/lapack live in AlmaLinux 9's CRB.
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            artifact: wheels_manylinux_aarch64
+            before_all: >
+              dnf config-manager --set-enabled crb &&
+              dnf -y install openblas-devel lapack-devel &&
+              python install_KLU_Sundials.py
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -169,18 +191,17 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: packages/pybammsolvers/wheelhouse
-          key: solver-wheels-linux-${{ steps.solverhash.outputs.hash }}
+          key: solver-wheels-linux-${{ matrix.arch }}-${{ steps.solverhash.outputs.hash }}
 
       - name: Build wheels on Linux
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_ARCHS_LINUX: x86_64
-          # openblas-devel/lapack-devel live in PowerTools, not EPEL; disable EPEL
-          # so its periodic metadata-rotation outages can't break the wheel build.
-          CIBW_BEFORE_ALL_LINUX: >
-            yum -y --disablerepo=epel install openblas-devel lapack-devel &&
-            python install_KLU_Sundials.py
+          CIBW_ARCHS_LINUX: ${{ matrix.arch }}
+          # aarch64 requires GCC>=11 libstdc++ for CasADi's C++11-ABI wheel;
+          # ignored for the x86_64 build (which uses the default manylinux2014).
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
+          CIBW_BEFORE_ALL_LINUX: ${{ matrix.before_all }}
           # libcasadi ships as a pip dep (resolved at runtime via $ORIGIN/../casadi).
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --exclude libcasadi.so.3.7 -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "dev"
@@ -191,7 +212,7 @@ jobs:
       - name: Upload wheels for Linux
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: wheels_manylinux
+          name: ${{ matrix.artifact }}
           path: packages/pybammsolvers/wheelhouse/*.whl
           if-no-files-found: error
 

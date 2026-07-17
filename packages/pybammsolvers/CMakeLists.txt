@@ -76,8 +76,8 @@ if (NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=vla")
 endif ()
 
-# casadi seems to compile without the newer versions of std::string
-add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
+# The libstdc++ std::string ABI (_GLIBCXX_USE_CXX11_ABI) is reconciled against
+# the actual libcasadi build further down, once CasADi has been located.
 
 find_package(pybind11 CONFIG REQUIRED)
 
@@ -222,6 +222,46 @@ else ()
     else()
         target_link_libraries(idaklu PRIVATE casadi)
     endif()
+endif ()
+
+# Match idaklu's libstdc++ std::string ABI to the linked libcasadi (GNU only;
+# no-op for MSVC and macOS/libc++). CasADi's PyPI casadi-config.cmake forces
+# `_GLIBCXX_USE_CXX11_ABI=0` on consumers: correct for the x86_64 wheel (legacy
+# ABI) but wrong for the aarch64 wheel (C++11 ABI), leaving casadi's std::string
+# symbols unresolved. Detect libcasadi's real ABI and override CasADi's guess.
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Drop CasADi's hard-coded (and, on aarch64, wrong) ABI interface definition.
+    if (TARGET casadi::casadi)
+        get_target_property(_casadi_defs casadi::casadi INTERFACE_COMPILE_DEFINITIONS)
+        if (_casadi_defs)
+            list(REMOVE_ITEM _casadi_defs
+                "_GLIBCXX_USE_CXX11_ABI=0" "_GLIBCXX_USE_CXX11_ABI=1")
+            set_target_properties(casadi::casadi PROPERTIES
+                INTERFACE_COMPILE_DEFINITIONS "${_casadi_defs}")
+        endif ()
+    endif ()
+
+    # Key off casadi::Function::deserialize(const std::string&): the C++11-ABI
+    # build exports the __cxx11 mangling, the legacy build the `Ss` mangling.
+    # Default to the legacy ABI if the probe cannot run (never worse than before).
+    set(_casadi_cxx11_abi 0)
+    set(_nm "${CMAKE_NM}")
+    if (NOT _nm)
+        find_program(_nm NAMES nm gcc-nm)
+    endif ()
+    file(GLOB _libcasadi "${CASADI_LIB_DIR}/libcasadi.so*")
+    if (_libcasadi AND _nm)
+        list(GET _libcasadi 0 _libcasadi0)
+        execute_process(
+            COMMAND "${_nm}" -D --defined-only "${_libcasadi0}"
+            OUTPUT_VARIABLE _casadi_syms
+            ERROR_QUIET)
+        if (_casadi_syms MATCHES "Function11deserializeERKNSt7__cxx11")
+            set(_casadi_cxx11_abi 1)
+        endif ()
+    endif ()
+    message(STATUS "idaklu: _GLIBCXX_USE_CXX11_ABI=${_casadi_cxx11_abi} (matched to libcasadi)")
+    target_compile_definitions(idaklu PRIVATE _GLIBCXX_USE_CXX11_ABI=${_casadi_cxx11_abi})
 endif ()
 
 # Math flags for the IDAKLU target.
