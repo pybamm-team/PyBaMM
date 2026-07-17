@@ -68,6 +68,10 @@ jobs:
     runs-on: windows-2025
     permissions:
       contents: read
+    env:
+      # Single source of truth for the vcpkg tag — shared by the clone and the
+      # binary-cache key so a version bump rotates the cache, never poisons it.
+      VCPKG_TAG: "2026.06.24"
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -91,32 +95,51 @@ jobs:
           path: packages/pybammsolvers/wheelhouse
           key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
 
-      # vcpkg 2026.06.24: sundials comes from the pybamm-team registry; its klu
-      # feature needs only suitesparse-klu (no LAPACK/Fortran/MSYS2 chain).
+      # Persist vcpkg's binary cache (built ports: casadi, sundials, suitesparse,
+      # openblas) across runs, so a PR that only changes solver source rebuilds
+      # the solver, not its dependencies. Gated to the cached (PR/periodic) path;
+      # releases build fresh (no cache). restore-keys lets a new branch reuse
+      # main's ports — vcpkg rebuilds only ABI-mismatched ones.
+      - name: Cache vcpkg binary artifacts
+        id: vcpkgcache
+        if: ${{ inputs.cache_wheels && steps.cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: C:\vcpkg-archives
+          key: vcpkg-x64-windows-static-md-${{ env.VCPKG_TAG }}-${{ hashFiles('packages/pybammsolvers/vcpkg.json', 'packages/pybammsolvers/vcpkg-configuration.json') }}
+          restore-keys: |
+            vcpkg-x64-windows-static-md-${{ env.VCPKG_TAG }}-
+
+      # vcpkg (see VCPKG_TAG): sundials comes from the pybamm-team registry; its
+      # klu feature needs only suitesparse-klu (no LAPACK/Fortran/MSYS2 chain).
       - name: Install vcpkg on Windows
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg --branch 2026.06.24
+          git clone https://github.com/microsoft/vcpkg --branch ${{ env.VCPKG_TAG }}
           cd vcpkg
           .\bootstrap-vcpkg.bat
+          # Binary-cache dir must exist before the build; -Force no-ops (keeps
+          # contents) if the cache-restore step already created it.
+          New-Item -ItemType Directory -Force -Path C:\vcpkg-archives | Out-Null
 
       - name: Build wheels on Windows
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
-          # No VCPKG_BINARY_SOURCES: keep vcpkg's default local cache
-          # (%LOCALAPPDATA%\vcpkg\archives) so the per-wheel CMake configures
-          # within this job share built ports instead of rebuilding from
-          # source for each Python version.
+          # VCPKG_DEFAULT_BINARY_CACHE points vcpkg's default files cache at a
+          # pinned dir that actions/cache persists across runs (see the cache
+          # step); ports are shared across the 5 Python builds AND across runs,
+          # so only a dependency change rebuilds from source.
           # No CMAKE_GENERATOR pin: CMake resolves the image's installed VS
           # (year-pins break when runner images drop that VS release).
-          # Forward-slash VCPKG_ROOT_DIR: cibuildwheel shell-parses this value, so a
+          # Forward-slash paths: cibuildwheel shell-parses these values, so a
           # backslash path arrives drive-relative (C:vcpkg) and breaks vcpkg's children.
           CIBW_ENVIRONMENT: >
             VCPKG_ROOT_DIR=C:/vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
+            VCPKG_DEFAULT_BINARY_CACHE=C:/vcpkg-archives
             VCPKG_FEATURE_FLAGS=manifests,registries
             CMAKE_GENERATOR_PLATFORM=x64
           CIBW_ARCHS: AMD64
