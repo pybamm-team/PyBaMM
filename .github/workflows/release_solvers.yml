@@ -57,7 +57,15 @@ jobs:
             echo "::error::Release tag '$TAG' does not match version.py ('$version', expected '$expected'). Bump version.py or fix the tag."
             exit 1
           fi
-          echo "Release tag '$TAG' matches version.py ($version)."
+          # version.py is the source of truth; pyproject.toml and vcpkg.json
+          # carry static mirrors. Delegate the drift check to the sync hook
+          # itself (--check verifies without rewriting) so the "where the
+          # version lives in each file" logic has a single home.
+          if ! python3 packages/pybammsolvers/scripts/sync_version.py --check; then
+            echo "::error::Static version mirrors are out of sync with version.py ('$version'). Run the sync-pybammsolvers-version pre-commit hook."
+            exit 1
+          fi
+          echo "Release tag '$TAG' matches version.py ($version); pyproject.toml and vcpkg.json are in sync."
 
   publish_pypi:
     if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybammsolvers-v') }}

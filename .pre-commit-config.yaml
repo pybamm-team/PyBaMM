@@ -49,3 +49,12 @@ repos:
     rev: v1.26.1
     hooks:
       - id: zizmor
+
+  - repo: local
+    hooks:
+      - id: sync-pybammsolvers-version
+        name: Sync pybammsolvers version.py into pyproject.toml and vcpkg.json
+        entry: python packages/pybammsolvers/scripts/sync_version.py
+        language: python
+        files: ^packages/pybammsolvers/(src/pybammsolvers/version\.py|pyproject\.toml|vcpkg\.json)$
+        pass_filenames: false

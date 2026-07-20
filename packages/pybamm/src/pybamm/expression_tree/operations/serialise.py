@@ -2201,24 +2201,23 @@ def convert_function_to_symbolic_expression(func, name=None):
     """
     # Create symbolic parameters for each input argument
     try:
-        func_name = func.get_name()
-        func_args = func.get_args()
-        # Use the underlying function for evaluation
-        func_to_eval = func.func
+        func_name = func.__name__
+        func_args = list(inspect.signature(func).parameters)
     except AttributeError:
-        try:
-            func_name = func.__name__
-            func_args = list(inspect.signature(func).parameters)
-            func_to_eval = func
-        except AttributeError:
-            # One more fallback, in case it's a partial
-            func_name = func.func.__name__
-            func_args = list(inspect.signature(func).parameters)
-            func_to_eval = func
+        # A functools.partial's signature still lists its bound/defaulted params
+        # (e.g. create_from_bpx's D_ref/Ea/constant); keep only the unfilled ones.
+        func_name = func.func.__name__
+        func_args = [
+            name
+            for name, parameter in inspect.signature(func).parameters.items()
+            if parameter.default is inspect.Parameter.empty
+            and parameter.kind not in (parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD)
+        ]
 
-    sym_inputs = [pybamm.Parameter(arg) for arg in func_args]
+    # Pass the symbols by keyword so a partial's bound (keyword-only) arguments
+    # keep their values rather than being displaced by a positional input.
     with tracing():
-        sym_output = func_to_eval(*sym_inputs)
+        sym_output = func(**{arg: pybamm.Parameter(arg) for arg in func_args})
 
     # Wrap the symbolic expression in an ExpressionFunctionParameter to allow access
     # to the function name and arguments
