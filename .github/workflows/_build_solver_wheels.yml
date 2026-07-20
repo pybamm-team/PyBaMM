@@ -65,9 +65,13 @@ jobs:
   build_windows_wheels:
     name: Wheels (Windows)
     if: ${{ contains(fromJSON(inputs.platforms), 'windows') }}
-    runs-on: windows-2022
+    runs-on: windows-2025
     permissions:
       contents: read
+    env:
+      # Single source of truth for the vcpkg tag — shared by the clone and the
+      # binary-cache key so a version bump rotates the cache, never poisons it.
+      VCPKG_TAG: "2026.06.24"
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -91,30 +95,52 @@ jobs:
           path: packages/pybammsolvers/wheelhouse
           key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
 
-      # Pin to 2025.01.13 to avoid issues with finding SuiteSparse in manifest mode
-      # after SuiteSparse was split into subpackages in recent vcpkg releases.
+      # Persist vcpkg's binary cache (built ports: casadi, sundials, suitesparse,
+      # openblas) across runs, so a PR that only changes solver source rebuilds
+      # the solver, not its dependencies. Gated to the cached (PR/periodic) path;
+      # releases build fresh (no cache). restore-keys lets a new branch reuse
+      # main's ports — vcpkg rebuilds only ABI-mismatched ones.
+      - name: Cache vcpkg binary artifacts
+        id: vcpkgcache
+        if: ${{ inputs.cache_wheels && steps.cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: C:\vcpkg-archives
+          key: vcpkg-x64-windows-static-md-${{ env.VCPKG_TAG }}-${{ hashFiles('packages/pybammsolvers/vcpkg.json', 'packages/pybammsolvers/vcpkg-configuration.json') }}
+          restore-keys: |
+            vcpkg-x64-windows-static-md-${{ env.VCPKG_TAG }}-
+
+      # vcpkg (see VCPKG_TAG): sundials comes from the pybamm-team registry; its
+      # klu feature needs only suitesparse-klu (no LAPACK/Fortran/MSYS2 chain).
       - name: Install vcpkg on Windows
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg --branch 2025.01.13
+          git clone https://github.com/microsoft/vcpkg --branch ${{ env.VCPKG_TAG }}
           cd vcpkg
           .\bootstrap-vcpkg.bat
+          # Binary-cache dir must exist before the build; -Force no-ops (keeps
+          # contents) if the cache-restore step already created it.
+          New-Item -ItemType Directory -Force -Path C:\vcpkg-archives | Out-Null
 
       - name: Build wheels on Windows
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
-          # No VCPKG_BINARY_SOURCES: keep vcpkg's default local cache
-          # (%LOCALAPPDATA%\vcpkg\archives) so the per-wheel CMake configures
-          # within this job share built ports instead of rebuilding from
-          # source for each Python version.
+          # VCPKG_DEFAULT_BINARY_CACHE points vcpkg's default files cache at a
+          # pinned dir that actions/cache persists across runs (see the cache
+          # step); ports are shared across the 5 Python builds AND across runs,
+          # so only a dependency change rebuilds from source.
+          # No CMAKE_GENERATOR pin: CMake resolves the image's installed VS
+          # (year-pins break when runner images drop that VS release).
+          # Forward-slash paths: cibuildwheel shell-parses these values, so a
+          # backslash path arrives drive-relative (C:vcpkg) and breaks vcpkg's children.
           CIBW_ENVIRONMENT: >
-            VCPKG_ROOT_DIR=C:\vcpkg
+            VCPKG_ROOT_DIR=C:/vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
+            VCPKG_DEFAULT_BINARY_CACHE=C:/vcpkg-archives
             VCPKG_FEATURE_FLAGS=manifests,registries
-            CMAKE_GENERATOR="Visual Studio 17 2022"
             CMAKE_GENERATOR_PLATFORM=x64
           CIBW_ARCHS: AMD64
           CIBW_BEFORE_BUILD: python -m pip install delvewheel
@@ -127,7 +153,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: vcpkg-logs-windows
-          path: C:\vcpkg\buildtrees\sundials\*.log
+          path: |
+            C:\vcpkg\buildtrees\sundials\*.log
+            C:\vcpkg\buildtrees\detect_compiler\*.log
           if-no-files-found: ignore
       - name: Upload Windows wheels
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -137,11 +165,33 @@ jobs:
           if-no-files-found: error
 
   build_manylinux_wheels:
-    name: Wheels (Linux)
+    name: Wheels (Linux ${{ matrix.arch }})
     if: ${{ contains(fromJSON(inputs.platforms), 'linux') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x86_64 uses the default manylinux2014; CasADi's x86_64 wheel is
+          # built with the legacy libstdc++ ABI (CentOS 7, EPEL disabled).
+          - arch: x86_64
+            runner: ubuntu-latest
+            artifact: wheels_manylinux
+            before_all: >
+              yum -y --disablerepo=epel install openblas-devel lapack-devel &&
+              python install_KLU_Sundials.py
+          # aarch64 needs manylinux_2_34: CasADi's aarch64 wheel is built with
+          # the C++11 ABI and requires a GCC>=11 libstdc++, which manylinux2014
+          # and manylinux_2_28 lack. openblas/lapack live in AlmaLinux 9's CRB.
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            artifact: wheels_manylinux_aarch64
+            before_all: >
+              dnf config-manager --set-enabled crb &&
+              dnf -y install openblas-devel lapack-devel &&
+              python install_KLU_Sundials.py
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -164,18 +214,17 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: packages/pybammsolvers/wheelhouse
-          key: solver-wheels-linux-${{ steps.solverhash.outputs.hash }}
+          key: solver-wheels-linux-${{ matrix.arch }}-${{ steps.solverhash.outputs.hash }}
 
       - name: Build wheels on Linux
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_ARCHS_LINUX: x86_64
-          # openblas-devel/lapack-devel live in PowerTools, not EPEL; disable EPEL
-          # so its periodic metadata-rotation outages can't break the wheel build.
-          CIBW_BEFORE_ALL_LINUX: >
-            yum -y --disablerepo=epel install openblas-devel lapack-devel &&
-            python install_KLU_Sundials.py
+          CIBW_ARCHS_LINUX: ${{ matrix.arch }}
+          # aarch64 requires GCC>=11 libstdc++ for CasADi's C++11-ABI wheel;
+          # ignored for the x86_64 build (which uses the default manylinux2014).
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
+          CIBW_BEFORE_ALL_LINUX: ${{ matrix.before_all }}
           # libcasadi ships as a pip dep (resolved at runtime via $ORIGIN/../casadi).
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --exclude libcasadi.so.3.7 -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "dev"
@@ -186,7 +235,7 @@ jobs:
       - name: Upload wheels for Linux
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: wheels_manylinux
+          name: ${{ matrix.artifact }}
           path: packages/pybammsolvers/wheelhouse/*.whl
           if-no-files-found: error
 
