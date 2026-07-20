@@ -364,17 +364,20 @@ _WORKER_SOLVER = None
 _IN_WORKER = False
 
 
-def _init_worker(solver_bytes: bytes) -> None:
+# Spawned-worker coverage is not collected; exercised by test_parallel_matches_sequential.
+def _init_worker(solver_bytes: bytes) -> None:  # pragma: no cover
     global _WORKER_SOLVER, _IN_WORKER
     _IN_WORKER = True
     _WORKER_SOLVER = pickle.loads(solver_bytes)
 
 
-def _worker_loss(params: np.ndarray) -> float:
+def _worker_loss(params: np.ndarray) -> float:  # pragma: no cover
     return _WORKER_SOLVER._single_loss(params)
 
 
-def _worker_loss_and_gradient(item: tuple) -> tuple[float, np.ndarray]:
+def _worker_loss_and_gradient(
+    item: tuple,
+) -> tuple[float, np.ndarray]:  # pragma: no cover
     params, mode_value = item
     mode = type(_WORKER_SOLVER).LossSolverGradientMode(mode_value)
     return _WORKER_SOLVER._single_loss_and_gradient(params, mode)

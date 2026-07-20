@@ -72,6 +72,14 @@ def _continuous_loss_function():
     return pybamm.ExplicitTimeIntegral(pybamm.Variable("y") ** 2, pybamm.Scalar(0))
 
 
+def _continuous_post_sum_loss_function():
+    return _continuous_loss_function() ** 0.5
+
+
+def _discrete_post_sum_loss_function():
+    return _discrete_loss_function() ** 0.5
+
+
 def _make_loss_solver(loss_function, max_workers=None):
     sim = pybamm.Simulation(
         _decay_model(), solver=pybamm.IDAKLUSolver(rtol=1e-9, atol=1e-9)
@@ -119,6 +127,11 @@ class TestLossSolver:
             continuous_solver.loss(p), [_continuous_loss(K_TRUE)], atol=1e-6
         )
 
+    def test_context_manager(self):
+        with _make_loss_solver(_continuous_loss_function()) as solver:
+            p = solver.inputs_to_parameters([{"k": K_TRUE}])
+            np.testing.assert_allclose(solver.loss(p), [_continuous_loss(K_TRUE)])
+
     def test_finite_difference_gradient_matches_analytic(self, continuous_solver):
         p = continuous_solver.inputs_to_parameters([{"k": K_TRUE}])
         gradient = continuous_solver.finite_difference_gradient(p)
@@ -137,6 +150,22 @@ class TestLossSolver:
         np.testing.assert_allclose(loss, [_continuous_loss(K_TRUE)], atol=1e-6)
         np.testing.assert_allclose(
             gradient, [[_continuous_loss_gradient(K_TRUE)]], rtol=1e-3, atol=1e-5
+        )
+
+    @pytest.mark.skipif(
+        is_windows, reason="adjoint sensitivity not available on Windows"
+    )
+    def test_loss_and_gradient_continuous_post_sum_adjoint(self):
+        solver = _make_loss_solver(_continuous_post_sum_loss_function())
+        p = solver.inputs_to_parameters([{"k": K_OTHER}])
+        loss, gradient = solver.loss_and_gradient(
+            p, LossSolver.LossSolverGradientMode.ADJOINT_SENSITIVITY
+        )
+        expected_loss = np.sqrt(_continuous_loss(K_OTHER))
+        expected_gradient = _continuous_loss_gradient(K_OTHER) / (2 * expected_loss)
+        np.testing.assert_allclose(loss, [expected_loss], atol=1e-6)
+        np.testing.assert_allclose(
+            gradient, [[expected_gradient]], rtol=1e-3, atol=1e-5
         )
 
     @pytest.mark.skipif(
@@ -220,6 +249,13 @@ class TestLossSolver:
         np.testing.assert_allclose(restored.loss(p), expected)
 
     @pytest.mark.skipif(is_windows, reason="pickling not supported on Windows")
+    def test_pickle_round_trip_post_sum(self):
+        solver = _make_loss_solver(_continuous_post_sum_loss_function())
+        p = solver.inputs_to_parameters([{"k": K_OTHER}])
+        restored = pickle.loads(pickle.dumps(solver))
+        np.testing.assert_allclose(restored.loss(p), solver.loss(p))
+
+    @pytest.mark.skipif(is_windows, reason="pickling not supported on Windows")
     def test_pickle_round_trip_restores_pool(self):
         sequential = _make_loss_solver(_continuous_loss_function())
         p = sequential.inputs_to_parameters([{"k": K_TRUE}, {"k": K_OTHER}])
@@ -291,6 +327,22 @@ class TestLossSolver:
     @pytest.mark.skipif(
         is_windows, reason="forward sensitivity not available on Windows"
     )
+    def test_loss_and_gradient_discrete_post_sum_forward(self):
+        solver = _make_loss_solver(_discrete_post_sum_loss_function())
+        p = solver.inputs_to_parameters([{"k": K_OTHER}])
+        loss, gradient = solver.loss_and_gradient(
+            p, LossSolver.LossSolverGradientMode.FORWARD_SENSITIVITY
+        )
+        expected_loss = np.sqrt(_discrete_loss(K_OTHER))
+        expected_gradient = _discrete_loss_gradient(K_OTHER) / (2 * expected_loss)
+        np.testing.assert_allclose(loss, [expected_loss], atol=1e-6)
+        np.testing.assert_allclose(
+            gradient, [[expected_gradient]], rtol=3e-5, atol=1e-6
+        )
+
+    @pytest.mark.skipif(
+        is_windows, reason="forward sensitivity not available on Windows"
+    )
     def test_loss_and_gradient_discrete_forward_zero_at_true(self):
         solver = _make_loss_solver(_discrete_loss_function())
         p = solver.inputs_to_parameters([{"k": K_TRUE}])
@@ -317,6 +369,22 @@ class TestLossSolver:
             solver.finite_difference_gradient(p),
             rtol=1e-3,
             atol=1e-5,
+        )
+
+    @pytest.mark.skipif(
+        is_windows, reason="adjoint sensitivity not available on Windows"
+    )
+    def test_loss_and_gradient_discrete_post_sum_adjoint(self):
+        solver = _make_loss_solver(_discrete_post_sum_loss_function())
+        p = solver.inputs_to_parameters([{"k": K_OTHER}])
+        loss, gradient = solver.loss_and_gradient(
+            p, LossSolver.LossSolverGradientMode.ADJOINT_SENSITIVITY
+        )
+        expected_loss = np.sqrt(_discrete_loss(K_OTHER))
+        expected_gradient = _discrete_loss_gradient(K_OTHER) / (2 * expected_loss)
+        np.testing.assert_allclose(loss, [expected_loss], atol=1e-6)
+        np.testing.assert_allclose(
+            gradient, [[expected_gradient]], rtol=1e-3, atol=1e-5
         )
 
     @pytest.mark.skipif(
