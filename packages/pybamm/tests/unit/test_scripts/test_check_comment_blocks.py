@@ -43,8 +43,10 @@ class TestCheckCommentBlocks:
         assert result.returncode == 0
         assert result.stderr == ""
 
-    def test_blank_line_splits_comment_blocks(self, tmp_path):
-        test_file = tmp_path / "split_comments.py"
+    def test_blank_lines_do_not_split_comment_blocks(self, tmp_path):
+        # Blank lines with no code between are still one logical block: this is
+        # the loophole (a long comment chopped into "compliant" chunks) closed.
+        test_file = tmp_path / "blank_split.py"
         test_file.write_text(
             "def f():\n"
             "    # first line\n"
@@ -53,6 +55,36 @@ class TestCheckCommentBlocks:
             "    # third line\n"
             "    # fourth line\n"
             "    return 1\n"
+        )
+
+        result = self._run_checker(test_file)
+
+        assert result.returncode == 1
+        assert f"{test_file}:2" in result.stderr
+
+    def test_code_between_splits_comment_blocks(self, tmp_path):
+        # Real code between the two 2-line blocks keeps them independent.
+        test_file = tmp_path / "code_split.py"
+        test_file.write_text(
+            "def f():\n"
+            "    # first line\n"
+            "    # second line\n"
+            "    x = 1\n"
+            "    # third line\n"
+            "    # fourth line\n"
+            "    return x\n"
+        )
+
+        result = self._run_checker(test_file)
+
+        assert result.returncode == 0
+        assert result.stderr == ""
+
+    def test_allows_two_lines_split_by_blank(self, tmp_path):
+        # Merging across blanks does not over-flag: two lines total is still fine.
+        test_file = tmp_path / "two_split.py"
+        test_file.write_text(
+            "def f():\n    # first line\n\n    # second line\n    return 1\n"
         )
 
         result = self._run_checker(test_file)

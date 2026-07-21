@@ -30,7 +30,7 @@ def _is_ignored_header_comment(line_number: int, comment: str) -> bool:
     )
 
 
-def _python_comment_only_lines(path: Path) -> list[tuple[int, str]]:
+def _python_comment_only_lines(path: Path) -> tuple[list[tuple[int, str]], list[str]]:
     with tokenize.open(path) as handle:
         source = handle.read()
 
@@ -51,12 +51,13 @@ def _python_comment_only_lines(path: Path) -> list[tuple[int, str]]:
         # separately, so skip comment-block analysis rather than crash.
         pass
 
-    return comment_lines
+    return comment_lines, source_lines
 
 
-def _generic_comment_only_lines(path: Path) -> list[tuple[int, str]]:
+def _generic_comment_only_lines(path: Path) -> tuple[list[tuple[int, str]], list[str]]:
     comment_lines: list[tuple[int, str]] = []
-    for line_number, source_line in enumerate(path.read_text().splitlines(), start=1):
+    source_lines = path.read_text().splitlines()
+    for line_number, source_line in enumerate(source_lines, start=1):
         stripped = source_line.strip()
         if not stripped.startswith("#"):
             continue
@@ -64,10 +65,10 @@ def _generic_comment_only_lines(path: Path) -> list[tuple[int, str]]:
             continue
         comment_lines.append((line_number, stripped))
 
-    return comment_lines
+    return comment_lines, source_lines
 
 
-def _comment_only_lines(path: Path) -> list[tuple[int, str]]:
+def _comment_only_lines(path: Path) -> tuple[list[tuple[int, str]], list[str]]:
     if path.suffix in PYTHON_SUFFIXES:
         return _python_comment_only_lines(path)
     return _generic_comment_only_lines(path)
@@ -78,14 +79,22 @@ def _is_license_block(block_text: list[str]) -> bool:
 
 
 def _violations(path: Path) -> list[int]:
-    comment_lines = _comment_only_lines(path)
+    comment_lines, source_lines = _comment_only_lines(path)
     if not comment_lines:
         return []
+
+    def _code_between(previous_line: int, current_line: int) -> bool:
+        # Blank lines keep comments in one logical block; only code between them
+        # starts a new block, so blanks can't split one long comment into chunks.
+        return any(
+            source_lines[line_number - 1].strip() != ""
+            for line_number in range(previous_line + 1, current_line)
+        )
 
     block_start, block_text = comment_lines[0][0], [comment_lines[0][1]]
     violations: list[int] = []
     for (previous_line, _), (current_line, current_text) in pairwise(comment_lines):
-        if current_line == previous_line + 1:
+        if not _code_between(previous_line, current_line):
             block_text.append(current_text)
             continue
         if len(block_text) > MAX_COMMENT_BLOCK_LINES and not _is_license_block(
