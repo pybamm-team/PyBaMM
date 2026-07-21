@@ -52,8 +52,8 @@ jobs:
             --exclude https://www.rse.ox.ac.uk
             --exclude https://realpython\.com
             --accept 200,429
-            --exclude-path ./CHANGELOG.md
-            --exclude-path ./scripts/update_version.py
+            --exclude-path CHANGELOG.md
+            --exclude-path scripts/update_version.py
             --exclude-path asv.conf.json
             --exclude-path docs/conf.py
             './**/*.rst'
