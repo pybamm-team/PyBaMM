@@ -324,8 +324,6 @@ class ParticleConcentrationTests(BaseOutputTest):
         ]
 
         if model.options["particle size"] == "distribution":
-            # These concentration variables are only present for distribution models.
-
             # Take only the x-averaged of these for now, since variables cannot have
             # 4 domains yet
             self.c_s_n_dist = solution[
@@ -411,8 +409,6 @@ class ParticleConcentrationTests(BaseOutputTest):
             R_n, R_p = self.R_n, self.R_p
             # Cannot have 3D processed variables, so test concs that depend on
             # r-R and x-R
-
-            # r-R (x-averaged)
             np.testing.assert_array_less(-self.c_s_n_dist(t, r=r_n, R=R_n), 0)
             np.testing.assert_array_less(-self.c_s_p_dist(t, r=r_p, R=R_p), 0)
 

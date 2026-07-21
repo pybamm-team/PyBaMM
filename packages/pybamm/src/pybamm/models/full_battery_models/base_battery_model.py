@@ -515,8 +515,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         dimensionality_option = extra_options.get("dimensionality", "none")
         if dimensionality_option in [1, 2]:
             default_options["cell geometry"] = "pouch"
-        # extra_options can still override cell geometry
-
         # Change the default for cell geometry based on the thermal model
         # return "none" if option not given
         thermal_option = extra_options.get("thermal", "none")
@@ -569,9 +567,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 default_options["particle mechanics"] = "swelling only"
             else:
                 default_options["particle mechanics"] = "none"
-        # The "particle mechanics" option will still be overridden by extra_options if
-        # provided
-
         # Default stress-induced diffusion based on particle mechanics option
         mechanics_option = extra_options.get("particle mechanics", "none")
         if (

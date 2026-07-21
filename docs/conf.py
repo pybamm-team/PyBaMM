@@ -1,9 +1,5 @@
 # Configuration file for the Sphinx documentation builder (see
 # http://www.sphinx-doc.org/en/master/config for full options list).
-
-# -- Path setup --------------------------------------------------------------
-
-# If autodoc extensions are in another directory, add them to sys.path.
 import importlib.metadata
 import os
 import sys
@@ -30,9 +26,6 @@ release = version
 
 
 # -- General configuration ---------------------------------------------------
-
-# needs_sphinx = '1.0'  # Uncomment if needed
-
 # Sphinx extensions (sphinx.ext.* or custom)
 extensions = [
     # Sphinx extensions
@@ -105,8 +98,6 @@ suppress_warnings = []
 html_theme = "pydata_sphinx_theme"
 
 html_static_path = ["_static"]
-
-# Theme
 
 # pydata theme options (copied from numpy, scipy, pandas; see
 # https://pydata-sphinx-theme.readthedocs.io/en/latest/index.html#)
@@ -198,10 +189,7 @@ htmlhelp_basename = "PyBaMMdoc"
 
 
 # -- Options for LaTeX output ------------------------------------------------
-
 # Exclude examples directory from LaTeX build (PDF creation issues on Read the Docs)
-
-# Detect if we are building LaTeX output through the invocation of the build commands
 if any("latex" in arg for arg in sys.argv) or any("latexmk" in arg for arg in sys.argv):
     exclude_patterns.append("source/examples/*")
     print("Skipping compilation of .ipynb files for LaTeX build.")
@@ -211,8 +199,6 @@ latex_elements = {}  # papersize, pointsize, preamble, figure_align commented ou
 # Grouping document tree into LaTeX files (source, target, title, author, class).
 latex_documents = [(master_doc, "PyBaMM.tex", "PyBaMM Documentation", author, "manual")]
 
-
-# -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
@@ -241,17 +227,11 @@ texinfo_documents = [
 epub_title = project
 
 # epub_identifier = ''  # ISBN or project homepage
-
-# epub_uid = ''  # Unique identification for the text
-
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ["search.html"]
 
 
-# -- Extension configuration -------------------------------------------------
-
 # -- Options for intersphinx extension ---------------------------------------
-
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
@@ -269,11 +249,8 @@ bibtex_footbibliography_header = """.. rubric:: References"""
 bibtex_reference_style = "author_year"
 bibtex_tooltips = True
 
-# -- nbsphinx configuration options ------------------------------------------
-
 # Important: ensure require.js is not loaded. this is needed to avoid
 # a conflict with the sphinx-docsearch extension for Algolia search
-
 nbsphinx_requirejs_path = ""
 
 # Set notebook version from READTHEDOCS_VERSION env var (main for "latest", release tree for "stable", PR hash for PRs).

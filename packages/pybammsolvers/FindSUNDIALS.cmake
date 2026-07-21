@@ -1,7 +1,4 @@
 # Adapted from CADET; finds SUNDIALS (IDA, SUNLINSOLKLU, sunlinsoldense, sunlinsollapackdense, sunmatrix_sparse, nvecserial)
-
-# List of the valid SUNDIALS components
-
 # find the SUNDIALS include directories
 find_path(SUNDIALS_INCLUDE_DIR
   NAMES

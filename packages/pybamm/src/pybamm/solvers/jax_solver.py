@@ -254,8 +254,6 @@ class JaxSolver(pybamm.BaseSolver):
         ):  # pragma: no cover
             # GPU execution runs faster when parallelised with vmap (see comment
             # below re: SPMD pmap on multiple XLAs).
-
-            # convert inputs (array of dict) to a dict of arrays for vmap
             y = []
             inputs_v = {
                 key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]

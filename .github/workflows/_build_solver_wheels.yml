@@ -105,13 +105,8 @@ jobs:
         if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
-          # VCPKG_DEFAULT_BINARY_CACHE pins vcpkg's files cache to a dir actions/cache
-          # persists (see cache step): ports shared across the 5 builds and across runs.
-
-          # No CMAKE_GENERATOR pin: CMake resolves the image's installed VS.
-
-          # Forward-slash paths: cibuildwheel shell-parses these, so a backslash arrives
-          # drive-relative (C:vcpkg) and breaks vcpkg's children.
+          # Forward-slash paths (backslash breaks vcpkg); DEFAULT_BINARY_CACHE persists
+          # built ports across runs; no CMAKE_GENERATOR pin so CMake picks the image's VS.
           CIBW_ENVIRONMENT: >
             VCPKG_ROOT_DIR=C:/vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md

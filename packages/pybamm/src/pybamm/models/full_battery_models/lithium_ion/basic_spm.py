@@ -106,9 +106,6 @@ class BasicSPM(BaseModel):
 
         # Note that the SPM does not have any algebraic equations, so the `algebraic`
         # dictionary remains empty
-
-        # === (Some) variables ===
-        # Interfacial reactions
         RT_F = self.param.R * T / self.param.F
         j0_n = self.param.n.prim.j0(self.param.c_e_init_av, c_s_surf_n, T)
         j0_p = self.param.p.prim.j0(self.param.c_e_init_av, c_s_surf_p, T)

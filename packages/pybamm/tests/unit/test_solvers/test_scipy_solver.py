@@ -49,8 +49,6 @@ class TestScipySolver:
             model.initial_conditions = {var: 1}
             # No need to set parameters;
             # can use base discretisation (no spatial operators)
-
-            # create discretisation
             mesh = get_mesh_for_testing()
             spatial_methods = {"macroscale": pybamm.FiniteVolume()}
             disc = pybamm.Discretisation(mesh, spatial_methods)
@@ -356,8 +354,6 @@ class TestScipySolver:
             ]
             # No need to set parameters; can use base discretisation (no spatial
             # operators)
-
-            # create discretisation
             mesh = get_mesh_for_testing()
             spatial_methods = {"macroscale": pybamm.FiniteVolume()}
             disc = pybamm.Discretisation(mesh, spatial_methods)
@@ -383,8 +379,6 @@ class TestScipySolver:
         model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
         # No need to set parameters; can use base discretisation (no spatial
         # operators)
-
-        # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)

@@ -36,9 +36,6 @@ jobs:
         with:
           results_file: results.sarif
           results_format: sarif
-          # (Optional) write PAT for Branch-Protection check on public repos or private repo setup
-          # repo_token: ${{ secrets.SCORECARD_TOKEN }}
-
           # Public: publish to OpenSSF REST API + Scorecard badge; private: always false
           publish_results: true
 

@@ -416,8 +416,6 @@ class SpatialMethod:
         """
         # For different spatial methods the matrix may need adjustment for Dirichlet
         # BCs. Here, the default behaviour is that the mass matrix is the identity.
-
-        # Get submesh
         submesh = self.mesh[symbol.domain]
 
         # Get number of points in primary dimension

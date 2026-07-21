@@ -72,8 +72,6 @@ class BasicDFNHalfCell(BaseModel):
 
         # Define parameters. We need to assemble them differently depending on the
         # working electrode
-
-        # Porosity (function of x and through-cell distance) and Transport_efficiency
         eps_s = pybamm.PrimaryBroadcast(
             pybamm.Parameter("Separator porosity"), "separator"
         )

@@ -25,9 +25,6 @@ class BasicDFNComposite(BaseModel):
         pybamm.citations.register("Ai2022")
         # `self.param` holds this model's parameters/functions as symbols; they are
         # substituted with values by ParameterValues when the model is processed
-
-        # === Variables ===
-        # Variables that depend only on time are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(

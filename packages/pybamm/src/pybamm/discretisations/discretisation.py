@@ -166,9 +166,7 @@ class Discretisation:
         # Check well-posedness to avoid obscure errors
         model.check_well_posedness()
 
-        # Prepare discretisation
         # set variables (we require the full variable not just id)
-
         # Search Equations for Independence
         if self._remove_independent_variables_from_rhs_flag:
             model = self.remove_independent_variables_from_rhs(model)

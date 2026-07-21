@@ -23,8 +23,6 @@ class BasicDFN(BaseModel):
         super().__init__(name=name)
         pybamm.citations.register("Marquis2019")
         # `param` contains symbolic parameters set by `ParameterValues` at processing
-
-        ###################### Variables ######################
         # Time-only variables created without domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
