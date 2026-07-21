@@ -42,3 +42,7 @@ API Reference
 
 .. autoclass:: pybamm.ParameterValues
   :members:
+
+.. autofunction:: pybamm.serialize_parameter_value
+
+.. autofunction:: pybamm.deserialize_parameter_value
