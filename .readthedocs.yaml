@@ -14,9 +14,11 @@ formats:
 
 # Set the version of Python and other tools you might need
 build:
-  # Install Graphviz to build SVG files
+  # graphviz builds SVG files; libopenblas provides the LAPACK that the
+  # from-source SUNDIALS build (ENABLE_LAPACK=ON) links against.
   apt_packages:
     - "graphviz"
+    - "libopenblas-dev"
   os: ubuntu-22.04
   tools:
     python: "3.14"
@@ -34,6 +36,9 @@ build:
     # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
     post_checkout:
       - git fetch --unshallow
+      # pybammsolvers is a uv workspace member built from source; fetch its
+      # SUNDIALS/SuiteSparse submodule sources so `uv sync` can compile it.
+      - git submodule update --init
     # Altered PDF build and upload job
     # This also runs on PR builds, but does not upload the PDF
     post_build:
