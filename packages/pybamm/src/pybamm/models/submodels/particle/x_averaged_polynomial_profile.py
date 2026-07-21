@@ -1,6 +1,3 @@
-#
-# Class for single particle with polynomial concentration profile
-#
 import pybamm
 
 from .polynomial_profile import PolynomialProfile
@@ -49,9 +46,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 bounds=(0, self.phase_param.c_max),
                 scale=self.phase_param.c_max,
             )
-            # Since concentration does not depend on "x", need a particle-size
-            # spatial variable R with only "current collector" as secondary
-            # domain
+            # x-independent concentration needs particle-size R with only current collector secondary domain
             R = pybamm.SpatialVariable(
                 f"R_{domain[0]}",
                 domain=[f"{domain} particle size"],
@@ -67,10 +62,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 )
             )
 
-            # Standard size-averaged variables. Average concentrations using
-            # the volume-weighted distribution since they are volume-based
-            # quantities. Necessary for output variables "Total lithium in
-            # negative electrode [mol]", etc, to be calculated correctly
+            # Volume-weighted average for volume-based outputs (Total lithium, etc.)
             f_v_dist = variables[
                 f"X-averaged {domain} volume-weighted particle-size distribution [m-1]"
             ]
@@ -78,11 +70,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
 
         variables.update({f"Average {domain} particle concentration [mol.m-3]": c_s_av})
 
-        # For the fourth order polynomial approximation we also solve an
-        # equation for the average concentration gradient. Note: in the original
-        # paper this quantity is referred to as the flux, but here we make the
-        # distinction between the flux defined as N = -D*dc/dr and the concentration
-        # gradient q = dc/dr
+        # Quartic profile solves extra equation for avg concentration gradient q = dc/dr (paper calls it "flux")
         if self.name == "quartic profile":
             q_s_av = pybamm.Variable(
                 f"Average {domain} particle concentration gradient [mol.m-4]",
@@ -119,27 +107,10 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             # the average
             c_s_surf_xav = c_s_av
         elif self.name == "quadratic profile":
-            # The surface concentration is computed from the average concentration
-            # and boundary flux
-            # Note 1: here we use the total average interfacial current for the single
-            # particle. We explicitly write this as the current density divided by the
-            # electrode thickness instead of getting the average current from the
-            # interface submodel since the interface submodel requires the surface
-            # concentration to be defined first to compute the exchange current density.
-            # Explicitly writing out the average interfacial current here avoids
-            # KeyErrors due to variables not being set in the "right" order.
-            # Note 2: the concentration, c, inside the diffusion coefficient, D, here
-            # should really be the surface value, but this requires solving a nonlinear
-            # equation for c_surf (if the diffusion coefficient is nonlinear), adding
-            # an extra algebraic equation to solve. For now, using the average c is an
-            # ok approximation and means the SPM(e) still gives a system of ODEs rather
-            # than DAEs.
+            # Surface conc from avg + flux; use avg c in D (not surface c) keeps SPM as ODEs not DAEs
             c_s_surf_xav = c_s_av - (j_xav * R / 5 / self.param.F / D_eff_av)
         elif self.name == "quartic profile":
-            # The surface concentration is computed from the average concentration,
-            # the average concentration gradient and the boundary flux (see notes
-            # for the quadratic profile)
-            # eq 31 of Subramanian2005
+            # Surface conc from avg, gradient, and flux (Subramanian2005 eq. 31)
             q_s_av = variables[
                 f"Average {domain} particle concentration gradient [mol.m-4]"
             ]
@@ -147,10 +118,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 8 * q_s_av - (j_xav / self.param.F / D_eff_av)
             )
 
-        # Set concentration depending on polynomial order
-        # Since c_s_xav doesn't depend on x, we need to define a spatial
-        # variable r which only has "... particle" and "current
-        # collector" as domains
+        # x-independent c_s_xav needs r with only particle + current collector domains
         r = pybamm.SpatialVariable(
             f"r_{domain[0]}",
             domain=[f"{domain} particle"],
@@ -219,10 +187,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         return variables
 
     def set_rhs(self, variables):
-        # Note: we have to use `pybamm.source(rhs, var)` in the rhs dict so that
-        # the scalar source term gets multplied by the correct mass matrix when
-        # using this model with 2D current collectors with the finite element
-        # method (see #1399)
+        # pybamm.source(rhs, var) ensures scalar source term multiplies by correct mass matrix (2D FEM, see #1399)
         domain = self.domain
 
         if self.size_distribution is False:

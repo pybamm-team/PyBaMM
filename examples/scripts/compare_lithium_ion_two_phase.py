@@ -1,6 +1,5 @@
-#
-# Compare lithium-ion battery models
-#
+"""Compare lithium-ion battery models with two-phase (2:1) particle phases."""
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

@@ -1,6 +1,4 @@
-#
-# Example showing how to load and solve the DFN
-#
+"""Example showing how to load and solve the DFN."""
 
 import pybamm
 

@@ -1,6 +1,3 @@
-#
-# Classes for calcuting the effective resistance of current collectors in a pouch cell
-#
 import pybamm
 
 

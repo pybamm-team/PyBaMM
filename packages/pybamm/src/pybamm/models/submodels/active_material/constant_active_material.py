@@ -1,6 +1,3 @@
-#
-# Class for constant active material
-#
 import pybamm
 
 from .base_active_material import BaseModel

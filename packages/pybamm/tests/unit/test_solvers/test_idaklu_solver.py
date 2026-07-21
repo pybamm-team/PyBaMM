@@ -76,9 +76,7 @@ def _hermite_wrms(sol_base, sol_reduced, atol, rtol) -> list[tuple[int, float]]:
 
 class TestIDAKLUSolver:
     def test_ida_roberts_klu(self):
-        # this test implements a python version of the ida Roberts
-        # example provided in sundials
-        # see sundials ida examples pdf
+        # Python port of the ida Roberts example from sundials ida examples pdf.
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -353,9 +351,7 @@ class TestIDAKLUSolver:
             )
 
     def test_ida_roberts_klu_sensitivities(self):
-        # this test implements a python version of the ida Roberts
-        # example provided in sundials
-        # see sundials ida examples pdf
+        # Python port of the ida Roberts example from sundials ida examples pdf.
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -460,9 +456,7 @@ class TestIDAKLUSolver:
         )
 
     def test_ida_roberts_consistent_initialization(self):
-        # this test implements a python version of the ida Roberts
-        # example provided in sundials
-        # see sundials ida examples pdf
+        # Python port of the ida Roberts example from sundials ida examples pdf.
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -489,9 +483,7 @@ class TestIDAKLUSolver:
         )
 
     def test_sensitivities_with_events(self):
-        # this test implements a python version of the ida Roberts
-        # example provided in sundials
-        # see sundials ida examples pdf
+        # Python port of the ida Roberts example from sundials ida examples pdf.
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -592,9 +584,7 @@ class TestIDAKLUSolver:
         )
 
     def test_failures(self):
-        # this test implements a python version of the ida Roberts
-        # example provided in sundials
-        # see sundials ida examples pdf
+        # Python port of the ida Roberts example from sundials ida examples pdf.
         model = pybamm.BaseModel()
         model.use_jacobian = False
         u = pybamm.Variable("u")
@@ -842,9 +832,7 @@ class TestIDAKLUSolver:
                 solver.solve(model, t_eval)
 
     def test_with_output_variables(self):
-        # Construct a model and solve for all variables, then test
-        # the 'output_variables' option for each variable in turn, confirming
-        # equivalence
+        # Test 'output_variables' option by solving for each variable and confirming equivalence.
         input_parameters = {}  # Sensitivities dictionary
         t_eval = [0, 3600]
         t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
@@ -948,9 +936,7 @@ class TestIDAKLUSolver:
         assert sol.variables_returned is True
 
     def test_with_sparse_output_variables_and_sensitivities(self):
-        # Construct a model and solve for all variables, then test
-        # the 'output_variables' option for each variable in turn, confirming
-        # equivalence
+        # Test 'output_variables' with sparse variables and sensitivities (should raise).
         input_parameters = {  # Sensitivities dictionary
             "Current function [A]": 0.222,
             "Separator porosity": 0.3,
@@ -971,9 +957,7 @@ class TestIDAKLUSolver:
             sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
 
     def test_with_output_variables_and_sensitivities(self):
-        # Construct a model and solve for all variables, then test
-        # the 'output_variables' option for each variable in turn, confirming
-        # equivalence
+        # Test 'output_variables' option with sensitivities for each variable, confirming equivalence.
         input_parameters = {  # Sensitivities dictionary
             "Current function [A]": 0.222,
             "Separator porosity": 0.3,
@@ -1097,11 +1081,8 @@ class TestIDAKLUSolver:
         assert sol3.termination == "event: Minimum voltage [V]"
 
     def test_closest_event_idx_set_after_root_return(self):
-        # IDAKLU must populate Solution.closest_event_idx after a root return so
-        # BaseSolver.get_termination_reason short-circuits instead of re-walking
-        # every TERMINATION event's symbolic expression on the Python side. That
-        # slow path generated tens of thousands of small numpy allocations per
-        # long event-terminated cycling run.
+        # Populating closest_event_idx avoids re-walking every TERMINATION event expression on Python side,
+        # preventing tens of thousands of numpy allocations per long cycling run.
         cycle = (
             "Discharge at 1C until 3.0 V",
             "Charge at 1C until 4.2 V",
@@ -1277,9 +1258,7 @@ class TestIDAKLUSolver:
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
-        # FV discretisation has identity mass. Manually set the mass matrix to
-        # be a diag of 10s here for testing. Note that the algebraic part is all
-        # zeros
+        # Manually set mass matrix to diag(10) for testing non-identity mass DAE solve.
         mass_matrix = 10 * model.mass_matrix.entries
         model.mass_matrix = pybamm.Matrix(mass_matrix)
 

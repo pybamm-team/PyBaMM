@@ -1,7 +1,3 @@
-#
-# Tests for the base model class
-#
-
 import os
 import platform
 import subprocess  # nosec
@@ -1420,9 +1416,7 @@ class TestBaseModel:
         )
         model_disc = disc.process_model(model, inplace=False)
 
-        # Create solution with y that's too short (invalid slice bounds)
-        # Make y smaller than expected to trigger invalid bounds
-        # Should fall back to dict lookup when slice bounds are invalid
+        # Short y triggers invalid slice bounds, falls back to dict lookup
         var_data = np.ones((5, 10)) * 8
         sol_dict = {"var": var_data}
         model_disc.set_initial_conditions_from(sol_dict)

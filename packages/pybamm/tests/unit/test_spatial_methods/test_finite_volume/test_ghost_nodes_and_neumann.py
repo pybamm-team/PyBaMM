@@ -1,7 +1,3 @@
-#
-# Test for adding ghost nodes in finite volumes class
-#
-
 import numpy as np
 import pytest
 

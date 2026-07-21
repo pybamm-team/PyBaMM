@@ -252,11 +252,8 @@ class JaxSolver(pybamm.BaseSolver):
             or platform.startswith("tpu")
             or platform.startswith("metal")
         ):  # pragma: no cover
-            # gpu execution runs faster when parallelised with vmap
-            # (see also comment below regarding single-program multiple-data
-            #  execution (SPMD) using pmap on multiple XLAs)
-
-            # convert inputs (array of dict) to a dict of arrays for vmap
+            # GPU execution runs faster when parallelised with vmap (see comment
+            # below re: SPMD pmap on multiple XLAs).
             y = []
             inputs_v = {
                 key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]
@@ -273,34 +270,8 @@ class JaxSolver(pybamm.BaseSolver):
             for inputs_v, y0 in zip(inputs, y0_list, strict=True):
                 y.append(self._cached_solves[model](y0, inputs_v))
 
-        # This code block implements single-program multiple-data execution
-        # using pmap across multiple XLAs. It is currently commented out
-        # because it produces bus errors for even moderate-sized models.
-        # It is suspected that this is due to either a bug in JAX, insufficient
-        # sparse matrix support in JAX resulting in high memory usage, or a bug
-        # in the BDF solver.
-        #
-        # This issue on GitHub appears related:
-        # https://github.com/jax-ml/jax/discussions/13930
-        #
-        #     # Split input list based on the number of available xla devices
-        #     device_count = jax.local_device_count()
-        #     inputs_listoflists = [inputs[x:x + device_count]
-        #                           for x in range(0, len(inputs), device_count)]
-        #     if len(inputs_listoflists) > 1:
-        #         print(f"{len(inputs)} parameter sets were provided, "
-        #               f"but only {device_count} XLA devices are available")
-        #         print(f"Parameter sets split into {len(inputs_listoflists)} "
-        #               "lists for parallel processing")
-        #     y = []
-        #     for k, inputs_list in enumerate(inputs_listoflists):
-        #         if len(inputs_listoflists) > 1:
-        #             print(f" Solving list {k+1} of {len(inputs_listoflists)} "
-        #                   f"({len(inputs_list)} parameter sets)")
-        #         # convert inputs to a dict of arrays for pmap
-        #         inputs_v = {key: jnp.array([dic[key] for dic in inputs_list])
-        #                     for key in inputs_list[0]}
-        #         y.extend(jax.pmap(self._cached_solves[model])(inputs_v))
+        # SPMD pmap across XLAs, commented out due to bus errors on moderate models
+        # (JAX bug, sparse matrix support, or BDF bug; related: jax-ml/jax#13930).
 
         integration_time = timer.time()
 

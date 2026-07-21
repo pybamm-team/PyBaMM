@@ -11,9 +11,8 @@ import casadi
 
 from pybamm import logger
 
-# Cache of bundle-hash -> list of ``casadi.external`` wrappers, one per
-# non-External input to that bundle. A single-Function call is a bundle of
-# size one; no separate code path.
+# Cache of bundle-hash -> list of casadi.external wrappers, one per non-External
+# input. A single-Function call is a bundle of size one.
 _CACHE: dict[str, list[casadi.Function]] = {}
 
 # Only remove build artifacts older than this to avoid racing with another
@@ -26,10 +25,8 @@ _PER_ATTEMPT_TOKEN = re.compile(r"\.\d+\.[0-9a-f]{32}(?:\.|$)")
 
 _TMP_FILE_PREFIX = "pybamm_"
 
-# ``int NAME(const casadi_real** arg, ...);`` at the top level of the
-# generated C marks an External sub-Function named ``NAME``. Decls for names
-# defined in the same TU are fine; decls for anything else mean the caller
-# wrapped an inner Function as an External before feeding it to a composite.
+# ``int NAME(const casadi_real** arg, ...);`` in generated C marks an External
+# sub-Function (same-TU decls fine; others mean caller wrapped an inner Function).
 _EXTERN_DECL = re.compile(
     r"^\s*int\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*const\s+casadi_real\s*\*\*",
     re.MULTILINE,
@@ -140,9 +137,8 @@ def _aot_compile(
     cdir = cache_dir or _default_cache_dir()
     _maybe_sweep_stale(cdir)
 
-    # Single-fn bundles get named after the fn for readability; multi-fn
-    # bundles are hash-only since the member list isn't knowable from the
-    # filename anyway.
+    # Single-fn bundles are named for readability; multi-fn bundles are hash-only
+    # since the member list isn't knowable from the filename.
     fns_to_compile = [fns[idx] for idx in indices_to_compile]
     label = fns_to_compile[0].name() if len(fns_to_compile) == 1 else "bundle"
     stem = f"{_TMP_FILE_PREFIX}{label}_{key}"
@@ -164,9 +160,8 @@ def _aot_compile(
                 "top-level Functions; keep intermediate Functions as MX/SX."
             )
 
-        # Per-attempt temp paths so concurrent compiles of the same bundle
-        # can't clobber each other, and so an interrupted build can be
-        # detected and cleaned up later.
+        # Per-attempt temp paths prevent concurrent compile clobbering and allow
+        # detection/cleanup of interrupted builds.
         suffix = f".{os.getpid()}.{uuid.uuid4().hex}"
         tmp_cfile = os.path.join(cdir, stem + suffix + ".c")
         tmp_sofile = os.path.join(cdir, stem + suffix + ext + ".tmp")
@@ -197,9 +192,8 @@ def _aot_compile(
 
 
 def _maybe_sweep_stale(cdir: str) -> None:
-    # Remove leaked per-attempt artifacts and orphan .c files once per
-    # process. Only touches files matching our naming, and only if older
-    # than ``_STALE_TMP_AGE_S``.
+    # Remove leaked per-attempt artifacts and orphan .c files once per process,
+    # only touching files older than _STALE_TMP_AGE_S.
     if cdir in _swept_dirs:
         return
     _swept_dirs.add(cdir)

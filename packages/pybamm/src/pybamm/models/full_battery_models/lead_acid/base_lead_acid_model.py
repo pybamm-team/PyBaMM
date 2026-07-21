@@ -1,7 +1,3 @@
-#
-# Lead acid base model class
-#
-
 import pybamm
 
 

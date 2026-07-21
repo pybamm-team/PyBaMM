@@ -1,6 +1,3 @@
-#
-# Standard tests on the standard set of model outputs
-#
 import numpy as np
 
 import pybamm
@@ -327,8 +324,6 @@ class ParticleConcentrationTests(BaseOutputTest):
         ]
 
         if model.options["particle size"] == "distribution":
-            # These concentration variables are only present for distribution models.
-
             # Take only the x-averaged of these for now, since variables cannot have
             # 4 domains yet
             self.c_s_n_dist = solution[
@@ -354,9 +349,7 @@ class ParticleConcentrationTests(BaseOutputTest):
         tol = 1e-16
 
         if self.model.options["particle"] in ["quadratic profile", "quartic profile"]:
-            # For the assumed polynomial concentration profiles the values
-            # can increase/decrease within the particle as the polynomial shifts,
-            # so we just check the average instead
+            # Polynomial profiles can shift within particles; check averages instead.
             neg_diff = self.c_s_n_rav(t[1:], x_n) - self.c_s_n_rav(t[:-1], x_n)
             pos_diff = self.c_s_p_rav(t[1:], x_p) - self.c_s_p_rav(t[:-1], x_p)
             neg_end_vs_start = self.c_s_n_rav(t[-1], x_n) - self.c_s_n_rav(t[0], x_n)
@@ -416,8 +409,6 @@ class ParticleConcentrationTests(BaseOutputTest):
             R_n, R_p = self.R_n, self.R_p
             # Cannot have 3D processed variables, so test concs that depend on
             # r-R and x-R
-
-            # r-R (x-averaged)
             np.testing.assert_array_less(-self.c_s_n_dist(t, r=r_n, R=R_n), 0)
             np.testing.assert_array_less(-self.c_s_p_dist(t, r=r_p, R=R_p), 0)
 
@@ -495,9 +486,7 @@ class ParticleConcentrationTests(BaseOutputTest):
         else:
             if self.operating_condition == "discharge":
                 if self.model.options["particle"] == "quartic profile":
-                    # quartic profile has a transient at the beginning where
-                    # the concentration "rearranges" giving flux of the opposite
-                    # sign, so ignore first three times
+                    # Quartic profile transient "rearranges" concentration; skip first 3 time steps.
                     np.testing.assert_array_less(0, self.N_s_n(t[3:], x_n, r_n[1:]))
                     np.testing.assert_array_less(self.N_s_p(t[3:], x_p, r_p[1:]), 0)
                 else:
@@ -577,28 +566,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         than the average and the concentration in the positive is less than the average
         during a discharge."""
 
-        # TODO: uncomment when have average concentrations
-        # small number so that can use array less
-        # epsilon = 0.001
-
-        # if self.operating_condition == "discharge":
-        #     np.testing.assert_array_less(
-        #         -self.c_e_n_av.entries, self.c_e_av.entries + epsilon
-        #     )
-        #     np.testing.assert_array_less(
-        #         self.c_e_p_av.entries, self.c_e_av.entries + epsilon
-        #     )
-        # elif self.operating_condition == "charge":
-        #     np.testing.assert_array_less(
-        #         -self.c_e_n_av.entries, self.c_e_av.entries + epsilon
-        #     )
-        #     np.testing.assert_array_less(
-        #         self.c_e_p_av.entries, self.c_e_av.entries + epsilon
-        #     )
-        # elif self.operating_condition == "off":
-        #     np.testing.assert_array_equal(self.c_e_n_av.entries, self.c_e_av.entries)
-        #     np.testing.assert_array_equal(self.c_e_s_av.entries, self.c_e_av.entries)
-        #     np.testing.assert_array_equal(self.c_e_p_av.entries, self.c_e_av.entries)
+        # TODO: uncomment when average concentrations are available (epsilon = 0.001).
+        # Discharge/charge/off assertions commented out pending avg concentration variables.
 
     def test_fluxes(self):
         """Test current collector fluxes are zero. Tolerance reduced for surface form

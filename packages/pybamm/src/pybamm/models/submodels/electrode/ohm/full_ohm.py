@@ -1,6 +1,3 @@
-#
-# Full model of electrode employing Ohm's law
-#
 import pybamm
 
 from .base_ohm import BaseModel

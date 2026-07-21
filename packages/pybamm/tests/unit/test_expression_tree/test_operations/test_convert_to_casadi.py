@@ -1,7 +1,3 @@
-#
-# Test for the Simplify class
-#
-
 import casadi
 import numpy as np
 import pytest
@@ -134,11 +130,7 @@ class TestCasadiConverter:
                 pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
             )
 
-        # A workaround to fix the tests running on GitHub Actions -
-        # casadi.evalf(
-        #       pybamm.Function(np_fun, c).to_casadi()
-        # ) - casadi.evalf(casadi.MX(np_fun(3)))
-        # is not zero, but a small number of the order 10^-15 when np_func is np.cosh
+        # GitHub Actions workaround: casadi.evalf diff for np.cosh is ~1e-15, not zero
         for np_fun in [np.cosh]:
             self.assert_casadi_almost_equal(
                 pybamm.Function(np_fun, c).to_casadi(),
@@ -372,16 +364,7 @@ class TestCasadiConverter:
             interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6
         )
 
-        # # len(x)=1 but y is 2d
-        # y = pybamm.StateVector(slice(0, 1), slice(0, 1))
-        # casadi_y = casadi.MX.sym("y", 1)
-        # data = np.tile((2 * x).sum(axis=1), (10, 1)).T
-        # y_test = np.array([0.4])
-        # for interpolator in ["linear"]:
-        #     interp = pybamm.Interpolant(x_, data, y, interpolator=interpolator)
-        #     interp_casadi = interp.to_casadi(y=casadi_y)
-        #     f = casadi.Function("f", [casadi_y], [interp_casadi])
-        #     np.testing.assert_allclose(interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6)
+        # # len(x)=1 but y is 2d (commented out test)
 
         # error for pchip interpolator
         with pytest.raises(ValueError, match=r"interpolator should be"):

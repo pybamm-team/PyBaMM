@@ -1,6 +1,3 @@
-#
-# Tests for the Scalar class
-#
 import numpy as np
 import pytest
 

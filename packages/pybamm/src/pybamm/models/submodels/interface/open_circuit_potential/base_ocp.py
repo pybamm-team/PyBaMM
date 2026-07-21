@@ -1,6 +1,3 @@
-#
-# Base class for open-circuit potential
-#
 import pybamm
 from pybamm.models.submodels.interface.base_interface import BaseInterface
 
@@ -98,9 +95,8 @@ class BaseOpenCircuitPotential(BaseInterface):
         elif ocp_surf.domain == ["current collector"]:
             ocp_surf = pybamm.PrimaryBroadcast(ocp_surf, f"{domain} electrode")
 
-        # Particle overpotential is the difference between the average(U(c_surf)) and
-        # U(c_bulk), i.e. the overpotential due to concentration gradients in the
-        # particle
+        # Particle overpotential = average(U(c_surf)) - U(c_bulk), due to
+        # concentration gradients in the particle
         eta_particle = ocp_surf_av - ocp_bulk
         variables.update(
             {

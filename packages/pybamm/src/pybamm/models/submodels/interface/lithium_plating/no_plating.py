@@ -1,6 +1,3 @@
-#
-# Class for no plating
-#
 import pybamm
 
 from .base_plating import BasePlating

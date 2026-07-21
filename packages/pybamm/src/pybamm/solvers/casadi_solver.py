@@ -214,14 +214,9 @@ class CasadiSolver(pybamm.BaseSolver):
             pybamm.logger.debug(f"Start solving {model.name} with {self.name}")
 
             if self.mode == "safe without grid":
-                # in "safe without grid" mode,
-                # create integrator once, without grid,
-                # to avoid having to create several times
+                # "safe without grid" mode: create integrator once without grid
                 self.create_integrator(model, y0, inputs)
-                # Initialize solution. Coerce y0 to a CasADi DM so that when
-                # subsequent CasADi integration segments are appended, the
-                # concatenated ``solution.y`` stays a CasADi type. When the
-                # root method is NonlinearSolver, y0 arrives as an ndarray.
+                # Coerce y0 to CasADi DM so solution.y stays CasADi type (ndarray from NonlinearSolver root method)
                 y0_init = y0 if isinstance(y0, casadi.DM | casadi.MX) else casadi.DM(y0)
                 solution = pybamm.Solution(
                     np.array([t]),
@@ -236,9 +231,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 solution = None
                 use_grid = True
 
-            # Try to integrate in global steps of size dt_max. Note: dt_max must
-            # be at least as big as the the biggest step in t_eval (multiplied
-            # by some tolerance, here 1.01) to avoid an empty integration window below
+            # Integrate in global steps of dt_max (>= 1.01 * max(t_eval step) to avoid empty windows)
             dt_max = self.dt_max
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
             if dt_max < dt_eval_max:
@@ -260,9 +253,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     t_window = np.concatenate(
                         ([t], t_eval[(t_eval > t) & (t_eval < t + dt)])
                     )
-                    # Sometimes near events the solver fails between two time
-                    # points in t_eval (i.e. no points t < t_i < t+dt for t_i
-                    # in t_eval), so we simply integrate from t to t+dt
+                    # Near events, solver may fail between t_eval points; integrate t to t+dt directly
                     if len(t_window) == 1:
                         t_window = np.array([t, t + dt])
 
@@ -290,11 +281,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         pybamm.logger.debug("Failed, halving step size")
                         dt /= 2
                         count += 1
-                        # also reduce maximum step size for future global steps,
-                        # but skip them in the beginning
-                        # sometimes, for the first integrator smaller timesteps are
-                        # needed, but this won't affect the global timesteps. The
-                        # global timestep will only be reduced after the first timestep.
+                        # Reduce max step size for future steps (skip initially; first integrator may need smaller steps)
                         if first_ts_solved:
                             dt_max = dt
                         if count > self.max_step_decrease_count:
@@ -383,18 +370,14 @@ class CasadiSolver(pybamm.BaseSolver):
             t_events = [None] * len(active_events)
             event_idcs_lower = [None] * len(active_events)
             for i, event in enumerate(active_events):
-                # Implement our own bisection algorithm for speed
-                # This is used to find the time range in which the event is triggered
-                # Evaluations of the "event" function are (relatively) expensive
+                # Custom bisection for speed (event function evaluations are expensive)
                 f_eval = {}
 
                 def f(idx, f_eval=f_eval, event=event):
                     try:
                         return f_eval[idx]
                     except KeyError:
-                        # We take away 1e-5 to deal with the case where the event sits
-                        # exactly on zero, as can happen when the event switch is used
-                        # (fast with events mode)
+                        # Subtract 1e-5 for events sitting exactly on zero (event switch/fast mode)
                         f_eval[idx] = event(sol.t[idx], sol.y[:, idx], inputs) - 1e-5
                         return f_eval[idx]
 
@@ -420,9 +403,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 if typ == "window":
                     event_idcs_lower[i] = event_idx_lower
                 elif typ == "exact":
-                    # Linear interpolation between the two indices to find the root time
-                    # We could do cubic interpolation here instead but it would be
-                    # slower
+                    # Linear interpolation for root time (cubic would be slower)
                     t_lower = sol.t[event_idx_lower]
                     t_upper = sol.t[event_idx_lower + 1]
                     event_lower = abs(f(event_idx_lower))
@@ -456,10 +437,7 @@ class CasadiSolver(pybamm.BaseSolver):
             coarse_solution.termination = "final time"
             return coarse_solution
 
-        # If events have been triggered, we solve for a dense window in the interval
-        # where the event was triggered, then find the precise location of the event
-        # Solve again with a more dense idx_window, starting from the start of the
-        # window where the event was triggered
+        # Solve dense window where event triggered, then find precise event location
         t_window_event_dense = np.linspace(
             coarse_solution.t[event_idx_lower],
             coarse_solution.t[event_idx_lower + 1],
@@ -484,10 +462,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
         # Find the exact time at which the event was triggered
         t_event, y_event, closest_event_idx = find_t_event(dense_step_sol, "exact")
-        # If this returns None, no event was crossed in dense_step_sol. This can happen
-        # if the event crossing was right at the end of the interval in the coarse
-        # solution. In this case, return the t and y from the end of the interval
-        # (i.e. next point in the coarse solution)
+        # None return means no event crossed in dense_step_sol (event at coarse interval end); use coarse interval endpoint
         if y_event is None:  # pragma: no cover
             # This is extremely rare, it's difficult to find a test that triggers this
             # hence no coverage check
@@ -534,9 +509,7 @@ class CasadiSolver(pybamm.BaseSolver):
             # If we're not using the grid, we don't need to change the integrator
             if use_grid is False:
                 return self.integrators[model]["no grid"]
-            # Otherwise, create new integrator with an updated grid
-            # We don't need to update the grid if reusing the same t_eval
-            # (up to a shift by a constant)
+            # Create new integrator with updated grid (skip if reusing same t_eval)
             else:
                 if t_eval_shifted_rounded in self.integrators[model]:
                     return self.integrators[model][t_eval_shifted_rounded]
@@ -585,9 +558,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 t_scaled = t_min + t
                 p_with_tlims = casadi.vertcat(p, t_min)
 
-            # define the event switch as the point when an event is crossed
-            # we don't do this for ODE models
-            # see #1082
+            # Event switch = point when event crossed (not for ODE models; see #1082)
             event_switch = 1
             if use_event_switch is True and not algebraic(0, y0, p).is_empty():
                 for event in model.casadi_switch_events:
@@ -676,10 +647,7 @@ class CasadiSolver(pybamm.BaseSolver):
         y0_diff = y0[:len_rhs]
         y0_alg_exact = y0[len_rhs:]
         if self.perturb_algebraic_initial_conditions and len_alg > 0:
-            # Add a tiny perturbation to the algebraic initial conditions
-            # For some reason this helps with convergence
-            # The actual value of the initial conditions for the algebraic variables
-            # doesn't matter
+            # Add tiny perturbation to algebraic ICs (helps convergence; actual value doesn't matter)
             y0_alg = y0_alg_exact * (1 + 1e-6 * casadi.DM(np.random.rand(len_alg)))
         else:
             y0_alg = y0_alg_exact

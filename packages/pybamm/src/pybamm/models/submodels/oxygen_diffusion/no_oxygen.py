@@ -1,6 +1,3 @@
-#
-# Class for when there is no oxygen
-#
 import pybamm
 
 from .base_oxygen_diffusion import BaseModel

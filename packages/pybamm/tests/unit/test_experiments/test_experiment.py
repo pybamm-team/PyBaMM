@@ -1,7 +1,3 @@
-#
-# Test the base experiment class
-#
-
 import os
 from datetime import datetime
 

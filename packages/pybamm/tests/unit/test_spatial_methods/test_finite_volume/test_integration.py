@@ -1,7 +1,3 @@
-#
-# Tests for integration using Finite Volume method
-#
-
 import numpy as np
 import pytest
 
@@ -299,8 +295,7 @@ class TestFiniteVolumeIntegration:
         )
 
     def test_integral_primary_then_secondary_same_result(self):
-        # Test that integrating in r then in x gives the same result as integrating in
-        # x then in r
+        # Integrate r then x = integrate x then r
         # create discretisation
         mesh = get_1p1d_mesh_for_testing()
         spatial_methods = {
@@ -419,9 +414,7 @@ class TestFiniteVolumeIntegration:
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        # input a phi, take grad, then integrate to recover phi approximation
-        # (need to test this way as check evaluated on edges using if has grad
-        # and no div)
+        # grad(phi) then integrate recovers phi (check evaluated on edges for grad without div)
         phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
         i = pybamm.grad(phi)  # create test current (variable on edges)
 

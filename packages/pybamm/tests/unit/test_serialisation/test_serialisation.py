@@ -1,7 +1,3 @@
-#
-# Tests for the serialisation class
-#
-
 import json
 import os
 import re
@@ -370,9 +366,7 @@ class TestSerialise:
             convert_symbol_from_json([{"type": "Scalar", "value": 1.0}])
 
     def test_convert_symbol_from_json_decoded_leaf_values_pass(self):
-        # Tagged leaf nodes decode to non-Symbol values (tuple/ndarray); these
-        # are successful decodes (e.g. ParameterValues data entries), not
-        # pass-throughs, and must not be rejected.
+        # Tagged leaves decode to non-Symbol values (tuple/ndarray); successful decodes, not rejected
         arr = convert_symbol_from_json(
             {"$type": "numpy.ndarray", "data": [1.0, 2.0], "dtype": "float64"}
         )
@@ -956,9 +950,7 @@ class TestSerialise:
         diff_var = pybamm.Variable("r")
         func_param = pybamm.FunctionParameter("my_func", {"x": x}, diff_var)
 
-        # The kernel carries diff_variable as a trailing child (flagged by
-        # has_diff_variable), not a top-level "diff_variable" field; assert the
-        # round-trip rather than the wire shape.
+        # diff_variable is trailing child (flagged by has_diff_variable), not top-level field; assert round-trip
         json_dict = convert_symbol_to_json(func_param)
         expr2 = convert_symbol_from_json(json_dict)
         assert isinstance(expr2, pybamm.FunctionParameter)

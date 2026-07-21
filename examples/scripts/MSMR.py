@@ -2,13 +2,11 @@ import pybamm
 
 pybamm.set_logging_level("INFO")
 
-# Use the MSMR model, with 6 negative electrode reactions and 4 positive electrode
-# reactions
+# MSMR model with 6 negative and 4 positive electrode reactions
 msmr_model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
 
-# We can also use a SPM with MSMR thermodynamics, transport and kinetics by changing
-# model options. Note we need to se the "surface form" to "algebraic" or "differential"
-# to use the MSMR, since we cannot explicitly invert the kinetics
+# SPM with MSMR thermodynamics/transport/kinetics requires "surface form" = algebraic
+# or differential (cannot explicitly invert the kinetics)
 spm_msmr_model = pybamm.lithium_ion.SPM(
     {
         "number of MSMR reactions": ("6", "4"),

@@ -1,6 +1,3 @@
-#
-# Tests getting model info
-#
 import pybamm
 
 

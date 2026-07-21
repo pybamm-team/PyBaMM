@@ -1,7 +1,3 @@
-#
-# Tests for BaseModel.to_json and BaseModel.from_json round-trip
-#
-
 import json
 
 import numpy as np
@@ -239,9 +235,7 @@ class TestBaseModelToConfig:
 
     def test_custom_model_to_config_includes_defaults(self):
         """Custom model config includes geometry/var_pts/etc when available."""
-        # SPM itself is built-in, so we test with a real SPM via to_json
-        # and verify the custom path includes defaults by using a fresh
-        # model that goes through the custom serialization.
+        # SPM built-in; test custom path includes defaults via fresh model through custom serialization
         model = pybamm.lithium_ion.SPM()
         # Force custom path by calling Serialise directly
         from pybamm.expression_tree.operations.serialise import Serialise

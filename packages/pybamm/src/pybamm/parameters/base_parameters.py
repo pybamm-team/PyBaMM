@@ -1,6 +1,3 @@
-#
-# Base parameters class
-#
 import warnings
 
 import pybamm

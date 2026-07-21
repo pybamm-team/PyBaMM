@@ -1,12 +1,3 @@
-#
-# Performance and scaling guards for unified experiment mode.
-#
-# The structural guarantees -- branch count constant across cycles, and constant-current
-# steps collapsing to one branch -- are what make compile/runtime cost independent of the
-# number of cycles and distinct values. They are asserted deterministically. The
-# wall-clock ratios vs legacy are environment-dependent, so they only warn (not fail) on
-# a regression, to monitor performance without flaking CI.
-#
 import time
 import warnings
 
@@ -70,9 +61,7 @@ def _warn_if_slow(model_class, limit):
 
 class TestUnifiedExperimentPerformance:
     def test_dfn_warm_solve_close_to_legacy(self):
-        # Requirement: DFN cycling ~<1.1x legacy (measured ~1.0x). Warn-only: wall-clock
-        # is environment-dependent; the sparse control row is guarded deterministically
-        # by test_unified_control_row_jacobian_is_sparse.
+        # DFN ~<1.1x legacy; warn-only (env-dependent), sparse control row guarded by test_unified_control_row_jacobian_is_sparse
         _warn_if_slow(pybamm.lithium_ion.DFN, 1.15)
 
     def test_spme_warm_solve_close_to_legacy(self):

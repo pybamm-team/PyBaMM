@@ -1,8 +1,3 @@
-#
-# Tests for the Base Parameter Values class
-#
-
-
 import os
 import re
 import warnings
@@ -678,10 +673,7 @@ class TestParameterValues:
             14.82
         )
 
-        # process differentiated function parameter
-        # diff_func = func.diff(a)
-        # processed_diff_func = parameter_values.process_symbol(diff_func)
-        # self.assertEqual(processed_diff_func.evaluate(), 2)
+        # process differentiated function parameter (commented out)
 
         # interpolant defined up front
         interp2 = pybamm.Interpolant(data[0], data[1], children=(a, b))
@@ -1514,10 +1506,7 @@ class TestParameterValues:
     def test_scalarize_dict_duplicate_key_in_list(self):
         """Test scalarize_dict with duplicate key when scalarizing lists."""
 
-        # This is difficult to trigger naturally since dict keys must be unique
-        # We would need to manually construct a scenario where the scalarization
-        # creates a key that already exists in the output dict
-        # For now, this path is hard to reach naturally
+        # Hard to trigger: dict keys must be unique, scalarization rarely creates conflicts
 
     def test_scalarize_dict_duplicate_regular_key(self):
         """Test scalarize_dict with duplicate regular key"""

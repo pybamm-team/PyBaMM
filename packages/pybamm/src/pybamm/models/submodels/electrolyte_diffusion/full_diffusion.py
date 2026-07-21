@@ -1,6 +1,3 @@
-#
-# Class for electrolyte diffusion employing stefan-maxwell
-#
 import numpy as np
 
 import pybamm
@@ -133,9 +130,7 @@ class Full(BaseElectrolyteDiffusion):
         if self.options.whole_cell_domains[-1] == "positive electrode":
             # right bc at cathode/current collector interface
             rbc = pybamm.Scalar(0)
-        # elif self.options.whole_cell_domains[-1] == "separator":
-        #     # right bc at separator/cathode interface
-        #     rbc = flux_bc("right")
+        # elif separator is last domain, right bc at separator/cathode interface
 
         # add boundary conditions to both forms of the concentration
         self.boundary_conditions = {

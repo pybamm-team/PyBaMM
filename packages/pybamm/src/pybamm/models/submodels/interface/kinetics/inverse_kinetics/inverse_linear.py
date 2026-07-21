@@ -1,7 +1,3 @@
-#
-# Inverse linear class
-#
-
 from .base_inverse import BaseInverseKinetics
 
 

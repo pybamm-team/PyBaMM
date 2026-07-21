@@ -1,6 +1,3 @@
-#
-# Class for particles with Fickian diffusion
-#
 import pybamm
 
 from .base_particle import BaseParticle
@@ -115,10 +112,8 @@ class FickianDiffusion(BaseParticle):
                     c_s_distribution
                 )
             )
-            # Standard size-averaged variables. Average concentrations using
-            # the volume-weighted distribution since they are volume-based
-            # quantities. Necessary for output variables "Total lithium in
-            # negative electrode [mol]", etc, to be calculated correctly
+            # Size-averaged concentrations use volume-weighted distribution for
+            # volume-based quantities (e.g. "Total lithium in negative electrode [mol]")
             c_s = pybamm.Integral(f_v_dist * c_s_distribution, R)
             if self.x_average is True:
                 c_s = pybamm.SecondaryBroadcast(c_s, [f"{domain} electrode"])

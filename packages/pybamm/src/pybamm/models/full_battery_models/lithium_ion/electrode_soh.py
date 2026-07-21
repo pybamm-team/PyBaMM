@@ -1,6 +1,3 @@
-#
-# A model to calculate electrode-specific SOH
-#
 from __future__ import annotations
 
 import warnings

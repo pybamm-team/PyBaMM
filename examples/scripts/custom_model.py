@@ -1,6 +1,4 @@
-#
-# Example showing how to create a custom lithium-ion model from submodels
-#
+"""Example showing how to create a custom lithium-ion model from submodels."""
 
 import numpy as np
 

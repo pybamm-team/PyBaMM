@@ -1,6 +1,3 @@
-#
-# Newman Tobias Model
-#
 import pybamm
 
 from .dfn import DFN
@@ -21,9 +18,8 @@ class NewmanTobias(DFN):
     """
 
     def __init__(self, options=None, name="Newman-Tobias model", build=True):
-        # Set default option "uniform profile" for particle submodel. Other
-        # default options are those given in `pybamm.BatteryModelOptions` defined in
-        # `base_battery_model.py`.
+        # Default "uniform profile" for particle submodel; other defaults from
+        # BatteryModelOptions in base_battery_model.py
         options = options or {}
         if "particle" not in options:
             options["particle"] = "uniform profile"

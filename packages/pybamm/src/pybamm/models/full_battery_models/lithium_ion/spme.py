@@ -1,6 +1,3 @@
-#
-# Single Particle Model with Electrolyte (SPMe)
-#
 import pybamm
 
 from .spm import SPM

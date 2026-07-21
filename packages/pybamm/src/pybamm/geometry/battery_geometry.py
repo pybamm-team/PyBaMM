@@ -1,6 +1,3 @@
-#
-# Function to create battery geometries
-#
 import pybamm
 
 

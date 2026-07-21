@@ -1,6 +1,3 @@
-#
-# Tests for the basic lithium-ion models
-#
 import pybamm
 
 

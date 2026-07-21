@@ -333,9 +333,7 @@ class TestSimulation:
         model = pybamm.lithium_ion.SPM(options)
         param = pybamm.ParameterValues("Chen2020_composite")
 
-        # Map Chen2020_composite negative electrode parameters to positive electrode
-        # Primary phase: Graphite (from Chen2020_composite negative primary)
-        # Secondary phase: Silicon (from Chen2020_composite negative secondary)
+        # Map Chen2020_composite negative electrode params to positive (Graphite primary, Silicon secondary)
 
         param.update(
             {

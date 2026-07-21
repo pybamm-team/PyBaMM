@@ -81,8 +81,7 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
         expression = self.child.create_copy()
         for child in expression.pre_order():
             if isinstance(child, pybamm.Interpolant):
-                # Replace Interpolant with a constructor call that preserves all data
-                # This works for 1D, 2D, and 3D interpolants
+                # Replace Interpolant with a constructor preserving all data (1D/2D/3D)
                 # Format x arrays (list of arrays, one per dimension)
                 x_arrays = ", ".join(f"np.array({x.tolist()})" for x in child.x)
                 # Format y array (can be 1D, 2D, or 3D)
@@ -94,18 +93,14 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
                 else:
                     # Multiple children - pass as list
                     input_vars = "[" + ", ".join(c.name for c in child.children) + "]"
-                # Build the full Interpolant constructor call
-                # Set _print_name directly to bypass prettify_print_name which
-                # mangles the output for LaTeX display
+                # Build Interpolant constructor; set _print_name to bypass prettify_print_name
                 child._print_name = (
                     f"pybamm.Interpolant([{x_arrays}], {y_array}, {input_vars}, "
                     f'name="{child.name}", interpolator="{child.interpolator}", '
                     f"extrapolate={child.extrapolate})"
                 )
             elif isinstance(child, pybamm.FunctionParameter):
-                # Replace FunctionParameter with a constructor call
-                # Build the inputs dict string mapping input names to actual parameter
-                # names
+                # Replace FunctionParameter with constructor; build inputs dict string
                 inputs_str = ", ".join(
                     f'"{input_name}": {child.children[i].name}'
                     for i, input_name in enumerate(child.input_names)
@@ -534,11 +529,8 @@ class Serialise:
             },
         }
 
-        # Capture the discretisation recipe (geometry / var_pts / submesh /
-        # spatial methods). These live on subclass ``default_*`` properties and
-        # are otherwise lost when the model is reloaded in an environment where
-        # the defining package can't be imported (the base-class fallback yields
-        # empty defaults), leaving the model undiscretisable.
+        # Capture discretisation recipe (geometry/var_pts/submesh/spatial methods)
+        # from subclass ``default_*`` properties so models stay discretisable on load.
         discretisation = Serialise._serialise_discretisation(model)
         if discretisation:
             model_content["discretisation"] = discretisation
@@ -1455,9 +1447,8 @@ class Serialise:
         model = base_cls()
         model.name = model_data["name"]
         model.schema_version = schema_version
-        # JSON turns tuple-valued options into lists (rejected by validation);
-        # convert back. Assigning options rebuilds the options-derived param via
-        # the setter, so it matches the restored options.
+        # JSON converts tuple-valued options to lists (rejected by validation);
+        # convert back and assign via setter to rebuild options-derived param.
         opts = model_data.get("options", {})
         if opts is not None:
             model.options = Serialise._convert_options(opts)
@@ -2054,9 +2045,8 @@ class Serialise:
         else:
             raise ValueError("Experiment config must have 'steps' or 'cycles'.")
 
-    # Solver __init__ params that are genuinely re-derived on construction or are
-    # non-serialisable transients. Empty today (no shipped solver omits anything);
-    # anything not listed that fails to serialise raises (safe-or-loud).
+    # Params re-derived on construction or non-serialisable transients; empty
+    # today (no shipped solver omits anything), others raise on serialise failure.
     _SOLVER_DERIVED_PARAMS: frozenset = frozenset()
 
     @staticmethod

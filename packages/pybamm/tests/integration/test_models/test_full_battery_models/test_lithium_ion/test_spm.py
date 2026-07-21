@@ -1,6 +1,3 @@
-#
-# Tests for the lithium-ion SPM model
-#
 import pytest
 
 import pybamm

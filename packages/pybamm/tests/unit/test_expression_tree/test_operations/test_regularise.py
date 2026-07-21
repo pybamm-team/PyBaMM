@@ -1,7 +1,3 @@
-#
-# Tests for the RegulariseSqrtAndPower class
-#
-
 import pytest
 
 import pybamm

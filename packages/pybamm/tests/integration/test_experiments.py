@@ -1,6 +1,3 @@
-#
-# Test some experiments
-#
 import numpy as np
 
 import pybamm

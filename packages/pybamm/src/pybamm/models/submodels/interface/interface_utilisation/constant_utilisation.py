@@ -1,6 +1,3 @@
-#
-# Class for constant interface utilisation
-#
 import pybamm
 
 from .base_utilisation import BaseModel

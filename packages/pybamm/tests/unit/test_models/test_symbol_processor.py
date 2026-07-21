@@ -1,6 +1,3 @@
-#
-# Tests for the SymbolProcessor class
-#
 import pytest
 
 import pybamm

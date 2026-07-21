@@ -1,7 +1,3 @@
-#
-# Tests for the electrode-electrolyte interface equations
-#
-
 import numpy as np
 import pytest
 

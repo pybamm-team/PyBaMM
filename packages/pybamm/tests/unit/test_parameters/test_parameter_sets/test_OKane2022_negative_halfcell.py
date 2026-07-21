@@ -1,6 +1,3 @@
-#
-# Tests for O'Kane (2022) parameter set
-#
 import pytest
 
 import pybamm

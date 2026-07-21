@@ -1,7 +1,3 @@
-#
-# Tests lithium-ion parameters load and give expected values
-#
-
 import numpy as np
 import pytest
 
@@ -207,9 +203,7 @@ class TestLithiumIonParameterValues:
         )
 
     def test_sigma_temperature_only_function_raises(self):
-        # a conductivity supplied as a function of temperature only (the old
-        # signature) must raise a clear error pointing at f(sto, T), rather than
-        # failing later with a cryptic "takes 1 positional argument" TypeError
+        # Old sig (T-only conductivity) must raise clear error for f(sto, T), not cryptic TypeError
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.LithiumIonParameters()
         T = param.T_ref

@@ -1,7 +1,3 @@
-#
-# Tests for the jacobian methods
-#
-
 import numpy as np
 import pytest
 from scipy.sparse import eye

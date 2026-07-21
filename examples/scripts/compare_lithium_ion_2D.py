@@ -1,6 +1,5 @@
-#
-# Compare lithium-ion battery models
-#
+"""Compare lithium-ion battery models."""
+
 import argparse
 
 import numpy as np

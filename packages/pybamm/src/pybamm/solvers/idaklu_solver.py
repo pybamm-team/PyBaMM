@@ -23,9 +23,7 @@ def _flatten_inputs(inputs_dict):
     return np.concatenate([np.asarray(v).reshape(-1) for v in inputs_dict.values()])
 
 
-# Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
-# Returned by ``IDASolve`` (and surfaced via ``Solution.flag``) when the
-# integrator has located one or more root function zeros.
+# Mirrors SUNDIALS IDA_ROOT_RETURN; returned when root function zeros are found.
 _IDA_ROOT_RETURN = 2
 
 # Function entries staged in ``_setup`` while building the C++ solver
@@ -46,9 +44,7 @@ _SETUP_FCN_LIST_KEYS = (
     "dvar_dp_idaklu_fcns",
 )
 
-# Attributes holding casadi.Function graphs (or the C++ solver) that are
-# rebuilt from the model on the next solve(). Dropped in __getstate__ so a
-# pickled solver doesn't carry these heavy, non-portable objects.
+# CasADi/C++ solver objects rebuilt on next solve(); dropped in __getstate__ for pickling.
 _REBUILDABLE_STATE_KEYS = (
     "_setup",
     "_model_set_up",
@@ -254,9 +250,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         self._options = self._combine_options(options)
 
-        # By default, we use an internal nonlinear solver within pybammsolvers
-        # to compute the initial conditions. As a fallback, we use python bindings
-        # for the same solver
+        # Default: internal pybammsolvers solver, falling back to Python bindings
         if root_method is _UNSET:
             root_method = None if self._internal_initialisation else "nonlinear_solver"
 
@@ -506,10 +500,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, model)
 
-        # Build algebraic-only residual and Jacobian for Newton sub-block mode.
-        # When newton_mode="full", skip these so the C++ solver uses the
-        # full-system IDA linear solve (DECOUPLED_FULL or COUPLED_FULL),
-        # which supports any linear solver including iterative ones.
+        # Build algebraic residual/Jacobian for Newton sub-block mode when newton_mode != "full"
         if self._options.get("newton_mode", "auto") == "auto":
             alg_res_fn = model.algebraic_eval
             jac_alg_fn = model.jac_algebraic_eval
@@ -529,9 +520,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 stacklevel=2,
             )
 
-        # Collect all casadi functions for AOT compilation. With compile=True,
-        # all functions are bundled into a single shared library via one gcc
-        # invocation; each serialized Function then points at its entry point.
+        # Collect casadi functions for AOT compilation (single gcc invocation with compile=True)
         has_sens = (len(stacked_inputs) > 0) and model.calculate_sensitivities
         fns = dict(
             zip(
@@ -632,10 +621,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         for key in (*_SETUP_FCN_KEYS, *_SETUP_FCN_LIST_KEYS):
             self._setup.pop(key, None)
 
-        # Release the public casadi.Function caches now that the C++ group
-        # owns the functions. _setup["var_fcns"] keeps the references that
-        # _post_process_solution still needs; the dvar caches are unused
-        # after setup, so dropping them frees that memory immediately.
+        # Release public casadi.Function caches; keep _setup["var_fcns"] for post-processing
         self.computed_var_fcns = {}
         self.computed_dvar_dy_fcns = {}
         self.computed_dvar_dp_fcns = {}
@@ -643,9 +629,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         return base_set_up_return
 
     def __getstate__(self):
-        # Drop the rebuildable state (C++ solver + casadi.Function graphs)
-        # so the next solve() rebuilds from the model rather than shipping
-        # serialised functions in the pickle.
+        # Drop C++ solver + casadi.Function graphs so pickle rebuilds on next solve()
         state = self.__dict__.copy()
         for key in _REBUILDABLE_STATE_KEYS:
             state.pop(key, None)
@@ -653,8 +637,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
     def __setstate__(self, d):
         self.__dict__.update(d)
-        # Restore the empty defaults BaseSolver.__init__ would set, so the
-        # solver reads as "not yet set up" until the next solve().
+        # Restore empty defaults so the solver reads as "not yet set up" until next solve()
         self._model_set_up = {}
         self.computed_var_fcns = {}
 
@@ -747,17 +730,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             y_out = sol.y.reshape((number_of_timesteps, number_of_states))
             y_event = y_out[-1]
 
-        # If there is only one step and an event was found, the event was
-        # triggered at t0 after consistent initialization. y_event is the
-        # post-IC state: sol.y_term (outputs-only) or y_out[-1] (full),
-        # both stored after IC. This check identifies *which* event fired.
+        # Single timestep + root return means event fired at t0 during IC initialization
         if number_of_timesteps == 1 and sol.flag == _IDA_ROOT_RETURN:
             self._check_event_violation_post_solve(t_eval, model, y_event, inputs_dict)
 
-        # return sensitivity solution, we need to flatten yS to
-        # (#timesteps * #states (where t is changing the quickest),)
-        # to match format used by Solution
-        # note that yS is (n_p, n_t, n_y)
+        # Flatten yS to (#timesteps * #states, #sens_params) to match Solution format
         if number_of_sensitivity_parameters != 0:
             yS_out = {
                 name: sol.yS[i].reshape(-1, 1)
@@ -768,9 +745,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             yS_out = {}
 
-        # IDA_SUCCESS (0) = solved for all t_eval
-        # IDA_ROOT_RETURN (2) = found root(s)
-        # < 0 = solver failure
+        # sol.flag: 0=success, 2=event found, <0=solver failure
         if sol.flag == _IDA_ROOT_RETURN:
             termination = "event"
         elif sol.flag >= 0:
@@ -798,8 +773,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             idx_final = np.searchsorted(t_eval, t[-1]) + 1
             t_eval = t_eval[:idx_final]
 
-            # the final index may differ due to an event;
-            # manually set it to the true final time
+            # Truncate t_eval to match actual final time (may differ due to event)
             t_eval[-1] = t[-1]
 
         # Forward the compile flag so post-solve observation uses the same
@@ -1130,10 +1104,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         rtol = self.rtol
         atol = self.atol
 
-        # Build flat time-major arrays for the C++ reducer.
-        # all_ys[i] is (n_states, M) transposed view whose underlying
-        # buffer is already time-major (M * n_states,).  .T.ravel()
-        # returns a 1D view of that buffer -- no copy.
+        # Build flat time-major arrays via .T.ravel() (zero-copy view of underlying buffer)
         flat_ys = [all_ys[i].T.ravel() for i in range(n_seg)]
         flat_yps = [all_yps[i].T.ravel() for i in range(n_seg)]
 

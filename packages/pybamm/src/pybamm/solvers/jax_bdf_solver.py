@@ -316,11 +316,7 @@ if pybamm.has_jax():
         if not onp.any(algebraic_variables):
             return y0, False
 
-        # calculate consistent initial conditions via a newton on -J_a @ delta = f_a
-        # This follows this reference:
-        #
-        # Shampine, L. F., Reichelt, M. W., & Kierzenka, J. A. (1999).
-        # Solving index-1 DAEs in MATLAB and Simulink. SIAM review, 41(3), 538-552.
+        # Consistent ICs via Newton on -J_a @ delta = f_a (Shampine et al 1999, SIAM review)
 
         # calculate fun_a, function of algebraic variables
         def fun_a(y_a):
@@ -569,9 +565,7 @@ if pybamm.has_jax():
         error_norm = rms_norm(error / scale_y)
         safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER + n_iter)
 
-        # similar to the optimal step size factor we calculated above for the current
-        # order k, we need to calculate the optimal step size factors for orders
-        # k-1 and k+1. To do this, we note that the error = C_k * D^{k+1} y_n
+        # Compute optimal step size factors for orders k-1 and k+1 (error = C_k * D^{k+1} y_n)
         error_m_norm = jnp.where(
             order > 1,
             rms_norm(state.error_const[order - 1] * D[order] / scale_y),
@@ -627,10 +621,7 @@ if pybamm.has_jax():
             safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER + n_iter)
             scale_y = state.atol + state.rtol * jnp.abs(y)
 
-            # Calculate error and updated step size factor
-            # combine eq 3, 4 and 6 from [1] to obtain error
-            # Note that error = C_k * h^{k+1} y^{k+1}
-            # and d = D^{k+1} y_{n+1} \approx h^{k+1} y^{k+1}
+            # Error = C_k * h^{k+1} y^{k+1} (combine eq. 3,4,6 from [1]; d ≈ h^{k+1} y^{k+1})
             error = state.error_const[state.order] * d
             error_norm = rms_norm(error / scale_y)
 
@@ -797,15 +788,7 @@ if pybamm.has_jax():
             # normal time. See the `odeint` invocation in `scan_fun` below.
             y_dot, vjpfun = jax.vjp(func, y, -t, *args)
 
-            # Adjoint equations for semi-explicit dae index 1 system from
-            #
-            # [1] Cao, Y., Li, S., Petzold, L., & Serban, R. (2003). Adjoint sensitivity
-            # analysis for differential-algebraic equations: The adjoint DAE system and
-            # its numerical solution.
-            # SIAM journal on scientific computing, 24(3), 1076-1089.
-            #
-            # y_bar_dot_d = -J_dd^T y_bar_d - J_ad^T y_bar_a
-            #           0 =  J_da^T y_bar_d + J_aa^T y_bar_d
+            # Adjoint DAE for semi-explicit index 1 (Cao et al 2003, SIAM J Sci Comput)
 
             y_bar_dot, *rest = vjpfun(y_bar)
 
@@ -897,9 +880,7 @@ if pybamm.has_jax():
         jaxpr, _, consts = pe.trace_to_jaxpr_dynamic(wrapped_fun, in_avals)
         out_tree = out_tree()
 
-        # We only want to closure convert for constants with respect to which we're
-        # differentiating. As a proxy for that, we hoist consts with float dtype.
-        # TODO(mattjj): revise this approach
+        # Hoist float-dtype consts for closure conversion (proxy for differentiable constants)
         def is_float(c):
             return dtypes.issubdtype(type(c), jnp.inexact)
 

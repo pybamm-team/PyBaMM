@@ -179,8 +179,6 @@ class TestJaxSolver:
         model.initial_conditions = {var: 1}
         # No need to set parameters; can use base discretisation (no spatial
         # operators)
-
-        # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
@@ -210,8 +208,6 @@ class TestJaxSolver:
         model.initial_conditions = {var: 1}
         # No need to set parameters; can use base discretisation (no spatial
         # operators)
-
-        # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)

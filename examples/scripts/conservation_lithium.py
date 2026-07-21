@@ -1,6 +1,4 @@
-#
-# Check conservation of lithium
-#
+"""Check conservation of lithium."""
 
 import matplotlib.pyplot as plt
 

@@ -1,7 +1,3 @@
-#
-# Tests for the Casadi Solver Modes
-#
-
 import numpy as np
 
 import pybamm

@@ -1,6 +1,3 @@
-#
-# Basic Doyle-Fuller-Newman (DFN) Model
-#
 import pybamm
 from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
     BaseModel,
@@ -21,19 +18,12 @@ class BasicDFN2D(BaseModel):
     def __init__(self, name="Doyle-Fuller-Newman model"):
         super().__init__(name=name)
         pybamm.citations.register("Marquis2019")
-        # `param` is a class containing all the relevant parameters and functions for
-        # this model. These are purely symbolic at this stage, and will be set by the
-        # `ParameterValues` class when the model is processed.
-
-        ######################
-        # Variables
-        ######################
+        # `param` contains symbolic parameters set by `ParameterValues` at processing
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
-        # Spatial variables
-        # Direction is required for 2D spatial variables, and can be "lr" or "tb"
-        # for left-right or top-bottom respectively.
+        # Spatial variables (x and z directions); "lr" or "tb" for left-right or
+        # top-bottom respectively.
         x = pybamm.SpatialVariable(
             "x",
             domain=["negative electrode", "separator", "positive electrode"],
@@ -106,9 +96,7 @@ class BasicDFN2D(BaseModel):
             "Positive electrode potential [V]",
             domain="positive electrode",
         )
-        # Particle concentrations are variables on the particle domain, but also vary in
-        # the x-direction and z-direction (electrode domain) and so must be provided with auxiliary
-        # domains
+        # Particle concentrations vary in particle domain + x/z (electrode) auxiliary domains
         c_s_n = pybamm.Variable(
             "Negative particle concentration [mol.m-3]",
             domain="negative particle",
@@ -123,16 +111,13 @@ class BasicDFN2D(BaseModel):
         # Constant temperature
         T = self.param.T_init
 
-        ######################
-        # Other set-up
-        ######################
+        ###################### Other set-up ######################
 
         # Current density
         i_cell = self.param.current_density_with_time
 
         # Porosity
-        # Primary broadcasts are used to broadcast scalar quantities across a domain
-        # into a vector of the right shape, for multiplying with other vectors
+        # PrimaryBroadcasts broadcast scalars to vectors for multiplication
         eps_n = pybamm.FunctionParameter(
             "Negative electrode porosity",
             {"Through-cell distance (x) [m]": x_n, "Vertical distance (z) [m]": z_n},
@@ -164,10 +149,7 @@ class BasicDFN2D(BaseModel):
         a_n = 3 * self.param.n.prim.epsilon_s_av / self.param.n.prim.R_typ
         a_p = 3 * self.param.p.prim.epsilon_s_av / self.param.p.prim.R_typ
 
-        # Interfacial reactions
-        # Surf takes the surface value of a variable, i.e. its boundary value on the
-        # right side. This is also accessible via `boundary_value(x, "right")`, with
-        # "left" providing the boundary value of the left side
+        # Interfacial reactions: `pybamm.surf()` gets surface value (boundary on right side)
         c_s_surf_n = pybamm.surf(c_s_n)
         sto_surf_n = c_s_surf_n / self.param.n.prim.c_max
         j0_n = self.param.n.prim.j0(c_e_n, c_s_surf_n, T)
@@ -189,22 +171,16 @@ class BasicDFN2D(BaseModel):
         a_j_p = a_p * j_p
         a_j = pybamm.concatenation(a_j_n, j_s, a_j_p)
 
-        ######################
-        # State of Charge
-        ######################
+        ###################### State of Charge ######################
         current = self.param.current_with_time
-        # The `rhs` dictionary contains differential equations, with the key being the
-        # variable in the d/dt
+        # `rhs` dict: differential equations keyed by d/dt variable
         self.rhs[Q] = current / 3600
         # Initial conditions must be provided for the ODEs
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
-        ######################
-        # Particles
-        ######################
+        ###################### Particles ######################
 
-        # The div and grad operators will be converted to the appropriate matrix
-        # multiplication at the discretisation stage
+        # div/grad operators convert to matrix multiplication at discretisation
         N_s_n = -self.param.n.prim.D(c_s_n, T) * pybamm.grad(c_s_n)
         N_s_p = -self.param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
         self.rhs[c_s_n] = -pybamm.div(N_s_n)
@@ -233,15 +209,12 @@ class BasicDFN2D(BaseModel):
         solid_lithium_positive = pybamm.Integral(c_s_p_av * eps_s_p, [x_p, z_p])
         total_solid_lithium = solid_lithium_negative + solid_lithium_positive
 
-        ######################
-        # Current in the solid
-        ######################
+        ###################### Current in the solid ######################
         sigma_eff_n = self.param.n.sigma(sto_surf_n, T) * eps_s_n**self.param.n.b_s
         i_s_n = pybamm.VectorField(-sigma_eff_n, -sigma_eff_n) * pybamm.grad(phi_s_n)
         sigma_eff_p = self.param.p.sigma(sto_surf_p, T) * eps_s_p**self.param.p.b_s
         i_s_p = pybamm.VectorField(-sigma_eff_p, -sigma_eff_p) * pybamm.grad(phi_s_p)
-        # The `algebraic` dictionary contains differential equations, with the key being
-        # the main scalar variable of interest in the equation
+        # `algebraic` dict: algebraic equations keyed by main scalar variable
         # multiply by Lx**2 to improve conditioning
         self.algebraic[phi_s_n] = (
             self.param.L_x**2 * self.param.L_z**2 * (pybamm.div(i_s_n) + a_j_n)
@@ -261,14 +234,11 @@ class BasicDFN2D(BaseModel):
             "top": (pybamm.Scalar(0), "Neumann"),
             "bottom": (pybamm.Scalar(0), "Neumann"),
         }
-        # Initial conditions must also be provided for algebraic equations, as an
-        # initial guess for a root-finding algorithm which calculates consistent initial
-        # conditions
+        # Initial conditions for algebraic equations serve as root-finding guesses
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
         self.initial_conditions[phi_s_p] = self.param.ocv_init
         ######################
         # Current in the electrolyte
-        ######################
         i_e = (
             pybamm.VectorField(
                 self.param.kappa_e(c_e, T) * tor, self.param.kappa_e(c_e, T) * tor
@@ -292,9 +262,7 @@ class BasicDFN2D(BaseModel):
         }
         self.initial_conditions[phi_e] = -self.param.n.prim.U_init
 
-        ######################
-        # Electrolyte concentration
-        ######################
+        ###################### Electrolyte concentration ######################
         N_e = pybamm.VectorField(
             -tor * self.param.D_e(c_e, T), -tor * self.param.D_e(c_e, T)
         ) * pybamm.grad(c_e)
@@ -309,9 +277,7 @@ class BasicDFN2D(BaseModel):
         }
         self.initial_conditions[c_e] = self.param.c_e_init
 
-        ######################
-        # (Some) variables
-        ######################
+        ###################### (Some) variables ######################
         voltage = pybamm.boundary_value(phi_s_p, "top-right")
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"

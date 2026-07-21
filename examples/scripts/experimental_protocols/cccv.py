@@ -1,6 +1,5 @@
-#
-# Constant-current constant-voltage charge
-#
+"""Constant-current constant-voltage charge."""
+
 import matplotlib.pyplot as plt
 
 import pybamm

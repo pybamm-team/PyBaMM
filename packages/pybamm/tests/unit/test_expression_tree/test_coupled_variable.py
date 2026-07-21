@@ -1,8 +1,3 @@
-#
-# Tests for the CoupledVariable class
-#
-
-
 import numpy as np
 import pytest
 

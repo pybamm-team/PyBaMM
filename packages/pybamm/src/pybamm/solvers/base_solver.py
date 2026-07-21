@@ -329,9 +329,7 @@ class BaseSolver:
         model.jac_rhs_algebraic_action_eval = jac_rhs_algebraic_action
         model.jacp_rhs_algebraic_eval = jacp_rhs_algebraic
 
-        # Save CasADi functions for the CasADi solver
-        # Save CasADi functions for solvers that use CasADi
-        # Note: when we pass to casadi the ode part of the problem must be in
+        # Save CasADi functions (ODE part must be in explicit form when passing to casadi)
         if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
             self,
             pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver,
@@ -419,10 +417,7 @@ class BaseSolver:
                 if casadi_format:
                     inputs_jacp_ics = inputs_y0_ics
                 else:
-                    # we are calculating the derivative wrt the inputs
-                    # so need to make sure we convert int -> float
-                    # This is to satisfy JAX jacfwd function which requires
-                    # float inputs
+                    # Convert int -> float for JAX jacfwd (requires float inputs)
                     inputs_jacp_ics = {
                         key: float(value) if isinstance(value, int) else value
                         for key, value in ipts.items()
@@ -475,9 +470,7 @@ class BaseSolver:
                 "Cannot use CasadiSolver to solve algebraic model, "
                 "use CasadiAlgebraicSolver instead"
             )
-        # Discretise model if it isn't already discretised
-        # This only works with purely 0D models, as otherwise the mesh and spatial
-        # method should be specified by the user
+        # Discretise model (only works with purely 0D models)
         if model.is_discretised is False:
             try:
                 disc = pybamm.Discretisation()
@@ -558,10 +551,8 @@ class BaseSolver:
         )
 
     def _set_up_events(self, model, t_eval, inputs: list[dict], vars_for_processing):
-        # Check for heaviside and modulo functions in rhs and algebraic and add
-        # discontinuity events if these exist.
-        # Note: only checks for the case of t < X, t <= X, X < t, or X <= t,
-        # but also accounts for the fact that t might be dimensional
+        # Check for heaviside/modulo in rhs/algebraic; add discontinuity events
+        # (handles t < X, t <= X, X < t, X <= t with dimensional t)
         tf = np.max(t_eval)
 
         def supports_t_eval_discontinuities(expr):
@@ -629,24 +620,15 @@ class BaseSolver:
                 and self.mode == "fast with events"
                 and model.algebraic != {}
             ):
-                # Save some events to casadi_switch_events for the 'fast with
-                # events' mode of the casadi solver
-                # We only need to do this if the model is a DAE model
-                # see #1082
+                # Save events to casadi_switch_events for 'fast with events' mode (DAE only; #1082)
                 k = 20
-                # address numpy 1.25 deprecation warning: array should have
-                # ndim=0 before conversion
-                # note: assumes that the sign for all batches is the same
+                # Address numpy 1.25 deprecation (ndim=0 before conversion; assumes uniform batch sign)
                 init_sign = float(
                     np.sign(
                         event.evaluate(0, model.y0_list[0].full(), inputs=inputs[0])
                     ).item()
                 )
-                # We create a sigmoid for each event which will multiply the
-                # rhs. Doing * 2 - 1 ensures that when the event is crossed,
-                # the sigmoid is zero. Hence the rhs is zero and the solution
-                # stays constant for the rest of the simulation period
-                # We can then cut off the part after the event was crossed
+                # Sigmoid for each event (multiplies rhs; *2-1 zeros at event crossing to hold solution constant)
                 event_sigmoid = (
                     pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
                 )
@@ -984,9 +966,7 @@ class BaseSolver:
             != model.concatenated_initial_conditions
         ):
             if self._algebraic_solver:
-                # For an algebraic solver, we don't need to set up the initial
-                # conditions function and we can just evaluate
-                # model.concatenated_initial_conditions
+                # Algebraic solver: skip initial conditions setup; evaluate model.concatenated_initial_conditions directly
                 model.y0_list = [
                     model.concatenated_initial_conditions.evaluate()
                 ] * len(inputs_list)
@@ -1033,9 +1013,7 @@ class BaseSolver:
 
         start_indices, end_indices, t_eval = first_row
 
-        # Integrate separately over each time segment and accumulate into the solution
-        # object, restarting the solver at each discontinuity (and recalculating a
-        # consistent state afterwards if a DAE)
+        # Integrate over each time segment, restarting solver at discontinuities (recalculate DAE state)
         old_y0_list = model.y0_list
         solutions = None
         for start_index, end_index in zip(start_indices, end_indices, strict=False):
@@ -1106,9 +1084,7 @@ class BaseSolver:
                 f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time}, Total time: {solutions[0].total_time}"
             )
 
-        # Raise error if solutions[0] only contains one timestep (except for algebraic
-        # solvers, where we may only expect one time in the solution, or failure
-        # solutions where we may only have the initial state)
+        # Raise error if solutions[0] has only one timestep (except algebraic/failure solutions)
         if (
             self._algebraic_solver is False
             and solutions[0].termination != "failure"
@@ -1280,8 +1256,7 @@ class BaseSolver:
                 scaled_final_state_eval = (final_state_eval[i] - reference) / scale
                 initial_conditions[i].append(scaled_final_state_eval)
 
-        # Also update the concatenated initial conditions if the model is already
-        # discretised
+        # Also update concatenated initial conditions for already-discretised models
         # Unpack slices for sorting
         y_slices = {var: slce for var, slce in model.y_slices.items()}
         slices = [y_slices[symbol][0] for symbol in model.initial_conditions.keys()]
@@ -1446,10 +1421,7 @@ class BaseSolver:
         if t_start == 0:
             t_start_shifted = t_start
         else:
-            # find the next largest floating point value for t_start
-            # to avoid repeated times in the solution
-            # from having the same time at the end of the previous step and
-            # the start of the next step
+            # Use nextafter to avoid repeated times (same end/start boundary between steps)
             t_start_shifted = np.nextafter(t_start, np.inf)
             t_eval[0] = t_start_shifted
             if t_interp.size > 0 and t_interp[0] == t_start:
@@ -1508,14 +1480,10 @@ class BaseSolver:
                 last_state = old_solution.last_state
                 y_from = last_state.all_ys[0]
                 mapper_func, _mapper_jac, _mapper_jacp = state_mapper
-                # Mapper CasADi graph is compiled using previous_model.input_parameters
-                # (see Simulation._build_experiment_state_mappers); stack p in that
-                # layout, not the next model's model_inputs.
+                # Stack p in previous_model's input_parameters layout (see Simulation._build_experiment_state_mappers)
                 previous_model = old_solution.all_models[-1]
-                # Legacy experiment solves often omit temperature in `inputs`
-                # (include_temperature=False). Padding-rest models still list ambient
-                # as an input parameter; match compile-time defaults from
-                # Simulation._build_experiment_state_mappers (inputs.get(name, 0)).
+                # Legacy experiments omit temperature in `inputs`; match compile-time defaults
+                # (inputs.get(name, 0)) for padding-rest models that list ambient as input
                 mapper_p_inputs = dict(inputs)
                 for name in sorted(ip.name for ip in previous_model.input_parameters):
                     if name not in mapper_p_inputs or mapper_p_inputs[name] is None:
@@ -1646,9 +1614,7 @@ class BaseSolver:
                 )
             # Add the event to the solution object
             solution.termination = f"event: {termination_event}"
-        # Update t, y and inputs to include event time and state
-        # Note: if the final entry of t is equal to the event time we skip
-        # this (having duplicate entries causes an error later in ProcessedVariable)
+        # Update t, y, inputs with event time/state (skip if duplicate entries cause errors)
         if solution.t_event != solution.all_ts[-1][-1]:
             event_sol = pybamm.Solution(
                 solution.t_event,
@@ -1799,10 +1765,7 @@ class BaseSolver:
             value = inputs.get(name)
 
             if value is None:
-                # Since the solver has all the strictly required input parameters, but
-                # lacks the total set of input parameters, the model is solvable, but
-                # unobservable. In this case, we can safely set the input parameter to
-                # a dummy value (np.nan)
+                # Model is solvable but unobservable without this param; set to dummy (np.nan)
                 missing_inputs.append(name)
                 value = DUMMY_INPUT_PARAMETER_VALUE
                 model.disable_solution_observability(
@@ -1954,9 +1917,7 @@ def process(
                     [casadi.jacobian(casadi_expression, p_casadi_stacked)],
                 )
             else:
-                # WARNING, jacp for convert_to_format=casadi does not return a dict
-                # instead it returns multiple return values, one for each param
-                # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
+                # jacp for casadi returns multiple values (not a dict); TODO: try jacobian wrt pS_casadi_stacked
                 jacp = casadi.Function(
                     name + "_jacp",
                     [t_casadi, y_casadi, p_casadi_stacked],

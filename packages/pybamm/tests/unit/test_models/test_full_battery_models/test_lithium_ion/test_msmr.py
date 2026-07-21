@@ -1,6 +1,3 @@
-#
-# Tests for the lithium-ion MSMR model
-#
 import pybamm
 
 

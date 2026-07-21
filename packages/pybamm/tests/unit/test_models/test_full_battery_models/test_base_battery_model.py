@@ -1,7 +1,3 @@
-#
-# Tests for the base battery model class
-#
-
 import io
 import os
 from contextlib import redirect_stdout
@@ -472,9 +468,7 @@ class TestBaseBatteryModel:
         assert model.options["number of MSMR reactions"] == ("3", "none")
 
     def test_msmr_half_cell_does_not_validate_counter_electrode(self):
-        # On a half cell the negative electrode is lithium metal, not a porous
-        # MSMR electrode, so a scalar "MSMR" option must not force a reaction
-        # count on it.
+        # Half cell: negative electrode is lithium metal, not porous MSMR; scalar MSMR must not force reaction count
         options = {
             "working electrode": "positive",
             "open-circuit potential": "MSMR",

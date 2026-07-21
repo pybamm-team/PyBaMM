@@ -1,6 +1,3 @@
-#
-# SymbolProcessor class for processing symbols with parameter values and discretisation
-#
 from __future__ import annotations
 
 import copy

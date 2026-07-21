@@ -1,7 +1,3 @@
-#
-# Test for making copies
-#
-
 import numpy as np
 import pytest
 

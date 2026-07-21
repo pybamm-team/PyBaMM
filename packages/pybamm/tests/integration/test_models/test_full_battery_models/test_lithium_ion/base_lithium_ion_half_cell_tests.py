@@ -1,6 +1,3 @@
-#
-# Base integration tests for lithium-ion half-cell battery models.
-#
 import numpy as np
 
 import pybamm
@@ -44,9 +41,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
             )
 
     def test_half_cell_bulk_ocp_scalar(self):
-        # Guard: lithium metal bulk OCP must be scalar-valued (0d02d1f63)
-        # The bug was using "0 * T" which gave array-valued OCP with current collector domain
-        # The fix changed to scalar 0 for lithium metal OCP
+        # Lithium metal bulk OCP must be scalar (0 * T bug gave array-valued OCP; fixed to scalar 0)
         options = {}
         parameter_values = pybamm.ParameterValues("Xu2019")
         sol = self.run_basic_processing_test(options, parameter_values=parameter_values)

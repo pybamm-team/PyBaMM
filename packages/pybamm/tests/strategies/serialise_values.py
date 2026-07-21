@@ -124,10 +124,7 @@ def step_kwargs() -> st.SearchStrategy[dict]:
             kwargs["duration"] = draw(st.floats(min_value=1.0, max_value=3600.0))
         else:
             if step_type == "c-rate":
-                # A C-rate of 0 is meaningless (0 current is a rest step) and
-                # makes CRate's default-duration heuristic (1 / |C-rate|) divide
-                # by zero, so keep the magnitude bounded away from zero. Sign is
-                # free: positive discharges, negative charges.
+                # C-rate 0 causes divide-by-zero in duration heuristic; keep |magnitude| ≥ 0.05
                 magnitude = draw(
                     st.floats(
                         min_value=0.05,
@@ -192,15 +189,8 @@ def parameter_values_overrides() -> st.SearchStrategy[dict]:
     )
 
 
-# Option keys fuzzed by ``model_options_kwargs``. Chosen to be (near-)orthogonal
-# across SPM/SPMe/DFN so a random draw is almost always a valid model. Their
-# *values* are derived from the canonical ``possible_options`` (see
-# ``_OPTION_SPACE``) so they can never drift; we only sample this fixed key set.
-# Keys deliberately not fuzzed need a coordinated multi-option change:
-#   - "open-circuit potential"/"particle"/"intercalation kinetics": MSMR must be
-#     set on all three together (so "particle" is fuzzed but with "MSMR" pruned).
-#   - "dimensionality": non-zero values require "current collector" changes.
-#   - "convection": must be "none" for lithium-ion models.
+# Option keys fuzzed by model_options_kwargs, chosen to be (near-)orthogonal across
+# SPM/SPMe/DFN; keys not fuzzed need coordinated multi-option changes (MSMR, dimensionality, convection)
 _FUZZED_OPTION_KEYS = (
     "calculate discharge energy",
     "lithium plating",
@@ -212,11 +202,7 @@ _FUZZED_OPTION_KEYS = (
     "thermal",
 )
 
-# Values that only construct as part of a multi-option combination, verified by
-# building SPM/SPMe/DFN with each value in isolation:
-#   - particle "MSMR" needs the MSMR triple (see above).
-#   - thermal "x-lumped" needs "cell geometry"="pouch" ("x-full" sets that
-#     default itself, "x-lumped" does not).
+# Values requiring multi-option combinations (MSMR triple, x-lumped→pouch geometry)
 _EXCLUDED_OPTION_VALUES: dict[str, frozenset[str]] = {
     "particle": frozenset({"MSMR"}),
     "thermal": frozenset({"x-lumped"}),

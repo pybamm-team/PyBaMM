@@ -1,6 +1,3 @@
-#
-# Tests for the Concatenation class and subclasses
-#
 import numpy as np
 import pytest
 import sympy
@@ -431,9 +428,7 @@ class TestConcatenations:
         # check symbol re-creation
         assert pybamm.pybamm.DomainConcatenation._from_json(json_dict) == conc
 
-        # -----------------------------
-        # test NumpyConcatenation -----
-        # -----------------------------
+        # test NumpyConcatenation
 
         y = np.linspace(0, 1, 15)[:, np.newaxis]
         a_np = pybamm.Vector(y[:5])

@@ -1,6 +1,3 @@
-#
-# A model to calculate electrode-specific SOH, adapted to a half-cell
-#
 import warnings
 
 import pybamm

@@ -1,41 +1,4 @@
-# This CMakeFile is adapted from that in dune-common:
-
-# .. cmake_module::
-#
-#    Find the SuiteSparse libraries like UMFPACK or SPQR.
-#
-#    Example which tries to find Suite Sparse's UMFPack component:
-#
-#    :code:`find_package(SuiteSparse OPTIONAL_COMPONENTS UMFPACK)`
-#
-#    `OPTIONAL_COMPONENTS`
-#       A list of components. Components are:
-#       AMD, BTF, CAMD, CCOLAMD, CHOLMOD, COLAMD, CXSPARSE,
-#       KLU, LDL, RBIO, SPQR, UMFPACK
-#
-#    :ref:`SuiteSparse_ROOT`
-#       Path list to search for SuiteSparse
-#
-#    Sets the following variables:
-#
-#    :code:`SuiteSparse_FOUND`
-#       True if SuiteSparse was found.
-#
-#    :code:`SuiteSparse_INCLUDE_DIRS`
-#       Path to the SuiteSparse include dirs.
-#
-#    :code:`SuiteSparse_LIBRARIES`
-#       Name of the SuiteSparse libraries.
-#
-#    :code:`SuiteSparse_<COMPONENT>_FOUND`
-#       Whether <COMPONENT> was found as part of SuiteSparse.
-#
-# .. cmake_variable:: SuiteSparse_ROOT
-#
-#   You may set this variable to have :ref:`FindSuiteSparse` look
-#   for SuiteSparse in the given path before inspecting
-#   system paths.
-#
+# Adapted from dune-common; finds SuiteSparse libs (AMD, BTF, CAMD, CHOLMOD, KLU, SPQR, UMFPACK, etc.)
 
 find_package(BLAS QUIET)
 

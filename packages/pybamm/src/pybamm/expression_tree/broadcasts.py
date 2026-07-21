@@ -1,6 +1,3 @@
-#
-# Unary operator classes and methods
-#
 from __future__ import annotations
 
 from typing import cast
@@ -126,9 +123,8 @@ class PrimaryBroadcast(Broadcast):
 
     def check_and_set_domains(self, child: pybamm.Symbol, broadcast_domain: list[str]):
         """See :meth:`Broadcast.check_and_set_domains`"""
-        # Can only do primary broadcast from current collector to electrode,
-        # particle-size or particle or from electrode to particle-size or particle.
-        # Note e.g. current collector to particle *is* allowed
+        # Primary broadcast allowed: current collector → electrode/particle-size/particle,
+        # or electrode → particle-size/particle (current collector → particle is allowed)
         if broadcast_domain == []:
             raise pybamm.DomainError("Cannot Broadcast an object into empty domain.")
         if child.domain == []:
@@ -313,9 +309,8 @@ class SecondaryBroadcast(Broadcast):
             raise pybamm.DomainError(
                 "Cannot do secondary broadcast from current collector domain"
             )
-        # Domain stays the same as child domain and broadcast domain is secondary
-        # domain
-        # Child's secondary domain becomes tertiary domain, tertiary becomes quaternary
+        # Child's secondary/tertiary domains become tertiary/quaternary; broadcast
+        # domain becomes the new secondary domain
         domains = {
             "primary": child.domains["primary"],
             "secondary": broadcast_domain,

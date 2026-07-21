@@ -1,6 +1,3 @@
-#
-# Tests for the Solution class
-#
 import numpy as np
 
 import pybamm

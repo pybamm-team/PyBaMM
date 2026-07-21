@@ -1,6 +1,3 @@
-#
-# Class for lithium plating
-#
 import pybamm
 
 from .base_plating import BasePlating
