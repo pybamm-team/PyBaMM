@@ -6,20 +6,56 @@ on:
       - main
   pull_request:
   schedule:
-    # Run everyday at 3 am UTC
-    - cron: "0 3 * * *"
-
+    # Weekly full external sweep (Mondays 03:00 UTC); PR/push only check local links.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
 
 permissions: {}
 
 jobs:
+  # PR/push gate: offline check of internal/relative links only. No network, so it
+  # never flakes on external outages, bot-blocks, or rate limits.
   linkChecker:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
+      - name: Lychee URL checker (offline, internal links)
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: >-
+            --offline
+            --no-progress
+            --exclude-path CHANGELOG.md
+            --exclude-path scripts/update_version.py
+            --exclude-path asv.conf.json
+            --exclude-path docs/conf.py
+            './**/*.rst'
+            './**/*.md'
+            './**/*.py'
+            './**/*.ipynb'
+            './**/*.json'
+            './**/*.toml'
+          fail: true
+          jobSummary: true
+          format: markdown
+
+  # Weekly external sweep: full online check. Never blocks a merge; opens a tracking
+  # issue so external link rot is triaged asynchronously instead of gating PRs.
+  externalLinkChecker:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
       # cache Lychee results to avoid hitting rate limits
       - name: Restore lychee cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -28,16 +64,14 @@ jobs:
           key: cache-lychee-${{ github.sha }}
           restore-keys: cache-lychee-
 
-      # check URLs with Lychee
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
-      # use stable version for now to avoid breaking changes
-      - name: Lychee URL checker
+      - name: Lychee URL checker (full external check)
+        id: lychee
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
-          # arguments with file types to check
           args: >-
             --cache
             --no-progress
@@ -62,10 +96,28 @@ jobs:
             './**/*.ipynb'
             './**/*.json'
             './**/*.toml'
-          # fail the action on broken links
-          fail: true
+          # Never fail the job; the issue step below surfaces any broken links.
+          fail: false
+          output: ./lychee/out.md
           jobSummary: true
           format: markdown
         env:
           # to be used in case rate limits are surpassed
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Comment on the existing open report if one exists, else open a new issue,
+      # so persistent link rot does not file a duplicate every week.
+      - name: Report broken links as an issue
+        if: steps.lychee.outputs.exit_code != 0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: Broken links found by the weekly link check
+        run: |
+          existing=$(gh issue list --state open --search "in:title $TITLE" \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file ./lychee/out.md
+          else
+            gh issue create --title "$TITLE" --body-file ./lychee/out.md
+          fi
