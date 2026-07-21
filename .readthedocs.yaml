@@ -14,9 +14,12 @@ formats:
 
 # Set the version of Python and other tools you might need
 build:
-  # Install Graphviz to build SVG files
+  # graphviz builds SVG files; the from-source SUNDIALS build uses
+  # ENABLE_LAPACK=ON, needing gfortran (configure) and libopenblas (LAPACK).
   apt_packages:
     - "graphviz"
+    - "gfortran"
+    - "libopenblas-dev"
   os: ubuntu-22.04
   tools:
     python: "3.14"
@@ -30,10 +33,15 @@ build:
     install:
       - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --group docs --extra all
     pre_build:
-      - python -m sphinx -b linkcheck -D linkcheck_timeout=20 docs/ ./linkcheck_output
+      # linkcheck is advisory: external link flake (bot-blocks, transient 5xx) must
+      # not fail the build. Broken links are swept weekly by the CI lychee job.
+      - python -m sphinx -b linkcheck -D linkcheck_timeout=20 docs/ ./linkcheck_output || true
     # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
     post_checkout:
       - git fetch --unshallow
+      # pybammsolvers is a uv workspace member built from source; fetch its
+      # SUNDIALS/SuiteSparse submodule sources so `uv sync` can compile it.
+      - git submodule update --init --recursive
     # Altered PDF build and upload job
     # This also runs on PR builds, but does not upload the PDF
     post_build:
