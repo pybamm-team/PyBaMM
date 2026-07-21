@@ -759,9 +759,27 @@ def _parse_termination(term_str, value):
 
 
 def _check_input_params(value):
-    """Check if self.value is a function of input parameters"""
+    """Check if ``value`` depends on any user-supplied ``InputParameter``.
+
+    ``BaseStep`` injects an internal ``InputParameter("start time")``
+    into ``self.value`` whenever the step value is a Python function or
+    a drive cycle (see the assignments above to ``self.value``). That
+    placeholder is an implementation detail — it is solved-in at
+    ``simulation`` time via :attr:`Simulation._START_TIME_INPUT` and is
+    not user-controllable. Treating it as a real ``InputParameter``
+    here misclassifies every Python-function step as
+    "uses InputParameter", which then incorrectly forces an operator on
+    plain string terminations like ``"4.3 V"`` (issue #5018) and turns
+    off direction inference for ``pybamm.step.current(callable, ...)``.
+
+    Genuine user InputParameters (any other name) still trigger the
+    check, so existing behaviour for symbolic values like
+    ``pybamm.InputParameter("I_app")`` or ``I_coeff * pybamm.t`` is
+    preserved.
+    """
     leaves = value.post_order(filter=lambda node: len(node.children) == 0)
     contains_input_parameter = any(
-        isinstance(leaf, pybamm.InputParameter) for leaf in leaves
+        isinstance(leaf, pybamm.InputParameter) and leaf.name != "start time"
+        for leaf in leaves
     )
     return contains_input_parameter
