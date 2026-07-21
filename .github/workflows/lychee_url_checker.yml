@@ -48,7 +48,7 @@ jobs:
             --skip-missing
             --exclude-loopback
             --exclude https://twitter.com/pybamm_
-            --exclude "https://doi\.org|www.sciencedirect\.com/*"
+            --exclude "https?://(dx\.)?doi\.org|www.sciencedirect\.com/*"
             --exclude https://www.rse.ox.ac.uk
             --exclude https://realpython\.com
             --accept 200,429
