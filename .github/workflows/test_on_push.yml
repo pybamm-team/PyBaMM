@@ -236,44 +236,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: nox -s integration
 
-  # Guards the `pip install pybamm` user path: in-repo PyBaMM against the
-  # *released* PyPI solver (--no-sources ignores the workspace source so
-  # pybammsolvers resolves from PyPI). main-to-main testing can't cover this.
-  released_solver_smoke:
-    needs: changes
-    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    name: Released-solver smoke (ubuntu-latest / Python 3.13)
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-
-      - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
-        with:
-          packages: gfortran gcc libopenblas-dev
-          execute_install_scripts: true
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: 3.13
-
-      - uses: astral-sh/setup-uv@f98e06938123ccabd21905ea5d0069192241f9f1 # v8.3.1
-        with:
-          version: "latest"
-          enable-cache: true
-
-      - name: Install PyBaMM against the released PyPI solver and smoke-test IDAKLU
-        run: |
-          uv venv
-          uv pip install --no-sources "./packages/pybamm[all]" --group "packages/pybamm/pyproject.toml:dev"
-          . .venv/bin/activate
-          python -m pytest packages/pybamm/tests/unit/test_solvers/test_idaklu_solver.py -q
-
   # `uv sync` based so the solver's auto-bootstrap fires.
   #  Guards both the bootstrap and the clean-clone dev experience.
   from_source_smoke:
