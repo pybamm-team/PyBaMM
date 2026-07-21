@@ -160,9 +160,8 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     ic = state.initial_conditions if state is not None else None
     te = state.thermal_environment if state is not None else None
 
-    # Fields PyBaMM always needs: temperatures default to the (always-present)
-    # reference temperature, the electrolyte concentration to 1 M (the reference
-    # c_e0 that normalises the exchange-current density).
+    # Fields PyBaMM always needs: temperatures default to the reference temperature,
+    # the electrolyte concentration to 1 M (the reference c_e0).
     T_ref = pybamm_dict["Reference temperature [K]"]
     defaulted: list[str] = []
     for target, bpx_value, default in (

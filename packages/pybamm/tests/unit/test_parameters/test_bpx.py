@@ -158,9 +158,8 @@ class TestBPX:
         assert "check_already_exists" not in params.keys()
 
     def test_bpx_emits_current_particle_diffusivity_name(self, tmp_path):
-        # a BPX-derived set must use only the current "particle diffusivity" name;
-        # emitting the deprecated "electrode diffusivity" alias too would let it
-        # silently clobber the current value on any later re-normalisation
+        # a BPX set must emit only the current "particle diffusivity" name; also
+        # emitting the deprecated alias would let it clobber the value on re-normalisation
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(copy.deepcopy(self.base)))
 
@@ -735,8 +734,7 @@ class TestBPX:
 
     def test_bpx_default_initial_concentrations_at_full_charge(self):
         # self.base gives no initial SOC, so concentrations default to full charge
-        # (theta_max negative / theta_min positive) without invoking
-        # set_initial_state.
+        # (theta_max negative / theta_min positive) without invoking set_initial_state.
         bpx_obj = copy.deepcopy(self.base)
         neg = bpx_obj["Parameterisation"]["Negative electrode"]
         pos = bpx_obj["Parameterisation"]["Positive electrode"]

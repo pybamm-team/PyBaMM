@@ -742,9 +742,8 @@ class ParameterValues:
                         f"the deprecated '{param}' untouched.",
                         stacklevel=2,
                     )
-                # current name takes precedence so the deprecated alias can no
-                # longer silently overwrite it; the deprecated key is kept for
-                # backward compatibility (custom models may still reference it)
+                # current name takes precedence so the deprecated alias can no longer
+                # overwrite it; the deprecated key is kept for backward compatibility
                 values.setdefault(new_param, values[param])
             if is_deprecated_msmr_name(param):
                 new_param = replace_deprecated_msmr_name(param)
