@@ -14,10 +14,11 @@ formats:
 
 # Set the version of Python and other tools you might need
 build:
-  # graphviz builds SVG files; libopenblas provides the LAPACK that the
-  # from-source SUNDIALS build (ENABLE_LAPACK=ON) links against.
+  # graphviz builds SVG files; the from-source SUNDIALS build uses
+  # ENABLE_LAPACK=ON, needing gfortran (configure) and libopenblas (LAPACK).
   apt_packages:
     - "graphviz"
+    - "gfortran"
     - "libopenblas-dev"
   os: ubuntu-22.04
   tools:
