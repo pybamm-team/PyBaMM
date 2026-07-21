@@ -56,6 +56,8 @@ jobs:
             --exclude-path ./scripts/update_version.py
             --exclude-path asv.conf.json
             --exclude-path docs/conf.py
+            --exclude-path ./scripts/check_changelog.py
+            --exclude-path ./packages/pybamm/tests/unit/test_scripts/test_check_changelog.py
             './**/*.rst'
             './**/*.md'
             './**/*.py'
