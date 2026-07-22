@@ -138,12 +138,16 @@ jobs:
 
     strategy:
       fail-fast: false
-      # PR matrix: full Python on Linux + min/max endpoints on the 10x macOS/Windows
-      # runners; macos-15-intel and interior versions run nightly (run_periodic_tests.yml).
+      # PR matrix: full Python on x86 Linux + min/max endpoints on the ARM Linux,
+      # macOS, and Windows runners; interior versions run nightly (run_periodic_tests.yml).
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         include:
+          - os: ubuntu-24.04-arm
+            python-version: "3.10"
+          - os: ubuntu-24.04-arm
+            python-version: "3.14"
           - os: macos-latest
             python-version: "3.10"
           - os: macos-latest
@@ -167,14 +171,14 @@ jobs:
 
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
-        if: matrix.os == 'ubuntu-latest'
+        if: startsWith(matrix.os, 'ubuntu')
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
 
       # dot -c is for registering graphviz fonts and plugins
       - name: Install OpenBLAS and TeXLive for Linux
-        if: matrix.os == 'ubuntu-latest'
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
           sudo dot -c
@@ -215,7 +219,7 @@ jobs:
       - name: Download in-repo solver wheels
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: ${{ matrix.os == 'ubuntu-latest' && 'wheels_manylinux' || matrix.os == 'windows-latest' && 'wheels_windows' || format('wheels_{0}', matrix.os) }}
+          name: ${{ matrix.os == 'ubuntu-latest' && 'wheels_manylinux' || matrix.os == 'ubuntu-24.04-arm' && 'wheels_manylinux_aarch64' || matrix.os == 'windows-latest' && 'wheels_windows' || format('wheels_{0}', matrix.os) }}
           path: solver-wheels
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
