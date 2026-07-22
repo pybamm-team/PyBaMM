@@ -25,9 +25,9 @@ dev = [
     "pre-commit",
     # pybammsolvers build toolchain, required in the venv because the solver is
     # installed with --no-build-isolation (above) and rebuilds itself on import.
-    "scikit-build-core>=0.10",
+    "scikit-build-core>=1.0.3",
     "pybind11>=3.0.1",
-    "cmake>=3.13",
+    "cmake>=4.4.0",
     "ninja",
 ]
 
