@@ -89,6 +89,94 @@ class TestSimulationExperiment:
         assert len(sol.cycles) == 5  # cycles wiring preserved
         assert sol.summary_variables is not None
 
+    def test_solve_time_includes_unsaved_cycles(self, monkeypatch):
+        """save_at_cycles must not drop unsaved cycles from the timers (#2484)."""
+        # Pin the per-step timer so the totals are deterministic.
+        monkeypatch.setattr(pybamm.Timer, "time", lambda self: pybamm.TimerTime(1.0))
+
+        def run(**kwargs):
+            exp = pybamm.Experiment(
+                [("Discharge at 1C until 3.0V", "Charge at 1C until 4.2V")] * 3,
+                period=600,
+            )
+            sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=exp)
+            sim.solve(**kwargs)
+            return sim.solution
+
+        full = run()
+        saved = run(save_at_cycles=[1])
+
+        # The saved run drops cycles, but its timers still cover all of them.
+        assert any(cycle is None for cycle in saved.cycles)
+        assert all(cycle is not None for cycle in full.cycles)
+        assert saved.solve_time.value == full.solve_time.value
+        assert saved.integration_time.value == full.integration_time.value
+        assert full.solve_time.value > 0
+        assert full.integration_time.value > 0
+
+    def test_solve_time_seeded_from_starting_solution(self, monkeypatch):
+        """starting_solution time carries over and the new cycles add to it (#2484)."""
+        monkeypatch.setattr(pybamm.Timer, "time", lambda self: pybamm.TimerTime(1.0))
+
+        def make_sim(n_cycles):
+            exp = pybamm.Experiment(
+                [("Discharge at 1C until 3.0V", "Charge at 1C until 4.2V")] * n_cycles,
+                period=600,
+            )
+            return pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=exp)
+
+        start = make_sim(2).solve()
+        start_time = start.solve_time.value
+
+        resumed_full = make_sim(3).solve(starting_solution=start)
+        resumed_saved = make_sim(3).solve(starting_solution=start, save_at_cycles=[1])
+
+        # The carried-over total is kept and added to, and dropping saved
+        # cycles leaves it unchanged.
+        assert any(cycle is None for cycle in resumed_saved.cycles)
+        assert resumed_full.solve_time.value > start_time
+        assert resumed_saved.solve_time.value == resumed_full.solve_time.value
+        assert resumed_saved.integration_time.value == (
+            resumed_full.integration_time.value
+        )
+
+    def test_solve_time_counts_starting_solution_padding_rest(self, monkeypatch):
+        """A start_time gap on resume inserts a padding rest that is counted (#2484)."""
+        monkeypatch.setattr(pybamm.Timer, "time", lambda self: pybamm.TimerTime(1.0))
+        model = pybamm.lithium_ion.SPM()
+
+        def resume_solve_time(second_start_time):
+            exp1 = pybamm.Experiment(
+                [
+                    pybamm.step.string(
+                        "Discharge at 1C for 10 minutes",
+                        start_time=datetime(2023, 1, 1, 8, 0, 0),
+                    ),
+                ]
+            )
+            start = pybamm.Simulation(model, experiment=exp1).solve(calc_esoh=False)
+            exp2 = pybamm.Experiment(
+                [
+                    pybamm.step.string(
+                        "Discharge at 1C for 10 minutes",
+                        start_time=second_start_time,
+                    ),
+                ]
+            )
+            resumed = pybamm.Simulation(model, experiment=exp2).solve(
+                starting_solution=start, calc_esoh=False
+            )
+            return resumed.solve_time.value
+
+        # No gap: the second step starts exactly when the first run ended (8:10).
+        no_gap = resume_solve_time(datetime(2023, 1, 1, 8, 10, 0))
+        # Gap: the second step starts an hour later, so solve() runs a padding rest.
+        with_gap = resume_solve_time(datetime(2023, 1, 1, 9, 10, 0))
+
+        # The only extra work is the padding-rest solve, whose time must be
+        # included (one extra pinned 1.0 measurement).
+        assert with_gap == no_gap + 1.0
+
     def test_unified_model_mode_validation_and_blockers(self):
         with pytest.raises(ValueError, match="experiment_model_mode must be one of"):
             pybamm.Simulation(
