@@ -703,6 +703,62 @@ class TestConvertParameterValuesToJson:
         assert "p1" in data
         assert "p2" in data
 
+    def test_accepts_plain_mapping(self):
+        """A raw dict serializes identically to a ParameterValues wrapper."""
+
+        def my_function(x):
+            return x * 2
+
+        raw = {"p1": 42, "p2": my_function}
+        from_dict = convert_parameter_values_to_json(raw)
+        from_pv = convert_parameter_values_to_json(pybamm.ParameterValues(raw))
+        assert from_dict == from_pv
+
+
+class TestSerializeParameterValue:
+    """Per-value dispatch exposed publicly (fix for raw-mapping serialisation)."""
+
+    def test_roundtrip_scalar(self):
+        wire = pybamm.serialize_parameter_value("a", 3.14)
+        assert pybamm.deserialize_parameter_value(wire) == 3.14
+
+    def test_roundtrip_symbol(self):
+        expr = 1 + pybamm.Parameter("k")
+        wire = pybamm.serialize_parameter_value("expr", expr)
+        restored = pybamm.deserialize_parameter_value(wire)
+        assert restored == expr
+
+    def test_roundtrip_callable(self):
+        def double(x):
+            return 2 * x
+
+        wire = pybamm.serialize_parameter_value("f", double)
+        restored = pybamm.deserialize_parameter_value(wire)
+        pv = pybamm.ParameterValues({"f": restored})
+        fp = pybamm.FunctionParameter("f", {"x": pybamm.Scalar(5)})
+        assert pv.evaluate(fp) == 10.0
+
+    def test_roundtrip_interpolant(self):
+        x_data = np.linspace(0, 1, 20)
+        y_data = 2 * x_data**2
+
+        def ocp(sto):
+            return pybamm.Interpolant(x_data, y_data, sto, name="ocp")
+
+        wire = pybamm.serialize_parameter_value("OCP [V]", ocp)
+        restored = pybamm.deserialize_parameter_value(wire)
+        pv_orig = pybamm.ParameterValues({"OCP [V]": ocp})
+        pv = pybamm.ParameterValues({"OCP [V]": restored})
+        fp = pybamm.FunctionParameter("OCP [V]", {"sto": pybamm.Scalar(0.5)})
+        np.testing.assert_array_equal(pv.evaluate(fp), pv_orig.evaluate(fp))
+
+    def test_matches_convert_parameter_values_to_json(self):
+        """Per-value dispatch agrees with the whole-mapping entry point."""
+        pv = pybamm.ParameterValues({"a": 42, "expr": 1 + pybamm.Parameter("k")})
+        whole = convert_parameter_values_to_json(pv)
+        per_value = {k: pybamm.serialize_parameter_value(k, v) for k, v in pv.items()}
+        assert per_value == whole
+
 
 # ------------------------------------------------------------------ #
 # Stress tests: every callable across every parameter set
