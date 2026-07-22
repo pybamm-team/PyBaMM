@@ -12,19 +12,19 @@ maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 requires-python = ">=3.10, <3.15"
 readme = { file = "README.md", content-type = "text/markdown" }
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-    "Topic :: Scientific/Engineering",
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering",
 ]
 dependencies = [
     "pybammsolvers>=0.9.0,<0.10.0",
@@ -53,66 +53,68 @@ Changelog = "https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md"
 # For example notebooks
 examples = ["jupyter"]
 plot = [
-    # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
-    # on systems without an attached display, it should never be imported
-    # outside of plot() methods.
-    "matplotlib>=3.6.0",
+  # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
+  # on systems without an attached display, it should never be imported
+  # outside of plot() methods.
+  "matplotlib>=3.6.0",
 ]
 cite = ["pybtex>=0.25.0"]
-# For diffsl export integration tests
-pydiffsol = ["pydiffsol>=0.5.2"]
+# For diffsl tests
+pydiffsol = ["pydiffsol>=0.6.1"]
 # Battery Parameter eXchange format
 bpx = ["bpx>=1.1.1,<1.2.0"]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
-jax = ["jax>=0.7.0, <0.9.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+jax = [
+  "jax>=0.7.0, <0.9.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
+]
 # Contains all optional dependencies, except for jax, and dev dependencies
 all = [
-    "scikit-fem>=8.1.0",
-    "meshio>=5.3.0",
-    "pybamm[examples,plot,cite,bpx,tqdm]",
+  "scikit-fem>=8.1.0",
+  "meshio>=5.3.0",
+  "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
 
 [dependency-groups]
 docs = [
-    "sphinx>=6",
-    "sphinx_rtd_theme>=0.5",
-    "pydata-sphinx-theme",
-    "sphinx_design",
-    "sphinx-copybutton",
-    "myst-parser",
-    "sphinx-inline-tabs",
-    "sphinxcontrib-bibtex",
-    "sphinx-autobuild",
-    "sphinx-last-updated-by-git",
-    "nbsphinx",
-    "ipykernel",
-    "ipywidgets",
-    "sphinx-gallery",
-    "sphinx-docsearch",
+  "sphinx>=6",
+  "sphinx_rtd_theme>=0.5",
+  "pydata-sphinx-theme",
+  "sphinx_design",
+  "sphinx-copybutton",
+  "myst-parser",
+  "sphinx-inline-tabs",
+  "sphinxcontrib-bibtex",
+  "sphinx-autobuild",
+  "sphinx-last-updated-by-git",
+  "nbsphinx",
+  "ipykernel",
+  "ipywidgets",
+  "sphinx-gallery",
+  "sphinx-docsearch",
 ]
 dev = [
-    # For working with pre-commit hooks
-    "pre-commit",
-    # For code style checks: linting and auto-formatting
-    "ruff",
-    # For running testing sessions
-    "nox",
-    # For coverage
-    "pytest-cov",
-    # For doctest
-    "pytest-doctestplus",
-    # pytest and its plugins
-    "pytest>=9.0",
-    "pytest-xdist",
-    "pytest-mock",
-    "pytest-snapshot",
-    # For testing Jupyter notebooks
-    "nbmake",
-    # To access the metadata for python packages
-    "importlib-metadata; python_version < '3.10'",
-    # For property based testing
-    "hypothesis",
+  # For working with pre-commit hooks
+  "pre-commit",
+  # For code style checks: linting and auto-formatting
+  "ruff",
+  # For running testing sessions
+  "nox",
+  # For coverage
+  "pytest-cov",
+  # For doctest
+  "pytest-doctestplus",
+  # pytest and its plugins
+  "pytest>=9.0",
+  "pytest-xdist",
+  "pytest-mock",
+  "pytest-snapshot",
+  # For testing Jupyter notebooks
+  "nbmake",
+  # To access the metadata for python packages
+  "importlib-metadata; python_version < '3.10'",
+  # For property based testing
+  "hypothesis",
 ]
 
 [project.entry-points."pybamm_parameter_sets"]
@@ -159,21 +161,29 @@ build.hooks.vcs.version-file = "src/pybamm/_version.py"
 # pyproject. Without this, setuptools_scm looks for .git in packages/pybamm/,
 # fails, and falls back to 0.0.0.
 root = "../.."
-git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--match", "pybamm-v*"]
+git_describe_command = [
+  "git",
+  "describe",
+  "--dirty",
+  "--tags",
+  "--long",
+  "--match",
+  "pybamm-v*",
+]
 tag_regex = '^pybamm-v(?P<version>[0-9].*)$'
 
 [tool.repo-review]
 ignore = [
-    "MY",     # ignore all MyPy setting checks (MY101, MY103, MY104, MY105, MY106)
-    "PP004",  # ignore the check that prevents an upper cap on Python requires
-    "PP308",  # ignore the explicit pytest summary flag (-ra) check
-    "PC140",  # ignore missing type checker in pre-commit
-    "PC160",  # ignore missing spell checker in pre-commit
-    "PC180",  # ignore missing markdown formatter in pre-commit
-    "RF102",  # ignore the missing isort selection in Ruff configuration
-    "PP006",  # ignore dev dependency group should be defined
-    "NOX201", # ignore set a script block with dependencies in your noxfile
-    "NOX202", # ignore noxfile has a shebang line
+  "MY",     # ignore all MyPy setting checks (MY101, MY103, MY104, MY105, MY106)
+  "PP004",  # ignore the check that prevents an upper cap on Python requires
+  "PP308",  # ignore the explicit pytest summary flag (-ra) check
+  "PC140",  # ignore missing type checker in pre-commit
+  "PC160",  # ignore missing spell checker in pre-commit
+  "PC180",  # ignore missing markdown formatter in pre-commit
+  "RF102",  # ignore the missing isort selection in Ruff configuration
+  "PP006",  # ignore dev dependency group should be defined
+  "NOX201", # ignore set a script block with dependencies in your noxfile
+  "NOX202", # ignore noxfile has a shebang line
 ]
 
 # NOTE: The shared [tool.ruff] config was hoisted to the repo-root pyproject.toml
@@ -188,14 +198,14 @@ testpaths = ["tests"]
 console_output_style = "progress"
 xfail_strict = true
 filterwarnings = [
-    "error",
-    # ignore internal nbmake warnings
-    'ignore:unclosed \<socket.socket:ResourceWarning',
-    'ignore:unclosed event loop \<:ResourceWarning',
-    # ignore warnings generated while running tests
-    "ignore::DeprecationWarning",
-    "ignore::UserWarning",
-    "ignore::RuntimeWarning",
+  "error",
+  # ignore internal nbmake warnings
+  'ignore:unclosed \<socket.socket:ResourceWarning',
+  'ignore:unclosed event loop \<:ResourceWarning',
+  # ignore warnings generated while running tests
+  "ignore::DeprecationWarning",
+  "ignore::UserWarning",
+  "ignore::RuntimeWarning",
 ]
 
 # Logging configuration
@@ -218,7 +228,7 @@ disable_error_code = ["call-overload", "operator"]
 
 [[tool.mypy.overrides]]
 module = [
-    "pybamm.models.base_model.*",
-    "pybamm.models.full_battery_models.base_battery_model.*",
+  "pybamm.models.base_model.*",
+  "pybamm.models.full_battery_models.base_battery_model.*",
 ]
 disable_error_code = "attr-defined"

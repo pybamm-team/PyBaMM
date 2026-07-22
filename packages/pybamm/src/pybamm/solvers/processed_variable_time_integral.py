@@ -19,6 +19,7 @@ class ProcessedVariableTimeIntegral:
     discrete_times: npt.NDArray[np.float64] | None
     post_sum_node: pybamm.Symbol | None = None
     post_sum: casadi.Function | None = None
+    sens_fun: casadi.Function | None = None
 
     def postfix_sum(self, entries, t_pts) -> np.ndarray:
         if self.method == "discrete":
@@ -70,9 +71,14 @@ class ProcessedVariableTimeIntegral:
         the_integral = self.postfix_sum(sensitivities, t_pts)
         if self.post_sum_node is None:
             return the_integral
+        sens_fun = self.generate_sens_fun(inputs, the_integral.shape)
+        inputs_stacked = casadi.vertcat(*[v for v in inputs.values()])
+        sens_values = sens_fun(0.0, entries, inputs_stacked, the_integral)
+        return sens_values.full()
 
-        y_casadi = casadi.MX.sym("y", entries.shape[0])
-        sens_casadi = casadi.MX.sym("s_var", the_integral.shape)
+    def generate_sens_fun(self, inputs, sens_shape):
+        y_casadi = casadi.MX.sym("y", sens_shape[0])
+        sens_casadi = casadi.MX.sym("s_var", sens_shape)
         t_casadi = casadi.MX.sym("t")
         p_casadi = {
             name: casadi.MX.sym(
@@ -81,21 +87,22 @@ class ProcessedVariableTimeIntegral:
             for name, value in inputs.items()
         }
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
-        inputs_stacked = casadi.vertcat(*[v for v in inputs.values()])
         post_sum_casadi = self.post_sum_node.to_casadi(
             t_casadi, y_casadi, inputs=p_casadi
         )
 
+        # post = (y)
+        # dpost_dy = (y, y)
+        # dpost_dp = (p, y)
         dpost_dy = casadi.jacobian(post_sum_casadi, y_casadi)
         dpost_dp = casadi.jacobian(post_sum_casadi, p_casadi_stacked)
+        # sens = (y, y) @ (s_var, y) + (p, y) = (y)
         sens = dpost_dy @ sens_casadi + dpost_dp
-        sens_fun = casadi.Function(
+        return casadi.Function(
             "sens_fun",
             [t_casadi, y_casadi, p_casadi_stacked, sens_casadi],
             [sens],
         )
-        sens_values = sens_fun(0.0, entries, inputs_stacked, the_integral)
-        return sens_values.full()
 
     @staticmethod
     def to_post_sum_expr(
@@ -123,7 +130,7 @@ class ProcessedVariableTimeIntegral:
     @staticmethod
     def from_pybamm_var(
         var: pybamm.Symbol,
-        nstates: int,
+        final_time: float | None = None,
     ) -> ProcessedVariableTimeIntegral | None:
         sum_node = None
         for symbol in var.pre_order():
@@ -145,12 +152,17 @@ class ProcessedVariableTimeIntegral:
                 var, sum_node, sum_y_len
             )
         if isinstance(sum_node, pybamm.DiscreteTimeSum):
+            discrete_times = (
+                sum_node.sum_times[sum_node.sum_times <= final_time]
+                if final_time is not None
+                else sum_node.sum_times
+            )
             return ProcessedVariableTimeIntegral(
                 method="discrete",
                 post_sum_node=post_sum_node,
                 sum_node=sum_node,
                 initial_condition=0.0,
-                discrete_times=sum_node.sum_times,
+                discrete_times=discrete_times,
             )
         elif isinstance(sum_node, pybamm.ExplicitTimeIntegral):
             if isinstance(sum_node.initial_condition, pybamm.Symbol):

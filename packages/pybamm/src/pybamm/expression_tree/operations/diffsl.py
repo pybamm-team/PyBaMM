@@ -50,6 +50,8 @@ class DiffSLExport:
             raise ValueError("float_precision must be a positive integer")
         self.float_precision = float_precision
         self._schedule_to_model_branch_order = None
+        self._input_names = None
+        self._nstates = None
         self._preprocess_model()
 
     def _preprocess_model(self) -> None:
@@ -591,6 +593,24 @@ class DiffSLExport:
                     num_terminal_states=num_terminal_states,
                 )
                 continue
+            # register Interpolant x/y data as constant tensors, store the
+            # Vector symbols on the Interpolant for later lookup
+            if (
+                isinstance(symbol, pybamm.Interpolant)
+                and symbol not in symbol_to_tensor_name
+                and symbol.dimension == 1
+            ):
+                x_vec = pybamm.Vector(np.asarray(symbol.x[0], dtype=float))
+                y_vec = pybamm.Vector(np.asarray(symbol.y, dtype=float))
+                for vec in (x_vec, y_vec):
+                    t_name, t_def = DiffSLExport.vector_to_diffeq(
+                        vec, tensor_index, float_precision=self.float_precision
+                    )
+                    tensor_index += 1
+                    symbol_to_tensor_name[vec] = t_name
+                    diffeq[t_name] = t_def
+                symbol_to_tensor_name[symbol] = (x_vec, y_vec)
+                continue
             # extract any binary operators that occur more than two times and dont involve scalars
             if (
                 isinstance(
@@ -710,7 +730,8 @@ class DiffSLExport:
         new_line = "\n"
 
         # inputs, find all pybamm.InputParameters in the model
-        inputs = [vn for _, vn in self._collect_input_names(all_vars, outputs)]
+        self._input_names = self._collect_input_names(all_vars, outputs)
+        inputs = [vn for _, vn in self._input_names]
 
         if len(inputs) > 0:
             lines = ["in_i {"]
@@ -795,6 +816,7 @@ class DiffSLExport:
             + new_line
             + "}"
         )
+        self._nstates = start_index
 
         # diff of state vector u
         if not is_ode:
@@ -1070,12 +1092,47 @@ class DiffSLExport:
 
         return "\n".join(all_lines) + "\n"
 
-    def map_inputs(self, inputs: dict, outputs: list[str] | None = None) -> np.ndarray:
+    def default_inputs(self) -> dict:
+        """
+        Return a dict of default input values for the model.
+
+        Returns
+        -------
+        dict
+            PyBaMM-style parameter dict mapping parameter names to scalar values.
+            The keys are the original PyBaMM parameter names (e.g. ``"Lower voltage cut-off [V]"``).
+        """
+        return {original_name: 1.0 for original_name, _ in self._input_names}
+
+    def input_names(self) -> list[tuple[str, str]]:
+        """
+        Return a list of input parameter names for the model.
+
+        Returns
+        -------
+        list[tuple[str, str]]
+            List of tuples containing the original PyBaMM parameter name and its diffsl-transformed form (e.g. ``("Lower voltage cut-off [V]", "lowervoltagecutoffv")``).
+        """
+        return self._input_names
+
+    def nstates(self) -> int | None:
+        """
+        Return the number of states in the model.
+
+        Returns
+        -------
+        int
+            The number of states in the model.
+        """
+        return self._nstates
+
+    def map_inputs(self, inputs: dict) -> np.ndarray:
         """
         Map a PyBaMM inputs dict to the ordered array expected by the DiffSL model.
 
-        The ordering matches the ``in_i {}`` block produced by :meth:`to_diffeq`.
-        Each key in ``inputs`` may be either the original PyBaMM parameter name
+        The ordering matches the ``in_i {}`` block produced by the most recent
+        call to :meth:`to_diffeq`, which must be called first. Each key in
+        ``inputs`` may be either the original PyBaMM parameter name
         (e.g. ``"Lower voltage cut-off [V]"``) or its DiffSL-transformed form
         (e.g. ``"lowervoltagecutoffv"``).
 
@@ -1083,9 +1140,6 @@ class DiffSLExport:
         ----------
         inputs : dict
             PyBaMM-style parameter dict mapping parameter names to scalar values.
-        outputs : list[str] or None, optional
-            Output variable names, used to scan for ``InputParameter`` nodes that
-            appear only inside output expressions.  Defaults to an empty list.
 
         Returns
         -------
@@ -1099,24 +1153,7 @@ class DiffSLExport:
         KeyError
             If a required input parameter is not present in *inputs*.
         """
-        if outputs is None:
-            outputs = []
-
-        model = self.model
-
-        # Build all_vars for the output expressions (same logic as to_diffeq)
-        all_vars = self._all_vars.copy()
-        for out in outputs:
-            if out not in all_vars:
-                raise ValueError(f"output {out} not in model")
-            if model.symbol_processor:
-                try:
-                    all_vars[out] = model.get_processed_variable(out)
-                except KeyError:  # pragma: no cover
-                    pass
-
-        # Reconstruct the ordered input list the same way to_diffeq does
-        ordered_names = self._collect_input_names(all_vars, outputs)
+        ordered_names = self._input_names
 
         if not ordered_names:
             return np.array([], dtype=float)
@@ -1135,6 +1172,40 @@ class DiffSLExport:
                 )
         return np.array(values, dtype=float)
 
+    def inverse_map_inputs(self, values: np.ndarray) -> dict:
+        """
+        Map an ordered DiffSL parameter array back to a PyBaMM inputs dict.
+
+        This is the inverse of :meth:`map_inputs`: the ``i``-th value is assigned
+        to the ``i``-th input parameter in the order of the ``in_i {}`` block
+        produced by :meth:`to_diffeq`.
+
+        Parameters
+        ----------
+        values : array_like
+            1-D array of parameter values ordered to match the ``in_i {}`` block.
+
+        Returns
+        -------
+        dict
+            PyBaMM-style parameter dict keyed by the original parameter names.
+
+        Raises
+        ------
+        ValueError
+            If the number of values does not match the number of input parameters.
+        """
+        ordered_names = self._input_names
+        values = np.asarray(values, dtype=float).reshape(-1)
+        if len(values) != len(ordered_names):
+            raise ValueError(
+                f"Expected {len(ordered_names)} parameter values, got {len(values)}."
+            )
+        return {
+            original_name: float(value)
+            for (original_name, _), value in zip(ordered_names, values, strict=True)
+        }
+
 
 def _equation_to_diffeq(
     equation: pybamm.Symbol,
@@ -1147,6 +1218,29 @@ def _equation_to_diffeq(
     if isinstance(equation, pybamm.Conditional) and equation in symbol_to_tensor_name:
         index = "j" if transpose else "i"
         return f"{symbol_to_tensor_name[equation]}_{index}[N]"
+    if isinstance(equation, pybamm.Interpolant):
+        if equation.interpolator != "linear":
+            raise ValueError(
+                "DiffSL export only supports 'linear' interpolants; "
+                f"got '{equation.interpolator}'"
+            )
+        if equation.dimension != 1:
+            raise ValueError(
+                f"DiffSL export only supports 1-D interpolants; "
+                f"got {equation.dimension}-D"
+            )
+        x_vec, y_vec = symbol_to_tensor_name[equation]
+        x_name = symbol_to_tensor_name[x_vec]
+        y_name = symbol_to_tensor_name[y_vec]
+        probe = _equation_to_diffeq(
+            equation.children[0],
+            y_slice_to_label,
+            symbol_to_tensor_name,
+            float_precision=float_precision,
+            transpose=transpose,
+            use_model_index=use_model_index,
+        )
+        return f"interp1d({x_name}_i, {y_name}_i, {probe})"
     if equation in symbol_to_tensor_name:
         if isinstance(equation, pybamm.Matrix):
             index = "ji" if transpose else "ij"
@@ -1303,6 +1397,11 @@ def equation_to_diffeq(
     )
 
 
+_DIFFSL_RESERVED = frozenset(
+    {"in", "u", "dudt", "M", "F", "out", "stop", "reset", "constant", "varying"}
+)
+
+
 def to_variable_name(name: str) -> str:
     """Convert a name to a valid diffeq variable name"""
     if name == pybamm.Simulation._STEP_VALUE_INPUT:
@@ -1311,6 +1410,8 @@ def to_variable_name(name: str) -> str:
     name = name.lower()
     for char in convert_to_underscore:
         name = name.replace(char, "")
+    if name in _DIFFSL_RESERVED:
+        name = f"x{name}"
     return name
 
 

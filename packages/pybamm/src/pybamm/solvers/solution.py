@@ -791,9 +791,7 @@ class Solution(SolutionBase):
         return self[name]
 
     def _convert_to_casadi(self, var_pybamm, inputs, ys_shape):
-        time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
-            var_pybamm, ys_shape[0]
-        )
+        time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(var_pybamm)
         if time_integral is not None:
             var_pybamm = time_integral.sum_node.child
             if time_integral.post_sum_node is not None:
