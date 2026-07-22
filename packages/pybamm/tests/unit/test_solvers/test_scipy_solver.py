@@ -24,8 +24,8 @@ class TestScipySolver:
             solver.solve(model, [0, 1], inputs={"p": 1}, calculate_sensitivities=True)
 
     def test_scipy_rejects_dae_spm(self):
-        """ScipySolver is an ODE solver and cannot solve the default SPM (now a DAE)."""
-        model = pybamm.lithium_ion.SPM()
+        """ScipySolver is an ODE solver and cannot solve a DAE model."""
+        model = pybamm.lithium_ion.SPM(options={"voltage as a state": "true"})
         sim = pybamm.Simulation(model, solver=pybamm.ScipySolver())
         with pytest.raises(
             pybamm.SolverError,
