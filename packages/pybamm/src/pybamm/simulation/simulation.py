@@ -118,6 +118,7 @@ class Simulation(BaseSimulation):
         self._experiment_padding_rest_index = None
         self._experiment_includes_padding_rest = False
         self._experiment_uses_value_input = False
+        self._experiment_termination_event_names_by_index = {}
 
     def __getstate__(self):
         """
@@ -146,6 +147,7 @@ class Simulation(BaseSimulation):
         "_experiment_padding_rest_index": None,
         "_experiment_includes_padding_rest": False,
         "_experiment_uses_value_input": False,
+        "_experiment_termination_event_names_by_index": dict,
     }
 
     def __setstate__(self, state):
@@ -350,13 +352,23 @@ class Simulation(BaseSimulation):
         # (in-place parameter processing and discretisation) through to solver.process.
         new_model.switching_control_variables = {var.name for var in submodel.algebraic}
 
-        # Combine each step's local termination expression into one experiment event,
-        # selecting the active branch with the step index input.
-        termination_branches = [
-            step.get_combined_termination_expression(variables) for step in unique_steps
-        ]
+        # The combined event is a numerical switch. Keep each branch's source
+        # event names beside it so solve can report the original step termination.
+        self._experiment_termination_event_names_by_index = {}
+        termination_branches = []
+        for step_index, step in enumerate(unique_steps, start=1):
+            events = step.get_termination_events(variables)
+            self._experiment_termination_event_names_by_index[step_index] = [
+                event.name for event in events
+            ]
+            termination_branches.append(
+                pybamm.step.BaseStep._combine_termination_events(events)
+            )
         if self._experiment_includes_padding_rest:
             termination_branches.append(pybamm.Scalar(1))
+            self._experiment_termination_event_names_by_index[
+                self._experiment_padding_rest_index
+            ] = []
         combined_termination_expression = pybamm.Conditional(
             pybamm.InputParameter(self._STEP_INDEX_INPUT),
             *termination_branches,
@@ -454,16 +466,40 @@ class Simulation(BaseSimulation):
 
         return value
 
+    def _get_unified_termination_event_names(self, inputs):
+        active_step_index = inputs[self._STEP_INDEX_INPUT]
+        if isinstance(active_step_index, np.ndarray):
+            active_step_index = active_step_index.item()
+        return self._experiment_termination_event_names_by_index[active_step_index]
+
+    def _get_step_termination_event_candidates(self, step, model, inputs):
+        candidates = []
+        for term in step.termination:
+            event = term.get_event(model.variables, step)
+            if event is not None:
+                candidates.append((event.name, event, term))
+
+        if not self._experiment_uses_unified_model:
+            return candidates
+
+        source_event_names = self._get_unified_termination_event_names(inputs)
+        # Prefer the names recorded when the unified branch was built; the events
+        # below are reconstructed only to evaluate which source termination crossed.
+        return [
+            (source_event_name, event, term)
+            for source_event_name, (_event_name, event, term) in zip(
+                source_event_names, candidates, strict=True
+            )
+        ]
+
     def _decode_combined_step_termination(self, step_solution, step, model, inputs):
         if step_solution.termination != f"event: {self._COMBINED_TERMINATION_EVENT}":
             return step_solution.termination
 
         final_event_values = {}
-        for term in step.termination:
-            event = term.get_event(model.variables, step)
-            if event is None:
-                continue
-
+        for event_name, event, term in self._get_step_termination_event_candidates(
+            step, model, inputs
+        ):
             # First try the exact symbolic event expression that the unified model used.
             # This is the closest match to what the solver just triggered.
             t = (
@@ -488,7 +524,7 @@ class Simulation(BaseSimulation):
                 )
 
             if value is not None:
-                final_event_values[event.name] = value
+                final_event_values[event_name] = value
 
         if not final_event_values:
             return step_solution.termination
@@ -585,6 +621,7 @@ class Simulation(BaseSimulation):
         self._experiment_step_indices = []
         self._experiment_padding_rest_index = None
         self._experiment_includes_padding_rest = False
+        self._experiment_termination_event_names_by_index = {}
 
         self.experiment_unique_steps_to_model = {}
         for step in self.experiment.unique_steps:
