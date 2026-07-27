@@ -65,7 +65,7 @@ class BaseParameters:
 
     @options.setter
     def options(self, extra_options):
-        if extra_options is None or type(extra_options) == dict:  # noqa: E721
+        if extra_options is None or type(extra_options) == dict:
             self._options = pybamm.BatteryModelOptions(extra_options)
         else:
             self._options = extra_options

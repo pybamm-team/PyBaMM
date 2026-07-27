@@ -756,10 +756,11 @@ class Symbol:
         """
         if variable == self:
             return pybamm.Scalar(1)
-        elif any(variable == x for x in self.pre_order()):
-            return self._diff(variable)
-        elif variable == pybamm.t and self.has_symbol_of_classes(
-            (pybamm.VariableBase, pybamm.StateVectorBase)
+        elif any(variable == x for x in self.pre_order()) or (
+            variable == pybamm.t
+            and self.has_symbol_of_classes(
+                (pybamm.VariableBase, pybamm.StateVectorBase)
+            )
         ):
             return self._diff(variable)
         else:
@@ -907,9 +908,10 @@ class Symbol:
         except TypeError as error:
             # return None if specific TypeError is raised
             # (there is a e.g. StateVector in the tree)
-            if error.args[0] == "StateVector cannot evaluate input 'y=None'":
-                return None
-            elif error.args[0] == "StateVectorDot cannot evaluate input 'y_dot=None'":
+            if (
+                error.args[0] == "StateVector cannot evaluate input 'y=None'"
+                or error.args[0] == "StateVectorDot cannot evaluate input 'y_dot=None'"
+            ):
                 return None
             else:  # pragma: no cover
                 raise error

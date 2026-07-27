@@ -21,10 +21,9 @@ class TestTracingContextManager:
         assert is_tracing() is False
 
     def test_tracing_restores_on_exception(self):
-        with pytest.raises(RuntimeError, match="boom"):
-            with tracing():
-                assert is_tracing() is True
-                raise RuntimeError("boom")
+        with pytest.raises(RuntimeError, match="boom"), tracing():
+            assert is_tracing() is True
+            raise RuntimeError("boom")
         assert is_tracing() is False
 
     def test_nested_tracing(self):

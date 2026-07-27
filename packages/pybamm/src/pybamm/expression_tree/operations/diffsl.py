@@ -736,7 +736,7 @@ class DiffSLExport:
                     matrices[symbol] = None
 
         tensor_index = 0
-        for symbol in vectors.keys():
+        for symbol in vectors:
             tensor_name, tensor_def = DiffSLExport.vector_to_diffeq(
                 symbol, tensor_index, float_precision=self.float_precision
             )
@@ -744,7 +744,7 @@ class DiffSLExport:
             symbol_to_tensor_name[symbol] = tensor_name
             diffeq[tensor_name] = tensor_def
 
-        for symbol in matrices.keys():
+        for symbol in matrices:
             tensor_name, tensor_def = DiffSLExport.matrix_to_diffeq(
                 symbol, tensor_index, float_precision=self.float_precision
             )
@@ -1045,24 +1045,24 @@ class DiffSLExport:
         # inputs and constants
         if "in" in diffeq:
             all_lines = [diffeq["in"]]
-        for key in diffeq.keys():
+        for key in diffeq:
             if key.startswith("constant"):
                 all_lines += [diffeq[key]]
         for key in state_tensors:
             all_lines += [diffeq[key]]
-        for key in diffeq.keys():
+        for key in diffeq:
             if key.startswith("varying"):
                 all_lines += [diffeq[key]]
         for key in f_and_g:
             all_lines += [diffeq[key]]
-        for key in diffeq.keys():
+        for key in diffeq:
             if key.startswith("event"):
                 all_lines += [diffeq[key]]
         for key in stop:
             all_lines += [diffeq[key]]
         if "reset" in diffeq:
             all_lines += [diffeq["reset"]]
-        for key in diffeq.keys():
+        for key in diffeq:
             if key.startswith("variable"):
                 all_lines += [diffeq[key]]
         for key in out:

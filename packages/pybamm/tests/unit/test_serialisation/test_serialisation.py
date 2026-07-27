@@ -1042,14 +1042,16 @@ class TestSerialise:
         model.name = "TestModel"
         model.rhs = {pybamm.Variable("c"): pybamm.Variable("c")}
 
-        with patch(
-            "pybamm.expression_tree.operations.serialise.convert_symbol_to_json",
-            side_effect=Exception("conversion failed"),
-        ):
-            with pytest.raises(
+        with (
+            patch(
+                "pybamm.expression_tree.operations.serialise.convert_symbol_to_json",
+                side_effect=Exception("conversion failed"),
+            ),
+            pytest.raises(
                 ValueError, match=r"Failed to save custom model: conversion failed"
-            ):
-                Serialise.save_custom_model(model, "conversion_fail")
+            ),
+        ):
+            Serialise.save_custom_model(model, "conversion_fail")
 
     def test_unsupported_schema_version(self, tmp_path):
         unhandled_schema_json = {
@@ -1749,11 +1751,11 @@ class TestSpatialMethodsSerialization:
             assert set(loaded_methods.keys()) == set(spatial_methods.keys())
 
             # Verify class types match
-            for domain in spatial_methods.keys():
+            for domain in spatial_methods:
                 assert isinstance(loaded_methods[domain], type(spatial_methods[domain]))
 
             # Verify options are preserved
-            for domain in spatial_methods.keys():
+            for domain in spatial_methods:
                 if hasattr(spatial_methods[domain], "options"):
                     assert (
                         loaded_methods[domain].options
@@ -1945,7 +1947,7 @@ class TestSubmeshTypesSerialization:
             assert set(loaded_submesh_types.keys()) == set(submesh_types.keys())
 
             # Verify class types match
-            for domain in submesh_types.keys():
+            for domain in submesh_types:
                 assert isinstance(
                     loaded_submesh_types[domain], type(submesh_types[domain])
                 )

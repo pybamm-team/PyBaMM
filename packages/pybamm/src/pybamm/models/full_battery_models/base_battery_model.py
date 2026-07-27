@@ -1192,7 +1192,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # if extra_options is a dict then process it into a BatteryModelOptions
         # this does not catch cases that subclass the dict type
         # so other submodels can pass in their own options class if needed
-        if extra_options is None or type(extra_options) == dict:  # noqa: E721
+        if extra_options is None or type(extra_options) == dict:
             options = BatteryModelOptions(extra_options)
         else:
             options = extra_options
@@ -1815,14 +1815,12 @@ class BaseBatteryModel(pybamm.BaseModel):
         Set variables that quantify degradation.
         This function is overriden by the base battery models
         """
-        pass
 
     def set_soc_variables(self):
         """
         Set variables relating to the state of charge.
         This function is overriden by the base battery models
         """
-        pass
 
     def save_model(self, filename=None, mesh=None, variables=None):
         """

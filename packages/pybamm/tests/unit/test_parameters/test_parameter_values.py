@@ -13,12 +13,12 @@ import pandas as pd
 import pytest
 
 import pybamm
-import tests.shared as shared
 from pybamm.expression_tree.exceptions import OptionError
 from pybamm.input.parameters.lithium_ion.Marquis2019 import (
     lico2_ocp_Dualfoil1998,
 )
 from pybamm.parameters.parameter_values import ParameterValues
+from tests import shared
 
 
 class TestParameterValues:

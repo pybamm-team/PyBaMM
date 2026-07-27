@@ -126,7 +126,7 @@ class Mesh(dict):
                         # variable haven't been provided, unless that variable
                         # doesn't appear in the geometry
                         if (
-                            var.name not in var_name_pts.keys()
+                            var.name not in var_name_pts
                             and var.domain[0] in geometry.keys()
                         ):
                             raise KeyError(
@@ -247,7 +247,6 @@ class Mesh(dict):
                         raise pybamm.DomainError("lr edges are not aligned")
                     else:
                         pass
-                pass
             elif self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]:
                 # submeshes are aligned, all good
                 pass

@@ -1251,7 +1251,7 @@ class ParameterValues:
         >>> param.print_evaluated_parameters(evaluated_params, "params.txt")
         """
         # Get column width for pretty printing
-        column_width = max(len(name) for name in evaluated_parameters.keys())
+        column_width = max(len(name) for name in evaluated_parameters)
         s = f"{{:>{column_width}}}"
         with open(output_file, "w") as file:
             for name, value in sorted(evaluated_parameters.items()):

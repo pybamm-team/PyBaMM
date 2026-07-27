@@ -261,7 +261,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
                     lims[var.name]["min"], lims[var.name]["max"], npts[var.name]
                 )
             elif var.name == "z":
-                ii = np.array(range(0, npts[var.name]))
+                ii = np.array(range(npts[var.name]))
                 a = lims[var.name]["min"]
                 b = lims[var.name]["max"]
                 edges[var.name] = (b - a) * (

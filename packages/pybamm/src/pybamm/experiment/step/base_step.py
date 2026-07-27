@@ -494,11 +494,10 @@ class BaseStep:
         # the switch can freeze the dynamics before the experiment termination
         # event itself crosses zero.
         for i, event in enumerate(new_model.events):
-            if event.name in ["Minimum voltage [V]", "Maximum voltage [V]"]:
-                new_model.events[i] = pybamm.Event(
-                    event.name, event.expression + 1, event.event_type
-                )
-            elif event.name == "Minimum voltage switch [V]":
+            if (
+                event.name in ["Minimum voltage [V]", "Maximum voltage [V]"]
+                or event.name == "Minimum voltage switch [V]"
+            ):
                 new_model.events[i] = pybamm.Event(
                     event.name, event.expression + 1, event.event_type
                 )

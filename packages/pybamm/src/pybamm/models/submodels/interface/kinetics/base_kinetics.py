@@ -111,9 +111,9 @@ class BaseKinetics(BaseInterface):
         # delta_phi's secondary domain is "current collector", then take only the
         # orphan.
         if isinstance(ocp, pybamm.Broadcast):
-            if self.reaction == "lithium metal plating":
-                ocp = ocp.orphans[0]
-            elif delta_phi.domains["secondary"] == ["current collector"]:
+            if self.reaction == "lithium metal plating" or delta_phi.domains[
+                "secondary"
+            ] == ["current collector"]:
                 ocp = ocp.orphans[0]
 
         # Get reaction overpotential
