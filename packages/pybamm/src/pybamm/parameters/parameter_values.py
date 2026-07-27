@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
@@ -356,8 +356,7 @@ class ParameterValues:
             raise TypeError("Input must be a filename (str or pathlib.Path) or a dict")
 
         for key, value in parameter_values_dict.items():
-            if isinstance(value, dict):
-                parameter_values_dict[key] = convert_symbol_from_json(value)
+            parameter_values_dict[key] = deserialize_parameter_value(value)
 
         return ParameterValues(parameter_values_dict)
 
@@ -1599,18 +1598,68 @@ def convert_symbols_in_dict(data_dict: dict | None = None) -> dict:
     return data_dict
 
 
+def serialize_parameter_value(name: str, value: Any) -> Any:
+    """
+    Serialize a single parameter value to a JSON-compatible representation.
+
+    The per-value dispatch used by :func:`convert_parameter_values_to_json`:
+    callables are first traced to a symbolic expression, everything else is
+    encoded directly.
+
+    Parameters
+    ----------
+    name : str
+        The parameter name (used only to name a traced callable).
+    value : Any
+        The parameter value: a callable, a :class:`pybamm.Symbol`, or a scalar.
+
+    Returns
+    -------
+    Any
+        The JSON representation: a dict for symbols, a scalar otherwise.
+    """
+    if callable(value):
+        return convert_symbol_to_json(
+            convert_function_to_symbolic_expression(value, name)
+        )
+    return convert_symbol_to_json(value)
+
+
+def deserialize_parameter_value(value: Any) -> Any:
+    """
+    Reconstruct a single parameter value from its JSON representation.
+
+    Inverse of :func:`serialize_parameter_value`: dicts are decoded back to
+    :class:`pybamm.Symbol` objects, scalars pass through unchanged.
+
+    Parameters
+    ----------
+    value : Any
+        The JSON representation of a single parameter value.
+
+    Returns
+    -------
+    Any
+        The reconstructed value.
+    """
+    if isinstance(value, dict):
+        return convert_symbol_from_json(value)
+    return value
+
+
 def convert_parameter_values_to_json(
-    parameter_values: ParameterValues, filename: str | None = None
+    parameter_values: Mapping[str, Any], filename: str | None = None
 ) -> dict:
     """
-    Convert a ParameterValues object to a JSON-serializable dictionary.
+    Convert a mapping of parameter values to a JSON-serializable dictionary.
 
     Optionally saves it to a file.
 
     Parameters
     ----------
-    parameter_values : ParameterValues
-        The ParameterValues object to convert.
+    parameter_values : Mapping
+        The parameter values to convert. Any mapping of ``{name: value}`` is
+        accepted, not only a :class:`ParameterValues` object.
     filename : str, optional
         The filename to save the JSON file to.
 
@@ -1628,15 +1677,9 @@ def convert_parameter_values_to_json(
     >>> convert_parameter_values_to_json(param, "params.json")
     {'Temperature [K]': 298.15}
     """
-    parameter_values_dict = {}
-
-    for k, v in parameter_values.items():
-        if callable(v):
-            parameter_values_dict[k] = convert_symbol_to_json(
-                convert_function_to_symbolic_expression(v, k)
-            )
-        else:
-            parameter_values_dict[k] = convert_symbol_to_json(v)
+    parameter_values_dict = {
+        k: serialize_parameter_value(k, v) for k, v in parameter_values.items()
+    }
 
     if filename is not None:
         with open(filename, "w") as f:

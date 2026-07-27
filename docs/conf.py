@@ -97,6 +97,8 @@ linkcheck_ignore = [
     "https://pubs.acs.org",  # ACS blocks automated link checking
     "https://doi.org/10.1021/acsaem.2c02047",  # ACS DOI 403s automated checkers
     "https://realpython.com",  # Real Python (Cloudflare) blocks automated link checking
+    # RSC (pubs.rsc.org) 403s automated checkers; DOI appears as doi.org and dx.doi.org
+    r"https?://(dx\.)?doi\.org/10\.1039/D2CP00417H",
 ]
 
 # GitHub prefixes Markdown heading anchors with "user-content-" in the rendered

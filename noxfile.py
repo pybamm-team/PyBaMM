@@ -105,6 +105,8 @@ def install_locked(session, *, extras=None, groups=None):
 def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
+    # sys.monitoring core (Python 3.12+) slashes coverage tracing overhead.
+    session.env["COVERAGE_CORE"] = "sysmon"
     install_locked(session, extras=["all", "jax"], groups=["dev"])
     # Using plugin here since coverage runs unit tests on linux with latest python version.
     if "CI" in os.environ:

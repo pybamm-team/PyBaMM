@@ -1,5 +1,17 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.7.1.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.7.1.0) - 2026-07-22
+
+## Breaking changes
+
+- Reverted the "voltage as a state" default back to "false", undoing the [v26.7.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.7.0.0) change to "true". Promoting voltage to an algebraic state turns SPM/SPMe into DAEs and places voltage under solver error control, which caused IDAKLU error-test failures on solves of discontinuous (pulsed) current profiles at the default tolerances, and lowered voltage-output accuracy. The option remains available (`{"voltage as a state": "true"}`) and is still enabled automatically for the "explicit power" and "explicit resistance" operating modes. ([#5670](https://github.com/pybamm-team/PyBaMM/pull/5670))
+
+## Features
+
+- Exposed the per-value parameter serialisation dispatch publicly as `pybamm.serialize_parameter_value`/`pybamm.deserialize_parameter_value`, and `convert_parameter_values_to_json` now accepts any `Mapping` (not just a `ParameterValues`), so a raw `{name: value}` mapping can be serialised without constructing a throwaway `ParameterValues`. ([#5663](https://github.com/pybamm-team/PyBaMM/pull/5663))
+
+# [v26.7.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.7.0.0) - 2026-07-21
+
 ## Breaking changes
 
 - The minimum supported NumPy version is now `2.0.0` for both `pybamm` and `pybammsolvers` (previously unpinned). NumPy 1.x is no longer supported. ([#5647](https://github.com/pybamm-team/PyBaMM/pull/5647))
@@ -10,17 +22,20 @@
 
 - `pybammsolvers` now ships Linux `aarch64` (arm64) wheels, built on `manylinux_2_34` native ARM runners. The libstdc++ `std::string` ABI (`_GLIBCXX_USE_CXX11_ABI`) is now detected from the linked CasADi library instead of hard-coded, resolving the unresolved-symbol failure against CasADi's C++11-ABI aarch64 wheel. ([#5653](https://github.com/pybamm-team/PyBaMM/pull/5653))
 - Added `skip_surface_form_check` option to `EISSimulation` to bypass the surface form validation. ([#5632](https://github.com/pybamm-team/PyBaMM/pull/5632))
-- Added ability to export pybamm.Simulation with experiments to DiffSL format ([#5557)](https://github.com/pybamm-team/PyBaMM/pull/5557))
+- Added ability to export pybamm.Simulation with experiments to DiffSL format ([#5557](https://github.com/pybamm-team/PyBaMM/pull/5557))
 - PyBaMM and `pybammsolvers` now develop in a single repository — a UV workspace under `packages/` — while continuing to release independently to PyPI. Release tags are namespaced (`pybamm-v*` and `pybammsolvers-v*`), and PyBaMM's CI now tests against the in-repo solver on every platform. The published `pybamm` package and its dependency on `pybammsolvers` are unchanged for users. See `RELEASE.md` for the release model. ([#5512](https://github.com/pybamm-team/PyBaMM/issues/5512))
 - Legacy BPX v0.x files/objects now load again: `bpx` itself detects and converts them to the v1.x schema on a best-effort basis (with a `UserWarning`), so `ParameterValues.create_from_bpx`/`create_from_bpx_obj` no longer raise a `ValidationError`. PyBaMM officially supports `bpx>=1`. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
 - `create_from_bpx`/`create_from_bpx_obj` now also accept BPX files that omit `State` fields (or the whole `State` section): the ambient/initial temperatures default to the reference temperature and the initial electrolyte concentration to 1000 mol.m-3 (logged), while opt-in fields (initial hysteresis state, heat transfer coefficient) are left for the model to default. ([#5574](https://github.com/pybamm-team/PyBaMM/pull/5574))
 
 ## Bug fixes
 
+- Fixed `ParameterValues.to_json` (and `Serialise` of parameter values) raising `TypeError: ... got multiple values for argument` on `create_from_bpx` outputs, whose functional parameters are `functools.partial` objects with keyword-bound arguments (e.g. constant diffusivity, tabular OCPs, exchange-current density). The serialiser now only creates symbols for a partial's remaining required arguments, leaving bound and defaulted arguments in place. ([#5641](https://github.com/pybamm-team/PyBaMM/pull/5641))
+- Fixed the Dependabot `uv` update job failing to resolve the workspace (`ModuleNotFoundError: No module named 'scikit_build_core'`): `pybammsolvers` now declares a static `version` in `pyproject.toml`, so build-tool-less resolvers read its metadata without invoking the scikit-build-core backend. `version.py` remains the single source of truth, mirrored into `pyproject.toml` and `vcpkg.json` by a new `sync-pybammsolvers-version` pre-commit hook. ([#5655](https://github.com/pybamm-team/PyBaMM/pull/5655))
 - Fixed the `pybammsolvers` Windows wheels failing to build: vcpkg's transitive reference-LAPACK/Fortran toolchain chain broke on a pruned upstream MSYS2 download (a 404). The Windows build now avoids that chain, using a `suitesparse-klu`-only sundials port and vcpkg 2026.06.24 on a `windows-2025` runner. ([#5650](https://github.com/pybamm-team/PyBaMM/pull/5650))
 - Fixed the deprecated `"<X> electrode diffusivity [m2.s-1]"` alias silently overriding the current `"<X> particle diffusivity [m2.s-1]"`: the current name now takes precedence in `ParameterValues` (instead of being overwritten by the deprecated alias), and a warning is raised when both are set, so setting or fitting `particle diffusivity` is no longer a silent no-op. The deprecated key is retained for backward compatibility, and `create_from_bpx` now emits only the current `particle diffusivity` name. ([#5642](https://github.com/pybamm-team/PyBaMM/pull/5642))
 - Fixed the `pybammsolvers` source distribution bundling the SUNDIALS/SuiteSparse submodule trees (~291 MB, over PyPI's per-file limit) when built from a checkout with the submodules initialised; the sdist now excludes them. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
 - Fixed the `pybammsolvers` editable auto-rebuild failing to configure when the SUNDIALS/SuiteSparse submodules are absent even though the libraries were already built in `.idaklu`; the from-source bootstrap (and its submodule requirement) is now skipped once the libraries exist. ([#5623](https://github.com/pybamm-team/PyBaMM/pull/5623))
+- Fixed the Read the Docs documentation build, which broke once `pybammsolvers` became a workspace member with no published wheel during the release: RTD now fetches the SUNDIALS/SuiteSparse submodules and installs `gfortran`/`libopenblas` so the solver builds from source. Link checking was also restructured so transient external-link failures no longer block builds: Sphinx `linkcheck` is advisory, and the CI `lychee` check runs offline on PRs with a weekly external sweep that files a tracking issue. ([#5659](https://github.com/pybamm-team/PyBaMM/pull/5659))
 
 # [v26.6.2.0](https://github.com/pybamm-team/PyBaMM/tree/v26.6.2.0) - 2026-06-16
 

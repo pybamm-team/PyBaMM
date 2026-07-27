@@ -728,7 +728,7 @@ class TestSimulationExperiment:
         # With "voltage as a state" the algebraic block also holds a "Voltage [V]" row,
         # which is physics and must NOT be picked up as a switch row.
         sim = pybamm.Simulation(
-            pybamm.lithium_ion.SPM(),
+            pybamm.lithium_ion.SPM({"voltage as a state": "true"}),
             experiment=pybamm.Experiment(
                 [("Charge at 1 A for 1 min", "Hold at 4.1 V for 1 min")]
             ),

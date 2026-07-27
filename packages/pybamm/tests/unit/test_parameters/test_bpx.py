@@ -274,6 +274,27 @@ class TestBPX:
             dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](c)
             assert isinstance(dUdT, pybamm.Interpolant)
 
+    @pytest.mark.parametrize("form", ["function", "constant", "table"])
+    def test_bpx_to_json_roundtrip(self, tmp_path, form):
+        """create_from_bpx stores functional parameters as keyword-bound partials;
+        serialising them must not raise (regression for the partial arg handling
+        in convert_function_to_symbolic_expression)."""
+        bpx_obj = copy.deepcopy(self.base)
+        if form != "function":
+            value = 1 if form == "constant" else {"x": [0, 1], "y": [0, 1]}
+            for section in ["Electrolyte", "Negative electrode", "Positive electrode"]:
+                bpx_obj["Parameterisation"][section]["Diffusivity [m2.s-1]"] = value
+            bpx_obj["Parameterisation"]["Electrolyte"]["Conductivity [S.m-1]"] = value
+
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(bpx_obj))
+        param = pybamm.ParameterValues.create_from_bpx(temp_file)
+
+        out_file = tmp_path / "out.json"
+        param.to_json(out_file)
+        # the round-tripped values load back without error
+        pybamm.ParameterValues.from_json(out_file)
+
     def test_bpx_soc_error(self):
         bpx_obj = copy.deepcopy(self.base)
         with (

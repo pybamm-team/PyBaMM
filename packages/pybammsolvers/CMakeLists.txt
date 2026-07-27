@@ -24,11 +24,13 @@ endif()
 
 project(idaklu)
 
-# Default to .idaklu (install_KLU_Sundials.py output).
-if(NOT WIN32 AND NOT DEFINED SuiteSparse_ROOT)
+# Default to .idaklu (install_KLU_Sundials.py output). Skipped under conda
+# (which sets CONDA_BUILD=1), where SUNDIALS/SuiteSparse come from the host
+# environment and are found on CMAKE_PREFIX_PATH.
+if(NOT WIN32 AND NOT DEFINED ENV{CONDA_BUILD} AND NOT DEFINED SuiteSparse_ROOT)
     set(SuiteSparse_ROOT "${CMAKE_SOURCE_DIR}/.idaklu")
 endif()
-if(NOT WIN32 AND NOT DEFINED SUNDIALS_ROOT)
+if(NOT WIN32 AND NOT DEFINED ENV{CONDA_BUILD} AND NOT DEFINED SUNDIALS_ROOT)
     set(SUNDIALS_ROOT "${CMAKE_SOURCE_DIR}/.idaklu")
 endif()
 
@@ -37,7 +39,9 @@ endif()
 # and skipped once the libraries already exist — under editable.rebuild CMake
 # reconfigures on every import, and re-requiring the submodules (or re-running the
 # bootstrap) for an already-built tree would needlessly fail or repeat work.
-if(NOT WIN32 AND NOT DEFINED VCPKG_ROOT_DIR)
+# Also skipped under conda (CONDA_BUILD=1), which supplies both libraries as
+# host dependencies and ships no submodules in the sdist.
+if(NOT WIN32 AND NOT DEFINED VCPKG_ROOT_DIR AND NOT DEFINED ENV{CONDA_BUILD})
     file(GLOB _sundials_prebuilt
         "${SUNDIALS_ROOT}/lib/libsundials_idas.*"
         "${SUNDIALS_ROOT}/lib64/libsundials_idas.*")
@@ -126,7 +130,9 @@ pybind11_add_module(idaklu
 
 if (NOT DEFINED USE_PYTHON_CASADI)
     # Windows uses vcpkg for CasADi (no pip wheel exists); Linux/macOS use pip.
-    if (WIN32)
+    # Under conda (CONDA_BUILD=1) CasADi is a host dependency on every platform,
+    # so use that build rather than one from a pip site-packages tree.
+    if (WIN32 OR DEFINED ENV{CONDA_BUILD})
         set(USE_PYTHON_CASADI FALSE)
     else()
         set(USE_PYTHON_CASADI TRUE)
@@ -229,7 +235,10 @@ endif ()
 # `_GLIBCXX_USE_CXX11_ABI=0` on consumers: correct for the x86_64 wheel (legacy
 # ABI) but wrong for the aarch64 wheel (C++11 ABI), leaving casadi's std::string
 # symbols unresolved. Detect libcasadi's real ABI and override CasADi's guess.
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+# Only relevant for the PyPI wheel: a system CasADi (conda-forge, distro, vcpkg)
+# is built against the same libstdc++ as this extension, and the probe below has
+# no CASADI_LIB_DIR to look in, so it would wrongly force the legacy ABI.
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND USE_PYTHON_CASADI)
     # Drop CasADi's hard-coded (and, on aarch64, wrong) ABI interface definition.
     if (TARGET casadi::casadi)
         get_target_property(_casadi_defs casadi::casadi INTERFACE_COMPILE_DEFINITIONS)

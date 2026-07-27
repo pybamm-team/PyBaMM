@@ -20,6 +20,7 @@ from pybamm.expression_tree.operations.serialise import (
     SUPPORTED_SCHEMA_VERSION,
     ExpressionFunctionParameter,
     Serialise,
+    convert_function_to_symbolic_expression,
     convert_symbol_from_json,
     convert_symbol_to_json,
 )
@@ -1493,6 +1494,57 @@ class TestSerialise:
         sim = pybamm.Simulation(model, parameter_values=param2)
         sim.solve([0, 3600])
         sim.plot(show_plot=False)
+
+
+class TestConvertFunctionToSymbolicExpression:
+    def test_partial_with_bound_kwargs(self):
+        """A partial with keyword-bound args (as create_from_bpx produces) must
+        only receive symbols for its remaining required args, not the bound ones."""
+        import functools
+
+        def diffusivity(sto, T, D_ref, Ea, constant=False):
+            return D_ref * pybamm.exp(-Ea * (sto + T))
+
+        func = functools.partial(diffusivity, D_ref=1.5, Ea=2.0, constant=True)
+        efp = convert_function_to_symbolic_expression(func, "D")
+
+        assert efp.func_args == ["sto", "T"]
+        assert efp.name == "D"
+        assert efp.func_name == "diffusivity"
+
+    def test_partial_leaves_unbound_defaulted_arg(self):
+        """A defaulted parameter left unbound (e.g. constant diffusivity's
+        ``constant`` flag) must not be turned into a symbol, or a positional
+        call would collide with the following keyword-bound argument."""
+        import functools
+
+        def diffusivity(sto, T, D_ref, Ea, constant=False):
+            # constant is a Python control flag, not a symbolic input
+            if constant:
+                return D_ref * pybamm.exp(-Ea * T)
+            return D_ref(sto) * pybamm.exp(-Ea * T)
+
+        func = functools.partial(diffusivity, D_ref=lambda s: s, Ea=2.0)
+        efp = convert_function_to_symbolic_expression(func, "D")
+
+        assert efp.func_args == ["sto", "T"]
+
+    def test_partial_returning_interpolant(self):
+        """OCP-style partials bind name/x/y and return an Interpolant."""
+        import functools
+
+        def interpolant_func(var, name, x, y):
+            return pybamm.Interpolant(x, y, var, name=name, interpolator="linear")
+
+        x_data = np.array([0.0, 0.5, 1.0])
+        y_data = np.array([1.0, 2.0, 3.0])
+        func = functools.partial(interpolant_func, name="U", x=x_data, y=y_data)
+        efp = convert_function_to_symbolic_expression(func, "U")
+
+        assert efp.func_args == ["var"]
+        src = efp.to_source()
+        assert "def interpolant_func(var):" in src
+        assert 'name="U"' in src
 
 
 class TestExpressionFunctionParameter:
