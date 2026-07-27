@@ -406,10 +406,7 @@ class CasadiSolver(pybamm.BaseSolver):
                             return a_n
                         m_n = (a_n + b_n) // 2
                         f_m_n = f(m_n)
-                        if np.isnan(f_m_n):
-                            a_n = a_n
-                            b_n = m_n
-                        elif f_m_n < 0:
+                        if np.isnan(f_m_n) or f_m_n < 0:
                             a_n = a_n
                             b_n = m_n
                         elif f_m_n > 0:

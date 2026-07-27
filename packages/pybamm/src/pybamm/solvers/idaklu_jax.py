@@ -8,7 +8,7 @@ from functools import lru_cache
 
 import numpy as np
 import numpy.typing as npt
-import pybammsolvers.idaklu as idaklu
+from pybammsolvers import idaklu
 
 import pybamm
 

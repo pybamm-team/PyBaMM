@@ -1617,16 +1617,12 @@ class Serialise:
             if isinstance(val, dict) and ("$type" in val or "type" in val):
                 deserialized[key] = convert_symbol_from_json(val)
 
-            elif isinstance(val, list):
-                deserialized[key] = val
-
-            elif isinstance(val, (numbers.Number | bool)):
-                deserialized[key] = val
-
-            elif isinstance(val, str):
-                deserialized[key] = val
-
-            elif isinstance(val, dict):
+            elif (
+                isinstance(val, list)
+                or isinstance(val, (numbers.Number | bool))
+                or isinstance(val, str)
+                or isinstance(val, dict)
+            ):
                 deserialized[key] = val
 
             else:

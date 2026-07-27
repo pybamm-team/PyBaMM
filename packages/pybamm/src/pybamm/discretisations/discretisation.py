@@ -778,7 +778,7 @@ class Discretisation:
             incorrect expressions
         """
         new_variables = dict(variables)
-        for var in initial_conditions.keys():
+        for var in initial_conditions:
             if var.name not in new_variables:
                 new_variables[var.name] = var
             else:

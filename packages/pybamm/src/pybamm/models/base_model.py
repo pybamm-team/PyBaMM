@@ -1829,14 +1829,14 @@ class BaseModel:
         symbol = find_symbol_in_model(self, symbol_name)
 
         if symbol is None:
-            return None
+            return
 
         print(div)
         print(symbol_name, "\n")
         print(type(symbol))
 
         if isinstance(symbol, pybamm.FunctionParameter):
-            print("")
+            print()
             print("Inputs:")
             symbol.print_input_names()
 
@@ -2572,7 +2572,7 @@ class BoundaryConditionsDict(dict):
             for side, bc in bcs.items():
                 if isinstance(bc[0], numbers.Number):
                     # typ is the type of the bc, e.g. "Dirichlet" or "Neumann"
-                    eqn, typ = boundary_conditions[var][side]
+                    eqn, typ = bc
                     boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
                 # Check types
                 if bc[1] not in ["Dirichlet", "Neumann"]:
