@@ -31,7 +31,7 @@ class ScikitSubMesh2D(SubMesh):
         skfem = import_optional_dependency("skfem")
         self.edges = edges
         self.nodes = dict.fromkeys(["y", "z"])
-        for var in self.nodes.keys():
+        for var in self.nodes:
             self.nodes[var] = (self.edges[var][1:] + self.edges[var][:-1]) / 2
         self.npts = len(self.edges["y"]) * len(self.edges["z"])
         self.coord_sys = coord_sys

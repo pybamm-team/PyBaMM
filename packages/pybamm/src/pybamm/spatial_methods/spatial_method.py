@@ -36,7 +36,7 @@ class SpatialMethod:
 
     def build(self, mesh):
         # add npts_for_broadcast to mesh domains for this particular discretisation
-        for dom in mesh.keys():
+        for dom in mesh:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
         self._mesh = mesh
 

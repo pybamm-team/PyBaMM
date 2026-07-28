@@ -1045,26 +1045,26 @@ class DiffSLExport:
         # inputs and constants
         if "in" in diffeq:
             all_lines = [diffeq["in"]]
-        for key in diffeq:
+        for key, line in diffeq.items():
             if key.startswith("constant"):
-                all_lines += [diffeq[key]]
+                all_lines += [line]
         for key in state_tensors:
             all_lines += [diffeq[key]]
-        for key in diffeq:
+        for key, line in diffeq.items():
             if key.startswith("varying"):
-                all_lines += [diffeq[key]]
+                all_lines += [line]
         for key in f_and_g:
             all_lines += [diffeq[key]]
-        for key in diffeq:
+        for key, line in diffeq.items():
             if key.startswith("event"):
-                all_lines += [diffeq[key]]
+                all_lines += [line]
         for key in stop:
             all_lines += [diffeq[key]]
         if "reset" in diffeq:
             all_lines += [diffeq["reset"]]
-        for key in diffeq:
+        for key, line in diffeq.items():
             if key.startswith("variable"):
-                all_lines += [diffeq[key]]
+                all_lines += [line]
         for key in out:
             all_lines += [diffeq[key]]
 

@@ -2,6 +2,8 @@
 # Tests for the lithium-ion electrode-specific SOH model
 #
 
+import contextlib
+
 import pytest
 
 import pybamm
@@ -773,30 +775,30 @@ class TestElectrodeSOHHalfCell:
         param = pybamm.LithiumIonParameters(options)
 
         # Test invalid SOC
-        with pytest.warns(UserWarning, match=r"is greater than 1"):
-            # try/except to ignore the likely solver error at the extreme initial value
-            try:
-                pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
-                    1.5, params, param=param, options=options
-                )
-            except Exception as ex:
-                assert isinstance(ex, pybamm.SolverError)
-        with pytest.warns(UserWarning, match=r"is less than 0"):
-            try:
-                pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
-                    -0.1, params, param=param, options=options
-                )
-            except Exception as ex:
-                assert isinstance(ex, pybamm.SolverError)
+        # the extreme initial value likely trips the solver after the warning fires
+        with (
+            pytest.warns(UserWarning, match=r"is greater than 1"),
+            contextlib.suppress(pybamm.SolverError),
+        ):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                1.5, params, param=param, options=options
+            )
+        with (
+            pytest.warns(UserWarning, match=r"is less than 0"),
+            contextlib.suppress(pybamm.SolverError),
+        ):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                -0.1, params, param=param, options=options
+            )
 
         # Test invalid voltage (too low)
-        with pytest.warns(UserWarning, match=r"outside the voltage limits"):
-            try:
-                pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
-                    "0.000001 V", params, param=param, options=options
-                )
-            except Exception as ex:
-                assert isinstance(ex, pybamm.SolverError)
+        with (
+            pytest.warns(UserWarning, match=r"outside the voltage limits"),
+            contextlib.suppress(pybamm.SolverError),
+        ):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                "0.000001 V", params, param=param, options=options
+            )
 
         # Test invalid voltage (too high)
         with pytest.warns(UserWarning, match=r"outside the voltage limits"):

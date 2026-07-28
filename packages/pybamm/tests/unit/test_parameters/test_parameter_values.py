@@ -26,7 +26,7 @@ class TestParameterValues:
         # from dict
         param = pybamm.ParameterValues({"a": 1})
         assert param["a"] == 1
-        assert "a" in param.keys()
+        assert "a" in param
         assert 1 in param.values()
         assert ("a", 1) in param.items()
 
@@ -36,7 +36,7 @@ class TestParameterValues:
 
         # from dict "chemistry" key gets removed
         param = pybamm.ParameterValues({"a": 1, "chemistry": "lithium-ion"})
-        assert "chemistry" not in param.keys()
+        assert "chemistry" not in param
 
         # junk param values rejected
         with pytest.raises(ValueError, match=r"'Junk' is not a valid parameter set."):
@@ -111,7 +111,7 @@ class TestParameterValues:
 
         # test deleting a parameter
         del param["a"]
-        assert "a" not in param.keys()
+        assert "a" not in param
 
     def test_deprecated_parameter_raises_error(self):
         # Guard: deprecated parameter detection must work (388d1366f)

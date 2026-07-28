@@ -566,14 +566,14 @@ class TestBaseBatteryModel:
         model = pybamm.lithium_ion.SPM({"voltage as a state": "true"})
         assert model.options["voltage as a state"] == "true"
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
-        assert "Voltage [V]" in [v.name for v in model.algebraic.keys()]
+        assert "Voltage [V]" in [v.name for v in model.algebraic]
 
         model = pybamm.lithium_ion.SPM(
             {"voltage as a state": "true", "operating mode": "voltage"}
         )
         assert model.options["voltage as a state"] == "true"
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
-        assert "Voltage [V]" in [v.name for v in model.algebraic.keys()]
+        assert "Voltage [V]" in [v.name for v in model.algebraic]
 
     def test_explicit_modes_default_voltage_as_state(self):
         for mode in ["explicit power", "explicit resistance"]:

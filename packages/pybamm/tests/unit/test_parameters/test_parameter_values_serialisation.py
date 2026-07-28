@@ -499,7 +499,7 @@ class TestRoundtripNestedStructures:
         assert set(pv.keys()) == set(pv2.keys())
 
         # Numeric values are preserved exactly
-        for key in pv.keys():
+        for key in pv:
             orig = pv[key]
             loaded = pv2[key]
             if isinstance(orig, int | float):
@@ -784,7 +784,7 @@ class TestStressRoundtripAllParameterSets:
         c_e_max = 3000.0
         n = 5
 
-        for key in pv.keys():
+        for key in pv:
             if key == "citations":
                 continue
 

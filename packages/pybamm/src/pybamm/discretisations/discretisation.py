@@ -57,7 +57,7 @@ class Discretisation:
             self._spatial_methods = {}
         else:
             # Unpack macroscale to the constituent subdomains
-            if "macroscale" in spatial_methods.keys():
+            if "macroscale" in spatial_methods:
                 method = spatial_methods["macroscale"]
                 spatial_methods["negative electrode"] = method
                 spatial_methods["separator"] = method
@@ -68,12 +68,13 @@ class Discretisation:
                 method.build(mesh)
                 # Check zero-dimensional methods are only applied to zero-dimensional
                 # meshes
-                if isinstance(method, pybamm.ZeroDimensionalSpatialMethod):
-                    if not isinstance(mesh[domain], pybamm.SubMesh0D):
-                        raise pybamm.DiscretisationError(
-                            "Zero-dimensional spatial method for the "
-                            f"{domain} domain requires a zero-dimensional submesh"
-                        )
+                if isinstance(
+                    method, pybamm.ZeroDimensionalSpatialMethod
+                ) and not isinstance(mesh[domain], pybamm.SubMesh0D):
+                    raise pybamm.DiscretisationError(
+                        "Zero-dimensional spatial method for the "
+                        f"{domain} domain requires a zero-dimensional submesh"
+                    )
 
         self._bcs = {}
         self.y_slices = {}
@@ -486,7 +487,7 @@ class Discretisation:
         bc_keys = list(self.bcs.keys())
 
         internal_bcs = {}
-        for var in model.boundary_conditions.keys():
+        for var in model.boundary_conditions:
             if not isinstance(var, pybamm.Concatenation):
                 continue
             children = var.orphans
@@ -573,12 +574,12 @@ class Discretisation:
                     self.mesh[subdomain].coord_sys
                     in ["spherical polar", "cylindrical polar"]
                     and next(iter(self.mesh.geometry[subdomain].values()))["min"] == 0
+                    and (bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann")
                 ):
-                    if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
-                        raise pybamm.ModelError(
-                            "Boundary condition at r = 0 must be a homogeneous "
-                            f"Neumann condition for {self.mesh[subdomain].coord_sys} coordinates"
-                        )
+                    raise pybamm.ModelError(
+                        "Boundary condition at r = 0 must be a homogeneous "
+                        f"Neumann condition for {self.mesh[subdomain].coord_sys} coordinates"
+                    )
 
             # Handle any boundary conditions applied on the tabs
             if any("tab" in side for side in list(bcs.keys())):
@@ -920,13 +921,11 @@ class Discretisation:
             # Catch case where diffusion is a scalar and turn it into an identity matrix vector field.
             if isinstance(spatial_method, pybamm.FiniteVolume2D):
                 if isinstance(left, pybamm.Scalar) and (
-                    isinstance(right, pybamm.VectorField)
-                    or isinstance(right, pybamm.Gradient)
+                    isinstance(right, (pybamm.VectorField, pybamm.Gradient))
                 ):
                     left = pybamm.VectorField(left, left)
                 elif isinstance(right, pybamm.Scalar) and (
-                    isinstance(left, pybamm.VectorField)
-                    or isinstance(left, pybamm.Gradient)
+                    isinstance(left, (pybamm.VectorField, pybamm.Gradient))
                 ):
                     right = pybamm.VectorField(right, right)
             disc_left = self.process_symbol(left)
@@ -1235,7 +1234,7 @@ class Discretisation:
         # Unpack symbols in variables that are concatenations of variables
         unpacked_variables = []
         slices = []
-        for symbol in var_eqn_dict.keys():
+        for symbol in var_eqn_dict:
             if isinstance(symbol, pybamm.ConcatenationVariable):
                 unpacked_variables.extend([symbol] + [var for var in symbol.children])
             else:
@@ -1246,7 +1245,7 @@ class Discretisation:
             # Check keys from the given var_eqn_dict against self.y_slices
             unpacked_variables_set = set(unpacked_variables)
             if unpacked_variables_set != set(self.y_slices.keys()):
-                given_variable_names = [v.name for v in var_eqn_dict.keys()]
+                given_variable_names = [v.name for v in var_eqn_dict]
                 raise pybamm.ModelError(
                     "Initial conditions are insufficient. Only "
                     f"provided for {given_variable_names} "
@@ -1287,14 +1286,14 @@ class Discretisation:
 
         # Check initial conditions and model equations have the same shape
         # Individual
-        for var in model.rhs.keys():
+        for var in model.rhs:
             if model.rhs[var].shape != model.initial_conditions[var].shape:
                 raise pybamm.ModelError(
                     "rhs and initial conditions must have the same shape after "
                     "discretisation but rhs.shape = "
                     f"{model.rhs[var].shape} and initial_conditions.shape = {model.initial_conditions[var].shape} for variable '{var}'."
                 )
-        for var in model.algebraic.keys():
+        for var in model.algebraic:
             if model.algebraic[var].shape != model.initial_conditions[var].shape:
                 raise pybamm.ModelError(
                     "algebraic and initial conditions must have the same shape after "
@@ -1322,11 +1321,7 @@ class Discretisation:
         eqns_to_check = (
             list(model.rhs.values())
             + list(model.algebraic.values())
-            + [
-                x[side][0]
-                for x in model.boundary_conditions.values()
-                for side in x.keys()
-            ]
+            + [x[side][0] for x in model.boundary_conditions.values() for side in x]
             # only check children of variables, this will skip the variable itself
             # and catch any other cases
             + [child for var in model.variables.values() for child in var.children]

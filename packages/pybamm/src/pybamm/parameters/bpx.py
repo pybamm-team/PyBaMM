@@ -499,9 +499,7 @@ def _get_pybamm_name(pybamm_name, domain):
       * ``<Domain> particle delithiation hysteresis decay rate``
     """
     pybamm_name_lower = pybamm_name[:1].lower() + pybamm_name[1:]
-    if pybamm_name.startswith("Initial concentration") or pybamm_name.startswith(
-        "Maximum concentration"
-    ):
+    if pybamm_name.startswith(("Initial concentration", "Maximum concentration")):
         init_len = len("Initial concentration ")
         return [
             pybamm_name[:init_len]

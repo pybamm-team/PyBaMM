@@ -1284,7 +1284,7 @@ class BaseSolver:
         # discretised
         # Unpack slices for sorting
         y_slices = {var: slce for var, slce in model.y_slices.items()}
-        slices = [y_slices[symbol][0] for symbol in model.initial_conditions.keys()]
+        slices = [y_slices[symbol][0] for symbol in model.initial_conditions]
 
         # sort equations according to slices
         concatenated_initial_conditions = [

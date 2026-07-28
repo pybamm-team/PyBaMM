@@ -1121,11 +1121,7 @@ class BaseModel:
             self.rhs.values(),
             self.algebraic.values(),
             self.initial_conditions.values(),
-            (
-                x[side][0]
-                for x in self.boundary_conditions.values()
-                for side in x.keys()
-            ),
+            (x[side][0] for x in self.boundary_conditions.values() for side in x),
             self.variables.values(),
             fixed_input_parameters,
             (event.expression for event in self.events),
@@ -1147,7 +1143,7 @@ class BaseModel:
             (
                 x[side][0]
                 for x in self.submodels[submodel].boundary_conditions.values()
-                for side in x.keys()
+                for side in x
             ),
             self._variables_by_submodel[submodel].values(),
             fixed_input_parameters,
@@ -1347,7 +1343,7 @@ class BaseModel:
             ):
                 return None
             var_id = var.id
-            for sol_var in solution_model.y_slices.keys():
+            for sol_var in solution_model.y_slices:
                 if sol_var.id == var_id:
                     return sol_var
             return None
@@ -1461,13 +1457,11 @@ class BaseModel:
                 ) from e
 
         for var in self.initial_conditions:
-            if isinstance(var, pybamm.Variable) or isinstance(
-                var, pybamm.Concatenation
-            ):
+            if isinstance(var, (pybamm.Variable, pybamm.Concatenation)):
                 try:
                     final_state = get_variable_state(var)
                     final_state_eval = get_final_state_eval(final_state)
-                except pybamm.ModelError as e:
+                except pybamm.ModelError:
                     if isinstance(var, pybamm.Concatenation):
                         children = []
                         for child in var.orphans:
@@ -1476,7 +1470,7 @@ class BaseModel:
                             children.append(final_state_eval)
                         final_state_eval = np.concatenate(children)
                     else:
-                        raise e
+                        raise
             else:
                 raise NotImplementedError(
                     "Variable must have type 'Variable' or 'Concatenation'"
@@ -1499,7 +1493,7 @@ class BaseModel:
             # Unpack slices for sorting
             y_slices = {var: slce for var, slce in self.y_slices.items()}
             slices = []
-            for symbol in self.initial_conditions.keys():
+            for symbol in self.initial_conditions:
                 if isinstance(symbol, pybamm.Concatenation):
                     # must append the slice for the whole concatenation, so that
                     # equations get sorted correctly
@@ -1621,8 +1615,8 @@ class BaseModel:
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
-        ids1 = set(x for x in dict1.keys())
-        ids2 = set(x for x in dict2.keys())
+        ids1 = set(dict1.keys())
+        ids2 = set(dict2.keys())
         if len(ids1.intersection(ids2)) != 0:
             variables = ids1.intersection(ids2)
             raise pybamm.ModelError(
@@ -1725,8 +1719,8 @@ class BaseModel:
                 ]
             )
             all_vars_in_eqns.update(vars_in_eqns)
-        for _, side_eqn in self.boundary_conditions.items():
-            for _, (eqn, _) in side_eqn.items():
+        for side_eqn in self.boundary_conditions.values():
+            for eqn, _ in side_eqn.values():
                 vars_in_eqns = unpacker.unpack_symbol(eqn)
                 all_vars_in_eqns.update(vars_in_eqns)
 
@@ -1770,8 +1764,8 @@ class BaseModel:
     def check_ics_bcs(self):
         """Check that the initial and boundary conditions are well-posed."""
         # Initial conditions
-        for var in self.rhs.keys():
-            if var not in self.initial_conditions.keys():
+        for var in self.rhs:
+            if var not in self.initial_conditions:
                 raise pybamm.ModelError(
                     f"no initial condition given for variable '{var}'"
                 )
@@ -2142,18 +2136,18 @@ class BaseModel:
             ) from file_err
 
     @staticmethod
-    def _find_builtin_module(cls):
-        """Return the pybamm sub-module name if *cls* is a built-in model
+    def _find_builtin_module(model_class):
+        """Return the pybamm sub-module name if *model_class* is a built-in model
         class, else ``None``.
 
-        A class is "built-in" when ``getattr(pybamm.<mod>, cls.__name__)``
+        A class is "built-in" when ``getattr(pybamm.<mod>, model_class.__name__)``
         returns the exact same class object (identity check).
         """
         for mod_name in _BUILTIN_MODULE_NAMES:
             mod = getattr(pybamm, mod_name, None)
             if mod is not None:
-                candidate = getattr(mod, cls.__name__, None)
-                if candidate is cls:
+                candidate = getattr(mod, model_class.__name__, None)
+                if candidate is model_class:
                     return mod_name
         return None
 

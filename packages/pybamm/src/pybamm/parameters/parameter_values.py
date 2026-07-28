@@ -93,7 +93,7 @@ class ParameterValues:
             self.update(values_dict)
         else:
             # Check if values is a named parameter set
-            if isinstance(values, str) and values in pybamm.parameter_sets.keys():
+            if isinstance(values, str) and values in pybamm.parameter_sets:
                 values_dict = dict(pybamm.parameter_sets[values])
                 chemistry = values_dict.pop("chemistry", None)
                 self.update(values_dict)
@@ -460,11 +460,8 @@ class ParameterValues:
         if isinstance(value, str):
             if value == "[input]":
                 value = pybamm.InputParameter(key)
-            elif (
-                value.startswith("[function]")
-                or value.startswith("[current data]")
-                or value.startswith("[data]")
-                or value.startswith("[2D data]")
+            elif value.startswith(
+                ("[function]", "[current data]", "[data]", "[2D data]")
             ):
                 raise ValueError(
                     "Specifying parameters via [function], [current data], [data] "
@@ -662,11 +659,8 @@ class ParameterValues:
         for name, value in values.items():
             # Process value
             if isinstance(value, str):
-                if (
-                    value.startswith("[function]")
-                    or value.startswith("[current data]")
-                    or value.startswith("[data]")
-                    or value.startswith("[2D data]")
+                if value.startswith(
+                    ("[function]", "[current data]", "[data]", "[2D data]")
                 ):
                     raise ValueError(
                         "Specifying parameters via [function], [current data], [data] "

@@ -29,7 +29,7 @@ def test_float_inf_nan_round_trip():
     for val in (float("inf"), float("-inf"), 3.5):
         assert sk._decode_leaf(sk._encode_float(val)) == val
     nan = sk._decode_leaf(sk._encode_float(float("nan")))
-    assert nan != nan  # NaN
+    assert np.isnan(nan)
 
 
 def test_ndarray_round_trip():

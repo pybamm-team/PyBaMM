@@ -25,7 +25,7 @@ class TestVoltageAsStateOptIn:
     @pytest.mark.parametrize("model_cls", LI_ION_MODELS)
     def test_voltage_is_algebraic_state(self, model_cls):
         model = model_cls(options=OPT_IN)
-        algebraic_var_names = [var.name for var in model.algebraic.keys()]
+        algebraic_var_names = [var.name for var in model.algebraic]
         assert "Voltage [V]" in algebraic_var_names
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
 
@@ -57,7 +57,7 @@ class TestVoltageAsStateOptIn:
     def test_default_voltage_is_expression(self, model_cls):
         """Without the option, voltage remains a computed expression."""
         model = model_cls()
-        algebraic_var_names = [var.name for var in model.algebraic.keys()]
+        algebraic_var_names = [var.name for var in model.algebraic]
         assert "Voltage [V]" not in algebraic_var_names
         assert not isinstance(model.variables["Voltage [V]"], pybamm.Variable)
 

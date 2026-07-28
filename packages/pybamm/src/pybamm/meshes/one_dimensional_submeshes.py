@@ -38,7 +38,7 @@ class SubMesh1D(SubMesh):
         self.dimension = 1
 
         # Add tab locations in terms of "left" and "right"
-        if tabs and "negative tab" not in tabs.keys():
+        if tabs and "negative tab" not in tabs:
             self.tabs = {}
             l_z = self.edges[-1]
 
@@ -158,7 +158,7 @@ class Uniform1DSubMesh(SubMesh1D):
     def _from_json(cls, snippet: dict):
         instance = cls.__new__(cls)
 
-        tabs = snippet["tabs"] if "tabs" in snippet else None
+        tabs = snippet.get("tabs", None)
 
         super(Uniform1DSubMesh, instance).__init__(
             np.array(snippet["edges"]), snippet["coord_sys"], tabs=tabs

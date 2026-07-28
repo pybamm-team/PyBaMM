@@ -63,9 +63,8 @@ def _rename_option(options_dict, option_name, old_name, new_name):
                     if isinstance(x[0], tuple):
                         # Handle 2-tuple of 2-tuple of 2-tuple case
                         for y in x:
-                            if isinstance(y, tuple):
-                                if old_name in y:
-                                    has_old_name = True
+                            if isinstance(y, tuple) and old_name in y:
+                                has_old_name = True
                     # Handle 2-tuple of 2-tuple case
                     elif old_name in x:
                         has_old_name = True
@@ -793,17 +792,18 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
-        if options["dimensionality"] == 3:
-            if options["cell geometry"] not in ["pouch", "cylindrical"]:
-                raise pybamm.OptionError(
-                    "'cell geometry' must be 'pouch' or 'cylindrical' if 'dimensionality' is '3'"
-                )
+        if options["dimensionality"] == 3 and options["cell geometry"] not in [
+            "pouch",
+            "cylindrical",
+        ]:
+            raise pybamm.OptionError(
+                "'cell geometry' must be 'pouch' or 'cylindrical' if 'dimensionality' is '3'"
+            )
 
-        if options["cell geometry"] == "cylindrical":
-            if options["dimensionality"] != 3:
-                raise pybamm.OptionError(
-                    "'dimensionality' must be '3' if 'cell geometry' is 'cylindrical'"
-                )
+        if options["cell geometry"] == "cylindrical" and options["dimensionality"] != 3:
+            raise pybamm.OptionError(
+                "'dimensionality' must be '3' if 'cell geometry' is 'cylindrical'"
+            )
 
         if (
             options["thermal"] in ["x-lumped", "x-full"]
@@ -827,15 +827,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "models"
             )
 
-        if isinstance(options["stress-induced diffusion"], str):
-            if (
-                options["stress-induced diffusion"] == "true"
-                and options["particle mechanics"] == "none"
-            ):
-                raise pybamm.OptionError(
-                    "cannot have stress-induced diffusion without a particle "
-                    "mechanics model"
-                )
+        if isinstance(options["stress-induced diffusion"], str) and (
+            options["stress-induced diffusion"] == "true"
+            and options["particle mechanics"] == "none"
+        ):
+            raise pybamm.OptionError(
+                "cannot have stress-induced diffusion without a particle "
+                "mechanics model"
+            )
 
         if options["working electrode"] != "both":
             if options["thermal"] == "x-full":
@@ -849,23 +848,24 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current collectors in a half-cell configuration"
                 )
 
-        if options["particle phases"] not in ["1", ("1", "1")]:
-            if not (
-                options["surface form"] != "false"
-                and options["particle"] == "Fickian diffusion"
-            ):
-                raise pybamm.OptionError(
-                    "If there are multiple particle phases: 'surface form' cannot be "
-                    "'false', 'particle size' must be 'single', 'particle' must be "
-                    "'Fickian diffusion'."
-                )
+        if options["particle phases"] not in ["1", ("1", "1")] and not (
+            options["surface form"] != "false"
+            and options["particle"] == "Fickian diffusion"
+        ):
+            raise pybamm.OptionError(
+                "If there are multiple particle phases: 'surface form' cannot be "
+                "'false', 'particle size' must be 'single', 'particle' must be "
+                "'Fickian diffusion'."
+            )
 
-        if options["surface temperature"] == "lumped":
-            if options["thermal"] not in ["isothermal", "lumped"]:
-                raise pybamm.OptionError(
-                    "lumped surface temperature model only compatible with isothermal "
-                    "or lumped thermal model"
-                )
+        if options["surface temperature"] == "lumped" and options["thermal"] not in [
+            "isothermal",
+            "lumped",
+        ]:
+            raise pybamm.OptionError(
+                "lumped surface temperature model only compatible with isothermal "
+                "or lumped thermal model"
+            )
         if "true" in options["SEI on cracks"]:
             sei_on_cr = options["SEI on cracks"]
             p_mechanics = options["particle mechanics"]
@@ -1198,38 +1198,41 @@ class BaseBatteryModel(pybamm.BaseModel):
             options = extra_options
 
         # Options that are incompatible with models
-        if isinstance(self, pybamm.lithium_ion.BaseModel):
-            if options["convection"] != "none":
-                raise pybamm.OptionError(
-                    "convection not implemented for lithium-ion models"
-                )
-        if isinstance(self, pybamm.lithium_ion.SPMe):
-            if options["electrolyte conductivity"] not in [
-                "default",
-                "composite",
-                "integrated",
-            ]:
-                raise pybamm.OptionError(
-                    "electrolyte conductivity '{}' not suitable for SPMe".format(
-                        options["electrolyte conductivity"]
-                    )
-                )
-        if isinstance(self, pybamm.lithium_ion.SPM) and not isinstance(
-            self, pybamm.lithium_ion.SPMe
+        if (
+            isinstance(self, pybamm.lithium_ion.BaseModel)
+            and options["convection"] != "none"
         ):
-            if options["x-average side reactions"] == "false":
-                raise pybamm.OptionError(
-                    "x-average side reactions cannot be 'false' for SPM models"
+            raise pybamm.OptionError(
+                "convection not implemented for lithium-ion models"
+            )
+        if isinstance(self, pybamm.lithium_ion.SPMe) and options[
+            "electrolyte conductivity"
+        ] not in [
+            "default",
+            "composite",
+            "integrated",
+        ]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity '{}' not suitable for SPMe".format(
+                    options["electrolyte conductivity"]
                 )
-        if isinstance(self, pybamm.lithium_ion.SPM):
-            if (
-                "distribution" in options["particle size"]
-                and options["surface form"] == "false"
-            ):
-                raise pybamm.OptionError(
-                    "surface form must be 'algebraic' or 'differential' if "
-                    " 'particle size' contains a 'distribution'"
-                )
+            )
+        if (
+            isinstance(self, pybamm.lithium_ion.SPM)
+            and not isinstance(self, pybamm.lithium_ion.SPMe)
+            and options["x-average side reactions"] == "false"
+        ):
+            raise pybamm.OptionError(
+                "x-average side reactions cannot be 'false' for SPM models"
+            )
+        if isinstance(self, pybamm.lithium_ion.SPM) and (
+            "distribution" in options["particle size"]
+            and options["surface form"] == "false"
+        ):
+            raise pybamm.OptionError(
+                "surface form must be 'algebraic' or 'differential' if "
+                " 'particle size' contains a 'distribution'"
+            )
         if isinstance(self, pybamm.lead_acid.BaseModel):
             if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
                 raise pybamm.OptionError(
@@ -1553,9 +1556,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D
             elif self.options["dimensionality"] == 2:
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D
-        elif self.options["thermal"] == "x-full":
-            if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
+        elif (
+            self.options["thermal"] == "x-full" and self.options["dimensionality"] == 0
+        ):
+            thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
 
         x_average = getattr(self, "x_average", False)
         self.submodels["thermal"] = thermal_submodel(

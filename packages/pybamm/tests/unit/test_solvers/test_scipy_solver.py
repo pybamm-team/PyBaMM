@@ -151,7 +151,7 @@ class TestScipySolver:
 
         # construct Jacobian in order of model.rhs
         J = []
-        for var in model.rhs.keys():
+        for var in model.rhs:
             if var == var1:
                 J.append([np.eye(N), np.zeros((N, N))])
             else:

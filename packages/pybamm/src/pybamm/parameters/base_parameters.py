@@ -44,10 +44,10 @@ class BaseParameters:
                                 f"param.{domain}.prim.{name_without_domain}"
                             ) from e
                         else:
-                            raise e
+                            raise
                     else:
-                        raise e
-            raise e
+                        raise
+            raise
 
     def __setattr__(self, name, value):
         if hasattr(self, "domain"):
