@@ -263,7 +263,7 @@ class Citations:
 def print_citations(filename=None, output_format="text", verbose=False):
     """See :meth:`Citations.print`"""
     if verbose and filename is not None:  # pragma: no cover
-        raise Exception(
+        raise ValueError(
             "Verbose output is available only for the terminal and not for printing to files",
         )
     pybamm.citations.print(filename, output_format, verbose)

@@ -210,7 +210,7 @@ class BaseSimulation:
             evals = pybamm.lithium_ion.compute_esoh_fingerprint(
                 pv, self._model.param, self._model.options, inputs
             )
-        except Exception:
+        except (KeyError, AttributeError, TypeError, ValueError, pybamm.ModelError):
             evals = self._normalize_inputs(inputs) if inputs else ()
 
         return (initial_soc, direction, pv_fp, evals)
