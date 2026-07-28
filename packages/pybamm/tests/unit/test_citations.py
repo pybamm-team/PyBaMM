@@ -73,11 +73,11 @@ class TestCitations:
 
         # Overwrite NotACitation
         old_citation = pybamm.citations._all_citations["NotACitation"]
+        new_citation = r"@article{NotACitation, title = {A New Title}}"
+        pybamm.citations.register(new_citation)
+        # the overwrite warning comes from parsing, not from registering
         with pytest.warns(Warning):
-            pybamm.citations.register(r"@article{NotACitation, title = {A New Title}}")
-            pybamm.citations._parse_citation(
-                r"@article{NotACitation, title = {A New Title}}"
-            )
+            pybamm.citations._parse_citation(new_citation)
         assert "NotACitation" in pybamm.citations._papers_to_cite
         assert pybamm.citations._all_citations["NotACitation"] != old_citation
 

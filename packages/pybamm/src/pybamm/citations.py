@@ -152,9 +152,9 @@ class Citations:
                     raise PybtexError("no entries found")
 
                 # Add and register all citations
-                for key, entry in bib_data.entries.items():
-                    self._add_citation(key, entry)
-                    self._papers_to_cite.add(key)
+                for entry_key, entry in bib_data.entries.items():
+                    self._add_citation(entry_key, entry)
+                    self._papers_to_cite.add(entry_key)
                 return
             except PybtexError as error:
                 raise KeyError(
