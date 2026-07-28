@@ -283,7 +283,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             c_s_av = variables[
                 f"Average {domain} particle concentration distribution [mol.m-3]"
             ]
-            c_init = c_init = pybamm.PrimaryBroadcast(c_init, f"{domain} particle size")
+            c_init = pybamm.PrimaryBroadcast(c_init, f"{domain} particle size")
 
         self.initial_conditions = {c_s_av: c_init}
         if self.name == "quartic profile":

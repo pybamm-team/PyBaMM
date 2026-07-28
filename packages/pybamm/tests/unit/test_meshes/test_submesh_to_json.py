@@ -80,8 +80,8 @@ class TestSubmeshTypesDictRoundTrip:
         serialised = {k: v.to_config() for k, v in submesh_types.items()}
         restored = {k: pybamm.SubMesh.from_config(v) for k, v in serialised.items()}
         assert set(restored.keys()) == set(submesh_types.keys())
-        for domain in submesh_types:
-            assert restored[domain] is submesh_types[domain]
+        for domain, submesh_type in submesh_types.items():
+            assert restored[domain] is submesh_type
 
     def test_dict_round_trip_mesh_generators(self):
         """Dict of MeshGenerator instances round-trips correctly."""
@@ -96,11 +96,9 @@ class TestSubmeshTypesDictRoundTrip:
             k: pybamm.MeshGenerator.from_config(v) for k, v in serialised.items()
         }
         assert set(restored.keys()) == set(submesh_types.keys())
-        for domain in submesh_types:
-            assert restored[domain].submesh_type is submesh_types[domain].submesh_type
-            assert (
-                restored[domain].submesh_params == submesh_types[domain].submesh_params
-            )
+        for domain, submesh_type in submesh_types.items():
+            assert restored[domain].submesh_type is submesh_type.submesh_type
+            assert restored[domain].submesh_params == submesh_type.submesh_params
 
 
 class TestSubmeshSerialiseCompatibility:

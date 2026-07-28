@@ -64,7 +64,7 @@ class TestDiscretise:
         disc.set_internal_boundary_conditions(model)
 
         for child in c_e.children:
-            assert child in disc.bcs.keys()
+            assert child in disc.bcs
 
     def test_add_internal_boundary_conditions_symbolic(self):
         submesh_types = {
@@ -102,7 +102,7 @@ class TestDiscretise:
         disc.set_internal_boundary_conditions(model)
 
         for child in c_e.children:
-            assert child in disc.bcs.keys()
+            assert child in disc.bcs
 
     def test_discretise_slicing(self):
         # create discretisation

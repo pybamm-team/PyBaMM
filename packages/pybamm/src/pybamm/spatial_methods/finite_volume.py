@@ -40,7 +40,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         super().build(mesh)
 
         # add npts_for_broadcast to mesh domains for this particular discretisation
-        for dom in mesh.keys():
+        for dom in mesh:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
 
     def spatial_variable(self, symbol):
@@ -305,8 +305,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                 d_edges = (r_edges_right**3 - r_edges_left**3) / 3
             elif submesh.coord_sys == "cylindrical polar":
                 d_edges = (r_edges_right**2 - r_edges_left**2) / 2
-        else:
-            d_edges = d_edges
         e = 1 / d_edges
 
         # Create matrix using submesh
@@ -408,8 +406,6 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             if vector_type == "row":
                 d_edges = pybamm.Transpose(d_edges)
-            elif vector_type == "column":
-                d_edges = d_edges
 
             # repeat matrix for each node in secondary dimensions
             second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
@@ -824,7 +820,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Catch if no boundary conditions are defined
-        if "left" not in bcs.keys() and "right" not in bcs.keys():
+        if "left" not in bcs and "right" not in bcs:
             raise ValueError(f"No boundary conditions have been provided for {symbol}")
 
         # Allow to only pass one boundary condition (for upwind/downwind)

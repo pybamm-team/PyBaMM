@@ -222,7 +222,7 @@ def _maybe_sweep_stale(cdir: str) -> None:
                 continue
 
             is_per_attempt = bool(_PER_ATTEMPT_TOKEN.search(name))
-            if is_per_attempt and (name.endswith(".tmp") or name.endswith(".c")):
+            if is_per_attempt and (name.endswith((".tmp", ".c"))):
                 os.remove(path)
                 continue
 

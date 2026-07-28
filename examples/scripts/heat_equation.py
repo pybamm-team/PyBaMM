@@ -89,7 +89,7 @@ def T_n(t, n):
 
 
 # Sum series to get the source term
-def Q_exact(n):
+def Q_exact(x):
     out = 0
     for n in np.arange(1, N):
         out += q(n) * np.sin(n * np.pi * x / 2)

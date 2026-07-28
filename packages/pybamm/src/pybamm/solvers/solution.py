@@ -563,11 +563,11 @@ class Solution(SolutionBase):
             return
 
         # Collect unique reasons from all models
-        unique_reasons = set(
+        unique_reasons = {
             model.solution_observable_status
             for model in self.all_models
             if not model.solution_observable
-        )
+        }
         if unique_reasons:
             reasons_str = ", ".join(sorted(unique_reasons))
             raise ValueError(f"Solution is not observable: {reasons_str}")
@@ -858,7 +858,7 @@ class Solution(SolutionBase):
             var_casadi_out = var_casadi.expand()
         except RuntimeError as error:
             if "'eval_sx' not defined for" not in str(error):
-                raise error  # pragma: no cover
+                raise  # pragma: no cover
             var_casadi_out = var_casadi
 
         return var_casadi_out
@@ -1010,7 +1010,7 @@ class Solution(SolutionBase):
             if filename is None:
                 raise ValueError("matlab format must be written to a file")
             # Check all the variable names only contain a-z, A-Z or _ or numbers
-            for name in data.keys():
+            for name in data:
                 # Check the string only contains the following ASCII:
                 # a-z (97-122)
                 # A-Z (65-90)

@@ -878,7 +878,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             )
         sol = esoh_sim.solve([0], inputs=all_inputs)
 
-        return {var: sol[var].entries[0] for var in sol.all_models[0].variables.keys()}
+        return {var: sol[var].entries[0] for var in sol.all_models[0].variables}
 
 
 def get_initial_stoichiometries_composite(

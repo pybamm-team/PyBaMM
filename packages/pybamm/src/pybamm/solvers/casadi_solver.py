@@ -407,11 +407,9 @@ class CasadiSolver(pybamm.BaseSolver):
                         m_n = (a_n + b_n) // 2
                         f_m_n = f(m_n)
                         if np.isnan(f_m_n) or f_m_n < 0:
-                            a_n = a_n
                             b_n = m_n
                         elif f_m_n > 0:
                             a_n = m_n
-                            b_n = b_n
 
                 event_idx_lower = integer_bisect()
                 if typ == "window":

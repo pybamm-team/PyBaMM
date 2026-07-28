@@ -19,9 +19,7 @@ class TestBatteryGeometry:
 
     def test_geometry_keys(self, geometry):
         for domain_geoms in geometry.values():
-            assert all(
-                isinstance(spatial_var, str) for spatial_var in domain_geoms.keys()
-            )
+            assert all(isinstance(spatial_var, str) for spatial_var in domain_geoms)
         geometry.print_parameter_info()
 
     def test_geometry(self):
@@ -115,22 +113,20 @@ class TestReadParameters:
 
         geometry = pybamm.battery_geometry(options={"dimensionality": 2})
 
-        assert set([x.name for x in geometry.parameters]) == set(
-            [
-                x.name
-                for x in [
-                    L_n,
-                    L_s,
-                    L_p,
-                    L_y,
-                    L_z,
-                    tab_n_y,
-                    tab_n_z,
-                    L_tab_n,
-                    tab_p_y,
-                    tab_p_z,
-                    L_tab_p,
-                ]
+        assert {x.name for x in geometry.parameters} == {
+            x.name
+            for x in [
+                L_n,
+                L_s,
+                L_p,
+                L_y,
+                L_z,
+                tab_n_y,
+                tab_n_z,
+                L_tab_n,
+                tab_p_y,
+                tab_p_z,
+                L_tab_p,
             ]
-        )
+        }
         assert all(isinstance(x, pybamm.Parameter) for x in geometry.parameters)

@@ -83,7 +83,7 @@ class JaxSolver(pybamm.BaseSolver):
         self._ode_solver = method == "RK45"
         self.extra_options = extra_options or {}
         self.name = f"JAX solver ({method})"
-        self._cached_solves = dict()
+        self._cached_solves = {}
         pybamm.citations.register("jax2018")
 
     def get_solve(self, model, t_eval):
@@ -247,11 +247,7 @@ class JaxSolver(pybamm.BaseSolver):
                 return await asyncio.gather(*coro)
 
             y = asyncio.run(solve_model_for_inputs())
-        elif (
-            platform.startswith("gpu")
-            or platform.startswith("tpu")
-            or platform.startswith("metal")
-        ):  # pragma: no cover
+        elif platform.startswith(("gpu", "tpu", "metal")):  # pragma: no cover
             # gpu execution runs faster when parallelised with vmap
             # (see also comment below regarding single-program multiple-data
             #  execution (SPMD) using pmap on multiple XLAs)

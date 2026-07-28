@@ -70,8 +70,10 @@ class TestCompareOutputsTwoPhase:
             # Compare two phase model to standard model
             for variable in [
                 "X-averaged negative electrode active material volume fraction",
-                "X-averaged negative electrode volumetric "
-                "interfacial current density [A.m-3]",
+                (
+                    "X-averaged negative electrode volumetric "
+                    "interfacial current density [A.m-3]"
+                ),
                 "Voltage [V]",
             ]:
                 np.testing.assert_allclose(

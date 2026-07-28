@@ -20,12 +20,10 @@ def is_notebook():
             cfg = get_ipython().config
             nb = len(cfg["InteractiveShell"].keys()) == 0
             return nb
-        elif shell == "TerminalInteractiveShell":  # pragma: no cover
-            return False  # Terminal running IPython
-        elif shell == "Shell":  # pragma: no cover
-            return True  # Google Colab notebook
         else:  # pragma: no cover
-            return False  # Other type (?)
+            # "Shell" is Google Colab; anything else (incl. TerminalInteractiveShell)
+            # is not a notebook
+            return shell == "Shell"
     except NameError:
         return False  # Probably standard Python interpreter
 

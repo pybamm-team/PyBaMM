@@ -155,7 +155,7 @@ class TestBPX:
         temp_file.write_text(json.dumps(copy.deepcopy(self.base)))
 
         params = pybamm.ParameterValues.create_from_bpx(temp_file)
-        assert "check_already_exists" not in params.keys()
+        assert "check_already_exists" not in params
 
     def test_bpx_emits_current_particle_diffusivity_name(self, tmp_path):
         # a BPX-derived set must use only the current "particle diffusivity" name;

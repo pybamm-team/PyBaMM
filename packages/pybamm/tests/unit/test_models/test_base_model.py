@@ -146,9 +146,9 @@ class TestBaseModel:
         assert "v+f+i" in model.variables_and_events
         assert "Event: u=e" in model.variables_and_events
 
-        assert set([x.name for x in model.parameters]) == set(
-            [x.name for x in [a, b, c, d, e, f, g, h, i]]
-        )
+        assert {x.name for x in model.parameters} == {
+            x.name for x in [a, b, c, d, e, f, g, h, i]
+        }
         assert all(
             isinstance(x, pybamm.Parameter | pybamm.InputParameter)
             for x in model.parameters
@@ -412,9 +412,9 @@ class TestBaseModel:
         model.events = [pybamm.Event("u=e", u - e)]
         model.variables = {"v+f": v + f}
 
-        assert set([x.name for x in model.input_parameters]) == set(
-            [x.name for x in [a, b, c, d, e, f]]
-        )
+        assert {x.name for x in model.input_parameters} == {
+            x.name for x in [a, b, c, d, e, f]
+        }
         assert all(isinstance(x, pybamm.InputParameter) for x in model.input_parameters)
 
     def test_update(self):
@@ -806,7 +806,9 @@ class TestBaseModel:
         model.generate("test.c", ["a+b"], input_parameter_order=["p", "q"])
 
         # Compile
-        subprocess.run(["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"])  # nosec
+        subprocess.run(
+            ["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"], check=True
+        )  # nosec
 
         # Read the generated functions
         x0_fn = casadi.external("x0", "./test.so")

@@ -23,7 +23,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
 
     def build(self, mesh):
         super().build(mesh)
-        for dom in mesh.keys():
+        for dom in mesh:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
 
     def spatial_variable(self, symbol):

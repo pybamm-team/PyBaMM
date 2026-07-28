@@ -811,8 +811,8 @@ class TestIDAKLUSolver:
         }
 
         # test everything works
-        for option in options_success:
-            options = {option: options_success[option]}
+        for option, value in options_success.items():
+            options = {option: value}
             solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
             soln = solver.solve(model, t_eval)
             # Hermite upsample y
@@ -835,8 +835,8 @@ class TestIDAKLUSolver:
         }
 
         # test that the solver throws a warning
-        for option in options_fail:
-            options = {option: options_fail[option]}
+        for option, value in options_fail.items():
+            options = {option: value}
             with pytest.raises(pybamm.SolverError):
                 solver = pybamm.IDAKLUSolver(options=options)
                 solver.solve(model, t_eval)

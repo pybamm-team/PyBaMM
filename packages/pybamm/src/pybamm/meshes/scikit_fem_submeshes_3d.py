@@ -299,7 +299,7 @@ class UserSuppliedSubmesh3D(pybamm.MeshGenerator):
         if coord_sys:
             self.coord_sys = coord_sys
         else:
-            if any("r_min" in k or "r_max" in k for k in boundary_mapping.keys()):
+            if any("r_min" in k or "r_max" in k for k in boundary_mapping):
                 self.coord_sys = "cylindrical polar"
             else:
                 self.coord_sys = "cartesian"

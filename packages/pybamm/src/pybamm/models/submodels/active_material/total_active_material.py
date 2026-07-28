@@ -32,8 +32,10 @@ class Total(pybamm.BaseSubModel):
             f"{Domain} electrode {{}}active material volume fraction",
             f"X-averaged {domain} electrode {{}}active material volume fraction",
             f"{Domain} electrode {{}}active material volume fraction change [s-1]",
-            f"X-averaged {domain} electrode {{}}active material "
-            "volume fraction change [s-1]",
+            (
+                f"X-averaged {domain} electrode {{}}active material "
+                "volume fraction change [s-1]"
+            ),
             f"Loss of lithium due to loss of {{}}active material in {domain} electrode [mol]",
         ]:
             sumvar = sum(

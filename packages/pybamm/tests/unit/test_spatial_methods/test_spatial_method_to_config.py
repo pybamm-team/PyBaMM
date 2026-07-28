@@ -79,9 +79,9 @@ class TestSpatialMethodsDictRoundTrip:
             k: pybamm.SpatialMethod.from_config(v) for k, v in serialised.items()
         }
         assert set(restored.keys()) == set(spatial_methods.keys())
-        for domain in spatial_methods:
-            assert type(restored[domain]) is type(spatial_methods[domain])
-            assert restored[domain].options == spatial_methods[domain].options
+        for domain, method in spatial_methods.items():
+            assert type(restored[domain]) is type(method)
+            assert restored[domain].options == method.options
 
 
 class TestSpatialMethodSerialiseCompatibility:

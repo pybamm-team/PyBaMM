@@ -49,10 +49,7 @@ class Broadcast(pybamm.SpatialOperator):
 
     @property
     def broadcasts_to_nodes(self):
-        if self.broadcast_type.endswith("nodes"):
-            return True
-        else:
-            return False
+        return bool(self.broadcast_type.endswith("nodes"))
 
     def _sympy_operator(self, child: pybamm.Symbol):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""

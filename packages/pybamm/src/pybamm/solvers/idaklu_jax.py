@@ -390,7 +390,7 @@ class IDAKLUJax:
             # Provide vector support for time
             if t.ndim == 0:
                 t = np.array([t])
-            tk = list(map(lambda t: np.argmin(abs(self.jax_t_eval - t)), t))
+            tk = [np.argmin(abs(self.jax_t_eval - tp)) for tp in t]
             out = jnp.array(
                 [
                     jnp.array(sim[outvar].sensitivities[invar][tk])
@@ -675,9 +675,9 @@ class IDAKLUJax:
             logger.info(f"f_batch: {type(args)}, {type(batch_axes)}")
             t = args[0]
             inputs = args[1:]
-            if batch_axes[0] is not None and all([b is None for b in batch_axes[1:]]):
+            if batch_axes[0] is not None and all(b is None for b in batch_axes[1:]):
                 # Temporal batching
-                return jnp.stack(list(map(lambda tp: f_p.bind(tp, *inputs), t))), 0
+                return jnp.stack([f_p.bind(tp, *inputs) for tp in t]), 0
             else:
                 raise NotImplementedError(
                     f"jaxify: batching not implemented for batch_axes = {batch_axes}"
@@ -765,10 +765,7 @@ class IDAKLUJax:
                 return lax.zeros_like_array(prim) if type(tan) is ad.Zero else tan
 
             zero_mapped_tangents = tuple(
-                map(
-                    lambda pt: make_zero(pt[0], pt[1]),
-                    zip(primals, tangents, strict=False),
-                )
+                make_zero(pt[0], pt[1]) for pt in zip(primals, tangents, strict=False)
             )
 
             y = f_p.bind(*primals)
@@ -799,22 +796,20 @@ class IDAKLUJax:
 
             if (
                 batch_primals[0] is not None
-                and all([b is None for b in batch_primals[1:]])
-                and all([b is None for b in batch_tangents])
+                and all(b is None for b in batch_primals[1:])
+                and all(b is None for b in batch_tangents)
             ):
                 # Temporal batching (primals) only
                 t = primals[0]
                 inputs = primals[1:]
                 return (
-                    jnp.stack(
-                        list(map(lambda tp: f_jvp_p.bind(tp, *inputs, *tangents), t))
-                    ),
+                    jnp.stack([f_jvp_p.bind(tp, *inputs, *tangents) for tp in t]),
                     0,
                 )
             elif (
                 batch_tangents[0] is not None
-                and all([b is None for b in batch_tangents[1:]])
-                and all([b is None for b in batch_primals])
+                and all(b is None for b in batch_tangents[1:])
+                and all(b is None for b in batch_primals)
             ):
                 # Batch over derivates wrt time
                 raise NotImplementedError(
@@ -822,8 +817,8 @@ class IDAKLUJax:
                 )
             elif (
                 batch_tangents[0] is None
-                and any([b is not None for b in batch_tangents[1:]])
-                and all([b is None for b in batch_primals])
+                and any(b is not None for b in batch_tangents[1:])
+                and all(b is None for b in batch_primals)
             ):
                 # Batch over (some combination of) inputs
                 batch_axis_indices = [
@@ -869,7 +864,7 @@ class IDAKLUJax:
             primals = args[: len(args) // 2]
 
             tangents_out = []
-            for invar in self.jax_inputs.keys():
+            for invar in self.jax_inputs:
                 js = f_vjp(y_bar, invar, *primals)
                 tangents_out.append(js)
 
@@ -996,17 +991,17 @@ class IDAKLUJax:
             logger.info("f_vjp_p_batch")
             y_bars, invar, t, *inputs = args
 
-            if batch_axes[0] is not None and all([b is None for b in batch_axes[1:]]):
+            if batch_axes[0] is not None and all(b is None for b in batch_axes[1:]):
                 # Batch over y_bar
-                out = list(map(lambda yb: f_vjp(yb, invar, t, *inputs), y_bars))
+                out = [f_vjp(yb, invar, t, *inputs) for yb in y_bars]
                 return jnp.stack(out), 0
             elif (
                 batch_axes[2] is not None
-                and all([b is None for b in batch_axes[:2]])
-                and all([b is None for b in batch_axes[3:]])
+                and all(b is None for b in batch_axes[:2])
+                and all(b is None for b in batch_axes[3:])
             ):
                 # Batch over time
-                out = list(map(lambda yt: f_vjp(y_bars, invar, yt, *inputs), t))
+                out = [f_vjp(y_bars, invar, yt, *inputs) for yt in t]
                 return jnp.stack(out), 0
             else:
                 raise Exception(

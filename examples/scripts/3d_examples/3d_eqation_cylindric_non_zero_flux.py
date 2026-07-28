@@ -155,13 +155,13 @@ ax4.text(
     0.05,
     T_axial_profile[5],
     f"q = {heat_flux_bottom} W/m²\n(cooling)",
-    bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue"),
+    bbox={"boxstyle": "round,pad=0.3", "facecolor": "lightblue"},
 )
 ax4.text(
     0.85,
     T_axial_profile[-5],
     f"q = {heat_flux_top} W/m²\n(heating)",
-    bbox=dict(boxstyle="round,pad=0.3", facecolor="lightcoral"),
+    bbox={"boxstyle": "round,pad=0.3", "facecolor": "lightcoral"},
 )
 
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])

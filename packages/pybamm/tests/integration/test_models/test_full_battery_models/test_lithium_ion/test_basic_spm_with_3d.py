@@ -60,7 +60,7 @@ class TestBasicSPMWith3DThermal:
 
             all_solutions[h] = solutions
 
-        for _h, solutions in all_solutions.items():
+        for solutions in all_solutions.values():
             lumped_sol = solutions["Lumped"]
             three_d_sol = solutions["3D"]
 
@@ -136,7 +136,7 @@ class TestBasicSPMWith3DThermal:
 
             all_solutions[h] = solutions
 
-        for _h, solutions in all_solutions.items():
+        for solutions in all_solutions.values():
             lumped_sol = solutions["Lumped"]
             three_d_sol = solutions["3D"]
 

@@ -405,7 +405,7 @@ class Symbol:
         """Combine domains from children, at all levels."""
         domains: dict = {}
         for child in children:
-            for level in child.domains.keys():
+            for level in child.domains:
                 if child.domains[level] == []:
                     pass
                 elif (
@@ -914,7 +914,7 @@ class Symbol:
             ):
                 return None
             else:  # pragma: no cover
-                raise error
+                raise
         except ValueError as error:
             # return None if specific ValueError is raised
             # (there is a e.g. Time in the tree)
@@ -1110,7 +1110,7 @@ class Symbol:
         new_children: list[Symbol] | None = None,
         perform_simplifications: bool = True,
     ):
-        """ """
+        """Deprecated alias for :meth:`create_copy`."""
         warnings.warn(
             "The 'new_copy' function for expression tree symbols is deprecated, use "
             "'create_copy' instead.",

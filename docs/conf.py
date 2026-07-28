@@ -426,28 +426,28 @@ if os.environ.get("READTHEDOCS_VERSION") == "latest":
 # -- sphinxext/inheritance_diagram.py options --------------------------------
 
 graphviz_output_format = "svg"
-inheritance_graph_attrs = dict(
-    rankdir="TB",
-    size='"10.0, 10.0"',
-    fontsize=10,
-    ratio="auto",
-    center="true",
-    nodesep=5,
-    ranksep=0.35,
-    bgcolor="white",
-)
-inheritance_node_attrs = dict(
-    shape="box",
-    fontsize=14,
-    fontname="monospace",
-    height=0.20,
-    color="black",
-    style="filled",
-)
-inheritance_edge_attrs = dict(
-    arrowsize=0.75,
-    style='"setlinewidth(0.5)"',
-)
+inheritance_graph_attrs = {
+    "rankdir": "TB",
+    "size": '"10.0, 10.0"',
+    "fontsize": 10,
+    "ratio": "auto",
+    "center": "true",
+    "nodesep": 5,
+    "ranksep": 0.35,
+    "bgcolor": "white",
+}
+inheritance_node_attrs = {
+    "shape": "box",
+    "fontsize": 14,
+    "fontname": "monospace",
+    "height": 0.20,
+    "color": "black",
+    "style": "filled",
+}
+inheritance_edge_attrs = {
+    "arrowsize": 0.75,
+    "style": '"setlinewidth(0.5)"',
+}
 
 
 # -- Options for Algolia DocSearch (sphinx-docsearch) ------------------------

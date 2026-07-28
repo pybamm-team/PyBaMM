@@ -249,11 +249,14 @@ class ParameterSubstitutor:
             return new_symbol
 
         # Functions, BinaryOperators & Concatenations
-        elif (
-            isinstance(symbol, pybamm.Function)
-            or isinstance(symbol, pybamm.Concatenation)
-            or isinstance(symbol, pybamm.BinaryOperator)
-            or isinstance(symbol, pybamm.Conditional)
+        elif isinstance(
+            symbol,
+            (
+                pybamm.Function,
+                pybamm.Concatenation,
+                pybamm.BinaryOperator,
+                pybamm.Conditional,
+            ),
         ):
             new_children = [self.process_symbol(child) for child in symbol.children]
             return symbol.create_copy(new_children)
@@ -617,7 +620,7 @@ class ParameterSubstitutor:
                         pass
                     # do raise error otherwise (e.g. can't process symbol)
                     else:
-                        raise err
+                        raise
 
         return new_boundary_conditions
 
@@ -651,18 +654,18 @@ class ParameterSubstitutor:
                     )
             return new_sym
 
-        for domain in geometry:
-            for spatial_variable, spatial_limits in geometry[domain].items():
+        for domain_geometry in geometry.values():
+            for spatial_variable, spatial_limits in domain_geometry.items():
                 # process tab information if using 1 or 2D current collectors
                 if spatial_variable == "tabs":
                     for tab, position_info in spatial_limits.items():
                         for position_size, sym in position_info.items():
-                            geometry[domain]["tabs"][tab][position_size] = (
+                            domain_geometry["tabs"][tab][position_size] = (
                                 process_and_check(sym)
                             )
                 else:
                     for lim, sym in spatial_limits.items():
-                        geometry[domain][spatial_variable][lim] = process_and_check(sym)
+                        domain_geometry[spatial_variable][lim] = process_and_check(sym)
 
     def evaluate(self, symbol: pybamm.Symbol, inputs: dict | None = None) -> Any:
         """
