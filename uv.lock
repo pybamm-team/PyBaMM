@@ -2811,11 +2811,11 @@ wheels = [
 
 [[package]]
 name = "platformdirs"
-version = "4.10.0"
+version = "4.11.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d7/47/e4501f49c178ae1d9f4a75073fda4204f52647993f075a9db4d14930e0c5/platformdirs-4.10.0.tar.gz", hash = "sha256:31e761a6a0ca04faf7353ea759bdba55652be214725111e5aac52dfa29d4bef7", size = 31224, upload-time = "2026-05-28T03:32:53.587Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/9b/560e4be8e26f6fd133a03630a8df0c663b9e8d61b4ade152b72005aec83b/platformdirs-4.11.0.tar.gz", hash = "sha256:0555d18370482847566ffabcaa53ad7c6c1c29f195989ae1ed634a05f76ea1e0", size = 31953, upload-time = "2026-07-21T13:09:36.565Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/e6/cd9575ac904136b3cbf7aa7ee819ef86eedb7274e46f230e94ea4342e729/platformdirs-4.10.0-py3-none-any.whl", hash = "sha256:fb516cdb12eb0d857d0cd85a7c57cea4d060bee4578d6cf5a14dfdf8cbf8784a", size = 22743, upload-time = "2026-05-28T03:32:52.175Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/68/d8d58938dfb1370b266a1a729e6d77a985be23689a0496498ee17b2cbf90/platformdirs-4.11.0-py3-none-any.whl", hash = "sha256:360ccded2b7fce0af0ff80cc8f5942a1c5d99b0e856033acb030bfc634709e74", size = 23247, upload-time = "2026-07-21T13:09:35.422Z" },
 ]
 
 [[package]]
@@ -2843,7 +2843,7 @@ wheels = [
 
 [[package]]
 name = "posthog"
-version = "7.16.3"
+version = "7.27.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -2851,9 +2851,9 @@ dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/20/d4/6e1c24823c515683cb6f74bd1dcc3fbe55f60a27743c1694bdc61c5db5d0/posthog-7.16.3.tar.gz", hash = "sha256:ff8972813c836ae4fcb634b499cf06d643bc3c4f49931218fe142e7aa8a39810", size = 226535, upload-time = "2026-06-01T13:24:07.781Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/72/6c/d5799cd82deeb26abfd48959a7075c9cd542463e1229a28ae75564e6eb83/posthog-7.27.1.tar.gz", hash = "sha256:c01f4ec937f20dcbcb431cc60b3a9d0a5e7ce210b5e95f528ef257c80440c825", size = 352562, upload-time = "2026-07-21T18:10:40.009Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f9/0b/562afe6f037ab3dde06d2bbe33f1de9f8516ac22f882ad263e4e0bfb665b/posthog-7.16.3-py3-none-any.whl", hash = "sha256:f0cbaf25ac06211b87c0a43500673fa2d8de86eb1edb75b8bf688f1b884878ce", size = 264300, upload-time = "2026-06-01T13:24:06.074Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/88/fe212347be1e632426a76e58195363e325df43c5a7a857d0d5baa31382a0/posthog-7.27.1-py3-none-any.whl", hash = "sha256:2300789f675cc5176bda6308bdb2665af921017ee11ba3c1196b62351c1d5ded", size = 421519, upload-time = "2026-07-21T18:10:38.5Z" },
 ]
 
 [[package]]
@@ -3051,7 +3051,7 @@ requires-dist = [
     { name = "pybammsolvers", editable = "packages/pybammsolvers" },
     { name = "pybtex", marker = "extra == 'all'", specifier = ">=0.25.0" },
     { name = "pybtex", marker = "extra == 'cite'", specifier = ">=0.25.0" },
-    { name = "pydiffsol", marker = "extra == 'pydiffsol'", specifier = ">=0.5.2" },
+    { name = "pydiffsol", marker = "extra == 'pydiffsol'", specifier = ">=0.6.1" },
     { name = "pyyaml" },
     { name = "scikit-fem", marker = "extra == 'all'", specifier = ">=8.1.0" },
     { name = "scipy", specifier = ">=1.11.4,!=1.18.0" },
@@ -3336,20 +3336,18 @@ wheels = [
 
 [[package]]
 name = "pydiffsol"
-version = "0.5.2"
+version = "0.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/90/b2/bd3f30be470bcb5a514e37a02a3cc594fe2ed0d9e69560d17e01156c2b9c/pydiffsol-0.5.2.tar.gz", hash = "sha256:b5affb6b2b6189a74dba8c38d2200d740d61144d17ec8fd08c8e19e89ee377cd", size = 236219, upload-time = "2026-05-20T16:02:41.434Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/28/810dacc6082e7a0c5819ba6763ae42a5e8137019aca89a3eb9fb364daaee/pydiffsol-0.6.1.tar.gz", hash = "sha256:f665d3be7864b76b2b51b14d38ff24d53270a4a5448b34f1aebfc7f52e962c34", size = 240958, upload-time = "2026-07-10T10:12:59.491Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/76/f6d658363ce5a915349b15fa5caa268e06a94d22f9393087a24b3fdbd39f/pydiffsol-0.5.2-cp314-cp314t-macosx_14_0_arm64.whl", hash = "sha256:e6278ff74bba4ae51e930720120a5ff7e00f947d3d1e010474b92ab08de6f459", size = 36875919, upload-time = "2026-05-20T16:02:35.787Z" },
-    { url = "https://files.pythonhosted.org/packages/10/89/1c5f1538d135c0c99808428ecf9ab83a5cbb1285189d289f9ed8f48b4d95/pydiffsol-0.5.2-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:2645c2a2e7717e67d4ea793959d13d369d70b97b670736195bc1b5e81eff9cc1", size = 47205400, upload-time = "2026-05-20T16:02:43.936Z" },
-    { url = "https://files.pythonhosted.org/packages/f9/99/5088e1a81f2c1b980698acb28540cb5ebfbf46df07857930a3b9d63d984e/pydiffsol-0.5.2-cp314-cp314t-win_amd64.whl", hash = "sha256:c2c95c821359950bcda22e3caa53deedd4a1641ba9fa1bc6eaa8e1a6faf9e69e", size = 4132015, upload-time = "2026-05-20T16:02:50.312Z" },
-    { url = "https://files.pythonhosted.org/packages/d6/eb/3e63722d89d3cc1040ce3b0e24018bc15d506e251283a2ff634b9b310bc4/pydiffsol-0.5.2-cp39-abi3-macosx_14_0_arm64.whl", hash = "sha256:db6d926df360dc2e107f3a524b5bf139d2f186951406fe238c7dfabe251138c7", size = 36883932, upload-time = "2026-05-20T16:02:38.962Z" },
-    { url = "https://files.pythonhosted.org/packages/e6/ca/901bc57399b5bd47899479ab709368dfd338da59a41c7f1b20a510793258/pydiffsol-0.5.2-cp39-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:66370286565951cdb4a104929a0a4ce05265634a1d95099894542cf436cfc325", size = 47206738, upload-time = "2026-05-20T16:02:47.092Z" },
-    { url = "https://files.pythonhosted.org/packages/26/fd/b5a6c2dc755d495c31d62834750e844ab00d462ae20dd3640cac247c4e2b/pydiffsol-0.5.2-cp39-abi3-win_amd64.whl", hash = "sha256:024ac97b2096f4bab76811cbb97cf6912acc07031685f716d3002faeaf2d352a", size = 4138061, upload-time = "2026-05-20T16:02:51.845Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/cf/b5c7154c4f8cb314abb02181ca1a2648de6a0862a3ecee3fcb29cf9f4d5a/pydiffsol-0.6.1-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:fa49c985d5d7f41f433b835ad0b4c3b40904882c633ddba3dd3dbc526ed3f786", size = 44040271, upload-time = "2026-07-10T10:12:57.207Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/f8/056bf2f4b8823e7d145a3ff298ab982a0a395bd9fe7f259bbb22e10302fe/pydiffsol-0.6.1-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:52cad8a9db84f5a226bad5312e42c15804191c793d2f448c7211eb4be5e20d48", size = 50969068, upload-time = "2026-07-10T10:13:01.162Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/38/ac3480f5802830a3bb8c4b49aa0d3df5a8f3176e8544e08bd394f2a984ee/pydiffsol-0.6.1-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:9b7568cdda902c904dada2d3f0a7e5e08979472e425f8b55641a39d3cc37e31a", size = 54362150, upload-time = "2026-07-10T10:13:04.603Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/c2/53c44583e97ab14b1ec417a22977d7f983558825fd8d7cdeab8129ee2e87/pydiffsol-0.6.1-cp310-abi3-win_amd64.whl", hash = "sha256:20eb8ba8ee45dee27a8d2277da0e307d1dd07c9374543577194863b6bc4cf35f", size = 4506091, upload-time = "2026-07-10T10:13:07.376Z" },
 ]
 
 [[package]]
@@ -3372,7 +3370,7 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "9.0.3"
+version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -3383,9 +3381,9 @@ dependencies = [
     { name = "pygments" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7d/0d/549bd94f1a0a402dc8cf64563a117c0f3765662e2e668477624baeec44d5/pytest-9.0.3.tar.gz", hash = "sha256:b86ada508af81d19edeb213c681b1d48246c1a91d304c6c81a427674c17eb91c", size = 1572165, upload-time = "2026-04-07T17:16:18.027Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369, upload-time = "2026-06-19T10:58:32.857Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/24/a372aaf5c9b7208e7112038812994107bc65a84cd00e0354a88c2c77a617/pytest-9.0.3-py3-none-any.whl", hash = "sha256:2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9", size = 375249, upload-time = "2026-04-07T17:16:16.13Z" },
+    { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
 ]
 
 [[package]]
