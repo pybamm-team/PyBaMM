@@ -87,7 +87,6 @@ ignore = [
     "DTZ",     # Experiment step `start_time`s are naive wall-clock by design
     "N999",    # Parameter-set modules are named after the set (e.g. Chen2020.py)
     "TRY004",  # PyBaMM raises its own exceptions, not TypeError (see AGENTS.md)
-    "BLE001",  # Blind `except Exception` on best-effort paths
 ]
 
 [tool.ruff.lint.per-file-ignores]

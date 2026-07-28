@@ -90,7 +90,7 @@ def aot_compile(fn_or_fns, **kwargs):
     fns = [fn_or_fns] if is_single else list(fn_or_fns)
     try:
         out = _aot_compile(fns, **kwargs)
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as e:
         names = ", ".join(fn.name() for fn in fns)
         logger.warning(f"Failed to compile [{names}] with error: {e}")
         out = list(fns)

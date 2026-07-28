@@ -1238,5 +1238,5 @@ def convert_to_symbol(value) -> Symbol:
     try:
         # Try to convert the input to a pybamm.Symbol
         return value * pybamm.Scalar(1)
-    except Exception:
+    except (NotImplementedError, TypeError, ValueError):
         raise ValueError("Input cannot be converted to a `pybamm.Symbol`") from None

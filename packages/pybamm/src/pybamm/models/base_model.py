@@ -2287,15 +2287,15 @@ class BaseModel:
                     model_config["geometry"] = Serialise.serialise_custom_geometry(
                         self.default_geometry
                     )
-                except Exception:
-                    pass
+                except (pybamm.SerialisationError, ValueError) as err:
+                    pybamm.logger.debug(f"Could not serialise default geometry: {err}")
             if hasattr(self, "default_var_pts"):
                 try:
                     model_config["var_pts"] = Serialise.serialise_var_pts(
                         self.default_var_pts
                     )
-                except Exception:
-                    pass
+                except (pybamm.SerialisationError, ValueError) as err:
+                    pybamm.logger.debug(f"Could not serialise default var_pts: {err}")
             if hasattr(self, "default_spatial_methods"):
                 try:
                     model_config["spatial_methods"] = (
@@ -2303,15 +2303,19 @@ class BaseModel:
                             self.default_spatial_methods
                         )
                     )
-                except Exception:
-                    pass
+                except (pybamm.SerialisationError, ValueError) as err:
+                    pybamm.logger.debug(
+                        f"Could not serialise default spatial methods: {err}"
+                    )
             if hasattr(self, "default_submesh_types"):
                 try:
                     model_config["submesh_types"] = Serialise.serialise_submesh_types(
                         self.default_submesh_types
                     )
-                except Exception:
-                    pass
+                except (pybamm.SerialisationError, ValueError) as err:
+                    pybamm.logger.debug(
+                        f"Could not serialise default submesh types: {err}"
+                    )
 
         if filename is not None:
             self._write_json_to_file(model_config, filename, label="model config")

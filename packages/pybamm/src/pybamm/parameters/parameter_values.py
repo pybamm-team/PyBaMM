@@ -1571,11 +1571,14 @@ def convert_symbols_in_dict(data_dict: dict | None = None) -> dict:
             x = value.get("x", [])
             y = value.get("y", [])
 
-            def interpolant_function(sto, x=x, y=y, interpolator=interpolator):
+            def interpolant_function(sto, x=x, y=y, interpolator=interpolator, key=key):
                 try:
                     return pybamm.Interpolant(x, y, sto, interpolator=interpolator)
-                except Exception as e:
-                    print(e)
+                except (ValueError, TypeError, IndexError) as e:
+                    pybamm.logger.warning(
+                        f"Could not build interpolant for '{key}', "
+                        f"falling back to zero: {e}"
+                    )
                     return pybamm.Scalar(0)
 
             data_dict[key] = interpolant_function

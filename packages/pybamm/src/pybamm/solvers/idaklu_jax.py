@@ -1004,8 +1004,8 @@ class IDAKLUJax:
                 out = [f_vjp(y_bars, invar, yt, *inputs) for yt in t]
                 return jnp.stack(out), 0
             else:
-                raise Exception(
-                    "Batch mode not supported for batch_axes = ", batch_axes
+                raise pybamm.SolverError(
+                    f"Batch mode not supported for batch_axes = {batch_axes}"
                 )  # pragma: no cover
 
         batching.primitive_batchers[f_vjp_p] = f_vjp_batch
