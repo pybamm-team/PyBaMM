@@ -34,62 +34,53 @@ class Callback:
     change in future releases.
     """
 
-    def on_experiment_start(self, logs):
+    def on_experiment_start(self, logs):  # pragma: no cover
         """
         Called at the start of an experiment simulation.
         """
-        # pragma: no cover
 
-    def on_cycle_start(self, logs):
+    def on_cycle_start(self, logs):  # pragma: no cover
         """
         Called at the start of each cycle in an experiment simulation.
         """
-        # pragma: no cover
 
-    def on_step_start(self, logs):
+    def on_step_start(self, logs):  # pragma: no cover
         """
         Called at the start of each step in an experiment simulation.
         """
-        # pragma: no cover
 
-    def on_step_end(self, logs):
+    def on_step_end(self, logs):  # pragma: no cover
         """
         Called at the end of each step in an experiment simulation.
         """
-        # pragma: no cover
 
-    def on_cycle_end(self, logs):
+    def on_cycle_end(self, logs):  # pragma: no cover
         """
         Called at the end of each cycle in an experiment simulation.
         """
-        # pragma: no cover
 
-    def on_experiment_end(self, logs):
+    def on_experiment_end(self, logs):  # pragma: no cover
         """
         Called at the end of an experiment simulation.
         """
-        # pragma: no cover
 
-    def on_experiment_error(self, logs):
+    def on_experiment_error(self, logs):  # pragma: no cover
         """
         Called when a SolverError occurs during an experiment simulation.
 
         For example, this could be used to send an error alert with a bug report when
         running batch simulations in the cloud.
         """
-        # pragma: no cover
 
-    def on_experiment_infeasible_time(self, logs):
+    def on_experiment_infeasible_time(self, logs):  # pragma: no cover
         """
         Called when an experiment simulation is infeasible due to reaching maximum time.
         """
-        # pragma: no cover
 
-    def on_experiment_infeasible_event(self, logs):
+    def on_experiment_infeasible_event(self, logs):  # pragma: no cover
         """
         Called when an experiment simulation is infeasible due to an event.
         """
-        # pragma: no cover
 
 
 ########################################################################################
