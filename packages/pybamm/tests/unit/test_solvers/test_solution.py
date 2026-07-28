@@ -611,9 +611,7 @@ class TestSolution:
 
         sol2 = sol1.copy()
 
-        assert (
-            sol1._variables[k] == sol2._variables[k] for k in sol1._variables.keys()
-        )
+        assert (sol1._variables[k] == sol2._variables[k] for k in sol1._variables)
         assert sol2.variables_returned is True
 
     def test_all_inputs(self):
@@ -1307,10 +1305,8 @@ class TestSolution:
         assert all(not model.solution_observable for model in sol.all_models)
 
         model = sol.all_models[0]
-        assert set(ip.name for ip in model.input_parameters) == set(input_names)
-        assert set(ip.name for ip in model.required_input_parameters) == set(
-            inputs.keys()
-        )
+        assert {ip.name for ip in model.input_parameters} == set(input_names)
+        assert {ip.name for ip in model.required_input_parameters} == set(inputs.keys())
         # check that missing input is set to DUMMY_INPUT_PARAMETER_VALUE (np.nan)
         assert np.isnan(sol.all_inputs[0]["dummy"])
 

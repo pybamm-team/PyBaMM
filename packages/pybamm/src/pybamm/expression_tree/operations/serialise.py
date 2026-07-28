@@ -170,7 +170,7 @@ class Serialise:
                 DeprecationWarning,
                 stacklevel=2,
             )
-        for k in model.variables.keys():
+        for k in model.variables:
             model.get_processed_variable(k)
         variables_processed = model.get_processed_variables_dict()
 
@@ -808,7 +808,7 @@ class Serialise:
 
             # Find symbol keys and reconstruct SpatialVariables
             symbol_keys = {}
-            for key in domain_geom.keys():
+            for key in domain_geom:
                 if key.startswith("symbol_"):
                     var_name = key[7:]  # Remove "symbol_" prefix
                     symbol_keys[var_name] = convert_symbol_from_json(domain_geom[key])
@@ -1617,16 +1617,7 @@ class Serialise:
             if isinstance(val, dict) and ("$type" in val or "type" in val):
                 deserialized[key] = convert_symbol_from_json(val)
 
-            elif isinstance(val, list):
-                deserialized[key] = val
-
-            elif isinstance(val, (numbers.Number | bool)):
-                deserialized[key] = val
-
-            elif isinstance(val, str):
-                deserialized[key] = val
-
-            elif isinstance(val, dict):
+            elif isinstance(val, (list, numbers.Number | bool, str, dict)):
                 deserialized[key] = val
 
             else:

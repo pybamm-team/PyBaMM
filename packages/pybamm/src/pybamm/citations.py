@@ -32,7 +32,7 @@ class Citations:
     def __init__(self):
         self._check_for_bibtex()
         # Dict mapping citations keys to BibTex entries
-        self._all_citations: dict[str, str] = dict()
+        self._all_citations: dict[str, str] = {}
 
         self.read_citations()
         self._reset()
@@ -47,7 +47,7 @@ class Citations:
         """Reset citations to default only (only for testing purposes)"""
         self._papers_to_cite = set()
         self._unknown_citations = set()
-        self._citation_tags = dict()
+        self._citation_tags = {}
         # Register the PyBaMM paper and the NumPy paper
         self.register("Sulzer2021")
         self.register("Harris2020")

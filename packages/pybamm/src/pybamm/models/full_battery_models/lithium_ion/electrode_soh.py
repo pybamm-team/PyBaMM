@@ -475,13 +475,13 @@ class ElectrodeSOHSolver:
             # just in case solving one by one works better
             try:
                 sol = self._solve_split(inputs, ics, direction)
-            except pybamm.SolverError as split_error:
+            except pybamm.SolverError:
                 # check if the error is due to the simulation not being feasible
                 self._check_esoh_feasible(inputs, direction)
                 # if that didn't raise an error, raise the original error instead
-                raise split_error
+                raise
 
-        sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables.keys()}
+        sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables}
 
         # Calculate theoretical energy
         # TODO: energy calc for MSMR

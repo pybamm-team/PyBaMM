@@ -125,10 +125,7 @@ class Mesh(dict):
                         # Raise error if the number of points for a particular
                         # variable haven't been provided, unless that variable
                         # doesn't appear in the geometry
-                        if (
-                            var.name not in var_name_pts.keys()
-                            and var.domain[0] in geometry.keys()
-                        ):
+                        if var.name not in var_name_pts and var.domain[0] in geometry:
                             raise KeyError(
                                 f"Points not given for variable '{var.name}' in domain '{domain}'"
                             )
@@ -162,7 +159,7 @@ class Mesh(dict):
                                         "run."
                                     ) from error
                                 else:
-                                    raise error
+                                    raise
                         elif isinstance(sym, numbers.Number):
                             sym_eval = sym
                         geometry[domain][spatial_variable][lim] = sym_eval
@@ -247,7 +244,6 @@ class Mesh(dict):
                         raise pybamm.DomainError("lr edges are not aligned")
                     else:
                         pass
-                pass
             elif self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]:
                 # submeshes are aligned, all good
                 pass

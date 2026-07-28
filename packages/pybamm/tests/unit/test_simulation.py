@@ -695,8 +695,7 @@ class TestSimulation:
             "Voltage [V]": pybamm.step.voltage,
             "Power [W]": pybamm.step.power,
         }
-        for name in operating_modes:
-            operating_mode = operating_modes[name]
+        for name, operating_mode in operating_modes.items():
             step = operating_mode(oscillating, duration=tf / 2)
             experiment = pybamm.Experiment([step, step], period=f"{tf / 100} seconds")
 
