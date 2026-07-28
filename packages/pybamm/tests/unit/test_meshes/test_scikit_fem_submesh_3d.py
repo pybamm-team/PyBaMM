@@ -290,6 +290,18 @@ class TestUserSuppliedMesh:
                 VALID_MESH_FILE, {}, {}, domain_tag_name="bad_tag"
             )
 
+    def test_bad_user_boundary_tag_name_error(self):
+        with pytest.raises(
+            pybamm.GeometryError,
+            match=r"User-specified boundary tag name 'bad_tag' not found",
+        ):
+            pybamm.ScikitFemSubMesh3D.load_mesh_from_file(
+                VALID_MESH_FILE,
+                {"z_min": 1},
+                {"current collector": 5},
+                boundary_tag_name="bad_tag",
+            )
+
     def test_no_integer_tag_error(self):
         with pytest.raises(
             pybamm.GeometryError,

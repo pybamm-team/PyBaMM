@@ -642,7 +642,7 @@ class ScikitFemSubMesh3D(pybamm.SubMesh):
                                 f"No boundary facets found for '{name}' with tag {tag}"
                             )
 
-        except Exception as e:
+        except (KeyError, IndexError, AttributeError, TypeError, ValueError) as e:
             pybamm.logger.warning(
                 f"Could not extract boundary information from '{file_path}': {e}"
             )
