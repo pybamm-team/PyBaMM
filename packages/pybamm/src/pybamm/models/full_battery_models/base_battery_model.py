@@ -607,7 +607,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if phases_option in ["1", ("1", "1"), ["1", "1"]]:
             default_options["surface form"] = "false"
         else:
-            default_options["surface form"] = "algebraic"
+            default_options["surface form"] = "differential"
         # The "surface form" option will still be overridden by
         # extra_options if provided
 
