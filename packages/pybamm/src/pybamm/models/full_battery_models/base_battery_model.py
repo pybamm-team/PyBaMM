@@ -604,7 +604,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # phases option is provided.
         # return "1" if option not given
         phases_option = extra_options.get("particle phases", "1")
-        if phases_option == "1":
+        if phases_option in ["1", ("1", "1"), ["1", "1"]]:
             default_options["surface form"] = "false"
         else:
             default_options["surface form"] = "algebraic"
@@ -703,7 +703,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # then "total interfacial current density as a state" must be "true"
         if (
             options["SEI film resistance"] != "none"
-            and options["particle phases"] != "1"
+            and options["particle phases"] not in ["1", ("1", "1"), ["1", "1"]]
         ):
             options["total interfacial current density as a state"] = "true"
             # Check that extra_options did not try to provide a clashing option
@@ -849,7 +849,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current collectors in a half-cell configuration"
                 )
 
-        if options["particle phases"] not in ["1", ("1", "1")]:
+        if options["particle phases"] not in ["1", ("1", "1"), ["1", "1"]]:
             if not (
                 options["surface form"] != "false"
                 and options["particle"] == "Fickian diffusion"

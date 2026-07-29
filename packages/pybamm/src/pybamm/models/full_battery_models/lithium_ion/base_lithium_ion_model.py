@@ -104,7 +104,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def calc_esoh(self):
         """Whether to include eSOH variables in the summary variables."""
         if (
-            self.options["particle phases"] not in ["1", ("1", "1")]
+            self.options["particle phases"] not in ["1", ("1", "1"), ["1", "1"]]
             or self.options["working electrode"] != "both"
         ):
             self._calc_esoh = False

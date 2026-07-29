@@ -697,6 +697,14 @@ class TestOptions:
         for key in options.possible_options:
             assert key in options, f"Missing default for option '{key}'"
 
+    def test_explicit_single_phase_surface_form(self):
+        """Explicit single-phase specification ("1", "1") should default surface form to false."""
+        options_default = BatteryModelOptions({})
+        assert options_default["surface form"] == "false"
+
+        options_explicit_tuple = BatteryModelOptions({"particle phases": ("1", "1")})
+        assert options_explicit_tuple["surface form"] == "false"
+
 
 class TestVaasNormalization:
     """Test the centralized VAAS + surface form policy."""
