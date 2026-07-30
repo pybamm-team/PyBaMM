@@ -222,8 +222,8 @@ class BasicDFN3DUnstructured(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = self.param.n.sigma(T) * eps_s_n**self.param.n.b_s
-        sigma_eff_p = self.param.p.sigma(T) * eps_s_p**self.param.p.b_s
+        sigma_eff_n = self.param.n.sigma(None, T) * eps_s_n**self.param.n.b_s
+        sigma_eff_p = self.param.p.sigma(None, T) * eps_s_p**self.param.p.b_s
         L_scale = self.param.L_x**2 * self.param.L_z**2
         self.algebraic[phi_s_n] = L_scale * (
             pybamm.div(-sigma_eff_n * pybamm.grad(phi_s_n)) + a_j_n

@@ -1525,6 +1525,17 @@ class Component(UnaryOperator):
         super().__init__(f"component({index})", child)
         self.index = index
 
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "index": self.index,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["index"])
+
     def _unary_new_copy(self, child, perform_simplifications=True):
         return self.__class__(child, self.index)
 

@@ -728,6 +728,17 @@ class Reduction(SpecificFunction):
         super().__init__(function, child)
         self.clear_domains()
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`.
+
+        ``SpecificFunction._from_json`` bypasses ``__init__``, so the domains
+        inherited from the child have to be cleared again here.
+        """
+        instance = super()._from_json(snippet)
+        instance.clear_domains()
+        return instance
+
     def _evaluate_for_shape(self):
         return np.nan * np.ones((1, 1))
 

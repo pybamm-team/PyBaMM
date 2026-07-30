@@ -670,6 +670,17 @@ def _magnitude_branch(
     )
 
 
+def _component_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.Component]:
+    """Component(child, index) — domain-bearing child, zero-based component index."""
+    return st.builds(
+        pybamm.Component,
+        _any_domain_leaves(),
+        st.integers(min_value=0, max_value=2),
+    )
+
+
 def _discrete_time_sum_branch(
     _child_strategy: st.SearchStrategy[pybamm.Symbol],
 ) -> st.SearchStrategy[pybamm.DiscreteTimeSum]:
@@ -981,6 +992,9 @@ _STRATEGIES.update(
         pybamm.UpwindDownwind2D: _upwind_downwind_2d_branch,
         pybamm.NodeToEdge2D: _node_to_edge_2d_branch,
         pybamm.Magnitude: _magnitude_branch,
+        pybamm.Component: _component_branch,
+        # Norm: (self, child) only — round-trips via the generic unary hook.
+        pybamm.Norm: lambda _children: _any_domain_leaves().map(pybamm.Norm),
         pybamm.DiscreteTimeData: _discrete_time_data_branch,
         pybamm.DiscreteTimeSum: _discrete_time_sum_branch,
         pybamm.SizeAverage: _size_average_branch,
@@ -1023,6 +1037,7 @@ _NOT_ROUND_TRIPPABLE: frozenset[type[pybamm.Symbol]] = frozenset(
         pybamm.StateVectorBase,  # abstract base; StateVector + StateVectorDot cover it
         pybamm.Function,  # to_json() raises NotImplementedError — only SpecificFunction subclasses round-trip
         pybamm.SpecificFunction,  # base for named funcs; direct instantiation not useful
+        pybamm.Reduction,  # abstract base for scalar reductions; Max and Min cover it
         pybamm.Broadcast,  # abstract base; PrimaryBroadcast/Secondary/Full covered
         pybamm.Integral,  # base for domain-constrained integrals; heavyweight constructor
         pybamm.IndependentVariable,  # abstract base; Time + SpatialVariable covered
