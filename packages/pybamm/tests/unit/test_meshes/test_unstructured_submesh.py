@@ -686,7 +686,7 @@ class TestMeshIntegration:
             {x: 3, z: 3},
         )
 
-        ghost_keys = [k for k in mesh.keys() if "ghost" in str(k)]
+        ghost_keys = [k for k in mesh if "ghost" in str(k)]
         assert len(ghost_keys) == 0
 
     def test_combine_submeshes(self):

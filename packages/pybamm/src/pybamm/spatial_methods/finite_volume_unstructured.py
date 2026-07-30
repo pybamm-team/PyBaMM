@@ -45,7 +45,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     def build(self, mesh):
         super().build(mesh)
-        for dom in mesh.keys():
+        for dom in mesh:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
         # Auto-discover all sharing pairs across unstructured submeshes,
         # populate ``interface_data`` and add ``iface_<other>`` boundary-face
@@ -76,7 +76,12 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             if b_mesh.boundary_faces
             else np.array([], dtype=int)
         )
-        if len(a_idx) == 0 or len(b_idx) == 0:
+        if (
+            len(a_idx) == 0
+            or len(b_idx) == 0
+            # meshes of different spatial dimension can never share an interface
+            or a_mesh.face_centroids.shape[1] != b_mesh.face_centroids.shape[1]
+        ):
             return np.array([], dtype=int), np.array([], dtype=int), False
         a_c = a_mesh.face_centroids[a_idx]
         b_c = b_mesh.face_centroids[b_idx]
@@ -138,8 +143,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         # Remove these face indices from any pre-existing axis-aligned
         # buckets ("left", "right", "top", "bottom", "front", "back") so
         # external Robin BCs don't double-count interface faces.
-        a_match_set = set(int(i) for i in a_match)
-        b_match_set = set(int(i) for i in b_match)
+        a_match_set = {int(i) for i in a_match}
+        b_match_set = {int(i) for i in b_match}
         for tag in list(a_mesh.boundary_faces.keys()):
             if tag.startswith("iface_"):
                 continue
@@ -171,7 +176,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         from pybamm.meshes.unstructured_submesh import UnstructuredSubMesh
 
         domains = []
-        for raw in mesh.keys():
+        for raw in mesh:
             name = raw[0] if isinstance(raw, tuple) else raw
             sm = mesh[raw]
             if isinstance(sm, UnstructuredSubMesh):
@@ -181,11 +186,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             if ma is mb or (a, b) in seen or (b, a) in seen:
                 continue
             seen.add((a, b))
-            try:
-                self._compute_pair_interface(ma, mb, a, b)
-            except Exception:
-                # Pair couldn't be matched — not actually adjacent.
-                pass
+            # returns False when the pair shares no conformal interface
+            self._compute_pair_interface(ma, mb, a, b)
 
     # ------------------------------------------------------------------
     # internal BC assembly for arbitrary-topology Concatenation
@@ -236,7 +238,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             for tag, bc_value in outer_bcs.items():
                 if tag in child_mesh.boundary_faces:
                     bcs[tag] = bc_value
-            for neighbor_name, _data in child_mesh.interface_data.items():
+            for neighbor_name in child_mesh.interface_data:
                 neighbor_child = name_to_child.get(neighbor_name)
                 if neighbor_child is None:
                     continue

@@ -955,14 +955,12 @@ class Discretisation:
                     right = pybamm.VectorField(right, right)
             elif isinstance(spatial_method, pybamm.FiniteVolumeUnstructured):
                 dim = self.mesh[symbol.domain[0]].dimension
-                if isinstance(left, pybamm.Scalar) and (
-                    isinstance(right, pybamm.VectorField)
-                    or isinstance(right, pybamm.Gradient)
+                if isinstance(left, pybamm.Scalar) and isinstance(
+                    right, pybamm.VectorField | pybamm.Gradient
                 ):
                     left = pybamm.VectorField(*[left] * dim)
-                elif isinstance(right, pybamm.Scalar) and (
-                    isinstance(left, pybamm.VectorField)
-                    or isinstance(left, pybamm.Gradient)
+                elif isinstance(right, pybamm.Scalar) and isinstance(
+                    left, pybamm.VectorField | pybamm.Gradient
                 ):
                     right = pybamm.VectorField(*[right] * dim)
             disc_left = self.process_symbol(left)

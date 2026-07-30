@@ -685,7 +685,7 @@ class QuickPlot:
                     variable, pybamm.ProcessedVariableUnstructuredFVM
                 )
                 if self.is_y_z[key] is True or is_unstructured:
-                    kw = dict(vmin=vmin, vmax=vmax, shading=self.shading)
+                    kw = {"vmin": vmin, "vmax": vmax, "shading": self.shading}
                     if is_unstructured:
                         import matplotlib
 
@@ -1037,7 +1037,7 @@ class QuickPlot:
                     variable, pybamm.ProcessedVariableUnstructuredFVM
                 )
                 if self.is_y_z[key] is True or is_unstructured:
-                    kw = dict(vmin=vmin, vmax=vmax, shading=self.shading)
+                    kw = {"vmin": vmin, "vmax": vmax, "shading": self.shading}
                     if is_unstructured:
                         import matplotlib
 

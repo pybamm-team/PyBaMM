@@ -345,7 +345,7 @@ class UnstructuredSubMesh(SubMesh):
         self.face_owner = inv_perm[self.face_owner]
         self.face_neighbor = inv_perm[self.face_neighbor]
 
-        for _key, data_dict in self.interface_data.items():
+        for data_dict in self.interface_data.values():
             if "left_cells" in data_dict:
                 data_dict["left_cells"] = inv_perm[data_dict["left_cells"]]
             if "right_cells" in data_dict:
@@ -703,7 +703,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
 
     @staticmethod
     def _get_cell_mask(mesh, cell_type, tag_value):
-        for _key, data_list in mesh.cell_data.items():
+        for data_list in mesh.cell_data.values():
             matching = [
                 data
                 for block, data in zip(mesh.cells, data_list, strict=False)
@@ -776,7 +776,9 @@ class TaggedSubMeshGenerator(MeshGenerator):
         tag_id = int(m.field_data[self._region][0])
 
         tet_blocks = []
-        for block, tags in zip(m.cells, m.cell_data.get("gmsh:physical", [])):
+        for block, tags in zip(
+            m.cells, m.cell_data.get("gmsh:physical", []), strict=False
+        ):
             if block.type != "tetra":
                 continue
             mask = np.asarray(tags, dtype=np.int32) == tag_id
