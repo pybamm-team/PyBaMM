@@ -58,3 +58,11 @@ repos:
         language: python
         files: ^packages/pybammsolvers/(src/pybammsolvers/version\.py|pyproject\.toml|vcpkg\.json)$
         pass_filenames: false
+
+      - id: check-ci-gate
+        name: Check every CI job is merge-gated or explicitly advisory
+        entry: python .github/scripts/check_ci_gate.py
+        language: python
+        additional_dependencies: [pyyaml]
+        files: ^\.github/(workflows/test_on_push\.yml|scripts/check_ci_gate\.py)$
+        pass_filenames: false
