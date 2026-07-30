@@ -16,7 +16,7 @@
   // The Python project's subdirectory in your repo.  If missing or
   // the empty string, the project is assumed to be located at the root
   // of the repository.
-  // "repo_subdir": "",
+  "repo_subdir": "packages/pybamm",
 
   // Customizable commands for building, installing, and
   // uninstalling the project. See asv.conf.json documentation.
@@ -24,8 +24,6 @@
   // "install_command": ["in-dir={env_dir} python -mpip install {wheel_file}"],
   // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
   "build_command": [
-    "/bin/rm -rf pybind11",
-    "/usr/bin/git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git pybind11 -c advice.detachedHead=false",
     "python -m pip install build",
     "python -m build --wheel -o {build_cache_dir} {build_dir}"
   ],

@@ -57,7 +57,7 @@ disc = pybamm.Discretisation(mesh, spatial_methods)
 disc.process_model(model)
 
 # Solve
-solver = pybamm.ScipySolver()
+solver = pybamm.IDAKLUSolver()
 t = np.linspace(0, 1, 100)
 solution = solver.solve(model, t)
 
@@ -89,7 +89,7 @@ def T_n(t, n):
 
 
 # Sum series to get the source term
-def Q_exact(n):
+def Q_exact(x):
     out = 0
     for n in np.arange(1, N):
         out += q(n) * np.sin(n * np.pi * x / 2)
@@ -120,7 +120,7 @@ for i, t in enumerate(plot_times):
         color=color,
         label="Numerical" if i == 0 else "",
     )
-    plt.plot(xx, T_exact(xx, t), "-", color=color, label=f"Exact (t={plot_times[i]})")
+    plt.plot(xx, T_exact(xx, t), "-", color=color, label=f"Exact (t={t})")
 plt.xlabel("x", fontsize=16)
 plt.ylabel("T", fontsize=16)
 plt.legend()

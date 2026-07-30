@@ -42,8 +42,8 @@ An :class:`Experiment` object represents an experimental protocol that can be us
 Solvers
 -------
 
-The two main solvers in PyBaMM are the :class:`CasadiSolver` and the :class:`IDAKLUSolver`. Both are wrappers around the Sundials suite of solvers, but the :class:`CasadiSolver` uses the CasADi library
-whereas the :class:`IDAKLUSolver` is PyBaMM specific. Both solvers have many options that can be set to control the solver behaviour, see the documentation for each solver for more details.
+The recommended solver in PyBaMM is the :class:`IDAKLUSolver`, a PyBaMM-specific wrapper around the Sundials suite of solvers. It is the default solver for all models and has many
+options that can be set to control its behaviour, see its documentation for more details.
 
 When a model is solved, the solution is returned as a :class:`Solution` object.
 
