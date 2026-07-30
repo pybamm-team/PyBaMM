@@ -180,13 +180,13 @@ class VTKQuickPlot:
           ``plot_type`` is ``"slice"``)
         - ``"scale"``: ``"auto"`` (default), ``None``, or ``(sx, sy, sz)``
 
-    Each variable's options value may also be a **list** of dicts, in which
-    case one panel is created per entry::
+        A variable's value may also be a **list** of such dicts, in which
+        case one panel is created per entry::
 
-        options={"T": [
-            {"plot_type": "3d"},
-            {"plot_type": "slice", "x": 0.5},
-        ]}
+            options={"T": [
+                {"plot_type": "3d"},
+                {"plot_type": "slice", "x": 0.5},
+            ]}
     """
 
     def __init__(

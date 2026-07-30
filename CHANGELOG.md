@@ -1,6 +1,13 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added unstructured finite volume support: `pybamm.UnstructuredSubMesh` (cell-centred meshes of triangles, quadrilaterals, tetrahedra, or hexahedra), the `pybamm.FiniteVolumeUnstructured` spatial method, and the `pybamm.lithium_ion.BasicDFN2DUnstructured`/`BasicDFN3DUnstructured` models. Meshes can be read from gmsh files via `pybamm.UserSuppliedUnstructuredMesh` or `pybamm.TaggedSubMeshGenerator`, and interfaces between adjacent submeshes are discovered automatically for arbitrary topologies rather than assuming a 1D stack. ([#5397](https://github.com/pybamm-team/PyBaMM/pull/5397))
+- Added `pybamm.VTKQuickPlot`, a VTK-based interactive alternative to `QuickPlot` for 2D and 3D unstructured mesh solutions. Requires the new `vtk` extra (`pip install pybamm[vtk]`). ([#5397](https://github.com/pybamm-team/PyBaMM/pull/5397))
+
 ## Bug fixes
+
+- `pybamm.max` and `pybamm.min` now clear their child's domains, reflecting that a reduction over a spatial field is a scalar. ([#5397](https://github.com/pybamm-team/PyBaMM/pull/5397))
 
 - `BatchStudy.solve` no longer ignores its `solver` argument: previously the loop over study inputs shadowed it, so a caller-supplied solver was silently dropped. A solver from `BatchStudy(solvers=...)` still takes precedence. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
 - `pybamm.citations.register` now names the citation the caller passed in when a BibTeX string fails to parse, instead of whichever entry the parser had reached. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))

@@ -19,10 +19,11 @@ class UnstructuredSubMesh(SubMesh):
 
     Parameters
     ----------
-    nodes : numpy.ndarray, shape (n_nodes, d)
-        Vertex coordinates (d = 2 or 3).
-    elements : numpy.ndarray, shape (n_cells, n_verts_per_cell)
-        Element vertex indices.  For 2D: 3 (triangles) or 4 (quads).
+    nodes : numpy.ndarray
+        Vertex coordinates, of shape ``(n_nodes, d)`` (d = 2 or 3).
+    elements : numpy.ndarray
+        Element vertex indices, of shape ``(n_cells, n_verts_per_cell)``.
+        For 2D: 3 (triangles) or 4 (quads).
         For 3D: 4 (tetrahedra) or 8 (hexahedra).
     coord_sys : str, optional
         Coordinate system, default ``"cartesian"``.
