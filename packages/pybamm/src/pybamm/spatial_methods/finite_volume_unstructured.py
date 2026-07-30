@@ -328,6 +328,10 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             matrix = vstack([identity for _ in range(sec_size)])
             out = pybamm.Matrix(matrix) @ symbol
 
+        if out is symbol:
+            # simplification can hand back the child itself (e.g. ones-vector
+            # multiply); copy before stamping domains on a possibly shared node
+            out = symbol.create_copy(perform_simplifications=False)
         out.domains = domains.copy()
         return out
 
