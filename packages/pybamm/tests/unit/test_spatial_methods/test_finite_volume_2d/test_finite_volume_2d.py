@@ -310,8 +310,8 @@ class TestFiniteVolume2D:
             eqn_disc.evaluate(None, TB.flatten())
 
         for eqn in [
-            var * pybamm.Magnitude(pybamm.grad(var), "lr"),
-            pybamm.Magnitude(pybamm.grad(var), "lr") * var,
+            var * pybamm.Component(pybamm.grad(var), 0),
+            pybamm.Component(pybamm.grad(var), 0) * var,
         ]:
             eqn_disc = disc.process_symbol(eqn)
             eqn_disc.evaluate(None, LR.flatten())
