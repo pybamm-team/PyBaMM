@@ -232,10 +232,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
         # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
         matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64)), sub_matrix
         )
@@ -462,10 +458,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                 pybamm.Matrix(eye(higher_repeats)), int_matrix
             )
         # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
         return matrix
 
     def indefinite_integral(self, child, discretised_child, direction):
@@ -612,10 +604,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix_transposed = pybamm.Transpose(sub_matrix)
         sub_matrix = pybamm.SparseStack(zero_col, sub_matrix_transposed, zero_col)
         sub_matrix = pybamm.Transpose(sub_matrix)
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+        # generate full matrix from the submatrix
         matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64)), sub_matrix
         )
@@ -659,10 +648,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = d_edges_matrix * pybamm.Matrix(
             spdiags(du_entries, offset, n + 1, n)
         )
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+        # generate full matrix from the submatrix
         matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64)), sub_matrix
         )
@@ -719,10 +705,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             domain_width = pybamm.Scalar(submesh.edges[-1] - submesh.edges[0])
         # Generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
         matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64).toarray()),
             sub_matrix,
@@ -802,7 +784,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         where y1 is the value of the first node.
         Similarly for the right-hand boundary condition.
 
-        For Neumann bcs no ghost nodes are added. Instead, the exact value provided
+        For Neumann bcs, no ghost nodes are added. Instead, the exact value provided
         by the boundary condition is used at the cell edge when calculating the
         gradient (see :meth:`pybamm.FiniteVolume.add_neumann_values`).
 
@@ -1023,10 +1005,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # has domain electrode, since it is a function of the macroscopic variables
         bcs_vector.copy_domains(discretised_gradient)
 
-        # Make matrix which makes "gaps" in the the discretised gradient into
-        # which the known Neumann values will be added. E.g. in 1D if the left
+        # Make matrix which makes "gaps" in the discretised gradient into which
+        # the known Neumann or flux values will be added. E.g. in 1D if the left
         # boundary condition is Dirichlet and the right Neumann, this matrix will
-        # act to append a zero to the end of the discretised gradient
+        # act to append a zero to the end of the discretised gradient.
         if lbc_type == "Neumann":
             left_vector = csr_matrix((1, n))
         else:
@@ -1056,9 +1038,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         Flux boundary are a variation of Neumann boundary conditions that
         instead of being directly implemented for the gradient,
         are given terms of an expression(gradient).
-
-        Dirichlet bcs are implemented using ghost nodes, see
-        :meth:`pybamm.FiniteVolume.add_ghost_nodes`.
 
         Parameters
         ----------
@@ -1568,6 +1547,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The discretised left child of `bin_op`
         disc_right : :class:`pybamm.Symbol`
             The discretised right child of `bin_op`
+
         Returns
         -------
         :class:`pybamm.BinaryOperator`

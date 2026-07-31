@@ -289,7 +289,7 @@ class Sign(UnaryOperator):
 
 class Floor(UnaryOperator):
     """
-    A node in the expression tree representing an `floor` operator.
+    A node in the expression tree representing a `floor` operator.
     """
 
     def __init__(self, child):
@@ -483,7 +483,6 @@ class SpatialOperator(UnaryOperator):
 
     Parameters
     ----------
-
     name : str
         name of the node
     child : :class:`Symbol`
@@ -611,7 +610,7 @@ class Divergence(SpatialOperator):
 class Laplacian(SpatialOperator):
     """
     A node in the expression tree representing a Laplacian operator. This is
-    currently only implemeted in the weak form for finite element formulations.
+    currently only implemented in the weak form for finite element formulations.
     """
 
     def __init__(self, child):
@@ -624,9 +623,9 @@ class Laplacian(SpatialOperator):
 
 class GradientSquared(SpatialOperator):
     """
-    A node in the expression tree representing a the inner product of the grad
+    A node in the expression tree representing the inner product of the grad
     operator with itself. In particular, this is useful in the finite element
-    formualtion where we only require the (sclar valued) square of the gradient,
+    formulation where we only require the (scalar valued) square of the gradient,
     and not the gradient itself.
     """
 
@@ -640,8 +639,8 @@ class GradientSquared(SpatialOperator):
 
 class Mass(SpatialOperator):
     """
-    Returns the mass matrix for a given symbol, accounting for Dirchlet boundary
-    conditions where necessary (e.g. in the finite element formualtion)
+    Returns the mass matrix for a given symbol, accounting for Dirichlet boundary
+    conditions where necessary (e.g. in the finite element formulation)
     """
 
     def __init__(self, child):
@@ -654,8 +653,8 @@ class Mass(SpatialOperator):
 class BoundaryMass(SpatialOperator):
     """
     Returns the mass matrix for a given symbol assembled over the boundary of
-    the domain, accounting for Dirchlet boundary conditions where necessary
-    (e.g. in the finite element formualtion)
+    the domain, accounting for Dirichlet boundary conditions where necessary
+    (e.g. in the finite element formulation)
     """
 
     def __init__(self, child):
@@ -1477,13 +1476,11 @@ def grad(symbol):
 
     Parameters
     ----------
-
     symbol : :class:`Symbol`
         the gradient will be performed on this sub-symbol
 
     Returns
     -------
-
     :class:`Gradient`
         the gradient of ``symbol``
     """
@@ -1496,7 +1493,7 @@ def grad(symbol):
         return pybamm.PrimaryBroadcastToEdges(new_child, symbol.domain)
     elif isinstance(symbol, pybamm.SecondaryBroadcast):
         # Take gradient of the child
-        # then broadcast back to the originalsymbol's secondary domain
+        # then broadcast back to the original symbol's secondary domain
         # We can do this because gradient only acts on the primary domain
         return pybamm.SecondaryBroadcast(grad(symbol.child), symbol.secondary_domain)
     elif isinstance(symbol, pybamm.FullBroadcast):
@@ -1511,13 +1508,11 @@ def div(symbol):
 
     Parameters
     ----------
-
     symbol : :class:`Symbol`
         the divergence will be performed on this sub-symbol
 
     Returns
     -------
-
     :class:`Divergence`
         the divergence of ``symbol``
     """
@@ -1547,13 +1542,11 @@ def laplacian(symbol):
 
     Parameters
     ----------
-
     symbol : :class:`Symbol`
         the Laplacian will be performed on this sub-symbol
 
     Returns
     -------
-
     :class:`Laplacian`
         the Laplacian of ``symbol``
     """
@@ -1567,14 +1560,12 @@ def grad_squared(symbol):
 
     Parameters
     ----------
-
     symbol : :class:`Symbol`
         the inner product of the gradient with itself will be performed on this
         sub-symbol
 
     Returns
     -------
-
     :class:`GradientSquared`
         inner product of the gradient of ``symbol`` with itself
     """
@@ -1604,7 +1595,6 @@ def surf(symbol):
 
     Parameters
     ----------
-
     symbol : :class:`pybamm.Symbol`
         the surface value of this symbol will be returned
 

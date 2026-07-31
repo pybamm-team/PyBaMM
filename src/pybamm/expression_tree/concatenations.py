@@ -210,7 +210,7 @@ class NumpyConcatenation(Concatenation):
 
     def __init__(self, *children: pybamm.Symbol):
         children = list(children)
-        # Turn objects that evaluate to scalars to objects that evaluate to vectors,
+        # Turn objects that evaluate to scalars into objects that evaluate to vectors,
         # so that we can concatenate them
         for i, child in enumerate(children):
             if child.evaluates_to_number():
@@ -273,14 +273,11 @@ class DomainConcatenation(Concatenation):
 
     Parameters
     ----------
-
     children : iterable of :class:`pybamm.Symbol`
         The symbols to concatenate
-
     full_mesh : :class:`pybamm.Mesh`
         The underlying mesh for discretisation, used to obtain the number of mesh points
         in each domain.
-
     copy_this : :class:`pybamm.DomainConcatenation` (optional)
         if provided, this class is initialised by copying everything except the children
         from `copy_this`. `mesh` is not used in this case
@@ -632,7 +629,7 @@ def simplified_domain_concatenation(
     # Create the DomainConcatenation to read domain and child domain
     concat = DomainConcatenation(children, mesh, copy_this=copy_this)
     # Simplify Concatenation of StateVectors to a single StateVector
-    # The sum of the evalation arrays of the StateVectors must be exactly 1
+    # The sum of the evaluation arrays of the StateVectors must be exactly 1
     if all(isinstance(child, pybamm.StateVector) for child in children):
         sv_children: list[pybamm.StateVector] = children  # type: ignore[assignment]
         longest_eval_array = len(sv_children[-1]._evaluation_array)

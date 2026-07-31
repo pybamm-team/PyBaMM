@@ -28,11 +28,11 @@ class Discretisation:
         domain. The keys correspond to the model domains and the
         values to the spatial method.
     check_model : bool, optional
-            If True, model checks are performed after discretisation. For large
-            systems these checks can be slow, so can be skipped by setting this
-            option to False. When developing, testing or debugging it is recommended
-            to leave this option as True as it may help to identify any errors.
-            Default is True.
+        If True, model checks are performed after discretisation. For large
+        systems these checks can be slow, so can be skipped by setting this
+        option to False. When developing, testing or debugging it is recommended
+        to leave this option as True as it may help to identify any errors.
+        Default is True.
     remove_independent_variables_from_rhs : bool, optional
         If True, model checks to see whether any variables from the RHS are used
         in any other equation. If a variable meets all of the following criteria
@@ -125,7 +125,7 @@ class Discretisation:
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
-            Model to dicretise. Must have attributes rhs, initial_conditions and
+            Model to discretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         inplace : bool, optional
             If True, discretise the model in place. Otherwise, return a new
@@ -519,7 +519,7 @@ class Discretisation:
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
-            Model to dicretise. Must have attributes rhs, initial_conditions and
+            Model to discretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
 
         Returns
@@ -549,7 +549,7 @@ class Discretisation:
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
-            Model to dicretise. Must have attributes rhs, initial_conditions and
+            Model to discretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
 
         Returns
@@ -561,7 +561,7 @@ class Discretisation:
 
         processed_bcs = {}
 
-        # process and set pybamm.variables first incase required
+        # process and set pybamm.variables first in case required
         # in discrisation of other boundary conditions
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key] = {}
@@ -654,7 +654,7 @@ class Discretisation:
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
-            Model to dicretise. Must have attributes rhs, initial_conditions and
+            Model to discretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
 
         Returns
@@ -799,7 +799,7 @@ class Discretisation:
         Parameters
         ----------
         var_eqn_dict : dict
-            Equations ({variable: equation} dict) to dicretise
+            Equations ({variable: equation} dict) to discretise
             (can be model.rhs, model.algebraic, model.initial_conditions or
             model.variables)
         ics : bool, optional
@@ -824,7 +824,7 @@ class Discretisation:
         Parameters
         ----------
         var_eqn_dict : dict
-            Equations ({variable: equation} dict) to dicretise
+            Equations ({variable: equation} dict) to discretise
             (can be model.rhs, model.algebraic, model.initial_conditions or
             model.variables)
         ics : bool, optional
@@ -1217,7 +1217,7 @@ class Discretisation:
         Parameters
         ----------
         var_eqn_dict : dict
-            Equations ({variable: equation} dict) to dicretise
+            Equations ({variable: equation} dict) to discretise
         check_complete : bool, optional
             Whether to check keys in var_eqn_dict against self.y_slices. Default
             is False
