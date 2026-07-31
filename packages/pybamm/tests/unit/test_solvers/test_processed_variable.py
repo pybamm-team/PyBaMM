@@ -405,7 +405,7 @@ class TestProcessedVariable:
             y_sol.reshape(processed_var.entries.shape),
         )
 
-        var_edges_tb = pybamm.Magnitude(pybamm.grad(var), "tb")
+        var_edges_tb = pybamm.Component(pybamm.grad(var), 1)
         disc.bcs = {
             var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
@@ -433,7 +433,7 @@ class TestProcessedVariable:
             ),
         )
 
-        var_edges_lr = pybamm.Magnitude(pybamm.grad(var), "lr")
+        var_edges_lr = pybamm.Component(pybamm.grad(var), 0)
         disc.bcs = {
             var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),

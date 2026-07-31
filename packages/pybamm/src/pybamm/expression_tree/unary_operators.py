@@ -3,6 +3,8 @@
 #
 from __future__ import annotations
 
+import warnings
+
 import casadi
 import numpy as np
 import numpy.typing as npt
@@ -1486,10 +1488,21 @@ class NodeToEdge2D(SpatialOperator):
 
 class Magnitude(UnaryOperator):
     """
-    A node in the expression tree representing the magnitude of a vector field.
+    Extract a directional component from a 2D :class:`VectorField`.
+
+    .. deprecated::
+        Use :class:`Component` with index ``0`` (``"lr"``) or ``1`` (``"tb"``)
+        instead. ``Magnitude`` will be removed in a future release.
     """
 
     def __init__(self, child, direction):
+        warnings.warn(
+            "pybamm.Magnitude is deprecated and will be removed in a future "
+            "release. Use pybamm.Component(symbol, 0) for the lr/x component "
+            "or pybamm.Component(symbol, 1) for the tb/z component.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__("magnitude" + f"({direction})", child)
         self.direction = direction
 

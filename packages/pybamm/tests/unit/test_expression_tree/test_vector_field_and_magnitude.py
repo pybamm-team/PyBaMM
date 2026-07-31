@@ -4,7 +4,7 @@ import pybamm
 
 
 class TestVectorFieldAndMagnitude:
-    def test_vector_field_and_magnitude(self, mesh_2d):
+    def test_vector_field_and_component(self, mesh_2d):
         mesh = mesh_2d
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume2D(),
@@ -17,18 +17,18 @@ class TestVectorFieldAndMagnitude:
         one = pybamm.Constant(1, "one")
         vf_plus_one = vector_field + one
         one_plus_vf = one + vector_field
-        magnitude_lr = pybamm.Magnitude(vector_field, "lr")
-        magnitude_tb = pybamm.Magnitude(vector_field, "tb")
+        component_lr = pybamm.Component(vector_field, 0)
+        component_tb = pybamm.Component(vector_field, 1)
         negative_vf = -vector_field
         vf_processed = disc.process_symbol(vector_field)
         vf_plus_one_processed = disc.process_symbol(vf_plus_one)
         one_plus_vf_processed = disc.process_symbol(one_plus_vf)
-        magnitude_lr_processed = disc.process_symbol(magnitude_lr)
-        magnitude_tb_processed = disc.process_symbol(magnitude_tb)
+        component_lr_processed = disc.process_symbol(component_lr)
+        component_tb_processed = disc.process_symbol(component_tb)
         negative_vf_processed = disc.process_symbol(negative_vf)
 
-        assert magnitude_lr_processed.evaluate() == 1
-        assert magnitude_tb_processed.evaluate() == 2
+        assert component_lr_processed.evaluate() == 1
+        assert component_tb_processed.evaluate() == 2
         assert vf_plus_one_processed == pybamm.VectorField(
             pybamm.Scalar(2), pybamm.Scalar(3)
         )
@@ -42,8 +42,8 @@ class TestVectorFieldAndMagnitude:
         )
         assert vf_processed == pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
 
-        with pytest.raises(ValueError, match=r"applied to a vector field"):
-            disc.process_symbol(pybamm.Magnitude(pybamm.Scalar(1), "lr"))
+        with pytest.raises(ValueError, match=r"applied to a VectorField"):
+            disc.process_symbol(pybamm.Component(pybamm.Scalar(1), 0))
 
         assert negative_vf_processed == pybamm.VectorField(
             pybamm.Scalar(-1), pybamm.Scalar(-2)
@@ -60,7 +60,25 @@ class TestVectorFieldAndMagnitude:
         with pytest.raises(ValueError, match=r"must either"):
             vf_evaluates_on_edges.evaluates_on_edges("primary")
 
-        assert magnitude_lr.new_copy([vector_field]) == magnitude_lr
+        assert component_lr.new_copy([vector_field]) == component_lr
+
+    def test_magnitude_is_deprecated(self, mesh_2d):
+        mesh = mesh_2d
+        disc = pybamm.Discretisation(mesh, {"macroscale": pybamm.FiniteVolume2D()})
+        vector_field = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+
+        with pytest.warns(DeprecationWarning, match="Magnitude is deprecated"):
+            magnitude_lr = pybamm.Magnitude(vector_field, "lr")
+        with pytest.warns(DeprecationWarning, match="Magnitude is deprecated"):
+            magnitude_tb = pybamm.Magnitude(vector_field, "tb")
+
+        assert disc.process_symbol(magnitude_lr).evaluate() == 1
+        assert disc.process_symbol(magnitude_tb).evaluate() == 2
+
+        with pytest.raises(ValueError, match=r"applied to a vector field"):
+            with pytest.warns(DeprecationWarning, match="Magnitude is deprecated"):
+                disc.process_symbol(pybamm.Magnitude(pybamm.Scalar(1), "lr"))
 
         with pytest.raises(ValueError, match=r"Invalid direction"):
-            disc.process_symbol(pybamm.Magnitude(vector_field, "asdf"))
+            with pytest.warns(DeprecationWarning, match="Magnitude is deprecated"):
+                disc.process_symbol(pybamm.Magnitude(vector_field, "asdf"))
