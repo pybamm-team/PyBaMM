@@ -2,8 +2,10 @@ import numpy as np
 
 import pybamm
 from pybamm.meshes.unstructured_submesh import (
+    TaggedSubMeshGenerator,
     UnstructuredMeshGenerator,
     UnstructuredSubMesh,
+    UserSuppliedUnstructuredMesh,
     _hex_grid,
     _hex_to_tet,
     _quad_to_tri,
@@ -594,6 +596,148 @@ class TestUnstructuredMeshGenerator:
 
 
 # ======================================================================
+# TestFileGenerators
+# ======================================================================
+
+
+class TestFileGenerators:
+    @staticmethod
+    def _write_two_triangle_vtu(path, tags=None):
+        """Unit square as 2 triangles, z=0, optional per-cell integer tags."""
+        import meshio
+
+        points = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]], dtype=float)
+        cells = [("triangle", np.array([[0, 1, 2], [0, 2, 3]]))]
+        cell_data = {"tag": [np.asarray(tags)]} if tags is not None else {}
+        meshio.write(str(path), meshio.Mesh(points, cells, cell_data=cell_data))
+
+    def test_user_supplied_loads_whole_mesh(self, tmp_path):
+        """Full file load: z=0 points are trimmed to a 2D mesh."""
+        import pytest
+
+        pytest.importorskip("meshio")
+        path = tmp_path / "square.vtu"
+        self._write_two_triangle_vtu(path)
+
+        gen = UserSuppliedUnstructuredMesh(str(path))
+        sub = gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+
+        assert isinstance(sub, UnstructuredSubMesh)
+        assert sub.dimension == 2
+        assert sub.npts == 2
+        np.testing.assert_allclose(sub.cell_volumes.sum(), 1.0)
+        assert "square.vtu" in repr(gen)
+
+    def test_user_supplied_subdomain_filtering(self, tmp_path):
+        """subdomain_mapping selects only the cells with the matching tag."""
+        import pytest
+
+        pytest.importorskip("meshio")
+        path = tmp_path / "tagged.vtu"
+        self._write_two_triangle_vtu(path, tags=[1, 2])
+
+        gen = UserSuppliedUnstructuredMesh(
+            str(path), subdomain_mapping={"negative electrode": 1}
+        )
+        sub = gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+        assert sub.npts == 1
+
+        # A mesh with no cell data at all cannot satisfy a subdomain_mapping
+        import meshio
+
+        gen_bad = UserSuppliedUnstructuredMesh(
+            str(path), subdomain_mapping={"negative electrode": 1}
+        )
+        gen_bad._cached_mesh = meshio.Mesh(
+            np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0]], dtype=float),
+            [("triangle", np.array([[0, 1, 2]]))],
+        )
+        with pytest.raises(pybamm.GeometryError, match="cell data tag"):
+            gen_bad({"x_n": {"min": 0.0, "max": 1.0}}, {})
+
+    def test_user_supplied_no_supported_cells_raises(self):
+        """A mesh with only unsupported cell types raises."""
+        import pytest
+
+        meshio = pytest.importorskip("meshio")
+        gen = UserSuppliedUnstructuredMesh("unused.vtu")
+        gen._cached_mesh = meshio.Mesh(
+            np.array([[0, 0, 0], [1, 0, 0]], dtype=float),
+            [("line", np.array([[0, 1]]))],
+        )
+        with pytest.raises(pybamm.GeometryError, match="No supported cells"):
+            gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+
+    def test_domain_name_from_lims(self):
+        """String and SpatialVariable keys map to electrode domains; 'tabs' skipped."""
+        f = UserSuppliedUnstructuredMesh._domain_name_from_lims
+        assert f({"x_n": {}}) == "negative electrode"
+        assert f({"x_s": {}}) == "separator"
+        assert f({"tabs": {}, "x_p": {}}) == "positive electrode"
+        assert f({"r_n": {}}) is None
+        x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
+        assert f({x: {}}) == "negative electrode"
+
+    @staticmethod
+    def _tagged_gmsh_mesh():
+        """Synthetic meshio mesh: 5 tets of the unit cube, two physical groups."""
+        import meshio
+
+        nodes, elements = _unit_cube_five_tets()
+        return meshio.Mesh(
+            nodes,
+            [("tetra", elements)],
+            cell_data={"gmsh:physical": [np.array([1, 1, 1, 2, 2])]},
+            field_data={"anode": np.array([1, 3]), "cathode": np.array([2, 3])},
+        )
+
+    def test_tagged_generator_extracts_region(self):
+        import pytest
+
+        pytest.importorskip("meshio")
+        fake_path = "fake_tagged_mesh.msh"
+        TaggedSubMeshGenerator._mesh_cache[fake_path] = self._tagged_gmsh_mesh()
+        try:
+            gen = TaggedSubMeshGenerator("anode", fake_path, scale=2.0)
+            sub = gen({}, {})
+            assert isinstance(sub, UnstructuredSubMesh)
+            assert sub.npts == 3  # cells tagged 1
+            # scale multiplies coordinates: unit cube -> side 2
+            np.testing.assert_allclose(sub.nodes.max(axis=0), [2.0, 2.0, 2.0])
+        finally:
+            TaggedSubMeshGenerator._mesh_cache.pop(fake_path, None)
+
+    def test_tagged_generator_missing_region_raises(self):
+        import pytest
+
+        pytest.importorskip("meshio")
+        fake_path = "fake_tagged_mesh_2.msh"
+        TaggedSubMeshGenerator._mesh_cache[fake_path] = self._tagged_gmsh_mesh()
+        try:
+            gen = TaggedSubMeshGenerator("does-not-exist", fake_path)
+            with pytest.raises(pybamm.GeometryError, match="not in mesh field_data"):
+                gen({}, {})
+        finally:
+            TaggedSubMeshGenerator._mesh_cache.pop(fake_path, None)
+
+    def test_tagged_generator_region_without_tets_raises(self):
+        import pytest
+
+        pytest.importorskip("meshio")
+        fake_path = "fake_tagged_mesh_3.msh"
+        mesh = self._tagged_gmsh_mesh()
+        # Physical group 9 exists in field_data but tags no tet cells
+        mesh.field_data["empty"] = np.array([9, 3])
+        TaggedSubMeshGenerator._mesh_cache[fake_path] = mesh
+        try:
+            gen = TaggedSubMeshGenerator("empty", fake_path)
+            with pytest.raises(pybamm.GeometryError, match="no tets"):
+                gen({}, {})
+        finally:
+            TaggedSubMeshGenerator._mesh_cache.pop(fake_path, None)
+
+
+# ======================================================================
 # TestComputeInterfaceData
 # ======================================================================
 
@@ -702,6 +846,36 @@ class TestComputeInterfaceData:
         np.testing.assert_array_equal(
             left_to_right["right_cells"], right_to_left["left_cells"]
         )
+
+    def test_no_matching_boundary_faces_raises(self):
+        """A mesh without the required boundary bucket cannot be paired."""
+        import pytest
+
+        ye = np.linspace(0, 1, 3)
+        ze = np.linspace(0, 1, 3)
+        left = UnstructuredSubMesh(*_hex_grid(np.linspace(0, 1, 3), ye, ze))
+        nodes_r, elems_r = _hex_grid(np.linspace(1, 2, 3), ye, ze)
+        # Empty boundary_faces: no "left" bucket to match against
+        right = UnstructuredSubMesh(nodes_r, elems_r, boundary_faces={})
+
+        with pytest.raises(pybamm.GeometryError, match="matching boundary faces"):
+            compute_interface_data(left, right)
+
+    def test_transverse_mismatch_raises(self):
+        """Interface faces at different transverse positions cannot be paired."""
+        import pytest
+
+        ze = np.linspace(0, 1, 3)
+        left = UnstructuredSubMesh(
+            *_hex_grid(np.linspace(0, 1, 3), np.linspace(0, 1, 3), ze)
+        )
+        # y grid shifted by 0.37: same face count, wrong transverse positions
+        right = UnstructuredSubMesh(
+            *_hex_grid(np.linspace(1, 2, 3), np.linspace(0.37, 1.37, 3), ze)
+        )
+
+        with pytest.raises(pybamm.GeometryError, match="do not match"):
+            compute_interface_data(left, right)
 
 
 # ======================================================================
@@ -824,6 +998,53 @@ class TestMeshIntegration:
         combined = UnstructuredSubMesh.combine([left, right])
         assert combined.element_type == "tetrahedron"
         assert combined.npts == left.npts + right.npts
+
+    def test_combine_propagates_custom_boundary_tags(self):
+        """Non-standard boundary tags survive combining via centroid matching."""
+        ye = np.linspace(0, 1, 3)
+        ze = np.linspace(0, 1, 3)
+        left = UnstructuredSubMesh(*_hex_grid(np.linspace(0, 1, 3), ye, ze))
+        right = UnstructuredSubMesh(*_hex_grid(np.linspace(1, 2, 3), ye, ze))
+        left.boundary_faces["tab_top"] = left.boundary_faces.pop("top")
+
+        combined = UnstructuredSubMesh.combine([left, right])
+
+        assert "tab_top" in combined.boundary_faces
+        # The recovered faces sit on the z=1 plane of the left half only
+        tab_centroids = combined.face_centroids[combined.boundary_faces["tab_top"]]
+        np.testing.assert_allclose(tab_centroids[:, 2], 1.0)
+        assert tab_centroids[:, 0].max() <= 1.0
+
+    def test_mesh_skips_interface_for_mismatched_grids(self):
+        """Mesh.__init__ leaves interface_data empty when pairing fails."""
+        x_n = pybamm.SpatialVariable(
+            "x_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        x_s = pybamm.SpatialVariable("x_s", domain=["separator"], coord_sys="cartesian")
+        z_a = pybamm.SpatialVariable(
+            "z_2d", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        z_b = pybamm.SpatialVariable(
+            "z_2d", domain=["separator"], coord_sys="cartesian"
+        )
+
+        # Transverse extents disagree (z: 0-1 vs 0-2), so pairing cannot match
+        geometry = {
+            "negative electrode": {
+                x_n: {"min": 0, "max": 1},
+                z_a: {"min": 0, "max": 1},
+            },
+            "separator": {x_s: {"min": 1, "max": 2}, z_b: {"min": 0, "max": 2}},
+        }
+        gen = UnstructuredMeshGenerator()
+        mesh = pybamm.Mesh(
+            geometry,
+            {"negative electrode": gen, "separator": gen},
+            {x_n: 3, x_s: 3, z_a: 4, z_b: 4},
+        )
+
+        assert mesh["negative electrode"].interface_data == {}
+        assert mesh["separator"].interface_data == {}
 
     def test_combine_disconnected_domains_raises(self):
         """A non-conforming interface must raise, not solve silently to garbage."""
