@@ -107,10 +107,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Multiply by gradient matrix
         out = gradient_matrix @ discretised_symbol
 
-        # Add Neumann boundary conditions, if defined
+        # Add Neumann boundary conditions or extrapolated boundary-edge flux values
         if symbol in boundary_conditions:
             bcs = boundary_conditions[symbol]
-            if any(bc[1] == "Neumann" for bc in bcs.values()):
+            if any(bc[1] != "Dirichlet" for bc in bcs.values()):
                 out = self.add_neumann_values(symbol, out, bcs, domain)
 
         return out
@@ -241,14 +241,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.SpatialMethod.divergence`
         """
-        # Add Flux boundary conditions, if defined
-        if boundary_conditions:
-            key_id = next(iter(boundary_conditions.keys()))
-            for bc in boundary_conditions[key_id].values():
-                if pybamm.is_flux_boundary_condition(bc[1]) and bc[1][1] == symbol:
-                    discretised_symbol = self.add_flux_values(
-                        symbol, discretised_symbol, boundary_conditions[key_id]
-                    )
+        discretised_symbol = self.add_flux_values(
+            symbol, discretised_symbol, boundary_conditions
+        )
 
         submesh = self.mesh[symbol.domain]
 
@@ -810,7 +805,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         domain = symbol.domain
         submesh = self.mesh[domain]
 
-        # Prepare sizes and empty bcs_vector
+        # Prepare sizes
         n = submesh.npts
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
@@ -948,11 +943,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
 
-        # Count number of Neumann boundary conditions
+        # Count number of Neumann and flux boundary conditions
         n_bcs = 0
-        if lbc_type == "Neumann":
+        if lbc_type != "Dirichlet":
             n_bcs += 1
-        if rbc_type == "Neumann":
+        if rbc_type != "Dirichlet":
             n_bcs += 1
 
         # Add any values from Neumann boundary conditions to the bcs vector
@@ -1009,12 +1004,28 @@ class FiniteVolume(pybamm.SpatialMethod):
         # the known Neumann or flux values will be added. E.g. in 1D if the left
         # boundary condition is Dirichlet and the right Neumann, this matrix will
         # act to append a zero to the end of the discretised gradient.
+        # Where there is a flux boundary condition, an extrapolated value of the
+        # gradient is appended (mainly for plotting, the flux is applied later).
         if lbc_type == "Neumann":
             left_vector = csr_matrix((1, n))
+        elif pybamm.is_flux_boundary_condition(lbc_type):
+            # Linear extrapolation of discretised gradient to boundary edge
+            dx0_dx1 = submesh.d_edges[0] / submesh.d_edges[1]
+            left_vector = csr_matrix(
+                ([1 + dx0_dx1, -dx0_dx1], ([0, 0], [0, 1])),
+                shape=(1, n),
+            )
         else:
             left_vector = None
         if rbc_type == "Neumann":
             right_vector = csr_matrix((1, n))
+        elif pybamm.is_flux_boundary_condition(rbc_type):
+            # Linear extrapolation of discretised gradient to boundary edge
+            dxN_dxNm1 = submesh.d_edges[-1] / submesh.d_edges[-2]
+            right_vector = csr_matrix(
+                ([-dxN_dxNm1, 1 + dxN_dxNm1], ([0, 0], [n - 2, n - 1])),
+                shape=(1, n),
+            )
         else:
             right_vector = None
         sub_matrix = vstack([left_vector, eye(n, dtype=np.float64), right_vector])
@@ -1030,7 +1041,19 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return new_gradient
 
-    def add_flux_values(self, symbol, processed_symbol, bcs):
+    def add_flux_values(self, symbol, discretised_symbol, boundary_conditions):
+        """Add Flux boundary conditions, if defined."""
+        if boundary_conditions:
+            # Search all boundary conditions to see if this symbol appears as a flux
+            for key_id in boundary_conditions.keys():
+                for bc in boundary_conditions[key_id].values():
+                    if pybamm.is_flux_boundary_condition(bc[1]) and bc[1][1] == symbol:
+                        discretised_symbol = self._add_flux_values(
+                            symbol, discretised_symbol, boundary_conditions[key_id]
+                        )
+        return discretised_symbol
+
+    def _add_flux_values(self, symbol, processed_symbol, bcs):
         """
         Add the known values of the flux boundary conditions to
         the discretised symbol.
@@ -1055,37 +1078,20 @@ class FiniteVolume(pybamm.SpatialMethod):
             `processed_symbol + bcs_vector`.
 
         """
+        # get relevant grid points
         domain = symbol.domain
-        n_bcs = 0
-        neumann_bcs = 0
+        submesh = self.mesh[domain]
+
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
 
-        # Count number of Neumann and flux boundary conditions and adjust domain for dirichlet conditions
-        if pybamm.is_flux_boundary_condition(lbc_type):
-            n_bcs += 1
-        elif lbc_type == "Neumann":
-            neumann_bcs += 1
-        elif lbc_type == "Dirichlet":
-            domain = [domain[0] + "_left ghost cell", *domain]
-
-        if pybamm.is_flux_boundary_condition(rbc_type):
-            n_bcs += 1
-        elif rbc_type == "Neumann":
-            neumann_bcs += 1
-        elif rbc_type == "Dirichlet":
-            domain = [*domain, domain[-1] + "_right ghost cell"]
-
-        # get relevant grid points
-        submesh = self.mesh[domain]
-
-        # Prepare sizes and empty bcs_vector
-        n = submesh.npts - 1 + neumann_bcs
+        # Prepare sizes
+        n = submesh.npts + 1
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Add any values from flux boundary conditions to the bcs vector
         if pybamm.is_flux_boundary_condition(lbc_type) and lbc_value != 0:
-            lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n + n_bcs, 1))
+            lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n, 1))
             lbc_matrix = csr_matrix(
                 kron(eye(second_dim_repeats, dtype=np.float64), lbc_sub_matrix)
             )
@@ -1095,12 +1101,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
         else:
-            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
-
+            lbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
         if pybamm.is_flux_boundary_condition(rbc_type) and rbc_value != 0:
-            rbc_sub_matrix = coo_matrix(
-                ([1.0], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
-            )
+            rbc_sub_matrix = coo_matrix(([1.0], ([n - 1], [0])), shape=(n, 1))
             rbc_matrix = csr_matrix(
                 kron(eye(second_dim_repeats, dtype=np.float64), rbc_sub_matrix)
             )
@@ -1110,7 +1113,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
         else:
-            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
+            rbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
 
         bcs_vector = lbc_vector + rbc_vector
 
@@ -1119,19 +1122,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         # has domain electrode, since it is a function of the macroscopic variables
         bcs_vector.copy_domains(processed_symbol)
 
-        # Make matrix which makes "gaps" in the the discretised gradient into
-        # which the known Neumann values will be added. E.g. in 1D if the left
-        # boundary condition is Dirichlet and the right Neumann, this matrix will
-        # act to append a zero to the end of the discretised gradient
+        # Make matrix which makes "gaps" in the discretised symbol into which
+        # the known flux values will be added
+        diag_entries = np.ones(n, dtype=np.float64)
         if pybamm.is_flux_boundary_condition(lbc_type):
-            left_vector = csr_matrix((1, n))
-        else:
-            left_vector = None
+            diag_entries[0] = 0
         if pybamm.is_flux_boundary_condition(rbc_type):
-            right_vector = csr_matrix((1, n))
-        else:
-            right_vector = None
-        sub_matrix = vstack([left_vector, eye(n, dtype=np.float64), right_vector])
+            diag_entries[n - 1] = 0
+        sub_matrix = diags(diag_entries, shape=(n, n), dtype=np.float64)
 
         # repeat matrix for secondary dimensions
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
