@@ -35,6 +35,18 @@ class FiniteVolume2D(pybamm.SpatialMethod):
     def __init__(self, options=None):
         super().__init__(options)
 
+    @staticmethod
+    def _edge_direction(symbol):
+        """lr/tb direction for edge-averaging binary-op children."""
+        if isinstance(symbol, pybamm.Component):
+            try:
+                return ("lr", "tb")[symbol.index]
+            except IndexError as err:
+                raise pybamm.DiscretisationError(
+                    f"Component index {symbol.index} is not a 2D lr/tb direction"
+                ) from err
+        return symbol.direction
+
     def build(self, mesh):
         super().build(mesh)
 
@@ -2135,7 +2147,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # binary operator represents a flux)
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
             method = "arithmetic"
-            direction = left.direction
+            direction = self._edge_direction(left)
             disc_right = self.node_to_edge(
                 disc_right, method=method, direction=direction
             )
@@ -2145,7 +2157,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # binary operator represents a flux)
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
             method = "arithmetic"
-            direction = right.direction
+            direction = self._edge_direction(right)
             disc_left = self.node_to_edge(disc_left, method=method, direction=direction)
 
         # Return new binary operator with appropriate class
