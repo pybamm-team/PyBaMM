@@ -62,7 +62,7 @@ class TestSEIOnCracksCompositePhase5281:
 
     def test_spm_composite_solvent_diffusion_builds(self):
         """SEI options other than 'ec reaction limited' must not regress."""
-        opts = dict(COMPOSITE_OPTS_5281, **{"SEI": "solvent-diffusion limited"})
+        opts = dict(COMPOSITE_OPTS_5281, SEI="solvent-diffusion limited")
         # SPM uses x-averaged SEI; the 'x-average' branch of
         # SEIGrowth.set_rhs hits the X-averaged roughness ratio lookup.
         model = pybamm.lithium_ion.SPM(options=opts)
