@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added VTK-based plotting (`VTKQuickPlot`) for unstructured mesh solutions, including headless CI OpenGL setup. ([#5689](https://github.com/pybamm-team/PyBaMM/pull/5689))
 - Added `FiniteVolumeUnstructured` spatial method and unstructured processed-variable support for cell-centered data on arbitrary meshes. ([#5688](https://github.com/pybamm-team/PyBaMM/pull/5688))
 - Generalised `VectorField` to N components and added `Component`/`Norm` operators for multi-dimensional vector fields. ([#5688](https://github.com/pybamm-team/PyBaMM/pull/5688))
 - Added unstructured mesh support (`UnstructuredSubMesh`, generators, and interface coupling) for arbitrary 2D/3D domains. ([#5688](https://github.com/pybamm-team/PyBaMM/pull/5688))
