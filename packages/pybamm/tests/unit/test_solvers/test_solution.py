@@ -512,6 +512,28 @@ class TestSolution:
         assert sol_sum.observable == expected  # computed on access
         assert sol_sum._observable == expected  # and cached
 
+    def test_vector_field_variable(self, mesh_2d):
+        # a VectorField model variable is processed component-by-component,
+        # storing a list of casadi functions for the downstream processed
+        # variable classes to consume
+        model = pybamm.BaseModel()
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        model.rhs = {var: pybamm.Scalar(-1)}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        model.variables = {"var": var, "flux": pybamm.VectorField(var, 2 * var)}
+
+        disc = pybamm.Discretisation(mesh_2d, {"macroscale": pybamm.FiniteVolume2D()})
+        disc.process_model(model)
+        solution = pybamm.IDAKLUSolver().solve(model, np.linspace(0, 1, 5))
+
+        flux = solution["flux"]
+        assert isinstance(flux.base_variables[0], pybamm.VectorField)
+        casadi_components = flux.base_variables_casadi[0]
+        assert isinstance(casadi_components, list)
+        assert len(casadi_components) == 2
+
     def test_add_solutions_different_models(self):
         # Set up first solution
         t1 = np.linspace(0, 1)

@@ -234,6 +234,30 @@ class TestVectorFieldInheritance:
         np.testing.assert_array_equal(np.array(out[0]).flatten(), [1.0, 2.0])
 
 
+class TestComponentAndNorm:
+    """Tests for the Component and Norm operators on VectorFields."""
+
+    def test_component_convenience_function_and_copy(self):
+        """pybamm.component creates a Component; copying preserves the index."""
+        vf = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        comp = pybamm.component(vf, 1)
+        assert isinstance(comp, pybamm.Component)
+        assert comp.index == 1
+        copy = comp.create_copy()
+        assert isinstance(copy, pybamm.Component)
+        assert copy.index == 1
+        assert copy == comp
+
+    def test_norm_convenience_function_and_copy(self):
+        """pybamm.norm creates a Norm; copying preserves structure."""
+        vf = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        norm = pybamm.norm(vf)
+        assert isinstance(norm, pybamm.Norm)
+        copy = norm.create_copy()
+        assert isinstance(copy, pybamm.Norm)
+        assert copy == norm
+
+
 class TestTensorProduct:
     """Tests for TensorProduct operator."""
 
