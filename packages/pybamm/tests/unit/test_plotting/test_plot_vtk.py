@@ -36,10 +36,7 @@ def _cell_solution():
     model = pybamm.BaseModel()
     xyz = [pybamm.SpatialVariable(axis, domain="mesh") for axis in "xyz"]
     model._geometry = {
-        "mesh": {
-            var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
-            for var in xyz
-        }
+        "mesh": {var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)} for var in xyz}
     }
 
     field = pybamm.StateVector(slice(0, 1), domain="mesh")
@@ -93,10 +90,7 @@ def _node_solution():
     model = pybamm.BaseModel()
     xyz = [pybamm.SpatialVariable(axis, domain="mesh") for axis in "xyz"]
     model._geometry = {
-        "mesh": {
-            var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
-            for var in xyz
-        }
+        "mesh": {var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)} for var in xyz}
     }
 
     field = pybamm.StateVector(slice(0, 4), domain="mesh")
@@ -144,9 +138,7 @@ class TestVTKHelpers:
                 np.arange(n_vertices, dtype=float) + 2,
             ]
         )
-        mesh = SimpleNamespace(
-            nodes=nodes, elements=np.array([np.arange(n_vertices)])
-        )
+        mesh = SimpleNamespace(nodes=nodes, elements=np.array([np.arange(n_vertices)]))
 
         grid = _build_vtk_grid(mesh)
 
@@ -180,9 +172,7 @@ class TestVTKHelpers:
             _build_vtk_grid(mesh)
 
     def test_scale_options(self):
-        mesh = SimpleNamespace(
-            nodes=np.array([[0.0, 2.0, 3.0], [4.0, 2.0, 5.0]])
-        )
+        mesh = SimpleNamespace(nodes=np.array([[0.0, 2.0, 3.0], [4.0, 2.0, 5.0]]))
 
         np.testing.assert_allclose(_compute_scale(mesh), [1.0, 1.0, 2.0])
         np.testing.assert_allclose(_resolve_scale("auto", mesh), [1.0, 1.0, 2.0])
