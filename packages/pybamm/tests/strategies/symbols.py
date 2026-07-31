@@ -1038,6 +1038,7 @@ _NOT_ROUND_TRIPPABLE: frozenset[type[pybamm.Symbol]] = frozenset(
         pybamm.StateVectorBase,  # abstract base; StateVector + StateVectorDot cover it
         pybamm.Function,  # to_json() raises NotImplementedError — only SpecificFunction subclasses round-trip
         pybamm.SpecificFunction,  # base for named funcs; direct instantiation not useful
+        pybamm.Reduction,  # abstract base for scalar reductions; Max and Min cover it
         pybamm.Broadcast,  # abstract base; PrimaryBroadcast/Secondary/Full covered
         pybamm.Integral,  # base for domain-constrained integrals; heavyweight constructor
         pybamm.IndependentVariable,  # abstract base; Time + SpatialVariable covered
