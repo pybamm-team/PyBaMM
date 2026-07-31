@@ -424,6 +424,34 @@ class UnstructuredSubMesh(SubMesh):
                     if len(matched) > 0:
                         combined.boundary_faces[tag] = np.unique(matched) + bnd_start
 
+        # Welding only produces internal faces where interface nodes coincide.
+        # If a region shares no interface with the rest (mismatched transverse
+        # grids, wrong units, or a non-conforming input mesh) it stays a
+        # separate connected component and no flux can cross into it, which
+        # otherwise solves silently to a wrong answer. Reuse the integer face
+        # connectivity (no distance tolerance) to require a single component.
+        if len(submeshes) > 1 and combined.npts > 1:
+            from scipy.sparse import csr_matrix
+            from scipy.sparse.csgraph import connected_components
+
+            n_int = combined._boundary_face_start
+            rows = np.concatenate([combined.face_owner[:n_int], combined.face_neighbor])
+            cols = np.concatenate([combined.face_neighbor, combined.face_owner[:n_int]])
+            adjacency = csr_matrix(
+                (np.ones(len(rows)), (rows, cols)),
+                shape=(combined.npts, combined.npts),
+            )
+            n_components, _ = connected_components(adjacency, directed=False)
+            if n_components > 1:
+                raise pybamm.GeometryError(
+                    f"Combined unstructured mesh has {n_components} disconnected "
+                    f"regions: welding produced no interface between some domains, "
+                    f"so no flux could cross and the solve would be silently wrong. "
+                    f"Adjacent domains must share a conforming interface — matching "
+                    f"transverse grids and coordinate units, or a fragmented "
+                    f"(node-shared) mesh from the mesh generator."
+                )
+
         return combined
 
     def optimize_ordering(self):
@@ -711,6 +739,14 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
     """
     Load an unstructured mesh from an external file via *meshio*.
 
+    The interface between adjacent domains must be **conforming**: the two
+    sides must share the same interface nodes, so that welding in
+    :meth:`UnstructuredSubMesh.combine` turns the interface into internal
+    faces. In gmsh, build the regions from one geometry or fragment the parts
+    (``BooleanFragments`` / ``Coherence``) so the shared surface is meshed
+    once. A non-conforming interface raises a :class:`pybamm.GeometryError`
+    when the domains are combined.
+
     Parameters
     ----------
     filepath : str
@@ -857,6 +893,12 @@ class TaggedSubMeshGenerator(MeshGenerator):
     through one generator by introspecting ``lims``; ``TaggedSubMeshGenerator``
     is simpler when the model already supplies one mesh generator per
     domain.
+
+    Regions that share an interface must be conforming across it (the shared
+    surface meshed once, so both regions reference the same interface nodes),
+    or combining the domains raises a :class:`pybamm.GeometryError`. Fragment
+    the geometry in gmsh (``BooleanFragments`` / ``Coherence``) to guarantee
+    this.
 
     Parameters
     ----------

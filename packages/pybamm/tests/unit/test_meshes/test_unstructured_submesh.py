@@ -730,6 +730,39 @@ class TestMeshIntegration:
         combined = mesh[("negative electrode", "separator", "positive electrode")]
         assert combined.npts == n_neg + n_sep + n_pos
 
+    def test_combine_conforming_interface_welds_into_internal_faces(self):
+        """A matching interface welds, so the combined mesh is one component."""
+        ye = np.linspace(0, 1, 3)
+        ze = np.linspace(0, 1, 4)
+        left = UnstructuredSubMesh(*_hex_grid(np.linspace(0, 1, 3), ye, ze))
+        right = UnstructuredSubMesh(*_hex_grid(np.linspace(1, 2, 3), ye, ze))
+
+        combined = UnstructuredSubMesh.combine([left, right])
+
+        assert combined.npts == left.npts + right.npts
+        # coincident interface nodes are welded, not duplicated
+        assert combined.nodes.shape[0] < left.nodes.shape[0] + right.nodes.shape[0]
+        # the x=1 seam is now internal, so flux can cross it
+        n_int = combined._boundary_face_start
+        on_seam = np.abs(combined.face_centroids[:n_int, 0] - 1.0) < 1e-12
+        assert on_seam.sum() > 0
+
+    def test_combine_disconnected_domains_raises(self):
+        """A non-conforming interface must raise, not solve silently to garbage."""
+        import pytest
+
+        ye = np.linspace(0, 1, 3)
+        left = UnstructuredSubMesh(
+            *_hex_grid(np.linspace(0, 1, 3), ye, np.linspace(0, 1, 4))
+        )
+        # mismatched transverse (z) grid: no interface node coincides
+        right = UnstructuredSubMesh(
+            *_hex_grid(np.linspace(1, 2, 3), ye, np.linspace(0, 1, 5))
+        )
+
+        with pytest.raises(pybamm.GeometryError, match=r"disconnected regions"):
+            UnstructuredSubMesh.combine([left, right])
+
     def test_interface_data_computed_automatically(self):
         """Mesh.__init__ should compute interface data between adjacent domains."""
         x_n = pybamm.SpatialVariable(
