@@ -837,3 +837,38 @@ class TestBandwidthOptimization:
         iface = mesh_l.interface_data["right"]
         centroids_post = mesh_l.cell_centroids[iface["left_cells"]]
         np.testing.assert_allclose(centroids_pre, centroids_post)
+
+    def test_optimize_ordering_preserves_interface_pairing(self):
+        """``right_cells`` must keep indexing the neighbour after reordering."""
+        ye = np.linspace(0, 1, 4)
+        ze = np.linspace(0, 1, 3)
+        # Different x resolutions, so permuting the neighbour's indices by this
+        # mesh's permutation would run off the end of the neighbour.
+        nodes_l, elems_l = _hex_grid(np.linspace(0, 1, 4), ye, ze)
+        mesh_l = UnstructuredSubMesh(nodes_l, elems_l, coord_sys="cartesian")
+        nodes_r, elems_r = _hex_grid(np.linspace(1, 2, 3), ye, ze)
+        mesh_r = UnstructuredSubMesh(nodes_r, elems_r, coord_sys="cartesian")
+        assert mesh_l.npts > mesh_r.npts
+        compute_interface_data(mesh_l, mesh_r, "left", "right")
+
+        iface = mesh_l.interface_data["right"]
+        self_pre = mesh_l.cell_centroids[iface["left_cells"]].copy()
+        other_pre = mesh_r.cell_centroids[iface["right_cells"]].copy()
+
+        mesh_l.optimize_ordering()
+
+        iface = mesh_l.interface_data["right"]
+        assert iface["right_cells"].max() < mesh_r.npts
+        np.testing.assert_allclose(self_pre, mesh_l.cell_centroids[iface["left_cells"]])
+        np.testing.assert_allclose(
+            other_pre, mesh_r.cell_centroids[iface["right_cells"]]
+        )
+
+        # The neighbour's mirrored view of this mesh must follow the permutation
+        mirror = mesh_r.interface_data["left"]
+        np.testing.assert_allclose(
+            self_pre, mesh_l.cell_centroids[mirror["right_cells"]]
+        )
+        np.testing.assert_allclose(
+            other_pre, mesh_r.cell_centroids[mirror["left_cells"]]
+        )
