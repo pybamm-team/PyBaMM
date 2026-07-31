@@ -875,7 +875,13 @@ class Discretisation:
         _discretised_symbol = self._discretised_symbols.get(symbol)
         if _discretised_symbol is not None:
             return _discretised_symbol
-        discretised_symbol = self._process_symbol(symbol)
+        try:
+            discretised_symbol = self._process_symbol(symbol)
+        except pybamm.ShapeError as e:
+            raise pybamm.ModelError(
+                f"Unable to discretise symbol: {symbol} (type: {type(symbol).__name__})",
+                e,
+            ) from e
         self._discretised_symbols[symbol] = discretised_symbol
         discretised_symbol.test_shape()
 

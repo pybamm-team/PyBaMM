@@ -742,11 +742,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             left_symbol_disc.domains
         )
 
-        if second_dim_repeats != self._get_auxiliary_domain_repeats(
-            right_symbol_disc.domains
-        ):
+        second_dim_check = self._get_auxiliary_domain_repeats(right_symbol_disc.domains)
+        if second_dim_repeats != second_dim_check:
             raise pybamm.DomainError(
-                """Number of secondary points in subdomains do not match"""
+                "Number of secondary points in subdomains do not match "
+                f"(left: {second_dim_repeats}, right: {second_dim_check}"
             )
 
         left_sub_matrix = np.zeros((1, left_npts))
@@ -851,7 +851,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{lbc_type}'"
+                f"boundary condition must be Dirichlet, Neumann or a flux condition, not '{lbc_type}'"
             )
 
         if rbc_type == "Dirichlet":
@@ -874,7 +874,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
+                f"boundary condition must be Dirichlet, Neumann or a flux condition, not '{rbc_type}'"
             )
 
         bcs_vector = lbc_vector + rbc_vector
@@ -974,7 +974,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
+                f"boundary condition must be Dirichlet, Neumann or a flux condition, not '{lbc_type}'"
             )
         if rbc_type == "Neumann" and rbc_value != 0:
             rbc_sub_matrix = coo_matrix(
@@ -996,7 +996,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
-                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
+                f"boundary condition must be Dirichlet or Neumann or a flux condition, not '{rbc_type}'"
             )
 
         bcs_vector = lbc_vector + rbc_vector
@@ -1506,7 +1506,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         if hasattr(mesh, "length"):
             domain = discretised_child.domain
             raise NotImplementedError(
-                f"The symbolic submesh does not support `EvaluateAt` because we are unable to find the position of the node in the symbolic submesh. Please use one of the other submeshes for domain {domain}"
+                "The symbolic submesh does not support `EvaluateAt` because we are unable "
+                "to find the position of the node in the symbolic submesh. Please use one "
+                f"of the other submeshes for domain {domain}"
             )
         repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
 
@@ -1610,8 +1612,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                     disc_children[idx] = self.edge_to_node(child)
                 else:
                     raise pybamm.ShapeError(
-                        "child must have size n_nodes (number of nodes in the mesh) "
-                        "or n_edges (number of edges in the mesh)"
+                        f"child has size ({child_size}) but this size must match the "
+                        f"number of nodes ({n_nodes}) or edges ({n_edges}) in the mesh."
                     )
         return pybamm.domain_concatenation(disc_children, self.mesh)
 
