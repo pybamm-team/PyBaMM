@@ -170,20 +170,6 @@ class Mesh(dict):
             self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
             self.base_domains.append(domain)
 
-        # Register actual mesh sizes so symbolic shape checks
-        # (``pybamm.evaluate_for_shape_using_domain``) match the discretised
-        # vector lengths.  Lets ``pybamm.Vector(arr, domain=name)`` shape-match
-        # ``Variable(domain=name)`` without bespoke subclasses.
-        for domain, submesh in self.items():
-            if isinstance(domain, tuple) and len(domain) == 1:
-                domain_name = domain[0]
-            elif isinstance(domain, str):
-                domain_name = domain
-            else:
-                continue
-            if hasattr(submesh, "npts"):
-                pybamm.register_domain_size(domain_name, submesh.npts)
-
         # compute interface data for unstructured meshes
         self._compute_unstructured_interfaces()
 

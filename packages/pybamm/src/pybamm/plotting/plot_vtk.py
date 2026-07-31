@@ -752,7 +752,8 @@ class VTKQuickPlot:
                 mt_arr.Modified()
                 mtable.Modified()
             time_text.SetInput(f"t = {t_now:.4g} s")
-            window.Render()
+            if show_plot:
+                window.Render()
 
         slider = vtk.vtkSliderWidget()
         slider.SetInteractor(interactor)
