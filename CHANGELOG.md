@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added basic unstructured 2D/3D DFN models (`BasicDFN2DUnstructured`, `BasicDFN3DUnstructured`).
 - Added VTK-based plotting (`VTKQuickPlot`) for unstructured mesh solutions, including headless CI OpenGL setup.
 - Added `FiniteVolumeUnstructured` spatial method and unstructured processed-variable support for cell-centered data on arbitrary meshes.
 - Generalised `VectorField` to N components and added `Component`/`Norm` operators for multi-dimensional vector fields.
