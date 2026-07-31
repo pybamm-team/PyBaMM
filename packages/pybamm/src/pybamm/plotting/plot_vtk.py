@@ -273,12 +273,7 @@ class VTKQuickPlot:
         scalar_data = {}
         for name, pv in zip(self.scalar_names, self.scalar_vars, strict=True):
             pv.initialise()
-            if _is_unstructured_spatial_variable(pv):
-                vals = np.array(
-                    [float(_data_at_time(pv, t).ravel()[0]) for t in self.t_pts]
-                )
-            else:
-                vals = np.array([float(pv(t).ravel()[0]) for t in self.t_pts])
+            vals = np.array([float(pv(t).ravel()[0]) for t in self.t_pts])
             scalar_data[name] = vals
 
         # --- Layout ---
