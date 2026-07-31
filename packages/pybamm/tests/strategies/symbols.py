@@ -670,7 +670,6 @@ def _magnitude_branch(
     )
 
 
-
 def _component_branch(
     _child_strategy: st.SearchStrategy[pybamm.Symbol],
 ) -> st.SearchStrategy[pybamm.Component]:
