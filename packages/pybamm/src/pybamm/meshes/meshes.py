@@ -384,7 +384,7 @@ class Mesh(dict):
                         left_name=left_name,
                         right_name=right_name,
                     )
-                except ValueError:
+                except pybamm.GeometryError:
                     pass
 
     def add_ghost_meshes(self):

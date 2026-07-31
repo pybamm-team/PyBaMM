@@ -205,7 +205,17 @@ class TestUnstructuredSubMesh:
         elements = np.array([[0, 1, 2, 3, 4]], dtype=int)
         import pytest
 
-        with pytest.raises(ValueError, match="Unsupported"):
+        with pytest.raises(pybamm.GeometryError, match="Unsupported"):
+            UnstructuredSubMesh(nodes, elements)
+
+    def test_nonmanifold_face_raises(self):
+        """A face shared by more than two cells must raise, not vanish."""
+        import pytest
+
+        # Three triangles all sharing the edge (0, 1): a non-manifold fan.
+        nodes = np.array([[0, 0], [1, 0], [0.5, 1], [0.5, -1], [1.5, 0.5]], dtype=float)
+        elements = np.array([[0, 1, 2], [0, 1, 3], [0, 1, 4]], dtype=int)
+        with pytest.raises(pybamm.GeometryError, match="non-manifold"):
             UnstructuredSubMesh(nodes, elements)
 
     def test_2d_quad_mesh_basic(self):
@@ -322,7 +332,7 @@ class TestUnstructuredSubMesh:
         gen = UnstructuredMeshGenerator()
         x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
         lims = {x: {"min": 0.0, "max": 1.0}}
-        with pytest.raises(ValueError, match="supports 2D and 3D"):
+        with pytest.raises(pybamm.GeometryError, match="supports 2D and 3D"):
             gen(lims, {"x_n": 3})
 
     def test_generator_unknown_element_type_raises(self):
@@ -337,8 +347,44 @@ class TestUnstructuredSubMesh:
             direction="tb",
         )
         lims = {x: {"min": 0.0, "max": 1.0}, z: {"min": 0.0, "max": 1.0}}
-        with pytest.raises(ValueError, match="Unsupported 2D element_type"):
+        with pytest.raises(pybamm.GeometryError, match="Unsupported 2D element_type"):
             gen(lims, {"x_n": 2, "z_2d": 2})
+
+    def test_generator_tetrahedron_element_type(self):
+        """3D generator honours element_type='tetrahedron' (not just hexahedron)."""
+        x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
+        y = pybamm.SpatialVariable("y", domain=["negative electrode"])
+        z = pybamm.SpatialVariable("z", domain=["negative electrode"])
+        lims = {
+            x: {"min": 0.0, "max": 1.0},
+            y: {"min": 0.0, "max": 1.0},
+            z: {"min": 0.0, "max": 1.0},
+        }
+        npts = {"x_n": 2, "y": 2, "z": 2}
+
+        hex_mesh = UnstructuredMeshGenerator()(lims, npts)
+        assert hex_mesh.element_type == "hexahedron"  # 3D default
+
+        tet_mesh = UnstructuredMeshGenerator(element_type="tetrahedron")(lims, npts)
+        assert tet_mesh.element_type == "tetrahedron"
+        assert tet_mesh.npts == 8 * 5  # 5 tets per hex
+        np.testing.assert_allclose(tet_mesh.cell_volumes.sum(), 1.0, atol=1e-14)
+
+    def test_generator_unknown_3d_element_type_raises(self):
+        """3D generator rejects a bogus element_type."""
+        import pytest
+
+        gen = UnstructuredMeshGenerator(element_type="dodecahedron")
+        x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
+        y = pybamm.SpatialVariable("y", domain=["negative electrode"])
+        z = pybamm.SpatialVariable("z", domain=["negative electrode"])
+        lims = {
+            x: {"min": 0.0, "max": 1.0},
+            y: {"min": 0.0, "max": 1.0},
+            z: {"min": 0.0, "max": 1.0},
+        }
+        with pytest.raises(pybamm.GeometryError, match="Unsupported 3D element_type"):
+            gen(lims, {"x_n": 2, "y": 2, "z": 2})
 
     def test_generator_quad_element_type(self):
         """Generator with element_type='quad' produces quad submesh."""
@@ -746,6 +792,38 @@ class TestMeshIntegration:
         n_int = combined._boundary_face_start
         on_seam = np.abs(combined.face_centroids[:n_int, 0] - 1.0) < 1e-12
         assert on_seam.sum() > 0
+
+    def test_combine_tetrahedron_domains_conforming(self):
+        """Tet domains from the generator combine into one connected mesh.
+
+        Exercises the cumulative-offset regeneration in ``combine`` that keeps
+        the alternating tet triangulation conforming across the interface.
+        """
+        x_n = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
+        x_s = pybamm.SpatialVariable("x_s", domain=["separator"])
+        y = pybamm.SpatialVariable("y", domain=["negative electrode", "separator"])
+        z = pybamm.SpatialVariable("z", domain=["negative electrode", "separator"])
+        gen = UnstructuredMeshGenerator(element_type="tetrahedron")
+        left = gen(
+            {
+                x_n: {"min": 0, "max": 1},
+                y: {"min": 0, "max": 1},
+                z: {"min": 0, "max": 1},
+            },
+            {"x_n": 2, "y": 2, "z": 2},
+        )
+        right = gen(
+            {
+                x_s: {"min": 1, "max": 2},
+                y: {"min": 0, "max": 1},
+                z: {"min": 0, "max": 1},
+            },
+            {"x_s": 2, "y": 2, "z": 2},
+        )
+        # Must not raise: interface tets triangulate identically on both sides.
+        combined = UnstructuredSubMesh.combine([left, right])
+        assert combined.element_type == "tetrahedron"
+        assert combined.npts == left.npts + right.npts
 
     def test_combine_disconnected_domains_raises(self):
         """A non-conforming interface must raise, not solve silently to garbage."""
