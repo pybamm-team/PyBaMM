@@ -14,6 +14,7 @@ import pytest
 from scipy.sparse import coo_matrix as sp_coo
 from scipy.sparse import csr_matrix as sp_csr
 
+import pybamm
 from pybamm.meshes.unstructured_submesh import (
     UnstructuredSubMesh,
     _hex_to_tet,
@@ -59,6 +60,25 @@ def _get_internal_cells(mesh):
         for fi in indices:
             bnd_cells.add(mesh.face_owner[fi])
     return [i for i in range(mesh.npts) if i not in bnd_cells]
+
+
+class _MeshMap(dict):
+    """Minimal Mesh-like mapping that accepts PyBaMM domain lists."""
+
+    def __getitem__(self, key):
+        if isinstance(key, list):
+            key = tuple(key)
+        elif isinstance(key, str):
+            key = (key,)
+        return super().__getitem__(key)
+
+
+def _method_with_mesh(mesh, **auxiliary_meshes):
+    meshes = {("test",): mesh}
+    meshes.update({(name,): value for name, value in auxiliary_meshes.items()})
+    method = FiniteVolumeUnstructured()
+    method._mesh = _MeshMap(meshes)
+    return method
 
 
 # ======================================================================
@@ -668,3 +688,550 @@ class TestMisc:
         fvu = FiniteVolumeUnstructured()
         assert fvu.options is not None
         assert "extrapolation" in fvu.options
+
+
+class TestFiniteVolumeUnstructuredBehavior:
+    def test_build_discovers_interfaces_and_ignores_other_meshes(self):
+        left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
+        right = _make_2d_mesh(2, 2, x_range=(0.5, 1))
+        structured = pybamm.SubMesh1D(np.array([0, 1]), "cartesian")
+        meshes = _MeshMap(
+            {("left",): left, ("right",): right, ("structured",): structured}
+        )
+
+        method = FiniteVolumeUnstructured()
+        method.build(meshes)
+
+        assert right in [data["other_mesh"] for data in left.interface_data.values()]
+        assert left.npts_for_broadcast_to_nodes == left.npts
+        assert structured.npts_for_broadcast_to_nodes == structured.npts
+
+    def test_interface_matching_edge_cases(self):
+        empty = _make_2d_mesh(1, 1)
+        empty.boundary_faces = {}
+        other = _make_2d_mesh(1, 1)
+        a_idx, b_idx, matched = FiniteVolumeUnstructured._interface_face_match(
+            empty, other
+        )
+        assert not matched
+        assert a_idx.size == b_idx.size == 0
+
+        mesh_3d = _make_3d_mesh(1, 1, 1)
+        assert not FiniteVolumeUnstructured._interface_face_match(other, mesh_3d)[2]
+
+        distant = _make_2d_mesh(1, 1, x_range=(2, 3))
+        assert not FiniteVolumeUnstructured._interface_face_match(other, distant)[2]
+
+    def test_compute_pair_interface_success_and_noops(self):
+        left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
+        right = _make_2d_mesh(2, 2, x_range=(0.5, 1))
+        method = FiniteVolumeUnstructured()
+
+        assert method._compute_pair_interface(left, right, "left", "right")
+        assert "iface_right" in left.boundary_faces
+        assert "iface_left" in right.boundary_faces
+        assert method._compute_pair_interface(left, right, "left", "right") is False
+
+        far = _make_2d_mesh(1, 1, x_range=(2, 3))
+        assert method._compute_pair_interface(left, far, "left", "far") is False
+
+        shared = _make_2d_mesh(1, 1)
+        method._auto_compute_all_interfaces(
+            _MeshMap({("first",): shared, ("alias",): shared})
+        )
+
+    def test_spatial_variable_directions_and_auxiliary_repeats(self):
+        mesh = _make_3d_mesh(1, 1, 1)
+        aux = _make_2d_mesh(1, 1)
+        method = _method_with_mesh(mesh, aux=aux)
+        domains = {"primary": ["test"], "secondary": ["aux"]}
+
+        for name, direction, column in [
+            ("x", None, 0),
+            ("y", None, 1),
+            ("z", None, 2),
+            ("r", None, 0),
+            ("s", "lr", 0),
+            ("s", "tb", 2),
+            ("s", "fb", 1),
+            ("s", "unknown", 0),
+        ]:
+            symbol = pybamm.SpatialVariable(name, domains=domains, direction=direction)
+            actual = method.spatial_variable(symbol).evaluate().reshape(-1)
+            expected = np.tile(mesh.cell_centroids[:, column], aux.npts)
+            np.testing.assert_allclose(actual, expected)
+
+    def test_broadcast_variants(self):
+        mesh = _make_2d_mesh(1, 1)
+        aux = _make_2d_mesh(1, 1)
+        method = _method_with_mesh(mesh, aux=aux)
+        primary = {"primary": ["test"], "secondary": []}
+
+        scalar_primary = method.broadcast(pybamm.Scalar(2), primary, "primary to nodes")
+        np.testing.assert_array_equal(
+            scalar_primary.evaluate()[:, 0], np.full(mesh.npts, 2)
+        )
+
+        vector_primary = method.broadcast(
+            pybamm.Vector([2, 3]), primary, "primary to nodes"
+        )
+        np.testing.assert_array_equal(
+            vector_primary.evaluate()[:, 0], np.repeat([2, 3], mesh.npts)
+        )
+
+        full_domains = {"primary": ["test"], "secondary": ["aux"]}
+        full = method.broadcast(pybamm.Scalar(4), full_domains, "full to nodes")
+        np.testing.assert_array_equal(
+            full.evaluate()[:, 0], np.full(mesh.npts * aux.npts, 4)
+        )
+
+        secondary_child = pybamm.Vector([1, 2], domain="test")
+        secondary = method.broadcast(secondary_child, primary, "secondary to nodes")
+        np.testing.assert_array_equal(secondary.evaluate(), secondary_child.evaluate())
+        assert secondary.domain == primary["primary"]
+        assert secondary.domains["secondary"] == primary["secondary"]
+
+    def test_broadcast_does_not_mutate_simplified_child(self):
+        mesh = pybamm.SubMesh1D(np.array([0, 1]), "cartesian")
+        method = _method_with_mesh(mesh)
+        child = pybamm.StateVector(slice(0, 1))
+        domains = {"primary": ["test"], "secondary": []}
+
+        result = method.broadcast(child, domains, "full to nodes")
+
+        assert result is not child
+        assert child.domain == []
+        assert result.domains["primary"] == ["test"]
+        np.testing.assert_array_equal(result.evaluate(y=np.array([7])), [[7]])
+
+    def test_laplacian_and_boundary_conditions(self):
+        mesh = _make_2d_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(np.arange(mesh.npts), domain="test")
+
+        plain = method.laplacian(variable, values, {})
+        np.testing.assert_allclose(
+            plain.evaluate()[:, 0], method._tpfa_matrix(mesh) @ np.arange(mesh.npts)
+        )
+
+        constant = pybamm.Vector(np.full(mesh.npts, 3), domain="test")
+        dirichlet_bcs = {
+            variable: {
+                side: (pybamm.Scalar(3), "Dirichlet")
+                for side in ["left", "right", "top", "bottom"]
+            }
+        }
+        np.testing.assert_allclose(
+            method.laplacian(variable, constant, dirichlet_bcs).evaluate(),
+            0,
+            atol=1e-12,
+        )
+
+        neumann_bcs = {
+            variable: {
+                side: (pybamm.Scalar(0), "Neumann")
+                for side in ["left", "right", "top", "bottom"]
+            }
+            | {
+                "missing": (pybamm.Scalar(3), "Dirichlet"),
+            }
+        }
+        np.testing.assert_allclose(
+            method.laplacian(variable, constant, neumann_bcs).evaluate(), 0, atol=1e-12
+        )
+
+        face_count = len(mesh.boundary_faces["top"])
+        vector_bc = pybamm.Vector(np.arange(face_count) + 1)
+        _, rhs = method._apply_bcs_to_laplacian(
+            mesh,
+            method._tpfa_matrix(mesh),
+            pybamm.Vector(np.zeros(mesh.npts)),
+            {"top": (vector_bc, "Dirichlet")},
+        )
+        faces = mesh.boundary_faces["top"]
+        owners = mesh.face_owner[faces]
+        distance = np.linalg.norm(
+            mesh.face_centroids[faces] - mesh.cell_centroids[owners], axis=1
+        )
+        coefficients = mesh.face_areas[faces] / distance / mesh.cell_volumes[owners]
+        expected_rhs = np.zeros(mesh.npts)
+        np.add.at(expected_rhs, owners, coefficients * (np.arange(face_count) + 1))
+        np.testing.assert_allclose(rhs.evaluate()[:, 0], expected_rhs)
+
+    def test_gradient_and_gradient_squared(self):
+        mesh = _make_2d_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        constant = pybamm.Vector(np.full(mesh.npts, 3), domain="test")
+        dirichlet_bcs = {
+            variable: {
+                side: (pybamm.Scalar(3), "Dirichlet")
+                for side in ["left", "right", "top", "bottom"]
+            }
+        }
+        gradient = method.gradient(variable, constant, dirichlet_bcs)
+        assert gradient._disc_state_vector is constant
+        for component in gradient._components:
+            np.testing.assert_allclose(component.evaluate(), 0, atol=1e-12)
+
+        neumann_bcs = {
+            variable: {
+                side: (pybamm.Scalar(0), "Neumann")
+                for side in ["left", "right", "top", "bottom"]
+            }
+            | {
+                "missing": (pybamm.Scalar(2), "Neumann"),
+            }
+        }
+        for component in method.gradient(variable, constant, neumann_bcs)._components:
+            np.testing.assert_allclose(component.evaluate(), 0, atol=1e-12)
+
+        x_values = mesh.cell_centroids[:, 0]
+        values = pybamm.Vector(x_values, domain="test")
+        grad_squared = method.gradient_squared(variable, values, {})
+        matrices = method._green_gauss_matrices(mesh)
+        expected = sum((matrix @ x_values) ** 2 for matrix in matrices)
+        np.testing.assert_allclose(grad_squared.evaluate()[:, 0], expected)
+
+    def test_divergence_input_forms_and_error(self):
+        mesh = _make_2d_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        symbol = pybamm.Variable("F", domain="test")
+        components = [
+            pybamm.Vector(np.ones(mesh.npts), domain="test"),
+            pybamm.Vector(np.full(mesh.npts, 2), domain="test"),
+        ]
+
+        from_list = method.divergence(symbol, components, {})
+        from_field = method.divergence(symbol, pybamm.VectorField(*components), {})
+        np.testing.assert_allclose(from_list.evaluate(), from_field.evaluate())
+        matrices = method._divergence_matrices(mesh)
+        expected = matrices[0] @ np.ones(mesh.npts)
+        expected += matrices[1] @ np.full(mesh.npts, 2)
+        np.testing.assert_allclose(from_list.evaluate()[:, 0], expected)
+
+        with pytest.raises(TypeError, match="expects a VectorField"):
+            method.divergence(symbol, pybamm.Scalar(1), {})
+
+    def test_divergence_boundary_correction(self):
+        mesh = _make_2d_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        other = pybamm.Variable("v", domain="other")
+        bcs = {
+            "not a symbol": {"left": (pybamm.Scalar(0), "Dirichlet")},
+            other: {"left": (pybamm.Scalar(0), "Dirichlet")},
+            variable: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(2), "Neumann"),
+                "missing": (pybamm.Scalar(3), "Neumann"),
+            },
+        }
+
+        L_bc, rhs, boundary_matrices = method._div_boundary_correction(
+            mesh, bcs, domain=["test"]
+        )
+        assert L_bc.shape == (mesh.npts, mesh.npts)
+        assert rhs.evaluate().shape == (mesh.npts, 1)
+        assert len(boundary_matrices) == mesh.dimension
+        left_faces = mesh.boundary_faces["left"]
+        left_owners = mesh.face_owner[left_faces]
+        expected_rhs = np.zeros(mesh.npts)
+        left_distance = np.linalg.norm(
+            mesh.face_centroids[left_faces] - mesh.cell_centroids[left_owners], axis=1
+        )
+        np.add.at(
+            expected_rhs,
+            left_owners,
+            mesh.face_areas[left_faces]
+            / left_distance
+            / mesh.cell_volumes[left_owners],
+        )
+        right_faces = mesh.boundary_faces["right"]
+        right_owners = mesh.face_owner[right_faces]
+        np.add.at(
+            expected_rhs,
+            right_owners,
+            2 * mesh.face_areas[right_faces] / mesh.cell_volumes[right_owners],
+        )
+        np.testing.assert_allclose(rhs.evaluate()[:, 0], expected_rhs)
+
+        none_L, zero_rhs, none_D = method._div_boundary_correction(mesh, {})
+        assert none_L is None
+        assert none_D is None
+        np.testing.assert_allclose(zero_rhs.evaluate(), 0)
+
+    def test_div_D_grad_scalar_and_vector_coefficients(self):
+        mesh = _make_2d_mesh(2, 2)
+        aux = _make_2d_mesh(1, 1)
+        method = _method_with_mesh(mesh, aux=aux)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        cell_values = mesh.cell_centroids[:, 0] ** 2
+        values = pybamm.Vector(cell_values, domain="test")
+        bcs = {
+            variable: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(2), "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "missing": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        scalar_result = method.div_D_grad(
+            div_symbol, variable, pybamm.Scalar(2), values, bcs
+        )
+
+        coefficient = pybamm.Vector(np.full(mesh.npts, 2), domain="test")
+        vector_result = method.div_D_grad(
+            div_symbol, variable, coefficient, values, bcs
+        )
+        np.testing.assert_allclose(
+            vector_result.evaluate(), scalar_result.evaluate(), atol=1e-12
+        )
+
+        repeated_domains = {"primary": ["test"], "secondary": ["aux"]}
+        repeated_div = pybamm.Variable("repeated div", domains=repeated_domains)
+        repeated_u = pybamm.Variable("repeated u", domains=repeated_domains)
+        size = mesh.npts * aux.npts
+        repeated_values = pybamm.Vector(
+            np.tile(cell_values, aux.npts), domains=repeated_domains
+        )
+        repeated_coefficient = pybamm.Vector(np.full(size, 2), domains=repeated_domains)
+        repeated = method.div_D_grad(
+            repeated_div,
+            repeated_u,
+            repeated_coefficient,
+            repeated_values,
+            {
+                repeated_u: {
+                    "left": (pybamm.Scalar(0), "Dirichlet"),
+                    "right": (pybamm.Scalar(2), "Neumann"),
+                    "top": (pybamm.Scalar(0), "Neumann"),
+                    "missing": (pybamm.Scalar(1), "Dirichlet"),
+                }
+            },
+        )
+        np.testing.assert_allclose(
+            repeated.evaluate()[:, 0],
+            np.tile(vector_result.evaluate()[:, 0], aux.npts),
+            atol=1e-12,
+        )
+
+    def test_integral_and_boundary_integral(self):
+        mesh = _make_2d_mesh(2, 2)
+        aux = _make_2d_mesh(1, 1)
+        method = _method_with_mesh(mesh, aux=aux)
+        domains = {"primary": ["test"], "secondary": ["aux"]}
+        child = pybamm.Variable("u", domains=domains)
+        values = pybamm.Vector(np.ones(mesh.npts * aux.npts), domains=domains)
+
+        integral = method.integral(child, values, "primary")
+        np.testing.assert_allclose(integral.evaluate(), 1)
+
+        row = method.definite_integral_matrix(child)
+        np.testing.assert_allclose(row.toarray()[0], mesh.cell_volumes)
+
+        boundary = method.boundary_integral(child, values, "left")
+        np.testing.assert_allclose(boundary.evaluate(), 1)
+        missing = method.boundary_integral(child, values, "missing")
+        assert missing == pybamm.Scalar(0)
+
+    @pytest.mark.parametrize(
+        "side",
+        ["left", "missing", "top-right", "top-left", "bottom-right", "bottom-left"],
+    )
+    def test_boundary_value_and_corners(self, side):
+        mesh = _make_2d_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(np.arange(mesh.npts), domain="test")
+        symbol = pybamm.BoundaryValue(variable, side)
+
+        result = method.boundary_value_or_flux(symbol, values)
+        assert result.domain == []
+        if side == "missing":
+            assert result == pybamm.Scalar(0)
+        elif "-" in side:
+            top_bottom, left_right = side.split("-")
+            x = mesh.cell_centroids[:, 0]
+            z = mesh.cell_centroids[:, -1]
+            target_x = x.max() if left_right == "right" else x.min()
+            target_z = z.max() if top_bottom == "top" else z.min()
+            expected = np.argmin((x - target_x) ** 2 + (z - target_z) ** 2)
+            assert result.evaluate().item() == expected
+        else:
+            owners = mesh.face_owner[mesh.boundary_faces[side]]
+            np.testing.assert_array_equal(result.evaluate()[:, 0], owners)
+
+    def test_process_binary_operators(self):
+        method = FiniteVolumeUnstructured()
+        left_components = [pybamm.StateVector(slice(0, 2)), pybamm.Vector([2, 3])]
+        right_components = [pybamm.Vector([4, 5]), pybamm.Vector([6, 7])]
+        left_field = pybamm.VectorField(*left_components)
+        left_field._disc_state_vector = left_components[0]
+        right_field = pybamm.VectorField(*right_components)
+        multiplication = pybamm.Multiplication(pybamm.Scalar(1), pybamm.Scalar(2))
+
+        both = method.process_binary_operators(
+            multiplication,
+            None,
+            None,
+            left_field,
+            right_field,
+        )
+        assert both.n_components == 2
+        assert both._disc_state_vector is left_components[0]
+        np.testing.assert_array_equal(
+            both._components[0].evaluate(y=np.array([1, 2]))[:, 0], [4, 10]
+        )
+        np.testing.assert_array_equal(both._components[1].evaluate()[:, 0], [12, 21])
+
+        field_left = method.process_binary_operators(
+            multiplication, None, None, left_field, pybamm.Scalar(2)
+        )
+        field_right = method.process_binary_operators(
+            multiplication, None, None, pybamm.Scalar(2), right_field
+        )
+        np.testing.assert_array_equal(
+            field_left._components[0].evaluate(y=np.array([1, 2]))[:, 0], [2, 4]
+        )
+        np.testing.assert_array_equal(
+            field_right._components[0].evaluate()[:, 0], [8, 10]
+        )
+
+        scalar = method.process_binary_operators(
+            multiplication, None, None, pybamm.Scalar(3), pybamm.Scalar(4)
+        )
+        assert scalar.evaluate() == 12
+
+    def test_internal_neumann_unstructured_paths(self):
+        left, right = _make_split_2d_meshes(2, 2, 2)
+        method = FiniteVolumeUnstructured()
+        left_values = pybamm.Vector(np.arange(left.npts), domain="left")
+        right_values = pybamm.Vector(np.arange(right.npts), domain="right")
+
+        direct = method._internal_neumann_unstructured(
+            left_values, right_values, left, right, 1
+        )
+        interface = next(iter(left.interface_data.values()))
+        expected = (
+            np.arange(right.npts)[interface["right_cells"]]
+            - np.arange(left.npts)[interface["left_cells"]]
+        ) / interface["cell_distances"]
+        np.testing.assert_allclose(direct.evaluate()[:, 0], expected)
+
+        left_data = left.interface_data
+        left.interface_data = {}
+        reverse = method._internal_neumann_unstructured(
+            left_values, right_values, left, right, 1
+        )
+        np.testing.assert_allclose(reverse.evaluate(), direct.evaluate())
+
+        right.interface_data = {}
+        absent = method._internal_neumann_unstructured(
+            left_values, right_values, left, right, 2
+        )
+        np.testing.assert_allclose(absent.evaluate(), 0)
+        assert absent.shape[0] == left.npts * 2
+        left.interface_data = left_data
+
+    def test_internal_neumann_dispatch_structured_and_mismatch(self):
+        method = FiniteVolumeUnstructured()
+        left_mesh = pybamm.SubMesh1D(np.array([0, 0.5]), "cartesian")
+        right_mesh = pybamm.SubMesh1D(np.array([0.5, 1]), "cartesian")
+        left = pybamm.Vector(np.arange(left_mesh.npts), domain="left")
+        right = pybamm.Vector(np.arange(right_mesh.npts), domain="right")
+
+        structured = method.internal_neumann_condition(
+            left, right, left_mesh, right_mesh
+        )
+        dx = right_mesh.nodes[0] - left_mesh.nodes[-1]
+        expected = (np.arange(right_mesh.npts)[0] - np.arange(left_mesh.npts)[-1]) / dx
+        assert structured.evaluate().item() == expected
+
+        unstructured_left, unstructured_right = _make_split_2d_meshes(1, 1, 1)
+        method._mesh = _MeshMap(
+            {
+                ("aux",): _make_2d_mesh(1, 1),
+                ("other aux",): _make_2d_mesh(2, 1),
+            }
+        )
+        left_repeated = pybamm.Vector(
+            np.ones(unstructured_left.npts * method.mesh["aux"].npts),
+            domains={"primary": ["left"], "secondary": ["aux"]},
+        )
+        right_repeated = pybamm.Vector(
+            np.ones(unstructured_right.npts * method.mesh["other aux"].npts),
+            domains={"primary": ["right"], "secondary": ["other aux"]},
+        )
+        with pytest.raises(pybamm.DomainError, match="secondary points"):
+            method.internal_neumann_condition(
+                left_repeated,
+                right_repeated,
+                unstructured_left,
+                unstructured_right,
+            )
+
+    def test_internal_bcs_for_concatenation(self):
+        left = _make_2d_mesh(1, 1, x_range=(0, 0.5))
+        right = _make_2d_mesh(1, 1, x_range=(0.5, 1))
+        method = FiniteVolumeUnstructured()
+        method._compute_pair_interface(left, right, "left", "right")
+        method._mesh = _MeshMap({("left",): left, ("right",): right})
+        children = [
+            pybamm.Variable("left temperature", domain="left"),
+            pybamm.Variable("right temperature", domain="right"),
+        ]
+
+        class Disc:
+            def process_symbol(self, child):
+                size = method.mesh[child.domain].npts
+                return pybamm.Vector(np.ones(size), domains=child.domains)
+
+        result = method.set_internal_bcs_for_concat(
+            Disc(),
+            children[0],
+            children,
+            {"left": (pybamm.Scalar(0), "Dirichlet")},
+        )
+        assert set(result) == set(children)
+        assert "iface_right" in result[children[0]]
+        interface_gradient, bc_type = result[children[0]]["iface_right"]
+        assert bc_type == "Neumann"
+        np.testing.assert_allclose(interface_gradient.evaluate(), 0)
+
+        structured = pybamm.SubMesh1D(np.array([0, 1]), "cartesian")
+        method._mesh[("structured",)] = structured
+        structured_child = pybamm.Variable(
+            "structured temperature", domain="structured"
+        )
+        partial = method.set_internal_bcs_for_concat(
+            Disc(),
+            children[0],
+            [children[0], structured_child],
+            {},
+        )
+        assert structured_child not in partial
+        assert partial[children[0]] == {}
+
+        no_interface = _method_with_mesh(_make_2d_mesh(1, 1))
+        assert (
+            no_interface.set_internal_bcs_for_concat(
+                Disc(), children[0], [pybamm.Variable("u", domain="test")], {}
+            )
+            is None
+        )
+
+    def test_concatenation_preserves_domain_order(self):
+        left = _make_2d_mesh(1, 1, x_range=(0, 0.5))
+        right = _make_2d_mesh(1, 1, x_range=(0.5, 1))
+        method = FiniteVolumeUnstructured()
+        method._mesh = _MeshMap({("left",): left, ("right",): right})
+        left_values = pybamm.Vector([1, 2], domain="left")
+        right_values = pybamm.Vector([3, 4], domain="right")
+
+        result = method.concatenation([left_values, right_values])
+
+        np.testing.assert_array_equal(result.evaluate()[:, 0], [1, 2, 3, 4])
+        assert result.domain == ["left", "right"]
