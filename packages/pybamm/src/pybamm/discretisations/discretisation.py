@@ -492,6 +492,26 @@ class Discretisation:
                 continue
             children = var.orphans
 
+            # Dispatch hook: a spatial method may own its own internal-BC
+            # logic (e.g. graph-traversal for arbitrary topology).  If the
+            # spatial method on the first child's domain provides
+            # ``set_internal_bcs_for_concat``, defer to it and skip the
+            # default 1D-stack pairwise routine.
+            primary_method = self.spatial_methods.get(children[0].domain[0])
+            if primary_method is not None and hasattr(
+                primary_method, "set_internal_bcs_for_concat"
+            ):
+                handled = primary_method.set_internal_bcs_for_concat(
+                    self, var, children, self.bcs[var]
+                )
+                if handled is not None:
+                    # Only adopt entries for children not already user-supplied.
+                    for child, child_bcs in handled.items():
+                        if child not in bc_keys:
+                            internal_bcs[child] = child_bcs
+                    continue
+                # else fall through to legacy 1D-stack pairwise logic
+
             first_child = children[0]
             next_child = children[1]
 
@@ -581,8 +601,9 @@ class Discretisation:
                         f"Neumann condition for {self.mesh[subdomain].coord_sys} coordinates"
                     )
 
-            # Handle any boundary conditions applied on the tabs
-            if any("tab" in side for side in list(bcs.keys())):
+            # Handle legacy tab boundary conditions ("negative tab", etc.)
+            legacy_tab_sides = {"negative tab", "positive tab", "no tab"}
+            if legacy_tab_sides & set(bcs.keys()):
                 bcs = self.check_tab_conditions(key, bcs)
 
             # Process boundary conditions
@@ -932,6 +953,16 @@ class Discretisation:
                     isinstance(left, (pybamm.VectorField, pybamm.Gradient))
                 ):
                     right = pybamm.VectorField(right, right)
+            elif isinstance(spatial_method, pybamm.FiniteVolumeUnstructured):
+                dim = self.mesh[symbol.domain[0]].dimension
+                if isinstance(left, pybamm.Scalar) and isinstance(
+                    right, pybamm.VectorField | pybamm.Gradient
+                ):
+                    left = pybamm.VectorField(*[left] * dim)
+                elif isinstance(right, pybamm.Scalar) and isinstance(
+                    left, pybamm.VectorField | pybamm.Gradient
+                ):
+                    right = pybamm.VectorField(*[right] * dim)
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
@@ -989,6 +1020,33 @@ class Discretisation:
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
+
+            # Intercept div(grad(u)) and div(D*grad(u)) before processing
+            # children, to avoid the expensive Green-Gauss gradient assembly.
+            if isinstance(symbol, pybamm.Divergence) and child.domain != []:
+                child_spatial_method = self.spatial_methods[child.domain[0]]
+                if isinstance(child_spatial_method, pybamm.FiniteVolumeUnstructured):
+                    grad_sym = None
+                    coeff_sym = None
+                    if isinstance(child, pybamm.Gradient):
+                        grad_sym = child
+                        coeff_sym = pybamm.Scalar(1)
+                    elif isinstance(child, pybamm.Multiplication):
+                        left_c, right_c = child.children
+                        if isinstance(right_c, pybamm.Gradient):
+                            grad_sym, coeff_sym = right_c, left_c
+                        elif isinstance(left_c, pybamm.Gradient):
+                            grad_sym, coeff_sym = left_c, right_c
+                    if grad_sym is not None:
+                        disc_coeff = self.process_symbol(coeff_sym)
+                        disc_u = self.process_symbol(grad_sym.child)
+                        return child_spatial_method.div_D_grad(
+                            symbol,
+                            grad_sym.child,
+                            disc_coeff,
+                            disc_u,
+                            self.bcs,
+                        )
 
             disc_child = self.process_symbol(child)
             if child.domain != []:

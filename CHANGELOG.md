@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added `FiniteVolumeUnstructured` spatial method and unstructured processed-variable support for cell-centered data on arbitrary meshes.
 - Generalised `VectorField` to N components and added `Component`/`Norm` operators for multi-dimensional vector fields.
 - Added unstructured mesh support (`UnstructuredSubMesh`, generators, and interface coupling) for arbitrary 2D/3D domains.
 
