@@ -81,7 +81,7 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
         if: startsWith(matrix.leg.os, 'ubuntu')
         with:
-          packages: gfortran gcc graphviz pandoc
+          packages: gfortran gcc graphviz pandoc libosmesa6 libegl1
           execute_install_scripts: true
 
       # dot -c is for registering graphviz fonts and plugins
@@ -91,6 +91,11 @@ jobs:
           sudo apt-get update
           sudo dot -c
           sudo apt-get install libopenblas-dev
+
+      # VTK off-screen GIF export needs a software OpenGL backend on headless runners.
+      - name: Prefer OSMesa for VTK on Linux
+        if: startsWith(matrix.leg.os, 'ubuntu')
+        run: echo "VTK_DEFAULT_OPENGL_WINDOW=vtkOSOpenGLRenderWindow" >> "$GITHUB_ENV"
 
       # Kept separate and opt-out: texlive-latex-extra is large and uncached.
       - name: Install TeXLive for Linux

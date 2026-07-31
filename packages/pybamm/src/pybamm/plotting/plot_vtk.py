@@ -161,6 +161,30 @@ def _viridis_lut(vmin, vmax, n=256):
     return lut
 
 
+def _make_render_window(off_screen=False):
+    """Create a VTK render window.
+
+    Off-screen Linux uses OSMesa (``vtkOSOpenGLRenderWindow``); macOS/Windows
+    use the platform window with off-screen rendering enabled. Instantiating
+    the OSMesa window on unsupported platforms segfaults.
+    """
+    import sys
+
+    import vtk
+
+    if (
+        off_screen
+        and sys.platform.startswith("linux")
+        and hasattr(vtk, "vtkOSOpenGLRenderWindow")
+    ):
+        window = vtk.vtkOSOpenGLRenderWindow()
+    else:
+        window = vtk.vtkRenderWindow()
+    if off_screen:
+        window.SetOffScreenRendering(1)
+    return window
+
+
 class VTKQuickPlot:
     """Interactive VTK visualization for unstructured mesh solutions.
 
@@ -285,7 +309,7 @@ class VTKQuickPlot:
         n_rows = int(np.ceil(n_panels / n_cols))
         panel_height = (panel_top - panel_bot) / n_rows
 
-        window = vtk.vtkRenderWindow()
+        window = _make_render_window(off_screen=not show_plot)
         window.SetSize(650 * n_cols, 520 * n_rows)
         window.SetWindowName("PyBaMM - " + ", ".join(self.output_variables))
 
@@ -788,7 +812,7 @@ class VTKQuickPlot:
         import vtk
         from PIL import Image
 
-        if not hasattr(self, "_window"):
+        if not hasattr(self, "_window") or not self._window.GetOffScreenRendering():
             self.dynamic_plot(show_plot=False)
 
         win = self._window

@@ -10,6 +10,7 @@ from pybamm.plotting.plot_vtk import (
     _compute_scale,
     _data_at_time,
     _is_unstructured_spatial_variable,
+    _make_render_window,
     _resolve_scale,
     _set_cell_scalars,
     _set_point_scalars,
@@ -229,6 +230,15 @@ class TestVTKHelpers:
         assert lut.GetTableValue(0)[3] == pytest.approx(1.0)
         assert lut.GetTableValue(7)[3] == pytest.approx(1.0)
         assert lut.GetTableValue(0) != lut.GetTableValue(7)
+
+    def test_make_render_window_offscreen(self):
+        import sys
+
+        window = _make_render_window(off_screen=True)
+
+        assert window.GetOffScreenRendering() == 1
+        if sys.platform.startswith("linux"):
+            assert isinstance(window, vtk.vtkOSOpenGLRenderWindow)
 
 
 class TestVTKQuickPlot:
