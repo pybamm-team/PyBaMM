@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Generalised `VectorField` to N components and added `Component`/`Norm` operators for multi-dimensional vector fields.
+
 ## Bug fixes
 
 - `BatchStudy.solve` no longer ignores its `solver` argument: previously the loop over study inputs shadowed it, so a caller-supplied solver was silently dropped. A solver from `BatchStudy(solvers=...)` still takes precedence. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
