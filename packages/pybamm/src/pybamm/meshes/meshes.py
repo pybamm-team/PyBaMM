@@ -270,10 +270,9 @@ class Mesh(dict):
 
         coord_sys = self[submeshnames[0]].coord_sys
         if isinstance(self[submeshnames[0]], pybamm.UnstructuredSubMesh):
-            submesh = _combine_unstructured_submeshes(
+            return pybamm.UnstructuredSubMesh.combine(
                 [self[name] for name in submeshnames]
             )
-            return submesh
         elif self[submeshnames[0]].dimension == 1:
             combined_submesh_edges = np.concatenate(
                 [self[submeshnames[0]].edges]
@@ -364,8 +363,6 @@ class Mesh(dict):
         For adjacent domains backed by :class:`UnstructuredSubMesh`, compute
         and store interface coupling data.
         """
-        from .unstructured_submesh import compute_interface_data
-
         unstructured_domains = [
             d
             for d in self.base_domains
@@ -381,7 +378,7 @@ class Mesh(dict):
                 and "left" in right_mesh.boundary_faces
             ):
                 try:
-                    compute_interface_data(
+                    pybamm.compute_interface_data(
                         left_mesh,
                         right_mesh,
                         left_name=left_name,
@@ -467,117 +464,6 @@ class Mesh(dict):
         ):
             instance[domain] = submesh
         return instance
-
-
-def _combine_unstructured_submeshes(submeshes):
-    """
-    Create a lightweight combined mesh from a list of
-    :class:`UnstructuredSubMesh` objects.  Coincident boundary nodes
-    at domain interfaces are merged so that face-connectivity spans
-    across domains.
-    """
-    from .unstructured_submesh import UnstructuredSubMesh, _hex_to_tet
-
-    # For 3D tet meshes generated from hex grids, regenerate with
-    # cumulative i_offset so that alternating-parity face triangulations
-    # match across domain boundaries.
-    if all(hasattr(sm, "_hex_gen_params") and sm.dimension == 3 for sm in submeshes):
-        cumulative_offset = 0
-        fixed = []
-        for sm in submeshes:
-            p = sm._hex_gen_params
-            if cumulative_offset > 0:
-                nodes, elements = _hex_to_tet(
-                    p["x_edges"],
-                    p["y_edges"],
-                    p["z_edges"],
-                    i_offset=cumulative_offset,
-                )
-                new_sm = UnstructuredSubMesh(
-                    nodes,
-                    elements,
-                    coord_sys=sm.coord_sys,
-                )
-                new_sm._hex_gen_params = p
-                fixed.append(new_sm)
-            else:
-                fixed.append(sm)
-            cumulative_offset += p["nx"]
-        submeshes = fixed
-
-    # Weld coincident nodes across submeshes regardless of which face tag
-    # they belong to.  This generalises the original 1D-stack
-    # ``"right"↔"left"`` welding to arbitrary topology (star, tree, graph)
-    # so that body↔tab interfaces produced by ``FiniteVolumeUnstructured``'s
-    # auto-pairing become internal faces in the combined mesh and TPFA
-    # handles cross-region flux without internal Neumann book-keeping.
-    from scipy.spatial import cKDTree
-
-    tol = 1e-9
-    all_nodes = list(submeshes[0].nodes)
-    global_maps = [{i: i for i in range(submeshes[0].nodes.shape[0])}]
-    next_id = len(all_nodes)
-
-    for k in range(1, len(submeshes)):
-        curr = submeshes[k]
-        tree = cKDTree(np.asarray(all_nodes))
-        d, j = tree.query(curr.nodes)
-        local_to_global = {}
-        for nid in range(curr.nodes.shape[0]):
-            if d[nid] < tol:
-                local_to_global[nid] = int(j[nid])
-            else:
-                local_to_global[nid] = next_id
-                all_nodes.append(curr.nodes[nid])
-                next_id += 1
-        global_maps.append(local_to_global)
-
-    all_elements = [submeshes[0].elements.copy()]
-    for k in range(1, len(submeshes)):
-        gm = global_maps[k]
-        remapped = np.array(
-            [[gm[v] for v in row] for row in submeshes[k].elements],
-            dtype=int,
-        )
-        all_elements.append(remapped)
-
-    combined_nodes = np.array(all_nodes)
-    combined_elements = np.concatenate(all_elements, axis=0)
-    combined = pybamm.UnstructuredSubMesh(
-        combined_nodes,
-        combined_elements,
-        coord_sys=submeshes[0].coord_sys,
-    )
-
-    # Propagate custom boundary tags from component submeshes.
-    # The combined mesh auto-detects only standard tags (left/right/top/bottom/
-    # front/back). Custom tags like "tab_top" are lost. Recover them by
-    # matching boundary face centroids.
-    standard_tags = {"left", "right", "top", "bottom", "front", "back"}
-    custom_centroids = {}  # tag -> list of centroid arrays
-    for sm in submeshes:
-        for tag, face_indices in sm.boundary_faces.items():
-            if tag not in standard_tags:
-                custom_centroids.setdefault(tag, []).append(
-                    sm.face_centroids[face_indices]
-                )
-
-    if custom_centroids:
-        from scipy.spatial import cKDTree
-
-        bnd_start = combined._boundary_face_start
-        bnd_centroids = combined.face_centroids[bnd_start:]
-        if len(bnd_centroids) > 0:
-            tree = cKDTree(bnd_centroids)
-            match_tol = 1e-10 * max(np.ptp(combined_nodes, axis=0).max(), 1.0)
-            for tag, centroid_list in custom_centroids.items():
-                all_src = np.concatenate(centroid_list, axis=0)
-                dists, idxs = tree.query(all_src)
-                matched = idxs[dists < match_tol]
-                if len(matched) > 0:
-                    combined.boundary_faces[tag] = np.unique(matched) + bnd_start
-
-    return combined
 
 
 class SubMesh:

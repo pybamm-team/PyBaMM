@@ -311,6 +311,121 @@ class UnstructuredSubMesh(SubMesh):
             if len(indices) > 0:
                 self.boundary_faces[name] = indices
 
+    # ------------------------------------------------------------------
+    # Combining domains
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def combine(cls, submeshes):
+        """
+        Weld a list of :class:`UnstructuredSubMesh` objects into one mesh.
+
+        Coincident boundary nodes at domain interfaces are merged so that
+        face connectivity spans across domains.
+
+        Parameters
+        ----------
+        submeshes : list of UnstructuredSubMesh
+            The submeshes to combine, in order.
+
+        Returns
+        -------
+        UnstructuredSubMesh
+            A single mesh covering the union of the input domains.
+        """
+        from scipy.spatial import cKDTree
+
+        # For 3D tet meshes generated from hex grids, regenerate with
+        # cumulative i_offset so that alternating-parity face triangulations
+        # match across domain boundaries.
+        if all(
+            hasattr(sm, "_hex_gen_params") and sm.dimension == 3 for sm in submeshes
+        ):
+            cumulative_offset = 0
+            fixed = []
+            for sm in submeshes:
+                p = sm._hex_gen_params
+                if cumulative_offset > 0:
+                    nodes, elements = _hex_to_tet(
+                        p["x_edges"],
+                        p["y_edges"],
+                        p["z_edges"],
+                        i_offset=cumulative_offset,
+                    )
+                    new_sm = cls(nodes, elements, coord_sys=sm.coord_sys)
+                    new_sm._hex_gen_params = p
+                    fixed.append(new_sm)
+                else:
+                    fixed.append(sm)
+                cumulative_offset += p["nx"]
+            submeshes = fixed
+
+        # Weld coincident nodes across submeshes regardless of which face tag
+        # they belong to, so that interfaces of arbitrary topology (star, tree,
+        # graph) become internal faces and TPFA handles cross-region flux
+        # without internal Neumann book-keeping.
+        tol = 1e-9
+        all_nodes = list(submeshes[0].nodes)
+        global_maps = [{i: i for i in range(submeshes[0].nodes.shape[0])}]
+        next_id = len(all_nodes)
+
+        for k in range(1, len(submeshes)):
+            curr = submeshes[k]
+            tree = cKDTree(np.asarray(all_nodes))
+            d, j = tree.query(curr.nodes)
+            local_to_global = {}
+            for nid in range(curr.nodes.shape[0]):
+                if d[nid] < tol:
+                    local_to_global[nid] = int(j[nid])
+                else:
+                    local_to_global[nid] = next_id
+                    all_nodes.append(curr.nodes[nid])
+                    next_id += 1
+            global_maps.append(local_to_global)
+
+        all_elements = [submeshes[0].elements.copy()]
+        for k in range(1, len(submeshes)):
+            gm = global_maps[k]
+            remapped = np.array(
+                [[gm[v] for v in row] for row in submeshes[k].elements],
+                dtype=int,
+            )
+            all_elements.append(remapped)
+
+        combined_nodes = np.array(all_nodes)
+        combined_elements = np.concatenate(all_elements, axis=0)
+        combined = cls(
+            combined_nodes,
+            combined_elements,
+            coord_sys=submeshes[0].coord_sys,
+        )
+
+        # The combined mesh auto-detects only standard tags, so custom tags
+        # like "tab_top" are recovered by matching boundary face centroids.
+        standard_tags = {"left", "right", "top", "bottom", "front", "back"}
+        custom_centroids = {}  # tag -> list of centroid arrays
+        for sm in submeshes:
+            for tag, face_indices in sm.boundary_faces.items():
+                if tag not in standard_tags:
+                    custom_centroids.setdefault(tag, []).append(
+                        sm.face_centroids[face_indices]
+                    )
+
+        if custom_centroids:
+            bnd_start = combined._boundary_face_start
+            bnd_centroids = combined.face_centroids[bnd_start:]
+            if len(bnd_centroids) > 0:
+                tree = cKDTree(bnd_centroids)
+                match_tol = 1e-10 * max(np.ptp(combined_nodes, axis=0).max(), 1.0)
+                for tag, centroid_list in custom_centroids.items():
+                    all_src = np.concatenate(centroid_list, axis=0)
+                    dists, idxs = tree.query(all_src)
+                    matched = idxs[dists < match_tol]
+                    if len(matched) > 0:
+                        combined.boundary_faces[tag] = np.unique(matched) + bnd_start
+
+        return combined
+
     def optimize_ordering(self):
         """Reorder cells using Reverse Cuthill-McKee to reduce Jacobian bandwidth.
 
