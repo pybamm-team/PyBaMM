@@ -209,6 +209,19 @@ class TestVTKHelpers:
             [point_array.GetValue(i) for i in range(4)], [4, 3, 2, 1]
         )
 
+    def test_scalar_length_mismatch_raises(self):
+        """A variable must not attach to a grid built from a different mesh.
+
+        Painting a 3-domain variable onto another variable's larger grid
+        shifts every value by the leading domains' cell count (e.g.
+        electrolyte concentration rendered on current-collector tabs).
+        """
+        grid = _build_vtk_grid(_tetra_mesh())
+        with pytest.raises(ValueError, match="different meshes"):
+            _set_cell_scalars(grid, "cell", [1.0, 2.0])
+        with pytest.raises(ValueError, match="different meshes"):
+            _set_point_scalars(grid, "point", [1.0])
+
     def test_processed_variable_helpers(self):
         cell_solution, _ = _cell_solution()
         cell_variable = cell_solution["field"]
