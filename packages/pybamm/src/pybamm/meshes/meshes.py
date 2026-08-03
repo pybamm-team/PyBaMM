@@ -384,8 +384,14 @@ class Mesh(dict):
                         left_name=left_name,
                         right_name=right_name,
                     )
-                except pybamm.GeometryError:
-                    pass
+                except pybamm.GeometryError as error:
+                    # No exception during Mesh.__init__: the model may never
+                    # couple these domains. But a skipped interface carries no
+                    # flux, so it must be visible rather than silent.
+                    pybamm.logger.warning(
+                        f"No interface coupling between {left_name!r} and "
+                        f"{right_name!r}: {error}"
+                    )
 
     def add_ghost_meshes(self):
         """

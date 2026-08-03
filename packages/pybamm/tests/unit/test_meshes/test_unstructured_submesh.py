@@ -1207,8 +1207,10 @@ class TestMeshIntegration:
         np.testing.assert_allclose(tab_centroids[:, 2], 1.0)
         assert tab_centroids[:, 0].max() <= 1.0
 
-    def test_mesh_skips_interface_for_mismatched_grids(self):
-        """Mesh.__init__ leaves interface_data empty when pairing fails."""
+    def test_mesh_skips_interface_for_mismatched_grids(self, caplog):
+        """Mesh.__init__ leaves interface_data empty when pairing fails,
+        and says so: a skipped interface means no flux couples the domains,
+        which must be visible rather than silent."""
         x_n = pybamm.SpatialVariable(
             "x_n", domain=["negative electrode"], coord_sys="cartesian"
         )
@@ -1229,14 +1231,17 @@ class TestMeshIntegration:
             "separator": {x_s: {"min": 1, "max": 2}, z_b: {"min": 0, "max": 2}},
         }
         gen = UnstructuredMeshGenerator()
-        mesh = pybamm.Mesh(
-            geometry,
-            {"negative electrode": gen, "separator": gen},
-            {x_n: 3, x_s: 3, z_a: 4, z_b: 4},
-        )
+        with caplog.at_level("WARNING", logger="pybamm"):
+            mesh = pybamm.Mesh(
+                geometry,
+                {"negative electrode": gen, "separator": gen},
+                {x_n: 3, x_s: 3, z_a: 4, z_b: 4},
+            )
 
         assert mesh["negative electrode"].interface_data == {}
         assert mesh["separator"].interface_data == {}
+        assert "No interface coupling between 'negative electrode'" in caplog.text
+        assert "separator" in caplog.text
 
     def test_combine_disconnected_domains_raises(self):
         """A non-conforming interface must raise, not solve silently to garbage."""
