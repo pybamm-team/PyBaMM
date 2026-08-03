@@ -513,9 +513,7 @@ class TestSolution:
         assert sol_sum._observable == expected  # and cached
 
     def test_vector_field_variable(self, mesh_2d):
-        # a VectorField model variable is processed component-by-component,
-        # storing a list of casadi functions for the downstream processed
-        # variable classes to consume
+        # structured 2D FV does not support reading VectorField solution variables
         model = pybamm.BaseModel()
         var = pybamm.Variable(
             "var", domain=["negative electrode", "separator", "positive electrode"]
@@ -528,11 +526,10 @@ class TestSolution:
         disc.process_model(model)
         solution = pybamm.IDAKLUSolver().solve(model, np.linspace(0, 1, 5))
 
-        flux = solution["flux"]
-        assert isinstance(flux.base_variables[0], pybamm.VectorField)
-        casadi_components = flux.base_variables_casadi[0]
-        assert isinstance(casadi_components, list)
-        assert len(casadi_components) == 2
+        with pytest.raises(
+            NotImplementedError, match=r"structured 2D finite-volume meshes"
+        ):
+            solution["flux"]
 
     def test_add_solutions_different_models(self):
         # Set up first solution

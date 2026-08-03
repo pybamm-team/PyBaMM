@@ -2,7 +2,7 @@
 
 ## Features
 
-- Generalised `VectorField` to N components and added `Component`/`Norm` operators for multi-dimensional vector fields.
+- Generalised `VectorField` to N components and added `Component`/`Norm` operators for multi-dimensional vector fields. ([#5686](https://github.com/pybamm-team/PyBaMM/pull/5686))
 
 ## Bug fixes
 

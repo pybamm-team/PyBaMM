@@ -1811,16 +1811,6 @@ def sign(symbol):
     return pybamm.simplify_if_constant(Sign(symbol))
 
 
-def component(symbol, index):
-    """Convenience function for creating a :class:`Component`."""
-    return Component(symbol, index)
-
-
-def norm(symbol):
-    """Convenience function for creating a :class:`Norm`."""
-    return Norm(symbol)
-
-
 def smooth_absolute_value(symbol, k):
     """
     Smooth approximation to the absolute value function. k is the smoothing parameter,

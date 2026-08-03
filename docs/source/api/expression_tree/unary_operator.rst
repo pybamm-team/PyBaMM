@@ -73,6 +73,12 @@ Unary Operators
 .. autoclass:: pybamm.Downwind
   :members:
 
+.. autoclass:: pybamm.Component
+  :members:
+
+.. autoclass:: pybamm.Norm
+  :members:
+
 .. autofunction:: pybamm.grad
 
 .. autofunction:: pybamm.div

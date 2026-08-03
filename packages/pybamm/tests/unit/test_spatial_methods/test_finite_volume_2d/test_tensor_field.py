@@ -201,18 +201,12 @@ class TestVectorFieldInheritance:
         with pytest.raises(ValueError, match="requires at least 2 components"):
             pybamm.VectorField(pybamm.Scalar(1))
 
-    def test_vectorfield_fb_field_three_components(self):
-        """fb_field returns 3rd component for 3-component VectorField."""
+    def test_vectorfield_three_components(self):
+        """3-component VectorField exposes components by index."""
         a, b, c = pybamm.Scalar(1), pybamm.Scalar(2), pybamm.Scalar(3)
         vf = pybamm.VectorField(a, b, c)
-        assert vf.fb_field == c
+        assert vf[2] == c
         assert vf.n_components == 3
-
-    def test_vectorfield_fb_field_raises_when_missing(self):
-        """fb_field on 2-component VectorField raises AttributeError."""
-        vf = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
-        with pytest.raises(AttributeError, match="fb_field requires at least 3"):
-            _ = vf.fb_field
 
     def test_vectorfield_evaluates_on_edges_all_true(self):
         """VectorField evaluates_on_edges returns True when all on edges."""
@@ -237,10 +231,10 @@ class TestVectorFieldInheritance:
 class TestComponentAndNorm:
     """Tests for the Component and Norm operators on VectorFields."""
 
-    def test_component_convenience_function_and_copy(self):
-        """pybamm.component creates a Component; copying preserves the index."""
+    def test_component_copy(self):
+        """Copying a Component preserves the index."""
         vf = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
-        comp = pybamm.component(vf, 1)
+        comp = pybamm.Component(vf, 1)
         assert isinstance(comp, pybamm.Component)
         assert comp.index == 1
         copy = comp.create_copy()
@@ -248,10 +242,10 @@ class TestComponentAndNorm:
         assert copy.index == 1
         assert copy == comp
 
-    def test_norm_convenience_function_and_copy(self):
-        """pybamm.norm creates a Norm; copying preserves structure."""
+    def test_norm_copy(self):
+        """Copying a Norm preserves structure."""
         vf = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
-        norm = pybamm.norm(vf)
+        norm = pybamm.Norm(vf)
         assert isinstance(norm, pybamm.Norm)
         copy = norm.create_copy()
         assert isinstance(copy, pybamm.Norm)

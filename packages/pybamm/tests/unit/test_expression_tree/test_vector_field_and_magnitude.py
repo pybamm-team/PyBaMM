@@ -70,19 +70,33 @@ class TestVectorFieldAndMagnitude:
         disc = pybamm.Discretisation(mesh_2d, spatial_methods)
         vector_field = pybamm.VectorField(pybamm.Scalar(3), pybamm.Scalar(4))
 
-        comp_0 = disc.process_symbol(pybamm.component(vector_field, 0))
-        comp_1 = disc.process_symbol(pybamm.component(vector_field, 1))
+        comp_0 = disc.process_symbol(pybamm.Component(vector_field, 0))
+        comp_1 = disc.process_symbol(pybamm.Component(vector_field, 1))
         assert comp_0.evaluate() == 3
         assert comp_1.evaluate() == 4
 
-        norm = disc.process_symbol(pybamm.norm(vector_field))
+        norm = disc.process_symbol(pybamm.Norm(vector_field))
         assert norm.evaluate() == pytest.approx(5.0)
 
-        with pytest.raises(ValueError, match=r"Component can only be applied"):
-            disc.process_symbol(pybamm.component(pybamm.Scalar(1), 0))
+        with pytest.raises(
+            pybamm.DiscretisationError, match=r"Component can only be applied"
+        ):
+            disc.process_symbol(pybamm.Component(pybamm.Scalar(1), 0))
 
-        with pytest.raises(ValueError, match=r"Norm can only be applied"):
-            disc.process_symbol(pybamm.norm(pybamm.Scalar(1)))
+        with pytest.raises(
+            pybamm.DiscretisationError, match=r"Norm can only be applied"
+        ):
+            disc.process_symbol(pybamm.Norm(pybamm.Scalar(1)))
+
+    def test_mismatched_vector_field_components(self, mesh_2d):
+        spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
+        disc = pybamm.Discretisation(mesh_2d, spatial_methods)
+        vf2 = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        vf3 = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2), pybamm.Scalar(3))
+        with pytest.raises(
+            pybamm.DiscretisationError, match=r"Cannot combine VectorFields"
+        ):
+            disc.process_symbol(vf2 + vf3)
 
     def test_disc_state_vector_propagation(self, mesh_2d):
         # binary and unary operators on a discretised VectorField must carry

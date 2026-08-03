@@ -750,7 +750,7 @@ class Solution(SolutionBase):
                 )
             if isinstance(_var_pybamm, pybamm.VectorField):
                 comp_casadi = []
-                for k, comp in enumerate(_var_pybamm._components):
+                for k, comp in enumerate(_var_pybamm.components):
                     cc, _, _ = self._update_model_variable(
                         model,
                         comp,

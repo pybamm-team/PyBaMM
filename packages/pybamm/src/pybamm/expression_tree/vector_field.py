@@ -16,14 +16,16 @@ class VectorField(TensorField):
 
     VectorField is a convenience subclass of TensorField for rank-1 tensors
     with N >= 2 components.  Components are stored by integer index; the
-    properties ``lr_field``, ``tb_field``, and ``fb_field`` are backward-
-    compatible aliases for ``[0]``, ``[1]``, and ``[2]``.
+    properties ``lr_field`` and ``tb_field`` are aliases for ``[0]`` and ``[1]``.
 
     Parameters
     ----------
     *components : pybamm.Symbol
         Two or more component symbols, all sharing the same domain.
     """
+
+    # Set by discretisation for unstructured FV edge-averaging; None until then.
+    _disc_state_vector = None
 
     def __init__(self, *components):
         if len(components) < 2:
@@ -48,29 +50,19 @@ class VectorField(TensorField):
     @property
     def n_components(self):
         """Number of vector components."""
-        return len(self._components)
+        return len(self.components)
 
-    # ---- backward-compatible aliases for structured-grid directions ----
+    # ---- aliases for structured-grid directions ----
 
     @property
     def lr_field(self):
         """Component 0 (left-right / x)."""
-        return self._components[0]
+        return self.components[0]
 
     @property
     def tb_field(self):
         """Component 1 (top-bottom / y)."""
-        return self._components[1]
-
-    @property
-    def fb_field(self):
-        """Component 2 (front-back / z).  Only valid for 3-component fields."""
-        if len(self._components) < 3:
-            raise AttributeError(
-                "fb_field requires at least 3 components; this VectorField has "
-                f"{len(self._components)}"
-            )
-        return self._components[2]
+        return self.components[1]
 
     def create_copy(
         self,
@@ -80,21 +72,18 @@ class VectorField(TensorField):
         if new_children is None:
             new_children = [
                 c.create_copy(perform_simplifications=perform_simplifications)
-                for c in self._components
+                for c in self.components
             ]
         return VectorField(*new_children)
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.vertcat(
-            *[
-                c._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
-                for c in self._components
-            ]
+            *self._children_to_casadi(t, y, y_dot, inputs, casadi_symbols)
         )
 
     def evaluates_on_edges(self, dimension: str) -> bool:
-        statuses = [c.evaluates_on_edges(dimension) for c in self._components]
+        statuses = [c.evaluates_on_edges(dimension) for c in self.components]
         if all(statuses):
             return True
         if not any(statuses):
