@@ -78,6 +78,8 @@ class UnstructuredSubMesh(SubMesh):
 
     def _compute_cell_geometry(self):
         verts = self.nodes[self.elements]  # (n_cells, n_verts, d)
+        # Vertex mean is the exact centroid for simplices (triangles, tets);
+        # quads and hexes overwrite it with the true area/volume centroid.
         self.cell_centroids = verts.mean(axis=1)
 
         if self.element_type == "triangle":
@@ -87,14 +89,21 @@ class UnstructuredSubMesh(SubMesh):
             ) * (v2[:, 0] - v0[:, 0])
             self.cell_volumes = 0.5 * np.abs(cross)
         elif self.element_type == "quad":
-            # Shoelace formula for arbitrary (convex) quadrilaterals
+            # Shoelace formula for arbitrary simple quadrilaterals
             # Vertices ordered: v0, v1, v2, v3 (counterclockwise or clockwise)
             x = verts[:, :, 0]  # (n_cells, 4)
             y = verts[:, :, 1]  # (n_cells, 4)
             # shoelace: sum_i (x_i * y_{i+1} - x_{i+1} * y_i)
             x_next = np.roll(x, -1, axis=1)
             y_next = np.roll(y, -1, axis=1)
-            self.cell_volumes = 0.5 * np.abs(np.sum(x * y_next - x_next * y, axis=1))
+            cross = x * y_next - x_next * y
+            signed_area = 0.5 * np.sum(cross, axis=1)
+            self.cell_volumes = np.abs(signed_area)
+            # Polygon centroid (exact for non-parallelogram quads, where the
+            # vertex mean is not)
+            cx = np.sum((x + x_next) * cross, axis=1) / (6.0 * signed_area)
+            cy = np.sum((y + y_next) * cross, axis=1) / (6.0 * signed_area)
+            self.cell_centroids = np.column_stack([cx, cy])
         elif self.element_type == "tetrahedron":
             v0, v1, v2, v3 = verts[:, 0], verts[:, 1], verts[:, 2], verts[:, 3]
             d1 = v1 - v0
@@ -115,6 +124,7 @@ class UnstructuredSubMesh(SubMesh):
             for i, cell in enumerate(self.elements):
                 cv = self.nodes[cell]
                 vol = 0.0
+                moment = np.zeros(3)
                 # Split hex into 5 consistently-oriented tets (each signed
                 # volume is positive for a right-handed hex, so the signed
                 # sum is the true volume and flips sign for an inverted cell)
@@ -129,8 +139,14 @@ class UnstructuredSubMesh(SubMesh):
                     d1 = t[1] - t[0]
                     d2 = t[2] - t[0]
                     d3 = t[3] - t[0]
-                    vol += np.dot(d1, np.cross(d2, d3)) / 6.0
+                    tet_vol = np.dot(d1, np.cross(d2, d3)) / 6.0
+                    vol += tet_vol
+                    moment += tet_vol * t.mean(axis=0)
                 self.cell_volumes[i] = abs(vol)
+                # Volume-weighted tet centroids: exact for planar-faced hexes
+                # such as frusta, where the vertex mean is not
+                if vol != 0.0:
+                    self.cell_centroids[i] = moment / vol
 
     # ------------------------------------------------------------------
     # Face-cell connectivity
@@ -272,6 +288,21 @@ class UnstructuredSubMesh(SubMesh):
             cross = np.cross(diag1, diag2)
             self.face_areas = 0.5 * np.linalg.norm(cross, axis=1)
             normals = cross
+
+            # Area-weighted centroid over the (0,1,2)/(0,2,3) triangle split:
+            # exact for planar non-parallelogram quads (e.g. trapezoids),
+            # where the vertex mean is not. Signed areas taken along the face
+            # normal keep non-convex planar quads exact too.
+            n_hat = plane_normal / safe_norm[:, None]
+            area1 = 0.5 * np.einsum("ij,ij->i", np.cross(v1 - v0, v2 - v0), n_hat)
+            area2 = 0.5 * np.einsum("ij,ij->i", np.cross(v2 - v0, v3 - v0), n_hat)
+            total = area1 + area2
+            safe_total = np.where(np.abs(total) < 1e-30, 1.0, total)
+            weighted = (
+                area1[:, None] * (v0 + v1 + v2) + area2[:, None] * (v0 + v2 + v3)
+            ) / (3.0 * safe_total[:, None])
+            nonzero = np.abs(total) >= 1e-30
+            self.face_centroids[nonzero] = weighted[nonzero]
         else:
             # Face = triangle: 3 vertices
             v0, v1, v2 = face_verts[:, 0], face_verts[:, 1], face_verts[:, 2]

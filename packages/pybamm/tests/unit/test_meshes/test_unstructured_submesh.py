@@ -237,6 +237,58 @@ class TestUnstructuredSubMesh:
         assert "top" in mesh.boundary_faces
         assert "bottom" in mesh.boundary_faces
 
+    def test_2d_quad_trapezoid_centroid_exact(self):
+        """Quad centroids are geometric centroids, not vertex means.
+
+        Symmetric trapezoid: the vertex mean gives y = 0.5, the true
+        area centroid is y = 4/9.
+        """
+        nodes = np.array([[0, 0], [4, 0], [3, 1], [1, 1]], dtype=float)
+        elements = np.array([[0, 1, 2, 3]], dtype=int)
+        mesh = UnstructuredSubMesh(nodes, elements)
+
+        np.testing.assert_allclose(mesh.cell_volumes, [3.0])
+        np.testing.assert_allclose(mesh.cell_centroids, [[2.0, 4.0 / 9.0]])
+
+    def test_3d_hex_frustum_centroid_exact(self):
+        """Planar-faced but non-parallelogram hexes get exact centroids.
+
+        Square frustum, base side 2 at z=0, top side 1 at z=1: all six
+        faces planar (passes the warp check), volume 7/3, and the true
+        centroid height is 11/28 — the vertex mean would give 1/2.
+        The trapezoidal side faces likewise have exact area centroids.
+        """
+        nodes = np.array(
+            [
+                [-1, -1, 0],
+                [1, -1, 0],
+                [1, 1, 0],
+                [-1, 1, 0],
+                [-0.5, -0.5, 1],
+                [0.5, -0.5, 1],
+                [0.5, 0.5, 1],
+                [-0.5, 0.5, 1],
+            ],
+            dtype=float,
+        )
+        elements = np.array([[0, 1, 2, 3, 4, 5, 6, 7]], dtype=int)
+        mesh = UnstructuredSubMesh(nodes, elements)
+
+        np.testing.assert_allclose(mesh.cell_volumes, [7.0 / 3.0])
+        np.testing.assert_allclose(
+            mesh.cell_centroids, [[0.0, 0.0, 11.0 / 28.0]], atol=1e-14
+        )
+
+        # Side face (dominant -y normal, tagged "front") is a trapezoid in
+        # the plane y = -1 + z/2: exact centroid (0, -7/9, 4/9)
+        front = mesh.boundary_faces["front"]
+        assert len(front) == 1
+        np.testing.assert_allclose(
+            mesh.face_centroids[front[0]],
+            [0.0, -7.0 / 9.0, 4.0 / 9.0],
+            atol=1e-14,
+        )
+
     def test_2d_quad_grid_two_cells(self):
         """Two adjacent quads share 1 internal face."""
         nodes = np.array([[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]], dtype=float)
