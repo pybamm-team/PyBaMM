@@ -271,6 +271,38 @@ class TestUnstructuredSubMesh:
         assert mesh._n_boundary_faces == 6
         np.testing.assert_allclose(mesh.face_areas, np.ones(6))
 
+    def test_warped_hexahedron_raises(self):
+        """A hex with a non-planar face is rejected at construction.
+
+        Volumes of warped hexes depend on an arbitrary choice of face
+        triangulation (the two diagonal splits of a warped unit-cube face
+        differ by ~20%), so they are disallowed rather than approximated.
+        """
+        import pytest
+
+        nodes = np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [1.6, 1.6, 1.6],
+                [0, 1, 1],
+            ],
+            dtype=float,
+        )
+        elements = np.array([[0, 1, 2, 3, 4, 5, 6, 7]], dtype=int)
+        with pytest.raises(pybamm.GeometryError, match=r"non-planar"):
+            UnstructuredSubMesh(nodes, elements)
+
+        # Sub-tolerance jitter (well below 1e-8 relative) must still pass
+        nodes_jitter = nodes.copy()
+        nodes_jitter[6] = [1, 1, 1 + 1e-12]
+        mesh = UnstructuredSubMesh(nodes_jitter, elements)
+        np.testing.assert_allclose(mesh.cell_volumes, [1.0], rtol=1e-9)
+
     def test_2d_boundary_loops(self):
         """boundary_loops returns a matplotlib Path around the outer edge."""
         nodes, elements = _unit_square_two_triangles()
@@ -667,6 +699,38 @@ class TestFileGenerators:
         )
         with pytest.raises(pybamm.GeometryError, match="No supported cells"):
             gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+
+    def test_user_supplied_hexahedron_cells_raise(self):
+        """Hexahedral file meshes are rejected, even alongside tets."""
+        import pytest
+
+        meshio = pytest.importorskip("meshio")
+        points = np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [1, 1, 1],
+                [0, 1, 1],
+            ],
+            dtype=float,
+        )
+        hex_cells = ("hexahedron", np.array([[0, 1, 2, 3, 4, 5, 6, 7]]))
+        tet_cells = ("tetra", np.array([[0, 1, 2, 4]]))
+
+        gen = UserSuppliedUnstructuredMesh("unused.vtu")
+        gen._cached_mesh = meshio.Mesh(points, [hex_cells])
+        with pytest.raises(pybamm.GeometryError, match="Hexahedral cells"):
+            gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+
+        # Mixed tet+hex must also raise, not silently drop the hex cells
+        gen_mixed = UserSuppliedUnstructuredMesh("unused.vtu")
+        gen_mixed._cached_mesh = meshio.Mesh(points, [tet_cells, hex_cells])
+        with pytest.raises(pybamm.GeometryError, match="Hexahedral cells"):
+            gen_mixed({"x_n": {"min": 0.0, "max": 1.0}}, {})
 
     def test_domain_name_from_lims(self):
         """String and SpatialVariable keys map to electrode domains; 'tabs' skipped."""

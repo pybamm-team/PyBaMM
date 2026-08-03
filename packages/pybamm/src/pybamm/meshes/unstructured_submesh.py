@@ -14,6 +14,10 @@ class UnstructuredSubMesh(SubMesh):
     * **2D**: triangles (3 vertices) or quadrilaterals (4 vertices)
     * **3D**: tetrahedra (4 vertices) or hexahedra (8 vertices)
 
+    Hexahedra must have planar faces: volumes and face fluxes are
+    ill-defined on warped (non-planar-faced) hexes, so construction
+    raises a :class:`pybamm.GeometryError` for them.
+
     All operators are dimension-agnostic: the same code path handles
     both 2D and 3D, with dimension inferred from ``nodes.shape[1]``.
 
@@ -103,27 +107,30 @@ class UnstructuredSubMesh(SubMesh):
             )
             self.cell_volumes = np.abs(det) / 6.0
         elif self.element_type == "hexahedron":
-            # Volume via divergence theorem: V = (1/3) sum_faces (centroid . normal * area)
-            # For axis-aligned hexes this simplifies, but we use the general approach
-            # by splitting each hex into 5 tets for volume computation only.
+            # 5-tet decomposition, exact only for planar-faced hexes (warped
+            # faces are rejected in _compute_face_geometry). Tet volumes are
+            # summed signed so a degenerate or inverted cell cannot cancel
+            # into a plausible positive volume.
             self.cell_volumes = np.zeros(len(self.elements))
             for i, cell in enumerate(self.elements):
                 cv = self.nodes[cell]
                 vol = 0.0
-                # Split hex into 5 tets using pattern A
+                # Split hex into 5 consistently-oriented tets (each signed
+                # volume is positive for a right-handed hex, so the signed
+                # sum is the true volume and flips sign for an inverted cell)
                 for tet_local in [
                     (0, 1, 2, 5),
                     (0, 2, 3, 7),
                     (0, 5, 7, 4),
-                    (2, 5, 7, 6),
-                    (0, 2, 5, 7),
+                    (2, 7, 5, 6),
+                    (0, 5, 2, 7),
                 ]:
                     t = cv[list(tet_local)]
                     d1 = t[1] - t[0]
                     d2 = t[2] - t[0]
                     d3 = t[3] - t[0]
-                    vol += abs(np.dot(d1, np.cross(d2, d3))) / 6.0
-                self.cell_volumes[i] = vol
+                    vol += np.dot(d1, np.cross(d2, d3)) / 6.0
+                self.cell_volumes[i] = abs(vol)
 
     # ------------------------------------------------------------------
     # Face-cell connectivity
@@ -237,6 +244,26 @@ class UnstructuredSubMesh(SubMesh):
             v1 = face_verts[:, 1]
             v2 = face_verts[:, 2]
             v3 = face_verts[:, 3]
+
+            # Quad areas, normals, and the 5-tet cell volumes are only
+            # well-defined when all four vertices of a face are coplanar,
+            # so warped (non-planar) faces are rejected outright.
+            plane_normal = np.cross(v1 - v0, v2 - v0)
+            plane_norm = np.linalg.norm(plane_normal, axis=1)
+            safe_norm = np.where(plane_norm < 1e-30, 1.0, plane_norm)
+            offset = np.abs(
+                np.einsum("ij,ij->i", v3 - v0, plane_normal / safe_norm[:, None])
+            )
+            diag_len = np.linalg.norm(v2 - v0, axis=1)
+            warped = offset > 1e-8 * np.maximum(diag_len, 1e-30)
+            if warped.any():
+                raise pybamm.GeometryError(
+                    f"{int(warped.sum())} hexahedral face(s) are non-planar "
+                    "(warped): the fourth vertex does not lie in the plane of "
+                    "the other three. Volumes and face fluxes are ill-defined "
+                    "on warped hexahedra. Fix the mesh, or use tetrahedra."
+                )
+
             diag1 = v2 - v0
             diag2 = v3 - v1
             cross = np.cross(diag1, diag2)
@@ -749,6 +776,11 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
     """
     Load an unstructured mesh from an external file via *meshio*.
 
+    Supported cell types are tetrahedra (3D) and triangles or quadrilaterals
+    (2D). Hexahedral file meshes are rejected: file meshes commonly contain
+    warped (non-planar-faced) hexes, whose volumes and face fluxes are
+    ill-defined. Convert such meshes to tetrahedra before loading.
+
     The interface between adjacent domains must be **conforming**: the two
     sides must share the same interface nodes, so that welding in
     :meth:`UnstructuredSubMesh.combine` turns the interface into internal
@@ -858,16 +890,27 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
 
     @staticmethod
     def _extract_supported_cells(mesh):
+        # Hexahedra from files are rejected outright rather than silently
+        # dropped: file meshes commonly contain warped (non-planar-faced)
+        # hexes, for which cell volumes and face fluxes are ill-defined.
+        if any(block.type == "hexahedron" for block in mesh.cells):
+            raise pybamm.GeometryError(
+                "Hexahedral cells in mesh files are not supported: warped "
+                "(non-planar-faced) hexahedra have ill-defined volumes and "
+                "face fluxes. Convert the mesh to tetrahedra (e.g. with "
+                "gmsh or meshio) and reload. Hexahedral meshes are still "
+                "available through pybamm.UnstructuredMeshGenerator, whose "
+                "axis-aligned cells are always well-defined."
+            )
         # Prefer 3D cells when present, otherwise fall back to 2D.
-        for cell_type in ("tetra", "hexahedron", "triangle", "quad"):
+        for cell_type in ("tetra", "triangle", "quad"):
             blocks = [block.data for block in mesh.cells if block.type == cell_type]
             if blocks:
                 if len(blocks) == 1:
                     return blocks[0], cell_type
                 return np.concatenate(blocks, axis=0), cell_type
         raise pybamm.GeometryError(
-            "No supported cells found in mesh file "
-            "(expected tetra/hexahedron/triangle/quad)"
+            "No supported cells found in mesh file (expected tetra/triangle/quad)"
         )
 
     @staticmethod
