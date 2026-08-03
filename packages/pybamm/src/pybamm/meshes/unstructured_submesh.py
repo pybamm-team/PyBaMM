@@ -168,6 +168,9 @@ class UnstructuredSubMesh(SubMesh):
         _, inverse, counts = np.unique(
             sorted_faces, axis=0, return_inverse=True, return_counts=True
         )
+        # numpy 2.0.0 (the declared floor) returns inverse with shape (n, 1);
+        # 2.0.1+ returns (n,). Flatten so masks below stay 1-D everywhere.
+        inverse = inverse.reshape(-1)
 
         # A manifold mesh shares each face between at most two cells. A count of
         # three or more means overlapping or non-conforming elements; such faces
@@ -848,6 +851,8 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
             _, unique_idx, inverse = np.unique(
                 quantized, axis=0, return_index=True, return_inverse=True
             )
+            # numpy 2.0.0 returns inverse with shape (n, 1); 2.0.1+ (n,)
+            inverse = inverse.reshape(-1)
             nodes = nodes[unique_idx]
             elements = inverse[elements]
 
