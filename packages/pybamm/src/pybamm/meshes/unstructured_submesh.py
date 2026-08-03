@@ -413,7 +413,7 @@ class UnstructuredSubMesh(SubMesh):
         # they belong to, so that interfaces of arbitrary topology (star, tree,
         # graph) become internal faces and TPFA handles cross-region flux
         # without internal Neumann book-keeping.
-        tol = 1e-9
+        tol = _geometric_tolerance(submeshes)
         all_nodes = list(submeshes[0].nodes)
         global_maps = [{i: i for i in range(submeshes[0].nodes.shape[0])}]
         next_id = len(all_nodes)
@@ -465,7 +465,9 @@ class UnstructuredSubMesh(SubMesh):
             bnd_centroids = combined.face_centroids[bnd_start:]
             if len(bnd_centroids) > 0:
                 tree = cKDTree(bnd_centroids)
-                match_tol = 1e-10 * max(np.ptp(combined_nodes, axis=0).max(), 1.0)
+                # Welding may move nodes (and so centroids) by up to the weld
+                # tolerance, so tag matching must never be tighter than it
+                match_tol = tol
                 for tag, centroid_list in tag_centroids.items():
                     all_src = np.concatenate(centroid_list, axis=0)
                     dists, idxs = tree.query(all_src)
@@ -827,6 +829,11 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         Maps boundary name to physical group / facet tag.
     coord_sys : str, optional
         Coordinate system, default ``"cartesian"``.
+    merge_tolerance : float or None, optional
+        Absolute length (in the mesh file's units) below which coincident
+        nodes across cell blocks are welded, by quantising coordinates to
+        a grid of this spacing. Default ``1e-12``; pass ``None`` or ``0``
+        to disable welding.
     """
 
     def __init__(
@@ -1163,11 +1170,7 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
     tree = cKDTree(right_transverse)
     dists, right_indices = tree.query(left_transverse)
 
-    tol = 1e-8 * max(
-        np.ptp(left_transverse, axis=0).max(),
-        np.ptp(right_transverse, axis=0).max(),
-        1.0,
-    )
+    tol = _geometric_tolerance([left_mesh, right_mesh])
     if np.any(dists > tol):
         raise pybamm.GeometryError(
             f"Interface faces do not match: max transverse mismatch = {dists.max():.2e}. "
@@ -1202,6 +1205,32 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
         }
 
     return result
+
+
+# ======================================================================
+# Geometric tolerance
+# ======================================================================
+
+
+def _geometric_tolerance(submeshes, rel=1e-3):
+    """Distance below which two points of these meshes are the same point.
+
+    Scaled to the smallest sampled element edge: distinct nodes (and face
+    centroids) are at least one edge length apart, so a small fraction of
+    it can never merge genuinely distinct entities, while absorbing the
+    interface jitter that reduced-precision mesh files and unit
+    conversions produce. An absolute tolerance cannot do both across mesh
+    scales — battery meshes in SI units are ~1e-4 m across.
+    """
+    min_edge = min(
+        float(
+            np.linalg.norm(
+                sm.nodes[sm.elements[:, 1]] - sm.nodes[sm.elements[:, 0]], axis=1
+            ).min()
+        )
+        for sm in submeshes
+    )
+    return rel * min_edge
 
 
 # ======================================================================

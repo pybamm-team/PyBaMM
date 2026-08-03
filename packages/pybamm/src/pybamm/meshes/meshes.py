@@ -388,10 +388,11 @@ class Mesh(dict):
                 left_x = right_mesh.face_centroids[
                     right_mesh.boundary_faces["left"], 0
                 ].mean()
-                span = max(
-                    np.ptp(left_mesh.nodes[:, 0]), np.ptp(right_mesh.nodes[:, 0])
-                )
-                if abs(right_x - left_x) > 1e-8 * span:
+                from pybamm.meshes.unstructured_submesh import _geometric_tolerance
+
+                if abs(right_x - left_x) > _geometric_tolerance(
+                    [left_mesh, right_mesh]
+                ):
                     continue
                 try:
                     pybamm.compute_interface_data(

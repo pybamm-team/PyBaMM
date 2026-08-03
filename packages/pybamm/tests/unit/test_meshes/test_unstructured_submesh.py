@@ -1287,6 +1287,32 @@ class TestMeshIntegration:
         assert "No interface coupling between 'negative electrode'" in caplog.text
         assert "separator" in caplog.text
 
+    def test_combine_battery_scale_with_interface_jitter(self):
+        """Welding tolerances scale with the mesh, not with 1 metre.
+
+        Two 100 um domains whose shared interface is offset by 3 nm — the
+        precision loss a reduced-precision mesh file or a unit conversion
+        produces. The weld must absorb it (it is ~1e-4 of an edge), and
+        custom boundary tags must survive it.
+        """
+        um = 1e-6
+        ye = np.linspace(0, 100 * um, 3)
+        ze = np.linspace(0, 100 * um, 3)
+        left = UnstructuredSubMesh(*_hex_grid(np.linspace(0, 100 * um, 6), ye, ze))
+        right = UnstructuredSubMesh(
+            *_hex_grid(np.linspace(100 * um + 3e-9, 200 * um, 6), ye, ze)
+        )
+        left.detect_box_boundaries()
+        right.detect_box_boundaries()
+        left.boundary_faces["tab_top"] = left.boundary_faces.pop("top")
+
+        combined = UnstructuredSubMesh.combine([left, right])
+
+        assert combined.npts == left.npts + right.npts
+        assert "tab_top" in combined.boundary_faces
+        tab = combined.face_centroids[combined.boundary_faces["tab_top"]]
+        np.testing.assert_allclose(tab[:, 2], 100 * um, rtol=1e-6)
+
     def test_combine_mixed_element_types_raises(self):
         """Combining domains of different element types names both types."""
         import pytest
