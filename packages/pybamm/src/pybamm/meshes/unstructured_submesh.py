@@ -1,8 +1,23 @@
+from enum import Enum
+
 import numpy as np
 
 import pybamm
 
 from .meshes import MeshGenerator, SubMesh
+
+
+class ElementType(str, Enum):
+    """Element types supported by :class:`UnstructuredSubMesh`.
+
+    The ``str`` mixin keeps plain strings (``element_type="quad"``)
+    working everywhere an ``ElementType`` is expected.
+    """
+
+    TRIANGLE = "triangle"
+    QUAD = "quad"
+    TETRAHEDRON = "tetrahedron"
+    HEXAHEDRON = "hexahedron"
 
 
 class UnstructuredSubMesh(SubMesh):
@@ -48,13 +63,13 @@ class UnstructuredSubMesh(SubMesh):
 
         verts_per_cell = self.elements.shape[1]
         if self.dimension == 2 and verts_per_cell == 4:
-            self.element_type = "quad"
+            self.element_type = ElementType.QUAD
         elif self.dimension == 2 and verts_per_cell == 3:
-            self.element_type = "triangle"
+            self.element_type = ElementType.TRIANGLE
         elif self.dimension == 3 and verts_per_cell == 4:
-            self.element_type = "tetrahedron"
+            self.element_type = ElementType.TETRAHEDRON
         elif self.dimension == 3 and verts_per_cell == 8:
-            self.element_type = "hexahedron"
+            self.element_type = ElementType.HEXAHEDRON
         else:
             raise pybamm.GeometryError(
                 f"Unsupported: {verts_per_cell} vertices per cell in {self.dimension}D"
@@ -82,13 +97,13 @@ class UnstructuredSubMesh(SubMesh):
         # quads and hexes overwrite it with the true area/volume centroid.
         self.cell_centroids = verts.mean(axis=1)
 
-        if self.element_type == "triangle":
+        if self.element_type == ElementType.TRIANGLE:
             v0, v1, v2 = verts[:, 0], verts[:, 1], verts[:, 2]
             cross = (v1[:, 0] - v0[:, 0]) * (v2[:, 1] - v0[:, 1]) - (
                 v1[:, 1] - v0[:, 1]
             ) * (v2[:, 0] - v0[:, 0])
             self.cell_volumes = 0.5 * np.abs(cross)
-        elif self.element_type == "quad":
+        elif self.element_type == ElementType.QUAD:
             # Shoelace formula for arbitrary simple quadrilaterals
             # Vertices ordered: v0, v1, v2, v3 (counterclockwise or clockwise)
             x = verts[:, :, 0]  # (n_cells, 4)
@@ -104,7 +119,7 @@ class UnstructuredSubMesh(SubMesh):
             cx = np.sum((x + x_next) * cross, axis=1) / (6.0 * signed_area)
             cy = np.sum((y + y_next) * cross, axis=1) / (6.0 * signed_area)
             self.cell_centroids = np.column_stack([cx, cy])
-        elif self.element_type == "tetrahedron":
+        elif self.element_type == ElementType.TETRAHEDRON:
             v0, v1, v2, v3 = verts[:, 0], verts[:, 1], verts[:, 2], verts[:, 3]
             d1 = v1 - v0
             d2 = v2 - v0
@@ -115,7 +130,7 @@ class UnstructuredSubMesh(SubMesh):
                 + d1[:, 2] * (d2[:, 0] * d3[:, 1] - d2[:, 1] * d3[:, 0])
             )
             self.cell_volumes = np.abs(det) / 6.0
-        elif self.element_type == "hexahedron":
+        elif self.element_type == ElementType.HEXAHEDRON:
             # 5-tet decomposition, exact only for planar-faced hexes (warped
             # faces are rejected in _compute_face_geometry). Tet volumes are
             # summed signed so a degenerate or inverted cell cannot cancel
@@ -142,7 +157,7 @@ class UnstructuredSubMesh(SubMesh):
 
     def _build_face_connectivity(self):
         """Extract faces, identify internal / boundary, record owner-neighbor."""
-        if self.element_type == "hexahedron":
+        if self.element_type == ElementType.HEXAHEDRON:
             n_verts_per_face = 4
         else:
             n_verts_per_face = self.dimension
@@ -151,14 +166,14 @@ class UnstructuredSubMesh(SubMesh):
         n_cells = len(elems)
 
         # Build all faces at once using local face definitions
-        if self.element_type == "quad":
+        if self.element_type == ElementType.QUAD:
             idx = np.arange(4)
             local = np.stack([idx, (idx + 1) % 4], axis=1)  # (4, 2)
-        elif self.element_type == "triangle":
+        elif self.element_type == ElementType.TRIANGLE:
             local = np.array([[1, 2], [0, 2], [0, 1]])  # skip vertex 0, 1, 2
-        elif self.element_type == "tetrahedron":
+        elif self.element_type == ElementType.TETRAHEDRON:
             local = np.array([[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]])
-        elif self.element_type == "hexahedron":
+        elif self.element_type == ElementType.HEXAHEDRON:
             local = np.array(self._HEX_FACES)
         n_fpc = len(local)
 
@@ -251,7 +266,7 @@ class UnstructuredSubMesh(SubMesh):
             edge = v1 - v0
             self.face_areas = np.linalg.norm(edge, axis=1)
             normals = np.column_stack([edge[:, 1], -edge[:, 0]])
-        elif self.element_type == "hexahedron":
+        elif self.element_type == ElementType.HEXAHEDRON:
             # Face = quad: 4 vertices. Area via cross product of diagonals.
             v0 = face_verts[:, 0]
             v1 = face_verts[:, 1]
@@ -397,8 +412,8 @@ class UnstructuredSubMesh(SubMesh):
         if len(element_types) > 1:
             raise pybamm.GeometryError(
                 f"Cannot combine unstructured submeshes of different element "
-                f"types: {sorted(element_types)}. All domains must use the "
-                f"same element type."
+                f"types: {sorted(t.value for t in element_types)}. All domains "
+                f"must use the same element type."
             )
 
         # Weld coincident nodes across submeshes regardless of which face tag
@@ -743,10 +758,10 @@ class UnstructuredMeshGenerator(MeshGenerator):
         x_edges = np.linspace(lim_x["min"], lim_x["max"], nx + 1)
         z_edges = np.linspace(lim_z["min"], lim_z["max"], nz + 1)
 
-        etype = self._element_type or "triangle"
-        if etype == "quad":
+        etype = self._element_type or ElementType.TRIANGLE
+        if etype == ElementType.QUAD:
             nodes, elements = _make_quad_grid(x_edges, z_edges)
-        elif etype == "triangle":
+        elif etype == ElementType.TRIANGLE:
             nodes, elements = _quad_to_tri(x_edges, z_edges)
         else:
             raise pybamm.GeometryError(f"Unsupported 2D element_type: {etype!r}")
@@ -770,10 +785,10 @@ class UnstructuredMeshGenerator(MeshGenerator):
         y_edges = np.linspace(lim_y["min"], lim_y["max"], ny + 1)
         z_edges = np.linspace(lim_z["min"], lim_z["max"], nz + 1)
 
-        etype = self._element_type or "hexahedron"
-        if etype == "hexahedron":
+        etype = self._element_type or ElementType.HEXAHEDRON
+        if etype == ElementType.HEXAHEDRON:
             nodes, elements = _hex_grid(x_edges, y_edges, z_edges)
-        elif etype == "tetrahedron":
+        elif etype == ElementType.TETRAHEDRON:
             nodes, elements = _hex_to_tet(x_edges, y_edges, z_edges)
         else:
             raise pybamm.GeometryError(f"Unsupported 3D element_type: {etype!r}")
