@@ -120,33 +120,21 @@ class UnstructuredSubMesh(SubMesh):
             # faces are rejected in _compute_face_geometry). Tet volumes are
             # summed signed so a degenerate or inverted cell cannot cancel
             # into a plausible positive volume.
-            self.cell_volumes = np.zeros(len(self.elements))
-            for i, cell in enumerate(self.elements):
-                cv = self.vertices[cell]
-                vol = 0.0
-                moment = np.zeros(3)
-                # Split hex into 5 consistently-oriented tets (each signed
-                # volume is positive for a right-handed hex, so the signed
-                # sum is the true volume and flips sign for an inverted cell)
-                for tet_local in [
-                    (0, 1, 2, 5),
-                    (0, 2, 3, 7),
-                    (0, 5, 7, 4),
-                    (2, 7, 5, 6),
-                    (0, 5, 2, 7),
-                ]:
-                    t = cv[list(tet_local)]
-                    d1 = t[1] - t[0]
-                    d2 = t[2] - t[0]
-                    d3 = t[3] - t[0]
-                    tet_vol = np.dot(d1, np.cross(d2, d3)) / 6.0
-                    vol += tet_vol
-                    moment += tet_vol * t.mean(axis=0)
-                self.cell_volumes[i] = abs(vol)
-                # Volume-weighted tet centroids: exact for planar-faced hexes
-                # such as frusta, where the vertex mean is not
-                if vol != 0.0:
-                    self.cell_centroids[i] = moment / vol
+            t = verts[:, self._HEX_TETS]  # (n_cells, 5, 4, d)
+            d1 = t[:, :, 1] - t[:, :, 0]
+            d2 = t[:, :, 2] - t[:, :, 0]
+            d3 = t[:, :, 3] - t[:, :, 0]
+            tet_vols = np.einsum("ijk,ijk->ij", d1, np.cross(d2, d3)) / 6.0
+            vol = tet_vols.sum(axis=1)
+            self.cell_volumes = np.abs(vol)
+            # Volume-weighted tet centroids: exact for planar-faced hexes
+            # such as frusta, where the vertex mean is not
+            moment = np.einsum("ij,ijk->ik", tet_vols, t.mean(axis=2))
+            safe_vol = np.where(vol == 0.0, 1.0, vol)
+            nonzero = (vol != 0.0)[:, None]
+            self.cell_centroids = np.where(
+                nonzero, moment / safe_vol[:, None], self.cell_centroids
+            )
 
     # ------------------------------------------------------------------
     # Face-cell connectivity
@@ -242,6 +230,12 @@ class UnstructuredSubMesh(SubMesh):
         (0, 1, 2, 3),  # z- (bottom)
         (4, 5, 6, 7),  # z+ (top)
     ]
+
+    # 5-tet split for volume/centroid computation, each tet ordered so its
+    # signed volume is positive for a right-handed hex
+    _HEX_TETS = np.array(
+        [(0, 1, 2, 5), (0, 2, 3, 7), (0, 5, 7, 4), (2, 7, 5, 6), (0, 5, 2, 7)]
+    )
 
     # ------------------------------------------------------------------
     # Face geometry
