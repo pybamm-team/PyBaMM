@@ -1207,6 +1207,50 @@ class TestMeshIntegration:
         np.testing.assert_allclose(tab_centroids[:, 2], 1.0)
         assert tab_centroids[:, 0].max() <= 1.0
 
+    def test_mesh_pairs_interfaces_by_geometry_not_dict_order(self):
+        """Adjacency comes from boundary-plane positions, not insertion order.
+
+        The separator (x: 1-2) is declared before the negative electrode
+        (x: 0-1); consecutive-order pairing would try sep.right vs neg.left
+        (planes x=2 vs x=0), find nothing, and drop the coupling.
+        """
+        x_n = pybamm.SpatialVariable(
+            "x_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        x_s = pybamm.SpatialVariable("x_s", domain=["separator"], coord_sys="cartesian")
+        z_a = pybamm.SpatialVariable(
+            "z_2d", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        z_b = pybamm.SpatialVariable(
+            "z_2d", domain=["separator"], coord_sys="cartesian"
+        )
+
+        geometry = {
+            "separator": {x_s: {"min": 1, "max": 2}, z_b: {"min": 0, "max": 1}},
+            "negative electrode": {
+                x_n: {"min": 0, "max": 1},
+                z_a: {"min": 0, "max": 1},
+            },
+        }
+        gen = UnstructuredMeshGenerator()
+        mesh = pybamm.Mesh(
+            geometry,
+            {"negative electrode": gen, "separator": gen},
+            {x_n: 3, x_s: 3, z_a: 4, z_b: 4},
+        )
+
+        assert "separator" in mesh["negative electrode"].interface_data
+        assert "negative electrode" in mesh["separator"].interface_data
+        # The coupling must join abutting cells across x=1, not staple the
+        # far edges (x=0 and x=2) together. For the default triangle cells
+        # the abutting centroids sit dx/3 from the interface with a dz/3
+        # vertical offset, so the distance is one cell scale — not the
+        # geometry's full span
+        iface = mesh["negative electrode"].interface_data["separator"]
+        np.testing.assert_allclose(
+            iface["cell_distances"], np.hypot(2.0 / 9.0, 1.0 / 12.0)
+        )
+
     def test_mesh_skips_interface_for_mismatched_grids(self, caplog):
         """Mesh.__init__ leaves interface_data empty when pairing fails,
         and says so: a skipped interface means no flux couples the domains,

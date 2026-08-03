@@ -362,21 +362,37 @@ class Mesh(dict):
         """
         For adjacent domains backed by :class:`UnstructuredSubMesh`, compute
         and store interface coupling data.
+
+        Adjacency is derived from the geometry, not from the order domains
+        appear in the geometry dict: two domains abut when the plane of one's
+        ``"right"`` boundary faces coincides with the other's ``"left"``.
         """
         unstructured_domains = [
             d
             for d in self.base_domains
             if isinstance(self[d], pybamm.UnstructuredSubMesh)
         ]
-        for i in range(len(unstructured_domains) - 1):
-            left_name = unstructured_domains[i]
-            right_name = unstructured_domains[i + 1]
+        for left_name in unstructured_domains:
             left_mesh = self[left_name]
-            right_mesh = self[right_name]
-            if (
-                "right" in left_mesh.boundary_faces
-                and "left" in right_mesh.boundary_faces
-            ):
+            if "right" not in left_mesh.boundary_faces:
+                continue
+            right_x = left_mesh.face_centroids[
+                left_mesh.boundary_faces["right"], 0
+            ].mean()
+            for right_name in unstructured_domains:
+                if right_name == left_name:
+                    continue
+                right_mesh = self[right_name]
+                if "left" not in right_mesh.boundary_faces:
+                    continue
+                left_x = right_mesh.face_centroids[
+                    right_mesh.boundary_faces["left"], 0
+                ].mean()
+                span = max(
+                    np.ptp(left_mesh.nodes[:, 0]), np.ptp(right_mesh.nodes[:, 0])
+                )
+                if abs(right_x - left_x) > 1e-8 * span:
+                    continue
                 try:
                     pybamm.compute_interface_data(
                         left_mesh,
