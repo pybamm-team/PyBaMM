@@ -408,35 +408,21 @@ class UnstructuredSubMesh(SubMesh):
         # graph) become internal faces and TPFA handles cross-region flux
         # without internal Neumann book-keeping.
         tol = _geometric_tolerance(submeshes)
-        all_nodes = list(submeshes[0].vertices)
-        global_maps = [{i: i for i in range(submeshes[0].vertices.shape[0])}]
-        next_id = len(all_nodes)
+        combined_nodes = np.asarray(submeshes[0].vertices, dtype=float)
+        global_maps = [np.arange(len(combined_nodes))]
 
-        for k in range(1, len(submeshes)):
-            curr = submeshes[k]
-            tree = cKDTree(np.asarray(all_nodes))
-            d, j = tree.query(curr.vertices)
-            local_to_global = {}
-            for nid in range(curr.vertices.shape[0]):
-                if d[nid] < tol:
-                    local_to_global[nid] = int(j[nid])
-                else:
-                    local_to_global[nid] = next_id
-                    all_nodes.append(curr.vertices[nid])
-                    next_id += 1
-            global_maps.append(local_to_global)
-
-        all_elements = [submeshes[0].elements.copy()]
-        for k in range(1, len(submeshes)):
-            gm = global_maps[k]
-            remapped = np.array(
-                [[gm[v] for v in row] for row in submeshes[k].elements],
-                dtype=int,
+        for sm in submeshes[1:]:
+            d, j = cKDTree(combined_nodes).query(sm.vertices)
+            new = d >= tol
+            global_maps.append(
+                np.where(new, np.cumsum(new) - 1 + len(combined_nodes), j)
             )
-            all_elements.append(remapped)
+            combined_nodes = np.vstack([combined_nodes, sm.vertices[new]])
 
-        combined_nodes = np.array(all_nodes)
-        combined_elements = np.concatenate(all_elements, axis=0)
+        combined_elements = np.concatenate(
+            [gm[sm.elements] for gm, sm in zip(global_maps, submeshes, strict=True)],
+            axis=0,
+        )
         combined = cls(
             combined_nodes,
             combined_elements,
