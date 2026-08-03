@@ -1293,19 +1293,11 @@ def _make_quad_grid(x_edges, z_edges):
     xx, zz = np.meshgrid(x_edges, z_edges, indexing="ij")
     nodes = np.column_stack([xx.ravel(), zz.ravel()])
 
-    def node_id(i, j):
-        return i * (nz + 1) + j
+    i, j = np.meshgrid(np.arange(nx), np.arange(nz), indexing="ij")
+    n0 = (i * (nz + 1) + j).ravel()
+    elements = np.column_stack([n0, n0 + (nz + 1), n0 + (nz + 2), n0 + 1])
 
-    elements = []
-    for i in range(nx):
-        for j in range(nz):
-            n0 = node_id(i, j)
-            n1 = node_id(i + 1, j)
-            n2 = node_id(i + 1, j + 1)
-            n3 = node_id(i, j + 1)
-            elements.append([n0, n1, n2, n3])
-
-    return nodes, np.array(elements, dtype=int)
+    return nodes, elements
 
 
 def _quad_to_tri(x_edges, z_edges):
@@ -1326,20 +1318,13 @@ def _quad_to_tri(x_edges, z_edges):
     xx, zz = np.meshgrid(x_edges, z_edges, indexing="ij")
     nodes = np.column_stack([xx.ravel(), zz.ravel()])
 
-    def node_id(i, j):
-        return i * (nz + 1) + j
+    i, j = np.meshgrid(np.arange(nx), np.arange(nz), indexing="ij")
+    n0 = (i * (nz + 1) + j).ravel()
+    elements = np.empty((2 * len(n0), 3), dtype=int)
+    elements[0::2] = np.column_stack([n0, n0 + (nz + 1), n0 + (nz + 2)])
+    elements[1::2] = np.column_stack([n0, n0 + (nz + 2), n0 + 1])
 
-    elements = []
-    for i in range(nx):
-        for j in range(nz):
-            n0 = node_id(i, j)
-            n1 = node_id(i + 1, j)
-            n2 = node_id(i + 1, j + 1)
-            n3 = node_id(i, j + 1)
-            elements.append([n0, n1, n2])
-            elements.append([n0, n2, n3])
-
-    return nodes, np.array(elements, dtype=int)
+    return nodes, elements
 
 
 def _hex_grid(x_edges, y_edges, z_edges):
@@ -1368,34 +1353,22 @@ def _hex_grid(x_edges, y_edges, z_edges):
     xx, yy, zz = np.meshgrid(x_edges, y_edges, z_edges, indexing="ij")
     nodes = np.column_stack([xx.ravel(), yy.ravel(), zz.ravel()])
 
-    def node_id(i, j, k):
-        return i * (ny + 1) * (nz + 1) + j * (nz + 1) + k
-
     # Loop order determines cell numbering and hence Jacobian bandwidth.
     # Bandwidth = product of the two fastest-varying dimension sizes.
     # Minimise by putting the largest dimension outermost (slowest).
     dims = sorted([(nx, "x"), (ny, "y"), (nz, "z")], key=lambda d: d[0], reverse=True)
+    grids = np.meshgrid(*(np.arange(n) for n, _ in dims), indexing="ij")
+    idx = {name: grid.ravel() for (_, name), grid in zip(dims, grids, strict=True)}
+    i, j, k = idx["x"], idx["y"], idx["z"]
 
-    elements = []
-    for a in range(dims[0][0]):
-        for b in range(dims[1][0]):
-            for c in range(dims[2][0]):
-                idx = {dims[0][1]: a, dims[1][1]: b, dims[2][1]: c}
-                i, j, k = idx["x"], idx["y"], idx["z"]
-                elements.append(
-                    [
-                        node_id(i, j, k),
-                        node_id(i + 1, j, k),
-                        node_id(i + 1, j + 1, k),
-                        node_id(i, j + 1, k),
-                        node_id(i, j, k + 1),
-                        node_id(i + 1, j, k + 1),
-                        node_id(i + 1, j + 1, k + 1),
-                        node_id(i, j + 1, k + 1),
-                    ]
-                )
+    n0 = i * (ny + 1) * (nz + 1) + j * (nz + 1) + k
+    p = (ny + 1) * (nz + 1)
+    q = nz + 1
+    elements = np.column_stack(
+        [n0, n0 + p, n0 + p + q, n0 + q, n0 + 1, n0 + p + 1, n0 + p + q + 1, n0 + q + 1]
+    )
 
-    return nodes, np.array(elements, dtype=int)
+    return nodes, elements
 
 
 def _hex_to_tet(x_edges, y_edges, z_edges):
@@ -1422,9 +1395,6 @@ def _hex_to_tet(x_edges, y_edges, z_edges):
     xx, yy, zz = np.meshgrid(x_edges, y_edges, z_edges, indexing="ij")
     nodes = np.column_stack([xx.ravel(), yy.ravel(), zz.ravel()])
 
-    def node_id(i, j, k):
-        return i * (ny + 1) * (nz + 1) + j * (nz + 1) + k
-
     # Hex vertices numbered:
     #   0 = (i,   j,   k  )   4 = (i,   j,   k+1)
     #   1 = (i+1, j,   k  )   5 = (i+1, j,   k+1)
@@ -1433,30 +1403,29 @@ def _hex_to_tet(x_edges, y_edges, z_edges):
     #
     # One tet per monotone path 0 -> 6, stepping +x/+y/+z in each of the
     # 6 possible orders (xyz, xzy, yxz, yzx, zxy, zyx).
-    kuhn_tets = [
-        (0, 1, 2, 6),
-        (0, 1, 5, 6),
-        (0, 3, 2, 6),
-        (0, 3, 7, 6),
-        (0, 4, 5, 6),
-        (0, 4, 7, 6),
-    ]
+    kuhn_tets = np.array(
+        [
+            (0, 1, 2, 6),
+            (0, 1, 5, 6),
+            (0, 3, 2, 6),
+            (0, 3, 7, 6),
+            (0, 4, 5, 6),
+            (0, 4, 7, 6),
+        ]
+    )
 
-    elements = []
-    for i in range(nx):
-        for j in range(ny):
-            for k in range(nz):
-                hex_verts = [
-                    node_id(i, j, k),
-                    node_id(i + 1, j, k),
-                    node_id(i + 1, j + 1, k),
-                    node_id(i, j + 1, k),
-                    node_id(i, j, k + 1),
-                    node_id(i + 1, j, k + 1),
-                    node_id(i + 1, j + 1, k + 1),
-                    node_id(i, j + 1, k + 1),
-                ]
-                for tet in kuhn_tets:
-                    elements.append([hex_verts[v] for v in tet])
+    i, j, k = (
+        grid.ravel()
+        for grid in np.meshgrid(
+            np.arange(nx), np.arange(ny), np.arange(nz), indexing="ij"
+        )
+    )
+    n0 = i * (ny + 1) * (nz + 1) + j * (nz + 1) + k
+    p = (ny + 1) * (nz + 1)
+    q = nz + 1
+    hex_verts = np.column_stack(
+        [n0, n0 + p, n0 + p + q, n0 + q, n0 + 1, n0 + p + 1, n0 + p + q + 1, n0 + q + 1]
+    )
+    elements = hex_verts[:, kuhn_tets].reshape(-1, 4)
 
-    return nodes, np.array(elements, dtype=int)
+    return nodes, elements
