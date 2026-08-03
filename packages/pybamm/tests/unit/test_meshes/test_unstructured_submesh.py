@@ -1287,6 +1287,21 @@ class TestMeshIntegration:
         assert "No interface coupling between 'negative electrode'" in caplog.text
         assert "separator" in caplog.text
 
+    def test_combine_mixed_element_types_raises(self):
+        """Combining domains of different element types names both types."""
+        import pytest
+
+        tri_nodes, tri_elems = _unit_square_two_triangles()
+        quad_nodes = np.array([[1, 0], [2, 0], [2, 1], [1, 1]], dtype=float)
+        quad_elems = np.array([[0, 1, 2, 3]], dtype=int)
+        tri = UnstructuredSubMesh(tri_nodes, tri_elems)
+        quad = UnstructuredSubMesh(quad_nodes, quad_elems)
+
+        with pytest.raises(
+            pybamm.GeometryError, match=r"quad.*triangle|triangle.*quad"
+        ):
+            UnstructuredSubMesh.combine([tri, quad])
+
     def test_combine_disconnected_domains_raises(self):
         """A non-conforming interface must raise, not solve silently to garbage."""
         import pytest

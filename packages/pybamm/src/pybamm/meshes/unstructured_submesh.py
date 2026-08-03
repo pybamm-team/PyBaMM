@@ -401,6 +401,14 @@ class UnstructuredSubMesh(SubMesh):
         """
         from scipy.spatial import cKDTree
 
+        element_types = {sm.element_type for sm in submeshes}
+        if len(element_types) > 1:
+            raise pybamm.GeometryError(
+                f"Cannot combine unstructured submeshes of different element "
+                f"types: {sorted(element_types)}. All domains must use the "
+                f"same element type."
+            )
+
         # Weld coincident nodes across submeshes regardless of which face tag
         # they belong to, so that interfaces of arbitrary topology (star, tree,
         # graph) become internal faces and TPFA handles cross-region flux
