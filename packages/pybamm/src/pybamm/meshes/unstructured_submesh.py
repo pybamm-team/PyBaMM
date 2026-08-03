@@ -884,9 +884,38 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         if compact_nodes.shape[1] == 3 and np.allclose(compact_nodes[:, 2], 0):
             compact_nodes = compact_nodes[:, :2]
 
-        return UnstructuredSubMesh(
+        submesh = UnstructuredSubMesh(
             compact_nodes, compact_elements, coord_sys=self.coord_sys
         )
+
+        if self.boundary_mapping:
+            facet_type = "triangle" if cell_type == "tetra" else "line"
+            facets, facet_tags = _extract_tagged_facets(mesh, facet_type)
+            if facets is None:
+                pybamm.logger.warning(
+                    f"boundary_mapping given but no tagged '{facet_type}' "
+                    f"facets found in {self.filepath}; no boundary tags set"
+                )
+            else:
+                if self.merge_tolerance is not None and self.merge_tolerance > 0:
+                    facets = inverse[facets]
+                facets = node_map[facets]
+                # Facets of other subdomains reference nodes outside this
+                # submesh and cannot match
+                in_domain = (facets >= 0).all(axis=1)
+                for name, tag in self.boundary_mapping.items():
+                    matched = _match_facets_to_boundary_faces(
+                        facets[in_domain & (facet_tags == tag)], submesh
+                    )
+                    if len(matched) > 0:
+                        submesh.boundary_faces[name] = matched
+                    else:
+                        pybamm.logger.warning(
+                            f"boundary_mapping entry {name!r} (tag {tag}) "
+                            f"matched no boundary faces of this submesh"
+                        )
+
+        return submesh
 
     def __repr__(self):
         return f"UserSuppliedUnstructuredMesh({self.filepath})"
@@ -986,17 +1015,25 @@ class TaggedSubMeshGenerator(MeshGenerator):
         convert mm to m). Default ``1.0``.
     coord_sys : str, optional
         Coordinate system label, default ``"cartesian"``.
+    boundary_mapping : dict[str, str or int] or None, optional
+        Maps boundary name to a gmsh physical *surface* group, given as
+        its ``field_data`` name or integer tag. Matching tagged surface
+        triangles become the named entries in ``boundary_faces``. Without
+        it the submesh carries no boundary tags.
     """
 
     _mesh_cache: dict = {}
 
-    def __init__(self, region, mesh_path, scale=1.0, coord_sys="cartesian"):
+    def __init__(
+        self, region, mesh_path, scale=1.0, coord_sys="cartesian", boundary_mapping=None
+    ):
         self.submesh_type = UnstructuredSubMesh
         self.submesh_params = {}
         self._mesh_path = mesh_path
         self._region = region
         self._scale = float(scale)
         self.coord_sys = coord_sys
+        self.boundary_mapping = boundary_mapping or {}
 
     @classmethod
     def _read(cls, path):
@@ -1031,7 +1068,40 @@ class TaggedSubMeshGenerator(MeshGenerator):
         node_map = np.full(m.points.shape[0], -1, dtype=np.int64)
         node_map[unique_nodes] = np.arange(len(unique_nodes))
         nodes = m.points[unique_nodes] * self._scale
-        return UnstructuredSubMesh(nodes, node_map[elements], coord_sys=self.coord_sys)
+        submesh = UnstructuredSubMesh(
+            nodes, node_map[elements], coord_sys=self.coord_sys
+        )
+
+        if self.boundary_mapping:
+            facets, facet_tags = _extract_tagged_facets(m, "triangle")
+            if facets is None:
+                pybamm.logger.warning(
+                    f"boundary_mapping given but no tagged surface triangles "
+                    f"found in {self._mesh_path}; no boundary tags set"
+                )
+            else:
+                facets = node_map[facets]
+                in_domain = (facets >= 0).all(axis=1)
+                for name, group in self.boundary_mapping.items():
+                    if isinstance(group, str):
+                        if group not in m.field_data:
+                            raise pybamm.GeometryError(
+                                f"boundary group {group!r} not in mesh "
+                                f"field_data; available: {list(m.field_data)}"
+                            )
+                        group = int(m.field_data[group][0])
+                    matched = _match_facets_to_boundary_faces(
+                        facets[in_domain & (facet_tags == group)], submesh
+                    )
+                    if len(matched) > 0:
+                        submesh.boundary_faces[name] = matched
+                    else:
+                        pybamm.logger.warning(
+                            f"boundary_mapping entry {name!r} matched no "
+                            f"boundary faces of region {self._region!r}"
+                        )
+
+        return submesh
 
 
 # ======================================================================
@@ -1124,6 +1194,47 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
         }
 
     return result
+
+
+# ======================================================================
+# Boundary facet tagging helpers
+# ======================================================================
+
+
+def _extract_tagged_facets(mesh, facet_type):
+    """Concatenate a meshio mesh's facet blocks and their integer tags.
+
+    Returns ``(facets, tags)`` arrays, or ``(None, None)`` if the mesh has
+    no facet blocks of ``facet_type`` or no cell data to tag them with.
+    Prefers the ``gmsh:physical`` cell-data key, falling back to the first
+    available key.
+    """
+    block_ids = [i for i, b in enumerate(mesh.cells) if b.type == facet_type]
+    if not block_ids:
+        return None, None
+    data_lists = mesh.cell_data.get("gmsh:physical")
+    if data_lists is None:
+        data_lists = next(iter(mesh.cell_data.values()), None)
+    if data_lists is None:
+        return None, None
+    facets = np.concatenate([mesh.cells[i].data for i in block_ids], axis=0)
+    tags = np.concatenate([np.asarray(data_lists[i]) for i in block_ids])
+    return facets, tags
+
+
+def _match_facets_to_boundary_faces(facets, submesh):
+    """Return submesh boundary-face indices whose vertex sets match ``facets``."""
+    bnd_start = submesh._boundary_face_start
+    lookup = {
+        tuple(face): bnd_start + i
+        for i, face in enumerate(np.sort(submesh.faces[bnd_start:], axis=1).tolist())
+    }
+    matched = {
+        lookup[key]
+        for key in map(tuple, np.sort(facets, axis=1).tolist())
+        if key in lookup
+    }
+    return np.array(sorted(matched), dtype=int)
 
 
 # ======================================================================

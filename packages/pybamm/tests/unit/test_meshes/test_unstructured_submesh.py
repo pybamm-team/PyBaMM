@@ -745,6 +745,59 @@ class TestFileGenerators:
         with pytest.raises(pybamm.GeometryError, match="cell data tag"):
             gen_bad({"x_n": {"min": 0.0, "max": 1.0}}, {})
 
+    def test_user_supplied_boundary_mapping_tags_faces(self):
+        """boundary_mapping maps tagged facet groups to boundary face names."""
+        import pytest
+
+        meshio = pytest.importorskip("meshio")
+        points = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]], dtype=float)
+        tris = np.array([[0, 1, 2], [0, 2, 3]])
+        lines = np.array([[0, 1], [1, 2], [2, 3], [3, 0]])
+        gen = UserSuppliedUnstructuredMesh(
+            "unused.vtu", boundary_mapping={"seal": 1, "vent": 2}
+        )
+        gen._cached_mesh = meshio.Mesh(
+            points,
+            [("triangle", tris), ("line", lines)],
+            cell_data={"gmsh:physical": [np.array([0, 0]), np.array([1, 1, 2, 2])]},
+        )
+        sub = gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+
+        assert set(sub.boundary_faces) == {"seal", "vent"}
+        seal = sub.face_centroids[sub.boundary_faces["seal"]]
+        vent = sub.face_centroids[sub.boundary_faces["vent"]]
+        # seal = bottom + right edges, vent = top + left edges
+        np.testing.assert_allclose(sorted(map(tuple, seal)), [(0.5, 0.0), (1.0, 0.5)])
+        np.testing.assert_allclose(sorted(map(tuple, vent)), [(0.0, 0.5), (0.5, 1.0)])
+
+    def test_tagged_generator_boundary_mapping(self):
+        """TaggedSubMeshGenerator resolves surface physical groups to tags."""
+        import pytest
+
+        meshio = pytest.importorskip("meshio")
+        nodes, elements = _unit_cube_five_tets()
+        # Bottom cube face as the two triangles the 5-tet split puts there
+        base_tris = np.array([[0, 1, 2], [0, 2, 3]])
+        mesh = meshio.Mesh(
+            nodes,
+            [("tetra", elements), ("triangle", base_tris)],
+            cell_data={"gmsh:physical": [np.full(5, 1), np.full(2, 10)]},
+            field_data={"anode": np.array([1, 3]), "base": np.array([10, 2])},
+        )
+        fake_path = "fake_tagged_boundaries.msh"
+        TaggedSubMeshGenerator._mesh_cache[fake_path] = mesh
+        try:
+            gen = TaggedSubMeshGenerator(
+                "anode", fake_path, boundary_mapping={"bottom_seal": "base"}
+            )
+            sub = gen({}, {})
+            assert set(sub.boundary_faces) == {"bottom_seal"}
+            centroids = sub.face_centroids[sub.boundary_faces["bottom_seal"]]
+            np.testing.assert_allclose(centroids[:, 2], 0.0, atol=1e-14)
+            assert len(centroids) == 2
+        finally:
+            TaggedSubMeshGenerator._mesh_cache.pop(fake_path, None)
+
     def test_user_supplied_no_supported_cells_raises(self):
         """A mesh with only unsupported cell types raises."""
         import pytest
