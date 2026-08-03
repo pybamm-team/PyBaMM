@@ -930,9 +930,10 @@ class Discretisation:
             for k in range(n)
         ]
         result = pybamm.VectorField(*new_comps)
-        result._disc_state_vector = (
-            disc_left._disc_state_vector or disc_right._disc_state_vector
-        )
+        if disc_left._disc_state_vector is not None:
+            result._disc_state_vector = disc_left._disc_state_vector
+        else:
+            result._disc_state_vector = disc_right._disc_state_vector
         return result
 
     def _process_symbol(self, symbol):
