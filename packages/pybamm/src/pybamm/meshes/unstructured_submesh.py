@@ -344,30 +344,28 @@ class UnstructuredSubMesh(SubMesh):
         # Classify every external face by its outward normal direction so all
         # protrusions (e.g., tabs) get assigned a BC bucket.
         bnd_normals = self.face_normals[bnd_start:]
-        dominant_axis = np.argmax(np.abs(bnd_normals), axis=1)
+        n_bnd = len(bnd_normals)
 
-        tag_map = {
-            "left": np.zeros(len(bnd_centroids), dtype=bool),
-            "right": np.zeros(len(bnd_centroids), dtype=bool),
-            "bottom": np.zeros(len(bnd_centroids), dtype=bool),
-            "top": np.zeros(len(bnd_centroids), dtype=bool),
-        }
+        # A zero-area face has no normal direction and would land in an
+        # arbitrary bucket; surface it instead.
+        if np.any(self.face_areas[bnd_start:] < 1e-30):
+            raise pybamm.GeometryError(
+                "Mesh has degenerate (zero-area) boundary faces; boundary "
+                "detection cannot classify them."
+            )
+
+        axis = np.argmax(np.abs(bnd_normals), axis=1)
+        positive = (bnd_normals[np.arange(n_bnd), axis] >= 0).astype(int)
         if self.dimension == 3:
-            tag_map["front"] = np.zeros(len(bnd_centroids), dtype=bool)
-            tag_map["back"] = np.zeros(len(bnd_centroids), dtype=bool)
-
-        for i, axis in enumerate(dominant_axis):
-            sign = bnd_normals[i, axis]
-            if axis == 0:
-                tag_map["left" if sign < 0 else "right"][i] = True
-            elif self.dimension == 3 and axis == 1:
-                tag_map["front" if sign < 0 else "back"][i] = True
-            else:
-                tag_map["bottom" if sign < 0 else "top"][i] = True
+            names = ["left", "right", "front", "back", "bottom", "top"]
+            slot = axis * 2 + positive
+        else:
+            names = ["left", "right", "bottom", "top"]
+            slot = np.where(axis == 0, positive, 2 + positive)
 
         self.boundary_faces = {}
-        for name, mask in tag_map.items():
-            indices = np.nonzero(mask)[0] + bnd_start
+        for k, name in enumerate(names):
+            indices = np.nonzero(slot == k)[0] + bnd_start
             if len(indices) > 0:
                 self.boundary_faces[name] = indices
 
