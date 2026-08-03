@@ -92,6 +92,12 @@ def _set_cell_scalars(grid, name, values):
     """Set (or update) a cell scalar array on a VTK grid."""
     import vtk
 
+    if len(values) != grid.GetNumberOfCells():
+        raise ValueError(
+            f"Cannot attach {len(values)} cell values for {name!r} to a grid "
+            f"with {grid.GetNumberOfCells()} cells: the variable and the "
+            f"grid describe different meshes."
+        )
     arr = grid.GetCellData().GetArray(name)
     if arr is None:
         arr = vtk.vtkFloatArray()
@@ -108,6 +114,13 @@ def _set_cell_scalars(grid, name, values):
 def _set_point_scalars(grid, name, values):
     """Set (or update) a point scalar array on a VTK grid."""
     import vtk
+
+    if len(values) != grid.GetNumberOfPoints():
+        raise ValueError(
+            f"Cannot attach {len(values)} point values for {name!r} to a grid "
+            f"with {grid.GetNumberOfPoints()} points: the variable and the "
+            f"grid describe different meshes."
+        )
 
     arr = grid.GetPointData().GetArray(name)
     if arr is None:
@@ -333,13 +346,19 @@ class VTKQuickPlot:
             )
         }
 
+        pv_by_name = dict(zip(self.spatial_names, self.spatial_vars, strict=True))
         for name, opts in self.spatial_panels:
             plot_type = opts.get("plot_type", "3d")
-            var_scale = _resolve_scale(opts.get("scale", "auto"), self.mesh)
+            # Each variable is drawn on its OWN mesh: a 3-domain variable
+            # (e.g. electrolyte concentration) must not be painted onto the
+            # first variable's 5-domain grid, which shifts every value by
+            # the leading domains' cell count.
+            panel_mesh = pv_by_name[name].mesh
+            var_scale = _resolve_scale(opts.get("scale", "auto"), panel_mesh)
             is_cell_data = is_cell_data_by_name[name]
             panel_names.append(name)
 
-            g = _build_vtk_grid(self.mesh, scale=var_scale)
+            g = _build_vtk_grid(panel_mesh, scale=var_scale)
             if is_cell_data:
                 _set_cell_scalars(g, name, spatial_data[name][:, 0])
             else:
