@@ -110,6 +110,7 @@ class TestUnstructuredSubMesh:
         z_edges = np.linspace(0, 1, 4)
         nodes, elements = _quad_to_tri(x_edges, z_edges)
         mesh = UnstructuredSubMesh(nodes, elements)
+        mesh.detect_box_boundaries()
 
         assert "left" in mesh.boundary_faces
         assert "right" in mesh.boundary_faces
@@ -188,6 +189,7 @@ class TestUnstructuredSubMesh:
         z_edges = np.linspace(0, 1, 3)
         nodes, elements = _hex_to_tet(x_edges, y_edges, z_edges)
         mesh = UnstructuredSubMesh(nodes, elements)
+        mesh.detect_box_boundaries()
 
         for tag in ("left", "right", "front", "back", "bottom", "top"):
             assert tag in mesh.boundary_faces, f"Missing boundary tag '{tag}'"
@@ -225,6 +227,7 @@ class TestUnstructuredSubMesh:
         nodes = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype=float)
         elements = np.array([[0, 1, 2, 3]], dtype=int)
         mesh = UnstructuredSubMesh(nodes, elements)
+        mesh.detect_box_boundaries()
 
         assert mesh.element_type == "quad"
         np.testing.assert_allclose(mesh.cell_volumes, [1.0])
@@ -279,12 +282,12 @@ class TestUnstructuredSubMesh:
             mesh.cell_centroids, [[0.0, 0.0, 11.0 / 28.0]], atol=1e-14
         )
 
-        # Side face (dominant -y normal, tagged "front") is a trapezoid in
-        # the plane y = -1 + z/2: exact centroid (0, -7/9, 4/9)
-        front = mesh.boundary_faces["front"]
-        assert len(front) == 1
+        # Side face (outward normal toward -y) is a trapezoid in the plane
+        # y = -1 + z/2: exact centroid (0, -7/9, 4/9)
+        bnd_start = mesh._boundary_face_start
+        front = bnd_start + int(np.argmin(mesh.face_normals[bnd_start:, 1]))
         np.testing.assert_allclose(
-            mesh.face_centroids[front[0]],
+            mesh.face_centroids[front],
             [0.0, -7.0 / 9.0, 4.0 / 9.0],
             atol=1e-14,
         )
@@ -711,6 +714,9 @@ class TestFileGenerators:
         assert sub.npts == 2
         np.testing.assert_allclose(sub.cell_volumes.sum(), 1.0)
         assert "square.vtu" in repr(gen)
+        # File meshes get no guessed tags: boundary names must come from the
+        # mesh file (boundary_mapping) or be set explicitly
+        assert sub.boundary_faces == {}
 
     def test_user_supplied_subdomain_filtering(self, tmp_path):
         """subdomain_mapping selects only the cells with the matching tag."""
@@ -985,10 +991,12 @@ class TestComputeInterfaceData:
         left = UnstructuredSubMesh(
             *_hex_grid(np.linspace(0, 1, 3), np.linspace(0, 1, 3), ze)
         )
+        left.detect_box_boundaries()
         # y grid shifted by 0.37: same face count, wrong transverse positions
         right = UnstructuredSubMesh(
             *_hex_grid(np.linspace(1, 2, 3), np.linspace(0.37, 1.37, 3), ze)
         )
+        right.detect_box_boundaries()
 
         with pytest.raises(pybamm.GeometryError, match="do not match"):
             compute_interface_data(left, right)
@@ -1134,6 +1142,8 @@ class TestMeshIntegration:
         ze = np.linspace(0, 1, 3)
         left = UnstructuredSubMesh(*_hex_grid(np.linspace(0, 1, 3), ye, ze))
         right = UnstructuredSubMesh(*_hex_grid(np.linspace(1, 2, 3), ye, ze))
+        left.detect_box_boundaries()
+        right.detect_box_boundaries()
         left.boundary_faces["tab_top"] = left.boundary_faces.pop("top")
 
         combined = UnstructuredSubMesh.combine([left, right])
@@ -1286,8 +1296,10 @@ class TestBandwidthOptimization:
         ze = np.linspace(0, 1, 4)
         nodes_l, elems_l = _hex_grid(np.linspace(0, 1, 4), ye, ze)
         mesh_l = UnstructuredSubMesh(nodes_l, elems_l, coord_sys="cartesian")
+        mesh_l.detect_box_boundaries()
         nodes_r, elems_r = _hex_grid(np.linspace(1, 2, 4), ye, ze)
         mesh_r = UnstructuredSubMesh(nodes_r, elems_r, coord_sys="cartesian")
+        mesh_r.detect_box_boundaries()
         compute_interface_data(mesh_l, mesh_r, "left", "right")
 
         iface = mesh_l.interface_data["right"]
@@ -1307,8 +1319,10 @@ class TestBandwidthOptimization:
         # mesh's permutation would run off the end of the neighbour.
         nodes_l, elems_l = _hex_grid(np.linspace(0, 1, 4), ye, ze)
         mesh_l = UnstructuredSubMesh(nodes_l, elems_l, coord_sys="cartesian")
+        mesh_l.detect_box_boundaries()
         nodes_r, elems_r = _hex_grid(np.linspace(1, 2, 3), ye, ze)
         mesh_r = UnstructuredSubMesh(nodes_r, elems_r, coord_sys="cartesian")
+        mesh_r.detect_box_boundaries()
         assert mesh_l.npts > mesh_r.npts
         compute_interface_data(mesh_l, mesh_r, "left", "right")
 

@@ -32,8 +32,11 @@ class UnstructuredSubMesh(SubMesh):
     coord_sys : str, optional
         Coordinate system, default ``"cartesian"``.
     boundary_faces : dict[str, numpy.ndarray] or None, optional
-        Maps boundary name to face indices.  If ``None``, boundaries
-        are auto-detected from face centroid positions.
+        Maps boundary name to face indices.  If ``None``, no boundary
+        tags are assigned: tags must come from the mesh source (the
+        built-in generator tags its own box output, file generators use
+        the mesh file's boundary names), or call
+        :meth:`detect_box_boundaries` for a hand-built axis-aligned box.
     """
 
     def __init__(self, nodes, elements, coord_sys="cartesian", boundary_faces=None):
@@ -61,10 +64,7 @@ class UnstructuredSubMesh(SubMesh):
         self._build_face_connectivity()
         self._compute_face_geometry()
 
-        if boundary_faces is not None:
-            self.boundary_faces = boundary_faces
-        else:
-            self._identify_boundary_faces()
+        self.boundary_faces = boundary_faces if boundary_faces is not None else {}
 
         self.npts = len(self.elements)
         self.npts_lr = self.npts
@@ -329,7 +329,17 @@ class UnstructuredSubMesh(SubMesh):
     # Boundary identification
     # ------------------------------------------------------------------
 
-    def _identify_boundary_faces(self):
+    def detect_box_boundaries(self):
+        """Tag boundary faces of an axis-aligned box by outward normal.
+
+        Assigns ``left``/``right`` (x), ``front``/``back`` (y, 3D only),
+        and ``bottom``/``top`` (z) by each exterior face's dominant normal
+        direction, overwriting ``boundary_faces``. Only meaningful for
+        axis-aligned box domains (each face genuinely normal to one axis);
+        on curved geometry the buckets are not surfaces. The built-in
+        generator calls this on its output; meshes from files should carry
+        their own boundary names instead.
+        """
         bnd_start = self._boundary_face_start
         bnd_centroids = self.face_centroids[bnd_start:]
 
@@ -431,24 +441,24 @@ class UnstructuredSubMesh(SubMesh):
             coord_sys=submeshes[0].coord_sys,
         )
 
-        # The combined mesh auto-detects only standard tags, so custom tags
-        # like "tab_top" are recovered by matching boundary face centroids.
-        standard_tags = {"left", "right", "top", "bottom", "front", "back"}
-        custom_centroids = {}  # tag -> list of centroid arrays
+        # The combined mesh starts with no tags: every tag is propagated from
+        # the input submeshes by matching boundary face centroids. Faces that
+        # welding turned internal (interface faces) match no combined boundary
+        # face and drop out naturally.
+        tag_centroids = {}  # tag -> list of centroid arrays
         for sm in submeshes:
             for tag, face_indices in sm.boundary_faces.items():
-                if tag not in standard_tags:
-                    custom_centroids.setdefault(tag, []).append(
-                        sm.face_centroids[face_indices]
-                    )
+                tag_centroids.setdefault(tag, []).append(
+                    sm.face_centroids[face_indices]
+                )
 
-        if custom_centroids:
+        if tag_centroids:
             bnd_start = combined._boundary_face_start
             bnd_centroids = combined.face_centroids[bnd_start:]
             if len(bnd_centroids) > 0:
                 tree = cKDTree(bnd_centroids)
                 match_tol = 1e-10 * max(np.ptp(combined_nodes, axis=0).max(), 1.0)
-                for tag, centroid_list in custom_centroids.items():
+                for tag, centroid_list in tag_centroids.items():
                     all_src = np.concatenate(centroid_list, axis=0)
                     dists, idxs = tree.query(all_src)
                     matched = idxs[dists < match_tol]
@@ -749,7 +759,10 @@ class UnstructuredMeshGenerator(MeshGenerator):
             nodes, elements = _quad_to_tri(x_edges, z_edges)
         else:
             raise pybamm.GeometryError(f"Unsupported 2D element_type: {etype!r}")
-        return UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
+        submesh = UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
+        # The generator's output is an axis-aligned box by construction
+        submesh.detect_box_boundaries()
+        return submesh
 
     # ------------------------------------------------------------------
     # 3D
@@ -769,12 +782,14 @@ class UnstructuredMeshGenerator(MeshGenerator):
         etype = self._element_type or "hexahedron"
         if etype == "hexahedron":
             nodes, elements = _hex_grid(x_edges, y_edges, z_edges)
-            return UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
         elif etype == "tetrahedron":
             nodes, elements = _hex_to_tet(x_edges, y_edges, z_edges)
-            return UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
         else:
             raise pybamm.GeometryError(f"Unsupported 3D element_type: {etype!r}")
+        submesh = UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
+        # The generator's output is an axis-aligned box by construction
+        submesh.detect_box_boundaries()
+        return submesh
 
 
 class UserSuppliedUnstructuredMesh(MeshGenerator):
