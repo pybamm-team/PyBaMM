@@ -1036,6 +1036,28 @@ class TestComputeInterfaceData:
         with pytest.raises(pybamm.GeometryError, match="matching boundary faces"):
             compute_interface_data(left, right)
 
+    def test_non_bijective_pairing_raises(self):
+        """Surplus faces on one side of an interface must not vanish silently.
+
+        Every left face matches a right face exactly, but the right mesh
+        exposes one extra 'left' face — its flux would silently disappear
+        from the coupling.
+        """
+        import pytest
+
+        ye = np.linspace(0, 1, 3)
+        ze = np.linspace(0, 1, 3)
+        left = UnstructuredSubMesh(*_hex_grid(np.linspace(0, 1, 3), ye, ze))
+        right = UnstructuredSubMesh(*_hex_grid(np.linspace(1, 2, 3), ye, ze))
+        left.detect_box_boundaries()
+        right.detect_box_boundaries()
+        right.boundary_faces["left"] = np.append(
+            right.boundary_faces["left"], right.boundary_faces["top"][0]
+        )
+
+        with pytest.raises(pybamm.GeometryError, match=r"one-to-one"):
+            compute_interface_data(left, right)
+
     def test_transverse_mismatch_raises(self):
         """Interface faces at different transverse positions cannot be paired."""
         import pytest

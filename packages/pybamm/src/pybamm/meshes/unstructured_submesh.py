@@ -1133,6 +1133,9 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
     of *right_mesh*, matches them by face centroid position, and records
     cell indices, face areas, and centroid-to-centroid distances.
 
+    Domains are assumed to be stacked along x: faces are paired by their
+    transverse (non-x) centroid coordinates.
+
     Parameters
     ----------
     left_mesh : UnstructuredSubMesh
@@ -1175,6 +1178,18 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
         raise pybamm.GeometryError(
             f"Interface faces do not match: max transverse mismatch = {dists.max():.2e}. "
             "Ensure both meshes have the same transverse grid."
+        )
+
+    # The nearest-neighbour query is one-directional: without this check a
+    # surplus right face silently loses its flux, and a doubly-claimed one
+    # double-counts it.
+    if len(left_bnd) != len(right_bnd) or len(np.unique(right_indices)) != len(
+        right_indices
+    ):
+        raise pybamm.GeometryError(
+            f"Interface face pairing is not one-to-one: {len(left_bnd)} 'right' "
+            f"faces on the left mesh vs {len(right_bnd)} 'left' faces on the "
+            f"right mesh. Both sides must expose the same interface faces."
         )
 
     left_cells = left_mesh.face_owner[left_bnd]
