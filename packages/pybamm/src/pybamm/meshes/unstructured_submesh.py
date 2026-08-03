@@ -360,31 +360,6 @@ class UnstructuredSubMesh(SubMesh):
         """
         from scipy.spatial import cKDTree
 
-        # For 3D tet meshes generated from hex grids, regenerate with
-        # cumulative i_offset so that alternating-parity face triangulations
-        # match across domain boundaries.
-        if all(
-            hasattr(sm, "_hex_gen_params") and sm.dimension == 3 for sm in submeshes
-        ):
-            cumulative_offset = 0
-            fixed = []
-            for sm in submeshes:
-                p = sm._hex_gen_params
-                if cumulative_offset > 0:
-                    nodes, elements = _hex_to_tet(
-                        p["x_edges"],
-                        p["y_edges"],
-                        p["z_edges"],
-                        i_offset=cumulative_offset,
-                    )
-                    new_sm = cls(nodes, elements, coord_sys=sm.coord_sys)
-                    new_sm._hex_gen_params = p
-                    fixed.append(new_sm)
-                else:
-                    fixed.append(sm)
-                cumulative_offset += p["nx"]
-            submeshes = fixed
-
         # Weld coincident nodes across submeshes regardless of which face tag
         # they belong to, so that interfaces of arbitrary topology (star, tree,
         # graph) become internal faces and TPFA handles cross-region flux
@@ -668,8 +643,14 @@ class UnstructuredMeshGenerator(MeshGenerator):
 
     * **2D**: rectangular domain meshed as quads, or triangulated by
       splitting each quad into 2 triangles.
-    * **3D**: rectangular prism meshed as hexahedra, or split into 5
-      tetrahedra per hex.
+    * **3D**: rectangular prism meshed as hexahedra, or split into 6
+      tetrahedra per hex (Kuhn decomposition).
+
+    On box domains, hexahedra (the 3D default) are preferred for real
+    simulations: same resolution with 6x fewer cells and ideal face
+    orthogonality. The simplex element types chiefly exercise the same
+    code paths as user-supplied (e.g. gmsh) meshes without needing a
+    mesh file, which is useful for testing and validation.
 
     Parameters
     ----------
@@ -760,17 +741,7 @@ class UnstructuredMeshGenerator(MeshGenerator):
             return UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
         elif etype == "tetrahedron":
             nodes, elements = _hex_to_tet(x_edges, y_edges, z_edges)
-            submesh = UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
-            # Record the source grid so that combining tet domains can rebuild
-            # each with a cumulative offset, keeping face triangulations
-            # conforming across domain interfaces (see combine()).
-            submesh._hex_gen_params = {
-                "x_edges": x_edges,
-                "y_edges": y_edges,
-                "z_edges": z_edges,
-                "nx": nx,
-            }
-            return submesh
+            return UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
         else:
             raise pybamm.GeometryError(f"Unsupported 3D element_type: {etype!r}")
 
@@ -1237,19 +1208,17 @@ def _hex_grid(x_edges, y_edges, z_edges):
     return nodes, np.array(elements, dtype=int)
 
 
-def _hex_to_tet(x_edges, y_edges, z_edges, i_offset=0):
+def _hex_to_tet(x_edges, y_edges, z_edges):
     """
     Tetrahedralise a rectangular prism defined by edge arrays.
 
-    Each hex cell is split into 5 tetrahedra using a consistent
-    decomposition that guarantees matching triangular faces on
-    axis-aligned planes (required for interface conformity).
-
-    The decomposition alternates orientation based on the parity of
-    (i + i_offset + j + k) so that shared faces between adjacent hexes
-    are triangulated identically, including across domain boundaries
-    when ``i_offset`` equals the cumulative hex count from preceding
-    domains.
+    Each hex cell is split into 6 tetrahedra with the Kuhn (Freudenthal)
+    decomposition: every tet shares the main diagonal from vertex 0 to
+    vertex 6, one tet per monotone vertex path between them. The split
+    is identical for every cell and puts the same face-local diagonal on
+    opposite faces of each hex, so any two grids that share a boundary
+    plane and transverse edges triangulate it identically — including
+    across domain boundaries — with no cell-parity bookkeeping.
 
     Returns
     -------
@@ -1266,29 +1235,21 @@ def _hex_to_tet(x_edges, y_edges, z_edges, i_offset=0):
     def node_id(i, j, k):
         return i * (ny + 1) * (nz + 1) + j * (nz + 1) + k
 
-    # Two 5-tet decomposition patterns that share identical face diagonals
-    # on every axis-aligned interface.
     # Hex vertices numbered:
     #   0 = (i,   j,   k  )   4 = (i,   j,   k+1)
     #   1 = (i+1, j,   k  )   5 = (i+1, j,   k+1)
     #   2 = (i+1, j+1, k  )   6 = (i+1, j+1, k+1)
     #   3 = (i,   j+1, k  )   7 = (i,   j+1, k+1)
     #
-    # Pattern A (even parity): diagonal from vertex 0 to 6
-    pattern_a = [
-        (0, 1, 2, 5),
-        (0, 2, 3, 7),
-        (0, 5, 7, 4),
-        (2, 5, 7, 6),
-        (0, 2, 5, 7),
-    ]
-    # Pattern B (odd parity): diagonal from vertex 1 to 7
-    pattern_b = [
-        (1, 0, 3, 4),
-        (1, 2, 3, 6),
-        (1, 6, 4, 5),
-        (3, 4, 6, 7),
-        (1, 3, 4, 6),
+    # One tet per monotone path 0 -> 6, stepping +x/+y/+z in each of the
+    # 6 possible orders (xyz, xzy, yxz, yzx, zxy, zyx).
+    kuhn_tets = [
+        (0, 1, 2, 6),
+        (0, 1, 5, 6),
+        (0, 3, 2, 6),
+        (0, 3, 7, 6),
+        (0, 4, 5, 6),
+        (0, 4, 7, 6),
     ]
 
     elements = []
@@ -1305,8 +1266,7 @@ def _hex_to_tet(x_edges, y_edges, z_edges, i_offset=0):
                     node_id(i + 1, j + 1, k + 1),
                     node_id(i, j + 1, k + 1),
                 ]
-                pattern = pattern_a if (i + i_offset + j + k) % 2 == 0 else pattern_b
-                for tet in pattern:
+                for tet in kuhn_tets:
                     elements.append([hex_verts[v] for v in tet])
 
     return nodes, np.array(elements, dtype=int)

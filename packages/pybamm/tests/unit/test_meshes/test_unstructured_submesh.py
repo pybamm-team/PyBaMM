@@ -401,7 +401,7 @@ class TestUnstructuredSubMesh:
 
         tet_mesh = UnstructuredMeshGenerator(element_type="tetrahedron")(lims, npts)
         assert tet_mesh.element_type == "tetrahedron"
-        assert tet_mesh.npts == 8 * 5  # 5 tets per hex
+        assert tet_mesh.npts == 8 * 6  # 6 tets per hex (Kuhn split)
         np.testing.assert_allclose(tet_mesh.cell_volumes.sum(), 1.0, atol=1e-14)
 
     def test_generator_unknown_3d_element_type_raises(self):
@@ -1034,8 +1034,11 @@ class TestMeshIntegration:
     def test_combine_tetrahedron_domains_conforming(self):
         """Tet domains from the generator combine into one connected mesh.
 
-        Exercises the cumulative-offset regeneration in ``combine`` that keeps
-        the alternating tet triangulation conforming across the interface.
+        Uses an odd left nx so the cumulative-offset regeneration in
+        ``combine`` actually fires (an even offset leaves the parity of
+        ``(i + i_offset + j + k)`` unchanged and the branch is a no-op).
+        The combined mesh must describe the same cells as the per-domain
+        meshes: PyBaMM reads both views of the same region.
         """
         x_n = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
         x_s = pybamm.SpatialVariable("x_s", domain=["separator"])
@@ -1048,7 +1051,7 @@ class TestMeshIntegration:
                 y: {"min": 0, "max": 1},
                 z: {"min": 0, "max": 1},
             },
-            {"x_n": 2, "y": 2, "z": 2},
+            {"x_n": 3, "y": 2, "z": 2},
         )
         right = gen(
             {
@@ -1062,6 +1065,16 @@ class TestMeshIntegration:
         combined = UnstructuredSubMesh.combine([left, right])
         assert combined.element_type == "tetrahedron"
         assert combined.npts == left.npts + right.npts
+
+        # Both views of each domain must agree cell-for-cell
+        n_left = left.npts
+        np.testing.assert_allclose(
+            combined.cell_centroids[:n_left], left.cell_centroids
+        )
+        np.testing.assert_allclose(
+            combined.cell_centroids[n_left:], right.cell_centroids
+        )
+        np.testing.assert_allclose(combined.cell_volumes[n_left:], right.cell_volumes)
 
     def test_combine_propagates_custom_boundary_tags(self):
         """Non-standard boundary tags survive combining via centroid matching."""
