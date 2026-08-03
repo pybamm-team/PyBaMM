@@ -462,7 +462,7 @@ class Discretisation:
     def set_internal_boundary_conditions(self, model):
         """
         A method to set the internal boundary conditions for the submodel.
-        These are required to properly calculate the gradient.
+        These are required to calculate the gradient (although it should be the flux).
         Note: this method modifies the state of self.boundary_conditions.
         """
 
@@ -493,6 +493,12 @@ class Discretisation:
 
             first_child = children[0]
             next_child = children[1]
+
+            if isinstance(
+                self.spatial_methods[first_child.domain[0]], pybamm.FiniteVolume
+            ):
+                # Don't apply internal Neumann conditions for finite volume method
+                continue
 
             lbc = self.bcs[var]["left"]
             rbc = (boundary_gradient(first_child, next_child), "Neumann")
