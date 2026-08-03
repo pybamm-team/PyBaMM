@@ -655,10 +655,13 @@ class UnstructuredSubMesh(SubMesh):
         n_query = len(query_pts)
         winding = np.zeros(n_query)
 
-        for i in range(len(tri_idx)):
-            a = v0[i] - query_pts
-            b = v1_fixed[i] - query_pts
-            c = v2_fixed[i] - query_pts
+        # Loop over query points (usually few), vectorised over the many
+        # boundary triangles — the reverse nesting costs O(n_triangles)
+        # per point regardless of how few points are asked about.
+        for i in range(n_query):
+            a = v0 - query_pts[i]
+            b = v1_fixed - query_pts[i]
+            c = v2_fixed - query_pts[i]
 
             an = np.linalg.norm(a, axis=1)
             bn = np.linalg.norm(b, axis=1)
@@ -672,7 +675,7 @@ class UnstructuredSubMesh(SubMesh):
                 + np.einsum("ij,ij->i", b, c) * an
             )
 
-            winding += 2.0 * np.arctan2(num, den)
+            winding[i] = 2.0 * np.arctan2(num, den).sum()
 
         return winding > 2.0 * np.pi
 
