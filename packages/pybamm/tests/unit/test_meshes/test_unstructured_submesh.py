@@ -878,7 +878,7 @@ class TestFileGenerators:
             assert isinstance(sub, UnstructuredSubMesh)
             assert sub.npts == 3  # cells tagged 1
             # scale multiplies coordinates: unit cube -> side 2
-            np.testing.assert_allclose(sub.nodes.max(axis=0), [2.0, 2.0, 2.0])
+            np.testing.assert_allclose(sub.vertices.max(axis=0), [2.0, 2.0, 2.0])
         finally:
             TaggedSubMeshGenerator._mesh_cache.pop(fake_path, None)
 
@@ -1160,7 +1160,10 @@ class TestMeshIntegration:
 
         assert combined.npts == left.npts + right.npts
         # coincident interface nodes are welded, not duplicated
-        assert combined.nodes.shape[0] < left.nodes.shape[0] + right.nodes.shape[0]
+        assert (
+            combined.vertices.shape[0]
+            < left.vertices.shape[0] + right.vertices.shape[0]
+        )
         # the x=1 seam is now internal, so flux can cross it
         n_int = combined._boundary_face_start
         on_seam = np.abs(combined.face_centroids[:n_int, 0] - 1.0) < 1e-12

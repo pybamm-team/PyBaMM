@@ -19,12 +19,12 @@ class UnstructuredSubMesh(SubMesh):
     raises a :class:`pybamm.GeometryError` for them.
 
     All operators are dimension-agnostic: the same code path handles
-    both 2D and 3D, with dimension inferred from ``nodes.shape[1]``.
+    both 2D and 3D, with dimension inferred from ``vertices.shape[1]``.
 
     Parameters
     ----------
-    nodes : numpy.ndarray
-        Vertex coordinates, of shape ``(n_nodes, d)`` (d = 2 or 3).
+    vertices : numpy.ndarray
+        Vertex coordinates, of shape ``(n_vertices, d)`` (d = 2 or 3).
     elements : numpy.ndarray
         Element vertex indices, of shape ``(n_cells, n_verts_per_cell)``.
         For 2D: 3 (triangles) or 4 (quads).
@@ -39,11 +39,11 @@ class UnstructuredSubMesh(SubMesh):
         :meth:`detect_box_boundaries` for a hand-built axis-aligned box.
     """
 
-    def __init__(self, nodes, elements, coord_sys="cartesian", boundary_faces=None):
+    def __init__(self, vertices, elements, coord_sys="cartesian", boundary_faces=None):
         super().__init__()
-        self.nodes = np.asarray(nodes, dtype=float)
+        self.vertices = np.asarray(vertices, dtype=float)
         self.elements = np.asarray(elements, dtype=int)
-        self.dimension = self.nodes.shape[1]
+        self.dimension = self.vertices.shape[1]
         self.coord_sys = coord_sys
 
         verts_per_cell = self.elements.shape[1]
@@ -77,7 +77,7 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_cell_geometry(self):
-        verts = self.nodes[self.elements]  # (n_cells, n_verts, d)
+        verts = self.vertices[self.elements]  # (n_cells, n_verts, d)
         # Vertex mean is the exact centroid for simplices (triangles, tets);
         # quads and hexes overwrite it with the true area/volume centroid.
         self.cell_centroids = verts.mean(axis=1)
@@ -122,7 +122,7 @@ class UnstructuredSubMesh(SubMesh):
             # into a plausible positive volume.
             self.cell_volumes = np.zeros(len(self.elements))
             for i, cell in enumerate(self.elements):
-                cv = self.nodes[cell]
+                cv = self.vertices[cell]
                 vol = 0.0
                 moment = np.zeros(3)
                 # Split hex into 5 consistently-oriented tets (each signed
@@ -248,7 +248,7 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_face_geometry(self):
-        face_verts = self.nodes[self.faces]
+        face_verts = self.vertices[self.faces]
 
         self.face_centroids = face_verts.mean(axis=1)
 
@@ -414,21 +414,21 @@ class UnstructuredSubMesh(SubMesh):
         # graph) become internal faces and TPFA handles cross-region flux
         # without internal Neumann book-keeping.
         tol = _geometric_tolerance(submeshes)
-        all_nodes = list(submeshes[0].nodes)
-        global_maps = [{i: i for i in range(submeshes[0].nodes.shape[0])}]
+        all_nodes = list(submeshes[0].vertices)
+        global_maps = [{i: i for i in range(submeshes[0].vertices.shape[0])}]
         next_id = len(all_nodes)
 
         for k in range(1, len(submeshes)):
             curr = submeshes[k]
             tree = cKDTree(np.asarray(all_nodes))
-            d, j = tree.query(curr.nodes)
+            d, j = tree.query(curr.vertices)
             local_to_global = {}
-            for nid in range(curr.nodes.shape[0]):
+            for nid in range(curr.vertices.shape[0]):
                 if d[nid] < tol:
                     local_to_global[nid] = int(j[nid])
                 else:
                     local_to_global[nid] = next_id
-                    all_nodes.append(curr.nodes[nid])
+                    all_nodes.append(curr.vertices[nid])
                     next_id += 1
             global_maps.append(local_to_global)
 
@@ -605,7 +605,7 @@ class UnstructuredSubMesh(SubMesh):
 
         loop_data = []
         for loop in loops:
-            pts = self.nodes[loop]
+            pts = self.vertices[loop]
             sa = signed_area(pts)
             loop_data.append((abs(sa), pts))
 
@@ -646,9 +646,9 @@ class UnstructuredSubMesh(SubMesh):
                 f"contains_points_3d: unsupported face with {n_vpf} vertices"
             )
 
-        v0 = self.nodes[tri_idx[:, 0]]
-        v1 = self.nodes[tri_idx[:, 1]]
-        v2 = self.nodes[tri_idx[:, 2]]
+        v0 = self.vertices[tri_idx[:, 0]]
+        v1 = self.vertices[tri_idx[:, 1]]
+        v2 = self.vertices[tri_idx[:, 2]]
 
         # Ensure consistent CCW orientation from outside (matching outward normals)
         cross = np.cross(v1 - v0, v2 - v0)
@@ -1240,7 +1240,7 @@ def _geometric_tolerance(submeshes, rel=1e-3):
     min_edge = min(
         float(
             np.linalg.norm(
-                sm.nodes[sm.elements[:, 1]] - sm.nodes[sm.elements[:, 0]], axis=1
+                sm.vertices[sm.elements[:, 1]] - sm.vertices[sm.elements[:, 0]], axis=1
             ).min()
         )
         for sm in submeshes
