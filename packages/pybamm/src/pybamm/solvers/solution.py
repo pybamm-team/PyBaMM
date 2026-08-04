@@ -748,7 +748,11 @@ class Solution(SolutionBase):
                     "solve. Please re-run the solve with `output_variables` set to "
                     "include this variable."
                 )
-            if isinstance(_var_pybamm, pybamm.VectorField):
+            # Per-component processing only feeds the unstructured-FVM vector
+            # processed variable; structured meshes keep the scalar path.
+            if isinstance(_var_pybamm, pybamm.VectorField) and isinstance(
+                getattr(_var_pybamm, "mesh", None), pybamm.UnstructuredSubMesh
+            ):
                 comp_casadi = []
                 for k, comp in enumerate(_var_pybamm._components):
                     cc, _, _ = self._update_model_variable(
