@@ -838,6 +838,34 @@ class TestBandwidthOptimization:
         centroids_post = mesh_l.cell_centroids[iface["left_cells"]]
         np.testing.assert_allclose(centroids_pre, centroids_post)
 
+    def test_optimize_ordering_remaps_only_own_indices(self):
+        """"right_cells" index the *neighbor* mesh and must not be permuted;
+        the neighbor's mirror entry holds this mesh's indices and must be."""
+        ye = np.linspace(0, 1, 3)
+        ze = np.linspace(0, 1, 2)
+        nodes_l, elems_l = _hex_grid(np.linspace(0, 1, 6), ye, ze)
+        mesh_l = UnstructuredSubMesh(nodes_l, elems_l)
+        nodes_r, elems_r = _hex_grid(np.linspace(1, 1.4, 2), ye, ze)
+        mesh_r = UnstructuredSubMesh(nodes_r, elems_r)
+        compute_interface_data(mesh_l, mesh_r, "left", "right")
+
+        def check_pairing(a_mesh, b_mesh, data):
+            assert data["right_cells"].max() < b_mesh.npts
+            distances = np.linalg.norm(
+                b_mesh.cell_centroids[data["right_cells"]]
+                - a_mesh.cell_centroids[data["left_cells"]],
+                axis=1,
+            )
+            np.testing.assert_allclose(distances, data["cell_distances"])
+
+        mesh_l.optimize_ordering()
+        check_pairing(mesh_l, mesh_r, mesh_l.interface_data["right"])
+        check_pairing(mesh_r, mesh_l, mesh_r.interface_data["left"])
+
+        mesh_r.optimize_ordering()
+        check_pairing(mesh_l, mesh_r, mesh_l.interface_data["right"])
+        check_pairing(mesh_r, mesh_l, mesh_r.interface_data["left"])
+
 
 # ======================================================================
 # TestUserSuppliedUnstructuredMesh

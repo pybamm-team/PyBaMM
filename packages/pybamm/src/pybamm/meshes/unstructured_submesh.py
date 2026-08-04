@@ -332,11 +332,18 @@ class UnstructuredSubMesh(SubMesh):
         self.face_owner = inv_perm[self.face_owner]
         self.face_neighbor = inv_perm[self.face_neighbor]
 
+        # "left_cells" index this mesh; "right_cells" index the neighbor and
+        # must not be permuted. The neighbor's mirror entry stores this mesh's
+        # indices in its "right_cells", so remap those instead.
         for data_dict in self.interface_data.values():
             if "left_cells" in data_dict:
                 data_dict["left_cells"] = inv_perm[data_dict["left_cells"]]
-            if "right_cells" in data_dict:
-                data_dict["right_cells"] = inv_perm[data_dict["right_cells"]]
+            other = data_dict.get("other_mesh")
+            if other is None:
+                continue
+            for other_data in other.interface_data.values():
+                if other_data.get("other_mesh") is self:
+                    other_data["right_cells"] = inv_perm[other_data["right_cells"]]
 
     def boundary_loops(self):
         """Return boundary loops as a list of ``matplotlib.path.Path`` (2D only).
