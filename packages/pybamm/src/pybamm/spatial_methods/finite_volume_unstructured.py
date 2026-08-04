@@ -679,6 +679,15 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         bc_vecs = [pybamm.Vector(np.zeros(n * repeats)) for _ in range(d)]
         if symbol in boundary_conditions:
             bcs = boundary_conditions[symbol]
+            missing = [tag for tag in submesh.boundary_faces if tag not in bcs]
+            if missing:
+                pybamm.logger.warning(
+                    f"Green-Gauss gradient of {symbol.name!r}: boundary face "
+                    f"buckets {missing} have no boundary condition, so faces "
+                    "there use zeroth-order extrapolation (a no-flux "
+                    "assumption). This does not converge with mesh refinement "
+                    "if the field varies normal to those boundaries."
+                )
             G_components, bc_vecs = self._apply_bcs_to_gradient(
                 submesh, G_components, bc_vecs, bcs, repeats=repeats
             )
@@ -842,6 +851,26 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         d = submesh.dimension
         repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
+        # The generic divergence extrapolates cell-centred flux to boundary
+        # faces, so prescribed boundary conditions on the underlying variable
+        # would be silently ignored (the result is not conservative). The
+        # div(D*grad(u)) forms are intercepted upstream and handle BCs via
+        # TPFA; anything else with BC-bearing gradients must be rewritten.
+        bc_gradient_parents = [
+            node.child
+            for node in symbol.pre_order()
+            if isinstance(node, pybamm.Gradient) and node.child in boundary_conditions
+        ]
+        if bc_gradient_parents:
+            names = sorted({parent.name for parent in bc_gradient_parents})
+            raise pybamm.DiscretisationError(
+                f"Cannot discretise div of a general flux containing grad of "
+                f"{names} on an unstructured mesh: the boundary conditions "
+                "would be ignored and the result would not be conservative. "
+                "Write the equation as div(D * grad(u)) (a single product) so "
+                "the TPFA discretisation applies the boundary conditions."
+            )
+
         if isinstance(discretised_symbol, pybamm.VectorField):
             comps = discretised_symbol._components
         elif isinstance(discretised_symbol, (list, tuple)):
@@ -860,82 +889,6 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             result = result + pybamm.Matrix(Dk) @ comps[k]
 
         return result
-
-    def _div_boundary_correction(self, submesh, boundary_conditions, domain=None):
-        """Build boundary corrections for the divergence operator.
-
-        When computing ``div(D * grad(u))``, the divergence matrices use
-        cell-centered flux values at boundary faces, which is incorrect.
-        This method returns:
-
-        * ``L_bc`` – sparse matrix for TPFA Dirichlet correction on state vector
-        * ``bc_rhs`` – symbolic pybamm expression for Dirichlet/Neumann RHS
-        * ``D_bnd`` – list of sparse matrices (boundary-only divergence terms
-          to subtract from the cell-centered approximation)
-
-        The corrected divergence is::
-
-            div(F) = sum_k D_k @ F_k - sum_k D_bnd_k @ F_k + L_bc @ u + bc_rhs
-        """
-        n = submesh.npts
-        d = submesh.dimension
-        L_bc = None
-        bc_rhs = pybamm.Vector(np.zeros(n))
-        D_bnd = None
-
-        for var, bcs in boundary_conditions.items():
-            if not hasattr(var, "domain"):
-                continue
-            if domain is not None and var.domain != domain:
-                continue
-            for side, (bc_value, bc_type) in bcs.items():
-                self._check_bc_type(bc_type)
-                face_indices = self._boundary_faces_for_side(submesh, side)
-                n_bnd = len(face_indices)
-                owners = submesh.face_owner[face_indices]
-                areas = submesh.face_areas[face_indices]
-                vols = submesh.cell_volumes[owners]
-
-                if D_bnd is None:
-                    D_bnd = [csr_matrix((n, n)).tolil() for _ in range(d)]
-                for j, fi in enumerate(face_indices):
-                    cell = owners[j]
-                    normal = submesh.face_normals[fi]
-                    for k in range(d):
-                        D_bnd[k][cell, cell] += normal[k] * areas[j] / vols[j]
-
-                if bc_type == "Dirichlet":
-                    for j, fi in enumerate(face_indices):
-                        cell = owners[j]
-                        face_c = submesh.face_centroids[fi]
-                        cell_c = submesh.cell_centroids[cell]
-                        d_perp = np.linalg.norm(face_c - cell_c)
-                        coeff = areas[j] / d_perp
-                        if L_bc is None:
-                            L_bc = csr_matrix((n, n)).tolil()
-                        L_bc[cell, cell] -= coeff / vols[j]
-
-                    coeffs = np.empty(n_bnd)
-                    for j, fi in enumerate(face_indices):
-                        face_c = submesh.face_centroids[fi]
-                        cell_c = submesh.cell_centroids[owners[j]]
-                        d_perp = np.linalg.norm(face_c - cell_c)
-                        coeffs[j] = (areas[j] / d_perp) / vols[j]
-                    bc_rhs = bc_rhs + self._bc_contribution(
-                        n, n_bnd, owners, coeffs, bc_value
-                    )
-
-                elif bc_type == "Neumann":
-                    coeffs = self._neumann_sign(side) * areas / vols
-                    bc_rhs = bc_rhs + self._bc_contribution(
-                        n, n_bnd, owners, coeffs, bc_value
-                    )
-
-        if L_bc is not None:
-            L_bc = csr_matrix(L_bc)
-        if D_bnd is not None:
-            D_bnd = [csr_matrix(m) for m in D_bnd]
-        return L_bc, bc_rhs, D_bnd
 
     def _divergence_matrices(self, submesh):
         """

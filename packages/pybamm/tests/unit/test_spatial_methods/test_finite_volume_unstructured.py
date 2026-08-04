@@ -442,12 +442,6 @@ class TestBCValidation:
         with pytest.raises(pybamm.DiscretisationError, match="weft"):
             method.div_D_grad(div_symbol, variable, pybamm.Scalar(1), values, bcs)
 
-    def test_div_boundary_correction_unknown_side_raises(self):
-        mesh, method, variable, _ = self._setup()
-        bcs = {variable: {"weft": (pybamm.Scalar(0), "Neumann")}}
-        with pytest.raises(pybamm.DiscretisationError, match="weft"):
-            method._div_boundary_correction(mesh, bcs, domain=["test"])
-
     def test_boundary_value_unknown_side_raises(self):
         _, method, variable, values = self._setup()
         symbol = pybamm.BoundaryValue(variable, "missing")
@@ -467,7 +461,7 @@ class TestBCValidation:
         np.testing.assert_allclose(result.evaluate().sum(), 4.0, atol=1e-12)
 
     def test_boundary_integral_entire_excludes_interface_faces(self):
-        left, right = _make_split_2d_meshes()
+        left, _right = _make_split_2d_meshes()
         # emulate interface discovery: move left mesh's right faces to an
         # iface bucket
         left.boundary_faces["iface_right"] = left.boundary_faces.pop("right")
@@ -1226,52 +1220,43 @@ class TestFiniteVolumeUnstructuredBehavior:
         with pytest.raises(TypeError, match="expects a VectorField"):
             method.divergence(symbol, pybamm.Scalar(1), {})
 
-    def test_divergence_boundary_correction(self):
+    def test_divergence_of_bc_bearing_flux_raises(self):
+        # div of a flux whose gradient parent has BCs is not conservative
+        # (the BC flux would be silently ignored), so it must raise
         mesh = _make_2d_mesh(2, 2)
         method = _method_with_mesh(mesh)
         variable = pybamm.Variable("u", domain="test")
-        other = pybamm.Variable("v", domain="other")
+        flux = -(pybamm.Scalar(2) * pybamm.grad(variable))
+        components = [
+            pybamm.Vector(np.ones(mesh.npts), domain="test"),
+            pybamm.Vector(np.ones(mesh.npts), domain="test"),
+        ]
+        vector_field = pybamm.VectorField(*components)
+        bcs = {variable: {"left": (pybamm.Scalar(0), "Dirichlet")}}
+        with pytest.raises(pybamm.DiscretisationError, match="conservative"):
+            method.divergence(flux, vector_field, bcs)
+
+        # without BCs on u the same flux is fine
+        result = method.divergence(flux, vector_field, {})
+        assert result.evaluate().shape == (mesh.npts, 1)
+
+    def test_gradient_warns_on_bucket_without_bc(self, caplog):
+        import logging
+
+        mesh = _make_quad_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(np.arange(mesh.npts), domain="test")
         bcs = {
-            "not a symbol": {"left": (pybamm.Scalar(0), "Dirichlet")},
-            other: {"left": (pybamm.Scalar(0), "Dirichlet")},
             variable: {
-                "left": (pybamm.Scalar(1), "Dirichlet"),
-                "right": (pybamm.Scalar(2), "Neumann"),
-            },
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Dirichlet"),
+            }
         }
-
-        L_bc, rhs, boundary_matrices = method._div_boundary_correction(
-            mesh, bcs, domain=["test"]
-        )
-        assert L_bc.shape == (mesh.npts, mesh.npts)
-        assert rhs.evaluate().shape == (mesh.npts, 1)
-        assert len(boundary_matrices) == mesh.dimension
-        left_faces = mesh.boundary_faces["left"]
-        left_owners = mesh.face_owner[left_faces]
-        expected_rhs = np.zeros(mesh.npts)
-        left_distance = np.linalg.norm(
-            mesh.face_centroids[left_faces] - mesh.cell_centroids[left_owners], axis=1
-        )
-        np.add.at(
-            expected_rhs,
-            left_owners,
-            mesh.face_areas[left_faces]
-            / left_distance
-            / mesh.cell_volumes[left_owners],
-        )
-        right_faces = mesh.boundary_faces["right"]
-        right_owners = mesh.face_owner[right_faces]
-        np.add.at(
-            expected_rhs,
-            right_owners,
-            2 * mesh.face_areas[right_faces] / mesh.cell_volumes[right_owners],
-        )
-        np.testing.assert_allclose(rhs.evaluate()[:, 0], expected_rhs)
-
-        none_L, zero_rhs, none_D = method._div_boundary_correction(mesh, {})
-        assert none_L is None
-        assert none_D is None
-        np.testing.assert_allclose(zero_rhs.evaluate(), 0)
+        with caplog.at_level(logging.WARNING):
+            method.gradient(variable, values, bcs)
+        assert "no boundary condition" in caplog.text
+        assert "top" in caplog.text and "bottom" in caplog.text
 
     def test_div_D_grad_scalar_and_vector_coefficients(self):
         mesh = _make_2d_mesh(2, 2)
