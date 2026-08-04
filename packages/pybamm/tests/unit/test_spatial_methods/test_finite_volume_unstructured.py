@@ -17,7 +17,9 @@ from scipy.sparse import csr_matrix as sp_csr
 import pybamm
 from pybamm.meshes.unstructured_submesh import (
     UnstructuredSubMesh,
+    _hex_grid,
     _hex_to_tet,
+    _make_quad_grid,
     _quad_to_tri,
     compute_interface_data,
 )
@@ -42,6 +44,23 @@ def _make_3d_mesh(nx=3, ny=3, nz=3, x_range=(0, 1), y_range=(0, 1), z_range=(0, 
     y_edges = np.linspace(y_range[0], y_range[1], ny + 1)
     z_edges = np.linspace(z_range[0], z_range[1], nz + 1)
     nodes, elements = _hex_to_tet(x_edges, y_edges, z_edges)
+    return UnstructuredSubMesh(nodes, elements)
+
+
+def _make_quad_mesh(nx=4, nz=4, x_range=(0, 1), z_range=(0, 1)):
+    """TPFA-orthogonal quadrilateral mesh (exact for linear fields)."""
+    x_edges = np.linspace(x_range[0], x_range[1], nx + 1)
+    z_edges = np.linspace(z_range[0], z_range[1], nz + 1)
+    nodes, elements = _make_quad_grid(x_edges, z_edges)
+    return UnstructuredSubMesh(nodes, elements)
+
+
+def _make_hex_mesh(nx=3, ny=3, nz=3):
+    """TPFA-orthogonal hexahedral mesh on the unit cube."""
+    x_edges = np.linspace(0, 1, nx + 1)
+    y_edges = np.linspace(0, 1, ny + 1)
+    z_edges = np.linspace(0, 1, nz + 1)
+    nodes, elements = _hex_grid(x_edges, y_edges, z_edges)
     return UnstructuredSubMesh(nodes, elements)
 
 
@@ -166,6 +185,123 @@ class TestTPFALaplacian:
         L = fvu._tpfa_matrix(mesh)
         diag = L.diagonal()
         assert np.all(diag <= 1e-15)
+
+
+# ======================================================================
+# Tests: Neumann sign convention (PyBaMM coordinate-direction values)
+# ======================================================================
+
+
+class TestNeumannSignConvention:
+    """Named sides take coordinate-direction derivatives (matching
+    FiniteVolume/FiniteVolume2D), so ``u = x`` needs value +1 on *both*
+    left and right, not the outward-normal ±1."""
+
+    def test_laplacian_neumann_left_right_2d(self):
+        mesh = _make_quad_mesh(4, 4)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        u = pybamm.Vector(mesh.cell_centroids[:, 0], domain="test")
+        bcs = {
+            variable: {
+                "left": (pybamm.Scalar(1), "Neumann"),
+                "right": (pybamm.Scalar(1), "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        result = method.laplacian(variable, u, bcs)
+        np.testing.assert_allclose(result.evaluate(), 0, atol=1e-10)
+
+    def test_laplacian_neumann_top_bottom_2d(self):
+        mesh = _make_quad_mesh(4, 4)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        u = pybamm.Vector(mesh.cell_centroids[:, 1], domain="test")
+        bcs = {
+            variable: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+                "top": (pybamm.Scalar(1), "Neumann"),
+                "bottom": (pybamm.Scalar(1), "Neumann"),
+            }
+        }
+        result = method.laplacian(variable, u, bcs)
+        np.testing.assert_allclose(result.evaluate(), 0, atol=1e-10)
+
+    def test_laplacian_neumann_front_back_3d(self):
+        mesh = _make_hex_mesh(3, 3, 3)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        u = pybamm.Vector(mesh.cell_centroids[:, 1], domain="test")
+        bcs = {
+            variable: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+                "front": (pybamm.Scalar(1), "Neumann"),
+                "back": (pybamm.Scalar(1), "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        result = method.laplacian(variable, u, bcs)
+        np.testing.assert_allclose(result.evaluate(), 0, atol=1e-10)
+
+    def test_gradient_neumann_left_2d(self):
+        mesh = _make_quad_mesh(4, 4)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        u = pybamm.StateVector(slice(0, mesh.npts), domains={"primary": ["test"]})
+        y = mesh.cell_centroids[:, 0]
+        bcs = {
+            variable: {
+                "left": (pybamm.Scalar(1), "Neumann"),
+                "right": (pybamm.Scalar(1), "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        grad = method.gradient(variable, u, bcs)
+        np.testing.assert_allclose(grad._components[0].evaluate(y=y), 1, atol=1e-10)
+        np.testing.assert_allclose(grad._components[1].evaluate(y=y), 0, atol=1e-10)
+
+    def test_div_D_grad_neumann_left_2d(self):
+        mesh = _make_quad_mesh(4, 4)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        u = pybamm.Vector(mesh.cell_centroids[:, 0], domain="test")
+        bcs = {
+            variable: {
+                "left": (pybamm.Scalar(1), "Neumann"),
+                "right": (pybamm.Scalar(1), "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        result = method.div_D_grad(div_symbol, variable, pybamm.Scalar(2), u, bcs)
+        np.testing.assert_allclose(result.evaluate(), 0, atol=1e-10)
+
+    def test_custom_tags_use_outward_normal(self):
+        # Rename the axis buckets to custom tags: values are then
+        # outward-normal derivatives, so u = x needs -1 on the left tag.
+        mesh = _make_quad_mesh(4, 4)
+        mesh.boundary_faces = {
+            f"tag_{name}": faces for name, faces in mesh.boundary_faces.items()
+        }
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        u = pybamm.Vector(mesh.cell_centroids[:, 0], domain="test")
+        bcs = {
+            variable: {
+                "tag_left": (pybamm.Scalar(-1), "Neumann"),
+                "tag_right": (pybamm.Scalar(1), "Neumann"),
+                "tag_top": (pybamm.Scalar(0), "Neumann"),
+                "tag_bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        result = method.laplacian(variable, u, bcs)
+        np.testing.assert_allclose(result.evaluate(), 0, atol=1e-10)
 
 
 # ======================================================================

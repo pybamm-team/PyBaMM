@@ -30,6 +30,14 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     * **Divergence** – face-flux summation (adjoint of gradient)
     * **Boundary conditions** – ghost-cell (Dirichlet) / direct injection (Neumann)
 
+    Neumann boundary values on the named axis sides (``"left"``/``"right"``,
+    ``"front"``/``"back"``, ``"bottom"``/``"top"``) are coordinate-direction
+    derivatives (:math:`\\partial u/\\partial x`, etc.), matching
+    :class:`pybamm.FiniteVolume`; e.g. ``u = x`` takes value ``+1`` on both
+    ``"left"`` and ``"right"``.  Values on any other face tag (Gmsh region
+    names, ``"iface_*"``) are outward-normal derivatives
+    :math:`\\partial u/\\partial n`.
+
     Parameters
     ----------
     options : dict, optional
@@ -519,7 +527,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     )
 
                 elif bc_type == "Neumann" and bc_value != pybamm.Scalar(0):
-                    a_over_v = submesh.face_areas[fi_arr] / vol[bnd_own]
+                    a_over_v = (
+                        self._neumann_sign(side)
+                        * submesh.face_areas[fi_arr]
+                        / vol[bnd_own]
+                    )
                     a_over_v_f = np.tile(a_over_v, repeats) if repeats > 1 else a_over_v
                     bc_rhs = bc_rhs + pybamm.Matrix(P_f) @ (
                         D_bnd * bc_value * pybamm.Vector(a_over_v_f)
@@ -569,7 +581,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 )
 
             elif bc_type == "Neumann":
-                coeffs = submesh.face_areas[face_indices] / submesh.cell_volumes[owners]
+                coeffs = (
+                    self._neumann_sign(side)
+                    * submesh.face_areas[face_indices]
+                    / submesh.cell_volumes[owners]
+                )
                 bc_rhs = bc_rhs + self._bc_contribution(
                     n, n_bnd, owners, coeffs, bc_value
                 )
@@ -586,6 +602,21 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             "front": "front",
             "back": "back",
         }.get(side, side)
+
+    # Named sides whose outward normal points along the negative coordinate
+    # axis (see UnstructuredSubMesh._identify_boundary_faces).
+    _NEGATIVE_NORMAL_SIDES = frozenset({"left", "front", "bottom"})
+
+    @classmethod
+    def _neumann_sign(cls, side):
+        """Sign converting a Neumann boundary value to an outward-normal
+        derivative.
+
+        Named axis sides carry PyBaMM coordinate-direction values, so sides
+        with a negative outward normal flip sign; any other face tag (Gmsh
+        region names, ``iface_*``) is already outward-normal.
+        """
+        return -1.0 if side in cls._NEGATIVE_NORMAL_SIDES else 1.0
 
     # ------------------------------------------------------------------
     # Gradient  (Green-Gauss)
@@ -734,6 +765,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     )
 
             elif bc_type == "Neumann":
+                sign = self._neumann_sign(side)
                 dists = np.linalg.norm(
                     submesh.face_centroids[face_indices]
                     - submesh.cell_centroids[owners],
@@ -742,7 +774,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 for k in range(d):
                     coeffs = np.array(
                         [
-                            dists[j]
+                            sign
+                            * dists[j]
                             * submesh.face_normals[fi, k]
                             * submesh.face_areas[fi]
                             / vol[owners[j]]
@@ -852,7 +885,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     )
 
                 elif bc_type == "Neumann":
-                    coeffs = areas / vols
+                    coeffs = self._neumann_sign(side) * areas / vols
                     bc_rhs = bc_rhs + self._bc_contribution(
                         n, n_bnd, owners, coeffs, bc_value
                     )
