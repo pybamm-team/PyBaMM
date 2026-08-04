@@ -305,6 +305,47 @@ class TestNeumannSignConvention:
 
 
 # ======================================================================
+# Tests: operator caching
+# ======================================================================
+
+
+class TestOperatorCaching:
+    def test_operators_cached_and_invalidated_on_reordering(self):
+        mesh = _make_2d_mesh(4, 4)
+        fvu = FiniteVolumeUnstructured()
+        assert fvu._tpfa_matrix(mesh) is fvu._tpfa_matrix(mesh)
+        assert fvu._green_gauss_matrices(mesh) is fvu._green_gauss_matrices(mesh)
+        assert fvu._divergence_matrices(mesh) is fvu._divergence_matrices(mesh)
+        assert fvu._div_D_grad_matrices(mesh) is fvu._div_D_grad_matrices(mesh)
+
+        laplacian_before = fvu._tpfa_matrix(mesh)
+        mesh.optimize_ordering()
+        assert fvu._tpfa_matrix(mesh) is not laplacian_before
+
+    def test_bc_application_does_not_mutate_cached_operators(self):
+        mesh = _make_quad_mesh(3, 3)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(np.arange(mesh.npts), domain="test")
+        bcs = {
+            variable: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Dirichlet"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        laplacian_cached = method._tpfa_matrix(mesh).copy()
+        gauss_cached = method._green_gauss_matrices(mesh)[0].copy()
+
+        method.laplacian(variable, values, bcs)
+        method.gradient(variable, values, bcs)
+
+        assert (method._tpfa_matrix(mesh) - laplacian_cached).nnz == 0
+        assert (method._green_gauss_matrices(mesh)[0] - gauss_cached).nnz == 0
+
+
+# ======================================================================
 # Tests: auxiliary domains (secondary/tertiary repeats)
 # ======================================================================
 

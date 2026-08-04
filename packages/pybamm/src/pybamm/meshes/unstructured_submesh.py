@@ -408,6 +408,9 @@ class UnstructuredSubMesh(SubMesh):
         self.face_owner = inv_perm[self.face_owner]
         self.face_neighbor = inv_perm[self.face_neighbor]
 
+        # cached FV operator matrices are built from the old cell ordering
+        self.__dict__.pop("_fv_operator_cache", None)
+
         # "left_cells" index this mesh; "right_cells" index the neighbor and
         # must not be permuted. The neighbor's mirror entry stores this mesh's
         # indices in its "right_cells", so remap those instead.
@@ -529,24 +532,28 @@ class UnstructuredSubMesh(SubMesh):
         n_query = len(query_pts)
         winding = np.zeros(n_query)
 
-        for i in range(len(tri_idx)):
-            a = v0[i] - query_pts
-            b = v1_fixed[i] - query_pts
-            c = v2_fixed[i] - query_pts
+        # vectorised over (triangle-chunk, query); chunking bounds memory at
+        # ~chunk * n_query * 3 floats
+        chunk = max(1, int(2**22 // max(n_query, 1)))
+        for start in range(0, len(tri_idx), chunk):
+            sl = slice(start, start + chunk)
+            a = v0[sl, np.newaxis, :] - query_pts[np.newaxis, :, :]
+            b = v1_fixed[sl, np.newaxis, :] - query_pts[np.newaxis, :, :]
+            c = v2_fixed[sl, np.newaxis, :] - query_pts[np.newaxis, :, :]
 
-            an = np.linalg.norm(a, axis=1)
-            bn = np.linalg.norm(b, axis=1)
-            cn = np.linalg.norm(c, axis=1)
+            an = np.linalg.norm(a, axis=2)
+            bn = np.linalg.norm(b, axis=2)
+            cn = np.linalg.norm(c, axis=2)
 
-            num = np.einsum("ij,ij->i", a, np.cross(b, c))
+            num = np.einsum("tqj,tqj->tq", a, np.cross(b, c))
             den = (
                 an * bn * cn
-                + np.einsum("ij,ij->i", a, b) * cn
-                + np.einsum("ij,ij->i", a, c) * bn
-                + np.einsum("ij,ij->i", b, c) * an
+                + np.einsum("tqj,tqj->tq", a, b) * cn
+                + np.einsum("tqj,tqj->tq", a, c) * bn
+                + np.einsum("tqj,tqj->tq", b, c) * an
             )
 
-            winding += 2.0 * np.arctan2(num, den)
+            winding += 2.0 * np.arctan2(num, den).sum(axis=0)
 
         # Inside points sum to 4*pi and outside points to 0; points *on* the
         # surface fall anywhere in between (2*pi on a face, pi/2 at a cube

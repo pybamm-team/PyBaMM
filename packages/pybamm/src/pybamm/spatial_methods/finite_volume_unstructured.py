@@ -7,16 +7,12 @@ face-cell connectivity as sparse matrices.
 """
 
 import itertools
-import logging
-import time
 
 import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix, diags, eye, kron
 from scipy.spatial import cKDTree
 
 import pybamm
-
-logger = logging.getLogger(__name__)
 
 
 class FiniteVolumeUnstructured(pybamm.SpatialMethod):
@@ -405,8 +401,21 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         return result
 
+    @staticmethod
+    def _operator_cache(submesh):
+        """Per-submesh cache for assembled operator matrices.
+
+        Meshes are immutable apart from ``optimize_ordering``, which clears
+        this cache. Cached matrices must never be mutated in place.
+        """
+        cache = getattr(submesh, "_fv_operator_cache", None)
+        if cache is None:
+            cache = submesh._fv_operator_cache = {}
+        return cache
+
     def _tpfa_matrix(self, submesh):
-        """Assemble the TPFA Laplacian matrix for internal faces only.
+        """Assemble (or fetch the cached) TPFA Laplacian matrix for internal
+        faces only.
 
         Includes the non-orthogonality correction: the coefficient for
         each face is scaled by ``(n_f · e_ij)`` where ``n_f`` is the
@@ -415,6 +424,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         is 1; on non-orthogonal meshes it corrects the first-order
         directional error.
         """
+        cache = self._operator_cache(submesh)
+        if "tpfa" in cache:
+            return cache["tpfa"]
         n = submesh.npts
         n_int = submesh.n_internal_faces
 
@@ -447,40 +459,26 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             ]
         )
 
-        return csr_matrix(coo_matrix((data, (rows, cols)), shape=(n, n)))
+        cache["tpfa"] = csr_matrix(coo_matrix((data, (rows, cols)), shape=(n, n)))
+        return cache["tpfa"]
 
-    def div_D_grad(self, div_symbol, grad_child, disc_D, disc_u, boundary_conditions):
-        """Discretise ``div(D * grad(u))`` as a single TPFA operation.
-
-        Fully symbolic — works for both constant and state-dependent scalar
-        ``D``. Internal-face fluxes use arithmetic-mean interpolation of ``D``
-        to faces and a standard two-point difference for ``grad(u)``.
-
-        This method is only reached when the expression is written as
-        ``div(D * grad(u))`` (a single product, matched syntactically during
-        discretisation); other flux forms go through the generic
-        :meth:`gradient`/:meth:`divergence` operators, which cannot apply
-        boundary conditions conservatively and raise instead.
+    def _div_D_grad_matrices(self, submesh):
+        """Assemble (or fetch the cached) matrices for :meth:`div_D_grad`:
+        ``G`` (two-point difference per internal face), ``W``
+        (arithmetic-mean interpolation to faces), ``S`` (face flux to cell
+        divergence), and the geometric factor ``geo`` per internal face.
         """
-        if isinstance(disc_D, pybamm.VectorField):
-            raise pybamm.DiscretisationError(
-                "Anisotropic (vector-valued) diffusion coefficients are not "
-                "supported by the TPFA discretisation of div(D * grad(u))."
-            )
-        _t0 = time.perf_counter()
-        domain = div_symbol.domain
-        submesh = self.mesh[domain]
+        cache = self._operator_cache(submesh)
+        if "div_D_grad" in cache:
+            return cache["div_D_grad"]
+
         n = submesh.npts
         n_int = submesh.n_internal_faces
-        repeats = self._get_auxiliary_domain_repeats(div_symbol.domains)
         vol = submesh.cell_volumes
-
         owner = submesh.face_owner[:n_int]
         neighbor = submesh.face_neighbor[:n_int]
 
-        c_o = submesh.cell_centroids[owner]
-        c_n = submesh.cell_centroids[neighbor]
-        delta = c_n - c_o
+        delta = submesh.cell_centroids[neighbor] - submesh.cell_centroids[owner]
         dist = np.linalg.norm(delta, axis=1)
         e_ij = delta / dist[:, np.newaxis]
         cos_theta = np.abs(np.sum(submesh.face_normals[:n_int] * e_ij, axis=1))
@@ -512,6 +510,35 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             ),
             shape=(n, n_int),
         )
+
+        cache["div_D_grad"] = (G, W, S, geo)
+        return cache["div_D_grad"]
+
+    def div_D_grad(self, div_symbol, grad_child, disc_D, disc_u, boundary_conditions):
+        """Discretise ``div(D * grad(u))`` as a single TPFA operation.
+
+        Fully symbolic — works for both constant and state-dependent scalar
+        ``D``. Internal-face fluxes use arithmetic-mean interpolation of ``D``
+        to faces and a standard two-point difference for ``grad(u)``.
+
+        This method is only reached when the expression is written as
+        ``div(D * grad(u))`` (a single product, matched syntactically during
+        discretisation); other flux forms go through the generic
+        :meth:`gradient`/:meth:`divergence` operators, which cannot apply
+        boundary conditions conservatively and raise instead.
+        """
+        if isinstance(disc_D, pybamm.VectorField):
+            raise pybamm.DiscretisationError(
+                "Anisotropic (vector-valued) diffusion coefficients are not "
+                "supported by the TPFA discretisation of div(D * grad(u))."
+            )
+        domain = div_symbol.domain
+        submesh = self.mesh[domain]
+        n = submesh.npts
+        repeats = self._get_auxiliary_domain_repeats(div_symbol.domains)
+        vol = submesh.cell_volumes
+
+        G, W, S, geo = self._div_D_grad_matrices(submesh)
 
         if repeats == 1:
             G_f, W_f, S_f = G, W, S
@@ -582,23 +609,17 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                         D_bnd * bc_value * pybamm.Vector(a_over_v_f)
                     )
 
-        logger.debug(
-            "div_D_grad: %.3fs (n=%d, n_int=%d, repeats=%d)",
-            time.perf_counter() - _t0,
-            n,
-            n_int,
-            repeats,
-        )
         return result + bc_rhs
 
     def _apply_bcs_to_laplacian(self, submesh, L, bc_rhs, bcs, repeats=1):
-        """Modify the Laplacian matrix and RHS for boundary conditions.
+        """Return the Laplacian matrix and RHS modified for boundary
+        conditions.
 
         ``bc_rhs`` is a pybamm expression (symbolic vector of size
-        ``npts * repeats``).
+        ``npts * repeats``). ``L`` is not mutated (it may be cached).
         """
         n = submesh.npts
-        L = L.tolil()
+        diag_correction = np.zeros(n)
 
         for side, (bc_value, bc_type) in bcs.items():
             self._check_bc_type(bc_type)
@@ -617,8 +638,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     / d_perp
                     / submesh.cell_volumes[owners]
                 )
-                for j in range(n_bnd):
-                    L[owners[j], owners[j]] -= coeffs[j]
+                np.add.at(diag_correction, owners, -coeffs)
                 bc_rhs = bc_rhs + self._bc_contribution(
                     n, n_bnd, owners, coeffs, bc_value, repeats=repeats
                 )
@@ -633,7 +653,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     n, n_bnd, owners, coeffs, bc_value, repeats=repeats
                 )
 
-        return csr_matrix(L), bc_rhs
+        if np.any(diag_correction):
+            L = csr_matrix(L + diags(diag_correction))
+        return L, bc_rhs
 
     @staticmethod
     def _boundary_faces_for_side(submesh, side):
@@ -685,7 +707,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         d = submesh.dimension
         repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        G_components = self._green_gauss_matrices(submesh)
+        # copy the (cached) list: BC application replaces entries
+        G_components = list(self._green_gauss_matrices(submesh))
 
         bc_vecs = [pybamm.Vector(np.zeros(n * repeats)) for _ in range(d)]
         if symbol in boundary_conditions:
@@ -715,7 +738,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     def _green_gauss_matrices(self, submesh):
         """
-        Build Green-Gauss gradient matrices G_k for k = 0..d-1.
+        Build (or fetch the cached) Green-Gauss gradient matrices G_k for
+        k = 0..d-1.
 
         For each cell i, the gradient component k is:
             (grad u)_k,i = (1/V_i) * sum_f [u_f * n_k,f * A_f]
@@ -723,6 +747,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         where u_f is interpolated from owner/neighbor (distance-weighted
         for internal faces) or just the owner value (boundary faces).
         """
+        cache = self._operator_cache(submesh)
+        if "green_gauss" in cache:
+            return cache["green_gauss"]
         n = submesh.npts
         d = submesh.dimension
         n_int = submesh.n_internal_faces
@@ -785,6 +812,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 data = nk_A / vol[bnd_owner]
                 G[k] = G[k] + csr_matrix(coo_matrix((data, (rows, cols)), shape=(n, n)))
 
+        cache["green_gauss"] = G
         return G
 
     def _apply_bcs_to_gradient(self, submesh, G_components, bc_vecs, bcs, repeats=1):
@@ -803,25 +831,19 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             n_bnd = len(face_indices)
             owners = submesh.face_owner[face_indices]
 
-            if bc_type == "Dirichlet":
-                for j, fi in enumerate(face_indices):
-                    cell = owners[j]
-                    normal = submesh.face_normals[fi]
-                    area = submesh.face_areas[fi]
-                    for k in range(d):
-                        nk_A = normal[k] * area
-                        G_components[k] = G_components[k].tolil()
-                        G_components[k][cell, cell] -= nk_A / vol[cell]
-                        G_components[k] = csr_matrix(G_components[k])
+            nk_A = (
+                submesh.face_normals[face_indices]
+                * submesh.face_areas[face_indices, np.newaxis]
+            )
 
+            if bc_type == "Dirichlet":
                 for k in range(d):
-                    coeffs = np.array(
-                        [
-                            submesh.face_normals[fi, k]
-                            * submesh.face_areas[fi]
-                            / vol[owners[j]]
-                            for j, fi in enumerate(face_indices)
-                        ]
+                    coeffs = nk_A[:, k] / vol[owners]
+                    # replace the owner-value face contribution with bc_value
+                    diag_correction = np.zeros(n)
+                    np.add.at(diag_correction, owners, -coeffs)
+                    G_components[k] = csr_matrix(
+                        G_components[k] + diags(diag_correction)
                     )
                     bc_vecs[k] = bc_vecs[k] + self._bc_contribution(
                         n, n_bnd, owners, coeffs, bc_value, repeats=repeats
@@ -835,16 +857,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     axis=1,
                 )
                 for k in range(d):
-                    coeffs = np.array(
-                        [
-                            sign
-                            * dists[j]
-                            * submesh.face_normals[fi, k]
-                            * submesh.face_areas[fi]
-                            / vol[owners[j]]
-                            for j, fi in enumerate(face_indices)
-                        ]
-                    )
+                    coeffs = sign * dists * nk_A[:, k] / vol[owners]
                     bc_vecs[k] = bc_vecs[k] + self._bc_contribution(
                         n, n_bnd, owners, coeffs, bc_value, repeats=repeats
                     )
@@ -903,7 +916,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     def _divergence_matrices(self, submesh):
         """
-        Build divergence matrices D_k for k = 0..d-1.
+        Build (or fetch the cached) divergence matrices D_k for k = 0..d-1.
 
         For each cell i:
             (div F)_i = (1/V_i) * sum_f  F_k,f * n_k,f * A_f
@@ -911,6 +924,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         where F is the vector field components at cell centers. The face value
         is interpolated from owner/neighbor (same weights as gradient).
         """
+        cache = self._operator_cache(submesh)
+        if "divergence" in cache:
+            return cache["divergence"]
         n = submesh.npts
         d = submesh.dimension
         n_int = submesh.n_internal_faces
@@ -966,6 +982,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     )
                 )
 
+        cache["divergence"] = D
         return D
 
     # ------------------------------------------------------------------
