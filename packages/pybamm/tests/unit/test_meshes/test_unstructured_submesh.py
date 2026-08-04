@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import pybamm
 from pybamm.meshes.unstructured_submesh import (
@@ -6,6 +7,7 @@ from pybamm.meshes.unstructured_submesh import (
     UnstructuredSubMesh,
     _hex_grid,
     _hex_to_tet,
+    _make_quad_grid,
     _quad_to_tri,
     compute_interface_data,
 )
@@ -205,7 +207,7 @@ class TestUnstructuredSubMesh:
         elements = np.array([[0, 1, 2, 3, 4]], dtype=int)
         import pytest
 
-        with pytest.raises(ValueError, match="Unsupported"):
+        with pytest.raises(pybamm.GeometryError, match="Unsupported"):
             UnstructuredSubMesh(nodes, elements)
 
     def test_2d_quad_mesh_basic(self):
@@ -839,7 +841,7 @@ class TestBandwidthOptimization:
         np.testing.assert_allclose(centroids_pre, centroids_post)
 
     def test_optimize_ordering_remaps_only_own_indices(self):
-        """"right_cells" index the *neighbor* mesh and must not be permuted;
+        """ "right_cells" index the *neighbor* mesh and must not be permuted;
         the neighbor's mirror entry holds this mesh's indices and must be."""
         ye = np.linspace(0, 1, 3)
         ze = np.linspace(0, 1, 2)
@@ -1119,6 +1121,166 @@ class TestTaggedSubMeshGenerator:
 
         with pytest.raises(RuntimeError, match="no tets for region"):
             TaggedSubMeshGenerator("ghost", path)(None, None)
+
+
+# ======================================================================
+# Mesh input validation
+# ======================================================================
+
+
+class TestMeshInputValidation:
+    def test_nonmanifold_face_raises(self):
+        # three triangles sharing the edge (0, 1)
+        nodes = np.array([[0, 0], [1, 0], [0, 1], [0, -1], [1, 1]], dtype=float)
+        elems = np.array([[0, 1, 2], [0, 1, 3], [0, 1, 4]])
+        with pytest.raises(pybamm.GeometryError, match="non-manifold"):
+            UnstructuredSubMesh(nodes, elems)
+
+    def test_duplicate_elements_raise(self):
+        nodes = np.array([[0, 0], [1, 0], [0, 1]], dtype=float)
+        elems = np.array([[0, 1, 2], [0, 2, 1]])
+        with pytest.raises(pybamm.GeometryError, match="duplicated"):
+            UnstructuredSubMesh(nodes, elems)
+
+    def test_degenerate_cell_raises(self):
+        # second triangle has three collinear vertices
+        nodes = np.array([[0, 0], [1, 0], [2, 0], [0, 1]], dtype=float)
+        elems = np.array([[0, 1, 3], [0, 1, 2]])
+        with pytest.raises(pybamm.GeometryError, match="degenerate"):
+            UnstructuredSubMesh(nodes, elems)
+
+    def test_bad_hex_vertex_ordering_raises(self):
+        # unit cube with vertices 1 and 3 swapped (twisted bottom face)
+        nodes = np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [1, 1, 1],
+                [0, 1, 1],
+            ],
+            dtype=float,
+        )
+        elems = np.array([[0, 3, 2, 1, 4, 5, 6, 7]])
+        with pytest.raises(pybamm.GeometryError, match="vertex ordering"):
+            UnstructuredSubMesh(nodes, elems)
+
+    def test_left_handed_hex_is_accepted(self):
+        # full mirror ordering is consistent (all tets same sign): valid
+        nodes = np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [1, 1, 1],
+                [0, 1, 1],
+            ],
+            dtype=float,
+        )
+        elems = np.array([[4, 5, 6, 7, 0, 1, 2, 3]])
+        mesh = UnstructuredSubMesh(nodes, elems)
+        np.testing.assert_allclose(mesh.cell_volumes, [1.0])
+
+    def test_tab_side_walls_warn(self, caplog):
+        import logging
+
+        body_nodes, body_elems = _make_quad_grid(
+            np.array([0, 0.5, 1, 1.5, 2.0]), np.array([0.0, 1.0])
+        )
+        # tab cell on top between x = 0.5 and 1, reusing body nodes 3 and 5
+        nodes = np.vstack([body_nodes, [[0.5, 1.5], [1.0, 1.5]]])
+        elements = np.vstack([body_elems, [[3, 5, 11, 10]]])
+        with caplog.at_level(logging.WARNING):
+            UnstructuredSubMesh(nodes, elements)
+        assert "classification may be incorrect" in caplog.text
+
+    def test_rectangular_mesh_does_not_warn(self, caplog):
+        import logging
+
+        nodes, elems = _make_quad_grid(np.linspace(0, 1, 4), np.linspace(0, 1, 4))
+        with caplog.at_level(logging.WARNING):
+            UnstructuredSubMesh(nodes, elems)
+        assert "classification" not in caplog.text
+
+
+# ======================================================================
+# Node welding
+# ======================================================================
+
+
+class TestWeldNodes:
+    def test_welds_pairs_across_quantization_bins(self):
+        from pybamm.meshes.unstructured_submesh import _weld_nodes
+
+        # nodes 1 and 2 are 2e-8 apart (well within 1e-6) but straddle a
+        # 1e-6 quantization bin boundary
+        nodes = np.array(
+            [
+                [0.0, 0.0],
+                [0.99999949, 0.0],
+                [0.99999951, 0.0],
+                [0.5, 1.0],
+                [1.5, 1.0],
+            ]
+        )
+        elems = np.array([[0, 1, 3], [2, 4, 3]])
+        welded_nodes, welded_elems = _weld_nodes(nodes, elems, 1e-6)
+        assert len(welded_nodes) == 4
+        mesh = UnstructuredSubMesh(welded_nodes, welded_elems)
+        assert mesh.n_internal_faces == 1
+
+    def test_tiny_tolerance_welds_nothing(self):
+        from pybamm.meshes.unstructured_submesh import _weld_nodes
+
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [0.5, 1.0], [1.5, 1.0]])
+        elems = np.array([[0, 1, 2], [1, 3, 2]])
+        welded_nodes, welded_elems = _weld_nodes(nodes, elems, 1e-300)
+        assert len(welded_nodes) == len(nodes)
+        np.testing.assert_array_equal(welded_elems, elems)
+
+
+# ======================================================================
+# Non-conforming combine
+# ======================================================================
+
+
+class TestCombineCrackWarning:
+    def test_nonconforming_combine_warns(self, caplog):
+        import logging
+
+        from pybamm.meshes.meshes import _combine_unstructured_submeshes
+
+        nodes_l, elems_l = _make_quad_grid(np.linspace(0, 1, 3), np.linspace(0, 1, 3))
+        left = UnstructuredSubMesh(nodes_l, elems_l)
+        # right mesh touches at x = 1 but shares no nodes
+        nodes_r, elems_r = _make_quad_grid(
+            np.linspace(1, 2, 3), np.linspace(0.25, 0.75, 2)
+        )
+        right = UnstructuredSubMesh(nodes_r, elems_r)
+        with caplog.at_level(logging.WARNING):
+            _combine_unstructured_submeshes([left, right])
+        assert "internal crack" in caplog.text
+
+    def test_conforming_combine_does_not_warn(self, caplog):
+        import logging
+
+        from pybamm.meshes.meshes import _combine_unstructured_submeshes
+
+        z_edges = np.linspace(0, 1, 3)
+        nodes_l, elems_l = _make_quad_grid(np.linspace(0, 1, 3), z_edges)
+        nodes_r, elems_r = _make_quad_grid(np.linspace(1, 2, 3), z_edges)
+        left = UnstructuredSubMesh(nodes_l, elems_l)
+        right = UnstructuredSubMesh(nodes_r, elems_r)
+        with caplog.at_level(logging.WARNING):
+            combined = _combine_unstructured_submeshes([left, right])
+        assert "internal crack" not in caplog.text
+        assert combined.npts == left.npts + right.npts
 
 
 # ======================================================================

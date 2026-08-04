@@ -49,11 +49,13 @@ class UnstructuredSubMesh(SubMesh):
         elif self.dimension == 3 and verts_per_cell == 8:
             self.element_type = "hexahedron"
         else:
-            raise ValueError(
+            raise pybamm.GeometryError(
                 f"Unsupported: {verts_per_cell} vertices per cell in {self.dimension}D"
             )
 
+        self._validate_elements()
         self._compute_cell_geometry()
+        self._validate_cell_volumes()
         self._build_face_connectivity()
         self._compute_face_geometry()
 
@@ -67,6 +69,34 @@ class UnstructuredSubMesh(SubMesh):
         self.npts_tb = 1
         self.internal_boundaries = []
         self.interface_data = {}
+
+    # ------------------------------------------------------------------
+    # Input validation
+    # ------------------------------------------------------------------
+
+    def _validate_elements(self):
+        """Reject duplicate elements, which make shared faces look internal
+        (silently disconnecting the mesh from its boundary)."""
+        _, counts = np.unique(
+            np.sort(self.elements, axis=1), axis=0, return_counts=True
+        )
+        n_dup = int((counts > 1).sum())
+        if n_dup > 0:
+            raise pybamm.GeometryError(
+                f"Mesh contains {n_dup} duplicated element(s); remove "
+                "duplicate cells before building the mesh."
+            )
+
+    def _validate_cell_volumes(self):
+        """Reject degenerate (zero-volume) cells, which produce divisions by
+        zero in the FV operators."""
+        vol_scale = self.cell_volumes.max() if len(self.cell_volumes) else 0.0
+        degenerate = np.nonzero(self.cell_volumes <= 1e-12 * vol_scale)[0]
+        if len(degenerate) > 0:
+            raise pybamm.GeometryError(
+                f"Mesh contains {len(degenerate)} degenerate (zero-volume) "
+                f"cell(s), e.g. cell {int(degenerate[0])}."
+            )
 
     # ------------------------------------------------------------------
     # Cell geometry
@@ -103,27 +133,29 @@ class UnstructuredSubMesh(SubMesh):
             )
             self.cell_volumes = np.abs(det) / 6.0
         elif self.element_type == "hexahedron":
-            # Volume via divergence theorem: V = (1/3) sum_faces (centroid . normal * area)
-            # For axis-aligned hexes this simplifies, but we use the general approach
-            # by splitting each hex into 5 tets for volume computation only.
-            self.cell_volumes = np.zeros(len(self.elements))
-            for i, cell in enumerate(self.elements):
-                cv = self.nodes[cell]
-                vol = 0.0
-                # Split hex into 5 tets using pattern A
-                for tet_local in [
-                    (0, 1, 2, 5),
-                    (0, 2, 3, 7),
-                    (0, 5, 7, 4),
-                    (2, 5, 7, 6),
-                    (0, 2, 5, 7),
-                ]:
-                    t = cv[list(tet_local)]
-                    d1 = t[1] - t[0]
-                    d2 = t[2] - t[0]
-                    d3 = t[3] - t[0]
-                    vol += abs(np.dot(d1, np.cross(d2, d3))) / 6.0
-                self.cell_volumes[i] = vol
+            # Split each hex into 5 tets (pattern A, ordered so every tet is
+            # positively oriented for a right-handed hex) and sum signed
+            # volumes; mixed signs within a cell expose invalid vertex
+            # ordering that unsigned volumes would silently mask.
+            tet_pattern = np.array(
+                [(0, 1, 2, 5), (0, 2, 3, 7), (0, 5, 7, 4), (2, 7, 5, 6), (0, 5, 2, 7)]
+            )
+            tets = verts[:, tet_pattern]  # (n_cells, 5, 4, 3)
+            d1 = tets[:, :, 1] - tets[:, :, 0]
+            d2 = tets[:, :, 2] - tets[:, :, 0]
+            d3 = tets[:, :, 3] - tets[:, :, 0]
+            signed = np.einsum("ctj,ctj->ct", d1, np.cross(d2, d3)) / 6.0
+            eps = 1e-12 * np.abs(signed).max(axis=1, keepdims=True)
+            mixed = np.nonzero(
+                np.any(signed > eps, axis=1) & np.any(signed < -eps, axis=1)
+            )[0]
+            if len(mixed) > 0:
+                raise pybamm.GeometryError(
+                    f"{len(mixed)} hexahedral cell(s) have inconsistent vertex "
+                    f"ordering (e.g. cell {int(mixed[0])}); vertices must "
+                    "follow the standard hexahedron numbering."
+                )
+            self.cell_volumes = np.abs(signed.sum(axis=1))
 
     # ------------------------------------------------------------------
     # Face-cell connectivity
@@ -162,6 +194,11 @@ class UnstructuredSubMesh(SubMesh):
         _, inverse, counts = np.unique(
             sorted_faces, axis=0, return_inverse=True, return_counts=True
         )
+        if np.any(counts > 2):
+            raise pybamm.GeometryError(
+                f"{int((counts > 2).sum())} face(s) are shared by more than "
+                "two cells; the mesh is non-manifold."
+            )
 
         is_internal = counts[inverse] == 2
         is_boundary = counts[inverse] == 1
@@ -296,6 +333,42 @@ class UnstructuredSubMesh(SubMesh):
             indices = np.nonzero(mask)[0] + bnd_start
             if len(indices) > 0:
                 self.boundary_faces[name] = indices
+
+        self._warn_ambiguous_boundary_classification(bnd_normals, dominant_axis)
+
+    def _warn_ambiguous_boundary_classification(self, bnd_normals, dominant_axis):
+        """Warn when dominant-axis classification is unreliable: oblique
+        faces (chamfers, curved boundaries) tie-break on float noise, and
+        buckets spanning several positions along their axis indicate tab or
+        step side walls landing in the wrong bucket."""
+        issues = []
+        dominant = np.abs(bnd_normals[np.arange(len(dominant_axis)), dominant_axis])
+        n_oblique = int((dominant < 0.99).sum())
+        if n_oblique:
+            issues.append(
+                f"{n_oblique} face(s) have normals not aligned with a coordinate axis"
+            )
+        axis_for = {"left": 0, "right": 0, "front": 1, "back": 1}
+        axis_for.update({"bottom": self.dimension - 1, "top": self.dimension - 1})
+        extent = np.ptp(self.nodes, axis=0).max()
+        spread_tags = [
+            name
+            for name, indices in self.boundary_faces.items()
+            if name in axis_for
+            and np.ptp(self.face_centroids[indices, axis_for[name]]) > 1e-6 * extent
+        ]
+        if spread_tags:
+            issues.append(
+                f"bucket(s) {spread_tags} contain faces at multiple positions "
+                "along their axis (e.g. tab or step side walls)"
+            )
+        if issues:
+            pybamm.logger.warning(
+                "Automatic boundary-face classification may be incorrect: "
+                + "; ".join(issues)
+                + ". Supply explicit boundary_faces (e.g. Gmsh physical "
+                "groups) for such geometries."
+            )
 
     def optimize_ordering(self):
         """Reorder cells using Reverse Cuthill-McKee to reduce Jacobian bandwidth.
@@ -475,6 +548,36 @@ class UnstructuredSubMesh(SubMesh):
         return winding > 2.0 * np.pi
 
 
+def _weld_nodes(nodes, elements, tolerance):
+    """Merge nodes closer than ``tolerance`` via a KDTree radius query and
+    union-find, so near-coincident pairs always weld (quantized binning can
+    separate nodes a fraction of the tolerance apart).
+
+    Returns the welded ``(nodes, elements)``.
+    """
+    from scipy.spatial import cKDTree
+
+    pairs = cKDTree(nodes).query_pairs(tolerance, output_type="ndarray")
+    parent = np.arange(nodes.shape[0])
+
+    def find(i):
+        root = i
+        while parent[root] != root:
+            root = parent[root]
+        while parent[i] != root:
+            parent[i], i = root, parent[i]
+        return root
+
+    for a, b in pairs:
+        root_a, root_b = find(a), find(b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    roots = np.array([find(i) for i in range(nodes.shape[0])])
+    unique_roots, inverse = np.unique(roots, return_inverse=True)
+    return nodes[unique_roots], inverse[elements]
+
+
 # ======================================================================
 # Mesh generators
 # ======================================================================
@@ -636,13 +739,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         # Weld coincident nodes across cell blocks so touching regions
         # (e.g. body-tab interfaces) are thermally connected.
         if self.merge_tolerance is not None and self.merge_tolerance > 0:
-            scale = 1.0 / self.merge_tolerance
-            quantized = np.round(nodes * scale).astype(np.int64)
-            _, unique_idx, inverse = np.unique(
-                quantized, axis=0, return_index=True, return_inverse=True
-            )
-            nodes = nodes[unique_idx]
-            elements = inverse[elements]
+            nodes, elements = _weld_nodes(nodes, elements, self.merge_tolerance)
 
         # Re-index nodes to compact numbering
         unique_nodes = np.unique(elements)

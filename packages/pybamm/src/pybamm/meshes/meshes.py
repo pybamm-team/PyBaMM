@@ -525,17 +525,34 @@ def _combine_unstructured_submeshes(submeshes):
 
     for k in range(1, len(submeshes)):
         curr = submeshes[k]
-        tree = cKDTree(np.asarray(all_nodes))
+        prev_nodes = np.asarray(all_nodes)
+        tree = cKDTree(prev_nodes)
         d, j = tree.query(curr.nodes)
         local_to_global = {}
+        n_welded = 0
         for nid in range(curr.nodes.shape[0]):
             if d[nid] < tol:
                 local_to_global[nid] = int(j[nid])
+                n_welded += 1
             else:
                 local_to_global[nid] = next_id
                 all_nodes.append(curr.nodes[nid])
                 next_id += 1
         global_maps.append(local_to_global)
+        # Touching bounding boxes with zero welded nodes means the meshes
+        # are non-conforming at their interface: the combined mesh will
+        # contain an internal crack with zero flux across it.
+        boxes_touch = np.all(
+            curr.nodes.min(axis=0) <= prev_nodes.max(axis=0) + tol
+        ) and np.all(curr.nodes.max(axis=0) >= prev_nodes.min(axis=0) - tol)
+        if n_welded == 0 and boxes_touch:
+            pybamm.logger.warning(
+                f"Combining unstructured submeshes: submesh {k} shares no "
+                "nodes with the preceding submeshes although their bounding "
+                "boxes touch. If these domains are meant to be connected, "
+                "their meshes are non-conforming and the combined mesh will "
+                "contain an internal crack (no flux across it)."
+            )
 
     all_elements = [submeshes[0].elements.copy()]
     for k in range(1, len(submeshes)):
