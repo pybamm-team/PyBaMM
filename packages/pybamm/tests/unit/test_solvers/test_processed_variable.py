@@ -2214,6 +2214,18 @@ class TestProcessedVariableUnstructuredFVM:
         inside = pv(0.5, x=np.array([0.5]), z=np.array([0.5]))
         np.testing.assert_allclose(inside, 1.0, rtol=1e-10)
 
+    def test_auxiliary_domain_variable_raises(self):
+        geometry, submesh, _, _, _ = self._make_setup(dim=2, n=3)
+        # hand-build a repeated state vector, as an auxiliary-domain
+        # variable's discretisation would produce
+        repeats = 4
+        var_disc = pybamm.StateVector(slice(0, submesh.npts * repeats))
+        var_disc.mesh = submesh
+        t_sol = np.array([0.0, 1.0])
+        y_sol = np.ones((submesh.npts * repeats, 2))
+        with pytest.raises(NotImplementedError, match="auxiliary domains"):
+            self._make_pv(var_disc, geometry, t_sol, y_sol)
+
     def test_3d_dispatch_slices_and_mask(self):
         geometry, submesh, _, _, var_disc = self._make_setup(dim=3, n=3)
         t_sol = np.array([0.0, 1.0])

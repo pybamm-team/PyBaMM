@@ -281,12 +281,13 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         return bcs_out
 
     @staticmethod
-    def _bc_contribution(n, n_bnd, owners, coeffs, bc_value):
-        """Build a symbolic BC contribution vector.
+    def _bc_contribution(n, n_bnd, owners, coeffs, bc_value, repeats=1):
+        """Build a symbolic BC contribution vector of size ``n * repeats``.
 
         For scalar ``bc_value``: returns ``Vector(accumulated_coeffs) * bc_value``.
-        For vector ``bc_value`` (length ``n_bnd``):
-        returns ``Matrix(n, n_bnd) @ bc_value``.
+        For vector ``bc_value``: returns ``Matrix @ bc_value``, where the value
+        has one entry per boundary face (shared across auxiliary-domain
+        repeats) or ``n_bnd * repeats`` entries (one per face per repeat).
         """
         is_scalar = isinstance(bc_value, pybamm.Scalar) or (
             hasattr(bc_value, "shape_for_testing")
@@ -295,9 +296,17 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         if is_scalar:
             row = np.zeros(n)
             np.add.at(row, owners, coeffs)
+            if repeats > 1:
+                row = np.tile(row, repeats)
             return pybamm.Vector(row) * bc_value
         else:
             M = csr_matrix((coeffs, (owners, np.arange(n_bnd))), shape=(n, n_bnd))
+            if repeats > 1:
+                bc_shape = getattr(bc_value, "shape_for_testing", None)
+                if bc_shape == (n_bnd * repeats, 1):
+                    M = csr_matrix(kron(eye(repeats, dtype=np.float64), M))
+                else:
+                    M = csr_matrix(kron(np.ones((repeats, 1)), M))
             return pybamm.Matrix(M) @ bc_value
 
     # ------------------------------------------------------------------
@@ -345,13 +354,20 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         elif broadcast_type.startswith("full"):
             out = symbol * pybamm.Vector(np.ones(full_size), domains=domains)
         else:
-            identity = eye(symbol.shape[0])
             from scipy.sparse import vstack
 
-            sec_size = self._get_auxiliary_domain_repeats(
-                {"secondary": domains.get("secondary", [])}
-            )
-            matrix = vstack([identity for _ in range(sec_size)])
+            # secondary/tertiary broadcast tiles the child by the size of the
+            # new (slower-varying) dimension, matching SpatialMethod.broadcast
+            if broadcast_type.startswith("secondary"):
+                reps = self._get_auxiliary_domain_repeats(
+                    {"secondary": domains.get("secondary", [])}
+                )
+            else:
+                reps = self._get_auxiliary_domain_repeats(
+                    {"tertiary": domains.get("tertiary", [])}
+                )
+            identity = eye(symbol.shape[0])
+            matrix = vstack([identity for _ in range(reps)])
             out = pybamm.Matrix(matrix) @ symbol
 
         if out is symbol:
@@ -377,10 +393,12 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         L = self._tpfa_matrix(submesh)
 
-        bc_rhs = pybamm.Vector(np.zeros(n))
+        bc_rhs = pybamm.Vector(np.zeros(n * repeats))
         if symbol in boundary_conditions:
             bcs = boundary_conditions[symbol]
-            L, bc_rhs = self._apply_bcs_to_laplacian(submesh, L, bc_rhs, bcs)
+            L, bc_rhs = self._apply_bcs_to_laplacian(
+                submesh, L, bc_rhs, bcs, repeats=repeats
+            )
 
         L_full = csr_matrix(kron(eye(repeats, dtype=np.float64), L))
         result = pybamm.Matrix(L_full) @ discretised_symbol + bc_rhs
@@ -562,10 +580,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         )
         return result + bc_rhs
 
-    def _apply_bcs_to_laplacian(self, submesh, L, bc_rhs, bcs):
+    def _apply_bcs_to_laplacian(self, submesh, L, bc_rhs, bcs, repeats=1):
         """Modify the Laplacian matrix and RHS for boundary conditions.
 
-        ``bc_rhs`` is a pybamm expression (symbolic vector).
+        ``bc_rhs`` is a pybamm expression (symbolic vector of size
+        ``npts * repeats``).
         """
         n = submesh.npts
         L = L.tolil()
@@ -590,7 +609,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 for j in range(n_bnd):
                     L[owners[j], owners[j]] -= coeffs[j]
                 bc_rhs = bc_rhs + self._bc_contribution(
-                    n, n_bnd, owners, coeffs, bc_value
+                    n, n_bnd, owners, coeffs, bc_value, repeats=repeats
                 )
 
             elif bc_type == "Neumann":
@@ -600,7 +619,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     / submesh.cell_volumes[owners]
                 )
                 bc_rhs = bc_rhs + self._bc_contribution(
-                    n, n_bnd, owners, coeffs, bc_value
+                    n, n_bnd, owners, coeffs, bc_value, repeats=repeats
                 )
 
         return csr_matrix(L), bc_rhs
@@ -657,11 +676,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         G_components = self._green_gauss_matrices(submesh)
 
-        bc_vecs = [pybamm.Vector(np.zeros(n)) for _ in range(d)]
+        bc_vecs = [pybamm.Vector(np.zeros(n * repeats)) for _ in range(d)]
         if symbol in boundary_conditions:
             bcs = boundary_conditions[symbol]
             G_components, bc_vecs = self._apply_bcs_to_gradient(
-                submesh, G_components, bc_vecs, bcs
+                submesh, G_components, bc_vecs, bcs, repeats=repeats
             )
 
         components = []
@@ -748,10 +767,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         return G
 
-    def _apply_bcs_to_gradient(self, submesh, G_components, bc_vecs, bcs):
+    def _apply_bcs_to_gradient(self, submesh, G_components, bc_vecs, bcs, repeats=1):
         """Apply Dirichlet/Neumann BCs to gradient matrices.
 
-        ``bc_vecs`` is a list of pybamm expressions (one per spatial dimension).
+        ``bc_vecs`` is a list of pybamm expressions of size ``npts * repeats``
+        (one per spatial dimension).
         """
         n = submesh.npts
         d = submesh.dimension
@@ -784,7 +804,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                         ]
                     )
                     bc_vecs[k] = bc_vecs[k] + self._bc_contribution(
-                        n, n_bnd, owners, coeffs, bc_value
+                        n, n_bnd, owners, coeffs, bc_value, repeats=repeats
                     )
 
             elif bc_type == "Neumann":
@@ -806,7 +826,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                         ]
                     )
                     bc_vecs[k] = bc_vecs[k] + self._bc_contribution(
-                        n, n_bnd, owners, coeffs, bc_value
+                        n, n_bnd, owners, coeffs, bc_value, repeats=repeats
                     )
 
         return G_components, bc_vecs

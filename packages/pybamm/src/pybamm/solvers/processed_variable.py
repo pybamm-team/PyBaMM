@@ -988,6 +988,13 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         mesh = base_variables[0].mesh
+        if base_variables[0].size != mesh.npts:
+            raise NotImplementedError(
+                "Post-processing of unstructured-mesh variables with "
+                f"auxiliary domains is not yet supported: variable {name!r} "
+                f"has {base_variables[0].size} entries but the mesh has "
+                f"{mesh.npts} cells."
+            )
         self.dimensions = 3 if mesh.dimension == 3 else 2
         super().__init__(
             name,

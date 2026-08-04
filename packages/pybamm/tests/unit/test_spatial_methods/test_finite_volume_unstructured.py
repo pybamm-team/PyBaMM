@@ -305,6 +305,100 @@ class TestNeumannSignConvention:
 
 
 # ======================================================================
+# Tests: auxiliary domains (secondary/tertiary repeats)
+# ======================================================================
+
+
+class TestAuxiliaryDomains:
+    def _bcs(self, variable):
+        return {
+            variable: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(2), "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(3), "Dirichlet"),
+            }
+        }
+
+    def test_laplacian_with_secondary_domain(self):
+        mesh = _make_quad_mesh(2, 2)
+        aux = _make_quad_mesh(1, 3)
+        method = _method_with_mesh(mesh, aux=aux)
+        cell_values = mesh.cell_centroids[:, 0] ** 2
+
+        variable = pybamm.Variable("u", domain="test")
+        single = method.laplacian(
+            variable,
+            pybamm.Vector(cell_values, domain="test"),
+            self._bcs(variable),
+        )
+
+        domains = {"primary": ["test"], "secondary": ["aux"]}
+        repeated_var = pybamm.Variable("u rep", domains=domains)
+        repeated = method.laplacian(
+            repeated_var,
+            pybamm.Vector(np.tile(cell_values, aux.npts), domains=domains),
+            self._bcs(repeated_var),
+        )
+        np.testing.assert_allclose(
+            repeated.evaluate()[:, 0],
+            np.tile(single.evaluate()[:, 0], aux.npts),
+            atol=1e-12,
+        )
+
+    def test_gradient_with_secondary_domain(self):
+        mesh = _make_quad_mesh(2, 2)
+        aux = _make_quad_mesh(1, 3)
+        method = _method_with_mesh(mesh, aux=aux)
+        cell_values = mesh.cell_centroids[:, 0] ** 2
+
+        variable = pybamm.Variable("u", domain="test")
+        single = method.gradient(
+            variable,
+            pybamm.Vector(cell_values, domain="test"),
+            self._bcs(variable),
+        )
+
+        domains = {"primary": ["test"], "secondary": ["aux"]}
+        repeated_var = pybamm.Variable("u rep", domains=domains)
+        repeated = method.gradient(
+            repeated_var,
+            pybamm.Vector(np.tile(cell_values, aux.npts), domains=domains),
+            self._bcs(repeated_var),
+        )
+        for single_comp, repeated_comp in zip(
+            single._components, repeated._components, strict=True
+        ):
+            np.testing.assert_allclose(
+                repeated_comp.evaluate()[:, 0],
+                np.tile(single_comp.evaluate()[:, 0], aux.npts),
+                atol=1e-12,
+            )
+
+    def test_tertiary_broadcast_size(self):
+        mesh = _make_quad_mesh(2, 2)
+        sec = _make_quad_mesh(1, 2)
+        ter = _make_quad_mesh(1, 5)
+        method = _method_with_mesh(mesh, sec=sec, ter=ter)
+
+        child_size = mesh.npts * sec.npts
+        child = pybamm.Vector(
+            np.arange(child_size),
+            domains={"primary": ["test"], "secondary": ["sec"]},
+        )
+        domains = {
+            "primary": ["test"],
+            "secondary": ["sec"],
+            "tertiary": ["ter"],
+        }
+        out = method.broadcast(child, domains, "tertiary to nodes")
+        assert out.shape_for_testing == (child_size * ter.npts, 1)
+        np.testing.assert_array_equal(
+            out.evaluate()[:, 0], np.tile(np.arange(child_size), ter.npts)
+        )
+
+
+# ======================================================================
 # Tests: BC tag / type validation
 # ======================================================================
 
