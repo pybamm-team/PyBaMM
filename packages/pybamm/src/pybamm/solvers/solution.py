@@ -755,7 +755,7 @@ class Solution(SolutionBase):
             ):
                 comp_casadi = []
                 for k, comp in enumerate(_var_pybamm._components):
-                    cc, _, _ = self._update_model_variable(
+                    cc, _, comp_time_integral = self._update_model_variable(
                         model,
                         comp,
                         inputs=inputs,
@@ -763,6 +763,11 @@ class Solution(SolutionBase):
                         time_integral=None,
                         cache_key=f"{name}[{k}]",
                     )
+                    if comp_time_integral is not None:
+                        raise NotImplementedError(
+                            f"Variable '{name}': time integrals of vector "
+                            "fields are not supported."
+                        )
                     comp_casadi.append(cc)
                 vars_casadi[i] = comp_casadi
             else:

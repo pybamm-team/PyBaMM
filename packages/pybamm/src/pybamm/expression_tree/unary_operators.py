@@ -1522,6 +1522,10 @@ class Component(UnaryOperator):
     """
 
     def __init__(self, child, index):
+        if not isinstance(index, int) or isinstance(index, bool) or index < 0:
+            raise ValueError(
+                f"Component index must be a non-negative integer, got {index!r}"
+            )
         super().__init__(f"component({index})", child)
         self.index = index
 

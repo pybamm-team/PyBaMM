@@ -2214,6 +2214,72 @@ class TestProcessedVariableUnstructuredFVM:
         inside = pv(0.5, x=np.array([0.5]), z=np.array([0.5]))
         np.testing.assert_allclose(inside, 1.0, rtol=1e-10)
 
+    def test_call_coordinate_handling(self):
+        geometry, submesh, _, _, var_disc = self._make_setup(dim=2)
+        centroid_x = submesh.cell_centroids[:, 0]
+        t_sol = np.linspace(0, 1, 5)
+        y_sol = centroid_x[:, np.newaxis] * np.ones_like(t_sol)[np.newaxis, :]
+        pv = self._make_pv(var_disc, geometry, t_sol, y_sol)
+
+        # z only: x defaults to the domain midplane (0.5), not 0.0
+        z_q = np.linspace(0.4, 0.6, 3)
+        result = pv(0.5, z=z_q)
+        assert result.shape == (1, 3)
+        np.testing.assert_allclose(result, 0.5, rtol=1e-8)
+
+        # length-1 time arrays keep the time axis; scalars drop it
+        x_q = np.array([0.5])
+        assert pv(np.array([0.5]), x=x_q, z=z_q).shape == (1, 3, 1)
+        assert pv(0.5, x=x_q, z=z_q).shape == (1, 3)
+
+        # fill_value replaces NaN outside the domain
+        outside = pv(0.5, x=np.array([-0.5]), z=np.array([0.5]), fill_value=-7.0)
+        np.testing.assert_allclose(outside, -7.0)
+
+        # r/R are not unstructured coordinates
+        with pytest.raises(ValueError, match="no r or R"):
+            pv(0.5, r=np.array([0.5]))
+
+    def test_time_integral_raises(self):
+        geometry, submesh, _, _, var_disc = self._make_setup(dim=2, n=3)
+        t_sol = np.array([0.0, 1.0])
+        y_sol = np.ones((submesh.npts, 2))
+        var_casadi = to_casadi(var_disc, y_sol)
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+        time_integral = object()  # any non-None marker
+        with pytest.raises(NotImplementedError, match="Time integrals"):
+            pybamm.process_variable(
+                "u", [var_disc], [var_casadi], solution, time_integral=time_integral
+            )
+
+    def test_vector_field_pv_interface(self):
+        geometry, submesh, disc, _, _ = self._make_setup(dim=2, n=3)
+        var = pybamm.Variable("u", domain=["negative electrode"])
+        disc.set_variable_slices([var])
+        grad_disc = disc.process_symbol(pybamm.grad(var))
+        grad_disc.mesh = submesh
+        for comp in grad_disc._components:
+            comp.mesh = submesh
+
+        t_sol = np.array([0.0, 1.0])
+        y_sol = np.ones((submesh.npts, 2))
+        comp_casadi = [to_casadi(comp, y_sol) for comp in grad_disc._components]
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+        pv = pybamm.process_variable("grad u", [grad_disc], [comp_casadi], solution)
+
+        assert isinstance(pv, pybamm.ProcessedVariableVectorFieldUnstructuredFVM)
+        # entries and data return one array per component, not component 0
+        assert isinstance(pv.entries, tuple)
+        assert len(pv.entries) == 2
+        assert isinstance(pv.data, tuple)
+        # merging across solution segments is not supported: clear error
+        with pytest.raises(NotImplementedError, match="merged across"):
+            pv.update(pv, solution)
+
     def test_disconnected_component_is_not_masked(self):
         from pybamm.meshes.unstructured_submesh import (
             UnstructuredSubMesh,
@@ -2321,8 +2387,11 @@ class TestProcessedVariableUnstructuredFVM:
         assert flux_pv.n_components == 2
         assert flux_pv.dimensions == 2
 
-        # entries delegates to the first component
-        np.testing.assert_allclose(flux_pv.entries, 2.0, rtol=1e-12)
+        # entries returns one array per component
+        entries = flux_pv.entries
+        assert isinstance(entries, tuple)
+        np.testing.assert_allclose(entries[0], 2.0, rtol=1e-12)
+        np.testing.assert_allclose(entries[1], -3.0, rtol=1e-12)
 
         # Calling returns one array per component
         comps = flux_pv(t=t_sol)

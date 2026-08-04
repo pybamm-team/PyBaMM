@@ -1165,6 +1165,11 @@ class Discretisation:
             elif isinstance(symbol, pybamm.Component):
                 if not isinstance(disc_child, pybamm.VectorField):
                     raise ValueError("Component can only be applied to a VectorField")
+                if symbol.index >= disc_child.n_components:
+                    raise pybamm.DiscretisationError(
+                        f"Component index {symbol.index} is out of range for a "
+                        f"VectorField with {disc_child.n_components} components"
+                    )
                 return disc_child._components[symbol.index]
             elif isinstance(symbol, pybamm.Norm):
                 if not isinstance(disc_child, pybamm.VectorField):

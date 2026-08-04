@@ -995,6 +995,12 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
                 f"has {base_variables[0].size} entries but the mesh has "
                 f"{mesh.npts} cells."
             )
+        if time_integral is not None:
+            # silently returning the integrand would be wrong; the postfix
+            # sum assumes time on axis 0, which only holds for 0D variables
+            raise NotImplementedError(
+                "Time integrals of unstructured-mesh variables are not yet supported."
+            )
         self.dimensions = 3 if mesh.dimension == 3 else 2
         super().__init__(
             name,
@@ -1103,11 +1109,12 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         )
         return (containment_count % 2) == 0
 
-    def _interpolate_spatial(self, values, query_pts):
+    def _interpolate_spatial(self, values, query_pts, fill_value=np.nan):
         """Interpolate cell-centered data to query points.
 
         The Delaunay triangulation and boundary mask are computed once
-        and cached.  Only the interpolated values change per call.
+        and cached.  Only the interpolated values change per call. Points
+        outside the domain are set to ``fill_value``.
         """
         from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 
@@ -1125,7 +1132,7 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
 
         outside = self._get_boundary_mask(query_pts)
         if outside is not None:
-            result[outside] = np.nan
+            result[outside] = fill_value
 
         return result
 
@@ -1140,40 +1147,45 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
     def __call__(
         self, t=None, x=None, r=None, y=None, z=None, R=None, fill_value=np.nan
     ):
+        if r is not None or R is not None:
+            raise ValueError(
+                f"Variable {self._name!r} is on an unstructured mesh, which "
+                "has no r or R coordinates."
+            )
         data_at_t = self._data_at_time(t)
-        scalar_t = isinstance(t, int | float)
+        scalar_t = t is not None and np.ndim(t) == 0
 
         spatial_provided = any(c is not None for c in [x, y, z])
         if not spatial_provided:
             return data_at_t
 
+        nodes = self.mesh.nodes
+
+        def coord(values, axis):
+            if values is not None:
+                return np.asarray(values).ravel()
+            # a missing coordinate defaults to the domain midplane
+            return np.array([0.5 * (nodes[:, axis].min() + nodes[:, axis].max())])
+
         if self.mesh.dimension == 2:
-            x_q = np.asarray(x).ravel()
-            z_q = np.asarray(z).ravel() if z is not None else np.zeros_like(x_q)
-            grid = np.meshgrid(x_q, z_q, indexing="ij")
-            query = np.column_stack([g.ravel() for g in grid])
-            out_shape = grid[0].shape
+            axes = [coord(x, 0), coord(z, 1)]
         else:
-            x_q = np.asarray(x).ravel()
-            y_q = np.asarray(y).ravel() if y is not None else np.zeros_like(x_q)
-            z_q = np.asarray(z).ravel() if z is not None else np.zeros_like(x_q)
-            grid = np.meshgrid(x_q, y_q, z_q, indexing="ij")
-            query = np.column_stack([g.ravel() for g in grid])
-            out_shape = grid[0].shape
+            axes = [coord(x, 0), coord(y, 1), coord(z, 2)]
+        grid = np.meshgrid(*axes, indexing="ij")
+        query = np.column_stack([g.ravel() for g in grid])
+        out_shape = grid[0].shape
 
-        n_t = data_at_t.shape[1] if data_at_t.ndim > 1 else 1
-        if n_t == 1:
-            result = self._interpolate_spatial(data_at_t.ravel(), query).reshape(
-                out_shape
-            )
-        else:
-            result = np.empty((*out_shape, n_t))
-            for i in range(n_t):
-                result[..., i] = self._interpolate_spatial(
-                    data_at_t[:, i], query
-                ).reshape(out_shape)
+        if data_at_t.ndim == 1:
+            data_at_t = data_at_t[:, np.newaxis]
+        n_t = data_at_t.shape[1]
+        result = np.empty((*out_shape, n_t))
+        for i in range(n_t):
+            result[..., i] = self._interpolate_spatial(
+                data_at_t[:, i], query, fill_value=fill_value
+            ).reshape(out_shape)
 
-        if scalar_t and result.ndim > len(out_shape):
+        # scalar t drops the time axis; array-valued t (any length) keeps it
+        if scalar_t:
             result = result[..., 0]
 
         return result
@@ -1274,7 +1286,20 @@ class ProcessedVariableVectorFieldUnstructuredFVM:
 
     @property
     def entries(self):
-        return self._component_vars[0].entries
+        """Tuple of per-component entry arrays."""
+        return tuple(pv.entries for pv in self._component_vars)
+
+    @property
+    def data(self):
+        """Tuple of per-component data arrays."""
+        return tuple(pv.data for pv in self._component_vars)
+
+    def update(self, other, new_sol):
+        raise NotImplementedError(
+            f"Variable {self.name!r}: vector-valued output_variables cannot "
+            "yet be merged across solution segments (multi-step experiments "
+            "or solution addition). Post-process the components separately."
+        )
 
     def __call__(
         self, t=None, x=None, r=None, y=None, z=None, R=None, fill_value=np.nan
