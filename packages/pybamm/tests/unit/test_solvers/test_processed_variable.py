@@ -2280,6 +2280,26 @@ class TestProcessedVariableUnstructuredFVM:
         with pytest.raises(NotImplementedError, match="merged across"):
             pv.update(pv, solution)
 
+    def test_scalar_reduction_routes_to_0d(self):
+        # Max/Min of a spatial variable keep the domain (and hence the
+        # unstructured mesh) but evaluate to one value: 0D in space
+        geometry, submesh, _, _, var_disc = self._make_setup(dim=2, n=3)
+        max_disc = pybamm.Max(var_disc)
+        max_disc.mesh = submesh
+        t_sol = np.array([0.0, 1.0])
+        y_sol = np.arange(submesh.npts)[:, np.newaxis] * (1 + t_sol)[np.newaxis, :]
+        var_casadi = to_casadi(max_disc, y_sol)
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+        pv = pybamm.process_variable("max u", [max_disc], [var_casadi], solution)
+        from pybamm.solvers.processed_variable import ProcessedVariable0D
+
+        assert isinstance(pv, ProcessedVariable0D)
+        np.testing.assert_allclose(
+            pv(t_sol), (submesh.npts - 1) * (1 + t_sol), rtol=1e-12
+        )
+
     def test_disconnected_component_is_not_masked(self):
         from pybamm.meshes.unstructured_submesh import (
             UnstructuredSubMesh,

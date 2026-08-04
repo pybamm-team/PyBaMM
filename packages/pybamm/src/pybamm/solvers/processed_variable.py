@@ -1788,6 +1788,10 @@ def process_variable(name: str, base_variables, *args, **kwargs):
             return ProcessedVariableVectorFieldUnstructuredFVM(
                 name, base_variables, *args, **kwargs
             )
+        # scalar reductions (e.g. Max/Min) keep the spatial domain but
+        # evaluate to a single value: they are 0D in space
+        if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
+            return ProcessedVariable0D(name, base_variables, *args, **kwargs)
         return ProcessedVariableUnstructuredFVM(name, base_variables, *args, **kwargs)
 
     # check variable shape
