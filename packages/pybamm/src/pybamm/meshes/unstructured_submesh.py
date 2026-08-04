@@ -19,6 +19,11 @@ class ElementType(str, Enum):
     TETRAHEDRON = "tetrahedron"
     HEXAHEDRON = "hexahedron"
 
+    @property
+    def meshio_name(self):
+        """This element type's cell-type name in meshio's vocabulary."""
+        return "tetra" if self is ElementType.TETRAHEDRON else self.value
+
 
 class UnstructuredSubMesh(SubMesh):
     """
@@ -900,7 +905,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         )
 
         if self.boundary_mapping:
-            facet_type = "triangle" if cell_type == "tetra" else "line"
+            facet_type = "triangle" if cell_type == ElementType.TETRAHEDRON else "line"
             facets, facet_tags = _extract_tagged_facets(mesh, facet_type)
             if facets is None:
                 pybamm.logger.warning(
@@ -955,7 +960,9 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         # Hexahedra from files are rejected outright rather than silently
         # dropped: file meshes commonly contain warped (non-planar-faced)
         # hexes, for which cell volumes and face fluxes are ill-defined.
-        if any(block.type == "hexahedron" for block in mesh.cells):
+        if any(
+            block.type == ElementType.HEXAHEDRON.meshio_name for block in mesh.cells
+        ):
             raise pybamm.GeometryError(
                 "Hexahedral cells in mesh files are not supported: warped "
                 "(non-planar-faced) hexahedra have ill-defined volumes and "
@@ -965,8 +972,16 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
                 "axis-aligned cells are always well-defined."
             )
         # Prefer 3D cells when present, otherwise fall back to 2D.
-        for cell_type in ("tetra", "triangle", "quad"):
-            blocks = [block.data for block in mesh.cells if block.type == cell_type]
+        for cell_type in (
+            ElementType.TETRAHEDRON,
+            ElementType.TRIANGLE,
+            ElementType.QUAD,
+        ):
+            blocks = [
+                block.data
+                for block in mesh.cells
+                if block.type == cell_type.meshio_name
+            ]
             if blocks:
                 if len(blocks) == 1:
                     return blocks[0], cell_type
@@ -981,7 +996,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
             matching = [
                 data
                 for block, data in zip(mesh.cells, data_list, strict=False)
-                if block.type == cell_type
+                if block.type == cell_type.meshio_name
             ]
             if matching:
                 if len(matching) == 1:
@@ -1066,7 +1081,7 @@ class TaggedSubMeshGenerator(MeshGenerator):
         for block, tags in zip(
             m.cells, m.cell_data.get("gmsh:physical", []), strict=False
         ):
-            if block.type != "tetra":
+            if block.type != ElementType.TETRAHEDRON.meshio_name:
                 continue
             mask = np.asarray(tags, dtype=np.int32) == tag_id
             if mask.any():
