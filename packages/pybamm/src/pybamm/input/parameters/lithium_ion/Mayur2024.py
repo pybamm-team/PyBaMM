@@ -125,7 +125,7 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
-        c_e, c_s_surf, c_s_max, T
+    c_e, c_s_surf, c_s_max, T
 ):
     """
     Exchange-current density for Butler-Volmer reactions between graphite and LiPF6 in
@@ -158,7 +158,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     E_r = 35000
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_s_max - c_s_surf) ** 0.5
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def graphite_volume_change_Ai2020(sto):
@@ -197,16 +197,16 @@ def graphite_volume_change_Ai2020(sto):
     p9 = 0.386
     p10 = -4.966e-05
     t_change = (
-            p1 * sto ** 9
-            + p2 * sto ** 8
-            + p3 * sto ** 7
-            + p4 * sto ** 6
-            + p5 * sto ** 5
-            + p6 * sto ** 4
-            + p7 * sto ** 3
-            + p8 * sto ** 2
-            + p9 * sto
-            + p10
+        p1 * sto**9
+        + p2 * sto**8
+        + p3 * sto**7
+        + p4 * sto**6
+        + p5 * sto**5
+        + p6 * sto**4
+        + p7 * sto**3
+        + p8 * sto**2
+        + p9 * sto
+        + p10
     )
     return t_change
 
@@ -277,15 +277,15 @@ def silicon_ocp_lithiation_Mark2016(sto):
     p8 = 0.8633
 
     U_lithiation = (
-                           p1 * sto ** 7
-                           + p2 * sto ** 6
-                           + p3 * sto ** 5
-                           + p4 * sto ** 4
-                           + p5 * sto ** 3
-                           + p6 * sto ** 2
-                           + p7 * sto
-                           + p8
-                   ) + 1e-4 * (1 / sto + 1 / (sto - 1))
+        p1 * sto**7
+        + p2 * sto**6
+        + p3 * sto**5
+        + p4 * sto**4
+        + p5 * sto**3
+        + p6 * sto**2
+        + p7 * sto
+        + p8
+    ) + 1e-4 * (1 / sto + 1 / (sto - 1))
     return U_lithiation
 
 
@@ -321,22 +321,22 @@ def silicon_ocp_delithiation_Mark2016(sto):
     p8 = 0.9937
 
     U_delithiation = (
-            p1 * sto ** 7
-            + p2 * sto ** 6
-            + p3 * sto ** 5
-            + p4 * sto ** 4
-            + p5 * sto ** 3
-            + p6 * sto ** 2
-            + p7 * sto
-            + p8
+        p1 * sto**7
+        + p2 * sto**6
+        + p3 * sto**5
+        + p4 * sto**4
+        + p5 * sto**3
+        + p6 * sto**2
+        + p7 * sto
+        + p8
     )
     return U_delithiation
 
 
 def silicon_ocp_average_Mark2016(sto):
     return (
-                   silicon_ocp_lithiation_Mark2016(sto) + silicon_ocp_delithiation_Mark2016(sto)
-           ) / 2
+        silicon_ocp_lithiation_Mark2016(sto) + silicon_ocp_delithiation_Mark2016(sto)
+    ) / 2
 
 
 def silicon_LGM50_diffusivity_Bonkile2024(sto, T):
@@ -366,7 +366,7 @@ def silicon_LGM50_diffusivity_Bonkile2024(sto, T):
 
 
 def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
-        c_e, c_s_surf, c_s_max, T
+    c_e, c_s_surf, c_s_max, T
 ):
     """
     Exchange-current density for Butler-Volmer reactions between silicon and LiPF6 in
@@ -396,12 +396,12 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
         Exchange-current density [A.m-2]
     """
     m_ref = (
-            6.48e-7 * 28700 / 278000
+        6.48e-7 * 28700 / 278000
     )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 35000
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_s_max - c_s_surf) ** 0.5
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def silicon_volume_change_Ai2020(sto):
@@ -510,12 +510,12 @@ def nmc_LGM50_ocp_Chen2020(sto):
         Open-circuit potential
     """
     u_eq = (
-                   -0.8090 * sto
-                   + 4.4875
-                   - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
-                   - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
-                   + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
-           ) + 1e-4 * (1 / sto + 1 / (sto - 1))
+        -0.8090 * sto
+        + 4.4875
+        - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
+        - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
+        + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
+    ) + 1e-4 * (1 / sto + 1 / (sto - 1))
     return u_eq
 
 
@@ -551,7 +551,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     E_r = 17800
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_s_max - c_s_surf) ** 0.5
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def volume_change_Ai2020(sto):
@@ -682,7 +682,7 @@ def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
         Solid diffusivity
     """
     sigma_e = (
-            0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
+        0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
     )
 
     # Nyman et al. (2008) does not provide temperature dependence
@@ -923,8 +923,7 @@ def get_parameter_values():
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.2594,
         "Thermodynamic factor": 1.0,
-        "Electrolyte diffusivity [m2.s-1]"
-        "": electrolyte_diffusivity_Nyman2008_arrhenius,
+        "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008_arrhenius,
         "Electrolyte conductivity [S.m-1]"
         "": electrolyte_conductivity_Nyman2008_arrhenius,
         # experiment
