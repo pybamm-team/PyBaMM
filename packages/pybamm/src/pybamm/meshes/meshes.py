@@ -485,7 +485,9 @@ def _combine_unstructured_submeshes(submeshes):
 
     # For 3D tet meshes generated from hex grids, regenerate with
     # cumulative i_offset so that alternating-parity face triangulations
-    # match across domain boundaries.
+    # match across domain boundaries. Nothing in this package sets
+    # _hex_gen_params yet; it is the protocol for the multi-domain 3D
+    # generators arriving with the unstructured battery models (PR #5690).
     if all(hasattr(sm, "_hex_gen_params") and sm.dimension == 3 for sm in submeshes):
         cumulative_offset = 0
         fixed = []
@@ -510,12 +512,8 @@ def _combine_unstructured_submeshes(submeshes):
             cumulative_offset += p["nx"]
         submeshes = fixed
 
-    # Weld coincident nodes across submeshes regardless of which face tag
-    # they belong to.  This generalises the original 1D-stack
-    # ``"right"↔"left"`` welding to arbitrary topology (star, tree, graph)
-    # so that body↔tab interfaces produced by ``FiniteVolumeUnstructured``'s
-    # auto-pairing become internal faces in the combined mesh and TPFA
-    # handles cross-region flux without internal Neumann book-keeping.
+    # Weld coincident nodes across submeshes (any face tag, any topology)
+    # so inter-domain interfaces become internal faces of the combined mesh.
     from scipy.spatial import cKDTree
 
     # relative to the geometry so sub-unit meshes (metres-scale electrode
@@ -543,9 +541,8 @@ def _combine_unstructured_submeshes(submeshes):
                 all_nodes.append(curr.nodes[nid])
                 next_id += 1
         global_maps.append(local_to_global)
-        # Touching bounding boxes with zero welded nodes means the meshes
-        # are non-conforming at their interface: the combined mesh will
-        # contain an internal crack with zero flux across it.
+        # touching boxes with zero welded nodes = non-conforming interface:
+        # the combined mesh would contain a zero-flux internal crack
         boxes_touch = np.all(
             curr.nodes.min(axis=0) <= prev_nodes.max(axis=0) + tol
         ) and np.all(curr.nodes.max(axis=0) >= prev_nodes.min(axis=0) - tol)
@@ -589,8 +586,6 @@ def _combine_unstructured_submeshes(submeshes):
                 )
 
     if custom_centroids:
-        from scipy.spatial import cKDTree
-
         bnd_start = combined._boundary_face_start
         bnd_centroids = combined.face_centroids[bnd_start:]
         if len(bnd_centroids) > 0:

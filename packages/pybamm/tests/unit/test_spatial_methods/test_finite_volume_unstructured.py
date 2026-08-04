@@ -1221,7 +1221,6 @@ class TestFiniteVolumeUnstructuredBehavior:
             }
         }
         gradient = method.gradient(variable, constant, dirichlet_bcs)
-        assert gradient._disc_state_vector is constant
         for component in gradient._components:
             np.testing.assert_allclose(component.evaluate(), 0, atol=1e-12)
 
@@ -1258,7 +1257,7 @@ class TestFiniteVolumeUnstructuredBehavior:
         expected += matrices[1] @ np.full(mesh.npts, 2)
         np.testing.assert_allclose(from_list.evaluate()[:, 0], expected)
 
-        with pytest.raises(TypeError, match="expects a VectorField"):
+        with pytest.raises(pybamm.DiscretisationError, match="expects a VectorField"):
             method.divergence(symbol, pybamm.Scalar(1), {})
 
     def test_divergence_of_bc_bearing_flux_raises(self):
@@ -1453,7 +1452,6 @@ class TestFiniteVolumeUnstructuredBehavior:
         left_components = [pybamm.StateVector(slice(0, 2)), pybamm.Vector([2, 3])]
         right_components = [pybamm.Vector([4, 5]), pybamm.Vector([6, 7])]
         left_field = pybamm.VectorField(*left_components)
-        left_field._disc_state_vector = left_components[0]
         right_field = pybamm.VectorField(*right_components)
         multiplication = pybamm.Multiplication(pybamm.Scalar(1), pybamm.Scalar(2))
 
@@ -1465,7 +1463,6 @@ class TestFiniteVolumeUnstructuredBehavior:
             right_field,
         )
         assert both.n_components == 2
-        assert both._disc_state_vector is left_components[0]
         np.testing.assert_array_equal(
             both._components[0].evaluate(y=np.array([1, 2]))[:, 0], [4, 10]
         )
@@ -1674,7 +1671,9 @@ class TestDiscretisationDispatch:
 
     def test_component_requires_vector_field(self):
         disc, var, *_ = self._disc_var_grad()
-        with pytest.raises(ValueError, match="Component can only be applied"):
+        with pytest.raises(
+            pybamm.DiscretisationError, match="Component can only be applied"
+        ):
             disc.process_symbol(pybamm.component(var, 0))
 
     def test_norm_of_gradient(self):
@@ -1688,12 +1687,14 @@ class TestDiscretisationDispatch:
 
     def test_norm_requires_vector_field(self):
         disc, var, *_ = self._disc_var_grad()
-        with pytest.raises(ValueError, match="Norm can only be applied"):
+        with pytest.raises(
+            pybamm.DiscretisationError, match="Norm can only be applied"
+        ):
             disc.process_symbol(pybamm.norm(var))
 
     def test_generic_unary_maps_over_components(self):
         """A generic unary operator (negation) applies componentwise to a
-        VectorField and propagates the discretised state vector."""
+        VectorField."""
         disc, _, grad, disc_grad, u = self._disc_var_grad()
         neg = disc.process_symbol(-grad)
         assert isinstance(neg, pybamm.VectorField)
@@ -1703,8 +1704,6 @@ class TestDiscretisationDispatch:
                 -disc_grad._components[k].evaluate(y=u),
                 atol=1e-12,
             )
-        assert hasattr(disc_grad, "_disc_state_vector")
-        assert hasattr(neg, "_disc_state_vector")
 
     def test_scalar_times_gradient_lifted(self):
         """Scalar * grad(u) lifts the scalar to an N-component VectorField."""

@@ -6,6 +6,8 @@ dimension inferred from the mesh.  All operators are assembled from
 face-cell connectivity as sparse matrices.
 """
 
+from __future__ import annotations
+
 import itertools
 
 import numpy as np
@@ -48,13 +50,12 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # ------------------------------------------------------------------
 
     def build(self, mesh):
+        """See :meth:`pybamm.SpatialMethod.build`."""
         super().build(mesh)
         for dom in mesh:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
-        # Auto-discover all sharing pairs across unstructured submeshes,
-        # populate ``interface_data`` and add ``iface_<other>`` boundary-face
-        # buckets so internal BCs work for arbitrary topology (star, tree,
-        # graph), not just 1D-stack adjacency.
+        # Discover interfaces between all unstructured submesh pairs so
+        # internal BCs work for arbitrary topology, not just 1D stacks.
         self._auto_compute_all_interfaces(mesh)
 
     # ------------------------------------------------------------------
@@ -154,9 +155,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         a_mesh.boundary_faces[a_iface_tag] = a_match
         b_mesh.boundary_faces[b_iface_tag] = b_match
 
-        # Remove these face indices from any pre-existing axis-aligned
-        # buckets ("left", "right", "top", "bottom", "front", "back") so
-        # external Robin BCs don't double-count interface faces.
+        # Remove interface faces from the axis-aligned buckets so external
+        # BCs don't double-count them.
         a_match_set = {int(i) for i in a_match}
         b_match_set = {int(i) for i in b_match}
         for tag in list(a_mesh.boundary_faces.keys()):
@@ -310,6 +310,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # ------------------------------------------------------------------
 
     def spatial_variable(self, symbol):
+        """Return a vector of cell-centroid coordinates for ``symbol``'s
+        direction (or its name prefix), tiled over auxiliary domains."""
         symbol_mesh = self.mesh[symbol.domain]
         repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
@@ -335,6 +337,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # ------------------------------------------------------------------
 
     def broadcast(self, symbol, domains, broadcast_type):
+        """See :meth:`pybamm.SpatialMethod.broadcast`."""
         domain = domains["primary"]
         primary_pts = self.mesh[domain].npts
         aux_repeats = self._get_auxiliary_domain_repeats(domains)
@@ -382,6 +385,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # ------------------------------------------------------------------
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
+        """TPFA Laplacian ``Matrix @ discretised_symbol + bc_rhs``."""
         domain = symbol.domain
         submesh = self.mesh[domain]
         n = submesh.npts
@@ -701,6 +705,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # ------------------------------------------------------------------
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
+        """Green-Gauss cell-centroid gradient, returned as a
+        :class:`pybamm.VectorField` with one component per dimension."""
         domain = symbol.domain
         submesh = self.mesh[domain]
         n = submesh.npts
@@ -732,9 +738,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             comp = pybamm.Matrix(Gk) @ discretised_symbol + bc_vecs[k]
             components.append(comp)
 
-        vf = pybamm.VectorField(*components)
-        vf._disc_state_vector = discretised_symbol
-        return vf
+        return pybamm.VectorField(*components)
 
     def _green_gauss_matrices(self, submesh):
         """
@@ -779,14 +783,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         for k in range(d):
             nk_A = normals[:n_int, k] * areas[:n_int]
 
-            # Contribution from owner side of internal face to cell "owner"
-            #   G_k[owner, owner] += w_owner * nk_A / vol[owner]
-            # Contribution from neighbor side of internal face to cell "owner"
-            #   G_k[owner, neighbor] += w_neighbor * nk_A / vol[owner]
-            # Same for the neighbor cell but with flipped normal
-            #   G_k[neighbor, owner] -= w_owner * nk_A / vol[neighbor]
-            #   G_k[neighbor, neighbor] -= w_neighbor * nk_A / vol[neighbor]
-
+            # distance-weighted face value scatters to owner (+) and
+            # neighbor (-), each divided by that cell's volume
             rows = np.concatenate([int_owner, int_owner, int_neighbor, int_neighbor])
             cols = np.concatenate([int_owner, int_neighbor, int_owner, int_neighbor])
             data = np.concatenate(
@@ -869,17 +867,19 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # ------------------------------------------------------------------
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
+        """Face-flux divergence of a cell-centred vector field.
+
+        Boundary faces use zeroth-order flux extrapolation, so fluxes built
+        from BC-carrying gradients are rejected (see the raise below).
+        """
         domain = symbol.domain
         submesh = self.mesh[domain]
         n = submesh.npts
         d = submesh.dimension
         repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        # The generic divergence extrapolates cell-centred flux to boundary
-        # faces, so prescribed boundary conditions on the underlying variable
-        # would be silently ignored (the result is not conservative). The
-        # div(D*grad(u)) forms are intercepted upstream and handle BCs via
-        # TPFA; anything else with BC-bearing gradients must be rewritten.
+        # BC-bearing fluxes must use the div(D*grad(u)) TPFA intercept;
+        # here the prescribed boundary flux would be silently ignored.
         bc_gradient_parents = [
             node.child
             for node in symbol.pre_order()
@@ -900,7 +900,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         elif isinstance(discretised_symbol, (list, tuple)):
             comps = list(discretised_symbol)
         else:
-            raise TypeError(
+            raise pybamm.DiscretisationError(
                 "FiniteVolumeUnstructured.divergence expects a VectorField or "
                 f"list of {d} component arrays, got {type(discretised_symbol)}"
             )
@@ -990,6 +990,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # ------------------------------------------------------------------
 
     def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
+        """Pointwise ``|grad u|^2`` via :meth:`gradient`."""
         grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
         result = None
         for comp in grad._components:
@@ -1002,6 +1003,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # ------------------------------------------------------------------
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
+        """Apply a binary operator componentwise when either operand is a
+        :class:`pybamm.VectorField`, lifting scalars to N components."""
         if isinstance(disc_left, pybamm.VectorField) or isinstance(
             disc_right, pybamm.VectorField
         ):
@@ -1024,12 +1027,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 )
                 for k in range(n)
             ]
-            result = pybamm.VectorField(*new_comps)
-            for src in (disc_left, disc_right):
-                if hasattr(src, "_disc_state_vector"):
-                    result._disc_state_vector = src._disc_state_vector
-                    break
-            return result
+            return pybamm.VectorField(*new_comps)
 
         return bin_op._binary_new_copy(disc_left, disc_right)
 
@@ -1040,12 +1038,14 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     def integral(
         self, child, discretised_child, integration_dimension, integration_variable=None
     ):
+        """Volume integral over the primary domain (cell-volume weights)."""
         int_mat = self.definite_integral_matrix(child)
         repeats = self._get_auxiliary_domain_repeats(child.domains)
         mat = csr_matrix(kron(eye(repeats, dtype=np.float64), int_mat))
         return pybamm.Matrix(mat) @ discretised_child
 
     def definite_integral_matrix(self, child, vector_type="row", **kwargs):
+        """Row vector of cell volumes for the primary domain."""
         domain = child.domain
         if isinstance(domain, list):
             domain = tuple(domain)
@@ -1054,6 +1054,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         return csr_matrix(vol.reshape(1, -1))
 
     def boundary_integral(self, child, discretised_child, region):
+        """Integral of the owner-cell values of ``child`` over the boundary
+        faces of ``region`` (``"entire"`` = all exterior faces)."""
         submesh = self.mesh[child.domain]
         repeats = self._get_auxiliary_domain_repeats(child.domains)
 
@@ -1095,6 +1097,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     }
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
+        """Owner-cell values on a boundary side (zeroth-order boundary
+        value); corner sides return the single closest boundary cell."""
         if isinstance(symbol, pybamm.BoundaryGradient):
             raise NotImplementedError(
                 "BoundaryGradient is not implemented for unstructured meshes; "
@@ -1176,6 +1180,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     def internal_neumann_condition(
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
     ):
+        """Two-point gradient across the interface between two submeshes,
+        one value per interface face (outward from ``left_mesh``)."""
         from pybamm.meshes.unstructured_submesh import UnstructuredSubMesh
 
         repeats = self._get_auxiliary_domain_repeats(left_symbol_disc.domains)
@@ -1314,6 +1320,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # ------------------------------------------------------------------
 
     def concatenation(self, disc_children):
+        """See :meth:`pybamm.SpatialMethod.concatenation`."""
         return pybamm.domain_concatenation(disc_children, self.mesh)
 
     # ------------------------------------------------------------------

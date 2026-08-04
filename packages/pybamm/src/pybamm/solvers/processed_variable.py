@@ -1099,10 +1099,8 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         if loops is None or len(loops) == 0:
             return None
         pts2d = query_pts[:, :2]
-        # Even-odd rule: inside an odd number of loops = inside the domain.
-        # This treats extra loops as holes only when they are nested, so
-        # disconnected components are not masked out. The small radius keeps
-        # points exactly on the outer boundary inside.
+        # Even-odd rule (odd containment count = inside): nested loops are
+        # holes, disconnected components are kept, on-boundary points stay in.
         radius = 1e-9 * max(np.ptp(self.mesh.nodes, axis=0).max(), np.finfo(float).tiny)
         containment_count = sum(
             path.contains_points(pts2d, radius=radius).astype(int) for path in loops

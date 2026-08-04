@@ -324,7 +324,7 @@ class TestUnstructuredSubMesh:
         gen = UnstructuredMeshGenerator()
         x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
         lims = {x: {"min": 0.0, "max": 1.0}}
-        with pytest.raises(ValueError, match="supports 2D and 3D"):
+        with pytest.raises(pybamm.GeometryError, match="supports 2D and 3D"):
             gen(lims, {"x_n": 3})
 
     def test_generator_unknown_element_type_raises(self):
@@ -339,7 +339,7 @@ class TestUnstructuredSubMesh:
             direction="tb",
         )
         lims = {x: {"min": 0.0, "max": 1.0}, z: {"min": 0.0, "max": 1.0}}
-        with pytest.raises(ValueError, match="Unsupported 2D element_type"):
+        with pytest.raises(pybamm.GeometryError, match="Unsupported 2D element_type"):
             gen(lims, {"x_n": 2, "z_2d": 2})
 
     def test_generator_quad_element_type(self):
@@ -1015,7 +1015,7 @@ class TestUserSuppliedUnstructuredMesh:
 
         points = np.zeros((2, 3))
         lines_only = meshio.Mesh(points, [("line", np.array([[0, 1]]))])
-        with pytest.raises(ValueError, match="No supported cells"):
+        with pytest.raises(pybamm.GeometryError, match="No supported cells"):
             UserSuppliedUnstructuredMesh._extract_supported_cells(lines_only)
 
     def test_get_cell_mask_missing_tag_error(self):
@@ -1026,7 +1026,7 @@ class TestUserSuppliedUnstructuredMesh:
 
         points = np.zeros((3, 3))
         mesh = meshio.Mesh(points, [("triangle", np.array([[0, 1, 2]]))])
-        with pytest.raises(ValueError, match="Could not find cell data tag"):
+        with pytest.raises(pybamm.GeometryError, match="Could not find cell data tag"):
             UserSuppliedUnstructuredMesh._get_cell_mask(mesh, "tetra", 1)
 
     def test_domain_name_from_lims(self):
@@ -1108,7 +1108,7 @@ class TestTaggedSubMeshGenerator:
         path = tmp_path / "tagged.msh"
         _write_tagged_tet_msh(path)
 
-        with pytest.raises(KeyError, match="not in mesh field_data"):
+        with pytest.raises(pybamm.GeometryError, match="not in mesh field_data"):
             TaggedSubMeshGenerator("nope", path)(None, None)
 
     def test_region_without_tets_raises(self, tmp_path):
@@ -1119,7 +1119,7 @@ class TestTaggedSubMeshGenerator:
         path = tmp_path / "tagged.msh"
         _write_tagged_tet_msh(path)
 
-        with pytest.raises(RuntimeError, match="no tets for region"):
+        with pytest.raises(pybamm.GeometryError, match="no tets for region"):
             TaggedSubMeshGenerator("ghost", path)(None, None)
 
     def test_mesh_cache_keyed_on_path_and_mtime(self, tmp_path):
@@ -1556,7 +1556,7 @@ class TestUnstructuredMeshGeneratorErrors:
         x = pybamm.SpatialVariable(
             "x_n", domain=["negative electrode"], coord_sys="cartesian"
         )
-        with pytest.raises(ValueError, match="supports 2D and 3D"):
+        with pytest.raises(pybamm.GeometryError, match="supports 2D and 3D"):
             gen({x: {"min": 0.0, "max": 1.0}}, {"x_n": 3})
 
     def test_repr(self):

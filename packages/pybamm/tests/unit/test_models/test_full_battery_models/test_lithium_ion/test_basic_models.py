@@ -29,9 +29,7 @@ class TestBasicModels:
         model = pybamm.lithium_ion.BasicDFN2D()
         model.check_well_posedness()
 
-    @pytest.mark.filterwarnings(
-        "ignore:Could not determine how to combine submeshes"
-    )
+    @pytest.mark.filterwarnings("ignore:Could not determine how to combine submeshes")
     def test_dfn_2d_vector_field_variable(self):
         # VectorField variables on structured 2D meshes must stay on the
         # scalar processing path (per-component casadi lists are only for

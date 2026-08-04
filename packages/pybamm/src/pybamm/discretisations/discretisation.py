@@ -1006,12 +1006,7 @@ class Discretisation:
                         )
                         for k in range(n)
                     ]
-                    result = pybamm.VectorField(*new_comps)
-                    for src in (disc_left, disc_right):
-                        if hasattr(src, "_disc_state_vector"):
-                            result._disc_state_vector = src._disc_state_vector
-                            break
-                    return result
+                    return pybamm.VectorField(*new_comps)
 
                 return pybamm.simplify_if_constant(
                     symbol.create_copy(new_children=[disc_left, disc_right])
@@ -1182,7 +1177,9 @@ class Discretisation:
                 return disc_child
             elif isinstance(symbol, pybamm.Component):
                 if not isinstance(disc_child, pybamm.VectorField):
-                    raise ValueError("Component can only be applied to a VectorField")
+                    raise pybamm.DiscretisationError(
+                        "Component can only be applied to a VectorField"
+                    )
                 if symbol.index >= disc_child.n_components:
                     raise pybamm.DiscretisationError(
                         f"Component index {symbol.index} is out of range for a "
@@ -1191,7 +1188,9 @@ class Discretisation:
                 return disc_child._components[symbol.index]
             elif isinstance(symbol, pybamm.Norm):
                 if not isinstance(disc_child, pybamm.VectorField):
-                    raise ValueError("Norm can only be applied to a VectorField")
+                    raise pybamm.DiscretisationError(
+                        "Norm can only be applied to a VectorField"
+                    )
                 result = None
                 for comp in disc_child._components:
                     sq = comp**2
@@ -1199,24 +1198,23 @@ class Discretisation:
                 return result**0.5
             elif isinstance(symbol, pybamm.Magnitude):
                 if not isinstance(disc_child, pybamm.VectorField):
-                    raise ValueError("Magnitude can only be applied to a vector field")
+                    raise pybamm.DiscretisationError(
+                        "Magnitude can only be applied to a vector field"
+                    )
                 direction = symbol.direction
                 if direction == "lr":
                     return disc_child.lr_field
                 elif direction == "tb":
                     return disc_child.tb_field
                 else:
-                    raise ValueError("Invalid direction")
+                    raise pybamm.DiscretisationError("Invalid direction")
             else:
                 if isinstance(disc_child, pybamm.VectorField):
                     new_comps = [
                         symbol.create_copy(new_children=[c])
                         for c in disc_child._components
                     ]
-                    result = pybamm.VectorField(*new_comps)
-                    if hasattr(disc_child, "_disc_state_vector"):
-                        result._disc_state_vector = disc_child._disc_state_vector
-                    return result
+                    return pybamm.VectorField(*new_comps)
                 else:
                     return symbol.create_copy(new_children=[disc_child])
 

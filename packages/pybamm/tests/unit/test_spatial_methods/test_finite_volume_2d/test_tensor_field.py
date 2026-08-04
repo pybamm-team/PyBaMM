@@ -193,7 +193,7 @@ class TestVectorFieldInheritance:
         a = pybamm.Variable("a", domain="negative electrode")
         b = pybamm.Variable("b", domain="positive electrode")
 
-        with pytest.raises(ValueError, match="same domain"):
+        with pytest.raises(pybamm.DomainError, match="same domain"):
             pybamm.VectorField(a, b)
 
     def test_vectorfield_requires_two_components(self):

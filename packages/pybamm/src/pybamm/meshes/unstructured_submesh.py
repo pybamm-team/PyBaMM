@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import os
 
@@ -136,10 +138,8 @@ class UnstructuredSubMesh(SubMesh):
             )
             self.cell_volumes = np.abs(det) / 6.0
         elif self.element_type == "hexahedron":
-            # Split each hex into 5 tets (pattern A, ordered so every tet is
-            # positively oriented for a right-handed hex) and sum signed
-            # volumes; mixed signs within a cell expose invalid vertex
-            # ordering that unsigned volumes would silently mask.
+            # 5-tet split with consistent positive orientation: mixed signs
+            # within a cell expose invalid vertex ordering.
             tet_pattern = np.array(
                 [(0, 1, 2, 5), (0, 2, 3, 7), (0, 5, 7, 4), (2, 7, 5, 6), (0, 5, 2, 7)]
             )
@@ -176,7 +176,6 @@ class UnstructuredSubMesh(SubMesh):
 
         # Build all faces at once using local face definitions
         if self.element_type == "quad":
-            n_fpc = 4  # faces per cell
             idx = np.arange(4)
             local = np.stack([idx, (idx + 1) % 4], axis=1)  # (4, 2)
         elif self.element_type == "triangle":
@@ -197,6 +196,8 @@ class UnstructuredSubMesh(SubMesh):
         _, inverse, counts = np.unique(
             sorted_faces, axis=0, return_inverse=True, return_counts=True
         )
+        # numpy 2.0.0 returns a 2D inverse for axis != None
+        inverse = inverse.reshape(-1)
         if np.any(counts > 2):
             raise pybamm.GeometryError(
                 f"{int((counts > 2).sum())} face(s) are shared by more than "
@@ -435,7 +436,7 @@ class UnstructuredSubMesh(SubMesh):
         if self.dimension != 2:
             return None
 
-        from matplotlib.path import Path
+        Path = pybamm.import_optional_dependency("matplotlib.path", "Path")
 
         bnd_start = self._boundary_face_start
         bnd_edges = self.faces[bnd_start:]
@@ -513,7 +514,7 @@ class UnstructuredSubMesh(SubMesh):
             )
             tri_normals = np.concatenate([bnd_normals, bnd_normals], axis=0)
         else:
-            raise ValueError(
+            raise pybamm.GeometryError(
                 f"contains_points_3d: unsupported face with {n_vpf} vertices"
             )
 
@@ -611,11 +612,10 @@ class UnstructuredMeshGenerator(MeshGenerator):
     coord_sys : str, optional
         Coordinate system, default ``"cartesian"``.
     element_type : str, optional
-        ``"quad"`` for quadrilateral cells (2D only, TPFA-orthogonal),
+        ``"quad"`` for quadrilateral cells (2D, TPFA-orthogonal),
         ``"triangle"`` for triangular cells (2D default),
-        ``"tetrahedron"`` for tetrahedral cells (3D default).
-        If ``None``, defaults to ``"triangle"`` in 2D and
-        ``"tetrahedron"`` in 3D.
+        ``"hexahedron"`` for hexahedral cells (3D default, TPFA-orthogonal),
+        ``"tetrahedron"`` for tetrahedral cells (3D).
     """
 
     def __init__(self, coord_sys="cartesian", element_type=None):
@@ -632,7 +632,7 @@ class UnstructuredMeshGenerator(MeshGenerator):
         elif dim == 3:
             return self._generate_3d(spatial_vars, spatial_lims, npts)
         else:
-            raise ValueError(
+            raise pybamm.GeometryError(
                 f"UnstructuredMeshGenerator supports 2D and 3D, got {dim} spatial variables"
             )
 
@@ -673,7 +673,7 @@ class UnstructuredMeshGenerator(MeshGenerator):
         elif etype == "triangle":
             nodes, elements = _quad_to_tri(x_edges, z_edges)
         else:
-            raise ValueError(f"Unsupported 2D element_type: {etype!r}")
+            raise pybamm.GeometryError(f"Unsupported 2D element_type: {etype!r}")
         return UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
 
     # ------------------------------------------------------------------
@@ -691,7 +691,13 @@ class UnstructuredMeshGenerator(MeshGenerator):
         y_edges = np.linspace(lim_y["min"], lim_y["max"], ny + 1)
         z_edges = np.linspace(lim_z["min"], lim_z["max"], nz + 1)
 
-        nodes, elements = _hex_grid(x_edges, y_edges, z_edges)
+        etype = self._element_type or "hexahedron"
+        if etype == "hexahedron":
+            nodes, elements = _hex_grid(x_edges, y_edges, z_edges)
+        elif etype == "tetrahedron":
+            nodes, elements = _hex_to_tet(x_edges, y_edges, z_edges)
+        else:
+            raise pybamm.GeometryError(f"Unsupported 3D element_type: {etype!r}")
         return UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
 
 
@@ -729,7 +735,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         self._cached_mesh = None
 
     def __call__(self, lims, npts):
-        import meshio
+        meshio = pybamm.import_optional_dependency("meshio")
 
         if self._cached_mesh is None:
             self._cached_mesh = meshio.read(self.filepath)
@@ -801,7 +807,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
                 if len(blocks) == 1:
                     return blocks[0], cell_type
                 return np.concatenate(blocks, axis=0), cell_type
-        raise ValueError(
+        raise pybamm.GeometryError(
             "No supported cells found in mesh file "
             "(expected tetra/hexahedron/triangle/quad)"
         )
@@ -818,7 +824,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
                 if len(matching) == 1:
                     return matching[0] == tag_value
                 return np.concatenate(matching, axis=0) == tag_value
-        raise ValueError(
+        raise pybamm.GeometryError(
             f"Could not find cell data tag {tag_value} for cell type '{cell_type}'"
         )
 
@@ -864,7 +870,7 @@ class TaggedSubMeshGenerator(MeshGenerator):
     @staticmethod
     @functools.lru_cache(maxsize=8)
     def _read_cached(fspath, mtime_ns):
-        import meshio
+        meshio = pybamm.import_optional_dependency("meshio")
 
         return meshio.read(fspath)
 
@@ -878,7 +884,7 @@ class TaggedSubMeshGenerator(MeshGenerator):
     def __call__(self, lims, npts):
         m = self._read(self._mesh_path)
         if self._region not in m.field_data:
-            raise KeyError(
+            raise pybamm.GeometryError(
                 f"region {self._region!r} not in mesh field_data; "
                 f"available: {list(m.field_data)}"
             )
@@ -894,7 +900,7 @@ class TaggedSubMeshGenerator(MeshGenerator):
             if mask.any():
                 tet_blocks.append(block.data[mask])
         if not tet_blocks:
-            raise RuntimeError(f"no tets for region {self._region!r}")
+            raise pybamm.GeometryError(f"no tets for region {self._region!r}")
 
         elements = np.concatenate(tet_blocks, axis=0)
         unique_nodes = np.unique(elements)

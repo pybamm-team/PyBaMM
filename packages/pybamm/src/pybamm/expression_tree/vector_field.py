@@ -33,7 +33,7 @@ class VectorField(TensorField):
         ref_domain = components[0].domain
         for i, c in enumerate(components[1:], start=1):
             if c.domain != ref_domain:
-                raise ValueError(
+                raise pybamm.DomainError(
                     f"All components must have the same domain: "
                     f"component {i} has {c.domain}, expected {ref_domain}"
                 )

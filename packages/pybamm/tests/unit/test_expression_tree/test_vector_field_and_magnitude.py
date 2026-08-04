@@ -42,7 +42,9 @@ class TestVectorFieldAndMagnitude:
         )
         assert vf_processed == pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
 
-        with pytest.raises(ValueError, match=r"applied to a vector field"):
+        with pytest.raises(
+            pybamm.DiscretisationError, match=r"applied to a vector field"
+        ):
             disc.process_symbol(pybamm.Magnitude(pybamm.Scalar(1), "lr"))
 
         assert negative_vf_processed == pybamm.VectorField(
@@ -51,7 +53,7 @@ class TestVectorFieldAndMagnitude:
 
         thing_lr = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "domain_1")
         thing_tb = pybamm.PrimaryBroadcast(pybamm.Scalar(2), "domain_2")
-        with pytest.raises(ValueError, match=r"same domain"):
+        with pytest.raises(pybamm.DomainError, match=r"same domain"):
             pybamm.VectorField(thing_lr, thing_tb)
 
         vf_evaluates_on_edges = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
@@ -62,7 +64,7 @@ class TestVectorFieldAndMagnitude:
 
         assert magnitude_lr.new_copy([vector_field]) == magnitude_lr
 
-        with pytest.raises(ValueError, match=r"Invalid direction"):
+        with pytest.raises(pybamm.DiscretisationError, match=r"Invalid direction"):
             disc.process_symbol(pybamm.Magnitude(vector_field, "asdf"))
 
     def test_serialisation_round_trip_preserves_all_components(self):

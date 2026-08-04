@@ -2,11 +2,14 @@
 
 ## Features
 
-- Added `FiniteVolumeUnstructured` spatial method and unstructured processed-variable support for cell-centered data on arbitrary meshes.
-- Generalised `VectorField` to N components and added `Component`/`Norm` operators for multi-dimensional vector fields.
-- Added unstructured mesh support (`UnstructuredSubMesh`, generators, and interface coupling) for arbitrary 2D/3D domains.
+- Added `FiniteVolumeUnstructured` spatial method and unstructured processed-variable support for cell-centered data on arbitrary meshes. ([#5688](https://github.com/pybamm-team/PyBaMM/pull/5688))
+- Generalised `VectorField` to N components and added `Component`/`Norm` operators for multi-dimensional vector fields. ([#5688](https://github.com/pybamm-team/PyBaMM/pull/5688))
+- Added unstructured mesh support (`UnstructuredSubMesh`, generators, and interface coupling) for arbitrary 2D/3D domains. ([#5688](https://github.com/pybamm-team/PyBaMM/pull/5688))
 
 ## Bug fixes
+
+- `UnstructuredSubMesh` now validates its input (non-manifold faces, duplicated elements, degenerate cells, invalid hexahedron vertex ordering raise `GeometryError`), and unknown boundary-condition sides or types on unstructured meshes raise `DiscretisationError` instead of being silently ignored. ([#5688](https://github.com/pybamm-team/PyBaMM/pull/5688))
+- Evaluating a `VectorField` variable (e.g. `BasicDFN2D`'s electrolyte current density) from a solution no longer raises `TypeError: unhashable type: 'list'`. ([#5688](https://github.com/pybamm-team/PyBaMM/pull/5688))
 
 - `BatchStudy.solve` no longer ignores its `solver` argument: previously the loop over study inputs shadowed it, so a caller-supplied solver was silently dropped. A solver from `BatchStudy(solvers=...)` still takes precedence. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
 - `pybamm.citations.register` now names the citation the caller passed in when a BibTeX string fails to parse, instead of whichever entry the parser had reached. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
