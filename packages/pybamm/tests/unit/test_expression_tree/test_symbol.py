@@ -24,6 +24,14 @@ class TestDomainSize:
         assert domain_size(["negative electrode"]) == 11
         assert domain_size(["separator"]) == 13
         assert domain_size(["positive electrode"]) == 17
+        assert domain_size(["negative primary particle"]) == 5
+        assert domain_size(["negative secondary particle"]) == 5
+        assert domain_size(["positive primary particle"]) == 7
+        assert domain_size(["positive secondary particle"]) == 7
+        assert domain_size(["negative primary particle size"]) == 19
+        assert domain_size(["negative secondary particle size"]) == 19
+        assert domain_size(["positive primary particle size"]) == 23
+        assert domain_size(["positive secondary particle size"]) == 23
 
     def test_fixed_domains_are_additive(self):
         assert domain_size(["negative electrode", "separator"]) == 11 + 13
