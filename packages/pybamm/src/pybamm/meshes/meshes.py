@@ -518,7 +518,11 @@ def _combine_unstructured_submeshes(submeshes):
     # handles cross-region flux without internal Neumann book-keeping.
     from scipy.spatial import cKDTree
 
-    tol = 1e-9
+    # relative to the geometry so sub-unit meshes (metres-scale electrode
+    # dimensions) weld correctly
+    tol = 1e-9 * max(
+        np.ptp(np.vstack([sm.nodes for sm in submeshes]), axis=0).max(), 1e-300
+    )
     all_nodes = list(submeshes[0].nodes)
     global_maps = [{i: i for i in range(submeshes[0].nodes.shape[0])}]
     next_id = len(all_nodes)
@@ -591,7 +595,7 @@ def _combine_unstructured_submeshes(submeshes):
         bnd_centroids = combined.face_centroids[bnd_start:]
         if len(bnd_centroids) > 0:
             tree = cKDTree(bnd_centroids)
-            match_tol = 1e-10 * max(np.ptp(combined_nodes, axis=0).max(), 1.0)
+            match_tol = 1e-10 * max(np.ptp(combined_nodes, axis=0).max(), 1e-300)
             for tag, centroid_list in custom_centroids.items():
                 all_src = np.concatenate(centroid_list, axis=0)
                 dists, idxs = tree.query(all_src)

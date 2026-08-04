@@ -1093,11 +1093,15 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         if loops is None or len(loops) == 0:
             return None
         pts2d = query_pts[:, :2]
-        inside_outer = loops[0].contains_points(pts2d)
-        outside = ~inside_outer
-        for hole_path in loops[1:]:
-            outside |= hole_path.contains_points(pts2d)
-        return outside
+        # Even-odd rule: inside an odd number of loops = inside the domain.
+        # This treats extra loops as holes only when they are nested, so
+        # disconnected components are not masked out. The small radius keeps
+        # points exactly on the outer boundary inside.
+        radius = 1e-9 * max(np.ptp(self.mesh.nodes, axis=0).max(), np.finfo(float).tiny)
+        containment_count = sum(
+            path.contains_points(pts2d, radius=radius).astype(int) for path in loops
+        )
+        return (containment_count % 2) == 0
 
     def _interpolate_spatial(self, values, query_pts):
         """Interpolate cell-centered data to query points.

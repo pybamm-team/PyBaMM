@@ -1067,6 +1067,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     }
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
+        if isinstance(symbol, pybamm.BoundaryGradient):
+            raise NotImplementedError(
+                "BoundaryGradient is not implemented for unstructured meshes; "
+                "returning the boundary value instead would be silently wrong."
+            )
         submesh = self.mesh[discretised_child.domain]
         n = submesh.npts
         repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
@@ -1095,23 +1100,37 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         return out
 
     def _corner_boundary_value(self, submesh, n, repeats, side, discretised_child):
-        """Extract value from the cell closest to a corner of the domain."""
+        """Extract the value from the boundary cell closest to a corner of
+        the (x, z) bounding box.
+
+        Zeroth-order (cell value) regardless of the ``extrapolation`` option.
+        Candidates are restricted to cells owning boundary faces on the two
+        named sides, so interior cells of non-convex domains are never
+        picked; in 3D, ties across y pick the lowest cell index.
+        """
         tb_side, lr_side = self._CORNER_SIDES[side]
         centroids = submesh.cell_centroids
-        x_coords = centroids[:, 0]
-        z_coords = centroids[:, -1]
 
-        if lr_side == "right":
-            target_x = x_coords.max()
-        else:
-            target_x = x_coords.min()
-        if tb_side == "top":
-            target_z = z_coords.max()
-        else:
-            target_z = z_coords.min()
+        # cells owning boundary faces on either named side (fall back to all
+        # boundary-owner cells when a side bucket is missing)
+        candidates = np.unique(
+            np.concatenate(
+                [
+                    submesh.face_owner[submesh.boundary_faces[tag]]
+                    for tag in (tb_side, lr_side)
+                    if tag in submesh.boundary_faces
+                ]
+                or [submesh.face_owner[submesh._boundary_face_start :]]
+            )
+        )
+
+        x_coords = centroids[candidates, 0]
+        z_coords = centroids[candidates, -1]
+        target_x = x_coords.max() if lr_side == "right" else x_coords.min()
+        target_z = z_coords.max() if tb_side == "top" else z_coords.min()
 
         dists = (x_coords - target_x) ** 2 + (z_coords - target_z) ** 2
-        cell_idx = int(np.argmin(dists))
+        cell_idx = int(candidates[np.argmin(dists)])
 
         sub_matrix = csr_matrix(
             (np.ones(1), (np.zeros(1, dtype=int), [cell_idx])),

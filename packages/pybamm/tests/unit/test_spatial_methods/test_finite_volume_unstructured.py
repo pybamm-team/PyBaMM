@@ -1354,6 +1354,49 @@ class TestFiniteVolumeUnstructuredBehavior:
             owners = mesh.face_owner[mesh.boundary_faces[side]]
             np.testing.assert_array_equal(result.evaluate()[:, 0], owners)
 
+    def test_boundary_gradient_raises(self):
+        mesh = _make_2d_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(np.arange(mesh.npts), domain="test")
+        symbol = pybamm.BoundaryGradient(variable, "left")
+        with pytest.raises(NotImplementedError, match="BoundaryGradient"):
+            method.boundary_value_or_flux(symbol, values)
+
+    def test_corner_value_uses_boundary_cell_on_nonconvex_domain(self):
+        # L-shaped domain: [0,2]x[0,1] plus [0,1]x[1,2]; the top-right
+        # bounding-box corner (2,2) is outside the domain, and the interior
+        # cell nearest to it must not be picked
+        squares = []
+        for x0 in (0, 1):
+            squares.append((x0, 0))
+        squares.append((0, 1))
+        nodes_list, elems_list = [], []
+        node_ids = {}
+
+        def nid(p):
+            if p not in node_ids:
+                node_ids[p] = len(nodes_list)
+                nodes_list.append(p)
+            return node_ids[p]
+
+        for x0, z0 in squares:
+            corners = [(x0, z0), (x0 + 1, z0), (x0 + 1, z0 + 1), (x0, z0 + 1)]
+            elems_list.append([nid(c) for c in corners])
+        mesh = UnstructuredSubMesh(
+            np.array(nodes_list, dtype=float), np.array(elems_list)
+        )
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(np.arange(mesh.npts), domain="test")
+        symbol = pybamm.BoundaryValue(variable, "top-right")
+        result = method.boundary_value_or_flux(symbol, values)
+        chosen = int(result.evaluate().item())
+        candidates = set(mesh.face_owner[mesh.boundary_faces["top"]].tolist()) | set(
+            mesh.face_owner[mesh.boundary_faces["right"]].tolist()
+        )
+        assert chosen in candidates
+
     def test_process_binary_operators(self):
         method = FiniteVolumeUnstructured()
         left_components = [pybamm.StateVector(slice(0, 2)), pybamm.Vector([2, 3])]

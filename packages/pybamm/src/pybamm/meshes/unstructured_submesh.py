@@ -421,10 +421,10 @@ class UnstructuredSubMesh(SubMesh):
     def boundary_loops(self):
         """Return boundary loops as a list of ``matplotlib.path.Path`` (2D only).
 
-        Walks boundary edges to extract one or more closed loops.  The first
-        path is the outer boundary (largest area); subsequent paths are holes.
-        Use this to test containment: a point is in the domain if it is inside
-        the outer loop and outside all hole loops.
+        Walks boundary edges to extract one or more closed loops, sorted by
+        area (largest first). Loops may be outer boundaries of disconnected
+        components or holes; test containment with the even-odd rule (a point
+        is in the domain iff it lies inside an odd number of loops).
         """
         if self.dimension != 2:
             return None
@@ -545,7 +545,11 @@ class UnstructuredSubMesh(SubMesh):
 
             winding += 2.0 * np.arctan2(num, den)
 
-        return winding > 2.0 * np.pi
+        # Inside points sum to 4*pi and outside points to 0; points *on* the
+        # surface fall anywhere in between (2*pi on a face, pi/2 at a cube
+        # corner), so a small positive threshold keeps boundary points inside
+        # instead of masking them to NaN.
+        return winding > 0.1
 
 
 def _weld_nodes(nodes, elements, tolerance):

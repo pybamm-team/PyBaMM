@@ -2214,6 +2214,31 @@ class TestProcessedVariableUnstructuredFVM:
         inside = pv(0.5, x=np.array([0.5]), z=np.array([0.5]))
         np.testing.assert_allclose(inside, 1.0, rtol=1e-10)
 
+    def test_disconnected_component_is_not_masked(self):
+        from pybamm.meshes.unstructured_submesh import (
+            UnstructuredSubMesh,
+            _make_quad_grid,
+        )
+
+        # two disjoint unit squares with a gap between x = 1 and x = 2
+        nodes_a, elems_a = _make_quad_grid(np.linspace(0, 1, 3), np.linspace(0, 1, 3))
+        nodes_b, elems_b = _make_quad_grid(np.linspace(2, 3, 3), np.linspace(0, 1, 3))
+        nodes = np.vstack([nodes_a, nodes_b])
+        elements = np.vstack([elems_a, elems_b + len(nodes_a)])
+        submesh = UnstructuredSubMesh(nodes, elements)
+
+        var_disc = pybamm.StateVector(slice(0, submesh.npts))
+        var_disc.mesh = submesh
+        t_sol = np.array([0.0, 1.0])
+        y_sol = np.ones((submesh.npts, 2))
+        geometry = {"domain": {}}
+        pv = self._make_pv(var_disc, geometry, t_sol, y_sol)
+
+        in_second_square = pv(0.5, x=np.array([2.5]), z=np.array([0.5]))
+        np.testing.assert_allclose(in_second_square, 1.0, rtol=1e-10)
+        in_gap = pv(0.5, x=np.array([1.5]), z=np.array([0.5]))
+        assert np.isnan(in_gap).all()
+
     def test_auxiliary_domain_variable_raises(self):
         geometry, submesh, _, _, _ = self._make_setup(dim=2, n=3)
         # hand-build a repeated state vector, as an auxiliary-domain

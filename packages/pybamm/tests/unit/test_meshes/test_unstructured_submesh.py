@@ -1124,6 +1124,36 @@ class TestTaggedSubMeshGenerator:
 
 
 # ======================================================================
+# Point containment
+# ======================================================================
+
+
+class TestContainsPoints3D:
+    def test_boundary_points_are_inside(self):
+        nodes, elements = _hex_to_tet(
+            np.linspace(0, 1, 3), np.linspace(0, 1, 3), np.linspace(0, 1, 3)
+        )
+        mesh = UnstructuredSubMesh(nodes, elements)
+        queries = np.array(
+            [
+                [0.0, 0.0, 0.0],  # corner
+                [0.5, 0.0, 0.5],  # face interior
+                [0.5, 0.0, 0.0],  # edge midpoint
+                [0.5, 0.5, 0.5],  # interior
+            ]
+        )
+        assert mesh.contains_points_3d(queries).all()
+
+    def test_outside_points_are_outside(self):
+        nodes, elements = _hex_to_tet(
+            np.linspace(0, 1, 3), np.linspace(0, 1, 3), np.linspace(0, 1, 3)
+        )
+        mesh = UnstructuredSubMesh(nodes, elements)
+        queries = np.array([[-0.1, 0.5, 0.5], [1.5, 0.5, 0.5], [0.5, 0.5, 2.0]])
+        assert not mesh.contains_points_3d(queries).any()
+
+
+# ======================================================================
 # Mesh input validation
 # ======================================================================
 
