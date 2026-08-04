@@ -64,3 +64,13 @@ class TestVectorFieldAndMagnitude:
 
         with pytest.raises(ValueError, match=r"Invalid direction"):
             disc.process_symbol(pybamm.Magnitude(vector_field, "asdf"))
+
+    def test_serialisation_round_trip_preserves_all_components(self):
+        from pybamm.expression_tree.operations.serialise_kernel import decode, encode
+
+        vector_field = pybamm.VectorField(
+            pybamm.Scalar(1), pybamm.Scalar(2), pybamm.Scalar(3)
+        )
+        rebuilt = decode(encode(vector_field))
+        assert rebuilt.n_components == 3
+        assert rebuilt == vector_field

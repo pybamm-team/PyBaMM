@@ -42,8 +42,8 @@ class VectorField(TensorField):
 
     @classmethod
     def _from_json(cls, snippet):
-        # Two positional args, not a single list -- override TensorField._from_json.
-        return cls(snippet["children"][0], snippet["children"][1])
+        # N positional args, not a single list -- override TensorField._from_json.
+        return cls(*snippet["children"])
 
     @property
     def n_components(self):
