@@ -787,6 +787,21 @@ class TaggedSubMeshGenerator(MeshGenerator):
 # ======================================================================
 
 
+def _interface_length_scale(centroids, face_areas, dimension):
+    """Characteristic length for interface-matching tolerances.
+
+    The larger of the centroid extent and the mean face size, so tolerances
+    stay relative to the geometry (never absolute) and remain finite for
+    single-face interfaces.
+    """
+    extent = np.ptp(centroids, axis=0).max()
+    if dimension == 3:
+        face_length = float(np.sqrt(face_areas.mean()))
+    else:
+        face_length = float(face_areas.mean())
+    return max(extent, face_length)
+
+
 def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=None):
     """
     Compute coupling data for the interface between two adjacent
@@ -815,33 +830,43 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
     right_bnd = right_mesh.boundary_faces.get("left", np.array([], dtype=int))
 
     if len(left_bnd) == 0 or len(right_bnd) == 0:
-        raise ValueError(
+        raise pybamm.GeometryError(
             "Cannot compute interface data: one or both meshes have no "
             "matching boundary faces ('right' on left_mesh, 'left' on right_mesh)."
+        )
+    if len(left_bnd) != len(right_bnd):
+        raise pybamm.GeometryError(
+            f"Interface faces do not match: left mesh has {len(left_bnd)} "
+            f"'right' faces but right mesh has {len(right_bnd)} 'left' faces. "
+            "Ensure the meshes are conforming at the interface."
         )
 
     left_centroids = left_mesh.face_centroids[left_bnd]
     right_centroids = right_mesh.face_centroids[right_bnd]
 
-    # Match faces by transverse coordinates (all coords except x)
-    left_transverse = left_centroids[:, 1:]
-    right_transverse = right_centroids[:, 1:]
-
-    # Build a mapping by closest transverse match
+    # Match on full face centroids so faces separated along x (e.g. across a
+    # void in an L-shaped assembly) can never pair.
     from scipy.spatial import cKDTree
 
-    tree = cKDTree(right_transverse)
-    dists, right_indices = tree.query(left_transverse)
-
-    tol = 1e-8 * max(
-        np.ptp(left_transverse, axis=0).max(),
-        np.ptp(right_transverse, axis=0).max(),
-        1.0,
+    tol = 1e-8 * _interface_length_scale(
+        np.vstack([left_centroids, right_centroids]),
+        left_mesh.face_areas[left_bnd],
+        left_mesh.dimension,
     )
+    tree = cKDTree(right_centroids)
+    dists, right_indices = tree.query(left_centroids)
+
     if np.any(dists > tol):
-        raise ValueError(
-            f"Interface faces do not match: max transverse mismatch = {dists.max():.2e}. "
-            "Ensure both meshes have the same transverse grid."
+        raise pybamm.GeometryError(
+            f"Interface faces do not match: max face-centroid mismatch = "
+            f"{dists.max():.2e} (tolerance {tol:.2e}). Ensure the meshes "
+            "are conforming at the interface."
+        )
+    if len(np.unique(right_indices)) != len(right_indices):
+        raise pybamm.GeometryError(
+            "Interface faces do not match one-to-one: multiple faces of the "
+            "left mesh matched the same face of the right mesh. Ensure the "
+            "meshes are conforming at the interface."
         )
 
     left_cells = left_mesh.face_owner[left_bnd]

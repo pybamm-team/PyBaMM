@@ -1106,7 +1106,7 @@ class TestComputeInterfaceDataErrors:
         left = UnstructuredSubMesh(nodes, elems)
         right = UnstructuredSubMesh(nodes + np.array([1.0, 0.0]), elems)
         del left.boundary_faces["right"]
-        with pytest.raises(ValueError, match="Cannot compute interface data"):
+        with pytest.raises(pybamm.GeometryError, match="Cannot compute interface"):
             compute_interface_data(left, right)
 
     def test_transverse_mismatch_raises(self):
@@ -1116,8 +1116,83 @@ class TestComputeInterfaceDataErrors:
         nodes_r, elems_r = _quad_to_tri(np.linspace(1, 2, 4), np.linspace(0, 1, 5))
         left = UnstructuredSubMesh(nodes_l, elems_l)
         right = UnstructuredSubMesh(nodes_r, elems_r)
-        with pytest.raises(ValueError, match="Interface faces do not match"):
+        with pytest.raises(pybamm.GeometryError, match="do not match"):
             compute_interface_data(left, right)
+
+    def test_void_gap_raises(self):
+        """Meshes whose transverse coordinates coincide but which are
+        separated by a void along x must not be coupled."""
+        import pytest
+
+        nodes_l, elems_l = _quad_to_tri(np.linspace(0, 1, 4), np.linspace(0, 1, 4))
+        nodes_r, elems_r = _quad_to_tri(np.linspace(3, 4, 4), np.linspace(0, 1, 4))
+        left = UnstructuredSubMesh(nodes_l, elems_l)
+        right = UnstructuredSubMesh(nodes_r, elems_r)
+        with pytest.raises(pybamm.GeometryError, match="do not match"):
+            compute_interface_data(left, right)
+
+    def test_nonconforming_refinement_raises(self):
+        """A 2:1 refined neighbor has twice the interface faces; matching
+        must fail instead of double-counting flux."""
+        import pytest
+
+        nodes_l, elems_l = _quad_to_tri(np.linspace(0, 1, 3), np.linspace(0, 1, 3))
+        nodes_r, elems_r = _quad_to_tri(np.linspace(1, 2, 3), np.linspace(0, 1, 5))
+        left = UnstructuredSubMesh(nodes_l, elems_l)
+        right = UnstructuredSubMesh(nodes_r, elems_r)
+        with pytest.raises(pybamm.GeometryError, match="do not match"):
+            compute_interface_data(left, right)
+
+    def test_subunit_geometry_mismatch_raises(self):
+        """Tolerance is relative to the geometry size, not absolute: on a
+        100 um domain, a 1 nm interface offset is a real mismatch."""
+        import pytest
+
+        scale = 1e-4
+        nodes_l, elems_l = _quad_to_tri(
+            np.linspace(0, scale, 3), np.linspace(0, scale, 3)
+        )
+        nodes_r, elems_r = _quad_to_tri(
+            np.linspace(scale + 1e-9, 2 * scale, 3), np.linspace(0, scale, 3)
+        )
+        left = UnstructuredSubMesh(nodes_l, elems_l)
+        right = UnstructuredSubMesh(nodes_r, elems_r)
+        with pytest.raises(pybamm.GeometryError, match="do not match"):
+            compute_interface_data(left, right)
+
+    def test_mesh_init_warns_on_interface_failure(self, caplog):
+        """Mesh construction logs the interface-matching failure instead of
+        silently swallowing it."""
+        import logging
+
+        x_n = pybamm.SpatialVariable(
+            "x_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        x_s = pybamm.SpatialVariable("x_s", domain=["separator"], coord_sys="cartesian")
+        z_n = pybamm.SpatialVariable(
+            "z_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        z_s = pybamm.SpatialVariable("z_s", domain=["separator"], coord_sys="cartesian")
+        geometry = {
+            "negative electrode": {
+                x_n: {"min": 0.0, "max": 1.0},
+                z_n: {"min": 0.0, "max": 1.0},
+            },
+            # non-conforming transverse grid: 3 vs 4 z-cells
+            "separator": {
+                x_s: {"min": 1.0, "max": 2.0},
+                z_s: {"min": 0.0, "max": 1.0},
+            },
+        }
+        gen = UnstructuredMeshGenerator()
+        with caplog.at_level(logging.WARNING):
+            mesh = pybamm.Mesh(
+                geometry,
+                {"negative electrode": gen, "separator": gen},
+                {x_n: 3, x_s: 3, z_n: 3, z_s: 4},
+            )
+        assert "Could not compute interface data" in caplog.text
+        assert mesh["negative electrode"].interface_data == {}
 
 
 # ======================================================================

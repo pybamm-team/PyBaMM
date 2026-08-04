@@ -387,8 +387,13 @@ class Mesh(dict):
                         left_name=left_name,
                         right_name=right_name,
                     )
-                except ValueError:
-                    pass
+                except pybamm.GeometryError as error:
+                    pybamm.logger.warning(
+                        f"Could not compute interface data between "
+                        f"{left_name!r} and {right_name!r}: {error} "
+                        "Interface auto-discovery will be attempted during "
+                        "discretisation instead."
+                    )
 
     def add_ghost_meshes(self):
         """

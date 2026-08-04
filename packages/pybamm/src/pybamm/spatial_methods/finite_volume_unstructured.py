@@ -91,17 +91,27 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             or a_mesh.face_centroids.shape[1] != b_mesh.face_centroids.shape[1]
         ):
             return np.array([], dtype=int), np.array([], dtype=int), False
+        from pybamm.meshes.unstructured_submesh import _interface_length_scale
+
         a_c = a_mesh.face_centroids[a_idx]
         b_c = b_mesh.face_centroids[b_idx]
-        scale = max(
-            np.ptp(np.vstack([a_c, b_c]), axis=0).max(),
-            1.0,
+        scale = _interface_length_scale(
+            np.vstack([a_c, b_c]),
+            a_mesh.face_areas[a_idx],
+            a_mesh.face_centroids.shape[1],
         )
         tol = tol_factor * scale
         tree = cKDTree(b_c)
         d, j = tree.query(a_c, distance_upper_bound=tol)
         keep = np.isfinite(d)
-        return a_idx[keep], b_idx[j[keep]], bool(keep.any())
+        matched_b = j[keep]
+        if len(np.unique(matched_b)) != len(matched_b):
+            raise pybamm.GeometryError(
+                f"Interface between meshes is not one-to-one: multiple faces "
+                f"matched the same neighbor face within tolerance {tol:.2e}. "
+                "The meshes are non-conforming at the interface."
+            )
+        return a_idx[keep], b_idx[matched_b], bool(keep.any())
 
     def _compute_pair_interface(self, a_mesh, b_mesh, a_name, b_name):
         """Populate ``interface_data`` and ``iface_<other>`` face buckets for
