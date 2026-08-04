@@ -208,20 +208,6 @@ class UnstructuredSubMesh(SubMesh):
         (4, 5, 6, 7),  # z+ (top)
     ]
 
-    def _cell_faces(self, cell_verts):
-        """Yield face vertex tuples for a single cell."""
-        n = len(cell_verts)
-        if self.element_type == "quad":
-            for i in range(n):
-                yield (cell_verts[i], cell_verts[(i + 1) % n])
-        elif self.element_type == "hexahedron":
-            for local_face in self._HEX_FACES:
-                yield tuple(cell_verts[v] for v in local_face)
-        else:
-            # Simplex: d+1 faces, face i omits vertex i
-            for skip in range(n):
-                yield tuple(cell_verts[j] for j in range(n) if j != skip)
-
     # ------------------------------------------------------------------
     # Face geometry
     # ------------------------------------------------------------------

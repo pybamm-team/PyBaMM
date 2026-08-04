@@ -864,3 +864,25 @@ class TestUnaryOperators:
         assert expr.to_json() == expr_json
 
         assert pybamm.ExplicitTimeIntegral._from_json(expr_json) == expr
+
+
+class TestComponentAndNorm:
+    def test_component(self):
+        vector_field = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        comp = pybamm.component(vector_field, 1)
+        assert isinstance(comp, pybamm.Component)
+        assert comp.index == 1
+
+        copy = comp.create_copy()
+        assert isinstance(copy, pybamm.Component)
+        assert copy.index == 1
+        assert copy.child == comp.child
+
+    def test_norm(self):
+        vector_field = pybamm.VectorField(pybamm.Scalar(3), pybamm.Scalar(4))
+        norm = pybamm.norm(vector_field)
+        assert isinstance(norm, pybamm.Norm)
+
+        copy = norm.create_copy()
+        assert isinstance(copy, pybamm.Norm)
+        assert copy.child == norm.child

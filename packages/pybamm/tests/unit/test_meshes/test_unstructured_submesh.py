@@ -837,3 +837,417 @@ class TestBandwidthOptimization:
         iface = mesh_l.interface_data["right"]
         centroids_post = mesh_l.cell_centroids[iface["left_cells"]]
         np.testing.assert_allclose(centroids_pre, centroids_post)
+
+
+# ======================================================================
+# TestUserSuppliedUnstructuredMesh
+# ======================================================================
+
+
+def _write_two_square_triangle_vtu(path, tags=None):
+    """Two unit squares side by side, each split into 2 triangles.
+
+    Nodes are 3D with z=0 so loading exercises the 2D-trim path.
+    """
+    import meshio
+
+    points = np.array(
+        [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [2, 0, 0], [2, 1, 0]],
+        dtype=float,
+    )
+    tris = np.array([[0, 1, 2], [0, 2, 3], [1, 4, 5], [1, 5, 2]])
+    cell_data = {"tag": [np.asarray(tags)]} if tags is not None else None
+    meshio.write(
+        str(path), meshio.Mesh(points, [("triangle", tris)], cell_data=cell_data)
+    )
+
+
+class TestUserSuppliedUnstructuredMesh:
+    def test_load_full_triangle_mesh(self, tmp_path):
+        from pybamm.meshes.unstructured_submesh import UserSuppliedUnstructuredMesh
+
+        path = tmp_path / "mesh.vtu"
+        _write_two_square_triangle_vtu(path)
+
+        gen = UserSuppliedUnstructuredMesh(str(path))
+        x = pybamm.SpatialVariable("x", domain=["domain"], coord_sys="cartesian")
+        submesh = gen({x: {"min": 0.0, "max": 2.0}}, None)
+
+        assert isinstance(submesh, UnstructuredSubMesh)
+        assert submesh.npts == 4
+        # z=0 for all nodes, so the mesh is trimmed to 2D
+        assert submesh.dimension == 2
+        np.testing.assert_allclose(submesh.cell_volumes.sum(), 2.0, atol=1e-14)
+        assert "mesh.vtu" in repr(gen)
+
+    def test_subdomain_mapping_filters_cells(self, tmp_path):
+        from pybamm.meshes.unstructured_submesh import UserSuppliedUnstructuredMesh
+
+        path = tmp_path / "mesh.vtu"
+        _write_two_square_triangle_vtu(path, tags=[1, 1, 2, 2])
+
+        gen = UserSuppliedUnstructuredMesh(
+            str(path),
+            subdomain_mapping={"negative electrode": 1, "positive electrode": 2},
+        )
+        x_n = pybamm.SpatialVariable(
+            "x_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        left = gen({x_n: {"min": 0.0, "max": 1.0}}, None)
+        assert left.npts == 2
+        # Only the left square's nodes remain after compaction
+        assert left.nodes[:, 0].max() <= 1.0
+        np.testing.assert_allclose(left.cell_volumes.sum(), 1.0, atol=1e-14)
+
+        x_p = pybamm.SpatialVariable(
+            "x_p", domain=["positive electrode"], coord_sys="cartesian"
+        )
+        right = gen({x_p: {"min": 1.0, "max": 2.0}}, None)
+        assert right.npts == 2
+        assert right.nodes[:, 0].min() >= 1.0
+
+    def test_unmapped_domain_gets_all_cells(self, tmp_path):
+        from pybamm.meshes.unstructured_submesh import UserSuppliedUnstructuredMesh
+
+        path = tmp_path / "mesh.vtu"
+        _write_two_square_triangle_vtu(path, tags=[1, 1, 2, 2])
+
+        gen = UserSuppliedUnstructuredMesh(
+            str(path), subdomain_mapping={"negative electrode": 1}
+        )
+        # String lims key with no x_n/x_s/x_p prefix -> no domain filtering
+        submesh = gen({"r_macro": {"min": 0.0, "max": 2.0}}, None)
+        assert submesh.npts == 4
+
+    def test_merge_tolerance_welds_seam(self, tmp_path):
+        import meshio
+
+        from pybamm.meshes.unstructured_submesh import UserSuppliedUnstructuredMesh
+
+        # Two squares with duplicated seam nodes (1,2) == (4,7)
+        points = np.array(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [1, 0, 0],
+                [2, 0, 0],
+                [2, 1, 0],
+                [1, 1, 0],
+            ],
+            dtype=float,
+        )
+        block_a = np.array([[0, 1, 2], [0, 2, 3]])
+        block_b = np.array([[4, 5, 6], [4, 6, 7]])
+        path = tmp_path / "seam.vtu"
+        meshio.write(
+            str(path),
+            meshio.Mesh(points, [("triangle", block_a), ("triangle", block_b)]),
+        )
+
+        welded = UserSuppliedUnstructuredMesh(str(path))({"x": {}}, None)
+        # 2 diagonals + 1 seam edge internal; 6 unique nodes
+        assert len(welded.nodes) == 6
+        assert welded.n_internal_faces == 3
+
+        unwelded = UserSuppliedUnstructuredMesh(str(path), merge_tolerance=0)(
+            {"x": {}}, None
+        )
+        assert len(unwelded.nodes) == 8
+        assert unwelded.n_internal_faces == 2
+
+    def test_3d_tetra_preferred_and_not_trimmed(self, tmp_path):
+        import meshio
+
+        from pybamm.meshes.unstructured_submesh import UserSuppliedUnstructuredMesh
+
+        nodes, elems = _hex_to_tet(
+            np.array([0.0, 1.0]), np.array([0.0, 1.0]), np.array([0.0, 1.0])
+        )
+        # Add a stray triangle block: tetra must be preferred
+        path = tmp_path / "cube.vtu"
+        meshio.write(
+            str(path),
+            meshio.Mesh(nodes, [("triangle", np.array([[0, 1, 2]])), ("tetra", elems)]),
+        )
+
+        submesh = UserSuppliedUnstructuredMesh(str(path))({"x": {}}, None)
+        assert submesh.dimension == 3
+        assert submesh.npts == 5
+        np.testing.assert_allclose(submesh.cell_volumes.sum(), 1.0, atol=1e-14)
+
+    def test_extract_supported_cells_errors(self):
+        import meshio
+        import pytest
+
+        from pybamm.meshes.unstructured_submesh import UserSuppliedUnstructuredMesh
+
+        points = np.zeros((2, 3))
+        lines_only = meshio.Mesh(points, [("line", np.array([[0, 1]]))])
+        with pytest.raises(ValueError, match="No supported cells"):
+            UserSuppliedUnstructuredMesh._extract_supported_cells(lines_only)
+
+    def test_get_cell_mask_missing_tag_error(self):
+        import meshio
+        import pytest
+
+        from pybamm.meshes.unstructured_submesh import UserSuppliedUnstructuredMesh
+
+        points = np.zeros((3, 3))
+        mesh = meshio.Mesh(points, [("triangle", np.array([[0, 1, 2]]))])
+        with pytest.raises(ValueError, match="Could not find cell data tag"):
+            UserSuppliedUnstructuredMesh._get_cell_mask(mesh, "tetra", 1)
+
+    def test_domain_name_from_lims(self):
+        from pybamm.meshes.unstructured_submesh import UserSuppliedUnstructuredMesh
+
+        fn = UserSuppliedUnstructuredMesh._domain_name_from_lims
+        x_s = pybamm.SpatialVariable("x_s", domain=["separator"])
+        assert fn({"tabs": {}, x_s: {}}) == "separator"
+        assert fn({"x_n_something": {}}) == "negative electrode"
+        assert fn({"x_p": {}}) == "positive electrode"
+        assert fn({"r": {}}) is None
+
+
+# ======================================================================
+# TestTaggedSubMeshGenerator
+# ======================================================================
+
+
+def _write_tagged_tet_msh(path):
+    """Unit cube of 5 tets: 3 tagged 'body' (1), 2 tagged 'tab' (2)."""
+    import meshio
+
+    nodes, elems = _hex_to_tet(
+        np.array([0.0, 1.0]), np.array([0.0, 1.0]), np.array([0.0, 1.0])
+    )
+    tags = np.array([1, 1, 1, 2, 2])
+    tri = np.array([[0, 1, 2]])
+    tri_tags = np.array([7])
+    mesh = meshio.Mesh(
+        nodes,
+        [("triangle", tri), ("tetra", elems)],
+        cell_data={
+            "gmsh:physical": [tri_tags, tags],
+            "gmsh:geometrical": [tri_tags, tags],
+        },
+        field_data={
+            "body": np.array([1, 3]),
+            "tab": np.array([2, 3]),
+            "ghost": np.array([5, 3]),
+        },
+    )
+    meshio.write(str(path), mesh, file_format="gmsh22", binary=False)
+
+
+class TestTaggedSubMeshGenerator:
+    def test_extracts_tagged_region(self, tmp_path):
+        from pybamm.meshes.unstructured_submesh import TaggedSubMeshGenerator
+
+        path = tmp_path / "tagged.msh"
+        _write_tagged_tet_msh(path)
+
+        body = TaggedSubMeshGenerator("body", path)(None, None)
+        assert isinstance(body, UnstructuredSubMesh)
+        assert body.npts == 3
+        # Nodes are compacted to those referenced by the tagged tets
+        assert len(body.nodes) == len(np.unique(body.elements))
+
+        tab = TaggedSubMeshGenerator("tab", path)(None, None)
+        assert tab.npts == 2
+        # Together the regions tile the unit cube
+        np.testing.assert_allclose(
+            body.cell_volumes.sum() + tab.cell_volumes.sum(), 1.0, atol=1e-14
+        )
+
+    def test_scale(self, tmp_path):
+        from pybamm.meshes.unstructured_submesh import TaggedSubMeshGenerator
+
+        path = tmp_path / "tagged.msh"
+        _write_tagged_tet_msh(path)
+
+        submesh = TaggedSubMeshGenerator("body", path, scale=1e-3)(None, None)
+        np.testing.assert_allclose(submesh.nodes.max(), 1e-3, atol=1e-18)
+
+    def test_missing_region_raises(self, tmp_path):
+        import pytest
+
+        from pybamm.meshes.unstructured_submesh import TaggedSubMeshGenerator
+
+        path = tmp_path / "tagged.msh"
+        _write_tagged_tet_msh(path)
+
+        with pytest.raises(KeyError, match="not in mesh field_data"):
+            TaggedSubMeshGenerator("nope", path)(None, None)
+
+    def test_region_without_tets_raises(self, tmp_path):
+        import pytest
+
+        from pybamm.meshes.unstructured_submesh import TaggedSubMeshGenerator
+
+        path = tmp_path / "tagged.msh"
+        _write_tagged_tet_msh(path)
+
+        with pytest.raises(RuntimeError, match="no tets for region"):
+            TaggedSubMeshGenerator("ghost", path)(None, None)
+
+
+# ======================================================================
+# compute_interface_data error paths
+# ======================================================================
+
+
+class TestComputeInterfaceDataErrors:
+    def test_missing_boundary_faces_raises(self):
+        import pytest
+
+        nodes, elems = _quad_to_tri(np.linspace(0, 1, 3), np.linspace(0, 1, 3))
+        left = UnstructuredSubMesh(nodes, elems)
+        right = UnstructuredSubMesh(nodes + np.array([1.0, 0.0]), elems)
+        del left.boundary_faces["right"]
+        with pytest.raises(ValueError, match="Cannot compute interface data"):
+            compute_interface_data(left, right)
+
+    def test_transverse_mismatch_raises(self):
+        import pytest
+
+        nodes_l, elems_l = _quad_to_tri(np.linspace(0, 1, 4), np.linspace(0, 1, 4))
+        nodes_r, elems_r = _quad_to_tri(np.linspace(1, 2, 4), np.linspace(0, 1, 5))
+        left = UnstructuredSubMesh(nodes_l, elems_l)
+        right = UnstructuredSubMesh(nodes_r, elems_r)
+        with pytest.raises(ValueError, match="Interface faces do not match"):
+            compute_interface_data(left, right)
+
+
+# ======================================================================
+# _combine_unstructured_submeshes
+# ======================================================================
+
+
+class TestCombineUnstructuredSubmeshes:
+    def test_hex_tet_regen_makes_interface_conformal(self):
+        """Meshes carrying _hex_gen_params are regenerated with a cumulative
+        parity offset so tet faces match across the domain boundary."""
+        from pybamm.meshes.meshes import _combine_unstructured_submeshes
+
+        ye = np.linspace(0.0, 1.0, 3)
+        ze = np.linspace(0.0, 1.0, 3)
+        xe_l = np.linspace(0.0, 1.0, 4)
+        xe_r = np.linspace(1.0, 2.0, 4)
+
+        nodes_l, elems_l = _hex_to_tet(xe_l, ye, ze)
+        left = UnstructuredSubMesh(nodes_l, elems_l)
+        left._hex_gen_params = {"x_edges": xe_l, "y_edges": ye, "z_edges": ze, "nx": 3}
+
+        nodes_r, elems_r = _hex_to_tet(xe_r, ye, ze)
+        right = UnstructuredSubMesh(nodes_r, elems_r)
+        right._hex_gen_params = {"x_edges": xe_r, "y_edges": ye, "z_edges": ze, "nx": 3}
+
+        combined = _combine_unstructured_submeshes([left, right])
+
+        assert combined.npts == left.npts + right.npts
+        np.testing.assert_allclose(combined.cell_volumes.sum(), 2.0, atol=1e-12)
+        # Every interface quad contributes 2 triangular faces; all must have
+        # been welded into internal faces (2*2 hexes on the interface plane).
+        expected_internal = left.n_internal_faces + right.n_internal_faces + 2 * 2 * 2
+        assert combined.n_internal_faces == expected_internal
+
+    def test_custom_boundary_tags_carried_over(self):
+        from pybamm.meshes.meshes import _combine_unstructured_submeshes
+
+        nodes_l, elems_l = _quad_to_tri(np.linspace(0, 1, 3), np.linspace(0, 1, 3))
+        left = UnstructuredSubMesh(nodes_l, elems_l)
+        nodes_r, elems_r = _quad_to_tri(np.linspace(1, 2, 3), np.linspace(0, 1, 3))
+        right = UnstructuredSubMesh(nodes_r, elems_r)
+
+        left.boundary_faces["tab"] = left.boundary_faces["left"].copy()
+        tab_centroids = np.sort(left.face_centroids[left.boundary_faces["tab"]], axis=0)
+
+        combined = _combine_unstructured_submeshes([left, right])
+
+        assert "tab" in combined.boundary_faces
+        combined_centroids = np.sort(
+            combined.face_centroids[combined.boundary_faces["tab"]], axis=0
+        )
+        np.testing.assert_allclose(combined_centroids, tab_centroids, atol=1e-12)
+
+
+class TestMeshUnstructuredInterfaces:
+    def test_mismatched_interface_is_skipped(self):
+        """Mesh construction survives adjacent unstructured domains whose
+        transverse grids do not match; no interface data is stored."""
+        x_n = pybamm.SpatialVariable(
+            "x_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        z_a = pybamm.SpatialVariable(
+            "z_a", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        x_s = pybamm.SpatialVariable("x_s", domain=["separator"], coord_sys="cartesian")
+        z_b = pybamm.SpatialVariable("z_b", domain=["separator"], coord_sys="cartesian")
+
+        geometry = {
+            "negative electrode": {
+                x_n: {"min": 0.0, "max": 1.0},
+                z_a: {"min": 0.0, "max": 1.0},
+            },
+            "separator": {
+                x_s: {"min": 1.0, "max": 2.0},
+                z_b: {"min": 0.0, "max": 1.0},
+            },
+        }
+        gen = UnstructuredMeshGenerator()
+        mesh = pybamm.Mesh(
+            geometry,
+            {"negative electrode": gen, "separator": gen},
+            {x_n: 3, z_a: 3, x_s: 3, z_b: 4},
+        )
+        assert mesh["negative electrode"].interface_data == {}
+        assert mesh["separator"].interface_data == {}
+
+
+def test_extract_supported_cells_multiblock_same_type():
+    import meshio
+
+    from pybamm.meshes.unstructured_submesh import UserSuppliedUnstructuredMesh
+
+    nodes, elems = _hex_to_tet(
+        np.array([0.0, 1.0]), np.array([0.0, 1.0]), np.array([0.0, 1.0])
+    )
+    mesh = meshio.Mesh(nodes, [("tetra", elems[:2]), ("tetra", elems[2:])])
+    cells, cell_type = UserSuppliedUnstructuredMesh._extract_supported_cells(mesh)
+    assert cell_type == "tetra"
+    np.testing.assert_array_equal(cells, elems)
+
+
+def test_get_cell_mask_multiblock():
+    import meshio
+
+    from pybamm.meshes.unstructured_submesh import UserSuppliedUnstructuredMesh
+
+    points = np.zeros((4, 3))
+    mesh = meshio.Mesh(
+        points,
+        [
+            ("triangle", np.array([[0, 1, 2], [0, 2, 3]])),
+            ("triangle", np.array([[1, 2, 3]])),
+        ],
+        cell_data={"tag": [np.array([1, 2]), np.array([2])]},
+    )
+    mask = UserSuppliedUnstructuredMesh._get_cell_mask(mesh, "triangle", 2)
+    np.testing.assert_array_equal(mask, [False, True, True])
+
+
+class TestUnstructuredMeshGeneratorErrors:
+    def test_rejects_1d_lims(self):
+        import pytest
+
+        gen = UnstructuredMeshGenerator()
+        x = pybamm.SpatialVariable(
+            "x_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        with pytest.raises(ValueError, match="supports 2D and 3D"):
+            gen({x: {"min": 0.0, "max": 1.0}}, {"x_n": 3})
+
+    def test_repr(self):
+        assert repr(UnstructuredMeshGenerator()) == "Generator for UnstructuredSubMesh"

@@ -1235,3 +1235,315 @@ class TestFiniteVolumeUnstructuredBehavior:
 
         np.testing.assert_array_equal(result.evaluate()[:, 0], [1, 2, 3, 4])
         assert result.domain == ["left", "right"]
+
+
+# ======================================================================
+# Tests: Discretisation dispatch
+# ======================================================================
+
+
+def _get_unstructured_disc(nx=4, nz=4):
+    """Single-domain 2D unstructured discretisation on [0,1]^2."""
+    x = pybamm.SpatialVariable(
+        "x_n", domain=["negative electrode"], coord_sys="cartesian"
+    )
+    z = pybamm.SpatialVariable(
+        "z_2d", domain=["negative electrode"], coord_sys="cartesian", direction="tb"
+    )
+    geometry = {
+        "negative electrode": {x: {"min": 0.0, "max": 1.0}, z: {"min": 0.0, "max": 1.0}}
+    }
+    mesh = pybamm.Mesh(
+        geometry,
+        {
+            "negative electrode": pybamm.meshes.unstructured_submesh.UnstructuredMeshGenerator()
+        },
+        {x: nx, z: nz},
+    )
+    return pybamm.Discretisation(
+        mesh, {"negative electrode": FiniteVolumeUnstructured()}
+    )
+
+
+class TestDiscretisationDispatch:
+    def _disc_var_grad(self):
+        disc = _get_unstructured_disc()
+        var = pybamm.Variable("u", domain=["negative electrode"])
+        disc.set_variable_slices([var])
+        grad = pybamm.grad(var)
+        disc_grad = disc.process_symbol(grad)
+        u = disc.mesh["negative electrode"].cell_centroids[:, 0]
+        return disc, var, grad, disc_grad, u
+
+    def test_component_of_gradient(self):
+        disc, _, grad, disc_grad, u = self._disc_var_grad()
+        comp0 = disc.process_symbol(pybamm.component(grad, 0))
+        np.testing.assert_allclose(
+            comp0.evaluate(y=u),
+            disc_grad._components[0].evaluate(y=u),
+        )
+        comp1 = disc.process_symbol(pybamm.component(grad, 1))
+        np.testing.assert_allclose(
+            comp1.evaluate(y=u),
+            disc_grad._components[1].evaluate(y=u),
+        )
+
+    def test_component_requires_vector_field(self):
+        disc, var, *_ = self._disc_var_grad()
+        with pytest.raises(ValueError, match="Component can only be applied"):
+            disc.process_symbol(pybamm.component(var, 0))
+
+    def test_norm_of_gradient(self):
+        disc, _, grad, disc_grad, u = self._disc_var_grad()
+        norm = disc.process_symbol(pybamm.norm(grad))
+        gx = disc_grad._components[0].evaluate(y=u)
+        gz = disc_grad._components[1].evaluate(y=u)
+        np.testing.assert_allclose(
+            norm.evaluate(y=u), np.sqrt(gx**2 + gz**2), rtol=1e-12
+        )
+
+    def test_norm_requires_vector_field(self):
+        disc, var, *_ = self._disc_var_grad()
+        with pytest.raises(ValueError, match="Norm can only be applied"):
+            disc.process_symbol(pybamm.norm(var))
+
+    def test_generic_unary_maps_over_components(self):
+        """A generic unary operator (negation) applies componentwise to a
+        VectorField and propagates the discretised state vector."""
+        disc, _, grad, disc_grad, u = self._disc_var_grad()
+        neg = disc.process_symbol(-grad)
+        assert isinstance(neg, pybamm.VectorField)
+        for k in range(2):
+            np.testing.assert_allclose(
+                neg._components[k].evaluate(y=u),
+                -disc_grad._components[k].evaluate(y=u),
+                atol=1e-12,
+            )
+        assert hasattr(disc_grad, "_disc_state_vector")
+        assert hasattr(neg, "_disc_state_vector")
+
+    def test_scalar_times_gradient_lifted(self):
+        """Scalar * grad(u) lifts the scalar to an N-component VectorField."""
+        disc, _, grad, disc_grad, u = self._disc_var_grad()
+        scaled = disc.process_symbol(pybamm.Scalar(2) * grad)
+        assert isinstance(scaled, pybamm.VectorField)
+        for k in range(2):
+            np.testing.assert_allclose(
+                scaled._components[k].evaluate(y=u),
+                2 * disc_grad._components[k].evaluate(y=u),
+                atol=1e-12,
+            )
+
+    def test_gradient_times_scalar_lifted(self):
+        disc, _, grad, disc_grad, u = self._disc_var_grad()
+        scaled = disc.process_symbol(grad * pybamm.Scalar(3))
+        assert isinstance(scaled, pybamm.VectorField)
+        for k in range(2):
+            np.testing.assert_allclose(
+                scaled._components[k].evaluate(y=u),
+                3 * disc_grad._components[k].evaluate(y=u),
+                atol=1e-12,
+            )
+
+    def test_domainless_vector_field_binary_op(self):
+        """Binary ops on domainless VectorFields combine componentwise."""
+        disc = _get_unstructured_disc()
+        vf_a = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        vf_b = pybamm.VectorField(pybamm.Scalar(3), pybamm.Scalar(4))
+        product = disc.process_symbol(vf_a * vf_b)
+        assert isinstance(product, pybamm.VectorField)
+        np.testing.assert_allclose(product._components[0].evaluate(), 3)
+        np.testing.assert_allclose(product._components[1].evaluate(), 8)
+
+        # Scalar lifted to match the VectorField's components
+        scaled = disc.process_symbol(pybamm.Scalar(2) * vf_a)
+        assert isinstance(scaled, pybamm.VectorField)
+        np.testing.assert_allclose(scaled._components[0].evaluate(), 2)
+        np.testing.assert_allclose(scaled._components[1].evaluate(), 4)
+
+
+class TestProcessModelConcatenation:
+    def test_two_domain_diffusion_steady_state(self):
+        """process_model on a concatenated variable dispatches internal BCs
+        through FiniteVolumeUnstructured; the discrete Laplacian of the exact
+        steady profile (linear in x) is zero."""
+        x_n = pybamm.SpatialVariable(
+            "x_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        x_s = pybamm.SpatialVariable("x_s", domain=["separator"], coord_sys="cartesian")
+        z = pybamm.SpatialVariable(
+            "z_2d",
+            domain=["negative electrode", "separator"],
+            coord_sys="cartesian",
+            direction="tb",
+        )
+        geometry = {
+            "negative electrode": {
+                x_n: {"min": 0.0, "max": 0.5},
+                z: {"min": 0.0, "max": 1.0},
+            },
+            "separator": {
+                x_s: {"min": 0.5, "max": 1.0},
+                z: {"min": 0.0, "max": 1.0},
+            },
+        }
+        gen = pybamm.meshes.unstructured_submesh.UnstructuredMeshGenerator(
+            element_type="quad"
+        )
+        mesh = pybamm.Mesh(
+            geometry,
+            {"negative electrode": gen, "separator": gen},
+            {x_n: 3, x_s: 3, z: 3},
+        )
+        disc = pybamm.Discretisation(
+            mesh,
+            {
+                "negative electrode": FiniteVolumeUnstructured(),
+                "separator": FiniteVolumeUnstructured(),
+            },
+        )
+
+        var_n = pybamm.Variable("c_n", domain=["negative electrode"])
+        var_s = pybamm.Variable("c_s", domain=["separator"])
+        var = pybamm.concatenation(var_n, var_s)
+
+        model = pybamm.BaseModel()
+        model.rhs = {var: pybamm.div(pybamm.grad(var))}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        model.boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        model.variables = {"c": var}
+        model_disc = disc.process_model(model, inplace=False)
+
+        u = np.concatenate(
+            [
+                mesh["negative electrode"].cell_centroids[:, 0],
+                mesh["separator"].cell_centroids[:, 0],
+            ]
+        )
+        rhs = model_disc.concatenated_rhs.evaluate(t=0, y=u).flatten()
+        np.testing.assert_allclose(rhs, 0.0, atol=1e-10)
+
+
+class TestDiscretisationDispatchLifting:
+    def _disc_var_grad(self):
+        disc = _get_unstructured_disc()
+        var = pybamm.Variable("u", domain=["negative electrode"])
+        disc.set_variable_slices([var])
+        grad = pybamm.grad(var)
+        disc_grad = disc.process_symbol(grad)
+        u = disc.mesh["negative electrode"].cell_centroids[:, 0]
+        return disc, var, grad, disc_grad, u
+
+    def test_gradient_minus_scalar_lifted(self):
+        """A right-hand Scalar is lifted to an N-component VectorField.
+
+        A raw Subtraction node is used because operator simplification
+        rewrites ``x - c`` as ``-c + x``, which takes the left-Scalar path.
+        """
+        disc, _, grad, disc_grad, u = self._disc_var_grad()
+        shifted = disc.process_symbol(pybamm.Subtraction(grad, pybamm.Scalar(0.5)))
+        assert isinstance(shifted, pybamm.VectorField)
+        for k in range(2):
+            np.testing.assert_allclose(
+                shifted._components[k].evaluate(y=u),
+                disc_grad._components[k].evaluate(y=u) - 0.5,
+                atol=1e-12,
+            )
+
+    def test_domainless_vector_field_minus_scalar(self):
+        disc = _get_unstructured_disc()
+        vf = pybamm.VectorField(pybamm.Scalar(3), pybamm.Scalar(4))
+        shifted = disc.process_symbol(pybamm.Subtraction(vf, pybamm.Scalar(1)))
+        assert isinstance(shifted, pybamm.VectorField)
+        np.testing.assert_allclose(shifted._components[0].evaluate(), 2)
+        np.testing.assert_allclose(shifted._components[1].evaluate(), 3)
+
+    def test_div_of_coefficient_times_gradient(self):
+        """div(D * grad(u)) is intercepted and routed to div_D_grad for both
+        coefficient orderings."""
+        disc, var, grad, _, u = self._disc_var_grad()
+        base = disc.process_symbol(pybamm.div(grad)).evaluate(y=u)
+        scaled = disc.process_symbol(pybamm.div(pybamm.Scalar(2) * grad)).evaluate(y=u)
+        np.testing.assert_allclose(scaled, 2 * base, atol=1e-12)
+
+        right_form = disc.process_symbol(pybamm.div(var * grad)).evaluate(y=u)
+        left_form = disc.process_symbol(pybamm.div(grad * var)).evaluate(y=u)
+        np.testing.assert_allclose(left_form, right_form, atol=1e-12)
+
+
+class TestProcessModelConcatenationZStack:
+    def test_z_stacked_domains_use_graph_internal_bcs(self):
+        """Domains stacked in z: pybamm.Mesh's 1D-stack pairing fails on the
+        transverse mismatch, FiniteVolumeUnstructured's build() discovers the
+        interface by face matching, and process_model routes internal BCs
+        through set_internal_bcs_for_concat.  The discrete Laplacian of the
+        exact steady profile (linear in z) is zero."""
+        x_n = pybamm.SpatialVariable(
+            "x_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        z_n = pybamm.SpatialVariable(
+            "z_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        x_s = pybamm.SpatialVariable("x_s", domain=["separator"], coord_sys="cartesian")
+        z_s = pybamm.SpatialVariable("z_s", domain=["separator"], coord_sys="cartesian")
+        geometry = {
+            "negative electrode": {
+                x_n: {"min": 0.0, "max": 1.0},
+                z_n: {"min": 0.0, "max": 0.5},
+            },
+            "separator": {
+                x_s: {"min": 0.0, "max": 1.0},
+                z_s: {"min": 0.5, "max": 1.0},
+            },
+        }
+        gen = pybamm.meshes.unstructured_submesh.UnstructuredMeshGenerator(
+            element_type="quad"
+        )
+        mesh = pybamm.Mesh(
+            geometry,
+            {"negative electrode": gen, "separator": gen},
+            {x_n: 3, z_n: 3, x_s: 3, z_s: 3},
+        )
+        disc = pybamm.Discretisation(
+            mesh,
+            {
+                "negative electrode": FiniteVolumeUnstructured(),
+                "separator": FiniteVolumeUnstructured(),
+            },
+        )
+        # build() added graph-discovered interface buckets
+        assert any(
+            tag.startswith("iface_")
+            for tag in mesh["negative electrode"].boundary_faces
+        )
+        assert any(tag.startswith("iface_") for tag in mesh["separator"].boundary_faces)
+
+        var_n = pybamm.Variable("c_n", domain=["negative electrode"])
+        var_s = pybamm.Variable("c_s", domain=["separator"])
+        var = pybamm.concatenation(var_n, var_s)
+
+        model = pybamm.BaseModel()
+        model.rhs = {var: pybamm.div(pybamm.grad(var))}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        model.boundary_conditions = {
+            var: {
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
+                "top": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        model.variables = {"c": var}
+        model_disc = disc.process_model(model, inplace=False)
+
+        u = np.concatenate(
+            [
+                mesh["negative electrode"].cell_centroids[:, 1],
+                mesh["separator"].cell_centroids[:, 1],
+            ]
+        )
+        rhs = model_disc.concatenated_rhs.evaluate(t=0, y=u).flatten()
+        np.testing.assert_allclose(rhs, 0.0, atol=1e-10)

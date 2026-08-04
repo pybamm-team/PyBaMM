@@ -2124,3 +2124,263 @@ class TestProcessedVariable:
         )
 
         assert isinstance(processed_var, pybamm.ProcessedVariableUnstructured)
+
+
+class TestProcessedVariableUnstructuredFVM:
+    @staticmethod
+    def _make_setup(dim=2, n=6):
+        from pybamm.meshes.unstructured_submesh import UnstructuredMeshGenerator
+
+        domain = "negative electrode"
+        x = pybamm.SpatialVariable("x_n", domain=[domain], coord_sys="cartesian")
+        if dim == 2:
+            z = pybamm.SpatialVariable(
+                "z_2d", domain=[domain], coord_sys="cartesian", direction="tb"
+            )
+            geometry = {
+                domain: {x: {"min": 0.0, "max": 1.0}, z: {"min": 0.0, "max": 1.0}}
+            }
+            var_pts = {x: n, z: n}
+        else:
+            y = pybamm.SpatialVariable("y", domain=[domain], coord_sys="cartesian")
+            z = pybamm.SpatialVariable("z", domain=[domain], coord_sys="cartesian")
+            geometry = {
+                domain: {
+                    x: {"min": 0.0, "max": 1.0},
+                    y: {"min": 0.0, "max": 1.0},
+                    z: {"min": 0.0, "max": 1.0},
+                }
+            }
+            var_pts = {x: n, y: n, z: n}
+
+        mesh = pybamm.Mesh(geometry, {domain: UnstructuredMeshGenerator()}, var_pts)
+        disc = pybamm.Discretisation(mesh, {domain: pybamm.FiniteVolumeUnstructured()})
+        var = pybamm.Variable("u", domain=[domain])
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+        return geometry, mesh[domain], disc, var, var_disc
+
+    def _make_pv(self, var_disc, geometry, t_sol, y_sol):
+        var_casadi = to_casadi(var_disc, y_sol)
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+        return pybamm.process_variable("u", [var_disc], [var_casadi], solution)
+
+    def test_2d_dispatch_and_interpolation(self):
+        geometry, submesh, _, _, var_disc = self._make_setup(dim=2)
+        centroid_x = submesh.cell_centroids[:, 0]
+        t_sol = np.linspace(0, 1, 5)
+        y_sol = centroid_x[:, np.newaxis] * (1 + t_sol)[np.newaxis, :]
+
+        pv = self._make_pv(var_disc, geometry, t_sol, y_sol)
+        assert isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM)
+        assert pv.dimensions == 2
+        assert pv.first_dimension == "x"
+        assert pv.second_dimension == "z"
+
+        # At solver times with no spatial coords: raw cell data
+        np.testing.assert_allclose(pv(t_sol), y_sol, rtol=1e-12)
+
+        # Linear time interpolation between solver times
+        np.testing.assert_allclose(pv(0.5).ravel(), centroid_x * 1.5, rtol=1e-10)
+
+        # Spatial interpolation reproduces the linear field in the interior
+        x_q = np.linspace(0.4, 0.6, 3)
+        z_q = np.linspace(0.4, 0.6, 3)
+        result = pv(0.5, x=x_q, z=z_q)
+        assert result.shape == (3, 3)
+        expected = 1.5 * x_q[:, np.newaxis] * np.ones((1, 3))
+        np.testing.assert_allclose(result, expected, rtol=1e-8)
+
+        # Vector time: interpolation per time slice, time on the last axis
+        result_t = pv(t_sol[:2], x=x_q, z=z_q)
+        assert result_t.shape == (3, 3, 2)
+        np.testing.assert_allclose(
+            result_t[..., 0], x_q[:, np.newaxis] * np.ones((1, 3)), rtol=1e-8
+        )
+
+    def test_2d_outside_domain_is_nan(self):
+        geometry, submesh, _, _, var_disc = self._make_setup(dim=2, n=3)
+        t_sol = np.array([0.0, 1.0])
+        y_sol = np.ones((submesh.npts, 2))
+        pv = self._make_pv(var_disc, geometry, t_sol, y_sol)
+
+        outside = pv(0.5, x=np.array([-0.5]), z=np.array([0.5]))
+        assert np.isnan(outside).all()
+        # Second call goes through the cached boundary mask
+        outside_again = pv(0.5, x=np.array([-0.5]), z=np.array([0.5]))
+        assert np.isnan(outside_again).all()
+        inside = pv(0.5, x=np.array([0.5]), z=np.array([0.5]))
+        np.testing.assert_allclose(inside, 1.0, rtol=1e-10)
+
+    def test_3d_dispatch_slices_and_mask(self):
+        geometry, submesh, _, _, var_disc = self._make_setup(dim=3, n=3)
+        t_sol = np.array([0.0, 1.0])
+        # Spatially-constant field with linear time dependence: 7 * (1 + t)
+        y_sol = 7.0 * np.ones((submesh.npts, 1)) * (1 + t_sol)[np.newaxis, :]
+        pv = self._make_pv(var_disc, geometry, t_sol, y_sol)
+
+        assert isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM)
+        assert pv.dimensions == 3
+        assert pv.third_dimension == "z"
+        assert pv.third_dim_size == pv.N_VIS_3D
+
+        # Scalar-time spatial query inside the domain
+        result = pv(0.5, x=np.array([0.5]), y=np.array([0.5]), z=np.array([0.5]))
+        assert result.shape == (1, 1, 1)
+        np.testing.assert_allclose(result, 10.5, rtol=1e-10)
+
+        # Vector time keeps time on the last axis
+        result_t = pv(
+            t_sol, x=np.array([0.3, 0.7]), y=np.array([0.5]), z=np.array([0.5])
+        )
+        assert result_t.shape == (2, 1, 1, 2)
+        np.testing.assert_allclose(result_t[..., 0], 7.0, rtol=1e-10)
+        np.testing.assert_allclose(result_t[..., 1], 14.0, rtol=1e-10)
+
+        # Points outside the domain are masked (3D winding-number path)
+        outside = pv(0.5, x=np.array([-1.0]), y=np.array([0.5]), z=np.array([0.5]))
+        assert np.isnan(outside).all()
+
+        # Orthogonal midplane slices at the last time
+        s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = pv.get_3d_slices(1.0)
+        n_vis = pv.N_VIS_3D
+        for arr in (s1, xx1, yy1, zz1, s2, xx2, yy2, zz2):
+            assert arr.shape == (n_vis, n_vis)
+        assert np.isfinite(s1).mean() > 0.5
+        assert np.isfinite(s2).mean() > 0.5
+        np.testing.assert_allclose(s1[np.isfinite(s1)], 14.0, rtol=1e-8)
+        np.testing.assert_allclose(s2[np.isfinite(s2)], 14.0, rtol=1e-8)
+
+    def test_vector_field_via_solution_2d(self):
+        """Requesting a VectorField variable from a Solution goes through the
+        per-component casadi wiring and the unstructured vector-field PV."""
+        geometry, submesh, disc, var, _ = self._make_setup(dim=2, n=4)
+        domain = "negative electrode"
+
+        flux = pybamm.VectorField(
+            pybamm.PrimaryBroadcast(pybamm.Scalar(2), domain),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(-3), domain),
+        )
+        model = pybamm.BaseModel()
+        model.rhs = {var: pybamm.Scalar(0)}
+        model.initial_conditions = {var: pybamm.Scalar(0)}
+        model.variables = {"u": var, "flux": flux}
+        model_disc = disc.process_model(model, inplace=False)
+        model_disc._geometry = geometry
+
+        centroid_x = submesh.cell_centroids[:, 0]
+        t_sol = np.array([0.0, 1.0])
+        y_sol = centroid_x[:, np.newaxis] * (1 + t_sol)[np.newaxis, :]
+        solution = pybamm.Solution(t_sol, y_sol, model_disc, {})
+
+        scalar_pv = solution["u"]
+        assert isinstance(scalar_pv, pybamm.ProcessedVariableUnstructuredFVM)
+
+        flux_pv = solution["flux"]
+        assert isinstance(flux_pv, pybamm.ProcessedVariableVectorFieldUnstructuredFVM)
+        assert flux_pv.is_vector_field
+        assert flux_pv.n_components == 2
+        assert flux_pv.dimensions == 2
+
+        # entries delegates to the first component
+        np.testing.assert_allclose(flux_pv.entries, 2.0, rtol=1e-12)
+
+        # Calling returns one array per component
+        comps = flux_pv(t=t_sol)
+        assert isinstance(comps, tuple)
+        assert len(comps) == 2
+        np.testing.assert_allclose(comps[0], 2.0, rtol=1e-12)
+        np.testing.assert_allclose(comps[1], -3.0, rtol=1e-12)
+
+        # Quiver data on the coarse plotting grid
+        X, Z, U, W = flux_pv.get_quiver_data(0.5)
+        n_q = flux_pv.N_QUIVER
+        for arr in (X, Z, U, W):
+            assert arr.shape == (n_q, n_q)
+        np.testing.assert_allclose(U[np.isfinite(U)], 2.0, rtol=1e-8)
+        np.testing.assert_allclose(W[np.isfinite(W)], -3.0, rtol=1e-8)
+
+    def test_vector_field_3d_quiver(self):
+        geometry, submesh, disc, _, _ = self._make_setup(dim=3, n=3)
+        domain = "negative electrode"
+
+        flux = pybamm.VectorField(
+            pybamm.PrimaryBroadcast(pybamm.Scalar(1), domain),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(2), domain),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(3), domain),
+        )
+        flux_disc = disc.process_symbol(flux)
+
+        t_sol = np.array([0.0, 1.0])
+        y_sol = np.ones((submesh.npts, 2))
+        comp_casadi = [to_casadi(c, y_sol) for c in flux_disc._components]
+        model = pybamm.BaseModel()
+        model._geometry = geometry
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+
+        flux_pv = pybamm.process_variable("flux", [flux_disc], [comp_casadi], solution)
+        assert isinstance(flux_pv, pybamm.ProcessedVariableVectorFieldUnstructuredFVM)
+        assert flux_pv.dimensions == 3
+        assert flux_pv.third_dimension == "z"
+
+        (X1, Z1, u_xz, w_xz, y_mid, X2, Y2, u_xy, v_xy, z_mid) = (
+            flux_pv.get_quiver_data(0.5)
+        )
+        n_q = flux_pv.N_QUIVER
+        for arr in (X1, Z1, u_xz, w_xz, X2, Y2, u_xy, v_xy):
+            assert arr.shape == (n_q, n_q)
+        np.testing.assert_allclose(y_mid, 0.5, atol=1e-12)
+        np.testing.assert_allclose(z_mid, 0.5, atol=1e-12)
+        np.testing.assert_allclose(u_xz[np.isfinite(u_xz)], 1.0, rtol=1e-8)
+        np.testing.assert_allclose(w_xz[np.isfinite(w_xz)], 3.0, rtol=1e-8)
+        np.testing.assert_allclose(u_xy[np.isfinite(u_xy)], 1.0, rtol=1e-8)
+        np.testing.assert_allclose(v_xy[np.isfinite(v_xy)], 2.0, rtol=1e-8)
+
+    def test_2d_domain_with_hole_masks_hole(self):
+        from pybamm.meshes.meshes import MeshGenerator
+        from pybamm.meshes.unstructured_submesh import (
+            UnstructuredSubMesh,
+            _make_quad_grid,
+        )
+
+        class HoleGenerator(MeshGenerator):
+            """3x3 quad grid on [0,1]^2 with the centre cell removed."""
+
+            def __init__(self):
+                self.submesh_type = UnstructuredSubMesh
+                self.submesh_params = {}
+
+            def __call__(self, lims, npts):
+                nodes, elements = _make_quad_grid(
+                    np.linspace(0, 1, 4), np.linspace(0, 1, 4)
+                )
+                centroids = nodes[elements].mean(axis=1)
+                keep = ~(
+                    np.isclose(centroids[:, 0], 0.5) & np.isclose(centroids[:, 1], 0.5)
+                )
+                return UnstructuredSubMesh(nodes, elements[keep])
+
+        domain = "negative electrode"
+        x = pybamm.SpatialVariable("x_n", domain=[domain], coord_sys="cartesian")
+        z = pybamm.SpatialVariable(
+            "z_2d", domain=[domain], coord_sys="cartesian", direction="tb"
+        )
+        geometry = {domain: {x: {"min": 0.0, "max": 1.0}, z: {"min": 0.0, "max": 1.0}}}
+        mesh = pybamm.Mesh(geometry, {domain: HoleGenerator()}, {x: 3, z: 3})
+        disc = pybamm.Discretisation(mesh, {domain: pybamm.FiniteVolumeUnstructured()})
+        var = pybamm.Variable("u", domain=[domain])
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+
+        submesh = mesh[domain]
+        assert submesh.npts == 8
+        t_sol = np.array([0.0, 1.0])
+        y_sol = 3.0 * np.ones((submesh.npts, 2))
+        pv = self._make_pv(var_disc, geometry, t_sol, y_sol)
+
+        in_hole = pv(0.5, x=np.array([0.5]), z=np.array([0.5]))
+        assert np.isnan(in_hole).all()
+        in_domain = pv(0.5, x=np.array([1 / 6]), z=np.array([1 / 6]))
+        np.testing.assert_allclose(in_domain, 3.0, rtol=1e-10)

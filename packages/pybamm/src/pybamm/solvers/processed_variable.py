@@ -1071,27 +1071,26 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
     def _get_boundary_mask(self, query_pts):
         """Return a boolean mask of query points outside the domain.
 
-        * **2D** — uses ``boundary_loops()`` (cached).
+        * **2D** — uses ``boundary_loops()`` (loops cached; containment is
+          recomputed per call since query points vary between calls).
         * **3D** — uses the generalized winding number via
-          ``contains_points_3d`` (not cached because different slices
-          have different query points).
+          ``contains_points_3d``.
         """
         if self.mesh.dimension == 3:
             inside = self.mesh.contains_points_3d(query_pts)
             return ~inside
 
-        if not hasattr(self, "_cached_outside_mask"):
-            loops = self.mesh.boundary_loops()
-            if loops is not None and len(loops) > 0:
-                pts2d = query_pts[:, :2]
-                inside_outer = loops[0].contains_points(pts2d)
-                outside = ~inside_outer
-                for hole_path in loops[1:]:
-                    outside |= hole_path.contains_points(pts2d)
-                self._cached_outside_mask = outside
-            else:
-                self._cached_outside_mask = None
-        return self._cached_outside_mask
+        if not hasattr(self, "_cached_boundary_loops"):
+            self._cached_boundary_loops = self.mesh.boundary_loops()
+        loops = self._cached_boundary_loops
+        if loops is None or len(loops) == 0:
+            return None
+        pts2d = query_pts[:, :2]
+        inside_outer = loops[0].contains_points(pts2d)
+        outside = ~inside_outer
+        for hole_path in loops[1:]:
+            outside |= hole_path.contains_points(pts2d)
+        return outside
 
     def _interpolate_spatial(self, values, query_pts):
         """Interpolate cell-centered data to query points.
