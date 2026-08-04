@@ -575,7 +575,11 @@ class Divergence(SpatialOperator):
             )
         # Allow TensorField of rank >= 1, or symbols that evaluate on edges
         is_tensor = isinstance(child, pybamm.TensorField) and child.rank >= 1
-        if not is_tensor and child.evaluates_on_edges("primary") is False:
+        if (
+            not is_tensor
+            and not isinstance(child, pybamm.FluxConcatenation)
+            and child.evaluates_on_edges("primary") is False
+        ):
             raise TypeError(
                 f"Cannot take divergence of '{child}' since it does not "
                 + "evaluate on edges. Usually, a gradient should be taken before the "
@@ -1516,6 +1520,8 @@ def div(symbol):
     :class:`Divergence`
         the divergence of ``symbol``
     """
+    symbol.set_do_not_simplify()  # to enable flux boundary conditions
+
     # Divergence of a broadcast is zero
     if isinstance(symbol, pybamm.PrimaryBroadcastToEdges):
         if symbol.child.domain == []:

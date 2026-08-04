@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 from collections import defaultdict
 from collections.abc import Sequence
+from re import compile as rcompile
 from typing import Any
 
 import casadi
@@ -153,6 +154,10 @@ class Concatenation(pybamm.Symbol):
             return concatenation(*children, name=self.name)
         else:
             return self.__class__(*children, name=self.name)
+
+    def _evaluates_on_edges(self, dimension: str) -> bool:
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
+        return any(child.evaluates_on_edges(dimension) for child in self.children)
 
     def _concatenation_jac(self, children_jacs):
         """Calculate the Jacobian of a concatenation."""
@@ -324,7 +329,8 @@ class DomainConcatenation(Concatenation):
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.Concatenation._from_json()`."""
 
-        snippet["name"] = "domain_concatenation"
+        pattern = rcompile(r"(?<!^)(?=[A-Z])")  # to convert camel case to snake case
+        snippet["name"] = pattern.sub("_", cls.__name__).lower()
         snippet["concat_fun"] = None
 
         instance = super()._from_json(snippet)
@@ -440,6 +446,10 @@ class DomainConcatenation(Concatenation):
         else:
             return DomainConcatenation(children, self.full_mesh, copy_this=self)
 
+    def _evaluates_on_edges(self, dimension: str) -> bool:
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
+        return False
+
     def to_json(self):
         """
         Method to serialise a DomainConcatenation object into JSON.
@@ -465,6 +475,83 @@ class DomainConcatenation(Concatenation):
         }
 
         return json_dict
+
+
+class FluxConcatenation(DomainConcatenation):
+    """
+    A node in the expression tree representing a concatenation of fluxes, being
+    careful about domains.
+
+    It is assumed that each child has a domain, and the final concatenated vector will
+    respect the sizes and ordering of domains established in mesh keys taking account
+    of the overlapping boundary edges between neighbouring domains.
+
+    Parameters
+    ----------
+    children : iterable of :class:`pybamm.Symbol`
+        The symbols to concatenate
+    full_mesh : :class:`pybamm.Mesh`
+        The underlying mesh for discretisation, used to obtain the number of mesh points
+        in each domain.
+    """
+
+    def __init__(self, children: Sequence[pybamm.Symbol], full_mesh: pybamm.Mesh):
+        # Check if we are concatenating fluxes
+        unpacker = pybamm.SymbolUnpacker(pybamm.Gradient)
+        left_child = children[0]
+        left_child_is_gradient = any(unpacker.unpack_symbol(left_child))
+        for right_child in children:
+            right_child_is_gradient = any(unpacker.unpack_symbol(right_child))
+            if left_child_is_gradient and right_child_is_gradient:
+                raise TypeError(
+                    """Concatenating a sequence of gradient-based expressions is
+                    disabled, try concatenating before applying the gradient operator."""
+                )
+            left_child_is_gradient = right_child_is_gradient
+
+        super().__init__(children, full_mesh=full_mesh, copy_this=None)
+
+    def create_slices(self, node: pybamm.Symbol) -> defaultdict:
+        slices = defaultdict(list)
+        start = 0
+        end = 0
+        second_pts = self._get_auxiliary_domain_repeats(self.domains)
+        if second_pts != self.secondary_dimensions_npts:
+            raise ValueError(
+                """Concatenation and children must have the same number of
+                points in secondary dimensions"""
+            )
+        domains = self.domains["primary"]
+        for _ in range(second_pts):
+            for dom in node.domain:
+                end += self.full_mesh[dom].npts + 1  # n_edges
+                if dom in domains[:-2]:
+                    end -= 1  # remove the rightmost point
+                elif dom == domains[-1]:
+                    start += 1  # remove the leftmost point
+                slices[dom].append(slice(start, end))
+                if dom == domains[-2]:
+                    end -= 1  # shift back
+                start = end
+        return slices
+
+    def _concatenation_new_copy(
+        self, children: list[pybamm.Symbol], perform_simplifications: bool = True
+    ):
+        """See :meth:`pybamm.Concatenation._concatenation_new_copy()`."""
+        # TODO: simplifications?
+        return FluxConcatenation(children=children, full_mesh=self.full_mesh)
+
+    def _evaluates_on_edges(self, dimension: str) -> bool:
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
+        return True
+
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol.evaluate_for_shape`"""
+        if len(self.children) == 0:
+            return np.array([])
+        else:
+            return np.nan * np.ones((self._size, 1))
 
 
 class SparseStack(Concatenation):
@@ -657,3 +744,9 @@ def domain_concatenation(children: list[pybamm.Symbol], mesh: pybamm.Mesh):
     """Helper function to create domain concatenations."""
     # TODO: add option to turn off simplifications
     return simplified_domain_concatenation(children, mesh)
+
+
+def flux_concatenation(children: list[pybamm.Symbol], mesh: pybamm.Mesh):
+    """Helper function to create flux concatenations."""
+    concat = FluxConcatenation(children=children, full_mesh=mesh)
+    return pybamm.simplify_if_constant(concat)

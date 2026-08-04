@@ -580,10 +580,10 @@ class Discretisation:
                     in ["spherical polar", "cylindrical polar"]
                     and next(iter(self.mesh.geometry[subdomain].values()))["min"] == 0
                 ):
-                    if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
+                    if bcs["left"][0].value != 0 or bcs["left"][1] == "Dirichlet":
                         raise pybamm.ModelError(
                             "Boundary condition at r = 0 must be a homogeneous "
-                            f"Neumann condition for {self.mesh[subdomain].coord_sys} coordinates"
+                            f"Neumann or flux condition for {self.mesh[subdomain].coord_sys} coordinates"
                         )
 
             # Handle any boundary conditions applied on the tabs
