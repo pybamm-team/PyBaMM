@@ -1,3 +1,6 @@
+import functools
+import os
+
 import numpy as np
 
 import pybamm
@@ -843,8 +846,6 @@ class TaggedSubMeshGenerator(MeshGenerator):
         Coordinate system label, default ``"cartesian"``.
     """
 
-    _mesh_cache: dict = {}
-
     def __init__(self, region, mesh_path, scale=1.0, coord_sys="cartesian"):
         self.submesh_type = UnstructuredSubMesh
         self.submesh_params = {}
@@ -853,13 +854,19 @@ class TaggedSubMeshGenerator(MeshGenerator):
         self._scale = float(scale)
         self.coord_sys = coord_sys
 
+    @staticmethod
+    @functools.lru_cache(maxsize=8)
+    def _read_cached(fspath, mtime_ns):
+        import meshio
+
+        return meshio.read(fspath)
+
     @classmethod
     def _read(cls, path):
-        if path not in cls._mesh_cache:
-            import meshio
-
-            cls._mesh_cache[path] = meshio.read(str(path))
-        return cls._mesh_cache[path]
+        # keyed on (path, mtime) so edited files re-read and the cache
+        # stays bounded; os.fspath collapses str/Path duplicates
+        fspath = os.fspath(path)
+        return cls._read_cached(fspath, os.stat(fspath).st_mtime_ns)
 
     def __call__(self, lims, npts):
         m = self._read(self._mesh_path)

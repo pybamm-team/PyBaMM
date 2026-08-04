@@ -1312,6 +1312,16 @@ class TestFiniteVolumeUnstructuredBehavior:
             atol=1e-12,
         )
 
+    def test_div_D_grad_anisotropic_coefficient_raises(self):
+        mesh = _make_2d_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        values = pybamm.Vector(np.arange(mesh.npts), domain="test")
+        anisotropic = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        with pytest.raises(pybamm.DiscretisationError, match="Anisotropic"):
+            method.div_D_grad(div_symbol, variable, anisotropic, values, {})
+
     def test_integral_and_boundary_integral(self):
         mesh = _make_2d_mesh(2, 2)
         aux = _make_2d_mesh(1, 1)

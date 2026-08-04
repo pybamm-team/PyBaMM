@@ -1122,6 +1122,21 @@ class TestTaggedSubMeshGenerator:
         with pytest.raises(RuntimeError, match="no tets for region"):
             TaggedSubMeshGenerator("ghost", path)(None, None)
 
+    def test_mesh_cache_keyed_on_path_and_mtime(self, tmp_path):
+        import os
+
+        from pybamm.meshes.unstructured_submesh import TaggedSubMeshGenerator
+
+        path = tmp_path / "tagged.msh"
+        _write_tagged_tet_msh(path)
+        first = TaggedSubMeshGenerator._read(path)
+        # str and Path collapse to the same cache entry
+        assert TaggedSubMeshGenerator._read(str(path)) is first
+        # a newer mtime invalidates the entry
+        stat = os.stat(path)
+        os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+        assert TaggedSubMeshGenerator._read(path) is not first
+
 
 # ======================================================================
 # Point containment

@@ -66,6 +66,23 @@ class TestDiscretise:
         for child in c_e.children:
             assert child in disc.bcs
 
+    def test_internal_boundary_conditions_require_left_right(self):
+        model = pybamm.BaseModel()
+        c_e_n = pybamm.Variable("c_e_n", ["negative electrode"])
+        c_e_s = pybamm.Variable("c_e_s", ["separator"])
+        c_e_p = pybamm.Variable("c_e_p", ["positive electrode"])
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
+        bc = (pybamm.Scalar(0), "Neumann")
+        model.boundary_conditions = {c_e: {"top": bc, "bottom": bc}}
+
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": SpatialMethodForTesting()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.set_variable_slices([c_e_n, c_e_s, c_e_p])
+        disc.bcs = model.boundary_conditions
+        with pytest.raises(pybamm.DiscretisationError, match="'left' and 'right'"):
+            disc.set_internal_boundary_conditions(model)
+
     def test_add_internal_boundary_conditions_symbolic(self):
         submesh_types = {
             "left domain": pybamm.SymbolicUniform1DSubMesh,

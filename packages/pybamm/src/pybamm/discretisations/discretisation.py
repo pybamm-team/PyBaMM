@@ -507,14 +507,32 @@ class Discretisation:
                 if handled is not None:
                     # Only adopt entries for children not already user-supplied.
                     for child, child_bcs in handled.items():
-                        if child not in bc_keys:
-                            internal_bcs[child] = child_bcs
+                        if child in bc_keys:
+                            continue
+                        if not child_bcs:
+                            # adopting an empty dict would strip the child of
+                            # BCs entirely; surface it instead
+                            pybamm.logger.warning(
+                                f"No internal or external boundary conditions "
+                                f"were found for {child.name!r} in domain "
+                                f"{child.domain}; it will be discretised "
+                                "without boundary conditions."
+                            )
+                            continue
+                        internal_bcs[child] = child_bcs
                     continue
                 # else fall through to legacy 1D-stack pairwise logic
 
             first_child = children[0]
             next_child = children[1]
 
+            if "left" not in self.bcs[var] or "right" not in self.bcs[var]:
+                raise pybamm.DiscretisationError(
+                    f"Boundary conditions for the concatenated variable "
+                    f"{var.name!r} must include 'left' and 'right' entries "
+                    f"(got {sorted(self.bcs[var])}); other sides are not "
+                    "supported by the 1D-stack internal-BC routine."
+                )
             lbc = self.bcs[var]["left"]
             rbc = (boundary_gradient(first_child, next_child), "Neumann")
 

@@ -452,10 +452,21 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     def div_D_grad(self, div_symbol, grad_child, disc_D, disc_u, boundary_conditions):
         """Discretise ``div(D * grad(u))`` as a single TPFA operation.
 
-        Fully symbolic — works for both constant and state-dependent ``D``.
-        Internal-face fluxes use arithmetic-mean interpolation of ``D`` to
-        faces and a standard two-point difference for ``grad(u)``.
+        Fully symbolic — works for both constant and state-dependent scalar
+        ``D``. Internal-face fluxes use arithmetic-mean interpolation of ``D``
+        to faces and a standard two-point difference for ``grad(u)``.
+
+        This method is only reached when the expression is written as
+        ``div(D * grad(u))`` (a single product, matched syntactically during
+        discretisation); other flux forms go through the generic
+        :meth:`gradient`/:meth:`divergence` operators, which cannot apply
+        boundary conditions conservatively and raise instead.
         """
+        if isinstance(disc_D, pybamm.VectorField):
+            raise pybamm.DiscretisationError(
+                "Anisotropic (vector-valued) diffusion coefficients are not "
+                "supported by the TPFA discretisation of div(D * grad(u))."
+            )
         _t0 = time.perf_counter()
         domain = div_symbol.domain
         submesh = self.mesh[domain]
