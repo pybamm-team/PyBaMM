@@ -305,6 +305,94 @@ class TestNeumannSignConvention:
 
 
 # ======================================================================
+# Tests: BC tag / type validation
+# ======================================================================
+
+
+class TestBCValidation:
+    def _setup(self):
+        mesh = _make_quad_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(np.arange(mesh.npts), domain="test")
+        return mesh, method, variable, values
+
+    def test_laplacian_unknown_side_raises(self):
+        _, method, variable, values = self._setup()
+        bcs = {variable: {"weft": (pybamm.Scalar(0), "Neumann")}}
+        with pytest.raises(pybamm.DiscretisationError, match="weft"):
+            method.laplacian(variable, values, bcs)
+
+    def test_laplacian_unknown_bc_type_raises(self):
+        _, method, variable, values = self._setup()
+        bcs = {variable: {"left": (pybamm.Scalar(0), "Robin")}}
+        with pytest.raises(pybamm.DiscretisationError, match="Robin"):
+            method.laplacian(variable, values, bcs)
+
+    def test_gradient_unknown_side_raises(self):
+        _, method, variable, values = self._setup()
+        bcs = {variable: {"weft": (pybamm.Scalar(0), "Neumann")}}
+        with pytest.raises(pybamm.DiscretisationError, match="weft"):
+            method.gradient(variable, values, bcs)
+
+    def test_gradient_unknown_bc_type_raises(self):
+        _, method, variable, values = self._setup()
+        bcs = {variable: {"left": (pybamm.Scalar(0), "Dirchlet")}}
+        with pytest.raises(pybamm.DiscretisationError, match="Dirchlet"):
+            method.gradient(variable, values, bcs)
+
+    def test_div_D_grad_unknown_side_raises(self):
+        _, method, variable, values = self._setup()
+        div_symbol = pybamm.Variable("div", domain="test")
+        bcs = {variable: {"weft": (pybamm.Scalar(0), "Neumann")}}
+        with pytest.raises(pybamm.DiscretisationError, match="weft"):
+            method.div_D_grad(div_symbol, variable, pybamm.Scalar(1), values, bcs)
+
+    def test_div_boundary_correction_unknown_side_raises(self):
+        mesh, method, variable, _ = self._setup()
+        bcs = {variable: {"weft": (pybamm.Scalar(0), "Neumann")}}
+        with pytest.raises(pybamm.DiscretisationError, match="weft"):
+            method._div_boundary_correction(mesh, bcs, domain=["test"])
+
+    def test_boundary_value_unknown_side_raises(self):
+        _, method, variable, values = self._setup()
+        symbol = pybamm.BoundaryValue(variable, "missing")
+        with pytest.raises(pybamm.DiscretisationError, match="missing"):
+            method.boundary_value_or_flux(symbol, values)
+
+    def test_boundary_integral_unknown_region_raises(self):
+        _, method, variable, values = self._setup()
+        with pytest.raises(pybamm.DiscretisationError, match="missing"):
+            method.boundary_integral(variable, values, "missing")
+
+    def test_boundary_integral_entire(self):
+        # integral of u = 1 over the whole boundary = perimeter of unit square
+        mesh, method, variable, _ = self._setup()
+        ones = pybamm.Vector(np.ones(mesh.npts), domain="test")
+        result = method.boundary_integral(variable, ones, "entire")
+        np.testing.assert_allclose(result.evaluate().sum(), 4.0, atol=1e-12)
+
+    def test_boundary_integral_entire_excludes_interface_faces(self):
+        left, right = _make_split_2d_meshes()
+        # emulate interface discovery: move left mesh's right faces to an
+        # iface bucket
+        left.boundary_faces["iface_right"] = left.boundary_faces.pop("right")
+        method = _method_with_mesh(left)
+        variable = pybamm.Variable("u", domain="test")
+        ones = pybamm.Vector(np.ones(left.npts), domain="test")
+        result = method.boundary_integral(variable, ones, "entire")
+        # perimeter of [0, 0.5] x [0, 1] minus the shared edge (length 1)
+        np.testing.assert_allclose(result.evaluate().sum(), 2.0, atol=1e-12)
+
+    def test_deleted_bucket_message_mentions_interface(self):
+        mesh, method, variable, values = self._setup()
+        mesh.boundary_faces["iface_other"] = mesh.boundary_faces.pop("right")
+        bcs = {variable: {"right": (pybamm.Scalar(0), "Dirichlet")}}
+        with pytest.raises(pybamm.DiscretisationError, match="interface"):
+            method.laplacian(variable, values, bcs)
+
+
+# ======================================================================
 # Tests: Green-Gauss Gradient
 # ======================================================================
 
@@ -969,9 +1057,6 @@ class TestFiniteVolumeUnstructuredBehavior:
                 side: (pybamm.Scalar(0), "Neumann")
                 for side in ["left", "right", "top", "bottom"]
             }
-            | {
-                "missing": (pybamm.Scalar(3), "Dirichlet"),
-            }
         }
         np.testing.assert_allclose(
             method.laplacian(variable, constant, neumann_bcs).evaluate(), 0, atol=1e-12
@@ -1016,9 +1101,6 @@ class TestFiniteVolumeUnstructuredBehavior:
                 side: (pybamm.Scalar(0), "Neumann")
                 for side in ["left", "right", "top", "bottom"]
             }
-            | {
-                "missing": (pybamm.Scalar(2), "Neumann"),
-            }
         }
         for component in method.gradient(variable, constant, neumann_bcs)._components:
             np.testing.assert_allclose(component.evaluate(), 0, atol=1e-12)
@@ -1061,7 +1143,6 @@ class TestFiniteVolumeUnstructuredBehavior:
             variable: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(2), "Neumann"),
-                "missing": (pybamm.Scalar(3), "Neumann"),
             },
         }
 
@@ -1111,7 +1192,6 @@ class TestFiniteVolumeUnstructuredBehavior:
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(2), "Neumann"),
                 "top": (pybamm.Scalar(0), "Neumann"),
-                "missing": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
         scalar_result = method.div_D_grad(
@@ -1144,7 +1224,6 @@ class TestFiniteVolumeUnstructuredBehavior:
                     "left": (pybamm.Scalar(0), "Dirichlet"),
                     "right": (pybamm.Scalar(2), "Neumann"),
                     "top": (pybamm.Scalar(0), "Neumann"),
-                    "missing": (pybamm.Scalar(1), "Dirichlet"),
                 }
             },
         )
@@ -1170,12 +1249,10 @@ class TestFiniteVolumeUnstructuredBehavior:
 
         boundary = method.boundary_integral(child, values, "left")
         np.testing.assert_allclose(boundary.evaluate(), 1)
-        missing = method.boundary_integral(child, values, "missing")
-        assert missing == pybamm.Scalar(0)
 
     @pytest.mark.parametrize(
         "side",
-        ["left", "missing", "top-right", "top-left", "bottom-right", "bottom-left"],
+        ["left", "top-right", "top-left", "bottom-right", "bottom-left"],
     )
     def test_boundary_value_and_corners(self, side):
         mesh = _make_2d_mesh(2, 2)
@@ -1186,9 +1263,7 @@ class TestFiniteVolumeUnstructuredBehavior:
 
         result = method.boundary_value_or_flux(symbol, values)
         assert result.domain == []
-        if side == "missing":
-            assert result == pybamm.Scalar(0)
-        elif "-" in side:
+        if "-" in side:
             top_bottom, left_right = side.split("-")
             x = mesh.cell_centroids[:, 0]
             z = mesh.cell_centroids[:, -1]

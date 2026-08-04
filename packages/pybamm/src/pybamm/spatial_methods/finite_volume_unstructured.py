@@ -250,6 +250,14 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 neighbor_child = name_to_child.get(neighbor_name)
                 if neighbor_child is None:
                     continue
+                if f"iface_{neighbor_name}" not in child_mesh.boundary_faces:
+                    pybamm.logger.warning(
+                        f"Domain {primary!r} has interface data for "
+                        f"{neighbor_name!r} but no 'iface_{neighbor_name}' "
+                        "face bucket; skipping the internal BC, so these "
+                        "domains will not be coupled."
+                    )
+                    continue
                 left_disc = disc.process_symbol(child)
                 right_disc = disc.process_symbol(neighbor_child)
                 grad = self.internal_neumann_condition(
@@ -491,10 +499,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         if grad_child in boundary_conditions:
             bcs = boundary_conditions[grad_child]
             for side, (bc_value, bc_type) in bcs.items():
-                face_tag = self._side_to_boundary_tag(side)
-                if face_tag not in submesh.boundary_faces:
-                    continue
-                fi_arr = submesh.boundary_faces[face_tag]
+                self._check_bc_type(bc_type)
+                fi_arr = self._boundary_faces_for_side(submesh, side)
                 n_bnd = len(fi_arr)
                 bnd_own = submesh.face_owner[fi_arr]
 
@@ -555,11 +561,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         L = L.tolil()
 
         for side, (bc_value, bc_type) in bcs.items():
-            face_tag = self._side_to_boundary_tag(side)
-            if face_tag not in submesh.boundary_faces:
-                continue
-
-            face_indices = submesh.boundary_faces[face_tag]
+            self._check_bc_type(bc_type)
+            face_indices = self._boundary_faces_for_side(submesh, side)
             n_bnd = len(face_indices)
             owners = submesh.face_owner[face_indices]
 
@@ -593,15 +596,28 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         return csr_matrix(L), bc_rhs
 
     @staticmethod
-    def _side_to_boundary_tag(side):
-        return {
-            "left": "left",
-            "right": "right",
-            "top": "top",
-            "bottom": "bottom",
-            "front": "front",
-            "back": "back",
-        }.get(side, side)
+    def _boundary_faces_for_side(submesh, side):
+        """Boundary-face indices for a BC side, raising when the tag is unknown.
+
+        BC sides map directly onto ``submesh.boundary_faces`` keys; a missing
+        key means the BC cannot be applied, so failing loudly here is what
+        stops typos and interface-consumed sides from silently dropping BCs.
+        """
+        if side not in submesh.boundary_faces:
+            raise pybamm.DiscretisationError(
+                f"No boundary faces tagged {side!r} on this mesh (available "
+                f"tags: {sorted(submesh.boundary_faces)}). The side may be "
+                "misspelled, or its faces were absorbed into an internal "
+                "interface by interface discovery."
+            )
+        return submesh.boundary_faces[side]
+
+    @staticmethod
+    def _check_bc_type(bc_type):
+        if bc_type not in ("Dirichlet", "Neumann"):
+            raise pybamm.DiscretisationError(
+                f"boundary condition must be Dirichlet or Neumann, not {bc_type!r}"
+            )
 
     # Named sides whose outward normal points along the negative coordinate
     # axis (see UnstructuredSubMesh._identify_boundary_faces).
@@ -732,11 +748,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         vol = submesh.cell_volumes
 
         for side, (bc_value, bc_type) in bcs.items():
-            face_tag = self._side_to_boundary_tag(side)
-            if face_tag not in submesh.boundary_faces:
-                continue
-
-            face_indices = submesh.boundary_faces[face_tag]
+            self._check_bc_type(bc_type)
+            face_indices = self._boundary_faces_for_side(submesh, side)
             n_bnd = len(face_indices)
             owners = submesh.face_owner[face_indices]
 
@@ -846,10 +859,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             if domain is not None and var.domain != domain:
                 continue
             for side, (bc_value, bc_type) in bcs.items():
-                face_tag = self._side_to_boundary_tag(side)
-                if face_tag not in submesh.boundary_faces:
-                    continue
-                face_indices = submesh.boundary_faces[face_tag]
+                self._check_bc_type(bc_type)
+                face_indices = self._boundary_faces_for_side(submesh, side)
                 n_bnd = len(face_indices)
                 owners = submesh.face_owner[face_indices]
                 areas = submesh.face_areas[face_indices]
@@ -1033,13 +1044,22 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     def boundary_integral(self, child, discretised_child, region):
         submesh = self.mesh[child.domain]
-        face_tag = self._side_to_boundary_tag(region)
         repeats = self._get_auxiliary_domain_repeats(child.domains)
 
-        if face_tag not in submesh.boundary_faces:
-            return pybamm.Scalar(0)
-
-        face_indices = submesh.boundary_faces[face_tag]
+        if region == "entire":
+            # every exterior boundary face; iface_* buckets are internal
+            # interfaces, not part of the domain boundary
+            iface = [
+                indices
+                for tag, indices in submesh.boundary_faces.items()
+                if tag.startswith("iface_")
+            ]
+            face_indices = np.setdiff1d(
+                np.arange(submesh._boundary_face_start, len(submesh.face_owner)),
+                np.concatenate(iface) if iface else np.array([], dtype=int),
+            )
+        else:
+            face_indices = self._boundary_faces_for_side(submesh, region)
         n = submesh.npts
 
         owners = submesh.face_owner[face_indices]
@@ -1075,14 +1095,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 submesh, n, repeats, side, discretised_child
             )
 
-        face_tag = self._side_to_boundary_tag(side)
-
-        if face_tag not in submesh.boundary_faces:
-            out = pybamm.Scalar(0)
-            out.clear_domains()
-            return out
-
-        face_indices = submesh.boundary_faces[face_tag]
+        face_indices = self._boundary_faces_for_side(submesh, side)
         n_bnd = len(face_indices)
         owners = submesh.face_owner[face_indices]
 
