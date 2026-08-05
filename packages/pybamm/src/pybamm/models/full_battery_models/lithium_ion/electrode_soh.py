@@ -369,7 +369,7 @@ class ElectrodeSOHSolver:
         self._get_electrode_soh_sims_split = lru_cache()(
             self.__get_electrode_soh_sims_split
         )
-        self._get_energy_ocv_function = lru_cache(maxsize=4)(
+        self._get_energy_ocv_function = lru_cache()(
             self.__get_energy_ocv_function
         )
 
@@ -394,7 +394,7 @@ class ElectrodeSOHSolver:
         self._get_electrode_soh_sims_split = lru_cache()(
             self.__get_electrode_soh_sims_split
         )
-        self._get_energy_ocv_function = lru_cache(maxsize=4)(
+        self._get_energy_ocv_function = lru_cache()(
             self.__get_energy_ocv_function
         )
 
