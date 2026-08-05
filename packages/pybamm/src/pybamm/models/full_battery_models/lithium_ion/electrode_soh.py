@@ -369,9 +369,7 @@ class ElectrodeSOHSolver:
         self._get_electrode_soh_sims_split = lru_cache()(
             self.__get_electrode_soh_sims_split
         )
-        self._get_energy_ocv_function = lru_cache()(
-            self.__get_energy_ocv_function
-        )
+        self._get_energy_ocv_function = lru_cache()(self.__get_energy_ocv_function)
 
     def __getstate__(self):
         """
@@ -394,9 +392,7 @@ class ElectrodeSOHSolver:
         self._get_electrode_soh_sims_split = lru_cache()(
             self.__get_electrode_soh_sims_split
         )
-        self._get_energy_ocv_function = lru_cache()(
-            self.__get_energy_ocv_function
-        )
+        self._get_energy_ocv_function = lru_cache()(self.__get_energy_ocv_function)
 
     def _get_lims_ocp(self, direction):
         parameter_values = self.parameter_values
