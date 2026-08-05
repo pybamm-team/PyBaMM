@@ -60,7 +60,7 @@ plot = [
 ]
 cite = ["pybtex>=0.25.0"]
 # For diffsl export integration tests
-pydiffsol = ["pydiffsol>=0.6.1"]
+pydiffsol = ["pydiffsol>=0.6.2"]
 # Battery Parameter eXchange format
 bpx = ["bpx>=1.1.1,<1.2.0"]
 # Low-overhead progress bars
