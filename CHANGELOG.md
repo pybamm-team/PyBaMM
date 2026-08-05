@@ -7,6 +7,7 @@
 
 ## Bug fixes
 
+- Fixed a memory leak in `ElectrodeSOHSolver.theoretical_energy_integral`, which cached a new expression tree per call. ([#5695](https://github.com/pybamm-team/PyBaMM/pull/5695))
 - `BatchStudy.solve` no longer ignores its `solver` argument: previously the loop over study inputs shadowed it, so a caller-supplied solver was silently dropped. A solver from `BatchStudy(solvers=...)` still takes precedence. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
 - `pybamm.citations.register` now names the citation the caller passed in when a BibTeX string fails to parse, instead of whichever entry the parser had reached. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
 - Deserialising a parameter set whose interpolant specification is invalid now logs a warning naming the offending parameter, instead of printing the bare exception to stdout with no indication of which parameter fell back to zero. ([#5679](https://github.com/pybamm-team/PyBaMM/pull/5679))

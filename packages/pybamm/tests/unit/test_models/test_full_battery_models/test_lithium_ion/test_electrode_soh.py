@@ -831,6 +831,24 @@ class TestCalculateTheoreticalEnergy:
         assert 0 < discharge_energy
         assert 0 < theoretical_energy
 
+    def test_repeated_solves_do_not_grow_parameter_cache(self):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        param = pybamm.LithiumIonParameters()
+        inputs = {
+            "Q_n": parameter_values.evaluate(param.n.Q_init),
+            "Q_p": parameter_values.evaluate(param.p.Q_init),
+            "V_min": 2.5,
+            "V_max": 4.2,
+        }
+        Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values)
+
+        cache_sizes = []
+        for i in range(3):
+            esoh_solver.solve({**inputs, "Q_Li": Q_Li * (1 - 1e-6 * i)})
+            cache_sizes.append(len(parameter_values._processor.cache))
+        assert cache_sizes[1] == cache_sizes[2]
+
 
 class TestGetInitialSOC:
     def test_initial_soc(self):
