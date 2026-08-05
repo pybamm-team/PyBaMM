@@ -1387,6 +1387,12 @@ def process_variable(name: str, base_variables, *args, **kwargs):
         return ProcessedVariable3DSciKitFEM(name, base_variables, *args, **kwargs)
 
     if mesh and hasattr(mesh, "edges_lr") and hasattr(mesh, "edges_tb"):
+        if isinstance(base_variables[0], pybamm.VectorField):
+            raise NotImplementedError(
+                "Reading VectorField variables from a Solution is not supported "
+                "on structured 2D finite-volume meshes. Use pybamm.Component to "
+                "extract a scalar component first."
+            )
         return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
 
     # check variable shape

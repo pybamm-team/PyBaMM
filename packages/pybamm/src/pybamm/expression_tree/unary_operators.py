@@ -1509,6 +1509,54 @@ class Magnitude(UnaryOperator):
         return self.__class__(child, self.direction)
 
 
+class Component(UnaryOperator):
+    """
+    Extract component *index* from a VectorField.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        A VectorField symbol.
+    index : int
+        Zero-based component index.
+    """
+
+    def __init__(self, child, index):
+        super().__init__(f"component({index})", child)
+        self.index = index
+
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "index": self.index,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["index"])
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        return self.__class__(child, self.index)
+
+
+class Norm(UnaryOperator):
+    """
+    Euclidean norm of a VectorField: ``sqrt(sum(comp_i ** 2))``.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        A VectorField symbol.
+    """
+
+    def __init__(self, child):
+        super().__init__("norm", child)
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        return self.__class__(child)
+
+
 class Upwind(UpwindDownwind):
     """
     Upwinding operator. To be used if flow velocity is positive (left to right).
