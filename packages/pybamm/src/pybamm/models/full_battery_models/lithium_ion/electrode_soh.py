@@ -239,11 +239,14 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         param=None,
         solve_for=None,
         known_value="cyclable lithium capacity",
+        options=None,
     ):
         pybamm.citations.register("Baker2018")
         super().__init__()
 
-        param = param or pybamm.LithiumIonParameters({"open-circuit potential": "MSMR"})
+        param = param or pybamm.LithiumIonParameters(
+            options or {"open-circuit potential": "MSMR"}
+        )
         solve_for = solve_for or ["Un_0", "Un_100"]
 
         if known_value == "cell capacity" and solve_for != ["Un_0", "Un_100"]:
@@ -431,11 +434,17 @@ class ElectrodeSOHSolver:
     def __get_electrode_soh_sims_full(self, direction):
         if self.options["open-circuit potential"] == "MSMR":
             full_model = _ElectrodeSOHMSMR(
-                direction, param=self.param, known_value=self.known_value
+                direction,
+                param=self.param,
+                known_value=self.known_value,
+                options=self.options,
             )
         else:
             full_model = _ElectrodeSOH(
-                direction, param=self.param, known_value=self.known_value
+                direction,
+                param=self.param,
+                known_value=self.known_value,
+                options=self.options,
             )
         return pybamm.Simulation(full_model, parameter_values=self.parameter_values)
 
@@ -446,12 +455,14 @@ class ElectrodeSOHSolver:
                 param=self.param,
                 solve_for=["Un_100"],
                 known_value=self.known_value,
+                options=self.options,
             )
             x0_model = _ElectrodeSOHMSMR(
                 direction,
                 param=self.param,
                 solve_for=["Un_0"],
                 known_value=self.known_value,
+                options=self.options,
             )
         else:
             x100_model = _ElectrodeSOH(
@@ -459,12 +470,14 @@ class ElectrodeSOHSolver:
                 param=self.param,
                 solve_for=["x_100"],
                 known_value=self.known_value,
+                options=self.options,
             )
             x0_model = _ElectrodeSOH(
                 direction,
                 param=self.param,
                 solve_for=["x_0"],
                 known_value=self.known_value,
+                options=self.options,
             )
         x100_sim = pybamm.Simulation(x100_model, parameter_values=self.parameter_values)
         x0_sim = pybamm.Simulation(x0_model, parameter_values=self.parameter_values)

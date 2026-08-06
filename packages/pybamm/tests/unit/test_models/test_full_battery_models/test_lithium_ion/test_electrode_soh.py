@@ -202,6 +202,89 @@ class TestElectrodeSOH:
             esoh_solver.solve(inputs)
 
 
+class TestElectrodeSOHHysteresis:
+    """The eSOH model must equilibrate 100% SOC on the charge branch and 0% SOC on
+    the discharge branch, which requires the model options to reach `_ElectrodeSOH`."""
+
+    options = pybamm.BatteryModelOptions(
+        {"open-circuit potential": ("current sigmoid", "current sigmoid")}
+    )
+
+    @staticmethod
+    def _hysteresis_parameter_values():
+        """Chen2020 with OCP branches offset by +/- 50 mV from equilibrium."""
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        updates = {}
+        for electrode in ["Negative", "Positive"]:
+            U_eq = parameter_values[f"{electrode} electrode OCP [V]"]
+            updates[f"{electrode} electrode lithiation OCP [V]"] = (
+                lambda sto, U_eq=U_eq: U_eq(sto) - 0.05
+            )
+            updates[f"{electrode} electrode delithiation OCP [V]"] = (
+                lambda sto, U_eq=U_eq: U_eq(sto) + 0.05
+            )
+        parameter_values.update(updates, check_already_exists=False)
+        return parameter_values
+
+    def test_ocp_branches_in_model(self):
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            self._hysteresis_parameter_values(), options=self.options
+        )
+        model = esoh_solver._get_electrode_soh_sims_full(None).model
+        branches = {
+            var.name: sorted(
+                {node.name for node in eqn.pre_order() if node.name.endswith("OCP [V]")}
+            )
+            for var, eqn in model.algebraic.items()
+        }
+        assert branches == {
+            "x_100": [
+                "Negative electrode lithiation OCP [V]",
+                "Positive electrode delithiation OCP [V]",
+            ],
+            "x_0": [
+                "Negative electrode delithiation OCP [V]",
+                "Positive electrode lithiation OCP [V]",
+            ],
+        }
+
+    def test_solution_lies_on_hysteresis_branches(self):
+        parameter_values = self._hysteresis_parameter_values()
+        param = pybamm.LithiumIonParameters(self.options)
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, param=param, options=self.options
+        )
+        sol = esoh_solver.solve(
+            {
+                "Q_n": parameter_values.evaluate(param.n.Q_init),
+                "Q_p": parameter_values.evaluate(param.p.Q_init),
+                "Q_Li": parameter_values.evaluate(param.Q_Li_particles_init),
+            }
+        )
+
+        T_ref = parameter_values["Reference temperature [K]"]
+
+        def ocv(x, y, negative_branch, positive_branch):
+            return parameter_values.evaluate(
+                param.p.prim.U(y, T_ref, positive_branch)
+                - param.n.prim.U(x, T_ref, negative_branch)
+            )
+
+        V_max = parameter_values["Open-circuit voltage at 100% SOC [V]"]
+        V_min = parameter_values["Open-circuit voltage at 0% SOC [V]"]
+        x_100, y_100, x_0, y_0 = sol["x_100"], sol["y_100"], sol["x_0"], sol["y_0"]
+
+        assert ocv(x_100, y_100, "lithiation", "delithiation") == pytest.approx(
+            V_max, abs=1e-6
+        )
+        assert ocv(x_0, y_0, "delithiation", "lithiation") == pytest.approx(
+            V_min, abs=1e-6
+        )
+        # the equilibrium branch is 100 mV away, so it cannot also satisfy the limits
+        assert ocv(x_100, y_100, None, None) == pytest.approx(V_max - 0.1, abs=1e-6)
+        assert ocv(x_0, y_0, None, None) == pytest.approx(V_min + 0.1, abs=1e-6)
+
+
 class TestElectrodeSOHComposite:
     @staticmethod
     def _check_phases_equal(results, xy, soc):
