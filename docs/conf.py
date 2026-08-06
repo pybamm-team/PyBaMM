@@ -198,7 +198,10 @@ html_file_suffix = ".html"
 
 htmlhelp_basename = "pybamm"
 
-html_sidebars = {"**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
+html_sidebars = {
+    "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"],
+    "index": [],  # Remove the left side-bar for the home page
+}
 
 # For edit button
 html_context.update(
