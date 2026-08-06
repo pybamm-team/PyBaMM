@@ -1788,9 +1788,12 @@ def process_variable(name: str, base_variables, *args, **kwargs):
             return ProcessedVariableVectorFieldUnstructuredFVM(
                 name, base_variables, *args, **kwargs
             )
-        # scalar reductions (e.g. Max/Min) keep the spatial domain but
-        # evaluate to a single value: they are 0D in space
-        if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
+        # Scalar reductions (e.g. Max/Min) keep the spatial domain but
+        # evaluate to a single value, so they are 0D in space. A one-cell
+        # mesh is also size 1, hence the cell-count check takes precedence.
+        if base_eval_size != mesh.npts and (
+            len(base_eval_shape) == 0 or base_eval_shape[0] == 1
+        ):
             return ProcessedVariable0D(name, base_variables, *args, **kwargs)
         return ProcessedVariableUnstructuredFVM(name, base_variables, *args, **kwargs)
 

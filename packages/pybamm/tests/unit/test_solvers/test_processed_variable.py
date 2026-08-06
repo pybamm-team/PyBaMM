@@ -2300,6 +2300,28 @@ class TestProcessedVariableUnstructuredFVM:
             pv(t_sol), (submesh.npts - 1) * (1 + t_sol), rtol=1e-12
         )
 
+    def test_single_cell_mesh_variable_stays_spatial(self):
+        # a one-cell mesh also evaluates to size 1, but it is a genuine
+        # spatial variable and must not be routed to the 0D PV
+        from pybamm.meshes.unstructured_submesh import UnstructuredSubMesh
+
+        submesh = UnstructuredSubMesh(
+            np.array(
+                [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+            ),
+            np.array([[0, 1, 2, 3]]),
+        )
+        var_disc = pybamm.StateVector(slice(0, 1))
+        var_disc.mesh = submesh
+        t_sol = np.array([0.0, 1.0])
+        y_sol = np.array([[1.0, 2.0]])
+        var_casadi = to_casadi(var_disc, y_sol)
+        model = pybamm.BaseModel()
+        model._geometry = {"mesh": {}}
+        solution = pybamm.Solution(t_sol, y_sol, model, {})
+        pv = pybamm.process_variable("u", [var_disc], [var_casadi], solution)
+        assert isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM)
+
     def test_disconnected_component_is_not_masked(self):
         from pybamm.meshes.unstructured_submesh import (
             UnstructuredSubMesh,
