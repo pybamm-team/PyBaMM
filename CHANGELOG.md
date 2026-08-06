@@ -8,6 +8,7 @@
 
 ## Bug fixes
 
+- Boundary conditions are no longer silently dropped when their side is not one of a fixed list of names: `"front"`/`"back"` and user-defined boundary regions (e.g. Gmsh physical groups) are now processed like any other side. ([#5702](https://github.com/pybamm-team/PyBaMM/pull/5702))
 - `ElectrodeSOHSolver` now passes model options through, so hysteresis OCP branches are used. ([#5701](https://github.com/pybamm-team/PyBaMM/pull/5701))
 - Fixed a memory leak in `ElectrodeSOHSolver.theoretical_energy_integral`, which cached a new expression tree per call. ([#5695](https://github.com/pybamm-team/PyBaMM/pull/5695))
 - `BatchStudy.solve` no longer ignores its `solver` argument: previously the loop over study inputs shadowed it, so a caller-supplied solver was silently dropped. A solver from `BatchStudy(solvers=...)` still takes precedence. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
