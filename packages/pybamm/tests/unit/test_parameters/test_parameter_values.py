@@ -1081,6 +1081,39 @@ class TestParameterValues:
         with pytest.raises(KeyError):
             parameter_values.process_model(model)
 
+    def test_process_model_keeps_all_boundary_condition_sides(self):
+        # sides may be any named boundary region (3D faces, Gmsh physical
+        # groups, tabs), not only "left"/"right"
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var", domain="test")
+        model.rhs = {var: pybamm.Scalar(0)}
+        model.initial_conditions = {var: pybamm.Scalar(0)}
+        sides = {
+            "left": "a",
+            "right": "b",
+            "top": "c",
+            "bottom": "d",
+            "front": "e",
+            "back": "f",
+            "tab_top": "g",
+            "my region": "h",
+        }
+        model.boundary_conditions = {
+            var: {
+                side: (pybamm.Parameter(name), "Dirichlet")
+                for side, name in sides.items()
+            }
+        }
+
+        values = {name: index for index, name in enumerate(sides.values())}
+        pybamm.ParameterValues(values).process_model(model)
+
+        processed = next(iter(model.boundary_conditions.values()))
+        assert sorted(processed) == sorted(sides)
+        for side, name in sides.items():
+            assert processed[side][0].value == values[name]
+            assert processed[side][1] == "Dirichlet"
+
     def test_process_geometry(self):
         var = pybamm.Variable("var")
         geometry = {"negative electrode": {"x": {"min": 0, "max": var}}}

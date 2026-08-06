@@ -579,48 +579,26 @@ class ParameterSubstitutor:
         Process boundary conditions for a model.
 
         Boundary conditions are dictionaries {"left": left bc, "right": right bc}
-        in general, but may be imposed on the tabs (or *not* on the tab) for a
-        small number of variables.
+        in general, but may be imposed on the tabs (or *not* on the tab), or on
+        any named boundary region of the mesh (e.g. a Gmsh physical group).
+
+        Every side present in the model is processed: iterating a fixed list of
+        side names would silently discard conditions on any other tag.
         """
         new_boundary_conditions: dict[
             pybamm.Symbol, dict[str, tuple[pybamm.Symbol, str]]
         ] = {}
-        sides = [
-            "left",
-            "right",
-            "negative tab",
-            "positive tab",
-            "no tab",
-            "top",
-            "bottom",
-            "x_min",
-            "x_max",
-            "y_min",
-            "y_max",
-            "z_min",
-            "z_max",
-            "r_min",
-            "r_max",
-        ]
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = self.process_symbol(variable)
             new_boundary_conditions[processed_variable] = {}
-            for side in sides:
-                try:
-                    bc, typ = bcs[side]
-                    pybamm.logger.verbose(
-                        f"Processing parameters for {variable!r} ({side} bc)"
-                    )
-                    processed_bc = (self.process_symbol(bc), typ)
-                    new_boundary_conditions[processed_variable][side] = processed_bc
-                except KeyError as err:
-                    # don't raise error if the key error comes from the side not being
-                    # found
-                    if err.args[0] in side:
-                        pass
-                    # do raise error otherwise (e.g. can't process symbol)
-                    else:
-                        raise
+            for side, (bc, typ) in bcs.items():
+                pybamm.logger.verbose(
+                    f"Processing parameters for {variable!r} ({side} bc)"
+                )
+                new_boundary_conditions[processed_variable][side] = (
+                    self.process_symbol(bc),
+                    typ,
+                )
 
         return new_boundary_conditions
 
