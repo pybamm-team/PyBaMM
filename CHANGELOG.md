@@ -8,6 +8,7 @@
 
 ## Bug fixes
 
+- `ParameterValues.create_from_bpx` no longer writes `None` into the parameter set for thermal material properties (density and specific heat capacity) that a BPX file omits. Absent optional BPX fields are now dropped entirely, so building an isothermal model from a thermal-less BPX still works, and building a thermal model raises PyBaMM's usual named "parameter not found" error instead of a cryptic type error deep in the expression tree. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - `ElectrodeSOHSolver` now passes model options through, so hysteresis OCP branches are used. ([#5701](https://github.com/pybamm-team/PyBaMM/pull/5701))
 - Fixed a memory leak in `ElectrodeSOHSolver.theoretical_energy_integral`, which cached a new expression tree per call. ([#5695](https://github.com/pybamm-team/PyBaMM/pull/5695))
 - `BatchStudy.solve` no longer ignores its `solver` argument: previously the loop over study inputs shadowed it, so a caller-supplied solver was silently dropped. A solver from `BatchStudy(solvers=...)` still takes precedence. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
