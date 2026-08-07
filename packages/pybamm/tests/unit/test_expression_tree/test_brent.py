@@ -10,6 +10,10 @@ import pytest
 from scipy.optimize import brentq
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import (
+    convert_symbol_from_json,
+    convert_symbol_to_json,
+)
 
 
 def _evaluate(symbol, **inputs):
@@ -22,23 +26,23 @@ def _evaluate(symbol, **inputs):
 
 class TestBrent:
     def test_solves_a_scalar_equation(self):
-        x = pybamm.Symbol("x")
-        node = pybamm.Brent(pybamm.exp(x) + x, x, 2.0, -5.0, 5.0)
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(pybamm.exp(x) + x - 2.0, x, (-5.0, 5.0))
         got = float(casadi.evalf(node.to_casadi(inputs={})))
         want = brentq(lambda v: np.exp(v) + v - 2.0, -5.0, 5.0, xtol=2e-12)
         assert got == pytest.approx(want, abs=1e-12)
 
     def test_target_may_be_an_input_parameter(self):
-        x = pybamm.Symbol("x")
-        node = pybamm.Brent(x * x, x, pybamm.InputParameter("target"), 0.0, 10.0)
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(x * x - pybamm.InputParameter("target"), x, (0.0, 10.0))
         assert _evaluate(node, target=9.0) == pytest.approx(3.0, abs=1e-12)
         assert _evaluate(node, target=4.0) == pytest.approx(2.0, abs=1e-12)
 
     def test_bracket_may_be_input_parameters(self):
         # x^2 = 6 has roots at +-sqrt(6); the bracket selects one, at solve time
-        x = pybamm.Symbol("x")
+        x = pybamm.Variable("x")
         node = pybamm.Brent(
-            x * x, x, 6.0, pybamm.InputParameter("lo"), pybamm.InputParameter("hi")
+            x * x - 6.0, x, (pybamm.InputParameter("lo"), pybamm.InputParameter("hi"))
         )
         assert _evaluate(node, lo=0.0, hi=10.0) == pytest.approx(np.sqrt(6), abs=1e-12)
         assert _evaluate(node, lo=-10.0, hi=0.0) == pytest.approx(
@@ -47,19 +51,17 @@ class TestBrent:
 
     def test_the_expression_may_contain_input_parameters(self):
         # a x^2 = 9 has positive root 3 / sqrt(a)
-        x = pybamm.Symbol("x")
-        node = pybamm.Brent(pybamm.InputParameter("a") * x * x, x, 9.0, 0.0, 10.0)
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(pybamm.InputParameter("a") * x * x - 9.0, x, (0.0, 10.0))
         for a in (1.0, 4.0, 9.0):
             assert _evaluate(node, a=a) == pytest.approx(3.0 / np.sqrt(a), abs=1e-12)
 
     def test_every_argument_may_be_an_input_parameter_at_once(self):
-        x = pybamm.Symbol("x")
+        x = pybamm.Variable("x")
         node = pybamm.Brent(
-            pybamm.InputParameter("a") * x * x,
+            pybamm.InputParameter("a") * x * x - pybamm.InputParameter("target"),
             x,
-            pybamm.InputParameter("target"),
-            pybamm.InputParameter("lo"),
-            pybamm.InputParameter("hi"),
+            (pybamm.InputParameter("lo"), pybamm.InputParameter("hi")),
         )
         got = _evaluate(node, a=4.0, target=9.0, lo=0.0, hi=10.0)
         assert got == pytest.approx(1.5, abs=1e-12)
@@ -68,8 +70,8 @@ class TestBrent:
 
     def test_solves_over_the_state_vector(self):
         state = pybamm.StateVector(slice(0, 1))
-        x = pybamm.Symbol("x")
-        node = pybamm.Brent(x * state, x, 6.0, 0.0, 10.0)
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(x * state - 6.0, x, (0.0, 10.0))
         y = casadi.MX.sym("y", 1)
         expression = casadi.Function("f", [y], [node.to_casadi(y=y, inputs={})])
         assert float(expression(2.0)) == pytest.approx(3.0, abs=1e-12)
@@ -77,33 +79,33 @@ class TestBrent:
 
     def test_derivative_is_exact(self):
         # x = sqrt(target), so dx/d(target) = 1 / (2 sqrt(target))
-        x = pybamm.Symbol("x")
-        node = pybamm.Brent(x * x, x, pybamm.InputParameter("target"), 0.0, 10.0)
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(x * x - pybamm.InputParameter("target"), x, (0.0, 10.0))
         symbol = casadi.MX.sym("target")
         root = node.to_casadi(inputs={"target": symbol})
         derivative = casadi.Function("J", [symbol], [casadi.jacobian(root, symbol)])
         assert float(derivative(9.0)) == pytest.approx(1 / 6, rel=1e-12)
 
     def test_composes_into_a_larger_expression(self):
-        x = pybamm.Symbol("x")
-        node = pybamm.Brent(x * x, x, 9.0, 0.0, 10.0)
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(x * x - 9.0, x, (0.0, 10.0))
         got = float(casadi.evalf((3 * node + pybamm.Scalar(1)).to_casadi(inputs={})))
         assert got == pytest.approx(10.0, abs=1e-12)
 
     def test_nests(self):
         # the inner solve gives sqrt(16) = 4, so the outer gives sqrt(4) = 2
-        inner_x = pybamm.Symbol("inner")
-        inner = pybamm.Brent(inner_x * inner_x, inner_x, 16.0, 0.0, 10.0)
-        outer_x = pybamm.Symbol("outer")
-        outer = pybamm.Brent(outer_x * outer_x, outer_x, inner, 0.0, 10.0)
+        inner_x = pybamm.Variable("inner")
+        inner = pybamm.Brent(inner_x * inner_x - 16.0, inner_x, (0.0, 10.0))
+        outer_x = pybamm.Variable("outer")
+        outer = pybamm.Brent(outer_x * outer_x - inner, outer_x, (0.0, 10.0))
         assert float(casadi.evalf(outer.to_casadi(inputs={}))) == pytest.approx(2.0)
 
     def test_evaluating_does_not_re_enter_python(self):
         # the whole solve runs in the CasADi graph, so a Brent node must cost no more
         # python frames per evaluation than the same expression without one
         state = pybamm.StateVector(slice(3, 4))
-        x = pybamm.Symbol("x")
-        node = pybamm.Brent(pybamm.exp(x) + x * state, x, 2.0, -5.0, 5.0)
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(pybamm.exp(x) + x * state - 2.0, x, (-5.0, 5.0))
         y = casadi.MX.sym("y", 500)
         with_brent = casadi.Function("a", [y], [3 * node.to_casadi(y=y, inputs={}) + 1])
         without = casadi.Function("b", [y], [3 * casadi.exp(y[3]) + 1])
@@ -131,41 +133,52 @@ class TestBrent:
     def test_the_oracle_only_reads_what_the_residual_needs(self):
         # a residual that ignores time must not drag time into the solve
         state = pybamm.StateVector(slice(0, 1))
-        x = pybamm.Symbol("x")
-        node = pybamm.Brent(x * state, x, 6.0, 0.0, 10.0)
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(x * state - 6.0, x, (0.0, 10.0))
         t, y = casadi.MX.sym("t"), casadi.MX.sym("y", 1)
         names = [s.name() for s in casadi.symvar(node.to_casadi(t=t, y=y, inputs={}))]
         assert names == ["y"]
 
     def test_no_sign_change_fails_rather_than_guessing(self):
-        x = pybamm.Symbol("x")
-        node = pybamm.Brent(x * x + 1, x, 0.0, 0.0, 1.0)
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(x * x + 1 - 0.0, x, (0.0, 1.0))
         with pytest.raises(RuntimeError, match="rootfinder process failed"):
             casadi.evalf(node.to_casadi(inputs={}))
 
     def test_children_and_copy(self):
-        x = pybamm.Symbol("x")
-        node = pybamm.Brent(x * x, x, 9.0, 0.0, 10.0)
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(x * x - 9.0, x, (0.0, 10.0))
         assert len(node.children) == 4
         copy = node.create_copy()
         assert copy.name == node.name
         assert float(casadi.evalf(copy.to_casadi(inputs={}))) == pytest.approx(3.0)
 
     def test_errors(self):
-        x = pybamm.Symbol("x")
+        x = pybamm.Variable("x")
         with pytest.raises(TypeError, match=r"unknown must be a pybamm\.Symbol"):
-            pybamm.Brent(x * x, 1.0, 9.0, 0, 1)
-        with pytest.raises(TypeError, match=r"f must be a pybamm\.Symbol"):
-            pybamm.Brent(1.0, x, 9.0, 0, 1)
+            pybamm.Brent(x * x - 9.0, 1.0, (0, 1))
+        with pytest.raises(TypeError, match=r"residual must be a pybamm\.Symbol"):
+            pybamm.Brent(1.0, x, (0, 1))
         with pytest.raises(ValueError, match="does not appear in"):
-            pybamm.Brent(pybamm.Scalar(2) * pybamm.t, x, 9.0, 0, 1)
+            pybamm.Brent(pybamm.Scalar(2) * pybamm.t - 9.0, x, (0, 1))
+        with pytest.raises(ValueError, match="bounds must be a"):
+            pybamm.Brent(x * x - 9.0, x, (0, 1, 2))
 
-        node = pybamm.Brent(x * x, x, 9.0, 0.0, 10.0)
+        node = pybamm.Brent(x * x - 9.0, x, (0.0, 10.0))
         with pytest.raises(NotImplementedError, match="no symbolic derivative"):
             node.diff(pybamm.t)
         with pytest.raises(NotImplementedError, match="no symbolic jacobian"):
             node._jac(pybamm.t)
 
+    def test_round_trips_through_json(self):
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(x * x - 9.0, x, (0.0, 10.0), abstol=1e-12, max_iter=42)
+        rebuilt = convert_symbol_from_json(convert_symbol_to_json(node))
+        assert rebuilt.abstol == 1e-12
+        assert rebuilt.max_iter == 42
+        assert rebuilt.unknown == node.unknown
+        assert float(casadi.evalf(rebuilt.to_casadi(inputs={}))) == pytest.approx(3.0)
+
     def test_an_unresolved_unknown_is_an_error(self):
         with pytest.raises(TypeError, match="Cannot convert symbol of type"):
-            pybamm.Symbol("x").to_casadi(inputs={})
+            pybamm.Variable("x").to_casadi(inputs={})

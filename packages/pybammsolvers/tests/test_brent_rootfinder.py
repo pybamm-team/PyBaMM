@@ -22,10 +22,16 @@ def non_monotone(x, p):
 
 
 def _solver(expr_fn, lo=LO, hi=HI, **opts):
-    """A rootfinder over ``expr_fn(x, p) == 0``, and the function itself."""
-    x, p = casadi.MX.sym("x"), casadi.MX.sym("p")
-    f = casadi.Function("f", [x, p], [expr_fn(x, p)])
-    return casadi.rootfinder("rf", "brent", f, {"lo": lo, "hi": hi, **opts}), f
+    """A rootfinder over ``expr_fn(x, p) == 0``, and a callable for the residual.
+
+    The oracle is ``g(x, lo, hi, p)``: brent always reads its bracket from inputs 1
+    and 2. Here the bracket is bound to constants, so the returned solver takes ``p``.
+    """
+    x, lo_s, hi_s, p = (casadi.MX.sym(n) for n in ("x", "lo", "hi", "p"))
+    g = casadi.Function("g", [x, lo_s, hi_s, p], [expr_fn(x, p)])
+    rf = casadi.rootfinder("rf", "brent", g, opts)
+    bound = casadi.Function("bound", [p], [rf(0.0, lo, hi, p)])
+    return bound, casadi.Function("f", [x, p], [expr_fn(x, p)])
 
 
 class TestBrentPlugin:
@@ -34,7 +40,7 @@ class TestBrentPlugin:
 
     def test_solves_a_scalar_equation(self):
         rf, _ = _solver(lambda x, p: x * x - p * x - 6.0, lo=0.0, hi=10.0)
-        assert float(rf(0.0, 1.0)) == pytest.approx(3.0, abs=1e-12)
+        assert float(rf(1.0)) == pytest.approx(3.0, abs=1e-12)
 
     @pytest.mark.parametrize(
         "expr_fn", [lambda x, p: casadi.exp(x) + p * x - 2.0, non_monotone]
@@ -45,7 +51,7 @@ class TestBrentPlugin:
         for p in np.linspace(0.2, 1.8, 40):
             if float(f(LO, p)) * float(f(HI, p)) > 0:
                 continue  # no bracket for this p, nothing to compare
-            got = float(rf(0.0, p))
+            got = float(rf(p))
             want = brentq(lambda x, p=p: float(f(x, p)), LO, HI, xtol=2e-12)
             assert LO <= got <= HI
             worst_difference = max(worst_difference, abs(got - want))
@@ -58,16 +64,18 @@ class TestBrentPlugin:
         # passed as a live value rather than an option
         x, lo, hi = casadi.MX.sym("x"), casadi.MX.sym("lo"), casadi.MX.sym("hi")
         f = casadi.Function("f", [x, lo, hi], [x * x - 6.0])
-        rf = casadi.rootfinder("rf", "brent", f, {"lo_index": 1, "hi_index": 2})
+        rf = casadi.rootfinder("rf", "brent", f, {})
         assert float(rf(0.0, 0.0, 10.0)) == pytest.approx(np.sqrt(6), abs=1e-12)
         assert float(rf(0.0, -10.0, 0.0)) == pytest.approx(-np.sqrt(6), abs=1e-12)
 
     def test_derivatives_come_from_the_implicit_function_theorem(self):
         # x^2 - p0 x - p1 = 0 at (1, 6) has root 3; dx/dp = [x, 1] / (2x - p0)
-        x, p = casadi.MX.sym("x"), casadi.MX.sym("p", 2)
-        f = casadi.Function("f", [x, p], [x * x - p[0] * x - p[1]])
-        rf = casadi.rootfinder("rf", "brent", f, {"lo": 0.0, "hi": 10.0})
-        jacobian = casadi.Function("J", [p], [casadi.jacobian(rf(0.0, p), p)])
+        x, lo, hi = casadi.MX.sym("x"), casadi.MX.sym("lo"), casadi.MX.sym("hi")
+        p = casadi.MX.sym("p", 2)
+        g = casadi.Function("g", [x, lo, hi, p], [x * x - p[0] * x - p[1]])
+        rf = casadi.rootfinder("rf", "brent", g, {})
+        root = rf(0.0, 0.0, 10.0, p)
+        jacobian = casadi.Function("J", [p], [casadi.jacobian(root, p)])
         np.testing.assert_allclose(
             np.asarray(jacobian(casadi.DM([1.0, 6.0]))).ravel(), [0.6, 0.2], rtol=1e-12
         )
@@ -75,33 +83,42 @@ class TestBrentPlugin:
     def test_composes_inside_a_graph(self):
         rf, _ = _solver(lambda x, p: x * x - p * x - 6.0, lo=0.0, hi=10.0)
         p = casadi.MX.sym("p")
-        composed = casadi.Function("composed", [p], [3 * rf(0.0, p) + 1])
+        composed = casadi.Function("composed", [p], [3 * rf(p) + 1])
         assert float(composed(1.0)) == pytest.approx(10.0, abs=1e-12)
 
     def test_survives_a_serialize_round_trip(self):
         # pybamm hands functions to IDAKLU as generate_function(fn.serialize())
         rf, _ = _solver(lambda x, p: x * x - p * x - 6.0, lo=0.0, hi=10.0)
         p = casadi.MX.sym("p")
-        composed = casadi.Function("composed", [p], [3 * rf(0.0, p) + 1])
+        composed = casadi.Function("composed", [p], [3 * rf(p) + 1])
         rebuilt = casadi.Function.deserialize(composed.serialize())
         assert float(rebuilt(1.0)) == float(composed(1.0)) == pytest.approx(10.0)
 
     def test_no_sign_change_fails_rather_than_guessing(self):
         rf, _ = _solver(lambda x, p: x * x + 1.0, lo=0.0, hi=1.0)
         with pytest.raises(RuntimeError, match="rootfinder process failed"):
-            rf(0.0, 0.0)
+            rf(0.0)
 
     def test_reports_iteration_count(self):
-        rf, _ = _solver(lambda x, p: casadi.exp(x) + p * x - 2.0)
-        rf(0.0, 1.0)
+        x, lo, hi, p = (casadi.MX.sym(n) for n in ("x", "lo", "hi", "p"))
+        g = casadi.Function("g", [x, lo, hi, p], [casadi.exp(x) + p * x - 2.0])
+        rf = casadi.rootfinder("rf", "brent", g, {})
+        rf(0.0, LO, HI, 1.0)
         assert rf.stats()["iter_count"] > 0
         assert rf.stats()["return_status"] == "success"
 
     def test_rejects_a_non_scalar_system(self):
-        x, p = casadi.MX.sym("x", 2), casadi.MX.sym("p")
-        f = casadi.Function("f", [x, p], [x - p])
+        x = casadi.MX.sym("x", 2)
+        lo, hi = casadi.MX.sym("lo"), casadi.MX.sym("hi")
+        g = casadi.Function("g", [x, lo, hi], [x - 1.0])
         with pytest.raises(RuntimeError, match="Brent solves a scalar residual"):
-            casadi.rootfinder("rf", "brent", f, {"lo": 0.0, "hi": 1.0})
+            casadi.rootfinder("rf", "brent", g, {})
+
+    def test_rejects_an_oracle_without_bracket_inputs(self):
+        x, p = casadi.MX.sym("x"), casadi.MX.sym("p")
+        g = casadi.Function("g", [x, p], [x - p])
+        with pytest.raises(RuntimeError, match="g\\(x, lo, hi"):
+            casadi.rootfinder("rf", "brent", g, {})
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="needs a POSIX cc invocation")
@@ -131,7 +148,7 @@ class TestBrentCodegen:
     def test_generates_compilable_c(self, _in_tmp_path, recwarn):
         rf, _ = _solver(non_monotone)
         p = casadi.MX.sym("p")
-        composed = casadi.Function("composed", [p], [rf(0.0, p)])
+        composed = casadi.Function("composed", [p], [rf(p)])
         source, _ = self._compile(composed, _in_tmp_path, "composed")
         assert "#error" not in source
         assert not [w for w in recwarn if "code generated" in str(w.message)]
@@ -139,7 +156,7 @@ class TestBrentCodegen:
     def test_generated_c_matches_the_interpreted_plugin(self, _in_tmp_path):
         rf, f = _solver(non_monotone)
         p = casadi.MX.sym("p")
-        composed = casadi.Function("composed", [p], [rf(0.0, p)])
+        composed = casadi.Function("composed", [p], [rf(p)])
         _, external = self._compile(composed, _in_tmp_path, "composed")
 
         compared = 0
@@ -155,7 +172,7 @@ class TestBrentCodegen:
     def test_a_bracket_read_from_an_input_survives_codegen(self, _in_tmp_path):
         x, lo, hi = casadi.MX.sym("x"), casadi.MX.sym("lo"), casadi.MX.sym("hi")
         f = casadi.Function("f", [x, lo, hi], [x * x - 6.0])
-        rf = casadi.rootfinder("rf", "brent", f, {"lo_index": 1, "hi_index": 2})
+        rf = casadi.rootfinder("rf", "brent", f, {})
         a, b = casadi.MX.sym("a"), casadi.MX.sym("b")
         composed = casadi.Function("bracketed", [a, b], [rf(0.0, a, b)])
         _, external = self._compile(composed, _in_tmp_path, "bracketed")
@@ -168,7 +185,7 @@ class TestBrentCodegen:
         first, _ = _solver(non_monotone)
         second, _ = _solver(lambda x, p: casadi.exp(x) + p * x - 2.0)
         p = casadi.MX.sym("p")
-        composed = casadi.Function("both", [p], [first(0.0, p) + second(0.0, p)])
+        composed = casadi.Function("both", [p], [first(p) + second(p)])
         source, external = self._compile(composed, _in_tmp_path, "both")
         # one iteration behind an include guard, one residual wrapper per node
         assert source.count("#ifndef CASADI_BRENT_IMPL") == 2
@@ -180,7 +197,7 @@ class TestBrentCodegen:
     def test_the_derivative_survives_codegen(self, _in_tmp_path):
         rf, f = _solver(non_monotone)
         p = casadi.MX.sym("p")
-        composed = casadi.Function("composed", [p], [rf(0.0, p)])
+        composed = casadi.Function("composed", [p], [rf(p)])
         jacobian = casadi.Function("djac", [p], [casadi.jacobian(composed(p), p)])
         _, external = self._compile(jacobian, _in_tmp_path, "djac")
         for target in (0.4, 0.9, 1.4):

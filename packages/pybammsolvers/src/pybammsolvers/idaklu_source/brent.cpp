@@ -13,6 +13,10 @@
 
 namespace casadi {
 
+// The oracle is g(x, lo, hi, ...), so the bracket always arrives as these inputs.
+constexpr casadi_int BRACKET_LO = 1;
+constexpr casadi_int BRACKET_HI = 2;
+
 extern "C" int CASADI_ROOTFINDER_BRENT_EXPORT
 casadi_register_rootfinder_brent(Rootfinder::Plugin* plugin) {
   plugin->creator = Brent::creator;
@@ -34,33 +38,24 @@ const std::string Brent::meta_doc =
 
 const Options Brent::options_ = {
   {&Rootfinder::options_},
-  {{"lo", {OT_DOUBLE, "Lower end of the bracket"}},
-   {"hi", {OT_DOUBLE, "Upper end of the bracket"}},
-   {"abstol", {OT_DOUBLE, "Absolute tolerance on the unknown"}},
-   {"max_iter", {OT_INT, "Maximum number of iterations"}},
-   {"lo_index", {OT_INT, "Index of the input carrying the lower end of the bracket"}},
-   {"hi_index", {OT_INT, "Index of the input carrying the upper end of the bracket"}}}};
+  {{"abstol", {OT_DOUBLE, "Absolute tolerance on the unknown"}},
+   {"max_iter", {OT_INT, "Maximum number of iterations"}}}};
 
 void Brent::init(const Dict& opts) {
   Rootfinder::init(opts);
 
   for (auto&& op : opts) {
-    if (op.first == "lo") {
-      lo_ = op.second;
-    } else if (op.first == "hi") {
-      hi_ = op.second;
-    } else if (op.first == "abstol") {
+    if (op.first == "abstol") {
       abstol_ = op.second;
     } else if (op.first == "max_iter") {
       max_iter_ = op.second;
-    } else if (op.first == "lo_index") {
-      lo_index_ = op.second;
-    } else if (op.first == "hi_index") {
-      hi_index_ = op.second;
     }
   }
 
   casadi_assert(n_ == 1, "Brent solves a scalar residual, got n=" + str(n_));
+  casadi_assert(n_in_ >= 3,
+                "Brent reads its bracket from inputs 1 and 2, so the oracle must be "
+                "g(x, lo, hi, ...); got " + str(n_in_) + " input(s)");
   casadi_assert(max_iter_ > 0, "max_iter must be positive, got " + str(max_iter_));
   casadi_assert(abstol_ > 0, "abstol must be positive, got " + str(abstol_));
 
@@ -90,8 +85,8 @@ int Brent::solve(void* mem) const {
   auto m = static_cast<BrentMemory*>(mem);
   Context ctx{this, m};
 
-  const double a = lo_index_ >= 0 ? m->iarg[lo_index_][0] : lo_;
-  const double b = hi_index_ >= 0 ? m->iarg[hi_index_][0] : hi_;
+  const double a = m->iarg[BRACKET_LO][0];
+  const double b = m->iarg[BRACKET_HI][0];
 
   double root = 0;
   const int flag = casadi_brent<double>(&Brent::residual, &ctx, a, b, abstol_, max_iter_,
@@ -158,8 +153,8 @@ void Brent::codegen_body(CodeGenerator& g) const {
     << "brent_data.iw = iw;\n"
     << "brent_data.w = w;\n";
 
-  const std::string lo = lo_index_ >= 0 ? g.arg(lo_index_) + "[0]" : g.constant(lo_);
-  const std::string hi = hi_index_ >= 0 ? g.arg(hi_index_) + "[0]" : g.constant(hi_);
+  const std::string lo = g.arg(BRACKET_LO) + "[0]";
+  const std::string hi = g.arg(BRACKET_HI) + "[0]";
   g << "brent_flag = casadi_brent(" << g.shorthand("brent_res_" + codegen_name(g, false))
     << ", &brent_data, " << lo << ", " << hi << ", " << g.constant(abstol_) << ", "
     << max_iter_ << ", &brent_root, &brent_iter);\n"
@@ -170,22 +165,14 @@ void Brent::codegen_body(CodeGenerator& g) const {
 void Brent::serialize_body(SerializingStream& s) const {
   Rootfinder::serialize_body(s);
   s.version("Brent", 1);
-  s.pack("Brent::lo", lo_);
-  s.pack("Brent::hi", hi_);
   s.pack("Brent::abstol", abstol_);
   s.pack("Brent::max_iter", max_iter_);
-  s.pack("Brent::lo_index", lo_index_);
-  s.pack("Brent::hi_index", hi_index_);
 }
 
 Brent::Brent(DeserializingStream& s) : Rootfinder(s) {
   s.version("Brent", 1);
-  s.unpack("Brent::lo", lo_);
-  s.unpack("Brent::hi", hi_);
   s.unpack("Brent::abstol", abstol_);
   s.unpack("Brent::max_iter", max_iter_);
-  s.unpack("Brent::lo_index", lo_index_);
-  s.unpack("Brent::hi_index", hi_index_);
 }
 
 Dict Brent::get_stats(void* mem) const {

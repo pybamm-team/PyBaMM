@@ -21,9 +21,8 @@ struct CASADI_ROOTFINDER_BRENT_EXPORT BrentMemory : public RootfinderMemory {
  * bracket, so it converges on residuals where a Newton iteration stalls or leaves the
  * domain, and the iterate is confined to the bracket by construction.
  *
- * The bracket is taken from the ``lo``/``hi`` options, or, when ``lo_index``/``hi_index``
- * are given, read at solve time from those inputs of the oracle -- so a bracket can be a
- * live value in the surrounding graph rather than a constant.
+ * The oracle must be ``g(x, lo, hi, ...)``: the bracket is read from inputs 1 and 2 at
+ * solve time, so it can be a live value in the surrounding graph rather than a constant.
  *
  * Derivatives come from :class:`Rootfinder`, which applies the implicit function theorem;
  * nothing here is differentiated.
@@ -75,9 +74,8 @@ protected:
   /// casadi_brent's residual callback for the interpreted path.
   static int residual(void* user_data, double x, double* fx);
 
-  double lo_{0}, hi_{1}, abstol_{1e-14};
+  double abstol_{1e-14};
   casadi_int max_iter_{100};
-  casadi_int lo_index_{-1}, hi_index_{-1};
 };
 
 extern "C" int CASADI_ROOTFINDER_BRENT_EXPORT
