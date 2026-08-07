@@ -8,7 +8,7 @@
 
 ## Bug fixes
 
-- `TaggedSubMeshGenerator` no longer returns a stale cached mesh when the source `.msh` file changes on disk: its mesh cache is keyed on the file's modification time, collapses `str`/`pathlib.Path` paths to one entry, and is bounded in size. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `TaggedSubMeshGenerator` no longer returns a stale cached mesh when the source `.msh` file changes on disk: its mesh cache is keyed on the file's modification time, collapses `str`/`pathlib.Path` paths to one entry, and is bounded in size. ([#5705](https://github.com/pybamm-team/PyBaMM/pull/5705))
 - `ElectrodeSOHSolver` now passes model options through, so hysteresis OCP branches are used. ([#5701](https://github.com/pybamm-team/PyBaMM/pull/5701))
 - Fixed a memory leak in `ElectrodeSOHSolver.theoretical_energy_integral`, which cached a new expression tree per call. ([#5695](https://github.com/pybamm-team/PyBaMM/pull/5695))
 - `BatchStudy.solve` no longer ignores its `solver` argument: previously the loop over study inputs shadowed it, so a caller-supplied solver was silently dropped. A solver from `BatchStudy(solvers=...)` still takes precedence. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
