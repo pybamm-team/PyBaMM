@@ -1,3 +1,5 @@
+import functools
+import os
 from enum import Enum
 
 import numpy as np
@@ -1048,8 +1050,6 @@ class TaggedSubMeshGenerator(MeshGenerator):
         it the submesh carries no boundary tags.
     """
 
-    _mesh_cache: dict = {}
-
     def __init__(
         self, region, mesh_path, scale=1.0, coord_sys="cartesian", boundary_mapping=None
     ):
@@ -1061,12 +1061,18 @@ class TaggedSubMeshGenerator(MeshGenerator):
         self.coord_sys = coord_sys
         self.boundary_mapping = boundary_mapping or {}
 
+    @staticmethod
+    @functools.lru_cache(maxsize=8)
+    def _read_cached(fspath, mtime_ns):
+        meshio = pybamm.import_optional_dependency("meshio")
+        return meshio.read(fspath)
+
     @classmethod
     def _read(cls, path):
-        if path not in cls._mesh_cache:
-            meshio = pybamm.import_optional_dependency("meshio")
-            cls._mesh_cache[path] = meshio.read(str(path))
-        return cls._mesh_cache[path]
+        # Key on (path, mtime) so an edited file is re-read; os.fspath collapses
+        # str/Path to one entry and lru_cache bounds the retained meshes.
+        fspath = os.fspath(path)
+        return cls._read_cached(fspath, os.stat(fspath).st_mtime_ns)
 
     def __call__(self, lims, npts):
         m = self._read(self._mesh_path)

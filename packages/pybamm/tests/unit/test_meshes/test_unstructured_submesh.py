@@ -770,7 +770,7 @@ class TestFileGenerators:
         np.testing.assert_allclose(sorted(map(tuple, seal)), [(0.5, 0.0), (1.0, 0.5)])
         np.testing.assert_allclose(sorted(map(tuple, vent)), [(0.0, 0.5), (0.5, 1.0)])
 
-    def test_tagged_generator_boundary_mapping(self):
+    def test_tagged_generator_boundary_mapping(self, monkeypatch):
         """TaggedSubMeshGenerator resolves surface physical groups to tags."""
         import pytest
 
@@ -784,19 +784,17 @@ class TestFileGenerators:
             cell_data={"gmsh:physical": [np.full(5, 1), np.full(2, 10)]},
             field_data={"anode": np.array([1, 3]), "base": np.array([10, 2])},
         )
-        fake_path = "fake_tagged_boundaries.msh"
-        TaggedSubMeshGenerator._mesh_cache[fake_path] = mesh
-        try:
-            gen = TaggedSubMeshGenerator(
-                "anode", fake_path, boundary_mapping={"bottom_seal": "base"}
-            )
-            sub = gen({}, {})
-            assert set(sub.boundary_faces) == {"bottom_seal"}
-            centroids = sub.face_centroids[sub.boundary_faces["bottom_seal"]]
-            np.testing.assert_allclose(centroids[:, 2], 0.0, atol=1e-14)
-            assert len(centroids) == 2
-        finally:
-            TaggedSubMeshGenerator._mesh_cache.pop(fake_path, None)
+        monkeypatch.setattr(
+            TaggedSubMeshGenerator, "_read", classmethod(lambda cls, path: mesh)
+        )
+        gen = TaggedSubMeshGenerator(
+            "anode", "unused.msh", boundary_mapping={"bottom_seal": "base"}
+        )
+        sub = gen({}, {})
+        assert set(sub.boundary_faces) == {"bottom_seal"}
+        centroids = sub.face_centroids[sub.boundary_faces["bottom_seal"]]
+        np.testing.assert_allclose(centroids[:, 2], 0.0, atol=1e-14)
+        assert len(centroids) == 2
 
     def test_user_supplied_no_supported_cells_raises(self):
         """A mesh with only unsupported cell types raises."""
@@ -866,50 +864,77 @@ class TestFileGenerators:
             field_data={"anode": np.array([1, 3]), "cathode": np.array([2, 3])},
         )
 
-    def test_tagged_generator_extracts_region(self):
+    def test_tagged_generator_extracts_region(self, monkeypatch):
         import pytest
 
         pytest.importorskip("meshio")
-        fake_path = "fake_tagged_mesh.msh"
-        TaggedSubMeshGenerator._mesh_cache[fake_path] = self._tagged_gmsh_mesh()
-        try:
-            gen = TaggedSubMeshGenerator("anode", fake_path, scale=2.0)
-            sub = gen({}, {})
-            assert isinstance(sub, UnstructuredSubMesh)
-            assert sub.npts == 3  # cells tagged 1
-            # scale multiplies coordinates: unit cube -> side 2
-            np.testing.assert_allclose(sub.vertices.max(axis=0), [2.0, 2.0, 2.0])
-        finally:
-            TaggedSubMeshGenerator._mesh_cache.pop(fake_path, None)
+        monkeypatch.setattr(
+            TaggedSubMeshGenerator,
+            "_read",
+            classmethod(lambda cls, path: self._tagged_gmsh_mesh()),
+        )
+        gen = TaggedSubMeshGenerator("anode", "unused.msh", scale=2.0)
+        sub = gen({}, {})
+        assert isinstance(sub, UnstructuredSubMesh)
+        assert sub.npts == 3  # cells tagged 1
+        # scale multiplies coordinates: unit cube -> side 2
+        np.testing.assert_allclose(sub.vertices.max(axis=0), [2.0, 2.0, 2.0])
 
-    def test_tagged_generator_missing_region_raises(self):
+    def test_tagged_generator_missing_region_raises(self, monkeypatch):
         import pytest
 
         pytest.importorskip("meshio")
-        fake_path = "fake_tagged_mesh_2.msh"
-        TaggedSubMeshGenerator._mesh_cache[fake_path] = self._tagged_gmsh_mesh()
-        try:
-            gen = TaggedSubMeshGenerator("does-not-exist", fake_path)
-            with pytest.raises(pybamm.GeometryError, match="not in mesh field_data"):
-                gen({}, {})
-        finally:
-            TaggedSubMeshGenerator._mesh_cache.pop(fake_path, None)
+        monkeypatch.setattr(
+            TaggedSubMeshGenerator,
+            "_read",
+            classmethod(lambda cls, path: self._tagged_gmsh_mesh()),
+        )
+        gen = TaggedSubMeshGenerator("does-not-exist", "unused.msh")
+        with pytest.raises(pybamm.GeometryError, match="not in mesh field_data"):
+            gen({}, {})
 
-    def test_tagged_generator_region_without_tets_raises(self):
+    def test_tagged_generator_region_without_tets_raises(self, monkeypatch):
         import pytest
 
         pytest.importorskip("meshio")
-        fake_path = "fake_tagged_mesh_3.msh"
         mesh = self._tagged_gmsh_mesh()
         # Physical group 9 exists in field_data but tags no tet cells
         mesh.field_data["empty"] = np.array([9, 3])
-        TaggedSubMeshGenerator._mesh_cache[fake_path] = mesh
-        try:
-            gen = TaggedSubMeshGenerator("empty", fake_path)
-            with pytest.raises(pybamm.GeometryError, match="no tets"):
-                gen({}, {})
-        finally:
-            TaggedSubMeshGenerator._mesh_cache.pop(fake_path, None)
+        monkeypatch.setattr(
+            TaggedSubMeshGenerator, "_read", classmethod(lambda cls, path: mesh)
+        )
+        gen = TaggedSubMeshGenerator("empty", "unused.msh")
+        with pytest.raises(pybamm.GeometryError, match="no tets"):
+            gen({}, {})
+
+    def test_tagged_generator_cache_reads_and_invalidates(self, tmp_path):
+        import os
+
+        import pytest
+
+        meshio = pytest.importorskip("meshio")
+        TaggedSubMeshGenerator._read_cached.cache_clear()
+
+        path = tmp_path / "cache_demo.msh"
+        meshio.write(
+            str(path),
+            meshio.Mesh(
+                np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float),
+                [("tetra", np.array([[0, 1, 2, 3]]))],
+            ),
+            file_format="gmsh22",
+            binary=False,
+        )
+
+        first = TaggedSubMeshGenerator._read(path)
+        # unchanged file: cache hit returns the same object
+        assert TaggedSubMeshGenerator._read(path) is first
+        # str and pathlib.Path collapse to a single cache entry
+        assert TaggedSubMeshGenerator._read(str(path)) is first
+        # a newer modification time invalidates the entry and re-reads
+        stat = os.stat(path)
+        os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+        assert TaggedSubMeshGenerator._read(path) is not first
 
 
 # ======================================================================
