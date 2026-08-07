@@ -179,6 +179,13 @@ if (${USE_PYTHON_CASADI})
         message(FATAL_ERROR "Could not find CasADi include directory")
     endif ()
 
+    # The internal headers must come from the same CasADi that is being linked, so
+    # record its version; the check is below, next to the version that is pinned.
+    execute_process(
+            COMMAND "${PYTHON_EXECUTABLE}" -c "import casadi; print(casadi.__version__)"
+            OUTPUT_VARIABLE CASADI_LINKED_VERSION
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
     execute_process(
             COMMAND "${PYTHON_EXECUTABLE}" -c
             "import casadi; from pathlib import Path; import glob; lib_dir = Path(casadi.__file__).parent; lib_files = list(lib_dir.glob('*casadi*')); print(str(lib_dir) if lib_files else '')"
@@ -253,6 +260,14 @@ set(CASADI_INTERNAL_SHA256 "b4d7bd8acdc4180306903ae1c9eddaf41be2a3ae2fa7154c5717
         CACHE STRING "SHA-256 of the CasADi source distribution")
 set(CASADI_SOURCE_DIR ""
         CACHE PATH "Local CasADi source tree; set this for offline builds to skip the download")
+
+if (CASADI_LINKED_VERSION AND NOT CASADI_LINKED_VERSION STREQUAL CASADI_INTERNAL_VERSION)
+    message(FATAL_ERROR
+            "CasADi version mismatch: linking CasADi ${CASADI_LINKED_VERSION} but sourcing the "
+            "internal headers for the \"brent\" plugin from ${CASADI_INTERNAL_VERSION}. These "
+            "headers are not ABI-stable, so they must match. Update CASADI_INTERNAL_VERSION and "
+            "CASADI_INTERNAL_SHA256 in this file to match the casadi pin in pyproject.toml.")
+endif ()
 
 set(_casadi_internal_headers
         casadi_os.hpp
