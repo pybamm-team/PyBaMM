@@ -19,4 +19,5 @@ Expression Tree
   functions
   input_parameter
   interpolant
+  brent
   operations/index

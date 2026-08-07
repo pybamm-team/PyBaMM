@@ -1042,6 +1042,8 @@ _NOT_ROUND_TRIPPABLE: frozenset[type[pybamm.Symbol]] = frozenset(
         pybamm.IndependentVariable,  # abstract base; Time + SpatialVariable covered
         _BaseAverageClass,  # abstract base; XAverage/ZAverage/etc. cover it
         pybamm.DomainConcatenation,  # constructor requires full_mesh (pybamm.Mesh); not user-constructible
+        pybamm.Brent,  # solver hyperparameters and the unknown binding are not in the JSON schema
+        pybamm.BrentUnknown,  # only meaningful inside the Brent node that resolves it
     }
 )
 

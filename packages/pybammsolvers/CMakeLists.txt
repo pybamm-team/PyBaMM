@@ -119,6 +119,8 @@ pybind11_add_module(idaklu
         src/pybammsolvers/idaklu_source/Options.cpp
         src/pybammsolvers/idaklu_source/StandaloneNewtonSolver.hpp
         src/pybammsolvers/idaklu_source/StandaloneNewtonSolver.cpp
+        src/pybammsolvers/idaklu_source/brent.hpp
+        src/pybammsolvers/idaklu_source/brent.cpp
         # IDAKLU expressions / function evaluation [abstract]
         src/pybammsolvers/idaklu_source/Expressions/Expressions.hpp
         src/pybammsolvers/idaklu_source/Expressions/Base/Expression.hpp
@@ -170,6 +172,8 @@ if (${USE_PYTHON_CASADI})
         file(TO_CMAKE_PATH ${CASADI_INCLUDE_DIR} CASADI_INCLUDE_DIR)
         message("Found Python CasADi include directory: ${CASADI_INCLUDE_DIR}")
         target_include_directories(idaklu PRIVATE ${CASADI_INCLUDE_DIR})
+        # The vendored internal headers include their public siblings unqualified
+        target_include_directories(idaklu PRIVATE ${CASADI_INCLUDE_DIR}/casadi/core)
     else ()
         message(FATAL_ERROR "Could not find CasADi include directory")
     endif ()
@@ -228,7 +232,25 @@ else ()
     else()
         target_link_libraries(idaklu PRIVATE casadi)
     endif()
+    # The vendored internal headers include their public siblings unqualified
+    if(TARGET casadi::casadi)
+        get_target_property(_casadi_incs casadi::casadi INTERFACE_INCLUDE_DIRECTORIES)
+        foreach(_casadi_inc IN LISTS _casadi_incs)
+            target_include_directories(idaklu PRIVATE ${_casadi_inc}/casadi/core)
+        endforeach()
+    endif()
 endif ()
+
+# The "brent" rootfinder plugin subclasses casadi::Rootfinder, whose header CasADi
+# does not install; see vendor/casadi/README.md for provenance and licence.
+target_include_directories(idaklu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/vendor)
+# Read off CASADI_COMPILER_FLAGS in the linked CasADi's config.h. THREADSAFE_SYMBOLICS
+# is structural: it adds a static mutex to Rootfinder, so a mismatch is an ABI break.
+target_compile_definitions(idaklu PRIVATE
+        CASADI_VERSION=31
+        WITH_DL
+        CASADI_WITH_THREADSAFE_SYMBOLICS
+        CASADI_WITH_THREAD)
 
 # Match idaklu's libstdc++ std::string ABI to the linked libcasadi (GNU only;
 # no-op for MSVC and macOS/libc++). CasADi's PyPI casadi-config.cmake forces
