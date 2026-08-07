@@ -98,6 +98,16 @@ class TestVectorFieldAndMagnitude:
         ):
             disc.process_symbol(vf2 + vf3)
 
+    def test_json_round_trip_preserves_all_components(self):
+        # A 3-component field must survive serialisation; a two-component
+        # _from_json would silently drop the third and later IndexError.
+        from pybamm.expression_tree.operations.serialise_kernel import decode, encode
+
+        vf = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2), pybamm.Scalar(3))
+        rebuilt = decode(encode(vf))
+        assert rebuilt.n_components == 3
+        assert rebuilt == vf
+
     def test_disc_state_vector_propagation(self, mesh_2d):
         # binary and unary operators on a discretised VectorField must carry
         # the _disc_state_vector attribute over to the result
