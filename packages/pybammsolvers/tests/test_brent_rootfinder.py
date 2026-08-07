@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
-import subprocess
-import sys
-
 import casadi
 import numpy as np
 import pytest
@@ -121,24 +117,21 @@ class TestBrentPlugin:
             casadi.rootfinder("rf", "brent", g, {})
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="needs a POSIX cc invocation")
-@pytest.mark.skipif(shutil.which("cc") is None, reason="needs a C compiler")
 class TestBrentCodegen:
     """PyBaMM AOT-compiles its CasADi functions, so a Brent node has to survive
     Function.generate() -> C -> compile -> casadi.external unchanged."""
 
     @staticmethod
     def _compile(function, tmp_path, name):
-        """Generate, compile and load ``function``; returns the C and the external."""
+        """Generate, compile and load ``function``; returns the C and the external.
+
+        CasADi's own Importer drives the compiler, so this works wherever CasADi
+        does rather than only where a POSIX ``cc`` is on the path.
+        """
         function.generate(f"{name}.c", {"with_header": False})
         source = tmp_path / f"{name}.c"
-        library = tmp_path / f"{name}.so"
-        subprocess.run(  # noqa: S603
-            ["cc", "-fPIC", "-shared", "-O2", "-o", str(library), str(source)],
-            check=True,
-            capture_output=True,
-        )
-        return source.read_text(), casadi.external(name, str(library))
+        external = casadi.external(name, casadi.Importer(str(source), "shell"))
+        return source.read_text(), external
 
     @pytest.fixture
     def _in_tmp_path(self, tmp_path, monkeypatch):
