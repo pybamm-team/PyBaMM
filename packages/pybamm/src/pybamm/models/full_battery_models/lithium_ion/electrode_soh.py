@@ -144,12 +144,49 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
                 "Known value must be cell capacity or cyclable lithium capacity"
             )
 
+        # With Q_Li known the two stoichiometry limits are independent scalar
+        # equations, each solved on the bracket the caller supplies, so neither can
+        # stall or leave the feasible range.
+        bracket = (
+            pybamm.InputParameter("x_min"),
+            pybamm.InputParameter("x_max"),
+        )
+
+        def solve_for_limit(name, direction, voltage):
+            """The stoichiometry at which the cell sits at `voltage`."""
+            # an InputParameter passes through discretisation untouched; the Brent
+            # node binds it before it is ever looked up in the solver's inputs
+            unknown = pybamm.InputParameter(f"{name} (brent unknown)")
+            residual = (
+                Up(
+                    (Q_Li - unknown * Q_n) / Q_p,
+                    T_ref,
+                    get_lithiation_delithiation(
+                        get_equilibrium_direction(direction, "positive", options),
+                        "positive",
+                        options,
+                    ),
+                )
+                - Un(
+                    unknown,
+                    T_ref,
+                    get_lithiation_delithiation(
+                        get_equilibrium_direction(direction, "negative", options),
+                        "negative",
+                        options,
+                    ),
+                )
+                - voltage
+            )
+            return pybamm.Brent(residual, unknown, bracket, name=name)
+
         # Define variables for 100% state of charge
         if "x_100" in solve_for:
-            x_100 = pybamm.Variable("x_100")
             if known_value == "cyclable lithium capacity":
+                x_100 = solve_for_limit("x_100", "100", V_max)
                 y_100 = (Q_Li - x_100 * Q_n) / Q_p
             elif known_value == "cell capacity":
+                x_100 = pybamm.Variable("x_100")
                 y_100 = pybamm.Variable("y_100")
                 Q_Li = y_100 * Q_p + x_100 * Q_n
         else:
@@ -175,7 +212,7 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         )
 
         # Define equations for 100% state of charge
-        if "x_100" in solve_for:
+        if "x_100" in solve_for and known_value == "cell capacity":
             self.algebraic[x_100] = Up_100 - Un_100 - V_max
             self.initial_conditions[x_100] = pybamm.Scalar(0.9)
 
@@ -187,11 +224,11 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         # Define variables and equations for 0% state of charge
         if "x_0" in solve_for:
             if known_value == "cyclable lithium capacity":
-                x_0 = pybamm.Variable("x_0")
+                # y_0 = y_100 + Q/Q_p reduces to (Q_Li - x_0 Q_n)/Q_p, so this limit
+                # is the same equation as the 100% one at V_min, and independent of it
+                x_0 = solve_for_limit("x_0", "0", V_min)
                 Q = Q_n * (x_100 - x_0)
-                # the variable we are solving for is x0, since y_100 is calculated
-                # based on Q_Li
-                var = x_0
+                var = None
             elif known_value == "cell capacity":
                 x_0 = x_100 - Q / Q_n
                 # the variable we are solving for is y_100, since x_0 is calculated
@@ -216,8 +253,9 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
                     options,
                 ),
             )
-            self.algebraic[var] = Up_0 - Un_0 - V_min
-            self.initial_conditions[var] = pybamm.Scalar(0.1)
+            if var is not None:
+                self.algebraic[var] = Up_0 - Un_0 - V_min
+                self.initial_conditions[var] = pybamm.Scalar(0.1)
 
             # These variables are only defined if x_0 is solved for
             self.variables.update(
@@ -397,38 +435,36 @@ class ElectrodeSOHSolver:
         )
         self._get_energy_ocv_function = lru_cache()(self.__get_energy_ocv_function)
 
+    def _ocp_domain(self, electrode, direction):
+        """The stoichiometry range over which the electrode's OCP is defined.
+
+        Three exact constraints, no fitting: a stoichiometry lies in [0, 1]; the OCP
+        is clipped at ``tolerances["U__c_s"]`` either side, and is discontinuous there;
+        and tabulated data is only defined over its own abscissa, whichever way the
+        parameter was supplied, since it becomes an :class:`pybamm.Interpolant` once
+        parameterised.
+        """
+        margin = pybamm.settings.tolerances["U__c_s"]
+        low, high = margin, 1 - margin
+        expression = self.parameter_values.process_symbol(
+            getattr(self.param, electrode).prim.U(
+                pybamm.InputParameter("stoichiometry"),
+                self.param.T_ref,
+                get_lithiation_delithiation(direction, electrode, self.options),
+            )
+        )
+        for node in expression.pre_order():
+            if isinstance(node, pybamm.Interpolant):
+                low = max(low, float(np.min(node.x[0])))
+                high = min(high, float(np.max(node.x[0])))
+        return low, high
+
     def _get_lims_ocp(self, direction):
-        parameter_values = self.parameter_values
-
-        # Check whether each electrode OCP is a function (False) or data (True)
-        # Set to false for MSMR models
         if self.options["open-circuit potential"] == "MSMR":
-            OCPp_data = False
-            OCPn_data = False
-        else:
-            OCPp_data = isinstance(
-                parameter_values["Positive electrode OCP [V]"], tuple
-            )
-            OCPn_data = isinstance(
-                parameter_values["Negative electrode OCP [V]"], tuple
-            )
-
-        # Calculate stoich limits for the open-circuit potentials
-        if OCPp_data:
-            Up_sto = parameter_values["Positive electrode OCP [V]"][1][0]
-            y100_min = max(np.min(Up_sto), 0) + 1e-6
-            y0_max = min(np.max(Up_sto), 1) - 1e-6
-        else:
-            y100_min = 1e-6
-            y0_max = 1 - 1e-6
-
-        if OCPn_data:
-            Un_sto = parameter_values["Negative electrode OCP [V]"][1][0]
-            x0_min = max(np.min(Un_sto), 0) + 1e-6
-            x100_max = min(np.max(Un_sto), 1) - 1e-6
-        else:
-            x0_min = 1e-6
-            x100_max = 1 - 1e-6
+            margin = pybamm.settings.tolerances["U__c_s"]
+            return (margin, 1 - margin, margin, 1 - margin)
+        x0_min, x100_max = self._ocp_domain("n", direction)
+        y100_min, y0_max = self._ocp_domain("p", direction)
         return (x0_min, x100_max, y100_min, y0_max)
 
     def __get_electrode_soh_sims_full(self, direction):
@@ -484,6 +520,12 @@ class ElectrodeSOHSolver:
         return [x100_sim, x0_sim]
 
     def solve(self, inputs, direction=None):
+        # `_get_lims` raises on an infeasible request, and otherwise returns the
+        # bracket the stoichiometry limits are solved on
+        if self.known_value == "cyclable lithium capacity":
+            x_min, x_max, _, _ = self._get_lims(inputs)
+            inputs = {**inputs, "x_min": x_min, "x_max": x_max}
+            return self._evaluate(inputs, direction)
         ics = self._set_up_solve(inputs, direction)
         try:
             sol = self._solve_full(inputs, ics, direction)
@@ -506,6 +548,40 @@ class ElectrodeSOHSolver:
             energy = self.theoretical_energy_integral(energy_inputs)
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
 
+        return sol_dict
+
+    def _evaluate(self, inputs, direction):
+        """Read the variables off the model directly.
+
+        With Q_Li known every stoichiometry limit is a `pybamm.Brent` node, so the
+        model has no equations left to solve and the variables are just expressions.
+        """
+        import casadi
+
+        sim = self._get_electrode_soh_sims_full(direction)
+        sim.build()
+        model = sim.built_model
+        symbols = {name: casadi.DM(value) for name, value in inputs.items()}
+        try:
+            sol_dict = {
+                name: float(
+                    casadi.evalf(
+                        model.get_processed_variable(name).to_casadi(inputs=symbols)
+                    )
+                )
+                for name in model.variables
+            }
+        except RuntimeError as error:
+            # no sign change over the feasible range, so the cell cannot reach one of
+            # the voltage limits at this capacity and lithium inventory
+            self._check_esoh_feasible(inputs, direction)
+            raise pybamm.SolverError(
+                "Could not find a stoichiometry limit within the feasible range"
+            ) from error
+        if self.options["open-circuit potential"] != "MSMR":
+            sol_dict["Maximum theoretical energy [W.h]"] = (
+                self.theoretical_energy_integral({**sol_dict, **inputs})
+            )
         return sol_dict
 
     def _set_up_solve(self, inputs, direction):
