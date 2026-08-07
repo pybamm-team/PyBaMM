@@ -8,27 +8,6 @@ import casadi
 import pybamm
 
 
-class BrentUnknown(pybamm.Symbol):
-    """
-    The unknown of a :class:`Brent` solve.
-
-    Stands for the value being solved for. It is resolved by the enclosing
-    :class:`Brent` node, so converting an expression containing one on its own is an
-    error.
-
-    Parameters
-    ----------
-    name : str, optional
-        Name of the unknown.
-    """
-
-    def __init__(self, name: str = "brent unknown"):
-        super().__init__(name)
-
-    def create_copy(self, new_children=None, perform_simplifications=True):
-        return BrentUnknown(self.name)
-
-
 class Brent(pybamm.Symbol):
     """
     Solve ``f == y_target`` for ``unknown`` in ``[lo, hi]``, by Brent's method.
@@ -47,8 +26,9 @@ class Brent(pybamm.Symbol):
     ----------
     f : :class:`pybamm.Symbol`
         The expression to invert. Must contain ``unknown``.
-    unknown : :class:`pybamm.BrentUnknown`
-        The value being solved for.
+    unknown : :class:`pybamm.Symbol`
+        The value being solved for. Any symbol will do, so long as it appears in ``f``
+        and nowhere else in the surrounding expression.
     y_target : :class:`pybamm.Symbol` or float
         The value ``f`` must take.
     lo, hi : :class:`pybamm.Symbol` or float
@@ -66,14 +46,14 @@ class Brent(pybamm.Symbol):
     .. code-block:: python
 
         # invert an open-circuit potential at a given voltage
-        sto = pybamm.BrentUnknown("stoichiometry")
+        sto = pybamm.Symbol("stoichiometry")
         node = pybamm.Brent(param.n.prim.U(sto, T), sto, voltage, 0, 1)
     """
 
     def __init__(
         self,
         f: pybamm.Symbol,
-        unknown: BrentUnknown,
+        unknown: pybamm.Symbol,
         y_target: pybamm.Symbol | float,
         lo: pybamm.Symbol | float,
         hi: pybamm.Symbol | float,
@@ -81,9 +61,9 @@ class Brent(pybamm.Symbol):
         max_iter: int = 100,
         name: str = "brent",
     ):
-        if not isinstance(unknown, BrentUnknown):
+        if not isinstance(unknown, pybamm.Symbol):
             raise TypeError(
-                f"unknown must be a pybamm.BrentUnknown, got {type(unknown).__name__}"
+                f"unknown must be a pybamm.Symbol, got {type(unknown).__name__}"
             )
         if not isinstance(f, pybamm.Symbol):
             raise TypeError(f"f must be a pybamm.Symbol, got {type(f).__name__}")

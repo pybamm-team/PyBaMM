@@ -10,8 +10,6 @@
 namespace casadi {
 
 struct CASADI_ROOTFINDER_BRENT_EXPORT BrentMemory : public RootfinderMemory {
-  double* x;
-  double* f;
   casadi_int iter;
   const char* return_status;
 };
@@ -52,9 +50,13 @@ public:
   void* alloc_mem() const override { return new BrentMemory(); }
   int init_mem(void* mem) const override;
   void free_mem(void* mem) const override { delete static_cast<BrentMemory*>(mem); }
-  void set_work(void* mem, const double**& arg, double**& res, casadi_int*& iw,
-                double*& w) const override;
   Dict get_stats(void* mem) const override;
+
+  // Emit the iteration as C so an expression containing a Brent node survives
+  // Function::generate() and JIT, which is how PyBaMM AOT-compiles its functions.
+  bool has_codegen() const override { return true; }
+  void codegen_declarations(CodeGenerator& g) const override;
+  void codegen_body(CodeGenerator& g) const override;
 
   // Without these the deserialised instance silently loses its bracket and then fails
   // to solve, so they are required rather than optional.
@@ -63,6 +65,15 @@ public:
 
 protected:
   explicit Brent(DeserializingStream& s);
+
+  /// What ``residual`` needs to reach the oracle, passed through casadi_brent's void*.
+  struct Context {
+    const Brent* solver;
+    BrentMemory* mem;
+  };
+
+  /// casadi_brent's residual callback for the interpreted path.
+  static int residual(void* user_data, double x, double* fx);
 
   double lo_{0}, hi_{1}, abstol_{1e-14};
   casadi_int max_iter_{100};

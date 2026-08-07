@@ -1,7 +1,15 @@
 #include "brent.hpp"
 
+#include <math.h>
+
 #include <algorithm>
-#include <cmath>
+
+// The iteration itself, shared verbatim with the generated C (see codegen_declarations).
+#include "brent_impl.hpp"
+
+// CMake stringifies brent_impl.hpp into brent_impl_str, so the emitted C and the
+// compiled iteration are the same text by construction.
+#include "brent_impl_source.hpp"
 
 namespace casadi {
 
@@ -57,7 +65,6 @@ void Brent::init(const Dict& opts) {
   casadi_assert(abstol_ > 0, "abstol must be positive, got " + str(abstol_));
 
   set_function(oracle_, "g");
-  alloc_w(2, true);
 }
 
 int Brent::init_mem(void* mem) const {
@@ -68,100 +75,96 @@ int Brent::init_mem(void* mem) const {
   return 0;
 }
 
-void Brent::set_work(void* mem, const double**& arg, double**& res, casadi_int*& iw,
-                     double*& w) const {
-  Rootfinder::set_work(mem, arg, res, iw, w);
-  auto m = static_cast<BrentMemory*>(mem);
-  m->x = w;
-  w += 1;
-  m->f = w;
-  w += 1;
+int Brent::residual(void* user_data, double x, double* fx) {
+  auto ctx = static_cast<Context*>(user_data);
+  const Brent* self = ctx->solver;
+  BrentMemory* m = ctx->mem;
+  std::copy_n(m->iarg, self->n_in_, m->arg);
+  m->arg[self->iin_] = &x;
+  std::copy_n(m->ires, self->n_out_, m->res);
+  m->res[self->iout_] = fx;
+  return self->calc_function(m, "g");
 }
 
 int Brent::solve(void* mem) const {
   auto m = static_cast<BrentMemory*>(mem);
+  Context ctx{this, m};
 
-  auto g = [&](double x) -> double {
-    std::copy_n(m->iarg, n_in_, m->arg);
-    m->arg[iin_] = &x;
-    std::copy_n(m->ires, n_out_, m->res);
-    m->res[iout_] = m->f;
-    calc_function(m, "g");
-    return m->f[0];
-  };
+  const double a = lo_index_ >= 0 ? m->iarg[lo_index_][0] : lo_;
+  const double b = hi_index_ >= 0 ? m->iarg[hi_index_][0] : hi_;
 
-  double a = lo_index_ >= 0 ? m->iarg[lo_index_][0] : lo_;
-  double b = hi_index_ >= 0 ? m->iarg[hi_index_][0] : hi_;
-  double fa = g(a), fb = g(b);
-
-  if (!(fa * fb <= 0)) {
-    // No sign change, so the bracket contains no root. Report it rather than
-    // returning whichever end happens to be closer.
-    m->return_status = "no sign change over the bracket";
+  double root = 0;
+  const int flag = casadi_brent<double>(&Brent::residual, &ctx, a, b, abstol_, max_iter_,
+                                        &root, &m->iter);
+  if (flag) {
+    m->return_status = flag == 2 ? "no sign change over the bracket" : "residual failed";
     m->unified_return_status = SOLVER_RET_UNKNOWN;
     m->success = false;
     return 0;
   }
 
-  double c = a, fc = fa, d = b - a, e = d;
-  for (m->iter = 0; m->iter < max_iter_; ++m->iter) {
-    if (fb * fc > 0) {
-      c = a;
-      fc = fa;
-      d = b - a;
-      e = d;
-    }
-    if (std::fabs(fc) < std::fabs(fb)) {
-      a = b;
-      b = c;
-      c = a;
-      fa = fb;
-      fb = fc;
-      fc = fa;
-    }
-    const double tol = 2 * std::numeric_limits<double>::epsilon() * std::fabs(b)
-                       + 0.5 * abstol_;
-    const double xm = 0.5 * (c - b);
-    if (std::fabs(xm) <= tol || fb == 0) break;
-
-    if (std::fabs(e) >= tol && std::fabs(fa) > std::fabs(fb)) {
-      // Inverse quadratic interpolation, or secant when only two points are distinct
-      double p, q;
-      const double s = fb / fa;
-      if (a == c) {
-        p = 2 * xm * s;
-        q = 1 - s;
-      } else {
-        const double qq = fa / fc, r = fb / fc;
-        p = s * (2 * xm * qq * (qq - r) - (b - a) * (r - 1));
-        q = (qq - 1) * (r - 1) * (s - 1);
-      }
-      if (p > 0) q = -q;
-      p = std::fabs(p);
-      // Take the interpolated step only while it keeps bisecting; else bisect
-      if (2 * p < std::fmin(3 * xm * q - std::fabs(tol * q), std::fabs(e * q))) {
-        e = d;
-        d = p / q;
-      } else {
-        d = xm;
-        e = d;
-      }
-    } else {
-      d = xm;
-      e = d;
-    }
-
-    a = b;
-    fa = fb;
-    b += std::fabs(d) > tol ? d : (xm > 0 ? tol : -tol);
-    fb = g(b);
-  }
-
-  m->x[0] = b;
-  m->ires[iout_][0] = m->x[0];
+  if (m->ires[iout_]) m->ires[iout_][0] = root;
   m->return_status = "success";
   m->success = true;
   return 0;
+}
+
+void Brent::codegen_declarations(CodeGenerator& g) const {
+  // Adding the oracle first keeps its definition out of the middle of the wrapper
+  // emitted below, which is written straight to the buffer.
+  g.add_dependency(get_function("g"));
+
+  // The iteration and its user-data struct do not depend on this instance, so the guard
+  // collapses several Brent nodes in one file down to one definition. add_shorthand is
+  // off so the name is not CASADI_PREFIX-renamed, which the guard would then defeat.
+  g << "#ifndef CASADI_BRENT_IMPL\n"
+    << "#define CASADI_BRENT_IMPL\n"
+    << "struct casadi_brent_data {\n"
+    << "  const casadi_real** arg;\n"
+    << "  casadi_real** res;\n"
+    << "  casadi_int* iw;\n"
+    << "  casadi_real* w;\n"
+    << "};\n"
+    << g.sanitize_source(brent_impl_str, {"casadi_real"}, false)
+    << "#endif\n\n";
+
+  // The residual callback is per instance: it hard-codes this oracle and this
+  // implicit input/output pair.
+  g << "static int " << g.shorthand("brent_res_" + codegen_name(g, false))
+    << "(void* user_data, casadi_real x, casadi_real* fx) {\n"
+    << "  struct casadi_brent_data* d = (struct casadi_brent_data*) user_data;\n"
+    << "  const casadi_real** arg1 = d->arg + " << n_in_ << ";\n"
+    << "  casadi_real** res1 = d->res + " << n_out_ << ";\n";
+  for (casadi_int i = 0; i < n_in_; ++i) {
+    g << "  arg1[" << i << "] = " << (i == iin_ ? "&x" : "d->" + g.arg(i)) << ";\n";
+  }
+  for (casadi_int i = 0; i < n_out_; ++i) {
+    g << "  res1[" << i << "] = " << (i == iout_ ? "fx" : "d->" + g.res(i)) << ";\n";
+  }
+  g << "  return " << g(get_function("g"), "arg1", "res1", "d->iw", "d->w") << ";\n"
+    << "}\n\n";
+}
+
+void Brent::codegen_body(CodeGenerator& g) const {
+  g.local("brent_data", "struct casadi_brent_data");
+  g.local("brent_iter", "casadi_int");
+  g.local("brent_root", "casadi_real");
+  g.local("brent_flag", "int");
+
+  // sz_w_per_ is zero, so the oracle's scratch starts at w -- the same slice
+  // calc_function hands the oracle on the interpreted path.
+  g << "brent_data.arg = arg;\n"
+    << "brent_data.res = res;\n"
+    << "brent_data.iw = iw;\n"
+    << "brent_data.w = w;\n";
+
+  const std::string lo = lo_index_ >= 0 ? g.arg(lo_index_) + "[0]" : g.constant(lo_);
+  const std::string hi = hi_index_ >= 0 ? g.arg(hi_index_) + "[0]" : g.constant(hi_);
+  g << "brent_flag = casadi_brent(" << g.shorthand("brent_res_" + codegen_name(g, false))
+    << ", &brent_data, " << lo << ", " << hi << ", " << g.constant(abstol_) << ", "
+    << max_iter_ << ", &brent_root, &brent_iter);\n"
+    << "if (brent_flag) return 1;\n"
+    << "if (" << g.res(iout_) << ") " << g.res(iout_) << "[0] = brent_root;\n";
 }
 
 void Brent::serialize_body(SerializingStream& s) const {
