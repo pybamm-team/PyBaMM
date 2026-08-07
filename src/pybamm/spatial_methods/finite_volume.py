@@ -97,7 +97,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Add Dirichlet boundary conditions, if defined
         dirichlet = [side for side, bc in bcs.items() if bc[1] == "Dirichlet"]
-        if np.any(dirichlet):
+        if dirichlet:
             # add ghost nodes and update domain
             discretised_symbol, domain = self.add_ghost_nodes(
                 symbol, discretised_symbol, bcs
