@@ -8,7 +8,7 @@
 
 ## Bug fixes
 
-- 3D unstructured-mesh point-in-domain tests no longer misclassify points lying exactly on a domain face, edge, or corner as outside, so interpolating or plotting a field at the domain boundary no longer blanks it to NaN. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- 3D unstructured-mesh point-in-domain tests no longer misclassify points lying exactly on a domain face, edge, or corner as outside, so interpolating or plotting a field at the domain boundary no longer blanks it to NaN. ([#5704](https://github.com/pybamm-team/PyBaMM/pull/5704))
 - `ElectrodeSOHSolver` now passes model options through, so hysteresis OCP branches are used. ([#5701](https://github.com/pybamm-team/PyBaMM/pull/5701))
 - Fixed a memory leak in `ElectrodeSOHSolver.theoretical_energy_integral`, which cached a new expression tree per call. ([#5695](https://github.com/pybamm-team/PyBaMM/pull/5695))
 - `BatchStudy.solve` no longer ignores its `solver` argument: previously the loop over study inputs shadowed it, so a caller-supplied solver was silently dropped. A solver from `BatchStudy(solvers=...)` still takes precedence. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
