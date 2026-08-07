@@ -497,3 +497,29 @@ class TestInterpolant:
         interp2d_json["children"] = (var1, var2)
 
         assert pybamm.Interpolant._from_json(interp2d_json) == interp
+
+
+class TestInterpolantCasadiEndpoints:
+    def test_cubic_matches_scipy_at_the_data_endpoints(self):
+        """CasADi's bspline returns 0 outside its knot span and treats the upper
+        knot as exclusive, so the last data point used to evaluate to 0."""
+        import casadi
+        from scipy import interpolate
+
+        x = np.linspace(0.4, 0.998903136, 40)
+        y = np.cos(8 * x) + 3
+        symbol = casadi.MX.sym("s")
+        interpolant = pybamm.Interpolant(
+            x, y, pybamm.InputParameter("s"), interpolator="cubic"
+        )
+        evaluate = casadi.Function(
+            "f", [symbol], [interpolant.to_casadi(inputs={"s": symbol})]
+        )
+        spline = interpolate.make_interp_spline(x, y, k=3)
+        for argument in (x[0], x[-1], x[len(x) // 2]):
+            assert float(evaluate(argument)) == pytest.approx(
+                float(spline(argument)), abs=1e-12
+            )
+        # and outside the data it holds the endpoint rather than dropping to zero
+        for argument in (x[0] - 1e-9, x[-1] + 1e-9):
+            assert float(evaluate(argument)) != 0.0

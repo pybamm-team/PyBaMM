@@ -318,7 +318,14 @@ class Interpolant(pybamm.Function):
             f = casadi.Function.bspline(
                 self.name, [bspline.t], c_flat.tolist(), [bspline.k], m
             )
-            return f(converted_children[0])
+            # CasADi's bspline evaluates to 0 outside its knot span, and treats the
+            # upper knot as exclusive -- so the last data point, which scipy
+            # evaluates exactly, would come back as 0. Clamp into the span (#5582).
+            lower, upper = float(self.x[0][0]), float(self.x[0][-1])
+            child = casadi.fmax(
+                casadi.fmin(converted_children[0], np.nextafter(upper, -np.inf)), lower
+            )
+            return f(child)
         elif self.dimension == 2:
             bspline = interpolate.RectBivariateSpline(self.x[0], self.x[1], self.y)
             [tx, ty, c] = bspline.tck

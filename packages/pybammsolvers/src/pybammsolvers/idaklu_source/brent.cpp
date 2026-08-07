@@ -39,6 +39,7 @@ const std::string Brent::meta_doc =
 const Options Brent::options_ = {
   {&Rootfinder::options_},
   {{"abstol", {OT_DOUBLE, "Absolute tolerance on the unknown"}},
+   {"ftol", {OT_DOUBLE, "Largest residual accepted as a root"}},
    {"max_iter", {OT_INT, "Maximum number of iterations"}}}};
 
 void Brent::init(const Dict& opts) {
@@ -47,6 +48,8 @@ void Brent::init(const Dict& opts) {
   for (auto&& op : opts) {
     if (op.first == "abstol") {
       abstol_ = op.second;
+    } else if (op.first == "ftol") {
+      ftol_ = op.second;
     } else if (op.first == "max_iter") {
       max_iter_ = op.second;
     }
@@ -58,6 +61,7 @@ void Brent::init(const Dict& opts) {
                 "g(x, lo, hi, ...); got " + str(n_in_) + " input(s)");
   casadi_assert(max_iter_ > 0, "max_iter must be positive, got " + str(max_iter_));
   casadi_assert(abstol_ > 0, "abstol must be positive, got " + str(abstol_));
+  casadi_assert(ftol_ > 0, "ftol must be positive, got " + str(ftol_));
 
   set_function(oracle_, "g");
 }
@@ -89,10 +93,12 @@ int Brent::solve(void* mem) const {
   const double b = m->iarg[BRACKET_HI][0];
 
   double root = 0;
-  const int flag = casadi_brent<double>(&Brent::residual, &ctx, a, b, abstol_, max_iter_,
+  const int flag = casadi_brent<double>(&Brent::residual, &ctx, a, b, abstol_, ftol_, max_iter_,
                                         &root, &m->iter);
   if (flag) {
-    m->return_status = flag == 2 ? "no sign change over the bracket" : "residual failed";
+    m->return_status = flag == 2   ? "no sign change over the bracket"
+                       : flag == 3 ? "the bracket collapsed on a pole, not a root"
+                                   : "residual failed";
     m->unified_return_status = SOLVER_RET_UNKNOWN;
     m->success = false;
     return 0;
@@ -156,7 +162,7 @@ void Brent::codegen_body(CodeGenerator& g) const {
   const std::string lo = g.arg(BRACKET_LO) + "[0]";
   const std::string hi = g.arg(BRACKET_HI) + "[0]";
   g << "brent_flag = casadi_brent(" << g.shorthand("brent_res_" + codegen_name(g, false))
-    << ", &brent_data, " << lo << ", " << hi << ", " << g.constant(abstol_) << ", "
+    << ", &brent_data, " << lo << ", " << hi << ", " << g.constant(abstol_) << ", " << g.constant(ftol_) << ", "
     << max_iter_ << ", &brent_root, &brent_iter);\n"
     << "if (brent_flag) return 1;\n"
     << "if (" << g.res(iout_) << ") " << g.res(iout_) << "[0] = brent_root;\n";
@@ -166,12 +172,14 @@ void Brent::serialize_body(SerializingStream& s) const {
   Rootfinder::serialize_body(s);
   s.version("Brent", 1);
   s.pack("Brent::abstol", abstol_);
+  s.pack("Brent::ftol", ftol_);
   s.pack("Brent::max_iter", max_iter_);
 }
 
 Brent::Brent(DeserializingStream& s) : Rootfinder(s) {
   s.version("Brent", 1);
   s.unpack("Brent::abstol", abstol_);
+  s.unpack("Brent::ftol", ftol_);
   s.unpack("Brent::max_iter", max_iter_);
 }
 

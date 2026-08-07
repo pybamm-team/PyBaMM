@@ -730,8 +730,21 @@ class ElectrodeSOHSolver:
 
             # Update (tighten) stoich limits based on total lithium content and
             # electrode capacities
-            x100_max_from_y100_min = (Q_Li - y100_min * Q_p) / Q_n
-            x0_min_from_y0_max = (Q_Li - y0_max * Q_p) / Q_n
+            # Rounding in y = (Q_Li - x Q_n)/Q_p can put y a few ulps outside the
+            # range the OCP is defined on, where a CasADi interpolant returns zero
+            # rather than extrapolating. Step the x bound inwards until y lands
+            # strictly inside.
+            def x_bounding(y_bound, inwards):
+                x = (Q_Li - y_bound * Q_p) / Q_n
+                for _ in range(4):
+                    y = (Q_Li - x * Q_n) / Q_p
+                    if y100_min <= y <= y0_max:
+                        break
+                    x = np.nextafter(x, inwards)
+                return x
+
+            x100_max_from_y100_min = x_bounding(y100_min, -np.inf)
+            x0_min_from_y0_max = x_bounding(y0_max, np.inf)
             y100_min_from_x100_max = (Q_Li - x100_max * Q_n) / Q_p
             y0_max_from_x0_min = (Q_Li - x0_min * Q_n) / Q_p
 

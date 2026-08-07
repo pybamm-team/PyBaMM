@@ -74,7 +74,7 @@ protected:
   /// casadi_brent's residual callback for the interpreted path.
   static int residual(void* user_data, double x, double* fx);
 
-  double abstol_{1e-14};
+  double abstol_{1e-14}, ftol_{1e-6};
   casadi_int max_iter_{100};
 };
 

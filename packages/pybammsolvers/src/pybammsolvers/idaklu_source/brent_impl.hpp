@@ -10,13 +10,15 @@
 //
 // `res_fn` evaluates the residual at `x` into `*fx` and returns nonzero on failure.
 // Returns 0 on success (`*out` is the root, `*iter` the iteration count), 1 if the
-// residual failed, 2 if the bracket shows no sign change.
+// residual failed, 2 if the bracket shows no sign change, 3 if the bracket collapsed
+// on a point that is not a root -- a sign change across a pole rather than a zero,
+// which bisection converges to just as happily.
 //
 
 // `static` so that two generated files, each carrying its own copy, still link.
 template<typename T1>
 static int casadi_brent(int (*res_fn)(void*, T1, T1*), void* user_data,
-                        T1 a, T1 b, T1 abstol, casadi_int max_iter,
+                        T1 a, T1 b, T1 abstol, T1 ftol, casadi_int max_iter,
                         T1* out, casadi_int* iter) {
   T1 fa, fb, c, fc, d, e, tol, xm, p, q, s, qq, r, step;
   casadi_int k;
@@ -84,5 +86,9 @@ static int casadi_brent(int (*res_fn)(void*, T1, T1*), void* user_data,
   }
   *iter = k;
   *out = b;
+  // Brent converges on a sign change, which a pole provides as readily as a root.
+  // The bracket having collapsed is therefore not enough; the residual has to be
+  // small there too.
+  if (!(fabs(fb) <= ftol)) return 3;
   return 0;
 }
