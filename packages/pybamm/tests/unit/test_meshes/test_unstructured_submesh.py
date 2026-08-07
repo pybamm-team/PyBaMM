@@ -406,6 +406,25 @@ class TestUnstructuredSubMesh:
         assert mesh.contains_points_3d(np.array([[0.5, 0.5, 0.5]]))[0]
         assert not mesh.contains_points_3d(np.array([[2.0, 2.0, 2.0]]))[0]
 
+    def test_contains_points_3d_boundary_points_are_inside(self):
+        """Points lying exactly on a face, edge, or corner of the domain must
+        count as inside, not be masked out (their winding number is a partial
+        2*pi / pi / pi-over-2 rather than the full 4*pi)."""
+        mesh = UnstructuredSubMesh(*_hex_grid(*[np.linspace(0, 1, 3)] * 3))
+        mesh.detect_box_boundaries()
+
+        on_or_inside = np.array(
+            [
+                [0.0, 0.0, 0.0],  # corner
+                [0.5, 0.0, 0.0],  # edge midpoint
+                [0.5, 0.5, 0.0],  # face centre
+                [0.5, 0.5, 0.5],  # interior
+            ]
+        )
+        outside = np.array([[2.0, 2.0, 2.0]])
+        assert mesh.contains_points_3d(on_or_inside).all()
+        assert not mesh.contains_points_3d(outside)[0]
+
     def test_optimize_ordering_single_cell_noop(self):
         """optimize_ordering with 1 cell returns without permuting."""
         nodes = np.array([[0, 0], [1, 0], [0, 1]], dtype=float)

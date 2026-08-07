@@ -681,7 +681,11 @@ class UnstructuredSubMesh(SubMesh):
 
             winding[i] = 2.0 * np.arctan2(num, den).sum()
 
-        return winding > 2.0 * np.pi
+        # Interior points have winding 4*pi and exterior 0; a point lying on a
+        # face/edge/corner has a partial value (2*pi / pi / pi-over-2). Use a
+        # small positive threshold so boundary points count as inside rather
+        # than being masked to NaN, while true exterior (winding ~ 0) stays out.
+        return winding > 0.1
 
 
 # ======================================================================
