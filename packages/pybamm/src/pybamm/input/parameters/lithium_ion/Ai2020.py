@@ -578,7 +578,7 @@ def get_parameter_values():
         "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
-        "Maximum concentration in negative electrode [mol.m-3]": 28700.0,
+        "Maximum concentration in negative electrode [mol.m-3]": 29700.0,
         "Negative particle diffusivity [m2.s-1]": graphite_diffusivity_Dualfoil1998,
         "Negative electrode OCP [V]": graphite_ocp_Enertech_Ai2020,
         "Negative electrode porosity": 0.33,
