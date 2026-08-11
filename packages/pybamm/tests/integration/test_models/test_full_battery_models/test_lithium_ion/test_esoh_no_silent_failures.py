@@ -8,12 +8,27 @@ import pytest
 import pybamm
 
 PARAMETER_SETS = [
-    "Ai2020", "Chayambuka2022", "Chen2020", "Ecker2015", "Marquis2019",
-    "Mohtat2020", "NCA_Kim2011", "OKane2022", "ORegan2022", "Prada2013",
+    "Ai2020",
+    "Chayambuka2022",
+    "Chen2020",
+    "Ecker2015",
+    "Marquis2019",
+    "Mohtat2020",
+    "NCA_Kim2011",
+    "OKane2022",
+    "ORegan2022",
+    "Prada2013",
     "Ramadass2004",
 ]
-CAPACITY_STATES = [(1.0, 1.0), (0.8, 1.0), (1.0, 0.8), (1.2, 0.9), (0.9, 1.2),
-                   (0.7, 1.3), (1.3, 0.7)]
+CAPACITY_STATES = [
+    (1.0, 1.0),
+    (0.8, 1.0),
+    (1.0, 0.8),
+    (1.2, 0.9),
+    (0.9, 1.2),
+    (0.7, 1.3),
+    (1.3, 0.7),
+]
 INVENTORIES = 30
 RESIDUAL_TOLERANCE = 1e-6
 
@@ -58,8 +73,7 @@ class TestElectrodeSOHNoSilentFailures:
                 residuals = _residuals(solver, solution, request)
                 worst = max(abs(value) for value in residuals.values())
                 stoichiometries = [
-                    float(solution[name])
-                    for name in ("x_0", "x_100", "y_0", "y_100")
+                    float(solution[name]) for name in ("x_0", "x_100", "y_0", "y_100")
                 ]
                 if not all(-1e-9 <= v <= 1 + 1e-9 for v in stoichiometries):
                     defects.append((request["Q_Li"], "outside [0, 1]", stoichiometries))
