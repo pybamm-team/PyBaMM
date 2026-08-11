@@ -148,13 +148,61 @@ class TestBrent:
     def test_children_and_copy(self):
         x = pybamm.Variable("x")
         node = pybamm.Brent(x * x - 9.0, x, (0.0, 10.0))
-        assert len(node.children) == 4
+        assert len(node.children) == 5
         copy = node.create_copy()
         assert copy.name == node.name
         assert float(casadi.evalf(copy.to_casadi(inputs={}))) == pytest.approx(3.0)
 
+    def test_expansion_finds_a_bracket_the_bounds_missed(self):
+        # the bracket holds no sign change, so the plain method has nothing to do; with
+        # expansion the walk finds the root at 3 anyway
+        x = pybamm.Variable("x")
+        residual = x * x - 9.0
+        with pytest.raises(RuntimeError, match="rootfinder process failed"):
+            casadi.evalf(pybamm.Brent(residual, x, (0.0, 1.0)).to_casadi(inputs={}))
+        node = pybamm.Brent(residual, x, (0.0, 1.0), max_expansions=50)
+        assert float(casadi.evalf(node.to_casadi(inputs={}))) == pytest.approx(3.0)
+
+    def test_expansion_never_raises(self):
+        # x^2 + 1 has no real root at all, so nothing can be bracketed; expansion must
+        # still return a number rather than failing
+        x = pybamm.Variable("x")
+        node = pybamm.Brent(x * x + 1.0, x, (0.0, 1.0), max_expansions=20)
+        assert np.isfinite(float(casadi.evalf(node.to_casadi(inputs={}))))
+
+    def test_the_guess_only_sets_the_scale(self):
+        # far guess, wrong side, tiny bounds: the answer is the same either way
+        x = pybamm.Variable("x")
+        for guess in (-500.0, 0.5, 1e4):
+            node = pybamm.Brent(
+                x * x - 9.0, x, (0.0, 0.1), guess=guess, max_expansions=80
+            )
+            got = float(casadi.evalf(node.to_casadi(inputs={})))
+            assert got == pytest.approx(3.0, abs=1e-9)
+
+    def test_the_hyperparameters_are_part_of_the_identity(self):
+        # the id keys the caches in ParameterValues.process_symbol and _to_casadi, so
+        # two nodes differing only in a hyperparameter must not collide there
+        x = pybamm.Variable("x")
+        residual = x * x - 9.0
+        strict = pybamm.Brent(residual, x, (0.0, 1.0))
+        expanding = pybamm.Brent(residual, x, (0.0, 1.0), max_expansions=50)
+        assert strict.id != expanding.id
+        assert pybamm.Brent(residual, x, (0, 1), abstol=1e-12).id != strict.id
+        assert pybamm.Brent(residual, x, (0, 1), max_iter=7).id != strict.id
+
+        parameter_values = pybamm.ParameterValues({})
+        with pytest.raises(RuntimeError, match="rootfinder process failed"):
+            casadi.evalf(parameter_values.process_symbol(strict).to_casadi(inputs={}))
+        got = casadi.evalf(
+            parameter_values.process_symbol(expanding).to_casadi(inputs={})
+        )
+        assert float(got) == pytest.approx(3.0)
+
     def test_errors(self):
         x = pybamm.Variable("x")
+        with pytest.raises(ValueError, match="max_expansions must not be negative"):
+            pybamm.Brent(x * x - 9.0, x, (0, 1), max_expansions=-1)
         with pytest.raises(TypeError, match=r"unknown must be a pybamm\.Symbol"):
             pybamm.Brent(x * x - 9.0, 1.0, (0, 1))
         with pytest.raises(TypeError, match=r"residual must be a pybamm\.Symbol"):

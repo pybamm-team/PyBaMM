@@ -7,6 +7,7 @@ import pytest
 import pybamm
 
 # Every shipped full-cell parameter set with plain (non-MSMR) open-circuit potentials.
+# Xu2019 is excluded: it is a half cell and defines no negative electrode capacity.
 PARAMETER_SETS = [
     "Ai2020",
     "Chayambuka2022",
@@ -19,7 +20,6 @@ PARAMETER_SETS = [
     "ORegan2022",
     "Prada2013",
     "Ramadass2004",
-    "Xu2019",
 ]
 
 # 12 sets x 5 capacity states x 20 lithium inventories = 1200 solves
@@ -97,20 +97,34 @@ class TestElectrodeSOHConvergence:
         assert worst < RESIDUAL_TOLERANCE, worst
 
     @pytest.mark.parametrize(
-        # points where the solve returns "success" with a large residual on main
-        ("parameter_set", "inputs"),
+        # Points where the solve used to return "success" with a residual of 5.6 and
+        # 3.4e12. Neither has an answer to return: Ai2020 cannot reach its minimum
+        # voltage at this inventory, and Ramadass2004's negative OCP has a pole inside
+        # [0, 1], which gives a sign change with no root. Both must now say so.
+        ("parameter_set", "inputs", "error", "message"),
         [
-            ("Ai2020", {"Q_n": 3.8030, "Q_p": 3.2194, "Q_Li": 3.7669}),
-            ("Ramadass2004", {"Q_n": 2.1349, "Q_p": 3.9431, "Q_Li": 2.4312}),
+            (
+                "Ai2020",
+                {"Q_n": 3.8030, "Q_p": 3.2194, "Q_Li": 3.7669},
+                ValueError,
+                "greater than the target minimum voltage",
+            ),
+            (
+                "Ramadass2004",
+                {"Q_n": 2.1349, "Q_p": 3.9431, "Q_Li": 2.4312},
+                pybamm.SolverError,
+                "Could not find a stoichiometry limit",
+            ),
         ],
     )
-    def test_known_bad_points(self, parameter_set, inputs):
+    def test_known_bad_points_now_fail_loudly(
+        self, parameter_set, inputs, error, message
+    ):
         solver = pybamm.lithium_ion.ElectrodeSOHSolver(
             pybamm.ParameterValues(parameter_set)
         )
-        solution = solver.solve(dict(inputs))
-        residuals = _residuals(solver, solution, inputs)
-        assert max(abs(value) for value in residuals.values()) < RESIDUAL_TOLERANCE
+        with pytest.raises(error, match=message):
+            solver.solve(dict(inputs))
 
     def test_an_infeasible_request_raises(self):
         solver = pybamm.lithium_ion.ElectrodeSOHSolver(

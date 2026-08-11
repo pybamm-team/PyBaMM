@@ -8,7 +8,7 @@ from typing import Any
 
 import pybamm
 
-from .electrode_soh import _ElectrodeSOH, get_esoh_default_solver
+from .electrode_soh import get_esoh_default_solver
 from .util import (
     check_if_composite,
     get_equilibrium_direction,
@@ -185,6 +185,72 @@ def _get_cyclable_lithium_equation(options, soc="100"):
     return lithium_primary_phases + lithium_secondary_phases
 
 
+# Built solvers, keyed by identity because `ParameterValues` is not hashable; the entry
+# keeps a reference to it so its id cannot be recycled underneath. `param` is left out
+# of every key: callers build a fresh `LithiumIonParameters` per solve and it is
+# determined by `options`, so keying on it would miss every time.
+_SOLVERS: dict[tuple, tuple] = {}
+
+
+def _cached(parameter_values, key, build):
+    if key not in _SOLVERS:
+        _SOLVERS[key] = (parameter_values, build())
+    return _SOLVERS[key][1]
+
+
+def _primary_solver(parameter_values, param, direction, options):
+    """
+    The non-composite solver for the primary limits. Rebuilding it per call dominates
+    a composite solve, and it depends on nothing that changes between them.
+    """
+    return _cached(
+        parameter_values,
+        ("primary", id(parameter_values), direction, str(options)),
+        lambda: pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values,
+            direction=direction,
+            param=param,
+            known_value="cyclable lithium capacity",
+            options=options,
+        ),
+    )
+
+
+def _secondary_stoichiometry_solver(parameter_values, param, electrode, lithiation, T):
+    """
+    A compiled ``U_sec(z_2) = U_target`` solve, or ``None`` if the secondary potential
+    cannot be proved to have one root. Cached because building it converts the whole
+    tabulated potential, which costs far more than running it.
+    """
+    import casadi
+
+    def build():
+        domain_param = param.n if electrode == "negative" else param.p
+        try:
+            node = domain_param.sec.U_inverse(
+                pybamm.InputParameter("U_target"),
+                T,
+                parameter_values,
+                lithiation=lithiation,
+                sto_guess=pybamm.InputParameter("z_1"),
+            )
+        except pybamm.OptionError:
+            return None
+        target, guess = casadi.MX.sym("U_target"), casadi.MX.sym("z_1")
+        return casadi.Function(
+            "z_2",
+            [target, guess],
+            [
+                parameter_values.process_symbol(node).to_casadi(
+                    inputs={"U_target": target, "z_1": guess}
+                )
+            ],
+        )
+
+    key = ("secondary", id(parameter_values), electrode, lithiation, T)
+    return _cached(parameter_values, key, build)
+
+
 def _solve_secondary_stoichiometry(
     primary_stoich: float,
     parameter_values: pybamm.ParameterValues,
@@ -222,7 +288,6 @@ def _solve_secondary_stoichiometry(
     float
         The secondary phase stoichiometry (x_2 or y_2)
     """
-    model = pybamm.BaseModel()
     z_2 = pybamm.Variable("z_2", bounds=(0, 1))
     z_1 = pybamm.InputParameter("z_1")
 
@@ -245,6 +310,19 @@ def _solve_secondary_stoichiometry(
         U_prim = param.p.prim.U(z_1, T, lith_prim)
         U_sec = param.p.sec.U(z_2, T, lith_sec)
 
+    # Where the secondary potential is provably strictly decreasing this is a scalar
+    # inversion with one root, which Brent finds directly. The algebraic solve below
+    # is the fallback: it needs an initial guess and can converge anywhere.
+    solve = _secondary_stoichiometry_solver(
+        parameter_values, param, electrode, lith_sec, T
+    )
+    if solve is not None:
+        U_target = parameter_values.process_symbol(U_prim).evaluate(
+            inputs={"z_1": primary_stoich}
+        )
+        return float(solve(U_target, primary_stoich))
+
+    model = pybamm.BaseModel()
     model.algebraic[z_2] = U_prim - U_sec
     model.initial_conditions[z_2] = primary_stoich
     model.variables["z_2"] = z_2
@@ -625,28 +703,18 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         Q_p_total = Q_p_1 + (Qs.get("Q_p_2", 0))
 
         primary_options = _get_primary_only_options(options)
-        # _ElectrodeSOH uses get_equilibrium_direction internally for the equilibrium
-        # stoichiometries (x_0, x_100, y_0, y_100), consistent with the full solve
-        primary_model = _ElectrodeSOH(
-            direction=direction,
-            param=param,
-            solve_for=["x_0", "x_100"],
-            known_value="cyclable lithium capacity",
-            options=primary_options,
+        # The primary limits are the non-composite problem on the total capacities, so
+        # solve it with the solver that owns it rather than rebuilding the model here.
+        # That is also what supplies the bracket the stoichiometry limits need.
+        primary_solver = _primary_solver(
+            parameter_values, param, direction, primary_options
         )
-
         primary_inputs = {**inputs, "Q_n": Q_n_total, "Q_p": Q_p_total, "Q_Li": Q_Li}
-        primary_sim = pybamm.Simulation(
-            primary_model,
-            parameter_values=parameter_values,
-            solver=get_esoh_default_solver(tol),
-        )
-
-        primary_sol = primary_sim.solve([0], inputs=primary_inputs)
-        x_100_1 = primary_sol["x_100"].data[0]
-        x_0_1 = primary_sol["x_0"].data[0]
-        y_100_1 = primary_sol["y_100"].data[0]
-        y_0_1 = primary_sol["y_0"].data[0]
+        primary_sol = primary_solver.solve(primary_inputs, direction=direction)
+        x_100_1 = primary_sol["x_100"]
+        x_0_1 = primary_sol["x_0"]
+        y_100_1 = primary_sol["y_100"]
+        y_0_1 = primary_sol["y_0"]
 
         T_ref = parameter_values["Reference temperature [K]"]
         result = {

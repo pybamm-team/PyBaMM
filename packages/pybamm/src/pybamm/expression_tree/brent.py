@@ -4,8 +4,28 @@
 from __future__ import annotations
 
 import casadi
+import numpy as np
 
 import pybamm
+
+
+class BrentUnknown(pybamm.Symbol):
+    """
+    A symbol to solve a :class:`Brent` node for.
+
+    ``Brent`` accepts any symbol as its unknown, but a plain
+    :class:`pybamm.Symbol` has no shape, a :class:`pybamm.Variable` must appear in
+    ``rhs`` or ``algebraic`` to survive discretisation, and a
+    :class:`pybamm.InputParameter` is collected as an input the caller then has to
+    supply. This is bound by the enclosing ``Brent`` before any of that matters, so
+    it passes through every pass untouched and is never asked for.
+    """
+
+    def _evaluate_for_shape(self):
+        return np.nan * np.ones((1, 1))
+
+    def create_copy(self, new_children=None, perform_simplifications=True):
+        return BrentUnknown(self.name)
 
 
 class Brent(pybamm.Symbol):
@@ -29,10 +49,19 @@ class Brent(pybamm.Symbol):
         a target, pass ``f - target``.
     unknown : :class:`pybamm.Symbol`
         The value being solved for. Any symbol will do, so long as it appears in
-        ``residual`` and nowhere else in the surrounding expression; a
-        :class:`pybamm.Variable` is the usual choice.
+        ``residual`` and nowhere else in the surrounding expression;
+        :class:`pybamm.BrentUnknown` is the one that survives every pass.
     bounds : tuple
-        ``(lo, hi)``, the bracket to search. Either may be an expression.
+        ``(lo, hi)``, the bracket to search. Either may be an expression. With
+        ``max_expansions`` set these are only a starting scale, not a limit.
+    guess : :class:`pybamm.Symbol` or float, optional
+        Where to start. Only sets the scale of the first outward step, so it does
+        not have to be close. Defaults to the midpoint of ``bounds``.
+    max_expansions : int, optional
+        Outward steps allowed when ``bounds`` holds no sign change. The default ``0``
+        requires a valid bracket and raises without one. Positive walks outwards until
+        the sign changes -- unambiguous for a monotonic residual -- and **never
+        raises**: the closest point found comes back instead.
     abstol : float, optional
         Absolute tolerance on the unknown. A hyperparameter: fixed when the node is
         built, not solved over.
@@ -46,7 +75,7 @@ class Brent(pybamm.Symbol):
     .. code-block:: python
 
         # invert an open-circuit potential at a given voltage
-        sto = pybamm.Variable("stoichiometry")
+        sto = pybamm.BrentUnknown("stoichiometry")
         node = pybamm.Brent(param.n.prim.U(sto, T) - voltage, sto, (0, 1))
     """
 
@@ -56,6 +85,8 @@ class Brent(pybamm.Symbol):
         unknown: pybamm.Symbol,
         bounds: tuple,
         *,
+        guess: pybamm.Symbol | float | None = None,
+        max_expansions: int = 0,
         abstol: float = 1e-14,
         max_iter: int = 100,
         name: str = "brent",
@@ -72,15 +103,19 @@ class Brent(pybamm.Symbol):
             raise ValueError(f"'{unknown}' does not appear in '{residual}'")
         if len(bounds) != 2:
             raise ValueError(f"bounds must be a (lo, hi) pair, got {bounds}")
+        if max_expansions < 0:
+            raise ValueError(
+                f"max_expansions must not be negative, got {max_expansions}"
+            )
         self.abstol = abstol
         self.max_iter = max_iter
+        self.max_expansions = max_expansions
+        lo, hi = (pybamm.convert_to_symbol(bound) for bound in bounds)
+        if guess is None:
+            guess = (lo + hi) / 2
         # the unknown is a child so that it survives copying and serialisation with
         # the rest of the tree; it also appears inside the residual
-        children = [
-            residual,
-            unknown,
-            *(pybamm.convert_to_symbol(bound) for bound in bounds),
-        ]
+        children = [residual, unknown, lo, hi, pybamm.convert_to_symbol(guess)]
         super().__init__(name, children=children)
 
     @property
@@ -96,14 +131,29 @@ class Brent(pybamm.Symbol):
     @property
     def bounds(self):
         """The bracket, as a ``(lo, hi)`` pair of symbols."""
-        return tuple(self.children[2:])
+        return tuple(self.children[2:4])
+
+    @property
+    def guess(self):
+        """Where the search starts."""
+        return self.children[4]
+
+    def set_id(self):
+        """See :meth:`pybamm.Symbol.set_id()`."""
+        # The hyperparameters change the answer, so two nodes that differ only in them
+        # are different symbols. Leaving them out lets the id-keyed caches in
+        # `ParameterValues.process_symbol` and `_to_casadi` return the wrong one.
+        super().set_id()
+        self._id = hash((self._id, self.abstol, self.max_iter, self.max_expansions))
 
     def create_copy(self, new_children=None, perform_simplifications=True):
-        residual, unknown, lo, hi = self._children_for_copying(new_children)
+        residual, unknown, lo, hi, guess = self._children_for_copying(new_children)
         return Brent(
             residual,
             unknown,
             (lo, hi),
+            guess=guess,
+            max_expansions=self.max_expansions,
             abstol=self.abstol,
             max_iter=self.max_iter,
             name=self.name,
@@ -114,16 +164,24 @@ class Brent(pybamm.Symbol):
 
     def to_json(self):
         json_dict = super().to_json()
-        json_dict.update({"abstol": self.abstol, "max_iter": self.max_iter})
+        json_dict.update(
+            {
+                "abstol": self.abstol,
+                "max_iter": self.max_iter,
+                "max_expansions": self.max_expansions,
+            }
+        )
         return json_dict
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        residual, unknown, lo, hi = snippet["children"]
+        residual, unknown, lo, hi, guess = snippet["children"]
         return cls(
             residual,
             unknown,
             (lo, hi),
+            guess=guess,
+            max_expansions=snippet["max_expansions"],
             abstol=snippet["abstol"],
             max_iter=snippet["max_iter"],
             name=snippet["name"],
@@ -136,9 +194,9 @@ class Brent(pybamm.Symbol):
         equation = self.children[0]._to_casadi_inner(
             t, y, y_dot, inputs, {**casadi_symbols, self.unknown: unknown}
         )
-        lo, hi = (
-            bound._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
-            for bound in self.bounds
+        lo, hi, guess = (
+            child._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
+            for child in self.children[2:]
         )
 
         # Pass only the symbols the residual actually reads. Handing the oracle the
@@ -154,11 +212,13 @@ class Brent(pybamm.Symbol):
             f"brent_{abs(self.id)}",
             "brent",
             oracle,
-            {"abstol": self.abstol, "max_iter": self.max_iter},
+            {
+                "abstol": self.abstol,
+                "max_iter": self.max_iter,
+                "max_expansions": self.max_expansions,
+            },
         )
-        # the guess is required by the rootfinder interface and ignored by a bracketed
-        # method, so either end of the bracket does
-        return solver(lo, lo, hi, *free)
+        return solver(guess, lo, hi, *free)
 
     def diff(self, variable):
         raise NotImplementedError(

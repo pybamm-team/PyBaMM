@@ -523,3 +523,124 @@ class TestInterpolantCasadiEndpoints:
         # and outside the data it holds the endpoint rather than dropping to zero
         for argument in (x[0] - 1e-9, x[-1] + 1e-9):
             assert float(evaluate(argument)) != 0.0
+
+
+class TestInterpolantMonotonicity:
+    """
+    ``monotonicity`` is exact: it reads the derivative's extrema off the polynomial
+    coefficients of each piece, so an overshoot between the knots cannot be missed.
+    """
+
+    def _dense(self, interpolant, region, num_points=2_000_001):
+        """The verdict a sweep would give, for comparison against the exact one."""
+        grid = np.linspace(*region, num_points)
+        difference = np.diff(np.asarray(interpolant.function(grid), float).squeeze())
+        if np.all(difference > 0):
+            return 1
+        return -1 if np.all(difference < 0) else 0
+
+    @pytest.mark.parametrize("interpolator", ["linear", "cubic", "pchip"])
+    def test_reports_the_direction(self, interpolator):
+        x = np.linspace(0, 1, 11)
+        child = pybamm.Variable("v")
+        rising = pybamm.Interpolant(x, x**3 + x, child, interpolator=interpolator)
+        assert rising.monotonicity() == 1
+        falling = pybamm.Interpolant(x, -(x**3) - x, child, interpolator=interpolator)
+        assert falling.monotonicity() == -1
+        turning = pybamm.Interpolant(
+            x, (x - 0.5) ** 2, child, interpolator=interpolator
+        )
+        assert turning.monotonicity() == 0
+
+    def test_a_constant_interpolant_is_not_strictly_monotonic(self):
+        x = np.linspace(0, 1, 5)
+        for interpolator in ("linear", "cubic", "pchip"):
+            interpolant = pybamm.Interpolant(
+                x, np.ones_like(x), pybamm.Variable("v"), interpolator=interpolator
+            )
+            assert interpolant.monotonicity() == 0
+
+    def test_a_derivative_vanishing_at_a_point_stays_monotonic(self):
+        # x^3 is strictly increasing though its derivative is zero at the origin,
+        # and a cubic interpolant of it reproduces it exactly
+        x = np.linspace(-1, 1, 9)
+        interpolant = pybamm.Interpolant(
+            x, x**3, pybamm.Variable("v"), interpolator="cubic"
+        )
+        assert interpolant.monotonicity() == 1
+
+    def test_catches_an_overshoot_a_sweep_misses(self):
+        # monotone data whose cubic spline dips by 9e-10; a 1001-point sweep steps
+        # over the dip and calls it increasing, the exact answer does not
+        x = np.array([0.0, 0.238767, 0.30018, 0.702434, 1.0])
+        y = np.array([0.271235, 0.470231, 0.479492, 0.714784, 0.839206])
+        interpolant = pybamm.Interpolant(
+            x, y, pybamm.Variable("v"), interpolator="cubic"
+        )
+        assert self._dense(interpolant, (0.0, 1.0), num_points=1001) == 1
+        assert self._dense(interpolant, (0.0, 1.0)) == 0
+        assert interpolant.monotonicity() == 0
+        # pchip is built to preserve the monotonicity of its data, and does
+        preserved = pybamm.Interpolant(x, y, pybamm.Variable("v"), interpolator="pchip")
+        assert preserved.monotonicity() == 1
+
+    @pytest.mark.parametrize("interpolator", ["linear", "cubic", "pchip"])
+    def test_a_region_selects_a_monotonic_stretch(self, interpolator):
+        x = np.linspace(0, 1, 21)
+        interpolant = pybamm.Interpolant(
+            x, (x - 0.5) ** 2, pybamm.Variable("v"), interpolator=interpolator
+        )
+        assert interpolant.monotonicity() == 0
+        assert interpolant.monotonicity((0.0, 0.5)) == -1
+        assert interpolant.monotonicity((0.5, 1.0)) == 1
+
+    @pytest.mark.parametrize("interpolator", ["linear", "cubic", "pchip"])
+    def test_a_region_reaching_outside_the_data_extrapolates(self, interpolator):
+        x = np.linspace(0, 1, 11)
+        interpolant = pybamm.Interpolant(
+            x, x + 1, pybamm.Variable("v"), interpolator=interpolator
+        )
+        assert interpolant.monotonicity((-3.0, 4.0)) == 1
+        assert self._dense(interpolant, (-3.0, 4.0)) == 1
+
+        blocked = pybamm.Interpolant(
+            x, x + 1, pybamm.Variable("v"), interpolator=interpolator, extrapolate=False
+        )
+        with pytest.raises(ValueError, match="does not extrapolate"):
+            blocked.monotonicity((-3.0, 4.0))
+
+    def test_errors(self):
+        x = np.linspace(0, 1, 11)
+        interpolant = pybamm.Interpolant(
+            x, x**2, pybamm.Variable("v"), interpolator="cubic"
+        )
+        with pytest.raises(ValueError, match="lower < upper"):
+            interpolant.monotonicity((0.5, 0.5))
+
+        two_dimensional = pybamm.Interpolant(
+            (x, x),
+            np.outer(x, x),
+            (pybamm.Variable("a"), pybamm.Variable("b")),
+            interpolator="linear",
+        )
+        with pytest.raises(pybamm.ShapeError, match="1D, scalar-valued"):
+            two_dimensional.monotonicity()
+
+    @pytest.mark.parametrize("interpolator", ["linear", "cubic", "pchip"])
+    def test_never_disagrees_with_a_fine_sweep(self, interpolator):
+        """A sweep can miss what the exact answer sees, but never contradict it."""
+        rng = np.random.default_rng(20240611)
+        child = pybamm.Variable("v")
+        for _ in range(60):
+            x = np.sort(rng.uniform(0, 1, rng.integers(4, 12)))
+            x[0], x[-1] = 0.0, 1.0
+            if np.any(np.diff(x) < 1e-3):
+                continue
+            y = rng.uniform(-1, 1, len(x))
+            interpolant = pybamm.Interpolant(x, y, child, interpolator=interpolator)
+            lower, upper = sorted(rng.uniform(0, 1, 2))
+            if upper - lower < 1e-2:
+                lower, upper = 0.0, 1.0
+            exact = interpolant.monotonicity((lower, upper))
+            swept = self._dense(interpolant, (lower, upper), num_points=200_001)
+            assert exact == swept or (exact == 0 and swept != 0)

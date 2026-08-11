@@ -772,6 +772,94 @@ class ParticleLithiumIonParameters(BaseParameters):
             inputs,
         )
 
+    def U_inverse(
+        self,
+        U_target,
+        T,
+        parameter_values,
+        lithiation=None,
+        sto_guess=None,
+        sto_bounds=None,
+        abstol=1e-14,
+        max_expansions=100,
+    ):
+        """
+        Stoichiometry at which the open-circuit potential reaches ``U_target``.
+
+        Only defined where the potential is **provably** strictly decreasing: a single
+        tabulated OCP entering additively, monotonic over the region by
+        :meth:`pybamm.Interpolant.monotonicity`. Anything else raises. A bracketed
+        rootfind needs a unique root to be meaningful, and only that shape can be shown
+        to have one, so an analytic potential is refused rather than attempted.
+
+        Inverts the same :meth:`U` the models use, entropic term and asymptotes
+        included. Because ``U_asymptotes`` drives ``U`` to a large positive value as
+        ``sto -> 0`` and a large negative one as ``sto -> 1``, a root exists for every
+        finite target, the search always terminates, and the solve cannot fail.
+
+        Parameters
+        ----------
+        U_target : :class:`pybamm.Symbol` or float
+            The open-circuit potential to invert, in volts.
+        T : :class:`pybamm.Symbol` or float
+            Temperature [K].
+        parameter_values : :class:`pybamm.ParameterValues`
+            Needed to see the data behind the potential, which is what the proof reads.
+        lithiation : str, optional
+            ``"lithiation"`` or ``"delithiation"`` to pick a hysteresis branch.
+        sto_guess : :class:`pybamm.Symbol` or float, optional
+            Where to start. Only sets the scale of the first step, so it does not have
+            to be close; a previous solve makes a good one. Defaults to the midpoint of
+            ``sto_bounds``.
+        sto_bounds : tuple, optional
+            ``(lo, hi)`` to search first. Defaults to the whole stoichiometry range.
+        abstol : float, optional
+            Absolute tolerance on the stoichiometry.
+        max_expansions : int, optional
+            Outward steps allowed when ``sto_bounds`` holds no sign change. Zero makes
+            the bounds a hard bracket.
+
+        Returns
+        -------
+        :class:`pybamm.Brent`
+            The stoichiometry, as an expression.
+
+        Raises
+        ------
+        :class:`pybamm.OptionError`
+            If the potential cannot be proved strictly decreasing over the region.
+        """
+        if sto_bounds is None:
+            tol = pybamm.settings.tolerances["U__c_s"]
+            sto_bounds = (tol, 1 - tol)
+
+        region = (
+            max(float(sto_bounds[0]), U_BARRIER_FREE),
+            min(float(sto_bounds[1]), 1 - U_BARRIER_FREE),
+        )
+        if not U_is_strictly_decreasing(
+            parameter_values.process_symbol(
+                self.U(pybamm.Variable("sto"), T, lithiation)
+            ),
+            region,
+        ):
+            raise pybamm.OptionError(
+                f"The {self.domain} electrode open-circuit potential cannot be shown to "
+                f"decrease strictly over {region}, so it has no unique inverse there. "
+                "U_inverse covers tabulated potentials that are monotonic over the "
+                "region and nothing else."
+            )
+
+        sto = pybamm.BrentUnknown(f"{self.phase_prefactor}{self.domain} sto")
+        return pybamm.Brent(
+            self.U(sto, T, lithiation) - U_target,
+            sto,
+            sto_bounds,
+            guess=sto_guess,
+            max_expansions=max_expansions,
+            abstol=abstol,
+        )
+
     def X_j(self, T, index):
         "Available host sites indexed by reaction j"
         inputs = {"Temperature [K]": T}
@@ -943,6 +1031,74 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
 
 
+_U_ASYMPTOTE_PARAMETERS = (205.0568621937484, 6910.192179565431, -7.7e-4)
+
+
+# Beyond this the softplus in `U_asymptote_approaching_zero` rounds to exactly zero, so
+# `U_asymptotes` contributes exactly 0.0 -- and exactly -0.0 to the derivative -- on
+# `(U_BARRIER_FREE, 1 - U_BARRIER_FREE)`. That is 99.09% of [0, 1].
+U_BARRIER_FREE = (
+    _U_ASYMPTOTE_PARAMETERS[2]
+    + np.log(2.0 / np.finfo(np.float64).eps) / _U_ASYMPTOTE_PARAMETERS[1]
+)
+
+
+def U_is_strictly_decreasing(processed_U, region):
+    """
+    Whether a processed open-circuit potential provably decreases over ``region``.
+
+    A proof or nothing: it holds only for the one shape that can be checked exactly,
+    a single tabulated potential entering additively,
+
+    - the expression contains exactly one :class:`pybamm.Interpolant`,
+    - every node above it is an :class:`pybamm.Addition`, so it enters with a
+      coefficient of ``+1`` and the rest of the expression does not involve it,
+    - that interpolant is strictly decreasing over ``region``, by
+      :meth:`pybamm.Interpolant.monotonicity`, which is exact.
+
+    Then ``U' = interpolant' + U_asymptotes' < 0``, since `U_asymptotes` is a mirrored
+    softplus and so strictly decreasing everywhere. Anything else -- an analytic
+    potential, an entropic term that survives, a potential built by subtraction --
+    returns ``False`` rather than a guess.
+
+    Parameters
+    ----------
+    processed_U : :class:`pybamm.Symbol`
+        ``U(sto, T)`` after :meth:`pybamm.ParameterValues.process_symbol`.
+    region : tuple of float
+        ``(lower, upper)`` stoichiometry range to prove it over.
+
+    Returns
+    -------
+    bool
+    """
+    interpolants = [
+        node for node in processed_U.pre_order() if isinstance(node, pybamm.Interpolant)
+    ]
+    if len(interpolants) != 1:
+        return False
+    interpolant = interpolants[0]
+
+    def enters_additively(node):
+        if node is interpolant:
+            return True
+        if not isinstance(node, pybamm.Addition):
+            return False
+        return any(enters_additively(child) for child in node.children)
+
+    if not enters_additively(processed_U):
+        return False
+
+    data = interpolant.x[0]
+    lower, upper = max(region[0], data[0]), min(region[1], data[-1])
+    if not lower < upper:
+        return False
+    try:
+        return interpolant.monotonicity((lower, upper)) == -1
+    except (pybamm.ShapeError, ValueError):
+        return False
+
+
 def U_asymptote_approaching_zero(sto):
     """
     OCP asymptote approaching zero as sto -> 0. This function's hyperparameters
@@ -958,9 +1114,7 @@ def U_asymptote_approaching_zero(sto):
     float
         The OCP asymptote.
     """
-    a = 205.0568621937484
-    b = 6910.192179565431
-    c = -7.7e-4
+    a, b, c = _U_ASYMPTOTE_PARAMETERS
 
     # Smallest exponent for which 1 + exp(z) == exp(z) in float64, so the
     # linear continuation below is a bit-exact match for the softplus branch

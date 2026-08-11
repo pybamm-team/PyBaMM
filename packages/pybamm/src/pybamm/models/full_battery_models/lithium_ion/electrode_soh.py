@@ -114,6 +114,7 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         solve_for=None,
         known_value="cyclable lithium capacity",
         options=None,
+        max_expansions=0,
     ):
         super().__init__()
 
@@ -154,9 +155,7 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
 
         def solve_for_limit(name, direction, voltage):
             """The stoichiometry at which the cell sits at `voltage`."""
-            # an InputParameter passes through discretisation untouched; the Brent
-            # node binds it before it is ever looked up in the solver's inputs
-            unknown = pybamm.InputParameter(f"{name} (brent unknown)")
+            unknown = pybamm.BrentUnknown(name)
             residual = (
                 Up(
                     (Q_Li - unknown * Q_n) / Q_p,
@@ -178,7 +177,18 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
                 )
                 - voltage
             )
-            return pybamm.Brent(residual, unknown, bracket, name=name)
+            # With both open-circuit potentials proved decreasing, and `y` decreasing
+            # in `x`, the residual increases in `x` strictly. Only then is the bracket
+            # merely where to start looking: `max_expansions` walks out to the
+            # asymptotes if it has to, and the solve cannot fail. Unproved, it stays a
+            # hard bracket that reports what it could not do.
+            return pybamm.Brent(
+                residual,
+                unknown,
+                bracket,
+                max_expansions=max_expansions,
+                name=name,
+            )
 
         # Define variables for 100% state of charge
         if "x_100" in solve_for:
@@ -403,7 +413,9 @@ class ElectrodeSOHSolver:
         self.options = options or pybamm.BatteryModelOptions({})
 
         self.lims_ocp = self._get_lims_ocp(direction)
+        self.max_expansions = 100 if self._both_ocps_provably_decreasing() else 0
         self.OCV_function = None
+        self._get_evaluator = lru_cache()(self.__get_evaluator)
         self._get_electrode_soh_sims_full = lru_cache()(
             self.__get_electrode_soh_sims_full
         )
@@ -418,6 +430,7 @@ class ElectrodeSOHSolver:
         """
         result = self.__dict__.copy()
         result["_get_electrode_soh_sims_full"] = None  # Exclude LRU cache
+        result["_get_evaluator"] = None  # Exclude LRU cache
         result["_get_electrode_soh_sims_split"] = None  # Exclude LRU cache
         result["_get_energy_ocv_function"] = None  # Exclude LRU cache
         return result
@@ -427,6 +440,7 @@ class ElectrodeSOHSolver:
         Unpickle, restoring unpicklable relationships
         """
         self.__dict__ = state
+        self._get_evaluator = lru_cache()(self.__get_evaluator)
         self._get_electrode_soh_sims_full = lru_cache()(
             self.__get_electrode_soh_sims_full
         )
@@ -459,6 +473,34 @@ class ElectrodeSOHSolver:
                 high = min(high, float(np.max(node.x[0])))
         return low, high
 
+    def _both_ocps_provably_decreasing(self):
+        """
+        Whether both open-circuit potentials are proved to decrease where the limits
+        are solved for. Only then is the stoichiometry limit unique, so only then may
+        the solve treat its bracket as a starting scale rather than a bound.
+        """
+        from pybamm.parameters.lithium_ion_parameters import (
+            U_BARRIER_FREE,
+            U_is_strictly_decreasing,
+        )
+
+        sto = pybamm.Variable("sto")
+        T_ref = self.parameter_values.evaluate(self.param.T_ref)
+        region = (U_BARRIER_FREE, 1 - U_BARRIER_FREE)
+        try:
+            return all(
+                U_is_strictly_decreasing(
+                    self.parameter_values.process_symbol(
+                        phase.U(sto, pybamm.Scalar(T_ref))
+                    ),
+                    region,
+                )
+                for phase in (self.param.n.prim, self.param.p.prim)
+            )
+        except (KeyError, AttributeError, pybamm.OptionError):
+            # MSMR and half-cell parameter sets have no plain OCP to inspect
+            return False
+
     def _get_lims_ocp(self, direction):
         if self.options["open-circuit potential"] == "MSMR":
             margin = pybamm.settings.tolerances["U__c_s"]
@@ -479,6 +521,7 @@ class ElectrodeSOHSolver:
             full_model = _ElectrodeSOH(
                 direction,
                 param=self.param,
+                max_expansions=self.max_expansions,
                 known_value=self.known_value,
                 options=self.options,
             )
@@ -504,6 +547,7 @@ class ElectrodeSOHSolver:
             x100_model = _ElectrodeSOH(
                 direction,
                 param=self.param,
+                max_expansions=self.max_expansions,
                 solve_for=["x_100"],
                 known_value=self.known_value,
                 options=self.options,
@@ -511,6 +555,7 @@ class ElectrodeSOHSolver:
             x0_model = _ElectrodeSOH(
                 direction,
                 param=self.param,
+                max_expansions=self.max_expansions,
                 solve_for=["x_0"],
                 known_value=self.known_value,
                 options=self.options,
@@ -556,21 +601,11 @@ class ElectrodeSOHSolver:
         With Q_Li known every stoichiometry limit is a `pybamm.Brent` node, so the
         model has no equations left to solve and the variables are just expressions.
         """
-        import casadi
-
-        sim = self._get_electrode_soh_sims_full(direction)
-        sim.build()
-        model = sim.built_model
-        symbols = {name: casadi.DM(value) for name, value in inputs.items()}
+        input_names = tuple(sorted(inputs))
+        names, evaluate = self._get_evaluator(direction, input_names)
         try:
-            sol_dict = {
-                name: float(
-                    casadi.evalf(
-                        model.get_processed_variable(name).to_casadi(inputs=symbols)
-                    )
-                )
-                for name in model.variables
-            }
+            values = evaluate(*[inputs[name] for name in input_names])
+            sol_dict = dict(zip(names, np.asarray(values).ravel(), strict=True))
         except RuntimeError as error:
             # no sign change over the feasible range, so the cell cannot reach one of
             # the voltage limits at this capacity and lithium inventory
@@ -583,6 +618,33 @@ class ElectrodeSOHSolver:
                 self.theoretical_energy_integral({**sol_dict, **inputs})
             )
         return sol_dict
+
+    def __get_evaluator(self, direction, input_names):
+        """
+        Every variable of the limit-solving model as one compiled function.
+
+        Converting the expressions is far more expensive than running them, and
+        nothing in them changes between solves, so this is built once per direction.
+        """
+        import casadi
+
+        sim = self._get_electrode_soh_sims_full(direction)
+        sim.build()
+        model = sim.built_model
+        symbols = {name: casadi.MX.sym(name) for name in input_names}
+        names = list(model.variables)
+        return names, casadi.Function(
+            "electrode_soh",
+            list(symbols.values()),
+            [
+                casadi.vertcat(
+                    *[
+                        model.get_processed_variable(name).to_casadi(inputs=symbols)
+                        for name in names
+                    ]
+                )
+            ],
+        )
 
     def _set_up_solve(self, inputs, direction):
         # Try with full sim

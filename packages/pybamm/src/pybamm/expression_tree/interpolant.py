@@ -20,6 +20,71 @@ def _is_uniform_grid(x: npt.NDArray[np.float64]) -> bool:
     return bool(np.array_equal(x, np.linspace(x[0], x[-1], len(x))))
 
 
+def _polynomial_range(
+    coefficients: npt.NDArray[np.float64], lower: float, upper: float
+) -> tuple[float, float]:
+    """
+    The exact range of a polynomial on ``[lower, upper]``, from its coefficients.
+
+    A polynomial attains its extrema on a closed interval either at an end or at a
+    stationary point, and the stationary points are the roots of the derivative
+    polynomial. Both sets are finite and computed in closed form, so the answer is
+    the true range rather than a bound on it.
+
+    Parameters
+    ----------
+    coefficients : :class:`numpy.ndarray`
+        Coefficients in order of decreasing degree, as :attr:`scipy.PPoly.c`.
+    lower, upper : float
+        Ends of the interval.
+    """
+    points = [lower, upper]
+    if coefficients.size > 1:
+        stationary = np.roots(np.polyder(coefficients))
+        stationary = stationary[np.isreal(stationary)].real
+        points.extend(stationary[(stationary > lower) & (stationary < upper)])
+    values = np.polyval(coefficients, np.asarray(points, dtype=float))
+    return float(values.min()), float(values.max())
+
+
+def _derivative_range(
+    derivative: interpolate.PPoly, lower: float, upper: float
+) -> tuple[float, float, bool]:
+    """
+    The exact range of a piecewise polynomial on ``[lower, upper]``.
+
+    Returns ``(smallest, largest, flat)``, where ``flat`` says whether the
+    polynomial is identically zero over some sub-interval of positive length. That
+    happens exactly when a piece has all-zero coefficients, since a polynomial that
+    is not identically zero has finitely many roots.
+
+    Parameters
+    ----------
+    derivative : :class:`scipy.interpolate.PPoly`
+        The piecewise polynomial to bound.
+    lower, upper : float
+        Ends of the interval. May reach outside the breakpoints, in which case the
+        end pieces are continued, as :class:`scipy.interpolate.PPoly` extrapolates.
+    """
+    breaks, coefficients = derivative.x, derivative.c
+    smallest, largest = np.inf, -np.inf
+    for i in range(len(breaks) - 1):
+        # the end pieces are the ones extrapolation continues with, so they take the
+        # whole of whatever the region reaches beyond the data
+        start = lower if i == 0 else max(breaks[i], lower)
+        end = upper if i == len(breaks) - 2 else min(breaks[i + 1], upper)
+        if start >= end:
+            continue
+        if not np.any(coefficients[:, i]):
+            return 0.0, 0.0, True
+        # the coefficients are in the piece's own shifted coordinate
+        low, high = _polynomial_range(
+            coefficients[:, i], start - breaks[i], end - breaks[i]
+        )
+        smallest, largest = min(smallest, low), max(largest, high)
+    return smallest, largest, False
+
+
 class Interpolant(pybamm.Function):
     """
     Interpolate data in 1D, 2D, or 3D. Interpolation in 3D requires the input data to be
@@ -180,6 +245,89 @@ class Interpolant(pybamm.Function):
             extrapolate=snippet.get("extrapolate", True),
             _num_derivatives=snippet.get("_num_derivatives", 0),
         )
+
+    def monotonicity(self, region: tuple[float, float] | None = None) -> int:
+        """
+        Whether this interpolant is strictly monotonic over a region.
+
+        Exact. The interpolant is a piecewise polynomial, so its derivative is one
+        too; the derivative's extrema are read off the polynomial coefficients of
+        each piece, at that piece's own stationary points. Nothing is sampled, so
+        an overshoot between the knots cannot be missed.
+
+        Strict monotonicity permits a derivative that vanishes at isolated points
+        but not one that vanishes over an interval, which is exactly the condition
+        for the interpolant to be invertible.
+
+        Parameters
+        ----------
+        region : tuple of float, optional
+            ``(lower, upper)`` to test over. Defaults to the range of the data.
+            A region reaching outside the data is answered on the polynomials that
+            :attr:`extrapolate` continues with, so it requires ``extrapolate``.
+
+        Returns
+        -------
+        int
+            ``1`` if strictly increasing, ``-1`` if strictly decreasing, ``0``
+            otherwise.
+
+        Raises
+        ------
+        :class:`pybamm.ShapeError`
+            If the interpolant is not one-dimensional and scalar-valued.
+        ValueError
+            If ``region`` is empty, or reaches outside the data without
+            ``extrapolate``.
+        """
+        if self.dimension != 1 or self.y.ndim != 1:
+            raise pybamm.ShapeError(
+                "monotonicity is only defined for a 1D, scalar-valued interpolant, "
+                f"but this one has {self.dimension} input(s) and {self.y.ndim}D data"
+            )
+
+        x = self.x[0]
+        lower, upper = (
+            (float(x[0]), float(x[-1])) if region is None else map(float, region)
+        )
+        if not lower < upper:
+            raise ValueError(f"region must satisfy lower < upper, got {region}")
+        if not self.extrapolate and (lower < x[0] or upper > x[-1]):
+            raise ValueError(
+                f"region ({lower}, {upper}) reaches outside the data "
+                f"({x[0]}, {x[-1]}), which this interpolant does not extrapolate"
+            )
+
+        function = self.function
+        if isinstance(function, interpolate.interp1d):
+            # a linear interpolant differentiates to one constant per interval
+            slopes = np.diff(np.asarray(function.y, dtype=float)) / np.diff(x)
+            keep = (x[1:] > lower) & (x[:-1] < upper)
+            if not keep.any():
+                # wholly outside the data, so only the end interval continues there
+                keep[0 if upper <= x[0] else -1] = True
+            slopes = slopes[keep]
+            smallest, largest = slopes.min(), slopes.max()
+            flat = bool(np.any(slopes == 0))
+        else:
+            smallest, largest, flat = _derivative_range(
+                function.derivative(), lower, upper
+            )
+
+        # A stationary point evaluates to a rounding error rather than to zero, so
+        # compare against the derivative's own scale. This absorbs the error in the
+        # coefficients; it is not a substitute for looking at every piece.
+        scale = max(abs(smallest), abs(largest))
+        tolerance = 1e-12 * scale
+        # a derivative vanishing at isolated points still leaves the interpolant
+        # strictly monotonic; one vanishing over an interval does not
+        if flat or (smallest >= -tolerance and largest <= tolerance):
+            return 0
+        if smallest >= -tolerance:
+            return 1
+        if largest <= tolerance:
+            return -1
+        return 0
 
     @property
     def entries_string(self):

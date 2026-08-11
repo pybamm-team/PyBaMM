@@ -450,7 +450,7 @@ def _brent_branch(
 
     def make_brent(parts):
         residual, lo, hi, abstol, max_iter = parts
-        unknown = pybamm.Variable("brent unknown")
+        unknown = pybamm.BrentUnknown("brent unknown")
         return pybamm.Brent(
             # subtraction so the unknown cannot be simplified away, as `0 * x` would
             unknown - residual,
@@ -1069,6 +1069,7 @@ _NOT_ROUND_TRIPPABLE: frozenset[type[pybamm.Symbol]] = frozenset(
         pybamm.IndependentVariable,  # abstract base; Time + SpatialVariable covered
         _BaseAverageClass,  # abstract base; XAverage/ZAverage/etc. cover it
         pybamm.DomainConcatenation,  # constructor requires full_mesh (pybamm.Mesh); not user-constructible
+        pybamm.BrentUnknown,  # only meaningful inside a Brent, which _brent_branch covers
     }
 )
 

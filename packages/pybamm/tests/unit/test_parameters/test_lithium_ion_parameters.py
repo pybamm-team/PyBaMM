@@ -275,3 +275,196 @@ class TestUAsymptotes:
         val_very_neg = U_asymptote_approaching_zero(-10.0).evaluate()
         assert np.isfinite(val_very_neg)
         assert val_very_neg > val_neg  # More negative sto = larger barrier
+
+
+class TestUInverse:
+    """
+    ``U_inverse`` covers provably monotonic tabulated potentials and refuses the rest.
+    Of the shipped sets only Ai2020 and Chayambuka2022 have one, on the negative
+    electrode; every other potential must raise rather than be attempted.
+    """
+
+    PROVABLE = [("Ai2020", "n"), ("Chayambuka2022", "n")]
+    REFUSED = [
+        ("Ai2020", "p"),  # tabulated, but the spline rings, so not monotonic
+        ("Chayambuka2022", "p"),  # tabulated, data itself is not monotonic
+        ("Chen2020", "n"),  # analytic
+        ("Chen2020", "p"),  # analytic
+        ("Ramadass2004", "p"),  # analytic, and a pole at sto ~ 0.2453
+        ("OKane2022", "n"),  # tabulated, 117 monotonic stretches
+    ]
+
+    def _phase(self, param, electrode):
+        return param.n.prim if electrode == "n" else param.p.prim
+
+    @pytest.mark.parametrize(("parameter_set", "electrode"), REFUSED)
+    def test_refuses_what_it_cannot_prove(self, parameter_set, electrode):
+        parameter_values = pybamm.ParameterValues(parameter_set)
+        phase = self._phase(pybamm.LithiumIonParameters(), electrode)
+        with pytest.raises(pybamm.OptionError, match="cannot be shown to decrease"):
+            phase.U_inverse(pybamm.Scalar(0.1), pybamm.Scalar(298.15), parameter_values)
+
+    @pytest.mark.parametrize(("parameter_set", "electrode"), PROVABLE)
+    def test_round_trips_through_U(self, parameter_set, electrode):
+        import casadi
+
+        parameter_values = pybamm.ParameterValues(parameter_set)
+        phase = self._phase(pybamm.LithiumIonParameters(), electrode)
+        symbol = casadi.MX.sym("value")
+        forward = casadi.Function(
+            "U",
+            [symbol],
+            [
+                parameter_values.process_symbol(
+                    phase.U(pybamm.InputParameter("s"), pybamm.Scalar(298.15))
+                ).to_casadi(inputs={"s": symbol})
+            ],
+        )
+        inverse = casadi.Function(
+            "U_inverse",
+            [symbol],
+            [
+                parameter_values.process_symbol(
+                    phase.U_inverse(
+                        pybamm.InputParameter("target"),
+                        pybamm.Scalar(298.15),
+                        parameter_values,
+                    )
+                ).to_casadi(inputs={"target": symbol})
+            ],
+        )
+        for stoichiometry in np.linspace(0.05, 0.95, 25):
+            target = float(forward(stoichiometry))
+            got = float(inverse(target))
+            np.testing.assert_allclose(got, stoichiometry, atol=1e-9)
+            np.testing.assert_allclose(float(forward(got)), target, atol=1e-9)
+
+    def test_the_asymptotes_make_any_target_reachable(self):
+        import casadi
+
+        # far outside the potential's own range, so only the barrier can meet it
+        parameter_values = pybamm.ParameterValues("Ai2020")
+        phase = pybamm.LithiumIonParameters().n.prim
+        symbol = casadi.MX.sym("target")
+        inverse = casadi.Function(
+            "U_inverse",
+            [symbol],
+            [
+                parameter_values.process_symbol(
+                    phase.U_inverse(
+                        pybamm.InputParameter("target"),
+                        pybamm.Scalar(298.15),
+                        parameter_values,
+                    )
+                ).to_casadi(inputs={"target": symbol})
+            ],
+        )
+        for target in (50.0, -50.0):
+            assert np.isfinite(float(inverse(target)))
+
+    def test_bounds_are_only_a_starting_scale(self):
+        import casadi
+
+        parameter_values = pybamm.ParameterValues("Ai2020")
+        phase = pybamm.LithiumIonParameters().n.prim
+        symbol = casadi.MX.sym("target")
+
+        def solve(target, **kwargs):
+            node = phase.U_inverse(
+                pybamm.InputParameter("target"),
+                pybamm.Scalar(298.15),
+                parameter_values,
+                **kwargs,
+            )
+            function = casadi.Function(
+                "f",
+                [symbol],
+                [
+                    parameter_values.process_symbol(node).to_casadi(
+                        inputs={"target": symbol}
+                    )
+                ],
+            )
+            return float(function(target))
+
+        target = 0.1
+        np.testing.assert_allclose(
+            solve(target, sto_bounds=(0.01, 0.02)), solve(target), atol=1e-9
+        )
+        with pytest.raises(RuntimeError, match="rootfinder process failed"):
+            solve(target, sto_bounds=(0.01, 0.02), max_expansions=0)
+
+
+class TestUIsStrictlyDecreasing:
+    def _processed(self, parameter_set):
+        parameter_values = pybamm.ParameterValues(parameter_set)
+        param = pybamm.LithiumIonParameters()
+        temperature = pybamm.Scalar(parameter_values.evaluate(param.T_ref))
+        return [
+            parameter_values.process_symbol(
+                phase.U(pybamm.Variable("sto"), temperature)
+            )
+            for phase in (param.n.prim, param.p.prim)
+        ]
+
+    def test_the_barrier_free_window_is_where_the_barrier_vanishes(self):
+        from pybamm.parameters.lithium_ion_parameters import (
+            U_BARRIER_FREE,
+            U_asymptotes,
+        )
+
+        # strictly inside, the barrier is bit-exactly zero, so it contributes nothing
+        # to U. The closed form itself is the last point before that, within an ulp.
+        inside = np.linspace(U_BARRIER_FREE, 1 - U_BARRIER_FREE, 1001)[1:-1]
+        assert all(
+            float(U_asymptotes(pybamm.Scalar(s)).evaluate()) == 0.0 for s in inside
+        )
+        assert float(U_asymptotes(pybamm.Scalar(U_BARRIER_FREE)).evaluate()) < 1e-13
+        # and well outside it does not vanish at all
+        assert float(U_asymptotes(pybamm.Scalar(0.0)).evaluate()) == pytest.approx(1.0)
+
+    def test_the_barrier_never_increases(self):
+        # what the proof leans on: U' = interpolant' + barrier', and the second term is
+        # never positive anywhere, so it can only reinforce a decreasing interpolant
+        from pybamm.parameters.lithium_ion_parameters import U_asymptotes
+
+        sto = pybamm.StateVector(slice(0, 1))
+        derivative = U_asymptotes(sto).diff(sto)
+        for point in (-2.0, -0.01, 0.0, 1e-4, 0.001, 0.5, 0.999, 1.0, 3.0):
+            value = float(np.asarray(derivative.evaluate(y=np.array([point]))).item())
+            assert value <= 0.0, (point, value)
+
+    @pytest.mark.parametrize(
+        ("parameter_set", "expected"),
+        [
+            # tabulated and decreasing over the window, so provable
+            ("Ai2020", [True, False]),
+            ("Chayambuka2022", [True, False]),
+            # analytic: nothing to read, so never provable
+            ("Chen2020", [False, False]),
+            ("Ramadass2004", [False, False]),
+        ],
+    )
+    def test_proves_only_what_it_can(self, parameter_set, expected):
+        from pybamm.parameters.lithium_ion_parameters import (
+            U_BARRIER_FREE,
+            U_is_strictly_decreasing,
+        )
+
+        region = (U_BARRIER_FREE, 1 - U_BARRIER_FREE)
+        got = [
+            U_is_strictly_decreasing(u, region) for u in self._processed(parameter_set)
+        ]
+        assert got == expected
+
+    def test_an_increasing_potential_is_refused(self):
+        from pybamm.parameters.lithium_ion_parameters import U_is_strictly_decreasing
+
+        sto = pybamm.Variable("sto")
+        x = np.linspace(0, 1, 11)
+        rising = pybamm.Interpolant(x, x, sto, interpolator="linear")
+        assert U_is_strictly_decreasing(rising + pybamm.Scalar(1), (0.1, 0.9)) is False
+        # entering by subtraction is not the shape the proof covers
+        falling = pybamm.Interpolant(x, -x, sto, interpolator="linear")
+        assert U_is_strictly_decreasing(falling + pybamm.Scalar(1), (0.1, 0.9)) is True
+        assert U_is_strictly_decreasing(pybamm.Scalar(1) - falling, (0.1, 0.9)) is False

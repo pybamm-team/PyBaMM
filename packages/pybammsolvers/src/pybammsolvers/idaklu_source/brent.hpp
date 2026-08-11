@@ -24,6 +24,10 @@ struct CASADI_ROOTFINDER_BRENT_EXPORT BrentMemory : public RootfinderMemory {
  * The oracle must be ``g(x, lo, hi, ...)``: the bracket is read from inputs 1 and 2 at
  * solve time, so it can be a live value in the surrounding graph rather than a constant.
  *
+ * With ``max_expansions`` set, the bracket is only a starting scale: the solver walks
+ * outwards until the sign changes, which is unambiguous for a monotonic residual, and
+ * returns the closest point it found rather than failing.
+ *
  * Derivatives come from :class:`Rootfinder`, which applies the implicit function theorem;
  * nothing here is differentiated.
  */
@@ -75,7 +79,7 @@ protected:
   static int residual(void* user_data, double x, double* fx);
 
   double abstol_{1e-14}, ftol_{1e-6};
-  casadi_int max_iter_{100};
+  casadi_int max_iter_{100}, max_expansions_{0};
 };
 
 extern "C" int CASADI_ROOTFINDER_BRENT_EXPORT

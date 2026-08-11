@@ -4,6 +4,7 @@
 
 import contextlib
 
+import numpy as np
 import pytest
 
 import pybamm
@@ -1163,3 +1164,172 @@ class TestGetInitialOCPMSMR:
         )
         assert Up_100 - Un_100 == pytest.approx(4.2)
         assert Up_0 - Un_0 == pytest.approx(2.8)
+
+
+class TestCompositeSecondaryStoichiometry:
+    """
+    The secondary phase solve is a scalar inversion of one open-circuit potential, so
+    where that potential is provably monotonic it goes to Brent. It must give the same
+    answer as the algebraic solve it replaces, and fall back where nothing is provable.
+    """
+
+    def _setup(self):
+        options = pybamm.BatteryModelOptions({"particle phases": ("2", "1")})
+        param = pybamm.LithiumIonParameters(options)
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        temperature = float(parameter_values.evaluate(param.T_ref))
+        return options, param, parameter_values, temperature
+
+    def _tabulated(self, parameter_values):
+        """Chen2020_composite's silicon potential, as data rather than a formula."""
+        # its own 1 / sto + 1 / (sto - 1) barrier makes the endpoints unevaluable
+        grid = np.linspace(1e-3, 1 - 1e-3, 2001)
+        analytic = parameter_values["Secondary: Negative electrode OCP [V]"]
+        values = np.array(
+            [float(analytic(pybamm.Scalar(point)).evaluate()) for point in grid]
+        )
+        tabulated = pybamm.ParameterValues("Chen2020_composite")
+        tabulated["Secondary: Negative electrode OCP [V]"] = lambda sto: (
+            pybamm.Interpolant(grid, values, sto, interpolator="pchip")
+        )
+        return tabulated
+
+    def test_the_shipped_set_falls_back(self):
+        from pybamm.models.full_battery_models.lithium_ion.electrode_soh_composite import (
+            _secondary_stoichiometry_solver,
+        )
+
+        # the silicon potential is analytic, so there is nothing to prove it with
+        _, param, parameter_values, temperature = self._setup()
+        assert (
+            _secondary_stoichiometry_solver(
+                parameter_values, param, "negative", None, temperature
+            )
+            is None
+        )
+
+    def test_a_tabulated_potential_is_proved_and_agrees(self):
+        from pybamm.models.full_battery_models.lithium_ion.electrode_soh_composite import (
+            _secondary_stoichiometry_solver,
+            _solve_secondary_stoichiometry,
+        )
+
+        options, param, parameter_values, temperature = self._setup()
+        tabulated = self._tabulated(parameter_values)
+        assert (
+            _secondary_stoichiometry_solver(
+                tabulated, param, "negative", None, temperature
+            )
+            is not None
+        )
+
+        for primary in np.linspace(0.05, 0.95, 15):
+            fallback = _solve_secondary_stoichiometry(
+                primary,
+                parameter_values,
+                param,
+                "negative",
+                "discharge",
+                options,
+                temperature,
+            )
+            proved = _solve_secondary_stoichiometry(
+                primary, tabulated, param, "negative", "discharge", options, temperature
+            )
+            np.testing.assert_allclose(proved, fallback, atol=1e-7)
+
+
+class TestCompositeLinearInterpolants:
+    """
+    Chen2020_composite with every open-circuit potential and entropic change replaced
+    by a linear interpolant of itself. This is the shape that makes the whole solve
+    provable, so it exercises the rootfind path end to end.
+    """
+
+    # the silicon potential carries its own 1 / sto + 1 / (sto - 1), so the endpoints
+    # cannot be evaluated
+    GRID = np.linspace(1e-3, 1 - 1e-3, 401)
+    KEYS = [
+        "Primary: Negative electrode OCP [V]",
+        "Secondary: Negative electrode OCP [V]",
+        "Secondary: Negative electrode lithiation OCP [V]",
+        "Secondary: Negative electrode delithiation OCP [V]",
+        "Positive electrode OCP [V]",
+        "Primary: Negative electrode OCP entropic change [V.K-1]",
+        "Secondary: Negative electrode OCP entropic change [V.K-1]",
+        "Positive electrode OCP entropic change [V.K-1]",
+    ]
+
+    def _tabulated(self):
+        shipped = pybamm.ParameterValues("Chen2020_composite")
+        linear = pybamm.ParameterValues("Chen2020_composite")
+        for key in self.KEYS:
+            value = shipped[key]
+            if callable(value):
+                data = np.array(
+                    [
+                        np.asarray(value(pybamm.Scalar(point)).evaluate()).item()
+                        for point in self.GRID
+                    ]
+                )
+            else:
+                data = np.full(len(self.GRID), float(value))
+            linear[key] = lambda sto, _data=data: pybamm.Interpolant(
+                self.GRID, _data, sto, interpolator="linear"
+            )
+        return shipped, linear
+
+    def test_every_phase_becomes_provable_at_the_reference_temperature(self):
+        from pybamm.parameters.lithium_ion_parameters import (
+            U_BARRIER_FREE,
+            U_is_strictly_decreasing,
+        )
+
+        _, linear = self._tabulated()
+        options = pybamm.BatteryModelOptions({"particle phases": ("2", "1")})
+        param = pybamm.LithiumIonParameters(options)
+        region = (U_BARRIER_FREE, 1 - U_BARRIER_FREE)
+        sto = pybamm.Variable("sto")
+        reference = float(linear.evaluate(param.T_ref))
+
+        for phase in (param.n.prim, param.n.sec, param.p.prim):
+            potential = linear.process_symbol(phase.U(sto, pybamm.Scalar(reference)))
+            assert U_is_strictly_decreasing(potential, region)
+            # away from T_ref the entropic term survives as a second interpolant, so
+            # the proof no longer applies and must say so rather than assume
+            off = linear.process_symbol(phase.U(sto, pybamm.Scalar(reference + 10)))
+            assert not U_is_strictly_decreasing(off, region)
+
+    def test_it_agrees_with_the_analytic_set(self):
+        from pybamm.models.full_battery_models.lithium_ion.electrode_soh_composite import (
+            ElectrodeSOHComposite,
+            _secondary_stoichiometry_solver,
+        )
+
+        shipped, linear = self._tabulated()
+        options = {"particle phases": ("2", "1")}
+        param = pybamm.LithiumIonParameters(pybamm.BatteryModelOptions(options))
+        temperature = float(linear.evaluate(param.T_ref))
+
+        # the shipped silicon potential is analytic, so only the tabulated one is proved
+        assert (
+            _secondary_stoichiometry_solver(
+                shipped, param, "negative", None, temperature
+            )
+            is None
+        )
+        assert (
+            _secondary_stoichiometry_solver(
+                linear, param, "negative", None, temperature
+            )
+            is not None
+        )
+
+        for soc in (0.2, 0.5, 0.8):
+            reference = ElectrodeSOHComposite.solve_split(soc, shipped, options=options)
+            got = ElectrodeSOHComposite.solve_split(soc, linear, options=options)
+            assert sorted(got) == sorted(reference)
+            for key in reference:
+                # a linear table of a curved potential is O(h^2) accurate, and that
+                # error, not the rootfind, is what separates the two
+                np.testing.assert_allclose(got[key], reference[key], atol=2e-2)

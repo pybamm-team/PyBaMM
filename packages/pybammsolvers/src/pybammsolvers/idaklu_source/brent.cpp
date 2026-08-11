@@ -40,7 +40,13 @@ const Options Brent::options_ = {
   {&Rootfinder::options_},
   {{"abstol", {OT_DOUBLE, "Absolute tolerance on the unknown"}},
    {"ftol", {OT_DOUBLE, "Largest residual accepted as a root"}},
-   {"max_iter", {OT_INT, "Maximum number of iterations"}}}};
+   {"max_iter", {OT_INT, "Maximum number of iterations"}},
+   {"max_expansions",
+    {OT_INT,
+     "Outward steps allowed when the bracket holds no sign change. Zero requires a "
+     "valid bracket and fails without one. Positive treats the bracket as a starting "
+     "scale, which is unambiguous for a monotonic residual, and never fails: the "
+     "closest point found is returned and 'return_status' says what happened."}}}};
 
 void Brent::init(const Dict& opts) {
   Rootfinder::init(opts);
@@ -52,6 +58,8 @@ void Brent::init(const Dict& opts) {
       ftol_ = op.second;
     } else if (op.first == "max_iter") {
       max_iter_ = op.second;
+    } else if (op.first == "max_expansions") {
+      max_expansions_ = op.second;
     }
   }
 
@@ -62,6 +70,8 @@ void Brent::init(const Dict& opts) {
   casadi_assert(max_iter_ > 0, "max_iter must be positive, got " + str(max_iter_));
   casadi_assert(abstol_ > 0, "abstol must be positive, got " + str(abstol_));
   casadi_assert(ftol_ > 0, "ftol must be positive, got " + str(ftol_));
+  casadi_assert(max_expansions_ >= 0,
+                "max_expansions must not be negative, got " + str(max_expansions_));
 
   set_function(oracle_, "g");
 }
@@ -91,11 +101,15 @@ int Brent::solve(void* mem) const {
 
   const double a = m->iarg[BRACKET_LO][0];
   const double b = m->iarg[BRACKET_HI][0];
+  const double x0 = m->iarg[iin_][0];
 
   double root = 0;
-  const int flag = casadi_brent<double>(&Brent::residual, &ctx, a, b, abstol_, ftol_, max_iter_,
-                                        &root, &m->iter);
-  if (flag) {
+  const int flag = casadi_brent<double>(&Brent::residual, &ctx, x0, a, b, abstol_, ftol_,
+                                        max_iter_, max_expansions_, &root, &m->iter);
+
+  // A failed residual is never recoverable; the other flags still leave the closest
+  // point found in `root`, which is what expansion mode promises to return.
+  if (flag == 1 || (flag && max_expansions_ <= 0)) {
     m->return_status = flag == 2   ? "no sign change over the bracket"
                        : flag == 3 ? "the bracket collapsed on a pole, not a root"
                                    : "residual failed";
@@ -105,7 +119,9 @@ int Brent::solve(void* mem) const {
   }
 
   if (m->ires[iout_]) m->ires[iout_][0] = root;
-  m->return_status = "success";
+  m->return_status = flag == 0   ? "success"
+                     : flag == 2 ? "no sign change found; returned the closest point"
+                                 : "converged on a pole; returned it anyway";
   m->success = true;
   return 0;
 }
@@ -161,26 +177,32 @@ void Brent::codegen_body(CodeGenerator& g) const {
 
   const std::string lo = g.arg(BRACKET_LO) + "[0]";
   const std::string hi = g.arg(BRACKET_HI) + "[0]";
+  const std::string x0 = g.arg(iin_) + "[0]";
   g << "brent_flag = casadi_brent(" << g.shorthand("brent_res_" + codegen_name(g, false))
-    << ", &brent_data, " << lo << ", " << hi << ", " << g.constant(abstol_) << ", " << g.constant(ftol_) << ", "
-    << max_iter_ << ", &brent_root, &brent_iter);\n"
-    << "if (brent_flag) return 1;\n"
+    << ", &brent_data, " << x0 << ", " << lo << ", " << hi << ", " << g.constant(abstol_)
+    << ", " << g.constant(ftol_) << ", " << max_iter_ << ", " << max_expansions_
+    << ", &brent_root, &brent_iter);\n"
+    // Expansion mode returns the closest point rather than failing, exactly as solve()
+    // does, so the generated and interpreted paths agree on more than the iteration.
+    << (max_expansions_ > 0 ? "if (brent_flag == 1) return 1;\n" : "if (brent_flag) return 1;\n")
     << "if (" << g.res(iout_) << ") " << g.res(iout_) << "[0] = brent_root;\n";
 }
 
 void Brent::serialize_body(SerializingStream& s) const {
   Rootfinder::serialize_body(s);
-  s.version("Brent", 1);
+  s.version("Brent", 2);
   s.pack("Brent::abstol", abstol_);
   s.pack("Brent::ftol", ftol_);
   s.pack("Brent::max_iter", max_iter_);
+  s.pack("Brent::max_expansions", max_expansions_);
 }
 
 Brent::Brent(DeserializingStream& s) : Rootfinder(s) {
-  s.version("Brent", 1);
+  s.version("Brent", 2);
   s.unpack("Brent::abstol", abstol_);
   s.unpack("Brent::ftol", ftol_);
   s.unpack("Brent::max_iter", max_iter_);
+  s.unpack("Brent::max_expansions", max_expansions_);
 }
 
 Dict Brent::get_stats(void* mem) const {
