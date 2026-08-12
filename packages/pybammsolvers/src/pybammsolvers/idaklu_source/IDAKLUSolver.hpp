@@ -54,6 +54,15 @@ public:
   virtual void set_logger(py::object) {}
 
   /**
+   * Emit diagnostics as they are produced rather than buffering them, so a long
+   * solve reports progress live. Only valid when solve() will run on the thread
+   * holding the GIL, i.e. a single-solver group or the serial remainder loop of
+   * IDAKLUSolverGroup::solve.
+   * @brief Enable live diagnostic output
+   */
+  virtual void set_streaming(bool) {}
+
+  /**
    * Emit any buffered log and statistics output. MUST be called with the GIL
    * held, i.e. in a serial section of IDAKLUSolverGroup::solve.
    * @brief Flush buffered diagnostic output

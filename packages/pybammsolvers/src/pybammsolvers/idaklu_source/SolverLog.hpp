@@ -16,6 +16,8 @@
  * call into Python and MUST be called with the GIL held, from the serial sections
  * around that OpenMP region. The buffer is cleared only by flush(), so a solver
  * reused for several input sets retains every message until it is drained.
+ * In streaming mode the log methods emit as they are called instead, which is
+ * only valid when the solve runs on the thread holding the GIL.
  * pybammsolvers has zero knowledge of pybamm.
  */
 class SolverLog {
@@ -33,7 +35,17 @@ public:
     enabled_ = static_cast<bool>(logger_) && !logger_.is_none();
   }
 
+  /**
+   * @brief Emit messages as they are logged rather than buffering them
+   *
+   * Only enable this when the solve runs on the GIL-holding thread, so a long
+   * solve reports progress live. Toggling does not drain the current buffer.
+   */
+  void set_streaming(bool streaming) { streaming_ = streaming; }
+
   bool enabled() const { return enabled_; }
+
+  bool streaming() const { return streaming_; }
 
   void log_start(double t0, double tf) {
     if (!enabled_) return;
@@ -87,20 +99,33 @@ public:
    * reported through sys.unraisablehook rather than failing the solve.
    */
   void flush() noexcept {
-    try {
-      for (const auto& msg : buffer_) {
-        logger_(py::str(msg));
-      }
-    } catch (py::error_already_set& e) {
-      e.discard_as_unraisable("pybammsolvers SolverLog::flush");
-    } catch (...) {
-      // A logging failure must never propagate into the solve
+    for (const auto& msg : buffer_) {
+      emit(msg);
     }
     buffer_.clear();
   }
 
 private:
-  void append(std::string msg) { buffer_.push_back(std::move(msg)); }
+  void append(std::string msg) {
+    if (streaming_) {
+      emit(msg);
+    } else {
+      buffer_.push_back(std::move(msg));
+    }
+  }
+
+  /**
+   * @brief Pass one message to the Python logger (GIL held)
+   */
+  void emit(const std::string& msg) noexcept {
+    try {
+      logger_(py::str(msg));
+    } catch (py::error_already_set& e) {
+      e.discard_as_unraisable("pybammsolvers SolverLog::emit");
+    } catch (...) {
+      // A logging failure must never propagate into the solve
+    }
+  }
 
   /**
    * @brief printf-style formatting helper
@@ -126,6 +151,7 @@ private:
 
   py::object logger_;
   bool enabled_ = false;
+  bool streaming_ = false;
   std::vector<std::string> buffer_;
 };
 

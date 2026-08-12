@@ -1135,6 +1135,11 @@ void IDAKLUSolverOpenMP<ExprSet>::set_logger(py::object logger) {
 }
 
 template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::set_streaming(bool streaming) {
+  log_.set_streaming(streaming);
+}
+
+template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::flush_log() {
   log_.flush();
   for (const auto& pending : pending_stats_) {
@@ -1165,7 +1170,17 @@ void IDAKLUSolverOpenMP<ExprSet>::CaptureStats(const IDAKLUStats& stats) {
     &pending.tcur
   ), "IDAGetIntegratorStats");
 
-  pending_stats_.push_back(pending);
+  if (!log_.streaming()) {
+    pending_stats_.push_back(pending);
+    return;
+  }
+
+  // Printing here happens mid-solve, so a failing stdout must not fail the solve
+  try {
+    PrintStats(pending);
+  } catch (py::error_already_set& e) {
+    e.discard_as_unraisable("pybammsolvers IDAKLUSolverOpenMP::CaptureStats");
+  }
 }
 
 template <class ExprSet>

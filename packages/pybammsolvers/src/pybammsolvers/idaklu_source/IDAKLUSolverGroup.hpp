@@ -46,6 +46,11 @@ public:
      */
     void flush_logs();
 
+    /**
+     * @brief Switch every solver between live and buffered diagnostics
+     */
+    void set_streaming(bool streaming);
+
     std::vector<std::unique_ptr<IDAKLUSolver>> m_solvers;
     int number_of_states;
     int number_of_parameters;

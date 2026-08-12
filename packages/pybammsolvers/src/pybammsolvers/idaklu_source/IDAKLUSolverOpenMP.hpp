@@ -264,7 +264,7 @@ public:
   void CheckErrors(int const & flag, const char* context);
 
   /**
-   * @brief Buffer the solver statistics for printing at flush time
+   * @brief Print the solver statistics, or buffer them until flush time
    */
   void CaptureStats(IDAKLUStats const& stats);
 
@@ -419,6 +419,11 @@ public:
    * @brief Set the logger used for debug output (GIL held, serial section)
    */
   void set_logger(py::object logger) override;
+
+  /**
+   * @brief Emit diagnostics live instead of buffering (GIL-holding thread only)
+   */
+  void set_streaming(bool streaming) override;
 
   /**
    * @brief Emit buffered log and statistics output (GIL held, serial section)

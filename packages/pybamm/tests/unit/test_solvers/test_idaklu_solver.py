@@ -75,6 +75,16 @@ def _hermite_wrms(sol_base, sol_reduced, atol, rtol) -> list[tuple[int, float]]:
     return wrms_values
 
 
+class _StdoutLogHandler(logging.Handler):
+    """
+    Log handler printing to the current ``sys.stdout``, so records can be
+    interleaved with the solver's ``py::print`` statistics output.
+    """
+
+    def emit(self, record):
+        print(record.getMessage())
+
+
 class TestIDAKLUSolver:
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
@@ -727,6 +737,39 @@ class TestIDAKLUSolver:
 
         starts = [m for m in caplog.messages if m.startswith("Integrating from t =")]
         assert len(starts) == len(inputs)
+
+    @pytest.mark.parametrize("num_threads", [1, 4])
+    def test_diagnostics_stream_during_serial_solve(self, num_threads, caplog, capsys):
+        # A one-solver team, and a group with fewer input sets than solvers, both
+        # solve on the GIL-holding thread, so both stream instead of buffering
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -a * u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        t_eval = np.linspace(0, 1, 3)
+        inputs = [{"a": 1.0}, {"a": 2.0}]
+        solver = pybamm.IDAKLUSolver(
+            options={"print_stats": True, "num_threads": num_threads}
+        )
+
+        handler = _StdoutLogHandler(level=logging.DEBUG)
+        pybamm.logger.addHandler(handler)
+        try:
+            with caplog.at_level(logging.DEBUG, logger=pybamm.logger.name):
+                solver.solve(model, t_eval, t_interp=t_eval, inputs=inputs)
+        finally:
+            pybamm.logger.removeHandler(handler)
+
+        lines = capsys.readouterr().out.splitlines()
+        starts = [i for i, line in enumerate(lines) if line.startswith("Integrating")]
+        stats = [i for i, line in enumerate(lines) if line.startswith("Solver Stats:")]
+        assert len(starts) == len(stats) == len(inputs)
+        # Buffering would emit both traces before either statistics block
+        assert stats[0] < starts[1]
 
     def test_debug_log_emitted_when_solve_fails(self, caplog):
         model = pybamm.BaseModel()
