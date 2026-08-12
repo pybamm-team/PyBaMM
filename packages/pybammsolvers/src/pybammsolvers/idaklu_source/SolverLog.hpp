@@ -2,100 +2,131 @@
 #define PYBAMM_SOLVER_LOG_HPP
 
 #include "common.hpp"
+#include <cstdarg>
+#include <cstdio>
+#include <string>
+#include <utility>
+#include <vector>
 
 /**
- * @brief Simple debug logger that wraps an optional Python callable.
+ * @brief Debug logger that buffers messages and defers all Python calls to flush().
  *
- * If a callable (e.g. pybamm.logger.debug) is provided, log methods
- * format and forward messages through it. If None/null, all log
- * methods are no-ops. pybammsolvers has zero knowledge of pybamm.
+ * Log methods only format and buffer, so they are safe to call from the GIL-free
+ * OpenMP worker threads in IDAKLUSolverGroup::solve. set_logger() and flush() do
+ * call into Python and MUST be called with the GIL held, from the serial sections
+ * around that OpenMP region. The buffer is cleared only by flush(), so a solver
+ * reused for several input sets retains every message until it is drained.
+ * pybammsolvers has zero knowledge of pybamm.
  */
 class SolverLog {
 public:
-  SolverLog() : enabled_(false) {}
+  SolverLog() = default;
 
-  explicit SolverLog(py::object logger)
-    : logger_(std::move(logger)),
-      enabled_(!logger_.is_none())
-  {}
+  /**
+   * @brief Set the Python callable (e.g. pybamm.logger.debug) to log through
+   *
+   * A null or None callable disables logging. MUST be called with the GIL held.
+   */
+  void set_logger(py::object logger) {
+    logger_ = std::move(logger);
+    // A default-constructed py::object is null rather than None; both mean off
+    enabled_ = static_cast<bool>(logger_) && !logger_.is_none();
+  }
 
   bool enabled() const { return enabled_; }
 
   void log_start(double t0, double tf) {
     if (!enabled_) return;
-    logger_(
-      py::str("Integrating from t = %.17e to t = %.17e")
-        .attr("__mod__")(py::make_tuple(t0, tf))
-    );
+    append(format("Integrating from t = %.17e to t = %.17e", t0, tf));
   }
 
   void log_step(int step, double t_val) {
     if (!enabled_) return;
-    logger_(
-      py::str("Step %5d: t = %.17e")
-        .attr("__mod__")(py::make_tuple(step, t_val))
-    );
+    append(format("Step %5d: t = %.17e", step, t_val));
   }
 
   void log_consistent_init(double t_val) {
     if (!enabled_) return;
-    logger_(
-      py::str("Consistent initialization at t = %.17e")
-        .attr("__mod__")(py::make_tuple(t_val))
-    );
+    append(format("Consistent initialization at t = %.17e", t_val));
   }
 
   void log_breakpoint(double t_val) {
     if (!enabled_) return;
-    logger_(
-      py::str("Breakpoint at t = %.17e, reinitializing")
-        .attr("__mod__")(py::make_tuple(t_val))
-    );
+    append(format("Breakpoint at t = %.17e, reinitializing", t_val));
   }
 
   void log_integration_complete(int n_steps, double t_final) {
     if (!enabled_) return;
-    logger_(
-      py::str("Integration complete: %d steps, t_final = %.17e")
-        .attr("__mod__")(py::make_tuple(n_steps, t_final))
-    );
+    append(format("Integration complete: %d steps, t_final = %.17e", n_steps, t_final));
   }
 
   void log_newton_start(double t, int n_alg) {
     if (!enabled_) return;
-    logger_(
-      py::str("Newton solve at t = %.17e, n_alg = %d")
-        .attr("__mod__")(py::make_tuple(t, n_alg))
-    );
+    append(format("Newton solve at t = %.17e, n_alg = %d", t, n_alg));
   }
 
   void log_newton_iteration(int iter, double res_norm, double step_norm) {
     if (!enabled_) return;
-    logger_(
-      py::str(" Newton iter %3d: ||g|| = %.4e, ||dy|| = %.4e")
-        .attr("__mod__")(py::make_tuple(iter, res_norm, step_norm))
-    );
+    append(format(" Newton iter %3d: ||g|| = %.4e, ||dy|| = %.4e", iter, res_norm, step_norm));
   }
 
   void log_newton_converged(int iters, const char* reason) {
     if (!enabled_) return;
-    logger_(
-      py::str(" Newton converged in %d iterations (%s)")
-        .attr("__mod__")(py::make_tuple(iters, reason))
-    );
+    append(format(" Newton converged in %d iterations (%s)", iters, reason));
   }
 
   void log_newton_failed(int iters, double res_norm, const char* reason) {
     if (!enabled_) return;
-    logger_(
-      py::str(" Newton FAILED after %d iterations, ||g|| = %.4e (%s)")
-        .attr("__mod__")(py::make_tuple(iters, res_norm, reason))
-    );
+    append(format(" Newton FAILED after %d iterations, ||g|| = %.4e (%s)", iters, res_norm, reason));
+  }
+
+  /**
+   * @brief Emit and discard the buffered messages
+   *
+   * MUST be called with the GIL held. Never throws: a logger that raises is
+   * reported through sys.unraisablehook rather than failing the solve.
+   */
+  void flush() noexcept {
+    try {
+      for (const auto& msg : buffer_) {
+        logger_(py::str(msg));
+      }
+    } catch (py::error_already_set& e) {
+      e.discard_as_unraisable("pybammsolvers SolverLog::flush");
+    } catch (...) {
+      // A logging failure must never propagate into the solve
+    }
+    buffer_.clear();
   }
 
 private:
+  void append(std::string msg) { buffer_.push_back(std::move(msg)); }
+
+  /**
+   * @brief printf-style formatting helper
+   */
+  static std::string format(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    va_list args_copy;
+    va_copy(args_copy, args);
+    const int len = std::vsnprintf(nullptr, 0, fmt, args);
+    va_end(args);
+    if (len < 0) {
+      va_end(args_copy);
+      return std::string();
+    }
+    // Sized for the text plus the terminating null, which is then dropped
+    std::string out(static_cast<size_t>(len) + 1, '\0');
+    std::vsnprintf(&out[0], out.size(), fmt, args_copy);
+    va_end(args_copy);
+    out.pop_back();
+    return out;
+  }
+
   py::object logger_;
-  bool enabled_;
+  bool enabled_ = false;
+  std::vector<std::string> buffer_;
 };
 
 #endif // PYBAMM_SOLVER_LOG_HPP

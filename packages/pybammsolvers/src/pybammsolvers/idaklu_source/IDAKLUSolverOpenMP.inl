@@ -331,13 +331,10 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   const sunrealtype *yp0,
   const sunrealtype *inputs,
   bool save_adaptive_steps,
-  bool save_interp_steps,
-  py::object logger
+  bool save_interp_steps
 )
 {
   DEBUG("IDAKLUSolver::solve");
-
-  log_ = SolverLog(std::move(logger));
 
   // Store solve parameters as member state
   save_adaptive_steps_ = save_adaptive_steps;
@@ -650,7 +647,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
 
   if (solver_opts.print_stats) {
     SaveStats();
-    PrintStats(accumulated_stats);
+    CaptureStats(accumulated_stats);
   }
 
   // Finalize output arrays
@@ -1121,11 +1118,26 @@ void IDAKLUSolverOpenMP<ExprSet>::SaveStats() {
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::PrintStats(const IDAKLUStats& stats) {
-  // Get current point-in-time values from IDA (these are not accumulated)
+void IDAKLUSolverOpenMP<ExprSet>::set_logger(py::object logger) {
+  log_.set_logger(std::move(logger));
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::flush_log() {
+  log_.flush();
+  for (const auto& pending : pending_stats_) {
+    PrintStats(pending);
+  }
+  pending_stats_.clear();
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::CaptureStats(const IDAKLUStats& stats) {
+  PendingStats pending;
+  pending.stats = stats;
+
+  // Point-in-time values from IDA (these are not accumulated)
   long nsteps_unused, nrevals_unused, nlinsetups_unused, netfails_unused;
-  int klast, kcur;
-  sunrealtype hinused, hlast, hcur, tcur;
 
   CheckErrors(IDAGetIntegratorStats(
     ida_mem,
@@ -1133,13 +1145,20 @@ void IDAKLUSolverOpenMP<ExprSet>::PrintStats(const IDAKLUStats& stats) {
     &nrevals_unused,
     &nlinsetups_unused,
     &netfails_unused,
-    &klast,
-    &kcur,
-    &hinused,
-    &hlast,
-    &hcur,
-    &tcur
+    &pending.klast,
+    &pending.kcur,
+    &pending.hinused,
+    &pending.hlast,
+    &pending.hcur,
+    &pending.tcur
   ), "IDAGetIntegratorStats");
+
+  pending_stats_.push_back(pending);
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::PrintStats(const PendingStats& pending) {
+  const IDAKLUStats& stats = pending.stats;
 
   py::print("Solver Stats:");
   py::print("\tNumber of steps =", stats.nsteps);
@@ -1148,12 +1167,12 @@ void IDAKLUSolverOpenMP<ExprSet>::PrintStats(const IDAKLUStats& stats) {
             stats.ngevalsBBDP);
   py::print("\tNumber of linear solver setup calls =", stats.nlinsetups);
   py::print("\tNumber of error test failures =", stats.netfails);
-  py::print("\tMethod order used on last step =", klast);
-  py::print("\tMethod order used on next step =", kcur);
-  py::print("\tInitial step size =", hinused);
-  py::print("\tStep size on last step =", hlast);
-  py::print("\tStep size on next step =", hcur);
-  py::print("\tCurrent internal time reached =", tcur);
+  py::print("\tMethod order used on last step =", pending.klast);
+  py::print("\tMethod order used on next step =", pending.kcur);
+  py::print("\tInitial step size =", pending.hinused);
+  py::print("\tStep size on last step =", pending.hlast);
+  py::print("\tStep size on next step =", pending.hcur);
+  py::print("\tCurrent internal time reached =", pending.tcur);
   py::print("\tNumber of nonlinear iterations performed =", stats.nniters);
   py::print("\tNumber of nonlinear convergence failures =", stats.nncfails);
   py::print("\tNumber of Jacobian evaluations =", stats.njevals);

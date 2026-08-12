@@ -22,6 +22,22 @@ using std::vector;
 #include <sunmatrix/sunmatrix_band.h>
 
 /**
+ * @brief One solve's statistics, captured during solve and printed at flush
+ *
+ * Holds the accumulated counters alongside the point-in-time integrator values,
+ * which cannot be re-read once the solve has finished.
+ */
+struct PendingStats {
+  IDAKLUStats stats;
+  int klast = 0;
+  int kcur = 0;
+  sunrealtype hinused = 0.0;
+  sunrealtype hlast = 0.0;
+  sunrealtype hcur = 0.0;
+  sunrealtype tcur = 0.0;
+};
+
+/**
  * @brief Abstract solver class based on OpenMP vectors
  *
  * An abstract class that implements a solution based on OpenMP
@@ -101,6 +117,8 @@ public:
   SolverOptions const solver_opts;
   IDAKLUStats accumulated_stats;  // Accumulated stats across reinitializations
   SolverLog log_;
+  // One entry per solve; drained by flush_log() where the GIL is held
+  std::vector<PendingStats> pending_stats_;
   std::unique_ptr<HermiteKnotReducer> knot_reducer;  // Hermite knot reduction (nullptr if inactive)
 
   struct SubBlockResources {
@@ -202,8 +220,7 @@ public:
     const sunrealtype *yp0,
     const sunrealtype *inputs,
     bool save_adaptive_steps,
-    bool save_interp_steps,
-    py::object logger = py::none()
+    bool save_interp_steps
   ) override;
 
 
@@ -243,9 +260,14 @@ public:
   void CheckErrors(int const & flag, const char* context);
 
   /**
-   * @brief Print the solver statistics
+   * @brief Buffer the solver statistics for printing at flush time
    */
-  void PrintStats(IDAKLUStats const& stats);
+  void CaptureStats(IDAKLUStats const& stats);
+
+  /**
+   * @brief Print one buffered solver statistics block (GIL held)
+   */
+  void PrintStats(PendingStats const& pending);
 
   /**
    * @brief Get current statistics from IDA solver
@@ -388,6 +410,16 @@ public:
     std::vector<sunrealtype> &yS_out,
     std::vector<sunrealtype> &ypS_out
   );
+
+  /**
+   * @brief Set the logger used for debug output (GIL held, serial section)
+   */
+  void set_logger(py::object logger) override;
+
+  /**
+   * @brief Emit buffered log and statistics output (GIL held, serial section)
+   */
+  void flush_log() override;
 
   /**
    * @brief Set the step values (uses member state y_val_, yp_val_, yS_val_, ypS_val_, i_save_)

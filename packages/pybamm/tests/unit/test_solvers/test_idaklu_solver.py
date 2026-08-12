@@ -1,5 +1,6 @@
 import io
 import itertools
+import logging
 import warnings
 from contextlib import redirect_stdout
 
@@ -685,6 +686,66 @@ class TestIDAKLUSolver:
         soln_banded = solver_banded.solve(model, t_eval, t_interp=t_interp)
 
         np.testing.assert_allclose(soln.y, soln_banded.y, rtol=1e-6, atol=1e-5)
+
+    def test_print_stats_one_block_per_input_set(self):
+        # Diagnostics are buffered in C++ and flushed once the OpenMP region is
+        # over, so every solve in a group must survive until the flush
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -a * u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        t_eval = np.linspace(0, 1, 3)
+        inputs = [{"a": 1.0}, {"a": 2.0}, {"a": 3.0}]
+        solver = pybamm.IDAKLUSolver(options={"print_stats": True, "num_threads": 1})
+        f = io.StringIO()
+        with redirect_stdout(f):
+            solver.solve(model, t_eval, t_interp=t_eval, inputs=inputs)
+        s = f.getvalue()
+
+        assert s.count("Solver Stats:") == len(inputs)
+        # Values are printed through py::print, so the tab prefix is preserved
+        assert "\tNumber of steps =" in s
+
+    def test_debug_log_one_trace_per_input_set(self, caplog):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -a * u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        t_eval = np.linspace(0, 1, 3)
+        inputs = [{"a": 1.0}, {"a": 2.0}]
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 1})
+        with caplog.at_level(logging.DEBUG, logger=pybamm.logger.name):
+            solver.solve(model, t_eval, t_interp=t_eval, inputs=inputs)
+
+        starts = [m for m in caplog.messages if m.startswith("Integrating from t =")]
+        assert len(starts) == len(inputs)
+
+    def test_debug_log_emitted_when_solve_fails(self, caplog):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: u**2}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 1})
+        # u' = u^2 blows up at t = 1, so integrating to t = 5 fails
+        with (
+            caplog.at_level(logging.DEBUG, logger=pybamm.logger.name),
+            pytest.raises(pybamm.SolverError, match="IDA_ERR_FAIL"),
+        ):
+            solver.solve(model, np.array([0.0, 5.0]))
+
+        assert any(m.startswith("Integrating from t =") for m in caplog.messages)
+        assert any(m.startswith("Step ") for m in caplog.messages)
 
     def test_setup_options(self):
         model = pybamm.BaseModel()

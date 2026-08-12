@@ -8,6 +8,8 @@
 
 ## Bug fixes
 
+- IDAKLU debug logging and `print_stats` output are now buffered and emitted once the OpenMP region is over, instead of calling into Python from worker threads that do not hold the GIL. Solving with several input sets again produces one trace and one statistics block per input set. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- Buffered IDAKLU diagnostics are also flushed when a solve raises, so a failed solve still emits the trace leading up to the failure. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - `ParameterValues.create_from_bpx` no longer writes `None` into the parameter set for thermal material properties (density and specific heat capacity) that a BPX file omits. Absent optional BPX fields are now dropped entirely, so building an isothermal model from a thermal-less BPX still works, and building a thermal model raises PyBaMM's usual named "parameter not found" error instead of a cryptic type error deep in the expression tree. ([#5708](https://github.com/pybamm-team/PyBaMM/pull/5708))
 - `VectorField._from_json` now rebuilds all N components instead of only the first two, so a field with three or more components survives serialisation instead of silently losing its extra components (which later triggered an `IndexError` on `Component`). ([#5703](https://github.com/pybamm-team/PyBaMM/pull/5703))
 - `ElectrodeSOHSolver` now passes model options through, so hysteresis OCP branches are used. ([#5701](https://github.com/pybamm-team/PyBaMM/pull/5701))

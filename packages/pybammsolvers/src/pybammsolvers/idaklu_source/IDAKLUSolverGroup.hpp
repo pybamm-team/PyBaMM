@@ -41,6 +41,11 @@ public:
 
 
   private:
+    /**
+     * @brief Emit each solver's buffered diagnostics (GIL held, serial only)
+     */
+    void flush_logs();
+
     std::vector<std::unique_ptr<IDAKLUSolver>> m_solvers;
     int number_of_states;
     int number_of_parameters;

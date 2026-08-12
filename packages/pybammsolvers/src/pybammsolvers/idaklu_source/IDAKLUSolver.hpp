@@ -34,8 +34,7 @@ public:
     const sunrealtype *yp0,
     const sunrealtype *inputs,
     bool save_adaptive_steps,
-    bool save_interp_steps,
-    py::object logger = py::none()
+    bool save_interp_steps
   ) = 0;
 
   /**
@@ -44,6 +43,22 @@ public:
    * @brief Abstract initialization method
    */
   virtual void Initialize() = 0;
+
+  /**
+   * Install the Python callable that debug messages are logged through. MUST be
+   * called with the GIL held, i.e. in the serial section of
+   * IDAKLUSolverGroup::solve before the OpenMP region, because copying a
+   * py::object touches Python reference counts.
+   * @brief Set the logger used for debug output
+   */
+  virtual void set_logger(py::object) {}
+
+  /**
+   * Emit any buffered log and statistics output. MUST be called with the GIL
+   * held, i.e. in a serial section of IDAKLUSolverGroup::solve.
+   * @brief Flush buffered diagnostic output
+   */
+  virtual void flush_log() {}
 };
 
 #endif // PYBAMM_IDAKLU_CASADI_SOLVER_HPP

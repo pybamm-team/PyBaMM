@@ -106,6 +106,12 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
 
   std::optional<std::string> exception_message;
 
+  // Install the logger serially: copying a py::object touches Python reference
+  // counts, which is unsafe on the GIL-free worker threads below.
+  for (const auto& solver : m_solvers) {
+    solver->set_logger(logger);
+  }
+
   omp_set_num_threads(m_solvers.size());
   #pragma omp parallel for
   for (int i = 0; i < m_solvers.size(); i++) {
@@ -115,7 +121,7 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
         const sunrealtype *y = y0 + index * y0_np.shape(1);
         const sunrealtype *yp = yp0 + index * yp0_np.shape(1);
         const sunrealtype *input = inputs_data + index * inputs.shape(1);
-        results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps, logger);
+        results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
       }
     } catch (std::exception &e) {
       // If an exception is thrown, we need to catch it and rethrow it outside the parallel region
@@ -125,6 +131,9 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
       }
     }
   }
+
+  // Drain before the rethrow below, so a solve that throws still emits its log
+  flush_logs();
 
   if (exception_message.has_value()) {
     py::set_error(PyExc_ValueError, exception_message->c_str());
@@ -136,8 +145,10 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     const sunrealtype *y = y0 + index * y0_np.shape(1);
     const sunrealtype *yp = yp0 + index * yp0_np.shape(1);
     const sunrealtype *input = inputs_data + index * inputs.shape(1);
-    results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps, logger);
+    results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
   }
+
+  flush_logs();
 
   // create solutions (needs to be serial as we're using the Python GIL)
   std::vector<Solution> solutions(number_of_groups);
@@ -145,4 +156,10 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     solutions[i] = results[i].generate_solution();
   }
   return solutions;
+}
+
+void IDAKLUSolverGroup::flush_logs() {
+  for (const auto& solver : m_solvers) {
+    solver->flush_log();
+  }
 }
