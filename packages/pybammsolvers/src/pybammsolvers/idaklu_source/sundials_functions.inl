@@ -205,6 +205,8 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
   }
   else if (p_python_functions->setup_opts.using_sparse_matrix)
   {
+    // Re-copied every call: the KLU linear solver resets the matrix index
+    // arrays during setup, so a one-time copy in Initialize does not survive
     if (SUNSparseMatrix_SparseType(JJ) == CSC_MAT)
     {
       sunindextype *jac_colptrs = SUNSparseMatrix_IndexPointers(JJ);
