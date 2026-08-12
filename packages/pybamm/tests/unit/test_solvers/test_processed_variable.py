@@ -2240,6 +2240,11 @@ class TestProcessedVariableUnstructuredFVM:
         with pytest.raises(ValueError, match="no r or R"):
             pv(0.5, r=np.array([0.5]))
 
+        # y is not a 2D-mesh coordinate; silently ignoring it would return
+        # midplane values for a query the user thinks is at y
+        with pytest.raises(ValueError, match="no y coordinate"):
+            pv(0.5, x=x_q, y=np.array([0.5]))
+
     def test_time_integral_raises(self):
         geometry, submesh, _, _, var_disc = self._make_setup(dim=2, n=3)
         t_sol = np.array([0.0, 1.0])

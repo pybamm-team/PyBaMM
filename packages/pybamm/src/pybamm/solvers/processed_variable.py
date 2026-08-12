@@ -1152,6 +1152,11 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
                 f"Variable {self._name!r} is on an unstructured mesh, which "
                 "has no r or R coordinates."
             )
+        if y is not None and self.mesh.dimension == 2:
+            raise ValueError(
+                f"Variable {self._name!r} is on a 2D unstructured mesh, which "
+                "has no y coordinate; its in-plane coordinates are x and z."
+            )
         data_at_t = self._data_at_time(t)
         scalar_t = t is not None and np.ndim(t) == 0
 
