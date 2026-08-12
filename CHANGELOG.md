@@ -19,6 +19,11 @@
 - Deserialising a parameter set whose interpolant specification is invalid now logs a warning naming the offending parameter, instead of printing the bare exception to stdout with no indication of which parameter fell back to zero. ([#5679](https://github.com/pybamm-team/PyBaMM/pull/5679))
 - A user-specified boundary tag that is absent from a mesh file now raises `GeometryError` instead of degrading to a warning and a mesh with no boundary groups. ([#5679](https://github.com/pybamm-team/PyBaMM/pull/5679))
 
+## Optimizations
+
+- IDAKLU with `output_variables` now writes sensitivities straight into their final NumPy layout, removing the post-solve transpose pass and the second full-size sensitivity buffer it required. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- The dense scratch vector used to scatter sparse output sensitivities is now a reused member buffer instead of being allocated per output row on every step. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+
 # [v26.7.1.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.7.1.0) - 2026-07-22
 
 ## Breaking changes

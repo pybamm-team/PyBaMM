@@ -495,6 +495,9 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
     res.resize(max_res_size);
     res_dvar_dy.resize(max_res_dvar_dy);
     res_dvar_dp.resize(max_res_dvar_dp);
+    if (sensitivity) {
+      dvar_dp_dense.resize(number_of_parameters);
+    }
   }
 
   // Create knot reducer if active
@@ -702,9 +705,18 @@ void IDAKLUSolverOpenMP<ExprSet>::ReorderSensitivities(
 ) {
   DEBUG("IDAKLUSolver::ReorderSensitivities");
 
+  if (save_outputs_only) {
+    // Already written in the final (n_timesteps, stride, n_params) layout, so
+    // only the trim to the steps actually taken is needed. ypS stays empty
+    // because save_hermite is always false in outputs-only mode.
+    yS.resize(
+      size_t(number_of_timesteps) * number_of_parameters * length_of_return_vector);
+    yS_out = std::move(yS);
+    return;
+  }
+
   // Sensitivities are stored during solve as yS[(i * n_params + p) * stride + j].
-  // Python expects (n_params, n_timesteps, stride) for !save_outputs_only
-  // or (n_timesteps, stride, n_params) for save_outputs_only.
+  // Python expects (n_params, n_timesteps, stride).
   size_t const nt = number_of_timesteps;
   size_t const np = number_of_parameters;
   size_t const stride = length_of_return_vector;
@@ -716,9 +728,7 @@ void IDAKLUSolverOpenMP<ExprSet>::ReorderSensitivities(
     for (size_t p = 0; p < np; ++p) {
       for (size_t j = 0; j < stride; ++j) {
         size_t src = (i * np + p) * stride + j;
-        size_t dst = save_outputs_only
-          ? (i * stride + j) * np + p        // (i, j, p) layout
-          : (p * nt + i) * stride + j;       // (p, i, j) layout
+        size_t dst = (p * nt + i) * stride + j;       // (p, i, j) layout
         yS_out[dst] = yS[src];
       }
     }
@@ -733,13 +743,18 @@ void IDAKLUSolverOpenMP<ExprSet>::ReorderSensitivities(
       for (size_t p = 0; p < np; ++p) {
         for (size_t j = 0; j < ns; ++j) {
           size_t src = (i * np + p) * ns + j;
-          size_t dst = save_outputs_only
-            ? (i * ns + j) * np + p           // (i, j, p) layout
-            : (p * nt + i) * ns + j;          // (p, i, j) layout
+          size_t dst = (p * nt + i) * ns + j;          // (p, i, j) layout
           ypS_out[dst] = ypS[src];
         }
       }
     }
+  }
+
+  // Release the append-layout source buffers now that the transposed data
+  // lives in yS_out/ypS_out; avoids holding two full-size copies per solver.
+  std::vector<sunrealtype>().swap(yS);
+  if (save_hermite) {
+    std::vector<sunrealtype>().swap(ypS);
   }
 }
 
@@ -970,8 +985,8 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
 ) {
   DEBUG("IDAKLUSolver::SetStepOutputSensitivities");
 
-  // FLAT STORAGE: yS[(i * n_params + p) * stride + j]
-  // Base offset for this timestep
+  // Written straight in the numpy layout (n_timesteps, stride, n_params), so
+  // that ReorderSensitivities has no transpose to do at the end of the solve
   size_t yS_base = i_save_ * number_of_parameters * length_of_return_vector;
 
   // Running index over the flattened outputs
@@ -1000,12 +1015,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
     const auto& dvar_dp_row = dvar_dp->get_row();
     const auto& dvar_dp_col = dvar_dp->get_col();
 
-    // Temporary dense vector to hold doutput_row/dp_k for each parameter
-    vector<sunrealtype> dvar_dp_dense(number_of_parameters, 0.0);
-
     // Loop over each scalar component (row) of the output function
     for (size_t row = 0; row < n_rows; ++row, ++global_out_idx) {
-      // Dense dvar_row/dp_k vector (reset to zero)
+      // Dense dvar_row/dp_k vector (member buffer, reset to zero)
       std::fill(dvar_dp_dense.begin(), dvar_dp_dense.end(), 0.0);
 
       // Fill in dvar_row/dp_k from sparse structure
@@ -1027,8 +1039,8 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
           }
         }
 
-        // FLAT STORAGE: yS[yS_base + paramk * stride + global_out_idx]
-        yS[yS_base + paramk * length_of_return_vector + global_out_idx] = sens;
+        // FLAT STORAGE (final layout (i, j, p)): yS[(i * stride + out) * n_params + p]
+        yS[yS_base + global_out_idx * number_of_parameters + paramk] = sens;
       }
     }
   }

@@ -95,6 +95,8 @@ public:
   vector<sunrealtype> res;
   vector<sunrealtype> res_dvar_dy;
   vector<sunrealtype> res_dvar_dp;
+  // Reused scratch for sparse->dense output sensitivity scatter (outputs-only mode)
+  vector<sunrealtype> dvar_dp_dense;
   bool const sensitivity;  // cppcheck-suppress unusedStructMember
   bool const save_outputs_only; // cppcheck-suppress unusedStructMember
   bool save_hermite;  // cppcheck-suppress unusedStructMember
@@ -108,6 +110,8 @@ public:
   //   yp[i][j]       -> yp[i * stride_yp + j]    where stride_yp = number_of_states
   //   yS[i][p][j]    -> yS[(i * n_params + p) * stride_y + j]
   //   ypS[i][p][j]   -> ypS[(i * n_params + p) * stride_yp + j]
+  // Exception: in save_outputs_only mode yS is written straight in the numpy
+  // layout instead, as yS[(i * stride_y + j) * n_params + p].
   vector<sunrealtype> t;   // [n_timesteps]
   vector<sunrealtype> y;   // [n_timesteps * length_of_return_vector]  (flat)
   vector<sunrealtype> yp;  // [n_timesteps * number_of_states]         (flat)
