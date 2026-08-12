@@ -2245,6 +2245,24 @@ class TestProcessedVariableUnstructuredFVM:
         with pytest.raises(ValueError, match="no y coordinate"):
             pv(0.5, x=x_q, y=np.array([0.5]))
 
+    def test_nan_time_slice_does_not_corrupt_others(self):
+        # One all-NaN time step must propagate as NaN without triggering
+        # nearest-neighbour refill of the valid time steps (rows are only
+        # refilled when NaN in every column, the outside-hull signature).
+        geometry, submesh, _, _, var_disc = self._make_setup(dim=2)
+        centroid_x = submesh.cell_centroids[:, 0]
+        t_sol = np.array([0.0, 1.0])
+        y_sol = np.column_stack([centroid_x, np.full_like(centroid_x, np.nan)])
+        pv = self._make_pv(var_disc, geometry, t_sol, y_sol)
+
+        x_q = np.linspace(0.4, 0.6, 3)
+        z_q = np.linspace(0.4, 0.6, 3)
+        result = pv(t_sol, x=x_q, z=z_q)
+        np.testing.assert_allclose(
+            result[..., 0], x_q[:, np.newaxis] * np.ones((1, 3)), rtol=1e-8
+        )
+        assert np.isnan(result[..., 1]).all()
+
     def test_time_integral_raises(self):
         geometry, submesh, _, _, var_disc = self._make_setup(dim=2, n=3)
         t_sol = np.array([0.0, 1.0])

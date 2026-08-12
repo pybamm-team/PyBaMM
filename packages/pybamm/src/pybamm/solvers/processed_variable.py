@@ -1112,9 +1112,11 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
     def _interpolate_spatial(self, values, query_pts, fill_value=np.nan):
         """Interpolate cell-centered data to query points.
 
-        The Delaunay triangulation and boundary mask are computed once
-        and cached.  Only the interpolated values change per call. Points
-        outside the domain are set to ``fill_value``.
+        ``values`` has one entry per cell and, optionally, one column per
+        time step; all columns are interpolated in a single pass, so the
+        nearest-neighbour tree and boundary mask are built once rather
+        than per time step.  Points outside the domain are set to
+        ``fill_value``.  NaNs in ``values`` propagate to the output.
         """
         from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 
@@ -1125,7 +1127,13 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         linear = LinearNDInterpolator(tri, vals)
         result = linear(query_pts)
 
+        # A query point outside the convex hull is NaN in every column
+        # (it is a location property), so whole rows are nearest-filled;
+        # requiring all columns avoids clobbering valid columns when the
+        # input itself contains NaNs.
         mask = np.isnan(result)
+        if result.ndim == 2:
+            mask = mask.all(axis=1)
         if np.any(mask):
             nearest = NearestNDInterpolator(pts, vals)
             result[mask] = nearest(query_pts[mask])
@@ -1183,11 +1191,9 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         if data_at_t.ndim == 1:
             data_at_t = data_at_t[:, np.newaxis]
         n_t = data_at_t.shape[1]
-        result = np.empty((*out_shape, n_t))
-        for i in range(n_t):
-            result[..., i] = self._interpolate_spatial(
-                data_at_t[:, i], query, fill_value=fill_value
-            ).reshape(out_shape)
+        result = self._interpolate_spatial(
+            data_at_t, query, fill_value=fill_value
+        ).reshape(*out_shape, n_t)
 
         # scalar t drops the time axis; array-valued t (any length) keeps it
         if scalar_t:
