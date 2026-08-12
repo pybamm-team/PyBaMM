@@ -128,11 +128,12 @@ class TestUtil:
                 modules[module_name] = module
                 sys.modules[module_name] = None
 
-        # Unload pybamm and its sub-modules
+        # Unload pybamm and its sub-modules, keeping them for restoration
+        pybamm_modules = {}
         for module_name in list(sys.modules.keys()):
             base_module_name = module_name.split(".")[0]
             if base_module_name == "pybamm":
-                sys.modules.pop(module_name)
+                pybamm_modules[module_name] = sys.modules.pop(module_name)
 
         # Test pybamm is still importable
         try:
@@ -145,6 +146,11 @@ class TestUtil:
             # Restore optional dependencies and their sub-modules
             for module_name, module in modules.items():
                 sys.modules[module_name] = module
+            # A second copy of pybamm would break class identity for later tests
+            for module_name in list(sys.modules.keys()):
+                if module_name.split(".")[0] == "pybamm":
+                    del sys.modules[module_name]
+            sys.modules.update(pybamm_modules)
 
     def test_optional_dependencies(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
