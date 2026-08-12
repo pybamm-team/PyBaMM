@@ -104,7 +104,7 @@ class Array(pybamm.Symbol):
         return self._entries_string
 
     @entries_string.setter
-    def entries_string(self, value: None | tuple):
+    def entries_string(self, value: tuple | None):
         # We must include the entries in the hash, since different arrays can be
         # indistinguishable by class, name and domain alone
         # Slightly different syntax for sparse and non-sparse matrices

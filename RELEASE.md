@@ -164,10 +164,10 @@ A patch release is `YY.MM.N.P` where `P >= 1`. Patches are cut from the previous
 
 ### Cutting a `pybammsolvers` release
 
-`pybammsolvers` releases independently of PyBaMM. **Its published version is read from `packages/pybammsolvers/src/pybammsolvers/version.py`** (via the regex in `packages/pybammsolvers/pyproject.toml`), *not* from the release tag — the `pybammsolvers-v*` tag namespace only routes the workflow. Keep the tag and `version.py` in lockstep, or the wrong version ships.
+`pybammsolvers` releases independently of PyBaMM. **`packages/pybammsolvers/src/pybammsolvers/version.py` is the single source of truth for its published version**, *not* the release tag — the `pybammsolvers-v*` tag namespace only routes the workflow. The version is a static string (dynamic VCS versioning is avoided because it would force a build during dependency resolution, which build-tool-less resolvers like Dependabot cannot do); the `sync-pybammsolvers-version` pre-commit hook mirrors `version.py` into the two static copies — `pyproject.toml` (`[project] version`, which stamps the built distribution) and `vcpkg.json` (`version-string`) — so a bump touches only one file. Keep the tag and `version.py` in lockstep, or the wrong version ships.
 
-1. Bump `__version__` in `packages/pybammsolvers/src/pybammsolvers/version.py` and record the change in `CHANGELOG.md`. Open a PR to `main`, ensure CI passes, then merge.
-2. From `main` at the merge commit, create a GitHub _release_ with the tag `pybammsolvers-vX.Y.Z`, where `X.Y.Z` **exactly matches** the new `version.py` value. This triggers `release_solvers.yml`, which builds wheels + sdist and publishes to PyPI. The `check_version` job in that workflow fails the release if the tag and `version.py` disagree; PyPI separately rejects a re-upload of an already-published version.
+1. Bump `__version__` in `packages/pybammsolvers/src/pybammsolvers/version.py` (the pre-commit hook mirrors it into `pyproject.toml` and `vcpkg.json`) and record the change in `CHANGELOG.md`. Open a PR to `main`, ensure CI passes, then merge.
+2. From `main` at the merge commit, create a GitHub _release_ with the tag `pybammsolvers-vX.Y.Z`, where `X.Y.Z` **exactly matches** the new `version.py` value. This triggers `release_solvers.yml`, which builds wheels + sdist and publishes to PyPI. The `check_version` job in that workflow fails the release if the tag, `version.py`, or the `pyproject.toml`/`vcpkg.json` mirrors disagree; PyPI separately rejects a re-upload of an already-published version.
 3. Verify the release installs cleanly: `pip install pybammsolvers==X.Y.Z`.
 
 ### Conda-forge

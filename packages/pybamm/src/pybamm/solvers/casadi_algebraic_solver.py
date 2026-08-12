@@ -151,7 +151,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         out = casadi.rootfinder(
             "roots",
             "newton",
-            dict(x=y_alg_sym, p=p_sym, g=alg),
+            {"x": y_alg_sym, "p": p_sym, "g": alg},
             {
                 **self.extra_options,
                 "abstol": self.tol,

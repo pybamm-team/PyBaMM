@@ -33,10 +33,10 @@ class TestExperimentStepTermination:
         assert term.get_event(variables, None).evaluate() == 0
         with pytest.warns(DeprecationWarning):
             term_old = pybamm.step.CrateTermination(0.02)
-            assert (
-                term.get_event(variables, None).evaluate()
-                == term_old.get_event(variables, None).evaluate()
-            )
+        assert (
+            term.get_event(variables, None).evaluate()
+            == term_old.get_event(variables, None).evaluate()
+        )
 
     def test_current_and_voltage_termination_operator_branches(self):
         variables = {

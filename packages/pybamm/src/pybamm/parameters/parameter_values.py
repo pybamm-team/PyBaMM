@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
@@ -93,7 +93,7 @@ class ParameterValues:
             self.update(values_dict)
         else:
             # Check if values is a named parameter set
-            if isinstance(values, str) and values in pybamm.parameter_sets.keys():
+            if isinstance(values, str) and values in pybamm.parameter_sets:
                 values_dict = dict(pybamm.parameter_sets[values])
                 chemistry = values_dict.pop("chemistry", None)
                 self.update(values_dict)
@@ -356,8 +356,7 @@ class ParameterValues:
             raise TypeError("Input must be a filename (str or pathlib.Path) or a dict")
 
         for key, value in parameter_values_dict.items():
-            if isinstance(value, dict):
-                parameter_values_dict[key] = convert_symbol_from_json(value)
+            parameter_values_dict[key] = deserialize_parameter_value(value)
 
         return ParameterValues(parameter_values_dict)
 
@@ -461,11 +460,8 @@ class ParameterValues:
         if isinstance(value, str):
             if value == "[input]":
                 value = pybamm.InputParameter(key)
-            elif (
-                value.startswith("[function]")
-                or value.startswith("[current data]")
-                or value.startswith("[data]")
-                or value.startswith("[2D data]")
+            elif value.startswith(
+                ("[function]", "[current data]", "[data]", "[2D data]")
             ):
                 raise ValueError(
                     "Specifying parameters via [function], [current data], [data] "
@@ -663,11 +659,8 @@ class ParameterValues:
         for name, value in values.items():
             # Process value
             if isinstance(value, str):
-                if (
-                    value.startswith("[function]")
-                    or value.startswith("[current data]")
-                    or value.startswith("[data]")
-                    or value.startswith("[2D data]")
+                if value.startswith(
+                    ("[function]", "[current data]", "[data]", "[2D data]")
                 ):
                     raise ValueError(
                         "Specifying parameters via [function], [current data], [data] "
@@ -1252,7 +1245,7 @@ class ParameterValues:
         >>> param.print_evaluated_parameters(evaluated_params, "params.txt")
         """
         # Get column width for pretty printing
-        column_width = max(len(name) for name in evaluated_parameters.keys())
+        column_width = max(len(name) for name in evaluated_parameters)
         s = f"{{:>{column_width}}}"
         with open(output_file, "w") as file:
             for name, value in sorted(evaluated_parameters.items()):
@@ -1578,11 +1571,14 @@ def convert_symbols_in_dict(data_dict: dict | None = None) -> dict:
             x = value.get("x", [])
             y = value.get("y", [])
 
-            def interpolant_function(sto, x=x, y=y, interpolator=interpolator):
+            def interpolant_function(sto, x=x, y=y, interpolator=interpolator, key=key):
                 try:
                     return pybamm.Interpolant(x, y, sto, interpolator=interpolator)
-                except Exception as e:
-                    print(e)
+                except (ValueError, TypeError, IndexError) as e:
+                    pybamm.logger.warning(
+                        f"Could not build interpolant for '{key}', "
+                        f"falling back to zero: {e}"
+                    )
                     return pybamm.Scalar(0)
 
             data_dict[key] = interpolant_function
@@ -1599,18 +1595,68 @@ def convert_symbols_in_dict(data_dict: dict | None = None) -> dict:
     return data_dict
 
 
+def serialize_parameter_value(name: str, value: Any) -> Any:
+    """
+    Serialize a single parameter value to a JSON-compatible representation.
+
+    The per-value dispatch used by :func:`convert_parameter_values_to_json`:
+    callables are first traced to a symbolic expression, everything else is
+    encoded directly.
+
+    Parameters
+    ----------
+    name : str
+        The parameter name (used only to name a traced callable).
+    value : Any
+        The parameter value: a callable, a :class:`pybamm.Symbol`, or a scalar.
+
+    Returns
+    -------
+    Any
+        The JSON representation: a dict for symbols, a scalar otherwise.
+    """
+    if callable(value):
+        return convert_symbol_to_json(
+            convert_function_to_symbolic_expression(value, name)
+        )
+    return convert_symbol_to_json(value)
+
+
+def deserialize_parameter_value(value: Any) -> Any:
+    """
+    Reconstruct a single parameter value from its JSON representation.
+
+    Inverse of :func:`serialize_parameter_value`: dicts are decoded back to
+    :class:`pybamm.Symbol` objects, scalars pass through unchanged.
+
+    Parameters
+    ----------
+    value : Any
+        The JSON representation of a single parameter value.
+
+    Returns
+    -------
+    Any
+        The reconstructed value.
+    """
+    if isinstance(value, dict):
+        return convert_symbol_from_json(value)
+    return value
+
+
 def convert_parameter_values_to_json(
-    parameter_values: ParameterValues, filename: str | None = None
+    parameter_values: Mapping[str, Any], filename: str | None = None
 ) -> dict:
     """
-    Convert a ParameterValues object to a JSON-serializable dictionary.
+    Convert a mapping of parameter values to a JSON-serializable dictionary.
 
     Optionally saves it to a file.
 
     Parameters
     ----------
-    parameter_values : ParameterValues
-        The ParameterValues object to convert.
+    parameter_values : Mapping
+        The parameter values to convert. Any mapping of ``{name: value}`` is
+        accepted, not only a :class:`ParameterValues` object.
     filename : str, optional
         The filename to save the JSON file to.
 
@@ -1628,15 +1674,9 @@ def convert_parameter_values_to_json(
     >>> convert_parameter_values_to_json(param, "params.json")
     {'Temperature [K]': 298.15}
     """
-    parameter_values_dict = {}
-
-    for k, v in parameter_values.items():
-        if callable(v):
-            parameter_values_dict[k] = convert_symbol_to_json(
-                convert_function_to_symbolic_expression(v, k)
-            )
-        else:
-            parameter_values_dict[k] = convert_symbol_to_json(v)
+    parameter_values_dict = {
+        k: serialize_parameter_value(k, v) for k, v in parameter_values.items()
+    }
 
     if filename is not None:
         with open(filename, "w") as f:

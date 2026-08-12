@@ -7,7 +7,7 @@ from enum import IntEnum
 
 import casadi
 import numpy as np
-import pybammsolvers.idaklu as idaklu
+from pybammsolvers import idaklu
 from scipy.sparse.linalg import spsolve
 
 import pybamm

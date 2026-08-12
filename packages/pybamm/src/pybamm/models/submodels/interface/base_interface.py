@@ -159,12 +159,14 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_number_of_electrons_in_reaction(self):
         """Returns the number of electrons in the reaction."""
-        if self.reaction in [
-            "lithium-ion main",
-            "lithium metal plating",
-        ]:
-            return self.phase_param.ne
-        elif self.reaction == "lead-acid main":
+        if (
+            self.reaction
+            in [
+                "lithium-ion main",
+                "lithium metal plating",
+            ]
+            or self.reaction == "lead-acid main"
+        ):
             return self.phase_param.ne
         elif self.reaction == "lead-acid oxygen":
             return self.param.ne_Ox

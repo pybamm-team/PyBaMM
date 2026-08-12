@@ -5,6 +5,7 @@ from typing import TypeVar
 
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import Self
 
 
 class EventType(Enum):
@@ -56,7 +57,7 @@ class Event:
         self._event_type = event_type
 
     @classmethod
-    def _from_json(cls: type[E], snippet: dict) -> E:
+    def _from_json(cls, snippet: dict) -> Self:
         """Reconstruct an Event. Canonical files carry ``expression`` in
         ``children[0]``; legacy discretised files carried it as a sibling field."""
         children = snippet.get("children")
