@@ -302,6 +302,28 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     M = csr_matrix(kron(np.ones((repeats, 1)), M))
             return pybamm.Matrix(M) @ bc_value
 
+    @staticmethod
+    def _tile_bc_value(bc_value, n_bnd, repeats):
+        """Lift a BC value to ``n_bnd * repeats`` entries.
+
+        Scalars and already-full values (``n_bnd * repeats`` entries) pass
+        through; a per-face value (``n_bnd`` entries, shared across
+        auxiliary-domain repeats) is tiled, matching :meth:`_bc_contribution`.
+        """
+        if repeats == 1:
+            return bc_value
+        is_scalar = isinstance(bc_value, pybamm.Scalar) or (
+            hasattr(bc_value, "shape_for_testing")
+            and bc_value.shape_for_testing == (1, 1)
+        )
+        if is_scalar or getattr(bc_value, "shape_for_testing", None) == (
+            n_bnd * repeats,
+            1,
+        ):
+            return bc_value
+        tile = csr_matrix(kron(np.ones((repeats, 1)), eye(n_bnd, dtype=np.float64)))
+        return pybamm.Matrix(tile) @ bc_value
+
     # ------------------------------------------------------------------
     # spatial_variable
     # ------------------------------------------------------------------
@@ -587,6 +609,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     E_f = csr_matrix(kron(eye(repeats, dtype=np.float64), E))
                     P_f = csr_matrix(kron(eye(repeats, dtype=np.float64), P))
                 D_bnd = disc_D if is_scalar_D else pybamm.Matrix(E_f) @ disc_D
+                bc_value = self._tile_bc_value(bc_value, n_bnd, repeats)
 
                 if bc_type == "Dirichlet":
                     delta = (

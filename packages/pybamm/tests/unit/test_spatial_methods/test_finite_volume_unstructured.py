@@ -1360,6 +1360,74 @@ class TestFiniteVolumeUnstructuredBehavior:
             atol=1e-12,
         )
 
+    def test_div_D_grad_per_face_bc_vectors_with_repeats(self):
+        # A BC value with one entry per boundary face must be shared across
+        # auxiliary-domain repeats, matching _bc_contribution's convention.
+        mesh = _make_2d_mesh(2, 2)
+        aux = _make_2d_mesh(1, 1)
+        method = _method_with_mesh(mesh, aux=aux)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        cell_values = mesh.cell_centroids[:, 0] ** 2
+        values = pybamm.Vector(cell_values, domain="test")
+
+        n_left = len(mesh.boundary_faces["left"])
+        n_right = len(mesh.boundary_faces["right"])
+        bcs = {
+            variable: {
+                "left": (pybamm.Vector(np.linspace(1, 2, n_left)), "Dirichlet"),
+                "right": (pybamm.Vector(np.linspace(-1, 1, n_right)), "Neumann"),
+            }
+        }
+        single = method.div_D_grad(div_symbol, variable, pybamm.Scalar(2), values, bcs)
+
+        repeated_domains = {"primary": ["test"], "secondary": ["aux"]}
+        repeated_div = pybamm.Variable("repeated div", domains=repeated_domains)
+        repeated_u = pybamm.Variable("repeated u", domains=repeated_domains)
+        repeated_values = pybamm.Vector(
+            np.tile(cell_values, aux.npts), domains=repeated_domains
+        )
+        repeated = method.div_D_grad(
+            repeated_div,
+            repeated_u,
+            pybamm.Scalar(2),
+            repeated_values,
+            {repeated_u: bcs[variable]},
+        )
+        np.testing.assert_allclose(
+            repeated.evaluate()[:, 0],
+            np.tile(single.evaluate()[:, 0], aux.npts),
+            atol=1e-12,
+        )
+
+        # One entry per face per repeat passes through untiled
+        single_right = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.Scalar(2),
+            values,
+            {variable: {"right": bcs[variable]["right"]}},
+        )
+        full = method.div_D_grad(
+            repeated_div,
+            repeated_u,
+            pybamm.Scalar(2),
+            repeated_values,
+            {
+                repeated_u: {
+                    "right": (
+                        pybamm.Vector(np.tile(np.linspace(-1, 1, n_right), aux.npts)),
+                        "Neumann",
+                    ),
+                }
+            },
+        )
+        np.testing.assert_allclose(
+            full.evaluate()[:, 0],
+            np.tile(single_right.evaluate()[:, 0], aux.npts),
+            atol=1e-12,
+        )
+
     def test_div_D_grad_anisotropic_coefficient_raises(self):
         mesh = _make_2d_mesh(2, 2)
         method = _method_with_mesh(mesh)
