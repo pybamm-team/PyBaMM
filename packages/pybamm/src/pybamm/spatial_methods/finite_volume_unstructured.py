@@ -51,9 +51,29 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     def build(self, mesh):
         """See :meth:`pybamm.SpatialMethod.build`."""
+        from pybamm.meshes.unstructured_submesh import UnstructuredSubMesh
+
         super().build(mesh)
         for dom in mesh:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
+            sm = mesh[dom]
+            # Tags come from the generator, not the constructor: a hand-built
+            # mesh with none gets no BCs and is invisible to interface
+            # discovery, so surface that before it fails downstream.
+            if (
+                isinstance(sm, UnstructuredSubMesh)
+                and not sm.boundary_faces
+                and len(sm.face_owner) > sm._boundary_face_start
+            ):
+                name = dom[0] if isinstance(dom, tuple) else dom
+                pybamm.logger.warning(
+                    f"Unstructured submesh for domain {name!r} has exterior "
+                    "faces but no boundary tags: boundary conditions cannot "
+                    "be applied and interface auto-discovery will not pair "
+                    "it with neighboring domains. Tag it (e.g. "
+                    "detect_box_boundaries() for axis-aligned boxes) or use "
+                    "a mesh generator that supplies tags."
+                )
         # Discover interfaces between all unstructured submesh pairs so
         # internal BCs work for arbitrary topology, not just 1D stacks.
         self._auto_compute_all_interfaces(mesh)
@@ -1281,8 +1301,14 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 }
 
         if interface is None:
-            n_left = left_mesh.npts
-            return pybamm.Vector(np.zeros(n_left * repeats))
+            raise pybamm.DiscretisationError(
+                "No interface data pairs these two unstructured meshes, so "
+                "the internal gradient between them cannot be formed and the "
+                "domains would be silently decoupled. Check that both meshes "
+                "carry boundary tags (e.g. detect_box_boundaries() for "
+                "axis-aligned boxes) so interface discovery can pair their "
+                "faces."
+            )
 
         n_faces = len(interface["left_cells"])
         n_left = left_mesh.npts

@@ -1067,6 +1067,19 @@ class TestFiniteVolumeUnstructuredBehavior:
         assert left.npts_for_broadcast_to_nodes == left.npts
         assert structured.npts_for_broadcast_to_nodes == structured.npts
 
+    def test_build_warns_on_untagged_mesh(self, caplog):
+        import logging
+
+        untagged = _make_2d_mesh(2, 2)
+        untagged.boundary_faces = {}
+        tagged = _make_2d_mesh(2, 2)
+        method = FiniteVolumeUnstructured()
+        with caplog.at_level(logging.WARNING):
+            method.build(_MeshMap({("untagged",): untagged, ("tagged",): tagged}))
+        assert "no boundary tags" in caplog.text
+        assert "'untagged'" in caplog.text
+        assert "'tagged'" not in caplog.text
+
     def test_interface_matching_edge_cases(self):
         empty = _make_2d_mesh(1, 1)
         empty.boundary_faces = {}
@@ -1605,12 +1618,13 @@ class TestFiniteVolumeUnstructuredBehavior:
         )
         np.testing.assert_allclose(reverse.evaluate(), direct.evaluate())
 
+        # unpaired meshes raise: silently returning zeros would decouple
+        # the domains and solve to a wrong answer
         right.interface_data = {}
-        absent = method._internal_neumann_unstructured(
-            left_values, right_values, left, right, 2
-        )
-        np.testing.assert_allclose(absent.evaluate(), 0)
-        assert absent.shape[0] == left.npts * 2
+        with pytest.raises(pybamm.DiscretisationError, match="decoupled"):
+            method._internal_neumann_unstructured(
+                left_values, right_values, left, right, 2
+            )
         left.interface_data = left_data
 
     def test_internal_neumann_dispatch_structured_and_mismatch(self):
