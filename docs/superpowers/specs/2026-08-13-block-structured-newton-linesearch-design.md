@@ -208,6 +208,11 @@ before moving on".
 - **Converged residual.** The whole-system residual inf-norm at the returned solution,
   cross-checked in Python against `model.algebraic_eval`. This is the acceptance
   metric, not iteration count.
+- **Pinned failures.** `TestElectrodeSOHCompositeKnownFailures` holds twelve xfailed
+  `ElectrodeSOHComposite` systems the Newton solver cannot solve, each anchored by a
+  passing test showing the composite solver chain reaches a residual below 1e-8 on the
+  same inputs. `xfail_strict` is on, so fixing any of them fails the suite until the
+  marker is dropped.
 
 ## Measured results
 
