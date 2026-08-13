@@ -21,6 +21,7 @@
 - `pybamm.citations.register` now names the citation the caller passed in when a BibTeX string fails to parse, instead of whichever entry the parser had reached. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
 - Deserialising a parameter set whose interpolant specification is invalid now logs a warning naming the offending parameter, instead of printing the bare exception to stdout with no indication of which parameter fell back to zero. ([#5679](https://github.com/pybamm-team/PyBaMM/pull/5679))
 - A user-specified boundary tag that is absent from a mesh file now raises `GeometryError` instead of degrading to a warning and a mesh with no boundary groups. ([#5679](https://github.com/pybamm-team/PyBaMM/pull/5679))
+- Fixed the `pybammsolvers` CMake build under conda (`CONDA_BUILD=1`), where SUNDIALS, SuiteSparse, and CasADi are host dependencies rather than vendored: the `.idaklu` root defaults and the from-source bootstrap are skipped, the system CasADi is used instead of a pip one, and the libstdc++ ABI probe (which has no wheel to inspect and would wrongly force the legacy ABI) is now limited to the PyPI-CasADi path. Released as `pybammsolvers` v0.9.1. ([#5668](https://github.com/pybamm-team/PyBaMM/pull/5668))
 
 ## Optimizations
 
