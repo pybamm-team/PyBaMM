@@ -1111,16 +1111,35 @@ class TestFiniteVolumeUnstructuredBehavior:
             ("x", None, 0),
             ("y", None, 1),
             ("z", None, 2),
-            ("r", None, 0),
+            ("x_n", None, 0),
             ("s", "lr", 0),
             ("s", "tb", 2),
             ("s", "fb", 1),
-            ("s", "unknown", 0),
         ]:
             symbol = pybamm.SpatialVariable(name, domains=domains, direction=direction)
             actual = method.spatial_variable(symbol).evaluate().reshape(-1)
             expected = np.tile(mesh.cell_centroids[:, column], aux.npts)
             np.testing.assert_allclose(actual, expected)
+
+        # ambiguous names and unknown directions raise instead of guessing x
+        for name, direction in [("r", None), ("zeta", None), ("s", "unknown")]:
+            symbol = pybamm.SpatialVariable(name, domains=domains, direction=direction)
+            with pytest.raises(pybamm.DomainError):
+                method.spatial_variable(symbol)
+
+    def test_spatial_variable_2d_rejects_y_and_fb(self):
+        mesh = _make_2d_mesh(1, 1)
+        method = _method_with_mesh(mesh)
+        z = pybamm.SpatialVariable("z_2d", domain="test", direction="tb")
+        np.testing.assert_allclose(
+            method.spatial_variable(z).evaluate().reshape(-1),
+            mesh.cell_centroids[:, 1],
+        )
+        # 2D meshes are x-z: y names and the front-back direction don't exist
+        for name, direction in [("y", None), ("s", "fb")]:
+            symbol = pybamm.SpatialVariable(name, domain="test", direction=direction)
+            with pytest.raises(pybamm.DomainError):
+                method.spatial_variable(symbol)
 
     def test_broadcast_variants(self):
         mesh = _make_2d_mesh(1, 1)

@@ -330,23 +330,36 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     def spatial_variable(self, symbol):
         """Return a vector of cell-centroid coordinates for ``symbol``'s
-        direction (or its name prefix), tiled over auxiliary domains."""
+        direction (or its leading name token, e.g. ``x_n`` -> ``x``), tiled
+        over auxiliary domains.  Raises :class:`pybamm.DomainError` rather
+        than guessing when neither identifies a coordinate."""
         symbol_mesh = self.mesh[symbol.domain]
         repeats = self._get_auxiliary_domain_repeats(symbol.domains)
+        dim = symbol_mesh.dimension
 
         direction = getattr(symbol, "direction", None)
-        if direction is None:
-            name = symbol.name
-            if name.startswith("x"):
-                col = 0
-            elif name.startswith("y"):
-                col = 1
-            elif name.startswith("z"):
-                col = symbol_mesh.dimension - 1
-            else:
-                col = 0
+        if direction is not None:
+            direction_cols = {"lr": 0, "fb": 1, "tb": dim - 1}
+            if direction not in direction_cols or (direction == "fb" and dim == 2):
+                valid = "'lr', 'tb'" if dim == 2 else "'lr', 'fb', 'tb'"
+                raise pybamm.DomainError(
+                    f"Unknown direction {direction!r} for spatial variable "
+                    f"{symbol.name!r} on a {dim}D unstructured mesh; valid "
+                    f"directions are {valid}."
+                )
+            col = direction_cols[direction]
         else:
-            col = {"lr": 0, "tb": symbol_mesh.dimension - 1, "fb": 1}.get(direction, 0)
+            token = symbol.name.split("_")[0]
+            name_cols = {"x": 0, "y": 1, "z": dim - 1}
+            if token not in name_cols or (token == "y" and dim == 2):
+                valid = "'x'/'z'" if dim == 2 else "'x'/'y'/'z'"
+                raise pybamm.DomainError(
+                    f"Cannot infer a coordinate for spatial variable "
+                    f"{symbol.name!r} on a {dim}D unstructured mesh; name it "
+                    f"with a leading {valid} token (e.g. 'x_n') or set its "
+                    "direction."
+                )
+            col = name_cols[token]
 
         entries = np.tile(symbol_mesh.cell_centroids[:, col], repeats)
         return pybamm.Vector(entries, domains=symbol.domains)
