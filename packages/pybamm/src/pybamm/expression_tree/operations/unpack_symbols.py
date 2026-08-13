@@ -94,7 +94,7 @@ class SymbolUnpacker:
         """See :meth:`SymbolUnpacker.unpack()`."""
         # found a symbol of the right class -> return it
         if isinstance(symbol, self.classes_to_find):
-            return set([symbol])
+            return {symbol}
 
         children = symbol.children
 

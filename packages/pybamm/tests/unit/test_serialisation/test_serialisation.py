@@ -20,6 +20,7 @@ from pybamm.expression_tree.operations.serialise import (
     SUPPORTED_SCHEMA_VERSION,
     ExpressionFunctionParameter,
     Serialise,
+    convert_function_to_symbolic_expression,
     convert_symbol_from_json,
     convert_symbol_to_json,
 )
@@ -1041,14 +1042,16 @@ class TestSerialise:
         model.name = "TestModel"
         model.rhs = {pybamm.Variable("c"): pybamm.Variable("c")}
 
-        with patch(
-            "pybamm.expression_tree.operations.serialise.convert_symbol_to_json",
-            side_effect=Exception("conversion failed"),
-        ):
-            with pytest.raises(
+        with (
+            patch(
+                "pybamm.expression_tree.operations.serialise.convert_symbol_to_json",
+                side_effect=Exception("conversion failed"),
+            ),
+            pytest.raises(
                 ValueError, match=r"Failed to save custom model: conversion failed"
-            ):
-                Serialise.save_custom_model(model, "conversion_fail")
+            ),
+        ):
+            Serialise.save_custom_model(model, "conversion_fail")
 
     def test_unsupported_schema_version(self, tmp_path):
         unhandled_schema_json = {
@@ -1495,6 +1498,57 @@ class TestSerialise:
         sim.plot(show_plot=False)
 
 
+class TestConvertFunctionToSymbolicExpression:
+    def test_partial_with_bound_kwargs(self):
+        """A partial with keyword-bound args (as create_from_bpx produces) must
+        only receive symbols for its remaining required args, not the bound ones."""
+        import functools
+
+        def diffusivity(sto, T, D_ref, Ea, constant=False):
+            return D_ref * pybamm.exp(-Ea * (sto + T))
+
+        func = functools.partial(diffusivity, D_ref=1.5, Ea=2.0, constant=True)
+        efp = convert_function_to_symbolic_expression(func, "D")
+
+        assert efp.func_args == ["sto", "T"]
+        assert efp.name == "D"
+        assert efp.func_name == "diffusivity"
+
+    def test_partial_leaves_unbound_defaulted_arg(self):
+        """A defaulted parameter left unbound (e.g. constant diffusivity's
+        ``constant`` flag) must not be turned into a symbol, or a positional
+        call would collide with the following keyword-bound argument."""
+        import functools
+
+        def diffusivity(sto, T, D_ref, Ea, constant=False):
+            # constant is a Python control flag, not a symbolic input
+            if constant:
+                return D_ref * pybamm.exp(-Ea * T)
+            return D_ref(sto) * pybamm.exp(-Ea * T)
+
+        func = functools.partial(diffusivity, D_ref=lambda s: s, Ea=2.0)
+        efp = convert_function_to_symbolic_expression(func, "D")
+
+        assert efp.func_args == ["sto", "T"]
+
+    def test_partial_returning_interpolant(self):
+        """OCP-style partials bind name/x/y and return an Interpolant."""
+        import functools
+
+        def interpolant_func(var, name, x, y):
+            return pybamm.Interpolant(x, y, var, name=name, interpolator="linear")
+
+        x_data = np.array([0.0, 0.5, 1.0])
+        y_data = np.array([1.0, 2.0, 3.0])
+        func = functools.partial(interpolant_func, name="U", x=x_data, y=y_data)
+        efp = convert_function_to_symbolic_expression(func, "U")
+
+        assert efp.func_args == ["var"]
+        src = efp.to_source()
+        assert "def interpolant_func(var):" in src
+        assert 'name="U"' in src
+
+
 class TestExpressionFunctionParameter:
     def test_basic_serialisation(self):
         x = pybamm.SpatialVariable("x", domain="negative electrode")
@@ -1616,17 +1670,17 @@ class TestGeometrySerialization:
             assert set(loaded_geometry.keys()) == set(geometry.keys())
 
             # Verify spatial variables and their bounds
-            for domain in geometry.keys():
+            for domain in geometry:
                 assert domain in loaded_geometry
                 # Compare variable names
                 orig_vars = {
                     (var.name if hasattr(var, "name") else var)
-                    for var in geometry[domain].keys()
+                    for var in geometry[domain]
                     if var != "tabs"
                 }
                 loaded_vars = {
                     (var.name if hasattr(var, "name") else var)
-                    for var in loaded_geometry[domain].keys()
+                    for var in loaded_geometry[domain]
                     if var != "tabs"
                 }
                 assert orig_vars == loaded_vars
@@ -1654,16 +1708,18 @@ class TestGeometrySerialization:
         """Test geometry saving with auto-generated filename."""
         geometry = pybamm.battery_geometry()
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with monkeypatch.context() as m:
-                m.chdir(tmpdir)
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            monkeypatch.context() as m,
+        ):
+            m.chdir(tmpdir)
 
-                # Save with no filename (auto-generate)
-                Serialise.save_custom_geometry(geometry)
+            # Save with no filename (auto-generate)
+            Serialise.save_custom_geometry(geometry)
 
-                # Check a file was created
-                json_files = list(Path(tmpdir).glob("geometry_*.json"))
-                assert len(json_files) == 1
+            # Check a file was created
+            json_files = list(Path(tmpdir).glob("geometry_*.json"))
+            assert len(json_files) == 1
 
     def test_geometry_invalid_extension(self):
         """Test that non-.json extension raises error."""
@@ -1697,16 +1753,13 @@ class TestSpatialMethodsSerialization:
             assert set(loaded_methods.keys()) == set(spatial_methods.keys())
 
             # Verify class types match
-            for domain in spatial_methods.keys():
-                assert isinstance(loaded_methods[domain], type(spatial_methods[domain]))
+            for domain, method in spatial_methods.items():
+                assert isinstance(loaded_methods[domain], type(method))
 
             # Verify options are preserved
-            for domain in spatial_methods.keys():
-                if hasattr(spatial_methods[domain], "options"):
-                    assert (
-                        loaded_methods[domain].options
-                        == spatial_methods[domain].options
-                    )
+            for domain, method in spatial_methods.items():
+                if hasattr(method, "options"):
+                    assert loaded_methods[domain].options == method.options
 
     def test_serialise_and_load_spatial_methods_dict(self):
         """Test serializing to dict and loading from dict."""
@@ -1856,16 +1909,18 @@ class TestVarPtsSerialization:
         """Test var_pts saving with auto-generated filename."""
         var_pts = {"x_n": 20}
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with monkeypatch.context() as m:
-                m.chdir(tmpdir)
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            monkeypatch.context() as m,
+        ):
+            m.chdir(tmpdir)
 
-                # Save with no filename (auto-generate)
-                Serialise.save_var_pts(var_pts)
+            # Save with no filename (auto-generate)
+            Serialise.save_var_pts(var_pts)
 
-                # Check a file was created
-                json_files = list(Path(tmpdir).glob("var_pts_*.json"))
-                assert len(json_files) == 1
+            # Check a file was created
+            json_files = list(Path(tmpdir).glob("var_pts_*.json"))
+            assert len(json_files) == 1
 
 
 class TestSubmeshTypesSerialization:
@@ -1893,10 +1948,8 @@ class TestSubmeshTypesSerialization:
             assert set(loaded_submesh_types.keys()) == set(submesh_types.keys())
 
             # Verify class types match
-            for domain in submesh_types.keys():
-                assert isinstance(
-                    loaded_submesh_types[domain], type(submesh_types[domain])
-                )
+            for domain, submesh_type in submesh_types.items():
+                assert isinstance(loaded_submesh_types[domain], type(submesh_type))
 
     def test_serialise_and_load_submesh_types_dict(self):
         """Test serializing to dict and loading from dict."""
@@ -1925,16 +1978,18 @@ class TestSubmeshTypesSerialization:
             "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
         }
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with monkeypatch.context() as m:
-                m.chdir(tmpdir)
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            monkeypatch.context() as m,
+        ):
+            m.chdir(tmpdir)
 
-                # Save with no filename (auto-generate)
-                Serialise.save_submesh_types(submesh_types)
+            # Save with no filename (auto-generate)
+            Serialise.save_submesh_types(submesh_types)
 
-                # Check a file was created
-                json_files = list(Path(tmpdir).glob("submesh_types_*.json"))
-                assert len(json_files) == 1
+            # Check a file was created
+            json_files = list(Path(tmpdir).glob("submesh_types_*.json"))
+            assert len(json_files) == 1
 
     def test_submesh_types_invalid_class(self):
         """Test error handling for invalid submesh type class."""
@@ -2098,7 +2153,7 @@ class TestSerializationEdgeCases:
 
             # Verify Symbol keys are reconstructed
             for domain in loaded_geometry:
-                for key in loaded_geometry[domain].keys():
+                for key in loaded_geometry[domain]:
                     if isinstance(key, pybamm.Symbol):
                         assert hasattr(key, "name")
 
@@ -2274,16 +2329,18 @@ class TestSerializationEdgeCases:
         """Test spatial methods with auto-generated filename."""
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with monkeypatch.context() as m:
-                m.chdir(tmpdir)
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            monkeypatch.context() as m,
+        ):
+            m.chdir(tmpdir)
 
-                # Save with no filename (auto-generate)
-                Serialise.save_spatial_methods(spatial_methods)
+            # Save with no filename (auto-generate)
+            Serialise.save_spatial_methods(spatial_methods)
 
-                # Check a file was created
-                json_files = list(Path(tmpdir).glob("spatial_methods_*.json"))
-                assert len(json_files) == 1
+            # Check a file was created
+            json_files = list(Path(tmpdir).glob("spatial_methods_*.json"))
+            assert len(json_files) == 1
 
     def test_geometry_with_non_symbol_values_in_symbol_key(self):
         """Test geometry with non-Symbol values nested in Symbol-keyed dict."""

@@ -25,9 +25,9 @@ dev = [
     "pre-commit",
     # pybammsolvers build toolchain, required in the venv because the solver is
     # installed with --no-build-isolation (above) and rebuilds itself on import.
-    "scikit-build-core>=0.10",
+    "scikit-build-core>=1.0.3",
     "pybind11>=3.0.1",
-    "cmake>=3.13",
+    "cmake>=4.4.2",
     "ninja",
 ]
 
@@ -82,10 +82,17 @@ ignore = [
     "RET506",  # Unnecessary `elif`
     "B018",    # Found useless expression
     "RUF002",  # Docstring contains ambiguous
+    # Enabled by ruff 0.16.0's wider default selection, but at odds with
+    # deliberate choices in this repo:
+    "DTZ",     # Experiment step `start_time`s are naive wall-clock by design
+    "N999",    # Parameter-set modules are named after the set (e.g. Chen2020.py)
+    "TRY004",  # PyBaMM raises its own exceptions, not TypeError (see AGENTS.md)
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "packages/pybamm/tests/*" = ["T20", "S101"]
+# `exec` is how this module evaluates the Python it generates
+"packages/pybamm/src/pybamm/expression_tree/operations/evaluate_python.py" = ["S102"]
 "docs/*" = ["T20"]
 "examples/*" = ["T20"]
 "**.ipynb" = ["E402", "E703"]

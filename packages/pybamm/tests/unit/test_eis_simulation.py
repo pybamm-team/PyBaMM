@@ -20,6 +20,15 @@ class TestEISSimulationClassHierarchy:
         eis_sim = pybamm.EISSimulation(model)
         assert not isinstance(eis_sim, pybamm.Simulation)
 
+    def test_skip_surface_form_check(self):
+        # default SPM lacks surface form: raises unless check is skipped
+        model = pybamm.lithium_ion.SPM()
+        with pytest.raises(ValueError, match="surface form"):
+            pybamm.EISSimulation._validate_model_for_eis(model)
+        pybamm.EISSimulation._validate_model_for_eis(
+            model, skip_surface_form_check=True
+        )
+
 
 class TestEISSolution:
     """Tests for the EISSolution class."""

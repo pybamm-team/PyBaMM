@@ -5,6 +5,7 @@
 
 import os
 import re
+import warnings
 
 import casadi
 import numpy as np
@@ -12,12 +13,12 @@ import pandas as pd
 import pytest
 
 import pybamm
-import tests.shared as shared
 from pybamm.expression_tree.exceptions import OptionError
 from pybamm.input.parameters.lithium_ion.Marquis2019 import (
     lico2_ocp_Dualfoil1998,
 )
 from pybamm.parameters.parameter_values import ParameterValues
+from tests import shared
 
 
 class TestParameterValues:
@@ -25,7 +26,7 @@ class TestParameterValues:
         # from dict
         param = pybamm.ParameterValues({"a": 1})
         assert param["a"] == 1
-        assert "a" in param.keys()
+        assert "a" in param
         assert 1 in param.values()
         assert ("a", 1) in param.items()
 
@@ -35,7 +36,7 @@ class TestParameterValues:
 
         # from dict "chemistry" key gets removed
         param = pybamm.ParameterValues({"a": 1, "chemistry": "lithium-ion"})
-        assert "chemistry" not in param.keys()
+        assert "chemistry" not in param
 
         # junk param values rejected
         with pytest.raises(ValueError, match=r"'Junk' is not a valid parameter set."):
@@ -110,7 +111,7 @@ class TestParameterValues:
 
         # test deleting a parameter
         del param["a"]
-        assert "a" not in param.keys()
+        assert "a" not in param
 
     def test_deprecated_parameter_raises_error(self):
         # Guard: deprecated parameter detection must work (388d1366f)
@@ -265,6 +266,35 @@ class TestParameterValues:
             # since + has other meanings in regex
         with pytest.raises(ValueError, match=r"Thermodynamic factor"):
             pybamm.ParameterValues({"1 + dlnf/dlnc": 1})
+
+    def test_deprecated_electrode_diffusivity_migration(self):
+        # the deprecated name populates the current name (and, for backward
+        # compatibility, is itself kept) with a deprecation warning
+        with pytest.warns(DeprecationWarning, match=r"renamed"):
+            param = pybamm.ParameterValues(
+                {"Negative electrode diffusivity [m2.s-1]": 3.3e-14}
+            )
+        assert param["Negative electrode diffusivity [m2.s-1]"] == 3.3e-14
+        assert param["Negative particle diffusivity [m2.s-1]"] == 3.3e-14
+
+        # supplying only the current name is untouched and warning-free
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            param = pybamm.ParameterValues(
+                {"Negative particle diffusivity [m2.s-1]": 1e-17}
+            )
+        assert param["Negative particle diffusivity [m2.s-1]"] == 1e-17
+
+        # when both names are present the current name wins (regression: the
+        # deprecated alias used to silently clobber it) and a conflict is warned
+        with pytest.warns(UserWarning, match=r"Both the deprecated"):
+            param = pybamm.ParameterValues(
+                {
+                    "Negative electrode diffusivity [m2.s-1]": 3.3e-14,
+                    "Negative particle diffusivity [m2.s-1]": 1e-17,
+                }
+            )
+        assert param["Negative particle diffusivity [m2.s-1]"] == 1e-17
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3})

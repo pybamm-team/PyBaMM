@@ -1,6 +1,7 @@
 import copy
 import json
 import math
+import warnings
 from typing import Any
 
 import numpy as np
@@ -100,7 +101,6 @@ class TestBPX:
             },
             "State": {
                 "Initial conditions": {
-                    "Initial state-of-charge": 1.0,
                     "Initial temperature [K]": 298.15,
                     "Initial electrolyte concentration [mol.m-3]": 1000,
                     "Initial hysteresis state: Positive electrode": 0.0,
@@ -155,7 +155,34 @@ class TestBPX:
         temp_file.write_text(json.dumps(copy.deepcopy(self.base)))
 
         params = pybamm.ParameterValues.create_from_bpx(temp_file)
-        assert "check_already_exists" not in params.keys()
+        assert "check_already_exists" not in params
+
+    def test_bpx_emits_current_particle_diffusivity_name(self, tmp_path):
+        # a BPX-derived set must use only the current "particle diffusivity" name;
+        # emitting the deprecated "electrode diffusivity" alias too would let it
+        # silently clobber the current value on any later re-normalisation
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(copy.deepcopy(self.base)))
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            param = pybamm.ParameterValues.create_from_bpx(temp_file)
+        assert not [
+            w
+            for w in caught
+            if "diffusivity" in str(w.message) and "renamed" in str(w.message)
+        ]
+
+        for electrode in ["Negative", "Positive"]:
+            assert f"{electrode} particle diffusivity [m2.s-1]" in param
+            assert f"{electrode} electrode diffusivity [m2.s-1]" not in param
+            assert (
+                f"{electrode} particle diffusivity activation energy [J.mol-1]" in param
+            )
+            assert (
+                f"{electrode} electrode diffusivity activation energy [J.mol-1]"
+                not in param
+            )
 
     def test_constant_functions(self, tmp_path):
         bpx_obj = copy.deepcopy(self.base)
@@ -246,6 +273,27 @@ class TestBPX:
             assert isinstance(OCP, pybamm.Interpolant)
             dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](c)
             assert isinstance(dUdT, pybamm.Interpolant)
+
+    @pytest.mark.parametrize("form", ["function", "constant", "table"])
+    def test_bpx_to_json_roundtrip(self, tmp_path, form):
+        """create_from_bpx stores functional parameters as keyword-bound partials;
+        serialising them must not raise (regression for the partial arg handling
+        in convert_function_to_symbolic_expression)."""
+        bpx_obj = copy.deepcopy(self.base)
+        if form != "function":
+            value = 1 if form == "constant" else {"x": [0, 1], "y": [0, 1]}
+            for section in ["Electrolyte", "Negative electrode", "Positive electrode"]:
+                bpx_obj["Parameterisation"][section]["Diffusivity [m2.s-1]"] = value
+            bpx_obj["Parameterisation"]["Electrolyte"]["Conductivity [S.m-1]"] = value
+
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(bpx_obj))
+        param = pybamm.ParameterValues.create_from_bpx(temp_file)
+
+        out_file = tmp_path / "out.json"
+        param.to_json(out_file)
+        # the round-tripped values load back without error
+        pybamm.ParameterValues.from_json(out_file)
 
     def test_bpx_soc_error(self):
         bpx_obj = copy.deepcopy(self.base)
@@ -685,6 +733,29 @@ class TestBPX:
             pv["Lower voltage cut-off [V]"] < v_final < pv["Upper voltage cut-off [V]"]
         )
 
+    def test_bpx_default_initial_concentrations_at_full_charge(self):
+        # self.base gives no initial SOC, so concentrations default to full charge
+        # (theta_max negative / theta_min positive) without invoking
+        # set_initial_state.
+        bpx_obj = copy.deepcopy(self.base)
+        neg = bpx_obj["Parameterisation"]["Negative electrode"]
+        pos = bpx_obj["Parameterisation"]["Positive electrode"]
+        expected_neg = (
+            neg["Maximum stoichiometry"] * neg["Maximum concentration [mol.m-3]"]
+        )
+        expected_pos = (
+            pos["Minimum stoichiometry"] * pos["Maximum concentration [mol.m-3]"]
+        )
+
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+
+        assert param["Initial concentration in negative electrode [mol.m-3]"] == (
+            expected_neg
+        )
+        assert param["Initial concentration in positive electrode [mol.m-3]"] == (
+            expected_pos
+        )
+
     def test_bpx_initial_soc_applied_from_state(self):
         # A BPX initial state-of-charge other than full charge is applied via
         # set_initial_state, matching a manual set_initial_state on the same set.
@@ -778,3 +849,159 @@ class TestBPX:
             pytest.raises(NotImplementedError, match="blended electrodes"),
         ):
             pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=0.5)
+
+    # Legacy BPX v0.x backward-compatibility conversion
+    def _make_v0_obj(self, v1_obj=None):
+        """Recast a v1.x BPX dict into the legacy v0.x layout."""
+        obj = copy.deepcopy(v1_obj if v1_obj is not None else self.base)
+        state = obj.pop("State")
+        # v0.x used a numeric version field
+        obj["Header"]["BPX"] = 0.4
+        cell = obj["Parameterisation"]["Cell"]
+        ic = state["Initial conditions"]
+        te = state["Thermal environment"]
+        cell["Initial temperature [K]"] = ic["Initial temperature [K]"]
+        cell["Ambient temperature [K]"] = te["Ambient temperature [K]"]
+        # v0.x described thermal behaviour via a lumped thermal conductivity
+        cell["Thermal conductivity [W.m-1.K-1]"] = 1.5
+        obj["Parameterisation"]["Electrolyte"]["Initial concentration [mol.m-3]"] = ic[
+            "Initial electrolyte concentration [mol.m-3]"
+        ]
+        return obj
+
+    def test_bpx_v0_obj_is_converted_with_warning(self):
+        v0_obj = self._make_v0_obj()
+        with pytest.warns(UserWarning, match="legacy BPX v0"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(v0_obj)
+        # moved fields are preserved
+        assert param["Ambient temperature [K]"] == 298.15
+        assert param["Initial temperature [K]"] == 298.15
+        # v0.x has no heat transfer coefficient; PyBaMM applies its adiabatic default
+        assert param["Total heat transfer coefficient [W.m-2.K-1]"] == 0
+
+    def test_bpx_v0_file_is_converted_with_warning(self, tmp_path):
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(self._make_v0_obj()))
+        with pytest.warns(UserWarning, match="legacy BPX v0"):
+            param = pybamm.ParameterValues.create_from_bpx(temp_file)
+        assert param["Ambient temperature [K]"] == 298.15
+
+    def test_bpx_v0_missing_initial_temperature_falls_back_to_ambient(self):
+        v0_obj = self._make_v0_obj()
+        del v0_obj["Parameterisation"]["Cell"]["Initial temperature [K]"]
+        with pytest.warns(UserWarning, match="legacy BPX v0"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(v0_obj)
+        assert param["Initial temperature [K]"] == param["Ambient temperature [K]"]
+
+    def test_bpx_v0_blended_is_converted(self):
+        v0_obj = self._make_v0_obj(self._blended_bpx_obj())
+        with pytest.warns(UserWarning, match="legacy BPX v0"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(v0_obj)
+        assert param["Ambient temperature [K]"] == 298.15
+
+    def test_bpx_v1_float_version_not_converted(self):
+        # self.base uses a float version (1.0) but is a v1.x object: it must not
+        # trigger the legacy conversion path.
+        with warnings.catch_warnings(record=True) as records:
+            warnings.simplefilter("always")
+            pybamm.ParameterValues.create_from_bpx_obj(copy.deepcopy(self.base))
+        assert not any("legacy BPX v0" in str(r.message) for r in records)
+
+    def test_bpx_invalid_header_raises(self):
+        with pytest.raises(ValueError, match="Header"):
+            pybamm.ParameterValues.create_from_bpx_obj({"Parameterisation": {}})
+
+    # Optional BPX State handling (bpx>=1.1.1). All State fields are optional and
+    # the section may be omitted entirely; PyBaMM applies its own defaults.
+    def test_bpx_state_section_can_be_omitted(self):
+        bpx_obj = copy.deepcopy(self.base)
+        del bpx_obj["State"]
+        T_ref = bpx_obj["Parameterisation"]["Cell"]["Reference temperature [K]"]
+        with pytest.warns(UserWarning, match="PyBaMM applied defaults"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        # temperatures fall back to the reference temperature
+        assert param["Ambient temperature [K]"] == T_ref
+        assert param["Initial temperature [K]"] == T_ref
+        # electrolyte concentration falls back to 1 M
+        assert param["Initial concentration in electrolyte [mol.m-3]"] == 1000
+        # heat transfer coefficient falls back to the adiabatic default
+        assert param["Total heat transfer coefficient [W.m-2.K-1]"] == 0
+
+    def test_bpx_state_omitted_temperatures_default_to_reference(self):
+        bpx_obj = copy.deepcopy(self.base)
+        bpx_obj["Parameterisation"]["Cell"]["Reference temperature [K]"] = 300.0
+        del bpx_obj["State"]["Initial conditions"]["Initial temperature [K]"]
+        del bpx_obj["State"]["Thermal environment"]["Ambient temperature [K]"]
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        assert param["Ambient temperature [K]"] == 300.0
+        assert param["Initial temperature [K]"] == 300.0
+
+    def test_bpx_state_omitted_electrolyte_concentration_defaults_to_1M(self):
+        # PyBaMM needs c_e0 to normalise the exchange-current density, so an
+        # absent electrolyte concentration defaults to 1000 mol.m-3 (1 M).
+        bpx_obj = copy.deepcopy(self.base)
+        del bpx_obj["State"]["Initial conditions"][
+            "Initial electrolyte concentration [mol.m-3]"
+        ]
+        with pytest.warns(UserWarning, match="Initial concentration in electrolyte"):
+            param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        assert param["Initial concentration in electrolyte [mol.m-3]"] == 1000
+
+    def test_bpx_state_omitted_hysteresis_does_not_warn(self):
+        # hysteresis state is optional and usually absent; omitting it must not warn
+        bpx_obj = copy.deepcopy(self.base)
+        ic = bpx_obj["State"]["Initial conditions"]
+        del ic["Initial hysteresis state: Positive electrode"]
+        del ic["Initial hysteresis state: Negative electrode"]
+        with warnings.catch_warnings(record=True) as records:
+            warnings.simplefilter("always")
+            pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        assert not any("hysteresis" in str(r.message) for r in records)
+
+    def test_bpx_state_omitted_heat_transfer_coefficient_defaults_to_zero(self):
+        bpx_obj = copy.deepcopy(self.base)
+        del bpx_obj["State"]["Thermal environment"][
+            "Heat transfer coefficient [W.m-2.K-1]"
+        ]
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        assert param["Total heat transfer coefficient [W.m-2.K-1]"] == 0
+
+    # Optional thermal material properties (bpx>=1.1.1). BPX makes the cell
+    # density and specific heat capacity optional; many vendor files ship none.
+    # When they are absent PyBaMM must omit them rather than inject ``None``,
+    # so the isothermal path keeps working and the thermal path fails with the
+    # usual, named "parameter not found" error instead of a cryptic type error.
+    def _thermal_less_bpx_obj(self):
+        bpx_obj = copy.deepcopy(self.base)
+        del bpx_obj["Parameterisation"]["Cell"]["Specific heat capacity [J.K-1.kg-1]"]
+        del bpx_obj["Parameterisation"]["Cell"]["Density [kg.m-3]"]
+        return bpx_obj
+
+    def test_bpx_absent_thermal_properties_are_omitted_not_none(self):
+        param = pybamm.ParameterValues.create_from_bpx_obj(self._thermal_less_bpx_obj())
+        # No absent optional property may leak into ParameterValues as ``None``.
+        none_keys = [k for k, v in param.items() if v is None]
+        assert none_keys == [], f"BPX emitted None-valued parameters: {none_keys}"
+        # The specific thermal keys are absent entirely (not present-but-None).
+        for key in (
+            "Density [kg.m-3]",
+            "Specific heat capacity [J.K-1.kg-1]",
+            "Negative electrode density [kg.m-3]",
+            "Positive electrode specific heat capacity [J.kg-1.K-1]",
+            "Separator density [kg.m-3]",
+            "Negative current collector specific heat capacity [J.kg-1.K-1]",
+        ):
+            assert key not in param
+
+    def test_bpx_isothermal_model_builds_without_thermal_data(self):
+        param = pybamm.ParameterValues.create_from_bpx_obj(self._thermal_less_bpx_obj())
+        model = pybamm.lithium_ion.SPMe()  # isothermal: never reads thermal props
+        pybamm.Simulation(model, parameter_values=param).build()
+
+    def test_bpx_thermal_model_without_thermal_data_raises_named_error(self):
+        param = pybamm.ParameterValues.create_from_bpx_obj(self._thermal_less_bpx_obj())
+        model = pybamm.lithium_ion.SPMe({"thermal": "lumped"})
+        with pytest.raises(KeyError, match="not found") as excinfo:
+            pybamm.Simulation(model, parameter_values=param).build()
+        # the error names a specific missing thermal parameter, not a cryptic type error
+        assert "density [kg.m-3]" in str(excinfo.value).lower()

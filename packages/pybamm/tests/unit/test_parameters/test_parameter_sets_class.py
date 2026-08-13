@@ -20,9 +20,9 @@ class TestParameterSets:
     def test_all_registered(self):
         """Check that all parameter sets have been registered with the
         ``pybamm_parameter_sets`` entry point"""
-        known_entry_points = set(
+        known_entry_points = {
             ep.name for ep in pybamm.parameter_sets.get_entries("pybamm_parameter_sets")
-        )
+        }
         assert set(pybamm.parameter_sets.keys()) == known_entry_points
         assert len(known_entry_points) == len(pybamm.parameter_sets)
 
@@ -41,9 +41,9 @@ class TestModelEntryPoints:
     def test_all_registered(self):
         """Check that all models have been registered with the
         ``pybamm_models`` entry point"""
-        known_entry_points = set(
+        known_entry_points = {
             ep.name for ep in pybamm.dispatch.models.get_entries("pybamm_models")
-        )
+        }
         assert set(pybamm.dispatch.models.keys()) == known_entry_points
         assert len(known_entry_points) == len(pybamm.dispatch.models)
 

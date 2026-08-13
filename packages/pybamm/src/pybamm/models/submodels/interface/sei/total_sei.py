@@ -32,10 +32,14 @@ class TotalSEI(pybamm.BaseSubModel):
         # For each of the variables, the variable name without the phase name
         # is constructed by summing all of the variable names with the phases
         for variable_template in [
-            f"{Domain} electrode {{}}{self.reaction} volumetric "
-            "interfacial current density [A.m-3]",
-            f"X-averaged {domain} electrode {{}}{self.reaction} volumetric "
-            "interfacial current density [A.m-3]",
+            (
+                f"{Domain} electrode {{}}{self.reaction} volumetric "
+                "interfacial current density [A.m-3]"
+            ),
+            (
+                f"X-averaged {domain} electrode {{}}{self.reaction} volumetric "
+                "interfacial current density [A.m-3]"
+            ),
             f"Loss of lithium to {domain} {{}}{self.reaction} [mol]",
             f"Loss of capacity to {domain} {{}}{self.reaction} [A.h]",
         ]:

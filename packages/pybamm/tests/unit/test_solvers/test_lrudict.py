@@ -12,7 +12,7 @@ class TestLRUDict:
     def test_lrudict_defaultbehaviour(self):
         """Default behaviour [no LRU] mimics Dict"""
         d = LRUDict()
-        dd = dict()
+        dd = {}
         for count in range(1, 100):
             d[count] = f"v{count}"
             dd[count] = f"v{count}"

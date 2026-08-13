@@ -80,7 +80,7 @@ class Latexify:
                 continue
 
         # Take range maximum from the last domain
-        for _, rng in self.model.default_geometry[var.domain[-1]].items():
+        for rng in self.model.default_geometry[var.domain[-1]].values():
             if "max" in rng:
                 rng_max = get_rng_min_max_name(rng, "max")
             else:
@@ -220,7 +220,7 @@ class Latexify:
                     rhs = sympy.nsimplify(eqn.to_equation())
 
                 # Initial conditions equations
-                if not eqn_type == "algebraic":
+                if eqn_type != "algebraic":
                     init = self.model.initial_conditions.get(var, None)
                     init_eqn = sympy.Eq(var_symbol, init.to_equation(), evaluate=False)
                     init_eqn = sympy.Symbol(
@@ -242,7 +242,7 @@ class Latexify:
                 eqn_list.append(lhs_rhs)
 
                 # Add initial conditions to the list
-                if not eqn_type == "algebraic":
+                if eqn_type != "algebraic":
                     eqn_list.extend([init_eqn])
 
                 # Add boundary condition equations to the list

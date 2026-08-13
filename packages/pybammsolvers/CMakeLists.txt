@@ -24,11 +24,13 @@ endif()
 
 project(idaklu)
 
-# Default to .idaklu (install_KLU_Sundials.py output).
-if(NOT WIN32 AND NOT DEFINED SuiteSparse_ROOT)
+# Default to .idaklu (install_KLU_Sundials.py output). Skipped under conda
+# (which sets CONDA_BUILD=1), where SUNDIALS/SuiteSparse come from the host
+# environment and are found on CMAKE_PREFIX_PATH.
+if(NOT WIN32 AND NOT DEFINED ENV{CONDA_BUILD} AND NOT DEFINED SuiteSparse_ROOT)
     set(SuiteSparse_ROOT "${CMAKE_SOURCE_DIR}/.idaklu")
 endif()
-if(NOT WIN32 AND NOT DEFINED SUNDIALS_ROOT)
+if(NOT WIN32 AND NOT DEFINED ENV{CONDA_BUILD} AND NOT DEFINED SUNDIALS_ROOT)
     set(SUNDIALS_ROOT "${CMAKE_SOURCE_DIR}/.idaklu")
 endif()
 
@@ -37,7 +39,9 @@ endif()
 # and skipped once the libraries already exist — under editable.rebuild CMake
 # reconfigures on every import, and re-requiring the submodules (or re-running the
 # bootstrap) for an already-built tree would needlessly fail or repeat work.
-if(NOT WIN32 AND NOT DEFINED VCPKG_ROOT_DIR)
+# Also skipped under conda (CONDA_BUILD=1), which supplies both libraries as
+# host dependencies and ships no submodules in the sdist.
+if(NOT WIN32 AND NOT DEFINED VCPKG_ROOT_DIR AND NOT DEFINED ENV{CONDA_BUILD})
     file(GLOB _sundials_prebuilt
         "${SUNDIALS_ROOT}/lib/libsundials_idas.*"
         "${SUNDIALS_ROOT}/lib64/libsundials_idas.*")
@@ -76,8 +80,8 @@ if (NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=vla")
 endif ()
 
-# casadi seems to compile without the newer versions of std::string
-add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
+# The libstdc++ std::string ABI (_GLIBCXX_USE_CXX11_ABI) is reconciled against
+# the actual libcasadi build further down, once CasADi has been located.
 
 find_package(pybind11 CONFIG REQUIRED)
 
@@ -126,7 +130,9 @@ pybind11_add_module(idaklu
 
 if (NOT DEFINED USE_PYTHON_CASADI)
     # Windows uses vcpkg for CasADi (no pip wheel exists); Linux/macOS use pip.
-    if (WIN32)
+    # Under conda (CONDA_BUILD=1) CasADi is a host dependency on every platform,
+    # so use that build rather than one from a pip site-packages tree.
+    if (WIN32 OR DEFINED ENV{CONDA_BUILD})
         set(USE_PYTHON_CASADI FALSE)
     else()
         set(USE_PYTHON_CASADI TRUE)
@@ -224,6 +230,49 @@ else ()
     endif()
 endif ()
 
+# Match idaklu's libstdc++ std::string ABI to the linked libcasadi (GNU only;
+# no-op for MSVC and macOS/libc++). CasADi's PyPI casadi-config.cmake forces
+# `_GLIBCXX_USE_CXX11_ABI=0` on consumers: correct for the x86_64 wheel (legacy
+# ABI) but wrong for the aarch64 wheel (C++11 ABI), leaving casadi's std::string
+# symbols unresolved. Detect libcasadi's real ABI and override CasADi's guess.
+# Only relevant for the PyPI wheel: a system CasADi (conda-forge, distro, vcpkg)
+# is built against the same libstdc++ as this extension, and the probe below has
+# no CASADI_LIB_DIR to look in, so it would wrongly force the legacy ABI.
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND USE_PYTHON_CASADI)
+    # Drop CasADi's hard-coded (and, on aarch64, wrong) ABI interface definition.
+    if (TARGET casadi::casadi)
+        get_target_property(_casadi_defs casadi::casadi INTERFACE_COMPILE_DEFINITIONS)
+        if (_casadi_defs)
+            list(REMOVE_ITEM _casadi_defs
+                "_GLIBCXX_USE_CXX11_ABI=0" "_GLIBCXX_USE_CXX11_ABI=1")
+            set_target_properties(casadi::casadi PROPERTIES
+                INTERFACE_COMPILE_DEFINITIONS "${_casadi_defs}")
+        endif ()
+    endif ()
+
+    # Key off casadi::Function::deserialize(const std::string&): the C++11-ABI
+    # build exports the __cxx11 mangling, the legacy build the `Ss` mangling.
+    # Default to the legacy ABI if the probe cannot run (never worse than before).
+    set(_casadi_cxx11_abi 0)
+    set(_nm "${CMAKE_NM}")
+    if (NOT _nm)
+        find_program(_nm NAMES nm gcc-nm)
+    endif ()
+    file(GLOB _libcasadi "${CASADI_LIB_DIR}/libcasadi.so*")
+    if (_libcasadi AND _nm)
+        list(GET _libcasadi 0 _libcasadi0)
+        execute_process(
+            COMMAND "${_nm}" -D --defined-only "${_libcasadi0}"
+            OUTPUT_VARIABLE _casadi_syms
+            ERROR_QUIET)
+        if (_casadi_syms MATCHES "Function11deserializeERKNSt7__cxx11")
+            set(_casadi_cxx11_abi 1)
+        endif ()
+    endif ()
+    message(STATUS "idaklu: _GLIBCXX_USE_CXX11_ABI=${_casadi_cxx11_abi} (matched to libcasadi)")
+    target_compile_definitions(idaklu PRIVATE _GLIBCXX_USE_CXX11_ABI=${_casadi_cxx11_abi})
+endif ()
+
 # Math flags for the IDAKLU target.
 # -fno-math-errno: allows inlining fabs/fmax/sqrt without errno-setting overhead.
 # -fno-trapping-math: allows reordering around potential FP exceptions.
@@ -262,15 +311,17 @@ target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
 
 # link suitesparse
-# if using vcpkg, use config mode to
-# find suitesparse. Otherwise, use FindSuiteSparse module
+# With vcpkg, SuiteSparse is split into per-component ports with no combined
+# config; find KLU directly (its target pulls in AMD/COLAMD/BTF/config).
+# Otherwise, use the FindSuiteSparse module.
 if (DEFINED VCPKG_ROOT_DIR)
-    find_package(SuiteSparse CONFIG REQUIRED)
+    find_package(KLU CONFIG REQUIRED)
+    target_link_libraries(idaklu PRIVATE SuiteSparse::KLU)
 else ()
     find_package(SuiteSparse REQUIRED)
     message("SuiteSparse found in ${SuiteSparse_INCLUDE_DIRS}: ${SuiteSparse_LIBRARIES}")
+    target_include_directories(idaklu PRIVATE ${SuiteSparse_INCLUDE_DIRS})
+    target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
 endif ()
-include_directories(${SuiteSparse_INCLUDE_DIRS})
-target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
 
 install(TARGETS idaklu LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})

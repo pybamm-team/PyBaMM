@@ -66,7 +66,7 @@ class BaseSubModel(pybamm.BaseModel):
         self.name = name
         self.external = external
 
-        if options is None or type(options) == dict:  # noqa: E721
+        if options is None or type(options) == dict:
             options = pybamm.BatteryModelOptions(options)
 
         self.options = options
@@ -191,7 +191,6 @@ class BaseSubModel(pybamm.BaseModel):
         variables: dict
             The variables in the whole model.
         """
-        pass
 
     def set_algebraic(self, variables):
         """
@@ -205,7 +204,6 @@ class BaseSubModel(pybamm.BaseModel):
         variables: dict
             The variables in the whole model.
         """
-        pass
 
     def set_boundary_conditions(self, variables):
         """
@@ -219,7 +217,6 @@ class BaseSubModel(pybamm.BaseModel):
         variables: dict
             The variables in the whole model.
         """
-        pass
 
     def set_initial_conditions(self, variables):
         """
@@ -234,7 +231,6 @@ class BaseSubModel(pybamm.BaseModel):
         variables: dict
             The variables in the whole model.
         """
-        pass
 
     def add_events_from(self, variables):
         """
@@ -248,4 +244,3 @@ class BaseSubModel(pybamm.BaseModel):
         variables: dict
             The variables in the whole model.
         """
-        pass
