@@ -56,6 +56,7 @@ extensions = [
     # Local and custom extensions
     "extend_parent",
     "inheritance_diagram",
+    "generate_symbol_reference",
     # Third-party extensions
     "sphinx_design",
     "sphinx_copybutton",
