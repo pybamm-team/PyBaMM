@@ -354,7 +354,7 @@ class SpatialMethod:
             ``{child: {side: (value, type)}}`` to replace the default
             1D-stack pairwise routine, or ``None`` to use it.
         """
-        return None
+        return
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
