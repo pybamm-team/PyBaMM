@@ -91,6 +91,18 @@ class TestDiscretise:
         with pytest.raises(pybamm.DiscretisationError, match="'left' and 'right'"):
             disc.set_internal_boundary_conditions(model)
 
+    def test_custom_side_containing_tab_substring(self):
+        # arbitrary mesh region tags containing "tab" (e.g. "tab_weld") must
+        # not be routed into the legacy tab-condition check, which raises
+        # ModelError outside the current-collector domain
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": SpatialMethodForTesting()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        disc.set_variable_slices([var])
+        disc.bcs = {var: {"tab_region": (pybamm.Scalar(0), "Neumann")}}
+        disc.process_symbol(var)
+
     def test_add_internal_boundary_conditions_symbolic(self):
         submesh_types = {
             "left domain": pybamm.SymbolicUniform1DSubMesh,

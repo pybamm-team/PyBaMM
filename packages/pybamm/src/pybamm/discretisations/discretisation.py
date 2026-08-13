@@ -15,6 +15,11 @@ def has_bc_of_form(symbol, side, bcs, form):
     return (symbol in bcs) and (bcs[symbol][side][1] == form)
 
 
+# legacy current-collector tab BC side names, converted to left/right for
+# 1D meshes by Discretisation.check_tab_conditions
+LEGACY_TAB_SIDES = frozenset({"negative tab", "positive tab", "no tab"})
+
+
 class Discretisation:
     """The discretisation class, with methods to process a model and replace
     Spatial Operators with Matrices and Variables with StateVectors
@@ -616,8 +621,7 @@ class Discretisation:
                     )
 
             # Handle legacy tab boundary conditions ("negative tab", etc.)
-            legacy_tab_sides = {"negative tab", "positive tab", "no tab"}
-            if legacy_tab_sides & set(bcs.keys()):
+            if LEGACY_TAB_SIDES & set(bcs.keys()):
                 bcs = self.check_tab_conditions(key, bcs)
 
             # Process boundary conditions
@@ -979,7 +983,7 @@ class Discretisation:
             # If boundary conditions are provided, need to check for BCs on tabs
             if self.bcs:
                 key_id = next(iter(self.bcs.keys()))
-                if any("tab" in side for side in list(self.bcs[key_id].keys())):
+                if LEGACY_TAB_SIDES & set(self.bcs[key_id].keys()):
                     self.bcs[key_id] = self.check_tab_conditions(
                         symbol, self.bcs[key_id]
                     )
