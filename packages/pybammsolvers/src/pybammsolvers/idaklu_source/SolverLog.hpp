@@ -93,10 +93,11 @@ public:
   /**
    * @brief Emit and discard the buffered messages
    *
-   * MUST be called with the GIL held. Never throws: a logger that raises is
-   * reported through sys.unraisablehook rather than failing the solve.
+   * MUST be called with the GIL held. A logger that raises is reported through
+   * sys.unraisablehook rather than failing the solve; KeyboardInterrupt is the
+   * exception, and propagates.
    */
-  void flush() noexcept {
+  void flush() {
     for (const auto& msg : buffer_) {
       emit(msg);
     }
@@ -108,13 +109,15 @@ public:
    * @brief Run a Python-calling action, swallowing any exception it raises
    *
    * MUST be called with the GIL held. Shared by every diagnostic sink so that
-   * failing output can never turn into a failed solve.
+   * failing output can never turn into a failed solve. KeyboardInterrupt is
+   * control flow, not a diagnostics failure, so it propagates.
    */
   template <class Action>
-  static void guarded(Action&& action, const char* context) noexcept {
+  static void guarded(Action&& action, const char* context) {
     try {
       action();
     } catch (py::error_already_set& e) {
+      if (e.matches(PyExc_KeyboardInterrupt)) throw;
       e.discard_as_unraisable(context);
     } catch (...) {
       // A diagnostics failure must never propagate into the solve
@@ -133,7 +136,7 @@ private:
   /**
    * @brief Pass one message to the Python logger (GIL held)
    */
-  void emit(const std::string& msg) noexcept {
+  void emit(const std::string& msg) {
     guarded([&] { logger_(py::str(msg)); }, "pybammsolvers SolverLog::emit");
   }
 

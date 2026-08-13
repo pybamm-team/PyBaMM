@@ -1,5 +1,6 @@
 #include "IDAKLUSolverGroup.hpp"
 #include <omp.h>
+#include <exception>
 #include <optional>
 
 std::vector<Solution> IDAKLUSolverGroup::solve(
@@ -105,6 +106,8 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
   std::vector<SolutionData> results(number_of_groups);
 
   std::optional<std::string> exception_message;
+  // Python exceptions carry their own type, which the string path below loses
+  std::exception_ptr python_exception;
 
   // Also records this thread as the GIL holder, so each solver knows whether it
   // may log directly or must buffer until flush_logs().
@@ -121,6 +124,11 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
         const sunrealtype *input = inputs_data + index * inputs.shape(1);
         results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
       }
+    } catch (py::error_already_set &) {
+      #pragma omp critical
+      {
+        python_exception = std::current_exception();
+      }
     } catch (std::exception &e) {
       // If an exception is thrown, we need to catch it and rethrow it outside the parallel region
       #pragma omp critical
@@ -132,6 +140,10 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
 
   // Drain before the rethrow below, so a solve that throws still emits its log
   flush_logs();
+
+  if (python_exception) {
+    std::rethrow_exception(python_exception);
+  }
 
   if (exception_message.has_value()) {
     py::set_error(PyExc_ValueError, exception_message->c_str());
