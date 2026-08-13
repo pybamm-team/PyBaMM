@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.8.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.8.0.0) - 2026-08-13
+
 ## Features
 
 - Added unstructured mesh support (`UnstructuredSubMesh`, generators, and interface coupling) for arbitrary 2D/3D domains. Hexahedra must have planar faces (warped hexes raise a `GeometryError`), and `UserSuppliedUnstructuredMesh` accepts tetrahedral, triangular, and quadrilateral cells only. ([#5687](https://github.com/pybamm-team/PyBaMM/pull/5687))
