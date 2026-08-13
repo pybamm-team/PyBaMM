@@ -1,8 +1,15 @@
+"""
+Benchmarks for model and simulation setup.
+
+The sweep over parameter sets is large, so every test here is also marked
+`slow_bench` and is skipped in CI. See tests/benchmarks/README.md.
+"""
+
 import pytest
 
 import pybamm
 
-pytestmark = pytest.mark.time_bench
+pytestmark = [pytest.mark.time_bench, pytest.mark.slow_bench]
 
 _PARAMS = [
     "Marquis2019",
