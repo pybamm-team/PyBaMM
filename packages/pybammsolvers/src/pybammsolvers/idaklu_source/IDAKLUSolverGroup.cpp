@@ -106,15 +106,9 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
 
   std::optional<std::string> exception_message;
 
-  // Install the logger serially: copying a py::object touches Python reference
-  // counts, which is unsafe on the GIL-free worker threads below.
-  for (const auto& solver : m_solvers) {
-    solver->set_logger(logger);
-  }
-
-  // A one-solver team is just this thread, which holds the GIL, so live output
-  // is safe; genuinely concurrent solves stay buffered until flush_logs().
-  set_streaming(m_solvers.size() == 1);
+  // Also records this thread as the GIL holder, so each solver knows whether it
+  // may log directly or must buffer until flush_logs().
+  set_loggers(logger);
 
   omp_set_num_threads(m_solvers.size());
   #pragma omp parallel for
@@ -144,10 +138,7 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     throw py::error_already_set();
   }
 
-  // The remainder loop runs on this thread, and carries every solve when there
-  // are fewer input sets than solvers (solves_per_thread is then zero).
-  set_streaming(true);
-
+  // Runs on this thread, so these solves log directly rather than buffering
   for (int i = 0; i < remainder_solves; i++) {
     const std::size_t index = number_of_groups - remainder_solves + i;
     const sunrealtype *y = y0 + index * y0_np.shape(1);
@@ -172,8 +163,8 @@ void IDAKLUSolverGroup::flush_logs() {
   }
 }
 
-void IDAKLUSolverGroup::set_streaming(bool streaming) {
+void IDAKLUSolverGroup::set_loggers(py::object logger) {
   for (const auto& solver : m_solvers) {
-    solver->set_streaming(streaming);
+    solver->set_logger(logger);
   }
 }

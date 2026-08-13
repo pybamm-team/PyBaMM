@@ -650,7 +650,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
 
   if (solver_opts.print_stats) {
     SaveStats();
-    CaptureStats(accumulated_stats);
+    CaptureStats();
   }
 
   // Finalize output arrays
@@ -752,10 +752,9 @@ void IDAKLUSolverOpenMP<ExprSet>::ReorderSensitivities(
 
   // Release the append-layout source buffers now that the transposed data
   // lives in yS_out/ypS_out; avoids holding two full-size copies per solver.
+  // Swap rather than assign an empty list, which would keep the capacity.
   std::vector<sunrealtype>().swap(yS);
-  if (save_hermite) {
-    std::vector<sunrealtype>().swap(ypS);
-  }
+  std::vector<sunrealtype>().swap(ypS);
 }
 
 template <class ExprSet>
@@ -1093,10 +1092,9 @@ void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int const & flag, const char* cont
 }
 
 template <class ExprSet>
-IDAKLUStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
-  IDAKLUStats stats;
-  int klast, kcur;
-  sunrealtype hinused, hlast, hcur, tcur;
+PendingStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
+  PendingStats out;
+  IDAKLUStats& stats = out.stats;
 
   CheckErrors(IDAGetIntegratorStats(
     ida_mem,
@@ -1104,12 +1102,12 @@ IDAKLUStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
     &stats.nrevals,
     &stats.nlinsetups,
     &stats.netfails,
-    &klast,
-    &kcur,
-    &hinused,
-    &hlast,
-    &hcur,
-    &tcur
+    &out.klast,
+    &out.kcur,
+    &out.hinused,
+    &out.hlast,
+    &out.hcur,
+    &out.tcur
   ), "IDAGetIntegratorStats");
 
   CheckErrors(IDAGetNonlinSolvStats(ida_mem, &stats.nniters, &stats.nncfails), "IDAGetNonlinSolvStats");
@@ -1121,22 +1119,13 @@ IDAKLUStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
     CheckErrors(IDABBDPrecGetNumGfnEvals(ida_mem, &stats.ngevalsBBDP), "IDABBDPrecGetNumGfnEvals");
   }
 
-  return stats;
+  return out;
 }
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SaveStats() {
-  accumulated_stats += GetStats();
-}
-
-template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::set_logger(py::object logger) {
-  log_.set_logger(std::move(logger));
-}
-
-template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::set_streaming(bool streaming) {
-  log_.set_streaming(streaming);
+  latest_stats_ = GetStats();
+  accumulated_stats += latest_stats_.stats;
 }
 
 template <class ExprSet>
@@ -1149,42 +1138,28 @@ void IDAKLUSolverOpenMP<ExprSet>::flush_log() {
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::CaptureStats(const IDAKLUStats& stats) {
-  PendingStats pending;
-  pending.stats = stats;
+void IDAKLUSolverOpenMP<ExprSet>::CaptureStats() {
+  // The point-in-time half comes from the SaveStats() that just ran; only the
+  // counters accumulate across reinitializations
+  PendingStats pending = latest_stats_;
+  pending.stats = accumulated_stats;
 
-  // Point-in-time values from IDA (these are not accumulated)
-  long nsteps_unused, nrevals_unused, nlinsetups_unused, netfails_unused;
-
-  CheckErrors(IDAGetIntegratorStats(
-    ida_mem,
-    &nsteps_unused,
-    &nrevals_unused,
-    &nlinsetups_unused,
-    &netfails_unused,
-    &pending.klast,
-    &pending.kcur,
-    &pending.hinused,
-    &pending.hlast,
-    &pending.hcur,
-    &pending.tcur
-  ), "IDAGetIntegratorStats");
-
-  if (!log_.streaming()) {
-    pending_stats_.push_back(pending);
-    return;
-  }
-
-  // Printing here happens mid-solve, so a failing stdout must not fail the solve
-  try {
+  if (log_.on_gil_thread()) {
     PrintStats(pending);
-  } catch (py::error_already_set& e) {
-    e.discard_as_unraisable("pybammsolvers IDAKLUSolverOpenMP::CaptureStats");
+  } else {
+    pending_stats_.push_back(pending);
   }
 }
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::PrintStats(const PendingStats& pending) {
+  // Printing can happen mid-solve, so a failing stdout must not fail the solve
+  SolverLog::guarded([&] { WriteStats(pending); },
+                     "pybammsolvers IDAKLUSolverOpenMP::PrintStats");
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::WriteStats(const PendingStats& pending) {
   const IDAKLUStats& stats = pending.stats;
 
   py::print("Solver Stats:");

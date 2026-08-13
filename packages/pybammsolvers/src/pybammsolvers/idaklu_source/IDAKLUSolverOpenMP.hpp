@@ -22,10 +22,10 @@ using std::vector;
 #include <sunmatrix/sunmatrix_band.h>
 
 /**
- * @brief One solve's statistics, captured during solve and printed at flush
+ * @brief A statistics snapshot, taken during solve and printed at flush
  *
- * Holds the accumulated counters alongside the point-in-time integrator values,
- * which cannot be re-read once the solve has finished.
+ * Holds the counters alongside the point-in-time integrator values, which
+ * cannot be re-read once the solve has finished.
  */
 struct PendingStats {
   IDAKLUStats stats;
@@ -110,17 +110,17 @@ public:
   //   yp[i][j]       -> yp[i * stride_yp + j]    where stride_yp = number_of_states
   //   yS[i][p][j]    -> yS[(i * n_params + p) * stride_y + j]
   //   ypS[i][p][j]   -> ypS[(i * n_params + p) * stride_yp + j]
-  // Exception: in save_outputs_only mode yS is written straight in the numpy
-  // layout instead, as yS[(i * stride_y + j) * n_params + p].
   vector<sunrealtype> t;   // [n_timesteps]
   vector<sunrealtype> y;   // [n_timesteps * length_of_return_vector]  (flat)
   vector<sunrealtype> yp;  // [n_timesteps * number_of_states]         (flat)
+  // In save_outputs_only mode yS instead uses the final numpy layout,
+  // yS[(i * stride_y + j) * n_params + p], so no transpose is needed at the end
   vector<sunrealtype> yS;  // [n_timesteps * n_params * length_of_return_vector] (flat)
   vector<sunrealtype> ypS; // [n_timesteps * n_params * number_of_states]        (flat)
   SetupOptions const setup_opts;
   SolverOptions const solver_opts;
   IDAKLUStats accumulated_stats;  // Accumulated stats across reinitializations
-  SolverLog log_;
+  PendingStats latest_stats_;  // Most recent GetStats(), for its point-in-time half
   // One entry per solve; drained by flush_log() where the GIL is held
   std::vector<PendingStats> pending_stats_;
   std::unique_ptr<HermiteKnotReducer> knot_reducer;  // Hermite knot reduction (nullptr if inactive)
@@ -266,17 +266,22 @@ public:
   /**
    * @brief Print the solver statistics, or buffer them until flush time
    */
-  void CaptureStats(IDAKLUStats const& stats);
+  void CaptureStats();
 
   /**
-   * @brief Print one buffered solver statistics block (GIL held)
+   * @brief Print one solver statistics block (GIL held), never throwing
    */
   void PrintStats(PendingStats const& pending);
 
   /**
+   * @brief Write one statistics block to stdout; call through PrintStats
+   */
+  void WriteStats(PendingStats const& pending);
+
+  /**
    * @brief Get current statistics from IDA solver
    */
-  IDAKLUStats GetStats();
+  PendingStats GetStats();
 
   /**
    * @brief Save current stats to accumulated_stats
@@ -408,22 +413,14 @@ public:
   SolutionData BuildSolutionData(int retval);
 
   /**
-   * @brief Reorder sensitivity arrays from solve layout to numpy layout
+   * Trims the arrays to the steps actually taken, and transposes them into the
+   * numpy layout unless save_outputs_only already wrote them that way.
+   * @brief Hand the sensitivity arrays over in numpy layout
    */
   void ReorderSensitivities(
     std::vector<sunrealtype> &yS_out,
     std::vector<sunrealtype> &ypS_out
   );
-
-  /**
-   * @brief Set the logger used for debug output (GIL held, serial section)
-   */
-  void set_logger(py::object logger) override;
-
-  /**
-   * @brief Emit diagnostics live instead of buffering (GIL-holding thread only)
-   */
-  void set_streaming(bool streaming) override;
 
   /**
    * @brief Emit buffered log and statistics output (GIL held, serial section)

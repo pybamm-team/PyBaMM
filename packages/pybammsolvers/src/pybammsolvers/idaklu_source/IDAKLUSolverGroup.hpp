@@ -47,9 +47,11 @@ public:
     void flush_logs();
 
     /**
-     * @brief Switch every solver between live and buffered diagnostics
+     * Copying a py::object touches Python reference counts, so this MUST run in
+     * a serial section, before any OpenMP region.
+     * @brief Give every solver the logger to write debug output through
      */
-    void set_streaming(bool streaming);
+    void set_loggers(py::object logger);
 
     std::vector<std::unique_ptr<IDAKLUSolver>> m_solvers;
     int number_of_states;
