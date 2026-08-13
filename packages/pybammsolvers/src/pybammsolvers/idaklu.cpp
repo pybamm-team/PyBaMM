@@ -258,11 +258,19 @@ PYBIND11_MODULE(idaklu, m)
   py::class_<StandaloneNewtonSolver>(m, "StandaloneNewtonSolver")
     .def(py::init<casadi::Function, casadi::Function,
                   std::vector<sunrealtype>, sunrealtype, sunrealtype,
-                  int, int, sunrealtype, bool>(),
+                  int, int, sunrealtype, bool, const std::string&>(),
          py::arg("residual"), py::arg("jacobian"),
          py::arg("atol"), py::arg("rtol"), py::arg("step_tol"),
          py::arg("max_iter"), py::arg("max_backtracks"),
-         py::arg("eps_newt"), py::arg("use_sparse"))
+         py::arg("eps_newt"), py::arg("use_sparse"),
+         py::arg("block_mode") = "coupled")
+    .def_property_readonly("block_mode", &StandaloneNewtonSolver::block_mode)
+    .def_property_readonly("num_blocks", &StandaloneNewtonSolver::num_blocks)
+    .def_property_readonly("num_levels", &StandaloneNewtonSolver::num_levels)
+    .def_property_readonly("num_iterations", &StandaloneNewtonSolver::num_iterations)
+    .def_property_readonly("final_res_norm", &StandaloneNewtonSolver::final_res_norm)
+    .def_property_readonly("residual_monotone",
+                           &StandaloneNewtonSolver::residual_monotone)
     .def("solve", &StandaloneNewtonSolver::solve,
          py::arg("t"), py::arg("y0"), py::arg("inputs"),
          py::return_value_policy::move)

@@ -90,8 +90,11 @@ active one has its delay term held at zero, which freezes those states.
      and are solved simultaneously with separate delay terms. It differs only where a
      component splits into several triangularly coupled SCCs, which `DECOUPLED` keeps
      fused into one block.
-   - `auto` — `STAGGERED` if more than one level, else `DECOUPLED` if more than one
-     component, else `COUPLED`.
+   - `auto` — `DECOUPLED` if there is more than one independent component, else
+     `COUPLED`. `STAGGERED` is never selected automatically; it is opt-in.
+     `COUPLED` is `DECOUPLED` with a single block, so `auto` only pays for the
+     structural analysis and then falls back to today's path when there is nothing
+     to exploit.
 5. Fall back to `COUPLED` when the structure is unusable: structurally singular
    (`sprank < n`), a single SCC, or an unsupported mode.
 
@@ -154,14 +157,28 @@ early exit becomes per-block.
 ### Convergence test
 
 Per-block WRMS keeps the global `n_vars_` denominator, so the `COUPLED` formula is
-unchanged. The per-block threshold is `epsNewt / sqrt(|active|)`, which gives
+unchanged. The per-block threshold is `epsNewt / sqrt(|blocks in the level|)`, fixed for
+the level, which gives
 
 ```
-sum over active blocks of delnorm_b^2  <=  epsNewt^2
+sum over the level's blocks of delnorm_b^2  <=  epsNewt^2
 ```
 
-This is exactly today's global test when there is one active block, and is never looser
-than it. A level is done when every one of its blocks passes.
+This is exactly today's global test when there is one block, and is never looser than it.
+
+**Blocks finish independently.** A block leaves the active set the moment it either takes
+an undamped step within `step_tol` or rolls back a step that stopped reducing its
+residual; the remaining blocks keep iterating. Treating either event as a whole-solve
+exit — the obvious reading of the current single-block code — is wrong once there are
+many blocks: with 20 blocks the chance that at least one has stalled on any given
+iteration is high, and the solve returns "converged" with the other 19 still far from
+their roots. That mistake showed up as 179/400 solved on the synthetic case below, and
+per-block completion fixed it to 400/400.
+
+`initial_res_norm()` and `final_res_norm()` are whole-system inf-norms taken over every
+solved state, not the masked residual of whichever level ran last, so the accept/reject
+gate in `NonlinearSolverInitialConditions` compares like with like. That costs one extra
+residual evaluation per solve.
 
 Failure behaviour is unchanged: a level that exhausts `max_iter` returns the same
 `NonlinearResult` the current solver returns, with no coupled retry.
@@ -177,14 +194,155 @@ before moving on".
 - **Bit-identical `COUPLED`.** A test asserts the full iterate trace under `COUPLED`
   matches the pre-change solver byte for byte, and that a one-block partition selects
   `COUPLED` automatically.
-- **Residual improvement assertion.** After each accepted linesearch, every active
-  block's residual inf-norm must be no larger than it was before the step. Checked in
-  debug builds and recorded through `SolverLog`.
-- **Synthetic structures.** A two-block independent system (per-block `alpha` diverge,
-  same or fewer iterations than coupled) and a two-level triangular system (staggered
-  reproduces the exact block Gauss-Seidel iterates).
-- **Real models.** DFN 2-phase and DFN+SEI: Newton iterations and IC failures no worse
-  than `COUPLED`, per-block residuals monotone.
+- **Residual improvement.** `residual_monotone()` reports whether every accepted
+  linesearch lowered each active block's residual inf-norm. Exposed on
+  `StandaloneNewtonSolver` and asserted over the sweeps below.
+- **Converged residual.** The whole-system residual inf-norm at the returned solution,
+  cross-checked in Python against `model.algebraic_eval`. This is the acceptance
+  metric, not iteration count.
+
+## Measured results
+
+All numbers from this worktree, Chen2020 unless stated, macOS arm64.
+
+### Converged residual is unchanged by the mode
+
+Composite ESOH, 567 solves per mode (9x9 grid of `(x_100, x_0)` guesses spanning
+0.001 to 0.999, crossed with seven `Q_Li` scalings from 0.15x to 1.15x nominal),
+`atol = 1e-6`, backtrack budget 100:
+
+| mode | resolved | blocks/levels | max ‖F‖ | p90 ‖F‖ | median ‖F‖ | above atol | failures | mean iters | wall |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| coupled | coupled | 1 / 1 | 8.9e-15 | 8.9e-15 | 8.9e-16 | 0 / 567 | 0 | 16.40 | 343 ms |
+| decoupled | coupled | 1 / 1 | 8.9e-15 | 8.9e-15 | 8.9e-16 | 0 / 567 | 0 | 16.40 | 343 ms |
+| staggered | staggered | 2 / 2 | 8.9e-15 | 8.9e-15 | 8.9e-16 | 0 / 567 | 0 | 24.28 | 412 ms |
+
+Every mode lands on the same machine-precision residual from every guess, and the bare
+C++ Newton never fails, so the composite solver's `AlgebraicSolver` fallbacks are never
+reached on this grid. Staggering buys nothing here and costs 48% more iterations.
+
+The solver-reported `final_res_norm()` agrees with the independent Python evaluation to
+the last digit (0.0 and 8.9e-16 respectively at the nominal point), which is what makes
+it usable as the acceptance metric.
+
+### Composite ESOH: setup, initial and warm solve
+
+`ElectrodeSOHSolver` full model, `_set_up_solve` initial conditions, `atol = 1e-6`.
+"Setup" is `NonlinearSolver.set_up`: CasADi function construction, the block analysis,
+and the C++ solver build. Warm is the best of 30 repeat solves.
+
+| parameter set | mode | resolved | blk/lvl | setup | initial | warm | iters | ‖F‖ |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Chen2020 | coupled | coupled | 1/1 | 9.99 ms | 9.27 ms | 176 us | 8 | 0.0 |
+| Chen2020 | auto | coupled | 1/1 | 6.08 ms | 8.94 ms | 175 us | 8 | 0.0 |
+| Chen2020 | decoupled | coupled | 1/1 | 5.77 ms | 9.07 ms | 171 us | 8 | 0.0 |
+| Chen2020 | staggered | staggered | 2/2 | 6.56 ms | 8.90 ms | 241 us | 14 | 0.0 |
+| Chen2020 cell-capacity | coupled | coupled | 1/1 | 5.37 ms | 8.83 ms | 294 us | 10 | 8.9e-16 |
+| Chen2020 cell-capacity | staggered | coupled | 1/1 | 5.38 ms | 9.08 ms | 313 us | 10 | 8.9e-16 |
+| OKane2022 | coupled | coupled | 1/1 | 6.13 ms | 8.49 ms | 184 us | 8 | 0.0 |
+| OKane2022 | staggered | staggered | 2/2 | 5.97 ms | 8.80 ms | 253 us | 14 | 0.0 |
+| Ecker2015 | coupled | coupled | 1/1 | 7.17 ms | 9.76 ms | 203 us | 9 | 0.0 |
+| Ecker2015 | staggered | staggered | 2/2 | 6.69 ms | 10.22 ms | 273 us | 14 | 0.0 |
+
+Setup cost is flat: the block analysis is inside the run-to-run noise of the CasADi work
+that dominates `set_up`. Initial solve is unchanged. Warm solve is unchanged for
+`coupled`/`auto`/`decoupled` and 35-40% slower for `staggered`, which is the cost of
+converging `x_0` alone before starting `x_100`.
+
+The full ESOH model is a 2x2 system whose blocks are 1x1: `x_100` reads `x_0`, so it is
+one component and two levels. `auto` therefore resolves it to `coupled`, and the
+cell-capacity variant is structurally irreducible and resolves to `coupled` under every
+mode.
+
+### IDAKLU algebraic IC
+
+`sim.solve([0, 600])`, residual of the algebraic system at the solver's own `t = 0`
+state:
+
+| model | blocks/levels under staggered | ‖F_alg(0)‖ coupled | decoupled | staggered |
+| --- | --- | --- | --- | --- |
+| DFN | 1 / 1 | 1.21e-11 | 1.21e-11 | 1.21e-11 |
+| DFN+SEI | 21 / 2 | 2.12e-11 | 2.12e-11 | 1.03e-11 |
+| DFN 2-phase negative | 2 / 1 | 4.30e-11 | 4.35e-11 | 4.35e-11 |
+
+Voltages agree to 1e-11 or better everywhere. Newton IC iteration counts: DFN 6/6/6,
+DFN+SEI 7/7/8, DFN+SEI+plating 9/9/11, DFN 2-phase 7/7/7. Wall time is within noise in
+every case. Staggering halves the DFN+SEI IC residual, at a cost of one extra iteration.
+
+### Experiment initialisation, CC-CV with rests
+
+Twenty steps (2 x discharge / rest / charge / CV hold / rest / 2C discharge / rest /
+C-2 charge / CV hold / rest), so twenty Newton IC solves. Totals over the whole run:
+
+| model | experiment mode | block mode | resolved | IC solves | Newton iters | IC failures | wall |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| DFN | unified | any | coupled 1/1 | 20 | 94 | 4 | 0.55 s |
+| DFN | legacy | any | coupled 1/1 | 20 | 98 | 0 | 0.95 s |
+| DFN+SEI | unified | any | coupled 1/1 | 20 | 101 | 4 | 0.64 s |
+| DFN+SEI | legacy | coupled / auto / decoupled | coupled 1/1 | 20 | 162 | 0 | 1.11 s |
+| DFN+SEI | legacy | staggered | **staggered 21/2** | 20 | **143** | 0 | 1.16 s |
+
+All modes reach the same end state (`t_end`, `V_end` and discharge capacity agree to
+1e-8). Two things come out of this:
+
+**Staggering wins on legacy DFN+SEI**: 143 Newton iterations against 162, a 12%
+reduction, the only real-model win measured. Wall time is 4% worse because the extra
+iterations at level 1 each pay for a full 140x140 KLU solve to move 20 scalars — the
+deferred 1x1 shortcut would turn this into a net win.
+
+**The unified experiment model has no block structure to exploit.** It introduces one
+extra algebraic state, `Current variable [A]`, carrying the step switch. Every potential
+equation reads it and its own equation reads every potential, so the 21 strongly
+connected components of legacy DFN+SEI collapse into a single irreducible block of 141:
+
+| model | experiment mode | n_alg | SCC blocks |
+| --- | --- | --- | --- |
+| DFN | legacy | 100 | 1 |
+| DFN | unified | 101 | 1 |
+| DFN+SEI | legacy | 140 | 21 (120 + 20 singletons) |
+| DFN+SEI | unified | 141 | **1** |
+
+That cycle is structural, not incidental: under `legacy` the applied current is a
+parameter, under `unified` it must be an unknown so the switch can select CC, CV or
+rest. Any structure-exploiting treatment of the algebraic block — this partition, and
+equally a block preconditioner — is inert under `unified` until the switch is
+reformulated. Worth recording separately from this change.
+
+Also visible: `unified` logs 4 Newton IC failures per run against 0 for `legacy`, on
+both models and in every block mode, while still producing the same answer. That is
+pre-existing, unrelated to this change, and not something the block modes can address
+given the partition is a single block.
+
+### Synthetic case where per-block damping does win
+
+Twenty independent copies of a two-variable pair: a mildly nonlinear `a`, and a stiff
+`exp(6b) - 1 - a` downstream of it. 400 random starts in `[-0.6, 0.6]^40`:
+
+| mode | resolved | blocks/levels | solved | mean iters | non-monotone |
+| --- | --- | --- | --- | --- | --- |
+| coupled | coupled | 1 / 1 | 400/400 | 9.31 | 0 |
+| decoupled | decoupled | 20 / 1 | 400/400 | 8.51 | 0 |
+| staggered | staggered | 40 / 2 | 400/400 | 13.51 | 0 |
+
+`DECOUPLED` is 9% cheaper than `COUPLED` when the components really do damp at different
+rates. This is the regime the feature targets.
+
+### Verdict
+
+The converged residual is identical across all three modes everywhere it was measured:
+8.9e-15 max over 567 hard ESOH solves, and 1e-11 or better on every IDAKLU IC. No mode
+converges to a worse answer, and no mode fails where another succeeds.
+
+`DECOUPLED` is safe and occasionally cheaper, and is what `auto` selects. `STAGGERED`
+costs 15-50% more iterations on isolated solves — converging a level alone throws away
+the joint quadratic convergence the coupled Newton gets for free — but wins 12% on a
+full legacy DFN+SEI experiment run. That split is the honest picture: it helps when the
+same partition is reused across many solves with a warm guess, and hurts when each solve
+starts cold.
+
+Keep the default at `coupled`. `auto` costs only the structural analysis, which is
+inside the noise of setup. `STAGGERED` stays opt-in until the 1x1 level shortcut lands
+and turns its iteration win into a wall-time win.
 
 ## Interface
 

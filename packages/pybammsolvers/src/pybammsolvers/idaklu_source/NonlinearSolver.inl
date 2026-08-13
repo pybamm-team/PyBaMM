@@ -11,7 +11,7 @@ inline NonlinearSolver::NonlinearSolver(
   int max_iter,
   int max_backtracks,
   sunrealtype epsNewt,
-  const std::vector<int>& diff_idx
+  BlockPartition partition
 ) : n_vars_(n_vars),
     rtol_(rtol),
     step_tol_(step_tol),
@@ -19,9 +19,13 @@ inline NonlinearSolver::NonlinearSolver(
     max_backtracks_(max_backtracks),
     epsNewt_(epsNewt),
     system_(system),
-    diff_idx_(diff_idx),
+    part_(std::move(partition)),
     last_num_iterations_(0)
 {
+  if (part_.blocks.empty()) part_ = BlockPartition::coupled_all(n_vars_);
+  if (part_.n_vars != n_vars_)
+    throw std::invalid_argument("BlockPartition size does not match n_vars");
+
   atol_.resize(n_vars_);
   std::memcpy(atol_.data(), atol_data, n_vars_ * sizeof(sunrealtype));
 
@@ -30,21 +34,27 @@ inline NonlinearSolver::NonlinearSolver(
   delta_.resize(n_vars_);
   x_save_.resize(n_vars_);
   ewt_.resize(n_vars_);
+
+  active_idx_.resize(n_vars_);
+  full_step_blk_.resize(part_.n_blocks());
+  alpha_.resize(part_.n_blocks());
+  res_norm_blk_.resize(part_.n_blocks());
+  prev_res_norm_blk_.resize(part_.n_blocks());
+  delnorm_blk_.resize(part_.n_blocks());
+  trial_res_blk_.resize(part_.n_blocks());
 }
 
 // ────────────────────── Helpers ──────────────────────
 
-inline void NonlinearSolver::ZeroDiffComponents(sunrealtype* v) const {
-  for (int i : diff_idx_) v[i] = SUN_RCONST(0.0);
+inline void NonlinearSolver::RefreshActiveMask() {
+  std::fill(active_idx_.begin(), active_idx_.end(), static_cast<char>(0));
+  for (int b : active_blocks_)
+    for (int i : part_.blocks[b]) active_idx_[i] = 1;
 }
 
-inline sunrealtype NonlinearSolver::WrmsNorm(const sunrealtype* vals) const {
-  sunrealtype sum = SUN_RCONST(0.0);
-  for (int i = 0; i < n_vars_; i++) {
-    sunrealtype w = vals[i] * ewt_[i];
-    sum += w * w;
-  }
-  return std::sqrt(sum / n_vars_);
+inline void NonlinearSolver::MaskInactive(sunrealtype* v) const {
+  for (int i = 0; i < n_vars_; i++)
+    if (!active_idx_[i]) v[i] = SUN_RCONST(0.0);
 }
 
 inline sunrealtype NonlinearSolver::InfNorm(const sunrealtype* vals) const {
@@ -54,6 +64,28 @@ inline sunrealtype NonlinearSolver::InfNorm(const sunrealtype* vals) const {
     if (a > mx) mx = a;
   }
   return mx;
+}
+
+inline sunrealtype NonlinearSolver::BlockInfNorm(
+  const sunrealtype* vals, int block) const {
+  sunrealtype mx = SUN_RCONST(0.0);
+  for (int i : part_.blocks[block]) {
+    sunrealtype a = std::abs(vals[i]);
+    if (a > mx) mx = a;
+  }
+  return mx;
+}
+
+// Normalised by n_vars_ so that the sum of squares over the active blocks is the
+// whole-vector WRMS norm, and a single block reproduces it exactly.
+inline sunrealtype NonlinearSolver::BlockWrmsNorm(
+  const sunrealtype* vals, int block) const {
+  sunrealtype sum = SUN_RCONST(0.0);
+  for (int i : part_.blocks[block]) {
+    sunrealtype w = vals[i] * ewt_[i];
+    sum += w * w;
+  }
+  return std::sqrt(sum / n_vars_);
 }
 
 inline void NonlinearSolver::ComputeEwt() {
@@ -66,9 +98,10 @@ inline void NonlinearSolver::SaveIterate() {
   std::memcpy(x_save_.data(), x_.data(), n_vars_ * sizeof(sunrealtype));
 }
 
-inline void NonlinearSolver::RevertAndApply(sunrealtype alpha) {
+inline void NonlinearSolver::ApplyBlockSteps() {
   for (int i = 0; i < n_vars_; i++) {
-    x_[i] = x_save_[i] - alpha * delta_[i];
+    int b = part_.block_of[i];
+    x_[i] = (b >= 0) ? x_save_[i] - alpha_[b] * delta_[i] : x_save_[i];
   }
 }
 
@@ -76,7 +109,7 @@ inline void NonlinearSolver::RevertAndApply(sunrealtype alpha) {
 
 inline sunrealtype NonlinearSolver::EvalResidualAndNorm(sunrealtype t) {
   system_.eval_residual(t, x_.data(), res_.data());
-  if (!diff_idx_.empty()) ZeroDiffComponents(res_.data());
+  MaskInactive(res_.data());
   return InfNorm(res_.data());
 }
 
@@ -91,89 +124,164 @@ inline int NonlinearSolver::SetupAndSolveLinearSystem(sunrealtype t) {
   }
   if (flag != 0) return (flag > 0) ? 1 : -1;
 
-  if (!diff_idx_.empty()) ZeroDiffComponents(delta_.data());
+  MaskInactive(delta_.data());
   return 0;
 }
 
-// ────────────────────── Newton loop ──────────────────────
+// ────────────────────── Newton loop over one level ──────────────────────
 
-inline NonlinearResult NonlinearSolver::RunNewtonLoop(sunrealtype t) {
+inline NonlinearResult NonlinearSolver::RunLevel(sunrealtype t, int level) {
+  active_blocks_ = part_.levels[level];
+  RefreshActiveMask();
+
+  // Threshold per block, fixed for the level, so that the sum of squares over
+  // its blocks never exceeds epsNewt^2 - the whole-vector test, unchanged.
+  const sunrealtype eps_blk =
+    epsNewt_ / std::sqrt(static_cast<sunrealtype>(active_blocks_.size()));
+
   sunrealtype delnorm = std::numeric_limits<sunrealtype>::infinity();
-  sunrealtype prev_res_norm = std::numeric_limits<sunrealtype>::infinity();
   bool converged = false;
+  NonlinearResult result = NonlinearResult::CONVERGED_WRMS_AND_STEPTOL;
+
+  for (int b : active_blocks_)
+    prev_res_norm_blk_[b] = std::numeric_limits<sunrealtype>::infinity();
 
   ComputeEwt();
 
   for (int iter = 0; iter < max_iter_; iter++) {
     sunrealtype res_norm = EvalResidualAndNorm(t);
-    if (iter == 0) initial_res_norm_ = res_norm;
-    final_res_norm_ = res_norm;
+    for (int b : active_blocks_)
+      res_norm_blk_[b] = BlockInfNorm(res_.data(), b);
     if (log_) log_->log_newton_iteration(iter, res_norm, delnorm);
 
     int lsflag = SetupAndSolveLinearSystem(t);
-    if (lsflag > 0) {
-      last_message_ = nonlinear_result_reason(NonlinearResult::LSETUP_FAIL);
-      last_num_iterations_ = iter + 1;
+    if (lsflag != 0) {
+      NonlinearResult fail = (lsflag > 0) ? NonlinearResult::LSETUP_FAIL
+                                          : NonlinearResult::LSOLVE_FAIL;
+      last_message_ = nonlinear_result_reason(fail);
+      last_num_iterations_ += iter + 1;
       if (log_) log_->log_newton_failed(iter + 1, res_norm, last_message_.c_str());
-      return NonlinearResult::LSETUP_FAIL;
-    }
-    if (lsflag < 0) {
-      last_message_ = nonlinear_result_reason(NonlinearResult::LSOLVE_FAIL);
-      last_num_iterations_ = iter + 1;
-      if (log_) log_->log_newton_failed(iter + 1, res_norm, last_message_.c_str());
-      return NonlinearResult::LSOLVE_FAIL;
+      return fail;
     }
 
-    delnorm = WrmsNorm(delta_.data());
+    sunrealtype delnorm_sq = SUN_RCONST(0.0);
+    for (int b : active_blocks_) {
+      delnorm_blk_[b] = BlockWrmsNorm(delta_.data(), b);
+      delnorm_sq += delnorm_blk_[b] * delnorm_blk_[b];
+    }
+    delnorm = std::sqrt(delnorm_sq);
 
-    if (delnorm <= epsNewt_) {
+    // Classify each block: finish on an undamped step, finish by rolling back a
+    // step that stopped reducing the residual, or keep searching.
+    next_active_.clear();
+    bool all_full_step = true;
+    for (int b : active_blocks_) {
+      full_step_blk_[b] = 0;
+      if (delnorm_blk_[b] > eps_blk) {
+        next_active_.push_back(b);
+        all_full_step = false;
+        continue;
+      }
       converged = true;
-      if (delnorm <= step_tol_) {
-        SaveIterate();
-        RevertAndApply(SUN_RCONST(1.0));
-        last_message_ = nonlinear_result_reason(NonlinearResult::CONVERGED_WRMS_AND_STEPTOL);
-        last_num_iterations_ = iter + 1;
-        if (log_) log_->log_newton_converged(iter + 1, last_message_.c_str());
-        return NonlinearResult::CONVERGED_WRMS_AND_STEPTOL;
+      if (delnorm_blk_[b] <= step_tol_) {
+        full_step_blk_[b] = 1;
+        next_active_.push_back(b);
+        continue;
       }
-      if (iter > 0 && res_norm >= prev_res_norm) {
-        RevertAndApply(SUN_RCONST(0.0));
-        last_message_ = nonlinear_result_reason(NonlinearResult::CONVERGED_WRMS_STEP_DIVERGED);
-        last_num_iterations_ = iter + 1;
-        if (log_) log_->log_newton_converged(iter + 1, last_message_.c_str());
-        return NonlinearResult::CONVERGED_WRMS_STEP_DIVERGED;
+      if (iter > 0 && res_norm_blk_[b] >= prev_res_norm_blk_[b]) {
+        for (int i : part_.blocks[b]) x_[i] = x_save_[i];  // back to the last iterate
+        result = NonlinearResult::CONVERGED_WRMS_STEP_DIVERGED;
+        continue;                                          // block is finished
       }
+      next_active_.push_back(b);
+      all_full_step = false;
     }
 
-    prev_res_norm = res_norm;
+    // Blocks that rolled back are dropped before the iterate is saved, so their
+    // final value is what the next levels and the caller see.
+    active_blocks_ = next_active_;
+    if (active_blocks_.empty()) {
+      last_num_iterations_ += iter + 1;
+      if (log_) log_->log_newton_converged(iter + 1,
+                                           nonlinear_result_reason(result));
+      return result;
+    }
+    RefreshActiveMask();
+
+    for (int b : active_blocks_) prev_res_norm_blk_[b] = res_norm_blk_[b];
     SaveIterate();
+    for (int b : active_blocks_) alpha_[b] = SUN_RCONST(1.0);
 
-    // Armijo-style linesearch: halve step until sufficient decrease.
-    // The 0.5 factor is the standard Armijo parameter (c1 = 0.5) used
-    // in SUNDIALS IDA's own Newton iteration (see ida_ic.c).
-    sunrealtype alpha = SUN_RCONST(1.0);
-    for (int ls = 0; ls < max_backtracks_; ls++) {
-      RevertAndApply(alpha);
-      sunrealtype trial_norm = EvalResidualAndNorm(t);
-      if (trial_norm <= (SUN_RCONST(1.0) - alpha * SUN_RCONST(0.5)) * res_norm)
-        break;
-      if (alpha * delnorm <= step_tol_)
-        break;
-      alpha *= SUN_RCONST(0.5);
+    if (all_full_step) {
+      ApplyBlockSteps();
+      last_message_ =
+        nonlinear_result_reason(NonlinearResult::CONVERGED_WRMS_AND_STEPTOL);
+      last_num_iterations_ += iter + 1;
+      if (log_) log_->log_newton_converged(iter + 1, last_message_.c_str());
+      return result;
     }
+
+    // Armijo-style linesearch: halve the step of each block that fails the
+    // sufficient-decrease test. The 0.5 factor is the standard Armijo parameter
+    // (c1 = 0.5) used in SUNDIALS IDA's own Newton iteration (see ida_ic.c).
+    // Blocks in a level are independent once lower levels are frozen, so one
+    // residual evaluation scores all of them.
+    for (int ls = 0; ls < max_backtracks_; ls++) {
+      ApplyBlockSteps();
+      EvalResidualAndNorm(t);
+      bool halved = false;
+      for (int b : active_blocks_) {
+        trial_res_blk_[b] = BlockInfNorm(res_.data(), b);
+        if (full_step_blk_[b]) continue;
+        if (trial_res_blk_[b] <=
+            (SUN_RCONST(1.0) - alpha_[b] * SUN_RCONST(0.5)) * res_norm_blk_[b])
+          continue;
+        if (alpha_[b] * delnorm_blk_[b] <= step_tol_)
+          continue;
+        alpha_[b] *= SUN_RCONST(0.5);
+        halved = true;
+      }
+      if (!halved) break;
+    }
+
+    next_active_.clear();
+    for (int b : active_blocks_) {
+      if (trial_res_blk_[b] > res_norm_blk_[b]) residual_monotone_ = false;
+      if (!full_step_blk_[b]) next_active_.push_back(b);
+    }
+    active_blocks_ = next_active_;
+    if (active_blocks_.empty()) {
+      last_num_iterations_ += iter + 1;
+      if (log_) log_->log_newton_converged(iter + 1,
+                                           nonlinear_result_reason(result));
+      return result;
+    }
+    RefreshActiveMask();
   }
 
+  last_num_iterations_ += max_iter_;
   if (converged) {
-    last_message_ = nonlinear_result_reason(NonlinearResult::CONVERGED_WRMS_AT_MAX_ITER);
-    last_num_iterations_ = max_iter_;
+    last_message_ =
+      nonlinear_result_reason(NonlinearResult::CONVERGED_WRMS_AT_MAX_ITER);
     if (log_) log_->log_newton_converged(max_iter_, last_message_.c_str());
     return NonlinearResult::CONVERGED_WRMS_AT_MAX_ITER;
   }
 
   last_message_ = nonlinear_result_reason(NonlinearResult::MAX_ITER_NO_CONVERGE);
-  last_num_iterations_ = max_iter_;
   if (log_) log_->log_newton_failed(max_iter_, InfNorm(res_.data()), last_message_.c_str());
   return NonlinearResult::MAX_ITER_NO_CONVERGE;
+}
+
+// ────────────────────── Whole-system residual ──────────────────────
+
+// Residual inf-norm over every solved state, ignoring the level masking. This is
+// the number the caller judges the solve by, so it must not depend on which
+// blocks happened to be active last.
+inline sunrealtype NonlinearSolver::WholeSystemResNorm(sunrealtype t) {
+  active_blocks_.clear();
+  for (int b = 0; b < part_.n_blocks(); b++) active_blocks_.push_back(b);
+  RefreshActiveMask();
+  return EvalResidualAndNorm(t);
 }
 
 // ────────────────────── solve_single ──────────────────────
@@ -183,9 +291,26 @@ inline NonlinearResult NonlinearSolver::solve_single(
 ) {
   std::memcpy(x_.data(), y, n_vars_ * sizeof(sunrealtype));
 
-  if (log_) log_->log_newton_start(t, n_vars_);
-  NonlinearResult result = RunNewtonLoop(t);
+  if (log_) log_->log_newton_start(t, n_vars_, block_mode_name(part_.mode),
+                                   part_.n_blocks(), part_.n_levels());
 
+  residual_monotone_ = true;
+  last_num_iterations_ = 0;
+  initial_res_norm_ = WholeSystemResNorm(t);
+  NonlinearResult result = NonlinearResult::CONVERGED_WRMS_AND_STEPTOL;
+
+  for (int level = 0; level < part_.n_levels(); level++) {
+    NonlinearResult level_result = RunLevel(t, level);
+    if (!nonlinear_success(level_result)) {
+      result = level_result;
+      break;
+    }
+    // Report the weakest convergence reason seen across levels.
+    if (static_cast<int>(level_result) > static_cast<int>(result))
+      result = level_result;
+  }
+
+  final_res_norm_ = WholeSystemResNorm(t);
   std::memcpy(y, x_.data(), n_vars_ * sizeof(sunrealtype));
 
   return result;

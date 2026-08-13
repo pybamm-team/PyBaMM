@@ -1,10 +1,12 @@
 #ifndef PYBAMM_STANDALONE_NEWTON_SOLVER_HPP
 #define PYBAMM_STANDALONE_NEWTON_SOLVER_HPP
 
+#include "BlockPartitionBuilder.hpp"
 #include "NonlinearSolver.hpp"
 #include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "common.hpp"
 #include <memory>
+#include <string>
 #include <utility>
 
 /**
@@ -24,6 +26,9 @@ public:
   ~StandaloneAlgebraicSystem();
 
   int n_vars() const { return n_vars_; }
+
+  const std::vector<sunindextype>& colptrs() const { return colptrs_; }
+  const std::vector<sunindextype>& rowvals() const { return rowvals_; }
 
   void set_inputs(const sunrealtype* inputs_data, int inputs_len) {
     inputs_.assign(inputs_data, inputs_data + inputs_len);
@@ -75,7 +80,18 @@ public:
     int max_iter,
     int max_backtracks,
     sunrealtype epsNewt,
-    bool use_sparse);
+    bool use_sparse,
+    const std::string& block_mode = "coupled");
+
+  /** @brief Resolved block mode, blocks and levels of the last-built partition. */
+  std::string block_mode() const {
+    return block_mode_name(solver_.partition().mode);
+  }
+  int num_blocks() const { return solver_.partition().n_blocks(); }
+  int num_levels() const { return solver_.partition().n_levels(); }
+  int num_iterations() const { return solver_.num_iterations(); }
+  sunrealtype final_res_norm() const { return solver_.final_res_norm(); }
+  bool residual_monotone() const { return solver_.residual_monotone(); }
 
   /**
    * @brief Solve F(t, y, inputs) = 0 starting from y0.

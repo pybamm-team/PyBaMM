@@ -217,6 +217,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 #         system of equationd and can handle non-standard form DAEs and
                 #         all classes of linear solvers/
                 "newton_mode": "auto",
+                # How the Newton linesearch damps structurally independent
+                # subsystems of the algebraic Jacobian.
+                # "coupled":   one damping factor for every state (no analysis).
+                # "decoupled": one per independent subsystem, all solved at once.
+                # "staggered": one per strongly connected component, solved in
+                #              dependency order.
+                # "auto":      "decoupled", or "coupled" if there is one subsystem.
+                "newton_block_mode": "coupled",
                 ## Early termination
                 # Maximum number of consecutive steps allowed without advancing
                 # the solution time by at least `t_no_progress` seconds.
@@ -320,6 +328,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "calc_ic": True,
             "newton_step_tol": 1e-4,
             "newton_mode": "auto",
+            "newton_block_mode": "coupled",
             "num_steps_no_progress": 0,
             "t_no_progress": 0.0,
         }

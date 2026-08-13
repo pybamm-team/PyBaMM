@@ -3,6 +3,7 @@
 // Algebraic IC solver construction and helpers.
 // Included from IDAKLUSolverOpenMP.hpp after the class definition.
 
+#include "BlockPartitionBuilder.hpp"
 #include "Expressions/Expressions.hpp"
 #include "sundials_functions.hpp"
 
@@ -253,7 +254,9 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
   as.mode = has_alg_fns ? Mode::SUBBLOCK : Mode::FULL;
 
   int n_solve_vars;
-  std::vector<int> solve_diff_idx;
+  std::vector<int> solve_idx;              // states the Newton solve may move
+  std::vector<sunindextype> jac_colptrs;   // CSC of the square algebraic Jacobian
+  std::vector<sunindextype> jac_rowvals;
 
   if (as.mode == Mode::SUBBLOCK) {
     // ── SUBBLOCK: solve only algebraic variables with own LS/J ──
@@ -290,10 +293,30 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
     as.system = std::make_unique<SubBlockSystem<ExprSet>>(
       funcs, yy_ptr, *this, use_sparse);
 
+    solve_idx.resize(len_alg_);
+    for (int i = 0; i < len_alg_; i++) solve_idx[i] = i;
+    jac_colptrs = sb.colptrs;
+    jac_rowvals = sb.rowvals;
+
   } else {
     // ── FULL: full-system via IDA's linear solve interface ──
     n_solve_vars = number_of_states;
-    solve_diff_idx = as.diff_idx;
+    solve_idx = as.alg_idx;
+
+    // Algebraic rows and columns of the full Jacobian; states are laid out as
+    // [rhs, alg], so the algebraic indices are one contiguous range.
+    const auto& full_colptrs = funcs->jac_times_cjmass_colptrs;
+    const auto& full_rowvals = funcs->jac_times_cjmass_rowvals;
+    jac_colptrs.resize(len_alg_ + 1);
+    for (int c = 0; c < len_alg_; c++) {
+      jac_colptrs[c] = static_cast<sunindextype>(jac_rowvals.size());
+      for (auto k = full_colptrs[c + len_rhs_]; k < full_colptrs[c + len_rhs_ + 1]; k++) {
+        int row = static_cast<int>(full_rowvals[k]);
+        if (row >= len_rhs_)
+          jac_rowvals.push_back(static_cast<sunindextype>(row - len_rhs_));
+      }
+    }
+    jac_colptrs[len_alg_] = static_cast<sunindextype>(jac_rowvals.size());
 
     as.full = std::make_unique<FullSystemResources>();
     auto& fs = *as.full;
@@ -313,6 +336,13 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
     std::memcpy(solve_atol.data(), atol_data, number_of_states * sizeof(sunrealtype));
   }
 
+  BlockPartition partition = build_block_partition(
+    block_mode_from_string(solver_opts.newton_block_mode),
+    n_solve_vars, solve_idx, jac_colptrs, jac_rowvals);
+  DEBUG("Newton block mode: " << block_mode_name(partition.mode)
+        << ", blocks: " << partition.n_blocks()
+        << ", levels: " << partition.n_levels());
+
   as.solver = std::make_unique<NonlinearSolver>(
     *as.system,
     n_solve_vars,
@@ -322,7 +352,7 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
     solver_opts.max_num_iterations_ic,
     solver_opts.max_linesearch_backtracks_ic,
     solver_opts.nonlinear_convergence_coefficient_ic,
-    solve_diff_idx
+    std::move(partition)
   );
   as.solver->set_log(&log_);
 
