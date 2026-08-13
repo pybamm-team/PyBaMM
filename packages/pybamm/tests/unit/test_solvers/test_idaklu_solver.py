@@ -791,6 +791,25 @@ class TestIDAKLUSolver:
         starts = [m for m in caplog.messages if m.startswith("Integrating from t =")]
         assert len(starts) == 2
 
+    def test_solve_interrupted_from_debug_logger(self, caplog, monkeypatch):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        _debug_logger = pybamm.logger.debug
+
+        # applies a ctrl-C to keyboard interrupt on the first step of the simulation
+        def logger_interrupts_on_first_step(msg, *args, **kwargs):
+            _debug_logger(msg, *args, **kwargs)
+            if isinstance(msg, str) and msg.startswith("Step "):
+                raise KeyboardInterrupt
+
+        monkeypatch.setattr(pybamm.logger, "debug", logger_interrupts_on_first_step)
+        with (
+            caplog.at_level(logging.DEBUG, logger=pybamm.logger.name),
+            pytest.raises(KeyboardInterrupt),
+        ):
+            sim.solve([0, 3600])
+
+        assert not any(m.startswith("Integration complete") for m in caplog.messages)
+
     def test_setup_options(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
