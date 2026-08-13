@@ -175,6 +175,14 @@ iteration is high, and the solve returns "converged" with the other 19 still far
 their roots. That mistake showed up as 179/400 solved on the synthetic case below, and
 per-block completion fixed it to 400/400.
 
+**`CONVERGED_WRMS_AT_MAX_ITER` needs every still-running block.** The single-block code
+latches a `converged` flag the first time the WRMS step test passes and reports success
+on `max_iter` exhaustion if it was ever set. Latching that flag on *any* block is
+unsound: on composite-electrode ESOH it returned success at ‖F‖ = 1.7e-2 because one
+block had converged early while another ran to `max_iter` nowhere near its root. The
+flag is per-block, and exhaustion only reports convergence when every block still in the
+active set has latched. Retired blocks are converged by construction.
+
 `initial_res_norm()` and `final_res_norm()` are whole-system inf-norms taken over every
 solved state, not the masked residual of whichever level ran last, so the accept/reject
 gate in `NonlinearSolverInitialConditions` compares like with like. That costs one extra
@@ -269,6 +277,51 @@ Voltages agree to 1e-11 or better everywhere. Newton IC iteration counts: DFN 6/
 DFN+SEI 7/7/8, DFN+SEI+plating 9/9/11, DFN 2-phase 7/7/7. Wall time is within noise in
 every case. Staggering halves the DFN+SEI IC residual, at a cost of one extra iteration.
 
+### Composite-electrode ESOH — the case with real block structure
+
+`ElectrodeSOHComposite` (Chen2020_composite, `particle phases = ("2", "1")`, current-sigmoid
+hysteresis on the negative secondary phase) is the only PyBaMM model measured with a
+genuinely rich partition, and it is the one with a known failure mode — the
+`try_split_solve` rescue in `get_initial_stoichiometries_composite` exists because the
+full solve fails:
+
+| `initialization_method` | n_alg | blocks | levels | components | chain |
+| --- | --- | --- | --- | --- | --- |
+| voltage | 9 | 3 (3+3+3) | 2 | **2** | {x_100} → {x_0}, {x_init} independent |
+| SOC | 9 | 4 (3+3+2+1) | **4** | 1 | {x_100} → {x_0} → {x_init} → {y_init} |
+
+78 solves per mode: 13 initial values (voltage spanning 2.5-4.2 V, or SOC 0 to 1) crossed
+with six degradation states scaling `Q_n_1`, `Q_n_2`, `Q_p_1`, `Q_Li` from 0.5x to 1.0x.
+
+| init | mode | resolved | blk/lvl | solved | failed | mean iters | max ‖F‖ | ‖F‖ > 1e-8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| voltage | coupled | coupled | 1/1 | 75 | 3 | 17.36 | 2.9e-14 | 0 |
+| voltage | auto / decoupled | decoupled | 2/1 | **76** | 2 | 16.93 | 2.2e-14 | 0 |
+| voltage | staggered | staggered | 3/2 | 63 | 15 | 26.86 | 2.7e-14 | 0 |
+| SOC | coupled / auto / decoupled | coupled | 1/1 | 54 | 24 | 17.22 | 2.8e-14 | 0 |
+| SOC | staggered | staggered | 4/4 | **61** | 17 | 38.38 | 2.7e-14 | 0 |
+
+Every returned solution is a true root: max ‖F‖ = 2.9e-14 over all 312 solves, nothing
+above 1e-8, no mode ever returns a converged-but-wrong answer.
+
+- `decoupled` on voltage init: +1 net solve (two gains, one loss — it fails on
+  `Q = (0.7, 1.0, 0.9, 0.75)` at 2.64 V where coupled succeeds) and 2.5% fewer
+  iterations. Not a strict improvement, a net one.
+- `staggered` on SOC init: **+7 solves, 54 to 61**, the largest robustness gain measured
+  anywhere. The four-level chain lets each 1-3 variable stage converge on its own where
+  the joint 9-variable solve stalls. It costs 2.2x the iterations.
+- `staggered` on voltage init: 12 solves worse, failing all 13 nominal-degradation
+  voltages. Level 1 is the `x_0` block, whose root sits at stoichiometries of 4e-4 and
+  1.3e-3 — deep in the steep tail of the OCP — and its default guess is 0.15. Solved
+  jointly with `x_100` it rides along on the well-scaled part of the system; solved alone
+  it stalls at ‖F‖ = 2.9e-2 after 92 iterations. That is inherent to staggering, not a
+  tuning problem: isolating a block removes the conditioning help it got from its
+  neighbours.
+
+This is the sharpest result in the set. `staggered` is not uniformly better or worse —
+it is a different trade, and which way it goes depends on whether the hard block is
+helped or hurt by isolation.
+
 ### Experiment initialisation, CC-CV with rests
 
 Twenty steps (2 x discharge / rest / charge / CV hold / rest / 2C discharge / rest /
@@ -329,20 +382,35 @@ rates. This is the regime the feature targets.
 
 ### Verdict
 
-The converged residual is identical across all three modes everywhere it was measured:
-8.9e-15 max over 567 hard ESOH solves, and 1e-11 or better on every IDAKLU IC. No mode
-converges to a worse answer, and no mode fails where another succeeds.
+**Residual quality is never degraded by any mode.** Every solve that reports success
+returns a true root: 8.9e-15 max over 567 hard scalar-ESOH solves, 2.9e-14 max over 312
+composite-electrode ESOH solves, 1e-11 or better on every IDAKLU IC. Nothing above
+tolerance, anywhere.
 
-`DECOUPLED` is safe and occasionally cheaper, and is what `auto` selects. `STAGGERED`
-costs 15-50% more iterations on isolated solves — converging a level alone throws away
-the joint quadratic convergence the coupled Newton gets for free — but wins 12% on a
-full legacy DFN+SEI experiment run. That split is the honest picture: it helps when the
-same partition is reused across many solves with a warm guess, and hurts when each solve
-starts cold.
+That property was not free. Two defects had to be found and fixed to get it, both
+invisible in iteration counts and both only detectable by checking the converged
+residual: whole-solve exit on the first block to finish, and latching
+`CONVERGED_WRMS_AT_MAX_ITER` on any one block. Each returned a confident wrong answer.
 
-Keep the default at `coupled`. `auto` costs only the structural analysis, which is
-inside the noise of setup. `STAGGERED` stays opt-in until the 1x1 level shortcut lands
-and turns its iteration win into a wall-time win.
+Convergence *rate* is a genuinely mixed picture, and the claim that block structure can
+only help does not survive measurement:
+
+| case | decoupled vs coupled | staggered vs coupled |
+| --- | --- | --- |
+| scalar ESOH, 567 solves | identical (resolves to coupled) | same residual, +48% iters |
+| composite ESOH, voltage init | +1 solve, -2.5% iters | **-12 solves**, +55% iters |
+| composite ESOH, SOC init | identical (resolves to coupled) | **+7 solves**, +123% iters |
+| DFN+SEI legacy experiment | identical | -12% iters, +4% wall |
+| synthetic 20-component | -9% iters | +45% iters |
+
+`STAGGERED` is a different trade, not a strictly better one: isolating a block removes
+the conditioning help it got from its neighbours. That rescues the four-stage
+composite-ESOH chain and wrecks the two-stage one.
+
+Ship it as: default `coupled`; `auto` (which picks `decoupled` or falls back to
+`coupled`) costs only the structural analysis and is net-positive everywhere measured;
+`STAGGERED` opt-in and documented as problem-dependent. Do not promote `staggered` to
+`auto`.
 
 ## Interface
 

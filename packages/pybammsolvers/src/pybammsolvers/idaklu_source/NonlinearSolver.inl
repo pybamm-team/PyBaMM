@@ -37,6 +37,7 @@ inline NonlinearSolver::NonlinearSolver(
 
   active_idx_.resize(n_vars_);
   full_step_blk_.resize(part_.n_blocks());
+  converged_blk_.resize(part_.n_blocks());
   alpha_.resize(part_.n_blocks());
   res_norm_blk_.resize(part_.n_blocks());
   prev_res_norm_blk_.resize(part_.n_blocks());
@@ -140,11 +141,12 @@ inline NonlinearResult NonlinearSolver::RunLevel(sunrealtype t, int level) {
     epsNewt_ / std::sqrt(static_cast<sunrealtype>(active_blocks_.size()));
 
   sunrealtype delnorm = std::numeric_limits<sunrealtype>::infinity();
-  bool converged = false;
   NonlinearResult result = NonlinearResult::CONVERGED_WRMS_AND_STEPTOL;
 
-  for (int b : active_blocks_)
+  for (int b : active_blocks_) {
     prev_res_norm_blk_[b] = std::numeric_limits<sunrealtype>::infinity();
+    converged_blk_[b] = 0;
+  }
 
   ComputeEwt();
 
@@ -182,7 +184,7 @@ inline NonlinearResult NonlinearSolver::RunLevel(sunrealtype t, int level) {
         all_full_step = false;
         continue;
       }
-      converged = true;
+      converged_blk_[b] = 1;
       if (delnorm_blk_[b] <= step_tol_) {
         full_step_blk_[b] = 1;
         next_active_.push_back(b);
@@ -259,7 +261,13 @@ inline NonlinearResult NonlinearSolver::RunLevel(sunrealtype t, int level) {
     RefreshActiveMask();
   }
 
+  // Only claim convergence at max_iter if every block that is still running has
+  // met the WRMS step test. Latching on any one block would report success while
+  // the others sit at a large residual.
   last_num_iterations_ += max_iter_;
+  bool converged = true;
+  for (int b : active_blocks_)
+    if (!converged_blk_[b]) converged = false;
   if (converged) {
     last_message_ =
       nonlinear_result_reason(NonlinearResult::CONVERGED_WRMS_AT_MAX_ITER);

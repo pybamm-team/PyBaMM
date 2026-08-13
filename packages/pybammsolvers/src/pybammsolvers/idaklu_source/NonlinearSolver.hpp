@@ -132,6 +132,7 @@ private:
   std::vector<int> next_active_;          // scratch for the survivors of an iteration
   std::vector<char> active_idx_;          // n_vars; 1 if the state may move now
   std::vector<char> full_step_blk_;       // block takes an undamped step and finishes
+  std::vector<char> converged_blk_;       // block has met the WRMS step test at least once
   std::vector<sunrealtype> alpha_;        // damping factor per block
   std::vector<sunrealtype> res_norm_blk_;
   std::vector<sunrealtype> prev_res_norm_blk_;
