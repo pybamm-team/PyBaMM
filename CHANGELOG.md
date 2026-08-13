@@ -8,6 +8,9 @@
 
 ## Bug fixes
 
+- IDAKLU debug logging and `print_stats` output are now buffered and emitted once the OpenMP region is over, instead of calling into Python from worker threads that do not hold the GIL. Solving with several input sets again produces one trace and one statistics block per input set. ([#5717](https://github.com/pybamm-team/PyBaMM/pull/5717))
+- Buffered IDAKLU diagnostics are also flushed when a solve raises, so a failed solve still emits the trace leading up to the failure. ([#5717](https://github.com/pybamm-team/PyBaMM/pull/5717))
+- IDAKLU diagnostics are emitted as the solve progresses whenever it runs on the calling thread, which is the one holding the GIL, so a long solve reports progress instead of going quiet until it returns. Only the solves handed to OpenMP worker threads are held back, and they are flushed at the end of the parallel region. ([#5717](https://github.com/pybamm-team/PyBaMM/pull/5717))
 - `ParameterValues.create_from_bpx` no longer writes `None` into the parameter set for thermal material properties (density and specific heat capacity) that a BPX file omits. Absent optional BPX fields are now dropped entirely, so building an isothermal model from a thermal-less BPX still works, and building a thermal model raises PyBaMM's usual named "parameter not found" error instead of a cryptic type error deep in the expression tree. ([#5708](https://github.com/pybamm-team/PyBaMM/pull/5708))
 - `VectorField._from_json` now rebuilds all N components instead of only the first two, so a field with three or more components survives serialisation instead of silently losing its extra components (which later triggered an `IndexError` on `Component`). ([#5703](https://github.com/pybamm-team/PyBaMM/pull/5703))
 - `ElectrodeSOHSolver` now passes model options through, so hysteresis OCP branches are used. ([#5701](https://github.com/pybamm-team/PyBaMM/pull/5701))
@@ -16,6 +19,11 @@
 - `pybamm.citations.register` now names the citation the caller passed in when a BibTeX string fails to parse, instead of whichever entry the parser had reached. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
 - Deserialising a parameter set whose interpolant specification is invalid now logs a warning naming the offending parameter, instead of printing the bare exception to stdout with no indication of which parameter fell back to zero. ([#5679](https://github.com/pybamm-team/PyBaMM/pull/5679))
 - A user-specified boundary tag that is absent from a mesh file now raises `GeometryError` instead of degrading to a warning and a mesh with no boundary groups. ([#5679](https://github.com/pybamm-team/PyBaMM/pull/5679))
+
+## Optimizations
+
+- IDAKLU with `output_variables` now writes sensitivities straight into their final NumPy layout, removing the post-solve transpose pass and the second full-size sensitivity buffer it required. ([#5717](https://github.com/pybamm-team/PyBaMM/pull/5717))
+- The dense scratch vector used to scatter sparse output sensitivities is now a reused member buffer instead of being allocated per output row on every step. ([#5717](https://github.com/pybamm-team/PyBaMM/pull/5717))
 
 # [v26.7.1.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.7.1.0) - 2026-07-22
 

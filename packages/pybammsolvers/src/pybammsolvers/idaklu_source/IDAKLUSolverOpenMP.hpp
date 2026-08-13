@@ -22,6 +22,22 @@ using std::vector;
 #include <sunmatrix/sunmatrix_band.h>
 
 /**
+ * @brief A statistics snapshot, taken during solve and printed at flush
+ *
+ * Holds the counters alongside the point-in-time integrator values, which
+ * cannot be re-read once the solve has finished.
+ */
+struct PendingStats {
+  IDAKLUStats stats;
+  int klast = 0;
+  int kcur = 0;
+  sunrealtype hinused = 0.0;
+  sunrealtype hlast = 0.0;
+  sunrealtype hcur = 0.0;
+  sunrealtype tcur = 0.0;
+};
+
+/**
  * @brief Abstract solver class based on OpenMP vectors
  *
  * An abstract class that implements a solution based on OpenMP
@@ -79,6 +95,8 @@ public:
   vector<sunrealtype> res;
   vector<sunrealtype> res_dvar_dy;
   vector<sunrealtype> res_dvar_dp;
+  // Reused scratch for sparse->dense output sensitivity scatter (outputs-only mode)
+  vector<sunrealtype> dvar_dp_dense;
   bool const sensitivity;  // cppcheck-suppress unusedStructMember
   bool const save_outputs_only; // cppcheck-suppress unusedStructMember
   bool save_hermite;  // cppcheck-suppress unusedStructMember
@@ -95,12 +113,16 @@ public:
   vector<sunrealtype> t;   // [n_timesteps]
   vector<sunrealtype> y;   // [n_timesteps * length_of_return_vector]  (flat)
   vector<sunrealtype> yp;  // [n_timesteps * number_of_states]         (flat)
+  // In save_outputs_only mode yS instead uses the final numpy layout,
+  // yS[(i * stride_y + j) * n_params + p], so no transpose is needed at the end
   vector<sunrealtype> yS;  // [n_timesteps * n_params * length_of_return_vector] (flat)
   vector<sunrealtype> ypS; // [n_timesteps * n_params * number_of_states]        (flat)
   SetupOptions const setup_opts;
   SolverOptions const solver_opts;
   IDAKLUStats accumulated_stats;  // Accumulated stats across reinitializations
-  SolverLog log_;
+  PendingStats latest_stats_;  // Most recent GetStats(), for its point-in-time half
+  // One entry per solve; drained by flush_log() where the GIL is held
+  std::vector<PendingStats> pending_stats_;
   std::unique_ptr<HermiteKnotReducer> knot_reducer;  // Hermite knot reduction (nullptr if inactive)
 
   struct SubBlockResources {
@@ -202,8 +224,7 @@ public:
     const sunrealtype *yp0,
     const sunrealtype *inputs,
     bool save_adaptive_steps,
-    bool save_interp_steps,
-    py::object logger = py::none()
+    bool save_interp_steps
   ) override;
 
 
@@ -243,14 +264,24 @@ public:
   void CheckErrors(int const & flag, const char* context);
 
   /**
-   * @brief Print the solver statistics
+   * @brief Print the solver statistics, or buffer them until flush time
    */
-  void PrintStats(IDAKLUStats const& stats);
+  void CaptureStats();
+
+  /**
+   * @brief Print one solver statistics block (GIL held), never throwing
+   */
+  void PrintStats(PendingStats const& pending);
+
+  /**
+   * @brief Write one statistics block to stdout; call through PrintStats
+   */
+  void WriteStats(PendingStats const& pending);
 
   /**
    * @brief Get current statistics from IDA solver
    */
-  IDAKLUStats GetStats();
+  PendingStats GetStats();
 
   /**
    * @brief Save current stats to accumulated_stats
@@ -382,12 +413,19 @@ public:
   SolutionData BuildSolutionData(int retval);
 
   /**
-   * @brief Reorder sensitivity arrays from solve layout to numpy layout
+   * Trims the arrays to the steps actually taken, and transposes them into the
+   * numpy layout unless save_outputs_only already wrote them that way.
+   * @brief Hand the sensitivity arrays over in numpy layout
    */
   void ReorderSensitivities(
     std::vector<sunrealtype> &yS_out,
     std::vector<sunrealtype> &ypS_out
   );
+
+  /**
+   * @brief Emit buffered log and statistics output (GIL held, serial section)
+   */
+  void flush_log() override;
 
   /**
    * @brief Set the step values (uses member state y_val_, yp_val_, yS_val_, ypS_val_, i_save_)
