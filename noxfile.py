@@ -173,24 +173,27 @@ def run_memory(session):
 
 @nox.session(name="benchmark-time", default=False)
 def run_benchmark_time(session):
-    """Run timing benchmark tests and report to Bencher.
+    """Run timing benchmark tests locally.
 
-    Requires the bencher CLI to be installed separately:
-    https://bencher.dev/docs/how-to/install-cli/
+    CI does not use this session: Bencher runs the same pytest command inside the
+    benchmark image on bare metal hardware (see tests/benchmarks/Dockerfile).
     """
     set_environment_variables(PYBAMM_ENV, session=session)
     install_locked(session, groups=["dev"])
-    session.cd("packages/pybamm/tests/benchmarks")
     session.run(
-        "bencher",
-        "run",
-        "--adapter",
-        "python_pytest",
-        "--file",
-        "benchmark_results.json",
+        "python",
+        "-m",
+        "pytest",
+        "packages/pybamm/tests/benchmarks/",
+        "-m",
+        "time_bench",
+        "-v",
+        "-o",
+        "addopts=",
+        "--benchmark-group-by",
+        "func",
+        "--benchmark-disable-gc",
         *session.posargs,
-        "pytest -m time_bench -v -o addopts= --benchmark-group-by func --benchmark-disable-gc --benchmark-json results.json",
-        external=True,
     )
 
 
