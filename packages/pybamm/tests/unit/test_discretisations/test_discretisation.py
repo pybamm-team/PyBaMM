@@ -80,6 +80,14 @@ class TestDiscretise:
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.set_variable_slices([c_e_n, c_e_s, c_e_p])
         disc.bcs = model.boundary_conditions
+        # the base hook declines, so the legacy 1D-stack routine runs (and
+        # raises here because it requires left/right BCs)
+        assert (
+            spatial_methods["macroscale"].set_internal_bcs_for_concat(
+                disc, c_e, c_e.orphans, disc.bcs[c_e]
+            )
+            is None
+        )
         with pytest.raises(pybamm.DiscretisationError, match="'left' and 'right'"):
             disc.set_internal_boundary_conditions(model)
 

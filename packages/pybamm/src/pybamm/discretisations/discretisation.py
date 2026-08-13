@@ -493,14 +493,10 @@ class Discretisation:
             children = var.orphans
 
             # Dispatch hook: a spatial method may own its own internal-BC
-            # logic (e.g. graph-traversal for arbitrary topology).  If the
-            # spatial method on the first child's domain provides
-            # ``set_internal_bcs_for_concat``, defer to it and skip the
-            # default 1D-stack pairwise routine.
+            # logic (e.g. graph-traversal for arbitrary topology); a non-None
+            # return replaces the default 1D-stack pairwise routine.
             primary_method = self.spatial_methods.get(children[0].domain[0])
-            if primary_method is not None and hasattr(
-                primary_method, "set_internal_bcs_for_concat"
-            ):
+            if primary_method is not None:
                 handled = primary_method.set_internal_bcs_for_concat(
                     self, var, children, self.bcs[var]
                 )
