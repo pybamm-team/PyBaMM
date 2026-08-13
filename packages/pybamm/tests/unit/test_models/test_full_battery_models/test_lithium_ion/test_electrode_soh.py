@@ -4,6 +4,7 @@
 
 import contextlib
 
+import numpy as np
 import pytest
 
 import pybamm
@@ -1163,3 +1164,148 @@ class TestGetInitialOCPMSMR:
         )
         assert Up_100 - Un_100 == pytest.approx(4.2)
         assert Up_0 - Un_0 == pytest.approx(2.8)
+
+
+class TestElectrodeSOHCompositeKnownFailures:
+    """Feasible composite-electrode ESOH systems that the Newton solver cannot solve.
+
+    Every case here has a root: the composite solver chain
+    (:class:`pybamm.NonlinearSolver` -> :class:`pybamm.AlgebraicSolver` -> lsq ->
+    minimize) reaches a residual below 1e-8, which
+    ``test_composite_fallback_solves_all_known_failures`` asserts. The xfailed tests
+    below run the Newton solver on its own and record that it does not get there, so
+    the reason the fallback chain exists stays visible. Drop a marker if its case
+    starts passing.
+    """
+
+    OPTIONS = {
+        "particle phases": ("2", "1"),
+        "open-circuit potential": (("single", "current sigmoid"), "single"),
+    }
+
+    # (Q_n_1, Q_n_2, Q_p_1, Q_Li) multipliers applied to the nominal capacities
+    NOMINAL = (1.0, 1.0, 1.0, 1.0)
+    LOW_LI = (1.0, 1.0, 1.0, 0.85)
+    VERY_LOW_LI = (1.0, 1.0, 1.0, 0.6)
+    WORN_NEGATIVE = (0.85, 0.85, 1.0, 0.85)
+    LOST_SECONDARY = (1.0, 0.5, 1.0, 0.9)
+    WORN_ALL = (0.7, 1.0, 0.9, 0.75)
+
+    # Newton fails in the default "coupled" block mode. Nearly all of these are
+    # SOC initialisation at or near 0% with cyclable lithium below nominal.
+    COUPLED_FAILURES = [
+        ("voltage", NOMINAL, 3.35),
+        ("SOC", NOMINAL, 0.5833333333333334),
+        ("SOC", LOW_LI, 0.0),
+        ("SOC", LOW_LI, 0.08333333333333333),
+        ("SOC", VERY_LOW_LI, 0.0),
+        ("SOC", VERY_LOW_LI, 0.08333333333333333),
+        ("SOC", WORN_NEGATIVE, 0.08333333333333333),
+        ("SOC", LOST_SECONDARY, 0.0),
+        ("SOC", LOST_SECONDARY, 0.08333333333333333),
+    ]
+
+    # Newton fails only once the linesearch is damped per block.
+    DECOUPLED_ONLY_FAILURES = [("voltage", WORN_ALL, 2.6416666666666666)]
+
+    # Newton fails once the blocks are solved in dependency order. Under voltage
+    # initialisation level 1 is the x_0 block, whose root sits at stoichiometries of
+    # order 1e-4 while its initial guess is 0.15; solved jointly with x_100 it rides
+    # along on the well-conditioned part of the system, solved alone it stalls.
+    STAGGERED_ONLY_FAILURES = [
+        ("voltage", NOMINAL, 3.775),
+        ("SOC", NOMINAL, 0.5),
+    ]
+
+    ALL_FAILURES = COUPLED_FAILURES + DECOUPLED_ONLY_FAILURES + STAGGERED_ONLY_FAILURES
+
+    @staticmethod
+    def _build(initialization_method):
+        options = pybamm.BatteryModelOptions(
+            TestElectrodeSOHCompositeKnownFailures.OPTIONS
+        )
+        model = pybamm.lithium_ion.ElectrodeSOHComposite(
+            options, initialization_method=initialization_method
+        )
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sim.build()
+        return sim.built_model, parameter_values, options
+
+    @classmethod
+    def _inputs(cls, parameter_values, options, initialization_method, scales, target):
+        param = pybamm.LithiumIonParameters(options)
+        scale_n1, scale_n2, scale_p1, scale_li = scales
+        key = "V_init" if initialization_method == "voltage" else "SOC_init"
+        return {
+            "Q_Li": parameter_values.evaluate(param.Q_Li_particles_init) * scale_li,
+            "Q_n_1": parameter_values.evaluate(param.n.prim.Q_init) * scale_n1,
+            "Q_n_2": parameter_values.evaluate(param.n.sec.Q_init) * scale_n2,
+            "Q_p_1": parameter_values.evaluate(param.p.prim.Q_init) * scale_p1,
+            key: target,
+        }
+
+    @classmethod
+    def _residual(cls, initialization_method, scales, target, solver):
+        built_model, parameter_values, options = cls._build(initialization_method)
+        inputs = cls._inputs(
+            parameter_values, options, initialization_method, scales, target
+        )
+        solution = solver.solve(built_model, [0], inputs=inputs)
+        y = solution.y[: built_model.len_alg, 0]
+        residual = built_model.algebraic_eval(0.0, y, list(inputs.values()))
+        return np.abs(np.asarray(residual)).max()
+
+    @pytest.mark.parametrize(
+        ("initialization_method", "scales", "target"), ALL_FAILURES
+    )
+    def test_composite_fallback_solves_all_known_failures(
+        self, initialization_method, scales, target
+    ):
+        """Anchor: every xfailed case below has a root the fallback chain reaches."""
+        solver = pybamm.lithium_ion.electrode_soh.get_esoh_default_solver(1e-6)
+        residual = self._residual(initialization_method, scales, target, solver)
+        assert residual < 1e-8
+
+    @pytest.mark.xfail(reason="Newton solver alone cannot solve this feasible system")
+    @pytest.mark.parametrize(
+        ("initialization_method", "scales", "target"), COUPLED_FAILURES
+    )
+    def test_newton_coupled(self, initialization_method, scales, target):
+        solver = pybamm.NonlinearSolver(
+            atol=1e-6, rtol=0, step_tol=0, max_backtracks=100
+        )
+        residual = self._residual(initialization_method, scales, target, solver)
+        assert residual < 1e-8
+
+    @pytest.mark.xfail(
+        reason="per-block damping loses a case that coupled damping wins"
+    )
+    @pytest.mark.parametrize(
+        ("initialization_method", "scales", "target"), DECOUPLED_ONLY_FAILURES
+    )
+    def test_newton_decoupled(self, initialization_method, scales, target):
+        solver = pybamm.NonlinearSolver(
+            atol=1e-6,
+            rtol=0,
+            step_tol=0,
+            max_backtracks=100,
+            options={"newton_block_mode": "decoupled"},
+        )
+        residual = self._residual(initialization_method, scales, target, solver)
+        assert residual < 1e-8
+
+    @pytest.mark.xfail(reason="isolating the x_0 block removes its conditioning help")
+    @pytest.mark.parametrize(
+        ("initialization_method", "scales", "target"), STAGGERED_ONLY_FAILURES
+    )
+    def test_newton_staggered(self, initialization_method, scales, target):
+        solver = pybamm.NonlinearSolver(
+            atol=1e-6,
+            rtol=0,
+            step_tol=0,
+            max_backtracks=100,
+            options={"newton_block_mode": "staggered"},
+        )
+        residual = self._residual(initialization_method, scales, target, solver)
+        assert residual < 1e-8
