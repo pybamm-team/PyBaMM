@@ -1,7 +1,7 @@
 #ifndef PYBAMM_STANDALONE_NEWTON_SOLVER_HPP
 #define PYBAMM_STANDALONE_NEWTON_SOLVER_HPP
 
-#include "BlockPartitionBuilder.hpp"
+#include "BlockPartition.hpp"
 #include "NonlinearSolver.hpp"
 #include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "common.hpp"
@@ -83,12 +83,11 @@ public:
     bool use_sparse,
     const std::string& block_mode = "coupled");
 
-  /** @brief Resolved block mode, blocks and levels of the last-built partition. */
+  /** @brief Resolved block mode and block count of the partition. */
   std::string block_mode() const {
     return block_mode_name(solver_.partition().mode);
   }
   int num_blocks() const { return solver_.partition().n_blocks(); }
-  int num_levels() const { return solver_.partition().n_levels(); }
   int num_iterations() const { return solver_.num_iterations(); }
   sunrealtype final_res_norm() const { return solver_.final_res_norm(); }
   bool residual_monotone() const { return solver_.residual_monotone(); }

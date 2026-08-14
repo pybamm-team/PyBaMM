@@ -22,7 +22,6 @@ inline NonlinearSolver::NonlinearSolver(
     part_(std::move(partition)),
     last_num_iterations_(0)
 {
-  if (part_.blocks.empty()) part_ = BlockPartition::coupled_all(n_vars_);
   if (part_.n_vars != n_vars_)
     throw std::invalid_argument("BlockPartition size does not match n_vars");
 
@@ -46,6 +45,12 @@ inline NonlinearSolver::NonlinearSolver(
 }
 
 // ────────────────────── Helpers ──────────────────────
+
+inline void NonlinearSolver::ActivateAllBlocks() {
+  active_blocks_.resize(part_.n_blocks());
+  std::iota(active_blocks_.begin(), active_blocks_.end(), 0);
+  RefreshActiveMask();
+}
 
 inline void NonlinearSolver::RefreshActiveMask() {
   std::fill(active_idx_.begin(), active_idx_.end(), static_cast<char>(0));
@@ -129,14 +134,13 @@ inline int NonlinearSolver::SetupAndSolveLinearSystem(sunrealtype t) {
   return 0;
 }
 
-// ────────────────────── Newton loop over one level ──────────────────────
+// ────────────────────── Newton loop ──────────────────────
 
-inline NonlinearResult NonlinearSolver::RunLevel(sunrealtype t, int level) {
-  active_blocks_ = part_.levels[level];
-  RefreshActiveMask();
+inline NonlinearResult NonlinearSolver::RunNewtonLoop(sunrealtype t) {
+  ActivateAllBlocks();
 
-  // Threshold per block, fixed for the level, so that the sum of squares over
-  // its blocks never exceeds epsNewt^2 - the whole-vector test, unchanged.
+  // Threshold per block, fixed for the solve, so that the sum of squares over all
+  // blocks never exceeds epsNewt^2 - the whole-vector test, unchanged.
   const sunrealtype eps_blk =
     epsNewt_ / std::sqrt(static_cast<sunrealtype>(active_blocks_.size()));
 
@@ -160,9 +164,10 @@ inline NonlinearResult NonlinearSolver::RunLevel(sunrealtype t, int level) {
     if (lsflag != 0) {
       NonlinearResult fail = (lsflag > 0) ? NonlinearResult::LSETUP_FAIL
                                           : NonlinearResult::LSOLVE_FAIL;
-      last_message_ = nonlinear_result_reason(fail);
       last_num_iterations_ += iter + 1;
-      if (log_) log_->log_newton_failed(iter + 1, res_norm, last_message_.c_str());
+      if (log_)
+        log_->log_newton_failed(iter + 1, res_norm,
+                                nonlinear_result_reason(fail));
       return fail;
     }
 
@@ -200,7 +205,7 @@ inline NonlinearResult NonlinearSolver::RunLevel(sunrealtype t, int level) {
     }
 
     // Blocks that rolled back are dropped before the iterate is saved, so their
-    // final value is what the next levels and the caller see.
+    // final value is what the caller sees.
     active_blocks_ = next_active_;
     if (active_blocks_.empty()) {
       last_num_iterations_ += iter + 1;
@@ -216,18 +221,16 @@ inline NonlinearResult NonlinearSolver::RunLevel(sunrealtype t, int level) {
 
     if (all_full_step) {
       ApplyBlockSteps();
-      last_message_ =
-        nonlinear_result_reason(NonlinearResult::CONVERGED_WRMS_AND_STEPTOL);
       last_num_iterations_ += iter + 1;
-      if (log_) log_->log_newton_converged(iter + 1, last_message_.c_str());
+      if (log_) log_->log_newton_converged(iter + 1,
+                                           nonlinear_result_reason(result));
       return result;
     }
 
     // Armijo-style linesearch: halve the step of each block that fails the
     // sufficient-decrease test. The 0.5 factor is the standard Armijo parameter
     // (c1 = 0.5) used in SUNDIALS IDA's own Newton iteration (see ida_ic.c).
-    // Blocks in a level are independent once lower levels are frozen, so one
-    // residual evaluation scores all of them.
+    // Blocks are independent, so one residual evaluation scores all of them.
     for (int ls = 0; ls < max_backtracks_; ls++) {
       ApplyBlockSteps();
       EvalResidualAndNorm(t);
@@ -269,26 +272,25 @@ inline NonlinearResult NonlinearSolver::RunLevel(sunrealtype t, int level) {
   for (int b : active_blocks_)
     if (!converged_blk_[b]) converged = false;
   if (converged) {
-    last_message_ =
-      nonlinear_result_reason(NonlinearResult::CONVERGED_WRMS_AT_MAX_ITER);
-    if (log_) log_->log_newton_converged(max_iter_, last_message_.c_str());
+    if (log_) log_->log_newton_converged(
+      max_iter_,
+      nonlinear_result_reason(NonlinearResult::CONVERGED_WRMS_AT_MAX_ITER));
     return NonlinearResult::CONVERGED_WRMS_AT_MAX_ITER;
   }
 
-  last_message_ = nonlinear_result_reason(NonlinearResult::MAX_ITER_NO_CONVERGE);
-  if (log_) log_->log_newton_failed(max_iter_, InfNorm(res_.data()), last_message_.c_str());
+  if (log_) log_->log_newton_failed(
+    max_iter_, InfNorm(res_.data()),
+    nonlinear_result_reason(NonlinearResult::MAX_ITER_NO_CONVERGE));
   return NonlinearResult::MAX_ITER_NO_CONVERGE;
 }
 
 // ────────────────────── Whole-system residual ──────────────────────
 
-// Residual inf-norm over every solved state, ignoring the level masking. This is
-// the number the caller judges the solve by, so it must not depend on which
-// blocks happened to be active last.
+// Residual inf-norm over every solved state, ignoring which blocks have retired.
+// This is the number the caller judges the solve by, so it must not depend on
+// which blocks happened to be active last.
 inline sunrealtype NonlinearSolver::WholeSystemResNorm(sunrealtype t) {
-  active_blocks_.clear();
-  for (int b = 0; b < part_.n_blocks(); b++) active_blocks_.push_back(b);
-  RefreshActiveMask();
+  ActivateAllBlocks();
   return EvalResidualAndNorm(t);
 }
 
@@ -300,23 +302,13 @@ inline NonlinearResult NonlinearSolver::solve_single(
   std::memcpy(x_.data(), y, n_vars_ * sizeof(sunrealtype));
 
   if (log_) log_->log_newton_start(t, n_vars_, block_mode_name(part_.mode),
-                                   part_.n_blocks(), part_.n_levels());
+                                   part_.n_blocks());
 
   residual_monotone_ = true;
   last_num_iterations_ = 0;
   initial_res_norm_ = WholeSystemResNorm(t);
-  NonlinearResult result = NonlinearResult::CONVERGED_WRMS_AND_STEPTOL;
 
-  for (int level = 0; level < part_.n_levels(); level++) {
-    NonlinearResult level_result = RunLevel(t, level);
-    if (!nonlinear_success(level_result)) {
-      result = level_result;
-      break;
-    }
-    // Report the weakest convergence reason seen across levels.
-    if (static_cast<int>(level_result) > static_cast<int>(result))
-      result = level_result;
-  }
+  NonlinearResult result = RunNewtonLoop(t);
 
   final_res_norm_ = WholeSystemResNorm(t);
   std::memcpy(y, x_.data(), n_vars_ * sizeof(sunrealtype));

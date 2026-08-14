@@ -64,8 +64,8 @@ class NonlinearSolver(pybamm.BaseSolver):
     options : dict, optional
         Solver options. ``compile`` (bool, default False) enables ahead-of-time
         compilation of the CasADi residual/Jacobian. ``newton_block_mode``
-        ("coupled", "decoupled", "staggered" or "auto"; default "coupled")
-        selects how the linesearch damps structurally independent subsystems.
+        ("coupled" or "decoupled"; default "coupled") selects whether the
+        linesearch damps structurally independent subsystems separately.
     """
 
     def __init__(

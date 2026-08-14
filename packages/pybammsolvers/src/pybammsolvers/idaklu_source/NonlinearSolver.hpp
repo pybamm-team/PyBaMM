@@ -55,11 +55,10 @@ public:
 /**
  * @brief Newton solver for consistent initial conditions.
  *
- * The BlockPartition decides which states move together and in what order. Each
- * block carries its own linesearch damping factor, so an ill-scaled equation damps
- * only its own block; states outside the active level are held at zero damping.
- * Zeroing their residual rows makes the single full linear solve return the exact
- * block Gauss-Seidel step for a block-triangular Jacobian.
+ * The BlockPartition decides which states move together. Each block carries its own
+ * linesearch damping factor, so an ill-scaled equation damps only its own block, and
+ * a block that converges retires while the others keep iterating. Blocks are
+ * independent subsystems, so retiring one cannot disturb another.
  *
  * Zero allocations in the hotpath.
  */
@@ -74,7 +73,7 @@ public:
     int max_iter,
     int max_backtracks,
     sunrealtype epsNewt,
-    BlockPartition partition = {}
+    BlockPartition partition
   );
 
   ~NonlinearSolver() = default;
@@ -102,7 +101,7 @@ public:
   bool residual_monotone() const { return residual_monotone_; }
 
 private:
-  NonlinearResult RunLevel(sunrealtype t, int level);
+  NonlinearResult RunNewtonLoop(sunrealtype t);
 
   sunrealtype EvalResidualAndNorm(sunrealtype t);
   int SetupAndSolveLinearSystem(sunrealtype t);
@@ -113,6 +112,7 @@ private:
 
   void ComputeEwt();
   void SaveIterate();
+  void ActivateAllBlocks();
   void RefreshActiveMask();
   void MaskInactive(sunrealtype* v) const;
   void ApplyBlockSteps();
@@ -128,7 +128,7 @@ private:
   NonlinearSystem& system_;
 
   BlockPartition part_;
-  std::vector<int> active_blocks_;        // blocks of the level still iterating
+  std::vector<int> active_blocks_;        // blocks still iterating
   std::vector<int> next_active_;          // scratch for the survivors of an iteration
   std::vector<char> active_idx_;          // n_vars; 1 if the state may move now
   std::vector<char> full_step_blk_;       // block takes an undamped step and finishes
@@ -148,7 +148,6 @@ private:
 
   SolverLog* log_ = nullptr;
 
-  std::string last_message_;
   int last_num_iterations_ = 0;
   bool residual_monotone_ = true;
 

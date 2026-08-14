@@ -235,3 +235,49 @@ class TestNonlinearSolver:
         solver = pybamm.NonlinearSolver(max_iter=50)
         with pytest.raises(pybamm.SolverError, match="Could not find acceptable"):
             solver.solve(model, [0])
+
+    @staticmethod
+    def _two_component_model():
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        model = pybamm.BaseModel()
+        model.algebraic = {a: a**3 - 8, b: pybamm.exp(b) - 1}
+        model.initial_conditions = {a: 1, b: 1}
+        model.variables = {"a": a, "b": b}
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    @pytest.mark.parametrize(
+        ("block_mode", "expected_blocks"), [("coupled", 1), ("decoupled", 2)]
+    )
+    def test_block_mode_partition(self, block_mode, expected_blocks):
+        model = self._two_component_model()
+        solver = pybamm.NonlinearSolver(options={"newton_block_mode": block_mode})
+        solution = solver.solve(model, [0])
+
+        setup = model.algebraic_root_solver._setup
+        assert setup.num_blocks == expected_blocks
+        assert setup.residual_monotone
+        assert setup.final_res_norm < 1e-8
+        np.testing.assert_allclose(solution["a"].data[0], 2, rtol=1e-8, atol=1e-10)
+        np.testing.assert_allclose(solution["b"].data[0], 0, rtol=0, atol=1e-10)
+
+    def test_block_mode_falls_back_when_fully_coupled(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        model = pybamm.BaseModel()
+        model.algebraic = {a: a + b - 3, b: a - b - 1}
+        model.initial_conditions = {a: 0, b: 0}
+        pybamm.Discretisation().process_model(model)
+
+        solver = pybamm.NonlinearSolver(options={"newton_block_mode": "decoupled"})
+        solver.solve(model, [0])
+        setup = model.algebraic_root_solver._setup
+        assert setup.block_mode == "coupled"
+        assert setup.num_blocks == 1
+
+    def test_unknown_block_mode_raises(self):
+        model = self._two_component_model()
+        solver = pybamm.NonlinearSolver(options={"newton_block_mode": "diagonal"})
+        with pytest.raises(ValueError, match=r"Unknown block mode 'diagonal'"):
+            solver.solve(model, [0])

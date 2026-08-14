@@ -266,7 +266,6 @@ PYBIND11_MODULE(idaklu, m)
          py::arg("block_mode") = "coupled")
     .def_property_readonly("block_mode", &StandaloneNewtonSolver::block_mode)
     .def_property_readonly("num_blocks", &StandaloneNewtonSolver::num_blocks)
-    .def_property_readonly("num_levels", &StandaloneNewtonSolver::num_levels)
     .def_property_readonly("num_iterations", &StandaloneNewtonSolver::num_iterations)
     .def_property_readonly("final_res_norm", &StandaloneNewtonSolver::final_res_norm)
     .def_property_readonly("residual_monotone",

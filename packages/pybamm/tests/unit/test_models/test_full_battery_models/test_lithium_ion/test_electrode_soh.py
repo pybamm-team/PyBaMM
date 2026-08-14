@@ -1208,16 +1208,7 @@ class TestElectrodeSOHCompositeKnownFailures:
     # Newton fails only once the linesearch is damped per block.
     DECOUPLED_ONLY_FAILURES = [("voltage", WORN_ALL, 2.6416666666666666)]
 
-    # Newton fails once the blocks are solved in dependency order. Under voltage
-    # initialisation level 1 is the x_0 block, whose root sits at stoichiometries of
-    # order 1e-4 while its initial guess is 0.15; solved jointly with x_100 it rides
-    # along on the well-conditioned part of the system, solved alone it stalls.
-    STAGGERED_ONLY_FAILURES = [
-        ("voltage", NOMINAL, 3.775),
-        ("SOC", NOMINAL, 0.5),
-    ]
-
-    ALL_FAILURES = COUPLED_FAILURES + DECOUPLED_ONLY_FAILURES + STAGGERED_ONLY_FAILURES
+    ALL_FAILURES = COUPLED_FAILURES + DECOUPLED_ONLY_FAILURES
 
     @staticmethod
     def _build(initialization_method):
@@ -1291,21 +1282,6 @@ class TestElectrodeSOHCompositeKnownFailures:
             step_tol=0,
             max_backtracks=100,
             options={"newton_block_mode": "decoupled"},
-        )
-        residual = self._residual(initialization_method, scales, target, solver)
-        assert residual < 1e-8
-
-    @pytest.mark.xfail(reason="isolating the x_0 block removes its conditioning help")
-    @pytest.mark.parametrize(
-        ("initialization_method", "scales", "target"), STAGGERED_ONLY_FAILURES
-    )
-    def test_newton_staggered(self, initialization_method, scales, target):
-        solver = pybamm.NonlinearSolver(
-            atol=1e-6,
-            rtol=0,
-            step_tol=0,
-            max_backtracks=100,
-            options={"newton_block_mode": "staggered"},
         )
         residual = self._residual(initialization_method, scales, target, solver)
         assert residual < 1e-8

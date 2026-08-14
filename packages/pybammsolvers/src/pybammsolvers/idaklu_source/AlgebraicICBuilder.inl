@@ -3,7 +3,7 @@
 // Algebraic IC solver construction and helpers.
 // Included from IDAKLUSolverOpenMP.hpp after the class definition.
 
-#include "BlockPartitionBuilder.hpp"
+#include "BlockPartition.hpp"
 #include "Expressions/Expressions.hpp"
 #include "sundials_functions.hpp"
 
@@ -294,7 +294,7 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
       funcs, yy_ptr, *this, use_sparse);
 
     solve_idx.resize(len_alg_);
-    for (int i = 0; i < len_alg_; i++) solve_idx[i] = i;
+    std::iota(solve_idx.begin(), solve_idx.end(), 0);
     jac_colptrs = sb.colptrs;
     jac_rowvals = sb.rowvals;
 
@@ -340,8 +340,7 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
     block_mode_from_string(solver_opts.newton_block_mode),
     n_solve_vars, solve_idx, jac_colptrs, jac_rowvals);
   DEBUG("Newton block mode: " << block_mode_name(partition.mode)
-        << ", blocks: " << partition.n_blocks()
-        << ", levels: " << partition.n_levels());
+        << ", blocks: " << partition.n_blocks());
 
   as.solver = std::make_unique<NonlinearSolver>(
     *as.system,

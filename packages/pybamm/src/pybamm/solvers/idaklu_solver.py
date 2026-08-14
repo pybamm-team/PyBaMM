@@ -220,10 +220,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # How the Newton linesearch damps structurally independent
                 # subsystems of the algebraic Jacobian.
                 # "coupled":   one damping factor for every state (no analysis).
-                # "decoupled": one per independent subsystem, all solved at once.
-                # "staggered": one per strongly connected component, solved in
-                #              dependency order.
-                # "auto":      "decoupled", or "coupled" if there is one subsystem.
+                # "decoupled": one damping factor per independent subsystem, so an
+                #              ill-scaled equation damps only its own subsystem.
+                #              Falls back to "coupled" if there is only one.
                 "newton_block_mode": "coupled",
                 ## Early termination
                 # Maximum number of consecutive steps allowed without advancing
