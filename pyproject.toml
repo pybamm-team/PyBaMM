@@ -27,7 +27,7 @@ dev = [
     # installed with --no-build-isolation (above) and rebuilds itself on import.
     "scikit-build-core>=1.0.3",
     "pybind11>=3.0.1",
-    "cmake>=4.4.0",
+    "cmake>=4.4.2",
     "ninja",
 ]
 

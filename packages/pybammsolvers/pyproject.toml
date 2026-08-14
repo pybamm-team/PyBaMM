@@ -35,7 +35,7 @@ dev = [
     # build tools available in the venv.
     "scikit-build-core>=1.0.3",
     "pybind11>=3.0.1",
-    "cmake>=3.13",
+    "cmake>=4.4.2",
     "ninja",
 ]
 
