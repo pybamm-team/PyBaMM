@@ -263,7 +263,7 @@ PYBIND11_MODULE(idaklu, m)
          py::arg("atol"), py::arg("rtol"), py::arg("step_tol"),
          py::arg("max_iter"), py::arg("max_backtracks"),
          py::arg("eps_newt"), py::arg("use_sparse"),
-         py::arg("block_mode") = "coupled")
+         py::arg("block_mode") = "decoupled")
     .def_property_readonly("block_mode", &StandaloneNewtonSolver::block_mode)
     .def_property_readonly("num_blocks", &StandaloneNewtonSolver::num_blocks)
     .def_property_readonly("num_iterations", &StandaloneNewtonSolver::num_iterations)

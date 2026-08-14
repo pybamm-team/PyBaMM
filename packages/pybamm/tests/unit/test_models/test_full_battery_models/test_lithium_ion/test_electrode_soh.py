@@ -1176,6 +1176,10 @@ class TestElectrodeSOHCompositeKnownFailures:
     below run the Newton solver on its own and record that it does not get there, so
     the reason the fallback chain exists stays visible. Drop a marker if its case
     starts passing.
+
+    All of these are the default `decoupled` block mode too: it splits nothing on
+    this model under SOC initialisation, and its failures are retried with the
+    blocks merged, so it lands on the same iterates as `coupled`.
     """
 
     OPTIONS = {
@@ -1189,7 +1193,6 @@ class TestElectrodeSOHCompositeKnownFailures:
     VERY_LOW_LI = (1.0, 1.0, 1.0, 0.6)
     WORN_NEGATIVE = (0.85, 0.85, 1.0, 0.85)
     LOST_SECONDARY = (1.0, 0.5, 1.0, 0.9)
-    WORN_ALL = (0.7, 1.0, 0.9, 0.75)
 
     # Newton fails in the default "coupled" block mode. Nearly all of these are
     # SOC initialisation at or near 0% with cyclable lithium below nominal.
@@ -1205,10 +1208,7 @@ class TestElectrodeSOHCompositeKnownFailures:
         ("SOC", LOST_SECONDARY, 0.08333333333333333),
     ]
 
-    # Newton fails only once the linesearch is damped per block.
-    DECOUPLED_ONLY_FAILURES = [("voltage", WORN_ALL, 2.6416666666666666)]
-
-    ALL_FAILURES = COUPLED_FAILURES + DECOUPLED_ONLY_FAILURES
+    ALL_FAILURES = COUPLED_FAILURES
 
     @staticmethod
     def _build(initialization_method):
@@ -1264,24 +1264,11 @@ class TestElectrodeSOHCompositeKnownFailures:
     )
     def test_newton_coupled(self, initialization_method, scales, target):
         solver = pybamm.NonlinearSolver(
-            atol=1e-6, rtol=0, step_tol=0, max_backtracks=100
-        )
-        residual = self._residual(initialization_method, scales, target, solver)
-        assert residual < 1e-8
-
-    @pytest.mark.xfail(
-        reason="per-block damping loses a case that coupled damping wins"
-    )
-    @pytest.mark.parametrize(
-        ("initialization_method", "scales", "target"), DECOUPLED_ONLY_FAILURES
-    )
-    def test_newton_decoupled(self, initialization_method, scales, target):
-        solver = pybamm.NonlinearSolver(
             atol=1e-6,
             rtol=0,
             step_tol=0,
             max_backtracks=100,
-            options={"newton_block_mode": "decoupled"},
+            options={"newton_block_mode": "coupled"},
         )
         residual = self._residual(initialization_method, scales, target, solver)
         assert residual < 1e-8

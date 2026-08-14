@@ -12,8 +12,9 @@ states whose residual was already decreasing.
 ## Goals
 
 - Per-block damping, so an ill-scaled equation damps only its own subsystem.
-- Never worse than today: `coupled` is bit-identical to the current code, and a
-  single-subsystem partition degrades to `coupled` automatically.
+- Never worse than today: `coupled` is bit-identical to the current code, a
+  single-subsystem partition degrades to `coupled` automatically, and a multi-block
+  solve that fails is retried once with the blocks merged.
 
 ## Non-goals
 
@@ -135,8 +136,18 @@ solved state, not the masked residual of whichever blocks were last active, so t
 accept/reject gate in `NonlinearSolverInitialConditions` compares like with like. That
 costs one extra residual evaluation per solve.
 
-Failure behaviour is unchanged: exhausting `max_iter` returns the same `NonlinearResult`
-the current solver returns, with no retry.
+### Merged retry
+
+A multi-block solve that fails is retried once from the original guess with every block
+merged into one. Per-block damping is a different search path, not a strictly better
+one, and without the retry making it the default is unsafe: on the single
+composite-electrode ESOH case where `decoupled` loses, the composite solver chain fell
+through its Newton and `AlgebraicSolver` stages to `lsq`, which returned a
+least-squares point at ‖F‖ = 1.6e-1 and reported success. The retry costs nothing on
+success and turns that case back into ‖F‖ = 2.0e-14.
+
+Beyond the retry, failure behaviour is unchanged: exhausting `max_iter` returns the same
+`NonlinearResult` the current solver returns.
 
 ## Verification
 
@@ -149,7 +160,7 @@ the current solver returns, with no retry.
 - **Converged residual.** The whole-system residual inf-norm at the returned solution,
   cross-checked in Python against `model.algebraic_eval`. This is the acceptance
   metric, not iteration count.
-- **Pinned failures.** `TestElectrodeSOHCompositeKnownFailures` holds ten xfailed
+- **Pinned failures.** `TestElectrodeSOHCompositeKnownFailures` holds nine xfailed
   `ElectrodeSOHComposite` systems the Newton solver cannot solve, each anchored by a
   passing test showing the composite solver chain reaches a residual below 1e-8 on the
   same inputs. `xfail_strict` is on, so fixing any of them fails the suite until the
@@ -201,16 +212,17 @@ SOC 0 to 1) crossed with six degradation states scaling `Q_n_1`, `Q_n_2`, `Q_p_1
 | init | mode | resolved | blocks | solved | failed | mean iters | max ‖F‖ | ‖F‖ > 1e-8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | voltage | coupled | coupled | 1 | 75 | 3 | 17.36 | 2.9e-14 | 0 |
-| voltage | decoupled | decoupled | 2 | **76** | 2 | 16.93 | 2.2e-14 | 0 |
+| voltage | decoupled | decoupled | 2 | **77** | 1 | 18.22 | 2.2e-14 | 0 |
 | SOC | coupled | coupled | 1 | 54 | 24 | 17.22 | 2.8e-14 | 0 |
 | SOC | decoupled | coupled | 1 | 54 | 24 | 17.22 | 2.8e-14 | 0 |
 
 Every returned solution is a true root: max ‖F‖ = 2.9e-14 over all solves, nothing above
 1e-8, no mode ever returns a converged-but-wrong answer.
 
-On voltage init `decoupled` gains one net solve — two gains and one loss, it fails on
-`Q = (0.7, 1.0, 0.9, 0.75)` at 2.64 V where coupled succeeds — and takes 2.5% fewer
-iterations. A net improvement, not a strict one. That loss is pinned as an xfail.
+On voltage init `decoupled` gains two solves and loses none. Without the merged retry it
+was 76 solved and one regression against `coupled`; the retry recovers that case, at the
+cost of the mean iteration count rising from 16.93 to 18.22 since the retried solve runs
+twice.
 
 ### Synthetic case where per-block damping wins
 
@@ -274,14 +286,15 @@ invisible in iteration counts and both only detectable by checking the converged
 residual: whole-solve exit on the first block to finish, and latching
 `CONVERGED_WRMS_AT_MAX_ITER` on any one block. Each returned a confident wrong answer.
 
-`decoupled` is net-positive everywhere measured and falls back to `coupled` on the
-models that have nothing to split, which is most of them. Ship with the default at
-`coupled`.
+`decoupled` is the default. With the merged retry it never loses a solve that `coupled`
+would have got, it gains two on composite-electrode ESOH and 9% of the iterations on the
+synthetic case, and it falls back to `coupled` on the models with nothing to split,
+which is most of them. Setting `newton_block_mode = "coupled"` skips the analysis and
+reproduces the previous solver exactly.
 
 ## Interface
 
-New `SolverOptions` field `newton_block_mode`, `"coupled"` or `"decoupled"`, defaulting
-to `"coupled"`. Plumbed from Python the same way `newton_mode` is, defaulted in
+New `SolverOptions` field `newton_block_mode`, `"decoupled"` (default) or `"coupled"`. Plumbed from Python the same way `newton_mode` is, defaulted in
 `idaklu_solver.py` and `nonlinear_solver.py`.
 
 ## Files

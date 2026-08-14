@@ -81,7 +81,7 @@ public:
     int max_backtracks,
     sunrealtype epsNewt,
     bool use_sparse,
-    const std::string& block_mode = "coupled");
+    const std::string& block_mode = "decoupled");
 
   /** @brief Resolved block mode and block count of the partition. */
   std::string block_mode() const {

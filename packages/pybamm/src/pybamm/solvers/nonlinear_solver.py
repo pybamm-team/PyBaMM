@@ -9,7 +9,7 @@ from pybamm.codegen.compilation import aot_compile
 
 _DEFAULT_OPTIONS = {
     "compile": False,
-    "newton_block_mode": "coupled",
+    "newton_block_mode": "decoupled",
 }
 
 
@@ -64,8 +64,9 @@ class NonlinearSolver(pybamm.BaseSolver):
     options : dict, optional
         Solver options. ``compile`` (bool, default False) enables ahead-of-time
         compilation of the CasADi residual/Jacobian. ``newton_block_mode``
-        ("coupled" or "decoupled"; default "coupled") selects whether the
+        ("decoupled" or "coupled"; default "decoupled") selects whether the
         linesearch damps structurally independent subsystems separately.
+        "decoupled" falls back to "coupled" when there is only one subsystem.
     """
 
     def __init__(

@@ -205,7 +205,7 @@ SolverOptions::SolverOptions(py::dict &py_opts)
         newton_mode = py_opts["newton_mode"].cast<std::string>();
     }
 
-    newton_block_mode = "coupled";
+    newton_block_mode = "decoupled";
     if (py_opts.contains("newton_block_mode")) {
         newton_block_mode = py_opts["newton_block_mode"].cast<std::string>();
     }
