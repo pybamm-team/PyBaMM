@@ -1241,9 +1241,9 @@ class TestElectrodeSOHCompositeHardCases:
         solution = sim.solve([0], inputs=inputs)
         state = {name: float(solution[name](0)) for name in model.variables}
 
-        branch = lambda electrode, phase: get_lithiation_delithiation(
-            None, electrode, options, phase=phase
-        )
+        def branch(electrode, phase):
+            return get_lithiation_delithiation(None, electrode, options, phase=phase)
+
         if initialization_method == "voltage":
             voltage = self._ocp(
                 parameter_values,
@@ -1260,10 +1260,13 @@ class TestElectrodeSOHCompositeHardCases:
             )
             assert voltage == pytest.approx(target, abs=1e-08)
         else:
-            charge = lambda tag: (
-                capacities["Q_n_1"] * state[f"x_{tag}_1"]
-                + capacities["Q_n_2"] * state[f"x_{tag}_2"]
-            )
+
+            def charge(tag):
+                return (
+                    capacities["Q_n_1"] * state[f"x_{tag}_1"]
+                    + capacities["Q_n_2"] * state[f"x_{tag}_2"]
+                )
+
             soc = (charge("init") - charge("0")) / (charge("100") - charge("0"))
             assert soc == pytest.approx(target, abs=1e-08)
 
@@ -1273,3 +1276,97 @@ class TestElectrodeSOHCompositeHardCases:
             + capacities["Q_p_1"] * state["y_init_1"]
         )
         assert lithium == pytest.approx(capacities["Q_Li"], rel=1e-10)
+
+
+class TestElectrodeSOHCompositeFallback:
+    """The split solve is the fallback when the bracketed solve cannot answer.
+
+    It reaches the stoichiometries a different way, one electrode at a time, so it
+    is a genuine second attempt rather than a retry of the same solve. These tests
+    force the first attempt to fail, since nothing in the parameter sweep does.
+    """
+
+    OPTIONS = {
+        "particle phases": ("2", "1"),
+        "open-circuit potential": (("single", "current sigmoid"), "single"),
+    }
+
+    def _call(self, **kwargs):
+        return pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            0.5,
+            pybamm.ParameterValues("Chen2020_composite"),
+            direction="discharge",
+            options=self.OPTIONS,
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            pybamm.SolverError("full solve failed"),
+            # the native rootfinder reports failure this way, and it used to escape
+            # the fallback entirely
+            RuntimeError("rootfinder process failed"),
+            ValueError("bad bracket"),
+        ],
+    )
+    def test_a_failed_full_solve_falls_back_to_the_split_solve(
+        self, monkeypatch, error
+    ):
+        def fail(*args, **kwargs):
+            raise error
+
+        expected = pybamm.lithium_ion.ElectrodeSOHComposite.solve_split(
+            0.5,
+            pybamm.ParameterValues("Chen2020_composite"),
+            direction="discharge",
+            options=self.OPTIONS,
+        )
+        monkeypatch.setattr(
+            pybamm.lithium_ion.ElectrodeSOHComposite, "solve_full", fail
+        )
+        from_split = self._call(try_split_solve=True)
+        assert from_split.keys() == expected.keys()
+        for name, value in expected.items():
+            assert from_split[name] == pytest.approx(value, abs=1e-10), name
+
+    def test_the_fallback_can_be_turned_off(self, monkeypatch):
+        def fail(*args, **kwargs):
+            raise RuntimeError("rootfinder process failed")
+
+        monkeypatch.setattr(
+            pybamm.lithium_ion.ElectrodeSOHComposite, "solve_full", fail
+        )
+        with pytest.raises(pybamm.SolverError, match="Failed to solve composite"):
+            self._call(try_split_solve=False)
+
+    def test_both_failing_reports_both_errors(self, monkeypatch):
+        def fail_full(*args, **kwargs):
+            raise pybamm.SolverError("full is broken")
+
+        def fail_split(*args, **kwargs):
+            raise pybamm.SolverError("split is broken")
+
+        monkeypatch.setattr(
+            pybamm.lithium_ion.ElectrodeSOHComposite, "solve_full", fail_full
+        )
+        monkeypatch.setattr(
+            pybamm.lithium_ion.ElectrodeSOHComposite, "solve_split", fail_split
+        )
+        with pytest.raises(
+            pybamm.SolverError, match=r"full is broken.*split is broken"
+        ):
+            self._call(try_split_solve=True)
+
+    def test_a_non_finite_stoichiometry_is_a_failure_not_a_result(self, monkeypatch):
+        # a solve that returns NaN must reach the fallback, not be handed back
+        def nan_evaluator(model, parameter_values):
+            names = sorted(model.variables)
+            return names, [], lambda *a: np.full(len(names), np.nan)
+
+        monkeypatch.setattr(
+            pybamm.models.full_battery_models.lithium_ion.electrode_soh_composite,
+            "_esoh_evaluator",
+            nan_evaluator,
+        )
+        assert np.isfinite(self._call(try_split_solve=True)["x_init_1"])

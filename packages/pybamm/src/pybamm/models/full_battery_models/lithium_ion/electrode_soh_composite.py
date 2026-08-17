@@ -84,6 +84,35 @@ def _get_primary_only_options(
     return options_dict
 
 
+def _initialization_method(initial_value):
+    """Whether ``initial_value`` asks for a voltage or an SOC.
+
+    Parameters
+    ----------
+    initial_value : float or str
+        An SOC, or a voltage as a string ending in ``"V"``.
+
+    Returns
+    -------
+    str
+        ``"voltage"`` or ``"SOC"``.
+
+    Raises
+    ------
+    ValueError
+        If it is neither.
+    """
+    if isinstance(initial_value, str) and initial_value.endswith("V"):
+        return "voltage"
+    if isinstance(initial_value, float):
+        return "SOC"
+    raise ValueError(
+        "Invalid initial value. Expected a float between 0 and 1 "
+        "(for SOC) or a string ending in 'V' (for voltage), got "
+        f"{initial_value!r} of type {type(initial_value).__name__}"
+    )
+
+
 def _get_stoich_variables(options):
     """Create stoichiometry variables for composite electrodes."""
     variables = {
@@ -383,10 +412,13 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         def limits(soc, V_target, closure):
             """A limit state: one unknown, the shared negative potential."""
             neg, pos = ocps("negative", soc), ocps("positive", soc)
-            states = lambda U_n: (
-                [invert(U, b, U_n, T_ref) for U, b in neg],
-                [invert(U, b, U_n + V_target, T_ref) for U, b in pos],
-            )
+
+            def states(U_n):
+                return (
+                    [invert(U, b, U_n, T_ref) for U, b in neg],
+                    [invert(U, b, U_n + V_target, T_ref) for U, b in pos],
+                )
+
             U_n = pybamm.BrentUnknown("negative potential")
             lo, hi = bracket(neg + pos, [0] * len(neg) + [V_target] * len(pos), T_ref)
             solved = pybamm.Brent(
@@ -398,9 +430,8 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             )
             return states(solved)
 
-        total_lithium = lambda x, y: sum(
-            q * s for q, s in zip(Q_n + Q_p, x + y, strict=True)
-        )
+        def total_lithium(x, y):
+            return sum(q * s for q, s in zip(Q_n + Q_p, x + y, strict=True))
 
         x_100, y_100 = limits(
             "100", param.ocp_soc_100, lambda x, y: Q_Li - total_lithium(x, y)
@@ -448,7 +479,10 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         if initialization_method == "voltage":
             closure = total_lithium(x_guess, y_guess) - Q_Li
         elif initialization_method == "SOC":
-            charge = lambda x: sum(q * s for q, s in zip(Q_n, x, strict=True))
+
+            def charge(x):
+                return sum(q * s for q, s in zip(Q_n, x, strict=True))
+
             closure = (charge(x_guess) - charge(x_0)) / (
                 charge(x_100) - charge(x_0)
             ) - pybamm.InputParameter("SOC_init")
@@ -769,7 +803,8 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         inputs : dict, optional
             Additional inputs
         initial_conditions : dict, optional
-            Dictionary of initial conditions for variables (e.g., from split solve)
+            Accepted and ignored. Each stoichiometry is found by a bracketed
+            rootfind, which needs a bracket rather than a starting guess.
         esoh_sim : :class:`pybamm.Simulation`, optional
             A pre-built simulation wrapping an :class:`ElectrodeSOHComposite` model
             to reuse across calls. If not provided, a new one is created.
@@ -797,28 +832,20 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
 
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init, inputs=inputs)
 
-        if isinstance(initial_value, str) and initial_value.endswith("V"):
+        initialization_method = _initialization_method(initial_value)
+        if initialization_method == "voltage":
             V_init = float(initial_value[:-1])
-            initialization_method = "voltage"
-        elif isinstance(initial_value, float):
-            initialization_method = "SOC"
-            if initial_value > 1:
-                warnings.warn(
-                    message=f"Initial SoC {initial_value} is greater than 1",
-                    category=UserWarning,
-                    stacklevel=2,
-                )
-            elif initial_value < 0:
-                warnings.warn(
-                    message=f"Initial SoC {initial_value} is less than 0",
-                    category=UserWarning,
-                    stacklevel=2,
-                )
-        else:
-            raise ValueError(
-                "Invalid initial value. Expected a float between 0 and 1 "
-                "(for SOC) or a string ending in 'V' (for voltage), got "
-                f"{initial_value!r} of type {type(initial_value).__name__}"
+        elif initial_value > 1:
+            warnings.warn(
+                message=f"Initial SoC {initial_value} is greater than 1",
+                category=UserWarning,
+                stacklevel=2,
+            )
+        elif initial_value < 0:
+            warnings.warn(
+                message=f"Initial SoC {initial_value} is less than 0",
+                category=UserWarning,
+                stacklevel=2,
             )
 
         all_inputs = {**inputs, **Qs, "Q_Li": Q_Li}
@@ -834,12 +861,21 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         else:
             model = esoh_sim.model
 
-        # `initial_conditions` is accepted for backwards compatibility and ignored:
-        # a bracketed rootfind has no initial guess to seed.
         names, input_names, function = _esoh_evaluator(model, parameter_values)
-        values = np.asarray(
-            function(*[all_inputs[name] for name in input_names])
-        ).reshape(-1)
+        try:
+            values = np.asarray(
+                function(*[all_inputs[name] for name in input_names])
+            ).reshape(-1)
+        except RuntimeError as error:
+            # the native rootfinder reports failure as RuntimeError; callers, and the
+            # fallback in get_initial_stoichiometries_composite, expect a SolverError
+            raise pybamm.SolverError(
+                f"Composite electrode SOH solve failed: {error}"
+            ) from error
+        if not np.all(np.isfinite(values)):
+            raise pybamm.SolverError(
+                "Composite electrode SOH solve returned a non-finite stoichiometry"
+            )
         return dict(zip(names, values, strict=True))
 
 
@@ -1003,6 +1039,10 @@ def get_initial_stoichiometries_composite(
             "Only `cyclable lithium capacity` is supported for composite electrodes"
         )
 
+    # A value that is neither an SOC nor a voltage is the caller's mistake, not a
+    # solve that failed, so it must not reach the fallback.
+    _initialization_method(initial_value)
+
     try:
         return ElectrodeSOHComposite.solve_full(
             initial_value,
@@ -1014,45 +1054,26 @@ def get_initial_stoichiometries_composite(
             inputs=inputs,
             esoh_sim=esoh_sim,
         )
-    except (pybamm.SolverError, ValueError) as first_error:
-        if try_split_solve:
-            try:
-                split_results = ElectrodeSOHComposite.solve_split(
-                    initial_value,
-                    parameter_values,
-                    direction=direction,
-                    param=param,
-                    options=options,
-                    tol=tol,
-                    inputs=inputs,
-                )
-
-                try:
-                    return ElectrodeSOHComposite.solve_full(
-                        initial_value,
-                        parameter_values,
-                        direction=direction,
-                        param=param,
-                        options=options,
-                        tol=tol,
-                        inputs=inputs,
-                        initial_conditions=split_results,
-                    )
-                except (pybamm.SolverError, ValueError) as retry_error:
-                    raise ValueError(
-                        f"Failed to solve composite electrode SOH. "
-                        f"Initial full solve error: {first_error}. "
-                        f"Retry with split solve initial conditions also failed: "
-                        f"{retry_error}"
-                    ) from retry_error
-
-            except (pybamm.SolverError, ValueError) as split_error:
-                raise ValueError(
-                    f"Failed to solve composite electrode SOH. "
-                    f"Full solve error: {first_error}. "
-                    f"Split solve error: {split_error}"
-                ) from split_error
-        else:
-            raise ValueError(
+    except (pybamm.SolverError, ValueError, RuntimeError) as first_error:
+        if not try_split_solve:
+            raise pybamm.SolverError(
                 f"Failed to solve composite electrode SOH: {first_error}"
             ) from first_error
+        # The split solve reaches the answer a different way, one electrode at a
+        # time, so its result is the fallback rather than a guess to re-solve from.
+        try:
+            return ElectrodeSOHComposite.solve_split(
+                initial_value,
+                parameter_values,
+                direction=direction,
+                param=param,
+                options=options,
+                tol=tol,
+                inputs=inputs,
+            )
+        except (pybamm.SolverError, ValueError, RuntimeError) as split_error:
+            raise pybamm.SolverError(
+                f"Failed to solve composite electrode SOH. "
+                f"Full solve error: {first_error}. "
+                f"Split solve error: {split_error}"
+            ) from split_error

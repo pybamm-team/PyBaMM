@@ -287,7 +287,9 @@ class Brent(pybamm.Symbol):
         """
         from scipy.optimize import brentq
 
-        scalar = lambda v: np.asarray(v, dtype=float).reshape(-1)[0]
+        def scalar(value):
+            return np.asarray(value, dtype=float).reshape(-1)[0]
+
         lo, hi = (scalar(b.evaluate(t, y, y_dot, inputs)) for b in self.bounds)
         unknown = self.unknown
         if not isinstance(unknown, BrentUnknown):
