@@ -178,6 +178,13 @@ class Brent(pybamm.Symbol):
         ]
         super().__init__(name, children=children)
 
+    def set_id(self):
+        # the tolerances change what the node computes, so they belong in its
+        # identity: the CasADi conversion cache is keyed on it, and two Brents that
+        # differ only in tolerance must not be served each other's rootfinder
+        super().set_id()
+        self._id = hash((self._id, self.abstol, self.max_iter))
+
     @property
     def residual(self):
         """The expression being driven to zero."""

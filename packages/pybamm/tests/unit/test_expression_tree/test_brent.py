@@ -182,3 +182,32 @@ class TestBrent:
     def test_an_unresolved_unknown_is_an_error(self):
         with pytest.raises(TypeError, match="Cannot convert symbol of type"):
             pybamm.Variable("x").to_casadi(inputs={})
+
+    def test_the_tolerances_are_part_of_the_identity(self):
+        # The conversion cache is keyed on `id`, and a Brent converted inside another
+        # Brent's oracle is shared with the enclosing conversion. Two nodes that differ
+        # only in tolerance must not be served each other's rootfinder.
+        unknown = pybamm.BrentUnknown("s")
+        target = pybamm.InputParameter("p")
+        residual = unknown * unknown - target
+        coarse = pybamm.Brent(residual, unknown, (0.01, 10), abstol=1e-1, max_iter=2)
+        fine = pybamm.Brent(residual, unknown, (0.01, 10), abstol=1e-14, max_iter=100)
+        assert coarse.id != fine.id
+
+        outer_unknown = pybamm.BrentUnknown("outer")
+        outer = pybamm.Brent(outer_unknown - coarse, outer_unknown, (0.01, 50))
+        inputs = {"p": casadi.MX.sym("p")}
+        shared: dict = {}
+        converted = [
+            node.to_casadi(
+                casadi.MX.sym("t"),
+                casadi.MX.sym("y", 1),
+                inputs=inputs,
+                casadi_symbols=shared,
+            )
+            for node in (outer, fine)
+        ]
+        function = casadi.Function("f", [inputs["p"]], [casadi.vertcat(*converted)])
+        np.testing.assert_allclose(
+            float(np.asarray(function(2.0)).reshape(-1)[1]), np.sqrt(2), rtol=1e-13
+        )
