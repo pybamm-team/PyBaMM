@@ -443,6 +443,32 @@ def _reg_power_branch(
     )
 
 
+def _brent_branch(
+    child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.Brent]:
+    """Brent over ``residual(unknown) == 0``, bracketed by two further expressions."""
+
+    def make_brent(parts):
+        residual, lo, hi, abstol, max_iter = parts
+        unknown = pybamm.Variable("brent unknown")
+        return pybamm.Brent(
+            # subtraction so the unknown cannot be simplified away, as `0 * x` would
+            unknown - residual,
+            unknown,
+            (lo, hi),
+            abstol=abstol,
+            max_iter=max_iter,
+        )
+
+    return st.tuples(
+        child_strategy,
+        child_strategy,
+        child_strategy,
+        st.floats(min_value=1e-16, max_value=1e-6, allow_nan=False),
+        st.integers(min_value=1, max_value=200),
+    ).map(make_brent)
+
+
 def _interpolant_branch(
     _child_strategy: st.SearchStrategy[pybamm.Symbol],
 ) -> st.SearchStrategy[pybamm.Interpolant]:
@@ -938,6 +964,7 @@ _STRATEGIES.update(
         pybamm.RegPower: _reg_power_branch,
         # data-bearing leaves
         pybamm.Interpolant: _interpolant_branch,
+        pybamm.Brent: _brent_branch,
         ExpressionFunctionParameter: _expression_function_parameter_branch,
         # n-ary / complex branch strategies
         pybamm.Conditional: _conditional_branch,

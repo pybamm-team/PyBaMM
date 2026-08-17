@@ -119,6 +119,9 @@ pybind11_add_module(idaklu
         src/pybammsolvers/idaklu_source/Options.cpp
         src/pybammsolvers/idaklu_source/StandaloneNewtonSolver.hpp
         src/pybammsolvers/idaklu_source/StandaloneNewtonSolver.cpp
+        src/pybammsolvers/idaklu_source/brent.hpp
+        src/pybammsolvers/idaklu_source/brent.cpp
+        src/pybammsolvers/idaklu_source/brent_impl.hpp
         # IDAKLU expressions / function evaluation [abstract]
         src/pybammsolvers/idaklu_source/Expressions/Expressions.hpp
         src/pybammsolvers/idaklu_source/Expressions/Base/Expression.hpp
@@ -170,9 +173,18 @@ if (${USE_PYTHON_CASADI})
         file(TO_CMAKE_PATH ${CASADI_INCLUDE_DIR} CASADI_INCLUDE_DIR)
         message("Found Python CasADi include directory: ${CASADI_INCLUDE_DIR}")
         target_include_directories(idaklu PRIVATE ${CASADI_INCLUDE_DIR})
+        # CasADi's internal headers include their public siblings unqualified
+        target_include_directories(idaklu PRIVATE ${CASADI_INCLUDE_DIR}/casadi/core)
     else ()
         message(FATAL_ERROR "Could not find CasADi include directory")
     endif ()
+
+    # The internal headers must come from the same CasADi that is being linked, so
+    # record its version; the check is below, next to the version that is pinned.
+    execute_process(
+            COMMAND "${PYTHON_EXECUTABLE}" -c "import casadi; print(casadi.__version__)"
+            OUTPUT_VARIABLE CASADI_LINKED_VERSION
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
 
     execute_process(
             COMMAND "${PYTHON_EXECUTABLE}" -c
@@ -228,7 +240,136 @@ else ()
     else()
         target_link_libraries(idaklu PRIVATE casadi)
     endif()
+    # CasADi's internal headers include their public siblings unqualified
+    if(TARGET casadi::casadi)
+        get_target_property(_casadi_incs casadi::casadi INTERFACE_INCLUDE_DIRECTORIES)
+        foreach(_casadi_inc IN LISTS _casadi_incs)
+            target_include_directories(idaklu PRIVATE ${_casadi_inc}/casadi/core)
+        endforeach()
+    endif()
 endif ()
+
+# The "brent" rootfinder plugin subclasses casadi::Rootfinder, whose headers CasADi
+# does not install (casadi/core/CMakeLists.txt gates them behind the OFF-by-default
+# INSTALL_INTERNAL_HEADERS). They are LGPL-3.0-or-later, so instead of vendoring
+# them into this BSD-3-Clause tree they are taken at configure time from CasADi's
+# own PyPI source distribution, pinned by version and SHA-256.
+set(CASADI_INTERNAL_VERSION "3.7.2"
+        CACHE STRING "CasADi version to source the internal headers from")
+set(CASADI_INTERNAL_SHA256 "b4d7bd8acdc4180306903ae1c9eddaf41be2a3ae2fa7154c57174ae64acdc60d"
+        CACHE STRING "SHA-256 of the CasADi source distribution")
+set(CASADI_SOURCE_DIR ""
+        CACHE PATH "Local CasADi source tree; set this for offline builds to skip the download")
+
+if (CASADI_LINKED_VERSION AND NOT CASADI_LINKED_VERSION STREQUAL CASADI_INTERNAL_VERSION)
+    message(FATAL_ERROR
+            "CasADi version mismatch: linking CasADi ${CASADI_LINKED_VERSION} but sourcing the "
+            "internal headers for the \"brent\" plugin from ${CASADI_INTERNAL_VERSION}. These "
+            "headers are not ABI-stable, so they must match. Update CASADI_INTERNAL_VERSION and "
+            "CASADI_INTERNAL_SHA256 in this file to match the casadi pin in pyproject.toml.")
+endif ()
+
+set(_casadi_internal_headers
+        casadi_os.hpp
+        function_internal.hpp
+        oracle_function.hpp
+        plugin_interface.hpp
+        rootfinder_impl.hpp)
+set(_casadi_internal_work "${CMAKE_CURRENT_BINARY_DIR}/casadi-internal")
+set(_casadi_internal_include "${_casadi_internal_work}/include")
+
+# editable.rebuild reconfigures on every import; skip the work once staged.
+set(_casadi_internal_staged TRUE)
+foreach (_header IN LISTS _casadi_internal_headers)
+    if (NOT EXISTS "${_casadi_internal_include}/casadi/core/${_header}")
+        set(_casadi_internal_staged FALSE)
+    endif ()
+endforeach ()
+
+if (NOT _casadi_internal_staged)
+    if (NOT CASADI_SOURCE_DIR AND DEFINED ENV{CASADI_SOURCE_DIR})
+        set(CASADI_SOURCE_DIR "$ENV{CASADI_SOURCE_DIR}")
+    endif ()
+
+    if (CASADI_SOURCE_DIR)
+        file(TO_CMAKE_PATH "${CASADI_SOURCE_DIR}" _casadi_internal_src)
+        message(STATUS "idaklu: taking CasADi internal headers from ${_casadi_internal_src}")
+    else ()
+        set(_casadi_sdist "${_casadi_internal_work}/casadi-${CASADI_INTERNAL_VERSION}.tar.gz")
+        set(_casadi_sdist_url
+                "https://pypi.org/packages/source/c/casadi/casadi-${CASADI_INTERNAL_VERSION}.tar.gz")
+        message(STATUS "idaklu: downloading ${_casadi_sdist_url} for the CasADi internal headers")
+        file(DOWNLOAD "${_casadi_sdist_url}" "${_casadi_sdist}"
+                EXPECTED_HASH SHA256=${CASADI_INTERNAL_SHA256}
+                STATUS _casadi_download_status)
+        list(GET _casadi_download_status 0 _casadi_download_rc)
+        if (_casadi_download_rc)
+            list(GET _casadi_download_status 1 _casadi_download_message)
+            file(REMOVE "${_casadi_sdist}")
+            message(FATAL_ERROR
+                    "Could not download the CasADi source distribution, which supplies the "
+                    "internal headers the \"brent\" rootfinder plugin is built against:\n"
+                    "  ${_casadi_sdist_url}\n"
+                    "  ${_casadi_download_message}\n"
+                    "For an offline build, unpack that archive yourself and configure with "
+                    "-DCASADI_SOURCE_DIR=<dir> (or set the CASADI_SOURCE_DIR environment "
+                    "variable), pointing at a CasADi ${CASADI_INTERNAL_VERSION} source tree.")
+        endif ()
+        set(_casadi_internal_members "")
+        foreach (_header IN LISTS _casadi_internal_headers)
+            list(APPEND _casadi_internal_members
+                    "casadi-${CASADI_INTERNAL_VERSION}/casadi/core/${_header}")
+        endforeach ()
+        execute_process(
+                COMMAND "${CMAKE_COMMAND}" -E tar xzf "${_casadi_sdist}" ${_casadi_internal_members}
+                WORKING_DIRECTORY "${_casadi_internal_work}"
+                RESULT_VARIABLE _casadi_extract_rc)
+        if (_casadi_extract_rc)
+            message(FATAL_ERROR
+                    "Could not extract the CasADi internal headers from ${_casadi_sdist} "
+                    "(exit ${_casadi_extract_rc}).")
+        endif ()
+        set(_casadi_internal_src "${_casadi_internal_work}/casadi-${CASADI_INTERNAL_VERSION}")
+    endif ()
+
+    # Stage only the five headers, so the rest of a CasADi source tree can never
+    # shadow the generated public headers of the CasADi actually being linked.
+    foreach (_header IN LISTS _casadi_internal_headers)
+        if (NOT EXISTS "${_casadi_internal_src}/casadi/core/${_header}")
+            message(FATAL_ERROR
+                    "${_casadi_internal_src} is not a CasADi source tree: "
+                    "casadi/core/${_header} is missing.")
+        endif ()
+        configure_file(
+                "${_casadi_internal_src}/casadi/core/${_header}"
+                "${_casadi_internal_include}/casadi/core/${_header}"
+                COPYONLY)
+    endforeach ()
+endif ()
+
+target_include_directories(idaklu PRIVATE ${_casadi_internal_include})
+
+# Brent's iteration is emitted verbatim into generated C, so the plugin needs it both
+# compiled and as a string. Stringify the one source file rather than keeping a copy.
+set(BRENT_IMPL_HEADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/pybammsolvers/idaklu_source/brent_impl.hpp")
+file(READ "${BRENT_IMPL_HEADER}" BRENT_IMPL_SOURCE)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated/brent_impl_source.hpp"
+        "// Generated by CMake from brent_impl.hpp. Do not edit.\n"
+        "namespace casadi {\n"
+        "static const char brent_impl_str[] = R\"PYBAMM_BRENT(\n"
+        "${BRENT_IMPL_SOURCE}"
+        ")PYBAMM_BRENT\";\n"
+        "}  // namespace casadi\n")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${BRENT_IMPL_HEADER}")
+target_include_directories(idaklu PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+# Read off CASADI_COMPILER_FLAGS in the linked CasADi's config.h. THREADSAFE_SYMBOLICS
+# is structural: it adds a static mutex to Rootfinder, so a mismatch is an ABI break.
+target_compile_definitions(idaklu PRIVATE
+        CASADI_VERSION=31
+        WITH_DL
+        CASADI_WITH_THREADSAFE_SYMBOLICS
+        CASADI_WITH_THREAD)
 
 # Match idaklu's libstdc++ std::string ABI to the linked libcasadi (GNU only;
 # no-op for MSVC and macOS/libc++). CasADi's PyPI casadi-config.cmake forces
