@@ -256,6 +256,7 @@ class ParameterSubstitutor:
                 pybamm.Concatenation,
                 pybamm.BinaryOperator,
                 pybamm.Conditional,
+                pybamm.Brent,
             ),
         ):
             new_children = [self.process_symbol(child) for child in symbol.children]

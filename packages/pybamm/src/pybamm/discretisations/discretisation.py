@@ -1148,7 +1148,7 @@ class Discretisation:
                 else:
                     return symbol.create_copy(new_children=[disc_child])
 
-        elif isinstance(symbol, (pybamm.Function, pybamm.Conditional)):
+        elif isinstance(symbol, (pybamm.Function, pybamm.Conditional, pybamm.Brent)):
             disc_children = [self.process_symbol(child) for child in symbol.children]
             return symbol.create_copy(disc_children)
 
