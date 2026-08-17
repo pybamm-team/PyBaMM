@@ -32,12 +32,27 @@ class BrentUnknown(pybamm.Symbol):
     def __init__(self, name: str = "brent unknown"):
         super().__init__(f"{name} {next(BrentUnknown._count)}")
 
+    @classmethod
+    def _rebuild(cls, name: str) -> BrentUnknown:
+        """Rebuild with ``name`` exactly, without allocating a new suffix.
+
+        Parameters
+        ----------
+        name : str
+            The full name, unique suffix included.
+        """
+        # every occurrence of one unknown must stay the *same* unknown: the binding in
+        # Brent._to_casadi is keyed on it, and re-running __init__ would rename it
+        unknown = cls.__new__(cls)
+        pybamm.Symbol.__init__(unknown, name)
+        return unknown
+
     def create_copy(self, new_children=None, perform_simplifications=True):
-        # a copy must stay the *same* unknown, or the binding in Brent._to_casadi and
-        # the residual would refer to two different symbols
-        copy = BrentUnknown.__new__(BrentUnknown)
-        pybamm.Symbol.__init__(copy, self.name)
-        return copy
+        return BrentUnknown._rebuild(self.name)
+
+    @classmethod
+    def _from_json(cls, snippet: dict) -> BrentUnknown:
+        return cls._rebuild(snippet["name"])
 
     def _evaluate_for_shape(self):
         # a scalar, but shaped like every other column-vector node so that the
@@ -164,9 +179,9 @@ class Brent(pybamm.Symbol):
                 f"unknown must be a pybamm.Symbol, got {type(unknown).__name__}"
             )
         if not any(node == unknown for node in residual.pre_order()):
-            raise ValueError(f"'{unknown}' does not appear in '{residual}'")
+            raise pybamm.ModelError(f"'{unknown}' does not appear in '{residual}'")
         if len(bounds) != 2:
-            raise ValueError(f"bounds must be a (lo, hi) pair, got {bounds}")
+            raise pybamm.ModelError(f"bounds must be a (lo, hi) pair, got {bounds}")
         self.abstol = abstol
         self.max_iter = max_iter
         # the unknown is a child so that it survives copying and serialisation with
@@ -179,9 +194,8 @@ class Brent(pybamm.Symbol):
         super().__init__(name, children=children)
 
     def set_id(self):
-        # the tolerances change what the node computes, so they belong in its
-        # identity: the CasADi conversion cache is keyed on it, and two Brents that
-        # differ only in tolerance must not be served each other's rootfinder
+        # the conversion cache is keyed on the id, so two Brents differing only in
+        # tolerance must not be served each other's rootfinder
         super().set_id()
         self._id = hash((self._id, self.abstol, self.max_iter))
 
@@ -233,9 +247,8 @@ class Brent(pybamm.Symbol):
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         unknown = casadi.MX.sym(f"brent_unknown_{abs(self.id)}")
-        # the unknown resolves through the conversion cache; only the nodes that read
-        # it are kept local, so an enclosing conversion never sees the binding but
-        # still shares everything else with the residual
+        # only the nodes reading the unknown stay local, so the enclosing conversion
+        # never sees the binding but still shares the rest of the residual
         cache = _OracleCache(
             casadi_symbols, _nodes_reading(self.residual, self.unknown)
         )
@@ -288,14 +301,25 @@ class Brent(pybamm.Symbol):
             return scalar(self.residual.evaluate(t, y, y_dot, inputs))
 
         try:
+            # A shape probe carries NaN through the bounds; there is nothing to solve
+            if not (np.isfinite(lo) and np.isfinite(hi)):
+                return np.nan * np.ones((1, 1))
             root = brentq(g, lo, hi, xtol=self.abstol, maxiter=self.max_iter)
-            return np.array([[root]])
-        except (ValueError, RuntimeError):
-            # a shape probe passes NaN through the bounds, and a bracket that does not
-            # straddle a root has no answer to give
-            return np.nan * np.ones((1, 1))
+        except (ValueError, RuntimeError) as error:
+            # A shape probe lands here too: unsubstituted parameters make the
+            # residual unevaluable or NaN, which is not a failed solve.
+            try:
+                probing = not np.isfinite(g(lo))
+            except (ValueError, RuntimeError):
+                probing = True
+            if probing:
+                return np.nan * np.ones((1, 1))
+            raise pybamm.SolverError(
+                f"Brent failed to solve '{self.residual}' on [{lo}, {hi}]: {error}"
+            ) from error
         finally:
             unknown._value = np.nan * np.ones((1, 1))
+        return np.array([[root]])
 
     def diff(self, variable):
         raise NotImplementedError(

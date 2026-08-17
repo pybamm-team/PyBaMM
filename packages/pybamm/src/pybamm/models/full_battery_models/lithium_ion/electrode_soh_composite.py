@@ -18,9 +18,8 @@ from .util import (
     get_lithiation_delithiation,
 )
 
-# The open-circuit potentials are monotone on the whole line and diverge outside
-# [0, 1], so an inversion may pass through non-physical stoichiometry on its way to
-# the answer. Searching wider costs almost nothing and removes a class of failure.
+# `LithiumIonParameters.U` clips the stoichiometry it passes on and adds an asymptote,
+# so every OCP diverges outside [0, 1] and any of these brackets straddles a root.
 _STOICH_LO, _STOICH_HI = -10.0, 10.0
 _BRACKET_LO, _BRACKET_HI = -5.0, 5.0
 _BRACKET_PAD, _BRACKET_PAD_ABS = 0.05, 1e-6
@@ -415,10 +414,8 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             ),
         )
 
-        # The initial state solves for x_init_1 rather than the potential: it is what
-        # the residual is sensitive to, and near 0% or 100% SOC it is small enough
-        # that an absolute tolerance on the potential would mean nothing. That also
-        # gives the bracket for free, since the initial state lies between the limits.
+        # Solve for x_init_1, not the potential: it is what the residual is sensitive
+        # to, and it lies between the limits, which gives the bracket for free.
         neg_init, pos_init = ocps("negative", "init"), ocps("positive", "init")
 
         def init_states(x_init_1):
@@ -456,7 +453,10 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 charge(x_100) - charge(x_0)
             ) - pybamm.InputParameter("SOC_init")
         else:
-            raise ValueError("Invalid initialization method")
+            raise pybamm.OptionError(
+                f"Invalid initialization method '{initialization_method}', "
+                "expected 'voltage' or 'SOC'"
+            )
 
         # Pad the bracket: at 0% or 100% SOC the answer sits on an endpoint, and a
         # bracketed method needs a strict sign change.
@@ -472,9 +472,8 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         )
         x_init, y_init = init_states(x_init_1)
 
-        # Nothing is solved by the caller's solver: every stoichiometry above is an
-        # expression. The placeholder gives the solver a state to own, and is left out
-        # of `variables` so it never reaches a caller.
+        # Every stoichiometry above is an expression, so the solver has nothing to
+        # iterate; the placeholder gives it a state and is kept out of `variables`.
         placeholder = pybamm.Variable("ESOH placeholder")
         self.algebraic = {placeholder: placeholder}
         self.initial_conditions = {placeholder: pybamm.Scalar(0)}
@@ -492,9 +491,8 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         for index, value in enumerate(y_init):
             self.variables[f"y_init_{index + 1}"] = value
 
-        # Filled in on the first solve and reused while this model is alive; see
-        # `_esoh_evaluator`. Reuse across calls is the caller's to opt into, by
-        # holding on to the simulation and passing it back as `esoh_sim`.
+        # Filled in on the first solve and reused while this model is alive; callers
+        # opt into that by holding the simulation and passing it back as `esoh_sim`.
         self._evaluator: tuple | None = None
 
     @property
@@ -865,6 +863,20 @@ def _unique_nodes(roots):
     return nodes
 
 
+def _parameter_fingerprint(parameter_values):
+    """A comparable summary of every parameter value.
+
+    Numbers compare by value and everything else by identity, so replacing an OCP
+    function counts as a change but re-reading the same one does not.
+    """
+    return tuple(
+        (name, value)
+        if isinstance(value := parameter_values[name], (int, float))
+        else (name, id(value))
+        for name in sorted(parameter_values.keys())
+    )
+
+
 def _esoh_evaluator(model, parameter_values):
     """Map capacities and target straight to stoichiometries.
 
@@ -873,8 +885,8 @@ def _esoh_evaluator(model, parameter_values):
     the solver's per-variable post-processing would convert the same nested
     rootfind once per variable; one CasADi function converts it once.
 
-    The result is held on ``model`` and rebuilt if a different ``parameter_values``
-    arrives, so it lives and dies with the model rather than with the process.
+    The result is held on ``model`` and rebuilt whenever the parameter values change,
+    including in place, so it lives and dies with the model rather than the process.
 
     Returns
     -------
@@ -882,8 +894,9 @@ def _esoh_evaluator(model, parameter_values):
         ``(names, input_names, function)``, where ``function`` maps the inputs in
         ``input_names`` order to the stoichiometries in ``names`` order.
     """
+    fingerprint = _parameter_fingerprint(parameter_values)
     cached = model._evaluator
-    if cached is None or cached[0] is not parameter_values:
+    if cached is None or cached[0] != fingerprint:
         names = sorted(model.variables)
         input_names = sorted(
             {
@@ -905,7 +918,7 @@ def _esoh_evaluator(model, parameter_values):
             for name in names
         ]
         cached = (
-            parameter_values,
+            fingerprint,
             names,
             input_names,
             casadi.Function(

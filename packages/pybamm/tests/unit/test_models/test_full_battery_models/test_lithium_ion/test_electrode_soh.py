@@ -1239,7 +1239,7 @@ class TestElectrodeSOHCompositeHardCases:
         inputs = {**capacities, key: target}
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
         solution = sim.solve([0], inputs=inputs)
-        state = {name: float(solution[name].entries[0]) for name in model.variables}
+        state = {name: float(solution[name](0)) for name in model.variables}
 
         branch = lambda electrode, phase: get_lithiation_delithiation(
             None, electrode, options, phase=phase

@@ -159,9 +159,9 @@ class TestBrent:
             pybamm.Brent(x * x - 9.0, 1.0, (0, 1))
         with pytest.raises(TypeError, match=r"residual must be a pybamm\.Symbol"):
             pybamm.Brent(1.0, x, (0, 1))
-        with pytest.raises(ValueError, match="does not appear in"):
+        with pytest.raises(pybamm.ModelError, match="does not appear in"):
             pybamm.Brent(pybamm.Scalar(2) * pybamm.t - 9.0, x, (0, 1))
-        with pytest.raises(ValueError, match="bounds must be a"):
+        with pytest.raises(pybamm.ModelError, match="bounds must be a"):
             pybamm.Brent(x * x - 9.0, x, (0, 1, 2))
 
         node = pybamm.Brent(x * x - 9.0, x, (0.0, 10.0))
@@ -170,13 +170,20 @@ class TestBrent:
         with pytest.raises(NotImplementedError, match="no symbolic jacobian"):
             node._jac(pybamm.t)
 
-    def test_round_trips_through_json(self):
-        x = pybamm.Variable("x")
+    @pytest.mark.parametrize("unknown_type", [pybamm.Variable, pybamm.BrentUnknown])
+    def test_round_trips_through_json(self, unknown_type):
+        # BrentUnknown is the documented form and names itself from a global counter,
+        # so decoding must restore the name rather than allocate a new one
+        x = unknown_type("x")
         node = pybamm.Brent(x * x - 9.0, x, (0.0, 10.0), abstol=1e-12, max_iter=42)
         rebuilt = convert_symbol_from_json(convert_symbol_to_json(node))
         assert rebuilt.abstol == 1e-12
         assert rebuilt.max_iter == 42
         assert rebuilt.unknown == node.unknown
+        # the two references in `x * x` and the explicit child are one unknown
+        assert (
+            len({s.name for s in rebuilt.pre_order() if type(s) is unknown_type}) == 1
+        )
         assert float(casadi.evalf(rebuilt.to_casadi(inputs={}))) == pytest.approx(3.0)
 
     def test_an_unresolved_unknown_is_an_error(self):
