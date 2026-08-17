@@ -1,15 +1,6 @@
 #include "StandaloneNewtonSolver.hpp"
 
 #include <cstring>
-#include <numeric>
-
-namespace {
-std::vector<int> all_indices(int n) {
-  std::vector<int> idx(n);
-  std::iota(idx.begin(), idx.end(), 0);
-  return idx;
-}
-}  // namespace
 
 // ────────────────────── StandaloneAlgebraicSystem ──────────────────────
 
@@ -189,15 +180,10 @@ StandaloneNewtonSolver::StandaloneNewtonSolver(
   int max_iter,
   int max_backtracks,
   sunrealtype epsNewt,
-  bool use_sparse,
-  const std::string& block_mode)
+  bool use_sparse)
   : system_(residual_fn, jacobian_fn, use_sparse),
     solver_(system_, system_.n_vars(), atol.data(), rtol, step_tol,
-            max_iter, max_backtracks, epsNewt,
-            build_block_partition(
-              block_mode_from_string(block_mode), system_.n_vars(),
-              all_indices(system_.n_vars()),
-              system_.colptrs(), system_.rowvals())),
+            max_iter, max_backtracks, epsNewt),
     n_vars_(system_.n_vars()),
     y_work_(n_vars_)
 {}

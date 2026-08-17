@@ -61,12 +61,11 @@ public:
     );
   }
 
-  void log_newton_start(double t, int n_alg, const char* block_mode,
-                        int n_blocks) {
+  void log_newton_start(double t, int n_alg) {
     if (!enabled_) return;
     logger_(
-      py::str("Newton solve at t = %.17e, n_alg = %d, block mode = %s (%d blocks)")
-        .attr("__mod__")(py::make_tuple(t, n_alg, block_mode, n_blocks))
+      py::str("Newton solve at t = %.17e, n_alg = %d")
+        .attr("__mod__")(py::make_tuple(t, n_alg))
     );
   }
 

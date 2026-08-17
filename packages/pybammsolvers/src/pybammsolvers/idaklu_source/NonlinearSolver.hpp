@@ -2,9 +2,7 @@
 #define PYBAMM_NONLINEAR_SOLVER_HPP
 
 #include "common.hpp"
-#include "BlockPartition.hpp"
 #include "SolverLog.hpp"
-#include <algorithm>
 #include <vector>
 #include <cmath>
 #include <limits>
@@ -55,10 +53,9 @@ public:
 /**
  * @brief Newton solver for consistent initial conditions.
  *
- * The BlockPartition decides which states move together. Each block carries its own
- * linesearch damping factor, so an ill-scaled equation damps only its own block, and
- * a block that converges retires while the others keep iterating. Blocks are
- * independent subsystems, so retiring one cannot disturb another.
+ * Operates on the full n_states system using IDA's existing LS/J.
+ * When diff_idx is non-empty, zeros differential components of the
+ * residual and Newton step to effectively solve only the algebraic block.
  *
  * Zero allocations in the hotpath.
  */
@@ -73,7 +70,7 @@ public:
     int max_iter,
     int max_backtracks,
     sunrealtype epsNewt,
-    BlockPartition partition
+    const std::vector<int>& diff_idx = {}
   );
 
   ~NonlinearSolver() = default;
@@ -92,13 +89,6 @@ public:
   // Algebraic residual inf-norm of the guess and final iterate from the last solve.
   sunrealtype initial_res_norm() const { return initial_res_norm_; }
   sunrealtype final_res_norm() const { return final_res_norm_; }
-  int num_iterations() const { return last_num_iterations_; }
-
-  const BlockPartition& partition() const { return part_; }
-
-  // True if every accepted step of the last solve lowered each active block's
-  // residual inf-norm. False only where a block exhausted its backtracks.
-  bool residual_monotone() const { return residual_monotone_; }
 
 private:
   NonlinearResult RunNewtonLoop(sunrealtype t);
@@ -106,17 +96,14 @@ private:
   sunrealtype EvalResidualAndNorm(sunrealtype t);
   int SetupAndSolveLinearSystem(sunrealtype t);
 
+  sunrealtype WrmsNorm(const sunrealtype* vals) const;
   sunrealtype InfNorm(const sunrealtype* vals) const;
-  sunrealtype BlockInfNorm(const sunrealtype* vals, int block) const;
-  sunrealtype BlockWrmsNorm(const sunrealtype* vals, int block) const;
 
   void ComputeEwt();
   void SaveIterate();
-  void ActivateAllBlocks();
-  void RefreshActiveMask();
-  void MaskInactive(sunrealtype* v) const;
-  void ApplyBlockSteps();
-  sunrealtype WholeSystemResNorm(sunrealtype t);
+  void RevertAndApply(sunrealtype alpha);
+
+  void ZeroDiffComponents(sunrealtype* v) const;
 
   int n_vars_;
   sunrealtype rtol_;
@@ -127,17 +114,7 @@ private:
 
   NonlinearSystem& system_;
 
-  BlockPartition part_;
-  std::vector<int> active_blocks_;        // blocks still iterating
-  std::vector<int> next_active_;          // scratch for the survivors of an iteration
-  std::vector<char> active_idx_;          // n_vars; 1 if the state may move now
-  std::vector<char> full_step_blk_;       // block takes an undamped step and finishes
-  std::vector<char> converged_blk_;       // block has met the WRMS step test at least once
-  std::vector<sunrealtype> alpha_;        // damping factor per block
-  std::vector<sunrealtype> res_norm_blk_;
-  std::vector<sunrealtype> prev_res_norm_blk_;
-  std::vector<sunrealtype> delnorm_blk_;
-  std::vector<sunrealtype> trial_res_blk_;
+  std::vector<int> diff_idx_;
 
   std::vector<sunrealtype> x_;
   std::vector<sunrealtype> res_;
@@ -148,8 +125,8 @@ private:
 
   SolverLog* log_ = nullptr;
 
+  std::string last_message_;
   int last_num_iterations_ = 0;
-  bool residual_monotone_ = true;
 
   sunrealtype initial_res_norm_ = std::numeric_limits<sunrealtype>::infinity();
   sunrealtype final_res_norm_ = std::numeric_limits<sunrealtype>::infinity();

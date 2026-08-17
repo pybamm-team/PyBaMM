@@ -61,7 +61,6 @@ struct SolverOptions {
   // Newton solver for algebraic initial conditions
   double newton_step_tol;
   std::string newton_mode;  // "auto" or "full"
-  std::string newton_block_mode;  // "coupled", "decoupled", "staggered" or "auto"
   explicit SolverOptions(py::dict &py_opts);
 };
 

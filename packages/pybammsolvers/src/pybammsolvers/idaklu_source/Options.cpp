@@ -1,5 +1,4 @@
 #include "Options.hpp"
-#include "BlockPartition.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <cmath>
@@ -204,10 +203,4 @@ SolverOptions::SolverOptions(py::dict &py_opts)
     if (py_opts.contains("newton_mode")) {
         newton_mode = py_opts["newton_mode"].cast<std::string>();
     }
-
-    newton_block_mode = "decoupled";
-    if (py_opts.contains("newton_block_mode")) {
-        newton_block_mode = py_opts["newton_block_mode"].cast<std::string>();
-    }
-    block_mode_from_string(newton_block_mode);  // validate eagerly
 }
