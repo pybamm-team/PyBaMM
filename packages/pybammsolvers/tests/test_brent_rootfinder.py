@@ -197,3 +197,72 @@ class TestBrentCodegen:
             np.testing.assert_allclose(
                 float(external(target)), float(jacobian(target)), rtol=0, atol=1e-14
             )
+
+
+class TestBrentCache:
+    """A Brent nested inside another must not re-solve on every enclosing iteration.
+
+    Its inputs do not vary with the enclosing iterate, so the last solve is kept and
+    returned when they repeat. Without that the cost compounds at each level of
+    nesting, which is a hang rather than a wrong answer -- so it needs its own test
+    on both the interpreted and the generated path.
+    """
+
+    @staticmethod
+    def _nested():
+        """``x`` such that ``g(x) = 0`` where ``g`` reads an inner solve of its own."""
+        target = casadi.MX.sym("target")
+        inner_rf, _ = _solver(non_monotone)
+        inner = inner_rf(target)
+        outer_x = casadi.MX.sym("x")
+        outer = casadi.rootfinder(
+            "outer",
+            "brent",
+            casadi.Function(
+                "outer_g",
+                [outer_x, casadi.MX.sym("lo"), casadi.MX.sym("hi"), target],
+                [outer_x - inner],
+            ),
+            {"abstol": 1e-13, "max_iter": 200},
+        )
+        return casadi.Function(
+            "nested", [target], [outer(LO, LO, HI, target)]
+        )
+
+    def test_repeating_the_inputs_reuses_the_last_solve(self):
+        x, lo, hi, p = (casadi.MX.sym(n) for n in ("x", "lo", "hi", "p"))
+        rf = casadi.rootfinder(
+            "rf", "brent",
+            casadi.Function("g", [x, lo, hi, p], [non_monotone(x, p)]),
+        )
+        first = float(rf(0.0, LO, HI, 1.0))
+        assert rf.stats()["return_status"] == "success"
+        iterations = rf.stats()["iter_count"]
+
+        # Same inputs: the root comes back from the cache, so the iteration count
+        # does not move and the status says so.
+        assert float(rf(0.0, LO, HI, 1.0)) == first
+        assert rf.stats()["return_status"] == "success (cached)"
+        assert rf.stats()["iter_count"] == iterations
+
+        # A different target has to be solved afresh.
+        rf(0.0, LO, HI, 1.4)
+        assert rf.stats()["return_status"] == "success"
+
+    def test_generated_c_carries_the_cache(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        nested = self._nested()
+        nested.generate("nested.c", {"with_header": False})
+        source = (tmp_path / "nested.c").read_text()
+        # The generated iteration keeps its own copy of the cache, so an
+        # ahead-of-time compiled function does not regress to re-solving.
+        assert "brent_cache" in source
+        assert "CASADI_BRENT_TLS" in source
+
+        external = casadi.external(
+            "nested", casadi.Importer(str(tmp_path / "nested.c"), "shell")
+        )
+        for target in (0.7, 1.0, 1.4):
+            np.testing.assert_allclose(
+                float(external(target)), float(nested(target)), rtol=0, atol=1e-14
+            )
