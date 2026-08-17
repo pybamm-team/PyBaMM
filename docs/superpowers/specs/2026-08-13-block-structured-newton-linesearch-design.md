@@ -12,9 +12,8 @@ states whose residual was already decreasing.
 ## Goals
 
 - Per-block damping, so an ill-scaled equation damps only its own subsystem.
-- Never worse than today: `coupled` is bit-identical to the current code, a
-  single-subsystem partition degrades to `coupled` automatically, and a multi-block
-  solve that fails is retried once with the blocks merged.
+- Never worse than today: `coupled` is bit-identical to the current code, and a
+  single-subsystem partition degrades to `coupled` automatically.
 
 ## Non-goals
 
@@ -136,18 +135,50 @@ solved state, not the masked residual of whichever blocks were last active, so t
 accept/reject gate in `NonlinearSolverInitialConditions` compares like with like. That
 costs one extra residual evaluation per solve.
 
-### Merged retry
+Failure behaviour is unchanged: exhausting `max_iter` returns the same
+`NonlinearResult` the current solver returns, with no retry.
 
-A multi-block solve that fails is retried once from the original guess with every block
-merged into one. Per-block damping is a different search path, not a strictly better
-one, and without the retry making it the default is unsafe: on the single
-composite-electrode ESOH case where `decoupled` loses, the composite solver chain fell
-through its Newton and `AlgebraicSolver` stages to `lsq`, which returned a
-least-squares point at ‖F‖ = 1.6e-1 and reported success. The retry costs nothing on
-success and turns that case back into ‖F‖ = 2.0e-14.
+### Why per-block damping cannot be worse, and what the one regression really is
 
-Beyond the retry, failure behaviour is unchanged: exhausting `max_iter` returns the same
-`NonlinearResult` the current solver returns.
+Setting every block's damping factor to the same value reproduces the coupled iteration
+exactly, so the coupled trajectory is inside the per-block scheme's reachable set. A
+per-block solve therefore cannot be worse than a coupled one as a *family*; it can only
+differ in which member of that family the linesearch selects.
+
+The composite-electrode ESOH case where `decoupled` loses is exactly that, and it is
+worth stating precisely because the obvious reading is backwards. Block 1 solved
+entirely on its own reproduces `decoupled`'s block-1 iterates to every printed digit, so
+the split introduces no cross-contamination. The two runs part company at the very first
+step:
+
+| | iteration 0 | iteration 1 |
+| --- | --- | --- |
+| coupled | x_init_1 = 8.333e-2 | **6.275e-4** (alpha = 1) |
+| decoupled | x_init_1 = 8.333e-2 | **4.198e-2** (alpha = 1/2) |
+
+`coupled` tests Armijo on the whole-vector inf-norm, 2.393, which is set by block 0.
+Block 1's undamped Newton step passes that test without block 1's own residual ever
+being consulted, and lands straight in the right basin. Judged on its own residual,
+1.495, the same step fails sufficient decrease, halves, and creeps into a stall.
+
+So `coupled` does not solve this case because coupling helps. It solves it because the
+larger block masks the smaller block's merit function and lets it take an undamped step.
+That is an accident of the two blocks' relative scales, and it runs the other way just
+as easily.
+
+The block is solvable on its own; what breaks it is the linesearch budget:
+
+| `max_backtracks` on block 1 alone | result | ‖F‖ |
+| --- | --- | --- |
+| 100 | max_iter, no convergence | 1.7e-2 |
+| **3** | **converged in 23 iterations** | **0.0** |
+| 1 | max_iter | 1.9e+6 |
+
+More backtracking is worse. Block 1's root sits at stoichiometries of 1.3e-3 and 5.8e-4,
+deep in the steep tail of the graphite OCP, where the inf-norm is a poor merit function
+and an aggressive backtracking budget damps into a stall. `get_esoh_default_solver` asks
+for `max_backtracks=100`. That is the defect this case actually exposes, and it belongs
+to the merit function, not to the block split.
 
 ## Verification
 
@@ -212,17 +243,15 @@ SOC 0 to 1) crossed with six degradation states scaling `Q_n_1`, `Q_n_2`, `Q_p_1
 | init | mode | resolved | blocks | solved | failed | mean iters | max ‖F‖ | ‖F‖ > 1e-8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | voltage | coupled | coupled | 1 | 75 | 3 | 17.36 | 2.9e-14 | 0 |
-| voltage | decoupled | decoupled | 2 | **77** | 1 | 18.22 | 2.2e-14 | 0 |
+| voltage | decoupled | decoupled | 2 | **76** | 2 | 16.93 | 2.2e-14 | 0 |
 | SOC | coupled | coupled | 1 | 54 | 24 | 17.22 | 2.8e-14 | 0 |
 | SOC | decoupled | coupled | 1 | 54 | 24 | 17.22 | 2.8e-14 | 0 |
 
 Every returned solution is a true root: max ‖F‖ = 2.9e-14 over all solves, nothing above
 1e-8, no mode ever returns a converged-but-wrong answer.
 
-On voltage init `decoupled` gains two solves and loses none. Without the merged retry it
-was 76 solved and one regression against `coupled`; the retry recovers that case, at the
-cost of the mean iteration count rising from 16.93 to 18.22 since the retried solve runs
-twice.
+On voltage init `decoupled` gains two solves and loses one, for +1 net, at 2.5% fewer
+iterations. The loss is the case dissected above; it is pinned as an xfail.
 
 ### Synthetic case where per-block damping wins
 
@@ -286,11 +315,15 @@ invisible in iteration counts and both only detectable by checking the converged
 residual: whole-solve exit on the first block to finish, and latching
 `CONVERGED_WRMS_AT_MAX_ITER` on any one block. Each returned a confident wrong answer.
 
-`decoupled` is the default. With the merged retry it never loses a solve that `coupled`
-would have got, it gains two on composite-electrode ESOH and 9% of the iterations on the
-synthetic case, and it falls back to `coupled` on the models with nothing to split,
-which is most of them. Setting `newton_block_mode = "coupled"` skips the analysis and
-reproduces the previous solver exactly.
+`decoupled` is the default: +1 net solve on composite-electrode ESOH, 9% of the
+iterations on the synthetic case, and it falls back to `coupled` on the models with
+nothing to split, which is most of them. Setting `newton_block_mode = "coupled"` skips
+the analysis and reproduces the previous solver exactly.
+
+One consequence to track separately: on the single case `decoupled` loses, the ESOH
+composite chain falls through to `lsq`, which returns a least-squares point at
+‖F‖ = 1.6e-1 **and reports success**. That tail is unsound regardless of this change —
+it is only reached more often now — and is worth fixing where it lives.
 
 ## Interface
 

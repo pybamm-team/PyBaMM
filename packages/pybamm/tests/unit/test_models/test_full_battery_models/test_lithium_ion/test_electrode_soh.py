@@ -1169,10 +1169,8 @@ class TestGetInitialOCPMSMR:
 class TestElectrodeSOHCompositeKnownFailures:
     """Feasible composite-electrode ESOH systems that the Newton solver cannot solve.
 
-    Every case here has a root: the composite solver chain
-    (:class:`pybamm.NonlinearSolver` -> :class:`pybamm.AlgebraicSolver` -> lsq ->
-    minimize) reaches a residual below 1e-8, which
-    ``test_composite_fallback_solves_all_known_failures`` asserts. The xfailed tests
+    Every case here has a root, which ``test_every_known_failure_is_feasible``
+    asserts. The xfailed tests
     below run the Newton solver on its own and record that it does not get there, so
     the reason the fallback chain exists stays visible. Drop a marker if its case
     starts passing.
@@ -1208,7 +1206,14 @@ class TestElectrodeSOHCompositeKnownFailures:
         ("SOC", LOST_SECONDARY, 0.08333333333333333),
     ]
 
-    ALL_FAILURES = COUPLED_FAILURES
+    # `coupled` gets this one only by accident: block 0's much larger residual
+    # dominates the shared inf-norm merit function, so block 1's full Newton step
+    # passes the Armijo test untested and lands in the right basin. Judged on its own
+    # residual the same step is rejected and the block backtracks into a stall. The
+    # block is solvable alone -- it converges to zero residual with max_backtracks=3.
+    DECOUPLED_ONLY_FAILURES = [("voltage", (0.7, 1.0, 0.9, 0.75), 2.6416666666666666)]
+
+    ALL_FAILURES = COUPLED_FAILURES + DECOUPLED_ONLY_FAILURES
 
     @staticmethod
     def _build(initialization_method):
@@ -1250,11 +1255,30 @@ class TestElectrodeSOHCompositeKnownFailures:
     @pytest.mark.parametrize(
         ("initialization_method", "scales", "target"), ALL_FAILURES
     )
-    def test_composite_fallback_solves_all_known_failures(
+    def test_every_known_failure_is_feasible(
         self, initialization_method, scales, target
     ):
-        """Anchor: every xfailed case below has a root the fallback chain reaches."""
-        solver = pybamm.lithium_ion.electrode_soh.get_esoh_default_solver(1e-6)
+        """Anchor: every xfailed case below really does have a root.
+
+        The default composite chain with its Newton pinned to `coupled`, since the
+        default `decoupled` is what the xfails below are about. The residual is
+        asserted rather than trusted from the solver: the chain's `lsq` and `minimize`
+        tails report success at least-squares points that are not always roots.
+        """
+        solver = pybamm.CompositeSolver(
+            [
+                pybamm.NonlinearSolver(
+                    atol=1e-6,
+                    rtol=0,
+                    step_tol=0,
+                    max_backtracks=100,
+                    options={"newton_block_mode": "coupled"},
+                ),
+                pybamm.AlgebraicSolver(tol=1e-6),
+                pybamm.AlgebraicSolver(method="lsq", tol=1e-6),
+                pybamm.AlgebraicSolver(method="minimize", tol=1e-6),
+            ]
+        )
         residual = self._residual(initialization_method, scales, target, solver)
         assert residual < 1e-8
 
@@ -1269,6 +1293,23 @@ class TestElectrodeSOHCompositeKnownFailures:
             step_tol=0,
             max_backtracks=100,
             options={"newton_block_mode": "coupled"},
+        )
+        residual = self._residual(initialization_method, scales, target, solver)
+        assert residual < 1e-8
+
+    @pytest.mark.xfail(
+        reason="over-damped by the shared linesearch budget, not by the split"
+    )
+    @pytest.mark.parametrize(
+        ("initialization_method", "scales", "target"), DECOUPLED_ONLY_FAILURES
+    )
+    def test_newton_decoupled(self, initialization_method, scales, target):
+        solver = pybamm.NonlinearSolver(
+            atol=1e-6,
+            rtol=0,
+            step_tol=0,
+            max_backtracks=100,
+            options={"newton_block_mode": "decoupled"},
         )
         residual = self._residual(initialization_method, scales, target, solver)
         assert residual < 1e-8

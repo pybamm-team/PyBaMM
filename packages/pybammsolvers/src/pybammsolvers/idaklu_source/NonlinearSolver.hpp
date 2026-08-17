@@ -60,10 +60,6 @@ public:
  * a block that converges retires while the others keep iterating. Blocks are
  * independent subsystems, so retiring one cannot disturb another.
  *
- * A multi-block solve that fails is retried once with every block merged, so per-block
- * damping can never turn a solve that a single damping factor would have got into a
- * failure. The retry costs nothing unless the first attempt fails.
- *
  * Zero allocations in the hotpath.
  */
 class NonlinearSolver {
@@ -132,7 +128,6 @@ private:
   NonlinearSystem& system_;
 
   BlockPartition part_;
-  BlockPartition merged_;                 // single-block retry; empty if part_ has one block
   std::vector<int> active_blocks_;        // blocks still iterating
   std::vector<int> next_active_;          // scratch for the survivors of an iteration
   std::vector<char> active_idx_;          // n_vars; 1 if the state may move now

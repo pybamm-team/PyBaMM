@@ -25,13 +25,6 @@ inline NonlinearSolver::NonlinearSolver(
   if (part_.n_vars != n_vars_)
     throw std::invalid_argument("BlockPartition size does not match n_vars");
 
-  if (part_.n_blocks() > 1) {
-    std::vector<int> solved;
-    for (int i = 0; i < n_vars_; i++)
-      if (part_.block_of[i] >= 0) solved.push_back(i);
-    merged_ = BlockPartition::coupled(n_vars_, solved);
-  }
-
   atol_.resize(n_vars_);
   std::memcpy(atol_.data(), atol_data, n_vars_ * sizeof(sunrealtype));
 
@@ -316,15 +309,6 @@ inline NonlinearResult NonlinearSolver::solve_single(
   initial_res_norm_ = WholeSystemResNorm(t);
 
   NonlinearResult result = RunNewtonLoop(t);
-
-  // Per-block damping is a different search path, not a strictly better one, so a
-  // failure gets one retry from the original guess with the blocks merged.
-  if (!nonlinear_success(result) && !merged_.blocks.empty()) {
-    std::memcpy(x_.data(), y, n_vars_ * sizeof(sunrealtype));
-    std::swap(part_, merged_);
-    result = RunNewtonLoop(t);
-    std::swap(part_, merged_);
-  }
 
   final_res_norm_ = WholeSystemResNorm(t);
   std::memcpy(y, x_.data(), n_vars_ * sizeof(sunrealtype));
