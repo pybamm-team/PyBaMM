@@ -261,12 +261,60 @@ set(CASADI_INTERNAL_SHA256 "b4d7bd8acdc4180306903ae1c9eddaf41be2a3ae2fa7154c5717
 set(CASADI_SOURCE_DIR ""
         CACHE PATH "Local CasADi source tree; set this for offline builds to skip the download")
 
-if (CASADI_LINKED_VERSION AND NOT CASADI_LINKED_VERSION STREQUAL CASADI_INTERNAL_VERSION)
+option(CASADI_ALLOW_UNVERIFIED_INTERNALS
+        "Build the \"brent\" plugin even if the linked CasADi cannot be identified" OFF)
+
+# Identify the CasADi actually being linked from its own installed config.h, which is
+# a public header present on every discovery path. The Python-package path also reads
+# a version out of `import casadi`, but the system path (Windows/vcpkg, conda) has no
+# such interpreter to ask, and that is exactly where an unnoticed mismatch would
+# compile 3.7.2 internals against a different binary.
+set(_casadi_include_dirs "")
+if (CASADI_INCLUDE_DIR)
+    list(APPEND _casadi_include_dirs "${CASADI_INCLUDE_DIR}")
+endif ()
+if (TARGET casadi::casadi)
+    get_target_property(_casadi_target_incs casadi::casadi INTERFACE_INCLUDE_DIRECTORIES)
+    if (_casadi_target_incs)
+        list(APPEND _casadi_include_dirs ${_casadi_target_incs})
+    endif ()
+endif ()
+
+unset(CASADI_CONFIG_HEADER CACHE)
+find_file(CASADI_CONFIG_HEADER casadi/config.h PATHS ${_casadi_include_dirs} NO_DEFAULT_PATH)
+
+set(_casadi_config_flags "")
+if (CASADI_CONFIG_HEADER)
+    file(READ "${CASADI_CONFIG_HEADER}" _casadi_config_contents)
+    string(REGEX MATCH "CASADI_VERSION_STRING[ \t]+\"([0-9]+\\.[0-9]+\\.[0-9]+)\""
+            _casadi_version_match "${_casadi_config_contents}")
+    set(CASADI_LINKED_VERSION "${CMAKE_MATCH_1}")
+    string(REGEX MATCH "CASADI_COMPILER_FLAGS[ \t]+\"([^\"]*)\""
+            _casadi_flags_match "${_casadi_config_contents}")
+    set(_casadi_config_flags "${CMAKE_MATCH_1}")
+endif ()
+
+if (NOT CASADI_LINKED_VERSION)
+    if (CASADI_ALLOW_UNVERIFIED_INTERNALS)
+        message(WARNING
+                "Could not read the linked CasADi version from casadi/config.h. The \"brent\" "
+                "plugin is being built against CasADi ${CASADI_INTERNAL_VERSION} internals "
+                "without checking that they match; an ABI mismatch will not be diagnosed.")
+    else ()
+        message(FATAL_ERROR
+                "Could not find casadi/config.h in any of: ${_casadi_include_dirs}\n"
+                "The \"brent\" rootfinder plugin subclasses CasADi internals that are not "
+                "ABI-stable, so the linked version must be known before it can be built. "
+                "Configure with -DCASADI_ALLOW_UNVERIFIED_INTERNALS=ON to build anyway.")
+    endif ()
+elseif (NOT CASADI_LINKED_VERSION STREQUAL CASADI_INTERNAL_VERSION)
     message(FATAL_ERROR
             "CasADi version mismatch: linking CasADi ${CASADI_LINKED_VERSION} but sourcing the "
             "internal headers for the \"brent\" plugin from ${CASADI_INTERNAL_VERSION}. These "
             "headers are not ABI-stable, so they must match. Update CASADI_INTERNAL_VERSION and "
             "CASADI_INTERNAL_SHA256 in this file to match the casadi pin in pyproject.toml.")
+else ()
+    message(STATUS "idaklu: \"brent\" plugin verified against CasADi ${CASADI_LINKED_VERSION}")
 endif ()
 
 set(_casadi_internal_headers
@@ -363,13 +411,25 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated/brent_impl_source.hpp"
         "}  // namespace casadi\n")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${BRENT_IMPL_HEADER}")
 target_include_directories(idaklu PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
-# Read off CASADI_COMPILER_FLAGS in the linked CasADi's config.h. THREADSAFE_SYMBOLICS
-# is structural: it adds a static mutex to Rootfinder, so a mismatch is an ABI break.
-target_compile_definitions(idaklu PRIVATE
-        CASADI_VERSION=31
-        WITH_DL
-        CASADI_WITH_THREADSAFE_SYMBOLICS
-        CASADI_WITH_THREAD)
+# Compile the internal headers with the flags the linked CasADi was itself built with,
+# taken from CASADI_COMPILER_FLAGS in its config.h. CASADI_WITH_THREADSAFE_SYMBOLICS is
+# structural: it adds a static mutex to Rootfinder, so guessing it wrong is an ABI break.
+set(_casadi_internal_defs "")
+if (_casadi_config_flags)
+    separate_arguments(_casadi_config_flag_list UNIX_COMMAND "${_casadi_config_flags}")
+    foreach (_flag IN LISTS _casadi_config_flag_list)
+        if (_flag MATCHES "^-D(.+)$")
+            list(APPEND _casadi_internal_defs "${CMAKE_MATCH_1}")
+        endif ()
+    endforeach ()
+endif ()
+if (NOT _casadi_internal_defs)
+    # No config.h to read: fall back to the flags of every CasADi 3.7 release build.
+    set(_casadi_internal_defs CASADI_VERSION=31 WITH_DL
+            CASADI_WITH_THREADSAFE_SYMBOLICS CASADI_WITH_THREAD)
+endif ()
+message(STATUS "idaklu: CasADi internal header flags: ${_casadi_internal_defs}")
+target_compile_definitions(idaklu PRIVATE ${_casadi_internal_defs})
 
 # Match idaklu's libstdc++ std::string ABI to the linked libcasadi (GNU only;
 # no-op for MSVC and macOS/libc++). CasADi's PyPI casadi-config.cmake forces

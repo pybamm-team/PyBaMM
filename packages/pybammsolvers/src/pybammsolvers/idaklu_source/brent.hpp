@@ -5,8 +5,14 @@
 #include <vector>
 
 // In-tree CasADi plugins get this from a generated export header; out of tree it is
-// just default visibility, which is what CASADI_EXPORT expands to anyway.
+// whatever the toolchain spells "visible in this shared object".
+#if defined(_WIN32) || defined(__CYGWIN__)
+#define CASADI_ROOTFINDER_BRENT_EXPORT __declspec(dllexport)
+#elif defined(__GNUC__) || defined(__clang__)
 #define CASADI_ROOTFINDER_BRENT_EXPORT __attribute__((visibility("default")))
+#else
+#define CASADI_ROOTFINDER_BRENT_EXPORT
+#endif
 
 namespace casadi {
 
