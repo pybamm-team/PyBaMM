@@ -492,6 +492,11 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         for index, value in enumerate(y_init):
             self.variables[f"y_init_{index + 1}"] = value
 
+        # Filled in on the first solve and reused while this model is alive; see
+        # `_esoh_evaluator`. Reuse across calls is the caller's to opt into, by
+        # holding on to the simulation and passing it back as `esoh_sim`.
+        self._evaluator: tuple | None = None
+
     @property
     def default_solver(self):
         return get_esoh_default_solver()
@@ -825,7 +830,9 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             all_inputs["SOC_init"] = initial_value
 
         if esoh_sim is None:
-            model = _esoh_model(options, direction, initialization_method)
+            model = ElectrodeSOHComposite(
+                options, direction, initialization_method=initialization_method
+            )
         else:
             model = esoh_sim.model
 
@@ -859,12 +866,15 @@ def _unique_nodes(roots):
 
 
 def _esoh_evaluator(model, parameter_values):
-    """Map capacities and target straight to stoichiometries, built once.
+    """Map capacities and target straight to stoichiometries.
 
     Every stoichiometry the composite model defines is an expression rather than a
     state, so there is nothing for a solver to iterate. Reading them back through
     the solver's per-variable post-processing would convert the same nested
     rootfind once per variable; one CasADi function converts it once.
+
+    The result is held on ``model`` and rebuilt if a different ``parameter_values``
+    arrives, so it lives and dies with the model rather than with the process.
 
     Returns
     -------
@@ -872,9 +882,8 @@ def _esoh_evaluator(model, parameter_values):
         ``(names, input_names, function)``, where ``function`` maps the inputs in
         ``input_names`` order to the stoichiometries in ``names`` order.
     """
-    cache = model.__dict__.setdefault("_esoh_evaluators", {})
-    key = id(parameter_values)
-    if key not in cache:
+    cached = model._evaluator
+    if cached is None or cached[0] is not parameter_values:
         names = sorted(model.variables)
         input_names = sorted(
             {
@@ -895,9 +904,7 @@ def _esoh_evaluator(model, parameter_values):
             )
             for name in names
         ]
-        # The parameter values are kept alive alongside the function: the key is
-        # their id, and a freed object would let a later one reuse it.
-        cache[key] = (
+        cached = (
             parameter_values,
             names,
             input_names,
@@ -907,29 +914,8 @@ def _esoh_evaluator(model, parameter_values):
                 [casadi.vertcat(*expressions)],
             ),
         )
-    return cache[key][1:]
-
-
-def _esoh_model(options, direction, initialization_method):
-    """Cached composite ESOH model; building one is pure symbolic work."""
-    try:
-        key = (
-            tuple(sorted(dict(options).items())),
-            direction,
-            initialization_method,
-        )
-    except TypeError:  # unhashable option value
-        return ElectrodeSOHComposite(
-            options, direction, initialization_method=initialization_method
-        )
-    if key not in _ESOH_MODELS:
-        _ESOH_MODELS[key] = ElectrodeSOHComposite(
-            options, direction, initialization_method=initialization_method
-        )
-    return _ESOH_MODELS[key]
-
-
-_ESOH_MODELS: dict = {}
+        model._evaluator = cached
+    return cached[1:]
 
 
 def get_initial_stoichiometries_composite(
