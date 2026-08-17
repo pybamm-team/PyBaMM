@@ -3,9 +3,54 @@
 #
 from __future__ import annotations
 
+import itertools
+
 import casadi
+import numpy as np
 
 import pybamm
+
+
+class BrentUnknown(pybamm.Symbol):
+    """
+    The scalar a :class:`Brent` solves for.
+
+    Bound by the rootfinder, not by the model, so it is deliberately not a
+    :class:`pybamm.Variable`: the checks that enumerate model states must not count it
+    as one, or a ``Brent`` inside ``model.rhs`` or ``model.algebraic`` looks like an
+    extra unknown with no equation. Each instance is uniquely named, so two ``Brent``
+    nodes never share an unknown.
+
+    Parameters
+    ----------
+    name : str, optional
+        Name of the node. A unique suffix is appended.
+    """
+
+    _count = itertools.count()
+
+    def __init__(self, name: str = "brent unknown"):
+        super().__init__(f"{name} {next(BrentUnknown._count)}")
+
+    def create_copy(self, new_children=None, perform_simplifications=True):
+        # a copy must stay the *same* unknown, or the binding in Brent._to_casadi and
+        # the residual would refer to two different symbols
+        copy = BrentUnknown.__new__(BrentUnknown)
+        pybamm.Symbol.__init__(copy, self.name)
+        return copy
+
+    def _evaluate_for_shape(self):
+        # a scalar, but shaped like every other column-vector node so that the
+        # broadcasting helpers can read shape[1]
+        return np.nan * np.ones((1, 1))
+
+    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+        # set by Brent._base_evaluate while it iterates; there is nothing to read
+        # otherwise, since the value only exists inside a solve
+        return self._value
+
+    # a 1x1 column, the shape every other node in an equation reports
+    _value = np.nan * np.ones((1, 1))
 
 
 class Brent(pybamm.Symbol):
@@ -28,9 +73,11 @@ class Brent(pybamm.Symbol):
         The expression to drive to zero. Must contain ``unknown``. To invert ``f`` at
         a target, pass ``f - target``.
     unknown : :class:`pybamm.Symbol`
-        The value being solved for. Any symbol will do, so long as it appears in
-        ``residual`` and nowhere else in the surrounding expression; a
-        :class:`pybamm.Variable` is the usual choice.
+        The value being solved for. Must appear in ``residual`` and nowhere else in the
+        surrounding expression. Use :class:`pybamm.BrentUnknown`, which is what the
+        model checks recognise as bound rather than as a state; a
+        :class:`pybamm.Variable` works for a standalone expression but makes the model
+        look underdetermined once the node is inside ``rhs`` or ``algebraic``.
     bounds : tuple
         ``(lo, hi)``, the bracket to search. Either may be an expression.
     abstol : float, optional
@@ -46,7 +93,7 @@ class Brent(pybamm.Symbol):
     .. code-block:: python
 
         # invert an open-circuit potential at a given voltage
-        sto = pybamm.Variable("stoichiometry")
+        sto = pybamm.BrentUnknown("stoichiometry")
         node = pybamm.Brent(param.n.prim.U(sto, T) - voltage, sto, (0, 1))
     """
 
@@ -159,6 +206,38 @@ class Brent(pybamm.Symbol):
         # the guess is required by the rootfinder interface and ignored by a bracketed
         # method, so either end of the bracket does
         return solver(lo, lo, hi, *free)
+
+    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+        """Solve in NumPy, for the paths that do not go through CasADi.
+
+        The CasADi conversion is the one that matters for solving; this exists so that
+        shape inference and the NumPy evaluation path work on an expression containing
+        a Brent node.
+        """
+        from scipy.optimize import brentq
+
+        scalar = lambda v: np.asarray(v, dtype=float).reshape(-1)[0]
+        lo, hi = (scalar(b.evaluate(t, y, y_dot, inputs)) for b in self.bounds)
+        unknown = self.unknown
+        if not isinstance(unknown, BrentUnknown):
+            raise TypeError(
+                "NumPy evaluation needs a pybamm.BrentUnknown as the unknown, got "
+                f"{type(unknown).__name__}"
+            )
+
+        def g(value):
+            unknown._value = np.array([[value]])
+            return scalar(self.residual.evaluate(t, y, y_dot, inputs))
+
+        try:
+            root = brentq(g, lo, hi, xtol=self.abstol, maxiter=self.max_iter)
+            return np.array([[root]])
+        except (ValueError, RuntimeError):
+            # a shape probe passes NaN through the bounds, and a bracket that does not
+            # straddle a root has no answer to give
+            return np.nan * np.ones((1, 1))
+        finally:
+            unknown._value = np.nan * np.ones((1, 1))
 
     def diff(self, variable):
         raise NotImplementedError(
