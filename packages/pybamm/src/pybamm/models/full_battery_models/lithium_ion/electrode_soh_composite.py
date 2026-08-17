@@ -6,6 +6,9 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
+import casadi
+import numpy as np
+
 import pybamm
 
 from .electrode_soh import _ElectrodeSOH, get_esoh_default_solver
@@ -14,6 +17,14 @@ from .util import (
     get_equilibrium_direction,
     get_lithiation_delithiation,
 )
+
+# The open-circuit potentials are monotone on the whole line and diverge outside
+# [0, 1], so an inversion may pass through non-physical stoichiometry on its way to
+# the answer. Searching wider costs almost nothing and removes a class of failure.
+_STOICH_LO, _STOICH_HI = -10.0, 10.0
+_BRACKET_LO, _BRACKET_HI = -5.0, 5.0
+_BRACKET_PAD, _BRACKET_PAD_ABS = 0.05, 1e-6
+_ABSTOL, _MAX_ITER = 1e-14, 200
 
 
 def _get_primary_only_options(
@@ -300,234 +311,186 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         pybamm.citations.register("Mohtat2019")
         super().__init__(name)
         param = pybamm.LithiumIonParameters(options)
+        neg_composite = check_if_composite(options, "negative")
+        pos_composite = check_if_composite(options, "positive")
 
         Q_Li = pybamm.InputParameter("Q_Li")
-        is_negative_composite = check_if_composite(options, "negative")
-        is_positive_composite = check_if_composite(options, "positive")
-        variables = _get_stoich_variables(options)
-        x_100_1 = variables["x_100_1"]
-        y_100_1 = variables["y_100_1"]
-        x_0_1 = variables["x_0_1"]
-        y_0_1 = variables["y_0_1"]
-        V_max = param.ocp_soc_100
-        V_min = param.ocp_soc_0
-        if is_negative_composite:
-            x_100_2 = variables["x_100_2"]
-            x_0_2 = variables["x_0_2"]
-            self.algebraic[x_100_2] = param.n.sec.U(
-                x_100_2,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("100", "negative", options, "secondary"),
-                    "negative",
-                    options,
-                    phase="secondary",
-                ),
-            ) - param.n.prim.U(
-                x_100_1,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("100", "negative", options, "primary"),
-                    "negative",
-                    options,
-                    phase="primary",
-                ),
-            )
-            self.algebraic[x_0_2] = param.n.sec.U(
-                x_0_2,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("0", "negative", options, "secondary"),
-                    "negative",
-                    options,
-                    phase="secondary",
-                ),
-            ) - param.n.prim.U(
-                x_0_1,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("0", "negative", options, "primary"),
-                    "negative",
-                    options,
-                    phase="primary",
-                ),
-            )
-        if is_positive_composite:
-            y_100_2 = variables["y_100_2"]
-            y_0_2 = variables["y_0_2"]
-            self.algebraic[y_100_2] = param.p.sec.U(
-                y_100_2,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("100", "positive", options, "secondary"),
-                    "positive",
-                    options,
-                    phase="secondary",
-                ),
-            ) - param.p.prim.U(
-                y_100_1,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("100", "positive", options, "primary"),
-                    "positive",
-                    options,
-                    phase="primary",
-                ),
-            )
-            self.algebraic[y_0_2] = param.p.prim.U(
-                y_0_1,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("0", "positive", options, "primary"),
-                    "positive",
-                    options,
-                    phase="primary",
-                ),
-            ) - param.p.sec.U(
-                y_0_2,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("0", "positive", options, "secondary"),
-                    "positive",
-                    options,
-                    phase="secondary",
-                ),
-            )
-        self.algebraic[x_100_1] = (
-            param.p.prim.U(
-                y_100_1,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("100", "positive", options, "primary"),
-                    "positive",
-                    options,
-                    phase="primary",
-                ),
-            )
-            - param.n.prim.U(
-                x_100_1,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("100", "negative", options, "primary"),
-                    "negative",
-                    options,
-                    phase="primary",
-                ),
-            )
-            - V_max
-        )
-        self.algebraic[x_0_1] = (
-            param.p.prim.U(
-                y_0_1,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("0", "positive", options, "primary"),
-                    "positive",
-                    options,
-                    phase="primary",
-                ),
-            )
-            - param.n.prim.U(
-                x_0_1,
-                param.T_ref,
-                get_lithiation_delithiation(
-                    get_equilibrium_direction("0", "negative", options, "primary"),
-                    "negative",
-                    options,
-                    phase="primary",
-                ),
-            )
-            - V_min
-        )
-        self.algebraic[y_0_1] = _get_electrode_capacity_equation(
-            options, "positive"
-        ) - _get_electrode_capacity_equation(options, "negative")
-        self.algebraic[y_100_1] = Q_Li - _get_cyclable_lithium_equation(options)
+        Q_n = [pybamm.InputParameter("Q_n_1")]
+        Q_p = [pybamm.InputParameter("Q_p_1")]
+        if neg_composite:
+            Q_n.append(pybamm.InputParameter("Q_n_2"))
+        if pos_composite:
+            Q_p.append(pybamm.InputParameter("Q_p_2"))
 
-        x_init_1 = variables["x_init_1"]
-        y_init_1 = variables["y_init_1"]
+        T_ref = param.T_ref
+        T_init = param.T_init if initialization_method == "voltage" else T_ref
+
+        def ocps(electrode, soc):
+            """(open-circuit potential, branch) per phase, at an SOC level."""
+            side = param.n if electrode == "negative" else param.p
+            phases = ["primary"]
+            if check_if_composite(options, electrode):
+                phases.append("secondary")
+            out = []
+            for phase in phases:
+                U = (side.prim if phase == "primary" else side.sec).U
+                if soc == "init":
+                    branch = get_lithiation_delithiation(
+                        direction, electrode, options, phase=phase
+                    )
+                else:
+                    branch = get_lithiation_delithiation(
+                        get_equilibrium_direction(soc, electrode, options, phase),
+                        electrode,
+                        options,
+                        phase=phase,
+                    )
+                out.append((U, branch))
+            return out
+
+        def invert(U, branch, target, T):
+            """Stoichiometry at a given potential, by Brent.
+
+            The open-circuit potentials are monotone on the whole line and diverge
+            outside [0, 1], so the inverse exists everywhere and the search may leave
+            the physical range on its way to the answer.
+            """
+            sto = pybamm.BrentUnknown("stoichiometry")
+            return pybamm.Brent(
+                U(sto, T, branch) - target,
+                sto,
+                (_STOICH_LO, _STOICH_HI),
+                abstol=_ABSTOL,
+                max_iter=_MAX_ITER,
+            )
+
+        def bracket(pairs, offsets, T):
+            """Potentials for which every inversion in `pairs` brackets."""
+            los = [
+                U(pybamm.Scalar(_BRACKET_HI), T, b) - off
+                for (U, b), off in zip(pairs, offsets, strict=True)
+            ]
+            his = [
+                U(pybamm.Scalar(_BRACKET_LO), T, b) - off
+                for (U, b), off in zip(pairs, offsets, strict=True)
+            ]
+            lo, hi = los[0], his[0]
+            for value in los[1:]:
+                lo = pybamm.maximum(lo, value)
+            for value in his[1:]:
+                hi = pybamm.minimum(hi, value)
+            return lo, hi
+
+        def limits(soc, V_target, closure):
+            """A limit state: one unknown, the shared negative potential."""
+            neg, pos = ocps("negative", soc), ocps("positive", soc)
+            states = lambda U_n: (
+                [invert(U, b, U_n, T_ref) for U, b in neg],
+                [invert(U, b, U_n + V_target, T_ref) for U, b in pos],
+            )
+            U_n = pybamm.BrentUnknown("negative potential")
+            lo, hi = bracket(neg + pos, [0] * len(neg) + [V_target] * len(pos), T_ref)
+            solved = pybamm.Brent(
+                closure(*states(U_n)),
+                U_n,
+                (lo, hi),
+                abstol=_ABSTOL,
+                max_iter=_MAX_ITER,
+            )
+            return states(solved)
+
+        total_lithium = lambda x, y: sum(
+            q * s for q, s in zip(Q_n + Q_p, x + y, strict=True)
+        )
+
+        x_100, y_100 = limits(
+            "100", param.ocp_soc_100, lambda x, y: Q_Li - total_lithium(x, y)
+        )
+        x_0, y_0 = limits(
+            "0",
+            param.ocp_soc_0,
+            lambda x, y: (
+                -sum(q * (a - b) for q, a, b in zip(Q_p, y_100, y, strict=True))
+                - sum(q * (a - b) for q, a, b in zip(Q_n, x_100, x, strict=True))
+            ),
+        )
+
+        # The initial state solves for x_init_1 rather than the potential: it is what
+        # the residual is sensitive to, and near 0% or 100% SOC it is small enough
+        # that an absolute tolerance on the potential would mean nothing. That also
+        # gives the bracket for free, since the initial state lies between the limits.
+        neg_init, pos_init = ocps("negative", "init"), ocps("positive", "init")
+
+        def init_states(x_init_1):
+            U_n = neg_init[0][0](x_init_1, T_init, neg_init[0][1])
+            x = [x_init_1] + [invert(U, b, U_n, T_init) for U, b in neg_init[1:]]
+            if initialization_method == "voltage":
+                U_p = U_n + pybamm.InputParameter("V_init")
+                return x, [invert(U, b, U_p, T_init) for U, b in pos_init]
+            # No cell-voltage relation: lithium conservation fixes the positive side.
+            remaining = Q_Li - sum(q * s for q, s in zip(Q_n, x, strict=True))
+            if not pos_composite:
+                return x, [remaining / Q_p[0]]
+            U_p = pybamm.BrentUnknown("positive potential")
+            lo, hi = bracket(pos_init, [0] * len(pos_init), T_init)
+            solved = pybamm.Brent(
+                sum(
+                    q * invert(U, b, U_p, T_init)
+                    for q, (U, b) in zip(Q_p, pos_init, strict=True)
+                )
+                - remaining,
+                U_p,
+                (lo, hi),
+                abstol=_ABSTOL,
+                max_iter=_MAX_ITER,
+            )
+            return x, [invert(U, b, solved, T_init) for U, b in pos_init]
+
+        unknown = pybamm.BrentUnknown("x_init_1")
+        x_guess, y_guess = init_states(unknown)
         if initialization_method == "voltage":
-            V_init = pybamm.InputParameter("V_init")
-            self.algebraic[x_init_1] = (
-                param.p.prim.U(
-                    y_init_1,
-                    param.T_init,
-                    get_lithiation_delithiation(
-                        direction, "positive", options, phase="primary"
-                    ),
-                )
-                - param.n.prim.U(
-                    x_init_1,
-                    param.T_init,
-                    get_lithiation_delithiation(
-                        direction, "negative", options, phase="primary"
-                    ),
-                )
-                - V_init
-            )
-            self.algebraic[y_init_1] = (
-                _get_cyclable_lithium_equation(options, "init") - Q_Li
-            )
+            closure = total_lithium(x_guess, y_guess) - Q_Li
         elif initialization_method == "SOC":
-            soc_init = pybamm.InputParameter("SOC_init")
-            negative_soc = x_init_1 * pybamm.InputParameter("Q_n_1")
-            if is_negative_composite:
-                x_init_2 = variables["x_init_2"]
-                negative_soc += x_init_2 * pybamm.InputParameter("Q_n_2")
-
-            negative_0_soc = x_0_1 * pybamm.InputParameter("Q_n_1")
-            if is_negative_composite:
-                negative_0_soc += x_0_2 * pybamm.InputParameter("Q_n_2")
-
-            negative_100_soc = x_100_1 * pybamm.InputParameter("Q_n_1")
-            if is_negative_composite:
-                negative_100_soc += x_100_2 * pybamm.InputParameter("Q_n_2")
-            self.algebraic[x_init_1] = (
-                (negative_soc - negative_0_soc) / (negative_100_soc - negative_0_soc)
-            ) - soc_init
-            self.algebraic[y_init_1] = (
-                _get_cyclable_lithium_equation(options, "init") - Q_Li
-            )
+            charge = lambda x: sum(q * s for q, s in zip(Q_n, x, strict=True))
+            closure = (charge(x_guess) - charge(x_0)) / (
+                charge(x_100) - charge(x_0)
+            ) - pybamm.InputParameter("SOC_init")
         else:
             raise ValueError("Invalid initialization method")
-        T = param.T_init if initialization_method == "voltage" else param.T_ref
-        if is_positive_composite:
-            y_init_2 = variables["y_init_2"]
-            self.algebraic[y_init_2] = param.p.prim.U(
-                y_init_1,
-                T,
-                get_lithiation_delithiation(
-                    direction, "positive", options, phase="primary"
-                ),
-            ) - param.p.sec.U(
-                y_init_2,
-                T,
-                get_lithiation_delithiation(
-                    direction, "positive", options, phase="secondary"
-                ),
-            )
-        if is_negative_composite:
-            x_init_2 = variables["x_init_2"]
-            self.algebraic[x_init_2] = param.n.prim.U(
-                x_init_1,
-                T,
-                get_lithiation_delithiation(
-                    direction, "negative", options, phase="primary"
-                ),
-            ) - param.n.sec.U(
-                x_init_2,
-                T,
-                get_lithiation_delithiation(
-                    direction, "negative", options, phase="secondary"
-                ),
-            )
 
-        self.variables.update(variables)
-        if initialization_method == "SOC":
-            soc_init = pybamm.InputParameter("SOC_init")
-        else:
-            soc_init = (V_init - V_min) / (V_max - V_min)
-        self.initial_conditions.update(_get_initial_conditions(options, soc_init))
+        # Pad the bracket: at 0% or 100% SOC the answer sits on an endpoint, and a
+        # bracketed method needs a strict sign change.
+        low = pybamm.minimum(x_0[0], x_100[0])
+        high = pybamm.maximum(x_0[0], x_100[0])
+        pad = _BRACKET_PAD * (high - low) + _BRACKET_PAD_ABS
+        x_init_1 = pybamm.Brent(
+            closure,
+            unknown,
+            (low - pad, high + pad),
+            abstol=_ABSTOL,
+            max_iter=_MAX_ITER,
+        )
+        x_init, y_init = init_states(x_init_1)
+
+        # Nothing is solved by the caller's solver: every stoichiometry above is an
+        # expression. The placeholder gives the solver a state to own, and is left out
+        # of `variables` so it never reaches a caller.
+        placeholder = pybamm.Variable("ESOH placeholder")
+        self.algebraic = {placeholder: placeholder}
+        self.initial_conditions = {placeholder: pybamm.Scalar(0)}
+
+        for index, value in enumerate(x_100):
+            self.variables[f"x_100_{index + 1}"] = value
+        for index, value in enumerate(y_100):
+            self.variables[f"y_100_{index + 1}"] = value
+        for index, value in enumerate(x_0):
+            self.variables[f"x_0_{index + 1}"] = value
+        for index, value in enumerate(y_0):
+            self.variables[f"y_0_{index + 1}"] = value
+        for index, value in enumerate(x_init):
+            self.variables[f"x_init_{index + 1}"] = value
+        for index, value in enumerate(y_init):
+            self.variables[f"y_init_{index + 1}"] = value
 
     @property
     def default_solver(self):
@@ -862,23 +825,89 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             all_inputs["SOC_init"] = initial_value
 
         if esoh_sim is None:
-            model = ElectrodeSOHComposite(
-                options, direction, initialization_method=initialization_method
-            )
-            esoh_sim = pybamm.Simulation(
-                model,
-                parameter_values=parameter_values,
-                solver=get_esoh_default_solver(tol),
-            )
+            model = _esoh_model(options, direction, initialization_method)
+        else:
+            model = esoh_sim.model
 
-        if initial_conditions is not None:
-            esoh_sim.build()
-            esoh_sim.built_model.set_initial_conditions_from(
-                initial_conditions, inputs=all_inputs
-            )
-        sol = esoh_sim.solve([0], inputs=all_inputs)
+        # `initial_conditions` is accepted for backwards compatibility and ignored:
+        # a bracketed rootfind has no initial guess to seed.
+        names, input_names, function = _esoh_evaluator(model, parameter_values)
+        values = np.asarray(
+            function(*[all_inputs[name] for name in input_names])
+        ).reshape(-1)
+        return dict(zip(names, values, strict=True))
 
-        return {var: sol[var].entries[0] for var in sol.all_models[0].variables}
+
+def _esoh_evaluator(model, parameter_values):
+    """Map capacities and target straight to stoichiometries, built once.
+
+    Every stoichiometry the composite model defines is an expression rather than a
+    state, so there is nothing for a solver to iterate. Reading them back through
+    the solver's per-variable post-processing would convert the same nested
+    rootfind once per variable; one CasADi function converts it once.
+
+    Returns
+    -------
+    tuple
+        ``(names, input_names, function)``, where ``function`` maps the inputs in
+        ``input_names`` order to the stoichiometries in ``names`` order.
+    """
+    cache = model.__dict__.setdefault("_esoh_evaluators", {})
+    key = id(parameter_values)
+    if key not in cache:
+        names = sorted(model.variables)
+        input_names = sorted(
+            {
+                symbol.name
+                for name in names
+                for symbol in model.variables[name].pre_order()
+                if isinstance(symbol, pybamm.InputParameter)
+            }
+        )
+        symbols = {name: casadi.MX.sym(name) for name in input_names}
+        time = casadi.MX.sym("t")
+        state = casadi.MX.sym("y", 1)
+        expressions = [
+            parameter_values.process_symbol(model.variables[name]).to_casadi(
+                time, state, inputs=symbols
+            )
+            for name in names
+        ]
+        # The parameter values are kept alive alongside the function: the key is
+        # their id, and a freed object would let a later one reuse it.
+        cache[key] = (
+            parameter_values,
+            names,
+            input_names,
+            casadi.Function(
+                "electrode_soh_composite",
+                list(symbols.values()),
+                [casadi.vertcat(*expressions)],
+            ),
+        )
+    return cache[key][1:]
+
+
+def _esoh_model(options, direction, initialization_method):
+    """Cached composite ESOH model; building one is pure symbolic work."""
+    try:
+        key = (
+            tuple(sorted(dict(options).items())),
+            direction,
+            initialization_method,
+        )
+    except TypeError:  # unhashable option value
+        return ElectrodeSOHComposite(
+            options, direction, initialization_method=initialization_method
+        )
+    if key not in _ESOH_MODELS:
+        _ESOH_MODELS[key] = ElectrodeSOHComposite(
+            options, direction, initialization_method=initialization_method
+        )
+    return _ESOH_MODELS[key]
+
+
+_ESOH_MODELS: dict = {}
 
 
 def get_initial_stoichiometries_composite(

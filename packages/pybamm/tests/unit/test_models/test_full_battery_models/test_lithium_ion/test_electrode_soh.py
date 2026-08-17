@@ -8,6 +8,9 @@ import numpy as np
 import pytest
 
 import pybamm
+from pybamm.models.full_battery_models.lithium_ion.util import (
+    get_lithiation_delithiation,
+)
 
 
 # Fixture for TestElectrodeSOHMSMR, TestCalculateTheoreticalEnergy and TestGetInitialOCPMSMR class.
@@ -1166,18 +1169,14 @@ class TestGetInitialOCPMSMR:
         assert Up_0 - Un_0 == pytest.approx(2.8)
 
 
-class TestElectrodeSOHCompositeKnownFailures:
-    """Feasible composite-electrode ESOH systems that the Newton solver cannot solve.
+class TestElectrodeSOHCompositeHardCases:
+    """Composite-electrode states the previous algebraic formulation could not reach.
 
-    Every case here has a root, which ``test_every_known_failure_is_feasible``
-    asserts. The xfailed tests
-    below run the Newton solver on its own and record that it does not get there, so
-    the reason the fallback chain exists stays visible. Drop a marker if its case
-    starts passing.
-
-    All of these are the default `decoupled` block mode too: it splits nothing on
-    this model under SOC initialisation, and its failures are retried with the
-    blocks merged, so it lands on the same iterates as `coupled`.
+    Every case here used to fail: the model was a nine-variable algebraic system
+    handed to a Newton solver, and these inputs sat outside its basin. The Brent
+    formulation reaches them by construction, so they are checked against the
+    physics rather than against a residual: the requested state must be the one
+    that comes back, and lithium must be conserved.
     """
 
     OPTIONS = {
@@ -1185,17 +1184,19 @@ class TestElectrodeSOHCompositeKnownFailures:
         "open-circuit potential": (("single", "current sigmoid"), "single"),
     }
 
-    # (Q_n_1, Q_n_2, Q_p_1, Q_Li) multipliers applied to the nominal capacities
+    # (Q_n_1, Q_n_2, Q_p_1, Q_Li) multipliers on the nominal capacities. Most of
+    # these are SOC initialisation at or near 0% with cyclable lithium below
+    # nominal, which is where the old solver gave up.
     NOMINAL = (1.0, 1.0, 1.0, 1.0)
     LOW_LI = (1.0, 1.0, 1.0, 0.85)
     VERY_LOW_LI = (1.0, 1.0, 1.0, 0.6)
     WORN_NEGATIVE = (0.85, 0.85, 1.0, 0.85)
     LOST_SECONDARY = (1.0, 0.5, 1.0, 0.9)
+    WORN_ALL = (0.7, 1.0, 0.9, 0.75)
 
-    # Newton fails in the default "coupled" block mode. Nearly all of these are
-    # SOC initialisation at or near 0% with cyclable lithium below nominal.
-    COUPLED_FAILURES = [
+    CASES = [
         ("voltage", NOMINAL, 3.35),
+        ("voltage", WORN_ALL, 2.6416666666666666),
         ("SOC", NOMINAL, 0.5833333333333334),
         ("SOC", LOW_LI, 0.0),
         ("SOC", LOW_LI, 0.08333333333333333),
@@ -1206,110 +1207,69 @@ class TestElectrodeSOHCompositeKnownFailures:
         ("SOC", LOST_SECONDARY, 0.08333333333333333),
     ]
 
-    # `coupled` gets this one only by accident: block 0's much larger residual
-    # dominates the shared inf-norm merit function, so block 1's full Newton step
-    # passes the Armijo test untested and lands in the right basin. Judged on its own
-    # residual the same step is rejected and the block backtracks into a stall. The
-    # block is solvable alone -- it converges to zero residual with max_backtracks=3.
-    DECOUPLED_ONLY_FAILURES = [("voltage", (0.7, 1.0, 0.9, 0.75), 2.6416666666666666)]
-
-    ALL_FAILURES = COUPLED_FAILURES + DECOUPLED_ONLY_FAILURES
-
     @staticmethod
-    def _build(initialization_method):
-        options = pybamm.BatteryModelOptions(
-            TestElectrodeSOHCompositeKnownFailures.OPTIONS
-        )
-        model = pybamm.lithium_ion.ElectrodeSOHComposite(
-            options, initialization_method=initialization_method
-        )
+    def _setup(scales):
+        options = pybamm.BatteryModelOptions(TestElectrodeSOHCompositeHardCases.OPTIONS)
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
-        sim = pybamm.Simulation(model, parameter_values=parameter_values)
-        sim.build()
-        return sim.built_model, parameter_values, options
-
-    @classmethod
-    def _inputs(cls, parameter_values, options, initialization_method, scales, target):
         param = pybamm.LithiumIonParameters(options)
         scale_n1, scale_n2, scale_p1, scale_li = scales
-        key = "V_init" if initialization_method == "voltage" else "SOC_init"
-        return {
+        capacities = {
             "Q_Li": parameter_values.evaluate(param.Q_Li_particles_init) * scale_li,
             "Q_n_1": parameter_values.evaluate(param.n.prim.Q_init) * scale_n1,
             "Q_n_2": parameter_values.evaluate(param.n.sec.Q_init) * scale_n2,
             "Q_p_1": parameter_values.evaluate(param.p.prim.Q_init) * scale_p1,
-            key: target,
         }
+        return options, parameter_values, param, capacities
 
-    @classmethod
-    def _residual(cls, initialization_method, scales, target, solver):
-        built_model, parameter_values, options = cls._build(initialization_method)
-        inputs = cls._inputs(
-            parameter_values, options, initialization_method, scales, target
+    @staticmethod
+    def _ocp(parameter_values, potential, stoichiometry, temperature, branch):
+        sto = pybamm.InputParameter("sto")
+        processed = parameter_values.process_symbol(potential(sto, temperature, branch))
+        return float(
+            np.asarray(processed.evaluate(inputs={"sto": stoichiometry})).reshape(-1)[0]
         )
-        solution = solver.solve(built_model, [0], inputs=inputs)
-        y = solution.y[: built_model.len_alg, 0]
-        residual = built_model.algebraic_eval(0.0, y, list(inputs.values()))
-        return np.abs(np.asarray(residual)).max()
 
-    @pytest.mark.parametrize(
-        ("initialization_method", "scales", "target"), ALL_FAILURES
-    )
-    def test_every_known_failure_is_feasible(
-        self, initialization_method, scales, target
-    ):
-        """Anchor: every xfailed case below really does have a root.
-
-        The default composite chain with its Newton pinned to `coupled`, since the
-        default `decoupled` is what the xfails below are about. The residual is
-        asserted rather than trusted from the solver: the chain's `lsq` and `minimize`
-        tails report success at least-squares points that are not always roots.
-        """
-        solver = pybamm.CompositeSolver(
-            [
-                pybamm.NonlinearSolver(
-                    atol=1e-6,
-                    rtol=0,
-                    step_tol=0,
-                    max_backtracks=100,
-                    options={"newton_block_mode": "coupled"},
-                ),
-                pybamm.AlgebraicSolver(tol=1e-6),
-                pybamm.AlgebraicSolver(method="lsq", tol=1e-6),
-                pybamm.AlgebraicSolver(method="minimize", tol=1e-6),
-            ]
+    @pytest.mark.parametrize(("initialization_method", "scales", "target"), CASES)
+    def test_reaches_the_requested_state(self, initialization_method, scales, target):
+        options, parameter_values, param, capacities = self._setup(scales)
+        model = pybamm.lithium_ion.ElectrodeSOHComposite(
+            options, initialization_method=initialization_method
         )
-        residual = self._residual(initialization_method, scales, target, solver)
-        assert residual < 1e-8
+        key = "V_init" if initialization_method == "voltage" else "SOC_init"
+        inputs = {**capacities, key: target}
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        solution = sim.solve([0], inputs=inputs)
+        state = {name: float(solution[name].entries[0]) for name in model.variables}
 
-    @pytest.mark.xfail(reason="Newton solver alone cannot solve this feasible system")
-    @pytest.mark.parametrize(
-        ("initialization_method", "scales", "target"), COUPLED_FAILURES
-    )
-    def test_newton_coupled(self, initialization_method, scales, target):
-        solver = pybamm.NonlinearSolver(
-            atol=1e-6,
-            rtol=0,
-            step_tol=0,
-            max_backtracks=100,
-            options={"newton_block_mode": "coupled"},
+        branch = lambda electrode, phase: get_lithiation_delithiation(
+            None, electrode, options, phase=phase
         )
-        residual = self._residual(initialization_method, scales, target, solver)
-        assert residual < 1e-8
+        if initialization_method == "voltage":
+            voltage = self._ocp(
+                parameter_values,
+                param.p.prim.U,
+                state["y_init_1"],
+                param.T_init,
+                branch("positive", "primary"),
+            ) - self._ocp(
+                parameter_values,
+                param.n.prim.U,
+                state["x_init_1"],
+                param.T_init,
+                branch("negative", "primary"),
+            )
+            assert voltage == pytest.approx(target, abs=1e-08)
+        else:
+            charge = lambda tag: (
+                capacities["Q_n_1"] * state[f"x_{tag}_1"]
+                + capacities["Q_n_2"] * state[f"x_{tag}_2"]
+            )
+            soc = (charge("init") - charge("0")) / (charge("100") - charge("0"))
+            assert soc == pytest.approx(target, abs=1e-08)
 
-    @pytest.mark.xfail(
-        reason="over-damped by the shared linesearch budget, not by the split"
-    )
-    @pytest.mark.parametrize(
-        ("initialization_method", "scales", "target"), DECOUPLED_ONLY_FAILURES
-    )
-    def test_newton_decoupled(self, initialization_method, scales, target):
-        solver = pybamm.NonlinearSolver(
-            atol=1e-6,
-            rtol=0,
-            step_tol=0,
-            max_backtracks=100,
-            options={"newton_block_mode": "decoupled"},
+        lithium = (
+            capacities["Q_n_1"] * state["x_init_1"]
+            + capacities["Q_n_2"] * state["x_init_2"]
+            + capacities["Q_p_1"] * state["y_init_1"]
         )
-        residual = self._residual(initialization_method, scales, target, solver)
-        assert residual < 1e-8
+        assert lithium == pytest.approx(capacities["Q_Li"], rel=1e-10)
