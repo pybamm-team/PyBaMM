@@ -2,6 +2,7 @@
 #define PYBAMM_BRENT_HPP
 
 #include "casadi/core/rootfinder_impl.hpp"
+#include <vector>
 
 // In-tree CasADi plugins get this from a generated export header; out of tree it is
 // just default visibility, which is what CASADI_EXPORT expands to anyway.
@@ -12,6 +13,12 @@ namespace casadi {
 struct CASADI_ROOTFINDER_BRENT_EXPORT BrentMemory : public RootfinderMemory {
   casadi_int iter;
   const char* return_status;
+  // PROTOTYPE: last solve, so a nested node that does not vary with the enclosing
+  // iterate is not re-solved on every enclosing iteration.
+  std::vector<double> cache_key;
+  double cache_root = 0;
+  bool cache_valid = false;
+  casadi_int cache_hits = 0;
 };
 
 /**
@@ -44,6 +51,7 @@ public:
   static const std::string meta_doc;
 
   void init(const Dict& opts) override;
+  mutable std::vector<double> key_;   // PROTOTYPE cache scratch
   int solve(void* mem) const override;
 
   void* alloc_mem() const override { return new BrentMemory(); }
@@ -56,6 +64,8 @@ public:
   bool has_codegen() const override { return true; }
   void codegen_declarations(CodeGenerator& g) const override;
   void codegen_body(CodeGenerator& g) const override;
+  std::string cache_name(CodeGenerator& g) const;
+  casadi_int cache_size() const;
 
   // Without these the deserialised instance silently loses its bracket and then fails
   // to solve, so they are required rather than optional.

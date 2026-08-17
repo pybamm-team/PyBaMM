@@ -88,6 +88,21 @@ int Brent::solve(void* mem) const {
   const double a = m->iarg[BRACKET_LO][0];
   const double b = m->iarg[BRACKET_HI][0];
 
+  // PROTOTYPE cache. The root depends on the bracket and the parameters, never on
+  // the initial guess, so the guess is left out of the key.
+  key_.clear();
+  for (casadi_int i = 0; i < n_in_; ++i) {
+    if (i == iin_ || !m->iarg[i]) continue;
+    key_.insert(key_.end(), m->iarg[i], m->iarg[i] + nnz_in(i));
+  }
+  if (m->cache_valid && m->cache_key == key_) {
+    ++m->cache_hits;
+    if (m->ires[iout_]) m->ires[iout_][0] = m->cache_root;
+    m->return_status = "success (cached)";
+    m->success = true;
+    return 0;
+  }
+
   double root = 0;
   const int flag = casadi_brent<double>(&Brent::residual, &ctx, a, b, abstol_, max_iter_,
                                         &root, &m->iter);
@@ -97,6 +112,10 @@ int Brent::solve(void* mem) const {
     m->success = false;
     return 0;
   }
+
+  m->cache_key = key_;
+  m->cache_root = root;
+  m->cache_valid = true;
 
   if (m->ires[iout_]) m->ires[iout_][0] = root;
   m->return_status = "success";
@@ -114,6 +133,18 @@ void Brent::codegen_declarations(CodeGenerator& g) const {
   // off so the name is not CASADI_PREFIX-renamed, which the guard would then defeat.
   g << "#ifndef CASADI_BRENT_IMPL\n"
     << "#define CASADI_BRENT_IMPL\n"
+    // The cache below is per instance and per thread. Generated code is expected to
+    // be reentrant, so plain statics will not do.
+    << "#if defined(__cplusplus) && __cplusplus >= 201103L\n"
+    << "#define CASADI_BRENT_TLS thread_local\n"
+    << "#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L"
+       " && !defined(__STDC_NO_THREADS__)\n"
+    << "#define CASADI_BRENT_TLS _Thread_local\n"
+    << "#elif defined(__GNUC__) || defined(__clang__)\n"
+    << "#define CASADI_BRENT_TLS __thread\n"
+    << "#else\n"
+    << "#define CASADI_BRENT_TLS\n"
+    << "#endif\n"
     << "struct casadi_brent_data {\n"
     << "  const casadi_real** arg;\n"
     << "  casadi_real** res;\n"
@@ -138,6 +169,24 @@ void Brent::codegen_declarations(CodeGenerator& g) const {
   }
   g << "  return " << g(get_function("g"), "arg1", "res1", "d->iw", "d->w") << ";\n"
     << "}\n\n";
+
+  // Last solve, keyed on every input but the guess -- the same cache the interpreted
+  // path keeps in BrentMemory. Without it a Brent nested inside another one re-solves
+  // on every iteration of the enclosing solve.
+  const std::string c = cache_name(g);
+  g << "static CASADI_BRENT_TLS casadi_real " << c << "_key[" << cache_size() << "];\n"
+    << "static CASADI_BRENT_TLS casadi_real " << c << "_root;\n"
+    << "static CASADI_BRENT_TLS int " << c << "_valid = 0;\n\n";
+}
+
+std::string Brent::cache_name(CodeGenerator& g) const {
+  return g.shorthand("brent_cache_" + codegen_name(g, false));
+}
+
+casadi_int Brent::cache_size() const {
+  casadi_int n = 0;
+  for (casadi_int i = 0; i < n_in_; ++i) if (i != iin_) n += nnz_in(i);
+  return n;
 }
 
 void Brent::codegen_body(CodeGenerator& g) const {
@@ -155,11 +204,36 @@ void Brent::codegen_body(CodeGenerator& g) const {
 
   const std::string lo = g.arg(BRACKET_LO) + "[0]";
   const std::string hi = g.arg(BRACKET_HI) + "[0]";
-  g << "brent_flag = casadi_brent(" << g.shorthand("brent_res_" + codegen_name(g, false))
+  const std::string c = cache_name(g);
+
+  std::vector<std::string> key;
+  for (casadi_int i = 0; i < n_in_; ++i) {
+    if (i == iin_) continue;
+    for (casadi_int e = 0; e < nnz_in(i); ++e) {
+      const std::string a = g.arg(i);
+      key.push_back("(" + a + " ? " + a + "[" + str(e) + "] : 0)");
+    }
+  }
+
+  g.local("brent_hit", "int");
+  g << "brent_hit = " << c << "_valid;\n";
+  for (casadi_int j = 0; j < static_cast<casadi_int>(key.size()); ++j) {
+    g << "if (brent_hit && " << c << "_key[" << j << "] != " << key[j]
+      << ") brent_hit = 0;\n";
+  }
+  g << "if (!brent_hit) {\n"
+    << "  brent_flag = casadi_brent("
+    << g.shorthand("brent_res_" + codegen_name(g, false))
     << ", &brent_data, " << lo << ", " << hi << ", " << g.constant(abstol_) << ", "
     << max_iter_ << ", &brent_root, &brent_iter);\n"
-    << "if (brent_flag) return 1;\n"
-    << "if (" << g.res(iout_) << ") " << g.res(iout_) << "[0] = brent_root;\n";
+    << "  if (brent_flag) return 1;\n";
+  for (casadi_int j = 0; j < static_cast<casadi_int>(key.size()); ++j) {
+    g << "  " << c << "_key[" << j << "] = " << key[j] << ";\n";
+  }
+  g << "  " << c << "_root = brent_root;\n"
+    << "  " << c << "_valid = 1;\n"
+    << "}\n"
+    << "if (" << g.res(iout_) << ") " << g.res(iout_) << "[0] = " << c << "_root;\n";
 }
 
 void Brent::serialize_body(SerializingStream& s) const {
