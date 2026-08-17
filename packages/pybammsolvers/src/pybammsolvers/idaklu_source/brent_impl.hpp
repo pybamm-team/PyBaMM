@@ -10,7 +10,8 @@
 //
 // `res_fn` evaluates the residual at `x` into `*fx` and returns nonzero on failure.
 // Returns 0 on success (`*out` is the root, `*iter` the iteration count), 1 if the
-// residual failed, 2 if the bracket shows no sign change.
+// residual failed, 2 if the bracket shows no sign change, 3 if `max_iter` was reached
+// without the bracket shrinking to `abstol`.
 //
 
 // `static` so that two generated files, each carrying its own copy, still link.
@@ -83,6 +84,9 @@ static int casadi_brent(int (*res_fn)(void*, T1, T1*), void* user_data,
     if (res_fn(user_data, b, &fb)) return 1;
   }
   *iter = k;
+  // Falling out of the loop means the bracket never shrank to `abstol`, so `b` is
+  // not a root. Reporting it as one would hand back an arbitrary point silently.
+  if (k >= max_iter) return 3;
   *out = b;
   return 0;
 }

@@ -107,7 +107,9 @@ int Brent::solve(void* mem) const {
   const int flag = casadi_brent<double>(&Brent::residual, &ctx, a, b, abstol_, max_iter_,
                                         &root, &m->iter);
   if (flag) {
-    m->return_status = flag == 2 ? "no sign change over the bracket" : "residual failed";
+    m->return_status =
+      flag == 2 ? "no sign change over the bracket" :
+      flag == 3 ? "iteration limit reached without converging" : "residual failed";
     m->unified_return_status = SOLVER_RET_UNKNOWN;
     m->success = false;
     return 0;

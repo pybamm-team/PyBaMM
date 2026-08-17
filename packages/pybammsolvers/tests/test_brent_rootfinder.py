@@ -225,14 +225,13 @@ class TestBrentCache:
             ),
             {"abstol": 1e-13, "max_iter": 200},
         )
-        return casadi.Function(
-            "nested", [target], [outer(LO, LO, HI, target)]
-        )
+        return casadi.Function("nested", [target], [outer(LO, LO, HI, target)])
 
     def test_repeating_the_inputs_reuses_the_last_solve(self):
         x, lo, hi, p = (casadi.MX.sym(n) for n in ("x", "lo", "hi", "p"))
         rf = casadi.rootfinder(
-            "rf", "brent",
+            "rf",
+            "brent",
             casadi.Function("g", [x, lo, hi, p], [non_monotone(x, p)]),
         )
         first = float(rf(0.0, LO, HI, 1.0))
@@ -266,3 +265,62 @@ class TestBrentCache:
             np.testing.assert_allclose(
                 float(external(target)), float(nested(target)), rtol=0, atol=1e-14
             )
+
+
+class TestIterationLimit:
+    """Running out of iterations is a failure, not a root.
+
+    Brent stops when the bracket is narrower than ``abstol``. Exhausting ``max_iter``
+    instead leaves an arbitrary point inside the bracket, so reporting it as a root
+    hands back a wrong answer with no indication anything went wrong.
+    """
+
+    @staticmethod
+    def _steep():
+        """``exp(x) - 100``, whose root at ``log(100)`` takes many iterations to reach."""
+        x, lo, hi, p = (casadi.MX.sym(n) for n in ("x", "lo", "hi", "p"))
+        return casadi.Function("g", [x, lo, hi, p], [casadi.exp(x) - 100])
+
+    def test_exhausting_the_iterations_is_not_a_success(self):
+        rootfinder = casadi.rootfinder(
+            "rf", "brent", self._steep(), {"max_iter": 1, "error_on_fail": False}
+        )
+        rootfinder(0.0, 0.0, 10.0, 0.0)
+        assert rootfinder.stats()["return_status"] == (
+            "iteration limit reached without converging"
+        )
+
+    def test_the_same_problem_converges_when_given_the_iterations(self):
+        rootfinder = casadi.rootfinder("rf", "brent", self._steep(), {"max_iter": 200})
+        root = float(rootfinder(0.0, 0.0, 10.0, 0.0))
+        assert rootfinder.stats()["return_status"] == "success"
+        np.testing.assert_allclose(root, np.log(100), rtol=1e-12)
+
+    def test_an_exhausted_solve_is_not_cached(self):
+        rootfinder = casadi.rootfinder(
+            "rf", "brent", self._steep(), {"max_iter": 1, "error_on_fail": False}
+        )
+        rootfinder(0.0, 0.0, 10.0, 0.0)
+        rootfinder(0.0, 0.0, 10.0, 0.0)
+        # A cached hit would report "success (cached)" and hand back the non-root.
+        assert rootfinder.stats()["return_status"] == (
+            "iteration limit reached without converging"
+        )
+
+    def test_the_generated_c_also_refuses_to_converge(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        rootfinder = casadi.rootfinder(
+            "rf", "brent", self._steep(), {"max_iter": 1, "error_on_fail": False}
+        )
+        # `p` stays symbolic: an all-constant call is folded away at build time and
+        # never reaches the generated C.
+        target = casadi.MX.sym("p")
+        wrapped = casadi.Function(
+            "wrapped", [target], [rootfinder(0.0, 0.0, 10.0, target)]
+        )
+        wrapped.generate("wrapped.c", {"with_header": False})
+        external = casadi.external(
+            "wrapped", casadi.Importer(str(tmp_path / "wrapped.c"), "shell")
+        )
+        with pytest.raises(RuntimeError):
+            external(0.0)

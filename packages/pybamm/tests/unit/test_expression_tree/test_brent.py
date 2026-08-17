@@ -190,7 +190,7 @@ class TestBrent:
         unknown = pybamm.BrentUnknown("s")
         target = pybamm.InputParameter("p")
         residual = unknown * unknown - target
-        coarse = pybamm.Brent(residual, unknown, (0.01, 10), abstol=1e-1, max_iter=2)
+        coarse = pybamm.Brent(residual, unknown, (0.01, 10), abstol=1e-1, max_iter=100)
         fine = pybamm.Brent(residual, unknown, (0.01, 10), abstol=1e-14, max_iter=100)
         assert coarse.id != fine.id
 
