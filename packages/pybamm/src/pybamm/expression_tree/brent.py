@@ -53,6 +53,54 @@ class BrentUnknown(pybamm.Symbol):
     _value = np.nan * np.ones((1, 1))
 
 
+def _nodes_reading(root: pybamm.Symbol, unknown: pybamm.Symbol) -> set:
+    """The symbols in ``root``'s graph whose subtree contains ``unknown``.
+
+    Iterative post-order over the graph as a DAG. An expression is a DAG, not a
+    tree, and one that contains a rootfind is heavily shared, so a walk that
+    visits a node once per path through it is orders of magnitude larger.
+    """
+    reads: set = set()
+    seen: set = set()
+    stack = [(root, False)]
+    while stack:
+        node, expanded = stack.pop()
+        if expanded:
+            if node == unknown or any(child in reads for child in node.children):
+                reads.add(node)
+        elif node not in seen:
+            seen.add(node)
+            stack.append((node, True))
+            stack.extend((child, False) for child in node.children)
+    return reads
+
+
+class _OracleCache(dict):
+    """Conversion cache that keeps a :class:`Brent`'s own binding out of the shared one.
+
+    Nodes that read the unknown convert to expressions in a symbol that exists only
+    inside the oracle, so they are held locally and discarded with it. Everything
+    else is written straight through to the enclosing conversion: a rootfind shares
+    most of its graph with the expression around it, and with a private cache each
+    of those nodes is converted again for every rootfind that reads it.
+    """
+
+    def __init__(self, shared: dict, local: set):
+        super().__init__()
+        self._shared = shared
+        self._local = local
+
+    def get(self, key, default=None):
+        value = super().get(key)
+        return self._shared.get(key, default) if value is None else value
+
+    def __setitem__(self, key, value):
+        if key in self._local:
+            super().__setitem__(key, value)
+        else:
+            self._shared[key] = value
+
+
 class Brent(pybamm.Symbol):
     """
     Solve ``residual == 0`` for ``unknown`` within ``bounds``, by Brent's method.
@@ -178,11 +226,14 @@ class Brent(pybamm.Symbol):
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         unknown = casadi.MX.sym(f"brent_unknown_{abs(self.id)}")
-        # the unknown resolves through the conversion cache; the copy keeps the binding
-        # local to this node, so an enclosing conversion never sees it
-        equation = self.children[0]._to_casadi_inner(
-            t, y, y_dot, inputs, {**casadi_symbols, self.unknown: unknown}
+        # the unknown resolves through the conversion cache; only the nodes that read
+        # it are kept local, so an enclosing conversion never sees the binding but
+        # still shares everything else with the residual
+        cache = _OracleCache(
+            casadi_symbols, _nodes_reading(self.residual, self.unknown)
         )
+        cache[self.unknown] = unknown
+        equation = self.children[0]._to_casadi_inner(t, y, y_dot, inputs, cache)
         lo, hi = (
             bound._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
             for bound in self.bounds

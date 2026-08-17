@@ -838,6 +838,26 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         return dict(zip(names, values, strict=True))
 
 
+def _unique_nodes(roots):
+    """Every symbol reachable from ``roots``, visited once.
+
+    ``pre_order`` walks the graph as a tree, so a node shared by many parents is
+    yielded once per path to it. These expressions contain nested rootfinds and are
+    shared enough for that to be a factor of a hundred or more.
+    """
+    seen: set = set()
+    nodes = []
+    stack = list(roots)
+    while stack:
+        symbol = stack.pop()
+        if id(symbol) in seen:
+            continue
+        seen.add(id(symbol))
+        nodes.append(symbol)
+        stack.extend(symbol.children)
+    return nodes
+
+
 def _esoh_evaluator(model, parameter_values):
     """Map capacities and target straight to stoichiometries, built once.
 
@@ -859,17 +879,19 @@ def _esoh_evaluator(model, parameter_values):
         input_names = sorted(
             {
                 symbol.name
-                for name in names
-                for symbol in model.variables[name].pre_order()
+                for symbol in _unique_nodes(model.variables[name] for name in names)
                 if isinstance(symbol, pybamm.InputParameter)
             }
         )
         symbols = {name: casadi.MX.sym(name) for name in input_names}
         time = casadi.MX.sym("t")
         state = casadi.MX.sym("y", 1)
+        # One conversion cache for all of the variables: they are nine views of one
+        # graph, so a cache per variable converts the shared part nine times.
+        converted: dict = {}
         expressions = [
             parameter_values.process_symbol(model.variables[name]).to_casadi(
-                time, state, inputs=symbols
+                time, state, inputs=symbols, casadi_symbols=converted
             )
             for name in names
         ]
