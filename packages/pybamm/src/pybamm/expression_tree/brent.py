@@ -298,9 +298,16 @@ class Brent(pybamm.Symbol):
                 f"{type(unknown).__name__}"
             )
 
+        # the residual as it was last seen, to tell a probe from a failed solve without
+        # evaluating anything twice; nested rootfinds make a second pass cost dearly
+        last = np.nan
+
         def g(value):
+            nonlocal last
+            last = np.nan
             unknown._value = np.array([[value]])
-            return scalar(self.residual.evaluate(t, y, y_dot, inputs))
+            last = scalar(self.residual.evaluate(t, y, y_dot, inputs))
+            return last
 
         try:
             # A shape probe carries NaN through the bounds; there is nothing to solve
@@ -308,13 +315,9 @@ class Brent(pybamm.Symbol):
                 return np.nan * np.ones((1, 1))
             root = brentq(g, lo, hi, xtol=self.abstol, maxiter=self.max_iter)
         except (ValueError, RuntimeError) as error:
-            # A shape probe lands here too: unsubstituted parameters make the
-            # residual unevaluable or NaN, which is not a failed solve.
-            try:
-                probing = not np.isfinite(g(lo))
-            except (ValueError, RuntimeError):
-                probing = True
-            if probing:
+            # A shape probe lands here too: unsubstituted parameters leave the residual
+            # unevaluable or NaN, which is not a failed solve.
+            if not np.isfinite(last):
                 return np.nan * np.ones((1, 1))
             raise pybamm.SolverError(
                 f"Brent failed to solve '{self.residual}' on [{lo}, {hi}]: {error}"
