@@ -180,29 +180,37 @@ class TestCompositeElectrodeSOHStress:
     @pytest.mark.parametrize(
         ("method", "targets"),
         [
-            ("SOC", np.linspace(-0.5, -0.001, 250)),
-            ("SOC", np.linspace(1.001, 1.5, 250)),
-            ("voltage", np.linspace(0.5, 2.4, 250)),
-            ("voltage", np.linspace(4.3, 6.0, 250)),
+            ("SOC", np.linspace(-5.0, 5.0, SWEEP)),
+            ("voltage", np.linspace(0.5, 6.0, SWEEP)),
         ],
     )
-    def test_a_target_outside_the_window_is_never_answered_wrongly(
-        self, method, targets
-    ):
-        # Refusing is fine and so is a non-physical stoichiometry. Returning a
-        # plausible-looking number that does not satisfy the request is not.
+    def test_a_target_outside_the_window_still_solves_exactly(self, method, targets):
+        """A non-physical target has an exact answer, and must be given it.
+
+        The open-circuit potentials diverge outside [0, 1], so the residual keeps a
+        sign change however far the target is pushed. Stoichiometries outside [0, 1]
+        are not physical, but they are the correct solution of the stated problem,
+        and refusing to return them would be the solver giving up.
+        """
         case = Case("discharge", method)
         capacities = case.capacities(WEAR["nominal"])
         for target in targets:
-            try:
-                state = case.solve(capacities, target)
-            except RuntimeError:
-                continue
-            if not all(np.isfinite(v) for v in state.values()):
-                continue
+            state = case.solve(capacities, target)
+            assert all(np.isfinite(v) for v in state.values()), target
             assert case.lithium(capacities, state) == pytest.approx(
                 capacities["Q_Li"], rel=1e-9
             ), target
             if method == "voltage":
                 voltage = case.U_p(state["y_init_1"]) - case.U_n(state["x_init_1"])
-                assert voltage == pytest.approx(target, abs=1e-6)
+                assert voltage == pytest.approx(target, abs=1e-6), target
+            else:
+                assert case.state_of_charge(capacities, state) == pytest.approx(
+                    target, abs=1e-7
+                ), target
+
+    def test_a_non_physical_target_returns_a_non_physical_stoichiometry(self):
+        # the answer is meant to leave [0, 1], not be clipped back into it
+        case = Case("discharge", "SOC")
+        capacities = case.capacities(WEAR["nominal"])
+        assert case.solve(capacities, -3.0)["x_init_1"] < 0
+        assert case.solve(capacities, 3.0)["x_init_1"] > 1

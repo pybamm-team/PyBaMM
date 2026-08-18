@@ -22,7 +22,6 @@ from .util import (
 # so every OCP diverges outside [0, 1] and any of these brackets straddles a root.
 _STOICH_LO, _STOICH_HI = -10.0, 10.0
 _BRACKET_LO, _BRACKET_HI = -5.0, 5.0
-_BRACKET_PAD, _BRACKET_PAD_ABS = 0.05, 1e-6
 _ABSTOL, _MAX_ITER = 1e-14, 200
 
 
@@ -492,15 +491,13 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 "expected 'voltage' or 'SOC'"
             )
 
-        # Pad the bracket: at 0% or 100% SOC the answer sits on an endpoint, and a
-        # bracketed method needs a strict sign change.
-        low = pybamm.minimum(x_0[0], x_100[0])
-        high = pybamm.maximum(x_0[0], x_100[0])
-        pad = _BRACKET_PAD * (high - low) + _BRACKET_PAD_ABS
+        # Search well past [0, 1]: a target outside the physical range still has an
+        # exact answer. This bracket stays inside the one the inversions inside the
+        # residual use, so they can still reach the potentials it asks them for.
         x_init_1 = pybamm.Brent(
             closure,
             unknown,
-            (low - pad, high + pad),
+            (_BRACKET_LO, _BRACKET_HI),
             abstol=_ABSTOL,
             max_iter=_MAX_ITER,
         )
