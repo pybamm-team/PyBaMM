@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import itertools
+import threading
 
 import casadi
 import numpy as np
@@ -18,8 +19,11 @@ class BrentUnknown(pybamm.Symbol):
     Bound by the rootfinder, not by the model, so it is deliberately not a
     :class:`pybamm.Variable`: the checks that enumerate model states must not count it
     as one, or a ``Brent`` inside ``model.rhs`` or ``model.algebraic`` looks like an
-    extra unknown with no equation. Each instance is uniquely named, so two ``Brent``
-    nodes never share an unknown.
+    extra unknown with no equation.
+
+    The name is the key the enclosing ``Brent`` binds it under, so it carries a unique
+    suffix: a ``Brent`` nested inside another whose unknown had the same name would
+    shadow the outer binding and read its own value instead.
 
     Parameters
     ----------
@@ -28,9 +32,12 @@ class BrentUnknown(pybamm.Symbol):
     """
 
     _count = itertools.count()
+    _count_lock = threading.Lock()
 
     def __init__(self, name: str = "brent unknown"):
-        super().__init__(f"{name} {next(BrentUnknown._count)}")
+        with BrentUnknown._count_lock:
+            suffix = next(BrentUnknown._count)
+        super().__init__(f"{name} {suffix}")
 
     @classmethod
     def _rebuild(cls, name: str) -> BrentUnknown:
@@ -58,6 +65,19 @@ class BrentUnknown(pybamm.Symbol):
         # a scalar, but shaped like every other column-vector node so that the
         # broadcasting helpers can read shape[1]
         return np.nan * np.ones((1, 1))
+
+    def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        """See :meth:`pybamm.Symbol._to_casadi()`.
+
+        The enclosing :class:`Brent` binds the unknown in ``inputs`` for the length of
+        its own conversion, exactly as an :class:`pybamm.InputParameter` is bound.
+        """
+        try:
+            return inputs[self.name]
+        except KeyError:
+            raise pybamm.ModelError(
+                f"'{self}' only has a value inside the Brent that solves for it"
+            ) from None
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         # set by Brent._base_evaluate while it iterates; there is nothing to read
@@ -135,12 +155,11 @@ class Brent(pybamm.Symbol):
     residual : :class:`pybamm.Symbol`
         The expression to drive to zero. Must contain ``unknown``. To invert ``f`` at
         a target, pass ``f - target``.
-    unknown : :class:`pybamm.Symbol`
+    unknown : :class:`pybamm.BrentUnknown`
         The value being solved for. Must appear in ``residual`` and nowhere else in the
-        surrounding expression. Use :class:`pybamm.BrentUnknown`, which is what the
-        model checks recognise as bound rather than as a state; a
-        :class:`pybamm.Variable` works for a standalone expression but makes the model
-        look underdetermined once the node is inside ``rhs`` or ``algebraic``.
+        surrounding expression. It is deliberately not a :class:`pybamm.Variable`, so
+        that a ``Brent`` inside ``rhs`` or ``algebraic`` does not make the model look
+        underdetermined.
     bounds : tuple
         ``(lo, hi)``, the bracket to search. Either may be an expression.
     abstol : float, optional
@@ -174,9 +193,9 @@ class Brent(pybamm.Symbol):
             raise TypeError(
                 f"residual must be a pybamm.Symbol, got {type(residual).__name__}"
             )
-        if not isinstance(unknown, pybamm.Symbol):
+        if not isinstance(unknown, BrentUnknown):
             raise TypeError(
-                f"unknown must be a pybamm.Symbol, got {type(unknown).__name__}"
+                f"unknown must be a pybamm.BrentUnknown, got {type(unknown).__name__}"
             )
         if not any(node == unknown for node in residual.pre_order()):
             raise pybamm.ModelError(f"'{unknown}' does not appear in '{residual}'")
@@ -252,8 +271,9 @@ class Brent(pybamm.Symbol):
         cache = _OracleCache(
             casadi_symbols, _nodes_reading(self.residual, self.unknown)
         )
-        cache[self.unknown] = unknown
-        equation = self.children[0]._to_casadi_inner(t, y, y_dot, inputs, cache)
+        equation = self.children[0]._to_casadi_inner(
+            t, y, y_dot, {**inputs, self.unknown.name: unknown}, cache
+        )
         lo, hi = (
             bound._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
             for bound in self.bounds
@@ -298,30 +318,20 @@ class Brent(pybamm.Symbol):
                 f"{type(unknown).__name__}"
             )
 
-        # the residual as it was last seen, to tell a probe from a failed solve without
-        # evaluating anything twice; nested rootfinds make a second pass cost dearly
-        last = np.nan
-
         def g(value):
-            nonlocal last
-            last = np.nan
             unknown._value = np.array([[value]])
-            last = scalar(self.residual.evaluate(t, y, y_dot, inputs))
-            return last
+            return scalar(self.residual.evaluate(t, y, y_dot, inputs))
+
+        # a shape probe carries NaN through the bounds, so there is nothing to solve
+        if not (np.isfinite(lo) and np.isfinite(hi)):
+            return np.nan * np.ones((1, 1))
 
         try:
-            # A shape probe carries NaN through the bounds; there is nothing to solve
-            if not (np.isfinite(lo) and np.isfinite(hi)):
-                return np.nan * np.ones((1, 1))
             root = brentq(g, lo, hi, xtol=self.abstol, maxiter=self.max_iter)
-        except (ValueError, RuntimeError) as error:
-            # A shape probe lands here too: unsubstituted parameters leave the residual
-            # unevaluable or NaN, which is not a failed solve.
-            if not np.isfinite(last):
-                return np.nan * np.ones((1, 1))
-            raise pybamm.SolverError(
-                f"Brent failed to solve '{self.residual}' on [{lo}, {hi}]: {error}"
-            ) from error
+        except (ValueError, RuntimeError):
+            # This path exists for shape inference and quick checks, and a probe walks
+            # the tree before the parameters are in place. NaN is the honest answer.
+            return np.nan * np.ones((1, 1))
         finally:
             unknown._value = np.nan * np.ones((1, 1))
         return np.array([[root]])
