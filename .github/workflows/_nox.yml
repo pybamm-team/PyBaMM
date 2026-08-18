@@ -8,6 +8,9 @@
 # is not individually visible to `needs`. Split legs across two caller jobs and
 # list only the gated one in test_on_push.yml's `ci_gate.needs`.
 #
+# Naming: a check is "<caller job name> / <this job's name>", so a caller without
+# `name:` leaks its job id, e.g. "run_unit_tests / ubuntu-latest / Python 3.13".
+#
 # The caller must build the solver wheels first (build_solver) — this workflow
 # downloads the per-platform artifact rather than building from source.
 name: Run nox sessions (reusable)
@@ -21,10 +24,6 @@ on:
         type: string
       legs:
         description: 'JSON array of runner/Python pairs, e.g. [{"os": "ubuntu-latest", "python": "3.13"}].'
-        required: true
-        type: string
-      job_name:
-        description: 'Check-run name prefix; the leg is appended, e.g. "Tests" -> "Tests (ubuntu-latest / Python 3.13)".'
         required: true
         type: string
       fetch_depth:
@@ -63,7 +62,7 @@ jobs:
       fail-fast: false
       matrix:
         leg: ${{ fromJSON(inputs.legs) }}
-    name: ${{ inputs.job_name }} (${{ matrix.leg.os }} / Python ${{ matrix.leg.python }})
+    name: ${{ matrix.leg.os }} / Python ${{ matrix.leg.python }}
 
     env:
       # noxfile install_locked installs the matching prebuilt solver wheel from
