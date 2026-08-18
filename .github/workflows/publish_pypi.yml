@@ -8,20 +8,27 @@ permissions: {}
 
 jobs:
   build:
+    # Monorepo: this workflow publishes ONLY pybamm. Releases are discriminated
+    # by tag namespace now that pybamm and pybammsolvers share a repository
+    # (the old `github.repository` guard no longer distinguishes them).
+    if: startsWith(github.event.release.tag_name, 'pybamm-v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: true
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+          # Full history + tags so hatch-vcs can resolve the pybamm-v* version.
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: 3.14
 
       - name: Build wheel
-        run: pipx run build --outdir deploy
+        # Build the pybamm workspace package (its pyproject now lives under packages/).
+        run: pipx run build packages/pybamm --outdir deploy
 
       - name: Upload package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -45,6 +52,6 @@ jobs:
           merge-multiple: true
 
       - name: Publish on PyPI
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           packages-dir: deploy/

@@ -28,7 +28,10 @@ RUN uv venv $VIRTUAL_ENV
 RUN #!/bin/bash && source /home/pybamm/venv/bin/activate;
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN uv pip install -e ".[all,jax]";
-RUN uv pip install --group dev --group docs;
+# pybamm is at packages/pybamm (root has no [project]); install it editable with
+# extras + path-qualified groups, --no-sources pulls the released solver wheel.
+RUN uv pip install --no-sources -e "./packages/pybamm[all,jax]" \
+    --group "packages/pybamm/pyproject.toml:dev" \
+    --group "packages/pybamm/pyproject.toml:docs";
 
 ENTRYPOINT ["/bin/bash"]

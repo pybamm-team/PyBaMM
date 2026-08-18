@@ -5,7 +5,7 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.15.13"
+    rev: "v0.16.3"
     hooks:
       - id: ruff-check
         args: [--fix, --show-fixes]
@@ -41,11 +41,28 @@ repos:
         - id: rst-inline-touching-normal
 
   - repo: https://github.com/scientific-python/cookie
-    rev: 2026.04.04
+    rev: 2026.08.14
     hooks:
         - id: sp-repo-review
 
-  - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.25.2
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.29.0
     hooks:
       - id: zizmor
+
+  - repo: local
+    hooks:
+      - id: sync-pybammsolvers-version
+        name: Sync pybammsolvers version.py into pyproject.toml and vcpkg.json
+        entry: python packages/pybammsolvers/scripts/sync_version.py
+        language: python
+        files: ^packages/pybammsolvers/(src/pybammsolvers/version\.py|pyproject\.toml|vcpkg\.json)$
+        pass_filenames: false
+
+      - id: check-ci-gate
+        name: Check every CI job is merge-gated or explicitly advisory
+        entry: python .github/scripts/check_ci_gate.py
+        language: python
+        additional_dependencies: [pyyaml]
+        files: ^\.github/(workflows/test_on_push\.yml|scripts/check_ci_gate\.py)$
+        pass_filenames: false

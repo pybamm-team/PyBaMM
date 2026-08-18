@@ -1,0 +1,149 @@
+# Reusable workflow: run nox session(s) against the prebuilt in-repo solver wheels.
+#
+# Single definition of "how to set up a runner and run a nox session", called by
+# test_on_push.yml for unit tests, coverage, integration, doctests, examples,
+# scripts, and memory.
+#
+# Gating: a caller job is the unit of merge-gating, because a matrix leg's result
+# is not individually visible to `needs`. Split legs across two caller jobs and
+# list only the gated one in test_on_push.yml's `ci_gate.needs`.
+#
+# The caller must build the solver wheels first (build_solver) — this workflow
+# downloads the per-platform artifact rather than building from source.
+name: Run nox sessions (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      sessions:
+        description: 'Nox session(s) to run, space-separated and in order (e.g. "doctests docs").'
+        required: true
+        type: string
+      legs:
+        description: 'JSON array of runner/Python pairs, e.g. [{"os": "ubuntu-latest", "python": "3.13"}].'
+        required: true
+        type: string
+      job_name:
+        description: 'Check-run name prefix; the leg is appended, e.g. "Tests" -> "Tests (ubuntu-latest / Python 3.13)".'
+        required: true
+        type: string
+      fetch_depth:
+        description: "Checkout depth; the docs build needs the full history (0)."
+        default: 1
+        required: false
+        type: number
+      texlive:
+        description: "Install TeXLive on Linux, for sessions that render LaTeX in figures or docs."
+        default: true
+        required: false
+        type: boolean
+      upload_coverage:
+        description: "Upload coverage.xml to Codecov after the sessions finish."
+        default: false
+        required: false
+        type: boolean
+    secrets:
+      CODECOV_TOKEN:
+        description: "Codecov upload token; only needed when upload_coverage is true."
+        required: false
+
+# The env context does not propagate from a caller workflow, so these must be
+# repeated here rather than inherited from test_on_push.yml.
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+  FORCE_COLOR: 3
+
+jobs:
+  nox:
+    runs-on: ${{ matrix.leg.os }}
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(inputs.legs) }}
+    name: ${{ inputs.job_name }} (${{ matrix.leg.os }} / Python ${{ matrix.leg.python }})
+
+    env:
+      # noxfile install_locked installs the matching prebuilt solver wheel from
+      # this directory instead of building the solver from source.
+      PYBAMM_SOLVER_WHEELS: ${{ github.workspace }}/solver-wheels
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: ${{ inputs.fetch_depth }}
+          persist-credentials: false
+
+      - name: Install Linux system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
+        if: startsWith(matrix.leg.os, 'ubuntu')
+        with:
+          packages: gfortran gcc graphviz pandoc
+          execute_install_scripts: true
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install OpenBLAS for Linux
+        if: startsWith(matrix.leg.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo dot -c
+          sudo apt-get install libopenblas-dev
+
+      # Kept separate and opt-out: texlive-latex-extra is large and uncached.
+      - name: Install TeXLive for Linux
+        if: ${{ startsWith(matrix.leg.os, 'ubuntu') && inputs.texlive }}
+        run: sudo apt-get install texlive-latex-extra dvipng
+
+      - name: Install macOS system dependencies
+        if: startsWith(matrix.leg.os, 'macos')
+        env:
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
+          # Speed up CI
+          NONINTERACTIVE: 1
+        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
+        run: |
+          brew analytics off
+          brew install graphviz libomp
+          brew reinstall gcc
+
+      - name: Install Windows system dependencies
+        if: startsWith(matrix.leg.os, 'windows')
+        run: winget install --id Graphviz.Graphviz --exact --accept-source-agreements --accept-package-agreements
+
+      - name: Set up Python ${{ matrix.leg.python }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.leg.python }}
+
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install nox
+        run: uv tool install nox
+
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ matrix.leg.os == 'ubuntu-latest' && 'wheels_manylinux' || matrix.leg.os == 'ubuntu-24.04-arm' && 'wheels_manylinux_aarch64' || matrix.leg.os == 'windows-latest' && 'wheels_windows' || format('wheels_{0}', matrix.leg.os) }}
+          path: solver-wheels
+
+      - name: Run nox -s ${{ inputs.sessions }}
+        # bash on every runner so the unquoted expansion below splits a
+        # multi-session input ("doctests docs") into separate nox arguments.
+        shell: bash
+        env:
+          SESSIONS: ${{ inputs.sessions }}
+        run: nox -s $SESSIONS
+
+      - name: Upload coverage report
+        if: inputs.upload_coverage
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
