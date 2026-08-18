@@ -450,7 +450,7 @@ def _brent_branch(
 
     def make_brent(parts):
         residual, lo, hi, abstol, max_iter = parts
-        unknown = pybamm.Variable("brent unknown")
+        unknown = pybamm.BrentUnknown()
         return pybamm.Brent(
             # subtraction so the unknown cannot be simplified away, as `0 * x` would
             unknown - residual,
@@ -896,6 +896,7 @@ _STRATEGIES.update(
         pybamm.Parameter: lambda _children: parameter_strategy(),
         pybamm.Time: lambda _children: time_strategy(),
         pybamm.InputParameter: lambda _children: input_parameter_strategy(),
+        pybamm.BrentUnknown: lambda _children: st.builds(pybamm.BrentUnknown),
         pybamm.Negate: lambda children: _unary_branch(children, pybamm.Negate),
         pybamm.AbsoluteValue: lambda children: _unary_branch(
             children, pybamm.AbsoluteValue
@@ -1092,6 +1093,7 @@ _LEAF_CLASSES: frozenset[type[pybamm.Symbol]] = frozenset(
         pybamm.Parameter,
         pybamm.Time,
         pybamm.InputParameter,
+        pybamm.BrentUnknown,
     }
 )
 
