@@ -73,7 +73,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
         None
             Not used for `pybamm.AlgebraicSolver`.
         """
-        return None
+        return
 
     @property
     def tol(self):

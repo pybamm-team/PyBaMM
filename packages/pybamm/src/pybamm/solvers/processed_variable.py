@@ -54,7 +54,7 @@ class ProcessedVariable(BaseProcessedVariable):
         self.all_inputs = solution.all_inputs
         self.all_inputs_stacked = solution.all_inputs_stacked
         self.sensitivity_names = [
-            name for name in solution._all_sensitivities.keys() if name != "all"
+            name for name in solution._all_sensitivities if name != "all"
         ]
 
         self.mesh = base_variables[0].mesh
@@ -211,11 +211,11 @@ class ProcessedVariable(BaseProcessedVariable):
                 raw_names.append(var.name)
 
         # Rename battery variables to match PyBaMM convention
-        if all([var.startswith("r") for var in raw_names]):
+        if all(var.startswith("r") for var in raw_names):
             return "r"
-        elif all([var.startswith("x") for var in raw_names]):
+        elif all(var.startswith("x") for var in raw_names):
             return "x"
-        elif all([var.startswith("R") for var in raw_names]):
+        elif all(var.startswith("R") for var in raw_names):
             return "R"
         elif len(raw_names) == 1:
             return raw_names[0]
@@ -1379,13 +1379,20 @@ def process_variable(name: str, base_variables, *args, **kwargs):
         and isinstance(mesh, pybamm.ScikitSubMesh2D)
     ):
         return ProcessedVariable2DSciKitFEM(name, base_variables, *args, **kwargs)
-    if hasattr(base_variables[0], "secondary_mesh"):
-        if "current collector" in base_variables[0].domains["secondary"] and isinstance(
-            base_variables[0].secondary_mesh, pybamm.ScikitSubMesh2D
-        ):
-            return ProcessedVariable3DSciKitFEM(name, base_variables, *args, **kwargs)
+    if (
+        hasattr(base_variables[0], "secondary_mesh")
+        and "current collector" in base_variables[0].domains["secondary"]
+        and isinstance(base_variables[0].secondary_mesh, pybamm.ScikitSubMesh2D)
+    ):
+        return ProcessedVariable3DSciKitFEM(name, base_variables, *args, **kwargs)
 
     if mesh and hasattr(mesh, "edges_lr") and hasattr(mesh, "edges_tb"):
+        if isinstance(base_variables[0], pybamm.VectorField):
+            raise NotImplementedError(
+                "Reading VectorField variables from a Solution is not supported "
+                "on structured 2D finite-volume meshes. Use pybamm.Component to "
+                "extract a scalar component first."
+            )
         return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
 
     # check variable shape

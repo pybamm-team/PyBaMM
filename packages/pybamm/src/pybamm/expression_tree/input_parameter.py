@@ -49,6 +49,11 @@ class InputParameter(pybamm.Symbol):
         self._expected_size = expected_size
         super().__init__(name, domain=domain)
 
+    def set_id(self):
+        """See :meth:`pybamm.Symbol.set_id()`. Inputs of different sizes are distinct."""
+        domains = tuple((k, tuple(v)) for k, v in self.domains.items() if v)
+        self._id = hash((self.__class__, self.name, self._expected_size, *domains))
+
     @classmethod
     def _from_json(cls, snippet: dict):
         return cls(

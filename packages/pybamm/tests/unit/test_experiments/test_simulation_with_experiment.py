@@ -728,7 +728,7 @@ class TestSimulationExperiment:
         # With "voltage as a state" the algebraic block also holds a "Voltage [V]" row,
         # which is physics and must NOT be picked up as a switch row.
         sim = pybamm.Simulation(
-            pybamm.lithium_ion.SPM(),
+            pybamm.lithium_ion.SPM({"voltage as a state": "true"}),
             experiment=pybamm.Experiment(
                 [("Charge at 1 A for 1 min", "Hold at 4.1 V for 1 min")]
             ),
@@ -1503,7 +1503,7 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
         assert sorted([step.basic_repr() for step in experiment.steps]) == sorted(
-            list(sim.experiment_unique_steps_to_model.keys())
+            sim.experiment_unique_steps_to_model.keys()
         )
 
     def test_run_experiment_drive_cycle_experiment(self):
@@ -2038,7 +2038,7 @@ class TestSimulationExperiment:
         experiment = pybamm.Experiment(["Rest for 1 hour"])
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
-        assert "Rest for padding" not in sim.experiment_unique_steps_to_model.keys()
+        assert "Rest for padding" not in sim.experiment_unique_steps_to_model
 
         # Test padding rest model exists if there are start_times
         experiment = pybamm.step.string(
@@ -2047,7 +2047,7 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
         assert not sim._experiment_uses_unified_model
-        assert "Rest for padding" in sim.experiment_unique_steps_to_model.keys()
+        assert "Rest for padding" in sim.experiment_unique_steps_to_model
         assert not sim._experiment_includes_padding_rest
 
     def test_run_start_time_experiment(self):

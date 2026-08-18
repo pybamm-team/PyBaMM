@@ -57,7 +57,7 @@ class Discretisation:
             self._spatial_methods = {}
         else:
             # Unpack macroscale to the constituent subdomains
-            if "macroscale" in spatial_methods.keys():
+            if "macroscale" in spatial_methods:
                 method = spatial_methods["macroscale"]
                 spatial_methods["negative electrode"] = method
                 spatial_methods["separator"] = method
@@ -68,12 +68,13 @@ class Discretisation:
                 method.build(mesh)
                 # Check zero-dimensional methods are only applied to zero-dimensional
                 # meshes
-                if isinstance(method, pybamm.ZeroDimensionalSpatialMethod):
-                    if not isinstance(mesh[domain], pybamm.SubMesh0D):
-                        raise pybamm.DiscretisationError(
-                            "Zero-dimensional spatial method for the "
-                            f"{domain} domain requires a zero-dimensional submesh"
-                        )
+                if isinstance(
+                    method, pybamm.ZeroDimensionalSpatialMethod
+                ) and not isinstance(mesh[domain], pybamm.SubMesh0D):
+                    raise pybamm.DiscretisationError(
+                        "Zero-dimensional spatial method for the "
+                        f"{domain} domain requires a zero-dimensional submesh"
+                    )
 
         self._bcs = {}
         self.y_slices = {}
@@ -486,7 +487,7 @@ class Discretisation:
         bc_keys = list(self.bcs.keys())
 
         internal_bcs = {}
-        for var in model.boundary_conditions.keys():
+        for var in model.boundary_conditions:
             if not isinstance(var, pybamm.Concatenation):
                 continue
             children = var.orphans
@@ -573,12 +574,12 @@ class Discretisation:
                     self.mesh[subdomain].coord_sys
                     in ["spherical polar", "cylindrical polar"]
                     and next(iter(self.mesh.geometry[subdomain].values()))["min"] == 0
+                    and (bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann")
                 ):
-                    if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
-                        raise pybamm.ModelError(
-                            "Boundary condition at r = 0 must be a homogeneous "
-                            f"Neumann condition for {self.mesh[subdomain].coord_sys} coordinates"
-                        )
+                    raise pybamm.ModelError(
+                        "Boundary condition at r = 0 must be a homogeneous "
+                        f"Neumann condition for {self.mesh[subdomain].coord_sys} coordinates"
+                    )
 
             # Handle any boundary conditions applied on the tabs
             if any("tab" in side for side in list(bcs.keys())):
@@ -778,7 +779,7 @@ class Discretisation:
             incorrect expressions
         """
         new_variables = dict(variables)
-        for var in initial_conditions.keys():
+        for var in initial_conditions:
             if var.name not in new_variables:
                 new_variables[var.name] = var
             else:
@@ -881,7 +882,11 @@ class Discretisation:
 
         # Assign mesh as an attribute to the processed variable
         if symbol.domain != []:
-            discretised_symbol.mesh = self.mesh[symbol.domain]
+            mesh_for_symbol = self.mesh[symbol.domain]
+            discretised_symbol.mesh = mesh_for_symbol
+            if isinstance(discretised_symbol, pybamm.VectorField):
+                for comp in discretised_symbol.components:
+                    comp.mesh = mesh_for_symbol
         else:
             discretised_symbol.mesh = None
 
@@ -898,6 +903,38 @@ class Discretisation:
             discretised_symbol.tertiary_mesh = None
 
         return discretised_symbol
+
+    def _process_vector_field_binary(self, symbol, disc_left, disc_right):
+        """Broadcast a scalar side, then apply ``symbol`` component-wise."""
+        left_is_vf = isinstance(disc_left, pybamm.VectorField)
+        right_is_vf = isinstance(disc_right, pybamm.VectorField)
+        if left_is_vf and right_is_vf:
+            if disc_left.n_components != disc_right.n_components:
+                raise pybamm.DiscretisationError(
+                    f"Cannot combine VectorFields with {disc_left.n_components} and "
+                    f"{disc_right.n_components} components"
+                )
+            n = disc_left.n_components
+        elif left_is_vf:
+            n = disc_left.n_components
+            disc_right = pybamm.VectorField(*[disc_right] * n)
+        else:
+            n = disc_right.n_components
+            disc_left = pybamm.VectorField(*[disc_left] * n)
+        new_comps = [
+            pybamm.simplify_if_constant(
+                symbol.create_copy(
+                    new_children=[disc_left.components[k], disc_right.components[k]]
+                )
+            )
+            for k in range(n)
+        ]
+        result = pybamm.VectorField(*new_comps)
+        if disc_left._disc_state_vector is not None:
+            result._disc_state_vector = disc_left._disc_state_vector
+        else:
+            result._disc_state_vector = disc_right._disc_state_vector
+        return result
 
     def _process_symbol(self, symbol):
         """See :meth:`Discretisation.process_symbol()`."""
@@ -920,13 +957,11 @@ class Discretisation:
             # Catch case where diffusion is a scalar and turn it into an identity matrix vector field.
             if isinstance(spatial_method, pybamm.FiniteVolume2D):
                 if isinstance(left, pybamm.Scalar) and (
-                    isinstance(right, pybamm.VectorField)
-                    or isinstance(right, pybamm.Gradient)
+                    isinstance(right, (pybamm.VectorField, pybamm.Gradient))
                 ):
                     left = pybamm.VectorField(left, left)
                 elif isinstance(right, pybamm.Scalar) and (
-                    isinstance(left, pybamm.VectorField)
-                    or isinstance(left, pybamm.Gradient)
+                    isinstance(left, (pybamm.VectorField, pybamm.Gradient))
                 ):
                     right = pybamm.VectorField(right, right)
             disc_left = self.process_symbol(left)
@@ -935,23 +970,9 @@ class Discretisation:
                 if isinstance(disc_left, pybamm.VectorField) or isinstance(
                     disc_right, pybamm.VectorField
                 ):
-                    if not isinstance(disc_right, pybamm.VectorField):
-                        disc_right = pybamm.VectorField(disc_right, disc_right)
-                    if not isinstance(disc_left, pybamm.VectorField):
-                        disc_left = pybamm.VectorField(disc_left, disc_left)
-                    else:  # both are vector fields already
-                        pass
-                    disc_lr = pybamm.simplify_if_constant(
-                        symbol.create_copy(
-                            new_children=[disc_left.lr_field, disc_right.lr_field]
-                        )
+                    return self._process_vector_field_binary(
+                        symbol, disc_left, disc_right
                     )
-                    disc_tb = pybamm.simplify_if_constant(
-                        symbol.create_copy(
-                            new_children=[disc_left.tb_field, disc_right.tb_field]
-                        )
-                    )
-                    return pybamm.VectorField(disc_lr, disc_tb)
 
                 return pybamm.simplify_if_constant(
                     symbol.create_copy(new_children=[disc_left, disc_right])
@@ -1093,6 +1114,18 @@ class Discretisation:
             elif isinstance(symbol, pybamm.NotConstant):
                 # After discretisation, we can make the symbol constant
                 return disc_child
+            elif isinstance(symbol, pybamm.Component):
+                if not isinstance(disc_child, pybamm.VectorField):
+                    raise pybamm.DiscretisationError(
+                        "Component can only be applied to a VectorField"
+                    )
+                return disc_child.components[symbol.index]
+            elif isinstance(symbol, pybamm.Norm):
+                if not isinstance(disc_child, pybamm.VectorField):
+                    raise pybamm.DiscretisationError(
+                        "Norm can only be applied to a VectorField"
+                    )
+                return sum(c**2 for c in disc_child.components) ** 0.5
             elif isinstance(symbol, pybamm.Magnitude):
                 if not isinstance(disc_child, pybamm.VectorField):
                     raise ValueError("Magnitude can only be applied to a vector field")
@@ -1105,10 +1138,13 @@ class Discretisation:
                     raise ValueError("Invalid direction")
             else:
                 if isinstance(disc_child, pybamm.VectorField):
-                    return pybamm.VectorField(
-                        symbol.create_copy(new_children=[disc_child.lr_field]),
-                        symbol.create_copy(new_children=[disc_child.tb_field]),
-                    )
+                    new_comps = [
+                        symbol.create_copy(new_children=[c])
+                        for c in disc_child.components
+                    ]
+                    result = pybamm.VectorField(*new_comps)
+                    result._disc_state_vector = disc_child._disc_state_vector
+                    return result
                 else:
                     return symbol.create_copy(new_children=[disc_child])
 
@@ -1182,10 +1218,8 @@ class Discretisation:
             )
 
         elif isinstance(symbol, pybamm.VectorField):
-            # VectorField is a subclass of TensorField, handle it first for specificity
-            left_symbol = self.process_symbol(symbol.lr_field)
-            right_symbol = self.process_symbol(symbol.tb_field)
-            return symbol.create_copy(new_children=[left_symbol, right_symbol])
+            processed = [self.process_symbol(c) for c in symbol.components]
+            return symbol.create_copy(new_children=processed)
 
         elif isinstance(symbol, pybamm.TensorField):
             # General TensorField handling (rank-2 tensors)
@@ -1235,7 +1269,7 @@ class Discretisation:
         # Unpack symbols in variables that are concatenations of variables
         unpacked_variables = []
         slices = []
-        for symbol in var_eqn_dict.keys():
+        for symbol in var_eqn_dict:
             if isinstance(symbol, pybamm.ConcatenationVariable):
                 unpacked_variables.extend([symbol] + [var for var in symbol.children])
             else:
@@ -1246,7 +1280,7 @@ class Discretisation:
             # Check keys from the given var_eqn_dict against self.y_slices
             unpacked_variables_set = set(unpacked_variables)
             if unpacked_variables_set != set(self.y_slices.keys()):
-                given_variable_names = [v.name for v in var_eqn_dict.keys()]
+                given_variable_names = [v.name for v in var_eqn_dict]
                 raise pybamm.ModelError(
                     "Initial conditions are insufficient. Only "
                     f"provided for {given_variable_names} "
@@ -1287,14 +1321,14 @@ class Discretisation:
 
         # Check initial conditions and model equations have the same shape
         # Individual
-        for var in model.rhs.keys():
+        for var in model.rhs:
             if model.rhs[var].shape != model.initial_conditions[var].shape:
                 raise pybamm.ModelError(
                     "rhs and initial conditions must have the same shape after "
                     "discretisation but rhs.shape = "
                     f"{model.rhs[var].shape} and initial_conditions.shape = {model.initial_conditions[var].shape} for variable '{var}'."
                 )
-        for var in model.algebraic.keys():
+        for var in model.algebraic:
             if model.algebraic[var].shape != model.initial_conditions[var].shape:
                 raise pybamm.ModelError(
                     "algebraic and initial conditions must have the same shape after "
@@ -1322,11 +1356,7 @@ class Discretisation:
         eqns_to_check = (
             list(model.rhs.values())
             + list(model.algebraic.values())
-            + [
-                x[side][0]
-                for x in model.boundary_conditions.values()
-                for side in x.keys()
-            ]
+            + [x[side][0] for x in model.boundary_conditions.values() for side in x]
             # only check children of variables, this will skip the variable itself
             # and catch any other cases
             + [child for var in model.variables.values() for child in var.children]

@@ -63,7 +63,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         super().build(mesh)
 
         # add npts_for_broadcast to mesh domains for this particular discretisation
-        for dom in mesh.keys():
+        for dom in mesh:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
 
     def spatial_variable(self, symbol):
@@ -588,10 +588,10 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         # Catch if no boundary conditions are defined
         if (
-            "left" not in bcs.keys()
-            and "right" not in bcs.keys()
-            and "top" not in bcs.keys()
-            and "bottom" not in bcs.keys()
+            "left" not in bcs
+            and "right" not in bcs
+            and "top" not in bcs
+            and "bottom" not in bcs
         ):
             raise ValueError(f"No boundary conditions have been provided for {symbol}")
 

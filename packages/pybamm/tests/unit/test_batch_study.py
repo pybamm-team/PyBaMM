@@ -90,6 +90,28 @@ class TestBatchStudy:
             ]
             assert output_experiment in experiments_list
 
+    def test_solve_honours_solver_argument(self):
+        spm = pybamm.lithium_ion.SPM()
+        spm_uniform = pybamm.lithium_ion.SPM({"particle": "uniform profile"})
+        argument_solver = pybamm.IDAKLUSolver(rtol=1e-7)
+
+        # with no per-simulation solvers, the argument is used
+        bs = pybamm.BatchStudy(models={"SPM": spm, "SPM uniform": spm_uniform})
+        bs.solve(t_eval=[0, 3600], solver=argument_solver)
+        assert len(bs.sims) == 2
+        for sim in bs.sims:
+            assert sim.solver is argument_solver
+
+        # a solver from `solvers=` still takes precedence over the argument
+        study_solver = pybamm.IDAKLUSolver(rtol=1e-9)
+        bs = pybamm.BatchStudy(
+            models={"SPM": spm, "SPM uniform": spm_uniform},
+            solvers={"idaklu0": study_solver, "idaklu1": study_solver},
+        )
+        bs.solve(t_eval=[0, 3600], solver=argument_solver)
+        for sim in bs.sims:
+            assert sim.solver is study_solver
+
     def test_create_gif(self, tmp_path):
         bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
         with pytest.raises(

@@ -110,13 +110,12 @@ class ScipySolver(pybamm.BaseSolver):
 
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
-        if np.any([self.method in implicit_methods]):
-            if model.jac_rhs_eval:
+        if np.any([self.method in implicit_methods]) and model.jac_rhs_eval:
 
-                def jacobian(t, y):
-                    return model.jac_rhs_eval(t, y, inputs)
+            def jacobian(t, y):
+                return model.jac_rhs_eval(t, y, inputs)
 
-                extra_options.update({"jac": jacobian})
+            extra_options.update({"jac": jacobian})
 
         # rhs equation
         if model.convert_to_format == "casadi":

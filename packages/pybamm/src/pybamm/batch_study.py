@@ -136,10 +136,12 @@ class BatchStudy:
             submesh_type,
             var_pt,
             spatial_method,
-            solver,
+            solver_input,
             output_variable,
             C_rate,
         ) in iter_func(self.models.values(), *inp_values):
+            # a solver from `self.solvers` wins; otherwise fall back to the argument
+            sim_solver = solver if solver_input is None else solver_input
             sim = pybamm.Simulation(
                 model,
                 experiment=experiment,
@@ -148,7 +150,7 @@ class BatchStudy:
                 submesh_types=submesh_type,
                 var_pts=var_pt,
                 spatial_methods=spatial_method,
-                solver=solver,
+                solver=sim_solver,
                 output_variables=output_variable,
                 C_rate=C_rate,
             )
@@ -158,7 +160,7 @@ class BatchStudy:
             for _ in range(self.repeats):
                 sol = sim.solve(
                     t_eval,
-                    solver,
+                    sim_solver,
                     save_at_cycles,
                     calc_esoh,
                     starting_solution,

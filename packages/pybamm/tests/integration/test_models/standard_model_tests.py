@@ -1,6 +1,7 @@
 #
 # Standard basic tests for any model
 #
+import os
 import tempfile
 
 import numpy as np
@@ -154,45 +155,44 @@ class StandardModelTest:
         )
 
     def test_serialisation(self, solver=None, t_eval=None):
-        temp = tempfile.NamedTemporaryFile(prefix="test_model")
-        file_name = temp.name
-        self.model.save_model(file_name, mesh=self.disc.mesh)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_name = os.path.join(tmpdir, "test_model")
+            self.model.save_model(file_name, mesh=self.disc.mesh)
 
-        new_model = pybamm.load_model(file_name + ".json")
+            new_model = pybamm.load_model(file_name + ".json")
 
-        # create new solver for re-created model
-        if solver is not None:
-            new_solver = solver
-        else:
-            new_solver = new_model.default_solver
+            # create new solver for re-created model
+            if solver is not None:
+                new_solver = solver
+            else:
+                new_solver = new_model.default_solver
 
-        if isinstance(
-            new_model, pybamm.lithium_ion.BaseModel | pybamm.lead_acid.BaseModel
-        ):
-            new_solver.rtol = 1e-8
-            new_solver.atol = 1e-8
+            if isinstance(
+                new_model, pybamm.lithium_ion.BaseModel | pybamm.lead_acid.BaseModel
+            ):
+                new_solver.rtol = 1e-8
+                new_solver.atol = 1e-8
 
-        Crate = abs(
-            self.parameter_values["Current function [A]"]
-            / self.parameter_values["Nominal cell capacity [A.h]"]
-        )
-        # don't allow zero C-rate
-        if Crate == 0:
-            Crate = 1
-        if t_eval is None:
-            t_eval = [0, 3600 / Crate]
-        t_interp = np.linspace(0, t_eval[-1], 100)
-
-        new_solution = new_solver.solve(new_model, t_eval=t_eval, t_interp=t_interp)
-
-        for x, _ in enumerate(self.solution.all_ys):
-            np.testing.assert_allclose(
-                new_solution.all_ys[x],
-                self.solution.all_ys[x],
-                rtol=1e-6,
-                atol=1e-6,
+            Crate = abs(
+                self.parameter_values["Current function [A]"]
+                / self.parameter_values["Nominal cell capacity [A.h]"]
             )
-        temp.close()
+            # don't allow zero C-rate
+            if Crate == 0:
+                Crate = 1
+            if t_eval is None:
+                t_eval = [0, 3600 / Crate]
+            t_interp = np.linspace(0, t_eval[-1], 100)
+
+            new_solution = new_solver.solve(new_model, t_eval=t_eval, t_interp=t_interp)
+
+            for x, _ in enumerate(self.solution.all_ys):
+                np.testing.assert_allclose(
+                    new_solution.all_ys[x],
+                    self.solution.all_ys[x],
+                    rtol=1e-6,
+                    atol=1e-6,
+                )
 
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False

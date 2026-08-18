@@ -172,7 +172,7 @@ class SummaryVariables:
         """Create all aggregated eSOH variables"""
         if self.cycles is not None:
             var_cycle = [cycle._get_esoh_variables() for cycle in self.cycles]
-            aggregated_vars = {k: [] for k in var_cycle[0].keys()}
+            aggregated_vars = {k: [] for k in var_cycle[0]}
             for cycle in var_cycle:
                 for k, v in cycle.items():
                     aggregated_vars[k].append(v)

@@ -52,7 +52,7 @@ class EntryPoint(Mapping):
         ):  # Ensure __init__ is called once per instance
             self.initialized = True
             EntryPoint._instances += 1
-            self._all_entries = dict()
+            self._all_entries = {}
             self.group = group
             for entry_point in self.get_entries(self.group):
                 self._all_entries[entry_point.name] = entry_point
