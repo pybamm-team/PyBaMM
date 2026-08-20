@@ -9,6 +9,7 @@ import pytest
 
 import pybamm_model_zoo as zoo
 from pybamm_model_zoo import _docs
+from pybamm_model_zoo._registry import ModelEntry
 from pybamm_model_zoo.testing import contract
 
 # An externally-registered model is held only to the portable rules: it is not
@@ -59,6 +60,43 @@ class TestContractItself:
             assert check.run.__doc__, (
                 f"{name}: needs a docstring saying what it asserts"
             )
+
+
+class TestDependencyAgreement:
+    """A manifest and the extra behind it, held to each other in both directions."""
+
+    def check(self, tmp_path, packages, extra_items):
+        entry = ModelEntry(
+            slug="a_model",
+            name="AModel",
+            path=tmp_path,
+            raw={
+                "model": {
+                    "dependencies": {"extra": "zoo-a-model", "packages": packages}
+                }
+            },
+        )
+        contract._check_requirements_agree(
+            entry, tmp_path / "pyproject.toml", extra_items
+        )
+
+    def test_matching_requirements_pass(self, tmp_path):
+        self.check(tmp_path, ["scikit-fem>=12.0.2"], ["scikit-fem>=12.0.2"])
+
+    def test_a_package_the_extra_omits_is_caught(self, tmp_path):
+        with pytest.raises(AssertionError, match=r"is missing \['scikit-fem'\]"):
+            self.check(tmp_path, ["scikit-fem>=12.0.2"], [])
+
+    def test_a_package_the_manifest_omits_is_caught(self, tmp_path):
+        with pytest.raises(AssertionError, match=r"does not declare \['scikit-fem'\]"):
+            self.check(tmp_path, [], ["scikit-fem>=12.0.2"])
+
+    def test_a_disagreeing_constraint_is_caught(self, tmp_path):
+        with pytest.raises(AssertionError, match=r"declared differently"):
+            self.check(tmp_path, ["scikit-fem>=13"], ["scikit-fem>=12.0.2"])
+
+    def test_names_are_compared_canonically(self, tmp_path):
+        self.check(tmp_path, ["Scikit_FEM>=12.0.2"], ["scikit-fem>=12.0.2"])
 
 
 class TestGeneratedFiles:

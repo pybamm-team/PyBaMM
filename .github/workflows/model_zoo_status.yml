@@ -147,10 +147,15 @@ jobs:
           merge-multiple: true
           path: results
 
-      # The same generator the pre-commit hook runs, so the schema and the
-      # renderers that read it cannot drift apart.
+      # The same generator the pre-commit hook runs, so the schema cannot drift.
+      # `--expect` stops a leg that died before uploading leaving a green badge.
       - name: Fold the results into status.json, badges, and the docs table
-        run: python packages/pybamm-model-zoo/scripts/generate.py --collect results
+        env:
+          CELLS: ${{ needs.discover.outputs.cells }}
+        run: |
+          printf '%s' "$CELLS" > cells.json
+          python packages/pybamm-model-zoo/scripts/generate.py \
+            --collect results --expect cells.json
 
       - name: Open or update the status pull request
         env:

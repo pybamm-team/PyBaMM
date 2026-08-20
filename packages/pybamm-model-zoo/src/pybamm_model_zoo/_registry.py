@@ -273,23 +273,40 @@ class Registry(Mapping[str, ModelEntry]):
         ):
             self._discover(root, external=True)
 
+    def _shadowed(self, entry: ModelEntry) -> tuple[str, ModelEntry] | None:
+        """The registered entry ``entry`` would displace, and how it clashes.
+
+        Both keys have to be checked: ``by_slug`` resolves citations and the
+        generated per-model files, so a clashing slug shadows a model just as
+        effectively as a clashing name.
+        """
+        for label, registered in (
+            (f"name '{entry.name}'", self._entries.get(entry.name)),
+            (f"slug '{entry.slug}'", self._by_slug.get(entry.slug)),
+        ):
+            if registered is not None:
+                return label, registered
+        return None
+
     def _discover(self, root: Path, *, external: bool) -> None:
         for manifest in sorted(Path(root).glob(f"*/{MANIFEST_NAME}")):
             entry = _entry_from_manifest(manifest, external=external)
-            existing = self._entries.get(entry.name)
-            if existing is None:
+            clash = self._shadowed(entry)
+            if clash is None:
                 self._entries[entry.name] = entry
                 self._by_slug[entry.slug] = entry
-            elif external:
+                continue
+            label, existing = clash
+            if external:
                 # In-tree models win, so a third-party package cannot shadow one.
                 warnings.warn(
                     f"ignoring external model '{entry.name}' from {manifest}: "
-                    f"the name is already registered by {existing.manifest_path}",
+                    f"{label} is already registered by {existing.manifest_path}",
                     stacklevel=2,
                 )
             else:
                 raise ManifestError(
-                    f"{manifest}: duplicate model name '{entry.name}', already "
+                    f"{manifest}: duplicate model {label}, already "
                     f"declared by {existing.manifest_path}"
                 )
 

@@ -26,21 +26,24 @@ See [contributing a model](contributing.md) to add your own.
 
 | Model | Tier | Maintainer | PyBaMM | Added |
 | --- | --- | --- | --- | --- |
-| [Single Particle Model with a lumped series resistance](models/spm_series_resistance.md) | core | @pybamm-team/maintainers | `>=26.0` | 2026-08-20 |
+| [Single Particle Model with a linearised open-circuit potential](models/linearised_spm.md) | core | @pybamm-team/maintainers | `>=26.0` | 2026-08-20 |
 
 ## Compatibility
 
-Refreshed weekly by the `model_zoo_status` workflow, which runs each model
-against every release its `pybamm_requires` admits, plus `main`.
+Refreshed weekly by the `model_zoo_status` workflow. Each model is run against
+`main` and against the most recent PyBaMM releases its `pybamm_requires`
+admits; `scripts/matrix.py --releases` sets how far back that window reaches,
+and the columns below are the window as it stands. A cell reading `missing` is
+one whose job never reported, not a pass.
 
 | Model | Results | Last passing |
 | --- | --- | --- |
-| spm_series_resistance | not yet run | — |
+| linearised_spm | not yet run | — |
 
 ```{toctree}
 :hidden:
 :maxdepth: 1
 
 Contributing a model <contributing>
-models/spm_series_resistance
+models/linearised_spm
 ```
