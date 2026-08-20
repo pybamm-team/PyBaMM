@@ -113,6 +113,9 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
     # For property based testing
     "hypothesis",
+    "pytest-benchmark>=5.2.3",
+    # For memory benchmarking (Linux/macOS only)
+    "pytest-memray>=1.7.0; sys_platform != 'win32'",
 ]
 
 [project.entry-points."pybamm_parameter_sets"]
@@ -183,8 +186,9 @@ ignore = [
 [tool.pytest.ini_options]
 minversion = "9.0"
 required_plugins = ["pytest-xdist", "pytest-mock"]
-addopts = ["-nauto", "-vra", "--strict-config", "--strict-markers"]
+addopts = ["-nauto", "-vra", "--strict-config", "--strict-markers", "--benchmark-disable"]
 testpaths = ["tests"]
+norecursedirs = ["benchmarks"]
 console_output_style = "progress"
 xfail_strict = true
 filterwarnings = [
