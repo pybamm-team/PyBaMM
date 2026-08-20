@@ -41,6 +41,11 @@ on:
         default: false
         required: false
         type: boolean
+      timeout_minutes:
+        description: "Per-leg timeout. GitHub's own default is 360."
+        default: 360
+        required: false
+        type: number
     secrets:
       CODECOV_TOKEN:
         description: "Codecov upload token; only needed when upload_coverage is true."
@@ -55,6 +60,7 @@ env:
 jobs:
   nox:
     runs-on: ${{ matrix.leg.os }}
+    timeout-minutes: ${{ inputs.timeout_minutes }}
     permissions:
       contents: read
 

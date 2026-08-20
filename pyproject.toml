@@ -10,6 +10,7 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 pybammsolvers = { workspace = true }
+pybamm = { workspace = true }
 
 # Prevent uv's ephemeral build venv from being torn down between CMake configure
 # and scikit-build-core's editable auto-rebuild (which otherwise can't find
@@ -93,6 +94,11 @@ ignore = [
 "packages/pybamm/tests/*" = ["T20", "S101"]
 # `exec` is how this module evaluates the Python it generates
 "packages/pybamm/src/pybamm/expression_tree/operations/evaluate_python.py" = ["S102"]
+# The zoo's contract checks are test helpers that happen to ship in src/, so
+# `assert` is the right tool there as well as in the test tree.
+"packages/pybamm-model-zoo/**/tests/*" = ["T20", "S101"]
+"packages/pybamm-model-zoo/src/pybamm_model_zoo/testing/*" = ["S101"]
+"packages/pybamm-model-zoo/scripts/*" = ["T20"]
 "docs/*" = ["T20"]
 "examples/*" = ["T20"]
 "**.ipynb" = ["E402", "E703"]
@@ -105,7 +111,7 @@ ignore = [
 # PyPI dependency) and the committed import ordering reflects that; the solver's
 # own packages/pybammsolvers/ruff.toml governs its subtree.
 [tool.ruff.lint.isort]
-known-first-party = ["pybamm"]
+known-first-party = ["pybamm", "pybamm_model_zoo"]
 
 # repo-review runs at the repo root. Carry over the ignore list that lived in
 # the package pyproject on main, plus the checks that don't apply to a

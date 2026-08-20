@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling>=1.31.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pybamm-model-zoo"
+version = "0.1.0"
+license = "BSD-3-Clause"
+description = "Community- and partner-contributed models for PyBaMM"
+authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
+maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
+requires-python = ">=3.10, <3.15"
+readme = { file = "README.md", content-type = "text/markdown" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "pybamm",
+    "packaging>=23.0",
+    "tomli>=2.0.1; python_version < '3.11'",
+]
+
+[project.urls]
+Homepage = "https://pybamm.org"
+Documentation = "https://docs.pybamm.org/en/latest/source/model_zoo/index.html"
+Repository = "https://github.com/pybamm-team/PyBaMM"
+
+# A model's dependencies belong in a per-model `zoo-<slug>` extra, never in the
+# base dependencies above: workspace members share one lockfile and one dev venv.
+[project.optional-dependencies]
+# The aggregate is deliberately not named `all`: `uv sync --extra all` applies it
+# to every member, dragging every model's heavy dependencies into the dev env.
+zoo-all = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pybamm_model_zoo"]
+
+# pytest treats a pyproject.toml as the inifile only when it carries this table,
+# and the workspace root has none, so `--strict-markers` would reject the markers.
+[tool.pytest.ini_options]
+minversion = "9.0"
+required_plugins = ["pytest-xdist", "pytest-mock"]
+addopts = ["-nauto", "-vra", "--strict-config", "--strict-markers"]
+testpaths = ["tests", "src/pybamm_model_zoo"]
+console_output_style = "progress"
+xfail_strict = true
+markers = [
+    "zoo: mark test as part of the model zoo suite",
+    "gating: mark test as merge-gating (derived from a manifest's `core` tier)",
+    "zoo_examples: mark test as a model zoo example script",
+    "zoo_model(slug): mark test as belonging to one model, for --zoo-model",
+    "unit: mark test as a unit test",
+    "integration: mark test as an integration test",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+    "ignore::RuntimeWarning",
+]
+log_cli = true
+log_level = "INFO"
+log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"

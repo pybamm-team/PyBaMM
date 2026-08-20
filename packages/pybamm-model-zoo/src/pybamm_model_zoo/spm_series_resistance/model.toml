@@ -1,0 +1,22 @@
+[model]
+slug = "spm_series_resistance"
+name = "SPMSeriesResistance"
+title = "Single Particle Model with a lumped series resistance"
+summary = "SPM with an ohmic V = V_SPM - I*R terminal drop, for tab, weld, and cable resistance."
+class = "pybamm_model_zoo.spm_series_resistance:SPMSeriesResistance"
+tier = "core"
+pybamm_requires = ">=26.0"
+added = "2026-08-20"
+license = "BSD-3-Clause"
+
+[[model.maintainers]]
+name = "The PyBaMM Team"
+github = "pybamm-team/maintainers"
+
+[model.citation]
+key = "PyBaMMModelZoo2026"
+
+[model.tests]
+solve_time = 3600
+key_variables = ["Voltage [V]", "Battery voltage [V]"]
+skip_contract = []
