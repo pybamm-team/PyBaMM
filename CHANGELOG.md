@@ -2,7 +2,7 @@
 
 ## Features
 
-- Added the model zoo (`packages/pybamm-model-zoo/`), a home for community- and partner-contributed models: one self-contained folder per model, with a declarative `model.toml` manifest as the only boilerplate a contributor writes. The registry, a ten-check contract test suite, the docs pages, the CI routing, and the status badges are all derived from the manifests, which are parsed rather than imported so a broken model reports a clean failure instead of taking the zoo down. Models are either `community` tier (advisory CI) or `core` tier (in the merge gate); nothing in `pybamm` itself changed. ([#5511](https://github.com/pybamm-team/PyBaMM/issues/5511))
+- Added the model zoo (`packages/pybamm-model-zoo/`), a home for community- and partner-contributed models: one self-contained folder per model, with a declarative `model.toml` manifest as the only boilerplate a contributor writes. Models are either `community` tier (advisory CI) or `core` tier (in the merge gate); nothing in `pybamm` itself changed. ([#5727](https://github.com/pybamm-team/PyBaMM/issues/5727))
 
 ## Bug fixes
 
