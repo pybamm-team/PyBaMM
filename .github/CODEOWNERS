@@ -3,3 +3,8 @@
 
 # The pybammsolvers package is owned by the IDAKLU maintainers (last match wins)
 /packages/pybammsolvers/ @pybamm-team/idaklu-maintainers
+
+# The model zoo: the zoo's own machinery is owned by the maintainers, and each
+# model folder by its maintainer (last match wins)
+/packages/pybamm-model-zoo/ @pybamm-team/maintainers
+/packages/pybamm-model-zoo/src/pybamm_model_zoo/spm_series_resistance/ @pybamm-team/maintainers

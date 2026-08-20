@@ -1,0 +1,47 @@
+"""TODO: one line describing ${ModelName}."""
+
+from __future__ import annotations
+
+import pybamm
+import pybamm_model_zoo
+from pybamm_model_zoo import _compat
+
+SLUG = "${slug}"
+
+
+class ${ModelName}(pybamm.lithium_ion.SPM):
+    """TODO: what physics this adds, and when to prefer it.
+
+    As shipped this is plain SPM, so the contract suite passes from the first
+    commit. Add your physics by overriding the submodel setters you need — see
+    ``spm_series_resistance`` for a worked example, and the PyBaMM developer
+    docs for the submodel protocol.
+
+    Parameters
+    ----------
+    options : dict, optional
+        Model options, as for :class:`pybamm.lithium_ion.SPM`.
+    name : str, optional
+        The model name.
+    build : bool, optional
+        Whether to build the model on instantiation.
+    """
+
+    def __init__(
+        self,
+        options: dict | None = None,
+        name: str = "${ModelName}",
+        build: bool = True,
+    ) -> None:
+        super().__init__(
+            options=_compat.spm_default_options(options), name=name, build=build
+        )
+        pybamm_model_zoo.register_citation(SLUG)
+
+    # TODO: add your physics. New parameters need a default here so that the
+    # contract suite can build and solve the model without a bespoke set.
+    # @property
+    # def default_parameter_values(self) -> pybamm.ParameterValues:
+    #     values = super().default_parameter_values
+    #     values.update({"My new parameter [units]": 1.0})
+    #     return values
