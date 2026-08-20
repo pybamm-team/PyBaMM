@@ -17,6 +17,9 @@
 //
 // The export macro below is the fifth: in tree it comes from a generated header.
 //
+// The members below are all read from brent.cpp, but cppcheck also analyses this
+// header on its own, where nothing uses them, so it calls every one of them unused.
+// cppcheck-suppress-file unusedStructMember
 #ifndef PYBAMM_BRENT_HPP
 #define PYBAMM_BRENT_HPP
 

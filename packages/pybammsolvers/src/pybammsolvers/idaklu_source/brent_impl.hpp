@@ -3,8 +3,9 @@
 // that `CodeGenerator::sanitize_source` turns into plain C).
 //
 // This text is both compiled and stringified into the generated C, so keep it valid C
-// once the template header and comments are stripped: declarations first, no C++-only
-// constructs, no preprocessor directives (`sanitize_source` drops `#define`/`#undef`).
+// once the template header and comments are stripped: declarations at the top of each
+// block, no C++-only constructs, no preprocessor directives (`sanitize_source` drops
+// `#define`/`#undef`).
 //
 // `res_fn` evaluates the residual at `x` into `*fx` and returns nonzero on failure.
 // Returns 0 on success (`*out` is the root, `*iter` the iteration count), 1 if the
@@ -17,7 +18,7 @@ template<typename T1>
 static int casadi_brent(int (*res_fn)(void*, T1, T1*), void* user_data,
                         T1 a, T1 b, T1 abstol, casadi_int max_iter,
                         T1* out, casadi_int* iter) {
-  T1 fa, fb, c, fc, d, e, tol, xm, p, q, s, qq, r, step;
+  T1 fa, fb, c, fc, d, e;
   casadi_int k;
   *iter = 0;
   if (res_fn(user_data, a, &fa)) return 1;
@@ -30,6 +31,7 @@ static int casadi_brent(int (*res_fn)(void*, T1, T1*), void* user_data,
   d = b - a;
   e = d;
   for (k = 0; k < max_iter; ++k) {
+    T1 tol, xm, step;
     if (fb * fc > 0) {
       c = a;
       fc = fa;
@@ -50,11 +52,13 @@ static int casadi_brent(int (*res_fn)(void*, T1, T1*), void* user_data,
     if (fabs(xm) <= tol || fb == 0) break;
     if (fabs(e) >= tol && fabs(fa) > fabs(fb)) {
       // Inverse quadratic interpolation, or secant when only two points are distinct
+      T1 p, q, s;
       s = fb / fa;
       if (a == c) {
         p = 2 * xm * s;
         q = 1 - s;
       } else {
+        T1 qq, r;
         qq = fa / fc;
         r = fb / fc;
         p = s * (2 * xm * qq * (qq - r) - (b - a) * (r - 1));
