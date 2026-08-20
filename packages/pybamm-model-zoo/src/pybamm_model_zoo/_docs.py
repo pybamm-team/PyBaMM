@@ -23,7 +23,11 @@ GENERATED_BY = (
 )
 # Depth from docs/source/model_zoo/models/<slug>.md back to the repository root.
 README_PREFIX = "../../../../packages/pybamm-model-zoo/src/pybamm_model_zoo"
-BADGE_COLORS = {"pass": "brightgreen", "fail": "red", "untested": "lightgrey"}
+BADGE_COLORS = {
+    "pass": "brightgreen",  # nosec B105 - a shields.io colour, not a credential
+    "fail": "red",
+    "untested": "lightgrey",
+}
 BADGE_LABEL = "model zoo"
 
 _INDEX_HEADER = """\
