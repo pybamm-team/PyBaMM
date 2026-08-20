@@ -1575,6 +1575,31 @@ class TestProcessedVariable:
         # Check that the unsorted and sorted arrays are the same
         assert np.all(y_unsorted == y_sorted[idxs_unsort])
 
+    @pytest.mark.parametrize("hermite_interp", _hermite_args)
+    def test_unsorted_t_query_returns_query_order(self, hermite_interp):
+        # Both interpolation routes must return values in the caller's order:
+        # only the hermite route consumes the internally sorted times.
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        var = t * y
+        model = pybamm.BaseModel()
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        yp_sol = self._get_yps(y_sol, hermite_interp, values=5)
+        var_casadi = to_casadi(var, y_sol)
+        processed_var = pybamm.process_variable(
+            "test",
+            [var],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+
+        t_unsorted = np.array([0.9, 0.3, 0.6])
+        # var = t * y = 5 t^2; atol covers linear-interp error on the xr route
+        np.testing.assert_allclose(
+            processed_var(t_unsorted), 5 * t_unsorted**2, atol=2e-3
+        )
+
     def test_as_computed_0D(self):
         # 0D
         t = pybamm.t

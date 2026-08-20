@@ -183,13 +183,17 @@ class EISSimulation(BaseSimulation):
         model = self._built_model
         inputs_dict = inputs_dict or {}
 
-        # Convert inputs to casadi format for Jacobian evaluation
+        # Inputs in the format the compiled Jacobian expects for each backend
         if model.convert_to_format == "casadi":
             from casadi import vertcat
 
-            casadi_inputs = vertcat(*inputs_dict.values()) if inputs_dict else []
+            eval_inputs = vertcat(*inputs_dict.values()) if inputs_dict else []
+        elif model.convert_to_format == "rust":
+            from pybamm.solvers.base_solver import stack_inputs
+
+            eval_inputs = stack_inputs(inputs_dict, "rust")
         else:
-            casadi_inputs = inputs_dict
+            eval_inputs = inputs_dict
 
         # Only compile Jacobian/model functions on first call; the compiled
         # functions persist on the model and work with any inputs/y0 values.
@@ -198,8 +202,10 @@ class EISSimulation(BaseSimulation):
             solver.set_up(model, inputs=inputs_dict)
 
         y0 = model.concatenated_initial_conditions.evaluate(0, inputs=inputs_dict)
-        J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
-        neg_J = -J_sparse if isinstance(J_sparse, csc_matrix) else -csc_matrix(J_sparse)
+        J = model.jac_rhs_algebraic_eval(0, y0, eval_inputs)
+        if model.convert_to_format == "casadi":
+            J = J.sparse()
+        neg_J = -J if isinstance(J, csc_matrix) else -csc_matrix(J)
 
         # M and b are independent of operating point and cached after first call,
         # but we have a defensive guard to invalidate it if the state vector size changes

@@ -157,6 +157,9 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
 
   // create pointer to jac data, column pointers, and row values
   sunrealtype *jac_data;
+  // dense SUNMatrix + sparse-emitting expression (rust): eval into the tmp
+  // buffer, then scatter below via the stored CSC structure.
+  bool dense_needs_scatter = false;
   if (p_python_functions->setup_opts.using_sparse_matrix)
   {
     jac_data = SUNSparseMatrix_Data(JJ);
@@ -166,7 +169,11 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
   }
   else
   {
-    jac_data = SUNDenseMatrix_Data(JJ);
+    const sunindextype n_dense = SUNDenseMatrix_Rows(JJ) * SUNDenseMatrix_Columns(JJ);
+    dense_needs_scatter = p_python_functions->jac_times_cjmass->nnz_out() < n_dense;
+    jac_data = dense_needs_scatter
+        ? p_python_functions->get_tmp_sparse_jacobian_data()
+        : SUNDenseMatrix_Data(JJ);
   }
 
   DEBUG_VECTORn(yy, 100);
@@ -253,6 +260,22 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
       );
     } else
       throw std::runtime_error("Unknown matrix format detected (Expected CSC or CSR)");
+  }
+  else if (dense_needs_scatter)
+  {
+    // scatter the sparse-emitting expression's CSC values into the dense matrix
+    auto jac_colptrs = p_python_functions->jac_times_cjmass_colptrs.data();
+    auto jac_rowvals = p_python_functions->jac_times_cjmass_rowvals.data();
+    sunrealtype *dense = SUNDenseMatrix_Data(JJ);
+    const sunindextype n_rows = SUNDenseMatrix_Rows(JJ);
+    const sunindextype n_cols = SUNDenseMatrix_Columns(JJ);
+    std::memset(dense, 0, static_cast<size_t>(n_rows * n_cols) * sizeof(sunrealtype));
+    for (sunindextype col_ij = 0; col_ij < n_cols; col_ij++) {
+      for (auto data_i = jac_colptrs[col_ij]; data_i < jac_colptrs[col_ij + 1]; data_i++) {
+        const auto row_ij = jac_rowvals[data_i];
+        dense[col_ij * n_rows + row_ij] = jac_data[data_i];
+      }
+    }
   }
 
   return (0);

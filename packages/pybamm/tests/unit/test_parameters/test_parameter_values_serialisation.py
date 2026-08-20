@@ -528,8 +528,8 @@ class TestRoundtripNestedStructures:
         # 2-arg diffusivities (sto, T)
         y_sto_T = np.vstack([sto_vals, T_vals])
         for diff_name in [
-            "Negative electrode diffusivity [m2.s-1]",
-            "Positive electrode diffusivity [m2.s-1]",
+            "Negative particle diffusivity [m2.s-1]",
+            "Positive particle diffusivity [m2.s-1]",
         ]:
             _assert_evaluate_equal_array(
                 pv,

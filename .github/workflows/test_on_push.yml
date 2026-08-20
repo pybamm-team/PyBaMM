@@ -55,6 +55,7 @@ jobs:
               - '.github/workflows/_build_solver_wheels.yml'
             pybamm:
               - 'packages/pybamm/**'
+              - 'packages/pybamm-rust/**'
               - 'pyproject.toml'
               - 'uv.lock'
               - 'noxfile.py'
@@ -89,6 +90,50 @@ jobs:
             echo "macos_runners=$macos"
           } >> "$GITHUB_OUTPUT"
 
+  rust_msrv:
+    needs: changes
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    name: Rust MSRV (1.89)
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Install the MSRV toolchain
+        run: rustup toolchain install 1.89 --profile minimal --no-self-update
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
+          key: msrv-1.89
+      - name: Check against the declared MSRV
+        run: >
+          cargo +1.89 check --manifest-path packages/pybamm-rust/Cargo.toml
+          --locked --all-targets
+
+  rust_tests:
+    needs: changes
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    name: Rust tests
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
+          key: tests
+      # Includes the ABI drift tests, which read the pybammsolvers consumer
+      # header, so a cross-language contract break fails here.
+      - name: Run the Rust test suite
+        run: >
+          cargo test --manifest-path packages/pybamm-rust/Cargo.toml
+          --locked --workspace --all-features
+
   style:
     runs-on: ubuntu-latest
     permissions:
@@ -102,6 +147,9 @@ jobs:
         with:
           python-version: 3.12
 
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "latest"
@@ -202,7 +250,7 @@ jobs:
   #  Guards both the bootstrap and the clean-clone dev experience.
   from_source_smoke:
     needs: changes
-    if: ${{ github.event_name == 'push' || needs.changes.outputs.solver == 'true' }}
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.solver == 'true' || needs.changes.outputs.pybamm == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -225,6 +273,9 @@ jobs:
         with:
           python-version: 3.13
 
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "latest"
@@ -289,6 +340,8 @@ jobs:
     needs:
       - changes
       - style
+      - rust_msrv
+      - rust_tests
       - build_solver
       - run_unit_tests
       - run_coverage

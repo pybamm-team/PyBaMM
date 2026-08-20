@@ -1,0 +1,15 @@
+Δ is the raw difference from casadi_idaklu at the scenario tolerance; no converged reference was run.
+
+Timings (ms)
+Scenario Backend          Protocol       Pts   Build    Prep    Cold    Warm   Solve    Wall     Int    Obs     E2E
+-------------------------------------------------------------------------------------------------------------------
+SPM      rust_idaklu      cc_discharge   100   10.00    5.20   16.50    0.10    1.20    1.30    1.10   0.20    1.50
+SPMe     rust_idaklu      cc_discharge   100   10.00    5.20   16.50    0.10    1.20    1.30    1.10   0.20    1.50
+DFN      rust_idaklu      cc_discharge   100   10.00    5.20   16.50    0.10    1.20    1.30    1.10   0.20    1.50
+
+Validation
+Scenario Backend          Protocol      Cover       Δt Clr Rows Entry    Tape  State Δ Output Δ    Base Δ Status Reason
+-----------------------------------------------------------------------------------------------------------------------
+SPM      rust_idaklu      cc_discharge  1.000 0.00e+00   5    0     0       0 1.00e-08 1.00e-08         -   pass
+SPMe     rust_idaklu      cc_discharge  1.000 0.00e+00   3    1    65    4096 1.00e-08 1.00e-08         -   pass
+DFN      rust_idaklu      cc_discharge  1.000 0.00e+00   9    0     0       0 1.00e-08 1.00e-08         -   pass

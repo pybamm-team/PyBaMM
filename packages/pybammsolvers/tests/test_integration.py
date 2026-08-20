@@ -232,3 +232,37 @@ class TestExponentialDecaySolver:
             for idx, sol in enumerate(solutions):
                 expected = model_y0 * np.exp(-decay_constants[idx] * sol.t)
                 np.testing.assert_allclose(sol.y, expected, rtol=1e-5, atol=1e-8)
+
+
+class TestSensitivityScales:
+    """The optional ``pbar`` argument carrying IDAS's sensitivity scales."""
+
+    pytestmark = pytest.mark.integration
+
+    @staticmethod
+    def _args(solver_data):
+        t_eval = solver_data["model"]["t_eval"]
+        return (
+            t_eval,
+            t_eval,
+            solver_data["y0"],
+            solver_data["yp0"],
+            solver_data["inputs"],
+        )
+
+    def test_an_empty_pbar_matches_omitting_it(self, exponential_decay_solver):
+        solver = exponential_decay_solver["solver"]
+        args = self._args(exponential_decay_solver)
+
+        without = solver.solve(*args)[0]
+        with_empty = solver.solve(*args, np.empty((0, 0)))[0]
+
+        np.testing.assert_array_equal(without.t, with_empty.t)
+        np.testing.assert_array_equal(without.y, with_empty.y)
+
+    def test_a_misshapen_pbar_is_rejected(self, exponential_decay_solver):
+        # A silently ignored pbar would leave the scales at 1 with no warning.
+        # This fixture has no sens parameters, so any pbar is too wide.
+        solver = exponential_decay_solver["solver"]
+        with pytest.raises(Exception, match="pbar has wrong number of cols"):
+            solver.solve(*self._args(exponential_decay_solver), np.ones((1, 3)))

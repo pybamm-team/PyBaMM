@@ -15,6 +15,7 @@ from pybamm.codegen.compilation import (
     _CACHE,
     _PER_ATTEMPT_TOKEN,
     _STALE_TMP_AGE_S,
+    _capture_aot_compile_events,
     _default_cache_dir,
     _maybe_sweep_stale,
     _shared_ext,
@@ -90,13 +91,19 @@ class TestAotCompile:
 
     def test_in_memory_cache_hit(self, cache_dir):
         f = _make_simple_fn("test_aot_inmem_cache")
-        g1 = aot_compile(f, cache_dir=cache_dir)
-        g2 = aot_compile(f, cache_dir=cache_dir)
+        with _capture_aot_compile_events() as events:
+            g1 = aot_compile(f, cache_dir=cache_dir)
+            g2 = aot_compile(f, cache_dir=cache_dir)
         assert g1 is g2
+        assert [event.cache_status for event in events] == ["miss", "memory"]
+        assert events[0].cache_key == events[1].cache_key
+        assert events[0].compiler_ms > 0
+        assert events[0].library_size_bytes > 0
 
     def test_on_disk_cache_skips_recompile(self, cache_dir):
         f = _make_simple_fn("test_aot_disk_cache")
-        _ = aot_compile(f, cache_dir=cache_dir)
+        with _capture_aot_compile_events() as miss_events:
+            _ = aot_compile(f, cache_dir=cache_dir)
         sofile = next(
             os.path.join(cache_dir, p)
             for p in os.listdir(cache_dir)
@@ -115,11 +122,19 @@ class TestAotCompile:
 
         compilation_module.subprocess.run = fake_run
         try:
-            g2 = aot_compile(f, cache_dir=cache_dir)
+            with _capture_aot_compile_events() as events:
+                g2 = aot_compile(f, cache_dir=cache_dir)
         finally:
             compilation_module.subprocess.run = original_run
 
         assert called == [], "gcc was invoked despite an existing on-disk .dylib"
+        assert len(events) == 1
+        assert events[0].cache_status == "disk"
+        assert events[0].cache_key == miss_events[0].cache_key
+        assert events[0].library_path == sofile
+        assert events[0].library_size_bytes == os.path.getsize(sofile)
+        assert events[0].compiler_ms == 0
+        assert events[0].load_ms > 0
         assert g2.class_name() == "External"
         assert os.path.getmtime(sofile) == mtime_before
         np.testing.assert_allclose(
@@ -145,12 +160,15 @@ class TestAotCompile:
 
         compilation_module.subprocess.run = fake_run
         try:
-            g2 = aot_compile(g, cache_dir=cache_dir)
+            with _capture_aot_compile_events() as events:
+                g2 = aot_compile(g, cache_dir=cache_dir)
         finally:
             compilation_module.subprocess.run = original_run
 
         assert g2 is g
         assert called == []
+        assert len(events) == 1
+        assert events[0].cache_status == "external"
         n_dylibs_after = sum(
             1 for p in os.listdir(cache_dir) if p.endswith(_shared_ext())
         )
@@ -158,12 +176,39 @@ class TestAotCompile:
 
     def test_compiler_failure_returns_original(self, cache_dir, caplog):
         f = _make_simple_fn("test_aot_compiler_failure")
-        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+        with (
+            caplog.at_level(logging.WARNING, logger="pybamm.logger"),
+            _capture_aot_compile_events() as events,
+        ):
             g = aot_compile(f, cache_dir=cache_dir, compiler="nonexistent_compiler_x")
         assert g is f
+        assert len(events) == 1
+        assert events[0].cache_status == "fallback"
+        assert "ValueError" in events[0].error
         assert not any(p.endswith(_shared_ext()) for p in os.listdir(cache_dir))
         assert len(_CACHE) == 0
         assert any("Failed to compile" in r.getMessage() for r in caplog.records)
+
+    def test_library_size_telemetry_is_best_effort(
+        self, cache_dir, monkeypatch, caplog
+    ):
+        f = _make_simple_fn("test_aot_library_size_best_effort")
+
+        def fail_getsize(_path):
+            raise OSError("metadata unavailable")
+
+        monkeypatch.setattr(compilation_module.os.path, "getsize", fail_getsize)
+        with (
+            caplog.at_level(logging.WARNING, logger="pybamm.logger"),
+            _capture_aot_compile_events() as events,
+        ):
+            g = aot_compile(f, cache_dir=cache_dir)
+
+        assert g.class_name() == "External"
+        assert len(events) == 1
+        assert events[0].cache_status == "miss"
+        assert events[0].library_size_bytes is None
+        assert not caplog.records
 
     def test_atomic_install_no_partial_dylib_on_failure(self, cache_dir):
         f = _make_simple_fn("test_aot_atomic_install")

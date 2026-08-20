@@ -3,6 +3,7 @@
 
 #include "IDAKLUSolver.hpp"
 #include "common.hpp"
+#include <cmath>
 #include <vector>
 #include <memory>  // For std::make_unique
 using std::vector;
@@ -97,6 +98,12 @@ public:
   vector<sunrealtype> res_dvar_dp;
   // Reused scratch for sparse->dense output sensitivity scatter (outputs-only mode)
   vector<sunrealtype> dvar_dp_dense;
+  // Staged (t, y) points for batched output evaluation (Rust ExprSet only):
+  // interpolation points accumulate here and flush through one batched FFI
+  // call instead of one tape walk per point.
+  vector<sunrealtype> stage_out_t_;
+  vector<sunrealtype> stage_out_y_;
+  size_t stage_out_first_ = 0;  // i_save_ index of the first staged point
   bool const sensitivity;  // cppcheck-suppress unusedStructMember
   bool const save_outputs_only; // cppcheck-suppress unusedStructMember
   bool save_hermite;  // cppcheck-suppress unusedStructMember
@@ -188,6 +195,9 @@ public:
   sunrealtype *yp_val_ = nullptr;
   vector<sunrealtype *> yS_val_;
   vector<sunrealtype *> ypS_val_;
+  // |p| per sensitivity parameter, so IDAS weights the scaled sensitivity
+  // pbar*yS like a state. Empty leaves IDAS at its pbar = 1 default.
+  std::vector<sunrealtype> sens_scales_;
 
   SUNContext sunctx;
 
@@ -223,6 +233,7 @@ public:
     const sunrealtype *y0,
     const sunrealtype *yp0,
     const sunrealtype *inputs,
+    const sunrealtype *pbar,
     bool save_adaptive_steps,
     bool save_interp_steps
   ) override;
@@ -297,6 +308,14 @@ public:
   void ReinitializeIntegrator(const sunrealtype& t_val);
 
   /**
+   * @brief Hand IDAS the per-parameter scales held in sens_scales_.
+   *
+   * Must run after every IDASensInit/IDASensReInit, both of which reset pbar
+   * to 1.0.
+   */
+  void ApplySensitivityScales();
+
+  /**
    * @brief Set a consistent initialization for the system of equations.
    */
   void ConsistentInitialization(
@@ -365,7 +384,8 @@ public:
     const std::vector<sunrealtype> &t_eval,
     const sunrealtype *y0,
     const sunrealtype *yp0,
-    const sunrealtype *inputs
+    const sunrealtype *inputs,
+    const sunrealtype *pbar
   );
 
   /**
@@ -460,9 +480,27 @@ public:
   void SetStepOutput(sunrealtype &tval);
 
   /**
+   * @brief Evaluate and store any staged batched-output points
+   */
+  void FlushOutputBatch();
+
+  /**
    * @brief Save the output function sensitivities at the requested time
    */
   void SetStepOutputSensitivities(sunrealtype &tval);
+
+  /**
+   * @brief Save the output function sensitivities via native projection.
+   * Used when ExprSet::kNativeOutputSensitivities is true (Rust core), writing
+   * to the same flat yS positions as the CasADi SetStepOutputSensitivities.
+   */
+  void NativeSetStepOutputSensitivities(sunrealtype &tval);
+
+  // Reusable scratch for the native output-sensitivity projection (avoids
+  // per-step allocation). yS_flat_: [n_params * n_states] gather buffer;
+  // out_sens_flat_: [n_params * length_of_return_vector] projection output.
+  std::vector<sunrealtype> yS_flat_;
+  std::vector<sunrealtype> out_sens_flat_;
 
   /**
    * @brief Save Hermite interpolation derivatives at the requested time

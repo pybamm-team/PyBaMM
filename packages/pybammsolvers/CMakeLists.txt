@@ -124,6 +124,9 @@ pybind11_add_module(idaklu
         src/pybammsolvers/idaklu_source/Expressions/Base/Expression.hpp
         src/pybammsolvers/idaklu_source/Expressions/Base/ExpressionSet.hpp
         src/pybammsolvers/idaklu_source/Expressions/Base/ExpressionTypes.hpp
+        # IDAKLU expressions - Rust backend (header-only; FFI resolved via dlsym)
+        src/pybammsolvers/idaklu_source/Expressions/Rust/RustFunctions.hpp
+        src/pybammsolvers/idaklu_source/Expressions/Rust/pybamm_rust_ffi.h
         # IDAKLU expressions - concrete implementations
         ${IDAKLU_EXPR_CASADI_SOURCE_FILES}
 )

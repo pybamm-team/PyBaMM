@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import numbers
 import pickle
+from dataclasses import dataclass
 from functools import cached_property
 from itertools import chain
 
@@ -16,6 +17,11 @@ from scipy.io import savemat
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.observation import (
+    CASADI_OBSERVATION,
+    ObservationBackend,
+    join_observations,
+)
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -30,6 +36,29 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         # won't be called since we only need to convert numpy arrays
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
+
+
+@dataclass
+class SolverStatistics:
+    """Solver statistics common across all ODE/DAE solver backends.
+
+    Populated by solvers that track internal step/iteration counts.
+    Fields mirror the SUNDIALS IDA / diffsol BDF statistics.
+    """
+
+    number_of_steps: int
+    number_of_linear_solver_setups: int
+    number_of_nonlinear_solver_iterations: int
+    number_of_nonlinear_solver_fails: int
+    number_of_error_test_failures: int
+    number_of_linear_solver_setups_from_checkpoint: int = 0
+    number_of_linear_solver_setups_from_first_convergence_fail: int = 0
+    number_of_linear_solver_setups_from_second_convergence_fail: int = 0
+    number_of_linear_solver_setups_from_error_test_fail: int = 0
+    number_of_linear_solver_setups_from_step_success: int = 0
+    ic_time_secs: float = 0.0
+    solver_setup_time_secs: float = 0.0
+    sens_error_control_relaxed: bool = False
 
 
 class SolutionBase:
@@ -262,7 +291,9 @@ class Solution(SolutionBase):
             all_ts = [all_ts]
         if _validate_time_structure:
             self._ensure_sorted_t(all_ts, "all_ts")
-        if not isinstance(all_ys, list):
+        if all_ys is None:
+            all_ys = [None]
+        elif not isinstance(all_ys, list):
             all_ys = [all_ys]
         if not isinstance(all_models, list):
             all_models = [all_models]
@@ -288,6 +319,10 @@ class Solution(SolutionBase):
         self.variables_returned = variables_returned
         # computed lazily on first access; see the `observable` property
         self._observable = None
+
+        # How variables are read back; a solver replaces it wholesale and
+        # every derived Solution carries it.
+        self._observation = CASADI_OBSERVATION
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -320,6 +355,7 @@ class Solution(SolutionBase):
 
         super().__init__()
         self.integration_time = None
+        self.solver_statistics = None
 
         self._all_inputs_stacked = None
         self._all_inputs_casadi = None
@@ -356,6 +392,11 @@ class Solution(SolutionBase):
 
     def has_sensitivities(self) -> bool:
         return len(self._all_sensitivities) > 0
+
+    @property
+    def sensitivity_names(self) -> list[str]:
+        """Sensitivity-parameter names, the column order of every ``"all"`` block."""
+        return [key for key in self._all_sensitivities if key != "all"]
 
     @staticmethod
     def _ensure_t_evals(all_ts, all_t_evals):
@@ -471,6 +512,9 @@ class Solution(SolutionBase):
         # We only care about the cases where y is growing too large without any
         # restraint, so if y gets large in the middle then comes back down that is ok
         t, y, model = self.all_ts[-1], self.all_ys[-1], self.all_models[-1]
+        if y is None:
+            # Outputs-only solve - no full state to check
+            return
         t = t[-1]
         y = y[:, -1]
 
@@ -509,8 +553,18 @@ class Solution(SolutionBase):
     @property
     def all_inputs_stacked(self) -> list[np.ndarray]:
         if self._all_inputs_stacked is None:
+            # Flatten each value first: a mix of scalar and vector-width inputs is
+            # a ragged sequence numpy refuses to coerce into one array.
             self._all_inputs_stacked = [
-                np.asarray(list(inp.values())).reshape(-1) for inp in self.all_inputs
+                np.concatenate(
+                    [
+                        np.atleast_1d(np.asarray(v, dtype=float)).ravel()
+                        for v in inp.values()
+                    ]
+                )
+                if inp
+                else np.array([])
+                for inp in self.all_inputs
             ]
         return self._all_inputs_stacked
 
@@ -617,6 +671,7 @@ class Solution(SolutionBase):
         )
         # stacked/casadi stay lazy; built from all_inputs[:1] on first access
         new_sol._sub_solutions = self.sub_solutions[:1]
+        new_sol._observation = self._observation[:1]
 
         new_sol.solve_time = 0
         new_sol.integration_time = 0
@@ -661,6 +716,7 @@ class Solution(SolutionBase):
         )
         # stacked/casadi stay lazy; built from all_inputs[-1:] on first access
         new_sol._sub_solutions = self.sub_solutions[-1:]
+        new_sol._observation = self._observation[-1:]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
         new_sol.set_up_time = 0
@@ -694,6 +750,20 @@ class Solution(SolutionBase):
             self, cycle_summary_variables=all_summary_variables
         )
 
+    @property
+    def observation(self) -> ObservationBackend:
+        """How this Solution reads its variables back.
+
+        Defaults to CasADi conversion; a solver assigns a native backend when
+        the model was lowered to Rust. The backend must cover this Solution's
+        sub-solutions, so it has one segment per entry of ``all_ys``.
+        """
+        return self._observation
+
+    @observation.setter
+    def observation(self, backend: ObservationBackend) -> None:
+        self._observation = backend
+
     def update(self, variables: str | list[str]):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
         # Single variable
@@ -704,79 +774,8 @@ class Solution(SolutionBase):
         for variable in variables:
             self._update_variable(variable)
 
-    def _update_model_variable(
-        self,
-        model: pybamm.BaseModel,
-        var_pybamm: pybamm.Symbol,
-        time_integral: pybamm.ProcessedVariableTimeIntegral | None,
-        inputs: dict,
-        ys_shape: tuple,
-        cache_key,
-    ):
-        _var_casadi = model._variables_casadi.get(cache_key)
-        if _var_casadi is not None:
-            return _var_casadi, var_pybamm, time_integral
-
-        var_casadi, var_pybamm, time_integral = self._convert_to_casadi(
-            var_pybamm, inputs, ys_shape
-        )
-
-        # Only cache if it's not a time integral
-        if time_integral is None:
-            model._variables_casadi[cache_key] = var_casadi
-        return var_casadi, var_pybamm, time_integral
-
     def _update_variable(self, name: str):
-        time_integral = None
-        pybamm.logger.debug(f"Post-processing {name}")
-
-        # Iterate through all models, some may be in the list several times and
-        # therefore only get set up once
-        vars_pybamm = [
-            model.get_processed_variable_or_event(name) for model in self.all_models
-        ]
-        vars_casadi = [None] * len(self.all_models)
-        for i, (model, ys, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, strict=True)
-        ):
-            _var_pybamm = vars_pybamm[i]
-            if self.variables_returned and _var_pybamm.has_symbol_of_classes(
-                pybamm.expression_tree.state_vector.StateVector
-            ):
-                raise KeyError(
-                    f"Cannot process variable '{name}' as it was not part of the "
-                    "solve. Please re-run the solve with `output_variables` set to "
-                    "include this variable."
-                )
-            if isinstance(_var_pybamm, pybamm.VectorField):
-                comp_casadi = []
-                for k, comp in enumerate(_var_pybamm.components):
-                    cc, _, _ = self._update_model_variable(
-                        model,
-                        comp,
-                        inputs=inputs,
-                        ys_shape=ys.shape,
-                        time_integral=None,
-                        cache_key=f"{name}[{k}]",
-                    )
-                    comp_casadi.append(cc)
-                vars_casadi[i] = comp_casadi
-            else:
-                var_casadi, var_pybamm, time_integral = self._update_model_variable(
-                    model,
-                    _var_pybamm,
-                    inputs=inputs,
-                    ys_shape=ys.shape,
-                    time_integral=time_integral,
-                    cache_key=name,
-                )
-                vars_pybamm[i] = var_pybamm
-                vars_casadi[i] = var_casadi
-        var = pybamm.process_variable(
-            name, vars_pybamm, vars_casadi, self, time_integral=time_integral
-        )
-
-        self._variables[name] = var
+        self._variables[name] = self._observation.build_variable(self, name)
 
     def observe(self, symbol: pybamm.Symbol) -> pybamm.ProcessedVariable:
         """
@@ -1180,6 +1179,14 @@ class Solution(SolutionBase):
 
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
+        # Segment count is unchanged by the leading-sample drop that
+        # _segment_series applies to the ys data, so the runs just append.
+        new_sol._observation = join_observations(
+            [
+                (self._observation, len(self.all_ys)),
+                (other._observation, len(other.all_ys)),
+            ]
+        )
 
         # update variables which were derived at the solver stage
         if any([self.variables_returned, other.variables_returned]):
@@ -1286,6 +1293,9 @@ class Solution(SolutionBase):
         new_sol.closest_event_idx = segments[-1].closest_event_idx
         # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
         new_sol._sub_solutions = sub_sols
+        new_sol._observation = join_observations(
+            [(s._observation, len(s.all_ys)) for s in segments]
+        )
 
         for attr in ["solve_time", "integration_time", "set_up_time"]:
             vals = [getattr(s, attr, None) for s in segments]
@@ -1330,6 +1340,7 @@ class Solution(SolutionBase):
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
         new_sol.set_up_time = self.set_up_time
+        new_sol._observation = self._observation
 
         # copy over variables which were derived at the solver stage
         if self._variables and all(

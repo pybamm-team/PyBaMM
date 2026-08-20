@@ -10,6 +10,8 @@ class TestCompareBasicModels:
     def test_compare_full(self):
         basic_full = pybamm.lead_acid.BasicFull()
         full = pybamm.lead_acid.Full()
+        for model in (basic_full, full):
+            model.convert_to_format = "casadi"
 
         parameter_values = pybamm.ParameterValues("Sulzer2019")
         parameter_values["Current function [A]"] = 10

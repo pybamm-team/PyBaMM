@@ -1075,6 +1075,48 @@ class Symbol:
             for child in self.children
         ]
 
+    def to_rust(self, graph, rust_symbols=None):
+        """
+        Allocate this expression into a Rust expression graph.
+
+        Parameters
+        ----------
+        graph : :class:`pybamm.rust.ExprGraph`
+            The graph to allocate nodes into. The returned handles are only valid
+            against this graph.
+        rust_symbols : dict, optional
+            A shared cache mapping symbol ids to already-allocated handles. Pass a
+            single ``{}`` when converting several expressions over one graph so a
+            shared subgraph is allocated once and stays shared in Rust.
+
+        Returns
+        -------
+        :class:`pybamm.rust.Expr`
+            Handle to the root node of the converted expression.
+        """
+        if rust_symbols is None:
+            rust_symbols = {}
+        return self._to_rust_inner(graph, rust_symbols)
+
+    def _to_rust_inner(self, graph, rust_symbols):
+        cached = rust_symbols.get(self.id, None)
+        if cached is not None:
+            return cached
+        result = self._to_rust(graph, rust_symbols)
+        rust_symbols[self.id] = result
+        return result
+
+    def _to_rust(self, graph, rust_symbols):
+        raise TypeError(
+            f"Cannot convert symbol of type '{type(self).__name__}' to the Rust "
+            "backend. Use a CasADi-backed model (set "
+            "`model.convert_to_format = 'casadi'`) for models using "
+            "this symbol."
+        )
+
+    def _children_to_rust(self, graph, rust_symbols):
+        return [child._to_rust_inner(graph, rust_symbols) for child in self.children]
+
     def _children_for_copying(self, children: list[Symbol] | None = None) -> Symbol:
         """
         Gets existing children for a symbol being copied if they aren't provided.

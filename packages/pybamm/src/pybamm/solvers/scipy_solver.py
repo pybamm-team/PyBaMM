@@ -8,6 +8,7 @@ import numpy as np
 import scipy.integrate as it
 
 import pybamm
+from pybamm.solvers.base_solver import stack_inputs
 
 
 class ScipySolver(pybamm.BaseSolver):
@@ -94,10 +95,10 @@ class ScipySolver(pybamm.BaseSolver):
                 "Sensitivity analysis is not implemented for the Scipy solver."
             )
 
-        # Save inputs dictionary, and if necessary convert inputs to a casadi vector
+        # Save inputs dictionary, and if necessary convert inputs to a stacked vector
         inputs_dict = inputs_dict or {}
-        if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        if model.uses_stacked_inputs:
+            inputs = stack_inputs(inputs_dict, model.convert_to_format)
         else:
             inputs = inputs_dict
 
@@ -133,7 +134,7 @@ class ScipySolver(pybamm.BaseSolver):
 
             def event_wrapper(event):
                 def event_fn(t, y):
-                    return event(t, y, inputs)
+                    return np.asarray(event(t, y, inputs)).item()
 
                 event_fn.terminal = True
                 return event_fn

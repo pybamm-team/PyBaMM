@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9f844515f49dea055f1a6f428f32fa1800f5339048d39418b6e41e46f1093b6e # shrinks to case = DagCase { arena: Arena { nodes: [Scalar(2.0), Scalar(2.0), Sub(NodeId(0), NodeId(1)), Arcsinh(NodeId(2)), Scalar(2.0), Scalar(2.0), Sub(NodeId(4), NodeId(5)), StateVector { start: 0, end: 1 }, StateVector { start: 0, end: 1 }, Sub(NodeId(7), NodeId(8)), Sub(NodeId(6), NodeId(9)), Sin(NodeId(10)), StateVector { start: 0, end: 2 }, StateVector { start: 0, end: 2 }, EqualHeaviside(NodeId(12), NodeId(13)), StateVector { start: 0, end: 2 }, Concat([NodeId(3), NodeId(11), NodeId(14), NodeId(15)])] }, root: NodeId(16), y: [0.1, 0.1], n_states: 2 }

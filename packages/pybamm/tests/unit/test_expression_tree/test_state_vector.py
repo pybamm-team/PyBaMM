@@ -99,6 +99,18 @@ class TestStateVector:
         # Turn debug mode back to what is was before
         pybamm.settings.debug_mode = original_debug_mode
 
+    def test_multi_slice_to_rust(self):
+        from pybamm.rust import ExprGraph
+
+        sv = pybamm.StateVector(slice(0, 2), slice(4, 6))
+        graph = ExprGraph()
+        cf = graph.compile(sv.to_rust(graph, {}), name="sv", n_states=6)
+        y = np.arange(6.0)
+        np.testing.assert_array_equal(
+            np.asarray(cf(0.0, y, np.array([]))).ravel(),
+            sv.evaluate(y=y.reshape(-1, 1)).ravel(),
+        )
+
 
 class TestStateVectorDot:
     def test_evaluate(self):

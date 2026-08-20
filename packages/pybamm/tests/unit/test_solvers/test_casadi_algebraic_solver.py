@@ -6,6 +6,12 @@ import pybamm
 from tests import get_discretisation_for_testing
 
 
+@pytest.fixture(autouse=True)
+def _casadi_default(monkeypatch):
+    # This file tests the CasADi solvers; pin the model default they require.
+    monkeypatch.setattr(pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", "casadi")
+
+
 class TestCasadiAlgebraicSolver:
     def test_algebraic_solver_init(self):
         solver = pybamm.CasadiAlgebraicSolver(step_tol=1e-6, tol=1e-4)

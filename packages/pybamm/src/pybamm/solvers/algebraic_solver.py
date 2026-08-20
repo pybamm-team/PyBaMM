@@ -7,6 +7,7 @@ from scipy import optimize
 from scipy.sparse import issparse
 
 import pybamm
+from pybamm.solvers.base_solver import stack_inputs
 
 
 class AlgebraicSolver(pybamm.BaseSolver):
@@ -105,8 +106,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
             as well as various diagnostic messages.
         """
         inputs_dict = inputs_dict or {}
-        if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        if model.uses_stacked_inputs:
+            inputs = stack_inputs(inputs_dict, model.convert_to_format)
         else:
             inputs = inputs_dict
 
@@ -220,7 +221,9 @@ class AlgebraicSolver(pybamm.BaseSolver):
                     else:
 
                         def jac_norm(y, jac_fn=jac_fn):
-                            return np.sum(2 * root_fun(y) * jac_fn(y), 0)
+                            # Gradient of sum(f**2) is 2*J^T*f; keep f as a column
+                            # so numpy broadcasts rows like casadi DM does.
+                            return np.sum(2 * root_fun(y)[:, np.newaxis] * jac_fn(y), 0)
 
                     if self.method == "minimize":
                         method = None

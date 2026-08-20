@@ -45,6 +45,29 @@ class ProcessedVariableTimeIntegral:
             ret = self.post_sum(0.0, the_integral, inputs).full().reshape(-1)
         return ret
 
+    def check_discrete_times(self, var_name, t_pts) -> None:
+        """Reject a discrete-time sum whose times are not the solution's.
+
+        The postfix sum only lands on the requested times when the two grids
+        agree, so both the CasADi and the native sensitivity paths gate on this.
+
+        Raises
+        ------
+        pybamm.SolverError
+            If this is a discrete-time sum and ``t_pts`` are not its times.
+        """
+        if self.method != "discrete":
+            return
+        if len(t_pts) == len(self.discrete_times) and np.allclose(
+            t_pts, self.discrete_times, atol=1e-10
+        ):
+            return
+        raise pybamm.SolverError(
+            f'Processing discrete-time-sum variable "{var_name}": solution times '
+            "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
+            f"ensure the correct times are used.\nSolution times: {t_pts}\nDiscrete Sum times: {self.discrete_times}"
+        )
+
     def postfix_sensitivities(
         self,
         var_name,
@@ -53,18 +76,7 @@ class ProcessedVariableTimeIntegral:
         inputs,
         sensitivities,
     ) -> np.ndarray:
-        # post fix for discrete time integral won't give correct result
-        # if ts are not equal to the discrete times. Raise error
-        # in this case
-        if self.method == "discrete" and not (
-            len(t_pts) == len(self.discrete_times)
-            and np.allclose(t_pts, self.discrete_times, atol=1e-10)
-        ):
-            raise pybamm.SolverError(
-                f'Processing discrete-time-sum variable "{var_name}": solution times '
-                "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
-                f"ensure the correct times are used.\nSolution times: {t_pts}\nDiscrete Sum times: {self.discrete_times}"
-            )
+        self.check_discrete_times(var_name, t_pts)
 
         the_integral = self.postfix_sum(sensitivities, t_pts)
         if self.post_sum_node is None:

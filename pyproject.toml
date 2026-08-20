@@ -7,6 +7,8 @@
 
 [tool.uv.workspace]
 members = ["packages/*"]
+# The Rust crate is excluded as uv would glob it and error on the absent pyproject.
+exclude = ["packages/pybamm-rust"]
 
 [tool.uv.sources]
 pybammsolvers = { workspace = true }
@@ -22,6 +24,16 @@ no-build-isolation-package = ["pybammsolvers"]
 [dependency-groups]
 dev = [
     "nox[uv]",
+    # Builds the Rust extension. The floor is the version this was verified
+    # against, not the technical minimum (<1.9.4 does not set
+    # PYO3_BUILD_EXTENSION_MODULE at all).
+    "maturin>=1.14.1,<2.0",
+    # Imported by packages/pybamm/hatch_build.py, which has unit tests.
+    "hatchling>=1.31.0",
+    # Only for `mypy.stubtest`, which pins pybamm/rust/_core.pyi against the
+    # built extension.
+    "mypy>=1.14",
+    "scipy-stubs",
     "pre-commit",
     # pybammsolvers build toolchain, required in the venv because the solver is
     # installed with --no-build-isolation (above) and rebuilds itself on import.

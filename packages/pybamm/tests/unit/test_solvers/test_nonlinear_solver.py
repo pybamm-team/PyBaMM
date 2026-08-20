@@ -196,6 +196,7 @@ class TestNonlinearSolver:
 
         model2 = _ElectrodeSOH(param=li_param)
         parameter_values.process_model(model2)
+        model2.convert_to_format = "casadi"
         sol_casadi = pybamm.CasadiAlgebraicSolver(tol=1e-10).solve(
             model2,
             [0],

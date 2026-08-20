@@ -110,6 +110,52 @@ class TestProcessedVariableComputed:
         comb_var = processed_var.update(processed_var2, comb_sol)
         np.testing.assert_array_equal(comb_var.entries, np.append(y_sol, y_sol2))
 
+    def _build_0D_var(self):
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        var = t * y
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        var_casadi = to_casadi(var, y_sol)
+        return pybamm.ProcessedVariableComputed(
+            [var],
+            [var_casadi],
+            [y_sol],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+        )
+
+    def test_0D_call_matches_the_xarray_route(self):
+        # __call__ takes an np.interp fast path for time-only 0D queries; it
+        # must agree with xarray on values, query order, and NaN fill.
+        processed_var = self._build_0D_var()
+        t_query = np.array([0.9, 0.3, 0.6])
+
+        # entries are 5*t, so linear interpolation is exact
+        np.testing.assert_allclose(processed_var(t_query), 5 * t_query, rtol=1e-12)
+        np.testing.assert_allclose(processed_var(0.5), 2.5, rtol=1e-12)
+        np.testing.assert_allclose(
+            processed_var(t_query),
+            processed_var._xr_data_array.interp(t=t_query).values,
+            rtol=1e-14,
+        )
+        # out-of-range queries keep xarray's NaN fill
+        np.testing.assert_array_equal(
+            np.isnan(processed_var(np.array([-0.5, 0.5, 2.0]))),
+            [True, False, True],
+        )
+
+    def test_data_read_does_not_build_the_data_array(self):
+        # .data must stay cheap: the xr.DataArray builds on first
+        # interpolation read only.
+        processed_var = self._build_0D_var()
+        processed_var.data
+        assert processed_var._xr_data_array_cache is None
+        assert processed_var._xr_interp_args is not None
+
+        data_array = processed_var._xr_data_array
+        assert processed_var._xr_data_array_cache is data_array
+        assert processed_var._xr_interp_args is None
+
     # check empty sensitivity works
     def test_processed_variable_0D_no_sensitivity(self):
         # without space
@@ -530,10 +576,11 @@ class TestProcessedVariableComputed:
         var_casadi = to_casadi(var_sol, u_sol)
         geometry_options = {"options": {"particle size": "distribution"}}
         model = tests.get_base_model_with_battery_geometry(**geometry_options)
+        # base_variables_data is time-major (n_t, output); u_sol is (output, n_t)
         processed_var = pybamm.ProcessedVariableComputed(
             [var_sol],
             [var_casadi],
-            [u_sol],
+            [u_sol.T],
             pybamm.Solution(t_sol, u_sol, model, {}),
         )
 
@@ -571,10 +618,11 @@ class TestProcessedVariableComputed:
         u_sol = np.ones(len(x_sol) * len(y_sol) * len(z_sol))[:, np.newaxis] * t_sol
 
         var_casadi = to_casadi(var_sol, u_sol)
+        # base_variables_data is time-major (n_t, output); u_sol is (output, n_t)
         processed_var = pybamm.ProcessedVariableComputed(
             [var_sol],
             [var_casadi],
-            [u_sol],
+            [u_sol.T],
             pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
         )
 

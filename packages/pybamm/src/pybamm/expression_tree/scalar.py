@@ -82,6 +82,9 @@ class Scalar(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
+    def _to_rust(self, graph, rust_symbols):
+        return graph.scalar(float(self.value))
+
     def _jac(self, variable: pybamm.Variable) -> pybamm.Scalar:
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)

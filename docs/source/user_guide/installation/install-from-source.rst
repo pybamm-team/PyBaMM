@@ -36,8 +36,17 @@ To install PyBaMM, you will need:
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
 - A Fortran compiler (ex: ``gfortran``).
+- A Rust toolchain (``cargo`` 1.89 or newer), for the Rust compute core — install via `rustup <https://rustup.rs>`__.
 - ``graphviz`` (optional), if you wish to build the documentation locally.
 - ``pandoc`` (optional) to convert the example Jupyter notebooks when building the documentation.
+
+.. note::
+
+   PyBaMM's wheels on PyPI bundle a prebuilt Rust extension, so ``pip install pybamm``
+   needs no Rust toolchain. Building from source or from the source distribution
+   compiles it, which requires ``cargo`` 1.89 or newer — the floor comes from the
+   crate's dependency graph, not from Rust edition 2024, which alone needs only 1.85.
+   To force a prebuilt wheel, use ``pip install --only-binary pybamm pybamm``.
 
 You can install the above with
 

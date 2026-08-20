@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.31.0", "hatch-vcs>=0.5.0"]
+requires = ["hatchling>=1.31.0", "hatch-vcs>=0.5.0", "maturin>=1.14.1,<2.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -113,6 +113,13 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
     # For property based testing
     "hypothesis",
+    # Imported by packages/pybamm/hatch_build.py, which has unit tests.
+    "hatchling>=1.31.0",
+    # Only for `mypy.stubtest`, which pins pybamm/rust/_core.pyi against the
+    # built extension. Also in the root group, which nox does not install here.
+    "mypy>=1.14",
+    # The stub imports scipy.sparse; without these stubtest refuses to run.
+    "scipy-stubs",
 ]
 
 [project.entry-points."pybamm_parameter_sets"]
@@ -147,8 +154,40 @@ Yang2017 = "pybamm.models.full_battery_models.lithium_ion.Yang2017:Yang2017"
 [tool.hatch]
 version.source = "vcs"
 version.fallback-version = "0.0.0"
-build.targets.sdist.include = ["src/pybamm", "CITATION.cff"]
+build.targets.sdist.include = ["src/pybamm", "CITATION.cff", "hatch_build.py"]
 build.hooks.vcs.version-file = "src/pybamm/_version.py"
+
+# Only the files a cargo build needs. A force-included DIRECTORY is walked
+# recursively and ignores `exclude`, so never point an entry at ../pybamm-rust.
+[tool.hatch.build.targets.sdist.force-include]
+"../pybamm-rust/Cargo.toml" = "pybamm-rust/Cargo.toml"
+"../pybamm-rust/Cargo.lock" = "pybamm-rust/Cargo.lock"
+"../pybamm-rust/pybamm-core/Cargo.toml" = "pybamm-rust/pybamm-core/Cargo.toml"
+"../pybamm-rust/pybamm-core/src" = "pybamm-rust/pybamm-core/src"
+# cargo validates every declared [[bench]] target exists, even for a lib-only
+# build. tests/ is auto-discovered, so it stays out.
+"../pybamm-rust/pybamm-core/benches" = "pybamm-rust/pybamm-core/benches"
+"../pybamm-rust/pybamm-python/Cargo.toml" = "pybamm-rust/pybamm-python/Cargo.toml"
+"../pybamm-rust/pybamm-python/src" = "pybamm-rust/pybamm-python/src"
+
+# Local hook files load through hatchling's `custom` plugin. `editable` is a
+# version of the wheel target, not a target, so one registration covers both.
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
+
+# Replaces uv's default of just pyproject.toml, so every build input must appear.
+# Scoped to src/ trees: a `**/*.rs` glob would walk the 21 GB Cargo target/ dir.
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "hatch_build.py" },
+    { file = "../pybamm-rust/Cargo.toml" },
+    { file = "../pybamm-rust/Cargo.lock" },
+    { file = "../pybamm-rust/pybamm-core/Cargo.toml" },
+    { file = "../pybamm-rust/pybamm-python/Cargo.toml" },
+    { file = "../pybamm-rust/pybamm-core/src/**/*.rs" },
+    { file = "../pybamm-rust/pybamm-python/src/**/*.rs" },
+]
 
 # Monorepo tag scoping: PyBaMM releases are tagged `pybamm-v<CalVer>` (e.g.
 # pybamm-v27.1.0.0). Scope git-describe to that namespace so pybammsolvers tags
@@ -185,6 +224,9 @@ minversion = "9.0"
 required_plugins = ["pytest-xdist", "pytest-mock"]
 addopts = ["-nauto", "-vra", "--strict-config", "--strict-markers"]
 testpaths = ["tests"]
+# Repo root, so benchmark-backed tests can `import benchmarks...` without each
+# one re-deriving the path from its own depth.
+pythonpath = ["../.."]
 console_output_style = "progress"
 xfail_strict = true
 filterwarnings = [

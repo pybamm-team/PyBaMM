@@ -185,6 +185,7 @@ class Serialise:
             "pybamm_version": pybamm.__version__,
             "name": model.name,
             "options": model.options,
+            "convert_to_format": model.convert_to_format,
             "bounds": [bound.tolist() for bound in model.bounds],  # type: ignore[attr-defined]
             "concatenated_rhs": encode(model._concatenated_rhs),
             "concatenated_algebraic": encode(model._concatenated_algebraic),
@@ -306,6 +307,7 @@ class Serialise:
         recon_model_dict = {
             "name": model_data["name"],
             "options": self._convert_options(model_data["options"]),
+            "convert_to_format": model_data.get("convert_to_format", "casadi"),
             "bounds": tuple(np.array(bound) for bound in model_data["bounds"]),
             "concatenated_rhs": self._decode_model_node(model_data["concatenated_rhs"]),
             "concatenated_algebraic": self._decode_model_node(
@@ -480,6 +482,7 @@ class Serialise:
             "base_class": base_cls_str,
             "base_class_mro": base_class_mro,
             "options": getattr(model, "options", {}),
+            "convert_to_format": getattr(model, "convert_to_format", "casadi"),
             "rhs": [
                 (
                     convert_symbol_to_json(variable),
@@ -1559,6 +1562,9 @@ class Serialise:
                 raise ValueError(
                     f"Failed to convert variable '{variable_name}': {e!s}"
                 ) from e
+
+        # Restore convert_to_format
+        model.convert_to_format = model_data.get("convert_to_format", "casadi")
 
         # Restore observable state
         model._solution_observable = False
