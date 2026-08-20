@@ -57,6 +57,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: 'recursive'
+          # The `main` cell installs PyBaMM from this checkout, and hatch-vcs
+          # needs the release tags to give it a version the zoo can check.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Install Linux system dependencies

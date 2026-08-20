@@ -155,6 +155,17 @@ def check_manifest(entry: ModelEntry) -> None:
     _check_dependency_declaration(entry)
 
 
+def names_a_release(version: str) -> bool:
+    """Whether an installed PyBaMM version names a release it can be held to.
+
+    With no ``pybamm-v*`` tag in reach — a shallow CI clone, an sdist, a fork —
+    hatch-vcs has nothing to describe and guesses a ``0.0.x``, a series PyBaMM
+    has never published. Such an install cannot say which release it is, so a
+    declared range has nothing to be checked against.
+    """
+    return Version(version).release[:2] != (0, 0)
+
+
 def check_pybamm_requires(entry: ModelEntry) -> None:
     """The declared PyBaMM range is a valid specifier, satisfied by this install.
 
@@ -162,6 +173,9 @@ def check_pybamm_requires(entry: ModelEntry) -> None:
     matrix only pairs a model with versions its range admits — so reaching this
     check with an unsatisfied range means the manifest claims a PyBaMM the tests
     are not running against, which is a manifest error worth failing loudly.
+
+    The specifier is validated wherever this runs; the range itself is only held
+    to an install that names a release. See :func:`names_a_release`.
     """
     where = entry.manifest_path
     assert entry.pybamm_requires.strip(), (
@@ -171,6 +185,8 @@ def check_pybamm_requires(entry: ModelEntry) -> None:
         satisfied = entry.admits(pybamm.__version__)
     except ManifestError as error:
         raise AssertionError(str(error)) from error
+    if not names_a_release(pybamm.__version__):
+        return
     assert satisfied, (
         f"{where}: pybamm_requires '{entry.pybamm_requires}' is not satisfied by "
         f"the installed PyBaMM {pybamm.__version__}"
