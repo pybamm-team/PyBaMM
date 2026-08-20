@@ -4,9 +4,13 @@
 
 import contextlib
 
+import numpy as np
 import pytest
 
 import pybamm
+from pybamm.models.full_battery_models.lithium_ion.util import (
+    get_lithiation_delithiation,
+)
 
 
 # Fixture for TestElectrodeSOHMSMR, TestCalculateTheoreticalEnergy and TestGetInitialOCPMSMR class.
@@ -1163,3 +1167,196 @@ class TestGetInitialOCPMSMR:
         )
         assert Up_100 - Un_100 == pytest.approx(4.2)
         assert Up_0 - Un_0 == pytest.approx(2.8)
+
+
+class TestElectrodeSOHCompositeHardCases:
+    """Composite-electrode states checked against the physics, not stored answers.
+
+    The requested state must be the one that comes back, and lithium conserved.
+    """
+
+    OPTIONS = {
+        "particle phases": ("2", "1"),
+        "open-circuit potential": (("single", "current sigmoid"), "single"),
+    }
+
+    # (Q_n_1, Q_n_2, Q_p_1, Q_Li) multipliers on the nominal capacities
+    NOMINAL = (1.0, 1.0, 1.0, 1.0)
+    LOW_LI = (1.0, 1.0, 1.0, 0.85)
+    VERY_LOW_LI = (1.0, 1.0, 1.0, 0.6)
+    WORN_NEGATIVE = (0.85, 0.85, 1.0, 0.85)
+    LOST_SECONDARY = (1.0, 0.5, 1.0, 0.9)
+    WORN_ALL = (0.7, 1.0, 0.9, 0.75)
+
+    CASES = [
+        ("voltage", NOMINAL, 3.35),
+        ("voltage", WORN_ALL, 2.6416666666666666),
+        ("SOC", NOMINAL, 0.5833333333333334),
+        ("SOC", LOW_LI, 0.0),
+        ("SOC", LOW_LI, 0.08333333333333333),
+        ("SOC", VERY_LOW_LI, 0.0),
+        ("SOC", VERY_LOW_LI, 0.08333333333333333),
+        ("SOC", WORN_NEGATIVE, 0.08333333333333333),
+        ("SOC", LOST_SECONDARY, 0.0),
+        ("SOC", LOST_SECONDARY, 0.08333333333333333),
+    ]
+
+    @staticmethod
+    def _setup(scales):
+        options = pybamm.BatteryModelOptions(TestElectrodeSOHCompositeHardCases.OPTIONS)
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        param = pybamm.LithiumIonParameters(options)
+        scale_n1, scale_n2, scale_p1, scale_li = scales
+        capacities = {
+            "Q_Li": parameter_values.evaluate(param.Q_Li_particles_init) * scale_li,
+            "Q_n_1": parameter_values.evaluate(param.n.prim.Q_init) * scale_n1,
+            "Q_n_2": parameter_values.evaluate(param.n.sec.Q_init) * scale_n2,
+            "Q_p_1": parameter_values.evaluate(param.p.prim.Q_init) * scale_p1,
+        }
+        return options, parameter_values, param, capacities
+
+    @staticmethod
+    def _ocp(parameter_values, potential, stoichiometry, temperature, branch):
+        sto = pybamm.InputParameter("sto")
+        processed = parameter_values.process_symbol(potential(sto, temperature, branch))
+        return float(
+            np.asarray(processed.evaluate(inputs={"sto": stoichiometry})).reshape(-1)[0]
+        )
+
+    @pytest.mark.parametrize(("initialization_method", "scales", "target"), CASES)
+    def test_reaches_the_requested_state(self, initialization_method, scales, target):
+        options, parameter_values, param, capacities = self._setup(scales)
+        model = pybamm.lithium_ion.ElectrodeSOHComposite(
+            options, initialization_method=initialization_method
+        )
+        key = "V_init" if initialization_method == "voltage" else "SOC_init"
+        inputs = {**capacities, key: target}
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        solution = sim.solve([0], inputs=inputs)
+        state = {name: float(solution[name](0)) for name in model.variables}
+
+        def branch(electrode, phase):
+            return get_lithiation_delithiation(None, electrode, options, phase=phase)
+
+        if initialization_method == "voltage":
+            voltage = self._ocp(
+                parameter_values,
+                param.p.prim.U,
+                state["y_init_1"],
+                param.T_init,
+                branch("positive", "primary"),
+            ) - self._ocp(
+                parameter_values,
+                param.n.prim.U,
+                state["x_init_1"],
+                param.T_init,
+                branch("negative", "primary"),
+            )
+            assert voltage == pytest.approx(target, abs=1e-08)
+        else:
+
+            def charge(tag):
+                return (
+                    capacities["Q_n_1"] * state[f"x_{tag}_1"]
+                    + capacities["Q_n_2"] * state[f"x_{tag}_2"]
+                )
+
+            soc = (charge("init") - charge("0")) / (charge("100") - charge("0"))
+            assert soc == pytest.approx(target, abs=1e-08)
+
+        lithium = (
+            capacities["Q_n_1"] * state["x_init_1"]
+            + capacities["Q_n_2"] * state["x_init_2"]
+            + capacities["Q_p_1"] * state["y_init_1"]
+        )
+        assert lithium == pytest.approx(capacities["Q_Li"], rel=1e-10)
+
+
+class TestElectrodeSOHCompositeFallback:
+    """The split solve is the fallback when the bracketed solve cannot answer.
+
+    Nothing in the parameter sweep fails, so these force the first attempt to.
+    """
+
+    OPTIONS = {
+        "particle phases": ("2", "1"),
+        "open-circuit potential": (("single", "current sigmoid"), "single"),
+    }
+
+    def _call(self, **kwargs):
+        return pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            0.5,
+            pybamm.ParameterValues("Chen2020_composite"),
+            direction="discharge",
+            options=self.OPTIONS,
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            pybamm.SolverError("full solve failed"),
+            RuntimeError("rootfinder process failed"),
+            ValueError("bad bracket"),
+        ],
+    )
+    def test_a_failed_full_solve_falls_back_to_the_split_solve(
+        self, monkeypatch, error
+    ):
+        def fail(*args, **kwargs):
+            raise error
+
+        expected = pybamm.lithium_ion.ElectrodeSOHComposite.solve_split(
+            0.5,
+            pybamm.ParameterValues("Chen2020_composite"),
+            direction="discharge",
+            options=self.OPTIONS,
+        )
+        monkeypatch.setattr(
+            pybamm.lithium_ion.ElectrodeSOHComposite, "solve_full", fail
+        )
+        from_split = self._call(try_split_solve=True)
+        assert from_split.keys() == expected.keys()
+        for name, value in expected.items():
+            assert from_split[name] == pytest.approx(value, abs=1e-10), name
+
+    def test_the_fallback_can_be_turned_off(self, monkeypatch):
+        def fail(*args, **kwargs):
+            raise RuntimeError("rootfinder process failed")
+
+        monkeypatch.setattr(
+            pybamm.lithium_ion.ElectrodeSOHComposite, "solve_full", fail
+        )
+        with pytest.raises(pybamm.SolverError, match="Failed to solve composite"):
+            self._call(try_split_solve=False)
+
+    def test_both_failing_reports_both_errors(self, monkeypatch):
+        def fail_full(*args, **kwargs):
+            raise pybamm.SolverError("full is broken")
+
+        def fail_split(*args, **kwargs):
+            raise pybamm.SolverError("split is broken")
+
+        monkeypatch.setattr(
+            pybamm.lithium_ion.ElectrodeSOHComposite, "solve_full", fail_full
+        )
+        monkeypatch.setattr(
+            pybamm.lithium_ion.ElectrodeSOHComposite, "solve_split", fail_split
+        )
+        with pytest.raises(
+            pybamm.SolverError, match=r"full is broken.*split is broken"
+        ):
+            self._call(try_split_solve=True)
+
+    def test_a_non_finite_stoichiometry_is_a_failure_not_a_result(self, monkeypatch):
+        # a solve that returns NaN must reach the fallback, not be handed back
+        def nan_evaluator(model, parameter_values):
+            names = sorted(model.variables)
+            return names, [], lambda *a: np.full(len(names), np.nan)
+
+        monkeypatch.setattr(
+            pybamm.models.full_battery_models.lithium_ion.electrode_soh_composite,
+            "_esoh_evaluator",
+            nan_evaluator,
+        )
+        assert np.isfinite(self._call(try_split_solve=True)["x_init_1"])
