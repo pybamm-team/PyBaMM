@@ -310,9 +310,13 @@ else ()
     message(STATUS "idaklu: \"brent\" plugin verified against CasADi ${CASADI_LINKED_VERSION}")
 endif ()
 
+# options.hpp is public, but stage it too: the headers below include it unqualified, and
+# MSVC then searches the include stack, where our own case-insensitively equal Options.hpp
+# would answer for it.
 set(_casadi_internal_headers
         casadi_os.hpp
         function_internal.hpp
+        options.hpp
         oracle_function.hpp
         plugin_interface.hpp
         rootfinder_impl.hpp)
