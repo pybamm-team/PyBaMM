@@ -4,7 +4,8 @@ A thin command line over :mod:`pybamm_model_zoo._docs`, which owns the rendering
 so the ``docs`` contract check can compare a page against what it should contain.
 
     uv run python packages/pybamm-model-zoo/scripts/generate.py [--check]
-    uv run python packages/pybamm-model-zoo/scripts/generate.py --collect results/
+    uv run python packages/pybamm-model-zoo/scripts/generate.py \
+        --collect results/ [--expect cells.json]
 """
 
 from __future__ import annotations
@@ -38,20 +39,38 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "before rendering"
         ),
     )
+    parser.add_argument(
+        "--expect",
+        metavar="FILE",
+        type=Path,
+        help=(
+            "the matrix the run set out to cover, as the JSON list of "
+            "{model, version} cells that scripts/matrix.py emitted; a cell "
+            "missing from --collect is recorded as such instead of dropped"
+        ),
+    )
     return parser.parse_args(argv)
+
+
+def now() -> str:
+    """The current UTC time, as the timestamp format ``status.json`` carries."""
+    return (
+        datetime.datetime.now(datetime.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
 
     if args.collect:
-        generated = (
-            datetime.datetime.now(datetime.timezone.utc)
-            .replace(microsecond=0)
-            .isoformat()
-            .replace("+00:00", "Z")
+        expected = (
+            json.loads(args.expect.read_text(encoding="utf-8")) if args.expect else None
         )
-        status = _docs.collect_results(args.collect, generated)
+        collected = _docs.collect_results(args.collect, expected=expected)
+        status = _docs.stamp(collected, _docs.read_status(), now())
         _paths.STATUS_FILE.write_text(
             json.dumps(status, indent=2) + "\n", encoding="utf-8"
         )

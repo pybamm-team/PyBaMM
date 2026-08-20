@@ -14,12 +14,12 @@ import pybamm
 import pybamm_model_zoo as zoo
 
 zoo.list_models()
-entry = zoo.info("SPMSeriesResistance")
+entry = zoo.info("LinearisedSPM")
 entry.tier, entry.maintainers, entry.pybamm_requires
 
-model = zoo.load("SPMSeriesResistance")()
-solution = pybamm.Simulation(model).solve([0, 3600])
-print(solution["Voltage [V]"](1800))
+model = zoo.load("LinearisedSPM")()
+solution = pybamm.Simulation(model).solve([0, 300])
+print(solution["Voltage [V]"](150))
 ```
 
 The zoo is a `uv` workspace member, so `uv sync --extra all --group dev` from the
@@ -52,7 +52,7 @@ Then:
 6. Add a bullet to this package's `CHANGELOG.md`. Zoo pull requests never touch
    PyBaMM's changelog.
 
-[`spm_series_resistance/`](https://github.com/pybamm-team/PyBaMM/tree/main/packages/pybamm-model-zoo/src/pybamm_model_zoo/spm_series_resistance)
+[`linearised_spm/`](https://github.com/pybamm-team/PyBaMM/tree/main/packages/pybamm-model-zoo/src/pybamm_model_zoo/linearised_spm)
 is the reference entry: the smallest thing that is still a real model. Copy that
 folder rather than reading prose.
 
