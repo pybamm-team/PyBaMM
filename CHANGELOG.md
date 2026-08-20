@@ -2,7 +2,7 @@
 
 ## Bug fixes
 
-- The `integration` nox session no longer installs the `pydiffsol` extra on macOS Intel CI runners, where it has no working build. ([#0000](https://github.com/pybamm-team/PyBaMM/pull/0000))
+- The `integration` nox session no longer installs the `pydiffsol` extra on macOS Intel CI runners, where it has no working build. ([#5726](https://github.com/pybamm-team/PyBaMM/pull/5726))
 
 # [v26.8.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.8.0.0) - 2026-08-13
 
@@ -290,6 +290,7 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 - Fixed a bug in 2D concatenatations for quantities that vary in the `tb` direction ([#5310](https://github.com/pybamm-team/PyBaMM/pull/5310))
 
 # Breaking changes
+
 - Removes default constants added to  `ParameterValues` on construction. **Only breaking if you rely on this functionality in custom models, parameters, etc.** ([#5336](https://github.com/pybamm-team/PyBaMM/pull/5336))
 
 # [v25.10.2](https://github.com/pybamm-team/PyBaMM/tree/v25.10.2) - 2025-11-27
@@ -341,11 +342,11 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 - Fix Bruggeman coefficient computation from BPX porosity and transport efficiency instead of hard-coding, remove redundant values, and add a unit test for verification. ([#5196](https://github.com/pybamm-team/PyBaMM/pull/5196))
 
 ## Breaking changes
+
 - Updates the hysteresis decay rate parameters to a "true" hysteresis decay rate which changes the interpretation of the units of the hysteresis decay rate parameters. ([#5217](https://github.com/pybamm-team/PyBaMM/pull/5217))
 - Changed fundamental variable for all SEI models from thickness to concentration ([#4869](https://github.com/pybamm-team/PyBaMM/pull/4869))
 
 # [v25.8.0](https://github.com/pybamm-team/PyBaMM/tree/v25.8.0) - 2025-08-04
-
 
 ## Features
 
@@ -371,7 +372,7 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 - Fixed non-deterministic plotting CI issues ([#5150](https://github.com/pybamm-team/PyBaMM/pull/5150))
 - Fix non-deterministic ShapeError in 3D FEM gradient method ([#5143](https://github.com/pybamm-team/PyBaMM/pull/5143))
 - Fixes negative electrode boundary values for half-cell voltage contributions. ([#5139](https://github.com/pybamm-team/PyBaMM/pull/5139))
-- Makes `A_cc` L_z * L_y * number of layers ([#5138](https://github.com/pybamm-team/PyBaMM/pull/5138))
+- Makes `A_cc` L_z *L_y* number of layers ([#5138](https://github.com/pybamm-team/PyBaMM/pull/5138))
 - Fixes `TimeIntegral` expression node summation when dependent on an input parameter. ([#5119](https://github.com/pybamm-team/PyBaMM/pull/5119))
 - Fixed a bug that ignored the default duration of drive cycles for `CRate` steps and a bug that overwrote custom `period` arguments for drive cycles. ([#5090](https://github.com/pybamm-team/PyBaMM/pull/5090))
 - Converts sensitivities to numpy objects, fixing bug in `DiscreteTimeSum` sensitivity calculation ([#5037](https://github.com/pybamm-team/PyBaMM/pull/5037))
@@ -380,7 +381,6 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 - Fixed a bug where simplifications cause heavisides to evaluate as booleans ([#4893](https://github.com/pybamm-team/PyBaMM/pull/4893))
 - Fixed a bug in the `WyciskOpenCircuitPotential` model where the differential capacity was not being evaluated correctly. ([#4893](https://github.com/pybamm-team/PyBaMM/pull/4893))
 
-
 ## Breaking changes
 
 - Changed behavior of drive cycle steps in `pybamm.Experiment`s to treat each time point as a discontinuity, consistent with how input interpolants work. This ensures more accurate simulation of drive cycles with rapid changes. ([#5141](https://github.com/pybamm-team/PyBaMM/pull/5141))
@@ -388,7 +388,6 @@ as initial conditions. ([#5311](https://github.com/pybamm-team/PyBaMM/pull/5311)
 - Removed the IREE code from the IDAKLU solver ([#5080](https://github.com/pybamm-team/PyBaMM/pull/5080))
 - Removed support for Python 3.9 ([#5052](https://github.com/pybamm-team/PyBaMM/pull/5052))
 - In OCP hysteresis models, users need to explicitly give the equilibrium, delithiation, and lithiation OCPs when using a hysteresis model. E.g., you must provide all three of "Negative electrode OCP [V]", "Negative electrode delithiation OCP [V]", and "Negative electrode lithiation OCP [V]". ([#4893](https://github.com/pybamm-team/PyBaMM/pull/4893))
-
 
 # [v25.6.0](https://github.com/pybamm-team/PyBaMM/tree/v25.6.0) - 2025-05-27
 
@@ -547,6 +546,7 @@ package to install PyBaMM with only the required dependencies. ([conda-forge/pyb
 - Removed the `start_step_offset` setting and disabled minimum `dt` warnings for drive cycles with the (`IDAKLUSolver`). ([#4416](https://github.com/pybamm-team/PyBaMM/pull/4416))
 
 ## Bug Fixes
+
 - Added error for binary operators on two concatenations with different numbers of children. Previously, the extra children were dropped. Also fixed bug where Q_rxn was dropped from the total heating term in half-cell models. ([#4562](https://github.com/pybamm-team/PyBaMM/pull/4562))
 - Fixed bug where Q_rxn was set to 0 for the negative electrode in half-cell models. ([#4557](https://github.com/pybamm-team/PyBaMM/pull/4557))
 - Fixed bug in post-processing solutions with infeasible experiments using the (`IDAKLUSolver`). ([#4541](https://github.com/pybamm-team/PyBaMM/pull/4541))
@@ -1314,7 +1314,7 @@ This release introduces:
 - Added `NewmanTobias` li-ion battery model ([#1423](https://github.com/pybamm-team/PyBaMM/pull/1423))
 - Added `plot_voltage_components` to easily plot the component overpotentials that make up the voltage ([#1419](https://github.com/pybamm-team/PyBaMM/pull/1419))
 - Made `QuickPlot` more customizable and added an example ([#1419](https://github.com/pybamm-team/PyBaMM/pull/1419))
-- `Solution` objects can now be created by stepping _different_ models ([#1408](https://github.com/pybamm-team/PyBaMM/pull/1408))
+- `Solution` objects can now be created by stepping *different* models ([#1408](https://github.com/pybamm-team/PyBaMM/pull/1408))
 - Added Yang et al 2017 model that couples irreversible lithium plating, SEI growth and change in porosity which produces a transition from linear to nonlinear degradation pattern of lithium-ion battery over extended cycles([#1398](https://github.com/pybamm-team/PyBaMM/pull/1398))
 - Added support for Python 3.9 and dropped support for Python 3.6. Python 3.6 may still work but is now untested ([#1370](https://github.com/pybamm-team/PyBaMM/pull/1370))
 - Added the electrolyte overpotential and Ohmic losses for full conductivity, including surface form ([#1350](https://github.com/pybamm-team/PyBaMM/pull/1350))
