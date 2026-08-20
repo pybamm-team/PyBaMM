@@ -294,9 +294,9 @@ def run_zoo(session):
 
 @nox.session(name="zoo-gating", default=False)
 def run_zoo_gating(session):
-    """Run only the `core`-tier zoo models, which are in PyBaMM's merge gate."""
+    """Run what is in PyBaMM's merge gate: `core`-tier models and the zoo itself."""
     install_zoo(session)
-    zoo_pytest(session, "zoo and gating and not zoo_examples")
+    zoo_pytest(session, "zoo and gating")
 
 
 @nox.session(name="zoo-examples", default=False)

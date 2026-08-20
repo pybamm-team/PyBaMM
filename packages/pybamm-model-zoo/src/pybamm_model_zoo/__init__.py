@@ -7,9 +7,9 @@ contract test suite, the docs pages, and the CI routing.
 Examples
 --------
 >>> import pybamm_model_zoo as zoo
->>> "SPMSeriesResistance" in zoo.list_models()
+>>> "LinearisedSPM" in zoo.list_models()
 True
->>> entry = zoo.info("SPMSeriesResistance")
+>>> entry = zoo.info("LinearisedSPM")
 >>> entry.tier
 'core'
 """

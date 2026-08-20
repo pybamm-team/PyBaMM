@@ -26,9 +26,13 @@ README_PREFIX = "../../../../packages/pybamm-model-zoo/src/pybamm_model_zoo"
 BADGE_COLORS = {
     "pass": "brightgreen",  # nosec B105 - a shields.io colour, not a credential
     "fail": "red",
+    "missing": "orange",
     "untested": "lightgrey",
 }
 BADGE_LABEL = "model zoo"
+#: A matrix cell that was expected but reported nothing, so its leg never
+#: finished. Never treated as a pass: a timed-out job must not read as green.
+MISSING = "missing"
 
 _INDEX_HEADER = """\
 (model_zoo)=
@@ -65,8 +69,11 @@ _COMPATIBILITY_HEADER = """\
 
 ## Compatibility
 
-Refreshed weekly by the `model_zoo_status` workflow, which runs each model
-against every release its `pybamm_requires` admits, plus `main`.
+Refreshed weekly by the `model_zoo_status` workflow. Each model is run against
+`main` and against the most recent PyBaMM releases its `pybamm_requires`
+admits; `scripts/matrix.py --releases` sets how far back that window reaches,
+and the columns below are the window as it stands. A cell reading `missing` is
+one whose job never reported, not a pass.
 
 | Model | Results | Last passing |
 | --- | --- | --- |
@@ -97,14 +104,26 @@ def read_status(path: Path | None = None) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def collect_results(results_dir: Path, generated: str) -> dict:
-    """Fold one JSON file per matrix cell into the ``status.json`` shape."""
+def collect_results(results_dir: Path, expected: list[dict] | None = None) -> dict:
+    """Fold one JSON file per matrix cell into the ``status.json`` shape.
+
+    Parameters
+    ----------
+    results_dir : Path
+        Directory of ``{model, version, result}`` files, one per reported cell.
+    expected : list of dict, optional
+        Every ``{model, version}`` cell the matrix set out to run. A cell with no
+        file is recorded as :data:`MISSING` rather than omitted, so a leg that
+        died before uploading cannot silently leave a green badge behind.
+    """
     models: dict[str, dict[str, str]] = {}
     for path in sorted(Path(results_dir).glob("*.json")):
         record = json.loads(path.read_text(encoding="utf-8"))
         models.setdefault(record["model"], {})[record["version"]] = record["result"]
+    for cell in expected or []:
+        models.setdefault(cell["model"], {}).setdefault(cell["version"], MISSING)
 
-    status: dict = {"generated": generated, "models": {}}
+    status: dict = {"models": {}}
     for model, results in sorted(models.items()):
         passing = [
             version
@@ -120,17 +139,38 @@ def collect_results(results_dir: Path, generated: str) -> dict:
     return status
 
 
+def stamp(collected: dict, previous: dict, generated: str) -> dict:
+    """``collected``, timestamped, keeping ``previous``'s stamp if it still holds.
+
+    Restamping an unchanged result would put a diff in front of a reviewer every
+    week and say nothing by it.
+    """
+    if collected["models"] == previous.get("models"):
+        generated = previous.get("generated") or generated
+    return {"generated": generated, **collected}
+
+
 def badge(record: dict) -> dict:
     """The shields.io endpoint payload for one model's status record."""
     results = record.get("results", {})
     failing = sorted(
-        (version for version, result in results.items() if result != "pass"),
+        (version for version, result in results.items() if result == "fail"),
+        key=version_key,
+    )
+    missing = sorted(
+        (
+            version
+            for version, result in results.items()
+            if result not in ("pass", "fail")
+        ),
         key=version_key,
     )
     if not results:
         message, color = "untested", BADGE_COLORS["untested"]
     elif failing:
         message, color = f"failing on {', '.join(failing)}", BADGE_COLORS["fail"]
+    elif missing:
+        message, color = f"no result on {', '.join(missing)}", BADGE_COLORS["missing"]
     else:
         message = f"passing ({record.get('last_pass') or 'latest'})"
         color = BADGE_COLORS["pass"]

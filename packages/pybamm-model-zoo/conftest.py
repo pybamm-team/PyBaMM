@@ -64,8 +64,10 @@ def pytest_collection_modifyitems(config, items):
 
         slug = _slug_of(item)
         # Advisory-ness lives in the CI job, never in a marker: `gating` only
-        # says whether a failure blocks a merge.
-        if slug in core_slugs:
+        # says whether a failure blocks a merge. A test belonging to no model is
+        # the zoo's own machinery -- the registry, the template, the contract
+        # suite itself -- which gates however the models happen to be tiered.
+        if slug is None or slug in core_slugs:
             item.add_marker(pytest.mark.gating)
         if selected is not None and slug != selected:
             deselected.append(item)

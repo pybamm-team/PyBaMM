@@ -15,10 +15,12 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 from packaging.version import Version
 
 import pybamm
@@ -346,14 +348,7 @@ def _check_extra_is_declared(entry: ModelEntry) -> None:
     assert extra in extras, (
         f"{pyproject}: no '{extra}' extra, but {entry.manifest_path} declares one"
     )
-    declared = {Requirement(item).name for item in extras[extra]}
-    missing = sorted(
-        {Requirement(item).name for item in entry.dependencies.packages} - declared
-    )
-    assert not missing, (
-        f"{pyproject}: extra '{extra}' is missing {missing}, declared by "
-        f"{entry.manifest_path}"
-    )
+    _check_requirements_agree(entry, pyproject, extras[extra])
     aggregated: set[str] = set()
     for item in extras.get("zoo-all", []):
         requirement = Requirement(item)
@@ -362,6 +357,59 @@ def _check_extra_is_declared(entry: ModelEntry) -> None:
     assert extra in aggregated, (
         f"{pyproject}: the 'zoo-all' extra must include 'pybamm-model-zoo[{extra}]', "
         f"or `uv sync --extra zoo-all` will not install {entry.slug}"
+    )
+
+
+def _check_requirements_agree(
+    entry: ModelEntry, pyproject: Path, extra_items: list[str]
+) -> None:
+    """A manifest and the extra behind it declare the same requirements.
+
+    Compared in both directions, and on the specifier rather than the name
+    alone. CI installs every model's extra at once, so a one-way name-only
+    comparison lets a model lean on a package it never declared, or claim a
+    stronger bound than the extra actually installs, and still pass.
+    """
+    declared = _requirements(entry.dependencies.packages)
+    provided = _requirements(extra_items)
+    extra = entry.dependencies.extra
+    missing = sorted(set(declared) - set(provided))
+    assert not missing, (
+        f"{pyproject}: extra '{extra}' is missing {missing}, declared by "
+        f"{entry.manifest_path}"
+    )
+    undeclared = sorted(set(provided) - set(declared))
+    assert not undeclared, (
+        f"{entry.manifest_path}: [model.dependencies].packages does not declare "
+        f"{undeclared}, which extra '{extra}' installs"
+    )
+    disagreeing = sorted(
+        name
+        for name, requirement in declared.items()
+        if _shape(requirement) != _shape(provided[name])
+    )
+    assert not disagreeing, (
+        f"{entry.manifest_path}: {disagreeing} declared differently here than in "
+        f"extra '{extra}' of {pyproject}; the manifest is what the compatibility "
+        f"table reports, so the two have to say the same thing"
+    )
+
+
+def _requirements(items: tuple[str, ...] | list[str]) -> dict[str, Requirement]:
+    """Requirement specifications, keyed by canonical distribution name."""
+    parsed = {}
+    for item in items:
+        requirement = Requirement(item)
+        parsed[canonicalize_name(requirement.name)] = requirement
+    return parsed
+
+
+def _shape(requirement: Requirement) -> tuple:
+    """What a requirement asks for, with the name left out: it is the key."""
+    return (
+        requirement.specifier,
+        frozenset(requirement.extras),
+        str(requirement.marker or ""),
     )
 
 

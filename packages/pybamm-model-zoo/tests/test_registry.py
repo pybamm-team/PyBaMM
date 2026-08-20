@@ -43,9 +43,9 @@ def write_model(root: Path, slug: str, name: str, body: str | None = None) -> Pa
 
 class TestRegistry:
     def test_discovers_the_reference_model(self):
-        assert "SPMSeriesResistance" in zoo.list_models()
-        entry = zoo.info("SPMSeriesResistance")
-        assert entry.slug == "spm_series_resistance"
+        assert "LinearisedSPM" in zoo.list_models()
+        entry = zoo.info("LinearisedSPM")
+        assert entry.slug == "linearised_spm"
         assert entry.tier == "core"
         assert entry.maintainers[0].github == "pybamm-team/maintainers"
 
@@ -86,14 +86,28 @@ class TestRegistry:
         with pytest.raises(zoo.ManifestError, match=r"duplicate model name"):
             Registry([tmp_path])
 
-    def test_external_models_do_not_shadow_in_tree_ones(self, tmp_path):
+    def test_duplicate_slugs_are_rejected(self, tmp_path):
+        one, two = tmp_path / "one", tmp_path / "two"
+        write_model(one, "same_slug", "OneName")
+        write_model(two, "same_slug", "OtherName")
+        with pytest.raises(zoo.ManifestError, match=r"duplicate model slug"):
+            Registry([one, two])
+
+    @pytest.mark.parametrize(
+        ("slug", "name"),
+        [("minimal_model", "MinimalModel"), ("minimal_model", "Different")],
+    )
+    def test_external_models_do_not_shadow_in_tree_ones(self, tmp_path, slug, name):
+        """Neither key may be shadowed: `by_slug` is what resolves citations."""
         in_tree = tmp_path / "in_tree"
         external = tmp_path / "external"
         write_model(in_tree, "minimal_model", "MinimalModel")
-        write_model(external, "minimal_model", "MinimalModel")
+        write_model(external, slug, name)
         with pytest.warns(UserWarning, match=r"ignoring external model"):
             registry = Registry([in_tree], external_paths=[external])
-        assert registry["MinimalModel"].path.parent == in_tree
+        assert registry.by_slug("minimal_model").path.parent == in_tree
+        assert not registry.by_slug("minimal_model").external
+        assert name not in registry or registry[name].path.parent == in_tree
 
     def test_external_entries_are_flagged(self, tmp_path):
         write_model(tmp_path, "minimal_model", "MinimalModel")
@@ -102,8 +116,8 @@ class TestRegistry:
 
 class TestLoad:
     def test_load_returns_the_class(self):
-        model_class = zoo.load("SPMSeriesResistance")
-        assert model_class.__name__ == "SPMSeriesResistance"
+        model_class = zoo.load("LinearisedSPM")
+        assert model_class.__name__ == "LinearisedSPM"
 
     def test_unparseable_class_path(self, tmp_path):
         body = MANIFEST.format(slug="minimal_model", name="MinimalModel").replace(
@@ -175,9 +189,9 @@ class TestCitationParsing:
         assert entries["A2020"].endswith("}")
 
     def test_reference_model_citation_resolves(self):
-        entry = zoo.info("SPMSeriesResistance")
+        entry = zoo.info("LinearisedSPM")
         assert entry.citation_key in zoo.read_citations(entry.path)
 
     def test_register_citation_rejects_an_unknown_key(self):
         with pytest.raises(zoo.ManifestError, match=r"no entry for 'Nope'"):
-            zoo.register_citation("spm_series_resistance", "Nope")
+            zoo.register_citation("linearised_spm", "Nope")

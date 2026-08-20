@@ -14,8 +14,8 @@ class ${ModelName}(pybamm.lithium_ion.SPM):
 
     As shipped this is plain SPM, so the contract suite passes from the first
     commit. Add your physics by overriding the submodel setters you need — see
-    ``spm_series_resistance`` for a worked example, and the PyBaMM developer
-    docs for the submodel protocol.
+    ``linearised_spm`` for a worked example, and the PyBaMM developer docs for
+    the submodel protocol.
 
     Parameters
     ----------
