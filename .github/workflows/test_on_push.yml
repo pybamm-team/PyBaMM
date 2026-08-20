@@ -301,6 +301,7 @@ jobs:
     with:
       sessions: zoo-gating
       texlive: false
+      fetch_depth: 0
       timeout_minutes: 30
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
@@ -316,6 +317,7 @@ jobs:
     with:
       sessions: zoo
       texlive: false
+      fetch_depth: 0
       timeout_minutes: 60
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 

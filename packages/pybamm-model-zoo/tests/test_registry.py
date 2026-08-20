@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+import pybamm
 import pybamm_model_zoo as zoo
 from pybamm_model_zoo._citations import parse_bibtex
 from pybamm_model_zoo._registry import Registry
@@ -127,6 +128,40 @@ class TestLoad:
         with pytest.raises(zoo.ModelUnavailableError, match=r"zoo-minimal-model"):
             entry.load()
         assert contract.missing_dependencies(entry) == ["not-a-real-package>=1.0"]
+
+
+class TestPybammRequires:
+    """The declared range, against installs that can and cannot name a release."""
+
+    def entry(self, tmp_path, requires):
+        body = MANIFEST.format(slug="minimal_model", name="MinimalModel").replace(
+            'pybamm_requires = ">=26.0"', f'pybamm_requires = "{requires}"'
+        )
+        write_model(tmp_path, "minimal_model", "MinimalModel", body=body)
+        return Registry([tmp_path])["MinimalModel"]
+
+    def test_unsatisfied_range_fails_on_a_real_release(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(pybamm, "__version__", "26.8.0.0")
+        with pytest.raises(AssertionError, match=r"is not satisfied by"):
+            contract.check_pybamm_requires(self.entry(tmp_path, ">=99.0"))
+
+    # setuptools_scm's guess with no tag in reach, and hatch-vcs's own fallback.
+    @pytest.mark.parametrize("version", ["0.0.1.dev1+gabc1234", "0.0.0"])
+    def test_range_is_not_held_to_an_install_that_names_no_release(
+        self, tmp_path, monkeypatch, version
+    ):
+        assert not contract.names_a_release(version)
+        monkeypatch.setattr(pybamm, "__version__", version)
+        contract.check_pybamm_requires(self.entry(tmp_path, ">=99.0"))
+
+    def test_invalid_specifier_fails_wherever_it_runs(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(pybamm, "__version__", "0.0.1.dev1+gabc1234")
+        with pytest.raises(AssertionError, match=r"not a valid specifier"):
+            contract.check_pybamm_requires(self.entry(tmp_path, "=>26.0"))
+
+    @pytest.mark.parametrize("version", ["0.1.0", "25.1.0", "26.8.0.1.dev4+gabc1234"])
+    def test_a_dev_build_off_a_real_tag_still_names_a_release(self, version):
+        assert contract.names_a_release(version)
 
 
 class TestCitationParsing:
