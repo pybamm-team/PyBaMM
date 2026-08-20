@@ -37,7 +37,7 @@ def version_order(version: str) -> tuple[int, list[int]]:
 
 def released_versions(count: int) -> list[str]:
     """The ``count`` most recent final PyBaMM releases on PyPI, oldest first."""
-    with urllib.request.urlopen(PYPI_URL) as response:
+    with urllib.request.urlopen(PYPI_URL) as response:  # nosec B310 - literal https URL
         releases = json.load(response)["releases"]
     published = sorted(
         (
