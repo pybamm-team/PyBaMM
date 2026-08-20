@@ -1,4 +1,5 @@
 import os
+import platform
 import sys
 from pathlib import Path
 
@@ -31,6 +32,11 @@ def set_environment_variables(env_dict, session):
     """
     for key, value in env_dict.items():
         session.env[key] = value
+
+
+def is_macos_intel():
+    """Check whether the current interpreter is running on macOS Intel (x86_64)."""
+    return sys.platform == "darwin" and platform.machine() in ("x86_64", "i386")
 
 
 def install_locked(session, *, extras=None, groups=None):
@@ -120,7 +126,11 @@ def run_coverage(session):
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    install_locked(session, extras=["all", "jax", "pydiffsol"], groups=["dev"])
+    extras = ["all", "jax"]
+    # pydiffsol has no working build on macOS Intel CI runners.
+    if not is_macos_intel():
+        extras.append("pydiffsol")
+    install_locked(session, extras=extras, groups=["dev"])
     if (
         "CI" in os.environ
         and sys.version_info[:2] >= (3, 12)
