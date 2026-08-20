@@ -117,6 +117,9 @@ class Time(IndependentVariable):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
+    def _to_rust(self, graph, rust_symbols):
+        return graph.time()
+
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
         return sympy.Symbol("t")

@@ -4,18 +4,38 @@
 #include "NonlinearSolver.hpp"
 #include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "common.hpp"
+#include <cstdint>
 #include <memory>
 #include <utility>
 
 /**
- * @brief NonlinearSystem backed by standalone CasadiFunctions + SUNLinSol.
+ * @brief NonlinearSystem backed by standalone Expression functions + SUNLinSol.
  *
  * Self-contained: no dependency on IDAKLUSolverOpenMP or IDA memory.
  * Residual signature: F(t, y_alg, inputs) -> res   (n_vars outputs)
  * Jacobian signature: J(t, y_alg, inputs) -> data   (COO or dense)
+ *
+ * Polymorphic over the Expression base, so any backend (casadi, Rust, ...)
+ * that implements the Expression interface can drive the Newton solve.
  */
 class StandaloneAlgebraicSystem : public NonlinearSystem {
 public:
+  /**
+   * @brief Expression-based constructor (the general entry point).
+   * @param res_fn   Residual function F(t, y, inputs) -> res
+   * @param jac_fn   Jacobian function J(t, y, inputs) -> data (COO)
+   * @param n_vars   Number of algebraic variables (residual output length)
+   * @param use_sparse Whether to use a sparse (KLU) linear solver
+   */
+  StandaloneAlgebraicSystem(
+    std::unique_ptr<Expression> res_fn,
+    std::unique_ptr<Expression> jac_fn,
+    int n_vars,
+    bool use_sparse);
+
+  /**
+   * @brief Casadi convenience constructor; delegates to the Expression ctor.
+   */
   StandaloneAlgebraicSystem(
     casadi::Function res_fn,
     casadi::Function jac_fn,
@@ -39,8 +59,8 @@ private:
   void BuildSparseResources(int jac_nnz);
   void BuildDenseResources();
 
-  CasadiFunction res_cf_;
-  CasadiFunction jac_cf_;
+  std::unique_ptr<Expression> res_;
+  std::unique_ptr<Expression> jac_;
   int n_vars_;
   bool use_sparse_;
 
@@ -69,6 +89,27 @@ public:
   StandaloneNewtonSolver(
     casadi::Function residual_fn,
     casadi::Function jacobian_fn,
+    const std::vector<sunrealtype>& atol,
+    sunrealtype rtol,
+    sunrealtype step_tol,
+    int max_iter,
+    int max_backtracks,
+    sunrealtype epsNewt,
+    bool use_sparse);
+
+  /**
+   * @brief Rust-backed constructor.
+   *
+   * Builds Newton residual/Jacobian adapters over the Rust FFI from an opaque
+   * Rust model handle, then constructs the algebraic system and solver exactly
+   * as the casadi ctor does.
+   */
+  StandaloneNewtonSolver(
+    std::uintptr_t rust_model_ptr,
+    int n_rhs,
+    int n_alg,
+    const std::vector<expr_int>& jac_rows,
+    const std::vector<expr_int>& jac_cols,
     const std::vector<sunrealtype>& atol,
     sunrealtype rtol,
     sunrealtype step_tol,

@@ -132,6 +132,26 @@ class Array(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
+    def _to_rust(self, graph, rust_symbols):
+        entries = self.evaluate()
+        if issparse(entries):
+            csr = csr_matrix(entries)
+            return graph.sparse_matrix(
+                csr.indptr.tolist(),
+                csr.indices.tolist(),
+                csr.data.astype(float),
+                csr.shape[0],
+                csr.shape[1],
+            )
+        entries = np.asarray(entries, dtype=float)
+        if entries.ndim == 2 and entries.shape[1] > 1:
+            return graph.dense_matrix(
+                np.ascontiguousarray(entries).ravel(),
+                entries.shape[0],
+                entries.shape[1],
+            )
+        return graph.array(entries.flatten())
+
     def _jac(self, variable) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
         # Return zeros of correct size

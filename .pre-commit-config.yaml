@@ -66,3 +66,16 @@ repos:
         additional_dependencies: [pyyaml]
         files: ^\.github/(workflows/test_on_push\.yml|scripts/check_ci_gate\.py)$
         pass_filenames: false
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --manifest-path packages/pybamm-rust/Cargo.toml --all
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --manifest-path packages/pybamm-rust/Cargo.toml --all-targets --fix --allow-dirty --allow-staged
+        language: system
+        types: [rust]
+        pass_filenames: false
+        args: ["--", "-D", "warnings"]

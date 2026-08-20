@@ -1,16 +1,19 @@
 #include "StandaloneNewtonSolver.hpp"
 
+#include "Expressions/Rust/RustFunctions.hpp"
+
 #include <cstring>
 
 // ────────────────────── StandaloneAlgebraicSystem ──────────────────────
 
 StandaloneAlgebraicSystem::StandaloneAlgebraicSystem(
-  casadi::Function res_fn,
-  casadi::Function jac_fn,
+  std::unique_ptr<Expression> res_fn,
+  std::unique_ptr<Expression> jac_fn,
+  int n_vars,
   bool use_sparse)
-  : res_cf_(res_fn),
-    jac_cf_(jac_fn),
-    n_vars_(static_cast<int>(res_fn.nnz_out(0))),
+  : res_(std::move(res_fn)),
+    jac_(std::move(jac_fn)),
+    n_vars_(n_vars),
     use_sparse_(use_sparse),
     sunctx_(nullptr), J_(nullptr), LS_(nullptr),
     res_nvec_(nullptr), delta_nvec_(nullptr)
@@ -20,7 +23,7 @@ StandaloneAlgebraicSystem::StandaloneAlgebraicSystem(
   res_nvec_ = N_VNew_Serial(n_vars_, sunctx_);
   delta_nvec_ = N_VNew_Serial(n_vars_, sunctx_);
 
-  int jac_nnz = static_cast<int>(jac_cf_.nnz_out());
+  int jac_nnz = static_cast<int>(jac_->nnz_out());
   jac_buf_.resize(jac_nnz > 0 ? jac_nnz : n_vars_ * n_vars_);
 
   if (use_sparse_ && jac_nnz > 0) {
@@ -30,6 +33,17 @@ StandaloneAlgebraicSystem::StandaloneAlgebraicSystem(
     BuildDenseResources();
   }
 }
+
+StandaloneAlgebraicSystem::StandaloneAlgebraicSystem(
+  casadi::Function res_fn,
+  casadi::Function jac_fn,
+  bool use_sparse)
+  : StandaloneAlgebraicSystem(
+      std::make_unique<CasadiFunction>(res_fn),
+      std::make_unique<CasadiFunction>(jac_fn),
+      static_cast<int>(res_fn.nnz_out(0)),
+      use_sparse)
+{}
 
 StandaloneAlgebraicSystem::~StandaloneAlgebraicSystem() {
   if (res_nvec_) N_VDestroy(res_nvec_);
@@ -42,22 +56,22 @@ StandaloneAlgebraicSystem::~StandaloneAlgebraicSystem() {
 void StandaloneAlgebraicSystem::eval_residual(
   sunrealtype t, const sunrealtype* y, sunrealtype* res)
 {
-  res_cf_.m_arg[0] = &t;
-  res_cf_.m_arg[1] = y;
-  res_cf_.m_arg[2] = inputs_.data();
-  res_cf_.m_res[0] = res;
-  res_cf_();
+  res_->m_arg[0] = &t;
+  res_->m_arg[1] = y;
+  res_->m_arg[2] = inputs_.data();
+  res_->m_res[0] = res;
+  (*res_)();
 }
 
 int StandaloneAlgebraicSystem::solve_linear(
   sunrealtype t, const sunrealtype* y,
   sunrealtype* res, sunrealtype* delta)
 {
-  jac_cf_.m_arg[0] = &t;
-  jac_cf_.m_arg[1] = y;
-  jac_cf_.m_arg[2] = inputs_.data();
-  jac_cf_.m_res[0] = jac_buf_.data();
-  jac_cf_();
+  jac_->m_arg[0] = &t;
+  jac_->m_arg[1] = y;
+  jac_->m_arg[2] = inputs_.data();
+  jac_->m_res[0] = jac_buf_.data();
+  (*jac_)();
 
   if (use_sparse_) {
     sunrealtype* mat_data = SUNSparseMatrix_Data(J_);
@@ -88,8 +102,8 @@ int StandaloneAlgebraicSystem::solve_linear(
 }
 
 void StandaloneAlgebraicSystem::BuildSparseResources(int jac_nnz) {
-  const auto& rows = jac_cf_.get_row();
-  const auto& cols = jac_cf_.get_col();
+  const auto& rows = jac_->get_row();
+  const auto& cols = jac_->get_col();
   int nnz_total = jac_nnz;
 
   // Build CSC from COO (same O(nnz) algorithm as AlgebraicICBuilder)
@@ -132,9 +146,9 @@ void StandaloneAlgebraicSystem::BuildSparseResources(int jac_nnz) {
 }
 
 void StandaloneAlgebraicSystem::BuildDenseResources() {
-  const auto& rows = jac_cf_.get_row();
-  const auto& cols = jac_cf_.get_col();
-  int nnz_total = static_cast<int>(jac_cf_.nnz_out());
+  const auto& rows = jac_->get_row();
+  const auto& cols = jac_->get_col();
+  int nnz_total = static_cast<int>(jac_->nnz_out());
 
   // Build CSC structure for dense scatter
   std::vector<int> col_count(n_vars_ + 1, 0);
@@ -182,6 +196,33 @@ StandaloneNewtonSolver::StandaloneNewtonSolver(
   sunrealtype epsNewt,
   bool use_sparse)
   : system_(residual_fn, jacobian_fn, use_sparse),
+    solver_(system_, system_.n_vars(), atol.data(), rtol, step_tol,
+            max_iter, max_backtracks, epsNewt),
+    n_vars_(system_.n_vars()),
+    y_work_(n_vars_)
+{}
+
+StandaloneNewtonSolver::StandaloneNewtonSolver(
+  std::uintptr_t rust_model_ptr,
+  int n_rhs,
+  int n_alg,
+  const std::vector<expr_int>& jac_rows,
+  const std::vector<expr_int>& jac_cols,
+  const std::vector<sunrealtype>& atol,
+  sunrealtype rtol,
+  sunrealtype step_tol,
+  int max_iter,
+  int max_backtracks,
+  sunrealtype epsNewt,
+  bool use_sparse)
+  : system_(
+      std::make_unique<RustNewtonResExpression>(
+        reinterpret_cast<void*>(rust_model_ptr), n_rhs, n_alg),
+      std::make_unique<RustNewtonJacExpression>(
+        reinterpret_cast<void*>(rust_model_ptr), n_rhs, n_alg,
+        static_cast<int>(jac_rows.size()), jac_rows, jac_cols),
+      n_alg,
+      use_sparse),
     solver_(system_, system_.n_vars(), atol.data(), rtol, step_tol,
             max_iter, max_backtracks, epsNewt),
     n_vars_(system_.n_vars()),

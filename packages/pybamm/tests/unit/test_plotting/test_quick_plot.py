@@ -12,6 +12,8 @@ class TestQuickPlot:
     @pytest.mark.parametrize("solver", _solver_args)
     def test_simple_ode_model(self, solver):
         model = pybamm.lithium_ion.BaseModel(name="Simple ODE Model")
+        if isinstance(solver, pybamm.CasadiSolver):
+            model.convert_to_format = "casadi"
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # Create variables: domain is explicitly empty since these variables are only

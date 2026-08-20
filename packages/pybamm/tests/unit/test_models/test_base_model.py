@@ -15,6 +15,8 @@ from numpy import testing
 
 import pybamm
 
+pytest_plugins = ["tests.conftest_rust"]
+
 
 class TestBaseModel:
     def test_rhs_set_get(self):
@@ -1752,3 +1754,42 @@ class TestBaseModel:
     def test_y0_property(self):
         model = pybamm.BaseModel()
         assert model.y0 is None
+
+    def test_convert_to_format_validated(self):
+        # Which backend ships as the default is asserted by
+        # test_convert_to_format_default_constant; this covers the setter only.
+        model = pybamm.BaseModel()
+        for valid in (None, "python", "casadi", "jax", "rust"):
+            model.convert_to_format = valid
+            assert model.convert_to_format == valid
+        with pytest.raises(ValueError, match="convert_to_format must be one of"):
+            model.convert_to_format = "fortran"
+
+    def test_convert_to_format_default_constant(self, monkeypatch):
+        # Drive the constant to each backend in turn: an __init__ that hardcoded
+        # any one format would satisfy at most one of these. Never reads the
+        # shipped default, so it holds whichever backend ships as the default.
+        for patched in ("casadi", "rust", "python"):
+            monkeypatch.setattr(pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", patched)
+            assert pybamm.BaseModel().convert_to_format == patched
+        # explicit assignment still wins over the class default
+        model = pybamm.BaseModel()
+        for explicit in ("casadi", "rust"):
+            model.convert_to_format = explicit
+            assert model.convert_to_format == explicit
+
+    def test_convert_to_format_serialisation_roundtrip(self, tmp_path):
+        model = pybamm.BaseModel(name="rt")
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1.0}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        model.convert_to_format = "rust"
+        path = str(tmp_path / "rt_model")
+        model.save_model(filename=path)
+        loaded = pybamm.load_model(path + ".json")
+        assert loaded.convert_to_format == "rust"
+
+    def test_rust_backend_fixture_drives_default(self, rust_backend):
+        assert pybamm.BaseModel().convert_to_format == "rust"

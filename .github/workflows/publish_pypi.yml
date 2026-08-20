@@ -7,10 +7,79 @@ on:
 permissions: {}
 
 jobs:
-  build:
+  build_wheels:
     # Monorepo: this workflow publishes ONLY pybamm. Releases are discriminated
     # by tag namespace now that pybamm and pybammsolvers share a repository
     # (the old `github.repository` guard no longer distinguishes them).
+    if: startsWith(github.event.release.tag_name, 'pybamm-v')
+    name: Wheels (${{ matrix.os }} ${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, arch: x86_64, artifact: wheels_manylinux, crossversion: true }
+          - { os: ubuntu-24.04-arm, arch: aarch64, artifact: wheels_manylinux_aarch64 }
+          - { os: macos-latest, arch: arm64, artifact: wheels_macos_arm64, deployment_target: "11.0" }
+          - { os: macos-15-intel, arch: x86_64, artifact: wheels_macos_x86_64, deployment_target: "10.13" }
+          - { os: windows-2025, arch: AMD64, artifact: wheels_windows }
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          # Full history + tags so hatch-vcs can resolve the pybamm-v* version.
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: 3.13
+
+      # Deliberately no cargo cache here: a cache entry poisoned from a PR could
+      # be restored into a wheel that gets published. Release builds start clean.
+      - name: Build wheels
+        # Pinned: cibuildwheel's abi3audit default is load-bearing here.
+        run: pipx run cibuildwheel==4.1.1 packages/pybamm --output-dir wheelhouse
+        env:
+          CIBW_BUILD_VERBOSITY: 1
+          # One abi3 wheel per platform serves CPython 3.10-3.14.
+          CIBW_BUILD: "cp310-*"
+          CIBW_SKIP: "pp* *musllinux* *t-*"
+          CIBW_ARCHS: ${{ matrix.arch }}
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
+          # manylinux containers have no rustup; the crate graph needs cargo >= 1.89.
+          CIBW_BEFORE_ALL_LINUX: >
+            curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+          CIBW_ENVIRONMENT_LINUX: 'PATH=$HOME/.cargo/bin:$PATH'
+          CIBW_TEST_COMMAND: >
+            python -c "import pybamm; from pybamm.rust import ExprGraph; print(pybamm.__version__, ExprGraph.__module__)"
+
+      - name: Check wheel metadata
+        run: pipx run twine check --strict wheelhouse/*.whl
+
+      - name: Verify the abi3 wheel imports on the newest Python
+        # CIBW_TEST_COMMAND only exercises the build interpreter (3.10). The point
+        # of abi3 is that the same wheel serves 3.14, so prove it once.
+        if: ${{ matrix.crossversion }}
+        run: |
+          pipx run --spec 'uv' uv venv --python 3.14 /tmp/abi3-check
+          VIRTUAL_ENV=/tmp/abi3-check pipx run --spec 'uv' uv pip install wheelhouse/*.whl
+          /tmp/abi3-check/bin/python -c "
+          import sys
+          from pybamm.rust import ExprGraph
+          assert sys.version_info[:2] == (3, 14), sys.version_info
+          print(sys.version_info[:2], ExprGraph.__module__)
+          "
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  build_sdist:
     if: startsWith(github.event.release.tag_name, 'pybamm-v')
     runs-on: ubuntu-latest
     permissions:
@@ -19,26 +88,36 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: true
-          # Full history + tags so hatch-vcs can resolve the pybamm-v* version.
+          persist-credentials: false
           fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: 3.14
+          python-version: 3.13
 
-      - name: Build wheel
-        # Build the pybamm workspace package (its pyproject now lives under packages/).
-        run: pipx run build packages/pybamm --outdir deploy
+      - name: Build sdist
+        run: pipx run build --sdist packages/pybamm --outdir deploy
 
-      - name: Upload package
+      - name: Guard the sdist size
+        # A force-include entry pointing one level too high would vendor the
+        # multi-gigabyte Cargo target/ tree. Fail rather than publish it.
+        run: |
+          size=$(stat -c%s deploy/*.tar.gz)
+          echo "sdist is $size bytes"
+          test "$size" -lt 52428800 || { echo "sdist over 50 MB - check sdist force-include"; exit 1; }
+          ! tar -tzf deploy/*.tar.gz | grep -q "pybamm-rust/target/"
+
+      - name: Check sdist metadata
+        run: pipx run twine check --strict deploy/*.tar.gz
+
+      - name: Upload sdist
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: distributions
-          path: deploy/
+          name: pybamm_sdist
+          path: deploy/*.tar.gz
           if-no-files-found: error
 
   publish:
-    needs: build
+    needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:

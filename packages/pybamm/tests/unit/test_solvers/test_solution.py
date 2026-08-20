@@ -931,6 +931,17 @@ class TestSolution:
         assert "DATA" in save_result.stdout
         assert save_result.stdout == load_result.stdout
 
+    def test_solution_save_load_rust_backend(self, tmp_path):
+        model = pybamm.lithium_ion.SPM()
+        model.convert_to_format = "rust"
+        sim = pybamm.Simulation(model, solver=pybamm.IDAKLUSolver())
+        sol = sim.solve([0, 3600])
+        expected = sol["Voltage [V]"].data
+        path = tmp_path / "sol.pkl"
+        sol.save(str(path))
+        loaded = pybamm.load(str(path))
+        np.testing.assert_allclose(loaded["Voltage [V]"].data, expected)
+
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry
@@ -994,7 +1005,13 @@ class TestSolution:
     @pytest.mark.parametrize(
         "solver_class,use_post_sum,use_output_var", _solver_classes
     )
-    def test_discrete_data_sum(self, solver_class, use_post_sum, use_output_var):
+    def test_discrete_data_sum(
+        self, solver_class, use_post_sum, use_output_var, monkeypatch
+    ):
+        if solver_class is pybamm.CasadiSolver:
+            monkeypatch.setattr(
+                pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", "casadi"
+            )
         model = pybamm.BaseModel(name="test_model")
         c = pybamm.Variable("c")
         model.rhs = {c: -2 * c}
@@ -1111,7 +1128,13 @@ class TestSolution:
     @pytest.mark.parametrize(
         "solver_class,use_post_sum,use_output_var", _solver_classes
     )
-    def test_explicit_time_integral(self, solver_class, use_post_sum, use_output_var):
+    def test_explicit_time_integral(
+        self, solver_class, use_post_sum, use_output_var, monkeypatch
+    ):
+        if solver_class is pybamm.CasadiSolver:
+            monkeypatch.setattr(
+                pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", "casadi"
+            )
         times = np.linspace(0, 1, 10)
         c = pybamm.Variable("c")
         if solver_class == pybamm.IDAKLUSolver:

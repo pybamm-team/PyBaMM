@@ -134,8 +134,7 @@ class TestJaxSolver:
 
         t_eval = np.linspace(0, 3, 100)
 
-        # solver needs a model converted to jax
-        for convert_to_format in ["casadi", "python", "something_else"]:
+        for convert_to_format in ["casadi", "python"]:
             model.convert_to_format = convert_to_format
 
             solver = pybamm.JaxSolver()

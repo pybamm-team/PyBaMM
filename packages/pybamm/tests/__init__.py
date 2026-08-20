@@ -47,6 +47,7 @@ from .shared import (
     get_unit_2p1D_mesh_for_testing,
     get_cylindrical_discretisation_for_testing,
     get_base_model_with_battery_geometry,
+    get_broken_input_model,
     get_required_distribution_deps,
     get_optional_distribution_deps,
     get_present_optional_import_deps,

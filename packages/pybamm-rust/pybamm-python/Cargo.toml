@@ -1,0 +1,26 @@
+[package]
+name = "pybamm-python"
+version = "0.1.0"
+edition = "2024"
+rust-version.workspace = true
+
+[lib]
+name = "_core"
+crate-type = ["cdylib"]
+
+[features]
+default = ["serialize", "diffsol"]
+serialize = ["pybamm-core/serialize", "dep:serde", "dep:bincode"]
+diffsol = ["pybamm-core/diffsol", "dep:rayon"]
+
+[dependencies]
+pybamm-core = { path = "../pybamm-core" }
+pyo3 = { version = "0.28" }
+numpy = "0.28"
+serde = { version = "1", features = ["derive"], optional = true }
+bincode = { version = "1", optional = true }
+# Only the feature-gated `pool` module uses it.
+rayon = { version = "1", optional = true }
+
+[lints]
+workspace = true

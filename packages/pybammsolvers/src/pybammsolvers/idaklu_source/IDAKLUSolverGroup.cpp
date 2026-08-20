@@ -1,7 +1,8 @@
 #include "IDAKLUSolverGroup.hpp"
 #include <omp.h>
+#include <atomic>
 #include <exception>
-#include <optional>
+#include <algorithm>
 
 std::vector<Solution> IDAKLUSolverGroup::solve(
     np_array t_eval_np,
@@ -9,6 +10,7 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     np_array y0_np,
     np_array yp0_np,
     np_array inputs,
+    np_array pbar,
     py::object logger) {
   DEBUG("IDAKLUSolverGroup::solve");
 
@@ -96,16 +98,31 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
       "inputs has wrong number of rows. Expected " + std::to_string(number_of_groups) +
       " but got " + std::to_string(inputs.shape()[0]));
 
-  const std::size_t solves_per_thread = number_of_groups / m_solvers.size();
-  const std::size_t remainder_solves = number_of_groups % m_solvers.size();
+  // pbar is optional: an empty array leaves IDAS at its unit default.
+  const bool has_pbar = pbar.size() > 0;
+  if (has_pbar) {
+    if (pbar.ndim() != 2)
+      throw std::domain_error("pbar has wrong number of dimensions. Expected 2 but got " + std::to_string(pbar.ndim()));
+    if (pbar.shape()[0] != number_of_groups)
+      throw std::domain_error(
+        "pbar has wrong number of rows. Expected " + std::to_string(number_of_groups) +
+        " but got " + std::to_string(pbar.shape()[0]));
+    if (pbar.shape()[1] != number_of_parameters)
+      throw std::domain_error(
+        "pbar has wrong number of cols. Expected " + std::to_string(number_of_parameters) +
+        " but got " + std::to_string(pbar.shape()[1]));
+  }
 
   const sunrealtype *y0 = y0_np.data();
   const sunrealtype *yp0 = yp0_np.data();
   const sunrealtype *inputs_data = inputs.data();
+  const sunrealtype *pbar_data = has_pbar ? pbar.data() : nullptr;
 
   std::vector<SolutionData> results(number_of_groups);
 
-  std::optional<std::string> exception_message;
+  // One slot per input set, so the rethrow below can name which sets failed.
+  // Distinct indices need no synchronisation; empty means the set succeeded.
+  std::vector<std::string> errors(number_of_groups);
   // Python exceptions carry their own type, which the string path below loses
   std::exception_ptr python_exception;
 
@@ -113,27 +130,39 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
   // may log directly or must buffer until flush_logs().
   set_loggers(logger);
 
-  omp_set_num_threads(m_solvers.size());
-  #pragma omp parallel for
-  for (int i = 0; i < m_solvers.size(); i++) {
-    try {
-      for (int j = 0; j < solves_per_thread; j++) {
-        const std::size_t index = i * solves_per_thread + j;
-        const sunrealtype *y = y0 + index * y0_np.shape(1);
-        const sunrealtype *yp = yp0 + index * yp0_np.shape(1);
-        const sunrealtype *input = inputs_data + index * inputs.shape(1);
-        results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
-      }
-    } catch (py::error_already_set &) {
-      #pragma omp critical
-      {
-        python_exception = std::current_exception();
-      }
-    } catch (std::exception &e) {
-      // If an exception is thrown, we need to catch it and rethrow it outside the parallel region
-      #pragma omp critical
-      {
-        exception_message = std::string(e.what());
+  // Scoped to this region rather than omp_set_num_threads, which would mutate a
+  // process-wide setting; never more threads than sets, so no team member idles
+  // and every thread id indexes a distinct solver.
+  const int team_size = std::max<int>(1, std::min<int>(m_solvers.size(), number_of_groups));
+  // Self-scheduled, not a static block partition: a heterogeneous sweep (current
+  // sets that terminate early on events) otherwise leaves threads idle through
+  // the tail, and a static split also leaves n % num_solvers solves serial.
+  // Plain atomic, not schedule(dynamic) or omp atomic capture: the macOS wheels'
+  // libomp lacks __kmpc_dispatch_deinit, and MSVC wants -openmp:llvm for capture.
+  // The first round is pre-assigned by thread id, so the GIL holder always takes
+  // a set and streams its diagnostics rather than leaving every set to a worker.
+  std::atomic<int> next_group{team_size};
+  #pragma omp parallel num_threads(team_size)
+  {
+    const int thread = omp_get_thread_num();
+    for (int i = thread; i < number_of_groups;
+         i = next_group.fetch_add(1, std::memory_order_relaxed)) {
+      const sunrealtype *y = y0 + i * y0_np.shape(1);
+      const sunrealtype *yp = yp0 + i * yp0_np.shape(1);
+      const sunrealtype *input = inputs_data + i * inputs.shape(1);
+      const sunrealtype *scales = pbar_data ? pbar_data + i * number_of_parameters : nullptr;
+      try {
+        results[i] = m_solvers[thread]->solve(
+          t_eval, t_interp, y, yp, input, scales, save_adaptive_steps, save_interp_steps);
+      } catch (py::error_already_set &) {
+        #pragma omp critical
+        {
+          if (!python_exception) {
+            python_exception = std::current_exception();
+          }
+        }
+      } catch (std::exception &e) {
+        errors[i] = e.what();
       }
     }
   }
@@ -145,21 +174,20 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     std::rethrow_exception(python_exception);
   }
 
-  if (exception_message.has_value()) {
-    py::set_error(PyExc_ValueError, exception_message->c_str());
+  std::string failures;
+  for (int i = 0; i < number_of_groups; i++) {
+    if (errors[i].empty()) {
+      continue;
+    }
+    if (!failures.empty()) {
+      failures += "; ";
+    }
+    failures += "input set " + std::to_string(i) + ": " + errors[i];
+  }
+  if (!failures.empty()) {
+    py::set_error(PyExc_ValueError, failures.c_str());
     throw py::error_already_set();
   }
-
-  // Runs on this thread, so these solves log directly rather than buffering
-  for (int i = 0; i < remainder_solves; i++) {
-    const std::size_t index = number_of_groups - remainder_solves + i;
-    const sunrealtype *y = y0 + index * y0_np.shape(1);
-    const sunrealtype *yp = yp0 + index * yp0_np.shape(1);
-    const sunrealtype *input = inputs_data + index * inputs.shape(1);
-    results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
-  }
-
-  flush_logs();
 
   // create solutions (needs to be serial as we're using the Python GIL)
   std::vector<Solution> solutions(number_of_groups);

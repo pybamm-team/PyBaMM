@@ -89,6 +89,9 @@ class InputParameter(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
+    def _to_rust(self, graph, rust_symbols):
+        return graph.input_parameter(self.name, self._expected_size or 1)
+
     def _jac(self, variable: pybamm.StateVector) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
         n_variable = variable.evaluation_array.count(True)

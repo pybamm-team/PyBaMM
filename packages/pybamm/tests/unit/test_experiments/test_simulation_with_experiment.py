@@ -5,6 +5,7 @@ import os
 import re
 from datetime import datetime
 from types import SimpleNamespace
+from typing import NamedTuple
 
 import casadi
 import numpy as np
@@ -19,23 +20,76 @@ class ShortDurationCRate(pybamm.step.CRate):
         return 1
 
 
-def _unified_rhs_jac_n_instructions(unique_step_strings):
-    """rhs_algebraic and jacobian top-function instruction counts for a unified-mode
-    SPM experiment with the given distinct steps."""
+class _TopFunctionSize(NamedTuple):
+    """A unified-model top function's reported instruction count, split into
+    always-run work and the control-flow nodes that pick a branch."""
+
+    n_instructions: int
+    n_control_flow: int
+
+    @property
+    def always_run_work(self) -> int:
+        """Reported count less its control-flow nodes: one Rust ``Dispatch`` per
+        short-circuited conditional (one per half in a split-eval tape), or one
+        `CasADi` switch call."""
+        return self.n_instructions - self.n_control_flow
+
+
+def _casadi_switch_calls(fn):
+    """How many of ``fn``'s instructions call another function; its Switch is one."""
+    return sum(
+        1 for k in range(fn.n_instructions()) if fn.instruction_id(k) == casadi.OP_CALL
+    )
+
+
+def _unified_rhs_jac_n_instructions(unique_step_strings, convert_to_format):
+    """Unified-model residual and Jacobian top-function sizes for one backend."""
     experiment = pybamm.Experiment([tuple(unique_step_strings)])
+    model = pybamm.lithium_ion.SPM()
+    model.convert_to_format = convert_to_format
     sim = pybamm.Simulation(
-        pybamm.lithium_ion.SPM(),
+        model,
         experiment=experiment,
         solver=pybamm.IDAKLUSolver(),
         experiment_model_mode="unified",
     )
     sim.solve()
     assert sim._experiment_uses_unified_model
-    model = sim._built_experiment_model
+    if convert_to_format == "casadi":
+        model = sim._built_experiment_model
+        return tuple(
+            _TopFunctionSize(fn.n_instructions(), _casadi_switch_calls(fn))
+            for fn in (model.rhs_algebraic_eval, model.jac_rhs_algebraic_eval)
+        )
+
+    model = sim._built_experiment_solver._setup["rust_model"]
+    stats = model.jacobian_stats()
     return (
-        model.rhs_algebraic_eval.n_instructions(),
-        model.jac_rhs_algebraic_eval.n_instructions(),
+        _TopFunctionSize(model.rhs.n_instructions, model.rhs.n_dispatches),
+        _TopFunctionSize(
+            stats["split_eval_total_instructions"], stats["split_eval_dispatch_count"]
+        ),
     )
+
+
+def _assert_no_always_run_growth(base, extended, what):
+    """Assert adding control modes did not grow the always-run tape.
+
+    The margin is derived, not fixed: a short-circuited conditional adds one
+    control-flow instruction to the reported count, which genuinely executes
+    every call and so stays in the metric. Short-circuiting one more conditional
+    is therefore allowed, while any per-mode growth of the always-run work still
+    fails.
+    """
+    assert extended.always_run_work <= base.always_run_work, (
+        f"{what} grew the always-run tape: {base} -> {extended}"
+    )
+
+
+def _native_jacobian_instruction_count(sim):
+    """Instruction count for IDAKLU's Rust-native Jacobian artifact."""
+    model = sim._built_experiment_solver._setup["rust_model"]
+    return model.jacobian_stats()["split_eval_total_instructions"]
 
 
 def _largest_generated_fn_lines(fn):
@@ -641,37 +695,59 @@ class TestSimulationExperiment:
             assert set(indices) == set(range(1, n_unique + 1))
             assert indices == [(i % n_unique) + 1 for i in range(len(indices))]
 
-    def test_unified_switch_top_functions_flat_in_unique_steps(self):
-        # Per-branch dispatch keeps the top rhs/jac flat in unique step count.
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_unified_switch_top_functions_flat_in_unique_steps(self, convert_to_format):
+        # Per-branch dispatch keeps the compiled residual and Jacobian flat in step count.
         rhs_1, jac_1 = _unified_rhs_jac_n_instructions(
-            [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(1)]
+            [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(1)],
+            convert_to_format,
         )
         rhs_8, jac_8 = _unified_rhs_jac_n_instructions(
-            [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(8)]
+            [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(8)],
+            convert_to_format,
         )
-        assert rhs_8 <= rhs_1 + 2, (
-            f"unified rhs top function grows with unique steps: {rhs_1} -> {rhs_8}"
-        )
-        assert jac_8 <= jac_1 + 2, (
-            f"unified jac top function grows with unique steps: {jac_1} -> {jac_8}"
-        )
+        _assert_no_always_run_growth(rhs_1, rhs_8, "8 unique steps in the rhs")
+        _assert_no_always_run_growth(jac_1, jac_8, "8 unique steps in the jac")
 
-    def test_unified_active_branch_independent_of_other_modes(self):
-        # Each mode is a separate branch function, so adding modes doesn't grow the top
-        # rhs/jac and inactive modes aren't evaluated during an active step.
-        rhs_cc, jac_cc = _unified_rhs_jac_n_instructions(["Discharge at 1C for 10 s"])
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_unified_active_branch_independent_of_other_modes(self, convert_to_format):
+        # Extra control modes must not inflate the active residual or Jacobian work.
+        rhs_cc, jac_cc = _unified_rhs_jac_n_instructions(
+            ["Discharge at 1C for 10 s"], convert_to_format
+        )
         rhs_multi, jac_multi = _unified_rhs_jac_n_instructions(
             [
                 "Discharge at 1C for 10 s",
                 "Charge at 0.5C until 4.2 V",
                 "Hold at 4.2 V until C/50",
-            ]
+            ],
+            convert_to_format,
         )
-        assert rhs_multi <= rhs_cc + 2, (
-            f"adding modes grew the rhs top function: {rhs_cc} -> {rhs_multi}"
+        _assert_no_always_run_growth(rhs_cc, rhs_multi, "adding modes to the rhs")
+        _assert_no_always_run_growth(jac_cc, jac_multi, "adding modes to the jac")
+
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_unified_voltage_and_power_modes_share_no_active_work(
+        self, convert_to_format
+    ):
+        # Voltage and power both need the voltage expression, so CSE shares that
+        # cone; without privatisation it is unowned and stays in the always-run tape.
+        rhs_cc, jac_cc = _unified_rhs_jac_n_instructions(
+            ["Discharge at 1C for 10 s"], convert_to_format
         )
-        assert jac_multi <= jac_cc + 2, (
-            f"adding modes grew the jac top function: {jac_cc} -> {jac_multi}"
+        rhs_multi, jac_multi = _unified_rhs_jac_n_instructions(
+            [
+                "Discharge at 1C for 10 s",
+                "Hold at 4.2 V until C/50",
+                "Discharge at 5 W for 10 s",
+            ],
+            convert_to_format,
+        )
+        _assert_no_always_run_growth(
+            rhs_cc, rhs_multi, "voltage+power modes in the rhs"
+        )
+        _assert_no_always_run_growth(
+            jac_cc, jac_multi, "voltage+power modes in the jac"
         )
 
     def test_unified_switch_matches_legacy_voltage(self):
@@ -698,15 +774,15 @@ class TestSimulationExperiment:
 
         assert voltage("unified") == pytest.approx(voltage("legacy"), abs=1e-6)
 
-    def test_unified_control_row_jacobian_is_sparse(self):
-        # CasADi declares a Switch's jacobian structurally dense, so the control
-        # equation would otherwise be a full-bandwidth row and balloon KLU work. The
-        # solver projects it back onto the true (union-of-branches) sparsity; assert no
-        # jacobian row spans the full bandwidth.
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_unified_control_row_jacobian_is_sparse(self, convert_to_format):
+        # The conditional Jacobian must use the union of branch sparsities, not a full row.
         from collections import Counter
 
+        model = pybamm.lithium_ion.DFN()
+        model.convert_to_format = convert_to_format
         sim = pybamm.Simulation(
-            pybamm.lithium_ion.DFN(),
+            model,
             experiment=pybamm.Experiment(
                 [("Discharge at 1C until 3.3 V", "Hold at 3.3 V until C/20")]
             ),
@@ -714,9 +790,16 @@ class TestSimulationExperiment:
             experiment_model_mode="unified",
         )
         sim.solve()
-        sparsity = sim._built_experiment_model.jac_rhs_algebraic_eval.sparsity_out(0)
-        n = sparsity.size2()
-        densest_row_nnz = max(Counter(sparsity.get_triplet()[0]).values())
+        if convert_to_format == "casadi":
+            jacobian = sim._built_experiment_model.jac_rhs_algebraic_eval
+            sparsity = jacobian.sparsity_out(0)
+            rows = sparsity.get_triplet()[0]
+            n = sparsity.size2()
+        else:
+            model = sim._built_experiment_solver._setup["rust_model"]
+            _, rows = model.csc_sparsity_pattern()
+            n = model.rhs.n_states
+        densest_row_nnz = max(Counter(rows).values())
         assert densest_row_nnz <= n // 2, (
             f"a jacobian row has {densest_row_nnz}/{n} nonzeros (near full bandwidth); "
             "the control-row union-sparsity projection did not take effect"
@@ -768,27 +851,31 @@ class TestSimulationExperiment:
             model.build_casadi_jacobian(expr, x), casadi.jacobian(expr, x), 20
         )
 
-    def test_unified_aot_compile_bounded_in_unique_steps(self):
-        # -O3 is superlinear in single-function size, so per-branch dispatch must keep
-        # the largest generated jac function flat as unique steps grow. Deterministic.
-        def largest_jac_fn_lines(n):
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_unified_aot_compile_bounded_in_unique_steps(self, convert_to_format):
+        # Compilation must stay flat as equivalent step values are added.
+        def jacobian_size(n):
             ops = [f"Discharge at {0.4 + 0.1 * i:.2f}C for 10 s" for i in range(n)]
+            model = pybamm.lithium_ion.SPMe()
+            model.convert_to_format = convert_to_format
             sim = pybamm.Simulation(
-                pybamm.lithium_ion.SPMe(),
+                model,
                 experiment=pybamm.Experiment([tuple(ops)]),
                 solver=pybamm.IDAKLUSolver(),
                 experiment_model_mode="unified",
             )
             sim.solve()
-            return _largest_generated_fn_lines(
-                sim._built_experiment_model.jac_rhs_algebraic_eval
-            )
+            if convert_to_format == "casadi":
+                return _largest_generated_fn_lines(
+                    sim._built_experiment_model.jac_rhs_algebraic_eval
+                )
+            return _native_jacobian_instruction_count(sim)
 
-        big_2 = largest_jac_fn_lines(2)
-        big_8 = largest_jac_fn_lines(8)
+        big_2 = jacobian_size(2)
+        big_8 = jacobian_size(8)
         assert big_8 <= big_2 + 50, (
-            "largest unified jac function grew with unique steps: "
-            f"{big_2} -> {big_8} lines (per-branch dispatch should keep it flat)"
+            "unified Jacobian compilation grew with equivalent steps: "
+            f"{big_2} -> {big_8}"
         )
 
     def test_experiment_state_mapper_has_full_state_size_for_2d_current_collector(self):
@@ -1216,8 +1303,15 @@ class TestSimulationExperiment:
         sol = sim.solve()
         assert sol.termination == "Event exceeded in initial conditions"
 
-    def test_skip_ok_with_multiple_infeasible_terminations_in_unified_model(self):
+    @pytest.mark.parametrize(
+        ("convert_to_format", "solver_class"),
+        [("casadi", pybamm.CasadiSolver), ("rust", pybamm.IDAKLUSolver)],
+    )
+    def test_skip_ok_with_multiple_infeasible_terminations_in_unified_model(
+        self, convert_to_format, solver_class
+    ):
         model = pybamm.lithium_ion.SPM()
+        model.convert_to_format = convert_to_format
         experiment = pybamm.Experiment(
             [
                 pybamm.step.Current(
@@ -1231,7 +1325,7 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
-            solver=pybamm.CasadiSolver(),
+            solver=solver_class(),
             experiment_model_mode="unified",
         )
 
@@ -1304,6 +1398,8 @@ class TestSimulationExperiment:
         solutions = {}
         for name, solver in solvers.items():
             model = pybamm.lithium_ion.SPM()
+            if isinstance(solver, pybamm.CasadiSolver):
+                model.convert_to_format = "casadi"
             sim = pybamm.Simulation(model, experiment=experiment_2step, solver=solver)
             solution = sim.solve()
             assert solution.t[-1] == pytest.approx(3600 * len(experiment_2step.steps))

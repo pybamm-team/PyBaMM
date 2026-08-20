@@ -3,6 +3,8 @@
 #
 from __future__ import annotations
 
+import itertools
+import math
 import numbers
 from collections.abc import Sequence
 from typing import Any
@@ -398,6 +400,128 @@ class Interpolant(pybamm.Function):
         if is_vector_valued:
             result = result.T
         return result
+
+    def _to_rust(self, graph, rust_symbols):
+        converted_children = self._children_to_rust(graph, rust_symbols)
+        if self.dimension == 1 and self.y.ndim > 2:
+            raise NotImplementedError(
+                f"Rust conversion of 1D {self.interpolator} interpolation does "
+                f"not support y data with more than two dimensions "
+                f"(y.ndim={self.y.ndim}). Use a CasADi-backed model (set "
+                "`model.convert_to_format = 'casadi'`) for this model."
+            )
+        # Vector-valued y (n, m): the constructor guarantees a size-1 child, so
+        # stack one interpolant per column in evaluate()'s column order.
+        if self.dimension == 1 and self.interpolator == "linear":
+            x_data = self.x[0].tolist()
+            child = converted_children[0]
+            if self.y.ndim == 2:
+                columns = [
+                    graph.interpolant_1d_linear(x_data, self.y[:, j].tolist(), child)
+                    for j in range(self.y.shape[1])
+                ]
+                return graph.concat(columns)
+            return graph.interpolant_1d_linear(x_data, self.y.tolist(), child)
+        elif self.dimension == 1 and self.interpolator in ("cubic", "pchip"):
+            # Coefficients from the same PPoly that evaluate() uses (exact oracle
+            # match); reshape adds the column axis vector-valued y already has.
+            ppoly = self.function
+            breakpoints = ppoly.x.tolist()
+            c = ppoly.c.reshape(ppoly.c.shape[0], ppoly.c.shape[1], -1)
+            nseg = c.shape[1]
+            deg = c.shape[0] - 1
+            if deg > 3:
+                raise ValueError(
+                    f"Unexpected PPoly degree {deg} for {self.interpolator} "
+                    "interpolation (expected <= 3)"
+                )
+            child = converted_children[0]
+            columns = []
+            for col in range(c.shape[2]):
+                coeffs: list[float] = []
+                for i in range(nseg):
+                    # Horner power basis [c0, c1, c2, c3]; pad degrees < 3 with zeros.
+                    power = [0.0, 0.0, 0.0, 0.0]
+                    for j in range(deg + 1):
+                        power[deg - j] = float(c[j, i, col])
+                    coeffs.extend(power)
+                columns.append(graph.interpolant_1d_cubic(breakpoints, coeffs, child))
+            if self.y.ndim == 2:
+                return graph.concat(columns)
+            return columns[0]
+        elif self.dimension in (2, 3):
+            # The constructor rejects ND pchip, so this is linear or cubic.
+            breakpoints = [np.asarray(xi, dtype=float).tolist() for xi in self.x]
+            if self.interpolator == "linear":
+                order, coeffs = self._nd_linear_coeffs()
+            else:
+                order, coeffs = self._nd_cubic_coeffs()
+            return graph.interpolant_nd(
+                breakpoints, coeffs.tolist(), order, converted_children
+            )
+        else:
+            raise NotImplementedError(
+                f"Rust conversion is not implemented for {self.dimension}D "
+                f"{self.interpolator} interpolation. Use a CasADi-backed model "
+                "(set `model.convert_to_format = 'casadi'`) for models "
+                "using this interpolant."
+            )
+
+    def _nd_tensor_layout(self, coeff):
+        """Flatten per-axis (order, nseg_a) coefficient pairs to the Rust
+        layout: cell-major (axis-0 segment slowest), then the order**ndim
+        within-cell power tensor (axis-0 power slowest, ascending powers)."""
+        ndim = self.dimension
+        seg_axes = tuple(2 * a + 1 for a in range(ndim))
+        pow_axes = tuple(2 * a for a in range(ndim))
+        return np.ascontiguousarray(np.transpose(coeff, seg_axes + pow_axes)).ravel()
+
+    def _nd_linear_coeffs(self):
+        """Per-cell multilinear tensor coefficients via per-axis finite
+        differences. Matches RegularGridInterpolator(method="linear",
+        fill_value=None) exactly, including multilinear extension outside
+        the domain (pinned <=1e-15)."""
+        coeff = np.asarray(self.y, dtype=float)
+        for a in range(self.dimension):
+            pos = 2 * a  # raw data axis a position after processing axes < a
+            coeff = np.moveaxis(coeff, pos, 0)
+            h = np.diff(self.x[a]).reshape((-1,) + (1,) * (coeff.ndim - 1))
+            coeff = np.stack([coeff[:-1], np.diff(coeff, axis=0) / h])
+            coeff = np.moveaxis(coeff, (0, 1), (pos, pos + 1))
+        return 2, self._nd_tensor_layout(coeff)
+
+    def _nd_cubic_coeffs(self):
+        """Per-cell tensor power coefficients for ND cubic, extracted from
+        self.function (the RegularGridInterpolator evaluate() uses).
+
+        scipy >= 1.13 pre-fits a tensor-product NdBSpline with an iterative
+        solver, so RGI cubic is only approximately interpolating; the
+        coefficients must be Taylor-extracted from that fitted spline via the
+        public nu= derivative API, not refit (refit differs ~1e-5; extraction
+        pinned <=5e-15). On scipy < 1.13 (no nu=), RGI cubic is
+        the recursive not-a-knot tensor spline, reproduced exactly by a
+        sequential CubicSpline fit (pinned <=5e-14)."""
+        ndim = self.dimension
+        mesh = np.meshgrid(*(np.asarray(xi)[:-1] for xi in self.x), indexing="ij")
+        corners = np.column_stack([m.ravel() for m in mesh])
+        try:
+            self.function(corners[:1], nu=(0,) * ndim)
+            has_nu = True
+        except TypeError:  # scipy < 1.13
+            has_nu = False
+        if has_nu:
+            coeffs = np.empty((corners.shape[0],) + (4,) * ndim)
+            for nu in itertools.product(range(4), repeat=ndim):
+                scale = math.prod(math.factorial(v) for v in nu)
+                coeffs[(slice(None), *nu)] = self.function(corners, nu=nu) / scale
+            return 4, coeffs.ravel()
+        coeff = np.asarray(self.y, dtype=float)
+        for a in range(ndim):
+            pos = 2 * a
+            coeff = np.moveaxis(coeff, pos, 0)
+            coeff = interpolate.CubicSpline(self.x[a], coeff, axis=0).c[::-1]
+            coeff = np.moveaxis(coeff, (0, 1), (pos, pos + 1))
+        return 4, self._nd_tensor_layout(coeff)
 
     def _function_diff(self, children: Sequence[pybamm.Symbol], idx: float):
         """

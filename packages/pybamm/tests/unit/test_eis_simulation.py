@@ -236,6 +236,18 @@ class TestEISSimulationSolve:
         z_v = eis_sim.solve(frequencies, inputs={"vf_solid": 0.94}, initial_soc="0.5 V")
         assert z_v.impedance.shape == (5,)
 
+    def test_eis_rust_backend_matches_casadi(self):
+        def impedance(fmt):
+            model = pybamm.lithium_ion.SPM(
+                options={"surface form": "differential"}, name="SPM"
+            )
+            model.convert_to_format = fmt
+            eis_sim = pybamm.EISSimulation(model)
+            frequencies = np.logspace(-2, 2, 10)
+            return eis_sim.solve(frequencies).impedance
+
+        np.testing.assert_allclose(impedance("rust"), impedance("casadi"), rtol=1e-6)
+
     def test_high_freq_intercept_matches_contact_resistance(self):
         model = pybamm.lithium_ion.SPM(
             options={"surface form": "differential", "contact resistance": "true"}

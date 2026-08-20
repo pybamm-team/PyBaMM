@@ -10,6 +10,14 @@ class ExpressionSet
 {
 public:
 
+  // Compile-time marker: does this ExprSet project output-variable
+  // sensitivities natively? Default false; RustFunctions overrides to true.
+  static constexpr bool kNativeOutputSensitivities = false;
+
+  // Compile-time marker: does this ExprSet evaluate output variables over a
+  // batch of points in one call? Default false; RustFunctions overrides.
+  static constexpr bool kNativeBatchedOutputs = false;
+
   /**
    * @brief Constructor
    */

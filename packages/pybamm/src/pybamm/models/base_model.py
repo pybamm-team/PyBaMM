@@ -93,6 +93,8 @@ class BaseModel:
             - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
             - "casadi": convert to CasADi expression tree for Jacobian calculation.
             - "jax": convert to JAX expression tree.
+            - "rust": convert to a compiled Rust expression graph for
+              solve-time evaluation (IDAKLU, diffsol, scipy, algebraic solvers).
 
         Default is "casadi".
     is_discretised: bool
@@ -101,6 +103,9 @@ class BaseModel:
         Slices of the concatenated state vector after discretisation, used to track
         different submodels in the full concatenated solution vector.
     """
+
+    _DEFAULT_CONVERT_TO_FORMAT = "rust"
+    _VALID_CONVERT_TO_FORMATS = (None, "python", "casadi", "jax", "rust")
 
     def __init__(self, name="Unnamed model"):
         self.name = name
@@ -141,7 +146,7 @@ class BaseModel:
 
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
-        self.convert_to_format = "casadi"
+        self.convert_to_format = self._DEFAULT_CONVERT_TO_FORMAT
 
         # Model is not initially discretised or parameterised
         self.is_discretised = False
@@ -177,6 +182,7 @@ class BaseModel:
     @classmethod
     def generic_deserialise(cls, instance, properties):
         # Initialise model with stored variables that have already been discretised
+        instance.convert_to_format = properties.get("convert_to_format", "casadi")
         instance._concatenated_rhs = properties["concatenated_rhs"]
         instance._concatenated_algebraic = properties["concatenated_algebraic"]
         instance._concatenated_initial_conditions = properties[
@@ -236,6 +242,23 @@ class BaseModel:
     @name.setter
     def name(self, value):
         self._name = value
+
+    @property
+    def convert_to_format(self):
+        return self._convert_to_format
+
+    @convert_to_format.setter
+    def convert_to_format(self, value):
+        if value not in self._VALID_CONVERT_TO_FORMATS:
+            valid = ", ".join(repr(v) for v in self._VALID_CONVERT_TO_FORMATS)
+            raise ValueError(f"convert_to_format must be one of {valid}, got {value!r}")
+        self._convert_to_format = value
+
+    @property
+    def uses_stacked_inputs(self):
+        """Whether solver evaluators expect inputs stacked into one flat
+        vector (casadi/rust convention) rather than a dict (python/jax)."""
+        return self._convert_to_format in ("casadi", "rust")
 
     @property
     def rhs(self):

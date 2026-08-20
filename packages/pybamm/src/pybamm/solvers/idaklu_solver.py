@@ -1,6 +1,5 @@
 # mypy: ignore-errors
 import logging
-import math
 import numbers
 import warnings
 from enum import IntEnum
@@ -12,15 +11,51 @@ from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import (
+    flatten_inputs,
+    stack_inputs,
+    validate_rust_sensitivity_widths,
+)
+from pybamm.solvers.observation import (
+    NativeInterpolatingObservation,
+    OutputAssembly,
+)
+from pybamm.solvers.rust_lowering import RustModelLowering
 
 _UNSET = object()
 
 
-def _flatten_inputs(inputs_dict):
-    """Flatten ``{name: value}`` into a 1-D float array in dict-key order."""
-    if not inputs_dict:
-        return np.zeros(0)
-    return np.concatenate([np.asarray(v).reshape(-1) for v in inputs_dict.values()])
+def _sensitivity_scales(inputs_dict, sensitivity_names):
+    """IDAS ``pbar``: the magnitude of each differentiated parameter.
+
+    IDAS weights the *scaled* sensitivity ``pbar_i * dy/dp_i`` like a state, so
+    ``pbar_i = |p_i|`` makes a column of ``dy/dp`` comparable to ``y`` however
+    small the parameter is. Left at the default 1.0, a diffusivity around
+    1e-15 produces a sensitivity column around 1e14 that no absolute tolerance
+    can accommodate, and the corrector fails to converge.
+
+    Magnitudes are handed over raw; the solver clamps the zero and non-finite
+    cases IDAS rejects. A vector-valued input takes one scale for the block.
+
+    Parameters
+    ----------
+    inputs_dict : dict
+        Input values for one input set.
+    sensitivity_names : list of str
+        Differentiated parameter names, in the solver's column order.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        One scale per differentiated parameter, ``(len(sensitivity_names),)``.
+    """
+    return np.asarray(
+        [
+            np.abs(np.asarray(inputs_dict[name], dtype=np.float64)).max()
+            for name in sensitivity_names
+        ],
+        dtype=np.float64,
+    )
 
 
 # Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
@@ -67,8 +102,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
     ----------
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-4).
-    atol : float, optional
-        The absolute tolerance for the solver (default is 1e-6).
+    atol : float or :class:`numpy.ndarray`, optional
+        The absolute tolerance for the solver, either shared by every state or
+        one entry per state (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
         Default is None, which uses a custom Newton solver for consistent
@@ -228,10 +264,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "t_no_progress": 0.0,
             }
 
-        Note: These options only have an effect if model.convert_to_format == 'casadi'
+        Note: Options apply to both 'casadi' and 'rust' formats except where noted.
 
 
     """
+
+    _integrates_via_compiled_model = True
+
+    # idaklu observation is native (Rust): full-state values via native
+    # cubic-Hermite, sensitivities via the native chain rule.
+    _observes_via_compiled_model = True
 
     class StateID(IntEnum):
         ALGEBRAIC = 0
@@ -279,6 +321,37 @@ class IDAKLUSolver(pybamm.BaseSolver):
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
 
+    def _validate_rust_compatibility(self, model, inputs):
+        """Runtime guards for unsupported Rust backend features."""
+        if not model.use_jacobian:
+            raise pybamm.SolverError("KLU requires the Jacobian")
+        # Equality makes SetupOptions derive one thread per solver, so nobody
+        # gets OpenMP N_Vectors: a pessimisation, and not run-to-run reproducible.
+        num_threads = self._options["num_threads"]
+        if self._options.get("num_solvers", num_threads) != num_threads:
+            pybamm.logger.warning(
+                "The Rust backend runs one solver per thread; num_solvers is "
+                f"set to num_threads ({num_threads})."
+            )
+        self._options["num_solvers"] = num_threads
+        if model.calculate_sensitivities:
+            validate_rust_sensitivity_widths(model, model.calculate_sensitivities)
+
+    def _is_identity_matrix(self, matrix):
+        """Check if sparse matrix is identity."""
+        import scipy.sparse as sp
+
+        if not sp.issparse(matrix):
+            return False
+        n = matrix.shape[0]
+        if matrix.shape[0] != matrix.shape[1]:
+            return False
+        if matrix.nnz != n:
+            return False
+        # Check diagonal is all ones
+        diag = matrix.diagonal()
+        return np.allclose(diag, 1.0)
+
     def _combine_options(self, user_options: dict | None) -> dict:
         user_options = user_options or {}
         num_solvers = user_options.get("num_threads", 1)
@@ -323,13 +396,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "num_steps_no_progress": 0,
             "t_no_progress": 0.0,
         }
-        if not user_options:
-            return default_options
-
-        options = default_options | user_options
-
+        options = self._overlay_options(
+            default_options, user_options, solver_name="IDAKLU"
+        )
         self._check_options(options)
-
         return options
 
     def _check_options(self, options: dict):
@@ -353,18 +423,118 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not isinstance(options["compile"], bool):
             raise pybamm.SolverError("compile must be a bool")
 
-    def _check_atol_type(self, atol, model):
-        if isinstance(atol, float):
-            return np.full(model.len_rhs_and_alg, atol)
-        elif isinstance(atol, np.ndarray):
-            return atol
-        else:
-            raise pybamm.SolverError(
-                "Absolute tolerances must be a numpy array or float"
+    def _set_up_rust(self, model, inputs_dict, y0):
+        """Set up solver with Rust evaluation backend."""
+        lowering = RustModelLowering(model, inputs_dict)
+        lowering.state_residual()
+
+        _, sensitivity_names = lowering.sensitivity_indices(
+            model.calculate_sensitivities
+        )
+
+        if self._options["hermite_reduction_factor"] > 1.0 and sensitivity_names:
+            warnings.warn(
+                "Setting hermite_reduction_factor > 1.0 is not currently supported "
+                "with sensitivities. The hermite_reduction_factor option will be "
+                "ignored.",
+                pybamm.SolverWarning,
+                stacklevel=2,
             )
 
+        # A time-integral output lowers to its integrand trajectory; the postfix
+        # sum runs post-solve.
+        _, output_lens = lowering.outputs(
+            self.output_variables, time_integral_vars=self._time_integral_vars
+        )
+
+        lowering.algebraic_block()
+        lowering.termination_events()
+
+        n_inputs = lowering.n_inputs
+        rust_model = lowering.compile()
+        lowering.bind_generic_evaluators(rust_model)
+
+        # Get sparsity pattern (CSC format)
+        colptrs, rowinds = rust_model.csc_sparsity_pattern()
+        nnz = rust_model.nnz
+        # Mirror the existing CasADi path: only expose algebraic-subblock
+        # callbacks when Newton IC mode is "auto".
+        enable_alg_subblock = (
+            self._options.get("newton_mode", "auto") == "auto"
+            and rust_model.has_algebraic
+        )
+        if enable_alg_subblock:
+            alg_jac_rows, alg_jac_cols = (
+                rust_model.algebraic_jacobian_sparsity_pattern()
+            )
+            alg_jac_nnz = rust_model.algebraic_jacobian_nnz
+            n_alg = rust_model.n_algebraic
+        else:
+            alg_jac_rows = np.array([], dtype=np.int64)
+            alg_jac_cols = np.array([], dtype=np.int64)
+            alg_jac_nnz = 0
+            n_alg = 0
+
+        # IDA `id` vector: 1.0 for differential, 0.0 for algebraic.
+        # Inferred from the mass matrix diagonal by the Rust core.
+        ids = np.asarray(rust_model.algebraic_ids(), dtype=np.float64)
+
+        atol = self._check_atol_type(getattr(model, "atol", self.atol), model)
+
+        # Store for solver creation
+        self._setup = {
+            "rust_model": rust_model,
+            # One evaluator per parallel solver, all sharing rust_model's tape.
+            "rust_evaluators": rust_model.evaluator_pool(self._options["num_solvers"]),
+            "number_of_states": len(y0),
+            "number_of_inputs": n_inputs,
+            "number_of_sensitivity_parameters": rust_model.n_sens_params,
+            "sensitivity_names": sensitivity_names,
+            "output_lens": output_lens,
+            "output_assembly": OutputAssembly(
+                self.output_variables,
+                output_lens,
+                time_integrals=self._time_integral_vars,
+            ),
+            "jac_colptrs": np.asarray(colptrs, dtype=np.int64),
+            "jac_rowvals": np.asarray(rowinds, dtype=np.int64),
+            "jac_nnz": nnz,
+            "n_alg": n_alg,
+            "alg_jac_rowvals": np.asarray(alg_jac_rows, dtype=np.int64),
+            "alg_jac_colvals": np.asarray(alg_jac_cols, dtype=np.int64),
+            "alg_jac_nnz": alg_jac_nnz,
+            "ids": ids,
+            "atol": atol,
+            # `num_of_events` mirrors the CasADi setup key so the shared
+            # `_post_process_solution` can read the event count uniformly.
+            "num_of_events": rust_model.n_events,
+            # Observation tapes cached 1:1 with the rust model; recreated on every
+            # `set_up`, so it can never serve tapes from a stale graph.
+            "rust_observation_cache": {},
+        }
+
+        self._setup["solver"] = idaklu.create_rust_solver_group(
+            rust_evaluators=self._setup["rust_evaluators"],
+            number_of_states=self._setup["number_of_states"],
+            number_of_inputs=self._setup["number_of_inputs"],
+            number_of_sens_params=self._setup["number_of_sensitivity_parameters"],
+            number_of_events=self._setup["num_of_events"],
+            output_lens=self._setup["output_lens"],
+            jac_colptrs=self._setup["jac_colptrs"],
+            jac_rowvals=self._setup["jac_rowvals"],
+            jac_nnz=self._setup["jac_nnz"],
+            n_alg=self._setup["n_alg"],
+            alg_jac_rowvals=self._setup["alg_jac_rowvals"],
+            alg_jac_colvals=self._setup["alg_jac_colvals"],
+            alg_jac_nnz=self._setup["alg_jac_nnz"],
+            rhs_alg_id=self._setup["ids"],
+            atol=self._setup["atol"],
+            rtol=self.rtol,
+            options=self._options,
+        )
+
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
-        if model.convert_to_format != "casadi":
+        if model.convert_to_format not in ("casadi", "rust"):
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for solving with IDAKLUSolver"
             )
@@ -390,6 +560,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         y0 = y0.flatten()
 
         if ics_only:
+            return base_set_up_return
+
+        if model.convert_to_format == "rust":
+            self._validate_rust_compatibility(model, inputs_dict)
+            self._set_up_rust(model, inputs_dict, y0)
             return base_set_up_return
 
         if model.convert_to_format != "casadi":
@@ -577,6 +752,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
             "standard_form_dae": model.is_standard_form_dae,
             "output_variables": self.output_variables,
+            "output_assembly": OutputAssembly.from_casadi(
+                self.output_variables,
+                self.computed_var_fcns,
+                time_integrals=self._time_integral_vars,
+            ),
             "var_fcns": self.computed_var_fcns,
             "var_idaklu_fcns": [],
             "dvar_dy_idaklu_fcns": [],
@@ -673,16 +853,24 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
         Overloads the _integrate method from BaseSolver to use the IDAKLU solver
         """
-        if model.convert_to_format != "casadi":  # pragma: no cover
+        if model.convert_to_format not in ("casadi", "rust"):  # pragma: no cover
             raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
 
         inputs_list = inputs_list or [{}]
 
         # stack inputs so that they are a 2D array of shape (number_of_inputs, number_of_parameters)
         if inputs_list and inputs_list[0]:
-            inputs = np.vstack([_flatten_inputs(d) for d in inputs_list])
+            inputs = np.vstack([flatten_inputs(d) for d in inputs_list])
         else:
             inputs = np.array([[]] * len(inputs_list))
+
+        sensitivity_names = self._setup["sensitivity_names"]
+        if sensitivity_names and inputs_list and inputs_list[0]:
+            pbar = np.vstack(
+                [_sensitivity_scales(d, sensitivity_names) for d in inputs_list]
+            )
+        else:
+            pbar = np.empty((0, 0))
 
         # y0full is now a list with length = number of input sets
         y0full = np.vstack(model.y0full)
@@ -703,6 +891,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 y0full,
                 ydot0full,
                 inputs,
+                pbar,
                 logger=logger,
             )
         except ValueError as e:
@@ -821,91 +1010,61 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options=solution_options,
         )
 
-        # Set closest_event_idx so BaseSolver.get_termination_reason doesn't
-        # re-walk every event's symbolic expression on the Python side.
-        if sol.flag == _IDA_ROOT_RETURN and self._setup["num_of_events"] > 0:
-            event_values = np.asarray(
-                self._setup["rootfn_casadi"](
-                    float(sol.t[-1]),
-                    np.asarray(y_event).reshape(-1),
-                    _flatten_inputs(inputs_dict),
+        # Fast path via the compiled events (`rootfn_casadi`, or the rust model's
+        # own event tapes); else BaseSolver re-walks events symbolically.
+        if sol.flag == _IDA_ROOT_RETURN and self._setup.get("num_of_events", 0) > 0:
+            t_event = float(sol.t[-1])
+            y_event_flat = np.asarray(y_event).reshape(-1)
+            if "rootfn_casadi" in self._setup:
+                event_values = np.asarray(
+                    self._setup["rootfn_casadi"](
+                        t_event,
+                        y_event_flat,
+                        flatten_inputs(inputs_dict),
+                    )
+                ).reshape(-1)
+                newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
+            elif model.convert_to_format == "rust":
+                stacked = stack_inputs(inputs_dict, "rust")
+                event_values = np.array(
+                    [
+                        float(np.asarray(fn(t_event, y_event_flat, stacked)).ravel()[0])
+                        for fn in model.terminate_events_eval
+                    ]
                 )
-            ).reshape(-1)
-            newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
+                newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
 
         newsol.integration_time = integration_time
+        newsol.solver_statistics = pybamm.SolverStatistics(
+            number_of_steps=sol.stats.number_of_steps,
+            number_of_linear_solver_setups=sol.stats.number_of_linear_solver_setups,
+            number_of_nonlinear_solver_iterations=sol.stats.number_of_nonlinear_solver_iterations,
+            number_of_nonlinear_solver_fails=sol.stats.number_of_nonlinear_solver_fails,
+            number_of_error_test_failures=sol.stats.number_of_error_test_failures,
+        )
+        if self._observes_via_compiled_model and model.convert_to_format == "rust":
+            # Attached on the outputs-only path too: first_state/last_state carry
+            # full states, and their observation must match the full-state path.
+            # IDAKLU always stores yps, so every solution reads off-grid.
+            newsol.observation = NativeInterpolatingObservation.uniform(
+                self._setup["rust_model"],
+                len(newsol.all_ys),
+                cache=self._setup["rust_observation_cache"],
+            )
         if not save_outputs_only:
             return newsol
 
-        # Populate variables and sensitivities dictionaries directly
-        number_of_samples = sol.y.shape[0] // number_of_timesteps
-        sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
-        sensitivity_params = (
-            model.calculate_sensitivities if model.calculate_sensitivities else []
+        # On this path `sol.y` carries the concatenated outputs rather than the
+        # states, and `sol.yS` their sensitivities as (n_t, n_rows, n_p).
+        self._setup["output_assembly"].attach(
+            newsol,
+            np.asarray(sol.y).reshape(number_of_timesteps, -1),
+            sensitivities=(
+                np.asarray(sol.yS) if number_of_sensitivity_parameters else None
+            ),
+            sensitivity_names=sensitivity_names,
         )
-
-        start_idx = 0
-        for var in self.output_variables:
-            var_nnz, var_shape, base_variables = self._get_variable_info(model, var)
-            end_idx = start_idx + var_nnz
-            data = sol.y[:, start_idx:end_idx]
-            time_indep = False
-
-            # handle any time integral variables
-            if var in self._time_integral_vars:
-                # time integral variables should all be 1D
-                tiv = self._time_integral_vars[var]
-                data = tiv.postfix(data.reshape(-1), sol.t, inputs_dict)
-                time_indep = True
-
-            newsol._variables[var] = pybamm.ProcessedVariableComputed(
-                [model.get_processed_variable_or_event(var)],
-                base_variables,
-                [data],
-                newsol,
-                time_indep=time_indep,
-            )
-
-            # Add sensitivities
-            newsol[var]._sensitivities = {}
-            if sensitivity_params:
-                if var_nnz != math.prod(var_shape):
-                    raise pybamm.SolverError(
-                        f"Sensitivity of sparse variables not supported. {var} is a sparse variable with number of non-zeros {var_nnz} and shape {var_shape}"
-                    )
-                sens_data = sol.yS[:, start_idx:end_idx, :]
-                sens_data = sens_data.reshape(
-                    number_of_timesteps * (end_idx - start_idx),
-                    number_of_sensitivity_parameters,
-                )
-                if var in self._time_integral_vars:
-                    tiv = self._time_integral_vars[var]
-                    sens_data = tiv.postfix_sensitivities(
-                        var, data, sol.t, inputs_dict, sens_data
-                    )
-                newsol[var]._sensitivities["all"] = sens_data
-
-                # Add the individual sensitivity
-                for i, name in enumerate(inputs_dict.keys()):
-                    sens = newsol[var]._sensitivities["all"][:, i : i + 1].reshape(-1)
-                    newsol[var]._sensitivities[name] = sens
-
-            start_idx += var_nnz
         return newsol
-
-    def _get_variable_info(self, model, var) -> tuple:
-        """Get variable length and base variables based on model format."""
-        if model.convert_to_format == "casadi":
-            base_var = self._setup["var_fcns"][var]
-            var_eval = base_var(0.0, 0.0, 0.0)
-            var_nnz = var_eval.sparsity().nnz()
-            var_shape = var_eval.shape
-            return var_nnz, var_shape, [base_var]
-        else:  # pragma: no cover
-            raise pybamm.SolverError(
-                f"Unsupported evaluation engine for convert_to_format="
-                f"{model.convert_to_format}"
-            )
 
     def _set_consistent_initialization(self, model, time, inputs_list):
         """
@@ -925,8 +1084,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # set model.y0_list
         super()._set_consistent_initialization(model, time, inputs_list)
 
-        casadi_format = model.convert_to_format == "casadi"
-
         def handle_y0(y0):
             if isinstance(y0, casadi.DM):
                 y0 = y0.full()
@@ -944,7 +1101,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             ydot0_list = [np.zeros_like(y0) for y0 in y0_list]
 
-        sensitivity = model.y0S_list and casadi_format
+        sensitivity = model.y0S_list and model.uses_stacked_inputs
         if sensitivity:
             y0S_list = model.y0S_list
             y0full = []
@@ -982,20 +1139,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving.
 
         """
-        casadi_format = model.convert_to_format == "casadi"
-
         inputs_dict = inputs_dict or {}
-        # stack inputs
-        if inputs_dict:
-            arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
-            inputs = np.vstack(arrays_to_stack)
+        if model.uses_stacked_inputs:
+            input_eval = stack_inputs(inputs_dict, model.convert_to_format)
         else:
-            inputs = np.array([[]])
+            input_eval = inputs_dict
 
         ydot0 = np.zeros_like(y0)
-        # calculate the time derivatives of the differential equations
-        input_eval = inputs if casadi_format else inputs_dict
-
         rhs0 = model.rhs_eval(time, y0, input_eval)
         if isinstance(rhs0, casadi.DM):
             rhs0 = rhs0.full()
@@ -1031,10 +1181,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         """
 
-        if isinstance(y0S, casadi.DM):
+        if isinstance(y0S, casadi.DM | np.ndarray):
             y0S = (y0S,)
 
-        if isinstance(y0S[0], casadi.DM):
+        if y0S and isinstance(y0S[0], casadi.DM):
             y0S = (x.full() for x in y0S)
         y0S = [x.flatten() for x in y0S]
 
@@ -1183,7 +1333,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options=solution.user_options,
         )
 
-        # Propagate metadata from the original solution
+        # Propagate metadata from the original solution. Thinning knots leaves
+        # the segments and their models alone, so the backend carries over as is.
+        new_sol.observation = solution.observation
         new_sol._all_inputs_stacked = solution.all_inputs_stacked
         new_sol._all_inputs_casadi = solution.all_inputs_casadi
         new_sol.closest_event_idx = solution.closest_event_idx

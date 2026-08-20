@@ -5,6 +5,7 @@ import sys
 import warnings
 from contextlib import redirect_stdout
 
+import casadi
 import numpy as np
 import pandas as pd
 import pytest
@@ -12,7 +13,28 @@ from scipy.integrate import quad_vec
 from scipy.interpolate import CubicHermiteSpline
 
 import pybamm
-from tests import get_discretisation_for_testing, no_internet_connection
+from pybamm.solvers.observation import (
+    NativeInterpolatingObservation,
+    NativeObservation,
+)
+from pybamm.solvers.variable_observer import NativeObserver
+from tests import (
+    get_broken_input_model,
+    get_discretisation_for_testing,
+    no_internet_connection,
+)
+
+
+def _rust_decay_model(with_input=True):
+    """``dvar/dt = -rate*var`` (or ``-var``), lowered to the Rust backend."""
+    model = pybamm.BaseModel()
+    var = pybamm.Variable("var")
+    rate = pybamm.InputParameter("rate") if with_input else 1
+    model.rhs = {var: -rate * var}
+    model.initial_conditions = {var: 2 if with_input else 1}
+    model.convert_to_format = "rust"
+    pybamm.Discretisation().process_model(model)
+    return model
 
 
 def _hermite_wrms(sol_base, sol_reduced, atol, rtol) -> list[tuple[int, float]]:
@@ -168,6 +190,74 @@ class TestIDAKLUSolver:
                     atol=1e-4,
                     rtol=1e-4,
                 )
+
+    def test_multiple_inputs_rust_solves_in_parallel(self):
+        # One evaluator per solver over a shared tape, so a parallel solve must
+        # match per-input solves with no cross-input interference.
+        model = _rust_decay_model()
+
+        t_eval = [0, 1]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 10)
+        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(4)]
+
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-10, options={"num_threads": 4})
+        batched_solutions = solver.solve(
+            model, t_eval, inputs=inputs_list, t_interp=t_interp
+        )
+
+        sequential_solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-10)
+        for inputs, batched in zip(inputs_list, batched_solutions, strict=True):
+            sequential = sequential_solver.solve(
+                model, t_eval, inputs=inputs, t_interp=t_interp
+            )
+            np.testing.assert_array_equal(batched.t, sequential.t)
+            np.testing.assert_allclose(
+                batched.y[0], sequential.y[0], rtol=1e-8, atol=1e-10
+            )
+
+    @pytest.mark.parametrize(
+        ("num_threads", "num_solvers"), [(4, None), (4, 1), (4, 2), (1, 1)]
+    )
+    def test_rust_runs_one_solver_per_thread(self, num_threads, num_solvers):
+        # Equality is what makes SetupOptions derive one thread per solver, so no
+        # solver is given the OpenMP N_Vectors that were 28x slower on DFN x32.
+        model = _rust_decay_model()
+
+        options = {"num_threads": num_threads}
+        if num_solvers is not None:
+            options["num_solvers"] = num_solvers
+        solver = pybamm.IDAKLUSolver(rtol=1e-5, atol=1e-5, options=options)
+        solver.solve(model, [0, 1], inputs=[{"rate": 0.01 * (i + 1)} for i in range(4)])
+
+        assert solver._options["num_threads"] == num_threads
+        assert solver._options["num_solvers"] == num_threads
+        assert len(solver._setup["rust_evaluators"]) == num_threads
+
+    def test_rust_evaluator_pool_hands_out_distinct_evaluators(self):
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 3})
+        solver.set_up(_rust_decay_model(with_input=False))
+        pool = solver._setup["rust_evaluators"]
+
+        assert len(pool) == 3
+        # set_up's solver group consumed every handout: an address is given out
+        # once, so nothing else can be handed a solver's evaluator.
+        with pytest.raises(RuntimeError, match=r"already handed to a solver"):
+            pool.as_ptr(0)
+
+        fresh = solver._setup["rust_model"].evaluator_pool(3)
+        assert len({fresh.as_ptr(i) for i in range(3)}) == 3
+        with pytest.raises(IndexError, match=r"out of range for a pool of 3"):
+            fresh.as_ptr(3)
+        with pytest.raises(RuntimeError, match=r"already handed to a solver"):
+            fresh.as_ptr(1)
+
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_a_failing_input_set_is_named(self, convert_to_format):
+        model = get_broken_input_model(convert_to_format)
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 4})
+        inputs_list = [{"k": k} for k in (1.0, 2.0, -1.0, 3.0, 4.0)]
+        with pytest.raises(pybamm.SolverError, match=r"input set 2:"):
+            solver.solve(model, np.linspace(0, 1, 10), inputs=inputs_list)
 
     def test_model_events(self):
         # Create model
@@ -328,6 +418,72 @@ class TestIDAKLUSolver:
             true_solution,
             rtol=1e-7,
             atol=1e-6,
+        )
+
+    def test_vector_input_parameter_rust(self):
+        # rust `check_p` must compare packed-input length against total input
+        # *width*, not input count, or vector inputs are misrejected.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", expected_size=2)
+        model.rhs = {u: -a * u * (pybamm.Index(b, 0) + pybamm.Index(b, 1))}
+        model.initial_conditions = {u: 1}
+        model.convert_to_format = "rust"
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver()
+        inputs = {"a": 0.5, "b": np.array([[0.2], [0.3]])}
+        sol = solver.solve(model, np.linspace(0, 1, 10), inputs=inputs)
+        np.testing.assert_allclose(
+            sol["u"].data, np.exp(-0.5 * 0.5 * sol.t), rtol=1e-3, atol=1e-5
+        )
+
+    def test_calculate_sensitivities_rejects_vector_width_input_parameter(self):
+        # Rust JVP/tangent seeds one scalar direction per named parameter; a
+        # width>1 parameter would silently under-seed, so this must raise instead.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        b = pybamm.InputParameter("b", expected_size=2)
+        model.rhs = {u: -(pybamm.Index(b, 0) + pybamm.Index(b, 1)) * u}
+        model.initial_conditions = {u: 1}
+        model.convert_to_format = "rust"
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(
+            pybamm.SolverError, match=r"vector-width input parameters.*'b'"
+        ):
+            solver.solve(
+                model,
+                np.linspace(0, 1, 10),
+                inputs={"b": np.array([0.2, 0.3])},
+                calculate_sensitivities=["b"],
+            )
+
+    def test_scalar_sensitivities_with_wide_input_registered_first(self):
+        # Guard only rejects sensitivities FOR a wide parameter; a scalar request
+        # with an earlier-registered width-2 input must still seed correctly.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a", expected_size=2)
+        c = pybamm.InputParameter("c")
+        model.rhs = {u: -c * (pybamm.Index(a, 0) + pybamm.Index(a, 1)) * u}
+        model.initial_conditions = {u: 1}
+        model.convert_to_format = "rust"
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-10)
+        sol = solver.solve(
+            model,
+            np.linspace(0, 1, 11),
+            inputs={"a": np.array([0.4, 0.6]), "c": 0.5},
+            calculate_sensitivities=["c"],
+        )
+        # u = exp(-c*(a0+a1)*t) with a0+a1 = 1: du/dc = -t*exp(-0.5*t)
+        analytic = -sol.t * np.exp(-0.5 * sol.t)
+        np.testing.assert_allclose(
+            np.asarray(sol["u"].sensitivities["c"]).ravel(),
+            analytic,
+            rtol=1e-5,
+            atol=1e-8,
         )
 
     def test_sensitivities_initial_condition(self):
@@ -656,6 +812,17 @@ class TestIDAKLUSolver:
         with pytest.raises(pybamm.SolverError):
             solver.solve(model, t_eval)
 
+    def test_rust_klu_requires_jacobian(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.use_jacobian = False
+        model.convert_to_format = "rust"
+        pybamm.Discretisation().process_model(model)
+        with pytest.raises(pybamm.SolverError, match=r"KLU requires the Jacobian"):
+            pybamm.IDAKLUSolver().solve(model, np.array([0.0, 1.0]))
+
     def test_dae_solver_algebraic_model(self):
         model = pybamm.BaseModel()
         var = pybamm.Variable("var")
@@ -776,6 +943,9 @@ class TestIDAKLUSolver:
         model.initial_conditions = {u: 1}
         model.variables = {"u": u}
         pybamm.Discretisation().process_model(model)
+        # The worker-thread flush under test is OpenMP-only; rust clamps to one
+        # solver, so every trace would come from the calling thread instead.
+        model.convert_to_format = "casadi"
 
         # Two solves per solver, so one solver buffers on a worker thread
         solver = pybamm.IDAKLUSolver(options={"num_threads": 2})
@@ -786,10 +956,10 @@ class TestIDAKLUSolver:
         ):
             solver.solve(model, np.array([0.0, 5.0]), inputs=inputs)
 
-        # Each solver throws on its first solve, and the calling thread streams
-        # its own, so the second trace can only come from the pre-rethrow flush
+        # Every set is attempted, and only the calling thread's traces stream
+        # directly, so the rest can only come from the pre-rethrow flush
         starts = [m for m in caplog.messages if m.startswith("Integrating from t =")]
-        assert len(starts) == 2
+        assert len(starts) == 4
 
     def test_solve_interrupted_from_debug_logger(self, caplog, monkeypatch):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -892,6 +1062,59 @@ class TestIDAKLUSolver:
             else:
                 with pytest.raises(ValueError):
                     _ = solver.solve(model, t_eval, t_interp=t_interp)
+
+    def test_rust_dense_jacobian_matches_sparse(self):
+        # rhs depends only on u, leaving a structural zero (row 0, col v) that
+        # exercises the dense scatter path; nonzero ICs force real Newton iterations.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -0.1 * u}
+        model.algebraic = {v: v - u}
+        model.initial_conditions = {u: 1, v: 1}
+        model.convert_to_format = "rust"
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        t_eval = np.array([0.0, 1.0])
+        t_interp = np.linspace(0, 1, 100)
+        base = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8).solve(
+            model, t_eval, t_interp=t_interp
+        )
+        for jacobian, linsol in [
+            ("dense", "SUNLinSol_Dense"),
+            ("none", "SUNLinSol_Dense"),
+        ]:
+            options = {
+                "jacobian": jacobian,
+                "linear_solver": linsol,
+                "preconditioner": "none",
+                "max_num_steps": 10_000,
+            }
+            solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8, options=options)
+            soln = solver.solve(model, t_eval, t_interp=t_interp)
+            np.testing.assert_allclose(soln.y, base.y, rtol=1e-5, atol=1e-4)
+
+    def test_rust_pure_algebraic_jacobian_diagonal(self):
+        # Pure-algebraic model (empty rhs): the empty child's zero-derivative must
+        # not widen to length 1, which would shift the diagonal and zero the Jacobian.
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.algebraic = {var: var + 1}
+        model.initial_conditions = {var: 0}
+        model.convert_to_format = "rust"
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+        solution = solver.solve(model, [0, 1])
+        np.testing.assert_array_equal(solution.y, -1)
+
+    def test_an_unknown_option_is_rejected(self):
+        # Merging a misspelt key through leaves the caller on the default.
+        with pytest.raises(pybamm.SolverError, match=r"Unknown IDAKLU solver option"):
+            pybamm.IDAKLUSolver(options={"num_thread": 4})
 
     def test_solver_options(self):
         model = pybamm.BaseModel()
@@ -1085,6 +1308,9 @@ class TestIDAKLUSolver:
             output_variables=["Negative particle flux [mol.m-2.s-1]"],
         )
         model = pybamm.lithium_ion.DFN()
+        # The nnz-compression this guards against only occurs on the casadi path;
+        # the rust equivalent is test_sparse_output_variable_sensitivities_rust_matches_casadi.
+        model.convert_to_format = "casadi"
         params = model.default_parameter_values
         params.update({"Current function [A]": "[input]"})
         sim = pybamm.Simulation(model, solver=solver, parameter_values=params)
@@ -1093,6 +1319,46 @@ class TestIDAKLUSolver:
             match=r"Sensitivity of sparse variables not supported",
         ):
             sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
+
+    def test_sparse_output_variable_sensitivities_rust_matches_casadi(self):
+        # Rust output lengths are always dense (== prod(shape)), so the casadi
+        # nnz-compression bug behind the guard above is unreachable on rust.
+        input_parameters = {
+            "Current function [A]": 0.222,
+            "Separator porosity": 0.3,
+        }
+        var_name = "Negative particle flux [mol.m-2.s-1]"
+
+        # Reference: full-state casadi solve bypasses the output-variables
+        # fast path (and its guard) entirely.
+        model_ref = pybamm.lithium_ion.DFN()
+        model_ref.convert_to_format = "casadi"
+        params_ref = model_ref.default_parameter_values
+        params_ref.update({"Current function [A]": "[input]"})
+        sim_ref = pybamm.Simulation(
+            model_ref, solver=pybamm.IDAKLUSolver(), parameter_values=params_ref
+        )
+        sol_ref = sim_ref.solve(
+            [0, 100], inputs=input_parameters, calculate_sensitivities=True
+        )
+
+        model = pybamm.lithium_ion.DFN()
+        model.convert_to_format = "rust"
+        params = model.default_parameter_values
+        params.update({"Current function [A]": "[input]"})
+        solver = pybamm.IDAKLUSolver(output_variables=[var_name])
+        sim = pybamm.Simulation(model, solver=solver, parameter_values=params)
+        sol = sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
+
+        np.testing.assert_allclose(
+            sol[var_name].data, sol_ref[var_name].data, rtol=1e-6, atol=1e-10
+        )
+        np.testing.assert_allclose(
+            np.asarray(sol[var_name].sensitivities["Current function [A]"]),
+            np.asarray(sol_ref[var_name].sensitivities["Current function [A]"]),
+            rtol=1e-5,
+            atol=1e-9,
+        )
 
     def test_with_output_variables_and_sensitivities(self):
         # Construct a model and solve for all variables, then test
@@ -1294,6 +1560,114 @@ class TestIDAKLUSolver:
                     "round-tripped IDAKLUSolver must still set "
                     "closest_event_idx after a root return"
                 )
+
+    def test_closest_event_idx_set_after_root_return_rust(self):
+        # Rust-path variant of test_closest_event_idx_set_after_root_return;
+        # _set_up_rust must bind the compiled model's event tapes for this to pass.
+        model = pybamm.lithium_ion.SPM()
+        model.convert_to_format = "rust"
+        cycle = (
+            "Discharge at 1C until 3.0 V",
+            "Charge at 1C until 4.2 V",
+            "Hold at 4.2 V until C/50",
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=pybamm.Experiment([cycle] * 2, period=300),
+            solver=pybamm.IDAKLUSolver(output_variables=["Voltage [V]"]),
+        )
+        sim.solve()
+
+        event_steps = [
+            step
+            for cycle_sol in sim.solution.cycles
+            for step in cycle_sol.steps
+            if step.termination.startswith("event:")
+        ]
+        assert event_steps, "expected at least one event-terminated step"
+        for step in event_steps:
+            assert step.all_models[-1].convert_to_format == "rust"
+            assert step.closest_event_idx is not None, (
+                f"event-terminated step {step.termination!r} has "
+                f"closest_event_idx=None — BaseSolver will fall back to "
+                f"per-step Python event re-evaluation"
+            )
+            terminate_events = [
+                e
+                for e in step.all_models[-1].events
+                if e.event_type == pybamm.EventType.TERMINATION
+            ]
+            picked = terminate_events[step.closest_event_idx].name
+            assert step.termination == f"event: {picked}", (
+                f"closest_event_idx={step.closest_event_idx} resolves to "
+                f"{picked!r}, but step.termination is {step.termination!r}"
+            )
+
+    def test_rust_fused_events_parity_with_casadi(self):
+        # SPMe has >= 2 termination events, so rust evaluates them through the fused
+        # tape; a tightened cut-off fires one, and both paths must agree on which.
+        def _solve(fmt):
+            params = pybamm.ParameterValues("Chen2020")
+            params["Lower voltage cut-off [V]"] = 3.5
+            model = pybamm.lithium_ion.SPMe()
+            model.convert_to_format = fmt
+            sim = pybamm.Simulation(
+                model, parameter_values=params, solver=pybamm.IDAKLUSolver()
+            )
+            return sim.solve(np.linspace(0, 3600, 100))
+
+        sol_rust = _solve("rust")
+        sol_casadi = _solve("casadi")
+
+        assert sol_rust.termination.startswith("event:"), (
+            f"expected an event to fire, got {sol_rust.termination!r}"
+        )
+        assert sol_rust.termination == sol_casadi.termination
+        assert sol_rust.closest_event_idx == sol_casadi.closest_event_idx
+        np.testing.assert_allclose(
+            float(sol_rust.t_event[0]), float(sol_casadi.t_event[0]), rtol=1e-4
+        )
+
+    def test_rust_events_survive_compiled_model_pickle(self):
+        # Pickling round-trips through `_rebuild`, which re-runs `build_from_parts`
+        # and thus `fuse_events`, so the rebuilt model must evaluate events the same.
+        import pickle
+
+        model = pybamm.lithium_ion.SPMe()
+        model.convert_to_format = "rust"
+        sim = pybamm.Simulation(model, solver=pybamm.IDAKLUSolver())
+        sol = sim.solve(np.linspace(0, 3600, 10))
+
+        rust_model = sim._solver._setup["rust_model"]
+        assert rust_model.n_events >= 2  # fusion is active
+
+        # A representative evaluation point from the solve.
+        y = np.ascontiguousarray(sol.all_ys[0][:, 0], dtype=np.float64)
+        p = np.zeros(rust_model.n_inputs, dtype=np.float64)
+        t = float(sol.all_ts[0][0])
+        before = [np.asarray(fn(t, y, p)).ravel() for fn in rust_model.events]
+
+        restored = pickle.loads(pickle.dumps(rust_model))
+        assert restored.n_events == rust_model.n_events
+        after = [np.asarray(fn(t, y, p)).ravel() for fn in restored.events]
+        for a, b in zip(before, after, strict=True):
+            np.testing.assert_array_equal(a, b)
+
+    def test_rust_diffsol_event_termination(self):
+        # Diffsol root-finding uses the same fused event tape (RootOp path).
+        params = pybamm.ParameterValues("Chen2020")
+        params["Lower voltage cut-off [V]"] = 3.5
+        model = pybamm.lithium_ion.SPMe()
+        model.convert_to_format = "rust"
+        sim = pybamm.Simulation(
+            model, parameter_values=params, solver=pybamm.DiffsolSolver()
+        )
+        sol = sim.solve(np.linspace(0, 3600, 100))
+        assert sol.termination.startswith("event:"), (
+            f"expected diffsol root-finding to terminate on an event, "
+            f"got {sol.termination!r}"
+        )
+        assert float(sol.t[-1]) < 3600.0
 
     def test_simulation_period(self):
         model = pybamm.lithium_ion.DFN()
@@ -1771,6 +2145,18 @@ class TestIDAKLUSolver:
         with pytest.warns(pybamm.SolverWarning, match="not currently supported"):
             sim.solve([0, 1], inputs={"I": 1.0}, calculate_sensitivities=True)
 
+    def test_hermite_reduction_factor_sensitivities_warning_rust(self):
+        # Regression: `_set_up_rust` used to return before the casadi path's
+        # hermite_reduction_factor + sensitivities check, skipping the warning.
+        model_sens = pybamm.lithium_ion.SPM()
+        model_sens.convert_to_format = "rust"
+        param = model_sens.default_parameter_values
+        param["Current function [A]"] = pybamm.InputParameter("I")
+        solver = pybamm.IDAKLUSolver(options={"hermite_reduction_factor": 2.0})
+        sim = pybamm.Simulation(model_sens, parameter_values=param, solver=solver)
+        with pytest.warns(pybamm.SolverWarning, match="not currently supported"):
+            sim.solve([0, 1], inputs={"I": 1.0}, calculate_sensitivities=True)
+
     def test_reduce_solution_basic(self):
         """Test basic post-hoc reduce_solution: fewer points, finite yps, bounded error."""
         model = pybamm.lithium_ion.SPM()
@@ -1820,6 +2206,29 @@ class TestIDAKLUSolver:
         assert len(reduced.all_t_evals) == len(sol.all_t_evals)
         for rte, ste in zip(reduced.all_t_evals, sol.all_t_evals, strict=True):
             np.testing.assert_array_equal(rte, ste)
+
+    def test_reduce_solution_keeps_native_observation(self):
+        """A reduced solution must not fall back to CasADi observation."""
+        model = pybamm.lithium_ion.SPM()
+        solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8)
+        sol = pybamm.Simulation(model, solver=solver).solve([0, 3600])
+        assert isinstance(sol.observation, NativeInterpolatingObservation)
+
+        reduced = solver.reduce_solution(sol, hermite_reduction_factor=2.0)
+
+        # Thinning knots leaves the segments and their models alone.
+        assert isinstance(reduced.observation, NativeInterpolatingObservation)
+        assert reduced.observation.segment_models == sol.observation.segment_models
+        assert reduced.observation.compile_cache is sol.observation.compile_cache
+        assert isinstance(reduced["Terminal voltage [V]"]._observer, NativeObserver)
+        # ... and the reduced spline still reads within its error budget
+        t = np.linspace(0, 3600, 51)
+        np.testing.assert_allclose(
+            reduced["Terminal voltage [V]"](t),
+            sol["Terminal voltage [V]"](t),
+            rtol=0,
+            atol=1e-4,
+        )
 
     def test_reduce_solution_vs_online(self):
         """Compare post-hoc reduce_solution with online knot reduction on a drive cycle.
@@ -1935,3 +2344,697 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(
             loaded["2u"].entries, sol["2u"].entries, rtol=1e-12, atol=1e-12
         )
+
+    def test_idaklu_dispatch_is_flag_driven(self):
+        with pytest.raises(TypeError):
+            pybamm.IDAKLUSolver(evaluator="rust")
+        from tests.unit.test_solvers.test_process_rust import _toy_dae
+
+        model = _toy_dae("rust")
+        solver = pybamm.IDAKLUSolver()
+        solver.set_up(model, inputs=[{"a": 0.5}])
+        assert "rust_model" in solver._setup
+        assert model.convert_to_format == "rust"
+
+    def test_idaklu_rust_output_sensitivities_set_up_ok(self):
+        # output_variables + calculate_sensitivities is supported for
+        # convert_to_format="rust", so set_up must not raise for the combination.
+        from tests.unit.test_solvers.test_process_rust import _toy_dae
+
+        model = _toy_dae("rust")
+        model.calculate_sensitivities = ["a"]
+        solver = pybamm.IDAKLUSolver(output_variables=["u"])
+        solver.set_up(model, inputs=[{"a": 0.5}])
+        assert model.convert_to_format == "rust"
+
+    def test_idaklu_rust_output_values_ok_without_sens(self):
+        from tests.unit.test_solvers.test_process_rust import _toy_dae
+
+        model = _toy_dae("rust")
+        solver = pybamm.IDAKLUSolver(output_variables=["u"])
+        solver.set_up(model, inputs=[{"a": 0.5}])
+        assert model.convert_to_format == "rust"
+
+    def test_rhs_dot_consistent_init_rust_inputs(self):
+        # Regression: _rhs_dot_consistent_initialization must stack inputs for rust,
+        # not hand a dict to the RustEvaluator.
+        from tests.unit.test_solvers.test_process_rust import _toy_dae
+
+        model = _toy_dae("rust")
+        solver = pybamm.IDAKLUSolver()
+        solver.set_up(model, inputs=[{"a": 0.5}])
+        y0 = np.asarray(model.y0_list[0]).ravel()
+        ydot0 = solver._rhs_dot_consistent_initialization(y0, model, 0.0, {"a": 0.5})
+        assert ydot0.shape == y0.shape
+
+    def test_sensitivity_consistent_init_gate_fires_for_rust(self):
+        from tests.unit.test_solvers.test_process_rust import _toy_dae
+
+        model = _toy_dae("rust")
+        model.calculate_sensitivities = ["a"]
+        solver = pybamm.IDAKLUSolver()
+        solver.set_up(model, inputs=[{"a": 0.5}])
+        solver._set_consistent_initialization(model, 0.0, [{"a": 0.5}])
+        # 1 sens param: y0full should be len_rhs_and_alg * 2
+        assert model.y0full[0].shape[0] == model.len_rhs_and_alg * 2
+
+
+class TestIDAKLUNativeObservation:
+    def _solve(self, convert_to_format, calculate_sensitivities=False, t_interp=None):
+        model = pybamm.lithium_ion.SPM()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        if calculate_sensitivities:
+            param.update({"Current function [A]": "[input]"})
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        model.convert_to_format = convert_to_format
+        solver = pybamm.IDAKLUSolver()
+        t_eval = [0, 3600]
+        sol = solver.solve(
+            model,
+            t_eval,
+            t_interp=t_interp,
+            inputs={"Current function [A]": 0.68} if calculate_sensitivities else None,
+            calculate_sensitivities=calculate_sensitivities,
+        )
+        return sol, solver
+
+    def test_offgrid_values_match_casadi(self):
+        # An off-grid t_interp exercises native Hermite against CasADi's
+        # observe_hermite_interp.
+        t_interp = np.linspace(0, 3600, 97)
+        cas, _ = self._solve("casadi", t_interp=t_interp)
+        rust, _ = self._solve("rust", t_interp=t_interp)
+        for name in [
+            "Terminal voltage [V]",
+            "X-averaged negative particle concentration [mol.m-3]",
+        ]:
+            np.testing.assert_allclose(
+                rust[name](t_interp), cas[name](t_interp), rtol=1e-6, atol=1e-6
+            )
+
+    def test_native_processed_variable_matches_casadi_direct(self):
+        # Build a native-backed ProcessedVariable by hand (routing is Task A4)
+        # and assert its native leaves + sensitivities match a CasADi solve.
+        t_interp = np.linspace(0, 3600, 41)
+        cas, _ = self._solve("casadi", calculate_sensitivities=True, t_interp=t_interp)
+        sol, solver = self._solve(
+            "rust", calculate_sensitivities=True, t_interp=t_interp
+        )
+
+        name = "Terminal voltage [V]"
+        vars_pybamm = [m.get_processed_variable_or_event(name) for m in sol.all_models]
+        rust_model = solver._setup["rust_model"]
+        rust_fns = [sol.observation._leaf(name, vp, rust_model) for vp in vars_pybamm]
+        pv = pybamm.process_variable(
+            name,
+            vars_pybamm,
+            NativeObserver(rust_fns, sol.observation),
+            sol,
+            time_integral=None,
+        )
+
+        # raw entries (exercises _observe_raw_native)
+        np.testing.assert_allclose(pv.entries, cas[name].entries, rtol=1e-6, atol=1e-6)
+        # off-grid query (exercises _observe_hermite_native)
+        np.testing.assert_allclose(
+            pv(t_interp), cas[name](t_interp), rtol=1e-6, atol=1e-6
+        )
+        # sensitivities (exercises _initialise_sensitivity_native)
+        np.testing.assert_allclose(
+            pv.sensitivities["Current function [A]"],
+            cas[name].sensitivities["Current function [A]"],
+            rtol=1e-5,
+            atol=1e-6,
+        )
+
+    def test_flip_compiles_no_casadi_observe(self):
+        # An idaklu rust-mode full-state solve observes natively: the
+        # ProcessedVariable is Rust-backed with no CasADi observe function.
+        rust, _ = self._solve("rust")
+        v = rust["Terminal voltage [V]"]
+        _ = v.entries  # force observation
+        assert isinstance(v._observer, NativeObserver)
+        assert not any(isinstance(f, casadi.Function) for f in v._observer.leaves)
+
+    def test_offgrid_values_native_backed(self):
+        # The off-grid parity above only exercises the native path if the observed
+        # ProcessedVariable is Rust-backed with no CasADi funcs.
+        rust, _ = self._solve("rust")
+        for name in [
+            "Terminal voltage [V]",
+            "X-averaged negative particle concentration [mol.m-3]",
+        ]:
+            v = rust[name]
+            _ = v.entries
+            assert isinstance(v._observer, NativeObserver)
+            assert not any(isinstance(f, casadi.Function) for f in v._observer.leaves)
+
+    def test_sensitivities_match_casadi(self):
+        # 0D non-time-integral variable sensitivities via the native chain rule.
+        cas, _ = self._solve("casadi", calculate_sensitivities=True)
+        rust, _ = self._solve("rust", calculate_sensitivities=True)
+        for name in ["Terminal voltage [V]"]:
+            assert isinstance(rust[name]._observer, NativeObserver)
+            np.testing.assert_allclose(
+                rust[name].sensitivities["Current function [A]"],
+                cas[name].sensitivities["Current function [A]"],
+                rtol=1e-5,
+                atol=1e-6,
+            )
+
+    def _solve_output_vars(
+        self, convert_to_format, output_variables, model=None, inputs=None, var_pts=None
+    ):
+        if model is None:
+            model = pybamm.lithium_ion.SPM()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        if inputs is None:
+            inputs = {"Current function [A]": 0.68}
+        param.update({key: "[input]" for key in inputs})
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(
+            geometry, model.default_submesh_types, var_pts or model.default_var_pts
+        )
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        model.convert_to_format = convert_to_format
+        solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+        # The two lowerings take different adaptive steps, so without t_interp each
+        # solution lands on its own grid and callers compare mismatched times.
+        sol = solver.solve(
+            model,
+            [0, 3600],
+            inputs=inputs,
+            calculate_sensitivities=True,
+            t_interp=np.linspace(0, 3600, 100),
+        )
+        return sol, solver
+
+    def test_output_variables_sensitivities_match_casadi(self):
+        # save_outputs_only path: output_variables + calculate_sensitivities
+        # together exercise the native yS projection consumer (B1+B2+B3).
+        ov = ["Terminal voltage [V]"]
+        cas, _ = self._solve_output_vars("casadi", ov)
+        rust, _ = self._solve_output_vars("rust", ov)
+        np.testing.assert_allclose(
+            rust["Terminal voltage [V]"].sensitivities["Current function [A]"],
+            cas["Terminal voltage [V]"].sensitivities["Current function [A]"],
+            rtol=1e-5,
+            atol=1e-6,
+        )
+
+    def test_output_variables_sensitivities_match_casadi_spme(self):
+        # Repeat the single-param output-variable-sensitivity parity check on
+        # a second chemistry, guarding against SPM-only coincidences.
+        ov = ["Terminal voltage [V]"]
+        cas, _ = self._solve_output_vars("casadi", ov, model=pybamm.lithium_ion.SPMe())
+        rust, _ = self._solve_output_vars("rust", ov, model=pybamm.lithium_ion.SPMe())
+        np.testing.assert_allclose(
+            rust["Terminal voltage [V]"].sensitivities["Current function [A]"],
+            cas["Terminal voltage [V]"].sensitivities["Current function [A]"],
+            rtol=1e-5,
+            atol=1e-6,
+        )
+
+    def test_output_variables_sensitivities_match_casadi_dfn(self):
+        # DFN is a much heavier solve, so a coarse mesh and one output variable bound
+        # the cost while still exercising the native yS projection.
+        ov = ["Terminal voltage [V]"]
+        var_pts = {"x_n": 10, "x_s": 10, "x_p": 10, "r_n": 5, "r_p": 5}
+        cas, _ = self._solve_output_vars(
+            "casadi", ov, model=pybamm.lithium_ion.DFN(), var_pts=var_pts
+        )
+        rust, _ = self._solve_output_vars(
+            "rust", ov, model=pybamm.lithium_ion.DFN(), var_pts=var_pts
+        )
+        np.testing.assert_allclose(
+            rust["Terminal voltage [V]"].sensitivities["Current function [A]"],
+            cas["Terminal voltage [V]"].sensitivities["Current function [A]"],
+            rtol=1e-5,
+            atol=1e-6,
+        )
+
+    def test_output_variables_multi_param_sensitivities_match_casadi(self):
+        # The two sensitivity params reach solve() reversed from the sorted order that
+        # sets yS columns, so keying off insertion order would mislabel one.
+        ov = ["Terminal voltage [V]"]
+        inputs = {
+            "Negative electrode active material volume fraction": 0.6,
+            "Current function [A]": 0.68,
+        }
+        cas, _ = self._solve_output_vars("casadi", ov, inputs=inputs)
+        rust, _ = self._solve_output_vars("rust", ov, inputs=inputs)
+        for name in inputs:
+            np.testing.assert_allclose(
+                rust["Terminal voltage [V]"].sensitivities[name],
+                cas["Terminal voltage [V]"].sensitivities[name],
+                rtol=1e-5,
+                atol=1e-6,
+                err_msg=f"sensitivity mismatch for param '{name}'",
+            )
+
+    def test_multi_output_multi_param_sensitivities_match_casadi(self):
+        # Two outputs and two parameters: yS is scattered as (output, param), and
+        # a transposed write agrees on the diagonal, so it needs both to be > 1.
+        ov = ["Terminal voltage [V]", "Discharge capacity [A.h]"]
+        inputs = {
+            "Negative electrode active material volume fraction": 0.6,
+            "Current function [A]": 0.68,
+        }
+        cas, _ = self._solve_output_vars("casadi", ov, inputs=inputs)
+        rust, _ = self._solve_output_vars("rust", ov, inputs=inputs)
+        for var in ov:
+            for name in inputs:
+                np.testing.assert_allclose(
+                    rust[var].sensitivities[name],
+                    cas[var].sensitivities[name],
+                    rtol=1e-5,
+                    atol=1e-6,
+                    err_msg=f"sensitivity mismatch for '{var}', parameter '{name}'",
+                )
+
+    def test_output_variables_time_integral_sensitivities_match_casadi(self):
+        # "Discharge capacity [A.h]" is a plain ODE state under the default
+        # discretisation, so this exercises the sensitivity chain off voltage.
+        ov = ["Discharge capacity [A.h]"]
+        cas, _ = self._solve_output_vars("casadi", ov)
+        rust, _ = self._solve_output_vars("rust", ov)
+        np.testing.assert_allclose(
+            rust["Discharge capacity [A.h]"].sensitivities["Current function [A]"],
+            cas["Discharge capacity [A.h]"].sensitivities["Current function [A]"],
+            rtol=1e-5,
+            atol=1e-6,
+        )
+
+    def test_output_variables_sensitivities_no_casadi_compiled(self):
+        # BaseSolver.set_up skips the computed_var_fcns loop for
+        # convert_to_format="rust", so no CasADi var/sens keys are ever compiled.
+        ov = ["Terminal voltage [V]"]
+        rust, solver = self._solve_output_vars("rust", ov)
+        assert solver.computed_var_fcns == {}
+        assert solver.computed_dvar_dy_fcns == {}
+        assert solver.computed_dvar_dp_fcns == {}
+        assert "var_fcns" not in solver._setup
+        assert "dvar_dy_idaklu_fcns" not in solver._setup
+        assert "dvar_dp_idaklu_fcns" not in solver._setup
+        assert rust.variables_returned is True
+
+    @staticmethod
+    def _discretise_dfn(convert_to_format):
+        model = pybamm.lithium_ion.DFN()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        var_pts = {"x_n": 20, "x_s": 20, "x_p": 20, "r_n": 10, "r_p": 10}
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        model.convert_to_format = convert_to_format
+        return model
+
+    def test_spatial_1d_2d_variables_match_casadi(self):
+        # 1D (x) and 2D (r, x) spatial variables exercise the native
+        # order="F" reshape/segment layout beyond the 0D cases above.
+        t_interp = np.linspace(0, 3600, 51)
+        cas = pybamm.IDAKLUSolver().solve(
+            self._discretise_dfn("casadi"), [0, 3600], t_interp=t_interp
+        )
+        rust = pybamm.IDAKLUSolver().solve(
+            self._discretise_dfn("rust"), [0, 3600], t_interp=t_interp
+        )
+        # off-grid query points strictly inside the solved interval
+        off = t_interp[:-1] + np.diff(t_interp) / 3
+        for name in [
+            "Electrolyte concentration [mol.m-3]",  # 1D in x
+            "Negative particle concentration [mol.m-3]",  # 2D (r, x)
+        ]:
+            assert isinstance(rust[name]._observer, NativeObserver)
+            np.testing.assert_allclose(
+                rust[name](off), cas[name](off), rtol=1e-6, atol=1e-6
+            )
+
+    @staticmethod
+    def _discretise_spm(convert_to_format, as_input=False):
+        model = pybamm.lithium_ion.SPM()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        if as_input:
+            param.update({"Current function [A]": "[input]"})
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        model.convert_to_format = convert_to_format
+        return model
+
+    def test_multi_segment_experiment_matches_casadi(self):
+        # A stepped solve builds all_ys with >1 segment, exercising per-segment
+        # native Hermite routing and flag propagation through Solution.__add__.
+        def stepped(convert_to_format):
+            model = self._discretise_spm(convert_to_format)
+            solver = pybamm.IDAKLUSolver()
+            sol = None
+            for _ in range(2):
+                sol = solver.step(sol, model, dt=1800)
+            return sol
+
+        cas = stepped("casadi")
+        rust = stepped("rust")
+        assert len(rust.all_ys) == 2
+        assert isinstance(rust.observation, NativeInterpolatingObservation)
+        off = np.linspace(0, rust.t[-1], 73)[1:-1] + 5.0
+        off = off[off < rust.t[-1]]
+        for name in ["Terminal voltage [V]"]:
+            assert isinstance(rust[name]._observer, NativeObserver)
+            np.testing.assert_allclose(
+                rust[name](off), cas[name](off), rtol=1e-6, atol=1e-6
+            )
+
+    def test_event_termination_matches_casadi(self):
+        # A voltage-cutoff termination yields a partial final segment; the
+        # native path must still off-grid-interpolate to match CasADi.
+        cas = pybamm.IDAKLUSolver().solve(self._discretise_spm("casadi"), [0, 100000])
+        rust = pybamm.IDAKLUSolver().solve(self._discretise_spm("rust"), [0, 100000])
+        assert rust.termination.startswith("event:")
+        name = "Terminal voltage [V]"
+        assert isinstance(rust[name]._observer, NativeObserver)
+        t_end = min(rust.t[-1], cas.t[-1])
+        off = np.linspace(0, t_end, 40)[1:-1] + 1.0
+        off = off[off < t_end]
+        np.testing.assert_allclose(
+            rust[name](off), cas[name](off), rtol=1e-6, atol=1e-6
+        )
+
+    def test_hermite_off_still_native_no_casadi(self):
+        # hermite_interpolation=False disables yps, but the solve must stay on the
+        # native-backed ProcessedVariable, not diffsol's ProcessedVariableComputed.
+        solver_kwargs = {"options": {"hermite_interpolation": False}}
+        cas = pybamm.IDAKLUSolver(**solver_kwargs).solve(
+            self._discretise_spm("casadi"), [0, 3600]
+        )
+        rust = pybamm.IDAKLUSolver(**solver_kwargs).solve(
+            self._discretise_spm("rust"), [0, 3600]
+        )
+        assert not rust.hermite_interpolation
+        v = rust["Terminal voltage [V]"]
+        assert isinstance(v._observer, NativeObserver)
+        assert not any(isinstance(f, casadi.Function) for f in v._observer.leaves)
+        np.testing.assert_allclose(
+            v.entries, cas["Terminal voltage [V]"].entries, rtol=1e-6, atol=1e-6
+        )
+
+    def test_time_integral_sensitivities_match_casadi(self):
+        # An ExplicitTimeIntegral output variable exercises the native postfix
+        # (_native_postfix_sensitivities) sensitivity path.
+        inputs = {"Current function [A]": 0.68}
+        cas = pybamm.IDAKLUSolver().solve(
+            self._discretise_spm("casadi", as_input=True),
+            [0, 3600],
+            inputs=inputs,
+            calculate_sensitivities=True,
+        )
+        rust = pybamm.IDAKLUSolver().solve(
+            self._discretise_spm("rust", as_input=True),
+            [0, 3600],
+            inputs=inputs,
+            calculate_sensitivities=True,
+        )
+        name = "Discharge capacity [A.h]"
+        assert isinstance(rust[name]._observer, NativeObserver)
+        np.testing.assert_allclose(
+            rust[name].sensitivities["Current function [A]"],
+            cas[name].sensitivities["Current function [A]"],
+            rtol=1e-5,
+            atol=1e-6,
+        )
+
+    def test_output_variables_first_last_state_observe_natively(self):
+        # Outputs-only solves must attach the observation context: their first/last
+        # states carry full state vectors, so summary variables must match exactly.
+        def solve(output_variables):
+            model = self._discretise_spm("rust")
+            solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+            return solver.solve(model, [0, 3600])
+
+        full = solve(None)
+        outputs_only = solve(["Voltage [V]"])
+        assert isinstance(outputs_only.observation, NativeObservation)
+        assert isinstance(outputs_only.last_state.observation, NativeObservation)
+        name = "Total lithium in electrolyte [mol]"
+        np.testing.assert_array_equal(
+            outputs_only.last_state[name].data, full.last_state[name].data
+        )
+
+    def test_output_variables_stay_aligned_across_the_batch_window(self):
+        # 200 points cross the 128-point batched-evaluation window on the rust
+        # FFI; a flush off-by-one would shift every value after the boundary.
+        t_interp = np.linspace(0, 3600, 200)
+        names = [
+            "Voltage [V]",
+            "Negative particle surface concentration [mol.m-3]",
+        ]
+
+        def solve(output_variables):
+            model = self._discretise_spm("rust")
+            solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+            return solver.solve(model, [0, 3600], t_interp=t_interp)
+
+        full = solve(None)
+        outputs_only = solve(names)
+        for name in names:
+            np.testing.assert_allclose(
+                np.asarray(outputs_only[name](t_interp)),
+                np.asarray(full[name](t_interp)),
+                rtol=1e-7,
+                atol=1e-9,
+                err_msg=name,
+            )
+
+    def test_output_variables_genuine_time_integral_matches_casadi(self):
+        # remove_independent_variables_from_rhs=True turns "Discharge capacity [A.h]"
+        # into a genuine ExplicitTimeIntegral, evaluated natively then postfixed.
+        def solve(convert_to_format):
+            model = pybamm.lithium_ion.SPM()
+            geometry = model.default_geometry
+            param = model.default_parameter_values
+            param.update({"Current function [A]": "[input]"})
+            param.process_model(model)
+            param.process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            disc = pybamm.Discretisation(
+                mesh,
+                model.default_spatial_methods,
+                remove_independent_variables_from_rhs=True,
+            )
+            disc.process_model(model)
+            model.convert_to_format = convert_to_format
+            solver = pybamm.IDAKLUSolver(output_variables=["Discharge capacity [A.h]"])
+            return solver.solve(
+                model,
+                [0, 3600],
+                inputs={"Current function [A]": 0.68},
+                calculate_sensitivities=True,
+            )
+
+        cas = solve("casadi")
+        rust = solve("rust")
+        name = "Discharge capacity [A.h]"
+        assert rust[name].data.shape == (1,)
+        np.testing.assert_allclose(
+            rust[name].data, cas[name].data, rtol=1e-6, atol=1e-8
+        )
+        np.testing.assert_allclose(
+            rust[name].sensitivities["Current function [A]"],
+            cas[name].sensitivities["Current function [A]"],
+            rtol=1e-6,
+            atol=1e-8,
+        )
+
+
+class TestIDAKLUSensitivityScales:
+    """IDAS ``pbar``, so a tiny parameter's sensitivity column stays solvable."""
+
+    @staticmethod
+    def _tiny_parameter_model():
+        """``du/dt = -(a / a0) u`` with ``a0 = 1e-14``, so ``du/da ~ 1e14``.
+
+        Analytically ``u = exp(-t)`` at ``a = a0`` and
+        ``du/da = -t exp(-t) / a0``, a column no absolute tolerance can hold at
+        the default ``pbar = 1``.
+        """
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -(a / 1e-14) * u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    def test_scales_are_the_parameter_magnitudes(self):
+        scales = pybamm.solvers.idaklu_solver._sensitivity_scales(
+            {"a": -3.0, "b": 4e-15, "c": 1.0}, ["b", "a"]
+        )
+        np.testing.assert_allclose(scales, [4e-15, 3.0])
+
+    def test_magnitudes_are_handed_over_unclamped(self):
+        # The solver owns the zero/non-finite clamp, so a raw 0.0 reaches it.
+        scales = pybamm.solvers.idaklu_solver._sensitivity_scales(
+            {"a": 0.0, "b": 2.0}, ["a", "b"]
+        )
+        np.testing.assert_allclose(scales, [0.0, 2.0])
+
+    def test_a_zero_parameter_still_solves(self):
+        # IDAS rejects pbar = 0, so the solver has to clamp it to the unit scale.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -u + a}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        sol = solver.solve(
+            model,
+            np.linspace(0, 1, 10),
+            inputs={"a": 0.0},
+            calculate_sensitivities=True,
+        )
+        # du/da = 1 - exp(-t) regardless of a, so the clamp must not skew it.
+        np.testing.assert_allclose(
+            np.asarray(sol["u"].sensitivities["a"]).ravel(),
+            1.0 - np.exp(-sol.t),
+            rtol=1e-5,
+            atol=1e-7,
+        )
+
+    def test_a_vector_parameter_uses_its_largest_magnitude(self):
+        scales = pybamm.solvers.idaklu_solver._sensitivity_scales(
+            {"a": np.array([1e-3, -5e-3, 2e-3])}, ["a"]
+        )
+        np.testing.assert_allclose(scales, [5e-3])
+
+    def test_scales_reach_the_solver_group(self):
+        model = self._tiny_parameter_model()
+        solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
+        solve_kwargs = {"inputs": {"a": 1e-14}, "calculate_sensitivities": True}
+        # Solve once so the second solve reuses this group rather than rebuilding
+        # it, which would discard the spy.
+        solver.solve(model, [0, 1], **solve_kwargs)
+
+        seen = {}
+        original = solver._setup["solver"].solve
+
+        def spy(*args, **kwargs):
+            seen["pbar"] = np.asarray(args[5])
+            return original(*args, **kwargs)
+
+        solver._setup["solver"] = type("Spy", (), {"solve": staticmethod(spy)})()
+        solver.solve(model, [0, 1], **solve_kwargs)
+        np.testing.assert_allclose(seen["pbar"], [[1e-14]])
+
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_a_tight_dfn_diffusivity_sensitivity_solve_converges(
+        self, convert_to_format
+    ):
+        # D_p is 4e-15, so dy/dD_p reaches ~1e14; unscaled in the corrector's
+        # weighted norm that is an IDA_CONV_FAIL.
+        model = pybamm.lithium_ion.DFN()
+        model.convert_to_format = convert_to_format
+        name = "Positive particle diffusivity [m2.s-1]"
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        nominal = float(parameter_values[name])
+        parameter_values[name] = pybamm.InputParameter("D_p")
+        simulation = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8),
+        )
+        sol = simulation.solve(
+            np.linspace(0, 600, 20),
+            inputs={"D_p": nominal},
+            calculate_sensitivities=["D_p"],
+        )
+        gradient = np.asarray(sol["Voltage [V]"].sensitivities["D_p"]).ravel()
+        assert np.all(np.isfinite(gradient))
+        assert np.abs(gradient).max() > 0.0
+
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_tiny_parameter_sensitivity_matches_the_analytic_column(
+        self, convert_to_format
+    ):
+        # Scaling the weights must not disturb the column itself.
+        model = self._tiny_parameter_model()
+        model.convert_to_format = convert_to_format
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        sol = solver.solve(
+            model,
+            np.linspace(0, 3, 20),
+            inputs={"a": 1e-14},
+            calculate_sensitivities=True,
+        )
+        expected = -sol.t * np.exp(-sol.t) / 1e-14
+        np.testing.assert_allclose(
+            np.asarray(sol["u"].sensitivities["a"]).ravel(),
+            expected,
+            rtol=1e-5,
+            atol=1e-5 / 1e-14,
+        )
+
+
+class TestIDAKLUSensitivityScaleOrdering:
+    """One scale per parameter, in the solver's column order rather than the
+    input dict's insertion order. Both orderings have the right length, so a
+    mix-up degrades the weighting silently instead of raising."""
+
+    def test_each_parameter_gets_its_own_magnitude(self):
+        scales = pybamm.solvers.idaklu_solver._sensitivity_scales(
+            {"b": 1e2, "a": 1e-14}, ["a", "b"]
+        )
+        np.testing.assert_allclose(scales, [1e-14, 1e2])
+
+
+class TestIDAKLUModelAtol:
+    """``model.atol`` overrides the solver's own tolerance, per state as well as
+    uniformly. Only IDAKLU reads it."""
+
+    def _two_state_model(self, atol=None):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        w = pybamm.Variable("w")
+        model.rhs = {u: -u, w: -2 * w}
+        model.initial_conditions = {u: 1.0, w: 1.0}
+        model.variables = {"u": u, "w": w}
+        pybamm.Discretisation().process_model(model)
+        if atol is not None:
+            model.atol = atol
+        return model
+
+    def _steps(self, model, atol):
+        solution = pybamm.IDAKLUSolver(rtol=1e-6, atol=atol).solve(
+            model, np.linspace(0, 1, 5)
+        )
+        return solution.solver_statistics.number_of_steps
+
+    def test_a_per_state_model_atol_wins_over_the_solvers(self):
+        tight = self._steps(self._two_state_model(), 1e-12)
+        loose = self._steps(self._two_state_model(), 1e-1)
+        assert self._steps(self._two_state_model(np.full(2, 1e-1)), 1e-12) == loose
+        assert loose < tight
+
+    def test_a_wrong_width_model_atol_is_rejected(self):
+        model = self._two_state_model(np.full(3, 1e-6))
+        with pytest.raises(pybamm.SolverError, match=r"shape \(3,\) but \(2,\)"):
+            self._steps(model, 1e-6)

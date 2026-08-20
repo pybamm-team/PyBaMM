@@ -15,6 +15,8 @@ class TestAsymptoticConvergence:
         # Create models
         leading_order_model = pybamm.lead_acid.LOQS()
         full_model = pybamm.lead_acid.Full()
+        for model in (leading_order_model, full_model):
+            model.convert_to_format = "casadi"
 
         # Same parameters, same geometry
         parameter_values = full_model.default_parameter_values

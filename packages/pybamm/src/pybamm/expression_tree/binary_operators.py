@@ -197,6 +197,41 @@ class BinaryOperator(pybamm.Symbol):
         )
         return self._casadi_evaluate(converted_left, converted_right)
 
+    def _to_rust(self, graph, rust_symbols):
+        left, right = self._children_to_rust(graph, rust_symbols)
+        if isinstance(self, Addition):
+            return graph.add(left, right)
+        elif isinstance(self, Subtraction):
+            return graph.sub(left, right)
+        elif isinstance(self, Multiplication):
+            return graph.mul(left, right)
+        elif isinstance(self, Division):
+            return graph.div(left, right)
+        elif isinstance(self, Power):
+            return graph.pow(left, right)
+        elif isinstance(self, MatrixMultiplication):
+            return graph.matmul(left, right)
+        elif isinstance(self, Inner):
+            return graph.mul(left, right)
+        elif isinstance(self, Minimum):
+            return graph.minimum(left, right)
+        elif isinstance(self, Maximum):
+            return graph.maximum(left, right)
+        elif isinstance(self, Modulo):
+            return graph.modulo(left, right)
+        elif isinstance(self, Hypot):
+            return graph.hypot(left, right)
+        elif isinstance(self, EqualHeaviside):
+            return graph.equal_heaviside(left, right)
+        elif isinstance(self, NotEqualHeaviside):
+            return graph.not_equal_heaviside(left, right)
+        elif isinstance(self, Equality):
+            return graph.equality(left, right)
+        else:
+            raise TypeError(
+                f"Cannot convert binary operator of type '{type(self)}' to Rust"
+            )
+
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(

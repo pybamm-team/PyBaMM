@@ -6,6 +6,10 @@ import sys
 import tempfile
 import time
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
 
 import casadi
 
@@ -38,6 +42,44 @@ _EXTERN_DECL = re.compile(
 _swept_dirs: set[str] = set()
 
 _ALLOWED_COMPILERS = frozenset({"gcc", "clang", "cc", "g++", "clang++"})
+
+
+@dataclass(frozen=True)
+class _AotCompileEvent:
+    """One AOT compilation request and its cache/phase telemetry."""
+
+    function_names: tuple[str, ...]
+    cache_status: str
+    cache_key: str | None
+    codegen_ms: float
+    compiler_ms: float
+    load_ms: float
+    total_ms: float
+    library_path: str | None
+    library_size_bytes: int | None
+    error: str | None = None
+
+
+_CAPTURED_EVENTS: ContextVar[list[_AotCompileEvent] | None] = ContextVar(
+    "pybamm_aot_compile_events", default=None
+)
+
+
+@contextmanager
+def _capture_aot_compile_events() -> Iterator[list[_AotCompileEvent]]:
+    """Capture AOT cache and phase telemetry within the current context."""
+    events: list[_AotCompileEvent] = []
+    token = _CAPTURED_EVENTS.set(events)
+    try:
+        yield events
+    finally:
+        _CAPTURED_EVENTS.reset(token)
+
+
+def _record_compile_event(event: _AotCompileEvent) -> None:
+    events = _CAPTURED_EVENTS.get()
+    if events is not None:
+        events.append(event)
 
 
 def _default_cache_dir() -> str:
@@ -88,12 +130,26 @@ def aot_compile(fn_or_fns, **kwargs):
     """
     is_single = isinstance(fn_or_fns, casadi.Function)
     fns = [fn_or_fns] if is_single else list(fn_or_fns)
+    start = time.perf_counter()
     try:
-        out = _aot_compile(fns, **kwargs)
+        out, event = _aot_compile(fns, **kwargs)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as e:
         names = ", ".join(fn.name() for fn in fns)
         logger.warning(f"Failed to compile [{names}] with error: {e}")
         out = list(fns)
+        event = _AotCompileEvent(
+            function_names=tuple(fn.name() for fn in fns),
+            cache_status="fallback",
+            cache_key=None,
+            codegen_ms=0.0,
+            compiler_ms=0.0,
+            load_ms=0.0,
+            total_ms=(time.perf_counter() - start) * 1000.0,
+            library_path=None,
+            library_size_bytes=None,
+            error=f"{type(e).__name__}: {e}",
+        )
+    _record_compile_event(event)
     return out[0] if is_single else out
 
 
@@ -103,14 +159,25 @@ def _aot_compile(
     cache_dir: str | None = None,
     compiler: str | None = None,
     flags: tuple[str, ...] | None = None,
-) -> list[casadi.Function]:
+) -> tuple[list[casadi.Function], _AotCompileEvent]:
+    start = time.perf_counter()
     # Pass-through Externals; compile the rest together in one TU.
     result: list[casadi.Function] = list(fns)
     indices_to_compile = [
         i for i, fn in enumerate(fns) if fn.class_name() != "External"
     ]
     if not indices_to_compile:
-        return result
+        return result, _AotCompileEvent(
+            function_names=tuple(fn.name() for fn in fns),
+            cache_status="external",
+            cache_key=None,
+            codegen_ms=0.0,
+            compiler_ms=0.0,
+            load_ms=0.0,
+            total_ms=(time.perf_counter() - start) * 1000.0,
+            library_path=None,
+            library_size_bytes=None,
+        )
 
     # Cache key: ordered hash of each fn's name + serialized form.
     hasher = hashlib.sha1(usedforsecurity=False)
@@ -126,7 +193,17 @@ def _aot_compile(
     if cached is not None:
         for idx, ext_fn in zip(indices_to_compile, cached, strict=True):
             result[idx] = ext_fn
-        return result
+        return result, _AotCompileEvent(
+            function_names=tuple(fns[idx].name() for idx in indices_to_compile),
+            cache_status="memory",
+            cache_key=key,
+            codegen_ms=0.0,
+            compiler_ms=0.0,
+            load_ms=0.0,
+            total_ms=(time.perf_counter() - start) * 1000.0,
+            library_path=None,
+            library_size_bytes=None,
+        )
 
     if compiler is None:
         compiler = "gcc"
@@ -148,12 +225,17 @@ def _aot_compile(
     stem = f"{_TMP_FILE_PREFIX}{label}_{key}"
     ext = _shared_ext()
     sofile = os.path.join(cdir, stem + ext)
+    cache_status = "disk" if os.path.exists(sofile) else "miss"
+    codegen_ms = 0.0
+    compiler_ms = 0.0
 
-    if not os.path.exists(sofile):
+    if cache_status == "miss":
+        codegen_start = time.perf_counter()
         gen = casadi.CodeGenerator(stem, {"with_header": False})
         for fn in fns_to_compile:
             gen.add(fn)
         c_source = gen.dump()
+        codegen_ms = (time.perf_counter() - codegen_start) * 1000.0
 
         bundled = {fn.name() for fn in fns_to_compile}
         externs = set(_EXTERN_DECL.findall(c_source)) - bundled
@@ -173,10 +255,12 @@ def _aot_compile(
         try:
             with open(tmp_cfile, "w") as f:
                 f.write(c_source)
+            compiler_start = time.perf_counter()
             subprocess.run(  # nosec B603 B607 - compiler validated against allowlist
                 [compiler, *flags, "-shared", tmp_cfile, "-o", tmp_sofile],
                 check=True,
             )
+            compiler_ms = (time.perf_counter() - compiler_start) * 1000.0
             os.replace(tmp_sofile, sofile)
             if os.environ.get("PYBAMM_CASADI_AOT_KEEP_C"):
                 os.replace(tmp_cfile, os.path.join(cdir, stem + ".c"))
@@ -187,13 +271,29 @@ def _aot_compile(
                 except OSError:
                     pass
 
+    load_start = time.perf_counter()
     ext_fns: list[casadi.Function] = []
     for idx, fn in zip(indices_to_compile, fns_to_compile, strict=True):
         ext_fn = casadi.external(fn.name(), sofile)
         result[idx] = ext_fn
         ext_fns.append(ext_fn)
+    load_ms = (time.perf_counter() - load_start) * 1000.0
     _CACHE[key] = ext_fns
-    return result
+    try:
+        library_size_bytes = os.path.getsize(sofile)
+    except OSError:
+        library_size_bytes = None
+    return result, _AotCompileEvent(
+        function_names=tuple(fn.name() for fn in fns_to_compile),
+        cache_status=cache_status,
+        cache_key=key,
+        codegen_ms=codegen_ms,
+        compiler_ms=compiler_ms,
+        load_ms=load_ms,
+        total_ms=(time.perf_counter() - start) * 1000.0,
+        library_path=sofile,
+        library_size_bytes=library_size_bytes,
+    )
 
 
 def _maybe_sweep_stale(cdir: str) -> None:

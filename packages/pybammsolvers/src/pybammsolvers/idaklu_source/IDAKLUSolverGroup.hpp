@@ -13,11 +13,20 @@ public:
 
   /**
    * @brief Default constructor
+   *
+   * `rust_owner` keeps whatever Python object owns the memory the solvers'
+   * expression sets point at (the Rust evaluator pool) alive for at least as
+   * long as the group, instead of relying on the caller to outlive us.
+   * pybind11 destroys the group with the GIL held, so its destructor is safe.
+   * It is required rather than defaulted, so a new construction site has to say
+   * what owns its memory; CasADi's expression sets own theirs and pass none.
    */
-  IDAKLUSolverGroup(std::vector<std::unique_ptr<IDAKLUSolver>> solvers, int number_of_states, int number_of_parameters):
+  IDAKLUSolverGroup(std::vector<std::unique_ptr<IDAKLUSolver>> solvers, int number_of_states, int number_of_parameters,
+                    py::object rust_owner):
     m_solvers(std::move(solvers)),
     number_of_states(number_of_states),
-    number_of_parameters(number_of_parameters)
+    number_of_parameters(number_of_parameters),
+    m_rust_owner(std::move(rust_owner))
     {}
 
   // no copy constructor (unique_ptr cannot be copied)
@@ -37,6 +46,7 @@ public:
     np_array y0_np,
     np_array yp0_np,
     np_array inputs,
+    np_array pbar = np_array(),
     py::object logger = py::none());
 
 
@@ -56,6 +66,7 @@ public:
     std::vector<std::unique_ptr<IDAKLUSolver>> m_solvers;
     int number_of_states;
     int number_of_parameters;
+    py::object m_rust_owner;
 };
 
 #endif // PYBAMM_IDAKLU_SOLVER_GROUP_HPP

@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc aea3e5527a53cec73352753f48e8ea76ef8b6510288d81ec896eb05dd7afe112 # shrinks to case = DagCase { arena: Arena { nodes: [Scalar(-1.0), Scalar(-1.0), EqualHeaviside(NodeId(0), NodeId(1)), Scalar(-1.0), Scalar(-1.0), EqualHeaviside(NodeId(3), NodeId(4)), StateVector { start: 0, end: 2 }, StateVector { start: 0, end: 2 }, Add(NodeId(6), NodeId(7)), Concat([NodeId(5), NodeId(8)]), Sin(NodeId(9)), Scalar(-1.0), Erf(NodeId(11)), StateVector { start: 0, end: 2 }, Concat([NodeId(2), NodeId(10), NodeId(12), NodeId(13)])] }, root: NodeId(14), y: [0.1, 0.1], n_states: 2 }
+cc af2d7a51de00f8639b4effade1b9009ad171c91a3fce13a8498948f7bd0bc242 # shrinks to case = DagCase { arena: Arena { nodes: [StateVector { start: 0, end: 3 }, Abs(NodeId(0)), Arcsinh(NodeId(1)), Sinh(NodeId(2)), StateVector { start: 0, end: 1 }, EqualHeaviside(NodeId(3), NodeId(4))] }, root: NodeId(5), y: [5.071448568001731, 0.1, 0.1], n_states: 3 }
+cc 8ccf7eb764a00b6573137a1b029b7941d6f4979a36222872a7cf7f9d547618b1 # shrinks to case = DagCase { arena: Arena { nodes: [StateVector { start: 0, end: 6 }, StateVector { start: 0, end: 6 }, Add(NodeId(0), NodeId(1)), Sinh(NodeId(2)), Sin(NodeId(3))] }, root: NodeId(4), y: [0.1, 0.1, 0.1, 0.1, 0.1, 8.629260979374383], n_states: 6 }

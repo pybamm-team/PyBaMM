@@ -6,6 +6,8 @@ from pybammsolvers import idaklu
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import flatten_inputs
+from pybamm.solvers.rust_lowering import RustModelLowering
 
 _DEFAULT_OPTIONS = {
     "compile": False,
@@ -15,19 +17,23 @@ _DEFAULT_OPTIONS = {
 class _NonlinearSolverSetup:
     """Pickle-safe wrapper around StandaloneNewtonSolver"""
 
-    __slots__ = ["_setup"]
+    __slots__ = ["_keepalive", "_setup"]
 
-    def __init__(self, setup: idaklu.StandaloneNewtonSolver):
+    def __init__(self, setup: idaklu.StandaloneNewtonSolver, keepalive=None):
         self._setup = setup
+        self._keepalive = keepalive  # EvaluatorPool backing the C++ raw ptr
 
     def __bool__(self):
+        # falsy once the handle is gone -> caller rebuilds, never reuses a
+        # dangling pointer (e.g. after a pickle round-trip)
         return self._setup is not None
 
     def __getstate__(self):
-        return {"_setup": None}
+        return {"_setup": None, "_keepalive": None}
 
     def __setstate__(self, state):
         self._setup = None
+        self._keepalive = None
 
     def solve_batch(self, *args, **kwargs):
         return self._setup.solve_batch(*args, **kwargs)
@@ -91,6 +97,17 @@ class NonlinearSolver(pybamm.BaseSolver):
         self._user_options = options or {}
         self._options = _DEFAULT_OPTIONS | self._user_options
 
+    def __getstate__(self):
+        # _model_set_up holds unpicklable rust artifacts, so clear it: the solver
+        # stays picklable and the next solve() rebuilds from the model.
+        state = self.__dict__.copy()
+        state["_model_set_up"] = {}
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._model_set_up = {}
+
     @staticmethod
     def _check_tolerance(value):
         if value < 0:
@@ -132,6 +149,9 @@ class NonlinearSolver(pybamm.BaseSolver):
         experiment (e.g. each unique step model) get independently sized
         Newton solvers without one stomping on another's cache.
         """
+        if model.convert_to_format == "rust":
+            return self._set_up_root_solver_rust(model, inputs_dict)
+
         pybamm.logger.info(f"Start building {self.name}")
 
         y0 = model.y0_list[0]
@@ -175,6 +195,65 @@ class NonlinearSolver(pybamm.BaseSolver):
 
         return self._build_newton_solver(res_fn, jac_fn, len_alg)
 
+    def _set_up_root_solver_rust(self, model, inputs_dict):
+        """Build the Rust-backed standalone Newton solver.
+
+        Lowers rhs+algebraic into one CompiledModel (same layout as the
+        IDAKLU rust set-up) and hands its algebraic sub-block to the C++
+        Newton driver via the dlsym FFI.
+        """
+        pybamm.logger.info(f"Start building {self.name} (rust)")
+        if self._options["compile"]:
+            raise pybamm.SolverError(
+                "options['compile'] is CasADi-only; not supported with "
+                "convert_to_format='rust'"
+            )
+        len_rhs = 0 if model.rhs == {} else model.len_rhs
+        # An oversized consistent y0 means the rhs/alg block was extended with
+        # sensitivities, which the Rust Newton driver does not support.
+        y0_list = getattr(model, "y0_list", None)
+        if y0_list and model.len_rhs_and_alg != np.asarray(y0_list[0]).shape[0]:
+            raise pybamm.SolverError(
+                "The Rust Newton root solver does not support "
+                "sensitivity-extended states; use convert_to_format='casadi' "
+                "for this configuration"
+            )
+
+        lowering = RustModelLowering(model, inputs_dict)
+        lowering.state_residual(algebraic_only=len_rhs == 0)
+        lowering.algebraic_block(first_algebraic_index=len_rhs)
+        rust_model = lowering.compile()
+        jac_rows, jac_cols = rust_model.algebraic_jacobian_sparsity_pattern()
+        len_alg = model.len_rhs_and_alg - len_rhs
+        # algebraic_jacobian_sparsity_pattern returns global state columns, but the C++ Newton
+        # builds an n_alg x n_alg system, so localise to the algebraic block.
+        jac_cols = [int(c) - len_rhs for c in np.asarray(jac_cols)]
+        jac_rows = np.asarray(jac_rows).tolist()
+        if any(c < 0 or c >= len_alg for c in jac_cols):
+            raise pybamm.SolverError(
+                "Rust algebraic jacobian has columns outside the algebraic "
+                f"block [0, {len_alg}); cannot localise for the Newton solver"
+            )
+
+        # The C++ Newton driver mutates the evaluator it drives, so its address
+        # must come from the pool's exclusive handout, not a rust_model borrow.
+        pool = rust_model.evaluator_pool(1)
+        _setup = idaklu.StandaloneNewtonSolver(
+            rust_model=pool.as_ptr(0),
+            n_rhs=len_rhs,
+            n_alg=len_alg,
+            jac_rows=jac_rows,
+            jac_cols=jac_cols,
+            atol=np.full(len_alg, float(self.atol)).tolist(),
+            rtol=float(self.rtol),
+            step_tol=float(self.step_tol),
+            max_iter=int(self.max_iter),
+            max_backtracks=int(self.max_backtracks),
+            eps_newt=float(self.eps_newt),
+            use_sparse=bool(self.use_sparse),
+        )
+        return _NonlinearSolverSetup(_setup, keepalive=pool)
+
     def _build_newton_solver(self, res_fn, jac_fn, len_alg):
         _setup = idaklu.StandaloneNewtonSolver(
             residual=idaklu.generate_function(res_fn.serialize()),
@@ -195,11 +274,7 @@ class NonlinearSolver(pybamm.BaseSolver):
         root_solver = self.get_root_solver(model, inputs_dict, t_eval)
         len_rhs = model.len_rhs
 
-        inputs_flat = (
-            np.concatenate([np.atleast_1d(v).ravel() for v in inputs_dict.values()])
-            if inputs_dict
-            else np.empty(0)
-        )
+        inputs_flat = flatten_inputs(inputs_dict)
 
         y0_np = np.asarray(y0).ravel()
         y0_diff = y0_np[:len_rhs]

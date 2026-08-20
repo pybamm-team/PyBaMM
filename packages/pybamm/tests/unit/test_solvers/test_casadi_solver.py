@@ -7,6 +7,12 @@ import pybamm
 from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
+@pytest.fixture(autouse=True)
+def _casadi_default(monkeypatch):
+    # This file tests the CasADi solvers; pin the model default they require.
+    monkeypatch.setattr(pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", "casadi")
+
+
 class TestCasadiSolver:
     def test_no_sensitivities_error(self):
         model = pybamm.lithium_ion.SPM()

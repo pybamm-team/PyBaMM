@@ -903,6 +903,7 @@ class TestSimulation:
         param["Current function [A]"] = pybamm.Interpolant(
             drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
         )
+        model.convert_to_format = "casadi"
         sim = pybamm.Simulation(
             model, parameter_values=param, solver=pybamm.CasadiSolver()
         )

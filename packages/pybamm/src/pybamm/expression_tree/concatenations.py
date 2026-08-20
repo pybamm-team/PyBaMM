@@ -246,6 +246,10 @@ class NumpyConcatenation(Concatenation):
         )
         return casadi.vertcat(*converted_children)
 
+    def _to_rust(self, graph, rust_symbols):
+        converted_children = self._children_to_rust(graph, rust_symbols)
+        return graph.concat(converted_children)
+
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
         children = self.children
@@ -428,6 +432,27 @@ class DomainConcatenation(Concatenation):
             )
         return casadi.vertcat(*all_child_vectors)
 
+    def _to_rust(self, graph, rust_symbols):
+        converted_children = self._children_to_rust(graph, rust_symbols)
+        slice_starts = []
+        all_child_exprs = []
+        for i in range(self.secondary_dimensions_npts):
+            child_exprs = []
+            for child_var, slices in zip(
+                converted_children, self._children_slices, strict=True
+            ):
+                for child_dom, child_slice in slices.items():
+                    slice_starts.append(self._slices[child_dom][i].start)
+                    child_exprs.append(
+                        graph.index(
+                            child_var, child_slice[i].start, child_slice[i].stop
+                        )
+                    )
+            all_child_exprs.extend(
+                [v for _, v in sorted(zip(slice_starts, child_exprs, strict=False))]
+            )
+        return graph.concat(all_child_exprs)
+
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
         # note that this assumes that the children are in the right order and only have
@@ -522,6 +547,10 @@ class SparseStack(Concatenation):
             t, y, y_dot, inputs, casadi_symbols
         )
         return casadi.vertcat(*converted_children)
+
+    def _to_rust(self, graph, rust_symbols):
+        converted_children = self._children_to_rust(graph, rust_symbols)
+        return graph.concat(converted_children)
 
     def _concatenation_new_copy(self, children, perform_simplifications=True):
         """See :meth:`pybamm.Concatenation._concatenation_new_copy()`."""

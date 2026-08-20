@@ -1,0 +1,58 @@
+[package]
+name = "pybamm-core"
+version = "0.1.0"
+edition = "2024"
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rustc-hash = "2"
+thiserror = "2"
+serde = { version = "1", features = ["derive"], optional = true }
+bincode = { version = "1", optional = true }
+diffsol = { version = "0.16.2", optional = true, default-features = false, features = ["faer", "nalgebra"] }
+diffsol-la = { version = "0.1.1", optional = true }
+faer = { version = "0.24", optional = true }
+# MemStack scratch API for ReusedFaerLu; must unify with faer's own dyn-stack.
+dyn-stack = { version = "0.13", optional = true }
+# Schedules the batch solve layer; only the `solver` module uses it.
+rayon = { version = "1", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1"
+rand = "0.9"
+
+[features]
+default = ["diffsol"]
+profile = []
+serialize = ["serde", "bincode"]
+diffsol = ["dep:diffsol", "dep:diffsol-la", "dep:faer", "dep:dyn-stack", "dep:rayon"]
+
+[[bench]]
+name = "compile"
+harness = false
+
+[[bench]]
+name = "eval"
+harness = false
+
+[[bench]]
+name = "sparsity"
+harness = false
+required-features = ["serialize"]
+
+[[bench]]
+name = "solver_setup"
+harness = false
+required-features = ["serialize", "diffsol"]
+
+[[bench]]
+name = "sens_params"
+harness = false
+required-features = ["diffsol"]
+
+[lints]
+workspace = true

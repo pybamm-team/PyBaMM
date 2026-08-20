@@ -85,6 +85,10 @@ class ProcessedVariableComputed(BaseProcessedVariable):
 
         # initialise_* runs lazily on first read of `entries` / `_xr_data_array`.
         self._initialised = False
+        # Building the xr.DataArray costs more than evaluating a small
+        # variable, so `.data` reads must not pay for it.
+        self._xr_interp_args = None
+        self._xr_data_array_cache = None
         self._initialise_method, self.dimensions = self._resolve_initialise_method()
 
     def _resolve_initialise_method(self):
@@ -149,6 +153,10 @@ class ProcessedVariableComputed(BaseProcessedVariable):
     @property
     def _xr_data_array(self):
         self._materialise()
+        if self._xr_data_array_cache is None and self._xr_interp_args is not None:
+            data, coords = self._xr_interp_args
+            self._xr_data_array_cache = xr.DataArray(data, coords=coords)
+            self._xr_interp_args = None
         return self._xr_data_array_cache
 
     def as_computed(self) -> ProcessedVariableComputed:
@@ -164,11 +172,13 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         # unroll in nnz != numel, otherwise copy
         if realdata is None:
             realdata = self.base_variables_data
-        if isinstance(self.base_variables_casadi[0], casadi.Function):  # casadi fcn
-            sp = self.base_variables_casadi[0](0, 0, 0).sparsity()
-            nnz = sp.nnz()
-            numel = sp.numel()
-            row = sp.row()
+        # Native observation carries no CasADi function: data is already dense.
+        if not isinstance(self.base_variables_casadi[0], casadi.Function):
+            return realdata
+        sp = self.base_variables_casadi[0](0, 0, 0).sparsity()
+        nnz = sp.nnz()
+        numel = sp.numel()
+        row = sp.row()
         if nnz != numel:
             data = [None] * len(realdata)
             for datak in range(len(realdata)):
@@ -232,12 +242,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             n_dim2 = self.unroll_params["n_dim2"]
             n_dim3 = self.unroll_params["n_dim3"]
             axis_swaps = self.unroll_params["axis_swaps"]
-        entries = (
-            np.concatenate(self._unroll_nnz(realdata), axis=0)
-            .transpose()
-            .reshape(
-                (len(self.t_pts), n_dim1, n_dim2, n_dim3),
-            )
+        # time-major (n_t, output), like unroll_1D/2D
+        entries = np.concatenate(self._unroll_nnz(realdata), axis=0).reshape(
+            (len(self.t_pts), n_dim1, n_dim2, n_dim3)
         )
         for a, b in axis_swaps:
             entries = np.moveaxis(entries, a, b)
@@ -257,7 +264,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
 
     def initialise_time_independent(self):
         self._entries = self.unroll_0D()
-        self._xr_data_array_cache = None
+        self._xr_interp_args = None
 
     def initialise_0D(self):
         entries = self.unroll_0D()
@@ -268,7 +275,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             )
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(entries, coords=[("t", self.t_pts)])
+        self._xr_interp_args = (entries, [("t", self.t_pts)])
 
         self._entries = entries
 
@@ -323,9 +330,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.first_dim_pts = edges
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(
+        self._xr_interp_args = (
             entries_for_interp,
-            coords=[(self.first_dimension, pts_for_interp), ("t", self.t_pts)],
+            [(self.first_dimension, pts_for_interp), ("t", self.t_pts)],
         )
 
     def initialise_2D(self):
@@ -452,9 +459,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.second_dim_pts = second_dim_edges
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(
+        self._xr_interp_args = (
             entries_for_interp,
-            coords={
+            {
                 self.first_dimension: first_dim_pts_for_interp,
                 self.second_dimension: second_dim_pts_for_interp,
                 "t": self.t_pts,
@@ -483,9 +490,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.second_dim_pts = z_sol
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(
+        self._xr_interp_args = (
             entries,
-            coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
+            {"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
 
     def initialise_3D(self):
@@ -628,9 +635,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.third_dim_pts = third_dim_edges
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(
+        self._xr_interp_args = (
             entries_for_interp,
-            coords={
+            {
                 self.first_dimension: first_dim_pts_for_interp,
                 self.second_dimension: second_dim_pts_for_interp,
                 self.third_dimension: third_dim_pts_for_interp,
@@ -672,9 +679,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.third_dim_pts = z_sol
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(
+        self._xr_interp_args = (
             entries,
-            coords={"x": x_sol, "y": y_sol, "z": z_sol, "t": self.t_pts},
+            {"x": x_sol, "y": y_sol, "z": z_sol, "t": self.t_pts},
         )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None):
@@ -684,6 +691,14 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         """
         if self.time_indep:
             return self.entries
+        if (
+            t is not None
+            and self.dimensions == 0
+            and all(arg is None for arg in (x, r, y, z, R))
+        ):
+            # np.interp is far cheaper than xr.interp for time-only reads;
+            # NaN outside the range matches xarray's fill behaviour.
+            return np.interp(t, self.t_pts, self.entries, left=np.nan, right=np.nan)
         kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
         # Remove any None arguments
         kwargs = {key: value for key, value in kwargs.items() if value is not None}

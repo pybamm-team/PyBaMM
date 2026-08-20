@@ -118,6 +118,13 @@ For an introduction to virtual environments, see
 Install PyBaMM
 --------------
 
+PyBaMM publishes platform-specific wheels for macOS (arm64, x86_64), Linux
+(``manylinux`` x86_64 and aarch64), and Windows (AMD64). One wheel per platform
+covers Python 3.10 to 3.14, because the bundled Rust compute core is built
+against CPython's stable ABI. On any other platform ``pip`` falls back to the
+source distribution, which compiles that core and therefore needs a Rust
+toolchain — see :doc:`install-from-source`.
+
 .. tab:: uv
 
    PyBaMM can be installed via `uv <https://docs.astral.sh/uv/>`__ from `PyPI <https://pypi.org/project/pybamm>`__.

@@ -23,6 +23,7 @@ maxdepth: 2
 fundamentals/index
 fundamentals/battery_models
 fundamentals/public_api
+rust_backend
 ```
 
 ```{toctree}
@@ -31,6 +32,7 @@ caption: Contributing guide
 maxdepth: 1
 ---
 contributing
+../developer/rust_idaklu_build
 release
 ```
 

@@ -1,0 +1,131 @@
+[workspace]
+resolver = "3"
+members = [
+    "pybamm-core",
+    "pybamm-python",
+]
+
+# Floor set by the dep graph (nalgebra 0.35 needs 1.89), not by edition 2024.
+# Resolver 3 is Rust-version-aware and keeps deps at or below this floor.
+[workspace.package]
+rust-version = "1.89"
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+missing_debug_implementations = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unused_lifetimes = "warn"
+unused_qualifications = "warn"
+
+[workspace.lints.clippy]
+# Correctness - these catch real bugs
+correctness = { level = "deny", priority = -1 }
+
+# Pedantic - stricter but valuable
+pedantic = { level = "warn", priority = -1 }
+
+# Nursery - experimental but useful
+nursery = { level = "warn", priority = -1 }
+
+# Perf - catch performance lints
+perf = { level = "warn", priority = -1 }
+
+# Complexity - express complex code in a simple form
+complexity = { level = "warn", priority = -1 }
+
+# Style - Idiomatic rust code
+style = { level = "warn", priority = -1 }
+
+# Specific high-value lints
+cast_possible_truncation = "warn"
+cast_possible_wrap = "warn"
+cast_sign_loss = "warn"
+checked_conversions = "warn"
+clone_on_ref_ptr = "warn"
+debug_assert_with_mut_call = "warn"
+empty_enums = "warn"
+enum_glob_use = "warn"
+expl_impl_clone_on_copy = "warn"
+explicit_deref_methods = "warn"
+explicit_into_iter_loop = "warn"
+explicit_iter_loop = "warn"
+filter_map_next = "warn"
+flat_map_option = "warn"
+float_cmp = "warn"
+fn_params_excessive_bools = "warn"
+implicit_clone = "warn"
+inefficient_to_string = "warn"
+invalid_upcast_comparisons = "warn"
+large_digit_groups = "warn"
+large_stack_arrays = "warn"
+large_types_passed_by_value = "warn"
+manual_ok_or = "warn"
+map_flatten = "warn"
+map_unwrap_or = "warn"
+match_bool = "warn"
+match_same_arms = "warn"
+match_wild_err_arm = "warn"
+match_wildcard_for_single_variants = "warn"
+mut_mut = "warn"
+needless_borrow = "warn"
+needless_continue = "warn"
+needless_for_each = "warn"
+needless_pass_by_value = "warn"
+option_option = "warn"
+pub_underscore_fields = "warn"
+range_minus_one = "warn"
+range_plus_one = "warn"
+redundant_closure_for_method_calls = "warn"
+redundant_else = "warn"
+ref_option_ref = "warn"
+same_functions_in_if_condition = "warn"
+semicolon_if_nothing_returned = "warn"
+string_add_assign = "warn"
+struct_excessive_bools = "warn"
+trait_duplication_in_bounds = "warn"
+trivially_copy_pass_by_ref = "warn"
+uninlined_format_args = "warn"
+unnested_or_patterns = "warn"
+unreadable_literal = "warn"
+unused_self = "warn"
+used_underscore_binding = "warn"
+zero_sized_map_values = "warn"
+
+# Allow some pedantic lints that are too noisy
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+too_many_lines = "allow"
+similar_names = "allow"
+# Numeric code uses indices with bounds guaranteed by construction
+indexing_slicing = "allow"
+# Benchmark/test data generation
+cast_precision_loss = "allow"
+# Mathematical notation (x, y, t, a, b)
+many_single_char_names = "allow"
+# PyO3 convention for uniform error handling
+unnecessary_wraps = "allow"
+# We ship baseline x86-64 wheels, where mul_add lowers to a libm call rather
+# than an FMA instruction, and its single rounding breaks CasADi parity.
+suboptimal_flops = "allow"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+[profile.bench]
+lto = "thin"
+codegen-units = 1
+
+[profile.release-baseline]
+inherits = "release"
+lto = false
+codegen-units = 16
+
+[profile.bench-baseline]
+inherits = "bench"
+lto = false
+codegen-units = 16

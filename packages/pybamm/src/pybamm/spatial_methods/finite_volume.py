@@ -63,9 +63,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         if symbol.evaluates_on_edges("primary"):
             if hasattr(symbol_mesh, "length"):
                 edges = self._get_edges_symbolic_mesh(symbol.domains["primary"])
-                entries = pybamm.kronecker_product(
-                    pybamm.Matrix(np.ones(repeats)), edges
-                )
+                entries = self._repeat_vector(edges, repeats)
                 entries.domains = symbol.domains
             else:
                 entries = pybamm.Vector(
@@ -74,9 +72,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             if hasattr(symbol_mesh, "length"):
                 nodes = self._get_nodes_symbolic_mesh(symbol.domains["primary"])
-                entries = pybamm.kronecker_product(
-                    pybamm.Matrix(np.ones(repeats)), nodes
-                )
+                entries = self._repeat_vector(nodes, repeats)
                 entries.domains = symbol.domains
             else:
                 entries = pybamm.Vector(
@@ -84,6 +80,29 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
         return entries
+
+    def _repeat_vector(self, vector, repeats):
+        """Stack ``repeats`` copies of ``vector``, as ``np.tile`` does for a fixed mesh.
+
+        Parameters
+        ----------
+        vector : :class:`pybamm.Symbol`
+            The column vector to repeat.
+        repeats : int
+            Number of copies to stack.
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            The stacked vector.
+        """
+        # A Kronecker product against a ones-column says the same thing, but stays
+        # symbolic here and no evaluator backend can lower that.
+        if not isinstance(vector, pybamm.Symbol):
+            return pybamm.Vector(np.tile(vector, repeats))
+        if repeats == 1:
+            return vector
+        return pybamm.numpy_concatenation(*([vector] * repeats))
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -102,10 +121,12 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
         # note in 1D cartesian, cylindrical and spherical grad are the same
-        gradient_matrix = self.gradient_matrix(domain, symbol.domains)
+        gradient_matrix, row_scale = self._gradient_parts(domain, symbol.domains)
 
         # Multiply by gradient matrix
         out = gradient_matrix @ discretised_symbol
+        if row_scale is not None:
+            out = row_scale * out
 
         # Add Neumann boundary conditions, if defined
         if symbol in boundary_conditions:
@@ -212,11 +233,30 @@ class FiniteVolume(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The (sparse) finite volume gradient matrix for the domain
         """
+        matrix, row_scale = self._gradient_parts(domain, domains)
+        return matrix if row_scale is None else matrix * row_scale
+
+    def _gradient_parts(self, domain, domains):
+        """The gradient matrix, split into a constant stencil and any row scaling.
+
+        Parameters
+        ----------
+        domain : str
+            The domain in which to compute the gradient matrix.
+        domains : dict
+            The domain and auxiliary domains of the symbol being differentiated.
+
+        Returns
+        -------
+        tuple[:class:`pybamm.Matrix`, :class:`pybamm.Symbol` or None]
+            The stencil, and the row scaling to apply after it or ``None`` when it
+            already folds into the stencil.
+        """
         # Create appropriate submesh by combining submeshes in primary domain
         submesh = self.mesh[domain]
-        if hasattr(submesh, "length"):
-            d_nodes = self._get_d_nodes_symbolic_mesh(domain)
-            e = 1 / d_nodes
+        symbolic = hasattr(submesh, "length")
+        if symbolic:
+            e = 1 / self._get_d_nodes_symbolic_mesh(domain)
         else:
             e = 1 / submesh.d_nodes
 
@@ -226,7 +266,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             diags([-1.0], [0], shape=(n - 1, n), dtype=None)
         )
         sub_matrix_plus = pybamm.Matrix(diags([1.0], [1], shape=(n - 1, n), dtype=None))
-        sub_matrix = (sub_matrix_minus + sub_matrix_plus) * e
+        sub_matrix = sub_matrix_minus + sub_matrix_plus
+        # On a symbolic mesh the scaling is left for the caller to apply to the
+        # result: folded in here it would make the Kronecker product symbolic.
+        if not symbolic:
+            sub_matrix = sub_matrix * e
 
         # number of repeats
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
@@ -239,7 +283,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64)), sub_matrix
         )
-        return matrix
+        row_scale = self._repeat_vector(e, second_dim_repeats) if symbolic else None
+        return matrix, row_scale
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
@@ -247,7 +292,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         submesh = self.mesh[symbol.domain]
 
-        divergence_matrix = self.divergence_matrix(symbol.domains)
+        divergence_matrix, row_scale = self._divergence_parts(symbol.domains)
 
         # check coordinate system
         if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
@@ -258,15 +303,16 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 edges = submesh.edges
 
-            r_edges = pybamm.kronecker_product(
-                pybamm.Matrix(np.ones(second_dim_repeats)), edges
-            )
+            r_edges = self._repeat_vector(edges, second_dim_repeats)
             if submesh.coord_sys == "spherical polar":
                 out = divergence_matrix @ ((r_edges**2) * discretised_symbol)
             elif submesh.coord_sys == "cylindrical polar":
                 out = divergence_matrix @ (r_edges * discretised_symbol)
         else:
             out = divergence_matrix @ discretised_symbol
+
+        if row_scale is not None:
+            out = row_scale * out
 
         return out
 
@@ -285,8 +331,26 @@ class FiniteVolume(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The (sparse) finite volume divergence matrix for the domain
         """
+        matrix, row_scale = self._divergence_parts(domains)
+        return matrix if row_scale is None else matrix * row_scale
+
+    def _divergence_parts(self, domains):
+        """The divergence matrix, split into a constant stencil and any row scaling.
+
+        Parameters
+        ----------
+        domains : dict
+            The domain and auxiliary domain in which to compute the matrix.
+
+        Returns
+        -------
+        tuple[:class:`pybamm.Matrix`, :class:`pybamm.Symbol` or None]
+            The stencil, and the row scaling to apply after it or ``None`` when it
+            already folds into the stencil.
+        """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh[domains["primary"]]
+        symbolic = hasattr(submesh, "length")
         if hasattr(submesh, "length"):
             d_edges = self._get_d_edges_symbolic_mesh(domains["primary"])
         else:
@@ -313,7 +377,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             diags([-1.0], [0], shape=(n - 1, n), dtype=None)
         )
         sub_matrix_plus = pybamm.Matrix(diags([1.0], [1], shape=(n - 1, n), dtype=None))
-        sub_matrix = (sub_matrix_minus + sub_matrix_plus) * e
+        sub_matrix = sub_matrix_minus + sub_matrix_plus
+        # On a symbolic mesh the scaling is left for the caller to apply to the
+        # result: folded in here it would make the Kronecker product symbolic.
+        if not symbolic:
+            sub_matrix = sub_matrix * e
 
         # repeat matrix for each node in secondary dimensions
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
@@ -321,7 +389,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = pybamm.kronecker_product(
             pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64)), sub_matrix
         )
-        return matrix
+        row_scale = self._repeat_vector(e, second_dim_repeats) if symbolic else None
+        return matrix, row_scale
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
         """
@@ -1347,9 +1416,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         # issue
         matrix = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
 
-        # Return boundary value with domain given by symbol
-        matrix = pybamm.Matrix(matrix) * multiplicative
-        boundary_value = matrix @ discretised_child
+        # Return boundary value with domain given by symbol. The scalar scaling
+        # goes on the result: in the matrix it would make it symbolic on a symbolic mesh.
+        boundary_value = multiplicative * (pybamm.Matrix(matrix) @ discretised_child)
         boundary_value.copy_domains(symbol)
 
         additive.copy_domains(symbol)
