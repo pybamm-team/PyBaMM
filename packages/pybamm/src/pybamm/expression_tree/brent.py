@@ -103,6 +103,10 @@ class Brent(pybamm.Symbol):
     plugin registered by ``pybammsolvers``, so the whole solve runs inside the CasADi
     graph.
 
+    Not available on Windows: the CasADi wheel there is built with MinGW and
+    ``pybammsolvers`` with MSVC, so the two hold separate copies of CasADi and the
+    plugin never reaches the one Python calls. ``evaluate()`` still works, via SciPy.
+
     Brent needs only a sign change over the bounds, so it converges where a Newton
     iteration stalls, and the answer cannot leave them. Derivatives come from CasADi's
     implicit function theorem, exactly.
@@ -217,6 +221,14 @@ class Brent(pybamm.Symbol):
         )
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
+        if not casadi.has_rootfinder("brent"):
+            raise NotImplementedError(
+                "the 'brent' rootfinder plugin is not registered with the CasADi that "
+                "Python is using, so this node cannot be converted to CasADi. On "
+                "Windows the casadi wheel is built with MinGW and pybammsolvers with "
+                "MSVC, which leaves the two with separate copies of CasADi. Call "
+                "evaluate() instead, which solves with SciPy."
+            )
         unknown = casadi.MX.sym(f"brent_unknown_{abs(self.id)}")
         cache = _OracleCache(
             casadi_symbols, _nodes_reading(self.residual, self.unknown)

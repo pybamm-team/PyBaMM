@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+import sys
+
 import casadi
 import numpy as np
 import pytest
 
 import pybammsolvers.idaklu  # noqa: F401  registers the plugin on import
+
+# On Windows this wheel is MSVC-built and the casadi wheel MinGW-built, so the two hold
+# separate copies of CasADi and the plugin registered here never reaches Python's.
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the brent plugin cannot reach the casadi wheel's CasADi on Windows",
+)
 
 LO, HI = 1e-9, 1 - 1e-9
 

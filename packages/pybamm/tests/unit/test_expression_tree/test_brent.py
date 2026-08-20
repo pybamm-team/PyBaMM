@@ -24,6 +24,14 @@ def _evaluate(symbol, **inputs):
     return float(function(*[inputs[name] for name in symbols]))
 
 
+# On Windows our MSVC-built extension and the MinGW-built casadi wheel hold separate
+# copies of CasADi, so a plugin registered in ours is invisible to the one Python calls.
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="the brent plugin cannot reach the casadi wheel's CasADi on Windows",
+)
+
+
 class TestBrent:
     def test_solves_a_scalar_equation(self):
         x = pybamm.BrentUnknown("x")
