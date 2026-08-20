@@ -8,7 +8,7 @@ template.
 """
 
 import shutil
-import subprocess
+import subprocess  # nosec B404 - runs the repo's own ruff over a rendered template
 import sys
 
 import pytest
@@ -101,7 +101,7 @@ class TestRenderedStyle:
         "command", [("check", "--no-cache"), ("format", "--check", "--no-cache")]
     )
     def test_rendered_python_is_style_clean(self, rendered, command):
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 B607 - literal argv, no external input
             [
                 "ruff",
                 *command,
