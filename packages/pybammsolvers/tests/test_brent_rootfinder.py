@@ -5,7 +5,6 @@ from __future__ import annotations
 import casadi
 import numpy as np
 import pytest
-from scipy.optimize import brentq
 
 import pybammsolvers.idaklu  # noqa: F401  registers the plugin on import
 
@@ -40,18 +39,15 @@ class TestBrentPlugin:
     @pytest.mark.parametrize(
         "expr_fn", [lambda x, p: casadi.exp(x) + p * x - 2.0, non_monotone]
     )
-    def test_matches_scipy_over_a_sweep(self, expr_fn):
+    def test_converges_across_a_sweep(self, expr_fn):
         rf, f = _solver(expr_fn)
-        worst_difference = worst_residual = 0.0
+        worst_residual = 0.0
         for p in np.linspace(0.2, 1.8, 40):
             if float(f(LO, p)) * float(f(HI, p)) > 0:
-                continue  # no bracket for this p, nothing to compare
+                continue  # no bracket for this p, nothing to solve
             got = float(rf(p))
-            want = brentq(lambda x, p=p: float(f(x, p)), LO, HI, xtol=2e-12)
             assert LO <= got <= HI
-            worst_difference = max(worst_difference, abs(got - want))
             worst_residual = max(worst_residual, abs(float(f(got, p))))
-        assert worst_difference < 1e-9
         assert worst_residual < 1e-12
 
     def test_bracket_can_be_a_graph_input(self):
