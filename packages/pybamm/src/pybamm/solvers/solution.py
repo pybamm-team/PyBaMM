@@ -979,6 +979,9 @@ class Solution(SolutionBase):
                     data_short_names["Step"] = np.concatenate(
                         [data_short_names["Step"], j * np.ones_like(step.t)]
                     )
+                data_short_names["Step"] = data_short_names["Step"][
+                    : len(data_short_names["Cycle"])
+                ]
 
         return data_short_names
 
