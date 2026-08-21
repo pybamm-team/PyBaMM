@@ -30,6 +30,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tier", default="community", choices=TIERS)
     parser.add_argument("--license", default="BSD-3-Clause", help="SPDX identifier")
     parser.add_argument(
+        "--pybamm-requires",
+        default=None,
+        metavar="SPECIFIER",
+        help=(
+            "the PyBaMM versions this model supports, e.g. '>=26.8'; defaults to a "
+            "floor of the installed release"
+        ),
+    )
+    parser.add_argument(
         "--dry-run", action="store_true", help="report what would be written"
     )
     return parser.parse_args(argv)
@@ -56,6 +65,7 @@ def main(argv: list[str] | None = None) -> int:
         github=args.github,
         tier=args.tier,
         license=args.license,
+        pybamm_requires=args.pybamm_requires,
     )
     destination = PACKAGE_ROOT / args.slug
     if args.dry_run:

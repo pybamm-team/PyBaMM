@@ -49,15 +49,17 @@ __all__ = [
     "registry",
 ]
 
-_registry: Registry | None = None
+# Not `_registry`: that name is the submodule imported above, and rebinding it
+# here would leave `pybamm_model_zoo._registry` pointing at this cache.
+_registry_instance: Registry | None = None
 
 
 def registry() -> Registry:
     """Return the model registry, building it on first use."""
-    global _registry
-    if _registry is None:
-        _registry = Registry()
-    return _registry
+    global _registry_instance
+    if _registry_instance is None:
+        _registry_instance = Registry()
+    return _registry_instance
 
 
 def refresh(
@@ -74,9 +76,9 @@ def refresh(
         Directories of third-party model folders. Defaults to those advertised
         through the ``pybamm_zoo_models`` entry point.
     """
-    global _registry
-    _registry = Registry(paths, external_paths=external_paths)
-    return _registry
+    global _registry_instance
+    _registry_instance = Registry(paths, external_paths=external_paths)
+    return _registry_instance
 
 
 def list_models() -> list[str]:

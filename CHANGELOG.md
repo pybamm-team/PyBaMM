@@ -2,7 +2,7 @@
 
 ## Features
 
-- Added the model zoo (`packages/pybamm-model-zoo/`), a home for community- and partner-contributed models: one self-contained folder per model, with a declarative `model.toml` manifest as the only boilerplate a contributor writes. Models are either `community` tier (advisory CI) or `core` tier (in the merge gate); nothing in `pybamm` itself changed. ([#5727](https://github.com/pybamm-team/PyBaMM/issues/5727))
+- Added the model zoo (`packages/pybamm-model-zoo/`), a home for community- and partner-contributed models: one self-contained folder per model, with a declarative `model.toml` manifest as the only boilerplate a contributor writes. Models are either `community` tier (advisory CI) or `core` tier (in the merge gate); nothing in `pybamm` itself changed. ([#5727](https://github.com/pybamm-team/PyBaMM/pull/5727))
 
 ## Bug fixes
 

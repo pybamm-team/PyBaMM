@@ -15,6 +15,7 @@ from pathlib import Path
 
 from pybamm_model_zoo._paths import BADGES_DIR, DOCS_DIR, STATUS_FILE
 from pybamm_model_zoo._registry import ModelEntry
+from pybamm_model_zoo._versions import version_key
 
 MODELS_DIR = DOCS_DIR / "models"
 GENERATED_BY = (
@@ -45,7 +46,15 @@ Community- and partner-contributed PyBaMM models. Each entry is one
 self-contained folder with its own maintainer, tests, examples, and
 citation; the table below is generated from those folders' manifests.
 
-Zoo models are reached through the zoo's registry, not the `pybamm`
+The zoo is a separate distribution that is **not yet published to PyPI**, so
+`pip install pybamm` does not provide it. Until it is released, install it
+from the repository:
+
+```bash
+pip install "pybamm-model-zoo @ git+https://github.com/pybamm-team/PyBaMM.git#subdirectory=packages/pybamm-model-zoo"
+```
+
+Zoo models are then reached through the zoo's registry, not the `pybamm`
 namespace:
 
 ```python
@@ -86,14 +95,6 @@ _TOCTREE = """
 
 Contributing a model <contributing>
 """
-
-
-def version_key(version: str) -> tuple[int, list[int]]:
-    """Sort CalVer releases numerically, and sort anything else (``main``) last."""
-    try:
-        return (0, [int(part) for part in version.split(".")])
-    except ValueError:
-        return (1, [])
 
 
 def read_status(path: Path | None = None) -> dict:
