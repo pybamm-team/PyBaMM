@@ -5,6 +5,8 @@ column to this matrix automatically, and adding a check to
 :data:`pybamm_model_zoo.testing.contract.CHECKS` adds a row.
 """
 
+from pathlib import Path
+
 import pytest
 
 import pybamm_model_zoo as zoo
@@ -97,6 +99,40 @@ class TestDependencyAgreement:
 
     def test_names_are_compared_canonically(self, tmp_path):
         self.check(tmp_path, ["Scikit_FEM>=12.0.2"], ["scikit-fem>=12.0.2"])
+
+
+class TestMissingDependencies:
+    """What counts as "not installed", which gates the import/build/solve checks."""
+
+    def entry(self, packages):
+        return ModelEntry(
+            slug="a_model",
+            name="AModel",
+            path=Path("a_model"),
+            raw={"model": {"dependencies": {"packages": packages}}},
+        )
+
+    def test_an_absent_package_is_missing(self):
+        assert contract.missing_dependencies(
+            self.entry(["definitely-not-installed-xyz"])
+        ) == ["definitely-not-installed-xyz"]
+
+    def test_an_installed_package_is_not_missing(self):
+        assert contract.missing_dependencies(self.entry(["packaging>=23.0"])) == []
+
+    def test_a_requirement_whose_marker_is_false_is_not_missing(self):
+        """Otherwise a platform-specific dependency skips the checks everywhere else."""
+        assert (
+            contract.missing_dependencies(
+                self.entry(['definitely-not-installed-xyz; python_version < "3.0"'])
+            )
+            == []
+        )
+
+    def test_a_requirement_whose_marker_is_true_is_still_checked(self):
+        assert contract.missing_dependencies(
+            self.entry(['definitely-not-installed-xyz; python_version >= "3.0"'])
+        ) == ['definitely-not-installed-xyz; python_version >= "3.0"']
 
 
 class TestGeneratedFiles:

@@ -18,7 +18,11 @@ from string import Template
 
 from pybamm_model_zoo._exceptions import ZooError
 from pybamm_model_zoo._paths import TEMPLATE_ROOT, codeowners_folder
-from pybamm_model_zoo._registry import NAME_PATTERN, SLUG_PATTERN
+from pybamm_model_zoo._registry import (
+    NAME_PATTERN,
+    SLUG_PATTERN,
+    usable_identifier,
+)
 
 TEMPLATE_SUFFIX = ".in"
 #: Matches what ``string.Template`` would substitute, for asserting none is left.
@@ -37,7 +41,7 @@ def template_root() -> Path:
 
 
 def default_pybamm_requires() -> str:
-    """A floor of the installed PyBaMM's major version — what it was written for.
+    """A floor of the installed PyBaMM release — what the model was written for.
 
     Reads the distribution metadata rather than importing PyBaMM, so scaffolding a
     model does not pay for an import it has no other use for.
@@ -52,7 +56,8 @@ def default_pybamm_requires() -> str:
             "this model was written against. Install it, or pass "
             "--pybamm-requires explicitly."
         ) from error
-    return f">={Version(installed).major}"
+    parsed = Version(installed)
+    return f">={parsed.major}.{parsed.minor}"
 
 
 def citation_key_for(author: str, year: int) -> str:
@@ -75,11 +80,15 @@ def tokens(
     license: str = "BSD-3-Clause",
 ) -> dict[str, str]:
     """Build the substitution map, validating the contributor's inputs."""
-    if not SLUG_PATTERN.match(slug):
-        raise ZooError(f"slug '{slug}' must be lower_snake_case, e.g. 'my_new_model'")
-    if not NAME_PATTERN.match(name):
+    if not usable_identifier(slug, SLUG_PATTERN):
         raise ZooError(
-            f"name '{name}' must be a valid Python identifier, e.g. 'MyModel'"
+            f"slug '{slug}' must be lower_snake_case and not a Python keyword, "
+            f"e.g. 'my_new_model'"
+        )
+    if not usable_identifier(name, NAME_PATTERN):
+        raise ZooError(
+            f"name '{name}' must be a valid Python identifier and not a Python "
+            f"keyword, e.g. 'MyModel'"
         )
     today = datetime.date.today()
     year = year if year is not None else today.year

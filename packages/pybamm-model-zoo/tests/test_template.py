@@ -7,6 +7,7 @@ are read from the contract registry, so a new check cannot quietly skip the
 template.
 """
 
+import re
 import shutil
 import subprocess  # nosec B404 - runs the repo's own ruff over a rendered template
 import sys
@@ -86,6 +87,39 @@ class TestTemplate:
         line = _template.codeowners_line(SLUG, "@ahandle")
         assert line.endswith(" @ahandle")
         assert line.startswith(_paths.codeowners_folder(SLUG))
+
+
+class TestTokenValidation:
+    """The scaffold refuses inputs it would render into invalid Python."""
+
+    def tokens(self, **overrides):
+        return _template.tokens(
+            **{
+                "slug": SLUG,
+                "name": NAME,
+                "author": "A. Author",
+                "github": "ahandle",
+                **overrides,
+            }
+        )
+
+    @pytest.mark.parametrize("keyword_name", ["class", "import", "lambda", "None"])
+    def test_a_python_keyword_is_rejected(self, keyword_name):
+        """`class` is identifier-shaped, so only a keyword check catches it."""
+        with pytest.raises(zoo.ZooError, match=r"keyword"):
+            self.tokens(slug=keyword_name.lower(), name=keyword_name)
+
+    @pytest.mark.parametrize("soft_keyword", ["match", "case", "type"])
+    def test_a_soft_keyword_is_still_a_usable_name(self, soft_keyword):
+        assert self.tokens(slug=soft_keyword, name=soft_keyword)["slug"] == soft_keyword
+
+    def test_the_default_floor_pins_the_minor_release(self):
+        """A bare major would let a model claim releases predating its own APIs."""
+        requires = _template.default_pybamm_requires()
+        assert re.fullmatch(r">=\d+\.\d+", requires), requires
+
+    def test_an_explicit_specifier_wins_over_the_default(self):
+        assert self.tokens(pybamm_requires=">=26.4")["pybamm_requires"] == ">=26.4"
 
 
 class TestRenderedStyle:

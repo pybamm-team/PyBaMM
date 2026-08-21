@@ -11,6 +11,7 @@ malformed field fails one model instead of taking the whole registry down.
 from __future__ import annotations
 
 import importlib
+import keyword
 import re
 import sys
 import warnings
@@ -35,6 +36,16 @@ DEFAULT_KEY_VARIABLES = ("Voltage [V]",)
 #: A model folder's name, and the registry key it declares.
 SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+
+
+def usable_identifier(value: str, pattern: re.Pattern[str]) -> bool:
+    """Whether ``value`` fits ``pattern`` and can be written in code as itself.
+
+    The patterns describe the shape of an identifier but cannot exclude a
+    keyword, and a slug becomes a module name while a name becomes a class name,
+    so ``class`` would pass the shape check and render a syntax error.
+    """
+    return bool(pattern.match(value)) and not keyword.iskeyword(value)
 
 
 def split_class_path(class_path: str) -> tuple[str, str]:
