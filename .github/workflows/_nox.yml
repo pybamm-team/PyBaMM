@@ -27,7 +27,10 @@ on:
         required: true
         type: string
       fetch_depth:
-        description: "Checkout depth; the docs build needs the full history (0)."
+        description: >-
+          Checkout depth. Sessions needing git history pass 0: the docs build,
+          and the zoo, which holds a manifest's `pybamm_requires` to the PyBaMM
+          version hatch-vcs derives from the release tags.
         default: 1
         required: false
         type: number
@@ -41,6 +44,11 @@ on:
         default: false
         required: false
         type: boolean
+      timeout_minutes:
+        description: "Per-leg timeout. GitHub's own default is 360."
+        default: 360
+        required: false
+        type: number
     secrets:
       CODECOV_TOKEN:
         description: "Codecov upload token; only needed when upload_coverage is true."
@@ -55,6 +63,7 @@ env:
 jobs:
   nox:
     runs-on: ${{ matrix.leg.os }}
+    timeout-minutes: ${{ inputs.timeout_minutes }}
     permissions:
       contents: read
 
