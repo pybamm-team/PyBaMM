@@ -7,9 +7,8 @@ collection or it can still break it.
 
 from pathlib import Path
 
-import pytest
-
 import conftest
+import pytest
 
 CORE = Path("/zoo/src/pybamm_model_zoo/core_model")
 COMMUNITY = Path("/zoo/src/pybamm_model_zoo/community_model")
