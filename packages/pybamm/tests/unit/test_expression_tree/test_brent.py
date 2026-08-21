@@ -2,7 +2,9 @@
 # Tests for the Brent expression tree node
 #
 
+import subprocess
 import sys
+import textwrap
 
 import casadi
 import numpy as np
@@ -158,6 +160,34 @@ class TestBrent:
         node = pybamm._Brent(x * x + 1.0, x, (0.0, 1.0))
         with pytest.raises(pybamm.SolverError, match="no sign change over the bracket"):
             node.evaluate()
+
+    def test_the_conversion_carries_no_process_identity(self):
+        # Symbol.id is a per-process hash, and anything the conversion puts in a name
+        # reaches fn.serialize(), which is the AOT compile cache key
+        script = textwrap.dedent("""
+            import hashlib
+
+            import casadi
+            import pybamm
+
+            y = casadi.MX.sym("y")
+            x = pybamm._BrentUnknown("x")
+            node = pybamm._Brent(
+                x * x - pybamm.StateVector(slice(0, 1)), x, (0.0, 10.0)
+            )
+            serialised = casadi.Function("f", [y], [node.to_casadi(y=y)]).serialize()
+            print(hashlib.sha256(serialised.encode()).hexdigest())
+        """)
+        keys = {
+            subprocess.run(
+                [sys.executable, "-c", script],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            for _ in range(3)
+        }
+        assert len(keys) == 1, f"the key moved between processes: {keys}"
 
     def test_children_and_copy(self):
         x = pybamm._BrentUnknown("x")

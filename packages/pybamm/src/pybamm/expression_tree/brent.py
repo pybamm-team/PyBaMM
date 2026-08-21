@@ -229,7 +229,10 @@ class _Brent(pybamm.Symbol):
                 "MSVC, which leaves the two with separate copies of CasADi. Call "
                 "evaluate() instead, which solves with SciPy."
             )
-        unknown = casadi.MX.sym(f"brent_unknown_{abs(self.id)}")
+        # These names reach fn.serialize(), which keys the AOT compile cache, so they
+        # must not carry `id`: it is a per-process hash. CasADi names generated code
+        # positionally, so duplicates across two Brent nodes are harmless.
+        unknown = casadi.MX.sym("brent_unknown")
         cache = _OracleCache(
             casadi_symbols, _nodes_reading(self.residual, self.unknown)
         )
@@ -248,10 +251,10 @@ class _Brent(pybamm.Symbol):
         # does not read, so they are declared here and left unused
         lo_sym, hi_sym = casadi.MX.sym("lo"), casadi.MX.sym("hi")
         oracle = casadi.Function(
-            f"brent_oracle_{abs(self.id)}", [unknown, lo_sym, hi_sym, *free], [equation]
+            "brent_oracle", [unknown, lo_sym, hi_sym, *free], [equation]
         )
         solver = casadi.rootfinder(
-            f"brent_{abs(self.id)}",
+            "brent",
             "brent",
             oracle,
             {"abstol": self.abstol, "max_iter": self.max_iter},
