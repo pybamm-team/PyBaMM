@@ -249,11 +249,11 @@ else ()
 endif ()
 
 # casadi::Rootfinder's headers are not installed and are LGPL-3.0-or-later, so stage
-# them from the pinned sdist rather than vendoring them into this BSD-3-Clause tree.
-set(CASADI_INTERNAL_VERSION "3.7.2"
-        CACHE STRING "CasADi version to source the internal headers from")
-set(CASADI_INTERNAL_SHA256 "b4d7bd8acdc4180306903ae1c9eddaf41be2a3ae2fa7154c57174ae64acdc60d"
-        CACHE STRING "SHA-256 of the CasADi source distribution")
+# them from the matching sdist rather than vendoring them into this BSD-3-Clause tree.
+set(CASADI_INTERNAL_VERSION ""
+        CACHE STRING "CasADi version to source the internal headers from; read from the linked CasADi when empty")
+set(CASADI_INTERNAL_SHA256 ""
+        CACHE STRING "SHA-256 of the CasADi source distribution, checked on download when set")
 set(CASADI_SOURCE_DIR ""
         CACHE PATH "Local CasADi source tree; set this for offline builds to skip the download")
 
@@ -287,7 +287,21 @@ if (CASADI_CONFIG_HEADER)
     set(_casadi_config_flags "${CMAKE_MATCH_1}")
 endif ()
 
-if (NOT CASADI_LINKED_VERSION)
+# Follow the CasADi being linked rather than a version pinned here, so the pin in
+# pyproject.toml stays the only one.
+set(_casadi_requested_version "${CASADI_INTERNAL_VERSION}")
+if (NOT _casadi_requested_version)
+    set(CASADI_INTERNAL_VERSION "${CASADI_LINKED_VERSION}")
+endif ()
+
+if (NOT CASADI_INTERNAL_VERSION)
+    message(FATAL_ERROR
+            "Could not find casadi/config.h in any of: ${_casadi_include_dirs}\n"
+            "The \"brent\" rootfinder plugin subclasses CasADi internals that are not "
+            "ABI-stable, so the version to source them from has to be known. Pass "
+            "-DCASADI_INTERNAL_VERSION=<x.y.z>, with "
+            "-DCASADI_ALLOW_UNVERIFIED_INTERNALS=ON to skip the check that it matches.")
+elseif (NOT CASADI_LINKED_VERSION)
     if (CASADI_ALLOW_UNVERIFIED_INTERNALS)
         message(WARNING
                 "Could not read the linked CasADi version from casadi/config.h. The \"brent\" "
@@ -303,9 +317,9 @@ if (NOT CASADI_LINKED_VERSION)
 elseif (NOT CASADI_LINKED_VERSION STREQUAL CASADI_INTERNAL_VERSION)
     message(FATAL_ERROR
             "CasADi version mismatch: linking CasADi ${CASADI_LINKED_VERSION} but sourcing the "
-            "internal headers for the \"brent\" plugin from ${CASADI_INTERNAL_VERSION}. These "
-            "headers are not ABI-stable, so they must match. Update CASADI_INTERNAL_VERSION and "
-            "CASADI_INTERNAL_SHA256 in this file to match the casadi pin in pyproject.toml.")
+            "internal headers for the \"brent\" plugin from the requested "
+            "${CASADI_INTERNAL_VERSION}. These headers are not ABI-stable, so they must match; "
+            "drop -DCASADI_INTERNAL_VERSION to follow the linked CasADi.")
 else ()
     message(STATUS "idaklu: \"brent\" plugin verified against CasADi ${CASADI_LINKED_VERSION}")
 endif ()
@@ -321,7 +335,7 @@ set(_casadi_internal_headers
         plugin_interface.hpp
         rootfinder_impl.hpp)
 set(_casadi_internal_work "${CMAKE_CURRENT_BINARY_DIR}/casadi-internal")
-set(_casadi_internal_include "${_casadi_internal_work}/include")
+set(_casadi_internal_include "${_casadi_internal_work}/${CASADI_INTERNAL_VERSION}/include")
 
 # editable.rebuild reconfigures on every import; skip the work once staged.
 set(_casadi_internal_staged TRUE)
@@ -344,8 +358,12 @@ if (NOT _casadi_internal_staged)
         set(_casadi_sdist_url
                 "https://pypi.org/packages/source/c/casadi/casadi-${CASADI_INTERNAL_VERSION}.tar.gz")
         message(STATUS "idaklu: downloading ${_casadi_sdist_url} for the CasADi internal headers")
+        set(_casadi_expected_hash "")
+        if (CASADI_INTERNAL_SHA256)
+            set(_casadi_expected_hash EXPECTED_HASH SHA256=${CASADI_INTERNAL_SHA256})
+        endif ()
         file(DOWNLOAD "${_casadi_sdist_url}" "${_casadi_sdist}"
-                EXPECTED_HASH SHA256=${CASADI_INTERNAL_SHA256}
+                ${_casadi_expected_hash}
                 STATUS _casadi_download_status)
         list(GET _casadi_download_status 0 _casadi_download_rc)
         if (_casadi_download_rc)
