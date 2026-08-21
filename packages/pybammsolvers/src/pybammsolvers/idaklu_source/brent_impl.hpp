@@ -23,9 +23,10 @@ static int casadi_brent(int (*res_fn)(void*, T1, T1*), void* user_data,
   *iter = 0;
   if (res_fn(user_data, a, &fa)) return 1;
   if (res_fn(user_data, b, &fb)) return 1;
-  // No sign change, so the bracket contains no root. Report it rather than
-  // returning whichever end happens to be closer.
-  if (!(fa * fb <= 0)) return 2;
+  // No sign change, so the bracket contains no root. Tested by sign rather than
+  // by product, which underflows to zero for two tiny residuals and fakes one.
+  if (fa != fa || fb != fb) return 2;
+  if (fa != 0 && fb != 0 && (fa > 0) == (fb > 0)) return 2;
   c = a;
   fc = fa;
   d = b - a;

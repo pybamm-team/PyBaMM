@@ -9,17 +9,17 @@ import numpy as np
 import pybamm
 
 
-class BrentUnknown(pybamm.Symbol):
+class _BrentUnknown(pybamm.Symbol):
     """
-    The scalar a :class:`Brent` solves for.
+    The scalar a :class:`_Brent` solves for.
 
     Bound by the rootfinder, not by the model, so it is deliberately not a
     :class:`pybamm.Variable`: the checks that enumerate model states must not count it
-    as one, or a ``Brent`` inside ``model.rhs`` or ``model.algebraic`` looks like an
+    as one, or a ``_Brent`` inside ``model.rhs`` or ``model.algebraic`` looks like an
     extra unknown with no equation.
 
     Two unknowns of the same name are the same unknown, as for any other symbol. Give
-    each one its own name: a ``Brent`` nested inside another whose unknown shares its
+    each one its own name: a ``_Brent`` nested inside another whose unknown shares its
     name shadows the outer binding, and CasADi rejects the oracle it builds.
 
     Parameters
@@ -70,7 +70,7 @@ def _nodes_reading(root: pybamm.Symbol, unknown: pybamm.Symbol) -> set:
 
 
 class _OracleCache(dict):
-    """Conversion cache that keeps a :class:`Brent`'s own binding out of the shared one.
+    """Conversion cache that keeps a :class:`_Brent`'s own binding out of the shared one.
 
     Keys in ``local`` are held here and discarded with the oracle; the rest is written
     through to ``shared``, so the graph a rootfind shares with its surroundings is
@@ -93,7 +93,7 @@ class _OracleCache(dict):
             self._shared[key] = value
 
 
-class Brent(pybamm.Symbol):
+class _Brent(pybamm.Symbol):
     """
     Solve ``residual == 0`` for ``unknown`` within ``bounds``, by Brent's method.
 
@@ -116,7 +116,7 @@ class Brent(pybamm.Symbol):
     residual : :class:`pybamm.Symbol`
         The expression to drive to zero. Must contain ``unknown``. To invert ``f`` at
         a target, pass ``f - target``.
-    unknown : :class:`pybamm.BrentUnknown`
+    unknown : :class:`_BrentUnknown`
         The value being solved for. Must appear in ``residual`` and nowhere else in
         the surrounding expression.
     bounds : tuple
@@ -134,14 +134,14 @@ class Brent(pybamm.Symbol):
     .. code-block:: python
 
         # invert an open-circuit potential at a given voltage
-        sto = pybamm.BrentUnknown("stoichiometry")
-        node = pybamm.Brent(param.n.prim.U(sto, T) - voltage, sto, (0, 1))
+        sto = pybamm._BrentUnknown("stoichiometry")
+        node = pybamm._Brent(param.n.prim.U(sto, T) - voltage, sto, (0, 1))
     """
 
     def __init__(
         self,
         residual: pybamm.Symbol,
-        unknown: BrentUnknown,
+        unknown: _BrentUnknown,
         bounds: tuple,
         *,
         abstol: float = 1e-14,
@@ -152,9 +152,9 @@ class Brent(pybamm.Symbol):
             raise TypeError(
                 f"residual must be a pybamm.Symbol, got {type(residual).__name__}"
             )
-        if not isinstance(unknown, BrentUnknown):
+        if not isinstance(unknown, _BrentUnknown):
             raise TypeError(
-                f"unknown must be a pybamm.BrentUnknown, got {type(unknown).__name__}"
+                f"unknown must be a _BrentUnknown, got {type(unknown).__name__}"
             )
         if not any(node == unknown for node in residual.pre_order()):
             raise pybamm.ModelError(f"'{unknown}' does not appear in '{residual}'")
@@ -182,7 +182,7 @@ class Brent(pybamm.Symbol):
         return self.children[0]
 
     @property
-    def unknown(self) -> BrentUnknown:
+    def unknown(self) -> _BrentUnknown:
         return self.children[1]
 
     @property
@@ -191,7 +191,7 @@ class Brent(pybamm.Symbol):
 
     def create_copy(self, new_children=None, perform_simplifications=True):
         residual, unknown, lo, hi = self._children_for_copying(new_children)
-        return Brent(
+        return _Brent(
             residual,
             unknown,
             (lo, hi),
@@ -269,9 +269,9 @@ class Brent(pybamm.Symbol):
 
         lo, hi = (scalar(b.evaluate(t, y, y_dot, inputs)) for b in self.bounds)
         unknown = self.unknown
-        if not isinstance(unknown, BrentUnknown):
+        if not isinstance(unknown, _BrentUnknown):
             raise TypeError(
-                "NumPy evaluation needs a pybamm.BrentUnknown as the unknown, got "
+                "NumPy evaluation needs a _BrentUnknown as the unknown, got "
                 f"{type(unknown).__name__}"
             )
 
@@ -284,20 +284,43 @@ class Brent(pybamm.Symbol):
             return np.nan * np.ones((1, 1))
 
         try:
-            root = brentq(g, lo, hi, xtol=self.abstol, maxiter=self.max_iter)
+            residual_lo, residual_hi = g(lo), g(hi)
         except (ValueError, RuntimeError):
             # a probe walks the tree before the parameters are in place
             return np.nan * np.ones((1, 1))
+        finally:
+            unknown._value = np.nan * np.ones((1, 1))
+
+        if not (np.isfinite(residual_lo) and np.isfinite(residual_hi)):
+            return np.nan * np.ones((1, 1))
+
+        # the same two failures the plugin reports, rather than a quiet NaN
+        if (
+            residual_lo != 0
+            and residual_hi != 0
+            and (residual_lo > 0) == (residual_hi > 0)
+        ):
+            raise pybamm.SolverError(
+                f"no sign change over the bracket ({lo}, {hi}), where the residual is "
+                f"{residual_lo} and {residual_hi}, so it holds no root"
+            )
+
+        try:
+            root = brentq(g, lo, hi, xtol=self.abstol, maxiter=self.max_iter)
+        except RuntimeError as error:
+            raise pybamm.SolverError(
+                f"the rootfind did not converge in {self.max_iter} iterations"
+            ) from error
         finally:
             unknown._value = np.nan * np.ones((1, 1))
         return np.array([[root]])
 
     def diff(self, variable):
         raise NotImplementedError(
-            "Brent has no symbolic derivative; use convert_to_format='casadi'."
+            "_Brent has no symbolic derivative; use convert_to_format='casadi'."
         )
 
     def _jac(self, variable):
         raise NotImplementedError(
-            "Brent has no symbolic jacobian; use convert_to_format='casadi'."
+            "_Brent has no symbolic jacobian; use convert_to_format='casadi'."
         )

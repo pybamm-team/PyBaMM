@@ -85,12 +85,12 @@ int Brent::solve(void* mem) const {
   const double b = m->iarg[BRACKET_HI][0];
 
   // the root never depends on the guess, so the guess is left out of the key
-  key_.clear();
+  m->key.clear();
   for (casadi_int i = 0; i < n_in_; ++i) {
     if (i == iin_ || !m->iarg[i]) continue;
-    key_.insert(key_.end(), m->iarg[i], m->iarg[i] + nnz_in(i));
+    m->key.insert(m->key.end(), m->iarg[i], m->iarg[i] + nnz_in(i));
   }
-  if (m->cache_valid && m->cache_key == key_) {
+  if (m->cache_valid && m->cache_key == m->key) {
     ++m->cache_hits;
     if (m->ires[iout_]) m->ires[iout_][0] = m->cache_root;
     m->return_status = "success (cached)";
@@ -110,7 +110,7 @@ int Brent::solve(void* mem) const {
     return 0;
   }
 
-  m->cache_key = key_;
+  m->cache_key = m->key;
   m->cache_root = root;
   m->cache_valid = true;
 

@@ -99,6 +99,23 @@ class TestBrentPlugin:
         with pytest.raises(RuntimeError, match="rootfinder process failed"):
             rf(0.0)
 
+    def test_two_tiny_residuals_are_not_a_bracket(self):
+        # both ends are the same sign, but their product underflows to zero, which a
+        # `fa * fb <= 0` test reads as a sign change
+        rf, _ = _solver(lambda x, p: 1e-200 * (x + 1.0), lo=0.0, hi=1.0)
+        with pytest.raises(RuntimeError, match="rootfinder process failed"):
+            rf(0.0)
+
+    def test_solves_the_same_function_from_several_threads(self):
+        # the cache scratch lives on the solver's memory, so two evaluations of one
+        # Function must not share it
+        rf, f = _solver(lambda x, p: casadi.exp(x) + p * x - 2.0)
+        targets = np.linspace(0.2, 1.8, 64)
+        mapped = rf.map(len(targets), "thread", 8)
+        roots = np.array(mapped(targets.reshape(1, -1))).reshape(-1)
+        worst = max(abs(float(f(root, p))) for root, p in zip(roots, targets))
+        assert worst < 1e-12
+
     def test_reports_iteration_count(self):
         x, lo, hi, p = (casadi.MX.sym(n) for n in ("x", "lo", "hi", "p"))
         g = casadi.Function("g", [x, lo, hi, p], [casadi.exp(x) + p * x - 2.0])

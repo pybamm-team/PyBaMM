@@ -43,6 +43,9 @@ struct CASADI_ROOTFINDER_BRENT_EXPORT BrentMemory : public RootfinderMemory {
   // Last solve, keyed on every input but the guess, so a Brent nested inside another
   // is not re-solved on every iteration of the enclosing one.
   std::vector<double> cache_key;
+  // scratch for the key of the solve in flight; per-memory, so two threads
+  // evaluating one Function do not share it
+  std::vector<double> key;
   double cache_root = 0;
   bool cache_valid = false;
   casadi_int cache_hits = 0;
@@ -78,7 +81,6 @@ public:
   static const std::string meta_doc;
 
   void init(const Dict& opts) override;
-  mutable std::vector<double> key_;   // cache scratch
   int solve(void* mem) const override;
 
   void* alloc_mem() const override { return new BrentMemory(); }

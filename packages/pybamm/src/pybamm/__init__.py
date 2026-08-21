@@ -32,7 +32,7 @@ from .expression_tree.averages import _BaseAverage
 from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
 from .expression_tree.conditional import Conditional
-from .expression_tree.brent import Brent, BrentUnknown
+from .expression_tree.brent import _Brent, _BrentUnknown
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.discrete_time_sum import *
 from .expression_tree.input_parameter import InputParameter
