@@ -280,9 +280,21 @@ def install_zoo(session):
     )
 
 
-def zoo_pytest(session, marker):
+def zoo_pytest(session, marker, *args, allow_empty=False):
     """Run the zoo suite, selecting by marker."""
-    session.run("python", "-m", "pytest", "-m", marker, ZOO_TESTS, *session.posargs)
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "-m",
+        marker,
+        *args,
+        ZOO_TESTS,
+        *session.posargs,
+        # 5 is "collected nothing", which is the honest state of the community
+        # tier until someone contributes to it, not a failure.
+        success_codes=[0, 5] if allow_empty else [0],
+    )
 
 
 @nox.session(name="zoo", default=False)
@@ -294,9 +306,20 @@ def run_zoo(session):
 
 @nox.session(name="zoo-gating", default=False)
 def run_zoo_gating(session):
-    """Run what is in PyBaMM's merge gate: `core`-tier models and the zoo itself."""
+    """Run what is in PyBaMM's merge gate: `core`-tier models and the zoo itself.
+
+    `--zoo-tier` keeps every other tier out of collection entirely, so a model
+    the gate does not cover cannot break the gate by failing to import.
+    """
     install_zoo(session)
-    zoo_pytest(session, "zoo and gating")
+    zoo_pytest(session, "zoo and gating", "--zoo-tier=core")
+
+
+@nox.session(name="zoo-community", default=False)
+def run_zoo_community(session):
+    """Run the advisory half: everything the merge gate does not already cover."""
+    install_zoo(session)
+    zoo_pytest(session, "zoo and not gating", allow_empty=True)
 
 
 @nox.session(name="zoo-examples", default=False)

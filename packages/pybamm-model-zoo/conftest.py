@@ -26,6 +26,47 @@ def pytest_addoption(parser):
             "pull request changed"
         ),
     )
+    parser.addoption(
+        "--zoo-tier",
+        action="store",
+        default=None,
+        choices=zoo.TIERS,
+        metavar="TIER",
+        help=(
+            "keep only the models of one tier in collection, so the merge gate "
+            "cannot be broken by a model outside it"
+        ),
+    )
+
+
+def _model_folders():
+    """Every registered model's folder, with its slug and tier.
+
+    Manifests are parsed rather than imported, so this is safe to call before a
+    single test module has been loaded.
+    """
+    return [
+        (entry.path.resolve(), entry.slug, entry.tier) for entry in zoo.all_entries()
+    ]
+
+
+def pytest_ignore_collect(collection_path, config):
+    """Drop a model's folder before pytest imports anything inside it.
+
+    It does not replace the marker: the contract suite is parametrized over every
+    model from a single module, so those cases are filtered by marker instead.
+    """
+    selected = config.getoption("--zoo-model")
+    tier = config.getoption("--zoo-tier")
+    if selected is None and tier is None:
+        return None
+    for folder, slug, model_tier in _model_folders():
+        if collection_path != folder and folder not in collection_path.parents:
+            continue
+        if selected is not None and slug != selected:
+            return True
+        return True if tier is not None and model_tier != tier else None
+    return None
 
 
 def _slug_from_path(path):

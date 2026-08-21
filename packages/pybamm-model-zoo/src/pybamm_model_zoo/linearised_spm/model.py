@@ -27,16 +27,15 @@ class LinearisedOpenCircuitPotential(
             variables
         )
         sto_0 = self.phase_param.sto_init_av
-        gradient = self.phase_param.U(sto_0, T).diff(sto_0)
-        gradient_bulk = self.phase_param.U(sto_0, T_bulk).diff(sto_0)
+        # At T_ref - not T, as a temperature-dependent slope makes `dUdT` wrong.
+        gradient = self.phase_param.U(sto_0, self.param.T_ref).diff(sto_0)
 
         ocp_surf = self.phase_param.U(sto_0, T) + gradient * (sto_surf - sto_0)
-        ocp_bulk = self.phase_param.U(sto_0, T_bulk) + gradient_bulk * (
-            sto_bulk - sto_0
-        )
-        # Evaluated at the linearisation point too, so the model stays linear
-        # in the state when a thermal submodel reads it.
+        ocp_bulk = self.phase_param.U(sto_0, T_bulk) + gradient * (sto_bulk - sto_0)
         dUdT = self.phase_param.dUdT(sto_0)
+        # dU/dT is size-averaged alongside the potential, so it needs its domains.
+        if ocp_surf.domain and ocp_surf.domain[0].endswith("particle size"):
+            dUdT = pybamm.FullBroadcast(dUdT, broadcast_domains=ocp_surf.domains)
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
         self._alias_ocp_as_equilibrium(variables)
@@ -46,7 +45,7 @@ class LinearisedOpenCircuitPotential(
                 f"{Domain} electrode {phase_name}linearisation open-circuit "
                 "potential [V]": self.phase_param.U(sto_0, T_bulk),
                 f"{Domain} electrode {phase_name}open-circuit potential "
-                "gradient [V]": gradient_bulk,
+                "gradient [V]": gradient,
             }
         )
         return variables

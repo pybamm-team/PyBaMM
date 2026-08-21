@@ -34,6 +34,7 @@ from pybamm_model_zoo._registry import (
     ModelEntry,
     read_manifest,
     split_class_path,
+    usable_identifier,
 )
 
 #: A portable rule any zoo model must satisfy, wherever it lives.
@@ -118,14 +119,15 @@ def check_manifest(entry: ModelEntry) -> None:
     if unknown := sorted(set(model) - MODEL_KEYS):
         raise AssertionError(f"{where}: unknown [model] key(s) {unknown}")
 
-    assert SLUG_PATTERN.match(entry.slug), (
-        f"{where}: slug '{entry.slug}' must be lower_snake_case"
+    assert usable_identifier(entry.slug, SLUG_PATTERN), (
+        f"{where}: slug '{entry.slug}' must be lower_snake_case and not a keyword"
     )
     assert entry.slug == entry.path.name, (
         f"{where}: slug '{entry.slug}' must equal the folder name '{entry.path.name}'"
     )
-    assert NAME_PATTERN.match(entry.name), (
-        f"{where}: name '{entry.name}' must be a valid Python identifier"
+    assert usable_identifier(entry.name, NAME_PATTERN), (
+        f"{where}: name '{entry.name}' must be a valid Python identifier and not "
+        f"a keyword"
     )
     for label, value in (("title", entry.title), ("summary", entry.summary)):
         assert value.strip(), f"{where}: {label} must be a non-empty string"
@@ -482,6 +484,10 @@ def missing_dependencies(entry: ModelEntry) -> list[str]:
     missing = []
     for item in entry.dependencies.packages:
         requirement = Requirement(item)
+        # A false marker means the package is not expected here, so counting it
+        # missing would skip the model's checks on every other platform.
+        if requirement.marker and not requirement.marker.evaluate():
+            continue
         try:
             installed = Version(version(requirement.name))
         except PackageNotFoundError:

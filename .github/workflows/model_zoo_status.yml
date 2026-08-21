@@ -105,9 +105,15 @@ jobs:
           echo "$CELLS" | uv run --no-sync python -c \
             'import json,os,sys; print("\n".join(c["model"] for c in json.load(sys.stdin) if c["version"] == os.environ["VERSION"]))' \
             > models.txt
+          # A frozen release can warn where `main` no longer does, which is no
+          # zoo regression, so only released legs downgrade. `main` stays strict.
+          filters=()
+          if [ "$VERSION" != main ]; then
+            filters=(-W default::DeprecationWarning -W default::PendingDeprecationWarning)
+          fi
           while read -r model; do
             [ -n "$model" ] || continue
-            if uv run --no-sync python -m pytest -m zoo \
+            if uv run --no-sync python -m pytest -m zoo "${filters[@]}" \
                  packages/pybamm-model-zoo --zoo-model="$model"; then
               result=pass
             else

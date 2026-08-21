@@ -23,8 +23,14 @@ print(solution["Voltage [V]"](150))
 ```
 
 The zoo is a `uv` workspace member, so `uv sync --extra all --group dev` from the
-repository root installs it editable alongside `pybamm`. It is not published to
-PyPI.
+repository root installs it editable alongside `pybamm`.
+
+It is not published to PyPI yet, so `pip install pybamm` does not provide it.
+Until it is released, users install it from the repository:
+
+```bash
+pip install "pybamm-model-zoo @ git+https://github.com/pybamm-team/PyBaMM.git#subdirectory=packages/pybamm-model-zoo"
+```
 
 ## Adding a model
 
@@ -88,7 +94,8 @@ Advisory-ness lives in the CI job, never in an `xfail` marker: a community model
 that fails, fails, and that is exactly the signal its badge reports. Being
 advisory is what lets the zoo test contributed models on every pull request
 without a contributed model ever blocking a PyBaMM release. The manifest tier is
-what puts a model's tests behind the `gating` marker.
+what puts a model's tests behind the `gating` marker, and what `--zoo-tier=core`
+keeps out of the merge gate's collection entirely.
 
 ## Testing
 
@@ -131,9 +138,15 @@ in the manifest diff. The `manifest` check itself cannot be waived.
 nox -s zoo                          # the whole zoo, both tiers, plus examples
 nox -s zoo -- --zoo-model=my_model  # one model
 nox -s zoo-gating                   # only core-tier models (the merge gate)
+nox -s zoo-community                # only what the gate does not cover (advisory CI)
 nox -s zoo-examples                 # every model's example scripts
 nox -s zoo-docs                     # regenerate docs pages and badges
 ```
+
+`--zoo-model` and `--zoo-tier` drop the folders they exclude *before* pytest
+imports anything in them, so a model that fails to import can only fail its own
+run. That is what keeps the merge gate independent of the community tier: marker
+deselection alone would not, since it happens after every test module is loaded.
 
 Aim for contract checks under 60 s per model and a model's own tests under
 5 minutes; `solve_time` in the manifest is the lever.

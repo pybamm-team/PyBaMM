@@ -72,6 +72,13 @@ jobs:
             model_zoo:
               - 'packages/pybamm-model-zoo/**'
               - '.github/workflows/test_on_push.yml'
+              # Ownership is a contract check, so dropping an owner line has to
+              # run the check that would have caught it.
+              - '.github/CODEOWNERS'
+              # The weekly job consumes the matrix and the docs generator, and
+              # nothing else validates it on a pull request.
+              - '.github/workflows/model_zoo_status.yml'
+              - 'docs/source/model_zoo/**'
 
       # Map "what changed" to the solver wheels to build: solver PRs validate every
       # platform; pybamm/push need the sparse matrix's runners; docs-only needs Linux.
@@ -305,8 +312,8 @@ jobs:
       timeout_minutes: 30
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
-  # Advisory like run_unit_tests_advisory above: the whole zoo runs, `community`
-  # models included, and reports red without blocking a merge.
+  # Advisory like run_unit_tests_advisory above: `community` reports red without
+  # blocking. The gate above covers `core`, so this runs only what it does not.
   run_zoo_tests_advisory:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
@@ -315,7 +322,7 @@ jobs:
       contents: read
     uses: ./.github/workflows/_nox.yml
     with:
-      sessions: zoo
+      sessions: zoo-community
       texlive: false
       fetch_depth: 0
       timeout_minutes: 60
