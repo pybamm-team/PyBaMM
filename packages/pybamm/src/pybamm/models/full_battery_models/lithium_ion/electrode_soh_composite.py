@@ -833,6 +833,15 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 stacklevel=2,
             )
 
+        # The stoichiometries are one expression holding rootfinds nested several
+        # deep, which only the native plugin evaluates quickly enough; on Windows it
+        # cannot be reached, so the caller's split solve answers instead.
+        if pybamm.is_windows():
+            raise pybamm.SolverError(
+                "the full composite electrode SOH solve needs the 'brent' CasADi "
+                "rootfinder plugin, which is not available on Windows"
+            )
+
         all_inputs = {**inputs, **Qs, "Q_Li": Q_Li}
         if initialization_method == "voltage":
             all_inputs["V_init"] = V_init

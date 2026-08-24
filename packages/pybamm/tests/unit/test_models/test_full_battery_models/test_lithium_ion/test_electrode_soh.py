@@ -289,6 +289,12 @@ class TestElectrodeSOHHysteresis:
         assert ocv(x_0, y_0, None, None) == pytest.approx(V_min + 0.1, abs=1e-6)
 
 
+needs_full_solve = pytest.mark.skipif(
+    pybamm.is_windows(),
+    reason="the full composite solve needs the brent plugin, which Windows cannot load",
+)
+
+
 class TestElectrodeSOHComposite:
     @staticmethod
     def _check_phases_equal(results, xy, soc):
@@ -377,6 +383,7 @@ class TestElectrodeSOHComposite:
             "positive",  # positive-only composite
         ],
     )
+    @needs_full_solve
     def test_half_cell_with_same_ocp_curves(self, composite_electrode, initial_value):
         pvals, options = self._get_params_and_options(composite_electrode)
         # Use composite ESOH helper to compute initial stoichiometries at a voltage
@@ -435,6 +442,7 @@ class TestElectrodeSOHComposite:
                 - param.n.prim.U(results["x_init_1"], param.T_ref)
             ) == pytest.approx(V_target, abs=1e-05)
 
+    @needs_full_solve
     def test_chen2020_composite_default_solve(self):
         pvals = pybamm.ParameterValues("Chen2020_composite")
         options = {"particle phases": ("2", "1")}
@@ -1060,15 +1068,16 @@ class TestGetInitialSOC:
                 "5 A", parameter_values_composite, options=options_composite
             )
 
-        with pytest.warns(UserWarning, match=r"is greater than 1"):
-            pybamm.lithium_ion.ElectrodeSOHComposite.solve_full(
-                1.001, parameter_values_composite, options=options_composite
-            )
+        if not pybamm.is_windows():
+            with pytest.warns(UserWarning, match=r"is greater than 1"):
+                pybamm.lithium_ion.ElectrodeSOHComposite.solve_full(
+                    1.001, parameter_values_composite, options=options_composite
+                )
 
-        with pytest.warns(UserWarning, match=r"is less than 0"):
-            pybamm.lithium_ion.ElectrodeSOHComposite.solve_full(
-                -0.001, parameter_values_composite, options=options_composite
-            )
+            with pytest.warns(UserWarning, match=r"is less than 0"):
+                pybamm.lithium_ion.ElectrodeSOHComposite.solve_full(
+                    -0.001, parameter_values_composite, options=options_composite
+                )
         with pytest.warns(UserWarning, match=r"is greater than 1"):
             pybamm.lithium_ion.ElectrodeSOHComposite.solve_split(
                 1.001, parameter_values_composite, options=options_composite

@@ -11,6 +11,7 @@ from .util import (
 from .util import (
     get_parameters_filepath,
     has_jax,
+    is_windows,
     raise_jax_not_found,
     import_optional_dependency,
 )

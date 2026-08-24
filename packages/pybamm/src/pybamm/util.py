@@ -368,6 +368,13 @@ def is_macos_intel():
     return sys.platform == "darwin" and platform.machine() == "x86_64"
 
 
+def is_windows():
+    """Check if running on Windows."""
+    import sys
+
+    return sys.platform == "win32"
+
+
 def raise_jax_not_found():
     """Raise an appropriate error when JAX is not available."""
     if is_macos_intel():
