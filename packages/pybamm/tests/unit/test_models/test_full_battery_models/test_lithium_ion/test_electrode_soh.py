@@ -1232,6 +1232,8 @@ class TestElectrodeSOHCompositeHardCases:
             np.asarray(processed.evaluate(inputs={"sto": stoichiometry})).reshape(-1)[0]
         )
 
+    # solves the model itself, whose variables hold the rootfinds
+    @needs_full_solve
     @pytest.mark.parametrize(("initialization_method", "scales", "target"), CASES)
     def test_reaches_the_requested_state(self, initialization_method, scales, target):
         options, parameter_values, param, capacities = self._setup(scales)
