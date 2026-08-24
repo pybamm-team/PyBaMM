@@ -24,14 +24,6 @@ def _evaluate(symbol, **inputs):
     return float(function(*[inputs[name] for name in symbols]))
 
 
-# On Windows our MSVC-built extension and the MinGW-built casadi wheel hold separate
-# copies of CasADi, so a plugin registered in ours is invisible to the one Python calls.
-pytestmark = pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="the brent plugin cannot reach the casadi wheel's CasADi on Windows",
-)
-
-
 class TestBrent:
     def test_solves_a_scalar_equation(self):
         x = pybamm._BrentUnknown("x")
@@ -108,6 +100,10 @@ class TestBrent:
         outer = pybamm._Brent(outer_x * outer_x - inner, outer_x, (0.0, 10.0))
         assert float(casadi.evalf(outer.to_casadi(inputs={}))) == pytest.approx(2.0)
 
+    @pytest.mark.skipif(
+        not casadi.has_rootfinder("brent"),
+        reason="only the plugin keeps the iteration out of Python",
+    )
     def test_evaluating_does_not_re_enter_python(self):
         # the whole solve runs in the CasADi graph, so a Brent node must cost no more
         # python frames per evaluation than the same expression without one
@@ -150,7 +146,9 @@ class TestBrent:
     def test_no_sign_change_fails_rather_than_guessing(self):
         x = pybamm._BrentUnknown("x")
         node = pybamm._Brent(x * x + 1 - 0.0, x, (0.0, 1.0))
-        with pytest.raises(RuntimeError, match="rootfinder process failed"):
+        with pytest.raises(
+            RuntimeError, match=r"rootfinder process failed|no sign change"
+        ):
             casadi.evalf(node.to_casadi(inputs={}))
 
     def test_evaluate_reports_an_empty_bracket_rather_than_nan(self):
@@ -174,6 +172,22 @@ class TestBrent:
             return casadi.Function("f", [y], [node.to_casadi(y=y)]).serialize()
 
         assert serialised(0) == serialised(1)
+
+    def test_the_driver_matches_the_plugin(self, monkeypatch):
+        # what Windows runs: the iteration in Python over a compiled residual
+        monkeypatch.setattr(casadi, "has_rootfinder", lambda name: False)
+        p = pybamm.InputParameter("p")
+        x = pybamm._BrentUnknown("x")
+        node = pybamm._Brent(x * x - p, x, (0.0, 10.0))
+        symbol = casadi.MX.sym("p")
+        converted = node.to_casadi(inputs={"p": symbol})
+        root = casadi.Function("root", [symbol], [converted])
+        assert float(root(6.0)) == pytest.approx(np.sqrt(6), abs=1e-12)
+        # dx/dp = 1 / (2x), by the implicit function theorem
+        derivative = casadi.Function(
+            "d", [symbol], [casadi.jacobian(converted, symbol)]
+        )
+        assert float(derivative(6.0)) == pytest.approx(1 / (2 * np.sqrt(6)), abs=1e-9)
 
     def test_children_and_copy(self):
         x = pybamm._BrentUnknown("x")

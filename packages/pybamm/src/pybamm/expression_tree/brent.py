@@ -93,6 +93,101 @@ class _OracleCache(dict):
             self._shared[key] = value
 
 
+# CasADi holds a Callback by weak reference, so a driver that fell out of scope would
+# be collected while the graph still pointed at it.
+_LIVE_DRIVERS: list[casadi.Callback] = []
+
+
+class _BrentDriver(casadi.Callback):
+    """Drive :func:`scipy.optimize.brentq` over a compiled residual.
+
+    Stands in for the ``"brent"`` plugin where it is not registered with the CasADi
+    the process calls, which is every Windows install. Only the iteration re-enters
+    Python; the residual and everything around it stay in the graph, so a rootfind
+    nested inside another costs one call per enclosing iteration rather than a tree
+    walk per residual evaluation.
+    """
+
+    def __init__(self, oracle, abstol, max_iter):
+        super().__init__()
+        self._oracle = oracle
+        self._abstol = abstol
+        self._max_iter = max_iter
+        self.construct("brent_driver", {})
+
+    def get_n_in(self):
+        # the oracle's inputs are (unknown, lo, hi, *free); the unknown is ours to find
+        return self._oracle.n_in() - 1
+
+    def get_n_out(self):
+        return 1
+
+    def get_sparsity_in(self, i):
+        return self._oracle.sparsity_in(i + 1)
+
+    def get_sparsity_out(self, i):
+        return casadi.Sparsity.dense(1, 1)
+
+    def has_forward(self, nfwd):
+        # one direction at a time, so a seed has the same shape as its input
+        return nfwd == 1
+
+    def get_forward(self, nfwd, name, inames, onames, opts):
+        """The implicit function theorem, as the plugin's own derivative is."""
+        oracle = self._oracle
+        unknown = casadi.MX.sym("x")
+        arguments = [
+            casadi.MX.sym(f"i{i}", oracle.sparsity_in(i + 1))
+            for i in range(oracle.n_in() - 1)
+        ]
+        root = casadi.MX.sym("root")
+        seeds = [
+            casadi.MX.sym(f"d{i}", argument.sparsity())
+            for i, argument in enumerate(arguments)
+        ]
+        residual = oracle(unknown, *arguments)
+        # dx/dp = -(dF/dp) / (dF/dx), at the root: the bracket does not move it
+        free = casadi.vertcat(*[casadi.vec(a) for a in arguments[2:]])
+        free_seed = casadi.vertcat(*[casadi.vec(seed) for seed in seeds[2:]])
+        numerator = casadi.jtimes(residual, free, free_seed) if arguments[2:] else 0
+        derivative = -numerator / casadi.jacobian(residual, unknown)
+        return casadi.Function(
+            name,
+            [*arguments, root, *seeds],
+            [casadi.substitute(derivative, unknown, root)],
+            inames,
+            onames,
+            {"allow_free": True, **opts},
+        )
+
+    def eval(self, arg):
+        from scipy.optimize import brentq
+
+        lo, hi = float(arg[0]), float(arg[1])
+        free = list(arg[2:])
+
+        def residual(value):
+            return float(self._oracle(value, lo, hi, *free))
+
+        residual_lo, residual_hi = residual(lo), residual(hi)
+        if (
+            residual_lo != 0
+            and residual_hi != 0
+            and (residual_lo > 0) == (residual_hi > 0)
+        ):
+            raise RuntimeError(
+                f"no sign change over the bracket ({lo}, {hi}), where the residual is "
+                f"{residual_lo} and {residual_hi}, so it holds no root"
+            )
+        try:
+            root = brentq(residual, lo, hi, xtol=self._abstol, maxiter=self._max_iter)
+        except RuntimeError as error:
+            raise RuntimeError(
+                f"the rootfind did not converge in {self._max_iter} iterations"
+            ) from error
+        return [casadi.DM(root)]
+
+
 class _Brent(pybamm.Symbol):
     """
     Solve ``residual == 0`` for ``unknown`` within ``bounds``, by Brent's method.
@@ -103,9 +198,12 @@ class _Brent(pybamm.Symbol):
     plugin registered by ``pybammsolvers``, so the whole solve runs inside the CasADi
     graph.
 
-    Not available on Windows: the CasADi wheel there is built with MinGW and
-    ``pybammsolvers`` with MSVC, so the two hold separate copies of CasADi and the
-    plugin never reaches the one Python calls. ``evaluate()`` still works, via SciPy.
+    Where that plugin is not registered with the CasADi the process calls -- every
+    Windows install, whose CasADi wheel is built with MinGW while ``pybammsolvers``
+    is built with MSVC, leaving two copies of CasADi in the process -- the iteration
+    runs in Python over the compiled residual instead. Same roots and the same
+    derivatives, a few tenths of a millisecond slower per solve, but the result
+    holds a callback and so cannot be code-generated.
 
     Brent needs only a sign change over the bounds, so it converges where a Newton
     iteration stalls, and the answer cannot leave them. Derivatives come from CasADi's
@@ -221,14 +319,6 @@ class _Brent(pybamm.Symbol):
         )
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
-        if not casadi.has_rootfinder("brent"):
-            raise NotImplementedError(
-                "the 'brent' rootfinder plugin is not registered with the CasADi that "
-                "Python is using, so this node cannot be converted to CasADi. On "
-                "Windows the casadi wheel is built with MinGW and pybammsolvers with "
-                "MSVC, which leaves the two with separate copies of CasADi. Call "
-                "evaluate() instead, which solves with SciPy."
-            )
         # These names reach fn.serialize(), which keys the AOT compile cache, so they
         # must not carry `id`: it is a per-process hash. CasADi names generated code
         # positionally, so duplicates across two Brent nodes are harmless.
@@ -253,6 +343,11 @@ class _Brent(pybamm.Symbol):
         oracle = casadi.Function(
             "brent_oracle", [unknown, lo_sym, hi_sym, *free], [equation]
         )
+        if not casadi.has_rootfinder("brent"):
+            driver = _BrentDriver(oracle, self.abstol, self.max_iter)
+            _LIVE_DRIVERS.append(driver)
+            return driver(lo, hi, *free)
+
         solver = casadi.rootfinder(
             "brent",
             "brent",
