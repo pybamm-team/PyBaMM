@@ -203,7 +203,8 @@ class _Brent(pybamm.Symbol):
     is built with MSVC, leaving two copies of CasADi in the process -- the iteration
     runs in Python over the compiled residual instead. Same roots and the same
     derivatives, a few tenths of a millisecond slower per solve, but the result
-    holds a callback and so cannot be code-generated.
+    holds a callback, so it can be neither code-generated nor serialised into the
+    solver: reading such a variable back through IDAKLU fails to deserialise it.
 
     Brent needs only a sign change over the bounds, so it converges where a Newton
     iteration stalls, and the answer cannot leave them. Derivatives come from CasADi's
