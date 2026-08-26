@@ -33,9 +33,11 @@ COPY . .
 # solver submodules are excluded from the build context, so it cannot be compiled
 # here. Benchmarks need core pybamm only, so the extras (jax, plotting) stay out.
 RUN uv venv "$VIRTUAL_ENV" \
-    && wheel=$(ls solver-wheels/*-cp313-*.whl 2>/dev/null | head -n1 || true) \
-    && uv pip install --no-sources $wheel -e ./packages/pybamm \
-         --group packages/pybamm/pyproject.toml:dev
+    && set -- -e ./packages/pybamm --group packages/pybamm/pyproject.toml:dev \
+    && for wheel in solver-wheels/*-cp313-*.whl; do \
+         if [ -e "$wheel" ]; then set -- "$wheel" "$@"; break; fi; \
+       done \
+    && uv pip install --no-sources "$@"
 
 WORKDIR /pybamm/packages/pybamm/tests/benchmarks
 
