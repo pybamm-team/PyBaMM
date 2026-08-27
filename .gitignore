@@ -9,7 +9,8 @@
 *.csv
 *.hidden
 *.pkl
-.claude
+.claude/*
+!.claude/skills/
 .local
 
 # don't ignore important .txt and .csv files
