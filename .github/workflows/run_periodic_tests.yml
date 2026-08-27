@@ -25,6 +25,7 @@ jobs:
   # Build the solver wheels once (like test_on_push.yml) and download them per
   # job; otherwise every nox/uv sync would compile the solver from source and fail.
   build_solver:
+    name: Solver wheels
     # Pass contents:read to the reusable workflow (top-level permissions are {},
     # so its checkout would otherwise get no token scope).
     permissions:
@@ -123,11 +124,11 @@ jobs:
 
   run_doctests:
     needs: build_solver
+    name: Doctests
     permissions:
       contents: read
     uses: ./.github/workflows/_nox.yml
     with:
-      job_name: Doctests
       sessions: "doctests docs"
       # Full clone: the docs build's sphinx_last_updated_by_git needs the history.
       fetch_depth: 0
@@ -135,20 +136,20 @@ jobs:
 
   run_example_tests:
     needs: build_solver
+    name: Example notebooks
     permissions:
       contents: read
     uses: ./.github/workflows/_nox.yml
     with:
-      job_name: Example notebooks
       sessions: examples
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
     needs: build_solver
+    name: Example scripts
     permissions:
       contents: read
     uses: ./.github/workflows/_nox.yml
     with:
-      job_name: Example scripts
       sessions: scripts
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
