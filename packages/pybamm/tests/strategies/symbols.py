@@ -443,6 +443,34 @@ def _reg_power_branch(
     )
 
 
+def _brent_branch(
+    child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm._Brent]:
+    """Brent over ``residual(unknown) == 0``, bracketed by two further expressions."""
+
+    def make_brent(parts):
+        residual, lo, hi, abstol, max_iter, tag = parts
+        # nested Brents must not share an unknown, and a drawn tag replays identically
+        unknown = pybamm._BrentUnknown(f"brent unknown {tag}")
+        return pybamm._Brent(
+            # subtraction so the unknown cannot be simplified away, as `0 * x` would
+            unknown - residual,
+            unknown,
+            (lo, hi),
+            abstol=abstol,
+            max_iter=max_iter,
+        )
+
+    return st.tuples(
+        child_strategy,
+        child_strategy,
+        child_strategy,
+        st.floats(min_value=1e-16, max_value=1e-6, allow_nan=False),
+        st.integers(min_value=1, max_value=200),
+        st.integers(min_value=0, max_value=2**40),
+    ).map(make_brent)
+
+
 def _interpolant_branch(
     _child_strategy: st.SearchStrategy[pybamm.Symbol],
 ) -> st.SearchStrategy[pybamm.Interpolant]:
@@ -870,6 +898,9 @@ _STRATEGIES.update(
         pybamm.Parameter: lambda _children: parameter_strategy(),
         pybamm.Time: lambda _children: time_strategy(),
         pybamm.InputParameter: lambda _children: input_parameter_strategy(),
+        pybamm._BrentUnknown: lambda _children: st.integers(
+            min_value=0, max_value=2**40
+        ).map(lambda tag: pybamm._BrentUnknown(f"brent unknown {tag}")),
         pybamm.Negate: lambda children: _unary_branch(children, pybamm.Negate),
         pybamm.AbsoluteValue: lambda children: _unary_branch(
             children, pybamm.AbsoluteValue
@@ -938,6 +969,7 @@ _STRATEGIES.update(
         pybamm.RegPower: _reg_power_branch,
         # data-bearing leaves
         pybamm.Interpolant: _interpolant_branch,
+        pybamm._Brent: _brent_branch,
         ExpressionFunctionParameter: _expression_function_parameter_branch,
         # n-ary / complex branch strategies
         pybamm.Conditional: _conditional_branch,
@@ -1065,6 +1097,7 @@ _LEAF_CLASSES: frozenset[type[pybamm.Symbol]] = frozenset(
         pybamm.Parameter,
         pybamm.Time,
         pybamm.InputParameter,
+        pybamm._BrentUnknown,
     }
 )
 
