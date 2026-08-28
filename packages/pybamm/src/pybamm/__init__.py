@@ -7,7 +7,6 @@ from .util import (
     root_dir,
     load,
     is_constant_and_can_evaluate,
-    is_flux_boundary_condition,
 )
 from .util import (
     get_parameters_filepath,
