@@ -4,9 +4,9 @@
 
 import numpy as np
 import pytest
+from tests import DummyDiscretisationClass
 
 import pybamm
-from tests import DummyDiscretisationClass
 
 
 class TestFiniteVolume2DGradDiv:

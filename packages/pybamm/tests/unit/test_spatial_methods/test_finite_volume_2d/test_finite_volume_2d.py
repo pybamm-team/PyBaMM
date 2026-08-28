@@ -2,9 +2,9 @@ import pickle
 
 import numpy as np
 import pytest
+from tests import get_mesh_for_testing
 
 import pybamm
-from tests import get_mesh_for_testing
 
 
 class TestFiniteVolume2D:
