@@ -173,7 +173,35 @@ class EISSolution(SolutionBase):
         """
         from pybamm.plotting.nyquist_plot import nyquist_plot
 
-        return nyquist_plot(self.impedance, **kwargs)
+        component_keys = {
+            "Cell": "Cell impedance [Ohm]",
+            "Positive electrode": "Positive electrode impedance [Ohm]",
+            "Negative electrode": "Negative electrode impedance [Ohm]",
+        }
+        if not all(key in self._data for key in component_keys.values()):
+            return nyquist_plot(self.impedance, **kwargs)
+
+        plot_kwargs = dict(kwargs)
+        ax = plot_kwargs.pop("ax", None)
+        show_plot = plot_kwargs.pop("show_plot", True)
+        plot_kwargs.pop("label", None)
+        fig = None
+        for label, key in component_keys.items():
+            fig_i, ax = nyquist_plot(
+                self._data[key],
+                ax=ax,
+                show_plot=False,
+                label=label,
+                **plot_kwargs,
+            )
+            fig = fig or fig_i
+        ax.legend()
+
+        if show_plot:  # pragma: no cover
+            plt = pybamm.import_optional_dependency("matplotlib.pyplot")
+            plt.show()
+
+        return fig, ax
 
 
 _DEFAULT_SOLUTION_OPTIONS = {
