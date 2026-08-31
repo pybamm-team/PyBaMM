@@ -3,6 +3,7 @@
 #
 
 import contextlib
+import warnings
 
 import pytest
 
@@ -551,6 +552,22 @@ class TestElectrodeSOHComposite:
                     assert 0 <= results[key] <= 1, (
                         f"Stoichiometry {key} out of bounds: {results[key]}"
                     )
+
+    def test_phase_capacity_inputs_are_not_deprecated_msmr_names(self):
+        # The phase capacities are named "Q_n_prim"/"Q_n_sec" rather than
+        # "Q_n_1"/"Q_n_2" because the numbered form matches the deprecated-MSMR
+        # name pattern, so check_parameter_values would report every composite
+        # solve as using a renamed parameter the caller never set.
+        pvals = pybamm.ParameterValues("Chen2020_composite")
+        options = {"particle phases": ("2", "1")}
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            pybamm.lithium_ion.get_initial_stoichiometries_composite(
+                0.5, pvals, options=options
+            )
+
+        assert [w for w in caught if issubclass(w.category, DeprecationWarning)] == []
 
 
 class TestElectrodeSOHMSMR:
