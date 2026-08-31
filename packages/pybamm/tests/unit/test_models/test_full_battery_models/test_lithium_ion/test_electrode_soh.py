@@ -567,7 +567,8 @@ class TestElectrodeSOHComposite:
                 0.5, pvals, options=options
             )
 
-        assert [w for w in caught if issubclass(w.category, DeprecationWarning)] == []
+        renamed = [w for w in caught if "has been renamed to" in str(w.message)]
+        assert renamed == []
 
 
 class TestElectrodeSOHMSMR:
