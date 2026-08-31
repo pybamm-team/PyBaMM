@@ -567,7 +567,9 @@ class TestElectrodeSOHComposite:
                 0.5, pvals, options=options
             )
 
-        renamed = [w for w in caught if "has been renamed to" in str(w.message)]
+        renamed = [
+            w for w in caught if "host site occupancy capacity" in str(w.message)
+        ]
         assert renamed == []
 
 
