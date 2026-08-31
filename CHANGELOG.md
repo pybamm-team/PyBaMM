@@ -3,6 +3,7 @@
 ## Bug fixes
 
 - The `integration` nox session no longer installs the `pydiffsol` extra on macOS Intel CI runners, where it has no working build. ([#5726](https://github.com/pybamm-team/PyBaMM/pull/5726))
+- The composite electrode-SOH model's phase-capacity inputs are renamed `Q_n_1` -> `Q_n_prim`, `Q_n_2` -> `Q_n_sec`, `Q_p_1` -> `Q_p_prim`, `Q_p_2` -> `Q_p_sec`. The numbered form matched the deprecated-MSMR name pattern, so every composite solve emitted a `DeprecationWarning` naming an input the caller never set and cannot change. No documented API takes these names, but they are visible in `all_inputs` on the ESOH sub-simulation's solution, so code introspecting those keys must use the new spellings. ([#5738](https://github.com/pybamm-team/PyBaMM/pull/5738))
 
 # [v26.8.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.8.0.0) - 2026-08-13
 
