@@ -1,7 +1,7 @@
 [build-system]
 requires = [
     "scikit-build-core>=1.0.3",
-    "pybind11>=3.0.1",
+    "pybind11>=3.1.0",
     # CasADi is pip-installable from PyPI on Windows, but finding the libcasadi.so path is
     # finicky, so we prefer the vcpkg registry for Windows builds.
     "casadi==3.7.2; platform_system!='Windows'",
@@ -34,7 +34,7 @@ dev = [
     # Duplicated from [build-system].requires so editable.auto-rebuild has
     # build tools available in the venv.
     "scikit-build-core>=1.0.3",
-    "pybind11>=3.0.1",
+    "pybind11>=3.1.0",
     "cmake>=4.4.2",
     "ninja",
 ]
