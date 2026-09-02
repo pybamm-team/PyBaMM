@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 from scipy.sparse import coo_matrix as sp_coo
 from scipy.sparse import csr_matrix as sp_csr
+from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.meshes.unstructured_submesh import (
@@ -1204,9 +1205,12 @@ class TestFiniteVolumeUnstructuredBehavior:
         values = pybamm.Vector(np.arange(mesh.npts), domain="test")
 
         plain = method.laplacian(variable, values, {})
-        np.testing.assert_allclose(
-            plain.evaluate()[:, 0], method._tpfa_matrix(mesh) @ np.arange(mesh.npts)
-        )
+        cell_values = np.arange(mesh.npts)
+        expected = method._tpfa_matrix(mesh) @ cell_values
+        gradient_matrices, _ = method._least_squares_gradient(mesh, {})
+        for K, G in zip(method._cross_term_matrices(mesh), gradient_matrices):
+            expected = expected + K @ (G @ cell_values)
+        np.testing.assert_allclose(plain.evaluate()[:, 0], expected)
 
         constant = pybamm.Vector(np.full(mesh.npts, 3), domain="test")
         dirichlet_bcs = {
@@ -1241,10 +1245,10 @@ class TestFiniteVolumeUnstructuredBehavior:
         )
         faces = mesh.boundary_faces["top"]
         owners = mesh.face_owner[faces]
-        distance = np.linalg.norm(
-            mesh.face_centroids[faces] - mesh.cell_centroids[owners], axis=1
+        distance, alpha, _ = method._boundary_decomposition(mesh, faces)
+        coefficients = (
+            mesh.face_areas[faces] * alpha / distance / mesh.cell_volumes[owners]
         )
-        coefficients = mesh.face_areas[faces] / distance / mesh.cell_volumes[owners]
         expected_rhs = np.zeros(mesh.npts)
         np.add.at(expected_rhs, owners, coefficients * (np.arange(face_count) + 1))
         np.testing.assert_allclose(rhs.evaluate()[:, 0], expected_rhs)
@@ -1276,7 +1280,7 @@ class TestFiniteVolumeUnstructuredBehavior:
         x_values = mesh.cell_centroids[:, 0]
         values = pybamm.Vector(x_values, domain="test")
         grad_squared = method.gradient_squared(variable, values, {})
-        matrices = method._green_gauss_matrices(mesh)
+        matrices, _ = method._least_squares_gradient(mesh, {})
         expected = sum((matrix @ x_values) ** 2 for matrix in matrices)
         np.testing.assert_allclose(grad_squared.evaluate()[:, 0], expected)
 
@@ -2040,3 +2044,191 @@ class TestProcessModelConcatenationZStack:
         )
         rhs = model_disc.concatenated_rhs.evaluate(t=0, y=u).flatten()
         np.testing.assert_allclose(rhs, 0.0, atol=1e-10)
+
+
+# ======================================================================
+# Tests: non-orthogonal correction
+# ======================================================================
+
+
+def _perturb_interior_nodes(nodes, spacing, fraction=0.3, seed=0):
+    """Jitter interior nodes so faces are skewed as well as non-orthogonal."""
+    rng = np.random.default_rng(seed)
+    nodes = nodes.copy()
+    low, high = nodes.min(axis=0), nodes.max(axis=0)
+    on_boundary = np.any(np.isclose(nodes, low) | np.isclose(nodes, high), axis=1)
+    interior = nodes[~on_boundary]
+    nodes[~on_boundary] = interior + rng.uniform(
+        -fraction * spacing, fraction * spacing, interior.shape
+    )
+    return nodes
+
+
+def _make_perturbed_tri_mesh(n=6):
+    edges = np.linspace(0, 1, n + 1)
+    nodes, elements = _quad_to_tri(edges, edges)
+    mesh = UnstructuredSubMesh(_perturb_interior_nodes(nodes, 1.0 / n), elements)
+    mesh.detect_box_boundaries()
+    return mesh
+
+
+def _dirichlet_all_sides(mesh, u_exact):
+    return {
+        side: (pybamm.Vector(u_exact(mesh.face_centroids[faces])), "Dirichlet")
+        for side, faces in mesh.boundary_faces.items()
+    }
+
+
+def _laplacian_system(method, mesh, bcs):
+    """``(L, rhs)`` with ``laplacian(u) = L @ u + rhs`` for the full operator."""
+    variable = pybamm.Variable("u", domain="test")
+    y = pybamm.StateVector(slice(0, mesh.npts), domains={"primary": ["test"]})
+    expr = method.laplacian(variable, y, {variable: bcs} if bcs else {})
+    zeros = np.zeros(mesh.npts)
+    return sp_csr(expr.jac(y).evaluate(y=zeros)), expr.evaluate(y=zeros)[:, 0]
+
+
+class TestNonOrthogonalCorrection:
+    @pytest.mark.parametrize(
+        "make_mesh",
+        [
+            lambda: _make_2d_mesh(6, 6),
+            _make_perturbed_tri_mesh,
+            lambda: _make_3d_mesh(3, 3, 3),
+        ],
+        ids=["tri", "tri-perturbed", "tet"],
+    )
+    @pytest.mark.parametrize("correction", ["over-relaxed", "minimum"])
+    def test_laplacian_exact_on_linear_field(self, make_mesh, correction):
+        """The discrete Laplacian of a linear field vanishes on every cell;
+        the two-point part alone fails this on any non-orthogonal mesh."""
+        mesh = make_mesh()
+        method = FiniteVolumeUnstructured({"non-orthogonal correction": correction})
+        method._mesh = _MeshMap({("test",): mesh})
+        slope = np.array([1.0, 0.7, 0.4])[: mesh.dimension]
+        u = mesh.cell_centroids @ slope
+        bcs = _dirichlet_all_sides(mesh, lambda points: points @ slope)
+        L, rhs = _laplacian_system(method, mesh, bcs)
+        np.testing.assert_allclose(L @ u + rhs, 0, atol=1e-10)
+
+    def test_two_point_part_alone_is_not_exact(self):
+        mesh = _make_2d_mesh(6, 6)
+        L = FiniteVolumeUnstructured()._tpfa_matrix(mesh)
+        residual = np.abs(L @ mesh.cell_centroids[:, 0])
+        assert residual[_get_internal_cells(mesh)].max() > 1
+
+    def test_second_order_convergence_on_triangles(self):
+        def u_exact(points):
+            return np.sin(np.pi * points[:, 0]) * np.sin(np.pi * points[:, 1])
+
+        errors = []
+        for n in (8, 16, 32):
+            mesh = _make_2d_mesh(n, n)
+            method = _method_with_mesh(mesh)
+            L, rhs = _laplacian_system(
+                method, mesh, _dirichlet_all_sides(mesh, u_exact)
+            )
+            source = -2 * np.pi**2 * u_exact(mesh.cell_centroids)
+            u = spsolve(L.tocsc(), source - rhs)
+            error = u - u_exact(mesh.cell_centroids)
+            errors.append(np.sqrt(np.sum(mesh.cell_volumes * error**2)))
+        rates = np.log2(np.array(errors[:-1]) / np.array(errors[1:]))
+        assert np.all(rates > 1.7), rates
+
+    def test_orthogonal_mesh_has_no_cross_term(self):
+        mesh = _make_quad_mesh(4, 4)
+        method = FiniteVolumeUnstructured()
+        assert method._cross_term_matrices(mesh) is None
+        assert method._div_D_grad_matrices(mesh)[4] is None
+        np.testing.assert_allclose(method._decomposition(mesh)[0], 1.0)
+
+    def test_full_operator_is_conservative(self):
+        mesh = _make_perturbed_tri_mesh(5)
+        L, _ = _laplacian_system(_method_with_mesh(mesh), mesh, None)
+        u = mesh.cell_centroids[:, 0] ** 2 + mesh.cell_centroids[:, 1]
+        np.testing.assert_allclose(np.sum((L @ u) * mesh.cell_volumes), 0, atol=1e-10)
+
+    def test_div_D_grad_matches_laplacian_for_constant_D(self):
+        mesh = _make_perturbed_tri_mesh(4)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+
+        def u_exact(points):
+            return np.sin(points[:, 0]) * points[:, 1] ** 2
+
+        values = pybamm.Vector(u_exact(mesh.cell_centroids), domain="test")
+        bcs = {variable: _dirichlet_all_sides(mesh, u_exact)}
+        laplacian = method.laplacian(variable, values, bcs).evaluate()[:, 0]
+        div_grad = method.div_D_grad(
+            div_symbol, variable, pybamm.Scalar(2), values, bcs
+        )
+        np.testing.assert_allclose(div_grad.evaluate()[:, 0], 2 * laplacian, atol=1e-10)
+
+    def test_div_D_grad_exact_on_linear_field_3d(self):
+        mesh = _make_3d_mesh(3, 3, 3)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        slope = np.array([1.0, 0.7, 0.4])
+        values = pybamm.Vector(mesh.cell_centroids @ slope, domain="test")
+        bcs = {variable: _dirichlet_all_sides(mesh, lambda points: points @ slope)}
+        result = method.div_D_grad(div_symbol, variable, pybamm.Scalar(2), values, bcs)
+        np.testing.assert_allclose(result.evaluate(), 0, atol=1e-10)
+
+    def test_least_squares_gradient_exact_on_linear_field(self):
+        mesh = _make_perturbed_tri_mesh(5)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        slope = np.array([2.0, -3.0])
+        values = pybamm.Vector(mesh.cell_centroids @ slope, domain="test")
+
+        dirichlet = {
+            variable: _dirichlet_all_sides(mesh, lambda points: points @ slope)
+        }
+        components = method.gradient(variable, values, dirichlet).components
+        for k, component in enumerate(components):
+            np.testing.assert_allclose(component.evaluate()[:, 0], slope[k], atol=1e-10)
+
+        # named sides take coordinate-direction derivatives on both ends
+        neumann = {
+            variable: {
+                "left": (pybamm.Scalar(2.0), "Neumann"),
+                "right": (pybamm.Scalar(2.0), "Neumann"),
+                "bottom": (pybamm.Scalar(-3.0), "Neumann"),
+                "top": (pybamm.Scalar(-3.0), "Neumann"),
+            }
+        }
+        components = method.gradient(variable, values, neumann).components
+        for k, component in enumerate(components):
+            np.testing.assert_allclose(component.evaluate()[:, 0], slope[k], atol=1e-10)
+
+    def test_green_gauss_gradient_is_not_exact_on_skewed_mesh(self):
+        """Documents why the cross term cannot use the Green-Gauss gradient."""
+        mesh = _make_3d_mesh(3, 3, 3)
+        G = FiniteVolumeUnstructured()._green_gauss_matrices(mesh)
+        grad_x = (G[0] @ mesh.cell_centroids[:, 0])[_get_internal_cells(mesh)]
+        assert np.abs(grad_x - 1).max() > 0.1
+
+    def test_divergence_shares_green_gauss_assembly(self):
+        mesh = _make_2d_mesh(3, 3)
+        method = FiniteVolumeUnstructured()
+        assert method._divergence_matrices(mesh) is method._green_gauss_matrices(mesh)
+
+    def test_invalid_option_raises(self):
+        with pytest.raises(pybamm.OptionError, match="non-orthogonal correction"):
+            FiniteVolumeUnstructured({"non-orthogonal correction": "none"})
+
+    def test_option_sets_two_point_weight(self):
+        mesh = _make_2d_mesh(3, 3)
+        cos_theta = FiniteVolumeUnstructured()._face_geometry(mesh)["cos_theta"]
+        minimum = FiniteVolumeUnstructured({"non-orthogonal correction": "minimum"})
+        over_relaxed = FiniteVolumeUnstructured()
+        np.testing.assert_allclose(minimum._decomposition(mesh)[0], cos_theta)
+        np.testing.assert_allclose(over_relaxed._decomposition(mesh)[0], 1 / cos_theta)
+
+    def test_inverted_cell_raises(self):
+        mesh = _make_2d_mesh(2, 2)
+        mesh.face_normals[: mesh.n_internal_faces] *= -1
+        with pytest.raises(pybamm.GeometryError, match="pointing away"):
+            FiniteVolumeUnstructured()._face_geometry(mesh)
