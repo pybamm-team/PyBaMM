@@ -70,11 +70,11 @@ jobs:
             .
 
       # The registry pairs a project key with the project slug as the username
-      # (a user key would pair with the owner's email instead), so BENCHER must
+      # (a user key would pair with the owner's email instead), so BENCHER_PROJECT must
       # hold a `bencher_run_*` key.
       - name: Log in to the Bencher registry
         env:
-          BENCHER_API_KEY: ${{ secrets.BENCHER }}
+          BENCHER_API_KEY: ${{ secrets.BENCHER_PROJECT }}
         run: |
           printf '%s' "$BENCHER_API_KEY" \
             | docker login "$BENCHER_REGISTRY" --username "$BENCHER_PROJECT" --password-stdin
@@ -86,7 +86,7 @@ jobs:
 
       - name: Track main branch benchmarks with Bencher
         env:
-          BENCHER_API_KEY: ${{ secrets.BENCHER }}
+          BENCHER_API_KEY: ${{ secrets.BENCHER_PROJECT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           bencher run \
