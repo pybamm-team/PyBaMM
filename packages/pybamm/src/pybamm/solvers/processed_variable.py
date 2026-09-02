@@ -1082,32 +1082,10 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         return self._cached_tri
 
     def _get_boundary_mask(self, query_pts):
-        """Return a boolean mask of query points outside the domain.
-
-        * **2D** — uses ``boundary_loops()`` (loops cached; containment is
-          recomputed per call since query points vary between calls).
-        * **3D** — uses the generalized winding number via
-          ``contains_points_3d``.
-        """
-        if self.mesh.dimension == 3:
-            inside = self.mesh.contains_points_3d(query_pts)
-            return ~inside
-
-        if not hasattr(self, "_cached_boundary_loops"):
-            self._cached_boundary_loops = self.mesh.boundary_loops()
-        loops = self._cached_boundary_loops
-        if loops is None or len(loops) == 0:
-            return None
-        pts2d = query_pts[:, :2]
-        # Even-odd rule (odd containment count = inside): nested loops are
-        # holes, disconnected components are kept, on-boundary points stay in.
-        radius = 1e-9 * max(
-            np.ptp(self.mesh.vertices, axis=0).max(), np.finfo(float).tiny
-        )
-        containment_count = sum(
-            path.contains_points(pts2d, radius=radius).astype(int) for path in loops
-        )
-        return (containment_count % 2) == 0
+        """Boolean mask of query points outside the domain, or ``None`` when
+        the mesh cannot decide (2D mesh without boundary edges)."""
+        inside = self.mesh.contains_points(query_pts)
+        return None if inside is None else ~inside
 
     def _interpolate_spatial(self, values, query_pts, fill_value=np.nan):
         """Interpolate cell-centered data to query points.
@@ -1130,15 +1108,18 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         # A query point outside the convex hull is NaN in every column
         # (it is a location property), so whole rows are nearest-filled;
         # requiring all columns avoids clobbering valid columns when the
-        # input itself contains NaNs.
+        # input itself contains NaNs. Points outside the domain get
+        # fill_value instead, so they are excluded before the (costly)
+        # nearest-neighbour fill rather than filled and then overwritten.
+        outside = self._get_boundary_mask(query_pts)
         mask = np.isnan(result)
         if result.ndim == 2:
             mask = mask.all(axis=1)
+        if outside is not None:
+            mask &= ~outside
         if np.any(mask):
             nearest = NearestNDInterpolator(pts, vals)
             result[mask] = nearest(query_pts[mask])
-
-        outside = self._get_boundary_mask(query_pts)
         if outside is not None:
             result[outside] = fill_value
 
@@ -1324,7 +1305,9 @@ class ProcessedVariableVectorFieldUnstructuredFVM:
     def get_quiver_data(self, t):
         """Interpolate vector components onto a coarser grid for quiver arrows.
 
-        Returns ``(X, Z, U, W)`` for 2D or ``(X, Y, Z, U, V, W)`` for 3D.
+        Returns ``(X, Z, U, W)`` in 2D.  In 3D two mid-plane slices are
+        returned as ``(X1, Z1, U_xz, W_xz, y_mid, X2, Y2, U_xy, V_xy, z_mid)``:
+        the x-z plane at ``y_mid`` followed by the x-y plane at ``z_mid``.
         """
         nq = self.N_QUIVER
         x_pts = np.linspace(self.first_dim_pts[0], self.first_dim_pts[-1], nq)

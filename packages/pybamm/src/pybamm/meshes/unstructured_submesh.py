@@ -551,6 +551,30 @@ class UnstructuredSubMesh(SubMesh):
                 if mirror.get("other_mesh") is self:
                     mirror["right_cells"] = permuted
 
+    def contains_points(self, query_pts):
+        """Boolean mask of ``query_pts`` lying inside the domain.
+
+        In 2D the boundary loops are cached on the mesh and containment uses
+        the even-odd rule, so holes are excluded, disconnected components
+        kept, and on-boundary points count as inside.  In 3D this is
+        :meth:`contains_points_3d`.  Returns ``None`` for a 2D mesh without
+        boundary edges.
+        """
+        query_pts = np.asarray(query_pts, dtype=np.float64)
+        if self.dimension == 3:
+            return self.contains_points_3d(query_pts)
+        if not hasattr(self, "_cached_boundary_loops"):
+            self._cached_boundary_loops = self.boundary_loops()
+        loops = self._cached_boundary_loops
+        if loops is None or len(loops) == 0:
+            return None
+        radius = 1e-9 * max(np.ptp(self.vertices, axis=0).max(), np.finfo(float).tiny)
+        containment_count = sum(
+            path.contains_points(query_pts[:, :2], radius=radius).astype(int)
+            for path in loops
+        )
+        return (containment_count % 2) == 1
+
     def boundary_loops(self):
         """Return boundary loops as a list of ``matplotlib.path.Path`` (2D only).
 
