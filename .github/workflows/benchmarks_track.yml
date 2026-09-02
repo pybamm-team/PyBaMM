@@ -1,0 +1,129 @@
+# Trusted half of the bare metal benchmark pipeline. Picks up the image built by
+# benchmarks_pr.yml, pushes it to Bencher's registry, and runs the benchmarks on
+# bare metal against the PR's base branch.
+#
+# `workflow_run` gives this the Bencher API key even for fork PRs, so it must
+# never execute the PR's code: loading and pushing an image does not run it, and
+# the benchmarks themselves run inside Bencher's sandboxed runner.
+name: Benchmarks (track)
+
+on:
+  workflow_run:
+    workflows: ["Benchmarks (PR)"]
+    types: [completed]
+
+permissions: {}
+
+env:
+  BENCHER_PROJECT: pybamm
+  # The image repository must be named after the Bencher project slug.
+  BENCHER_REGISTRY: registry.bencher.dev
+  FORCE_COLOR: 3
+
+jobs:
+  track_pr_benchmarks:
+    name: Timing benchmarks (bare metal)
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      # benchmarks_pr.yml skips the build when a PR touches nothing relevant, and
+      # a skipped job still concludes 'success' — so check before downloading.
+      - name: Look for a benchmark image
+        id: artifact
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const artifacts = await github.paginate(
+              github.rest.actions.listWorkflowRunArtifacts,
+              { owner: context.repo.owner, repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id },
+            );
+            const names = new Set(artifacts.map((artifact) => artifact.name));
+            core.setOutput("found", names.has("benchmark-image") && names.has("pr-event"));
+
+      - name: Download benchmark image
+        if: steps.artifact.outputs.found == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: benchmark-image
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download pull request event
+        if: steps.artifact.outputs.found == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pr-event
+          path: pr-event
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # The refs come from the fork's event payload, so they are untrusted input:
+      # export them as environment variables rather than interpolating into a shell.
+      - name: Export pull request refs
+        if: steps.artifact.outputs.found == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require("fs");
+            const event = JSON.parse(fs.readFileSync("pr-event/event.json", "utf8"));
+            core.exportVariable("PR_HEAD", event.pull_request.head.ref);
+            core.exportVariable("PR_HEAD_SHA", event.pull_request.head.sha);
+            core.exportVariable("PR_BASE", event.pull_request.base.ref);
+            core.exportVariable("PR_BASE_SHA", event.pull_request.base.sha);
+            core.exportVariable("PR_NUMBER", String(event.number));
+
+      - name: Load benchmark image
+        if: steps.artifact.outputs.found == 'true'
+        run: |
+          zstd -d -c benchmark-image.tar.zst | docker load
+          docker tag pybamm-benchmarks:pr "$BENCHER_REGISTRY/$BENCHER_PROJECT:pr-$PR_HEAD_SHA"
+
+      # The registry pairs a project key with the project slug as the username
+      # (a user key would pair with the owner's email instead), so BENCHER must
+      # hold a `bencher_run_*` key.
+      - name: Log in to the Bencher registry
+        if: steps.artifact.outputs.found == 'true'
+        env:
+          BENCHER_API_KEY: ${{ secrets.BENCHER }}
+        run: |
+          printf '%s' "$BENCHER_API_KEY" \
+            | docker login "$BENCHER_REGISTRY" --username "$BENCHER_PROJECT" --password-stdin
+
+      - name: Push benchmark image
+        if: steps.artifact.outputs.found == 'true'
+        run: docker push "$BENCHER_REGISTRY/$BENCHER_PROJECT:pr-$PR_HEAD_SHA"
+
+      - uses: bencherdev/bencher@4c83b25441d145ee273adaf74be30f2382e6ba85 # v0.6.11
+        if: steps.artifact.outputs.found == 'true'
+
+      # --start-point-* rebases the PR branch onto its base every run, so the
+      # comparison is always against the base commit the PR actually targets.
+      - name: Track PR benchmarks with Bencher
+        if: steps.artifact.outputs.found == 'true'
+        env:
+          BENCHER_API_KEY: ${{ secrets.BENCHER }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bencher run \
+            --project "$BENCHER_PROJECT" \
+            --image "$BENCHER_PROJECT:pr-$PR_HEAD_SHA" \
+            --branch "$PR_HEAD" \
+            --hash "$PR_HEAD_SHA" \
+            --start-point "$PR_BASE" \
+            --start-point-hash "$PR_BASE_SHA" \
+            --start-point-clone-thresholds \
+            --start-point-reset \
+            --testbed bare-metal \
+            --spec intel-v1 \
+            --adapter python_pytest \
+            --file /tmp/results.json \
+            --error-on-alert \
+            --github-actions "$GITHUB_TOKEN" \
+            --ci-number "$PR_NUMBER" \
+            "pytest -m 'time_bench and not slow_bench' -v -o addopts= --benchmark-group-by func --benchmark-disable-gc --benchmark-json /tmp/results.json"
