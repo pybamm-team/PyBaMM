@@ -1183,8 +1183,8 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
     Returns
     -------
     dict
-        Keys: ``"left_cells"``, ``"right_cells"``, ``"face_areas"``,
-        ``"cell_distances"``.
+        Keys: ``"left_cells"``, ``"right_cells"``, ``"left_faces"``,
+        ``"right_faces"``, ``"face_areas"``, ``"cell_distances"``.
     """
     left_bnd = left_mesh.boundary_faces.get("right", np.array([], dtype=int))
     right_bnd = right_mesh.boundary_faces.get("left", np.array([], dtype=int))
@@ -1235,9 +1235,12 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
     right_cell_centroids = right_mesh.cell_centroids[right_cells]
     cell_distances = np.linalg.norm(right_cell_centroids - left_cell_centroids, axis=1)
 
+    right_faces = right_bnd[right_indices]
     result = {
         "left_cells": left_cells,
         "right_cells": right_cells,
+        "left_faces": left_bnd,
+        "right_faces": right_faces,
         "face_areas": face_areas,
         "cell_distances": cell_distances,
         "other_mesh": right_mesh,
@@ -1249,6 +1252,8 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
         right_mesh.interface_data[left_name] = {
             "left_cells": right_cells,
             "right_cells": left_cells,
+            "left_faces": right_faces,
+            "right_faces": left_bnd,
             "face_areas": face_areas,
             "cell_distances": cell_distances,
             "other_mesh": left_mesh,

@@ -187,6 +187,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         a_mesh.interface_data[b_name] = {
             "left_cells": a_cells,
             "right_cells": b_cells,
+            "left_faces": a_match,
+            "right_faces": b_match,
             "face_areas": face_areas,
             "cell_distances": cell_distances,
             "other_mesh": b_mesh,
@@ -194,6 +196,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         b_mesh.interface_data[a_name] = {
             "left_cells": b_cells,
             "right_cells": a_cells,
+            "left_faces": b_match,
+            "right_faces": a_match,
             "face_areas": face_areas,
             "cell_distances": cell_distances,
             "other_mesh": a_mesh,
@@ -317,15 +321,29 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     continue
                 left_disc = disc.process_symbol(child)
                 right_disc = disc.process_symbol(neighbor_child)
+                neighbor_mesh = self.mesh[neighbor_name]
+                # External conditions feed the interface gradient's cross
+                # term; the interface faces themselves enter as cross rows.
                 grad = self.internal_neumann_condition(
                     left_disc,
                     right_disc,
                     child_mesh,
-                    self.mesh[neighbor_name],
+                    neighbor_mesh,
+                    left_bcs=self._external_bcs(child_mesh, outer_bcs),
+                    right_bcs=self._external_bcs(neighbor_mesh, outer_bcs),
                 )
                 bcs[f"iface_{neighbor_name}"] = (grad, "Neumann")
             bcs_out[child] = bcs
         return bcs_out
+
+    @staticmethod
+    def _external_bcs(submesh, outer_bcs):
+        """The entries of ``outer_bcs`` on this mesh's exterior face tags."""
+        return {
+            tag: bc
+            for tag, bc in outer_bcs.items()
+            if tag in submesh.boundary_faces and not tag.startswith("iface_")
+        }
 
     @staticmethod
     def _bc_contribution(n, n_bnd, owners, coeffs, bc_value, repeats=1):
@@ -502,7 +520,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             )
 
         if K is not None:
-            G_components, grad_bc_vecs = gradient()
+            G_components, grad_bc_vecs, _ = gradient()
             for k in range(d):
                 L = L + K[k] @ G_components[k]
                 if bcs:
@@ -802,7 +820,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         def gradient():
             if not gradient_cache:
-                G_grad, grad_bc = self._least_squares_gradient(submesh, bcs, repeats)
+                G_grad, grad_bc, _ = self._least_squares_gradient(submesh, bcs, repeats)
                 gradient_cache.append(
                     [
                         pybamm.Matrix(lift(G_grad[k])) @ disc_u + grad_bc[k]
@@ -911,7 +929,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         if np.any(diag_correction):
             L = csr_matrix(L + diags(diag_correction))
         if np.max(np.abs(cross_diag), initial=0.0) >= 1e-12:
-            G_components, grad_bc_vecs = gradient()
+            G_components, grad_bc_vecs, _ = gradient()
             for k in range(d):
                 scale = diags(cross_diag[k])
                 L = L + scale @ G_components[k]
@@ -984,11 +1002,12 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             if missing:
                 pybamm.logger.warning(
                     f"Gradient of {symbol.name!r}: boundary face buckets "
-                    f"{missing} have no boundary condition, so the gradient "
-                    "of cells on them is fitted without those faces and can "
-                    "miss variation normal to the boundary."
+                    f"{missing} have no boundary condition and are fitted as "
+                    "zero normal derivative (the operators' zero-flux "
+                    "treatment), which is wrong if the field varies normal "
+                    "to those boundaries."
                 )
-        G_components, bc_vecs = self._least_squares_gradient(submesh, bcs, repeats)
+        G_components, bc_vecs, _ = self._least_squares_gradient(submesh, bcs, repeats)
 
         components = []
         for k in range(d):
@@ -998,40 +1017,62 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         return pybamm.VectorField(*components)
 
-    def _face_bc_kinds(self, submesh, bcs):
-        """Per-face kind: 0 internal, 1 Dirichlet, 2 Neumann, 3 no condition."""
-        kinds = np.full(len(submesh.face_owner), 3, dtype=int)
-        kinds[: submesh.n_internal_faces] = 0
+    # Row kinds of the least-squares gradient fit
+    _ROW_INTERNAL, _ROW_DIRICHLET, _ROW_NEUMANN, _ROW_NO_BC, _ROW_INTERFACE = range(5)
+
+    def _face_bc_kinds(self, submesh, bcs, interface_faces=None):
+        """Per-face row kind (see the ``_ROW_*`` constants)."""
+        kinds = np.full(len(submesh.face_owner), self._ROW_NO_BC, dtype=int)
+        kinds[: submesh.n_internal_faces] = self._ROW_INTERNAL
         for side, (_, bc_type) in bcs.items():
             self._check_bc_type(bc_type)
             faces = self._boundary_faces_for_side(submesh, side)
-            kinds[faces] = 1 if bc_type == "Dirichlet" else 2
+            kinds[faces] = (
+                self._ROW_DIRICHLET if bc_type == "Dirichlet" else self._ROW_NEUMANN
+            )
+        if interface_faces is not None:
+            kinds[interface_faces] = self._ROW_INTERFACE
         return kinds
 
-    def _least_squares_matrices(self, submesh, bcs):
+    def _least_squares_matrices(self, submesh, bcs, interface=None):
         """Cached matrix part of the least-squares gradient for one BC layout.
 
         Each cell has the same number of faces ``m``, so the per-cell normal
         equations are solved in a batch.  Rows are unit-direction equations
         ``e · grad(u) = b``: ``e`` towards the neighbour centroid with
-        ``b = (u_j - u_i) / dist`` (internal), towards the face centroid
-        with ``b = (u_b - u_i) / dist`` (Dirichlet), or the outward normal
-        with ``b`` the prescribed derivative (Neumann).  Cells with too few
-        constrained directions get the minimum-norm fit via the
-        pseudo-inverse.
+        ``b = (u_j - u_i) / dist`` (internal faces, and interface faces
+        towards the other mesh's cell), towards the face centroid with
+        ``b = (u_b - u_i) / dist`` (Dirichlet), or the outward normal with
+        ``b`` the prescribed derivative (Neumann).  Boundary faces without a
+        condition take ``b = 0``, matching the operators' zero-flux treatment
+        of such faces.  Cells whose directions do not span the space get the
+        minimum-norm fit via the pseudo-inverse.
+
+        Parameters
+        ----------
+        submesh : UnstructuredSubMesh
+        bcs : dict
+            ``{side: (value, type)}`` boundary conditions.
+        interface : dict, optional
+            Cross-mesh rows: ``faces`` (this mesh's interface faces),
+            ``other_cells`` and ``other_centroids`` (the paired cells of the
+            other mesh), ``n_other`` and a hashable ``key`` for caching.
 
         Returns
         -------
         tuple
-            ``(G, coeff, slot, length)``: ``G[k]`` maps cell values to
-            gradient component ``k``; ``coeff`` of shape ``(n, d, m)`` holds
-            ``grad_k(cell) = sum_m coeff[cell, k, m] b_m``; ``slot[f]`` and
-            ``length[f]`` are the row position within the owner cell and the
-            row distance of face ``f``, used to place boundary values.
+            ``(G, coeff, slot, length, G_cross)``: ``G[k]`` maps cell values
+            to gradient component ``k`` and ``G_cross[k]`` (``None`` without
+            an interface) maps the other mesh's values; ``coeff`` of shape
+            ``(n, d, m)`` holds ``grad_k(cell) = sum_m coeff[cell, k, m]
+            b_m``; ``slot[f]`` and ``length[f]`` are the row position within
+            the owner cell and the row distance of face ``f``, used to place
+            boundary values.
         """
         cache = self._operator_cache(submesh)
         signature = tuple(sorted((side, bc_type) for side, (_, bc_type) in bcs.items()))
-        key = ("least_squares", signature)
+        interface_key = None if interface is None else interface["key"]
+        key = ("least_squares", signature, interface_key)
         if key in cache:
             return cache[key]
 
@@ -1040,7 +1081,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         n_int = submesh.n_internal_faces
         n_faces = len(submesh.face_owner)
         centroids = submesh.cell_centroids
-        kinds = self._face_bc_kinds(submesh, bcs)
+        interface_faces = None if interface is None else interface["faces"]
+        kinds = self._face_bc_kinds(submesh, bcs, interface_faces)
 
         # Half-face rows: the owner side of every face, then the neighbour
         # side of internal faces, so row f (< n_faces) belongs to face f.
@@ -1055,17 +1097,19 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         )
         row_kind = kinds[row_face]
         toward = np.where(
-            (row_kind == 0)[:, np.newaxis],
+            (row_kind == self._ROW_INTERNAL)[:, np.newaxis],
             centroids[np.maximum(other, 0)],
             submesh.face_centroids[row_face],
         )
+        if interface is not None:
+            toward[interface_faces] = interface["other_centroids"]
+            other[interface_faces] = interface["other_cells"]
         delta = toward - centroids[cell]
         length = np.linalg.norm(delta, axis=1)
         direction = delta / length[:, np.newaxis]
-        neumann = row_kind == 2
-        direction[neumann] = submesh.face_normals[row_face[neumann]]
-        length[neumann] = 1.0
-        weight = (row_kind != 3).astype(float)
+        normal_rows = (row_kind == self._ROW_NEUMANN) | (row_kind == self._ROW_NO_BC)
+        direction[normal_rows] = submesh.face_normals[row_face[normal_rows]]
+        length[normal_rows] = 1.0
 
         counts = np.bincount(cell, minlength=n)
         if np.any(counts != counts[0]):
@@ -1076,33 +1120,54 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         m = int(counts[0])
         order = np.argsort(cell, kind="stable")
         dirs = direction[order].reshape(n, m, d)
-        w = weight[order].reshape(n, m)
-        normal = np.einsum("nmi,nmj,nm->nij", dirs, dirs, w)
-        coeff = np.einsum("nij,nmj,nm->nim", np.linalg.pinv(normal), dirs, w)
+        normal = np.einsum("nmi,nmj->nij", dirs, dirs)
+        coeff = np.einsum("nij,nmj->nim", np.linalg.pinv(normal), dirs)
         slot = np.empty(len(cell), dtype=int)
         slot[order] = np.arange(len(cell)) % m
 
-        internal = np.nonzero(row_kind == 0)[0]
-        dirichlet = np.nonzero(row_kind == 1)[0]
-        G = []
-        for k in range(d):
-            c_int = coeff[cell[internal], k, slot[internal]] / length[internal]
-            c_dir = coeff[cell[dirichlet], k, slot[dirichlet]] / length[dirichlet]
-            rows = np.concatenate([cell[internal], cell[internal], cell[dirichlet]])
-            cols = np.concatenate([other[internal], cell[internal], cell[dirichlet]])
-            data = np.concatenate([c_int, -c_int, -c_dir])
-            G.append(csr_matrix(coo_matrix((data, (rows, cols)), shape=(n, n))))
+        def row_coefficients(rows, k):
+            return coeff[cell[rows], k, slot[rows]] / length[rows]
 
-        cache[key] = (G, coeff, slot[:n_faces], length[:n_faces])
+        internal = np.nonzero(row_kind == self._ROW_INTERNAL)[0]
+        dirichlet = np.nonzero(row_kind == self._ROW_DIRICHLET)[0]
+        across = np.nonzero(row_kind == self._ROW_INTERFACE)[0]
+        G = []
+        G_cross = None if interface is None else []
+        for k in range(d):
+            c_int = row_coefficients(internal, k)
+            c_dir = row_coefficients(dirichlet, k)
+            c_across = row_coefficients(across, k)
+            rows = np.concatenate(
+                [cell[internal], cell[internal], cell[dirichlet], cell[across]]
+            )
+            cols = np.concatenate(
+                [other[internal], cell[internal], cell[dirichlet], cell[across]]
+            )
+            data = np.concatenate([c_int, -c_int, -c_dir, -c_across])
+            G.append(csr_matrix(coo_matrix((data, (rows, cols)), shape=(n, n))))
+            if interface is not None:
+                G_cross.append(
+                    csr_matrix(
+                        coo_matrix(
+                            (c_across, (cell[across], other[across])),
+                            shape=(n, interface["n_other"]),
+                        )
+                    )
+                )
+
+        cache[key] = (G, coeff, slot[:n_faces], length[:n_faces], G_cross)
         return cache[key]
 
-    def _least_squares_gradient(self, submesh, bcs, repeats=1):
-        """``(matrices, bc_vecs)`` of the least-squares gradient: component
-        ``k`` is ``matrices[k] @ u + bc_vecs[k]`` (sizes lifted by
-        ``repeats`` for auxiliary domains)."""
+    def _least_squares_gradient(self, submesh, bcs, repeats=1, interface=None):
+        """``(matrices, bc_vecs, cross_matrices)`` of the least-squares
+        gradient: component ``k`` is ``matrices[k] @ u + bc_vecs[k]``, plus
+        ``cross_matrices[k] @ u_other`` when ``interface`` rows are given
+        (sizes lifted by ``repeats`` for auxiliary domains)."""
         n = submesh.npts
         d = submesh.dimension
-        G, coeff, slot, length = self._least_squares_matrices(submesh, bcs)
+        G, coeff, slot, length, G_cross = self._least_squares_matrices(
+            submesh, bcs, interface
+        )
         bc_vecs = [pybamm.Vector(np.zeros(n * repeats)) for _ in range(d)]
         for side, (bc_value, bc_type) in bcs.items():
             faces = self._boundary_faces_for_side(submesh, side)
@@ -1116,7 +1181,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 bc_vecs[k] = bc_vecs[k] + self._bc_contribution(
                     n, len(faces), owners, coeffs, bc_value, repeats=repeats
                 )
-        return G, bc_vecs
+        return G, bc_vecs, G_cross
 
     def _green_gauss_matrices(self, submesh):
         """
@@ -1472,10 +1537,23 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # ------------------------------------------------------------------
 
     def internal_neumann_condition(
-        self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
+        self,
+        left_symbol_disc,
+        right_symbol_disc,
+        left_mesh,
+        right_mesh,
+        left_bcs=None,
+        right_bcs=None,
     ):
-        """Two-point gradient across the interface between two submeshes,
-        one value per interface face (outward from ``left_mesh``)."""
+        """Normal gradient across the interface between two submeshes, one
+        value per interface face (outward from ``left_mesh``).
+
+        On unstructured meshes this is the two-point difference plus the
+        non-orthogonal cross term (see :meth:`_tpfa_matrix`), whose face
+        gradient is fitted on both sides with the interface faces as
+        cross-mesh rows.  ``left_bcs``/``right_bcs`` are the external
+        boundary conditions of each side, used by that fit.
+        """
         from pybamm.meshes.unstructured_submesh import UnstructuredSubMesh
 
         repeats = self._get_auxiliary_domain_repeats(left_symbol_disc.domains)
@@ -1492,6 +1570,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 left_mesh,
                 right_mesh,
                 repeats,
+                left_bcs or {},
+                right_bcs or {},
             )
         else:
             return self._internal_neumann_structured(
@@ -1509,7 +1589,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         left_mesh,
         right_mesh,
         repeats,
+        left_bcs=None,
+        right_bcs=None,
     ):
+        left_bcs = left_bcs or {}
+        right_bcs = right_bcs or {}
         # Find the interface_data entry that pairs left_mesh with right_mesh.
         # Each entry stores ``other_mesh`` so multi-neighbor topologies pick
         # the correct partner instead of grabbing the first dict value.
@@ -1535,6 +1619,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 interface = {
                     "left_cells": rev["right_cells"],
                     "right_cells": rev["left_cells"],
+                    "left_faces": rev["right_faces"],
+                    "right_faces": rev["left_faces"],
                     "face_areas": rev["face_areas"],
                     "cell_distances": rev["cell_distances"],
                 }
@@ -1549,36 +1635,100 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 "faces."
             )
 
-        n_faces = len(interface["left_cells"])
-        n_left = left_mesh.npts
-        n_right = right_mesh.npts
+        left_cells = interface["left_cells"]
+        right_cells = interface["right_cells"]
+        left_faces = interface["left_faces"]
+        n_faces = len(left_cells)
+        d = left_mesh.dimension
+
+        def lift(matrix):
+            return pybamm.Matrix(
+                csr_matrix(kron(eye(repeats, dtype=np.float64), matrix))
+            )
+
+        def without_domains(expr):
+            expr.clear_domains()
+            return expr
+
+        def tile(values):
+            return pybamm.Vector(np.tile(values, repeats))
 
         left_sub = csr_matrix(
-            (np.ones(n_faces), (np.arange(n_faces), interface["left_cells"])),
-            shape=(n_faces, n_left),
+            (np.ones(n_faces), (np.arange(n_faces), left_cells)),
+            shape=(n_faces, left_mesh.npts),
         )
         right_sub = csr_matrix(
-            (np.ones(n_faces), (np.arange(n_faces), interface["right_cells"])),
-            shape=(n_faces, n_right),
+            (np.ones(n_faces), (np.arange(n_faces), right_cells)),
+            shape=(n_faces, right_mesh.npts),
         )
 
-        inv_dx = diags(1.0 / interface["cell_distances"])
-        left_weighted = inv_dx @ left_sub
-        right_weighted = inv_dx @ right_sub
+        # n = alpha e + k with e the unit left-to-right centroid direction and
+        # n the interface normal, outward from the left cells.
+        normals = left_mesh.face_normals[left_faces]
+        c_left = left_mesh.cell_centroids[left_cells]
+        c_right = right_mesh.cell_centroids[right_cells]
+        delta = c_right - c_left
+        dist = np.linalg.norm(delta, axis=1)
+        e_ij = delta / dist[:, np.newaxis]
+        alpha = self._alpha(np.sum(normals * e_ij, axis=1))
+        k_vec = normals - alpha[:, np.newaxis] * e_ij
 
-        left_mat = pybamm.Matrix(
-            csr_matrix(kron(eye(repeats, dtype=np.float64), left_weighted))
+        two_point = diags(alpha / dist)
+        value = without_domains(
+            lift(two_point @ right_sub) @ right_symbol_disc
+        ) - without_domains(lift(two_point @ left_sub) @ left_symbol_disc)
+
+        if np.max(np.abs(k_vec), initial=0.0) < 1e-12:
+            return value
+
+        face_centroids = left_mesh.face_centroids[left_faces]
+        d_left = np.linalg.norm(face_centroids - c_left, axis=1)
+        d_right = np.linalg.norm(face_centroids - c_right, axis=1)
+        w_left = d_right / (d_left + d_right)
+
+        def side_gradient(mesh, bcs, faces, other, other_cells, own_disc, other_disc):
+            interface_rows = {
+                "key": (id(other), hash(faces.tobytes())),
+                "faces": faces,
+                "other_cells": other_cells,
+                "other_centroids": other.cell_centroids[other_cells],
+                "n_other": other.npts,
+            }
+            G, bc_vecs, G_cross = self._least_squares_gradient(
+                mesh, bcs, repeats, interface=interface_rows
+            )
+            return [
+                without_domains(lift(G[k]) @ own_disc)
+                + without_domains(lift(G_cross[k]) @ other_disc)
+                + without_domains(bc_vecs[k])
+                for k in range(d)
+            ]
+
+        grad_left = side_gradient(
+            left_mesh,
+            left_bcs,
+            left_faces,
+            right_mesh,
+            right_cells,
+            left_symbol_disc,
+            right_symbol_disc,
         )
-        right_mat = pybamm.Matrix(
-            csr_matrix(kron(eye(repeats, dtype=np.float64), right_weighted))
+        grad_right = side_gradient(
+            right_mesh,
+            right_bcs,
+            interface["right_faces"],
+            left_mesh,
+            left_cells,
+            right_symbol_disc,
+            left_symbol_disc,
         )
-
-        dy_r = right_mat @ right_symbol_disc
-        dy_r.clear_domains()
-        dy_l = left_mat @ left_symbol_disc
-        dy_l.clear_domains()
-
-        return dy_r - dy_l
+        for k in range(d):
+            face_gradient = (
+                lift(diags(w_left) @ left_sub) @ grad_left[k]
+                + lift(diags(1.0 - w_left) @ right_sub) @ grad_right[k]
+            )
+            value = value + face_gradient * tile(k_vec[:, k])
+        return value
 
     def _internal_neumann_structured(
         self,

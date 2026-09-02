@@ -1221,7 +1221,7 @@ class TestFiniteVolumeUnstructuredBehavior:
         plain = method.laplacian(variable, values, {})
         cell_values = np.arange(mesh.npts)
         expected = method._tpfa_matrix(mesh) @ cell_values
-        gradient_matrices, _ = method._least_squares_gradient(mesh, {})
+        gradient_matrices, _, _ = method._least_squares_gradient(mesh, {})
         for K, G in zip(
             method._cross_term_matrices(mesh), gradient_matrices, strict=True
         ):
@@ -1296,7 +1296,7 @@ class TestFiniteVolumeUnstructuredBehavior:
         x_values = mesh.cell_centroids[:, 0]
         values = pybamm.Vector(x_values, domain="test")
         grad_squared = method.gradient_squared(variable, values, {})
-        matrices, _ = method._least_squares_gradient(mesh, {})
+        matrices, _, _ = method._least_squares_gradient(mesh, {})
         expected = sum((matrix @ x_values) ** 2 for matrix in matrices)
         np.testing.assert_allclose(grad_squared.evaluate()[:, 0], expected)
 
@@ -1713,7 +1713,7 @@ class TestFiniteVolumeUnstructuredBehavior:
         assert "iface_right" in result[children[0]]
         interface_gradient, bc_type = result[children[0]]["iface_right"]
         assert bc_type == "Neumann"
-        np.testing.assert_allclose(interface_gradient.evaluate(), 0)
+        np.testing.assert_allclose(interface_gradient.evaluate(), 0, atol=1e-12)
 
         structured = pybamm.SubMesh1D(np.array([0, 1]), "cartesian")
         method._mesh[("structured",)] = structured
@@ -2270,3 +2270,101 @@ class TestNonOrthogonalCorrection:
         with caplog.at_level(logging.WARNING):
             method.build(_MeshMap({("tri",): _make_2d_mesh(3, 3)}))
         assert "non-orthogonality" not in caplog.text
+
+
+# ======================================================================
+# Tests: non-orthogonal correction across domain interfaces
+# ======================================================================
+
+
+def _two_domain_laplacian(element_type, boundary_conditions):
+    """Discretised ``div(grad(c))`` of a two-domain concatenation on the
+    unit box split at x = 0.5, returning ``(mesh, rhs_expression)``."""
+    dim3 = element_type in ("tetrahedron", "hexahedron")
+    domains = ["negative electrode", "separator"]
+    x_n = pybamm.SpatialVariable("x_n", domain=[domains[0]], coord_sys="cartesian")
+    x_s = pybamm.SpatialVariable("x_s", domain=[domains[1]], coord_sys="cartesian")
+    z = pybamm.SpatialVariable(
+        "z_2d", domain=domains, coord_sys="cartesian", direction="tb"
+    )
+    geometry = {
+        domains[0]: {x_n: {"min": 0.0, "max": 0.5}, z: {"min": 0.0, "max": 1.0}},
+        domains[1]: {x_s: {"min": 0.5, "max": 1.0}, z: {"min": 0.0, "max": 1.0}},
+    }
+    npts = {x_n: 3, x_s: 3, z: 4}
+    if dim3:
+        y = pybamm.SpatialVariable("y", domain=domains, coord_sys="cartesian")
+        for domain in domains:
+            geometry[domain][y] = {"min": 0.0, "max": 1.0}
+        npts[y] = 3
+    generator = pybamm.meshes.unstructured_submesh.UnstructuredMeshGenerator(
+        element_type=element_type
+    )
+    mesh = pybamm.Mesh(geometry, dict.fromkeys(domains, generator), npts)
+    disc = pybamm.Discretisation(
+        mesh, {domain: FiniteVolumeUnstructured() for domain in domains}
+    )
+    var_n = pybamm.Variable("c_n", domain=[domains[0]])
+    var_s = pybamm.Variable("c_s", domain=[domains[1]])
+    var = pybamm.concatenation(var_n, var_s)
+    model = pybamm.BaseModel()
+    model.rhs = {var: pybamm.div(pybamm.grad(var))}
+    model.initial_conditions = {var: pybamm.Scalar(1)}
+    model.boundary_conditions = {var: boundary_conditions}
+    model.variables = {"c": var}
+    disc.process_model(model, inplace=False)
+    return mesh, disc.process_model(model, inplace=False).concatenated_rhs
+
+
+class TestInterfaceCorrection:
+    @pytest.mark.parametrize("element_type", ["triangle", "tetrahedron"])
+    def test_linear_field_exact_across_interface(self, element_type):
+        """u = x is the steady state of left=0, right=1 with zero flux on the
+        other sides; the interface flux must reproduce it on skewed pairs."""
+        mesh, rhs = _two_domain_laplacian(
+            element_type,
+            {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            },
+        )
+        u = np.concatenate(
+            [
+                mesh["negative electrode"].cell_centroids[:, 0],
+                mesh["separator"].cell_centroids[:, 0],
+            ]
+        )
+        np.testing.assert_allclose(rhs.evaluate(y=u), 0, atol=1e-10)
+
+    def test_interface_flux_is_conservative(self):
+        mesh, rhs = _two_domain_laplacian(
+            "tetrahedron",
+            {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            },
+        )
+        volumes = np.concatenate(
+            [mesh["negative electrode"].cell_volumes, mesh["separator"].cell_volumes]
+        )
+        u = np.random.default_rng(1).uniform(size=len(volumes))
+        np.testing.assert_allclose(volumes @ rhs.evaluate(y=u)[:, 0], 0, atol=1e-10)
+
+    def test_interface_data_records_faces(self):
+        left, right = _make_split_2d_meshes(3, 3, 3)
+        data = left.interface_data["right"]
+        np.testing.assert_array_equal(data["left_faces"], left.boundary_faces["right"])
+        assert set(data["right_faces"]) == set(right.boundary_faces["left"])
+        np.testing.assert_array_equal(
+            left.face_owner[data["left_faces"]], data["left_cells"]
+        )
+
+        a = _make_2d_mesh(2, 2, x_range=(0, 0.5))
+        b = _make_2d_mesh(2, 2, x_range=(0.5, 1))
+        assert FiniteVolumeUnstructured()._compute_pair_interface(a, b, "a", "b")
+        np.testing.assert_array_equal(
+            a.interface_data["b"]["left_faces"], a.boundary_faces["iface_b"]
+        )
+        np.testing.assert_array_equal(
+            b.interface_data["a"]["left_faces"], b.boundary_faces["iface_a"]
+        )

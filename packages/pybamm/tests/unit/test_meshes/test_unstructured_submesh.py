@@ -1515,3 +1515,24 @@ class TestBandwidthOptimization:
         np.testing.assert_allclose(
             other_pre, mesh_r.cell_centroids[mirror["left_cells"]]
         )
+
+
+class TestContainsPoints:
+    def test_2d_even_odd_rule(self):
+        nodes, elements = _unit_square_two_triangles()
+        mesh = UnstructuredSubMesh(nodes, elements)
+        points = np.array([[0.5, 0.5], [2.0, 2.0], [0.5, 0.0], [-1e-3, 0.5]])
+        np.testing.assert_array_equal(
+            mesh.contains_points(points), [True, False, True, False]
+        )
+        # loops are cached on the mesh after the first query
+        assert mesh._cached_boundary_loops is not None
+
+    def test_3d_delegates_to_winding_number(self):
+        nodes, elements = _unit_cube_five_tets()
+        mesh = UnstructuredSubMesh(nodes, elements)
+        points = np.array([[0.5, 0.5, 0.5], [2.0, 2.0, 2.0]])
+        np.testing.assert_array_equal(mesh.contains_points(points), [True, False])
+        np.testing.assert_array_equal(
+            mesh.contains_points(points), mesh.contains_points_3d(points)
+        )
