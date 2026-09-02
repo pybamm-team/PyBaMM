@@ -1621,18 +1621,34 @@ class TestFiniteVolumeUnstructuredBehavior:
     def test_internal_neumann_unstructured_paths(self):
         left, right = _make_split_2d_meshes(2, 2, 2)
         method = FiniteVolumeUnstructured()
-        left_values = pybamm.Vector(np.arange(left.npts), domain="left")
-        right_values = pybamm.Vector(np.arange(right.npts), domain="right")
+        # u = x: the interface normal gradient is exactly 1 once the
+        # non-orthogonal cross term is included (the interface cells touch
+        # no external side where the fitted zero normal derivative is wrong)
+        left_values = pybamm.Vector(left.cell_centroids[:, 0], domain="left")
+        right_values = pybamm.Vector(right.cell_centroids[:, 0], domain="right")
 
         direct = method._internal_neumann_unstructured(
             left_values, right_values, left, right, 1
         )
-        interface = next(iter(left.interface_data.values()))
+        np.testing.assert_allclose(direct.evaluate()[:, 0], 1.0, atol=1e-12)
+
+        # orthogonal interface (quads): plain two-point difference
+        quad_left = _make_quad_mesh(2, 2, x_range=(0, 0.5))
+        quad_right = _make_quad_mesh(2, 2, x_range=(0.5, 1))
+        compute_interface_data(quad_left, quad_right, "left", "right")
+        interface = quad_left.interface_data["right"]
+        u_left, u_right = np.arange(quad_left.npts), np.arange(quad_right.npts)
+        quad_value = method._internal_neumann_unstructured(
+            pybamm.Vector(u_left, domain="left"),
+            pybamm.Vector(u_right, domain="right"),
+            quad_left,
+            quad_right,
+            1,
+        )
         expected = (
-            np.arange(right.npts)[interface["right_cells"]]
-            - np.arange(left.npts)[interface["left_cells"]]
+            u_right[interface["right_cells"]] - u_left[interface["left_cells"]]
         ) / interface["cell_distances"]
-        np.testing.assert_allclose(direct.evaluate()[:, 0], expected)
+        np.testing.assert_allclose(quad_value.evaluate()[:, 0], expected)
 
         left_data = left.interface_data
         left.interface_data = {}
