@@ -421,9 +421,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 )
             col = direction_cols[direction]
         else:
-            token = symbol.name.split("_")[0]
+            axis_name = symbol.name.split("_")[0]
             name_cols = {"x": 0, "y": 1, "z": dim - 1}
-            if token not in name_cols or (token == "y" and dim == 2):
+            if axis_name not in name_cols or (axis_name == "y" and dim == 2):
                 valid = "'x'/'z'" if dim == 2 else "'x'/'y'/'z'"
                 raise pybamm.DomainError(
                     f"Cannot infer a coordinate for spatial variable "
@@ -431,7 +431,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     f"with a leading {valid} token (e.g. 'x_n') or set its "
                     "direction."
                 )
-            col = name_cols[token]
+            col = name_cols[axis_name]
 
         entries = np.tile(symbol_mesh.cell_centroids[:, col], repeats)
         return pybamm.Vector(entries, domains=symbol.domains)
