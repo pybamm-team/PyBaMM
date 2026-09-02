@@ -1208,7 +1208,9 @@ class TestFiniteVolumeUnstructuredBehavior:
         cell_values = np.arange(mesh.npts)
         expected = method._tpfa_matrix(mesh) @ cell_values
         gradient_matrices, _ = method._least_squares_gradient(mesh, {})
-        for K, G in zip(method._cross_term_matrices(mesh), gradient_matrices):
+        for K, G in zip(
+            method._cross_term_matrices(mesh), gradient_matrices, strict=True
+        ):
             expected = expected + K @ (G @ cell_values)
         np.testing.assert_allclose(plain.evaluate()[:, 0], expected)
 
@@ -2232,3 +2234,22 @@ class TestNonOrthogonalCorrection:
         mesh.face_normals[: mesh.n_internal_faces] *= -1
         with pytest.raises(pybamm.GeometryError, match="pointing away"):
             FiniteVolumeUnstructured()._face_geometry(mesh)
+
+    def test_build_warns_on_severe_non_orthogonality(self, caplog):
+        import logging
+
+        # Sliver neighbour: the centroid line is ~85 degrees off the normal
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [10.0, -8.5]])
+        elements = np.array([[0, 1, 2], [1, 3, 2]])
+        skewed = UnstructuredSubMesh(nodes, elements)
+        skewed.detect_box_boundaries()
+        method = FiniteVolumeUnstructured()
+        assert method._face_geometry(skewed)["max_angle_deg"] > 70
+        with caplog.at_level(logging.WARNING):
+            method.build(_MeshMap({("skewed",): skewed}))
+        assert "non-orthogonality" in caplog.text
+
+        caplog.clear()
+        with caplog.at_level(logging.WARNING):
+            method.build(_MeshMap({("tri",): _make_2d_mesh(3, 3)}))
+        assert "non-orthogonality" not in caplog.text
