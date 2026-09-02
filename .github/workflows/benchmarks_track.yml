@@ -85,12 +85,12 @@ jobs:
           docker tag pybamm-benchmarks:pr "$BENCHER_REGISTRY/$BENCHER_PROJECT:pr-$PR_HEAD_SHA"
 
       # The registry pairs a project key with the project slug as the username
-      # (a user key would pair with the owner's email instead), so BENCHER_PROJECT must
+      # (a user key would pair with the owner's email instead), so BENCHER must
       # hold a `bencher_run_*` key.
       - name: Log in to the Bencher registry
         if: steps.artifact.outputs.found == 'true'
         env:
-          BENCHER_API_KEY: ${{ secrets.BENCHER_PROJECT }}
+          BENCHER_API_KEY: ${{ secrets.BENCHER }}
         run: |
           printf '%s' "$BENCHER_API_KEY" \
             | docker login "$BENCHER_REGISTRY" --username "$BENCHER_PROJECT" --password-stdin
@@ -107,7 +107,7 @@ jobs:
       - name: Track PR benchmarks with Bencher
         if: steps.artifact.outputs.found == 'true'
         env:
-          BENCHER_API_KEY: ${{ secrets.BENCHER_PROJECT }}
+          BENCHER_API_KEY: ${{ secrets.BENCHER }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           bencher run \
