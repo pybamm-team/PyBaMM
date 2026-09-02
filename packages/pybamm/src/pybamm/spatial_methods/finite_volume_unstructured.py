@@ -1305,19 +1305,47 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         self, child, discretised_child, integration_dimension, integration_variable=None
     ):
         """Volume integral over the primary domain (cell-volume weights)."""
-        int_mat = self.definite_integral_matrix(child)
-        repeats = self._get_auxiliary_domain_repeats(child.domains)
-        mat = csr_matrix(kron(eye(repeats, dtype=np.float64), int_mat))
-        return pybamm.Matrix(mat) @ discretised_child
+        int_mat = self.definite_integral_matrix(
+            child, integration_dimension=integration_dimension
+        )
+        return int_mat @ discretised_child
 
-    def definite_integral_matrix(self, child, vector_type="row", **kwargs):
-        """Row vector of cell volumes for the primary domain."""
-        domain = child.domain
-        if isinstance(domain, list):
-            domain = tuple(domain)
-        submesh = self.mesh[domain]
-        vol = submesh.cell_volumes
-        return csr_matrix(vol.reshape(1, -1))
+    def definite_integral_matrix(
+        self, child, vector_type="row", integration_dimension="primary"
+    ):
+        """Cell-volume weights of the primary domain as a
+        :class:`pybamm.Matrix`, one block per auxiliary-domain repeat.
+
+        Parameters
+        ----------
+        child : pybamm.Symbol
+            The symbol being integrated.
+        vector_type : str, optional
+            ``"row"`` (default) or ``"column"``.
+        integration_dimension : str, optional
+            Only ``"primary"`` is supported: cells have no secondary
+            structure to integrate over.
+
+        Raises
+        ------
+        NotImplementedError
+            For a non-primary ``integration_dimension``.
+        """
+        if integration_dimension != "primary":
+            raise NotImplementedError(
+                f"Integral in the {integration_dimension!r} dimension is not "
+                "implemented on unstructured meshes; only the primary (cell) "
+                "dimension can be integrated."
+            )
+        if vector_type not in ("row", "column"):
+            raise pybamm.DiscretisationError(
+                f"vector_type must be 'row' or 'column', not {vector_type!r}"
+            )
+        submesh = self.mesh[child.domain]
+        repeats = self._get_auxiliary_domain_repeats(child.domains)
+        shape = (1, -1) if vector_type == "row" else (-1, 1)
+        block = csr_matrix(submesh.cell_volumes.reshape(shape))
+        return pybamm.Matrix(csr_matrix(kron(eye(repeats, dtype=np.float64), block)))
 
     def boundary_integral(self, child, discretised_child, region):
         """Integral of the owner-cell values of ``child`` over the boundary

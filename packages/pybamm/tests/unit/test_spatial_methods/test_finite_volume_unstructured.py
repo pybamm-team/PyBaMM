@@ -699,59 +699,73 @@ class TestMassMatrix:
 
 
 class TestIntegral:
-    def test_definite_integral_constant_2d(self):
-        """Integral of 1 over [0,1]^2 = 1."""
-        mesh = _make_2d_mesh(5, 5)
-        fvu = FiniteVolumeUnstructured()
-        fvu._mesh = {("test",): mesh}
+    @pytest.mark.parametrize(
+        ("make_mesh", "expected_linear"),
+        [(lambda: _make_2d_mesh(10, 10), 0.5), (lambda: _make_3d_mesh(4, 4, 4), 0.5)],
+        ids=["2d", "3d"],
+    )
+    def test_definite_integral_matrix(self, make_mesh, expected_linear):
+        """Integral of 1 over the unit box is 1; of ``x`` is 0.5."""
+        mesh = make_mesh()
+        method = _method_with_mesh(mesh)
+        child = pybamm.Variable("u", domain="test")
+        mat = method.definite_integral_matrix(child)
+        assert isinstance(mat, pybamm.Matrix)
+        assert mat.shape == (1, mesh.npts)
+        np.testing.assert_allclose(mat.entries @ np.ones(mesh.npts), 1.0, atol=1e-12)
+        np.testing.assert_allclose(
+            mat.entries @ mesh.cell_centroids[:, 0], expected_linear, atol=0.01
+        )
 
-        class FakeChild:
-            domain = ("test",)
+    def test_definite_integral_matrix_column(self):
+        mesh = _make_2d_mesh(3, 3)
+        method = _method_with_mesh(mesh)
+        child = pybamm.Variable("u", domain="test")
+        column = method.definite_integral_matrix(child, vector_type="column")
+        assert column.shape == (mesh.npts, 1)
+        np.testing.assert_array_equal(column.entries.toarray()[:, 0], mesh.cell_volumes)
+        with pytest.raises(pybamm.DiscretisationError, match="vector_type"):
+            method.definite_integral_matrix(child, vector_type="diagonal")
 
-        mat = fvu.definite_integral_matrix(FakeChild())
-        result = mat @ np.ones(mesh.npts)
-        np.testing.assert_allclose(result[0], 1.0, atol=1e-12)
+    def test_non_primary_integration_dimension_raises(self):
+        mesh = _make_2d_mesh(2, 2)
+        aux = _make_2d_mesh(1, 1)
+        method = _method_with_mesh(mesh, aux=aux)
+        child = pybamm.Variable(
+            "u", domains={"primary": ["test"], "secondary": ["aux"]}
+        )
+        values = pybamm.Vector(np.ones(mesh.npts * aux.npts), domains=child.domains)
+        with pytest.raises(NotImplementedError, match="secondary"):
+            method.integral(child, values, "secondary")
+        with pytest.raises(NotImplementedError, match="secondary"):
+            method.definite_integral_matrix(child, integration_dimension="secondary")
 
-    def test_definite_integral_constant_3d(self):
-        """Integral of 1 over [0,1]^3 = 1."""
-        mesh = _make_3d_mesh(3, 3, 3)
-        fvu = FiniteVolumeUnstructured()
-        fvu._mesh = {("test",): mesh}
+    def test_definite_integral_vector_through_discretisation(self):
+        """``DefiniteIntegralVector`` must come back as a ``pybamm.Matrix`` so
+        ``process_symbol`` can shape-check it, in both orientations."""
+        x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
+        z = pybamm.SpatialVariable(
+            "z_2d", domain=["negative electrode"], coord_sys="cartesian", direction="tb"
+        )
+        geometry = {
+            "negative electrode": {x: {"min": 0, "max": 1}, z: {"min": 0, "max": 1}}
+        }
+        generator = pybamm.meshes.unstructured_submesh.UnstructuredMeshGenerator()
+        mesh = pybamm.Mesh(geometry, {"negative electrode": generator}, {x: 3, z: 3})
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": FiniteVolumeUnstructured()}
+        )
+        var = pybamm.Variable("var", domain="negative electrode")
+        disc.set_variable_slices([var])
+        npts = mesh["negative electrode"].npts
 
-        class FakeChild:
-            domain = ("test",)
-
-        mat = fvu.definite_integral_matrix(FakeChild())
-        result = mat @ np.ones(mesh.npts)
-        np.testing.assert_allclose(result[0], 1.0, atol=1e-12)
-
-    def test_integral_linear_field_2d(self):
-        """Integral of u = x over [0,1]^2 = 0.5."""
-        mesh = _make_2d_mesh(10, 10)
-        fvu = FiniteVolumeUnstructured()
-        fvu._mesh = {("test",): mesh}
-
-        class FakeChild:
-            domain = ("test",)
-
-        mat = fvu.definite_integral_matrix(FakeChild())
-        u = mesh.cell_centroids[:, 0]
-        result = mat @ u
-        np.testing.assert_allclose(result[0], 0.5, atol=0.01)
-
-    def test_integral_linear_field_3d(self):
-        """Integral of u = x over [0,1]^3 = 0.5."""
-        mesh = _make_3d_mesh(4, 4, 4)
-        fvu = FiniteVolumeUnstructured()
-        fvu._mesh = {("test",): mesh}
-
-        class FakeChild:
-            domain = ("test",)
-
-        mat = fvu.definite_integral_matrix(FakeChild())
-        u = mesh.cell_centroids[:, 0]
-        result = mat @ u
-        np.testing.assert_allclose(result[0], 0.5, atol=0.01)
+        row = disc.process_symbol(pybamm.DefiniteIntegralVector(var))
+        assert row.shape == (1, npts)
+        column = disc.process_symbol(
+            pybamm.DefiniteIntegralVector(var, vector_type="column")
+        )
+        assert column.shape == (npts, 1)
+        np.testing.assert_allclose(row.evaluate() @ np.ones(npts), 1.0, atol=1e-12)
 
 
 # ======================================================================
@@ -1488,7 +1502,10 @@ class TestFiniteVolumeUnstructuredBehavior:
         np.testing.assert_allclose(integral.evaluate(), 1)
 
         row = method.definite_integral_matrix(child)
-        np.testing.assert_allclose(row.toarray()[0], mesh.cell_volumes)
+        np.testing.assert_allclose(
+            row.entries.toarray()[0, : mesh.npts], mesh.cell_volumes
+        )
+        assert row.shape == (aux.npts, mesh.npts * aux.npts)
 
         boundary = method.boundary_integral(child, values, "left")
         np.testing.assert_allclose(boundary.evaluate(), 1)
