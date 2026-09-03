@@ -181,15 +181,13 @@ class BaseStep:
             termination = []
         elif not isinstance(termination, list):
             termination = [termination]
-        self.termination = []
-        for term in termination:
-            term_obj = None
+
+        def _build_termination(term):
             if isinstance(term, str):
-                operator, typ, val = _parse_termination(term, self.value)
-                term_obj = _read_termination((operator, typ, val))
-            else:
-                term_obj = _read_termination(term)
-            self.termination.append(term_obj)
+                term = _parse_termination(term, self.value)
+            return _read_termination(term)
+
+        self.termination = [_build_termination(term) for term in termination]
 
         if (
             hasattr(self, "calculate_charge_or_discharge")
@@ -213,9 +211,17 @@ class BaseStep:
         self.next_start_time = None
         self.end_time = None
 
-    def duration_seconds(self, inputs=None):
-        """The duration in seconds, resolving a symbolic duration against ``inputs``."""
-        return _evaluate_time(self.duration, "duration", inputs)
+    def duration_seconds(self, parameter_values, inputs=None):
+        """The duration in seconds, resolving a symbolic duration at solve time."""
+        duration = parameter_values.process_symbol(
+            pybamm.convert_to_symbol(self.duration)
+        )
+        return float(duration.evaluate(inputs=inputs))
+
+    def period_seconds(self, parameter_values, inputs=None):
+        """The period in seconds, resolving a symbolic period at solve time."""
+        period = parameter_values.process_symbol(pybamm.convert_to_symbol(self.period))
+        return float(period.evaluate(inputs=inputs))
 
     @staticmethod
     def is_implicit() -> bool:
@@ -352,9 +358,9 @@ class BaseStep:
     def default_period():
         return 60.0  # seconds
 
-    def default_time_vector(self, solver, tf, t0=0):
+    def default_time_vector(self, solver, tf, t0=0, parameter_values=None, inputs=None):
         if self.period is not None:
-            period = self.period
+            period = self.period_seconds(parameter_values, inputs)
         elif self.is_drive_cycle and solver.supports_interp:
             # Infer the period from the drive cycle
             period = np.diff(self.value.x[0]).min()
@@ -364,7 +370,9 @@ class BaseStep:
 
         return np.linspace(t0, tf, npts)
 
-    def setup_timestepping(self, solver, tf, t_interp=None):
+    def setup_timestepping(
+        self, solver, tf, t_interp=None, parameter_values=None, inputs=None
+    ):
         """
         Setup timestepping for the model.
 
@@ -378,11 +386,17 @@ class BaseStep:
             The time points at which to interpolate the solution
         """
         if solver.supports_interp:
-            return self._setup_timestepping(solver, tf, t_interp)
+            return self._setup_timestepping(
+                solver, tf, t_interp, parameter_values, inputs
+            )
         else:
-            return self._setup_timestepping_dense_t_eval(solver, tf, t_interp)
+            return self._setup_timestepping_dense_t_eval(
+                solver, tf, t_interp, parameter_values, inputs
+            )
 
-    def _setup_timestepping(self, solver, tf, t_interp):
+    def _setup_timestepping(
+        self, solver, tf, t_interp, parameter_values=None, inputs=None
+    ):
         """
         Setup timestepping for the model. This returns a t_eval vector that stops
         only at the first and last time points. If t_interp and the period are
@@ -409,7 +423,9 @@ class BaseStep:
 
         if t_interp is None:
             if self.period is not None:
-                t_interp = self.default_time_vector(solver, tf)
+                t_interp = self.default_time_vector(
+                    solver, tf, parameter_values=parameter_values, inputs=inputs
+                )
             else:
                 t_interp = solver.process_t_interp(t_interp)
 
@@ -426,7 +442,9 @@ class BaseStep:
             t_eval = np.append(t_eval, tf)
         return t_eval
 
-    def _setup_timestepping_dense_t_eval(self, solver, tf, t_interp):
+    def _setup_timestepping_dense_t_eval(
+        self, solver, tf, t_interp, parameter_values=None, inputs=None
+    ):
         """
         Setup timestepping for the model. By default, this returns a dense t_eval which
         stops the solver at each point in the t_eval vector. This method is for solvers
@@ -441,7 +459,9 @@ class BaseStep:
         t_interp: np.array | None
             The time points at which to interpolate the solution
         """
-        t_eval = self.default_time_vector(solver, tf)
+        t_eval = self.default_time_vector(
+            solver, tf, parameter_values=parameter_values, inputs=inputs
+        )
 
         t_interp = solver.process_t_interp(t_interp)
 
@@ -551,9 +571,11 @@ class BaseStep:
         # A Symbol has no truth value and no stable repr, but its id identifies the
         # expression it stands for
         if isinstance(duration, pybamm.Symbol):
-            duration = duration.id
+            duration = str(duration)
         if isinstance(termination, pybamm.Symbol):
-            termination = termination.id
+            termination = str(termination)
+        if isinstance(period, pybamm.Symbol):
+            period = str(period)
         repr_args = f"{value}, duration={duration}"
         hash_args = f"{value}"
         if termination:
@@ -700,16 +722,6 @@ def _convert_time_to_seconds(time_and_units):
             f"For example: {_examples}"
         )
     return time_in_seconds
-
-
-def _evaluate_time(time, name, inputs=None):
-    """Resolve a time that may be symbolic into a number of seconds."""
-    if not isinstance(time, pybamm.Symbol):
-        return time
-    seconds = float(time.evaluate(inputs=inputs))
-    if seconds <= 0:
-        raise ValueError(f"{name} must be positive; '{time}' evaluated to {seconds}")
-    return seconds
 
 
 def _convert_temperature_to_kelvin(temperature_and_units):

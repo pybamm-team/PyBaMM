@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from warnings import warn
 
 import pybamm
@@ -220,65 +221,49 @@ class CustomTermination(BaseTermination):
         return hash((type(self).__name__, self.name, id(self.event_function)))
 
 
-def _resolve_coupled_variables(symbol, variables):
-    """Replace each CoupledVariable with the matching entry of ``variables``."""
-    if isinstance(symbol, pybamm.CoupledVariable):
-        try:
-            # `variables` may be a lazy view of a solved step, so look up rather
-            # than test for membership
-            value = variables[symbol.name]
-        except KeyError:
-            raise KeyError(
-                f"'{symbol.name}', used in a termination, is not a model variable"
-            ) from None
-        if not isinstance(value, pybamm.Symbol):
-            # A value read off a solved step, not a symbol to resolve further
-            return pybamm.Scalar(value)
-        return _resolve_coupled_variables(value, variables)
-    if symbol.children:
-        return symbol.create_copy(
-            new_children=[
-                _resolve_coupled_variables(child, variables)
-                for child in symbol.children
-            ]
+_TERMINATION_MAP: dict[str, type[BaseTermination]] = {
+    "current": CurrentTermination,
+    "voltage": VoltageTermination,
+    "C-rate": CRateTermination,
+}
+
+
+def _parse_termination_class(termination_tuple) -> BaseTermination:
+    if len(termination_tuple) != 3:
+        raise ValueError(
+            f"Termination tuple must be of the form (operator, type, value), "
+            f"but got {termination_tuple}"
         )
-    return symbol
+    op, typ, value = termination_tuple
+    cls = _TERMINATION_MAP[typ]
+    return cls(value, operator=op)
 
 
-def _termination_from_inequality(inequality):
-    """Build a termination from a symbolic inequality, e.g.
-    ``pybamm.CoupledVariable("Voltage [V]") > pybamm.InputParameter("V hold")``.
-    Either side may be a :class:`pybamm.CoupledVariable`, resolved against the model
-    variables, or a :class:`pybamm.InputParameter`, resolved by the solver.
-    """
-    # A heaviside is "left < right", so the step terminates when left - right crosses
-    # zero from above, which is exactly the event convention.
-    left, right = inequality.orphans
+@dataclass(frozen=True, slots=True)
+class _HeavsideResidual:
+    symbol: pybamm.Symbol
 
-    def event_function(variables):
-        return _resolve_coupled_variables(left - right, variables)
-
-    return CustomTermination(str(inequality), event_function)
+    def __call__(self, variables: dict[str, pybamm.Symbol]) -> pybamm.Symbol:
+        # A heaviside is "left < right", so left - right is the event residual
+        residual = self.symbol.left - self.symbol.right
+        return pybamm.SymbolProcessor.resolve(residual, variables)
 
 
-def _read_termination(termination, operator=None):
-    if isinstance(termination, (pybamm.EqualHeaviside, pybamm.NotEqualHeaviside)):
-        return _termination_from_inequality(termination)
-    if isinstance(termination, pybamm.Symbol):
+def _parse_termination_symbol(termination: pybamm.Symbol) -> CustomTermination:
+    if not isinstance(termination, (pybamm.EqualHeaviside, pybamm.NotEqualHeaviside)):
         raise TypeError(
             "A symbolic termination must be an inequality between symbols, e.g. "
             'pybamm.CoupledVariable("Voltage [V]") > 3.0, but got '
             f"'{termination!s}'. Note that inequalities are only exact when "
             'pybamm.settings.heaviside_smoothing is "exact".'
         )
-    if isinstance(termination, tuple):
-        op, typ, value = termination
-    else:
+    return CustomTermination(str(termination), _HeavsideResidual(termination))
+
+
+def _read_termination(termination):
+    if isinstance(termination, pybamm.Symbol):
+        return _parse_termination_symbol(termination)
+    if not isinstance(termination, tuple):
         return termination
 
-    termination_class = {
-        "current": CurrentTermination,
-        "voltage": VoltageTermination,
-        "C-rate": CRateTermination,
-    }[typ]
-    return termination_class(value, operator=op)
+    return _parse_termination_class(termination)

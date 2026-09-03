@@ -2618,16 +2618,13 @@ class TestSimulationExperiment:
 
     @pytest.mark.parametrize("experiment_model_mode", ["unified", "legacy"])
     def test_run_experiment_with_symbolic_termination(self, experiment_model_mode):
-        experiment = pybamm.Experiment(
-            [
-                pybamm.step.c_rate(
-                    1,
-                    duration=3600,
-                    termination=pybamm.CoupledVariable("Voltage [V]")
-                    < pybamm.InputParameter("Voltage cut-off [V]"),
-                )
-            ]
+        step = pybamm.step.c_rate(
+            1,
+            duration=3600,
+            termination=pybamm.CoupledVariable("Voltage [V]")
+            < pybamm.InputParameter("Voltage cut-off [V]"),
         )
+        experiment = pybamm.Experiment([step])
         sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
             experiment=experiment,
@@ -2638,10 +2635,7 @@ class TestSimulationExperiment:
         # The threshold is only read at solve time, so one built model serves both
         for cut_off in (3.6, 3.5):
             sol = sim.solve(inputs={"Voltage cut-off [V]": cut_off}, calc_esoh=False)
-            assert (
-                sol.termination
-                == "event: Voltage [V] < Voltage cut-off [V] [experiment]"
-            )
+            assert sol.termination == f"event: {step.termination[0].name}"
             assert sol["Voltage [V]"].data[-1] == pytest.approx(cut_off, abs=1e-3)
             assert sol.t[-1] < 3600
 

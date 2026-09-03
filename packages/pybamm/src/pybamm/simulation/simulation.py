@@ -415,19 +415,22 @@ class Simulation(BaseSimulation):
                 )
         return inputs
 
+    @staticmethod
+    def _get_experiment_step_index(step_or_key):
+        if isinstance(step_or_key, str):
+            return step_or_key
+        return step_or_key.basic_repr()
+
     def _get_built_experiment_model(self, step_or_key):
         if self._experiment_uses_unified_model:
             return self._built_experiment_model
-        if isinstance(step_or_key, str):
-            return self.steps_to_built_models[step_or_key]
-        return self.steps_to_built_models[step_or_key.basic_repr()]
+        return self.steps_to_built_models[self._get_experiment_step_index(step_or_key)]
 
     def _get_built_experiment_solver(self, step_or_key):
         if self._experiment_uses_unified_model:
             return self._built_experiment_solver
-        if isinstance(step_or_key, str):
-            return self.steps_to_built_solvers[step_or_key]
-        return self.steps_to_built_solvers[step_or_key.basic_repr()]
+        key = self._get_experiment_step_index(step_or_key)
+        return self.steps_to_built_solvers[key]
 
     def _evaluate_step_termination_expression_from_solution(
         self, term, step_solution, step
@@ -478,7 +481,8 @@ class Simulation(BaseSimulation):
             )
 
             try:
-                value = event.expression.evaluate(t=t, y=y, inputs=inputs)
+                processed = model.process_symbol(event.expression)
+                value = processed.evaluate(t=t, y=y, inputs=inputs)
             except NotImplementedError:  # pragma: no cover
                 # If the raw expression still contains unevaluated symbols, fall back to
                 # the processed variables on the solved step. This is slower, but it works
@@ -1008,7 +1012,7 @@ class Simulation(BaseSimulation):
                 step = experiment_steps[idx]
                 start_time = current_solution.t[-1]
 
-                dt = step.duration_seconds(user_inputs)
+                dt = step.duration_seconds(self._parameter_values, user_inputs)
                 if step.end_time is not None:
                     remaining = (
                         step.end_time
@@ -1042,7 +1046,7 @@ class Simulation(BaseSimulation):
                 )
 
                 t_eval, t_interp_processed = step.setup_timestepping(
-                    solver, dt, t_interp
+                    solver, dt, t_interp, self._parameter_values, user_inputs
                 )
 
                 state_mapper = self._get_state_mapper_for_solution(

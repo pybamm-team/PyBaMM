@@ -141,28 +141,32 @@ def test_parse_termination_requires_operator_for_input_parameter():
         )
 
 
-def test_symbolic_duration_is_resolved_at_solve_time():
-    step = pybamm.step.c_rate(1, duration=pybamm.InputParameter("C-rate duration"))
+@pytest.mark.parametrize(
+    "duration, inputs",
+    [
+        # Resolved from the solver inputs directly...
+        (pybamm.InputParameter("d"), {"d": 1200}),
+        # ...or through a Parameter whose value in parameter_values is "[input]"
+        (pybamm.Parameter("d"), {"d": 1200}),
+        # ...or through a Parameter that simply has a value
+        (pybamm.Parameter("fixed d"), {}),
+        # A number needs neither
+        (1200, {}),
+    ],
+)
+def test_duration_is_resolved_at_solve_time(duration, inputs):
+    parameter_values = pybamm.ParameterValues({"d": "[input]", "fixed d": 1200})
+    step = pybamm.step.c_rate(1, duration=duration)
 
-    assert isinstance(step.duration, pybamm.InputParameter)
     assert not step.uses_default_duration
-    assert step.duration_seconds({"C-rate duration": 1200}) == 1200.0
-    # A numeric duration is returned unchanged, with or without inputs
-    assert pybamm.step.c_rate(1, duration=600).duration_seconds() == 600
-
-
-def test_symbolic_duration_must_be_positive_when_resolved():
-    step = pybamm.step.c_rate(1, duration=pybamm.InputParameter("d"))
-
-    with pytest.raises(ValueError, match="duration must be positive"):
-        step.duration_seconds({"d": -1})
+    assert step.duration_seconds(parameter_values, inputs) == 1200.0
 
 
 def test_symbolic_duration_needs_its_input():
     step = pybamm.step.c_rate(1, duration=pybamm.InputParameter("d"))
 
     with pytest.raises(KeyError, match="Input parameter 'd' not found"):
-        step.duration_seconds()
+        step.duration_seconds(pybamm.ParameterValues({}))
 
 
 def test_drive_cycle_repeats_independently_of_its_duration():
@@ -172,7 +176,7 @@ def test_drive_cycle_repeats_independently_of_its_duration():
 
     # The interpolant wraps the step time, so it does not depend on the duration
     assert symbolic.value == numeric.value
-    assert symbolic.duration_seconds({"d": 10}) == 10
+    assert symbolic.duration_seconds(pybamm.ParameterValues({}), {"d": 10}) == 10
     # Sample times are repeated up to the resolved final time, one cycle being 3 s
     np.testing.assert_array_equal(
         symbolic._drive_cycle_time_points(8),
@@ -180,16 +184,37 @@ def test_drive_cycle_repeats_independently_of_its_duration():
     )
 
 
-def test_symbolic_duration_and_termination_recorded_by_id():
+def test_symbolic_duration_and_termination_are_recorded():
     termination = pybamm.CoupledVariable("Voltage [V]") < pybamm.InputParameter("Vmin")
     duration = pybamm.InputParameter("d")
     step = pybamm.step.c_rate(1, duration=duration, termination=termination)
 
-    # A Symbol has no truth value and no stable repr, so its id stands in for it
-    assert f"duration={duration.id}" in repr(step)
-    assert f"termination={termination.id}" in step.basic_repr()
+    # A Symbol has no truth value, so its string form is what gets recorded
+    assert f"duration={duration}" in repr(step)
+    assert f"termination={termination}" in step.basic_repr()
     # Steps differing only in duration still share a model
     assert (
         step.basic_repr()
         == pybamm.step.c_rate(1, duration=1800, termination=termination).basic_repr()
     )
+
+
+@pytest.mark.parametrize(
+    "period, inputs",
+    [
+        (pybamm.InputParameter("sample"), {"sample": 300}),
+        (pybamm.Parameter("sample"), {"sample": 300}),
+        ("5 minutes", {}),
+        (300, {}),
+    ],
+)
+def test_period_is_resolved_at_solve_time(period, inputs):
+    parameter_values = pybamm.ParameterValues({"sample": "[input]"})
+    step = pybamm.step.c_rate(1, duration=1800, period=period)
+
+    assert step.period_seconds(parameter_values, inputs) == 300.0
+    # The period sets the output sampling, so it must be resolved before t_interp
+    _, t_interp = step.setup_timestepping(
+        DummySolver(), 1800, parameter_values=parameter_values, inputs=inputs
+    )
+    np.testing.assert_array_equal(t_interp, np.arange(0, 1801, 300.0))

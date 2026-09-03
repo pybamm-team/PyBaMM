@@ -1887,7 +1887,9 @@ class Serialise:
             for field, default in field_defaults.items():
                 value = getattr(step, field, None)
                 if value is not None and value != default:
-                    step_config[field] = value
+                    step_config[field] = (
+                        encode(value) if isinstance(value, pybamm.Symbol) else value
+                    )
             tags = getattr(step, "tags", None)
             if tags:
                 step_config["tags"] = tags
@@ -2012,7 +2014,12 @@ class Serialise:
                 "direction",
             ):
                 if step_dict.get(field) is not None:
-                    extra_kwargs[field] = step_dict[field]
+                    field_value = step_dict[field]
+                    extra_kwargs[field] = (
+                        decode(field_value)
+                        if isinstance(field_value, dict)
+                        else field_value
+                    )
             if step_dict.get("start_time") is not None:
                 extra_kwargs["start_time"] = datetime.fromisoformat(
                     step_dict["start_time"]
