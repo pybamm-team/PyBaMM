@@ -2392,3 +2392,33 @@ class TestInterfaceCorrection:
         mesh.face_owner[boundary[0]] = mesh.face_owner[boundary[1]]
         with pytest.raises(pybamm.DiscretisationError, match="same number of faces"):
             FiniteVolumeUnstructured()._least_squares_matrices(mesh, {})
+
+
+class TestTimeDependentScalarBoundaryValues:
+    def test_neumann_value_depending_on_time(self):
+        """A ``pybamm.t``-dependent Neumann value evaluates for shape to
+        ``()``; it must still be broadcast over the side's faces."""
+        mesh = _make_2d_mesh(3, 3)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        slope = 2.0 * pybamm.t
+        values = pybamm.Vector(mesh.cell_centroids[:, 0], domain="test")
+        bcs = {
+            variable: {
+                "left": (slope, "Neumann"),
+                "right": (slope, "Neumann"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        # at t = 0.5 the prescribed slope matches u = x, so both vanish
+        laplacian = method.laplacian(variable, values, bcs)
+        np.testing.assert_allclose(laplacian.evaluate(t=0.5), 0, atol=1e-10)
+        div_grad = method.div_D_grad(
+            div_symbol, variable, pybamm.Scalar(3), values, bcs
+        )
+        np.testing.assert_allclose(div_grad.evaluate(t=0.5), 0, atol=1e-10)
+        grad_x = method.gradient(variable, values, bcs).components[0]
+        np.testing.assert_allclose(grad_x.evaluate(t=0.5), 1, atol=1e-10)
+        assert np.abs(laplacian.evaluate(t=1.0)).max() > 1e-3

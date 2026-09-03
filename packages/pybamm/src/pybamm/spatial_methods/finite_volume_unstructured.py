@@ -346,6 +346,18 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         }
 
     @staticmethod
+    def _is_scalar_value(symbol):
+        """Whether ``symbol`` is a single value to broadcast over faces.
+
+        Time- or input-dependent scalars evaluate for shape to ``()`` or
+        ``(1,)`` rather than ``(1, 1)``, so every scalar shape counts.
+        """
+        if isinstance(symbol, pybamm.Scalar):
+            return True
+        shape = getattr(symbol, "shape_for_testing", None)
+        return shape is not None and int(np.prod(shape)) == 1
+
+    @staticmethod
     def _bc_contribution(n, n_bnd, owners, coeffs, bc_value, repeats=1):
         """Build a symbolic BC contribution vector of size ``n * repeats``.
 
@@ -354,10 +366,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         has one entry per boundary face (shared across auxiliary-domain
         repeats) or ``n_bnd * repeats`` entries (one per face per repeat).
         """
-        is_scalar = isinstance(bc_value, pybamm.Scalar) or (
-            hasattr(bc_value, "shape_for_testing")
-            and bc_value.shape_for_testing == (1, 1)
-        )
+        is_scalar = FiniteVolumeUnstructured._is_scalar_value(bc_value)
         if is_scalar:
             row = np.zeros(n)
             np.add.at(row, owners, coeffs)
@@ -384,10 +393,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         """
         if repeats == 1:
             return bc_value
-        is_scalar = isinstance(bc_value, pybamm.Scalar) or (
-            hasattr(bc_value, "shape_for_testing")
-            and bc_value.shape_for_testing == (1, 1)
-        )
+        is_scalar = FiniteVolumeUnstructured._is_scalar_value(bc_value)
         if is_scalar or getattr(bc_value, "shape_for_testing", None) == (
             n_bnd * repeats,
             1,
@@ -833,9 +839,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         if C is not None:
             for k, grad_k in enumerate(gradient()):
                 normal_grad = normal_grad + pybamm.Matrix(lift(C[k])) @ grad_k
-        is_scalar_D = isinstance(disc_D, pybamm.Scalar) or (
-            hasattr(disc_D, "shape_for_testing") and disc_D.shape_for_testing == (1, 1)
-        )
+        is_scalar_D = self._is_scalar_value(disc_D)
         D_face = disc_D if is_scalar_D else pybamm.Matrix(lift(W)) @ disc_D
         result = pybamm.Matrix(lift(S)) @ (D_face * normal_grad)
 
