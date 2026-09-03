@@ -2490,3 +2490,49 @@ class TestHarmonicDiffusivity:
                 values,
                 {},
             )
+
+
+class TestOrthogonalityTolerance:
+    """High-aspect-ratio boxes (10 um thick, cm wide, as in a pouch cell) put
+    ~1e-11 of centroid rounding into the face direction; that must not switch
+    the wide cross-term stencil on."""
+
+    def test_anisotropic_boxes_stay_orthogonal(self):
+        quad = UnstructuredSubMesh(
+            *_make_quad_grid(np.linspace(0, 1e-5, 6), np.linspace(0, 0.03, 4))
+        )
+        hexa = UnstructuredSubMesh(
+            *_hex_grid(
+                np.linspace(0, 1e-5, 4), np.linspace(0, 0.2, 4), np.linspace(0, 0.1, 4)
+            )
+        )
+        method = FiniteVolumeUnstructured()
+        for mesh in (quad, hexa):
+            mesh.detect_box_boundaries()
+            _, k = method._decomposition(mesh)
+            assert not k.any()
+            assert method._cross_term_matrices(mesh) is None
+            assert method._div_D_grad_matrices(mesh)[4] is None
+            for faces in mesh.boundary_faces.values():
+                assert not method._boundary_decomposition(mesh, faces)[2].any()
+
+    def test_stencil_stays_compact_on_anisotropic_hexes(self):
+        mesh = UnstructuredSubMesh(
+            *_hex_grid(
+                np.linspace(0, 1e-5, 4), np.linspace(0, 0.2, 4), np.linspace(0, 0.1, 4)
+            )
+        )
+        mesh.detect_box_boundaries()
+        method = _method_with_mesh(mesh)
+        bcs = {side: (pybamm.Scalar(0), "Dirichlet") for side in mesh.boundary_faces}
+        L, _ = _laplacian_system(method, mesh, bcs)
+        # face neighbours only: self + up to 6 in 3D
+        assert np.diff(L.indptr).max() <= 7
+
+    def test_genuinely_skewed_faces_are_kept(self):
+        # structured split: diagonal faces are orthogonal, axis faces skewed
+        mesh = _make_2d_mesh(3, 3)
+        _, k = FiniteVolumeUnstructured()._decomposition(mesh)
+        skew = np.linalg.norm(k, axis=1)
+        assert skew.max() > 0.4
+        assert (skew > 0.4).sum() >= mesh.n_internal_faces // 2

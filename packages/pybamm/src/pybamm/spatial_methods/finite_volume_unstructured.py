@@ -61,6 +61,10 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     # Common CFD mesh-quality limit; beyond it the scheme stays consistent
     # but conditioning degrades.
     _NON_ORTHOGONALITY_WARNING_DEG = 70.0
+    # Faces with |k| (about the angle in radians) below this are orthogonal:
+    # centroid rounding on high-aspect-ratio cells reaches 1e-11 and must not
+    # switch on the wide cross-term stencil.
+    _ORTHOGONALITY_TOL = 1e-8
 
     def __init__(self, options=None):
         super().__init__(options)
@@ -620,7 +624,15 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         alpha = self._alpha(geometry["cos_theta"])
         n_int = submesh.n_internal_faces
         k = submesh.face_normals[:n_int] - alpha[:, np.newaxis] * geometry["e_ij"]
-        return alpha, k
+        return alpha, self._drop_orthogonal(k)
+
+    @classmethod
+    def _drop_orthogonal(cls, k):
+        """Zero ``k`` on faces that are orthogonal to within rounding, so
+        they neither enter nor widen the cross-term stencil."""
+        k = k.copy()
+        k[np.linalg.norm(k, axis=1) < cls._ORTHOGONALITY_TOL] = 0.0
+        return k
 
     def _boundary_decomposition(self, submesh, faces):
         """``(dist, alpha, k)`` for boundary ``faces``, splitting the outward
@@ -637,7 +649,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         e_b = delta / dist[:, np.newaxis]
         normals = submesh.face_normals[faces]
         alpha = self._alpha(np.sum(normals * e_b, axis=1))
-        return dist, alpha, normals - alpha[:, np.newaxis] * e_b
+        return dist, alpha, self._drop_orthogonal(normals - alpha[:, np.newaxis] * e_b)
 
     def _cross_term_matrices(self, submesh):
         """Assemble (or fetch the cached) matrices ``K_k`` mapping the cell
@@ -656,7 +668,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         n_int = submesh.n_internal_faces
         d = submesh.dimension
         _, k = self._decomposition(submesh)
-        if n_int == 0 or np.max(np.abs(k)) < 1e-12:
+        if n_int == 0 or not k.any():
             cache[key] = None
             return None
 
@@ -681,7 +693,12 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             ),
             shape=(n, n_int),
         )
-        cache[key] = [csr_matrix(S @ diags(areas * k[:, kk]) @ P) for kk in range(d)]
+        matrices = []
+        for kk in range(d):
+            matrix = csr_matrix(S @ diags(areas * k[:, kk]) @ P)
+            matrix.eliminate_zeros()  # orthogonal faces must not widen the stencil
+            matrices.append(matrix)
+        cache[key] = matrices
         return cache[key]
 
     def _tpfa_matrix(self, submesh):
@@ -781,14 +798,15 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         # C[k] (n_int x n): cell gradient component -> face cross flux
         # A_f k_f,k grad_k(u)_f, interpolated like D; None when orthogonal
         _, k_vec = self._decomposition(submesh)
-        if np.max(np.abs(k_vec), initial=0.0) < 1e-12:
+        if not k_vec.any():
             C = None
         else:
             areas = submesh.face_areas[:n_int]
-            C = [
-                csr_matrix(diags(areas * k_vec[:, kk]) @ W)
-                for kk in range(submesh.dimension)
-            ]
+            C = []
+            for kk in range(submesh.dimension):
+                matrix = csr_matrix(diags(areas * k_vec[:, kk]) @ W)
+                matrix.eliminate_zeros()
+                C.append(matrix)
 
         cache[key] = (G, W, S, geo, C, W_harmonic)
         return cache[key]
@@ -891,7 +909,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     normal_grad_bnd = (bc_value - u_bnd) * pybamm.Vector(
                         tile(a_over_v * alpha / dist)
                     )
-                    if np.max(np.abs(k_vec)) >= 1e-12:
+                    if k_vec.any():
                         for k, grad_k in enumerate(gradient()):
                             normal_grad_bnd = normal_grad_bnd + (
                                 pybamm.Matrix(E_f) @ grad_k
@@ -952,7 +970,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         if np.any(diag_correction):
             L = csr_matrix(L + diags(diag_correction))
-        if np.max(np.abs(cross_diag), initial=0.0) >= 1e-12:
+        if cross_diag.any():
             G_components, grad_bc_vecs, _ = gradient()
             for k in range(d):
                 scale = diags(cross_diag[k])
@@ -1702,7 +1720,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             lift(two_point @ right_sub) @ right_symbol_disc
         ) - without_domains(lift(two_point @ left_sub) @ left_symbol_disc)
 
-        if np.max(np.abs(k_vec), initial=0.0) < 1e-12:
+        k_vec = self._drop_orthogonal(k_vec)
+        if not k_vec.any():
             return value
 
         face_centroids = left_mesh.face_centroids[left_faces]
