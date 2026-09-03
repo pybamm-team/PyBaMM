@@ -1536,3 +1536,9 @@ class TestContainsPoints:
         np.testing.assert_array_equal(
             mesh.contains_points(points), mesh.contains_points_3d(points)
         )
+
+    def test_2d_without_boundary_loops_returns_none(self):
+        nodes, elements = _unit_square_two_triangles()
+        mesh = UnstructuredSubMesh(nodes, elements)
+        mesh._cached_boundary_loops = None
+        assert mesh.contains_points(np.array([[0.5, 0.5]])) is None

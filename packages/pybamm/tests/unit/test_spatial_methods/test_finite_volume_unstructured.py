@@ -2384,3 +2384,11 @@ class TestInterfaceCorrection:
         np.testing.assert_array_equal(
             b.interface_data["a"]["left_faces"], b.boundary_faces["iface_a"]
         )
+
+    def test_inconsistent_face_counts_raise(self):
+        mesh = _make_2d_mesh(2, 2)
+        # give one cell an extra boundary face and another one fewer
+        boundary = mesh.boundary_faces["left"]
+        mesh.face_owner[boundary[0]] = mesh.face_owner[boundary[1]]
+        with pytest.raises(pybamm.DiscretisationError, match="same number of faces"):
+            FiniteVolumeUnstructured()._least_squares_matrices(mesh, {})
