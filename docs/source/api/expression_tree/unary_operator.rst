@@ -31,12 +31,6 @@ Unary Operators
 .. autoclass:: pybamm.GradientSquared
   :members:
 
-.. autoclass:: pybamm.Component
-  :members:
-
-.. autoclass:: pybamm.Norm
-  :members:
-
 .. autoclass:: pybamm.Mass
   :members:
 
