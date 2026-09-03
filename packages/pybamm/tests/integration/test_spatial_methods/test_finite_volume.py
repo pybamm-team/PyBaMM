@@ -401,3 +401,117 @@ class TestUpwindDownwind:
             rtol=1e-3,
             atol=1e-1,
         )
+
+
+class TestFluxBoundaryConditions:
+    def test_flux_boundary_conditions(self):
+        # solve the same problem with flux and neumann boundary conditions
+        # and check that the solutions are the same
+        from copy import deepcopy
+
+        import numpy as np
+
+        import pybamm
+
+        # model
+        model = pybamm.BaseModel()
+        # model variables
+        geometry = {"domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        x = pybamm.SpatialVariable("x", domain=["domain"], coord_sys="cartesian")
+        u = pybamm.Variable("u", domain="domain")
+
+        # model parameters
+        u0 = pybamm.Parameter("Initial value")
+        # diffusion coefficient dependent on time and space
+        d = pybamm.FunctionParameter(
+            "Diffusion coefficient", {"Time [s]": pybamm.t, "x [m]": x}
+        )
+        # time dependent boundary flux
+        rbc = pybamm.FunctionParameter(
+            "Right boundary condition", {"Time [s]": pybamm.t}
+        )
+
+        param = pybamm.ParameterValues(
+            {
+                "Diffusion coefficient": lambda t, x: (
+                    1 + 0.001 * x + np.sin(4 * np.pi * t / 3600)
+                ),
+                "Initial value": 0.5,
+                "Right boundary condition": lambda t: (
+                    0.5 + 0.5 * np.sin(2 * np.pi * t / 600)
+                ),
+            }
+        )
+
+        # governing equations
+        N = -d * pybamm.grad(u)  # flux
+        dudt = -pybamm.div(N)
+        model.rhs = {u: dudt}
+
+        # initial conditions
+        model.initial_conditions = {u: u0}
+
+        d_surf = pybamm.surf(d)
+        model.variables = {
+            "u": u,
+            "Flux": N,
+            "Surface value": pybamm.surf(u),
+            "Surface diffusion": d_surf,
+        }
+
+        model2 = deepcopy(model)
+
+        # flux boundary conditions
+        lbc = pybamm.Scalar(0)
+        model.boundary_conditions = {
+            u: {
+                "left": (lbc, "Neumann"),
+                "right": (rbc, "Flux"),
+            }
+        }
+
+        # process and discretise the model
+        param.process_model(model)
+        param.process_geometry(geometry)
+
+        submesh_types = {"domain": pybamm.Uniform1DSubMesh}
+        var_pts = {"x": 20}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        # solve
+        solver = pybamm.ScipySolver()
+        t = np.linspace(0, 3600, 600)
+        solution1 = solver.solve(model, t)
+
+        # post-process, so that the solution can be called at any time t or spaceå r
+        # (using interpolation)
+        u_sol1 = solution1["u"]
+        u_surf1 = solution1["Surface value"]
+
+        # Comparison with Neumann
+        model2.boundary_conditions = {
+            u: {
+                "left": (lbc, "Neumann"),
+                "right": (rbc / d_surf, "Neumann"),
+            }
+        }
+
+        param.process_model(model2)
+        disc.process_model(model2)
+
+        # solve
+        solver = pybamm.ScipySolver()
+        t = np.linspace(0, 3600, 600)
+        solution2 = solver.solve(model2, t)
+
+        # post-process, so that the solution can be called at any time t or spaceå r
+        # (using interpolation)
+        u_sol2 = solution2["u"]
+        u_surf2 = solution2["Surface value"]
+
+        assert np.allclose(u_surf1(solution1.t), u_surf2(solution2.t), atol=1e-14)
+        assert np.allclose(u_sol1(solution1.t), u_sol2(solution2.t), atol=1e-14)
