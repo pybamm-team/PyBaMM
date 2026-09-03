@@ -26,7 +26,7 @@ def _build_vtk_grid(mesh, scale=None):
     """Build a ``vtkUnstructuredGrid`` from an unstructured mesh."""
     import vtk
 
-    nodes = mesh.nodes
+    nodes = mesh.vertices
     if scale is not None:
         nodes = nodes * np.asarray(scale)[: nodes.shape[1]]
 
@@ -69,7 +69,7 @@ def _build_vtk_grid(mesh, scale=None):
 
 def _compute_scale(mesh):
     """Per-axis scale factors that normalise coordinate spans to the largest."""
-    nodes = mesh.nodes
+    nodes = mesh.vertices
     spans = np.array(
         [nodes[:, d].max() - nodes[:, d].min() for d in range(nodes.shape[1])]
     )
@@ -388,7 +388,7 @@ class VTKQuickPlot:
                     )
                 axis_idx = _AXIS_INDEX[axis_key]
                 frac = float(opts[axis_key])
-                nodes = self.mesh.nodes
+                nodes = self.mesh.vertices
                 lo = float(nodes[:, axis_idx].min())
                 hi = float(nodes[:, axis_idx].max())
                 phys_val = lo + frac * (hi - lo)
@@ -480,7 +480,7 @@ class VTKQuickPlot:
 
             # Cube axes
             if self.mesh is not None:
-                mesh_nodes = self.mesh.nodes
+                mesh_nodes = self.mesh.vertices
                 dim = mesh_nodes.shape[1]
 
                 if plot_type == "slice":

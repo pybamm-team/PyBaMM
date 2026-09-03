@@ -76,7 +76,7 @@ def _triangle_solution():
 
 def _node_solution():
     mesh = SimpleNamespace(
-        nodes=np.array(
+        vertices=np.array(
             [
                 [0.0, 0.0, 0.0],
                 [1.0, 0.0, 0.0],
@@ -139,7 +139,9 @@ class TestVTKHelpers:
                 np.arange(n_vertices, dtype=float) + 2,
             ]
         )
-        mesh = SimpleNamespace(nodes=nodes, elements=np.array([np.arange(n_vertices)]))
+        mesh = SimpleNamespace(
+            vertices=nodes, elements=np.array([np.arange(n_vertices)])
+        )
 
         grid = _build_vtk_grid(mesh)
 
@@ -153,7 +155,7 @@ class TestVTKHelpers:
 
     def test_build_grid_uses_element_type_and_scales_2d_points(self):
         mesh = SimpleNamespace(
-            nodes=np.array([[1.0, 2.0], [3.0, 2.0], [3.0, 4.0], [1.0, 4.0]]),
+            vertices=np.array([[1.0, 2.0], [3.0, 2.0], [3.0, 4.0], [1.0, 4.0]]),
             elements=np.array([[0, 1, 2, 3]]),
             element_type="quad",
         )
@@ -166,21 +168,21 @@ class TestVTKHelpers:
 
     def test_build_grid_rejects_unknown_connectivity(self):
         mesh = SimpleNamespace(
-            nodes=np.zeros((5, 3)), elements=np.array([[0, 1, 2, 3, 4]])
+            vertices=np.zeros((5, 3)), elements=np.array([[0, 1, 2, 3, 4]])
         )
 
         with pytest.raises(ValueError, match="5 vertices per element"):
             _build_vtk_grid(mesh)
 
     def test_scale_options(self):
-        mesh = SimpleNamespace(nodes=np.array([[0.0, 2.0, 3.0], [4.0, 2.0, 5.0]]))
+        mesh = SimpleNamespace(vertices=np.array([[0.0, 2.0, 3.0], [4.0, 2.0, 5.0]]))
 
         np.testing.assert_allclose(_compute_scale(mesh), [1.0, 1.0, 2.0])
         np.testing.assert_allclose(_resolve_scale("auto", mesh), [1.0, 1.0, 2.0])
         assert _resolve_scale(None, mesh) is None
         np.testing.assert_allclose(_resolve_scale((3, 2, 1), mesh), [3, 2, 1])
 
-        zero_mesh = SimpleNamespace(nodes=np.ones((3, 2)))
+        zero_mesh = SimpleNamespace(vertices=np.ones((3, 2)))
         np.testing.assert_array_equal(_compute_scale(zero_mesh), [1.0, 1.0])
 
     def test_set_and_update_cell_and_point_scalars(self):

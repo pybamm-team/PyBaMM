@@ -2453,9 +2453,10 @@ class TestProcessedVariableUnstructuredFVM:
         np.testing.assert_allclose(comps[0], 2.0, rtol=1e-12)
         np.testing.assert_allclose(comps[1], -3.0, rtol=1e-12)
 
-        # QuickPlot has no unstructured support in this PR and must say so
-        with pytest.raises(NotImplementedError, match="unstructured meshes"):
-            pybamm.QuickPlot(solution, ["u"])
+        # QuickPlot samples unstructured variables through the plotting helpers
+        quick_plot = pybamm.QuickPlot(solution, ["u"])
+        assert list(quick_plot._unstructured_grids[("u",)]) == ["x", "z"]
+        pybamm.close_plots()
 
     def test_vector_field_3d(self):
         geometry, submesh, disc, _, _ = self._make_setup(dim=3, n=3)

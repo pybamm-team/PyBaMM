@@ -6,6 +6,12 @@ from collections import defaultdict
 import numpy as np
 
 import pybamm
+from pybamm.plotting.unstructured_plot_grid import (
+    default_slice_positions,
+    midplane_slices,
+    plot_grid,
+    quiver_data,
+)
 from pybamm.util import import_optional_dependency
 
 
@@ -293,6 +299,8 @@ class QuickPlot:
         self.x_first_and_y_second = {}
         self.is_y_z = {}
         self.is_vector_field = {}
+        self._unstructured_grids = {}
+        self._slice_positions = {}
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
@@ -318,16 +326,6 @@ class QuickPlot:
             # just use the first solution to check this
             first_solution = variables[0]
             first_variable = first_solution[0]
-            if isinstance(
-                first_variable,
-                pybamm.ProcessedVariableUnstructuredFVM
-                | pybamm.ProcessedVariableVectorFieldUnstructuredFVM,
-            ):
-                raise NotImplementedError(
-                    f"QuickPlot cannot plot '{variable_tuple[0]}': variables on "
-                    "unstructured meshes have no plotting support yet. Query the "
-                    "variable at points with solution[name](t, x=..., z=...) instead."
-                )
             domain = first_variable.domain
             # check all other solutions against the first solution
             for idx, variable in enumerate(first_solution):
@@ -337,6 +335,18 @@ class QuickPlot:
                         f"'{variable_tuple[0]}' has domain '{domain}', but '{variable_tuple[idx]}' has domain '{variable.domain}'"
                     )
                 self.spatial_variable_dict[variable_tuple] = {}
+
+            if isinstance(
+                first_variable,
+                pybamm.ProcessedVariableUnstructuredFVM
+                | pybamm.ProcessedVariableVectorFieldUnstructuredFVM,
+            ):
+                # display grid and slice planes are plot state, not variable state
+                self._unstructured_grids[variable_tuple] = plot_grid(first_variable)
+                if first_variable.dimensions == 3:
+                    self._slice_positions[variable_tuple] = default_slice_positions(
+                        first_variable
+                    )
 
             # Set the x variable (i.e. "x" or "r" for any one-dimensional variables)
             if first_variable.dimensions == 1:
@@ -404,6 +414,12 @@ class QuickPlot:
 
     def _get_spatial_var(self, key, variable, dimension):
         """Return the appropriate spatial variable(s)"""
+
+        grid = self._unstructured_grids.get(key)
+        if grid is not None:
+            names = list(grid)
+            name = names[0] if dimension == "first" else names[1]
+            return name, grid[name]
 
         # Extract name and value
         # Special case for current collector, which is 2D but in a weird way (both
@@ -638,7 +654,9 @@ class QuickPlot:
             elif self.is_vector_field.get(key, False):
                 variable = variable_lists[0][0]
                 if variable.dimensions == 2:
-                    X, Z, U, W = variable.get_quiver_data(t_in_seconds)
+                    X, Z, U, W = quiver_data(
+                        variable, t_in_seconds, self._unstructured_grids[key]
+                    )
                     Xs = X * self.spatial_factor
                     Zs = Z * self.spatial_factor
                     mag = np.sqrt(U**2 + W**2)
@@ -729,8 +747,11 @@ class QuickPlot:
                 import matplotlib.pyplot as _plt
 
                 cmap = _plt.cm.viridis
-                s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = variable.get_3d_slices(
-                    t_in_seconds
+                s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = midplane_slices(
+                    variable,
+                    t_in_seconds,
+                    self._unstructured_grids[key],
+                    self._slice_positions[key],
                 )
                 fc1 = self._slice_facecolors(s1, cmap, norm)
                 fc2 = self._slice_facecolors(s2, cmap, norm)
@@ -821,7 +842,7 @@ class QuickPlot:
         mesh = variable.mesh
         if mesh.dimension != 2:
             return
-        verts = mesh.nodes[mesh.elements] * self.spatial_factor
+        verts = mesh.vertices[mesh.elements] * self.spatial_factor
         poly = PolyCollection(
             verts, facecolors="none", edgecolors=(0, 0, 0, 0.12), linewidths=0.3
         )
@@ -830,7 +851,9 @@ class QuickPlot:
     def _plot_3d_quiver(self, ax, variable, t, key, cm, colors):
         """Render quiver arrows on two orthogonal 3D slice planes."""
         sf = self.spatial_factor
-        data = variable.get_quiver_data(t)
+        data = quiver_data(
+            variable, t, self._unstructured_grids[key], self._slice_positions[key]
+        )
         X1, Z1, U_xz, W_xz, y_mid = data[0:5]
         X2, Y2, U_xy, V_xy, z_mid = data[5:10]
 
@@ -922,13 +945,15 @@ class QuickPlot:
 
             if has_3d:
                 self._slice_sliders = {}
-                var_3d = next(
-                    vl[0][0]
-                    for vl in self.variables.values()
+                key_3d = next(
+                    key
+                    for key, vl in self.variables.items()
                     if vl[0][0].dimensions == 3
                 )
-                y_pts = var_3d.second_dim_pts
-                z_pts = var_3d.third_dim_pts
+                grid_3d = self._unstructured_grids[key_3d]
+                positions = self._slice_positions[key_3d]
+                y_pts = grid_3d["y"]
+                z_pts = grid_3d["z"]
 
                 ax_y = plt.axes([0.315, 0.04, 0.37, 0.025], facecolor=axcolor)
                 self._slice_sliders["y"] = Slider(
@@ -936,7 +961,7 @@ class QuickPlot:
                     "$y$ slice",
                     y_pts[0],
                     y_pts[-1],
-                    valinit=var_3d._slice_positions["y"],
+                    valinit=positions["y"],
                     color="#ff7f0e",
                 )
                 ax_z = plt.axes([0.315, 0.005, 0.37, 0.025], facecolor=axcolor)
@@ -945,16 +970,14 @@ class QuickPlot:
                     "$z$ slice",
                     z_pts[0],
                     z_pts[-1],
-                    valinit=var_3d._slice_positions["z"],
+                    valinit=positions["z"],
                     color="#2ca02c",
                 )
 
                 def _on_slice_change(_):
-                    for vl in self.variables.values():
-                        v = vl[0][0]
-                        if v.dimensions == 3:
-                            v._slice_positions["y"] = self._slice_sliders["y"].val
-                            v._slice_positions["z"] = self._slice_sliders["z"].val
+                    for slice_positions in self._slice_positions.values():
+                        slice_positions["y"] = self._slice_sliders["y"].val
+                        slice_positions["z"] = self._slice_sliders["z"].val
                     self.slider_update(self.slider.val)
 
                 self._slice_sliders["y"].on_changed(_on_slice_change)
@@ -997,7 +1020,9 @@ class QuickPlot:
                 variable = self.variables[key][0][0]
                 ax.clear()
                 if variable.dimensions == 2:
-                    X, Z, U, W = variable.get_quiver_data(time_in_seconds)
+                    X, Z, U, W = quiver_data(
+                        variable, time_in_seconds, self._unstructured_grids[key]
+                    )
                     Xs = X * self.spatial_factor
                     Zs = Z * self.spatial_factor
                     mag = np.sqrt(U**2 + W**2)
@@ -1082,8 +1107,11 @@ class QuickPlot:
 
                 cmap = _plt.cm.viridis
                 ax.clear()
-                s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = variable.get_3d_slices(
-                    time_in_seconds
+                s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = midplane_slices(
+                    variable,
+                    time_in_seconds,
+                    self._unstructured_grids[key],
+                    self._slice_positions[key],
                 )
                 fc1 = self._slice_facecolors(s1, cmap, norm)
                 fc2 = self._slice_facecolors(s2, cmap, norm)
