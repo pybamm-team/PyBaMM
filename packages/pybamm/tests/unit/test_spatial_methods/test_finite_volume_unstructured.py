@@ -2422,3 +2422,71 @@ class TestTimeDependentScalarBoundaryValues:
         grad_x = method.gradient(variable, values, bcs).components[0]
         np.testing.assert_allclose(grad_x.evaluate(t=0.5), 1, atol=1e-10)
         assert np.abs(laplacian.evaluate(t=1.0)).max() > 1e-3
+
+
+class TestHarmonicDiffusivity:
+    def test_two_material_slab_is_exact(self):
+        """Piecewise-constant D with the jump on a face: the exact steady
+        profile is piecewise linear with the series-resistance flux, which the
+        harmonic mean reproduces and the arithmetic mean does not.  Uneven
+        cells make the weight orientation matter."""
+        x_edges = np.array([0.0, 0.3, 0.5, 0.6, 1.0])
+        z_edges = np.linspace(0, 1, 3)
+        nodes, elements = _make_quad_grid(x_edges, z_edges)
+        mesh = UnstructuredSubMesh(nodes, elements)
+        mesh.detect_box_boundaries()
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+
+        x = mesh.cell_centroids[:, 0]
+        D1, D2 = 1.0, 25.0
+        D_cells = np.where(x < 0.5, D1, D2)
+        flux = 1.0 / (0.5 / D1 + 0.5 / D2)
+        u_exact = np.where(x < 0.5, flux * x / D1, 1.0 - flux * (1.0 - x) / D2)
+        bcs = {
+            variable: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+                "top": (pybamm.Scalar(0), "Neumann"),
+                "bottom": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        result = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.Vector(D_cells, domain="test"),
+            pybamm.Vector(u_exact, domain="test"),
+            bcs,
+        )
+        np.testing.assert_allclose(result.evaluate(), 0, atol=1e-10)
+
+        # the same profile is not a steady state under the arithmetic mean
+        _, W, S, geo, _, _ = method._div_D_grad_matrices(mesh)
+        G = method._div_D_grad_matrices(mesh)[0]
+        arithmetic = S @ ((W @ D_cells) * (G @ u_exact) * geo)
+        assert np.abs(arithmetic).max() > 1e-2
+
+    def test_face_diffusivity_is_harmonic_mean(self):
+        mesh = _make_quad_mesh(3, 1)
+        method = _method_with_mesh(mesh)
+        W_harmonic = method._div_D_grad_matrices(mesh)[5]
+        D = np.array([1.0, 4.0, 4.0])
+        face_D = 1 / (W_harmonic @ (1 / D))
+        # uniform cells: plain harmonic mean 2 D1 D2 / (D1 + D2)
+        np.testing.assert_allclose(np.sort(face_D), [1.6, 4.0])
+
+    def test_nonpositive_coefficient_raises(self):
+        mesh = _make_quad_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        values = pybamm.Vector(np.ones(mesh.npts), domain="test")
+        with pytest.raises(pybamm.DiscretisationError, match="strictly positive"):
+            method.div_D_grad(
+                div_symbol,
+                variable,
+                pybamm.Vector(np.zeros(mesh.npts), domain="test"),
+                values,
+                {},
+            )

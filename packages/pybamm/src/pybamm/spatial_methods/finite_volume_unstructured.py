@@ -723,9 +723,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     def _div_D_grad_matrices(self, submesh):
         """Assemble (or fetch the cached) matrices for :meth:`div_D_grad`:
-        ``G`` (two-point difference per internal face), ``W``
-        (arithmetic-mean interpolation to faces), ``S`` (face flux to cell
-        divergence), and the geometric factor ``geo`` per internal face.
+        ``G`` (two-point difference per internal face), ``W`` (linear
+        interpolation to faces), ``S`` (face flux to cell divergence), the
+        geometric factor ``geo`` per internal face, the cross-term matrices
+        ``C`` (``None`` on orthogonal meshes) and ``W_harmonic`` (resistance
+        weights for the harmonic mean of ``D``).
         """
         cache = self._operator_cache(submesh)
         key = ("div_D_grad", self.options["non-orthogonal correction"])
@@ -750,13 +752,20 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             shape=(n_int, n),
         )
 
-        # W (n_int x n): distance-weighted interpolation of D to faces
+        # W (n_int x n): linear (distance-weighted) interpolation to faces,
+        # used for the face gradient of the cross term
         w_owner = self._face_geometry(submesh)["w_owner"]
+        face_rows = np.tile(np.arange(n_int), 2)
+        both = np.concatenate([owner, neighbor])
         W = csr_matrix(
-            (
-                np.concatenate([w_owner, 1.0 - w_owner]),
-                (np.tile(np.arange(n_int), 2), np.concatenate([owner, neighbor])),
-            ),
+            (np.concatenate([w_owner, 1.0 - w_owner]), (face_rows, both)),
+            shape=(n_int, n),
+        )
+        # W_h (n_int x n): resistance weights for the harmonic mean of D,
+        # D_f = 1 / (W_h @ (1/D)); each cell weighs by its own centroid-to-face
+        # distance, so a face between two materials carries the series flux
+        W_harmonic = csr_matrix(
+            (np.concatenate([1.0 - w_owner, w_owner]), (face_rows, both)),
             shape=(n_int, n),
         )
 
@@ -781,16 +790,19 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 for kk in range(submesh.dimension)
             ]
 
-        cache[key] = (G, W, S, geo, C)
+        cache[key] = (G, W, S, geo, C, W_harmonic)
         return cache[key]
 
     def div_D_grad(self, div_symbol, grad_child, disc_D, disc_u, boundary_conditions):
         """Discretise ``div(D * grad(u))`` as a single TPFA operation.
 
         Fully symbolic — works for both constant and state-dependent scalar
-        ``D``. Internal-face fluxes use distance-weighted interpolation of
-        ``D`` to faces and the two-point normal derivative plus its
-        non-orthogonal cross term (see :meth:`_tpfa_matrix`).
+        ``D``. Internal-face fluxes use the distance-weighted harmonic mean of
+        ``D`` (resistances in series, as :class:`pybamm.FiniteVolume` does for
+        coefficients of a gradient, so material interfaces carry the exact
+        two-cell flux) and the two-point normal derivative plus its
+        non-orthogonal cross term (see :meth:`_tpfa_matrix`).  ``D`` must be
+        strictly positive.
 
         This method is only reached when the expression is written as
         ``div(D * grad(u))`` (a single product, matched syntactically during
@@ -809,7 +821,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         repeats = self._get_auxiliary_domain_repeats(div_symbol.domains)
         vol = submesh.cell_volumes
 
-        G, W, S, geo, C = self._div_D_grad_matrices(submesh)
+        G, _, S, geo, C, W_harmonic = self._div_D_grad_matrices(submesh)
         bcs = boundary_conditions.get(grad_child, {})
 
         def lift(matrix):
@@ -840,7 +852,15 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             for k, grad_k in enumerate(gradient()):
                 normal_grad = normal_grad + pybamm.Matrix(lift(C[k])) @ grad_k
         is_scalar_D = self._is_scalar_value(disc_D)
-        D_face = disc_D if is_scalar_D else pybamm.Matrix(lift(W)) @ disc_D
+        if is_scalar_D:
+            D_face = disc_D
+        else:
+            if isinstance(disc_D, pybamm.Vector) and np.any(disc_D.entries <= 0):
+                raise pybamm.DiscretisationError(
+                    "div(D * grad(u)) needs a strictly positive coefficient D: "
+                    "faces take its harmonic mean."
+                )
+            D_face = 1 / (pybamm.Matrix(lift(W_harmonic)) @ (1 / disc_D))
         result = pybamm.Matrix(lift(S)) @ (D_face * normal_grad)
 
         # Boundary conditions
