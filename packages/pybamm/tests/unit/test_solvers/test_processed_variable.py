@@ -2176,8 +2176,6 @@ class TestProcessedVariableUnstructuredFVM:
         pv = self._make_pv(var_disc, geometry, t_sol, y_sol)
         assert isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM)
         assert pv.dimensions == 2
-        assert pv.first_dimension == "x"
-        assert pv.second_dimension == "z"
 
         # At solver times with no spatial coords: raw cell data
         np.testing.assert_allclose(pv(t_sol), y_sol, rtol=1e-12)
@@ -2393,8 +2391,6 @@ class TestProcessedVariableUnstructuredFVM:
 
         assert isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM)
         assert pv.dimensions == 3
-        assert pv.third_dimension == "z"
-        assert pv.third_dim_size == pv.N_VIS_3D
 
         # Scalar-time spatial query inside the domain
         result = pv(0.5, x=np.array([0.5]), y=np.array([0.5]), z=np.array([0.5]))
@@ -2412,16 +2408,6 @@ class TestProcessedVariableUnstructuredFVM:
         # Points outside the domain are masked (3D winding-number path)
         outside = pv(0.5, x=np.array([-1.0]), y=np.array([0.5]), z=np.array([0.5]))
         assert np.isnan(outside).all()
-
-        # Orthogonal midplane slices at the last time
-        s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = pv.get_3d_slices(1.0)
-        n_vis = pv.N_VIS_3D
-        for arr in (s1, xx1, yy1, zz1, s2, xx2, yy2, zz2):
-            assert arr.shape == (n_vis, n_vis)
-        assert np.isfinite(s1).mean() > 0.5
-        assert np.isfinite(s2).mean() > 0.5
-        np.testing.assert_allclose(s1[np.isfinite(s1)], 14.0, rtol=1e-8)
-        np.testing.assert_allclose(s2[np.isfinite(s2)], 14.0, rtol=1e-8)
 
     def test_vector_field_via_solution_2d(self):
         """Requesting a VectorField variable from a Solution goes through the
@@ -2467,15 +2453,11 @@ class TestProcessedVariableUnstructuredFVM:
         np.testing.assert_allclose(comps[0], 2.0, rtol=1e-12)
         np.testing.assert_allclose(comps[1], -3.0, rtol=1e-12)
 
-        # Quiver data on the coarse plotting grid
-        X, Z, U, W = flux_pv.get_quiver_data(0.5)
-        n_q = flux_pv.N_QUIVER
-        for arr in (X, Z, U, W):
-            assert arr.shape == (n_q, n_q)
-        np.testing.assert_allclose(U[np.isfinite(U)], 2.0, rtol=1e-8)
-        np.testing.assert_allclose(W[np.isfinite(W)], -3.0, rtol=1e-8)
+        # QuickPlot has no unstructured support in this PR and must say so
+        with pytest.raises(NotImplementedError, match="unstructured meshes"):
+            pybamm.QuickPlot(solution, ["u"])
 
-    def test_vector_field_3d_quiver(self):
+    def test_vector_field_3d(self):
         geometry, submesh, disc, _, _ = self._make_setup(dim=3, n=3)
         domain = "negative electrode"
 
@@ -2496,20 +2478,12 @@ class TestProcessedVariableUnstructuredFVM:
         flux_pv = pybamm.process_variable("flux", [flux_disc], [comp_casadi], solution)
         assert isinstance(flux_pv, pybamm.ProcessedVariableVectorFieldUnstructuredFVM)
         assert flux_pv.dimensions == 3
-        assert flux_pv.third_dimension == "z"
-
-        (X1, Z1, u_xz, w_xz, y_mid, X2, Y2, u_xy, v_xy, z_mid) = (
-            flux_pv.get_quiver_data(0.5)
+        components = flux_pv(
+            0.5, x=np.array([0.5]), y=np.array([0.5]), z=np.array([0.5])
         )
-        n_q = flux_pv.N_QUIVER
-        for arr in (X1, Z1, u_xz, w_xz, X2, Y2, u_xy, v_xy):
-            assert arr.shape == (n_q, n_q)
-        np.testing.assert_allclose(y_mid, 0.5, atol=1e-12)
-        np.testing.assert_allclose(z_mid, 0.5, atol=1e-12)
-        np.testing.assert_allclose(u_xz[np.isfinite(u_xz)], 1.0, rtol=1e-8)
-        np.testing.assert_allclose(w_xz[np.isfinite(w_xz)], 3.0, rtol=1e-8)
-        np.testing.assert_allclose(u_xy[np.isfinite(u_xy)], 1.0, rtol=1e-8)
-        np.testing.assert_allclose(v_xy[np.isfinite(v_xy)], 2.0, rtol=1e-8)
+        assert len(components) == 3
+        for value, component in zip([1.0, 2.0, 3.0], components, strict=True):
+            np.testing.assert_allclose(component, value, rtol=1e-10)
 
     def test_2d_domain_with_hole_masks_hole(self):
         from pybamm.meshes.meshes import MeshGenerator

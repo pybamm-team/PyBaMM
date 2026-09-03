@@ -972,12 +972,8 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
     (triangles, quads in 2D; tetrahedra in 3D).
 
     Spatial interpolation uses ``scipy.interpolate.LinearNDInterpolator``
-    on cell centroids.  For 2D meshes, a regular visualisation grid is
-    created so that ``solution.plot()`` works out of the box.
+    on cell centroids; query it at arbitrary points with ``pv(t, x=, y=, z=)``.
     """
-
-    N_VIS = 200
-    N_VIS_3D = 80
 
     def __init__(
         self,
@@ -1011,35 +1007,6 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
         )
         self._time_interpolator = None
         self.internal_boundaries = []
-
-        nodes = mesh.vertices
-        x_min, x_max = nodes[:, 0].min(), nodes[:, 0].max()
-
-        n_vis = self.N_VIS_3D if mesh.dimension == 3 else self.N_VIS
-        self.first_dimension = "x"
-        self.first_dim_pts = np.linspace(x_min, x_max, n_vis)
-        self.first_dim_size = n_vis
-
-        if mesh.dimension == 3:
-            n3 = self.N_VIS_3D
-            y_min, y_max = nodes[:, 1].min(), nodes[:, 1].max()
-            z_min, z_max = nodes[:, 2].min(), nodes[:, 2].max()
-            self.second_dimension = "y"
-            self.second_dim_pts = np.linspace(y_min, y_max, n3)
-            self.second_dim_size = n3
-            self.third_dimension = "z"
-            self.third_dim_pts = np.linspace(z_min, z_max, n3)
-            self.third_dim_size = n3
-            self._slice_positions = {
-                "y": 0.5 * (y_min + y_max),
-                "z": 0.5 * (z_min + z_max),
-            }
-        else:
-            z_col = 1
-            z_min, z_max = nodes[:, z_col].min(), nodes[:, z_col].max()
-            self.second_dimension = "z"
-            self.second_dim_pts = np.linspace(z_min, z_max, self.N_VIS)
-            self.second_dim_size = self.N_VIS
 
     def _shape(self, t):
         return [self.mesh.npts, len(t)]
@@ -1182,47 +1149,15 @@ class ProcessedVariableUnstructuredFVM(ProcessedVariable):
 
         return result
 
-    def get_3d_slices(self, t):
-        """Compute two orthogonal slices through the 3D domain for plotting.
-
-        Returns (slice_xz, xx_xz, yy_xz, zz_xz,
-                 slice_xy, xx_xy, yy_xy, zz_xy)
-        where each slice is on a regular grid at the midplane.
-        """
-        data_at_t = self._data_at_time(t)
-        vals = data_at_t.ravel() if data_at_t.ndim == 1 else data_at_t[:, -1]
-
-        x_pts = self.first_dim_pts
-        y_pts = self.second_dim_pts
-        z_pts = self.third_dim_pts
-        y_mid = self._slice_positions["y"]
-        z_mid = self._slice_positions["z"]
-
-        # x-z plane at y = y_mid
-        xx1, zz1 = np.meshgrid(x_pts, z_pts, indexing="ij")
-        yy1 = np.full_like(xx1, y_mid)
-        q1 = np.column_stack([xx1.ravel(), yy1.ravel(), zz1.ravel()])
-        s1 = self._interpolate_spatial(vals, q1).reshape(xx1.shape)
-
-        # x-y plane at z = z_mid
-        xx2, yy2 = np.meshgrid(x_pts, y_pts, indexing="ij")
-        zz2 = np.full_like(xx2, z_mid)
-        q2 = np.column_stack([xx2.ravel(), yy2.ravel(), zz2.ravel()])
-        s2 = self._interpolate_spatial(vals, q2).reshape(xx2.shape)
-
-        return s1, xx1, yy1, zz1, s2, xx2, yy2, zz2
-
 
 class ProcessedVariableVectorFieldUnstructuredFVM:
     """
     Processed variable for a VectorField on an unstructured mesh.
 
     Wraps N scalar ``ProcessedVariableUnstructuredFVM`` instances (one per
-    component) and provides a unified interface for querying and plotting
-    vector-valued data.
+    component) and provides a unified interface for querying vector-valued
+    data.
     """
-
-    N_QUIVER = 20
 
     def __init__(
         self,
@@ -1261,20 +1196,7 @@ class ProcessedVariableVectorFieldUnstructuredFVM:
             )
             self._component_vars.append(pv)
 
-        ref = self._component_vars[0]
-        self.dimensions = ref.dimensions
-        self.first_dimension = ref.first_dimension
-        self.first_dim_pts = ref.first_dim_pts
-        self.first_dim_size = ref.first_dim_size
-        self.second_dimension = ref.second_dimension
-        self.second_dim_pts = ref.second_dim_pts
-        self.second_dim_size = ref.second_dim_size
-
-        if self.dimensions == 3:
-            self.third_dimension = ref.third_dimension
-            self.third_dim_pts = ref.third_dim_pts
-            self.third_dim_size = ref.third_dim_size
-            self._slice_positions = ref._slice_positions
+        self.dimensions = self._component_vars[0].dimensions
 
     @property
     def entries(self):
@@ -1301,59 +1223,6 @@ class ProcessedVariableVectorFieldUnstructuredFVM:
             pv(t=t, x=x, r=r, y=y, z=z, R=R, fill_value=fill_value)
             for pv in self._component_vars
         )
-
-    def get_quiver_data(self, t):
-        """Interpolate vector components onto a coarser grid for quiver arrows.
-
-        Returns ``(X, Z, U, W)`` in 2D.  In 3D two mid-plane slices are
-        returned as ``(X1, Z1, U_xz, W_xz, y_mid, X2, Y2, U_xy, V_xy, z_mid)``:
-        the x-z plane at ``y_mid`` followed by the x-y plane at ``z_mid``.
-        """
-        nq = self.N_QUIVER
-        x_pts = np.linspace(self.first_dim_pts[0], self.first_dim_pts[-1], nq)
-
-        if self.dimensions == 2:
-            z_pts = np.linspace(self.second_dim_pts[0], self.second_dim_pts[-1], nq)
-            comp_u = self._component_vars[0](t=t, x=x_pts, z=z_pts)
-            comp_w = self._component_vars[1](t=t, x=x_pts, z=z_pts)
-            X, Z = np.meshgrid(x_pts, z_pts, indexing="ij")
-            return X, Z, comp_u, comp_w
-        else:
-            y_pts = np.linspace(self.second_dim_pts[0], self.second_dim_pts[-1], nq)
-            z_pts = np.linspace(self.third_dim_pts[0], self.third_dim_pts[-1], nq)
-            y_mid = self._slice_positions["y"]
-            z_mid = self._slice_positions["z"]
-
-            # x-z plane at y_mid
-            comp_u_xz = self._component_vars[0](
-                t=t, x=x_pts, y=np.array([y_mid]), z=z_pts
-            ).squeeze(axis=1)
-            comp_w_xz = self._component_vars[2](
-                t=t, x=x_pts, y=np.array([y_mid]), z=z_pts
-            ).squeeze(axis=1)
-            X1, Z1 = np.meshgrid(x_pts, z_pts, indexing="ij")
-
-            # x-y plane at z_mid
-            comp_u_xy = self._component_vars[0](
-                t=t, x=x_pts, y=y_pts, z=np.array([z_mid])
-            ).squeeze(axis=2)
-            comp_v_xy = self._component_vars[1](
-                t=t, x=x_pts, y=y_pts, z=np.array([z_mid])
-            ).squeeze(axis=2)
-            X2, Y2 = np.meshgrid(x_pts, y_pts, indexing="ij")
-
-            return (
-                X1,
-                Z1,
-                comp_u_xz,
-                comp_w_xz,
-                y_mid,
-                X2,
-                Y2,
-                comp_u_xy,
-                comp_v_xy,
-                z_mid,
-            )
 
 
 class ProcessedVariableRawFVM(ProcessedVariable):
