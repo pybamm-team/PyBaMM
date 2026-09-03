@@ -2932,6 +2932,36 @@ class TestExperimentSerialization:
         exp2 = pybamm.Experiment.from_config(config)
         assert isinstance(exp2.steps[0].value, pybamm.InputParameter)
 
+    @pytest.mark.parametrize(
+        "duration",
+        [
+            pybamm.InputParameter("Step duration [s]"),
+            2 * pybamm.InputParameter("d"),
+        ],
+    )
+    def test_symbolic_duration_round_trip(self, duration):
+        exp = pybamm.Experiment([pybamm.step.c_rate(1, duration=duration)])
+
+        # The config must survive a trip through JSON, not just through Python
+        config = json.loads(json.dumps(exp.to_config()))
+        exp2 = pybamm.Experiment.from_config(config)
+
+        assert exp2.steps[0].duration == duration
+        assert not exp2.steps[0].uses_default_duration
+
+    @pytest.mark.parametrize(
+        "period", [pybamm.InputParameter("sample"), 2 * pybamm.Parameter("sample")]
+    )
+    def test_symbolic_period_round_trip(self, period):
+        exp = pybamm.Experiment([pybamm.step.c_rate(1, duration=1800, period=period)])
+
+        config = json.loads(json.dumps(exp.to_config()))
+        exp2 = pybamm.Experiment.from_config(config)
+
+        assert exp2.steps[0].period == period
+        # The step's own value must survive alongside it
+        assert exp2.steps[0].value == 1.0
+
     def test_legacy_steps_format(self):
         """from_config also accepts flat {'steps': [...]} format."""
         config = {

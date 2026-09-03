@@ -67,12 +67,18 @@ def test_drive_cycle_validation_and_looping():
 
     step = pybamm.step.current(np.array([[0.0, 0.0], [2.0, 1.0]]), duration=5)
 
-    np.testing.assert_array_equal(
-        step.value.x[0], np.array([0.0, 2.0, 4.0, 6.0, 8.0, 10.0])
-    )
-    np.testing.assert_array_equal(
-        step.value.y, np.array([0.0, 1.0, 0.0, 1.0, 0.0, 1.0])
-    )
+    # One cycle, plus the wrap point that repeats the first sample: the step time is
+    # wrapped into this window rather than the cycle being tiled out to the duration
+    np.testing.assert_array_equal(step.value.x[0], np.array([0.0, 2.0, 4.0]))
+    np.testing.assert_array_equal(step.value.y, np.array([0.0, 1.0, 0.0]))
+
+    # The drive cycle repeats every 4 s, for as long as the step runs
+    def current_at(t):
+        return step.value.evaluate(t=t, inputs={"start time": 0.0})
+
+    for t in (0.0, 1.0, 2.0, 3.0):
+        assert current_at(t) == current_at(t + 4.0) == current_at(t + 8.0)
+    assert current_at(1.0) == 0.5
 
 
 def test_default_time_vector_uses_drive_cycle_period_only_when_supported():
@@ -133,3 +139,82 @@ def test_parse_termination_requires_operator_for_input_parameter():
         pybamm.experiment.step.base_step._parse_termination(
             "2A", pybamm.InputParameter("I_app")
         )
+
+
+@pytest.mark.parametrize(
+    "duration, inputs",
+    [
+        # Resolved from the solver inputs directly...
+        (pybamm.InputParameter("d"), {"d": 1200}),
+        # ...or through a Parameter whose value in parameter_values is "[input]"
+        (pybamm.Parameter("d"), {"d": 1200}),
+        # ...or through a Parameter that simply has a value
+        (pybamm.Parameter("fixed d"), {}),
+        # A number needs neither
+        (1200, {}),
+    ],
+)
+def test_duration_is_resolved_at_solve_time(duration, inputs):
+    parameter_values = pybamm.ParameterValues({"d": "[input]", "fixed d": 1200})
+    step = pybamm.step.c_rate(1, duration=duration)
+
+    assert not step.uses_default_duration
+    assert step.duration_seconds(parameter_values, inputs) == 1200.0
+
+
+def test_symbolic_duration_needs_its_input():
+    step = pybamm.step.c_rate(1, duration=pybamm.InputParameter("d"))
+
+    with pytest.raises(KeyError, match="Input parameter 'd' not found"):
+        step.duration_seconds(pybamm.ParameterValues({}))
+
+
+def test_drive_cycle_repeats_independently_of_its_duration():
+    drive_cycle = np.array([[0.0, 1.0], [1.0, -1.0], [2.0, 0.5]])
+    symbolic = pybamm.step.current(drive_cycle, duration=pybamm.InputParameter("d"))
+    numeric = pybamm.step.current(drive_cycle, duration=10)
+
+    # The interpolant wraps the step time, so it does not depend on the duration
+    assert symbolic.value == numeric.value
+    assert symbolic.duration_seconds(pybamm.ParameterValues({}), {"d": 10}) == 10
+    # Sample times are repeated up to the resolved final time, one cycle being 3 s
+    np.testing.assert_array_equal(
+        symbolic._drive_cycle_time_points(8),
+        np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
+    )
+
+
+def test_symbolic_duration_and_termination_are_recorded():
+    termination = pybamm.CoupledVariable("Voltage [V]") < pybamm.InputParameter("Vmin")
+    duration = pybamm.InputParameter("d")
+    step = pybamm.step.c_rate(1, duration=duration, termination=termination)
+
+    # A Symbol has no truth value, so its string form is what gets recorded
+    assert f"duration={duration}" in repr(step)
+    assert f"termination={termination}" in step.basic_repr()
+    # Steps differing only in duration still share a model
+    assert (
+        step.basic_repr()
+        == pybamm.step.c_rate(1, duration=1800, termination=termination).basic_repr()
+    )
+
+
+@pytest.mark.parametrize(
+    "period, inputs",
+    [
+        (pybamm.InputParameter("sample"), {"sample": 300}),
+        (pybamm.Parameter("sample"), {"sample": 300}),
+        ("5 minutes", {}),
+        (300, {}),
+    ],
+)
+def test_period_is_resolved_at_solve_time(period, inputs):
+    parameter_values = pybamm.ParameterValues({"sample": "[input]"})
+    step = pybamm.step.c_rate(1, duration=1800, period=period)
+
+    assert step.period_seconds(parameter_values, inputs) == 300.0
+    # The period sets the output sampling, so it must be resolved before t_interp
+    _, t_interp = step.setup_timestepping(
+        DummySolver(), 1800, parameter_values=parameter_values, inputs=inputs
+    )
+    np.testing.assert_array_equal(t_interp, np.arange(0, 1801, 300.0))

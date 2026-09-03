@@ -8,6 +8,8 @@
 
 ## Features
 
+- Experiment steps accept a symbolic `duration` (e.g. a `pybamm.InputParameter`), resolved against the inputs passed to `Simulation.solve`, so one built model serves any duration. Drive cycles now repeat by wrapping the step time, rather than being tiled out to a fixed duration.
+- Experiment steps accept a symbolic inequality as a `termination`, e.g. `pybamm.CoupledVariable("Voltage [V]") > pybamm.InputParameter("Voltage hold [V]")`, so a cut-off can be set on any model variable and its threshold supplied at solve time.
 - Added unstructured mesh support (`UnstructuredSubMesh`, generators, and interface coupling) for arbitrary 2D/3D domains. Hexahedra must have planar faces (warped hexes raise a `GeometryError`), and `UserSuppliedUnstructuredMesh` accepts tetrahedral, triangular, and quadrilateral cells only. ([#5687](https://github.com/pybamm-team/PyBaMM/pull/5687))
 - Generalised `VectorField` to N components and added `Component`/`Norm` operators for multi-dimensional vector fields. ([#5686](https://github.com/pybamm-team/PyBaMM/pull/5686))
 - Removed the left sidebar from the documentation home page for a cleaner landing experience. ([#5699](https://github.com/pybamm-team/PyBaMM/pull/5699))

@@ -1789,6 +1789,8 @@ class Serialise:
             ``CustomStepExplicit``, ``CustomStepImplicit``); these have no
             JSON representation.
         """
+        from pybamm.expression_tree.operations.serialise_kernel import encode
+
         step_type_map = {
             "Current": "current",
             "Rest": "rest",
@@ -1831,7 +1833,10 @@ class Serialise:
 
             step_config: dict = {"type": step_type}
             # Use ``input_duration`` so ``uses_default_duration`` round-trips.
-            if step.input_duration is not None:
+            if isinstance(step.input_duration, pybamm.Symbol):
+                # A symbolic duration is an expression tree, not a time string
+                step_config["duration"] = encode(step.input_duration)
+            elif step.input_duration is not None:
                 step_config["duration"] = step.input_duration
 
             if step_type != "rest":
@@ -1882,7 +1887,9 @@ class Serialise:
             for field, default in field_defaults.items():
                 value = getattr(step, field, None)
                 if value is not None and value != default:
-                    step_config[field] = value
+                    step_config[field] = (
+                        encode(value) if isinstance(value, pybamm.Symbol) else value
+                    )
             tags = getattr(step, "tags", None)
             if tags:
                 step_config["tags"] = tags
@@ -1938,6 +1945,8 @@ class Serialise:
         -------
         :class:`pybamm.Experiment`
         """
+        from pybamm.expression_tree.operations.serialise_kernel import decode
+
         step_func_map = _experiment_step_factories()
         term_class_map = {
             "voltage": pybamm.step.VoltageTermination,
@@ -1986,7 +1995,10 @@ class Serialise:
             # ``uses_default_duration`` (used by infeasibility handling).
             duration_kwargs = {}
             if "duration" in step_dict and step_dict["duration"] is not None:
-                duration_kwargs["duration"] = step_dict["duration"]
+                duration = step_dict["duration"]
+                if isinstance(duration, dict):
+                    duration = decode(duration)
+                duration_kwargs["duration"] = duration
             terminations = None
             if step_dict.get("terminations"):
                 terminations = [
@@ -2002,7 +2014,12 @@ class Serialise:
                 "direction",
             ):
                 if step_dict.get(field) is not None:
-                    extra_kwargs[field] = step_dict[field]
+                    field_value = step_dict[field]
+                    extra_kwargs[field] = (
+                        decode(field_value)
+                        if isinstance(field_value, dict)
+                        else field_value
+                    )
             if step_dict.get("start_time") is not None:
                 extra_kwargs["start_time"] = datetime.fromisoformat(
                     step_dict["start_time"]

@@ -51,11 +51,16 @@ class BaseStep:
     value : float
         The value of the step, corresponding to the type of step. Can be a number, a
         2-tuple (for cccv_ode), a 2-column array (for drive cycles), or a 1-argument function of t
-    duration : float, optional
-        The duration of the step in seconds.
-    termination : str or list, optional
-        A string or list of strings indicating the condition(s) that will terminate the
-        step. If a list, the step will terminate when any of the conditions are met.
+    duration : float or str or :class:`pybamm.Symbol`, optional
+        The duration of the step in seconds. A symbolic duration (e.g. a
+        :class:`pybamm.InputParameter`) is evaluated at solve time against the inputs
+        passed to :meth:`pybamm.Simulation.solve`.
+    termination : str or list or :class:`pybamm.Symbol`, optional
+        A condition, or list of conditions, that will terminate the step; the step ends
+        when any of them is met. Each condition is a string (e.g. ``"4.2V"``), a
+        :class:`pybamm.step.BaseTermination`, or a symbolic inequality such as
+        ``pybamm.CoupledVariable("Voltage [V]") > pybamm.InputParameter("V hold")``,
+        whose threshold may be an input parameter resolved at solve time.
     period : float or string, optional
         The period of the step. If a float, the value is in seconds. If a string, the
         value should be a valid time string, e.g. "1 hour".
@@ -135,28 +140,19 @@ class BaseStep:
             duration = self.default_duration(value)
         self.duration = _convert_time_to_seconds(duration)
 
-        # If drive cycle, repeat the drive cycle until the end of the experiment,
-        # and create an interpolant
+        # If drive cycle, repeat the drive cycle until the end of the experiment by
+        # wrapping the step time, so that the duration (which may be symbolic) does
+        # not enter the interpolant, and create an interpolant
         if self.is_drive_cycle:
-            t_max = self.duration
-            if t_max > value[-1, 0]:
-                # duration longer than drive cycle values so loop
-                nloop = np.ceil(t_max / value[-1, 0]).astype(int)
-                tstep = np.diff(value[:, 0])[0]
-                t = []
-                y = []
-                for i in range(nloop):
-                    t.append(value[:, 0] + ((value[-1, 0] + tstep) * i))
-                    y.append(value[:, 1])
-                t = np.asarray(t).flatten()
-                y = np.asarray(y).flatten()
-            else:
-                t, y = value[:, 0], value[:, 1]
-
+            t, y = value[:, 0], value[:, 1]
+            # Each repeat starts one sample after the last one ended, so the cycle's
+            # period is one sample longer than its last time point
+            cycle_period = t[-1] + np.diff(t)[0]
+            step_time = pybamm.t - pybamm.InputParameter("start time")
             self.value = pybamm.Interpolant(
-                t,
-                y,
-                pybamm.t - pybamm.InputParameter("start time"),
+                np.append(t, cycle_period),
+                np.append(y, y[0]),
+                step_time % cycle_period,
                 name="Drive Cycle",
             )
 
@@ -185,15 +181,13 @@ class BaseStep:
             termination = []
         elif not isinstance(termination, list):
             termination = [termination]
-        self.termination = []
-        for term in termination:
-            term_obj = None
+
+        def _build_termination(term):
             if isinstance(term, str):
-                operator, typ, val = _parse_termination(term, self.value)
-                term_obj = _read_termination((operator, typ, val))
-            else:
-                term_obj = _read_termination(term)
-            self.termination.append(term_obj)
+                term = _parse_termination(term, self.value)
+            return _read_termination(term)
+
+        self.termination = [_build_termination(term) for term in termination]
 
         if (
             hasattr(self, "calculate_charge_or_discharge")
@@ -216,6 +210,18 @@ class BaseStep:
             raise TypeError("`start_time` should be a datetime.datetime object")
         self.next_start_time = None
         self.end_time = None
+
+    def duration_seconds(self, parameter_values, inputs=None):
+        """The duration in seconds, resolving a symbolic duration at solve time."""
+        duration = parameter_values.process_symbol(
+            pybamm.convert_to_symbol(self.duration)
+        )
+        return float(duration.evaluate(inputs=inputs))
+
+    def period_seconds(self, parameter_values, inputs=None):
+        """The period in seconds, resolving a symbolic period at solve time."""
+        period = parameter_values.process_symbol(pybamm.convert_to_symbol(self.period))
+        return float(period.evaluate(inputs=inputs))
 
     @staticmethod
     def is_implicit() -> bool:
@@ -352,9 +358,9 @@ class BaseStep:
     def default_period():
         return 60.0  # seconds
 
-    def default_time_vector(self, solver, tf, t0=0):
+    def default_time_vector(self, solver, tf, t0=0, parameter_values=None, inputs=None):
         if self.period is not None:
-            period = self.period
+            period = self.period_seconds(parameter_values, inputs)
         elif self.is_drive_cycle and solver.supports_interp:
             # Infer the period from the drive cycle
             period = np.diff(self.value.x[0]).min()
@@ -364,7 +370,9 @@ class BaseStep:
 
         return np.linspace(t0, tf, npts)
 
-    def setup_timestepping(self, solver, tf, t_interp=None):
+    def setup_timestepping(
+        self, solver, tf, t_interp=None, parameter_values=None, inputs=None
+    ):
         """
         Setup timestepping for the model.
 
@@ -378,11 +386,17 @@ class BaseStep:
             The time points at which to interpolate the solution
         """
         if solver.supports_interp:
-            return self._setup_timestepping(solver, tf, t_interp)
+            return self._setup_timestepping(
+                solver, tf, t_interp, parameter_values, inputs
+            )
         else:
-            return self._setup_timestepping_dense_t_eval(solver, tf, t_interp)
+            return self._setup_timestepping_dense_t_eval(
+                solver, tf, t_interp, parameter_values, inputs
+            )
 
-    def _setup_timestepping(self, solver, tf, t_interp):
+    def _setup_timestepping(
+        self, solver, tf, t_interp, parameter_values=None, inputs=None
+    ):
         """
         Setup timestepping for the model. This returns a t_eval vector that stops
         only at the first and last time points. If t_interp and the period are
@@ -400,13 +414,7 @@ class BaseStep:
             The time points at which to interpolate the solution
         """
         if self.is_drive_cycle:
-            t_eval = self.value.x[0]
-            # If the drive cycle is longer than the final time,
-            # then truncate the drive cycle
-            if t_eval[-1] > tf:
-                t_eval = t_eval[t_eval <= tf]
-            if t_eval[-1] != tf:
-                t_eval = np.append(t_eval, tf)
+            t_eval = self._drive_cycle_time_points(tf)
         else:
             t_eval = np.array([0, tf])
 
@@ -415,13 +423,28 @@ class BaseStep:
 
         if t_interp is None:
             if self.period is not None:
-                t_interp = self.default_time_vector(solver, tf)
+                t_interp = self.default_time_vector(
+                    solver, tf, parameter_values=parameter_values, inputs=inputs
+                )
             else:
                 t_interp = solver.process_t_interp(t_interp)
 
         return t_eval, t_interp
 
-    def _setup_timestepping_dense_t_eval(self, solver, tf, t_interp):
+    def _drive_cycle_time_points(self, tf):
+        """The drive cycle's sample times, repeated to cover ``[0, tf]``."""
+        # The last point of ``x`` is the wrap point, which repeats the first sample
+        samples, period = self.value.x[0][:-1], self.value.x[0][-1]
+        nloop = max(int(np.ceil(tf / period)), 1)
+        t_eval = np.concatenate([samples + period * i for i in range(nloop)])
+        t_eval = t_eval[t_eval <= tf]
+        if t_eval[-1] != tf:
+            t_eval = np.append(t_eval, tf)
+        return t_eval
+
+    def _setup_timestepping_dense_t_eval(
+        self, solver, tf, t_interp, parameter_values=None, inputs=None
+    ):
         """
         Setup timestepping for the model. By default, this returns a dense t_eval which
         stops the solver at each point in the t_eval vector. This method is for solvers
@@ -436,7 +459,9 @@ class BaseStep:
         t_interp: np.array | None
             The time points at which to interpolate the solution
         """
-        t_eval = self.default_time_vector(solver, tf)
+        t_eval = self.default_time_vector(
+            solver, tf, parameter_values=parameter_values, inputs=inputs
+        )
 
         t_interp = solver.process_t_interp(t_interp)
 
@@ -543,6 +568,14 @@ class BaseStep:
         direction,
     ):
         """Record all the args for repr and hash"""
+        # A Symbol has no truth value and no stable repr, but its id identifies the
+        # expression it stands for
+        if isinstance(duration, pybamm.Symbol):
+            duration = str(duration)
+        if isinstance(termination, pybamm.Symbol):
+            termination = str(termination)
+        if isinstance(period, pybamm.Symbol):
+            period = str(period)
         repr_args = f"{value}, duration={duration}"
         hash_args = f"{value}"
         if termination:
@@ -662,6 +695,10 @@ def get_unit_from(a_string: str) -> str:
 def _convert_time_to_seconds(time_and_units):
     """Convert a time in seconds, minutes or hours to a time in seconds"""
     if time_and_units is None:
+        return time_and_units
+
+    # A symbolic time is resolved at solve time, by `_evaluate_time`
+    if isinstance(time_and_units, pybamm.Symbol):
         return time_and_units
 
     # If the time is a number, assume it is in seconds

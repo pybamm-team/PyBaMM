@@ -205,3 +205,68 @@ class TestExperimentStepTermination:
                 f"unique_steps={len(exp.unique_steps)} for n_cycles={n_cycles}, "
                 f"expected {n_unique} (steps must scale with template, not cycles)"
             )
+
+
+class TestInequalityTermination:
+    @pytest.mark.parametrize(
+        "expression, residual",
+        [
+            # `a > b` is the heaviside `b < a`, so the sides come back swapped
+            (
+                pybamm.CoupledVariable("V") > pybamm.InputParameter("V hold"),
+                lambda v: pybamm.InputParameter("V hold") - v,
+            ),
+            (
+                pybamm.CoupledVariable("V") <= pybamm.InputParameter("V hold"),
+                lambda v: v - pybamm.InputParameter("V hold"),
+            ),
+            (
+                pybamm.CoupledVariable("V") * 2 < 7.0,
+                lambda v: v * 2 - pybamm.Scalar(7.0),
+            ),
+        ],
+    )
+    def test_inequality_becomes_a_custom_termination(self, expression, residual):
+        term = pybamm.step.base_step._read_termination(expression)
+        v = pybamm.Variable("V")
+
+        assert isinstance(term, pybamm.step.CustomTermination)
+        assert term.name == f"{expression} [experiment]"
+        # A heaviside is "left < right", so left - right is positive before the
+        # inequality holds and negative once it does: the event convention. The
+        # CoupledVariable is looked up in the variables the termination is handed,
+        # exactly as every other termination finds its variable.
+        assert term.get_event({"V": v}, None).expression == residual(v)
+
+    def test_inequality_termination_over_a_custom_variable(self):
+        # A variable that is not a standard model output, referenced by name
+        model = pybamm.lithium_ion.SPM()
+        model.variables["Headroom [V]"] = model.variables["Voltage [V]"] - 3.0
+        step = pybamm.step.c_rate(
+            1, duration=3600, termination=pybamm.CoupledVariable("Headroom [V]") < 0.6
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=pybamm.Experiment([step]),
+            solver=pybamm.IDAKLUSolver(),
+        )
+
+        sol = sim.solve(calc_esoh=False)
+
+        assert sol.termination == f"event: {step.termination[0].name}"
+        assert sol["Headroom [V]"].data[-1] == pytest.approx(0.6, abs=1e-3)
+
+    def test_inequality_termination_rejects_unknown_variable(self):
+        step = pybamm.step.c_rate(
+            1, duration=3600, termination=pybamm.CoupledVariable("Not a variable") < 1
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), experiment=pybamm.Experiment([step])
+        )
+
+        with pytest.raises(ValueError, match="'Not a variable' not found"):
+            sim.solve(calc_esoh=False)
+
+    def test_symbolic_termination_must_be_an_inequality(self):
+        with pytest.raises(TypeError, match="must be an inequality between symbols"):
+            pybamm.step.c_rate(1, duration=1, termination=pybamm.InputParameter("Vmin"))

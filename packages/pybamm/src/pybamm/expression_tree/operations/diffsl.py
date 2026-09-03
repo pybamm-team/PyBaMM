@@ -407,6 +407,11 @@ class DiffSLExport:
     @staticmethod
     def _effective_step_duration(step: pybamm.step.BaseStep, initial_start_time):
         effective_duration = step.duration
+        if isinstance(effective_duration, pybamm.Symbol):
+            raise NotImplementedError(
+                "Steps with a symbolic duration cannot be exported to DiffSL: the "
+                "schedule is baked into the generated code, so it needs a number."
+            )
         if step.end_time is not None and initial_start_time is not None:
             start_dt = (step.start_time - initial_start_time).total_seconds()
             end_dt = (step.end_time - initial_start_time).total_seconds()
