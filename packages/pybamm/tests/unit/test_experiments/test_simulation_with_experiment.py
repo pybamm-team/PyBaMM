@@ -2598,3 +2598,72 @@ class TestSimulationExperiment:
 
         # Reusing the same Simulation must refresh experiment ICs when SOC changes.
         assert ic1 != ic2
+
+    @pytest.mark.parametrize("experiment_model_mode", ["unified", "legacy"])
+    def test_run_experiment_with_symbolic_duration(self, experiment_model_mode):
+        experiment = pybamm.Experiment(
+            [pybamm.step.c_rate(1, duration=pybamm.InputParameter("Step duration [s]"))]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode=experiment_model_mode,
+        )
+
+        for duration in (600, 1200):
+            sol = sim.solve(inputs={"Step duration [s]": duration}, calc_esoh=False)
+            assert sol.termination == "final time"
+            assert sol.t[-1] == pytest.approx(duration)
+
+    @pytest.mark.parametrize("experiment_model_mode", ["unified", "legacy"])
+    def test_run_experiment_with_symbolic_termination(self, experiment_model_mode):
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.c_rate(
+                    1,
+                    duration=3600,
+                    termination=pybamm.CoupledVariable("Voltage [V]")
+                    < pybamm.InputParameter("Voltage cut-off [V]"),
+                )
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode=experiment_model_mode,
+        )
+
+        # The threshold is only read at solve time, so one built model serves both
+        for cut_off in (3.6, 3.5):
+            sol = sim.solve(inputs={"Voltage cut-off [V]": cut_off}, calc_esoh=False)
+            assert (
+                sol.termination
+                == "event: Voltage [V] < Voltage cut-off [V] [experiment]"
+            )
+            assert sol["Voltage [V]"].data[-1] == pytest.approx(cut_off, abs=1e-3)
+            assert sol.t[-1] < 3600
+
+    def test_run_experiment_drive_cycle_with_symbolic_duration(self):
+        drive_cycle = np.column_stack([np.arange(0, 501, 100.0), [1, 2, -1, 0, 1, -2]])
+        experiment = pybamm.Experiment(
+            [pybamm.step.current(drive_cycle, duration=pybamm.InputParameter("dur"))]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+        )
+
+        # The interpolant wraps the step time, so the same built model serves any
+        # duration: the drive cycle repeats for as long as the step runs
+        sol = sim.solve(inputs={"dur": 1700}, calc_esoh=False)
+        assert sol.termination == "final time"
+        assert sol.t[-1] == pytest.approx(1700)
+        current = sol["Current [A]"]
+        for t in (0.0, 150.0, 400.0):
+            assert current(t) == pytest.approx(current(t + 600.0))
+
+        sol = sim.solve(inputs={"dur": 300}, calc_esoh=False)
+        assert sol.t[-1] == pytest.approx(300)

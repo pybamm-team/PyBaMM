@@ -220,7 +220,57 @@ class CustomTermination(BaseTermination):
         return hash((type(self).__name__, self.name, id(self.event_function)))
 
 
+def _resolve_coupled_variables(symbol, variables):
+    """Replace each CoupledVariable with the matching entry of ``variables``."""
+    if isinstance(symbol, pybamm.CoupledVariable):
+        try:
+            # `variables` may be a lazy view of a solved step, so look up rather
+            # than test for membership
+            value = variables[symbol.name]
+        except KeyError:
+            raise KeyError(
+                f"'{symbol.name}', used in a termination, is not a model variable"
+            ) from None
+        if not isinstance(value, pybamm.Symbol):
+            # A value read off a solved step, not a symbol to resolve further
+            return pybamm.Scalar(value)
+        return _resolve_coupled_variables(value, variables)
+    if symbol.children:
+        return symbol.create_copy(
+            new_children=[
+                _resolve_coupled_variables(child, variables)
+                for child in symbol.children
+            ]
+        )
+    return symbol
+
+
+def _termination_from_inequality(inequality):
+    """Build a termination from a symbolic inequality, e.g.
+    ``pybamm.CoupledVariable("Voltage [V]") > pybamm.InputParameter("V hold")``.
+    Either side may be a :class:`pybamm.CoupledVariable`, resolved against the model
+    variables, or a :class:`pybamm.InputParameter`, resolved by the solver.
+    """
+    # A heaviside is "left < right", so the step terminates when left - right crosses
+    # zero from above, which is exactly the event convention.
+    left, right = inequality.orphans
+
+    def event_function(variables):
+        return _resolve_coupled_variables(left - right, variables)
+
+    return CustomTermination(str(inequality), event_function)
+
+
 def _read_termination(termination, operator=None):
+    if isinstance(termination, (pybamm.EqualHeaviside, pybamm.NotEqualHeaviside)):
+        return _termination_from_inequality(termination)
+    if isinstance(termination, pybamm.Symbol):
+        raise TypeError(
+            "A symbolic termination must be an inequality between symbols, e.g. "
+            'pybamm.CoupledVariable("Voltage [V]") > 3.0, but got '
+            f"'{termination!s}'. Note that inequalities are only exact when "
+            'pybamm.settings.heaviside_smoothing is "exact".'
+        )
     if isinstance(termination, tuple):
         op, typ, value = termination
     else:

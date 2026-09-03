@@ -205,3 +205,68 @@ class TestExperimentStepTermination:
                 f"unique_steps={len(exp.unique_steps)} for n_cycles={n_cycles}, "
                 f"expected {n_unique} (steps must scale with template, not cycles)"
             )
+
+
+class TestInequalityTermination:
+    @pytest.mark.parametrize(
+        "expression, expected_name, not_yet_met, met",
+        [
+            (
+                pybamm.CoupledVariable("Voltage [V]")
+                > pybamm.InputParameter("Voltage hold [V]"),
+                "Voltage hold [V] < Voltage [V] [experiment]",
+                4.2,
+                3.5,
+            ),
+            (
+                pybamm.CoupledVariable("Voltage [V]")
+                <= pybamm.InputParameter("Voltage hold [V]"),
+                "Voltage [V] <= Voltage hold [V] [experiment]",
+                3.5,
+                4.2,
+            ),
+        ],
+    )
+    def test_inequality_termination_event(
+        self, expression, expected_name, not_yet_met, met
+    ):
+        term = pybamm.step.base_step._read_termination(expression)
+        variables = {"Voltage [V]": pybamm.Scalar(3.9)}
+
+        event = term.get_event(variables, None)
+        assert event.name == expected_name
+        # The event is positive while the inequality does not hold, negative once it does
+        assert event.expression.evaluate(inputs={"Voltage hold [V]": not_yet_met}) > 0
+        assert event.expression.evaluate(inputs={"Voltage hold [V]": met}) < 0
+
+    def test_inequality_termination_is_a_custom_termination(self):
+        expression = pybamm.CoupledVariable("Voltage [V]") < 3.0
+        term = pybamm.step.base_step._read_termination(expression)
+
+        assert isinstance(term, pybamm.step.CustomTermination)
+        # The name is what unified mode collapses branches on, so it must be the
+        # inequality itself, not an anonymous label
+        assert repr(term) == "CustomTermination(Voltage [V] < 3.0 [experiment])"
+
+    @pytest.mark.parametrize("voltage, expected", [(3.0, -1.0), (4.0, 1.0)])
+    def test_inequality_termination_resolves_nested_coupled_variables(
+        self, voltage, expected
+    ):
+        # The coupled variable is not the whole side of the inequality here
+        expression = pybamm.CoupledVariable("Voltage [V]") * 2 < 7.0
+        term = pybamm.step.base_step._read_termination(expression)
+        variables = {"Voltage [V]": pybamm.Scalar(voltage)}
+
+        assert term.get_event(variables, None).expression.evaluate() == expected
+
+    def test_inequality_termination_rejects_unknown_variable(self):
+        term = pybamm.step.base_step._read_termination(
+            pybamm.CoupledVariable("Not a variable") < 1
+        )
+
+        with pytest.raises(KeyError, match="'Not a variable', used in a termination"):
+            term.get_event({"Voltage [V]": pybamm.Scalar(3.0)}, None)
+
+    def test_symbolic_termination_must_be_an_inequality(self):
+        with pytest.raises(TypeError, match="must be an inequality between symbols"):
+            pybamm.step.c_rate(1, duration=1, termination=pybamm.InputParameter("Vmin"))

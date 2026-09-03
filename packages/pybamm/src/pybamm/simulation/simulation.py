@@ -1008,7 +1008,7 @@ class Simulation(BaseSimulation):
                 step = experiment_steps[idx]
                 start_time = current_solution.t[-1]
 
-                dt = step.duration
+                dt = step.duration_seconds(user_inputs)
                 if step.end_time is not None:
                     remaining = (
                         step.end_time
@@ -1029,7 +1029,7 @@ class Simulation(BaseSimulation):
 
                 logs["step number"] = (step_num, cycle_length)
                 logs["step operating conditions"] = step_str
-                logs["step duration"] = step.duration
+                logs["step duration"] = dt
                 callbacks.on_step_start(logs)
 
                 active_step_index = step_indices[idx] if uses_unified else None

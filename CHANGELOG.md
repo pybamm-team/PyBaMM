@@ -2,6 +2,8 @@
 
 ## Features
 
+- Experiment steps accept a symbolic `duration` (e.g. a `pybamm.InputParameter`), resolved against the inputs passed to `Simulation.solve`, so one built model serves any duration. Drive cycles now repeat by wrapping the step time, rather than being tiled out to a fixed duration.
+- Experiment steps accept a symbolic inequality as a `termination`, e.g. `pybamm.CoupledVariable("Voltage [V]") > pybamm.InputParameter("Voltage hold [V]")`, so a cut-off can be set on any model variable and its threshold supplied at solve time.
 - Added `pybamm.Brent`, a bracketed scalar rootfind backed by a native CasADi plugin.
 - Added `Interpolant.monotonicity`, an exact monotonicity test over any region.
 - Added `U_inverse`, inverting an open-circuit potential where it is provably monotonic.

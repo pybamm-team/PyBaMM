@@ -67,12 +67,18 @@ def test_drive_cycle_validation_and_looping():
 
     step = pybamm.step.current(np.array([[0.0, 0.0], [2.0, 1.0]]), duration=5)
 
-    np.testing.assert_array_equal(
-        step.value.x[0], np.array([0.0, 2.0, 4.0, 6.0, 8.0, 10.0])
-    )
-    np.testing.assert_array_equal(
-        step.value.y, np.array([0.0, 1.0, 0.0, 1.0, 0.0, 1.0])
-    )
+    # One cycle, plus the wrap point that repeats the first sample: the step time is
+    # wrapped into this window rather than the cycle being tiled out to the duration
+    np.testing.assert_array_equal(step.value.x[0], np.array([0.0, 2.0, 4.0]))
+    np.testing.assert_array_equal(step.value.y, np.array([0.0, 1.0, 0.0]))
+
+    # The drive cycle repeats every 4 s, for as long as the step runs
+    def current_at(t):
+        return step.value.evaluate(t=t, inputs={"start time": 0.0})
+
+    for t in (0.0, 1.0, 2.0, 3.0):
+        assert current_at(t) == current_at(t + 4.0) == current_at(t + 8.0)
+    assert current_at(1.0) == 0.5
 
 
 def test_default_time_vector_uses_drive_cycle_period_only_when_supported():
@@ -133,3 +139,57 @@ def test_parse_termination_requires_operator_for_input_parameter():
         pybamm.experiment.step.base_step._parse_termination(
             "2A", pybamm.InputParameter("I_app")
         )
+
+
+def test_symbolic_duration_is_resolved_at_solve_time():
+    step = pybamm.step.c_rate(1, duration=pybamm.InputParameter("C-rate duration"))
+
+    assert isinstance(step.duration, pybamm.InputParameter)
+    assert not step.uses_default_duration
+    assert step.duration_seconds({"C-rate duration": 1200}) == 1200.0
+    # A numeric duration is returned unchanged, with or without inputs
+    assert pybamm.step.c_rate(1, duration=600).duration_seconds() == 600
+
+
+def test_symbolic_duration_must_be_positive_when_resolved():
+    step = pybamm.step.c_rate(1, duration=pybamm.InputParameter("d"))
+
+    with pytest.raises(ValueError, match="duration must be positive"):
+        step.duration_seconds({"d": -1})
+
+
+def test_symbolic_duration_needs_its_input():
+    step = pybamm.step.c_rate(1, duration=pybamm.InputParameter("d"))
+
+    with pytest.raises(KeyError, match="Input parameter 'd' not found"):
+        step.duration_seconds()
+
+
+def test_drive_cycle_repeats_independently_of_its_duration():
+    drive_cycle = np.array([[0.0, 1.0], [1.0, -1.0], [2.0, 0.5]])
+    symbolic = pybamm.step.current(drive_cycle, duration=pybamm.InputParameter("d"))
+    numeric = pybamm.step.current(drive_cycle, duration=10)
+
+    # The interpolant wraps the step time, so it does not depend on the duration
+    assert symbolic.value == numeric.value
+    assert symbolic.duration_seconds({"d": 10}) == 10
+    # Sample times are repeated up to the resolved final time, one cycle being 3 s
+    np.testing.assert_array_equal(
+        symbolic._drive_cycle_time_points(8),
+        np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
+    )
+
+
+def test_symbolic_duration_and_termination_recorded_by_id():
+    termination = pybamm.CoupledVariable("Voltage [V]") < pybamm.InputParameter("Vmin")
+    duration = pybamm.InputParameter("d")
+    step = pybamm.step.c_rate(1, duration=duration, termination=termination)
+
+    # A Symbol has no truth value and no stable repr, so its id stands in for it
+    assert f"duration={duration.id}" in repr(step)
+    assert f"termination={termination.id}" in step.basic_repr()
+    # Steps differing only in duration still share a model
+    assert (
+        step.basic_repr()
+        == pybamm.step.c_rate(1, duration=1800, termination=termination).basic_repr()
+    )

@@ -51,11 +51,16 @@ class BaseStep:
     value : float
         The value of the step, corresponding to the type of step. Can be a number, a
         2-tuple (for cccv_ode), a 2-column array (for drive cycles), or a 1-argument function of t
-    duration : float, optional
-        The duration of the step in seconds.
-    termination : str or list, optional
-        A string or list of strings indicating the condition(s) that will terminate the
-        step. If a list, the step will terminate when any of the conditions are met.
+    duration : float or str or :class:`pybamm.Symbol`, optional
+        The duration of the step in seconds. A symbolic duration (e.g. a
+        :class:`pybamm.InputParameter`) is evaluated at solve time against the inputs
+        passed to :meth:`pybamm.Simulation.solve`.
+    termination : str or list or :class:`pybamm.Symbol`, optional
+        A condition, or list of conditions, that will terminate the step; the step ends
+        when any of them is met. Each condition is a string (e.g. ``"4.2V"``), a
+        :class:`pybamm.step.BaseTermination`, or a symbolic inequality such as
+        ``pybamm.CoupledVariable("Voltage [V]") > pybamm.InputParameter("V hold")``,
+        whose threshold may be an input parameter resolved at solve time.
     period : float or string, optional
         The period of the step. If a float, the value is in seconds. If a string, the
         value should be a valid time string, e.g. "1 hour".
@@ -135,28 +140,19 @@ class BaseStep:
             duration = self.default_duration(value)
         self.duration = _convert_time_to_seconds(duration)
 
-        # If drive cycle, repeat the drive cycle until the end of the experiment,
-        # and create an interpolant
+        # If drive cycle, repeat the drive cycle until the end of the experiment by
+        # wrapping the step time, so that the duration (which may be symbolic) does
+        # not enter the interpolant, and create an interpolant
         if self.is_drive_cycle:
-            t_max = self.duration
-            if t_max > value[-1, 0]:
-                # duration longer than drive cycle values so loop
-                nloop = np.ceil(t_max / value[-1, 0]).astype(int)
-                tstep = np.diff(value[:, 0])[0]
-                t = []
-                y = []
-                for i in range(nloop):
-                    t.append(value[:, 0] + ((value[-1, 0] + tstep) * i))
-                    y.append(value[:, 1])
-                t = np.asarray(t).flatten()
-                y = np.asarray(y).flatten()
-            else:
-                t, y = value[:, 0], value[:, 1]
-
+            t, y = value[:, 0], value[:, 1]
+            # Each repeat starts one sample after the last one ended, so the cycle's
+            # period is one sample longer than its last time point
+            cycle_period = t[-1] + np.diff(t)[0]
+            step_time = pybamm.t - pybamm.InputParameter("start time")
             self.value = pybamm.Interpolant(
-                t,
-                y,
-                pybamm.t - pybamm.InputParameter("start time"),
+                np.append(t, cycle_period),
+                np.append(y, y[0]),
+                step_time % cycle_period,
                 name="Drive Cycle",
             )
 
@@ -216,6 +212,10 @@ class BaseStep:
             raise TypeError("`start_time` should be a datetime.datetime object")
         self.next_start_time = None
         self.end_time = None
+
+    def duration_seconds(self, inputs=None):
+        """The duration in seconds, resolving a symbolic duration against ``inputs``."""
+        return _evaluate_time(self.duration, "duration", inputs)
 
     @staticmethod
     def is_implicit() -> bool:
@@ -400,13 +400,7 @@ class BaseStep:
             The time points at which to interpolate the solution
         """
         if self.is_drive_cycle:
-            t_eval = self.value.x[0]
-            # If the drive cycle is longer than the final time,
-            # then truncate the drive cycle
-            if t_eval[-1] > tf:
-                t_eval = t_eval[t_eval <= tf]
-            if t_eval[-1] != tf:
-                t_eval = np.append(t_eval, tf)
+            t_eval = self._drive_cycle_time_points(tf)
         else:
             t_eval = np.array([0, tf])
 
@@ -420,6 +414,17 @@ class BaseStep:
                 t_interp = solver.process_t_interp(t_interp)
 
         return t_eval, t_interp
+
+    def _drive_cycle_time_points(self, tf):
+        """The drive cycle's sample times, repeated to cover ``[0, tf]``."""
+        # The last point of ``x`` is the wrap point, which repeats the first sample
+        samples, period = self.value.x[0][:-1], self.value.x[0][-1]
+        nloop = max(int(np.ceil(tf / period)), 1)
+        t_eval = np.concatenate([samples + period * i for i in range(nloop)])
+        t_eval = t_eval[t_eval <= tf]
+        if t_eval[-1] != tf:
+            t_eval = np.append(t_eval, tf)
+        return t_eval
 
     def _setup_timestepping_dense_t_eval(self, solver, tf, t_interp):
         """
@@ -543,6 +548,12 @@ class BaseStep:
         direction,
     ):
         """Record all the args for repr and hash"""
+        # A Symbol has no truth value and no stable repr, but its id identifies the
+        # expression it stands for
+        if isinstance(duration, pybamm.Symbol):
+            duration = duration.id
+        if isinstance(termination, pybamm.Symbol):
+            termination = termination.id
         repr_args = f"{value}, duration={duration}"
         hash_args = f"{value}"
         if termination:
@@ -664,6 +675,10 @@ def _convert_time_to_seconds(time_and_units):
     if time_and_units is None:
         return time_and_units
 
+    # A symbolic time is resolved at solve time, by `_evaluate_time`
+    if isinstance(time_and_units, pybamm.Symbol):
+        return time_and_units
+
     # If the time is a number, assume it is in seconds
     if isinstance(time_and_units, numbers.Number):
         if time_and_units <= 0:
@@ -685,6 +700,16 @@ def _convert_time_to_seconds(time_and_units):
             f"For example: {_examples}"
         )
     return time_in_seconds
+
+
+def _evaluate_time(time, name, inputs=None):
+    """Resolve a time that may be symbolic into a number of seconds."""
+    if not isinstance(time, pybamm.Symbol):
+        return time
+    seconds = float(time.evaluate(inputs=inputs))
+    if seconds <= 0:
+        raise ValueError(f"{name} must be positive; '{time}' evaluated to {seconds}")
+    return seconds
 
 
 def _convert_temperature_to_kelvin(temperature_and_units):
