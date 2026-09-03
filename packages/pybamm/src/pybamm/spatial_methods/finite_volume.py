@@ -97,6 +97,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Add Dirichlet boundary conditions, if defined
         dirichlet = [side for side, bc in bcs.items() if bc[1] == "Dirichlet"]
+        neumann_type_bc = [
+            side for side, bc in bcs.items() if bc[1] in ["Neumann", "Flux"]
+        ]
         if dirichlet:
             # add ghost nodes and update domain
             discretised_symbol, domain = self.add_ghost_nodes(
@@ -110,9 +113,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         out = gradient_matrix @ discretised_symbol
 
         # Extrapolate to the boundary edges to ensure gradient has the expected length
-        if len(dirichlet) < 2:
+        if len(neumann_type_bc) > 0:
             out = self._extrapolate_gradient_to_boundaries(
-                symbol, out, dirichlet, domain
+                symbol, out, neumann_type_bc, domain
             )
 
         # Replace extrapolation with Neumann boundary conditions, if defined
@@ -977,8 +980,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
-        else:
+        elif lbc_type in ["Dirichlet", "Flux", "Neumann"]:
             lbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet, Neumann or a flux condition, not '{lbc_type}'"
+            )
 
         if rbc_type == "Neumann" and rbc_value != 0:
             rbc_sub_matrix = coo_matrix(([1.0], ([n - 1], [0])), shape=(n, 1))
@@ -990,8 +997,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
-        else:
+        elif rbc_type in ["Dirichlet", "Flux", "Neumann"]:
             rbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
+        else:
+            raise ValueError(
+                f"boundary condition must be Dirichlet, Neumann or a flux condition, not '{rbc_type}'"
+            )
 
         bcs_vector = lbc_vector + rbc_vector
         # Need to match the domain. E.g. in the case of the boundary condition
@@ -1019,7 +1030,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         return new_gradient
 
     def _extrapolate_gradient_to_boundaries(
-        self, symbol, discretised_gradient, dirichlet, domain
+        self, symbol, discretised_gradient, neumann_type_bc, domain
     ):
         """
         Extrapolate the discretised gradient to the boundary edges.
@@ -1030,8 +1041,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             The variable to be discretised
         discretised_gradient : :class:`pybamm.Vector`
             Contains the discretised gradient of symbol
-        dirichlet : list of strings
-            The sides on which Dirichlet conditions have been applied
+        neumann_type_bc : list of strings
+            The sides on which Neumann conditions have been applied or flux conditions are given
         domain : list of strings
             The domain of the gradient of the symbol (may include ghost nodes)
 
@@ -1053,7 +1064,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # E.g. in 1D if the left boundary condition is Dirichlet and the right a flux
         # boundary condition, this matrix will act to append an extra value to the end
         # of the discretised gradient (mainly for plotting, the flux is applied later).
-        if "left" not in dirichlet:
+        if "left" in neumann_type_bc:
             # Linear extrapolation of discretised gradient to boundary edge
             dx0_dx1 = submesh.d_edges[0] / submesh.d_edges[1]
             left_vector = csr_matrix(
@@ -1062,7 +1073,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
         else:
             left_vector = None
-        if "right" not in dirichlet:
+        if "right" in neumann_type_bc:
             # Linear extrapolation of discretised gradient to boundary edge
             dxN_dxNm1 = submesh.d_edges[-1] / submesh.d_edges[-2]
             right_vector = csr_matrix(
