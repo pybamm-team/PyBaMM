@@ -2,8 +2,8 @@
 
 ## Features
 
-- Step `duration`, `period` and `temperature` accept a `pybamm.Parameter` or `pybamm.InputParameter`.
-- Added `SymbolicTermination`: terminate a step on any inequality over model variables.
+- Step `duration`, `period` and `temperature` accept a `pybamm.Parameter` or `pybamm.InputParameter` ([#5744](https://github.com/pybamm-team/PyBaMM/pull/5744))
+- Added `SymbolicTermination`: terminate a step on any inequality over model variables ([#5744](https://github.com/pybamm-team/PyBaMM/pull/5744))
 
 ## Bug fixes
 
