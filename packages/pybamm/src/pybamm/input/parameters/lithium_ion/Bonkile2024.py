@@ -407,7 +407,7 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
 def silicon_volume_change_Ai2020(sto):
     """
     Silicon particle volume change as a function of stoichiometry, using the linear
-    model of :footcite:t:`Ai2020`, ``t_change = Omega * c_s_max * sto``, with the
+    model of :footcite:t:`Ai2019`, ``t_change = Omega * c_s_max * sto``, with the
     silicon partial molar volume and maximum concentration from
     :footcite:t:`Bonkile2024`.
 
@@ -715,9 +715,8 @@ def get_parameter_values():
 
     Beginning-of-life and degradation (mechanical, cracking, LAM) parameters for the
     graphite (primary) and silicon (secondary) phases are taken from the supplementary
-    information of Bonkile et al., "Is silicon worth it? Modelling degradation in
-    composite silicon/graphite lithium-ion battery electrodes", which itself draws on
-    :footcite:t:`Chen2020`, :footcite:t:`Ai2022` and :footcite:t:`Ai2020`.
+    information of :footcite:t:`Bonkile2024`, which itself draws on
+    :footcite:t:`Chen2020`, :footcite:t:`Ai2022` and :footcite:t:`Ai2019`.
 
     SEI parameters are example parameters for composite SEI on silicon/graphite. Both
     phases use the same values, from the paper :footcite:t:`Yang2017`.
@@ -924,8 +923,7 @@ def get_parameter_values():
         "Cation transference number": 0.2594,
         "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008_arrhenius,
-        "Electrolyte conductivity [S.m-1]"
-        "": electrolyte_conductivity_Nyman2008_arrhenius,
+        "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008_arrhenius,
         # experiment
         "Reference temperature [K]": 298.15,
         "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
@@ -940,5 +938,13 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,
         # citations
-        "citations": ["Chen2020", "Ai2022", "OKane2022", "OKane2020", "Ai2020"],
+        "citations": [
+            "Bonkile2024",
+            "Chen2020",
+            "Ai2022",
+            "OKane2022",
+            "OKane2020",
+            "Ai2019",
+            "Yang2017",
+        ],
     }
