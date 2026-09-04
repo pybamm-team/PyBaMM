@@ -47,6 +47,9 @@ class _Direction(str, Enum):
     REST = "rest"
 
 
+_DIRECTIONS = frozenset([d.value for d in _Direction] + [None])
+
+
 class _SymbolicInput(str, Enum):
     """Step inputs which may be a symbolic function of parameters or real numbers."""
 
@@ -112,10 +115,9 @@ class BaseStep:
     ):
         # Filled by `process_parameters` at setup, see `evaluate`
         self._processed_variables = {}
-        directions = [d.value for d in _Direction] + [None]
-        if direction not in directions:
+        if direction not in _DIRECTIONS:
             raise ValueError(
-                f"Invalid direction: {direction}. Must be one of {directions}"
+                f"Invalid direction: {direction}. Must be one of {list(_DIRECTIONS)}"
             )
         self.input_duration = duration
         self.input_value = value
