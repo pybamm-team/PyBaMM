@@ -15,7 +15,9 @@ class SymbolProcessor:
     This class provides a convenient way to process symbols using both
     :class:`pybamm.ParameterValues` and :class:`pybamm.Discretisation` objects.
     Once both are set, calling the processor on a symbol will first substitute
-    parameters, then discretise the result.
+    parameters, then discretise the result. :meth:`resolve` turns a symbol written
+    against variable names (:class:`pybamm.CoupledVariable`) into one over the model's
+    own symbols, ready for either.
 
     Attributes
     ----------
@@ -39,6 +41,27 @@ class SymbolProcessor:
         self._can_process_symbols = True
         self._discretisation = None
         self._parameter_values = None
+
+    @staticmethod
+    def resolve(symbol: pybamm.Symbol, variables: dict) -> pybamm.Symbol:
+        """Replace each CoupledVariable in ``symbol`` with the entry of ``variables``
+        of that name, so that a symbol written against variable names can be
+        processed like any other model equation."""
+        resolve = pybamm.SymbolProcessor.resolve
+        if isinstance(symbol, pybamm.CoupledVariable):
+            if symbol.name not in variables:
+                raise ValueError(
+                    f"CoupledVariable '{symbol.name}' not found in model.variables"
+                )
+            return resolve(pybamm.convert_to_symbol(variables[symbol.name]), variables)
+        if symbol.children:
+            children = [resolve(child, variables) for child in symbol.children]
+            if any(
+                new is not old
+                for new, old in zip(children, symbol.children, strict=True)
+            ):
+                return symbol.create_copy(new_children=children)
+        return symbol
 
     def __call__(self, name: str, symbol: pybamm.Symbol) -> pybamm.Symbol:
         """

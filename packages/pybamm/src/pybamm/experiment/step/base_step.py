@@ -39,6 +39,26 @@ _examples = """
     """
 
 
+class _Direction(str, Enum):
+    """The potential directions of a step."""
+
+    CHARGE = "charge"
+    DISCHARGE = "discharge"
+    REST = "rest"
+
+
+_DIRECTIONS = frozenset([d.value for d in _Direction] + [None])
+
+
+class _SymbolicInput(str, Enum):
+    """Step inputs which may be a symbolic function of parameters or real numbers."""
+
+    CONTROL_TARGET = "_control_target"
+    TEMPERATURE = "temperature"
+    PERIOD = "period"
+    DURATION = "duration"
+
+
 class BaseStep:
     """
     Class representing one step in an experiment.
@@ -51,11 +71,16 @@ class BaseStep:
     value : float
         The value of the step, corresponding to the type of step. Can be a number, a
         2-tuple (for cccv_ode), a 2-column array (for drive cycles), or a 1-argument function of t
-    duration : float, optional
-        The duration of the step in seconds.
-    termination : str or list, optional
-        A string or list of strings indicating the condition(s) that will terminate the
-        step. If a list, the step will terminate when any of the conditions are met.
+    duration : float or str or :class:`pybamm.Symbol`, optional
+        The duration of the step in seconds. A symbolic duration (e.g. a
+        :class:`pybamm.InputParameter`) is evaluated at solve time against the inputs
+        passed to :meth:`pybamm.Simulation.solve`.
+    termination : str or list or :class:`pybamm.Symbol`, optional
+        A condition, or list of conditions, that will terminate the step; the step ends
+        when any of them is met. Each condition is a string (e.g. ``"4.2V"``), a
+        :class:`pybamm.step.BaseTermination`, or a symbolic inequality such as
+        ``pybamm.CoupledVariable("Voltage [V]") > pybamm.InputParameter("V hold")``,
+        whose threshold may be an input parameter resolved at solve time.
     period : float or string, optional
         The period of the step. If a float, the value is in seconds. If a string, the
         value should be a valid time string, e.g. "1 hour".
@@ -69,7 +94,7 @@ class BaseStep:
     description : str, optional
         A description of the step.
     direction : str, optional
-        The direction of the step, e.g. "Charge" or "Discharge" or "Rest".
+        The direction of the step, e.g. "charge" or "discharge" or "rest".
     skip_ok : bool, optional
         If True, the step will be skipped if it is infeasible at the initial conditions.
         Default is True.
@@ -88,10 +113,11 @@ class BaseStep:
         direction: str | None = None,
         skip_ok: bool = True,
     ):
-        potential_directions = ["charge", "discharge", "rest", None]
-        if direction not in potential_directions:
+        # Filled by `process_parameters` at setup, see `evaluate`
+        self._processed_variables = {}
+        if direction not in _DIRECTIONS:
             raise ValueError(
-                f"Invalid direction: {direction}. Must be one of {potential_directions}"
+                f"Invalid direction: {direction}. Must be one of {list(_DIRECTIONS)}"
             )
         self.input_duration = duration
         self.input_value = value
@@ -135,28 +161,19 @@ class BaseStep:
             duration = self.default_duration(value)
         self.duration = _convert_time_to_seconds(duration)
 
-        # If drive cycle, repeat the drive cycle until the end of the experiment,
-        # and create an interpolant
+        # If drive cycle, repeat the drive cycle until the end of the experiment by
+        # wrapping the step time, so that the duration (which may be symbolic) does
+        # not enter the interpolant, and create an interpolant
         if self.is_drive_cycle:
-            t_max = self.duration
-            if t_max > value[-1, 0]:
-                # duration longer than drive cycle values so loop
-                nloop = np.ceil(t_max / value[-1, 0]).astype(int)
-                tstep = np.diff(value[:, 0])[0]
-                t = []
-                y = []
-                for i in range(nloop):
-                    t.append(value[:, 0] + ((value[-1, 0] + tstep) * i))
-                    y.append(value[:, 1])
-                t = np.asarray(t).flatten()
-                y = np.asarray(y).flatten()
-            else:
-                t, y = value[:, 0], value[:, 1]
-
+            t, y = value[:, 0], value[:, 1]
+            # Each repeat starts one sample after the last one ended, so the cycle's
+            # period is one sample longer than its last time point
+            cycle_period = t[-1] + np.diff(t)[0]
+            step_time = pybamm.t - pybamm.InputParameter("start time")
             self.value = pybamm.Interpolant(
-                t,
-                y,
-                pybamm.t - pybamm.InputParameter("start time"),
+                np.append(t, cycle_period),
+                np.append(y, y[0]),
+                step_time % cycle_period,
                 name="Drive Cycle",
             )
 
@@ -185,15 +202,13 @@ class BaseStep:
             termination = []
         elif not isinstance(termination, list):
             termination = [termination]
-        self.termination = []
-        for term in termination:
-            term_obj = None
+
+        def _build_termination(term):
             if isinstance(term, str):
-                operator, typ, val = _parse_termination(term, self.value)
-                term_obj = _read_termination((operator, typ, val))
-            else:
-                term_obj = _read_termination(term)
-            self.termination.append(term_obj)
+                term = _parse_termination(term, self.value)
+            return _read_termination(term)
+
+        self.termination = [_build_termination(term) for term in termination]
 
         if (
             hasattr(self, "calculate_charge_or_discharge")
@@ -216,6 +231,50 @@ class BaseStep:
             raise TypeError("`start_time` should be a datetime.datetime object")
         self.next_start_time = None
         self.end_time = None
+
+    def process_parameters(self, parameter_values: pybamm.ParameterValues):
+        """Substitute parameter values into the step's symbolic settings. Done once at
+        setup, so that at solve time each needs only the solver inputs."""
+        for parameter in _SymbolicInput:
+            name = parameter.value
+            value = getattr(self, name)
+            self._processed_variables[name] = parameter_values.process_symbol(value)
+
+    def _evaluate(self, name: str, inputs: dict[str, float]) -> float | None:
+        # A step that has not been set up still answers for its numeric settings
+        value = self._processed_variables.get(name, getattr(self, name))
+        if isinstance(value, pybamm.Symbol):
+            return float(value.evaluate(inputs=inputs))
+        return value
+
+    def period_seconds(self, inputs: dict[str, float]) -> float | None:
+        """Evaluate the step's period in seconds, using the solver inputs if it is
+        symbolic."""
+        return self._evaluate(_SymbolicInput.PERIOD, inputs)
+
+    def duration_seconds(self, inputs: dict[str, float]) -> float | None:
+        """Evaluate the step's duration in seconds, using the solver inputs if it is
+        symbolic."""
+        return self._evaluate(_SymbolicInput.DURATION, inputs)
+
+    def temperature_kelvin(self, inputs: dict[str, float]) -> float | None:
+        """Evaluate the step's temperature in Kelvin, using the solver inputs if it is
+        symbolic."""
+        return self._evaluate(_SymbolicInput.TEMPERATURE, inputs)
+
+    def control_target_value(self, inputs: dict[str, float]) -> float | None:
+        """The control target as a number, or ``None`` if it is not a constant."""
+        return self._evaluate(_SymbolicInput.CONTROL_TARGET, inputs)
+
+    @property
+    def has_symbolic_control_target(self) -> bool:
+        """Whether the control target is not a constant once parameters are substituted
+        (an input parameter, a drive cycle, or a custom step with no target)."""
+        name = _SymbolicInput.CONTROL_TARGET
+        target = self._processed_variables.get(name, getattr(self, name))
+        if isinstance(target, pybamm.Symbol):
+            return not target.is_constant()
+        return target is None
 
     @staticmethod
     def is_implicit() -> bool:
@@ -316,10 +375,6 @@ class BaseStep:
         """The control target as a symbol (the prescribed current, voltage, ...)."""
         return self.value
 
-    def control_target_value(self, parameter_values):
-        """The control target as a number, or ``None`` if it is not a constant."""
-        return _constant_value(parameter_values, self._control_target)
-
     def unified_branch_repr(self):
         """Branch identity in unified mode: control kind and everything but the value."""
         parts = [self.control_kind or type(self).__name__]
@@ -352,9 +407,9 @@ class BaseStep:
     def default_period():
         return 60.0  # seconds
 
-    def default_time_vector(self, solver, tf, t0=0):
+    def default_time_vector(self, solver, tf, t0=0, inputs=None):
         if self.period is not None:
-            period = self.period
+            period = self.period_seconds(inputs)
         elif self.is_drive_cycle and solver.supports_interp:
             # Infer the period from the drive cycle
             period = np.diff(self.value.x[0]).min()
@@ -364,7 +419,7 @@ class BaseStep:
 
         return np.linspace(t0, tf, npts)
 
-    def setup_timestepping(self, solver, tf, t_interp=None):
+    def setup_timestepping(self, solver, tf, t_interp=None, inputs=None):
         """
         Setup timestepping for the model.
 
@@ -378,11 +433,11 @@ class BaseStep:
             The time points at which to interpolate the solution
         """
         if solver.supports_interp:
-            return self._setup_timestepping(solver, tf, t_interp)
+            return self._setup_timestepping(solver, tf, t_interp, inputs)
         else:
-            return self._setup_timestepping_dense_t_eval(solver, tf, t_interp)
+            return self._setup_timestepping_dense_t_eval(solver, tf, t_interp, inputs)
 
-    def _setup_timestepping(self, solver, tf, t_interp):
+    def _setup_timestepping(self, solver, tf, t_interp, inputs=None):
         """
         Setup timestepping for the model. This returns a t_eval vector that stops
         only at the first and last time points. If t_interp and the period are
@@ -400,13 +455,7 @@ class BaseStep:
             The time points at which to interpolate the solution
         """
         if self.is_drive_cycle:
-            t_eval = self.value.x[0]
-            # If the drive cycle is longer than the final time,
-            # then truncate the drive cycle
-            if t_eval[-1] > tf:
-                t_eval = t_eval[t_eval <= tf]
-            if t_eval[-1] != tf:
-                t_eval = np.append(t_eval, tf)
+            t_eval = self._drive_cycle_time_points(tf)
         else:
             t_eval = np.array([0, tf])
 
@@ -415,13 +464,24 @@ class BaseStep:
 
         if t_interp is None:
             if self.period is not None:
-                t_interp = self.default_time_vector(solver, tf)
+                t_interp = self.default_time_vector(solver, tf, inputs=inputs)
             else:
                 t_interp = solver.process_t_interp(t_interp)
 
         return t_eval, t_interp
 
-    def _setup_timestepping_dense_t_eval(self, solver, tf, t_interp):
+    def _drive_cycle_time_points(self, tf):
+        """The drive cycle's sample times, repeated to cover ``[0, tf]``."""
+        # The last point of ``x`` is the wrap point, which repeats the first sample
+        samples, period = self.value.x[0][:-1], self.value.x[0][-1]
+        nloop = max(int(np.ceil(tf / period)), 1)
+        t_eval = np.concatenate([samples + period * i for i in range(nloop)])
+        t_eval = t_eval[t_eval <= tf]
+        if t_eval[-1] != tf:
+            t_eval = np.append(t_eval, tf)
+        return t_eval
+
+    def _setup_timestepping_dense_t_eval(self, solver, tf, t_interp, inputs=None):
         """
         Setup timestepping for the model. By default, this returns a dense t_eval which
         stops the solver at each point in the t_eval vector. This method is for solvers
@@ -436,7 +496,7 @@ class BaseStep:
         t_interp: np.array | None
             The time points at which to interpolate the solution
         """
-        t_eval = self.default_time_vector(solver, tf)
+        t_eval = self.default_time_vector(solver, tf, inputs=inputs)
 
         t_interp = solver.process_t_interp(t_interp)
 
@@ -524,11 +584,11 @@ class BaseStep:
             init_curr = self.value
         sign = np.sign(init_curr)
         if sign == 0:
-            return "rest"
+            return _Direction.REST.value
         elif sign > 0:
-            return "discharge"
+            return _Direction.DISCHARGE.value
         else:
-            return "charge"
+            return _Direction.CHARGE.value
 
     def record_tags(
         self,
@@ -543,26 +603,30 @@ class BaseStep:
         direction,
     ):
         """Record all the args for repr and hash"""
-        repr_args = f"{value}, duration={duration}"
-        hash_args = f"{value}"
-        if termination:
-            repr_args += f", termination={termination}"
-            hash_args += f", termination={termination}"
-        if period:
-            repr_args += f", period={period}"
-        if temperature:
-            repr_args += f", temperature={temperature}"
-            hash_args += f", temperature={temperature}"
-        if tags:
-            repr_args += f", tags={tags}"
-        if start_time:
-            repr_args += f", start_time={start_time}"
-        if description:
-            repr_args += f", description={description}"
-        if direction:
-            repr_args += f", direction={direction}"
-            hash_args += f", direction={direction}"
-        return repr_args, hash_args
+        # A Symbol has no truth value and no stable repr, but its id identifies the
+        # expression it stands for
+
+        reprs = [str(value)]
+        hashes = [str(value)]
+
+        def record(name, item, *, hashed):
+            if isinstance(item, pybamm.Symbol):
+                item = str(item)
+            if not item:
+                return
+            reprs.append(f"{name}={item}")
+            if hashed:
+                hashes.append(f"{name}={item}")
+
+        record("duration", duration, hashed=False)
+        record("termination", termination, hashed=True)
+        record("period", period, hashed=False)
+        record("temperature", temperature, hashed=True)
+        record("tags", tags, hashed=False)
+        record("start_time", start_time, hashed=False)
+        record("description", description, hashed=False)
+        record("direction", direction, hashed=True)
+        return ", ".join(reprs), ", ".join(hashes)
 
 
 class BaseStepExplicit(BaseStep):
@@ -645,16 +709,6 @@ _type_to_units = {
 }
 
 
-def _constant_value(parameter_values, target):
-    """Numeric value of ``target`` if it is a state/time-independent constant (after
-    parameter substitution), else ``None``. ``target`` may be ``None`` (custom steps),
-    a number, or a symbol (e.g. a drive-cycle interpolant, which is not constant)."""
-    if target is None:
-        return None
-    processed = parameter_values.process_symbol(pybamm.convert_to_symbol(target))
-    return float(processed.evaluate()) if processed.is_constant() else None
-
-
 def get_unit_from(a_string: str) -> str:
     return a_string.lstrip("0123456789.-eE ")
 
@@ -662,6 +716,10 @@ def get_unit_from(a_string: str) -> str:
 def _convert_time_to_seconds(time_and_units):
     """Convert a time in seconds, minutes or hours to a time in seconds"""
     if time_and_units is None:
+        return time_and_units
+
+    # A symbolic time is resolved at solve time, by `_evaluate_time`
+    if isinstance(time_and_units, pybamm.Symbol):
         return time_and_units
 
     # If the time is a number, assume it is in seconds
@@ -689,8 +747,12 @@ def _convert_time_to_seconds(time_and_units):
 
 def _convert_temperature_to_kelvin(temperature_and_units):
     """Convert a temperature in Celsius or Kelvin to a temperature in Kelvin"""
-    # If the temperature is a number, assume it is in Kelvin
-    if isinstance(temperature_and_units, int | float) or temperature_and_units is None:
+    # If the temperature is a number, assume it is in Kelvin; a symbol is resolved at
+    # solve time, see `BaseStep.process_parameters`
+    if (
+        isinstance(temperature_and_units, int | float | pybamm.Symbol)
+        or temperature_and_units is None
+    ):
         return temperature_and_units
 
     # Split number and units
@@ -758,9 +820,8 @@ def _parse_termination(term_str, value):
 
 
 def _check_input_params(value):
-    """Check if self.value is a function of input parameters"""
+    """Check if a step's value depends on parameters that are only known at solve time"""
     leaves = value.post_order(filter=lambda node: len(node.children) == 0)
-    contains_input_parameter = any(
-        isinstance(leaf, pybamm.InputParameter) for leaf in leaves
+    return any(
+        isinstance(leaf, pybamm.InputParameter | pybamm.Parameter) for leaf in leaves
     )
-    return contains_input_parameter

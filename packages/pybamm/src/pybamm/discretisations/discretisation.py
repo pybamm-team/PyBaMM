@@ -300,23 +300,7 @@ class Discretisation:
         """Resolve CoupledVariables in rhs, algebraic, initial_conditions, and boundary_conditions."""
 
         def resolve_symbol(symbol):
-            if isinstance(symbol, pybamm.CoupledVariable):
-                if symbol.name not in model.variables:
-                    raise pybamm.DiscretisationError(
-                        f"CoupledVariable '{symbol.name}' not found in model.variables."
-                    )
-                return resolve_symbol(model.variables[symbol.name])
-            elif hasattr(symbol, "children") and symbol.children:
-                new_children = []
-                changed = False
-                for child in symbol.children:
-                    new_child = resolve_symbol(child)
-                    new_children.append(new_child)
-                    if new_child is not child:
-                        changed = True
-                if changed:
-                    return symbol.create_copy(new_children=new_children)
-            return symbol
+            return pybamm.SymbolProcessor.resolve(symbol, model.variables)
 
         for var, expr in list(model.rhs.items()):
             resolved = resolve_symbol(expr)

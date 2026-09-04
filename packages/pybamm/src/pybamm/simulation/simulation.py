@@ -281,7 +281,7 @@ class Simulation(BaseSimulation):
         value_input = pybamm.InputParameter(self._STEP_VALUE_INPUT)
 
         def is_collapsible(step):
-            return step.control_target_value(self._parameter_values) is not None
+            return not step.has_symbolic_control_target
 
         def branch_key(step):
             return (
@@ -394,14 +394,13 @@ class Simulation(BaseSimulation):
 
         inputs[self._START_TIME_INPUT] = start_time
         if include_temperature:
-            ambient = (
-                step.temperature
-                or self._parameter_values[self._AMBIENT_TEMPERATURE_INPUT]
-            )
-            # The unified model reads ambient temperature as a solver input, so it
-            # must be numeric; the parameter value can be a pybamm.Scalar.
-            if isinstance(ambient, pybamm.Scalar):
-                ambient = ambient.value
+            ambient = step.temperature_kelvin(user_inputs)
+            if ambient is None:
+                ambient = self._parameter_values[self._AMBIENT_TEMPERATURE_INPUT]
+                # The unified model reads ambient temperature as a solver input, so
+                # it must be numeric; the parameter value can be a pybamm.Scalar.
+                if isinstance(ambient, pybamm.Scalar):
+                    ambient = ambient.value
             inputs[self._AMBIENT_TEMPERATURE_INPUT] = ambient
 
         if self._experiment_uses_unified_model:
@@ -409,25 +408,29 @@ class Simulation(BaseSimulation):
             if self._experiment_uses_value_input:
                 # Collapsible steps read their control target from this shared input;
                 # a non-collapsible active step doesn't read it, so pass the dummy.
-                target = step.control_target_value(self._parameter_values)
                 inputs[self._STEP_VALUE_INPUT] = (
-                    target if target is not None else DUMMY_INPUT_PARAMETER_VALUE
+                    DUMMY_INPUT_PARAMETER_VALUE
+                    if step.has_symbolic_control_target
+                    else step.control_target_value(user_inputs)
                 )
         return inputs
+
+    @staticmethod
+    def _get_experiment_step_index(step_or_key):
+        if isinstance(step_or_key, str):
+            return step_or_key
+        return step_or_key.basic_repr()
 
     def _get_built_experiment_model(self, step_or_key):
         if self._experiment_uses_unified_model:
             return self._built_experiment_model
-        if isinstance(step_or_key, str):
-            return self.steps_to_built_models[step_or_key]
-        return self.steps_to_built_models[step_or_key.basic_repr()]
+        return self.steps_to_built_models[self._get_experiment_step_index(step_or_key)]
 
     def _get_built_experiment_solver(self, step_or_key):
         if self._experiment_uses_unified_model:
             return self._built_experiment_solver
-        if isinstance(step_or_key, str):
-            return self.steps_to_built_solvers[step_or_key]
-        return self.steps_to_built_solvers[step_or_key.basic_repr()]
+        key = self._get_experiment_step_index(step_or_key)
+        return self.steps_to_built_solvers[key]
 
     def _evaluate_step_termination_expression_from_solution(
         self, term, step_solution, step
@@ -478,7 +481,8 @@ class Simulation(BaseSimulation):
             )
 
             try:
-                value = event.expression.evaluate(t=t, y=y, inputs=inputs)
+                processed = model.process_symbol(event.expression)
+                value = processed.evaluate(t=t, y=y, inputs=inputs)
             except NotImplementedError:  # pragma: no cover
                 # If the raw expression still contains unevaluated symbols, fall back to
                 # the processed variables on the solved step. This is slower, but it works
@@ -536,6 +540,8 @@ class Simulation(BaseSimulation):
         parameter_values = self._parameter_values.copy()
 
         self._check_experiment_input_parameters(parameter_values)
+        for step in self.experiment.steps:
+            step.process_parameters(parameter_values)
 
         if (
             solve_kwargs is not None
@@ -1008,7 +1014,7 @@ class Simulation(BaseSimulation):
                 step = experiment_steps[idx]
                 start_time = current_solution.t[-1]
 
-                dt = step.duration
+                dt = step.duration_seconds(user_inputs)
                 if step.end_time is not None:
                     remaining = (
                         step.end_time
@@ -1029,7 +1035,7 @@ class Simulation(BaseSimulation):
 
                 logs["step number"] = (step_num, cycle_length)
                 logs["step operating conditions"] = step_str
-                logs["step duration"] = step.duration
+                logs["step duration"] = dt
                 callbacks.on_step_start(logs)
 
                 active_step_index = step_indices[idx] if uses_unified else None
@@ -1042,7 +1048,7 @@ class Simulation(BaseSimulation):
                 )
 
                 t_eval, t_interp_processed = step.setup_timestepping(
-                    solver, dt, t_interp
+                    solver, dt, t_interp, inputs=user_inputs
                 )
 
                 state_mapper = self._get_state_mapper_for_solution(

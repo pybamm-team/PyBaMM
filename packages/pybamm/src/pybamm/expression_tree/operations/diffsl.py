@@ -407,6 +407,11 @@ class DiffSLExport:
     @staticmethod
     def _effective_step_duration(step: pybamm.step.BaseStep, initial_start_time):
         effective_duration = step.duration
+        if isinstance(effective_duration, pybamm.Symbol):
+            raise NotImplementedError(
+                "Steps with a symbolic duration cannot be exported to DiffSL: the "
+                "schedule is baked into the generated code, so it needs a number."
+            )
         if step.end_time is not None and initial_start_time is not None:
             start_dt = (step.start_time - initial_start_time).total_seconds()
             end_dt = (step.end_time - initial_start_time).total_seconds()
@@ -445,10 +450,14 @@ class DiffSLExport:
         padding_duration = self._padding_step_duration(
             step, effective_duration, initial_start_time
         )
-        target = step.control_target_value(sim._parameter_values)
-        ambient = (
-            step.temperature or sim._parameter_values[sim._AMBIENT_TEMPERATURE_INPUT]
-        )
+        if step.has_symbolic_control_target:
+            target = None
+        else:
+            target = step.control_target_value(inputs=None)
+
+        ambient = step.temperature
+        if ambient is None:
+            ambient = sim._parameter_values[sim._AMBIENT_TEMPERATURE_INPUT]
 
         return (
             branch_index,
@@ -491,7 +500,10 @@ class DiffSLExport:
                 stop_expr = duration_stop
             else:
                 stop_expr = pybamm.minimum(duration_stop, branch)
-            target = step.control_target_value(sim._parameter_values)
+            if step.has_symbolic_control_target:
+                target = None
+            else:
+                target = step.control_target_value(inputs=None)
             schedule_states.append(
                 _ExperimentScheduleState(
                     len(schedule_states),
