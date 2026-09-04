@@ -2635,7 +2635,9 @@ class TestSimulationExperiment:
         # The threshold is only read at solve time, so one built model serves both
         for cut_off in (3.6, 3.5):
             sol = sim.solve(inputs={"Voltage cut-off [V]": cut_off}, calc_esoh=False)
-            assert sol.termination == f"event: {step.termination[0].name}"
+            assert (
+                sol.termination == f"event: {step.termination[0].get_event_name(step)}"
+            )
             assert sol["Voltage [V]"].data[-1] == pytest.approx(cut_off, abs=1e-3)
             assert sol.t[-1] < 3600
 

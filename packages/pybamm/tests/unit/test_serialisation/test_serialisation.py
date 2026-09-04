@@ -2962,6 +2962,26 @@ class TestExperimentSerialization:
         # The step's own value must survive alongside it
         assert exp2.steps[0].value == 1.0
 
+    @pytest.mark.parametrize(
+        "termination",
+        [
+            # An inequality over a model variable and an input parameter
+            pybamm.CoupledVariable("Voltage [V]") > pybamm.InputParameter("V hold"),
+            # A named termination whose threshold is symbolic
+            pybamm.step.VoltageTermination(pybamm.Parameter("V cut"), operator="<"),
+            pybamm.step.CurrentTermination(0.05),
+        ],
+    )
+    def test_symbolic_termination_round_trip(self, termination):
+        exp = pybamm.Experiment(
+            [pybamm.step.current(1, duration=3600, termination=termination)]
+        )
+
+        config = json.loads(json.dumps(exp.to_config()))
+        exp2 = pybamm.Experiment.from_config(config)
+
+        assert exp2.steps[0].termination == exp.steps[0].termination
+
     def test_legacy_steps_format(self):
         """from_config also accepts flat {'steps': [...]} format."""
         config = {

@@ -155,18 +155,25 @@ def test_parse_termination_requires_operator_for_input_parameter():
     ],
 )
 def test_duration_is_resolved_at_solve_time(duration, inputs):
-    parameter_values = pybamm.ParameterValues({"d": "[input]", "fixed d": 1200})
+    parameter_values = pybamm.ParameterValues(
+        {"d": "[input]", "fixed d": 1200, "Nominal cell capacity [A.h]": 1}
+    )
     step = pybamm.step.c_rate(1, duration=duration)
-
     assert not step.uses_default_duration
-    assert step.duration_seconds(parameter_values, inputs) == 1200.0
+
+    # The parameter pass happens once at setup; solving then needs only the inputs
+    step.process_parameters(parameter_values)
+    assert step.duration_seconds(inputs) == 1200.0
+    # The user-facing attribute stays as it was written
+    assert step.duration == duration
 
 
 def test_symbolic_duration_needs_its_input():
     step = pybamm.step.c_rate(1, duration=pybamm.InputParameter("d"))
+    step.process_parameters(pybamm.ParameterValues({"Nominal cell capacity [A.h]": 1}))
 
     with pytest.raises(KeyError, match="Input parameter 'd' not found"):
-        step.duration_seconds(pybamm.ParameterValues({}))
+        step.duration_seconds({})
 
 
 def test_drive_cycle_repeats_independently_of_its_duration():
@@ -176,7 +183,8 @@ def test_drive_cycle_repeats_independently_of_its_duration():
 
     # The interpolant wraps the step time, so it does not depend on the duration
     assert symbolic.value == numeric.value
-    assert symbolic.duration_seconds(pybamm.ParameterValues({}), {"d": 10}) == 10
+    symbolic.process_parameters(pybamm.ParameterValues({}))
+    assert symbolic.duration_seconds({"d": 10}) == 10
     # Sample times are repeated up to the resolved final time, one cycle being 3 s
     np.testing.assert_array_equal(
         symbolic._drive_cycle_time_points(8),
@@ -209,12 +217,41 @@ def test_symbolic_duration_and_termination_are_recorded():
     ],
 )
 def test_period_is_resolved_at_solve_time(period, inputs):
-    parameter_values = pybamm.ParameterValues({"sample": "[input]"})
+    parameter_values = pybamm.ParameterValues(
+        {"sample": "[input]", "Nominal cell capacity [A.h]": 1}
+    )
     step = pybamm.step.c_rate(1, duration=1800, period=period)
 
-    assert step.period_seconds(parameter_values, inputs) == 300.0
+    step.process_parameters(parameter_values)
+    assert step.period_seconds(inputs) == 300.0
     # The period sets the output sampling, so it must be resolved before t_interp
-    _, t_interp = step.setup_timestepping(
-        DummySolver(), 1800, parameter_values=parameter_values, inputs=inputs
-    )
+    _, t_interp = step.setup_timestepping(DummySolver(), 1800, inputs=inputs)
     np.testing.assert_array_equal(t_interp, np.arange(0, 1801, 300.0))
+
+
+def test_every_step_setting_is_processed_the_same_way():
+    parameter_values = pybamm.ParameterValues(
+        {"I": "[input]", "T": "[input]", "d": "[input]", "p": "[input]"}
+    )
+    step = pybamm.step.current(
+        pybamm.Parameter("I"),
+        temperature=pybamm.Parameter("T"),
+        duration=pybamm.Parameter("d"),
+        period=pybamm.Parameter("p"),
+    )
+    inputs = {"I": 2.0, "T": 300.0, "d": 1800.0, "p": 60.0}
+
+    step.process_parameters(parameter_values)
+
+    assert step.temperature_kelvin(inputs) == 300.0
+    assert step.duration_seconds(inputs) == 1800.0
+    assert step.period_seconds(inputs) == 60.0
+    # An input-dependent control target is not a constant, so it is not collapsible
+    assert step.has_symbolic_control_target is True
+    # A constant one is, once its parameters are substituted
+    c_rate = pybamm.step.c_rate(0.5, duration=1)
+    c_rate.process_parameters(pybamm.ParameterValues("Marquis2019"))
+    assert c_rate.control_target_value(inputs) == pytest.approx(0.5 * 0.680616)
+    # The user-facing attributes are left exactly as written
+    assert step.temperature == pybamm.Parameter("T")
+    assert step.duration == pybamm.Parameter("d")

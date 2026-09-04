@@ -29,19 +29,19 @@ class TestExperimentStepTermination:
         term = pybamm.step.CRateTermination(0.02)
         assert term.value == 0.02
         assert term.operator is None
-        variables = {"C-rate": pybamm.Scalar(0.02)}
-        assert term.get_event(variables, None).evaluate() == 0
+        variables = {"C-rate": 0.02}
+        assert term.get_event(variables, None).expression == 0
         with pytest.warns(DeprecationWarning):
             term_old = pybamm.step.CrateTermination(0.02)
         assert (
-            term.get_event(variables, None).evaluate()
-            == term_old.get_event(variables, None).evaluate()
+            term.get_event(variables, None).expression
+            == term_old.get_event(variables, None).expression
         )
 
     def test_current_and_voltage_termination_operator_branches(self):
         variables = {
-            "Current [A]": pybamm.Scalar(0.5),
-            "Battery voltage [V]": pybamm.Scalar(4.2),
+            "Current [A]": 0.5,
+            "Battery voltage [V]": 4.2,
         }
         rest_step = SimpleNamespace(direction="rest")
 
@@ -49,23 +49,19 @@ class TestExperimentStepTermination:
         current_lt = pybamm.step.CurrentTermination(0.6, operator="<")
         assert current_gt.get_event_name(None) == "Current [A] > 0.4 [A] [experiment]"
         assert current_lt.get_event_name(None) == "Current [A] < 0.6 [A] [experiment]"
-        assert current_gt.get_event_expression(
-            variables, None
-        ).evaluate() == pytest.approx(-0.1)
-        assert current_lt.get_event_expression(
-            variables, None
-        ).evaluate() == pytest.approx(-0.1)
+        assert current_gt.get_event_expression(variables, None) == pytest.approx(-0.1)
+        assert current_lt.get_event_expression(variables, None) == pytest.approx(-0.1)
 
         voltage_gt = pybamm.step.VoltageTermination(4.1, operator=">")
         voltage_lt = pybamm.step.VoltageTermination(4.3, operator="<")
         assert voltage_gt.get_event_name(rest_step) == "Voltage > 4.1 [V] [experiment]"
         assert voltage_lt.get_event_name(rest_step) == "Voltage < 4.3 [V] [experiment]"
-        assert voltage_gt.get_event_expression(
-            variables, rest_step
-        ).evaluate() == pytest.approx(-0.1)
-        assert voltage_lt.get_event_expression(
-            variables, rest_step
-        ).evaluate() == pytest.approx(-0.1)
+        assert voltage_gt.get_event_expression(variables, rest_step) == pytest.approx(
+            -0.1
+        )
+        assert voltage_lt.get_event_expression(variables, rest_step) == pytest.approx(
+            -0.1
+        )
 
         assert (pybamm.step.step_termination.Current() > 0.4) == current_gt
         assert (pybamm.step.step_termination.Current() < 0.6) == current_lt
@@ -75,7 +71,7 @@ class TestExperimentStepTermination:
     def test_voltage_termination_returns_none_without_charge_or_discharge(self):
         term = pybamm.step.VoltageTermination(4.2)
         step = SimpleNamespace(direction="rest")
-        variables = {"Battery voltage [V]": pybamm.Scalar(4.2)}
+        variables = {"Battery voltage [V]": 4.2}
 
         assert term.get_event_name(step) is None
         assert term.get_event_expression(variables, step) is None
@@ -226,12 +222,13 @@ class TestInequalityTermination:
             ),
         ],
     )
-    def test_inequality_becomes_a_custom_termination(self, expression, residual):
+    def test_inequality_becomes_a_symbolic_termination(self, expression, residual):
         term = pybamm.step.base_step._read_termination(expression)
         v = pybamm.Variable("V")
 
-        assert isinstance(term, pybamm.step.CustomTermination)
-        assert term.name == f"{expression} [experiment]"
+        assert isinstance(term, pybamm.step.SymbolicTermination)
+        # The name is the inequality as written
+        assert term.get_event_name(None) == f"{expression} [experiment]"
         # A heaviside is "left < right", so left - right is positive before the
         # inequality holds and negative once it does: the event convention. The
         # CoupledVariable is looked up in the variables the termination is handed,
@@ -253,7 +250,7 @@ class TestInequalityTermination:
 
         sol = sim.solve(calc_esoh=False)
 
-        assert sol.termination == f"event: {step.termination[0].name}"
+        assert sol.termination == f"event: {step.termination[0].get_event_name(step)}"
         assert sol["Headroom [V]"].data[-1] == pytest.approx(0.6, abs=1e-3)
 
     def test_inequality_termination_rejects_unknown_variable(self):
@@ -268,5 +265,5 @@ class TestInequalityTermination:
             sim.solve(calc_esoh=False)
 
     def test_symbolic_termination_must_be_an_inequality(self):
-        with pytest.raises(TypeError, match="must be an inequality between symbols"):
+        with pytest.raises(TypeError, match="must be an inequality"):
             pybamm.step.c_rate(1, duration=1, termination=pybamm.InputParameter("Vmin"))

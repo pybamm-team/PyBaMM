@@ -450,10 +450,14 @@ class DiffSLExport:
         padding_duration = self._padding_step_duration(
             step, effective_duration, initial_start_time
         )
-        target = step.control_target_value(sim._parameter_values)
-        ambient = (
-            step.temperature or sim._parameter_values[sim._AMBIENT_TEMPERATURE_INPUT]
-        )
+        if step.has_symbolic_control_target:
+            target = None
+        else:
+            target = step.control_target_value(inputs=None)
+
+        ambient = step.temperature
+        if ambient is None:
+            ambient = sim._parameter_values[sim._AMBIENT_TEMPERATURE_INPUT]
 
         return (
             branch_index,
@@ -496,7 +500,10 @@ class DiffSLExport:
                 stop_expr = duration_stop
             else:
                 stop_expr = pybamm.minimum(duration_stop, branch)
-            target = step.control_target_value(sim._parameter_values)
+            if step.has_symbolic_control_target:
+                target = None
+            else:
+                target = step.control_target_value(inputs=None)
             schedule_states.append(
                 _ExperimentScheduleState(
                     len(schedule_states),

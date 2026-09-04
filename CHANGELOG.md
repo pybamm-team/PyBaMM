@@ -1,5 +1,11 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Step `duration`, `period` and `temperature` accept a `pybamm.Parameter` or `pybamm.InputParameter`.
+- Added `SymbolicTermination`: terminate a step on any inequality over model variables.
+- Voltage, current and C-rate terminations build on `SymbolicTermination` and serialise symbolic thresholds.
+
 ## Bug fixes
 
 - The `integration` nox session no longer installs the `pydiffsol` extra on macOS Intel CI runners, where it has no working build. ([#5726](https://github.com/pybamm-team/PyBaMM/pull/5726))

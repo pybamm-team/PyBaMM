@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from warnings import warn
 
 import pybamm
@@ -8,8 +7,8 @@ class BaseTermination:
     """
     Base class for a termination event for an experiment step. To create a custom
     termination, a class must implement `get_event_expression` to return the symbolic
-    expression for the event. In most cases the class
-    :class:`pybamm.step.CustomTermination` can be used to assist with this.
+    expression for the event. In most cases :class:`pybamm.step.SymbolicTermination`
+    can be used instead.
 
     Parameters
     ----------
@@ -60,17 +59,51 @@ class BaseTermination:
         return hash((type(self).__name__, self.value, self.operator))
 
 
-class CRateTermination(BaseTermination):
+class SymbolicTermination(BaseTermination):
+    """
+    Termination defined by an inequality over model variables, input parameters and
+    parameters, e.g. ``pybamm.CoupledVariable("Voltage [V]") > pybamm.InputParameter(
+    "V hold")``: the step terminates once it holds. Model variables are referenced by
+    name as :class:`pybamm.CoupledVariable`. The voltage, current and C-rate
+    terminations are special cases that build their inequality from a threshold.
+
+    Parameters
+    ----------
+    value : :class:`pybamm.EqualHeaviside` or :class:`pybamm.NotEqualHeaviside`
+        The inequality.
+    """
+
+    def inequality(self, step):
+        """The inequality, or ``None`` if the step has no such event."""
+        return self.value
+
+    def get_event_name(self, step):
+        return f"{self.inequality(step)} [experiment]"
+
+    def get_event_expression(self, variables, step):
+        inequality = self.inequality(step)
+        if inequality is None:
+            return None
+        # An inequality is "left < right", so left - right is positive before it holds
+        # and zero when the event triggers
+        residual = pybamm.SymbolProcessor.resolve(
+            inequality.left - inequality.right, variables
+        )
+        # A termination over known numbers is a number
+        return residual.evaluate() if residual.is_constant() else residual
+
+
+class CRateTermination(SymbolicTermination):
     """
     Termination based on C-rate, created when a string termination of the C-rate type
     (e.g. "C/10") is provided
     """
 
+    def inequality(self, step):
+        return abs(pybamm.CoupledVariable("C-rate")) < self.value
+
     def get_event_name(self, step):
         return "C-rate cut-off [experiment]"
-
-    def get_event_expression(self, variables, step):
-        return abs(variables["C-rate"]) - self.value
 
 
 class CrateTermination(CRateTermination):
@@ -87,71 +120,44 @@ class CrateTermination(CRateTermination):
         warn(warning, stacklevel=2)
 
 
-class CurrentTermination(BaseTermination):
+class CurrentTermination(SymbolicTermination):
     """
     Termination based on current, created when a string termination of the current type
     (e.g. "1A") is provided
     """
 
+    def inequality(self, step):
+        current = pybamm.CoupledVariable("Current [A]")
+        if self.operator == ">":
+            return current > self.value
+        if self.operator == "<":
+            return current < self.value
+        return abs(current) < self.value
+
     def get_event_name(self, step):
-        operator = self.operator
-        if operator == ">":
-            return f"Current [A] > {self.value} [A] [experiment]"
-        elif operator == "<":
-            return f"Current [A] < {self.value} [A] [experiment]"
-        else:
-            return f"abs(Current [A]) < {self.value} [A] [experiment]"
-
-    def get_event_expression(self, variables, step):
-        operator = self.operator
-        if operator == ">":
-            return self.value - variables["Current [A]"]
-        elif operator == "<":
-            return variables["Current [A]"] - self.value
-        else:
-            return abs(variables["Current [A]"]) - self.value
+        return str(self.inequality(step)) + " [experiment]"
 
 
-class VoltageTermination(BaseTermination):
+class VoltageTermination(SymbolicTermination):
     """
     Termination based on voltage, created when a string termination of the voltage type
-    (e.g. "4.2V") is provided
+    (e.g. "4.2V") is provided. Without an operator, the step's direction decides
+    whether the cut-off is above or below the voltage.
     """
 
-    def _get_operator(self, step):
-        operator = self.operator
+    def _operator(self, step):
+        return self.operator or {"charge": ">", "discharge": "<"}.get(step.direction)
+
+    def inequality(self, step):
+        operator = self._operator(step)
         if operator is None:
-            direction = step.direction
-            if direction == "charge":
-                operator = ">"
-            elif direction == "discharge":
-                operator = "<"
-            else:
-                return None
-        return operator
+            return None
+        voltage = pybamm.CoupledVariable("Battery voltage [V]")
+        return voltage > self.value if operator == ">" else voltage < self.value
 
     def get_event_name(self, step):
-        operator = self._get_operator(step)
-        if operator is None:
-            return None
-        return f"Voltage {operator} {self.value} [V] [experiment]"
-
-    def get_event_expression(self, variables, step):
-        # The voltage event should be positive at the start of charge/
-        # discharge. We use the sign of the current or power input to
-        # figure out whether the voltage event is greater than the starting
-        # voltage (charge) or less (discharge) and set the sign of the
-        # event accordingly
-        operator = self._get_operator(step)
-        if operator is None:
-            return None
-
-        if operator == ">":
-            sign = -1
-        else:
-            sign = 1
-
-        return sign * (variables["Battery voltage [V]"] - self.value)
+        operator = self._operator(step)
+        return operator and f"Voltage {operator} {self.value} [V] [experiment]"
 
 
 class Voltage:
@@ -239,31 +245,14 @@ def _parse_termination_class(termination_tuple) -> BaseTermination:
     return cls(value, operator=op)
 
 
-@dataclass(frozen=True, slots=True)
-class _HeavsideResidual:
-    symbol: pybamm.Symbol
-
-    def __call__(self, variables: dict[str, pybamm.Symbol]) -> pybamm.Symbol:
-        # A heaviside is "left < right", so left - right is the event residual
-        residual = self.symbol.left - self.symbol.right
-        return pybamm.SymbolProcessor.resolve(residual, variables)
-
-
-def _parse_termination_symbol(termination: pybamm.Symbol) -> CustomTermination:
-    if not isinstance(termination, (pybamm.EqualHeaviside, pybamm.NotEqualHeaviside)):
+def _read_termination(termination):
+    if isinstance(termination, pybamm.EqualHeaviside | pybamm.NotEqualHeaviside):
+        return SymbolicTermination(termination)
+    if isinstance(termination, pybamm.Symbol):
         raise TypeError(
             "A symbolic termination must be an inequality between symbols, e.g. "
-            'pybamm.CoupledVariable("Voltage [V]") > 3.0, but got '
-            f"'{termination!s}'. Note that inequalities are only exact when "
-            'pybamm.settings.heaviside_smoothing is "exact".'
+            f'pybamm.CoupledVariable("Voltage [V]") > 3.0, but got "{termination!s}".'
         )
-    return CustomTermination(str(termination), _HeavsideResidual(termination))
-
-
-def _read_termination(termination):
-    if isinstance(termination, pybamm.Symbol):
-        return _parse_termination_symbol(termination)
-    if not isinstance(termination, tuple):
-        return termination
-
-    return _parse_termination_class(termination)
+    if isinstance(termination, tuple):
+        return _parse_termination_class(termination)
+    return termination

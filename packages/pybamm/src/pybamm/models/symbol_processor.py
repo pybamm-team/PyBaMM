@@ -53,7 +53,7 @@ class SymbolProcessor:
                 raise ValueError(
                     f"CoupledVariable '{symbol.name}' not found in model.variables"
                 )
-            return resolve(variables[symbol.name], variables)
+            return resolve(pybamm.convert_to_symbol(variables[symbol.name]), variables)
         if symbol.children:
             children = [resolve(child, variables) for child in symbol.children]
             if any(
