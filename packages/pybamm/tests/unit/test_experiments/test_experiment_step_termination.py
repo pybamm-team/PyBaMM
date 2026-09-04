@@ -47,8 +47,8 @@ class TestExperimentStepTermination:
 
         current_gt = pybamm.step.CurrentTermination(0.4, operator=">")
         current_lt = pybamm.step.CurrentTermination(0.6, operator="<")
-        assert current_gt.get_event_name(None) == "Current [A] > 0.4 [A] [experiment]"
-        assert current_lt.get_event_name(None) == "Current [A] < 0.6 [A] [experiment]"
+        assert current_gt.get_event_name(None) == "0.4 < Current [A] [experiment]"
+        assert current_lt.get_event_name(None) == "Current [A] < 0.6 [experiment]"
         assert current_gt.get_event_expression(variables, None) == pytest.approx(-0.1)
         assert current_lt.get_event_expression(variables, None) == pytest.approx(-0.1)
 

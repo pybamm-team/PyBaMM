@@ -134,9 +134,6 @@ class CurrentTermination(SymbolicTermination):
             return current < self.value
         return abs(current) < self.value
 
-    def get_event_name(self, step):
-        return str(self.inequality(step)) + " [experiment]"
-
 
 class VoltageTermination(SymbolicTermination):
     """

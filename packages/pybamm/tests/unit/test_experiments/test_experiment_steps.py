@@ -395,7 +395,7 @@ class TestExperimentSteps:
         events = step.get_termination_events(variables)
         assert [event.name for event in events] == [
             "Voltage < 2.5 [V] [experiment]",
-            "abs(Current [A]) < 0.05 [A] [experiment]",
+            "abs(Current [A]) < 0.05 [experiment]",
         ]
         np.testing.assert_allclose(
             step.get_combined_termination_expression(variables).evaluate(),

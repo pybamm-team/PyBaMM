@@ -112,10 +112,10 @@ class BaseStep:
     ):
         # Filled by `process_parameters` at setup, see `evaluate`
         self._processed_variables = {}
-        if direction not in _Direction and direction is not None:
-            _DIRECTIONS = [d.value for d in _Direction] + [None]
+        directions = [d.value for d in _Direction] + [None]
+        if direction not in directions:
             raise ValueError(
-                f"Invalid direction: {direction}. Must be one of {_DIRECTIONS}"
+                f"Invalid direction: {direction}. Must be one of {directions}"
             )
         self.input_duration = duration
         self.input_value = value

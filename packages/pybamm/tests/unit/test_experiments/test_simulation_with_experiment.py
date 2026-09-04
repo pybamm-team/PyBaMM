@@ -1123,9 +1123,7 @@ class TestSimulationExperiment:
         legacy_hold = legacy_sol.cycles[0].steps[1]
         unified_hold = unified_sol.cycles[0].steps[1]
 
-        assert (
-            legacy_hold.termination == "event: abs(Current [A]) < 0.5 [A] [experiment]"
-        )
+        assert legacy_hold.termination == "event: abs(Current [A]) < 0.5 [experiment]"
         assert legacy_hold.termination == unified_hold.termination
         np.testing.assert_allclose(
             legacy_hold.t[-1], unified_hold.t[-1], rtol=5e-5, atol=5e-4
@@ -1242,7 +1240,7 @@ class TestSimulationExperiment:
         assert len(sol.cycles[0].steps) == 1
         assert (
             sol.cycles[0].steps[0].termination
-            == "event: abs(Current [A]) < 0.01 [A] [experiment]"
+            == "event: abs(Current [A]) < 0.01 [experiment]"
         )
 
     def test_all_empty_solution_errors(self):
