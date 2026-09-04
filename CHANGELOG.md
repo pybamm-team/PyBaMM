@@ -4,7 +4,6 @@
 
 - Step `duration`, `period` and `temperature` accept a `pybamm.Parameter` or `pybamm.InputParameter`.
 - Added `SymbolicTermination`: terminate a step on any inequality over model variables.
-- Voltage, current and C-rate terminations build on `SymbolicTermination` and serialise symbolic thresholds.
 
 ## Bug fixes
 
