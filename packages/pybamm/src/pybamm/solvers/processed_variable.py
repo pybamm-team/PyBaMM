@@ -966,6 +966,265 @@ class ProcessedVariable2DFVM(ProcessedVariable):
         return [self.first_dim_size, self.second_dim_size, len(t)]
 
 
+class ProcessedVariableUnstructuredFVM(ProcessedVariable):
+    """
+    Processed variable for cell-centered data on an unstructured mesh
+    (triangles, quads in 2D; tetrahedra in 3D).
+
+    Spatial interpolation uses ``scipy.interpolate.LinearNDInterpolator``
+    on cell centroids; query it at arbitrary points with ``pv(t, x=, y=, z=)``.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
+    ):
+        mesh = base_variables[0].mesh
+        if base_variables[0].size != mesh.npts:
+            raise NotImplementedError(
+                "Post-processing of unstructured-mesh variables with "
+                f"auxiliary domains is not yet supported: variable {name!r} "
+                f"has {base_variables[0].size} entries but the mesh has "
+                f"{mesh.npts} cells."
+            )
+        if time_integral is not None:
+            # silently returning the integrand would be wrong; the postfix
+            # sum assumes time on axis 0, which only holds for 0D variables
+            raise NotImplementedError(
+                "Time integrals of unstructured-mesh variables are not yet supported."
+            )
+        self.dimensions = 3 if mesh.dimension == 3 else 2
+        super().__init__(
+            name,
+            base_variables,
+            base_variables_casadi,
+            solution,
+            time_integral=time_integral,
+        )
+        self._time_interpolator = None
+        self.internal_boundaries = []
+
+    def _shape(self, t):
+        return [self.mesh.npts, len(t)]
+
+    def initialise(self):
+        if self.entries_raw_initialized:
+            return
+        self._entries_raw = self.observe_raw()
+
+        from scipy.interpolate import interp1d
+
+        self._time_interpolator = interp1d(
+            self.t_pts,
+            self._entries_raw,
+            kind="linear",
+            axis=1,
+            bounds_error=False,
+            fill_value="extrapolate",
+        )
+
+    def _augmented_points(self):
+        """Return the interpolation point cloud (cell centroids + boundary
+        face centroids) and the index array for mapping cell values to
+        boundary face values.  Cached after first call."""
+        if not hasattr(self, "_aug_pts"):
+            mesh = self.mesh
+            bnd_start = mesh._boundary_face_start
+            bnd_centroids = mesh.face_centroids[bnd_start:]
+            self._aug_pts = np.concatenate([mesh.cell_centroids, bnd_centroids], axis=0)
+            self._aug_bnd_owners = mesh.face_owner[bnd_start:]
+        return self._aug_pts, self._aug_bnd_owners
+
+    def _get_triangulation(self):
+        """Return a cached Delaunay triangulation of the augmented point cloud."""
+        if not hasattr(self, "_cached_tri"):
+            from scipy.spatial import Delaunay
+
+            pts, _ = self._augmented_points()
+            self._cached_tri = Delaunay(pts)
+        return self._cached_tri
+
+    def _get_boundary_mask(self, query_pts):
+        """Boolean mask of query points outside the domain, or ``None`` when
+        the mesh cannot decide (2D mesh without boundary edges)."""
+        inside = self.mesh.contains_points(query_pts)
+        return None if inside is None else ~inside
+
+    def _interpolate_spatial(self, values, query_pts, fill_value=np.nan):
+        """Interpolate cell-centered data to query points.
+
+        ``values`` has one entry per cell and, optionally, one column per
+        time step; all columns are interpolated in a single pass, so the
+        nearest-neighbour tree and boundary mask are built once rather
+        than per time step.  Points outside the domain are set to
+        ``fill_value``.  NaNs in ``values`` propagate to the output.
+        """
+        from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+
+        pts, bnd_owners = self._augmented_points()
+        vals = np.concatenate([values, values[bnd_owners]])
+
+        tri = self._get_triangulation()
+        linear = LinearNDInterpolator(tri, vals)
+        result = linear(query_pts)
+
+        # A query point outside the convex hull is NaN in every column
+        # (it is a location property), so whole rows are nearest-filled;
+        # requiring all columns avoids clobbering valid columns when the
+        # input itself contains NaNs. Points outside the domain get
+        # fill_value instead, so they are excluded before the (costly)
+        # nearest-neighbour fill rather than filled and then overwritten.
+        outside = self._get_boundary_mask(query_pts)
+        mask = np.isnan(result)
+        if result.ndim == 2:
+            mask = mask.all(axis=1)
+        if outside is not None:
+            mask &= ~outside
+        if np.any(mask):
+            nearest = NearestNDInterpolator(pts, vals)
+            result[mask] = nearest(query_pts[mask])
+        if outside is not None:
+            result[outside] = fill_value
+
+        return result
+
+    def _data_at_time(self, t):
+        """Return cell-centered data at time t."""
+        self.initialise()
+        t_observe, observe_raw = self._check_observe_raw(t)
+        if observe_raw:
+            return self._entries_raw
+        return self._time_interpolator(t_observe)
+
+    def __call__(
+        self, t=None, x=None, r=None, y=None, z=None, R=None, fill_value=np.nan
+    ):
+        if r is not None or R is not None:
+            raise ValueError(
+                f"Variable {self._name!r} is on an unstructured mesh, which "
+                "has no r or R coordinates."
+            )
+        if y is not None and self.mesh.dimension == 2:
+            raise ValueError(
+                f"Variable {self._name!r} is on a 2D unstructured mesh, which "
+                "has no y coordinate; its in-plane coordinates are x and z."
+            )
+        data_at_t = self._data_at_time(t)
+        scalar_t = t is not None and np.ndim(t) == 0
+
+        spatial_provided = any(c is not None for c in [x, y, z])
+        if not spatial_provided:
+            return data_at_t
+
+        nodes = self.mesh.vertices
+
+        def coord(values, axis):
+            if values is not None:
+                return np.asarray(values).ravel()
+            # a missing coordinate defaults to the domain midplane
+            return np.array([0.5 * (nodes[:, axis].min() + nodes[:, axis].max())])
+
+        if self.mesh.dimension == 2:
+            axes = [coord(x, 0), coord(z, 1)]
+        else:
+            axes = [coord(x, 0), coord(y, 1), coord(z, 2)]
+        grid = np.meshgrid(*axes, indexing="ij")
+        query = np.column_stack([g.ravel() for g in grid])
+        out_shape = grid[0].shape
+
+        if data_at_t.ndim == 1:
+            data_at_t = data_at_t[:, np.newaxis]
+        n_t = data_at_t.shape[1]
+        result = self._interpolate_spatial(
+            data_at_t, query, fill_value=fill_value
+        ).reshape(*out_shape, n_t)
+
+        # scalar t drops the time axis; array-valued t (any length) keeps it
+        if scalar_t:
+            result = result[..., 0]
+
+        return result
+
+
+class ProcessedVariableVectorFieldUnstructuredFVM:
+    """
+    Processed variable for a VectorField on an unstructured mesh.
+
+    Wraps N scalar ``ProcessedVariableUnstructuredFVM`` instances (one per
+    component) and provides a unified interface for querying vector-valued
+    data.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral=None,
+    ):
+        vf = base_variables[0]
+
+        self.name = name
+        self.mesh = vf.mesh
+        self.domain = vf.domain
+        self.is_vector_field = True
+        self.n_components = vf.n_components
+        self.internal_boundaries = []
+
+        self._component_vars = []
+        for k in range(vf.n_components):
+            comp_base_k = [bv.components[k] for bv in base_variables]
+            comp_casadi_k = []
+            for bvc in base_variables_casadi:
+                if isinstance(bvc, list):
+                    comp_casadi_k.append(bvc[k])
+                elif isinstance(bvc, pybamm.VectorField):
+                    comp_casadi_k.append(bvc.components[k])
+                else:
+                    comp_casadi_k.append(bvc)
+            pv = ProcessedVariableUnstructuredFVM(
+                f"{name}[{k}]",
+                comp_base_k,
+                comp_casadi_k,
+                solution,
+                time_integral=time_integral,
+            )
+            self._component_vars.append(pv)
+
+        self.dimensions = self._component_vars[0].dimensions
+
+    @property
+    def entries(self):
+        """Tuple of per-component entry arrays."""
+        return tuple(pv.entries for pv in self._component_vars)
+
+    @property
+    def data(self):
+        """Tuple of per-component data arrays."""
+        return tuple(pv.data for pv in self._component_vars)
+
+    def update(self, other, new_sol):
+        raise NotImplementedError(
+            f"Variable {self.name!r}: vector-valued output_variables cannot "
+            "yet be merged across solution segments (multi-step experiments "
+            "or solution addition). Post-process the components separately."
+        )
+
+    def __call__(
+        self, t=None, x=None, r=None, y=None, z=None, R=None, fill_value=np.nan
+    ):
+        """Return a tuple of arrays, one per component."""
+        return tuple(
+            pv(t=t, x=x, r=r, y=y, z=z, R=R, fill_value=fill_value)
+            for pv in self._component_vars
+        )
+
+
 class ProcessedVariableRawFVM(ProcessedVariable):
     def _shape(self, t):
         return [self.base_variables[0].size, len(t)]
@@ -1394,6 +1653,20 @@ def process_variable(name: str, base_variables, *args, **kwargs):
                 "extract a scalar component first."
             )
         return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
+
+    if isinstance(mesh, pybamm.UnstructuredSubMesh):
+        if isinstance(base_variables[0], pybamm.VectorField):
+            return ProcessedVariableVectorFieldUnstructuredFVM(
+                name, base_variables, *args, **kwargs
+            )
+        # Scalar reductions (e.g. Max/Min) keep the spatial domain but
+        # evaluate to a single value, so they are 0D in space. A one-cell
+        # mesh is also size 1, hence the cell-count check takes precedence.
+        if base_eval_size != mesh.npts and (
+            len(base_eval_shape) == 0 or base_eval_shape[0] == 1
+        ):
+            return ProcessedVariable0D(name, base_variables, *args, **kwargs)
+        return ProcessedVariableUnstructuredFVM(name, base_variables, *args, **kwargs)
 
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
