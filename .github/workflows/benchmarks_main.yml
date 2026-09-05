@@ -1,0 +1,107 @@
+# Baseline timing benchmarks for `main`, run on Bencher Bare Metal.
+#
+# Nothing is timed on the GitHub runner. This workflow builds the benchmark image,
+# pushes it to Bencher's OCI registry, and `bencher run --image` hands it to a
+# dedicated bare metal runner; results come back attached to a Bencher report.
+# Running on identical hardware every time is the point — GitHub runners are far
+# too noisy to compare a commit against its predecessor.
+#
+# PR benchmarks live in benchmarks_pr.yml / benchmarks_track.yml, which are split
+# in two so that fork code never runs in a context holding the API key.
+name: Benchmarks (main)
+
+on:
+  push:
+    branches: main
+
+permissions: {}
+
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+  FORCE_COLOR: 3
+  BENCHER_PROJECT: pybamm
+  # The image repository must be named after the Bencher project slug.
+  BENCHER_REGISTRY: registry.bencher.dev
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The image installs the prebuilt in-repo solver wheel, so benchmarks track
+  # pybammsolvers changes too rather than the last PyPI release.
+  build_solver:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: true
+      build_sdist: false
+      platforms: '["linux"]'
+      macos_runners: '[]'
+
+  benchmark_time:
+    name: Timing benchmarks (bare metal)
+    needs: build_solver
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    env:
+      IMAGE_TAG: main-${{ github.sha }}
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
+
+      - name: Build benchmark image
+        run: |
+          docker build \
+            --file packages/pybamm/tests/benchmarks/Dockerfile \
+            --tag "$BENCHER_REGISTRY/$BENCHER_PROJECT:$IMAGE_TAG" \
+            .
+
+      # The registry pairs a project key with the project slug as the username
+      # (a user key would pair with the owner's email instead), so BENCHER must
+      # hold a `bencher_run_*` key.
+      - name: Log in to the Bencher registry
+        env:
+          BENCHER_API_KEY: ${{ secrets.BENCHER }}
+        run: |
+          printf '%s' "$BENCHER_API_KEY" \
+            | docker login "$BENCHER_REGISTRY" --username "$BENCHER_PROJECT" --password-stdin
+
+      - name: Push benchmark image
+        run: docker push "$BENCHER_REGISTRY/$BENCHER_PROJECT:$IMAGE_TAG"
+
+      - uses: bencherdev/bencher@4c83b25441d145ee273adaf74be30f2382e6ba85 # v0.6.11
+
+      - name: Track main branch benchmarks with Bencher
+        env:
+          BENCHER_API_KEY: ${{ secrets.BENCHER }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bencher run \
+            --project "$BENCHER_PROJECT" \
+            --image "$BENCHER_PROJECT:$IMAGE_TAG" \
+            --branch main \
+            --testbed bare-metal \
+            --spec intel-v1 \
+            --adapter python_pytest \
+            --file /tmp/results.json \
+            --threshold-measure latency \
+            --threshold-test percentage \
+            --threshold-upper-boundary 0.1 \
+            --threshold-max-sample-size 50 \
+            --thresholds-reset \
+            --error-on-alert \
+            --github-actions "$GITHUB_TOKEN" \
+            "pytest -m 'time_bench and not slow_bench' -v -o addopts= --benchmark-group-by func --benchmark-disable-gc --benchmark-json /tmp/results.json"
