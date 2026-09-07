@@ -468,8 +468,8 @@ class VTKQuickPlot:
 
             ren = vtk.vtkRenderer()
             ren.AddActor(actor)
-            ren.AddActor2D(sb)
-            ren.AddActor2D(title_actor)
+            ren.AddViewProp(sb)
+            ren.AddViewProp(title_actor)
             ren.SetBackground(1, 1, 1)
 
             row = panel_idx // n_cols
@@ -706,7 +706,7 @@ class VTKQuickPlot:
         time_text.GetTextProperty().SetBold(True)
         time_text.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
         time_text.SetPosition(0.01, 0.15)
-        slider_bg.AddActor2D(time_text)
+        slider_bg.AddViewProp(time_text)
 
         # Time slider — scaled in physical time (seconds)
         t_min = float(self.t_pts[0])
