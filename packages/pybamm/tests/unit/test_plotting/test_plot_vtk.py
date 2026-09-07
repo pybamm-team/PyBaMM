@@ -436,3 +436,30 @@ class TestVTKQuickPlot:
             assert image.size == (160, 100)
             assert image.n_frames == 2
             assert image.info["duration"] == 200
+
+
+class TestPlotVTKEntryPoints:
+    def test_dynamic_plot_vtk_backend(self):
+        solution, _ = _cell_solution()
+        plot = pybamm.dynamic_plot(
+            solution, output_variables=["field"], backend="vtk", show_plot=False
+        )
+        assert isinstance(plot, pybamm.VTKQuickPlot)
+        assert hasattr(plot, "_window")
+
+    def test_viridis_lut_falls_back_without_matplotlib(self, monkeypatch):
+        import sys
+
+        from pybamm.plotting.plot_vtk import _viridis_lut
+
+        monkeypatch.setitem(sys.modules, "matplotlib.cm", None)
+        lut = _viridis_lut(0.0, 1.0)
+        assert lut.GetRange() == (0.0, 1.0)
+        assert lut.GetNumberOfTableValues() > 0
+
+    def test_make_render_window_on_screen_object(self):
+        from pybamm.plotting.plot_vtk import _make_render_window
+
+        window = _make_render_window(off_screen=False)
+        assert isinstance(window, vtk.vtkRenderWindow)
+        assert window.GetOffScreenRendering() == 0

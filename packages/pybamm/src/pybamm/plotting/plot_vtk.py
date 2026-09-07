@@ -795,7 +795,7 @@ class VTKQuickPlot:
                 mt_arr.Modified()
                 mtable.Modified()
             time_text.SetInput(f"t = {t_now:.4g} s")
-            if show_plot:
+            if show_plot:  # pragma: no cover
                 window.Render()
 
         slider = vtk.vtkSliderWidget()
@@ -805,7 +805,7 @@ class VTKQuickPlot:
         slider.EnabledOn()
         slider.AddObserver("InteractionEvent", on_slider)
 
-        if show_plot:
+        if show_plot:  # pragma: no cover
             interactor.Initialize()
             window.Render()
             interactor.Start()
