@@ -145,3 +145,14 @@ class TestQuickPlotUnstructured:
             np.testing.assert_allclose(positions["y"], 0.25)
         assert quick_plot.plots[("flux",)][0][0] == "quiver_3d"
         pybamm.close_plots()
+
+    def test_3d_tight_limits_and_wireframe_guard(self):
+        solution, _ = _unstructured_solution(3, 3)
+        quick_plot = pybamm.QuickPlot(solution, ["u"], variable_limits="tight")
+        quick_plot.plot(0.5)
+        quick_plot.slider_update(1.0)
+        s1, _ = quick_plot.plots[("u",)][0][0]
+        assert np.isfinite(s1).any()
+        # the 2D wireframe overlay is a no-op on a 3D mesh (returns before drawing)
+        assert quick_plot._overlay_mesh_wireframe(None, solution["u"]) is None
+        pybamm.close_plots()
