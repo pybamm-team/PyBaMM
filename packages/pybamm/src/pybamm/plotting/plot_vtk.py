@@ -449,17 +449,19 @@ class VTKQuickPlot:
             sb.SetLookupTable(lut)
             sb.SetTitle("")
             sb.SetNumberOfLabels(5)
-            sb.SetWidth(0.18)
+            sb.SetWidth(0.2)
             sb.SetHeight(0.5)
-            sb.SetPosition(0.80, 0.25)
-            sb.GetLabelTextProperty().SetFontSize(24)
+            sb.SetPosition(0.79, 0.25)
+            sb.GetLabelTextProperty().SetFontSize(22)
             sb.GetLabelTextProperty().SetColor(0, 0, 0)
             sb.SetUnconstrainedFontSize(True)
-            sb.SetLabelFormat("%-#6.3g")
+            # 4 significant figures without a width spec: "1265" and "303.2"
+            # rather than a clipped "1.27e+" or a dangling "303."
+            sb.SetLabelFormat("%.4g")
 
             title_actor = vtk.vtkTextActor()
             title_actor.SetInput(name)
-            title_actor.GetTextProperty().SetFontSize(36)
+            title_actor.GetTextProperty().SetFontSize(30)
             title_actor.GetTextProperty().SetColor(0, 0, 0)
             title_actor.GetTextProperty().SetBold(True)
             title_actor.GetTextProperty().SetJustificationToCentered()
@@ -496,9 +498,11 @@ class VTKQuickPlot:
                 cube_axes.SetFlyModeToOuterEdges()
                 if plot_type == "slice":
                     cube_axes.SetTickLocationToInside()
-                cube_axes.SetScreenSize(10.0)
-                cube_axes.SetLabelOffset(10)
-                cube_axes.SetTitleOffset([20, 20])
+                cube_axes.SetScreenSize(8.0)
+                cube_axes.SetLabelOffset(8)
+                cube_axes.SetTitleOffset([16, 16])
+                # print coordinates as they are, without a "(x10^-6)" factor
+                cube_axes.SetLabelScaling(False, 0, 0, 0)
 
                 orig_ranges = [
                     (float(mesh_nodes[:, d].min()), float(mesh_nodes[:, d].max()))
@@ -513,21 +517,38 @@ class VTKQuickPlot:
 
                 for ax_id in range(3):
                     tp = cube_axes.GetTitleTextProperty(ax_id)
-                    tp.SetFontSize(28)
+                    tp.SetFontSize(22)
                     tp.SetColor(0.15, 0.15, 0.15)
                     tp.SetBold(True)
                     lp = cube_axes.GetLabelTextProperty(ax_id)
-                    lp.SetFontSize(22)
+                    lp.SetFontSize(17)
                     lp.SetColor(0.25, 0.25, 0.25)
-                cube_axes.SetXTitle("X")
-                cube_axes.SetYTitle("Y")
-                cube_axes.SetZTitle("Z")
-                cube_axes.SetXLabelFormat("%.2g")
-                cube_axes.SetYLabelFormat("%.2g")
-                cube_axes.SetZLabelFormat("%.2g")
+                cube_axes.SetXTitle("x [m]")
+                cube_axes.SetYTitle("y [m]")
+                cube_axes.SetZTitle("z [m]")
+                cube_axes.SetXLabelFormat("%.3g")
+                cube_axes.SetYLabelFormat("%.3g")
+                cube_axes.SetZLabelFormat("%.3g")
                 cube_axes.XAxisMinorTickVisibilityOff()
                 cube_axes.YAxisMinorTickVisibilityOff()
                 cube_axes.ZAxisMinorTickVisibilityOff()
+                # Three explicit labels per axis: VTK's automatic major ticks
+                # crowd short or stretched axes into an unreadable pile. An
+                # axis much thinner than the others (the through-cell
+                # direction) gets its range in the title instead of labels.
+                extents = [hi - lo for lo, hi in orig_ranges[:dim]]
+                for axis, (lo, hi) in enumerate(orig_ranges[:dim]):
+                    letter = "XYZ"[axis]
+                    if extents[axis] < 0.05 * max(extents):
+                        getattr(cube_axes, f"Set{letter}AxisLabelVisibility")(False)
+                        getattr(cube_axes, f"Set{letter}Title")(
+                            f"{letter.lower()} [m]: {lo:.3g} to {hi:.3g}"
+                        )
+                        continue
+                    labels = vtk.vtkStringArray()
+                    for value in np.linspace(lo, hi, 3):
+                        labels.InsertNextValue(f"{value:.3g}")
+                    cube_axes.SetAxisLabels(axis, labels)
 
                 if plot_type == "slice":
                     if axis_idx == 0:
