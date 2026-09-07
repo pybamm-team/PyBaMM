@@ -717,9 +717,10 @@ class QuickPlot:
                     if is_unstructured:
                         import matplotlib
 
-                        cmap_copy = matplotlib.colormaps["viridis"].copy()
-                        cmap_copy.set_bad("white")
-                        kw["cmap"] = cmap_copy
+                        # NaN (outside the domain) renders white
+                        kw["cmap"] = matplotlib.colormaps["viridis"].with_extremes(
+                            bad="white"
+                        )
                     self.plots[key][0][0] = ax.pcolormesh(x, y, var, **kw)
                 else:
                     self.plots[key][0][0] = ax.contourf(
@@ -1076,9 +1077,10 @@ class QuickPlot:
                     if is_unstructured:
                         import matplotlib
 
-                        cmap_copy = matplotlib.colormaps["viridis"].copy()
-                        cmap_copy.set_bad("white")
-                        kw["cmap"] = cmap_copy
+                        # NaN (outside the domain) renders white
+                        kw["cmap"] = matplotlib.colormaps["viridis"].with_extremes(
+                            bad="white"
+                        )
                     self.plots[key][0][0] = ax.pcolormesh(x, y, var, **kw)
                 else:
                     self.plots[key][0][0] = ax.contourf(
