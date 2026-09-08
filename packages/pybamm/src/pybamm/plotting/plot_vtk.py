@@ -260,9 +260,16 @@ class VTKQuickPlot:
                 self.spatial_names.append(name)
                 self.spatial_vars.append(pv)
                 self.spatial_is_cell_data.append(False)
-            else:
+            elif getattr(pv, "dimensions", None) == 0:
                 self.scalar_names.append(name)
                 self.scalar_vars.append(pv)
+            else:
+                raise pybamm.OptionError(
+                    f"VTKQuickPlot cannot plot '{name}': only scalar variables on "
+                    "unstructured meshes and 0D time series are supported. Use "
+                    "pybamm.QuickPlot for structured-mesh and vector-field "
+                    "variables."
+                )
 
         self.output_variables = output_variables
         self.mesh = self.spatial_vars[0].mesh if self.spatial_vars else None

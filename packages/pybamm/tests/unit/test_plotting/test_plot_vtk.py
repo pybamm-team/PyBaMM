@@ -58,18 +58,24 @@ def _triangle_solution():
     model = pybamm.BaseModel()
     x = pybamm.SpatialVariable("x", domain="mesh")
     z = pybamm.SpatialVariable("z", domain="mesh")
+    x_line = pybamm.SpatialVariable("x", domain="line")
     model._geometry = {
         "mesh": {
             x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
             z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-        }
+        },
+        "line": {x_line: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
     }
     field = pybamm.StateVector(slice(0, 1), domain="mesh")
     field.mesh = mesh
-    model.variables = {"field": field}
+    vector = pybamm.VectorField(field, field)
+    vector.mesh = mesh
+    line = pybamm.StateVector(slice(0, 2), domain="line")
+    line.mesh = pybamm.SubMesh1D(np.array([0.0, 0.5, 1.0]), "cartesian")
+    model.variables = {"field": field, "vector": vector, "line": line}
     model.update_processed_variables(model.variables)
     solution = pybamm.Solution(
-        np.array([0.0, 1.0]), np.asfortranarray([[1.0, 2.0]]), model, {}
+        np.array([0.0, 1.0]), np.asfortranarray([[1.0, 2.0], [3.0, 4.0]]), model, {}
     )
     return solution
 
@@ -324,6 +330,13 @@ class TestVTKQuickPlot:
         mapped_data = _first_actor(field_renderer).GetMapper().GetInput()
         values = mapped_data.GetPointData().GetArray("field")
         assert values.GetValue(0) == pytest.approx(3.0)
+
+    def test_rejects_vector_field_and_structured_variables(self):
+        solution = _triangle_solution()
+        with pytest.raises(pybamm.OptionError, match="cannot plot 'vector'"):
+            VTKQuickPlot(solution, ["vector"])
+        with pytest.raises(pybamm.OptionError, match="cannot plot 'line'"):
+            VTKQuickPlot(solution, ["field", "line"])
 
     def test_dynamic_plot_2d_panels_share_camera(self):
         plot = VTKQuickPlot(
