@@ -18,6 +18,7 @@
 #include "idaklu_source/sundials_error_handler.hpp"
 #include "idaklu_source/reduce.hpp"
 #include "idaklu_source/StandaloneNewtonSolver.hpp"
+#include "idaklu_source/brent.hpp"
 
 
 casadi::Function generate_casadi_function(const std::string &data)
@@ -269,6 +270,10 @@ PYBIND11_MODULE(idaklu, m)
     .def("solve_batch", &StandaloneNewtonSolver::solve_batch,
          py::arg("t_eval"), py::arg("y0_alg"), py::arg("inputs"),
          py::return_value_policy::move);
+
+  // Register the "brent" rootfinder with CasADi. Rootfinder::solvers_ is a
+  // process-global, so registering here covers every CasADi user in the process.
+  casadi::casadi_load_rootfinder_brent();
 
   py::class_<casadi::Function>(m, "Function");
 
