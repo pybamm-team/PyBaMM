@@ -11,6 +11,7 @@ from pybamm.plotting.plot_vtk import (
     _data_at_time,
     _is_unstructured_spatial_variable,
     _make_render_window,
+    _mesh_vertices,
     _resolve_scale,
     _set_cell_scalars,
     _set_point_scalars,
@@ -81,8 +82,9 @@ def _triangle_solution():
 
 
 def _node_solution():
+    # mirrors ScikitFemSubMesh3D, which stores coordinates as ``nodes``
     mesh = SimpleNamespace(
-        vertices=np.array(
+        nodes=np.array(
             [
                 [0.0, 0.0, 0.0],
                 [1.0, 0.0, 0.0],
@@ -180,8 +182,13 @@ class TestVTKHelpers:
         with pytest.raises(ValueError, match="5 vertices per element"):
             _build_vtk_grid(mesh)
 
+    def test_mesh_vertices_accepts_vertices_or_nodes(self):
+        coords = np.array([[0.0, 1.0, 2.0]])
+        assert _mesh_vertices(SimpleNamespace(vertices=coords)) is coords
+        assert _mesh_vertices(SimpleNamespace(nodes=coords)) is coords
+
     def test_scale_options(self):
-        mesh = SimpleNamespace(vertices=np.array([[0.0, 2.0, 3.0], [4.0, 2.0, 5.0]]))
+        mesh = SimpleNamespace(nodes=np.array([[0.0, 2.0, 3.0], [4.0, 2.0, 5.0]]))
 
         np.testing.assert_allclose(_compute_scale(mesh), [1.0, 1.0, 2.0])
         np.testing.assert_allclose(_resolve_scale("auto", mesh), [1.0, 1.0, 2.0])

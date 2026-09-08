@@ -22,11 +22,20 @@ _VTK_CELL_TYPE = {
 _AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
 
 
+def _mesh_vertices(mesh):
+    """Vertex coordinates of an unstructured mesh.
+
+    Finite-volume meshes store them as ``vertices``; the scikit-fem 3D mesh
+    that backs node-centred variables stores them as ``nodes``.
+    """
+    return mesh.vertices if hasattr(mesh, "vertices") else mesh.nodes
+
+
 def _build_vtk_grid(mesh, scale=None):
     """Build a ``vtkUnstructuredGrid`` from an unstructured mesh."""
     import vtk
 
-    nodes = mesh.vertices
+    nodes = _mesh_vertices(mesh)
     if scale is not None:
         nodes = nodes * np.asarray(scale)[: nodes.shape[1]]
 
@@ -69,7 +78,7 @@ def _build_vtk_grid(mesh, scale=None):
 
 def _compute_scale(mesh):
     """Per-axis scale factors that normalise coordinate spans to the largest."""
-    nodes = mesh.vertices
+    nodes = _mesh_vertices(mesh)
     spans = np.array(
         [nodes[:, d].max() - nodes[:, d].min() for d in range(nodes.shape[1])]
     )
@@ -395,7 +404,7 @@ class VTKQuickPlot:
                     )
                 axis_idx = _AXIS_INDEX[axis_key]
                 frac = float(opts[axis_key])
-                nodes = self.mesh.vertices
+                nodes = _mesh_vertices(self.mesh)
                 lo = float(nodes[:, axis_idx].min())
                 hi = float(nodes[:, axis_idx].max())
                 phys_val = lo + frac * (hi - lo)
@@ -489,7 +498,7 @@ class VTKQuickPlot:
 
             # Cube axes
             if self.mesh is not None:
-                mesh_nodes = self.mesh.vertices
+                mesh_nodes = _mesh_vertices(self.mesh)
                 dim = mesh_nodes.shape[1]
 
                 if plot_type == "slice":
