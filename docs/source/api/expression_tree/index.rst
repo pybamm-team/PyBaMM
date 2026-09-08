@@ -12,6 +12,7 @@ Expression Tree
   matrix
   vector
   state_vector
+  vector_field
   binary_operator
   unary_operator
   concatenations
