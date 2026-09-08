@@ -99,7 +99,7 @@ jobs:
         if: steps.artifact.outputs.found == 'true'
         run: docker push "$BENCHER_REGISTRY/$BENCHER_PROJECT:pr-$PR_HEAD_SHA"
 
-      - uses: bencherdev/bencher@4c83b25441d145ee273adaf74be30f2382e6ba85 # v0.6.11
+      - uses: bencherdev/bencher@8d75325c3bc59403a2186a056b472c4f49d42838 # v0.6.12
         if: steps.artifact.outputs.found == 'true'
 
       # --start-point-* rebases the PR branch onto its base every run, so the
