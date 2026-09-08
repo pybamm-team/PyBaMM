@@ -19,8 +19,6 @@ _VTK_CELL_TYPE = {
     "hexahedron": 12,  # VTK_HEXAHEDRON
 }
 
-_AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
-
 
 def _mesh_vertices(mesh):
     """Vertex coordinates of an unstructured mesh.
@@ -370,6 +368,12 @@ class VTKQuickPlot:
             # first variable's 5-domain grid, which shifts every value by
             # the leading domains' cell count.
             panel_mesh = pv_by_name[name].mesh
+            panel_nodes = _mesh_vertices(panel_mesh)
+            dim = panel_nodes.shape[1]
+            # column k of the vertex array is drawn on VTK axis k; 2D meshes
+            # store their in-plane coordinates as (x, z)
+            axis_names = ("x", "z") if dim == 2 else ("x", "y", "z")
+            axis_columns = {axis: k for k, axis in enumerate(axis_names)}
             var_scale = _resolve_scale(opts.get("scale", "auto"), panel_mesh)
             is_cell_data = is_cell_data_by_name[name]
             panel_names.append(name)
@@ -392,21 +396,21 @@ class VTKQuickPlot:
             pipeline_source = c2p.GetOutputPort() if c2p is not None else g
             cutter = None
             if plot_type == "slice":
-                axis_key = None
-                for ak in ("x", "y", "z"):
-                    if ak in opts:
-                        axis_key = ak
-                        break
+                axis_key = next((ak for ak in ("x", "y", "z") if ak in opts), None)
                 if axis_key is None:
                     raise ValueError(
                         f"plot_type='slice' for '{name}' requires one of "
                         f"'x', 'y', or 'z' specifying the slice fraction"
                     )
-                axis_idx = _AXIS_INDEX[axis_key]
+                if axis_key not in axis_columns:
+                    raise pybamm.OptionError(
+                        f"Cannot slice '{name}' along '{axis_key}': its "
+                        f"{dim}D mesh has coordinates {', '.join(axis_names)}."
+                    )
+                axis_idx = axis_columns[axis_key]
                 frac = float(opts[axis_key])
-                nodes = _mesh_vertices(self.mesh)
-                lo = float(nodes[:, axis_idx].min())
-                hi = float(nodes[:, axis_idx].max())
+                lo = float(panel_nodes[:, axis_idx].min())
+                hi = float(panel_nodes[:, axis_idx].max())
                 phys_val = lo + frac * (hi - lo)
                 scaled_val = (
                     phys_val * var_scale[axis_idx]
@@ -497,84 +501,83 @@ class VTKQuickPlot:
             ren.SetViewport(col / n_cols, y0, (col + 1) / n_cols, y1)
 
             # Cube axes
-            if self.mesh is not None:
-                mesh_nodes = _mesh_vertices(self.mesh)
-                dim = mesh_nodes.shape[1]
+            if plot_type == "slice":
+                # Use the cutter output bounds so axes align with
+                # the visible slice geometry, not the full 3D grid.
+                axes_bounds = list(cutter.GetOutput().GetBounds())
+            else:
+                axes_bounds = list(g.GetBounds())
 
-                if plot_type == "slice":
-                    # Use the cutter output bounds so axes align with
-                    # the visible slice geometry, not the full 3D grid.
-                    axes_bounds = list(cutter.GetOutput().GetBounds())
-                else:
-                    axes_bounds = list(g.GetBounds())
+            cube_axes = vtk.vtkCubeAxesActor()
+            cube_axes.SetBounds(axes_bounds)
+            cube_axes.SetUseAxisOrigin(False)
+            cube_axes.SetFlyModeToOuterEdges()
+            if plot_type == "slice":
+                cube_axes.SetTickLocationToInside()
+            cube_axes.SetScreenSize(8.0)
+            cube_axes.SetLabelOffset(8)
+            cube_axes.SetTitleOffset([16, 16])
+            # print coordinates as they are, without a "(x10^-6)" factor
+            cube_axes.SetLabelScaling(False, 0, 0, 0)
 
-                cube_axes = vtk.vtkCubeAxesActor()
-                cube_axes.SetBounds(axes_bounds)
-                cube_axes.SetUseAxisOrigin(False)
-                cube_axes.SetFlyModeToOuterEdges()
-                if plot_type == "slice":
-                    cube_axes.SetTickLocationToInside()
-                cube_axes.SetScreenSize(8.0)
-                cube_axes.SetLabelOffset(8)
-                cube_axes.SetTitleOffset([16, 16])
-                # print coordinates as they are, without a "(x10^-6)" factor
-                cube_axes.SetLabelScaling(False, 0, 0, 0)
+            orig_ranges = [
+                (float(panel_nodes[:, d].min()), float(panel_nodes[:, d].max()))
+                for d in range(dim)
+            ]
+            if dim >= 1:
+                cube_axes.SetXAxisRange(*orig_ranges[0])
+            if dim >= 2:
+                cube_axes.SetYAxisRange(*orig_ranges[1])
+            if dim >= 3:
+                cube_axes.SetZAxisRange(*orig_ranges[2])
 
-                orig_ranges = [
-                    (float(mesh_nodes[:, d].min()), float(mesh_nodes[:, d].max()))
-                    for d in range(dim)
-                ]
-                if dim >= 1:
-                    cube_axes.SetXAxisRange(*orig_ranges[0])
-                if dim >= 2:
-                    cube_axes.SetYAxisRange(*orig_ranges[1])
-                if dim >= 3:
-                    cube_axes.SetZAxisRange(*orig_ranges[2])
-
-                for ax_id in range(3):
-                    tp = cube_axes.GetTitleTextProperty(ax_id)
-                    tp.SetFontSize(22)
-                    tp.SetColor(0.15, 0.15, 0.15)
-                    tp.SetBold(True)
-                    lp = cube_axes.GetLabelTextProperty(ax_id)
-                    lp.SetFontSize(17)
-                    lp.SetColor(0.25, 0.25, 0.25)
-                cube_axes.SetXTitle("x [m]")
-                cube_axes.SetYTitle("y [m]")
+            for ax_id in range(3):
+                tp = cube_axes.GetTitleTextProperty(ax_id)
+                tp.SetFontSize(22)
+                tp.SetColor(0.15, 0.15, 0.15)
+                tp.SetBold(True)
+                lp = cube_axes.GetLabelTextProperty(ax_id)
+                lp.SetFontSize(17)
+                lp.SetColor(0.25, 0.25, 0.25)
+            cube_axes.SetXTitle(f"{axis_names[0]} [m]")
+            cube_axes.SetYTitle(f"{axis_names[1]} [m]")
+            if dim == 3:
                 cube_axes.SetZTitle("z [m]")
-                cube_axes.SetXLabelFormat("%.3g")
-                cube_axes.SetYLabelFormat("%.3g")
-                cube_axes.SetZLabelFormat("%.3g")
-                cube_axes.XAxisMinorTickVisibilityOff()
-                cube_axes.YAxisMinorTickVisibilityOff()
-                cube_axes.ZAxisMinorTickVisibilityOff()
-                # Explicit labels: VTK's automatic major ticks crowd short or
-                # stretched axes into an unreadable pile. Three per axis, but
-                # only the two ends on an axis much thinner than the others
-                # (the through-cell direction under a display stretch).
-                extents = [hi - lo for lo, hi in orig_ranges[:dim]]
-                for axis, (lo, hi) in enumerate(orig_ranges[:dim]):
-                    thin = extents[axis] < 0.05 * max(extents)
-                    labels = vtk.vtkStringArray()
-                    for value in np.linspace(lo, hi, 2 if thin else 3):
-                        labels.InsertNextValue(f"{value:.3g}")
-                    cube_axes.SetAxisLabels(axis, labels)
+            else:
+                cube_axes.ZAxisVisibilityOff()
+            cube_axes.SetXLabelFormat("%.3g")
+            cube_axes.SetYLabelFormat("%.3g")
+            cube_axes.SetZLabelFormat("%.3g")
+            cube_axes.XAxisMinorTickVisibilityOff()
+            cube_axes.YAxisMinorTickVisibilityOff()
+            cube_axes.ZAxisMinorTickVisibilityOff()
+            # Explicit labels: VTK's automatic major ticks crowd short or
+            # stretched axes into an unreadable pile. Three per axis, but
+            # only the two ends on an axis much thinner than the others
+            # (the through-cell direction under a display stretch).
+            extents = [hi - lo for lo, hi in orig_ranges[:dim]]
+            for axis, (lo, hi) in enumerate(orig_ranges[:dim]):
+                thin = extents[axis] < 0.05 * max(extents)
+                labels = vtk.vtkStringArray()
+                for value in np.linspace(lo, hi, 2 if thin else 3):
+                    labels.InsertNextValue(f"{value:.3g}")
+                cube_axes.SetAxisLabels(axis, labels)
 
-                if plot_type == "slice":
-                    if axis_idx == 0:
-                        cube_axes.XAxisVisibilityOff()
-                        cube_axes.SetXAxisTickVisibility(False)
-                        cube_axes.SetXAxisLabelVisibility(False)
-                    elif axis_idx == 1:
-                        cube_axes.YAxisVisibilityOff()
-                        cube_axes.SetYAxisTickVisibility(False)
-                        cube_axes.SetYAxisLabelVisibility(False)
-                    else:
-                        cube_axes.ZAxisVisibilityOff()
-                        cube_axes.SetZAxisTickVisibility(False)
-                        cube_axes.SetZAxisLabelVisibility(False)
+            if plot_type == "slice":
+                if axis_idx == 0:
+                    cube_axes.XAxisVisibilityOff()
+                    cube_axes.SetXAxisTickVisibility(False)
+                    cube_axes.SetXAxisLabelVisibility(False)
+                elif axis_idx == 1:
+                    cube_axes.YAxisVisibilityOff()
+                    cube_axes.SetYAxisTickVisibility(False)
+                    cube_axes.SetYAxisLabelVisibility(False)
+                else:
+                    cube_axes.ZAxisVisibilityOff()
+                    cube_axes.SetZAxisTickVisibility(False)
+                    cube_axes.SetZAxisLabelVisibility(False)
 
-                ren.AddActor(cube_axes)
+            ren.AddActor(cube_axes)
 
             window.AddRenderer(ren)
             all_renderers.append(ren)
@@ -611,21 +614,17 @@ class VTKQuickPlot:
                 cam.SetViewUp(view_up)
                 ren.ResetCamera()
                 cam.Zoom(0.70)
-                if self.mesh is not None:
-                    cube_axes.SetCamera(cam)
+                cube_axes.SetCamera(cam)
             else:
                 if first_3d_cam is None:
                     ren.ResetCamera()
                     first_3d_cam = ren.GetActiveCamera()
-                    if self.mesh is not None and self.mesh.dimension == 3:
+                    if dim == 3:
                         first_3d_cam.Azimuth(-55)
                         first_3d_cam.Elevation(25)
-                    if self.mesh is not None:
-                        cube_axes.SetCamera(first_3d_cam)
                 else:
                     ren.SetActiveCamera(first_3d_cam)
-                    if self.mesh is not None:
-                        cube_axes.SetCamera(first_3d_cam)
+                cube_axes.SetCamera(first_3d_cam)
 
             panel_idx += 1
 

@@ -34,20 +34,33 @@ def _tetra_mesh():
 
 
 def _cell_solution():
+    """One-cell tetrahedral solution; ``shifted`` lives on a second mesh at x in [2, 3]."""
     mesh = _tetra_mesh()
+    shifted_mesh = pybamm.UnstructuredSubMesh(
+        mesh.vertices + np.array([2.0, 0.0, 0.0]), mesh.elements
+    )
     model = pybamm.BaseModel()
     xyz = [pybamm.SpatialVariable(axis, domain="mesh") for axis in "xyz"]
+    xyz_shifted = [pybamm.SpatialVariable(axis, domain="shifted") for axis in "xyz"]
     model._geometry = {
-        "mesh": {var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)} for var in xyz}
+        "mesh": {
+            var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)} for var in xyz
+        },
+        "shifted": {
+            var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+            for var in xyz_shifted
+        },
     }
 
     field = pybamm.StateVector(slice(0, 1), domain="mesh")
     field.mesh = mesh
-    model.variables = {"field": field, "scalar": pybamm.t}
+    shifted = pybamm.StateVector(slice(1, 2), domain="shifted")
+    shifted.mesh = shifted_mesh
+    model.variables = {"field": field, "shifted": shifted, "scalar": pybamm.t}
     model.update_processed_variables(model.variables)
 
     t = np.array([0.0, 1.0, 2.0])
-    y = np.asfortranarray([[1.0, 2.0, 3.0]])
+    y = np.asfortranarray([[1.0, 2.0, 3.0], [10.0, 20.0, 30.0]])
     return pybamm.Solution(t, y, model, {}), mesh
 
 
@@ -128,6 +141,15 @@ def _first_actor(renderer):
     actors = renderer.GetActors()
     actors.InitTraversal()
     return actors.GetNextActor()
+
+
+def _cube_axes(renderer):
+    actors = renderer.GetActors()
+    actors.InitTraversal()
+    actor = actors.GetNextActor()
+    while actor is not None and not isinstance(actor, vtk.vtkCubeAxesActor):
+        actor = actors.GetNextActor()
+    return actor
 
 
 class TestVTKHelpers:
@@ -344,6 +366,52 @@ class TestVTKQuickPlot:
             VTKQuickPlot(solution, ["vector"])
         with pytest.raises(pybamm.OptionError, match="cannot plot 'line'"):
             VTKQuickPlot(solution, ["field", "line"])
+
+    def test_slice_and_axes_follow_each_panels_own_mesh(self):
+        solution, _ = _cell_solution()
+        plot = VTKQuickPlot(
+            solution,
+            ["field", "shifted"],
+            options={"shifted": {"plot_type": "slice", "x": 0.5, "scale": None}},
+        )
+        plot.dynamic_plot(show_plot=False)
+
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        renderers.GetNextItem()
+        shifted_renderer = renderers.GetNextItem()
+        # the cut plane sits at x = 2.5, inside the shifted mesh, so it has cells
+        cut = _first_actor(shifted_renderer).GetMapper().GetInput()
+        assert cut.GetNumberOfCells() > 0
+        np.testing.assert_allclose(cut.GetBounds()[:2], [2.5, 2.5])
+        np.testing.assert_allclose(
+            _cube_axes(shifted_renderer).GetXAxisRange(), [2.0, 3.0]
+        )
+
+    def test_2d_slice_uses_x_and_z_coordinates(self):
+        solution = _triangle_solution()
+        plot = VTKQuickPlot(
+            solution,
+            "field",
+            options={"field": {"plot_type": "slice", "z": 0.5, "scale": None}},
+        )
+        plot.dynamic_plot(show_plot=False)
+
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        renderer = renderers.GetNextItem()
+        cut = _first_actor(renderer).GetMapper().GetInput()
+        assert cut.GetNumberOfCells() > 0
+        # physical z is drawn on VTK's y axis
+        np.testing.assert_allclose(cut.GetBounds()[2:4], [0.5, 0.5])
+        cube_axes = _cube_axes(renderer)
+        assert cube_axes.GetYTitle() == "z [m]"
+        assert cube_axes.GetZAxisVisibility() == 0
+
+        with pytest.raises(pybamm.OptionError, match="coordinates x, z"):
+            VTKQuickPlot(
+                solution, "field", options={"field": {"plot_type": "slice", "y": 0.5}}
+            ).dynamic_plot(show_plot=False)
 
     def test_dynamic_plot_2d_panels_share_camera(self):
         plot = VTKQuickPlot(
