@@ -184,22 +184,13 @@ def _viridis_lut(vmin, vmax, n=256):
 def _make_render_window(off_screen=False):
     """Create a VTK render window.
 
-    Off-screen Linux uses OSMesa (``vtkOSOpenGLRenderWindow``); macOS/Windows
-    use the platform window with off-screen rendering enabled. Instantiating
-    the OSMesa window on unsupported platforms segfaults.
+    VTK's object factory picks the window class, so a headless host selects
+    OSMesa with ``VTK_DEFAULT_OPENGL_WINDOW=vtkOSOpenGLRenderWindow`` while a
+    desktop keeps its native OpenGL window.
     """
-    import sys
-
     import vtk
 
-    if (
-        off_screen
-        and sys.platform.startswith("linux")
-        and hasattr(vtk, "vtkOSOpenGLRenderWindow")
-    ):
-        window = vtk.vtkOSOpenGLRenderWindow()
-    else:
-        window = vtk.vtkRenderWindow()
+    window = vtk.vtkRenderWindow()
     if off_screen:
         window.SetOffScreenRendering(1)
     return window
@@ -859,7 +850,8 @@ class VTKQuickPlot:
             Pixel dimensions of each frame.
         """
         import vtk
-        from PIL import Image
+
+        Image = pybamm.import_optional_dependency("PIL.Image")
 
         if not hasattr(self, "_window") or not self._window.GetOffScreenRendering():
             self.dynamic_plot(show_plot=False)

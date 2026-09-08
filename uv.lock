@@ -3131,6 +3131,7 @@ all = [
     { name = "matplotlib", version = "3.10.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "matplotlib", version = "3.11.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "meshio" },
+    { name = "pillow" },
     { name = "pybtex" },
     { name = "scikit-fem" },
     { name = "tqdm" },
@@ -3159,6 +3160,7 @@ tqdm = [
     { name = "tqdm" },
 ]
 vtk = [
+    { name = "pillow" },
     { name = "vtk" },
 ]
 
@@ -3215,6 +3217,8 @@ requires-dist = [
     { name = "meshio", marker = "extra == 'all'", specifier = ">=5.3.0" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "pandas", specifier = ">=1.5.0" },
+    { name = "pillow", marker = "extra == 'all'" },
+    { name = "pillow", marker = "extra == 'vtk'" },
     { name = "platformdirs" },
     { name = "pooch", specifier = ">=1.8.1" },
     { name = "posthog" },

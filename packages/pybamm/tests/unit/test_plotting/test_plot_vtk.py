@@ -282,13 +282,10 @@ class TestVTKHelpers:
         assert lut.GetTableValue(0) != lut.GetTableValue(7)
 
     def test_make_render_window_offscreen(self):
-        import sys
-
         window = _make_render_window(off_screen=True)
 
+        assert isinstance(window, vtk.vtkRenderWindow)
         assert window.GetOffScreenRendering() == 1
-        if sys.platform.startswith("linux"):
-            assert isinstance(window, vtk.vtkOSOpenGLRenderWindow)
 
 
 class TestVTKQuickPlot:
