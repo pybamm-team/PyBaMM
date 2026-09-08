@@ -461,11 +461,19 @@ class TestVTKQuickPlot:
 class TestPlotVTKEntryPoints:
     def test_dynamic_plot_vtk_backend(self):
         solution, _ = _cell_solution()
+        # positional output_variables, as with the matplotlib backend
+        plot = pybamm.dynamic_plot(solution, ["field"], backend="vtk", show_plot=False)
+        assert isinstance(plot, pybamm.VTKQuickPlot)
+        assert hasattr(plot, "_window")
         plot = pybamm.dynamic_plot(
             solution, output_variables=["field"], backend="vtk", show_plot=False
         )
-        assert isinstance(plot, pybamm.VTKQuickPlot)
-        assert hasattr(plot, "_window")
+        assert plot.output_variables == ["field"]
+
+    def test_dynamic_plot_rejects_unknown_backend(self):
+        solution, _ = _cell_solution()
+        with pytest.raises(pybamm.OptionError, match="Unknown plotting backend"):
+            pybamm.dynamic_plot(solution, ["field"], backend="plotly")
 
     def test_viridis_lut_falls_back_without_matplotlib(self, monkeypatch):
         import sys
