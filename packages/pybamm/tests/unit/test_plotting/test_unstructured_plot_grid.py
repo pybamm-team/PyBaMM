@@ -89,9 +89,8 @@ class TestUnstructuredPlotGrid:
             assert arr.shape == (12, 12)
         np.testing.assert_allclose(yy1, 0.5)
         np.testing.assert_allclose(zz2, 0.5)
-        # u = 2x at t = 1: linear interpolation between cell centroids is exact
-        # between the first and last centroid (x in [1/6, 5/6]); outside the
-        # domain the slices are NaN
+        # u = 2x at t = 1 is exact between the first and last centroid
+        # (x in [1/6, 5/6]); outside the domain the slices are NaN
         assert np.isfinite(s1).mean() > 0.5
         for values, xx in ((s1, xx1), (s2, xx2)):
             interior = (xx > 0.2) & (xx < 0.8)
@@ -112,7 +111,7 @@ class TestUnstructuredPlotGrid:
         positions = {"y": 0.4, "z": 0.6}
         data = quiver_data(flux, 0.5, plot_grid(flux), positions, n_points=6)
         X1, Z1, u_xz, w_xz, y_mid, X2, Y2, u_xy, v_xy, z_mid = data
-        assert (y_mid, z_mid) == (0.4, 0.6)
+        np.testing.assert_allclose([y_mid, z_mid], [0.4, 0.6])
         for arr in (X1, Z1, u_xz, w_xz, X2, Y2, u_xy, v_xy):
             assert arr.shape == (6, 6)
         np.testing.assert_allclose(u_xz[np.isfinite(u_xz)], u_val, rtol=1e-8)

@@ -217,7 +217,7 @@ class TestVTKHelpers:
             vertices=np.zeros((5, 3)), elements=np.array([[0, 1, 2, 3, 4]])
         )
 
-        with pytest.raises(ValueError, match="5 vertices per element"):
+        with pytest.raises(pybamm.GeometryError, match="5 vertices per element"):
             _build_vtk_grid(mesh)
 
     def test_mesh_vertices_accepts_vertices_or_nodes(self):
@@ -270,9 +270,9 @@ class TestVTKHelpers:
         electrolyte concentration rendered on current-collector tabs).
         """
         grid = _build_vtk_grid(_tetra_mesh())
-        with pytest.raises(ValueError, match="different meshes"):
+        with pytest.raises(pybamm.ShapeError, match="different meshes"):
             _set_cell_scalars(grid, "cell", [1.0, 2.0])
-        with pytest.raises(ValueError, match="different meshes"):
+        with pytest.raises(pybamm.ShapeError, match="different meshes"):
             _set_point_scalars(grid, "point", [1.0])
 
     def test_processed_variable_helpers(self):
@@ -520,7 +520,9 @@ class TestVTKQuickPlot:
             solution, "field", options={"field": {"plot_type": "slice"}}
         )
 
-        with pytest.raises(ValueError, match="requires one of 'x', 'y', or 'z'"):
+        with pytest.raises(
+            pybamm.OptionError, match="requires one of 'x', 'y', or 'z'"
+        ):
             plot.dynamic_plot(show_plot=False)
 
     def test_save_gif_builds_plot_and_writes_animation(self, tmp_path):
@@ -563,7 +565,7 @@ class TestPlotVTKEntryPoints:
 
         monkeypatch.setitem(sys.modules, "matplotlib.cm", None)
         lut = _viridis_lut(0.0, 1.0)
-        assert lut.GetRange() == (0.0, 1.0)
+        np.testing.assert_allclose(lut.GetRange(), [0.0, 1.0])
         assert lut.GetNumberOfTableValues() > 0
 
     def test_make_render_window_on_screen_object(self):

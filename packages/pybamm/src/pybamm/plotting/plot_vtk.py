@@ -8,6 +8,10 @@ and node-centered FEM).
 Also supports 0D (time-series) variables rendered as VTK line charts.
 """
 
+from __future__ import annotations
+
+from typing import Any
+
 import numpy as np
 
 import pybamm
@@ -31,8 +35,8 @@ def _mesh_vertices(mesh):
 
 def _build_vtk_grid(mesh, scale=None):
     """Build a ``vtkUnstructuredGrid`` from an unstructured mesh."""
-    import vtk
-    from vtk.util import numpy_support
+    vtk = pybamm.import_optional_dependency("vtk")
+    numpy_support = pybamm.import_optional_dependency("vtk.util.numpy_support")
 
     nodes = np.asarray(_mesh_vertices(mesh), dtype=float)
     if scale is not None:
@@ -57,7 +61,7 @@ def _build_vtk_grid(mesh, scale=None):
         elif nverts == 3:
             element_key = "triangle"
         else:
-            raise ValueError(
+            raise pybamm.GeometryError(
                 "Unable to infer VTK cell type from mesh connectivity with "
                 f"{nverts} vertices per element"
             )
@@ -103,11 +107,11 @@ def _resolve_scale(scale_opt, mesh):
 
 def _set_scalars(attribute_data, expected, kind, name, values):
     """Set (or update) a named float scalar array on cell or point data."""
-    from vtk.util import numpy_support
+    numpy_support = pybamm.import_optional_dependency("vtk.util.numpy_support")
 
     values = np.ascontiguousarray(values, dtype=np.float32).ravel()
     if len(values) != expected:
-        raise ValueError(
+        raise pybamm.ShapeError(
             f"Cannot attach {len(values)} {kind} values for {name!r} to a grid "
             f"with {expected} {kind}s: the variable and the grid describe "
             "different meshes."
@@ -154,11 +158,11 @@ def _data_at_time(pv, t):
 
 def _viridis_lut(vmin, vmax, n=256):
     """Build a VTK lookup table using the matplotlib viridis colormap."""
-    import vtk
+    vtk = pybamm.import_optional_dependency("vtk")
 
     try:
-        from matplotlib.cm import viridis as _cmap
-    except ImportError:
+        _cmap = pybamm.import_optional_dependency("matplotlib.cm", "viridis")
+    except ModuleNotFoundError:
         lut = vtk.vtkLookupTable()
         lut.SetHueRange(0.667, 0.0)
         lut.SetRange(vmin, vmax)
@@ -182,7 +186,7 @@ def _make_render_window(off_screen=False):
     OSMesa with ``VTK_DEFAULT_OPENGL_WINDOW=vtkOSOpenGLRenderWindow`` while a
     desktop keeps its native OpenGL window.
     """
-    import vtk
+    vtk = pybamm.import_optional_dependency("vtk")
 
     window = vtk.vtkRenderWindow()
     if off_screen:
@@ -220,10 +224,10 @@ class VTKQuickPlot:
 
     def __init__(
         self,
-        solutions,
-        output_variables=None,
-        options=None,
-        interpolate_time=False,
+        solutions: pybamm.Solution | pybamm.Simulation | list[pybamm.Solution],
+        output_variables: str | list[str] | None = None,
+        options: dict[str, dict[str, Any] | list[dict[str, Any]]] | None = None,
+        interpolate_time: bool = False,
     ):
         if isinstance(solutions, pybamm.Simulation):
             solutions = solutions.solution
@@ -286,9 +290,9 @@ class VTKQuickPlot:
 
     # ------------------------------------------------------------------
 
-    def dynamic_plot(self, show_plot=True):
+    def dynamic_plot(self, show_plot: bool = True) -> None:
         """Launch an interactive VTK window with a time slider."""
-        import vtk
+        vtk = pybamm.import_optional_dependency("vtk")
 
         n_spatial = len(self.spatial_panels)
         n_scalar = len(self.scalar_names)
@@ -348,10 +352,8 @@ class VTKQuickPlot:
         pv_by_name = dict(zip(self.spatial_names, self.spatial_vars, strict=True))
         for name, opts in self.spatial_panels:
             plot_type = opts.get("plot_type", "3d")
-            # Each variable is drawn on its OWN mesh: a 3-domain variable
-            # (e.g. electrolyte concentration) must not be painted onto the
-            # first variable's 5-domain grid, which shifts every value by
-            # the leading domains' cell count.
+            # each variable is drawn on its own mesh: painting a 3-domain variable
+            # onto a 5-domain grid would shift every value by the leading cells
             panel_mesh = pv_by_name[name].mesh
             panel_nodes = _mesh_vertices(panel_mesh)
             dim = panel_nodes.shape[1]
@@ -383,7 +385,7 @@ class VTKQuickPlot:
             if plot_type == "slice":
                 axis_key = next((ak for ak in ("x", "y", "z") if ak in opts), None)
                 if axis_key is None:
-                    raise ValueError(
+                    raise pybamm.OptionError(
                         f"plot_type='slice' for '{name}' requires one of "
                         f"'x', 'y', or 'z' specifying the slice fraction"
                     )
@@ -536,10 +538,8 @@ class VTKQuickPlot:
             cube_axes.XAxisMinorTickVisibilityOff()
             cube_axes.YAxisMinorTickVisibilityOff()
             cube_axes.ZAxisMinorTickVisibilityOff()
-            # Explicit labels: VTK's automatic major ticks crowd short or
-            # stretched axes into an unreadable pile. Three per axis, but
-            # only the two ends on an axis much thinner than the others
-            # (the through-cell direction under a display stretch).
+            # VTK's automatic ticks crowd stretched axes: label three points per
+            # axis, or just the two ends of an axis much thinner than the others
             extents = [hi - lo for lo, hi in orig_ranges[:dim]]
             for axis, (lo, hi) in enumerate(orig_ranges[:dim]):
                 thin = extents[axis] < 0.05 * max(extents)
@@ -829,7 +829,14 @@ class VTKQuickPlot:
         self._interactor = interactor
         self._slider = slider
 
-    def save_gif(self, filename, fps=10, n_frames=100, width=1800, height=900):
+    def save_gif(
+        self,
+        filename: str,
+        fps: int = 10,
+        n_frames: int = 100,
+        width: int = 1800,
+        height: int = 900,
+    ) -> None:
         """Render an animation to a GIF file.
 
         Parameters
@@ -843,8 +850,7 @@ class VTKQuickPlot:
         width, height : int
             Pixel dimensions of each frame.
         """
-        import vtk
-
+        vtk = pybamm.import_optional_dependency("vtk")
         Image = pybamm.import_optional_dependency("PIL.Image")
 
         if not hasattr(self, "_window") or not self._window.GetOffScreenRendering():
@@ -884,4 +890,4 @@ class VTKQuickPlot:
             duration=int(1000 / fps),
             loop=0,
         )
-        print(f"Saved {len(frames)}-frame GIF to {filename}")
+        pybamm.logger.info(f"Saved {len(frames)}-frame GIF to {filename}")
