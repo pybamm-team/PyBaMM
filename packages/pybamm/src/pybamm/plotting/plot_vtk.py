@@ -532,21 +532,15 @@ class VTKQuickPlot:
                 cube_axes.XAxisMinorTickVisibilityOff()
                 cube_axes.YAxisMinorTickVisibilityOff()
                 cube_axes.ZAxisMinorTickVisibilityOff()
-                # Three explicit labels per axis: VTK's automatic major ticks
-                # crowd short or stretched axes into an unreadable pile. An
-                # axis much thinner than the others (the through-cell
-                # direction) gets its range in the title instead of labels.
+                # Explicit labels: VTK's automatic major ticks crowd short or
+                # stretched axes into an unreadable pile. Three per axis, but
+                # only the two ends on an axis much thinner than the others
+                # (the through-cell direction under a display stretch).
                 extents = [hi - lo for lo, hi in orig_ranges[:dim]]
                 for axis, (lo, hi) in enumerate(orig_ranges[:dim]):
-                    letter = "XYZ"[axis]
-                    if extents[axis] < 0.05 * max(extents):
-                        getattr(cube_axes, f"Set{letter}AxisLabelVisibility")(False)
-                        getattr(cube_axes, f"Set{letter}Title")(
-                            f"{letter.lower()} [m]: {lo:.3g} to {hi:.3g}"
-                        )
-                        continue
+                    thin = extents[axis] < 0.05 * max(extents)
                     labels = vtk.vtkStringArray()
-                    for value in np.linspace(lo, hi, 3):
+                    for value in np.linspace(lo, hi, 2 if thin else 3):
                         labels.InsertNextValue(f"{value:.3g}")
                     cube_axes.SetAxisLabels(axis, labels)
 
