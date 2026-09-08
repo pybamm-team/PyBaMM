@@ -567,7 +567,9 @@ class Divergence(SpatialOperator):
     For tensor fields (rank-2 tensors), returns a vector field.
     """
 
-    def __init__(self, child):
+    _json_extra_fields = ("simplify",)
+
+    def __init__(self, child, simplify: bool = True):
         if child.domain == []:
             raise pybamm.DomainError(
                 f"Cannot take divergence of '{child}' since its domain is empty. "
@@ -583,6 +585,7 @@ class Divergence(SpatialOperator):
                 "divergence."
             )
         super().__init__("div", child)
+        self.simplify = simplify
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -595,10 +598,10 @@ class Divergence(SpatialOperator):
         Uses the convenience function :meth:`div` to cover scenarios where divergence is
         0 or interacts with other functions.
         """
-        if perform_simplifications:
+        if perform_simplifications and self.simplify:
             return div(child)
         else:
-            return Divergence(child)
+            return Divergence(child, simplify=self.simplify)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
@@ -1638,7 +1641,7 @@ def grad(symbol):
         return Gradient(symbol)
 
 
-def div(symbol):
+def div(symbol, simplify=True):
     """
     convenience function for creating a :class:`Divergence`
 
@@ -1661,16 +1664,17 @@ def div(symbol):
         else:
             new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcast(new_child, symbol.domain)
-    # Divergence commutes with Negate operator
-    if isinstance(symbol, pybamm.Negate):
-        return -div(symbol.orphans[0])
-    elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
-        left, right = symbol.orphans
-        if isinstance(left, pybamm.Negate):
-            return -div(symbol._binary_new_copy(left.orphans[0], right))
+    if simplify:
+        # Divergence commutes with Negate operator
+        if isinstance(symbol, pybamm.Negate):
+            return -div(symbol.orphans[0])
+        elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
+            left, right = symbol.orphans
+            if isinstance(left, pybamm.Negate):
+                return -div(symbol._binary_new_copy(left.orphans[0], right))
 
     # Last resort
-    return Divergence(symbol)
+    return Divergence(symbol, simplify=simplify)
 
 
 def laplacian(symbol):
