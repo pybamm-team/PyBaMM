@@ -196,6 +196,22 @@ class TestVTKHelpers:
         np.testing.assert_allclose(grid.GetPoint(0), [2.0, 6.0, 0.0])
         np.testing.assert_allclose(grid.GetPoint(2), [6.0, 12.0, 0.0])
 
+    def test_build_grid_connectivity_of_several_cells(self):
+        mesh = SimpleNamespace(
+            vertices=np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]),
+            elements=np.array([[0, 1, 2], [0, 2, 3]]),
+            element_type="triangle",
+        )
+
+        grid = _build_vtk_grid(mesh)
+
+        assert grid.GetNumberOfCells() == 2
+        assert grid.GetCellType(1) == vtk.VTK_TRIANGLE
+        np.testing.assert_array_equal(
+            [grid.GetCell(1).GetPointId(i) for i in range(3)], [0, 2, 3]
+        )
+        np.testing.assert_allclose(grid.GetPoint(3), [0.0, 1.0, 0.0])
+
     def test_build_grid_rejects_unknown_connectivity(self):
         mesh = SimpleNamespace(
             vertices=np.zeros((5, 3)), elements=np.array([[0, 1, 2, 3, 4]])

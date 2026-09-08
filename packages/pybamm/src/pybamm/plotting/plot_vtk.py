@@ -32,18 +32,16 @@ def _mesh_vertices(mesh):
 def _build_vtk_grid(mesh, scale=None):
     """Build a ``vtkUnstructuredGrid`` from an unstructured mesh."""
     import vtk
+    from vtk.util import numpy_support
 
-    nodes = _mesh_vertices(mesh)
+    nodes = np.asarray(_mesh_vertices(mesh), dtype=float)
     if scale is not None:
         nodes = nodes * np.asarray(scale)[: nodes.shape[1]]
+    if nodes.shape[1] == 2:
+        nodes = np.column_stack([nodes, np.zeros(len(nodes))])
 
     pts = vtk.vtkPoints()
-    pts.SetNumberOfPoints(len(nodes))
-    for i, nd in enumerate(nodes):
-        if len(nd) == 2:
-            pts.SetPoint(i, nd[0], nd[1], 0.0)
-        else:
-            pts.SetPoint(i, nd[0], nd[1], nd[2])
+    pts.SetData(numpy_support.numpy_to_vtk(np.ascontiguousarray(nodes), deep=True))
 
     grid = vtk.vtkUnstructuredGrid()
     grid.SetPoints(pts)
@@ -65,11 +63,19 @@ def _build_vtk_grid(mesh, scale=None):
             )
 
     cell_type = _VTK_CELL_TYPE[element_key]
-    for cell in mesh.elements:
-        id_list = vtk.vtkIdList()
-        for v in cell:
-            id_list.InsertNextId(int(v))
-        grid.InsertNextCell(cell_type, id_list)
+    elements = np.asarray(mesh.elements)
+    n_cells, n_verts = elements.shape
+    id_type = np.int64 if vtk.vtkIdTypeArray().GetDataTypeSize() == 8 else np.int32
+    cells = vtk.vtkCellArray()
+    cells.SetData(
+        numpy_support.numpy_to_vtkIdTypeArray(
+            np.arange(0, (n_cells + 1) * n_verts, n_verts, dtype=id_type), deep=True
+        ),
+        numpy_support.numpy_to_vtkIdTypeArray(
+            np.ascontiguousarray(elements.ravel(), dtype=id_type), deep=True
+        ),
+    )
+    grid.SetCells(cell_type, cells)
 
     return grid
 
@@ -95,50 +101,38 @@ def _resolve_scale(scale_opt, mesh):
     return np.asarray(scale_opt)
 
 
+def _set_scalars(attribute_data, expected, kind, name, values):
+    """Set (or update) a named float scalar array on cell or point data."""
+    from vtk.util import numpy_support
+
+    values = np.ascontiguousarray(values, dtype=np.float32).ravel()
+    if len(values) != expected:
+        raise ValueError(
+            f"Cannot attach {len(values)} {kind} values for {name!r} to a grid "
+            f"with {expected} {kind}s: the variable and the grid describe "
+            "different meshes."
+        )
+    arr = attribute_data.GetArray(name)
+    if arr is None:
+        arr = numpy_support.numpy_to_vtk(values, deep=True)
+        arr.SetName(name)
+        attribute_data.AddArray(arr)
+        attribute_data.SetActiveScalars(name)
+    else:
+        # one vectorised copy into VTK's buffer instead of a per-value loop
+        numpy_support.vtk_to_numpy(arr)[:] = values
+        arr.Modified()
+
+
 def _set_cell_scalars(grid, name, values):
     """Set (or update) a cell scalar array on a VTK grid."""
-    import vtk
-
-    if len(values) != grid.GetNumberOfCells():
-        raise ValueError(
-            f"Cannot attach {len(values)} cell values for {name!r} to a grid "
-            f"with {grid.GetNumberOfCells()} cells: the variable and the "
-            f"grid describe different meshes."
-        )
-    arr = grid.GetCellData().GetArray(name)
-    if arr is None:
-        arr = vtk.vtkFloatArray()
-        arr.SetName(name)
-        arr.SetNumberOfTuples(len(values))
-        grid.GetCellData().AddArray(arr)
-        grid.GetCellData().SetActiveScalars(name)
-    for i, v in enumerate(values):
-        arr.SetValue(i, float(v))
-    arr.Modified()
+    _set_scalars(grid.GetCellData(), grid.GetNumberOfCells(), "cell", name, values)
     grid.Modified()
 
 
 def _set_point_scalars(grid, name, values):
     """Set (or update) a point scalar array on a VTK grid."""
-    import vtk
-
-    if len(values) != grid.GetNumberOfPoints():
-        raise ValueError(
-            f"Cannot attach {len(values)} point values for {name!r} to a grid "
-            f"with {grid.GetNumberOfPoints()} points: the variable and the "
-            f"grid describe different meshes."
-        )
-
-    arr = grid.GetPointData().GetArray(name)
-    if arr is None:
-        arr = vtk.vtkFloatArray()
-        arr.SetName(name)
-        arr.SetNumberOfTuples(len(values))
-        grid.GetPointData().AddArray(arr)
-        grid.GetPointData().SetActiveScalars(name)
-    for i, v in enumerate(values):
-        arr.SetValue(i, float(v))
-    arr.Modified()
+    _set_scalars(grid.GetPointData(), grid.GetNumberOfPoints(), "point", name, values)
     grid.Modified()
 
 
