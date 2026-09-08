@@ -91,11 +91,6 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev
 
-      # VTK off-screen GIF export needs a software OpenGL backend on headless runners.
-      - name: Prefer OSMesa for VTK on Linux
-        if: startsWith(matrix.leg.os, 'ubuntu')
-        run: echo "VTK_DEFAULT_OPENGL_WINDOW=vtkOSOpenGLRenderWindow" >> "$GITHUB_ENV"
-
       # Kept separate and opt-out: texlive-latex-extra is large and uncached.
       - name: Install TeXLive for Linux
         if: ${{ startsWith(matrix.leg.os, 'ubuntu') && inputs.texlive }}
