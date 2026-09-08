@@ -140,7 +140,13 @@ class TestQuickPlotUnstructured:
         quick_plot.dynamic_plot(show_plot=False)
         s1, _ = quick_plot.plots[("u",)][0][0]
         assert s1.shape == (80, 80)
-        quick_plot._slice_sliders["y"].set_val(0.25)
+        # axes and sliders are in the display unit (um for a unit box in metres)
+        scalar_axis, quiver_axis = quick_plot.axes[0], quick_plot.axes[1]
+        unit = quick_plot.spatial_unit
+        assert scalar_axis.get_xlabel() == quiver_axis.get_xlabel() == f"$x$ [{unit}]"
+        np.testing.assert_allclose(scalar_axis.get_xlim(), quiver_axis.get_xlim())
+        np.testing.assert_allclose(quick_plot._slice_sliders["y"].val, 0.5e6)
+        quick_plot._slice_sliders["y"].set_val(0.25e6)
         for positions in quick_plot._slice_positions.values():
             np.testing.assert_allclose(positions["y"], 0.25)
         assert quick_plot.plots[("flux",)][0][0] == "quiver_3d"

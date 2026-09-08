@@ -823,19 +823,20 @@ class QuickPlot:
         s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = midplane_slices(
             variable, t, self._unstructured_grids[key], self._slice_positions[key]
         )
+        sf = self.spatial_factor
         for values, xx, yy, zz in ((s1, xx1, yy1, zz1), (s2, xx2, yy2, zz2)):
             ax.plot_surface(
-                xx,
-                yy,
-                zz,
+                xx * sf,
+                yy * sf,
+                zz * sf,
                 facecolors=self._slice_facecolors(values, cm.viridis, norm),
                 rstride=1,
                 cstride=1,
                 shade=False,
             )
-        ax.set_xlabel("$x$")
-        ax.set_ylabel("$y$")
-        ax.set_zlabel("$z$")
+        ax.set_xlabel(f"$x$ [{self.spatial_unit}]")
+        ax.set_ylabel(f"$y$ [{self.spatial_unit}]")
+        ax.set_zlabel(f"$z$ [{self.spatial_unit}]")
         self.plots[key][0][0] = (s1, s2)
         return cm.ScalarMappable(norm=norm, cmap=cm.viridis)
 
@@ -943,32 +944,34 @@ class QuickPlot:
                 )
                 grid_3d = self._unstructured_grids[key_3d]
                 positions = self._slice_positions[key_3d]
-                y_pts = grid_3d["y"]
-                z_pts = grid_3d["z"]
+                # sliders read in the display unit; positions stay in metres
+                sf = self.spatial_factor
+                y_pts = grid_3d["y"] * sf
+                z_pts = grid_3d["z"] * sf
 
                 ax_y = plt.axes([0.315, 0.04, 0.37, 0.025], facecolor=axcolor)
                 self._slice_sliders["y"] = Slider(
                     ax_y,
-                    "$y$ slice",
+                    f"$y$ slice [{self.spatial_unit}]",
                     y_pts[0],
                     y_pts[-1],
-                    valinit=positions["y"],
+                    valinit=positions["y"] * sf,
                     color="#ff7f0e",
                 )
                 ax_z = plt.axes([0.315, 0.005, 0.37, 0.025], facecolor=axcolor)
                 self._slice_sliders["z"] = Slider(
                     ax_z,
-                    "$z$ slice",
+                    f"$z$ slice [{self.spatial_unit}]",
                     z_pts[0],
                     z_pts[-1],
-                    valinit=positions["z"],
+                    valinit=positions["z"] * sf,
                     color="#2ca02c",
                 )
 
                 def _on_slice_change(_):
                     for slice_positions in self._slice_positions.values():
-                        slice_positions["y"] = self._slice_sliders["y"].val
-                        slice_positions["z"] = self._slice_sliders["z"].val
+                        slice_positions["y"] = self._slice_sliders["y"].val / sf
+                        slice_positions["z"] = self._slice_sliders["z"].val / sf
                     self.slider_update(self.slider.val)
 
                 self._slice_sliders["y"].on_changed(_on_slice_change)
