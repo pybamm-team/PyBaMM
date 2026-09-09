@@ -1143,6 +1143,41 @@ class TestSimulationExperiment:
             atol=5e-5,
         )
 
+    def test_unified_solution_termination_uses_concrete_step_event_name(self):
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Charge at 1 A until 4.1 V",
+                    pybamm.step.Voltage(4.1, termination=["0.5 A", "0.1 A"]),
+                )
+            ]
+        )
+
+        legacy_sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="legacy",
+        )
+        unified_sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(),
+            experiment_model_mode="unified",
+        )
+
+        legacy_sol = legacy_sim.solve(calc_esoh=False, initial_soc=0.2)
+        unified_sol = unified_sim.solve(calc_esoh=False, initial_soc=0.2)
+
+        expected = "event: abs(Current [A]) < 0.5 [A] [experiment]"
+        legacy_hold = legacy_sol.cycles[0].steps[1]
+        unified_hold = unified_sol.cycles[0].steps[1]
+
+        assert legacy_sol.termination == expected
+        assert unified_sol.termination == expected
+        assert legacy_hold.termination == expected
+        assert unified_hold.termination == expected
+
     def test_run_unified_resistance_branch_is_safe_when_inactive_at_zero_current(self):
         experiment = pybamm.Experiment(
             [("Rest for 5 minutes", "Discharge at 4 Ohm for 5 minutes")]
@@ -2205,6 +2240,28 @@ class TestSimulationExperiment:
 
         assert decoded == "event: Negative stoichiometry cut-off [experiment]"
 
+    def test_step_termination_event_candidates_legacy_use_reconstructed_events(self):
+        experiment = pybamm.Experiment(
+            [pybamm.step.current(1, duration=3600, termination=["2.5V", "0.05A"])]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            experiment_model_mode="legacy",
+        )
+        sim.build_for_experiment()
+        step = sim.experiment.steps[0]
+        model = sim.steps_to_built_models[step.basic_repr()]
+
+        candidates = sim._get_step_termination_event_candidates(step, model, {})
+
+        expected = [
+            "Voltage < 2.5 [V] [experiment]",
+            "abs(Current [A]) < 0.05 [A] [experiment]",
+        ]
+        assert [name for name, _event, _term in candidates] == expected
+        assert [event.name for _name, event, _term in candidates] == expected
+
     def test_decode_combined_step_termination_returns_original_when_no_events_match(
         self,
     ):
@@ -2224,7 +2281,7 @@ class TestSimulationExperiment:
             step_solution,
             step,
             sim._built_experiment_model,
-            {},
+            {sim._STEP_INDEX_INPUT: sim._experiment_step_indices[0]},
         )
 
         assert decoded == step_solution.termination
