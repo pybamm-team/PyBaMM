@@ -45,12 +45,20 @@ def domain_size(domain: list[str] | str):
     fixed_domain_sizes = {
         "current collector": 3,
         "negative particle": 5,
+        "negative primary particle": 5,
+        "negative secondary particle": 5,
         "positive particle": 7,
+        "positive primary particle": 7,
+        "positive secondary particle": 7,
         "negative electrode": 11,
         "separator": 13,
         "positive electrode": 17,
         "negative particle size": 19,
+        "negative primary particle size": 19,
+        "negative secondary particle size": 19,
         "positive particle size": 23,
+        "positive primary particle size": 23,
+        "positive secondary particle size": 23,
     }
     if domain in [[], None]:
         size = 1
