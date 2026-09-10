@@ -237,6 +237,7 @@ from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
 from .plotting.plot_3d_cross_section import plot_3d_cross_section
 from .plotting.plot_3d_heatmap import plot_3d_heatmap
+from .plotting.plot_vtk import VTKQuickPlot
 from .plotting.nyquist_plot import nyquist_plot
 
 # Simulation
