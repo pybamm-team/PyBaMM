@@ -201,7 +201,8 @@ class VTKQuickPlot:
 
     Parameters
     ----------
-    solutions : :class:`pybamm.Solution` or list thereof
+    solutions : :class:`pybamm.Solution` or :class:`pybamm.Simulation`
+        The solution to plot; a single-element list is also accepted.
     output_variables : list of str
     options : dict, optional
         Per-variable options keyed by variable name.  Each value is a dict
@@ -224,21 +225,29 @@ class VTKQuickPlot:
 
     def __init__(
         self,
-        solutions: pybamm.Solution | pybamm.Simulation | list[pybamm.Solution],
+        solutions: pybamm.Solution
+        | pybamm.Simulation
+        | list[pybamm.Solution | pybamm.Simulation],
         output_variables: str | list[str] | None = None,
         options: dict[str, dict[str, Any] | list[dict[str, Any]]] | None = None,
         interpolate_time: bool = False,
     ):
-        if isinstance(solutions, pybamm.Simulation):
-            solutions = solutions.solution
-        if isinstance(solutions, pybamm.Solution):
-            solutions = [solutions]
+        solutions = pybamm.QuickPlot.preprocess_solutions(solutions)
+        if len(solutions) != 1:
+            raise pybamm.OptionError(
+                f"VTKQuickPlot plots a single solution, but {len(solutions)} were "
+                "given. Use pybamm.QuickPlot to compare solutions."
+            )
         self.solution = solutions[0]
 
         if output_variables is None:
             output_variables = list(self.solution.all_models[0].variables.keys())[:1]
         if isinstance(output_variables, str):
             output_variables = [output_variables]
+        if len(output_variables) == 0:
+            raise pybamm.OptionError(
+                "VTKQuickPlot needs at least one output variable to plot."
+            )
 
         self.spatial_names = []
         self.spatial_vars = []
@@ -306,8 +315,12 @@ class VTKQuickPlot:
             pv.initialise()
             data = np.column_stack([_data_at_time(pv, t).ravel() for t in self.t_pts])
             spatial_data[name] = data
-            spatial_mins[name] = float(data.min())
-            spatial_maxs[name] = float(data.max())
+            finite = data[np.isfinite(data)]
+            if finite.size == 0:
+                raise ValueError(f"'{name}' has no finite values to plot")
+            # NaN cells must not swallow the colour range of the whole panel
+            spatial_mins[name] = float(finite.min())
+            spatial_maxs[name] = float(finite.max())
 
         # --- Precompute scalar (0D) data ---
         scalar_data = {}

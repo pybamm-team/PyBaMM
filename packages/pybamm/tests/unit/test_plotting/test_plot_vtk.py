@@ -373,6 +373,37 @@ class TestVTKQuickPlot:
         values = mapped_data.GetPointData().GetArray("field")
         assert values.GetValue(0) == pytest.approx(3.0)
 
+    def test_unwraps_simulation_list_and_rejects_several_solutions(self):
+        solution, _ = _cell_solution()
+        simulation = pybamm.Simulation(solution.all_models[0])
+        simulation._solution = solution
+        # BatchStudy.plot hands over a list of simulations
+        assert VTKQuickPlot([simulation], "field").solution is solution
+        with pytest.raises(pybamm.OptionError, match="single solution"):
+            VTKQuickPlot([solution, solution], "field")
+        with pytest.raises(TypeError, match="at least 1 solution"):
+            VTKQuickPlot([], "field")
+        with pytest.raises(pybamm.OptionError, match="at least one output variable"):
+            VTKQuickPlot(solution, [])
+
+    def test_nan_cells_do_not_poison_colour_range(self):
+        solution, _ = _cell_solution()
+        model = solution.all_models[0]
+        # the time interpolator spreads a NaN to its neighbouring frames, so
+        # leave finite frames at both ends
+        t = np.arange(5.0)
+        y = np.asfortranarray([[1.0, 2.0, np.nan, 4.0, 5.0], 10.0 * np.arange(1.0, 6)])
+        plot = VTKQuickPlot(pybamm.Solution(t, y, model, {}), "field")
+        plot.dynamic_plot(show_plot=False)
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        mapper = _first_actor(renderers.GetNextItem()).GetMapper()
+        np.testing.assert_allclose(mapper.GetScalarRange(), (1.0, 5.0))
+        y[0] = np.nan
+        plot = VTKQuickPlot(pybamm.Solution(t, y, model, {}), "field")
+        with pytest.raises(ValueError, match="no finite values"):
+            plot.dynamic_plot(show_plot=False)
+
     def test_rejects_vector_field_and_structured_variables(self):
         solution = _triangle_solution()
         with pytest.raises(pybamm.OptionError, match="cannot plot 'vector'"):
