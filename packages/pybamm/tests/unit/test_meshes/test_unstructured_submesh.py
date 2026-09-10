@@ -1542,3 +1542,42 @@ class TestContainsPoints:
         mesh = UnstructuredSubMesh(nodes, elements)
         mesh._cached_boundary_loops = None
         assert mesh.contains_points(np.array([[0.5, 0.5]])) is None
+
+    def test_3d_surface_points_are_inside(self):
+        nodes, elements = _unit_cube_five_tets()
+        mesh = UnstructuredSubMesh(nodes, elements)
+        # face centre, edge midpoint, corner, and a point just outside a face
+        points = np.array(
+            [[1.0, 0.5, 0.5], [0.5, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0 + 1e-3, 0.5, 0.5]]
+        )
+        np.testing.assert_array_equal(
+            mesh.contains_points(points), [True, True, True, False]
+        )
+
+    def test_3d_chunked_evaluation_matches_single_chunk(self, monkeypatch):
+        from pybamm.meshes import unstructured_submesh
+
+        nodes, elements = _unit_cube_five_tets()
+        mesh = UnstructuredSubMesh(nodes, elements)
+        rng = np.random.default_rng(0)
+        points = rng.uniform(-0.5, 1.5, size=(37, 3))
+        expected = mesh.contains_points_3d(points)
+        # a chunk of a single query point must reproduce the vectorised result
+        monkeypatch.setattr(unstructured_submesh, "_CONTAINS_POINTS_CHUNK_PAIRS", 1)
+        np.testing.assert_array_equal(mesh.contains_points_3d(points), expected)
+        np.testing.assert_array_equal(
+            expected, np.all((points >= 0) & (points <= 1), axis=1)
+        )
+
+    def test_mask_is_cached_per_query_grid(self):
+        nodes, elements = _unit_cube_five_tets()
+        mesh = UnstructuredSubMesh(nodes, elements)
+        points = np.array([[0.5, 0.5, 0.5], [2.0, 2.0, 2.0]])
+        first = mesh.contains_points(points)
+        assert len(mesh._contains_points_cache) == 1
+        first[:] = False
+        # the cache hands out copies, so callers cannot corrupt it
+        np.testing.assert_array_equal(mesh.contains_points(points), [True, False])
+        assert len(mesh._contains_points_cache) == 1
+        mesh.contains_points(points + 0.1)
+        assert len(mesh._contains_points_cache) == 2
