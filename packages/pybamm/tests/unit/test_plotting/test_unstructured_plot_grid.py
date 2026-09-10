@@ -1,7 +1,11 @@
+from types import SimpleNamespace
+
 import casadi
 import numpy as np
+import pytest
 
 import pybamm
+from pybamm.plotting.quick_plot import ax_max, ax_min
 from pybamm.plotting.unstructured_plot_grid import (
     default_slice_positions,
     midplane_slices,
@@ -63,6 +67,61 @@ def _unstructured_solution(dim, n):
     return pybamm.Solution(t_sol, y_sol, model_disc, {}), components
 
 
+def _triangle_vector_solution():
+    """Vector field ``(u, u)`` with ``u = 1 + t`` on one triangle, so the
+    bounding-box display grid samples points outside the domain."""
+    mesh = pybamm.UnstructuredSubMesh(
+        np.array([[0.0, 0.0], [2.0, 0.0], [0.0, 1.0]]), np.array([[0, 1, 2]])
+    )
+    model = pybamm.BaseModel()
+    x = pybamm.SpatialVariable("x", domain="mesh")
+    z = pybamm.SpatialVariable("z", domain="mesh")
+    model._geometry = {
+        "mesh": {
+            x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
+            z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+        }
+    }
+    field = pybamm.StateVector(slice(0, 1), domain="mesh")
+    field.mesh = mesh
+    vector = pybamm.VectorField(field, field)
+    vector.mesh = mesh
+    model.variables = {"vector": vector}
+    model.update_processed_variables(model.variables)
+    return pybamm.Solution(
+        np.array([0.0, 1.0]), np.asfortranarray([[1.0, 2.0]]), model, {}
+    )
+
+
+def _node_solution():
+    """Node-centred (scikit-fem style) variable on one tetrahedron."""
+    mesh = SimpleNamespace(
+        nodes=np.array(
+            [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+        ),
+        elements=np.array([[0, 1, 2, 3]]),
+        dimension=3,
+        npts=4,
+    )
+    model = pybamm.BaseModel()
+    xyz = [pybamm.SpatialVariable(axis, domain="mesh") for axis in "xyz"]
+    model._geometry = {
+        "mesh": {var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)} for var in xyz}
+    }
+    field = pybamm.StateVector(slice(0, 4), domain="mesh")
+    field.mesh = mesh
+    model.variables = {"node field": field}
+    model.update_processed_variables(model.variables)
+    t = np.array([0.0, 1.0])
+    y = np.asfortranarray(np.arange(8.0).reshape(4, 2))
+    solution = pybamm.Solution(t, y, model, {})
+    casadi_field, field, _ = solution._convert_to_casadi(field, {}, y.shape)
+    solution._variables["node field"] = pybamm.ProcessedVariableUnstructured(
+        "node field", [field], [casadi_field], solution
+    )
+    return solution
+
+
 class TestUnstructuredPlotGrid:
     def test_plot_grid(self):
         solution, _ = _unstructured_solution(2, 4)
@@ -89,9 +148,9 @@ class TestUnstructuredPlotGrid:
             assert arr.shape == (12, 12)
         np.testing.assert_allclose(yy1, 0.5)
         np.testing.assert_allclose(zz2, 0.5)
+        # the grid spans the closed unit box, so every sample is in the domain
+        assert np.isfinite(s1).all() and np.isfinite(s2).all()
         # u = 2x at t = 1 is exact between the first and last centroid
-        # (x in [1/6, 5/6]); outside the domain the slices are NaN
-        assert np.isfinite(s1).mean() > 0.5
         for values, xx in ((s1, xx1), (s2, xx2)):
             interior = (xx > 0.2) & (xx < 0.8)
             np.testing.assert_allclose(values[interior], 2 * xx[interior], atol=1e-8)
@@ -158,6 +217,52 @@ class TestQuickPlotUnstructured:
         quick_plot.slider_update(1.0)
         s1, _ = quick_plot.plots[("u",)][0][0]
         assert np.isfinite(s1).any()
+        # the colorbar follows the per-frame range of the slices
+        data = solution["u"](1.0)
+        norm = quick_plot.colorbars[("u",)].norm
+        np.testing.assert_allclose([norm.vmin, norm.vmax], [ax_min(data), ax_max(data)])
         # the 2D wireframe overlay is a no-op on a 3D mesh (returns before drawing)
         assert quick_plot._overlay_mesh_wireframe(None, solution["u"]) is None
         pybamm.close_plots()
+
+    def test_fixed_limits_use_cell_values(self):
+        solution, _ = _unstructured_solution(2, 4)
+        quick_plot = pybamm.QuickPlot(solution, ["u"])
+        # padded extrema of the raw cell values over all times, not of a
+        # display-grid interpolation
+        cell_values = solution["u"](solution.t)
+        np.testing.assert_allclose(
+            quick_plot.variable_limits[("u",)],
+            (ax_min(cell_values), ax_max(cell_values)),
+        )
+        pybamm.close_plots()
+
+    def test_vector_field_colour_limits(self):
+        solution, (u_val, w_val) = _unstructured_solution(2, 4)
+        quick_plot = pybamm.QuickPlot(solution, ["flux"])
+        quick_plot.plot(0.5)
+        norm = quick_plot.plots[("flux",)][0][0].norm
+        np.testing.assert_allclose([norm.vmin, norm.vmax], [0, np.hypot(u_val, w_val)])
+        quick_plot = pybamm.QuickPlot(
+            solution, ["flux"], variable_limits={"flux": (1.0, 5.0)}
+        )
+        quick_plot.plot(0.5)
+        norm = quick_plot.plots[("flux",)][0][0].norm
+        np.testing.assert_allclose([norm.vmin, norm.vmax], [1.0, 5.0])
+        pybamm.close_plots()
+
+    def test_quiver_colour_scale_ignores_samples_outside_domain(self):
+        solution = _triangle_vector_solution()
+        quick_plot = pybamm.QuickPlot(solution, ["vector"])
+        quick_plot.plot(0.5)
+        grid = quick_plot._unstructured_grids[("vector",)]
+        _, _, U, _ = quiver_data(solution["vector"], 0.5, grid)
+        assert np.isnan(U).any()
+        norm = quick_plot.plots[("vector",)][0][0].norm
+        np.testing.assert_allclose(norm.vmax, 1.5 * np.sqrt(2))
+        pybamm.close_plots()
+
+    def test_3d_node_centred_variable_points_to_vtk(self):
+        solution = _node_solution()
+        with pytest.raises(NotImplementedError, match="VTKQuickPlot"):
+            pybamm.QuickPlot(solution, ["node field"])

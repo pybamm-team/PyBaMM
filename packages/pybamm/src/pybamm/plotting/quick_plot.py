@@ -348,6 +348,14 @@ class QuickPlot:
                     self._slice_positions[variable_tuple] = default_slice_positions(
                         first_variable
                     )
+            elif first_variable.dimensions == 3:
+                raise NotImplementedError(
+                    f"QuickPlot cannot plot '{variable_tuple[0]}': 3D plotting is "
+                    "only supported for variables on unstructured finite-volume "
+                    "meshes. Use pybamm.VTKQuickPlot (or "
+                    "pybamm.dynamic_plot(..., backend='vtk')) for node-centred "
+                    "unstructured variables."
+                )
 
             # Set the x variable (i.e. "x" or "r" for any one-dimensional variables)
             if first_variable.dimensions == 1:
@@ -487,13 +495,19 @@ class QuickPlot:
 
             # Get min and max variable values
             if self.is_vector_field.get(key, False):
-                var_min, var_max = None, None
+                # arrows are coloured by magnitude: keep user limits, else tight
+                if isinstance(self.variable_limits[key], str):
+                    var_min, var_max = None, None
+                else:
+                    var_min, var_max = self.variable_limits[key]
             elif self.variable_limits[key] == "fixed":
                 # fixed variable limits: calculate "globlal" min and max
-                # 3D variables are sampled on their own cells, not a display grid
+                # unstructured variables are sampled on their cells, not a display grid
                 spatial_vars = (
                     {}
-                    if variable_lists[0][0].dimensions == 3
+                    if isinstance(
+                        variable_lists[0][0], pybamm.ProcessedVariableUnstructuredFVM
+                    )
                     else self.spatial_variable_dict[key]
                 )
                 var_min = np.min(
@@ -791,7 +805,12 @@ class QuickPlot:
 
         X, Z, U, W = quiver_data(variable, t, self._unstructured_grids[key])
         mag = np.sqrt(U**2 + W**2)
-        mag_max = np.max(mag) if np.max(mag) > 0 else 1.0
+        vmin, vmax = self.variable_limits[key]
+        if vmin is None:
+            vmin = 0.0
+        if vmax is None:
+            # samples outside the domain are NaN, so reduce with nanmax
+            vmax = float(np.nanmax(mag)) if np.any(mag > 0) else 1.0
         safe_mag = np.where(mag > 0, mag, 1.0)
         ax.set_xlabel(f"x [{self.spatial_unit}]")
         ax.set_ylabel(f"z [{self.spatial_unit}]")
@@ -802,7 +821,7 @@ class QuickPlot:
             W / safe_mag,
             mag,
             cmap="viridis",
-            norm=colors.Normalize(vmin=0, vmax=mag_max),
+            norm=colors.Normalize(vmin=vmin, vmax=vmax),
             scale=X.shape[0] * 1.2,
             scale_units="width",
             width=0.004,
@@ -1060,9 +1079,11 @@ class QuickPlot:
                     )
             elif self.variables[key][0][0].dimensions == 3:
                 ax.clear()
-                self._plot_3d_slices(
+                mappable = self._plot_3d_slices(
                     ax, self.variables[key][0][0], time_in_seconds, key
                 )
+                if key in self.colorbars:
+                    self.colorbars[key].update_normal(mappable)
                 title = split_long_string(key[0]) if len(key) == 1 else ""
                 ax.set_title(title, fontsize="medium")
 
