@@ -188,8 +188,16 @@ class LossActiveMaterial(BaseModel):
         V = self.domain_param.L * self.param.A_cc
 
         self.rhs = {
-            # minus sign because eps_solid is decreasing and LLI measures positive
-            lli_due_to_lam: -V * pybamm.x_average(c_s_rav * deps_solid_dt),
+            # minus sign because eps_solid is decreasing and LLI measures positive.
+            # ``lli_due_to_lam`` is a scalar (mol of lithium lost from the whole
+            # cell), so the integrand must be averaged over BOTH the through-cell
+            # direction and the current collector. ``x_average`` alone leaves a
+            # quantity still indexed by the current-collector mesh, which
+            # mismatches the scalar initial condition when
+            # ``dimensionality > 0``. ``yz_average`` is the identity for the
+            # 0-D current collector, so 1-D models are unaffected.
+            lli_due_to_lam: -V
+            * pybamm.yz_average(pybamm.x_average(c_s_rav * deps_solid_dt)),
             eps_solid: deps_solid_dt,
         }
 
