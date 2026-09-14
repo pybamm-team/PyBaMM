@@ -1116,18 +1116,20 @@ class BaseModel:
         """Find all the instances of `typ` in the model"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.fixed_input_parameters
-        unpacker = pybamm.SymbolUnpacker(typ)
         all_items = chain(
+            self.rhs.keys(),
             self.rhs.values(),
+            self.algebraic.keys(),
             self.algebraic.values(),
+            self.initial_conditions.keys(),
             self.initial_conditions.values(),
+            self.boundary_conditions.keys(),
             (x[side][0] for x in self.boundary_conditions.values() for side in x),
             self.variables.values(),
             fixed_input_parameters,
             (event.expression for event in self.events),
         )
-        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
-        return list(all_input_parameters)
+        return self._find_symbols_in_items(typ, all_items)
 
     def _find_symbols_by_submodel(
         self, typ, submodel, fixed_input_parameters=None
@@ -1135,11 +1137,14 @@ class BaseModel:
         """Find all the instances of `typ` in the submodel"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.submodels[submodel].fixed_input_parameters
-        unpacker = pybamm.SymbolUnpacker(typ)
         all_items = chain(
+            self.submodels[submodel].rhs.keys(),
             self.submodels[submodel].rhs.values(),
+            self.submodels[submodel].algebraic.keys(),
             self.submodels[submodel].algebraic.values(),
+            self.submodels[submodel].initial_conditions.keys(),
             self.submodels[submodel].initial_conditions.values(),
+            self.submodels[submodel].boundary_conditions.keys(),
             (
                 x[side][0]
                 for x in self.submodels[submodel].boundary_conditions.values()
@@ -1149,8 +1154,24 @@ class BaseModel:
             fixed_input_parameters,
             (event.expression for event in self.submodels[submodel].events),
         )
-        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
-        return list(all_input_parameters)
+        return self._find_symbols_in_items(typ, all_items)
+
+    @staticmethod
+    def _find_symbols_in_items(typ, all_items) -> list[pybamm.Symbol]:
+        all_items = list(all_items)
+        variables = pybamm.SymbolUnpacker(pybamm.Variable).unpack_list_of_symbols(
+            all_items
+        )
+        variable_metadata = [
+            metadata
+            for variable in variables
+            for metadata in (variable.scale, variable.reference, *variable.bounds)
+        ]
+        return list(
+            pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(
+                all_items + variable_metadata
+            )
+        )
 
     def new_copy(self):
         """
