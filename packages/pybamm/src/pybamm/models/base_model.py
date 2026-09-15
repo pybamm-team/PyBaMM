@@ -1129,7 +1129,7 @@ class BaseModel:
             fixed_input_parameters,
             (event.expression for event in self.events),
         )
-        return self._find_symbols_in_items(typ, all_items)
+        return list(pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items))
 
     def _find_symbols_by_submodel(
         self, typ, submodel, fixed_input_parameters=None
@@ -1154,24 +1154,7 @@ class BaseModel:
             fixed_input_parameters,
             (event.expression for event in self.submodels[submodel].events),
         )
-        return self._find_symbols_in_items(typ, all_items)
-
-    @staticmethod
-    def _find_symbols_in_items(typ, all_items) -> list[pybamm.Symbol]:
-        all_items = list(all_items)
-        variables = pybamm.SymbolUnpacker(pybamm.Variable).unpack_list_of_symbols(
-            all_items
-        )
-        variable_metadata = [
-            metadata
-            for variable in variables
-            for metadata in (variable.scale, variable.reference, *variable.bounds)
-        ]
-        return list(
-            pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(
-                all_items + variable_metadata
-            )
-        )
+        return list(pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items))
 
     def new_copy(self):
         """
