@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+- `FiniteVolume` node-to-edge shifts now use the true node spacing instead of weights that assume a uniform mesh, so the exterior edge values agree with `boundary_value`. On a non-uniform mesh they did not, which broke lithium conservation wherever a flux is imposed as a gradient divided by a surface value, as the Fickian particle does: with a concentration-dependent particle diffusivity on an `Exponential1DSubMesh`, `ORegan2022` gained 26% of its particle lithium over three 1C cycles. Uniform-mesh results are unchanged. ([#5755](https://github.com/pybamm-team/PyBaMM/pull/5755))
 - `BaseModel.parameters` now includes parameter symbols stored in `Variable` scale, reference, and bounds metadata. ([#5753](https://github.com/pybamm-team/PyBaMM/pull/5753))
 - The `integration` nox session no longer installs the `pydiffsol` extra on macOS Intel CI runners, where it has no working build. ([#5726](https://github.com/pybamm-team/PyBaMM/pull/5726))
 
