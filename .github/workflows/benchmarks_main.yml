@@ -33,7 +33,7 @@ jobs:
   build_solver:
     permissions:
       contents: read
-    uses: ./.github/workflows/_build_solver_wheels.yml
+    uses: $/.github/workflows/_build_solver_wheels.yml
     with:
       cache_wheels: true
       build_sdist: false

@@ -128,7 +128,7 @@ jobs:
     # get no token scope).
     permissions:
       contents: read
-    uses: ./.github/workflows/_build_solver_wheels.yml
+    uses: $/.github/workflows/_build_solver_wheels.yml
     with:
       cache_wheels: true
       build_sdist: false
@@ -145,7 +145,7 @@ jobs:
     name: Tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: unit
       legs: >-
@@ -166,7 +166,7 @@ jobs:
     name: Tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: unit
       legs: >-
@@ -179,7 +179,7 @@ jobs:
     name: Coverage
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
@@ -193,7 +193,7 @@ jobs:
     name: Integration tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: integration
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
@@ -241,7 +241,7 @@ jobs:
     name: Doctests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: "doctests docs"
       # Full clone: the docs build's sphinx_last_updated_by_git needs the history.
@@ -254,7 +254,7 @@ jobs:
     name: Example notebooks
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: examples
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
@@ -265,7 +265,7 @@ jobs:
     name: Example scripts
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: scripts
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
@@ -276,7 +276,7 @@ jobs:
     name: Memory tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: memory
       texlive: false
