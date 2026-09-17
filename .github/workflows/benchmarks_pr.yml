@@ -50,7 +50,7 @@ jobs:
     if: needs.changes.outputs.benchmark == 'true'
     permissions:
       contents: read
-    uses: ./.github/workflows/_build_solver_wheels.yml
+    uses: $/.github/workflows/_build_solver_wheels.yml
     with:
       cache_wheels: true
       build_sdist: false
@@ -116,7 +116,7 @@ jobs:
     if: needs.changes.outputs.benchmark == 'true'
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: benchmark-memory
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
