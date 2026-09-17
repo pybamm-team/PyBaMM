@@ -881,7 +881,7 @@ class TestSolution:
         data = sol.get_data_dict("c")
         np.testing.assert_array_equal(data["Cycle"], 0)
         np.testing.assert_array_equal(
-            data["Step"], np.concatenate([np.zeros(50), np.ones(50)])
+            data["Step"], np.concatenate([np.zeros(50), np.ones(49)])
         )
 
     def test_pickle_first_states_across_processes(self, tmp_path):

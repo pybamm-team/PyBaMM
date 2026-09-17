@@ -11,6 +11,7 @@
 *.pkl
 .claude
 .local
+.benchmarks
 
 # don't ignore important .txt and .csv files
 !requirements*
@@ -19,7 +20,6 @@
 !src/pybamm/CITATIONS.bib
 !src/pybamm/input/**/*.csv
 !tests/unit/test_parameters/*.csv
-!benchmarks/benchmark_images/*.png
 
 # running files
 *.pyc
@@ -37,6 +37,10 @@ packages/pybamm/src/pybamm/_version.py
 
 # Benchmark artifact (dropped in cwd; lands at repo root when solver tests run from here)
 performance_results.json
+
+# Benchmark image build inputs/outputs (see tests/benchmarks/Dockerfile)
+solver-wheels/
+benchmark-image.tar.zst
 
 # Sphinx build files
 docs/_build/
@@ -70,6 +74,9 @@ dist/
 .coverage
 coverage.xml
 htmlcov/
+
+# local secrets
+.env
 
 # virtual environment
 .venv

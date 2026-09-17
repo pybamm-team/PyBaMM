@@ -3,6 +3,12 @@ rules:
   # Environments add unnecessary noise for these high-frequency workflows.
   secrets-outside-env:
     ignore:
-      - periodic_benchmarks.yml
       - run_periodic_tests.yml
       - test_on_push.yml
+  # The only way to benchmark a fork PR: `pull_request` gets no secrets, so the
+  # Bencher key has to live in a `workflow_run` follow-up. That job never runs the
+  # PR's code — it loads and pushes an image, and Bencher's sandboxed runner
+  # executes it. See benchmarks_track.yml.
+  dangerous-triggers:
+    ignore:
+      - benchmarks_track.yml

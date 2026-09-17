@@ -330,6 +330,32 @@ class SpatialMethod:
 
         raise NotImplementedError
 
+    def set_internal_bcs_for_concat(self, disc, var, children, outer_bcs):
+        """
+        Hook for spatial methods that own their internal-BC logic for
+        concatenated variables (e.g. graph topologies on unstructured
+        meshes).
+
+        Parameters
+        ----------
+        disc : :class:`pybamm.Discretisation`
+            The discretisation, for processing child symbols
+        var : :class:`pybamm.Concatenation`
+            The concatenated variable whose boundary conditions are being set
+        children : list of :class:`pybamm.Symbol`
+            The orphaned children of ``var``
+        outer_bcs : dict
+            The user-supplied boundary conditions for ``var``,
+            ``{side: (value, type)}``
+
+        Returns
+        -------
+        dict or None
+            ``{child: {side: (value, type)}}`` to replace the default
+            1D-stack pairwise routine, or ``None`` to use it.
+        """
+        return
+
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
         Returns the boundary value or flux using the appropriate expression for the
