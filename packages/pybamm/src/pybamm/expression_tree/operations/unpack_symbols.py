@@ -97,6 +97,8 @@ class SymbolUnpacker:
             return {symbol}
 
         children = symbol.children
+        if isinstance(symbol, pybamm.Variable):
+            children = (*children, symbol.scale, symbol.reference, *symbol.bounds)
 
         if len(children) == 0:
             # not the right class and no children so the class to find doesn't appear
