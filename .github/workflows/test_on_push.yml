@@ -36,9 +36,13 @@ jobs:
       solver: ${{ steps.filter.outputs.solver }}
       pybamm: ${{ steps.filter.outputs.pybamm }}
       docs: ${{ steps.filter.outputs.docs }}
+      model_zoo: ${{ steps.filter.outputs.model_zoo }}
       # Routing decisions, resolved once here rather than repeated in every job's `if`.
       run_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
       run_docs_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
+      # A core change runs the zoo too, so an upstream regression shows up here
+      # rather than in a contributor's next pull request.
+      run_zoo_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.model_zoo == 'true' }}
       # Solver-wheel platforms each scenario's downstream jobs actually consume.
       platforms: ${{ steps.route.outputs.platforms }}
       macos_runners: ${{ steps.route.outputs.macos_runners }}
@@ -65,6 +69,16 @@ jobs:
               - '.github/workflows/_nox.yml'
             docs:
               - 'docs/**'
+            model_zoo:
+              - 'packages/pybamm-model-zoo/**'
+              - '.github/workflows/test_on_push.yml'
+              # Ownership is a contract check, so dropping an owner line has to
+              # run the check that would have caught it.
+              - '.github/CODEOWNERS'
+              # The weekly job consumes the matrix and the docs generator, and
+              # nothing else validates it on a pull request.
+              - '.github/workflows/model_zoo_status.yml'
+              - 'docs/source/model_zoo/**'
 
       # Map "what changed" to the solver wheels to build: solver PRs validate every
       # platform; pybamm/push need the sparse matrix's runners; docs-only needs Linux.
@@ -121,7 +135,7 @@ jobs:
   # old standalone unit/integration workflows.
   build_solver:
     needs: changes
-    if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
+    if: ${{ needs.changes.outputs.run_docs_tests == 'true' || needs.changes.outputs.run_zoo_tests == 'true' }}
     name: Solver wheels
     # Pass contents:read down to the called workflow (this workflow's top-level
     # permissions are {}, so the reusable workflow's checkout would otherwise
@@ -282,6 +296,38 @@ jobs:
       texlive: false
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
+  # The `core` tier: models the maintainers have adopted, so a failure blocks a
+  # merge exactly as a core test failure would.
+  run_zoo_gating:
+    needs: [changes, build_solver]
+    if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
+    name: Model zoo (core tier)
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_nox.yml
+    with:
+      sessions: zoo-gating
+      texlive: false
+      fetch_depth: 0
+      timeout_minutes: 30
+      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+
+  # Advisory like run_unit_tests_advisory above: `community` reports red without
+  # blocking. The gate above covers `core`, so this runs only what it does not.
+  run_zoo_tests_advisory:
+    needs: [changes, build_solver]
+    if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
+    name: Model zoo
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_nox.yml
+    with:
+      sessions: zoo-community
+      texlive: false
+      fetch_depth: 0
+      timeout_minutes: 60
+      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+
   # Single required check for branch protection. Green when every gated job either
   # succeeded or was routed around by `changes`; red on any failure or cancellation.
   ci_gate:
@@ -298,6 +344,7 @@ jobs:
       - run_example_tests
       - run_scripts_tests
       - run_memory_tests
+      - run_zoo_gating
     runs-on: ubuntu-latest
     permissions: {}
     name: CI gate
