@@ -277,7 +277,7 @@ class Serialise:
         out using the `save_model()` option.
 
         Warning: This only loads in discretised models. If you wish to make edits to the
-        model or initial conditions, a new model will need to be constructed seperately.
+        model or initial conditions, a new model will need to be constructed separately.
 
         Parameters
         ----------
@@ -1634,9 +1634,9 @@ class Serialise:
         Converts dictionaries which contain pybamm classes as keys
         into a json serialisable format.
 
-        Dictionary keys present as pybamm objects are given a seperate key
+        Dictionary keys present as pybamm objects are given a separate key
         as "symbol_<symbol name>" to store the dictionary required to reconstruct
-        a symbol, and their seperate key is used in the original dictionary. E.G:
+        a symbol, and their separate key is used in the original dictionary. E.G:
 
         {'rod':
             {SpatialVariable(name='spat_var'): {"min":0.0, "max":2.0} }
