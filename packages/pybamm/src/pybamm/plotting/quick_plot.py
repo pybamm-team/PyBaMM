@@ -6,6 +6,12 @@ from collections import defaultdict
 import numpy as np
 
 import pybamm
+from pybamm.plotting.unstructured_plot_grid import (
+    default_slice_positions,
+    midplane_slices,
+    plot_grid,
+    quiver_data,
+)
 from pybamm.util import import_optional_dependency
 
 
@@ -292,6 +298,10 @@ class QuickPlot:
         self.second_spatial_variable = {}
         self.x_first_and_y_second = {}
         self.is_y_z = {}
+        self.is_vector_field = {}
+        self._unstructured_grids = {}
+        self._slice_positions = {}
+        self._wireframes = {}
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
@@ -317,16 +327,6 @@ class QuickPlot:
             # just use the first solution to check this
             first_solution = variables[0]
             first_variable = first_solution[0]
-            if isinstance(
-                first_variable,
-                pybamm.ProcessedVariableUnstructuredFVM
-                | pybamm.ProcessedVariableVectorFieldUnstructuredFVM,
-            ):
-                raise NotImplementedError(
-                    f"QuickPlot cannot plot '{variable_tuple[0]}': variables on "
-                    "unstructured meshes have no plotting support yet. Query the "
-                    "variable at points with solution[name](t, x=..., z=...) instead."
-                )
             domain = first_variable.domain
             # check all other solutions against the first solution
             for idx, variable in enumerate(first_solution):
@@ -336,6 +336,26 @@ class QuickPlot:
                         f"'{variable_tuple[0]}' has domain '{domain}', but '{variable_tuple[idx]}' has domain '{variable.domain}'"
                     )
                 self.spatial_variable_dict[variable_tuple] = {}
+
+            if isinstance(
+                first_variable,
+                pybamm.ProcessedVariableUnstructuredFVM
+                | pybamm.ProcessedVariableVectorFieldUnstructuredFVM,
+            ):
+                # display grid and slice planes are plot state, not variable state
+                self._unstructured_grids[variable_tuple] = plot_grid(first_variable)
+                if first_variable.dimensions == 3:
+                    self._slice_positions[variable_tuple] = default_slice_positions(
+                        first_variable
+                    )
+            elif first_variable.dimensions == 3:
+                raise NotImplementedError(
+                    f"QuickPlot cannot plot '{variable_tuple[0]}': 3D plotting is "
+                    "only supported for variables on unstructured finite-volume "
+                    "meshes. Use pybamm.VTKQuickPlot (or "
+                    "pybamm.dynamic_plot(..., backend='vtk')) for node-centred "
+                    "unstructured variables."
+                )
 
             # Set the x variable (i.e. "x" or "r" for any one-dimensional variables)
             if first_variable.dimensions == 1:
@@ -349,12 +369,12 @@ class QuickPlot:
                     spatial_var_value * self.spatial_factor
                 )
 
-            elif first_variable.dimensions == 2:
-                # Don't allow 2D variables if there are multiple solutions
+            elif first_variable.dimensions in (2, 3):
+                # Don't allow 2D/3D variables if there are multiple solutions
                 if len(variables) > 1:
                     raise NotImplementedError(
-                        "Cannot plot 2D variables when comparing multiple solutions, "
-                        f"but '{variable_tuple[0]}' is 2D"
+                        "Cannot plot 2D/3D variables when comparing multiple solutions, "
+                        f"but '{variable_tuple[0]}' is {first_variable.dimensions}D"
                     )
                 # But do allow if just a single solution
                 else:
@@ -396,10 +416,19 @@ class QuickPlot:
 
             # Store variables and subplot position
             self.variables[variable_tuple] = variables
+            self.is_vector_field[variable_tuple] = getattr(
+                first_variable, "is_vector_field", False
+            )
             self.subplot_positions[variable_tuple] = (self.n_rows, self.n_cols, k + 1)
 
     def _get_spatial_var(self, key, variable, dimension):
         """Return the appropriate spatial variable(s)"""
+
+        grid = self._unstructured_grids.get(key)
+        if grid is not None:
+            names = list(grid)
+            name = names[0] if dimension == "first" else names[1]
+            return name, grid[name]
 
         # Extract name and value
         # Special case for current collector, which is 2D but in a weird way (both
@@ -413,7 +442,14 @@ class QuickPlot:
             spatial_var_value = variable.second_dim_pts
             if variable.domain[0] == "current collector":
                 domain = "current collector"
-            elif isinstance(variable, pybamm.ProcessedVariable2DFVM):
+            elif isinstance(
+                variable,
+                (
+                    pybamm.ProcessedVariable2DFVM,
+                    pybamm.ProcessedVariableUnstructuredFVM,
+                    pybamm.ProcessedVariableVectorFieldUnstructuredFVM,
+                ),
+            ):
                 domain = variable.domain[0]
             else:
                 domain = variable.domains["secondary"][0]
@@ -437,9 +473,13 @@ class QuickPlot:
             elif variable_lists[0][0].dimensions == 1:
                 x_min = self.first_spatial_variable[key][0]
                 x_max = self.first_spatial_variable[key][-1]
-            elif variable_lists[0][0].dimensions == 2:
-                # different order based on whether the domains are x-r, x-z or y-z, etc
-                if self.x_first_and_y_second[key] is False:
+            elif variable_lists[0][0].dimensions in (2, 3):
+                if variable_lists[0][0].dimensions == 3:
+                    x_min = self.first_spatial_variable[key][0]
+                    x_max = self.first_spatial_variable[key][-1]
+                    y_min = self.second_spatial_variable[key][0]
+                    y_max = self.second_spatial_variable[key][-1]
+                elif self.x_first_and_y_second[key] is False:
                     x_min = self.second_spatial_variable[key][0]
                     x_max = self.second_spatial_variable[key][-1]
                     y_min = self.first_spatial_variable[key][0]
@@ -454,9 +494,22 @@ class QuickPlot:
                 self.axis_limits[key] = [x_min, x_max, y_min, y_max]
 
             # Get min and max variable values
-            if self.variable_limits[key] == "fixed":
+            if self.is_vector_field.get(key, False):
+                # arrows are coloured by magnitude: keep user limits, else tight
+                if isinstance(self.variable_limits[key], str):
+                    var_min, var_max = None, None
+                else:
+                    var_min, var_max = self.variable_limits[key]
+            elif self.variable_limits[key] == "fixed":
                 # fixed variable limits: calculate "globlal" min and max
-                spatial_vars = self.spatial_variable_dict[key]
+                # unstructured variables are sampled on their cells, not a display grid
+                spatial_vars = (
+                    {}
+                    if isinstance(
+                        variable_lists[0][0], pybamm.ProcessedVariableUnstructuredFVM
+                    )
+                    else self.spatial_variable_dict[key]
+                )
                 var_min = np.min(
                     [
                         ax_min(var(self.ts_seconds[i], **spatial_vars))
@@ -522,19 +575,25 @@ class QuickPlot:
         self.plots = {}
         self.time_lines = {}
         self.colorbars = {}
+        self._wireframes = {}
         self.axes = QuickPlotAxes()
 
         # initialize empty handles, to be created only if the appropriate plots are made
         solution_handles = []
 
         for k, (key, variable_lists) in enumerate(self.variables.items()):
-            ax = self.fig.add_subplot(self.gridspec[k])
+            is_3d = variable_lists[0][0].dimensions == 3
+            if is_3d:
+                ax = self.fig.add_subplot(self.gridspec[k], projection="3d")
+            else:
+                ax = self.fig.add_subplot(self.gridspec[k])
             self.axes.add(key, ax)
-            x_min, x_max, y_min, y_max = self.axis_limits[key]
-            ax.set_xlim(x_min, x_max)
-            if y_min is not None and y_max is not None:
-                ax.set_ylim(y_min, y_max)
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            if not is_3d:
+                x_min, x_max, y_min, y_max = self.axis_limits[key]
+                ax.set_xlim(x_min, x_max)
+                if y_min is not None and y_max is not None:
+                    ax.set_ylim(y_min, y_max)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             self.plots[key] = defaultdict(dict)
             variable_handles = []
             # Set labels for the first subplot only (avoid repetition)
@@ -597,6 +656,15 @@ class QuickPlot:
                 for boundary in variable_lists[0][0].internal_boundaries:
                     boundary_scaled = boundary * self.spatial_factor
                     ax.axvline(boundary_scaled, color="0.5", lw=1, zorder=0)
+            elif self.is_vector_field.get(key, False):
+                variable = variable_lists[0][0]
+                if variable.dimensions == 2:
+                    quiver = self._plot_2d_quiver(ax, variable, t_in_seconds, key)
+                    self.colorbars[key] = self.fig.colorbar(
+                        quiver, ax=ax, label="|" + str(key[0]) + "|"
+                    )
+                else:
+                    self._plot_3d_quiver(ax, variable, t_in_seconds, key)
             elif variable_lists[0][0].dimensions == 2:
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
@@ -620,14 +688,13 @@ class QuickPlot:
                 vmin, vmax = self.variable_limits[key]
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
-                if self.is_y_z[key] is True:
+                if isinstance(variable, pybamm.ProcessedVariableUnstructuredFVM):
+                    self.plots[key][0][0] = self._plot_unstructured_pcolormesh(
+                        ax, variable, x, y, var, vmin, vmax, key
+                    )
+                elif self.is_y_z[key] is True:
                     self.plots[key][0][0] = ax.pcolormesh(
-                        x,
-                        y,
-                        var,
-                        vmin=vmin,
-                        vmax=vmax,
-                        shading=self.shading,
+                        x, y, var, vmin=vmin, vmax=vmax, shading=self.shading
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
@@ -640,6 +707,13 @@ class QuickPlot:
                 self.colorbars[key] = self.fig.colorbar(
                     cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax)),
                     ax=ax,
+                )
+            elif variable_lists[0][0].dimensions == 3:
+                mappable = self._plot_3d_slices(
+                    ax, variable_lists[0][0], t_in_seconds, key
+                )
+                self.colorbars[key] = self.fig.colorbar(
+                    mappable, ax=ax, shrink=0.6, pad=0.1
                 )
             # Set either y label or legend entries
             if len(key) == 1:
@@ -682,6 +756,154 @@ class QuickPlot:
         bottom = max(legend_top, slider_top)
         self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
 
+    @staticmethod
+    def _slice_facecolors(data, cmap, norm, base_alpha=0.85):
+        """Compute RGBA facecolors for ``plot_surface``, with NaN faces
+        rendered fully transparent so that cavities appear as holes."""
+        nan_mask = np.isnan(data)
+        fc = cmap(norm(np.where(nan_mask, 0.0, data)))
+        fc[..., 3] = np.where(nan_mask, 0.0, base_alpha)
+        return fc
+
+    def _overlay_mesh_wireframe(self, ax, variable):
+        """Draw mesh element edges as a light wireframe on a 2D axis."""
+        from matplotlib.collections import PolyCollection
+
+        mesh = variable.mesh
+        if mesh.dimension != 2:
+            return None
+        verts = mesh.vertices[mesh.elements] * self.spatial_factor
+        poly = PolyCollection(
+            verts, facecolors="none", edgecolors=(0, 0, 0, 0.12), linewidths=0.3
+        )
+        ax.add_collection(poly)
+        return poly
+
+    def _plot_unstructured_pcolormesh(self, ax, variable, x, y, var, vmin, vmax, key):
+        """Draw a 2D unstructured field on its display grid with a mesh wireframe."""
+        import matplotlib
+
+        # replace the previous frame's artists instead of stacking them
+        previous = self.plots[key][0].get(0)
+        if previous is not None:
+            previous.remove()
+        wireframe = self._wireframes.pop(key, None)
+        if wireframe is not None:
+            wireframe.remove()
+        # NaN (outside the domain) renders white
+        cmap = matplotlib.colormaps["viridis"].with_extremes(bad="white")
+        mesh_plot = ax.pcolormesh(
+            x, y, var, vmin=vmin, vmax=vmax, shading=self.shading, cmap=cmap
+        )
+        self._wireframes[key] = self._overlay_mesh_wireframe(ax, variable)
+        ax.set_aspect("equal")
+        return mesh_plot
+
+    def _plot_2d_quiver(self, ax, variable, t, key):
+        """Draw unit arrows coloured by magnitude; returns the quiver artist."""
+        colors = import_optional_dependency("matplotlib", "colors")
+
+        X, Z, U, W = quiver_data(variable, t, self._unstructured_grids[key])
+        mag = np.sqrt(U**2 + W**2)
+        vmin, vmax = self.variable_limits[key]
+        if vmin is None:
+            vmin = 0.0
+        if vmax is None:
+            # samples outside the domain are NaN, so reduce with nanmax
+            vmax = float(np.nanmax(mag)) if np.any(mag > 0) else 1.0
+        safe_mag = np.where(mag > 0, mag, 1.0)
+        ax.set_xlabel(f"x [{self.spatial_unit}]")
+        ax.set_ylabel(f"z [{self.spatial_unit}]")
+        self.plots[key][0][0] = ax.quiver(
+            X * self.spatial_factor,
+            Z * self.spatial_factor,
+            U / safe_mag,
+            W / safe_mag,
+            mag,
+            cmap="viridis",
+            norm=colors.Normalize(vmin=vmin, vmax=vmax),
+            scale=X.shape[0] * 1.2,
+            scale_units="width",
+            width=0.004,
+        )
+        return self.plots[key][0][0]
+
+    def _plot_3d_slices(self, ax, variable, t, key):
+        """Draw two mid-plane slices of a 3D scalar; returns the colour mappable."""
+        cm = import_optional_dependency("matplotlib", "cm")
+        colors = import_optional_dependency("matplotlib", "colors")
+
+        vmin, vmax = self.variable_limits[key]
+        if vmin is None or vmax is None:
+            data = variable(t)
+            vmin = ax_min(data) if vmin is None else vmin
+            vmax = ax_max(data) if vmax is None else vmax
+        norm = colors.Normalize(vmin=vmin, vmax=vmax)
+        s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = midplane_slices(
+            variable, t, self._unstructured_grids[key], self._slice_positions[key]
+        )
+        sf = self.spatial_factor
+        for values, xx, yy, zz in ((s1, xx1, yy1, zz1), (s2, xx2, yy2, zz2)):
+            ax.plot_surface(
+                xx * sf,
+                yy * sf,
+                zz * sf,
+                facecolors=self._slice_facecolors(values, cm.viridis, norm),
+                rstride=1,
+                cstride=1,
+                shade=False,
+            )
+        ax.set_xlabel(f"$x$ [{self.spatial_unit}]")
+        ax.set_ylabel(f"$y$ [{self.spatial_unit}]")
+        ax.set_zlabel(f"$z$ [{self.spatial_unit}]")
+        self.plots[key][0][0] = (s1, s2)
+        return cm.ScalarMappable(norm=norm, cmap=cm.viridis)
+
+    def _plot_3d_quiver(self, ax, variable, t, key):
+        """Render quiver arrows on two orthogonal 3D slice planes."""
+        sf = self.spatial_factor
+        data = quiver_data(
+            variable, t, self._unstructured_grids[key], self._slice_positions[key]
+        )
+        X1, Z1, U_xz, W_xz, y_mid = data[0:5]
+        X2, Y2, U_xy, V_xy, z_mid = data[5:10]
+
+        x_span = (X1.max() - X1.min()) * sf
+        arrow_len = x_span * 0.08 if x_span > 0 else 0.08
+
+        Y1_plane = np.full_like(X1, y_mid * sf)
+        ax.quiver(
+            X1 * sf,
+            Y1_plane,
+            Z1 * sf,
+            U_xz,
+            np.zeros_like(U_xz),
+            W_xz,
+            length=arrow_len,
+            normalize=True,
+            color="steelblue",
+            alpha=0.8,
+        )
+
+        Z2_plane = np.full_like(X2, z_mid * sf)
+        ax.quiver(
+            X2 * sf,
+            Y2 * sf,
+            Z2_plane,
+            U_xy,
+            V_xy,
+            np.zeros_like(U_xy),
+            length=arrow_len,
+            normalize=True,
+            color="darkorange",
+            alpha=0.8,
+        )
+
+        ax.set_xlabel(f"$x$ [{self.spatial_unit}]")
+        ax.set_ylabel(f"$y$ [{self.spatial_unit}]")
+        ax.set_zlabel(f"$z$ [{self.spatial_unit}]")
+        self.plots[key][0][0] = "quiver_3d"
+
     def dynamic_plot(self, show_plot=True, step=None):
         """
         Generate a dynamic plot with a slider to control the time.
@@ -714,8 +936,14 @@ class QuickPlot:
             # create an initial plot at time self.min_t
             self.plot(self.min_t, dynamic=True)
 
+            has_3d = any(vl[0][0].dimensions == 3 for vl in self.variables.values())
+
             axcolor = "lightgoldenrodyellow"
-            ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
+            if has_3d:
+                t_bottom = 0.08
+                ax_slider = plt.axes([0.315, t_bottom, 0.37, 0.03], facecolor=axcolor)
+            else:
+                ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
             self.slider = Slider(
                 ax_slider,
                 f"Time [{self.time_unit}]",
@@ -725,6 +953,48 @@ class QuickPlot:
                 color="#1f77b4",
             )
             self.slider.on_changed(self.slider_update)
+
+            if has_3d:
+                self._slice_sliders = {}
+                key_3d = next(
+                    key
+                    for key, vl in self.variables.items()
+                    if vl[0][0].dimensions == 3
+                )
+                grid_3d = self._unstructured_grids[key_3d]
+                positions = self._slice_positions[key_3d]
+                # sliders read in the display unit; positions stay in metres
+                sf = self.spatial_factor
+                y_pts = grid_3d["y"] * sf
+                z_pts = grid_3d["z"] * sf
+
+                ax_y = plt.axes([0.315, 0.04, 0.37, 0.025], facecolor=axcolor)
+                self._slice_sliders["y"] = Slider(
+                    ax_y,
+                    f"$y$ slice [{self.spatial_unit}]",
+                    y_pts[0],
+                    y_pts[-1],
+                    valinit=positions["y"] * sf,
+                    color="#ff7f0e",
+                )
+                ax_z = plt.axes([0.315, 0.005, 0.37, 0.025], facecolor=axcolor)
+                self._slice_sliders["z"] = Slider(
+                    ax_z,
+                    f"$z$ slice [{self.spatial_unit}]",
+                    z_pts[0],
+                    z_pts[-1],
+                    valinit=positions["z"] * sf,
+                    color="#2ca02c",
+                )
+
+                def _on_slice_change(_):
+                    for slice_positions in self._slice_positions.values():
+                        slice_positions["y"] = self._slice_sliders["y"].val / sf
+                        slice_positions["z"] = self._slice_sliders["z"].val / sf
+                    self.slider_update(self.slider.val)
+
+                self._slice_sliders["y"].on_changed(_on_slice_change)
+                self._slice_sliders["z"].on_changed(_on_slice_change)
 
             if show_plot:  # pragma: no cover
                 plt.show()
@@ -759,6 +1029,17 @@ class QuickPlot:
                 y_min, y_max = self.axis_limits[key][2:]
                 if y_min is None and y_max is None:
                     ax.set_ylim(var_min, var_max)
+            elif self.is_vector_field.get(key, False):
+                variable = self.variables[key][0][0]
+                ax.clear()
+                if variable.dimensions == 2:
+                    quiver = self._plot_2d_quiver(ax, variable, time_in_seconds, key)
+                    if key in self.colorbars:
+                        self.colorbars[key].update_normal(quiver)
+                else:
+                    self._plot_3d_quiver(ax, variable, time_in_seconds, key)
+                title = split_long_string(key[0]) if len(key) == 1 else ""
+                ax.set_title(title, fontsize="medium")
             elif self.variables[key][0][0].dimensions == 2:
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables
@@ -776,14 +1057,13 @@ class QuickPlot:
                     var = variable(time_in_seconds, **spatial_vars).T
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
-                if self.is_y_z[key] is True:
+                if isinstance(variable, pybamm.ProcessedVariableUnstructuredFVM):
+                    self.plots[key][0][0] = self._plot_unstructured_pcolormesh(
+                        ax, variable, x, y, var, vmin, vmax, key
+                    )
+                elif self.is_y_z[key] is True:
                     self.plots[key][0][0] = ax.pcolormesh(
-                        x,
-                        y,
-                        var,
-                        vmin=vmin,
-                        vmax=vmax,
-                        shading=self.shading,
+                        x, y, var, vmin=vmin, vmax=vmax, shading=self.shading
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
@@ -797,6 +1077,15 @@ class QuickPlot:
                     cb.update_normal(
                         cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax))
                     )
+            elif self.variables[key][0][0].dimensions == 3:
+                ax.clear()
+                mappable = self._plot_3d_slices(
+                    ax, self.variables[key][0][0], time_in_seconds, key
+                )
+                if key in self.colorbars:
+                    self.colorbars[key].update_normal(mappable)
+                title = split_long_string(key[0]) if len(key) == 1 else ""
+                ax.set_title(title, fontsize="medium")
 
         self.fig.canvas.draw_idle()
 
