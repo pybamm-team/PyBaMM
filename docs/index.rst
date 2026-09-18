@@ -39,7 +39,7 @@ Broadly, PyBaMM consists of
 Together, these enable flexible model definitions and fast battery simulations, allowing users to
 explore the effect of different battery designs and modeling assumptions under a variety of operating scenarios.
 
-.. grid:: 2
+.. grid:: 1 2 2 2
 
    .. grid-item-card::
       :img-top: _static/index-images/getting_started.svg
