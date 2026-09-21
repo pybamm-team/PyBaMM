@@ -986,6 +986,19 @@ class TestSerialise:
         assert isinstance(expr2.integration_variable[0], pybamm.SpatialVariable)
         assert expr2.integration_variable[0].name == "x"
 
+    def test_integral_serialisation(self):
+        x = pybamm.SpatialVariable("x", domain="negative electrode")
+        integral = pybamm.Integral(x, x)
+
+        json_dict = convert_symbol_to_json(integral)
+        assert json_dict[sk.TAG].endswith("Integral")
+
+        expr2 = convert_symbol_from_json(json_dict)
+        assert isinstance(expr2, pybamm.Integral)
+        assert expr2.id == integral.id
+        assert isinstance(expr2.integration_variable[0], pybamm.SpatialVariable)
+        assert expr2.integration_variable[0].name == "x"
+
     def test_invalid_filename(self):
         model = pybamm.lithium_ion.DFN()
         with pytest.raises(
