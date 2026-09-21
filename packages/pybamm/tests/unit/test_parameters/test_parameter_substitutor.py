@@ -1,5 +1,6 @@
 """Tests for the ParameterSubstitutor class."""
 
+import numpy as np
 import pytest
 
 import pybamm
@@ -106,6 +107,29 @@ class TestProcessSymbol:
         func_param = pybamm.FunctionParameter("My func", {"x": x})
         result = processor.process_symbol(func_param)
         assert result.evaluate() == 10
+
+    def test_process_function_parameter_direct_time_interpolant(self):
+        interpolant = pybamm.Interpolant(
+            np.array([0, 1]), np.array([298.15, 299.15]), pybamm.t
+        )
+        original_time = interpolant.children[0]
+        original_domains = original_time.domains.copy()
+        processor = ParameterSubstitutor(
+            ParameterStore({"Ambient temperature [K]": interpolant})
+        )
+        time = pybamm.PrimaryBroadcast(pybamm.t, "current collector")
+        function_parameter = pybamm.FunctionParameter(
+            "Ambient temperature [K]", {"Time [s]": time}
+        )
+
+        result = processor.process_symbol(function_parameter)
+        processed_interpolant = next(
+            node for node in result.pre_order() if isinstance(node, pybamm.Interpolant)
+        )
+
+        assert interpolant.children[0] is original_time
+        assert original_time.domains == original_domains
+        assert processed_interpolant.children[0] is processor.process_symbol(time)
 
     def test_process_missing_parameter(self):
         store = ParameterStore({"a": 1})

@@ -190,9 +190,22 @@ class ParameterSubstitutor:
                 # otherwise evaluate the function to create a new PyBaMM object
                 self._check_electrode_conductivity_signature(symbol, function_name)
                 function = function_name(*new_children)
-            elif isinstance(
-                function_name, pybamm.Interpolant | pybamm.InputParameter
-            ) or (
+            elif isinstance(function_name, pybamm.Interpolant):
+                if "Time [s]" in symbol.input_names and any(
+                    isinstance(child, pybamm.Time) for child in function_name.children
+                ):
+                    time = self.process_symbol(
+                        symbol.children[symbol.input_names.index("Time [s]")]
+                    )
+                    function = function_name.create_copy(
+                        [
+                            time if isinstance(child, pybamm.Time) else child
+                            for child in function_name.children
+                        ]
+                    )
+                else:
+                    function = function_name
+            elif isinstance(function_name, pybamm.InputParameter) or (
                 isinstance(function_name, pybamm.Symbol)
                 and function_name.size_for_testing == 1
             ):

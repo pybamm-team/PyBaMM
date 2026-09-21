@@ -60,6 +60,40 @@ class TestDFN(BaseIntegrationTestLithiumIon):
 
         assert sol.termination == "final time"
 
+    def test_time_dependent_ambient_temperature_with_nonlinear_electrolyte_parameters(
+        self,
+    ):
+        times = np.arange(0, 1810, 10)
+        final_time = times[-1]
+        ambient_temperature = pybamm.Interpolant(
+            times, 298.15 + 20 * times / final_time, pybamm.t
+        )
+
+        def cation_transference_number(c_e, T):
+            return 0.25 + 1e-10 * c_e * T
+
+        def thermodynamic_factor(c_e, T):
+            return 1 + 1e-10 * c_e * T
+
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {
+                "Ambient temperature [K]": ambient_temperature,
+                "Cation transference number": cation_transference_number,
+                "Initial temperature [K]": 298.15,
+                "Thermodynamic factor": thermodynamic_factor,
+            }
+        )
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            experiment=pybamm.Experiment([f"Discharge at 1C for {final_time} s"]),
+            parameter_values=parameter_values,
+        )
+
+        voltage = simulation.solve()["Voltage [V]"](final_time)
+
+        assert np.isfinite(voltage).all()
+
 
 class TestDFNWithSizeDistribution:
     @pytest.fixture(autouse=True)
