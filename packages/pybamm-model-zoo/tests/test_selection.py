@@ -10,9 +10,23 @@ from pathlib import Path
 import conftest
 import pytest
 
-CORE = Path("/zoo/src/pybamm_model_zoo/core_model")
-COMMUNITY = Path("/zoo/src/pybamm_model_zoo/community_model")
+from pybamm_model_zoo._registry import ModelEntry
+
+ROOT = Path("/zoo/src/pybamm_model_zoo")
 MACHINERY = Path("/zoo/tests/test_registry.py")
+
+
+def entry(slug, tier):
+    return ModelEntry(
+        slug=slug,
+        name=slug.title().replace("_", ""),
+        path=ROOT / slug,
+        raw={"model": {"tier": tier}},
+    )
+
+
+CORE = ROOT / "core_model"
+COMMUNITY = ROOT / "community_model"
 
 
 class FakeConfig:
@@ -31,8 +45,8 @@ def two_tiers(mocker):
         conftest,
         "_model_folders",
         return_value=[
-            (CORE, "core_model", "core"),
-            (COMMUNITY, "community_model", "community"),
+            (CORE, entry("core_model", "core")),
+            (COMMUNITY, entry("community_model", "community")),
         ],
     )
 
@@ -61,3 +75,27 @@ class TestIgnoreCollect:
         """They are the contract suite and the registry: no model owns them."""
         for options in ({"--zoo-tier": "core"}, {"--zoo-model": "core_model"}):
             assert ignored(MACHINERY, **options) is None
+
+
+class TestUnrecognisedTierIsNeverPruned:
+    """A tier typo must not demote a model out of the run that would report it.
+
+    ``check_manifest`` is the check that rejects the bad value, and it only runs
+    for models the run kept, so pruning on an unrecognised tier would bury it.
+    """
+
+    @pytest.fixture(autouse=True)
+    def mistyped_tier(self, mocker):
+        mocker.patch.object(
+            conftest,
+            "_model_folders",
+            return_value=[(CORE, entry("core_model", "Core"))],
+        )
+
+    @pytest.mark.parametrize("tier", ["core", "community"])
+    def test_it_survives_every_tier_filter(self, tier):
+        assert ignored(CORE / "tests" / "test_it.py", **{"--zoo-tier": tier}) is None
+
+    def test_a_model_filter_still_applies(self):
+        """Only the *tier* is untrusted; selecting one model by slug still works."""
+        assert ignored(CORE, **{"--zoo-model": "other_model"}) is True

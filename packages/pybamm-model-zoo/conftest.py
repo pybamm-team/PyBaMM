@@ -40,14 +40,12 @@ def pytest_addoption(parser):
 
 
 def _model_folders():
-    """Every registered model's folder, with its slug and tier.
+    """Every registered model's folder, paired with the entry that declared it.
 
     Manifests are parsed rather than imported, so this is safe to call before a
     single test module has been loaded.
     """
-    return [
-        (entry.path.resolve(), entry.slug, entry.tier) for entry in zoo.all_entries()
-    ]
+    return [(entry.path.resolve(), entry) for entry in zoo.all_entries()]
 
 
 def pytest_ignore_collect(collection_path, config):
@@ -60,12 +58,12 @@ def pytest_ignore_collect(collection_path, config):
     tier = config.getoption("--zoo-tier")
     if selected is None and tier is None:
         return None
-    for folder, slug, model_tier in _model_folders():
+    for folder, entry in _model_folders():
         if collection_path != folder and folder not in collection_path.parents:
             continue
-        if selected is not None and slug != selected:
+        if selected is not None and entry.slug != selected:
             return True
-        return True if tier is not None and model_tier != tier else None
+        return True if tier is not None and not entry.in_tier(tier) else None
     return None
 
 
@@ -92,7 +90,7 @@ def _slug_of(item):
 
 
 def pytest_collection_modifyitems(config, items):
-    core_slugs = {entry.slug for entry in zoo.all_entries() if entry.tier == "core"}
+    core_slugs = {entry.slug for entry in zoo.all_entries() if entry.in_tier("core")}
     selected = config.getoption("--zoo-model")
     deselected = []
     remaining = []

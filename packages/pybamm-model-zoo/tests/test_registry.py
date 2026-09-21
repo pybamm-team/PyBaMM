@@ -58,6 +58,26 @@ class TestRegistry:
         assert entry.dependencies.extra is None
         assert not entry.external
 
+    @pytest.mark.parametrize(
+        ("declared", "gates", "community"),
+        [("core", True, False), ("community", False, True), ("Core", True, True)],
+    )
+    def test_an_unrecognised_tier_belongs_to_every_tier(
+        self, tmp_path, declared, gates, community
+    ):
+        """A tier typo must fail the gate loudly, not drop quietly out of it."""
+        write_model(
+            tmp_path,
+            "minimal_model",
+            "MinimalModel",
+            body=MANIFEST.format(slug="minimal_model", name="MinimalModel").replace(
+                'tier = "community"', f'tier = "{declared}"'
+            ),
+        )
+        entry = Registry([tmp_path])["MinimalModel"]
+        assert entry.in_tier("core") is gates
+        assert entry.in_tier("community") is community
+
     def test_unknown_name_lists_what_is_registered(self, tmp_path):
         write_model(tmp_path, "minimal_model", "MinimalModel")
         with pytest.raises(KeyError, match=r"MinimalModel"):

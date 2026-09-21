@@ -122,6 +122,16 @@ class ModelEntry:
     def tier(self) -> str:
         return self._model.get("tier", "community")
 
+    def in_tier(self, tier: str) -> bool:
+        """Whether a ``--zoo-tier=<tier>`` run has to keep this entry.
+
+        A tier this package does not recognise belongs to *every* tier rather
+        than to none. ``check_manifest`` is what reports the bad value, and it
+        is itself tier-selected, so demoting a typo to non-gating would hide the
+        one failure that names it.
+        """
+        return self.tier == tier or self.tier not in TIERS
+
     @property
     def pybamm_requires(self) -> str:
         return self._model.get("pybamm_requires", "")
