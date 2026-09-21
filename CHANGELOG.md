@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added the `Bonkile2024` parameter set for a graphite/silicon composite negative electrode (NMC positive electrode), including its stress-driven loss-of-active-material, solvent-diffusion-limited SEI, partially-reversible lithium plating, and swelling-and-cracking/swelling-only particle mechanics for the two negative phases. ([#5694](https://github.com/pybamm-team/PyBaMM/pull/5694))
+
 ## Bug fixes
 
 - `BatchStudy.solve` no longer ignores its `solver` argument: previously the loop over study inputs shadowed it, so a caller-supplied solver was silently dropped. A solver from `BatchStudy(solvers=...)` still takes precedence. ([#5677](https://github.com/pybamm-team/PyBaMM/pull/5677))
