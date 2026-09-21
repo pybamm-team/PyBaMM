@@ -237,8 +237,8 @@ class BasicDFN2DUnstructured(BaseModel):
             side: (pybamm.Scalar(0), "Neumann")
             for side in ("left", "right", *self._transverse_sides)
         }
-        sigma_eff_n = self.param.n.sigma(None, T) * eps_s_n**self.param.n.b_s
-        sigma_eff_p = self.param.p.sigma(None, T) * eps_s_p**self.param.p.b_s
+        sigma_eff_n = self.param.n.sigma(sto_surf_n, T) * eps_s_n**self.param.n.b_s
+        sigma_eff_p = self.param.p.sigma(sto_surf_p, T) * eps_s_p**self.param.p.b_s
         self.algebraic[phi_s_n] = L_scale * (
             pybamm.div(-sigma_eff_n * pybamm.grad(phi_s_n)) + a_j_n
         )
@@ -261,6 +261,9 @@ class BasicDFN2DUnstructured(BaseModel):
         ######################
         kappa_eff = self.param.kappa_e(c_e, T) * tor
         kappa_D_eff = kappa_eff * self.param.chiRT_over_Fc(c_e, T)
+        i_e = kappa_D_eff * pybamm.grad(c_e) - kappa_eff * pybamm.grad(phi_e)
+        # The unstructured TPFA operator only accepts div(D * grad(u)) products,
+        # so div(i_e) is written out term by term
         self.algebraic[phi_e] = L_scale * (
             pybamm.div(kappa_D_eff * pybamm.grad(c_e))
             - pybamm.div(kappa_eff * pybamm.grad(phi_e))
@@ -273,9 +276,15 @@ class BasicDFN2DUnstructured(BaseModel):
         # Electrolyte concentration
         ######################
         D_e_eff = tor * self.param.D_e(c_e, T)
+        t_plus = self.param.t_plus(c_e, T)
+        N_e = -D_e_eff * pybamm.grad(c_e) + t_plus * i_e / self.param.F
+        # The migration term t_plus * i_e / F is kept inside the flux so that the
+        # balance is conservative when t_plus depends on c_e (see #5745)
         self.rhs[c_e] = (1 / eps) * (
             pybamm.div(D_e_eff * pybamm.grad(c_e))
-            + (1 - self.param.t_plus(c_e, T)) * a_j / self.param.F
+            - pybamm.div((t_plus * kappa_D_eff / self.param.F) * pybamm.grad(c_e))
+            + pybamm.div((t_plus * kappa_eff / self.param.F) * pybamm.grad(phi_e))
+            + a_j / self.param.F
         )
         self.boundary_conditions[c_e] = dict(zero_flux)
         self.initial_conditions[c_e] = self.param.c_e_init
@@ -311,7 +320,7 @@ class BasicDFN2DUnstructured(BaseModel):
             "Time [s]": pybamm.t,
             "Discharge capacity [A.h]": Q,
             "Current density [A.m-2]": a_j,
-            "Electrolyte current density [A.m-2]": a_j,
+            "Electrolyte current density [A.m-2]": i_e,
             "Negative electrode surface concentration [mol.m-3]": c_s_surf_n,
             "Negative electrode surface stoichiometry": sto_surf_n,
             "Positive electrode surface concentration [mol.m-3]": c_s_surf_p,
@@ -324,7 +333,7 @@ class BasicDFN2DUnstructured(BaseModel):
             "Negative electrode ocp [V]": self.param.n.prim.U(sto_surf_n, T),
             "Positive electrode current density [A.m-2]": j_p,
             "Negative electrode current density [A.m-2]": j_n,
-            "Electrolyte flux [mol.m-2.s-1]": D_e_eff,
+            "Electrolyte flux [mol.m-2.s-1]": N_e,
             "Positive solid lithium [mol]": solid_lithium_positive,
             "Negative solid lithium [mol]": solid_lithium_negative,
             "Total solid lithium [mol]": total_solid_lithium,
