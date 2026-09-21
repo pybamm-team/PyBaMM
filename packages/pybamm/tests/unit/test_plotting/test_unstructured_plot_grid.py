@@ -204,10 +204,19 @@ class TestQuickPlotUnstructured:
         assert scalar_axis.get_xlabel() == quiver_axis.get_xlabel() == f"$x$ [{unit}]"
         np.testing.assert_allclose(scalar_axis.get_xlim(), quiver_axis.get_xlim())
         np.testing.assert_allclose(quick_plot._slice_sliders["y"].val, 0.5e6)
+        # a variable on a taller mesh follows the slider as a fraction of its extent
+        quick_plot._unstructured_grids[("flux",)]["y"] = np.linspace(0.0, 2.0, 80)
+        xlim_before = scalar_axis.get_xlim()
         quick_plot._slice_sliders["y"].set_val(0.25e6)
-        for positions in quick_plot._slice_positions.values():
-            np.testing.assert_allclose(positions["y"], 0.25)
+        np.testing.assert_allclose(quick_plot._slice_positions[("u",)]["y"], 0.25)
+        np.testing.assert_allclose(quick_plot._slice_positions[("flux",)]["y"], 0.5)
         assert quick_plot.plots[("flux",)][0][0] == "quiver_3d"
+        # frames replace their artists rather than clearing the axes
+        assert len(quick_plot._panel_artists[("u",)]) == 2
+        assert len(scalar_axis.collections) == 2
+        assert len(quiver_axis.collections) == 2
+        np.testing.assert_allclose(scalar_axis.get_xlim(), xlim_before)
+        assert scalar_axis.get_xlabel() == f"$x$ [{unit}]"
         pybamm.close_plots()
 
     def test_3d_tight_limits_and_wireframe_guard(self):

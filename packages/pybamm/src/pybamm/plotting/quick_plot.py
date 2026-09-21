@@ -302,6 +302,7 @@ class QuickPlot:
         self._unstructured_grids = {}
         self._slice_positions = {}
         self._wireframes = {}
+        self._panel_artists = {}
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
@@ -576,6 +577,7 @@ class QuickPlot:
         self.time_lines = {}
         self.colorbars = {}
         self._wireframes = {}
+        self._panel_artists = {}
         self.axes = QuickPlotAxes()
 
         # initialize empty handles, to be created only if the appropriate plots are made
@@ -799,10 +801,16 @@ class QuickPlot:
         ax.set_aspect("equal")
         return mesh_plot
 
+    def _remove_panel_artists(self, key):
+        """Remove the artists drawn for ``key`` by the previous frame."""
+        for artist in self._panel_artists.pop(key, []):
+            artist.remove()
+
     def _plot_2d_quiver(self, ax, variable, t, key):
         """Draw unit arrows coloured by magnitude; returns the quiver artist."""
         colors = import_optional_dependency("matplotlib", "colors")
 
+        self._remove_panel_artists(key)
         X, Z, U, W = quiver_data(variable, t, self._unstructured_grids[key])
         mag = np.sqrt(U**2 + W**2)
         vmin, vmax = self.variable_limits[key]
@@ -826,6 +834,7 @@ class QuickPlot:
             scale_units="width",
             width=0.004,
         )
+        self._panel_artists[key] = [self.plots[key][0][0]]
         return self.plots[key][0][0]
 
     def _plot_3d_slices(self, ax, variable, t, key):
@@ -843,7 +852,8 @@ class QuickPlot:
             variable, t, self._unstructured_grids[key], self._slice_positions[key]
         )
         sf = self.spatial_factor
-        for values, xx, yy, zz in ((s1, xx1, yy1, zz1), (s2, xx2, yy2, zz2)):
+        self._remove_panel_artists(key)
+        self._panel_artists[key] = [
             ax.plot_surface(
                 xx * sf,
                 yy * sf,
@@ -853,6 +863,8 @@ class QuickPlot:
                 cstride=1,
                 shade=False,
             )
+            for values, xx, yy, zz in ((s1, xx1, yy1, zz1), (s2, xx2, yy2, zz2))
+        ]
         ax.set_xlabel(f"$x$ [{self.spatial_unit}]")
         ax.set_ylabel(f"$y$ [{self.spatial_unit}]")
         ax.set_zlabel(f"$z$ [{self.spatial_unit}]")
@@ -871,8 +883,9 @@ class QuickPlot:
         x_span = (X1.max() - X1.min()) * sf
         arrow_len = x_span * 0.08 if x_span > 0 else 0.08
 
+        self._remove_panel_artists(key)
         Y1_plane = np.full_like(X1, y_mid * sf)
-        ax.quiver(
+        quiver_xz = ax.quiver(
             X1 * sf,
             Y1_plane,
             Z1 * sf,
@@ -886,7 +899,7 @@ class QuickPlot:
         )
 
         Z2_plane = np.full_like(X2, z_mid * sf)
-        ax.quiver(
+        quiver_xy = ax.quiver(
             X2 * sf,
             Y2 * sf,
             Z2_plane,
@@ -902,6 +915,7 @@ class QuickPlot:
         ax.set_xlabel(f"$x$ [{self.spatial_unit}]")
         ax.set_ylabel(f"$y$ [{self.spatial_unit}]")
         ax.set_zlabel(f"$z$ [{self.spatial_unit}]")
+        self._panel_artists[key] = [quiver_xz, quiver_xy]
         self.plots[key][0][0] = "quiver_3d"
 
     def dynamic_plot(self, show_plot=True, step=None):
@@ -988,9 +1002,15 @@ class QuickPlot:
                 )
 
                 def _on_slice_change(_):
-                    for slice_positions in self._slice_positions.values():
-                        slice_positions["y"] = self._slice_sliders["y"].val / sf
-                        slice_positions["z"] = self._slice_sliders["z"].val / sf
+                    # variables may live on different meshes: carry the slider
+                    # across as a fraction of each variable's own extent
+                    for axis in ("y", "z"):
+                        lo, hi = grid_3d[axis][0], grid_3d[axis][-1]
+                        value = self._slice_sliders[axis].val / sf
+                        frac = (value - lo) / (hi - lo) if hi > lo else 0.5
+                        for key, positions in self._slice_positions.items():
+                            pts = self._unstructured_grids[key][axis]
+                            positions[axis] = pts[0] + frac * (pts[-1] - pts[0])
                     self.slider_update(self.slider.val)
 
                 self._slice_sliders["y"].on_changed(_on_slice_change)
@@ -1031,15 +1051,12 @@ class QuickPlot:
                     ax.set_ylim(var_min, var_max)
             elif self.is_vector_field.get(key, False):
                 variable = self.variables[key][0][0]
-                ax.clear()
                 if variable.dimensions == 2:
                     quiver = self._plot_2d_quiver(ax, variable, time_in_seconds, key)
                     if key in self.colorbars:
                         self.colorbars[key].update_normal(quiver)
                 else:
                     self._plot_3d_quiver(ax, variable, time_in_seconds, key)
-                title = split_long_string(key[0]) if len(key) == 1 else ""
-                ax.set_title(title, fontsize="medium")
             elif self.variables[key][0][0].dimensions == 2:
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables
@@ -1078,14 +1095,11 @@ class QuickPlot:
                         cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax))
                     )
             elif self.variables[key][0][0].dimensions == 3:
-                ax.clear()
                 mappable = self._plot_3d_slices(
                     ax, self.variables[key][0][0], time_in_seconds, key
                 )
                 if key in self.colorbars:
                     self.colorbars[key].update_normal(mappable)
-                title = split_long_string(key[0]) if len(key) == 1 else ""
-                ax.set_title(title, fontsize="medium")
 
         self.fig.canvas.draw_idle()
 
