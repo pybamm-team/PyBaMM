@@ -1,5 +1,6 @@
 """Unit tests for manifest parsing and the registry itself."""
 
+import re
 import textwrap
 from pathlib import Path
 
@@ -90,15 +91,38 @@ class TestRegistry:
         with pytest.raises(KeyError, match=r"minimal_model"):
             registry.by_slug("other")
 
-    def test_invalid_toml_is_reported_with_its_path(self, tmp_path):
-        write_model(tmp_path, "broken_model", "Broken", body="[model\nslug =")
-        with pytest.raises(zoo.ManifestError, match=r"invalid TOML"):
-            Registry([tmp_path])
+    @pytest.mark.parametrize(
+        ("body", "reported"),
+        [
+            ("[model\nslug =", r"invalid TOML"),
+            ("[other]\nkey = 1\n", r"missing a \[model\] table"),
+            ('[model]\nname = "Broken"\n', r"\[model\].slug must be a non-empty"),
+            ('[model]\nslug = "broken_model"\n', r"\[model\].name must be a non-empty"),
+        ],
+    )
+    def test_a_manifest_too_broken_to_key_is_kept_and_reported(
+        self, tmp_path, body, reported
+    ):
+        """It is recorded on the entry, not raised: one bad file fails one model."""
+        write_model(tmp_path, "broken_model", "Broken", body=body)
+        entry = Registry([tmp_path]).by_slug("broken_model")
+        assert entry.error is not None
+        assert re.search(reported, entry.error), entry.error
+        with pytest.raises(AssertionError, match=reported):
+            contract.check_manifest(entry)
 
-    def test_missing_model_table_is_reported(self, tmp_path):
-        write_model(tmp_path, "broken_model", "Broken", body="[other]\nkey = 1\n")
-        with pytest.raises(zoo.ManifestError, match=r"missing a \[model\] table"):
-            Registry([tmp_path])
+    def test_one_broken_manifest_does_not_take_down_the_registry(self, tmp_path):
+        write_model(tmp_path, "broken_model", "Broken", body="[model\nslug =")
+        write_model(tmp_path, "good_model", "GoodModel")
+        registry = Registry([tmp_path])
+        assert registry["GoodModel"].error is None
+        assert sorted(registry) == ["GoodModel", "broken_model"]
+
+    def test_a_broken_manifest_is_never_pruned_out_of_a_tier(self, tmp_path):
+        """It declares no trustworthy tier, so every tier has to keep it."""
+        write_model(tmp_path, "broken_model", "Broken", body="[model\nslug =")
+        entry = Registry([tmp_path]).by_slug("broken_model")
+        assert entry.in_tier("core") and entry.in_tier("community")
 
     def test_duplicate_names_are_rejected(self, tmp_path):
         write_model(tmp_path, "one_model", "Same")

@@ -40,6 +40,9 @@ def test_contract(entry, check):
     if check.name in entry.tests.skip_contract:
         # A reviewed, per-check escape hatch, visible in the manifest diff.
         pytest.skip(f"{entry.slug}: '{check.name}' waived by {entry.manifest_path}")
+    if entry.error is not None and check.name != "manifest":
+        # Nothing else has inputs to check, so 'manifest' carries the one failure.
+        pytest.skip(f"{entry.slug}: manifest did not parse")
     if check.needs_model and (missing := contract.missing_dependencies(entry)):
         pytest.skip(
             f"{entry.slug}: extra '{entry.dependencies.extra}' is not installed "

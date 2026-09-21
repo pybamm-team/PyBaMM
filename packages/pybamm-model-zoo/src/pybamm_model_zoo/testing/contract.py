@@ -114,6 +114,9 @@ def checks_in_scope(*scopes: str) -> list[Check]:
 def check_manifest(entry: ModelEntry) -> None:
     """Every field of the manifest is present, well formed, and consistent."""
     where = entry.manifest_path
+    # A manifest too broken to parse is reported here, which is the whole reason
+    # the registry keeps such an entry instead of raising past it.
+    assert entry.error is None, entry.error
     model = entry.raw.get("model", {})
 
     if unknown := sorted(set(model) - MODEL_KEYS):

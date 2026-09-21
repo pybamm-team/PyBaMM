@@ -4,8 +4,9 @@ Manifests are *parsed*, never imported, so a model whose code is broken or whose
 dependencies are missing still appears in the registry and reports a clean failure
 at :func:`load` time.
 
-Validation here is only the structural minimum needed to key an entry, so one
-malformed field fails one model instead of taking the whole registry down.
+Validation here is only the structural minimum needed to key an entry, and even
+that is recorded on the entry rather than raised, so one malformed manifest fails
+one model instead of taking the whole registry down with it.
 """
 
 from __future__ import annotations
@@ -90,6 +91,13 @@ class ModelEntry:
 
     Attributes are read leniently so that a manifest with a bad field still yields
     an entry; ``check_manifest`` is what turns a bad field into a failure.
+
+    Attributes
+    ----------
+    error : str or None
+        Why the manifest could not be parsed, if it could not be. Such an entry
+        is keyed on its folder name and carries no trustworthy metadata; it
+        exists so that ``check_manifest`` reports it.
     """
 
     slug: str
@@ -97,6 +105,7 @@ class ModelEntry:
     path: Path
     raw: dict[str, Any] = field(repr=False, default_factory=dict)
     external: bool = False
+    error: str | None = None
 
     @property
     def manifest_path(self) -> Path:
@@ -120,6 +129,9 @@ class ModelEntry:
 
     @property
     def tier(self) -> str:
+        """The declared tier, or none at all if the manifest never parsed."""
+        if self.error is not None:
+            return ""
         return self._model.get("tier", "community")
 
     def in_tier(self, tier: str) -> bool:
@@ -262,15 +274,35 @@ def read_manifest(path: Path) -> dict[str, Any]:
 
 
 def _entry_from_manifest(path: Path, *, external: bool) -> ModelEntry:
-    raw = read_manifest(path)
-    model = raw.get("model")
-    if not isinstance(model, dict):
-        raise ManifestError(f"{path}: missing a [model] table")
-    slug = model.get("slug")
-    name = model.get("name")
-    for label, value in (("slug", slug), ("name", name)):
-        if not isinstance(value, str) or not value:
-            raise ManifestError(f"{path}: [model].{label} must be a non-empty string")
+    """Read one manifest into an entry, recording a parse failure rather than raising.
+
+    Raising here would take the whole registry down -- every other model with it
+    -- for one bad file, so a manifest too broken to key still yields an entry
+    and ``check_manifest`` is what reports it.
+    """
+    raw: dict[str, Any] = {}
+    try:
+        raw = read_manifest(path)
+        model = raw.get("model")
+        if not isinstance(model, dict):
+            raise ManifestError(f"{path}: missing a [model] table")
+        slug = model.get("slug")
+        name = model.get("name")
+        for label, value in (("slug", slug), ("name", name)):
+            if not isinstance(value, str) or not value:
+                raise ManifestError(
+                    f"{path}: [model].{label} must be a non-empty string"
+                )
+    except ManifestError as error:
+        # The folder name is the only key a manifest this broken still offers.
+        return ModelEntry(
+            slug=path.parent.name,
+            name=path.parent.name,
+            path=path.parent,
+            raw=raw,
+            external=external,
+            error=str(error),
+        )
     return ModelEntry(
         slug=slug, name=name, path=path.parent, raw=raw, external=external
     )
