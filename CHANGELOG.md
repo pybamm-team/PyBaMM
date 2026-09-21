@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added support for Python 3.15 to `pybamm` and `pybammsolvers`. On 3.15, the `jax` and `vtk` extras install nothing until cp315 wheels are available for them. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - A `fem` extra installs the finite-element meshing dependencies, scikit-fem and meshio, so `pip install "pybamm[fem]"` is enough for 2D and 3D finite-element meshes. `pybamm[all]` includes it. ([#5881](https://github.com/pybamm-team/PyBaMM/pull/5881))
 
 ## Bug fixes
