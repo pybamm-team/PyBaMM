@@ -98,11 +98,23 @@ def _compute_scale(mesh):
 
 def _resolve_scale(scale_opt, mesh):
     """Turn a scale option into a concrete array or None."""
-    if scale_opt == "auto":
-        return _compute_scale(mesh)
     if scale_opt is None:
         return None
-    return np.asarray(scale_opt)
+    if isinstance(scale_opt, str):
+        if scale_opt == "auto":
+            return _compute_scale(mesh)
+        raise pybamm.OptionError(
+            f"Unknown scale option {scale_opt!r}: use 'auto', None or one factor "
+            "per axis."
+        )
+    scale = np.asarray(scale_opt, dtype=float)
+    dimension = _mesh_vertices(mesh).shape[1]
+    if scale.ndim != 1 or len(scale) < dimension:
+        raise pybamm.OptionError(
+            f"The scale option needs one factor per axis ({dimension} for this "
+            f"mesh), got {scale_opt!r}."
+        )
+    return scale
 
 
 def _set_scalars(attribute_data, expected, kind, name, values):
@@ -221,6 +233,9 @@ class VTKQuickPlot:
                 {"plot_type": "3d"},
                 {"plot_type": "slice", "x": 0.5},
             ]}
+    interpolate_time : bool, optional
+        Evaluate the variables at the exact slider time instead of snapping
+        to the nearest stored solution time. Default is False.
     """
 
     def __init__(
@@ -277,7 +292,6 @@ class VTKQuickPlot:
                 )
 
         self.output_variables = output_variables
-        self.mesh = self.spatial_vars[0].mesh if self.spatial_vars else None
         self.t_pts = self.solution.t
         self.interpolate_time = interpolate_time
 
@@ -313,11 +327,12 @@ class VTKQuickPlot:
         spatial_maxs = {}
         for name, pv in zip(self.spatial_names, self.spatial_vars, strict=True):
             pv.initialise()
-            data = np.column_stack([_data_at_time(pv, t).ravel() for t in self.t_pts])
+            # the (points x times) history the variable already holds
+            data = np.asarray(pv._entries_raw, dtype=float)
             spatial_data[name] = data
             finite = data[np.isfinite(data)]
             if finite.size == 0:
-                raise ValueError(f"'{name}' has no finite values to plot")
+                raise pybamm.OptionError(f"'{name}' has no finite values to plot")
             # NaN cells must not swallow the colour range of the whole panel
             spatial_mins[name] = float(finite.min())
             spatial_maxs[name] = float(finite.max())
@@ -409,9 +424,16 @@ class VTKQuickPlot:
                     )
                 axis_idx = axis_columns[axis_key]
                 frac = float(opts[axis_key])
+                if not 0.0 <= frac <= 1.0:
+                    raise pybamm.OptionError(
+                        f"The slice position for '{name}' must be a fraction in "
+                        f"[0, 1] of the {axis_key} range, got {frac}."
+                    )
                 lo = float(panel_nodes[:, axis_idx].min())
                 hi = float(panel_nodes[:, axis_idx].max())
-                phys_val = lo + frac * (hi - lo)
+                # a plane exactly on a boundary face cuts nothing: stay just inside
+                margin = 1e-6 * (hi - lo)
+                phys_val = min(max(lo + frac * (hi - lo), lo + margin), hi - margin)
                 scaled_val = (
                     phys_val * var_scale[axis_idx]
                     if var_scale is not None

@@ -236,6 +236,13 @@ class TestVTKHelpers:
         zero_mesh = SimpleNamespace(vertices=np.ones((3, 2)))
         np.testing.assert_array_equal(_compute_scale(zero_mesh), [1.0, 1.0])
 
+        with pytest.raises(pybamm.OptionError, match="Unknown scale option"):
+            _resolve_scale("big", mesh)
+        with pytest.raises(pybamm.OptionError, match="one factor per axis"):
+            _resolve_scale(2.0, mesh)
+        with pytest.raises(pybamm.OptionError, match="one factor per axis"):
+            _resolve_scale((1.0, 2.0), mesh)
+
     def test_set_and_update_cell_and_point_scalars(self):
         grid = _build_vtk_grid(_tetra_mesh())
 
@@ -306,11 +313,10 @@ class TestVTKHelpers:
 
 class TestVTKQuickPlot:
     def test_initialisation_accepts_solution_simulation_and_options(self):
-        solution, mesh = _cell_solution()
+        solution, _ = _cell_solution()
 
         default_plot = VTKQuickPlot(solution)
         assert default_plot.output_variables == ["field"]
-        assert default_plot.mesh is mesh
         assert default_plot.spatial_panels == [
             ("field", {"plot_type": "3d", "scale": "auto"})
         ]
@@ -401,7 +407,7 @@ class TestVTKQuickPlot:
         np.testing.assert_allclose(mapper.GetScalarRange(), (1.0, 5.0))
         y[0] = np.nan
         plot = VTKQuickPlot(pybamm.Solution(t, y, model, {}), "field")
-        with pytest.raises(ValueError, match="no finite values"):
+        with pytest.raises(pybamm.OptionError, match="no finite values"):
             plot.dynamic_plot(show_plot=False)
 
     def test_rejects_vector_field_and_structured_variables(self):
@@ -431,6 +437,28 @@ class TestVTKQuickPlot:
         np.testing.assert_allclose(
             _cube_axes(shifted_renderer).GetXAxisRange(), [2.0, 3.0]
         )
+
+    def test_slice_fraction_is_validated_and_kept_inside_the_mesh(self):
+        solution, _ = _cell_solution()
+        with pytest.raises(pybamm.OptionError, match=r"fraction in \[0, 1\]"):
+            VTKQuickPlot(
+                solution,
+                "field",
+                options={"field": {"plot_type": "slice", "x": 1.5}},
+            ).dynamic_plot(show_plot=False)
+
+        # a plane exactly on the boundary face would cut nothing
+        plot = VTKQuickPlot(
+            solution,
+            "field",
+            options={"field": {"plot_type": "slice", "x": 0.0, "scale": None}},
+        )
+        plot.dynamic_plot(show_plot=False)
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        cut = _first_actor(renderers.GetNextItem()).GetMapper().GetInput()
+        assert cut.GetNumberOfCells() > 0
+        np.testing.assert_allclose(cut.GetBounds()[:2], [1e-6, 1e-6], atol=1e-12)
 
     def test_2d_slice_uses_x_and_z_coordinates(self):
         solution = _triangle_solution()
