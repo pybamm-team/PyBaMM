@@ -1540,6 +1540,25 @@ class FiniteVolume(pybamm.SpatialMethod):
             `shift_key = "edge to node"`)
         """
 
+        def exterior_edge_rows(submesh):
+            """Linear extrapolation from the two nearest nodes onto the exterior edges.
+
+            Uses the true node positions, so the result agrees with
+            :meth:`boundary_value_or_flux`. On a uniform mesh it reduces to the
+            usual ``[1.5, -0.5]``; on a non-uniform one it must not, or a flux
+            imposed as a gradient divided by a surface value is inconsistent
+            with the flux the gradient actually produces.
+            """
+            n = submesh.npts
+            left = 0.5 * submesh.d_edges[0] / submesh.d_nodes[0]
+            right = 0.5 * submesh.d_edges[-1] / submesh.d_nodes[-1]
+            return (
+                csr_matrix(([1 + left, -left], ([0, 0], [0, 1])), shape=(1, n)),
+                csr_matrix(
+                    ([-right, 1 + right], ([0, 0], [n - 2, n - 1])), shape=(1, n)
+                ),
+            )
+
         def arithmetic_mean(array):
             """Calculate the arithmetic mean of an array using matrix multiplication"""
             # Create appropriate submesh by combining submeshes in domain
@@ -1549,15 +1568,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             n = submesh.npts
 
             if shift_key == "node to edge":
-                sub_matrix_left = csr_matrix(
-                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
-                )
+                # Interior edges sit between unevenly spaced nodes on a
+                # non-uniform mesh, so weight by the true distances.
+                d_edges = submesh.d_edges
+                weight = d_edges[:-1] / (d_edges[:-1] + d_edges[1:])
                 sub_matrix_center = diags(
-                    [0.5, 0.5], [0, 1], shape=(n - 1, n), dtype=None
+                    [1 - weight, weight], [0, 1], shape=(n - 1, n), dtype=None
                 )
-                sub_matrix_right = csr_matrix(
-                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
-                )
+                sub_matrix_left, sub_matrix_right = exterior_edge_rows(submesh)
                 sub_matrix = vstack(
                     [sub_matrix_left, sub_matrix_center, sub_matrix_right]
                 )
@@ -1617,13 +1635,10 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             if shift_key == "node to edge":
                 # Matrix to compute values at the exterior edges
-                edges_sub_matrix_left = csr_matrix(
-                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
+                edges_sub_matrix_left, edges_sub_matrix_right = exterior_edge_rows(
+                    submesh
                 )
                 edges_sub_matrix_center = csr_matrix((n - 1, n))
-                edges_sub_matrix_right = csr_matrix(
-                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
-                )
                 edges_sub_matrix = vstack(
                     [
                         edges_sub_matrix_left,

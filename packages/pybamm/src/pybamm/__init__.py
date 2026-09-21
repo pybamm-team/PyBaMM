@@ -259,7 +259,16 @@ import os
 import pathlib
 import sysconfig
 
+import casadi
+
 os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path("purelib")) / "casadi")
+
+# CasADi 3.8 changed the result type of numpy functions applied to CasADi values
+# (casadi#2959). Function nodes rely on the legacy types, so keep them.
+try:
+    casadi.GlobalOptions.setNumpyMode(-1)
+except AttributeError:
+    pass
 
 __all__ = [
     "batch_study",
