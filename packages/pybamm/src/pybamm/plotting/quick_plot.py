@@ -798,7 +798,6 @@ class QuickPlot:
             x, y, var, vmin=vmin, vmax=vmax, shading=self.shading, cmap=cmap
         )
         self._wireframes[key] = self._overlay_mesh_wireframe(ax, variable)
-        ax.set_aspect("equal")
         return mesh_plot
 
     def _remove_panel_artists(self, key):
