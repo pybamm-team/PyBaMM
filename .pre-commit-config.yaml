@@ -2,6 +2,8 @@ ci:
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autofix_commit_msg: "style: pre-commit fixes"
   autoupdate_schedule: "weekly"
+  # No base ref here, so comment-slop would scan nothing; `style` gates it.
+  skip: [comment-slop]
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -58,6 +60,13 @@ repos:
         language: python
         files: ^packages/pybammsolvers/(src/pybammsolvers/version\.py|pyproject\.toml|vcpkg\.json)$
         pass_filenames: false
+
+      - id: comment-slop
+        name: Report comment slop on changed lines
+        entry: python .github/scripts/check_comment_slop.py
+        language: python
+        additional_dependencies: ["comment-slop==0.1.0"]
+        require_serial: true
 
       - id: check-ci-gate
         name: Check every CI job is merge-gated or explicitly advisory

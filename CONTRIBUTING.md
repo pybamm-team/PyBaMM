@@ -32,6 +32,12 @@ pre-commit run --all-files
 
 If you would like to skip the failing checks and push the code for further discussion, use the `--no-verify` option with `git commit`.
 
+### Comment slop
+
+One of the hooks, [`comment-slop`](https://github.com/ionworks/comment-slop), reports comments that restate the code, narrate an edit, record what the code used to do, or leak task and review chatter — the [code style](#code-style) rule that a comment should explain the non-obvious *why*. It reports; it never edits a file. Only the lines your commit changed are checked, and on a pull request the comparison is made against the base branch.
+
+Coding agents get the same report as they write, through the `PostToolUse` hook in the tracked `.claude/settings.json`, which runs `.claude/hooks/comment-slop.sh`. The write-time hook reports while the author still knows whether a comment was required, and the pre-commit hook covers everything that reaches a commit, whatever wrote it.
+
 ## Workflow
 
 We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedia.org/wiki/GitHub) to coordinate our work. When making any kind of update, we try to follow the procedure below.
