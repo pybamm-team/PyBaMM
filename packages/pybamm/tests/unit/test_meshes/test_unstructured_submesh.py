@@ -1581,3 +1581,20 @@ class TestContainsPoints:
         assert len(mesh._contains_points_cache) == 1
         mesh.contains_points(points + 0.1)
         assert len(mesh._contains_points_cache) == 2
+
+    def test_cache_evicts_oldest_query_grid(self, monkeypatch):
+        from pybamm.meshes import unstructured_submesh
+
+        monkeypatch.setattr(unstructured_submesh, "_CONTAINS_POINTS_CACHE_SIZE", 2)
+        nodes, elements = _unit_cube_five_tets()
+        mesh = UnstructuredSubMesh(nodes, elements)
+        points = np.array([[0.5, 0.5, 0.5], [2.0, 2.0, 2.0]])
+        for shift in (0.0, 0.1, 0.2):
+            mesh.contains_points(points + shift)
+        cache = mesh._contains_points_cache
+        assert len(cache) == 2
+        # the first grid was evicted and is recomputed, pushing out the second
+        oldest_key = next(iter(cache))
+        np.testing.assert_array_equal(mesh.contains_points(points), [True, False])
+        assert len(cache) == 2
+        assert oldest_key not in cache
