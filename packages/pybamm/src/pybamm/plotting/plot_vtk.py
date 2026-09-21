@@ -337,9 +337,7 @@ class VTKQuickPlot:
         # --- Precompute scalar (0D) data ---
         scalar_data = {}
         for name, pv in zip(self.scalar_names, self.scalar_vars, strict=True):
-            pv.initialise()
-            vals = np.array([float(pv(t).ravel()[0]) for t in self.t_pts])
-            scalar_data[name] = vals
+            scalar_data[name] = np.asarray(pv(self.t_pts), dtype=float).ravel()
 
         slider_h = 0.08
         panel_top = 1.0
