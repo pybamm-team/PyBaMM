@@ -598,9 +598,27 @@ class TestVTKQuickPlot:
         )
 
         with pytest.raises(
-            pybamm.OptionError, match="requires one of 'x', 'y', or 'z'"
+            pybamm.OptionError, match=r"exactly one of 'x', 'y', or 'z'.*got \[\]"
         ):
             plot.dynamic_plot(show_plot=False)
+
+        plot = VTKQuickPlot(
+            solution,
+            "field",
+            options={"field": {"plot_type": "slice", "y": 0.5, "z": 0.5}},
+        )
+        with pytest.raises(pybamm.OptionError, match=r"got \['y', 'z'\]"):
+            plot.dynamic_plot(show_plot=False)
+
+    def test_options_for_unknown_variables_are_rejected(self):
+        solution, _ = _cell_solution()
+        with pytest.raises(pybamm.OptionError, match=r"\['Field'\].*not spatial"):
+            VTKQuickPlot(solution, "field", options={"Field": {"plot_type": "3d"}})
+        # 0D variables have no panel options either
+        with pytest.raises(pybamm.OptionError, match=r"\['scalar'\]"):
+            VTKQuickPlot(
+                solution, ["field", "scalar"], options={"scalar": {"scale": None}}
+            )
 
     def test_save_gif_builds_plot_and_writes_animation(self, tmp_path):
         Image = pytest.importorskip("PIL.Image")

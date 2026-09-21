@@ -297,6 +297,12 @@ class VTKQuickPlot:
 
         _defaults = {"plot_type": "3d", "scale": "auto"}
         raw_opts = options or {}
+        unknown = sorted(set(raw_opts) - set(self.spatial_names))
+        if unknown:
+            raise pybamm.OptionError(
+                f"Options were given for {unknown}, which are not spatial output "
+                f"variables of this plot ({self.spatial_names})."
+            )
 
         # Build spatial_panels: flat list of (name, opts_dict) tuples.
         self.spatial_panels = []
@@ -415,12 +421,14 @@ class VTKQuickPlot:
             pipeline_source = c2p.GetOutputPort() if c2p is not None else g
             cutter = None
             if plot_type == "slice":
-                axis_key = next((ak for ak in ("x", "y", "z") if ak in opts), None)
-                if axis_key is None:
+                axes_given = [ak for ak in ("x", "y", "z") if ak in opts]
+                if len(axes_given) != 1:
                     raise pybamm.OptionError(
-                        f"plot_type='slice' for '{name}' requires one of "
-                        f"'x', 'y', or 'z' specifying the slice fraction"
+                        f"plot_type='slice' for '{name}' requires exactly one of "
+                        f"'x', 'y', or 'z' specifying the slice fraction, got "
+                        f"{axes_given}."
                     )
+                axis_key = axes_given[0]
                 if axis_key not in axis_columns:
                     raise pybamm.OptionError(
                         f"Cannot slice '{name}' along '{axis_key}': its "
