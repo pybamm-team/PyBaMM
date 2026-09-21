@@ -29,6 +29,7 @@ from .basic_spm_with_3d_thermal import Basic3DThermalSPM
 from .multilayer_3d_thermal_spm import MultiLayer3DThermalSPM
 from .multilayer_3d_thermal_spme import MultiLayer3DThermalSPMe
 from .multilayer_3d_thermal_dfn import MultiLayer3DThermalDFN
+from .multilayer_1d_thermal_spm import MultiLayer1DThermalSPM
 from .basic_dfn_half_cell import BasicDFNHalfCell
 from .basic_dfn_composite import BasicDFNComposite
 from .Yang2017 import Yang2017

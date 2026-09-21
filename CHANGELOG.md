@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added `MultiLayer1DThermalSPM`, a multi-layer pouch model that resolves the full 1D through-thickness temperature profile T(x) within each layer (finite-volume across negative electrode | separator | positive electrode) instead of the coarse 2-node-per-layer profile of the 3D thermal models. Adjacent layers conduct across the inter-layer thermal contact resistance, as in `MultiLayer3DThermalSPM`. ([#5505](https://github.com/pybamm-team/PyBaMM/pull/5505))
 - Added `MultiLayer3DThermalSPMe` and `MultiLayer3DThermalDFN` model classes extending the multilayer 3D thermal framework to SPMe and DFN electrochemistry fidelity levels. Each layer can now resolve spatially-varying electrolyte concentration, potential, and solid-phase charge conservation, enabling higher-fidelity through-stack thermal predictions. ([#5505](https://github.com/pybamm-team/PyBaMM/pull/5505))
 - Added `NonlinearSolver` as the default nonlinear solver, which replaces `CasadiAlgebraicSolver`. `IDAKLUSolver` now computes the initial conditions in C++ by default. ([#5459](https://github.com/pybamm-team/PyBaMM/pull/5459))
 
