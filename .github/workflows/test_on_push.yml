@@ -139,6 +139,7 @@ jobs:
   # Gated by ci_gate. Full Python on x86 Linux + min/max endpoints on ARM Linux and
   # macOS; interior versions run nightly (run_periodic_tests.yml). ubuntu-latest/3.13
   # is absent here because it runs the coverage and integration jobs below instead.
+  # Python 3.15 is advisory-only until it ships (see run_unit_tests_advisory).
   run_unit_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
@@ -159,7 +160,9 @@ jobs:
          {"os": "macos-latest", "python": "3.14"}]
 
   # Advisory: reports red on failure but is deliberately absent from ci_gate's
-  # needs, so a flaky Windows run never blocks a merge.
+  # needs, so a flaky Windows run never blocks a merge. Python 3.15 sits here
+  # too while it is a release candidate; promote its legs into run_unit_tests
+  # once 3.15 ships.
   run_unit_tests_advisory:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
@@ -171,7 +174,11 @@ jobs:
       sessions: unit
       legs: >-
         [{"os": "windows-latest", "python": "3.10"},
-         {"os": "windows-latest", "python": "3.14"}]
+         {"os": "windows-latest", "python": "3.14"},
+         {"os": "windows-latest", "python": "3.15"},
+         {"os": "ubuntu-latest", "python": "3.15"},
+         {"os": "ubuntu-24.04-arm", "python": "3.15"},
+         {"os": "macos-latest", "python": "3.15"}]
 
   run_coverage:
     needs: [changes, build_solver]

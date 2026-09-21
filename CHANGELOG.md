@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added support for Python 3.15 to `pybamm` and `pybammsolvers`. The `jax` extra remains capped below 3.15 until `jaxlib` ships cp315 wheels. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - `DiffSLExport` now supports `Interpolant` nodes, so models with interpolated parameters (e.g. OCP or diffusivity lookup tables) can be exported to DiffSL. 1D interpolants use DiffSL's native `interp1d` over the table data; 2D interpolants use successive 1D interpolation. ([#5756](https://github.com/pybamm-team/PyBaMM/pull/5756))
 
 ## Bug fixes

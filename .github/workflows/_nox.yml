@@ -118,6 +118,9 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.leg.python }}
+          # 3.15 is still a release candidate; a stable release, when one exists,
+          # is always preferred. Drop this once 3.15 ships.
+          allow-prereleases: true
 
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
