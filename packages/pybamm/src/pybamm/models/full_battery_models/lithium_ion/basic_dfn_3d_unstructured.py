@@ -33,9 +33,6 @@ class BasicDFN3DUnstructured(BaseModel):
         self._element_type = element_type
         pybamm.citations.register("Marquis2019")
 
-        ######################
-        # Variables
-        ######################
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
         x = pybamm.SpatialVariable(
@@ -195,9 +192,6 @@ class BasicDFN3DUnstructured(BaseModel):
         self.rhs[Q] = current / 3600
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
-        ######################
-        # Particles
-        ######################
         N_s_n = -self.param.n.prim.D(c_s_n, T) * pybamm.grad(c_s_n)
         N_s_p = -self.param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
         self.rhs[c_s_n] = -pybamm.div(N_s_n)
