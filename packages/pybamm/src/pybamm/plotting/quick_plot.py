@@ -422,6 +422,9 @@ class QuickPlot:
             )
             self.subplot_positions[variable_tuple] = (self.n_rows, self.n_cols, k + 1)
 
+        # 3D panels add two slice sliders below the time slider
+        self._has_3d = any(vl[0][0].dimensions == 3 for vl in self.variables.values())
+
     def _get_spatial_var(self, key, variable, dimension):
         """Return the appropriate spatial variable(s)"""
 
@@ -752,7 +755,7 @@ class QuickPlot:
 
         # Fix layout
         if dynamic:
-            slider_top = 0.05
+            slider_top = 0.13 if self._has_3d else 0.05
         else:
             slider_top = 0
         bottom = max(legend_top, slider_top)
@@ -949,10 +952,8 @@ class QuickPlot:
             # create an initial plot at time self.min_t
             self.plot(self.min_t, dynamic=True)
 
-            has_3d = any(vl[0][0].dimensions == 3 for vl in self.variables.values())
-
             axcolor = "lightgoldenrodyellow"
-            if has_3d:
+            if self._has_3d:
                 t_bottom = 0.08
                 ax_slider = plt.axes([0.315, t_bottom, 0.37, 0.03], facecolor=axcolor)
             else:
@@ -967,7 +968,7 @@ class QuickPlot:
             )
             self.slider.on_changed(self.slider_update)
 
-            if has_3d:
+            if self._has_3d:
                 self._slice_sliders = {}
                 key_3d = next(
                     key

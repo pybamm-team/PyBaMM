@@ -207,6 +207,13 @@ class TestQuickPlotUnstructured:
         assert scalar_axis.get_xlabel() == quiver_axis.get_xlabel() == f"$x$ [{unit}]"
         np.testing.assert_allclose(scalar_axis.get_xlim(), quiver_axis.get_xlim())
         np.testing.assert_allclose(quick_plot._slice_sliders["y"].val, 0.5e6)
+        # the panels are laid out above the three stacked sliders
+        sliders_top = max(
+            slider.ax.get_position().y1
+            for slider in (quick_plot.slider, *quick_plot._slice_sliders.values())
+        )
+        assert scalar_axis.get_position().y0 >= sliders_top
+        assert quiver_axis.get_position().y0 >= sliders_top
         # a variable on a taller mesh follows the slider as a fraction of its extent
         quick_plot._unstructured_grids[("flux",)]["y"] = np.linspace(0.0, 2.0, 80)
         xlim_before = scalar_axis.get_xlim()
