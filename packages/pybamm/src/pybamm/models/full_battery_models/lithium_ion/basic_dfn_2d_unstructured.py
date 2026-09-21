@@ -1,6 +1,8 @@
 #
 # Basic Doyle-Fuller-Newman (DFN) Model — 2D Unstructured FVM
 #
+from __future__ import annotations
+
 import pybamm
 from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
     BaseModel,
@@ -12,7 +14,8 @@ class BasicDFN2DUnstructured(BaseModel):
 
     Identical physics to :class:`BasicDFN2D` but uses
     :class:`~pybamm.FiniteVolumeUnstructured` on triangle or quad elements
-    instead of the structured tensor-product grid.
+    instead of the structured tensor-product grid. The through-cell direction
+    is *x* and the height direction is *z*.
 
     Parameters
     ----------
@@ -23,10 +26,25 @@ class BasicDFN2DUnstructured(BaseModel):
         TPFA-orthogonal) or ``"triangle"``.
     """
 
+    # Transverse directions as (coordinate letter, direction tag, label used in
+    # the FunctionParameter input names) and their zero-flux boundary sides.
+    _transverse_directions: tuple[tuple[str, str, str], ...] = (
+        ("z", "tb", "Vertical"),
+    )
+    _transverse_sides: tuple[str, ...] = ("top", "bottom")
+    _default_through_cell_pts: dict[str, int] = {
+        "x_n": 20,
+        "x_s": 30,
+        "x_p": 20,
+        "r_p": 20,
+        "r_n": 20,
+    }
+    _default_transverse_pts: int = 10
+
     def __init__(
         self,
-        name="Doyle-Fuller-Newman model (2D unstructured)",
-        element_type="quad",
+        name: str = "Doyle-Fuller-Newman model (2D unstructured)",
+        element_type: str = "quad",
     ):
         super().__init__(name=name)
         self._element_type = element_type
@@ -34,36 +52,44 @@ class BasicDFN2DUnstructured(BaseModel):
 
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
-        x = pybamm.SpatialVariable(
-            "x",
-            domain=["negative electrode", "separator", "positive electrode"],
-            coord_sys="cartesian",
-            direction="lr",
-        )
-        x_n = pybamm.SpatialVariable(
-            "x_n", domain="negative electrode", coord_sys="cartesian", direction="lr"
-        )
-        x_s = pybamm.SpatialVariable(
-            "x_s", domain="separator", coord_sys="cartesian", direction="lr"
-        )
-        x_p = pybamm.SpatialVariable(
-            "x_p", domain="positive electrode", coord_sys="cartesian", direction="lr"
-        )
-        z_n = pybamm.SpatialVariable(
-            "z_n", domain="negative electrode", coord_sys="cartesian", direction="tb"
-        )
-        z_s = pybamm.SpatialVariable(
-            "z_s", domain="separator", coord_sys="cartesian", direction="tb"
-        )
-        z_p = pybamm.SpatialVariable(
-            "z_p", domain="positive electrode", coord_sys="cartesian", direction="tb"
-        )
-        z = pybamm.SpatialVariable(
-            "z",
-            domain=["negative electrode", "separator", "positive electrode"],
-            coord_sys="cartesian",
-            direction="tb",
-        )
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        subdomains = {
+            "n": "negative electrode",
+            "s": "separator",
+            "p": "positive electrode",
+        }
+
+        def spatial_variable(name, domain, direction):
+            return pybamm.SpatialVariable(
+                name, domain=domain, coord_sys="cartesian", direction=direction
+            )
+
+        x = spatial_variable("x", whole_cell, "lr")
+        x_n = spatial_variable("x_n", subdomains["n"], "lr")
+        x_s = spatial_variable("x_s", subdomains["s"], "lr")
+        x_p = spatial_variable("x_p", subdomains["p"], "lr")
+        through_cell = {"n": x_n, "s": x_s, "p": x_p, "": x}
+
+        # transverse[letter][suffix] is e.g. z_n for ("z", "n") and z for ("z", "")
+        transverse = {}
+        for letter, direction, _ in self._transverse_directions:
+            transverse[letter] = {
+                suffix: spatial_variable(f"{letter}_{suffix}", domain, direction)
+                for suffix, domain in subdomains.items()
+            }
+            transverse[letter][""] = spatial_variable(letter, whole_cell, direction)
+
+        def position_inputs(suffix):
+            inputs = {"Through-cell distance (x) [m]": through_cell[suffix]}
+            for letter, _, label in self._transverse_directions:
+                inputs[f"{label} distance ({letter}) [m]"] = transverse[letter][suffix]
+            return inputs
+
+        def integration_variables(suffix):
+            return [through_cell[suffix]] + [
+                transverse[letter][suffix]
+                for letter, _, _ in self._transverse_directions
+            ]
 
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
@@ -119,26 +145,21 @@ class BasicDFN2DUnstructured(BaseModel):
         i_cell = self.param.current_density_with_time
 
         eps_n = pybamm.FunctionParameter(
-            "Negative electrode porosity",
-            {"Through-cell distance (x) [m]": x_n, "Vertical distance (z) [m]": z_n},
+            "Negative electrode porosity", position_inputs("n")
         )
-        eps_s = pybamm.FunctionParameter(
-            "Separator porosity",
-            {"Through-cell distance (x) [m]": x_s, "Vertical distance (z) [m]": z_s},
-        )
+        eps_s = pybamm.FunctionParameter("Separator porosity", position_inputs("s"))
         eps_p = pybamm.FunctionParameter(
-            "Positive electrode porosity",
-            {"Through-cell distance (x) [m]": x_p, "Vertical distance (z) [m]": z_p},
+            "Positive electrode porosity", position_inputs("p")
         )
         eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         eps_s_n = pybamm.FunctionParameter(
             "Negative electrode active material volume fraction",
-            {"Through-cell distance (x) [m]": x_n, "Vertical distance (z) [m]": z_n},
+            position_inputs("n"),
         )
         eps_s_p = pybamm.FunctionParameter(
             "Positive electrode active material volume fraction",
-            {"Through-cell distance (x) [m]": x_p, "Vertical distance (z) [m]": z_p},
+            position_inputs("p"),
         )
 
         tor = pybamm.concatenation(
@@ -199,59 +220,53 @@ class BasicDFN2DUnstructured(BaseModel):
 
         c_s_n_av = pybamm.RAverage(c_s_n)
         c_s_p_av = pybamm.RAverage(c_s_p)
-        solid_lithium_negative = pybamm.Integral(c_s_n_av * eps_s_n, [x_n, z_n])
-        solid_lithium_positive = pybamm.Integral(c_s_p_av * eps_s_p, [x_p, z_p])
+        solid_lithium_negative = pybamm.Integral(
+            c_s_n_av * eps_s_n, integration_variables("n")
+        )
+        solid_lithium_positive = pybamm.Integral(
+            c_s_p_av * eps_s_p, integration_variables("p")
+        )
         total_solid_lithium = solid_lithium_negative + solid_lithium_positive
 
         ######################
         # Current in the solid
         ######################
+        # Multiply by L_x**2 * L_z**2 to improve conditioning
+        L_scale = self.param.L_x**2 * self.param.L_z**2
+        zero_flux = {
+            side: (pybamm.Scalar(0), "Neumann")
+            for side in ("left", "right", *self._transverse_sides)
+        }
         sigma_eff_n = self.param.n.sigma(None, T) * eps_s_n**self.param.n.b_s
         sigma_eff_p = self.param.p.sigma(None, T) * eps_s_p**self.param.p.b_s
-        self.algebraic[phi_s_n] = (
-            self.param.L_x**2
-            * self.param.L_z**2
-            * (pybamm.div(-sigma_eff_n * pybamm.grad(phi_s_n)) + a_j_n)
+        self.algebraic[phi_s_n] = L_scale * (
+            pybamm.div(-sigma_eff_n * pybamm.grad(phi_s_n)) + a_j_n
         )
-        self.algebraic[phi_s_p] = (
-            self.param.L_x**2
-            * self.param.L_z**2
-            * (pybamm.div(-sigma_eff_p * pybamm.grad(phi_s_p)) + a_j_p)
+        self.algebraic[phi_s_p] = L_scale * (
+            pybamm.div(-sigma_eff_p * pybamm.grad(phi_s_p)) + a_j_p
         )
         self.boundary_conditions[phi_s_n] = {
+            **zero_flux,
             "left": (pybamm.Scalar(0), "Dirichlet"),
-            "right": (pybamm.Scalar(0), "Neumann"),
-            "top": (pybamm.Scalar(0), "Neumann"),
-            "bottom": (pybamm.Scalar(0), "Neumann"),
         }
         self.boundary_conditions[phi_s_p] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
+            **zero_flux,
             "right": (i_cell / pybamm.boundary_value(-sigma_eff_p, "right"), "Neumann"),
-            "top": (pybamm.Scalar(0), "Neumann"),
-            "bottom": (pybamm.Scalar(0), "Neumann"),
         }
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
         self.initial_conditions[phi_s_p] = self.param.ocv_init
+
         ######################
         # Current in the electrolyte
         ######################
         kappa_eff = self.param.kappa_e(c_e, T) * tor
         kappa_D_eff = kappa_eff * self.param.chiRT_over_Fc(c_e, T)
-        self.algebraic[phi_e] = (
-            self.param.L_x**2
-            * self.param.L_z**2
-            * (
-                pybamm.div(kappa_D_eff * pybamm.grad(c_e))
-                - pybamm.div(kappa_eff * pybamm.grad(phi_e))
-                - a_j
-            )
+        self.algebraic[phi_e] = L_scale * (
+            pybamm.div(kappa_D_eff * pybamm.grad(c_e))
+            - pybamm.div(kappa_eff * pybamm.grad(phi_e))
+            - a_j
         )
-        self.boundary_conditions[phi_e] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (pybamm.Scalar(0), "Neumann"),
-            "top": (pybamm.Scalar(0), "Neumann"),
-            "bottom": (pybamm.Scalar(0), "Neumann"),
-        }
+        self.boundary_conditions[phi_e] = dict(zero_flux)
         self.initial_conditions[phi_e] = -self.param.n.prim.U_init
 
         ######################
@@ -262,12 +277,7 @@ class BasicDFN2DUnstructured(BaseModel):
             pybamm.div(D_e_eff * pybamm.grad(c_e))
             + (1 - self.param.t_plus(c_e, T)) * a_j / self.param.F
         )
-        self.boundary_conditions[c_e] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (pybamm.Scalar(0), "Neumann"),
-            "top": (pybamm.Scalar(0), "Neumann"),
-            "bottom": (pybamm.Scalar(0), "Neumann"),
-        }
+        self.boundary_conditions[c_e] = dict(zero_flux)
         self.initial_conditions[c_e] = self.param.c_e_init
 
         ######################
@@ -277,7 +287,7 @@ class BasicDFN2DUnstructured(BaseModel):
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
-        total_lithium = pybamm.Integral(c_e * eps, [x, z])
+        total_lithium = pybamm.Integral(c_e * eps, integration_variables(""))
         self.variables = {
             "Negative particle concentration [mol.m-3]": c_s_n,
             "Total lithium [mol]": total_lithium,
@@ -300,16 +310,8 @@ class BasicDFN2DUnstructured(BaseModel):
             "Battery voltage [V]": voltage * num_cells,
             "Time [s]": pybamm.t,
             "Discharge capacity [A.h]": Q,
-            "x": x,
-            "z": z,
             "Current density [A.m-2]": a_j,
             "Electrolyte current density [A.m-2]": a_j,
-            "x_n": x_n,
-            "x_s": x_s,
-            "x_p": x_p,
-            "z_n": z_n,
-            "z_s": z_s,
-            "z_p": z_p,
             "Negative electrode surface concentration [mol.m-3]": c_s_surf_n,
             "Negative electrode surface stoichiometry": sto_surf_n,
             "Positive electrode surface concentration [mol.m-3]": c_s_surf_p,
@@ -327,34 +329,56 @@ class BasicDFN2DUnstructured(BaseModel):
             "Negative solid lithium [mol]": solid_lithium_negative,
             "Total solid lithium [mol]": total_solid_lithium,
         }
+        for var in through_cell.values():
+            self.variables[var.name] = var
+        for variables_by_suffix in transverse.values():
+            for var in variables_by_suffix.values():
+                self.variables[var.name] = var
         self.events += [
             pybamm.Event("Minimum voltage [V]", voltage - self.param.voltage_low_cut),
             pybamm.Event("Maximum voltage [V]", self.param.voltage_high_cut - voltage),
         ]
 
+    def _transverse_geometry(
+        self,
+    ) -> list[tuple[pybamm.SpatialVariable, pybamm.Symbol]]:
+        """Whole-cell transverse spatial variables keyed like ``z_2d`` with the
+        cell dimension each one spans."""
+        ndim = 1 + len(self._transverse_directions)
+        return [
+            (
+                pybamm.SpatialVariable(
+                    f"{letter}_{ndim}d",
+                    domain=["negative electrode", "separator", "positive electrode"],
+                    coord_sys="cartesian",
+                    direction=direction,
+                ),
+                getattr(self.param, f"L_{letter}"),
+            )
+            for letter, direction, _ in self._transverse_directions
+        ]
+
     @property
     def default_geometry(self):
-        z_2d = pybamm.SpatialVariable(
-            "z_2d",
-            domain=["negative electrode", "separator", "positive electrode"],
-            coord_sys="cartesian",
-            direction="tb",
-        )
+        transverse = {
+            var: {"min": 0, "max": length}
+            for var, length in self._transverse_geometry()
+        }
         return {
             "negative electrode": {
                 "x_n": {"min": 0, "max": self.param.n.L},
-                z_2d: {"min": 0, "max": self.param.L_z},
+                **transverse,
             },
             "separator": {
                 "x_s": {"min": self.param.n.L, "max": self.param.n.L + self.param.s.L},
-                z_2d: {"min": 0, "max": self.param.L_z},
+                **transverse,
             },
             "positive electrode": {
                 "x_p": {
                     "min": self.param.n.L + self.param.s.L,
                     "max": self.param.n.L + self.param.s.L + self.param.p.L,
                 },
-                z_2d: {"min": 0, "max": self.param.L_z},
+                **transverse,
             },
             "positive particle": {
                 "r_p": {"min": 0, "max": self.param.p.prim.R_typ},
@@ -397,17 +421,7 @@ class BasicDFN2DUnstructured(BaseModel):
 
     @property
     def default_var_pts(self):
-        z_2d = pybamm.SpatialVariable(
-            "z_2d",
-            domain=["negative electrode", "separator", "positive electrode"],
-            coord_sys="cartesian",
-            direction="tb",
-        )
-        return {
-            "x_n": 20,
-            "x_s": 30,
-            "x_p": 20,
-            "r_p": 20,
-            "r_n": 20,
-            z_2d: 10,
-        }
+        var_pts = dict(self._default_through_cell_pts)
+        for var, _ in self._transverse_geometry():
+            var_pts[var] = self._default_transverse_pts
+        return var_pts
