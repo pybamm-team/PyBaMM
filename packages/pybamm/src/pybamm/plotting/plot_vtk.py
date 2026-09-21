@@ -311,8 +311,6 @@ class VTKQuickPlot:
                 merged.update(single_opt)
                 self.spatial_panels.append((name, merged))
 
-    # ------------------------------------------------------------------
-
     def dynamic_plot(self, show_plot: bool = True) -> None:
         """Launch an interactive VTK window with a time slider."""
         vtk = pybamm.import_optional_dependency("vtk")
@@ -321,7 +319,6 @@ class VTKQuickPlot:
         n_scalar = len(self.scalar_names)
         n_panels = n_spatial + n_scalar
 
-        # --- Precompute spatial data ---
         spatial_data = {}
         spatial_mins = {}
         spatial_maxs = {}
@@ -344,7 +341,6 @@ class VTKQuickPlot:
             vals = np.array([float(pv(t).ravel()[0]) for t in self.t_pts])
             scalar_data[name] = vals
 
-        # --- Layout ---
         slider_h = 0.08
         panel_top = 1.0
         panel_bot = slider_h
@@ -366,7 +362,6 @@ class VTKQuickPlot:
 
         panel_idx = 0
 
-        # --- Spatial panels ---
         first_3d_cam = None
         spatial_renderers = []
         panel_names = []
@@ -727,7 +722,6 @@ class VTKQuickPlot:
             chart_views.append((chart, view, scene))
             panel_idx += 1
 
-        # --- Fill any unused grid cells with white ---
         while panel_idx < n_rows * n_cols:
             ren = vtk.vtkRenderer()
             ren.SetBackground(1, 1, 1)

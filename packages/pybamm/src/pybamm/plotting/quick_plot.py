@@ -502,8 +502,8 @@ class QuickPlot:
                 else:
                     var_min, var_max = self.variable_limits[key]
             elif self.variable_limits[key] == "fixed":
-                # fixed variable limits: calculate "globlal" min and max
-                # unstructured variables are sampled on their cells, not a display grid
+                # limits span every time; unstructured variables use their cell
+                # values because a display-grid interpolation would clip extremes
                 spatial_vars = (
                     {}
                     if isinstance(
