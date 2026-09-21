@@ -572,7 +572,10 @@ class UnstructuredSubMesh(SubMesh):
         query_pts = np.ascontiguousarray(query_pts, dtype=np.float64)
         # plotting asks about the same display grid every frame: remember the mask
         cache = self.__dict__.setdefault("_contains_points_cache", {})
-        cache_key = (query_pts.shape, hashlib.sha1(query_pts.tobytes()).digest())
+        cache_key = (
+            query_pts.shape,
+            hashlib.sha1(query_pts.tobytes(), usedforsecurity=False).digest(),
+        )
         if cache_key in cache:
             return cache[cache_key].copy()
 
