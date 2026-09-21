@@ -7,8 +7,9 @@ import pybamm
 
 from .meshes import MeshGenerator, SubMesh
 
-# (query points x boundary triangles) pairs evaluated per chunk in contains_points_3d
-_CONTAINS_POINTS_CHUNK_PAIRS = 2_000_000
+# (query points x boundary triangles) pairs evaluated per chunk in contains_points_3d;
+# each pair carries ~10 float64 temporaries, so this keeps a chunk under ~20 MB
+_CONTAINS_POINTS_CHUNK_PAIRS = 200_000
 # solid angle (sr) above which a point counts as inside; exterior points sum to
 # ~0 with round-off far below this, surface points to at least a corner's angle
 _CONTAINS_POINTS_TOL = 1e-6
