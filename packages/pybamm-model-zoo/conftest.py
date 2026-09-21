@@ -58,8 +58,11 @@ def pytest_ignore_collect(collection_path, config):
     tier = config.getoption("--zoo-tier")
     if selected is None and tier is None:
         return None
+    # pytest keeps symlinks in `collection_path` but the registry resolves them,
+    # so both sides need resolving or a symlinked checkout stops pruning.
+    path = collection_path.resolve()
     for folder, entry in _model_folders():
-        if collection_path != folder and folder not in collection_path.parents:
+        if path != folder and folder not in path.parents:
             continue
         if selected is not None and entry.slug != selected:
             return True

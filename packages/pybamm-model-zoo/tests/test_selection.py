@@ -10,6 +10,7 @@ from pathlib import Path
 import conftest
 import pytest
 
+import pybamm_model_zoo as zoo
 from pybamm_model_zoo._registry import ModelEntry
 
 ROOT = Path("/zoo/src/pybamm_model_zoo")
@@ -99,3 +100,39 @@ class TestUnrecognisedTierIsNeverPruned:
     def test_a_model_filter_still_applies(self):
         """Only the *tier* is untrusted; selecting one model by slug still works."""
         assert ignored(CORE, **{"--zoo-model": "other_model"}) is True
+
+
+class TestSymlinkedCheckout:
+    """Pruning has to survive a checkout reached through a symlink.
+
+    pytest hands `pytest_ignore_collect` an ``os.path.abspath`` path, which keeps
+    symlinks deliberately, while the registry resolves them. Hand-building both
+    sides cannot catch that divergence, so this drives the real
+    :func:`conftest._model_folders` against a real symlink.
+    """
+
+    @pytest.fixture(autouse=True)
+    def two_tiers(self):
+        """Shadow the module fixture: this class needs the real registry."""
+
+    @pytest.fixture
+    def linked_zoo(self, tmp_path):
+        real = tmp_path / "real" / "community_model"
+        real.mkdir(parents=True)
+        (real / "model.toml").write_text(
+            '[model]\nslug = "community_model"\nname = "CommunityModel"\n'
+            'tier = "community"\n'
+        )
+        link = tmp_path / "link"
+        link.symlink_to(tmp_path / "real")
+        zoo.refresh([tmp_path / "real"])
+        yield link
+        zoo.refresh()
+
+    def test_a_tier_still_prunes_through_a_symlink(self, linked_zoo):
+        path = linked_zoo / "community_model" / "tests" / "test_it.py"
+        assert ignored(path, **{"--zoo-tier": "core"}) is True
+
+    def test_a_model_filter_still_prunes_through_a_symlink(self, linked_zoo):
+        path = linked_zoo / "community_model"
+        assert ignored(path, **{"--zoo-model": "other_model"}) is True
