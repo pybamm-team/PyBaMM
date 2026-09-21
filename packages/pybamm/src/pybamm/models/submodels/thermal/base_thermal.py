@@ -383,65 +383,65 @@ class BaseThermal(pybamm.BaseSubModel):
                 Q_s_cp = self.param.p.sigma_cc * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
 
+    def _phase_heat_of_mixing(self, variables, domain, phase_name, phase_param):
+        """Compute the heat of mixing source term for a single particle phase."""
+        Domain = domain.capitalize()
+        F = pybamm.constants.F.value
+        a = variables[
+            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
+        ]
+        R = variables[f"{Domain} {phase_name}particle radius [m]"]
+        N = a / (4 * np.pi * R**2)
+        if self.x_average:
+            c = variables[
+                f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
+            ]
+            T = variables[f"X-averaged {domain} electrode temperature [K]"]
+        else:
+            c = variables[f"{Domain} {phase_name}particle concentration [mol.m-3]"]
+            T = variables[f"{Domain} electrode temperature [K]"]
+        T_part = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
+        dc_dr2 = pybamm.inner(pybamm.grad(c), pybamm.grad(c))
+        D = phase_param.D(c, T_part)
+        dUeq = phase_param.U(c / phase_param.c_max, T_part).diff(c)
+        integrand_r = D * dc_dr2 * dUeq
+        integration_variable_r = [
+            pybamm.SpatialVariable("r", domain=integrand_r.domain)
+        ]
+        integral_r = pybamm.Integral(integrand_r, integration_variable_r)
+        return -F * N * integral_r
+
+    def _electrode_heat_of_mixing(self, variables, domain):
+        """Sum the heat of mixing over the particle phases of one electrode."""
+        electrode_param = getattr(self.param, domain[0])
+        num_phases = int(getattr(self.options, domain)["particle phases"])
+        if num_phases == 1:
+            return self._phase_heat_of_mixing(
+                variables, domain, "", electrode_param.prim
+            )
+        return sum(
+            self._phase_heat_of_mixing(variables, domain, phase_name, phase_param)
+            for phase_name, phase_param in zip(
+                ["primary ", "secondary "],
+                [electrode_param.prim, electrode_param.sec],
+                strict=True,
+            )
+        )
+
     def _heat_of_mixing(self, variables):
         """Compute heat of mixing source terms."""
 
         if self.options["heat of mixing"] == "true":
-            F = pybamm.constants.F.value
-            pi = np.pi
-
             # Compute heat of mixing in negative electrode
             if self.options.electrode_types["negative"] == "planar":
                 Q_mix_s_n = pybamm.FullBroadcast(
                     0, ["negative electrode"], "current collector"
                 )
             else:
-                a_n = variables["Negative electrode surface area to volume ratio [m-1]"]
-                R_n = variables["Negative particle radius [m]"]
-                N_n = a_n / (4 * pi * R_n**2)
-                if self.x_average:
-                    c_n = variables[
-                        "X-averaged negative particle concentration [mol.m-3]"
-                    ]
-                    T_n = variables["X-averaged negative electrode temperature [K]"]
-                else:
-                    c_n = variables["Negative particle concentration [mol.m-3]"]
-                    T_n = variables["Negative electrode temperature [K]"]
-                T_n_part = pybamm.PrimaryBroadcast(T_n, ["negative particle"])
-                dc_n_dr2 = pybamm.inner(pybamm.grad(c_n), pybamm.grad(c_n))
-                D_n = self.param.n.prim.D(c_n, T_n_part)
-                dUeq_n = self.param.n.prim.U(
-                    c_n / self.param.n.prim.c_max, T_n_part
-                ).diff(c_n)
-                integrand_r_n = D_n * dc_n_dr2 * dUeq_n
-                integration_variable_r_n = [
-                    pybamm.SpatialVariable("r", domain=integrand_r_n.domain)
-                ]
-                integral_r_n = pybamm.Integral(integrand_r_n, integration_variable_r_n)
-                Q_mix_s_n = -F * N_n * integral_r_n
+                Q_mix_s_n = self._electrode_heat_of_mixing(variables, "negative")
 
             # Compute heat of mixing in positive electrode
-            a_p = variables["Positive electrode surface area to volume ratio [m-1]"]
-            R_p = variables["Positive particle radius [m]"]
-            N_p = a_p / (4 * pi * R_p**2)
-            if self.x_average:
-                c_p = variables["X-averaged positive particle concentration [mol.m-3]"]
-                T_p = variables["X-averaged positive electrode temperature [K]"]
-            else:
-                c_p = variables["Positive particle concentration [mol.m-3]"]
-                T_p = variables["Positive electrode temperature [K]"]
-            T_p_part = pybamm.PrimaryBroadcast(T_p, ["positive particle"])
-            dc_p_dr2 = pybamm.inner(pybamm.grad(c_p), pybamm.grad(c_p))
-            D_p = self.param.p.prim.D(c_p, T_p_part)
-            dUeq_p = self.param.p.prim.U(c_p / self.param.p.prim.c_max, T_p_part).diff(
-                c_p
-            )
-            integrand_r_p = D_p * dc_p_dr2 * dUeq_p
-            integration_variable_r_p = [
-                pybamm.SpatialVariable("r", domain=integrand_r_p.domain)
-            ]
-            integral_r_p = pybamm.Integral(integrand_r_p, integration_variable_r_p)
-            Q_mix_s_p = -F * N_p * integral_r_p
+            Q_mix_s_p = self._electrode_heat_of_mixing(variables, "positive")
             Q_mix_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         else:
             Q_mix_s_n = pybamm.FullBroadcast(
