@@ -159,6 +159,28 @@ class TestBaseModel:
         }
         model.print_parameter_info()
 
+    def test_read_parameters_from_variable_metadata(self):
+        model = pybamm.BaseModel()
+        scale = pybamm.Parameter("scale")
+        reference = pybamm.Parameter("reference")
+        lower_bound = pybamm.Parameter("lower bound")
+        upper_bound = pybamm.Parameter("upper bound")
+        state = pybamm.Variable(
+            "state",
+            scale=scale,
+            reference=reference,
+            bounds=(lower_bound, upper_bound),
+        )
+        model.rhs = {state: pybamm.Scalar(0)}
+        model.initial_conditions = {state: pybamm.Scalar(0)}
+
+        assert {parameter.name for parameter in model.parameters} == {
+            "scale",
+            "reference",
+            "lower bound",
+            "upper bound",
+        }
+
     @pytest.mark.parametrize("symbols", ["c", "d", "e", "f", "h", "i"])
     def test_get_parameter_info(self, symbols):
         model = pybamm.BaseModel()

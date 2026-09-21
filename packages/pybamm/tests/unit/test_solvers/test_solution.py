@@ -512,6 +512,25 @@ class TestSolution:
         assert sol_sum.observable == expected  # computed on access
         assert sol_sum._observable == expected  # and cached
 
+    def test_vector_field_variable(self, mesh_2d):
+        # structured 2D FV does not support reading VectorField solution variables
+        model = pybamm.BaseModel()
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        model.rhs = {var: pybamm.Scalar(-1)}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        model.variables = {"var": var, "flux": pybamm.VectorField(var, 2 * var)}
+
+        disc = pybamm.Discretisation(mesh_2d, {"macroscale": pybamm.FiniteVolume2D()})
+        disc.process_model(model)
+        solution = pybamm.IDAKLUSolver().solve(model, np.linspace(0, 1, 5))
+
+        with pytest.raises(
+            NotImplementedError, match=r"structured 2D finite-volume meshes"
+        ):
+            solution["flux"]
+
     def test_add_solutions_different_models(self):
         # Set up first solution
         t1 = np.linspace(0, 1)

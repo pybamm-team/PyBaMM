@@ -190,12 +190,24 @@ class BasicDFNHalfCell(BaseModel):
         self.initial_conditions[phi_s_w] = self.param.p.prim.U_init
 
         ######################
+        # Current in the electrolyte
+        ######################
+        i_e = (self.param.kappa_e(c_e, T) * tor) * (
+            self.param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
+        )
+        # multiply by Lx**2 to improve conditioning
+        self.algebraic[phi_e] = self.param.L_x**2 * (pybamm.div(i_e) - a_j)
+
+        ######################
         # Electrolyte concentration
         ######################
-        N_e = -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
-        self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) + (1 - self.param.t_plus(c_e, T)) * a_j / self.param.F
+        # The migration term t_plus * i_e / F is kept inside the flux so that the
+        # balance is conservative when t_plus depends on c_e (see #5745)
+        N_e = (
+            -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
+            + self.param.t_plus(c_e, T) * i_e / self.param.F
         )
+        self.rhs[c_e] = (1 / eps) * (-pybamm.div(N_e) + a_j / self.param.F)
         dce_dx = (
             -(1 - self.param.t_plus(c_e, T))
             * i_cell
@@ -213,15 +225,6 @@ class BasicDFNHalfCell(BaseModel):
                 "Zero electrolyte concentration cut-off", pybamm.min(c_e) - 0.002
             )
         )
-
-        ######################
-        # Current in the electrolyte
-        ######################
-        i_e = (self.param.kappa_e(c_e, T) * tor) * (
-            self.param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
-        )
-        # multiply by Lx**2 to improve conditioning
-        self.algebraic[phi_e] = self.param.L_x**2 * (pybamm.div(i_e) - a_j)
 
         # reference potential
         L_Li = self.param.n.L
