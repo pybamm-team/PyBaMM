@@ -9,7 +9,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
-requires-python = ">=3.10, <3.15"
+requires-python = ">=3.10, <3.16"
 readme = { file = "README.md", content-type = "text/markdown" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -24,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
@@ -65,7 +66,8 @@ pydiffsol = ["pydiffsol>=0.6.2"]
 bpx = ["bpx>=1.1.1,<1.2.0"]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
-jax = ["jax>=0.7.0, <0.9.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+# Capped below 3.15 until jaxlib ships cp315 wheels.
+jax = ["jax>=0.7.0, <0.9.0; python_version >= '3.11' and python_version < '3.15' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
 # Contains all optional dependencies, except for jax, and dev dependencies
 all = [
     "scikit-fem>=12.0.2",

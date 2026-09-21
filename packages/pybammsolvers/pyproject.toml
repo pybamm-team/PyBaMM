@@ -14,7 +14,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "pybammsolvers"
 description = "Python interface for the IDAKLU solver"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 license-files = ["LICENSE"]
 readme = "README.md"
 # version.py stays the source of truth; a pre-commit hook mirrors it here.

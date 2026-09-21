@@ -31,7 +31,7 @@ without it, run ``git submodule update --init``.
 
 To install PyBaMM, you will need:
 
-- Python 3 (PyBaMM supports versions 3.10 — 3.14)
+- Python 3 (PyBaMM supports versions 3.10 — 3.15)
 - The Python headers file for your current Python version.
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
