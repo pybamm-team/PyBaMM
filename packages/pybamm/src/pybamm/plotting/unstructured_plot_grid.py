@@ -8,13 +8,22 @@ regular visualisation grid, mid-plane slices and quiver sampling that
 from __future__ import annotations
 
 import numpy as np
+import numpy.typing as npt
+
+import pybamm
+
+Grid = dict[str, npt.NDArray[np.float64]]
 
 N_POINTS_2D = 200
 N_POINTS_3D = 80
 N_QUIVER = 20
 
 
-def plot_grid(variable, n_points=None):
+def plot_grid(
+    variable: pybamm.ProcessedVariableUnstructuredFVM
+    | pybamm.ProcessedVariableVectorFieldUnstructuredFVM,
+    n_points: int | None = None,
+) -> Grid:
     """Regular grid over the variable's mesh bounding box.
 
     Parameters
@@ -41,7 +50,10 @@ def plot_grid(variable, n_points=None):
     }
 
 
-def default_slice_positions(variable):
+def default_slice_positions(
+    variable: pybamm.ProcessedVariableUnstructuredFVM
+    | pybamm.ProcessedVariableVectorFieldUnstructuredFVM,
+) -> dict[str, float]:
     """Mid-plane ``{"y": ..., "z": ...}`` positions of a 3D variable's mesh."""
     vertices = variable.mesh.vertices
     return {
@@ -50,7 +62,12 @@ def default_slice_positions(variable):
     }
 
 
-def midplane_slices(variable, t, grid, slice_positions):
+def midplane_slices(
+    variable: pybamm.ProcessedVariableUnstructuredFVM,
+    t: float,
+    grid: Grid,
+    slice_positions: dict[str, float],
+) -> tuple[npt.NDArray[np.float64], ...]:
     """Two orthogonal slices through a 3D scalar variable at time ``t``.
 
     Returns ``(s1, xx1, yy1, zz1, s2, xx2, yy2, zz2)``: the x-z plane at
@@ -69,7 +86,13 @@ def midplane_slices(variable, t, grid, slice_positions):
     return s1, xx1, yy1, zz1, s2, xx2, yy2, zz2
 
 
-def quiver_data(variable, t, grid, slice_positions=None, n_points=N_QUIVER):
+def quiver_data(
+    variable: pybamm.ProcessedVariableVectorFieldUnstructuredFVM,
+    t: float,
+    grid: Grid,
+    slice_positions: dict[str, float] | None = None,
+    n_points: int = N_QUIVER,
+) -> tuple[npt.NDArray[np.float64] | float, ...]:
     """Vector components on a coarse grid for quiver arrows at time ``t``.
 
     Returns ``(X, Z, U, W)`` in 2D.  In 3D two mid-plane slices are returned

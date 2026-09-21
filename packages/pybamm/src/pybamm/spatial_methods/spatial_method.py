@@ -119,7 +119,9 @@ class SpatialMethod:
             # Make copies of the child stacked on top of each other
             sub_vector = np.ones((primary_domain_size, 1))
             if symbol.shape_for_testing == ():
-                out = symbol * pybamm.Vector(sub_vector)
+                # Carry `domains` on the broadcast vector itself so binary-op
+                # simplifications can preserve the domain across rewrites.
+                out = symbol * pybamm.Vector(sub_vector, domains=domains)
             else:
                 # Repeat for secondary points
                 matrix = csr_matrix(kron(eye(symbol.shape_for_testing[0]), sub_vector))

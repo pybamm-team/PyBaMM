@@ -11,6 +11,7 @@ from pybamm.plotting.plot_vtk import (
     _data_at_time,
     _is_unstructured_spatial_variable,
     _make_render_window,
+    _mesh_vertices,
     _resolve_scale,
     _set_cell_scalars,
     _set_point_scalars,
@@ -33,20 +34,33 @@ def _tetra_mesh():
 
 
 def _cell_solution():
+    """One-cell tetrahedral solution; ``shifted`` lives on a second mesh at x in [2, 3]."""
     mesh = _tetra_mesh()
+    shifted_mesh = pybamm.UnstructuredSubMesh(
+        mesh.vertices + np.array([2.0, 0.0, 0.0]), mesh.elements
+    )
     model = pybamm.BaseModel()
     xyz = [pybamm.SpatialVariable(axis, domain="mesh") for axis in "xyz"]
+    xyz_shifted = [pybamm.SpatialVariable(axis, domain="shifted") for axis in "xyz"]
     model._geometry = {
-        "mesh": {var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)} for var in xyz}
+        "mesh": {
+            var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)} for var in xyz
+        },
+        "shifted": {
+            var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+            for var in xyz_shifted
+        },
     }
 
     field = pybamm.StateVector(slice(0, 1), domain="mesh")
     field.mesh = mesh
-    model.variables = {"field": field, "scalar": pybamm.t}
+    shifted = pybamm.StateVector(slice(1, 2), domain="shifted")
+    shifted.mesh = shifted_mesh
+    model.variables = {"field": field, "shifted": shifted, "scalar": pybamm.t}
     model.update_processed_variables(model.variables)
 
     t = np.array([0.0, 1.0, 2.0])
-    y = np.asfortranarray([[1.0, 2.0, 3.0]])
+    y = np.asfortranarray([[1.0, 2.0, 3.0], [10.0, 20.0, 30.0]])
     return pybamm.Solution(t, y, model, {}), mesh
 
 
@@ -58,25 +72,32 @@ def _triangle_solution():
     model = pybamm.BaseModel()
     x = pybamm.SpatialVariable("x", domain="mesh")
     z = pybamm.SpatialVariable("z", domain="mesh")
+    x_line = pybamm.SpatialVariable("x", domain="line")
     model._geometry = {
         "mesh": {
             x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
             z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
-        }
+        },
+        "line": {x_line: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
     }
     field = pybamm.StateVector(slice(0, 1), domain="mesh")
     field.mesh = mesh
-    model.variables = {"field": field}
+    vector = pybamm.VectorField(field, field)
+    vector.mesh = mesh
+    line = pybamm.StateVector(slice(0, 2), domain="line")
+    line.mesh = pybamm.SubMesh1D(np.array([0.0, 0.5, 1.0]), "cartesian")
+    model.variables = {"field": field, "vector": vector, "line": line}
     model.update_processed_variables(model.variables)
     solution = pybamm.Solution(
-        np.array([0.0, 1.0]), np.asfortranarray([[1.0, 2.0]]), model, {}
+        np.array([0.0, 1.0]), np.asfortranarray([[1.0, 2.0], [3.0, 4.0]]), model, {}
     )
     return solution
 
 
 def _node_solution():
+    # mirrors ScikitFemSubMesh3D, which stores coordinates as ``nodes``
     mesh = SimpleNamespace(
-        vertices=np.array(
+        nodes=np.array(
             [
                 [0.0, 0.0, 0.0],
                 [1.0, 0.0, 0.0],
@@ -120,6 +141,15 @@ def _first_actor(renderer):
     actors = renderer.GetActors()
     actors.InitTraversal()
     return actors.GetNextActor()
+
+
+def _cube_axes(renderer):
+    actors = renderer.GetActors()
+    actors.InitTraversal()
+    actor = actors.GetNextActor()
+    while actor is not None and not isinstance(actor, vtk.vtkCubeAxesActor):
+        actor = actors.GetNextActor()
+    return actor
 
 
 class TestVTKHelpers:
@@ -166,16 +196,37 @@ class TestVTKHelpers:
         np.testing.assert_allclose(grid.GetPoint(0), [2.0, 6.0, 0.0])
         np.testing.assert_allclose(grid.GetPoint(2), [6.0, 12.0, 0.0])
 
+    def test_build_grid_connectivity_of_several_cells(self):
+        mesh = SimpleNamespace(
+            vertices=np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]),
+            elements=np.array([[0, 1, 2], [0, 2, 3]]),
+            element_type="triangle",
+        )
+
+        grid = _build_vtk_grid(mesh)
+
+        assert grid.GetNumberOfCells() == 2
+        assert grid.GetCellType(1) == vtk.VTK_TRIANGLE
+        np.testing.assert_array_equal(
+            [grid.GetCell(1).GetPointId(i) for i in range(3)], [0, 2, 3]
+        )
+        np.testing.assert_allclose(grid.GetPoint(3), [0.0, 1.0, 0.0])
+
     def test_build_grid_rejects_unknown_connectivity(self):
         mesh = SimpleNamespace(
             vertices=np.zeros((5, 3)), elements=np.array([[0, 1, 2, 3, 4]])
         )
 
-        with pytest.raises(ValueError, match="5 vertices per element"):
+        with pytest.raises(pybamm.GeometryError, match="5 vertices per element"):
             _build_vtk_grid(mesh)
 
+    def test_mesh_vertices_accepts_vertices_or_nodes(self):
+        coords = np.array([[0.0, 1.0, 2.0]])
+        assert _mesh_vertices(SimpleNamespace(vertices=coords)) is coords
+        assert _mesh_vertices(SimpleNamespace(nodes=coords)) is coords
+
     def test_scale_options(self):
-        mesh = SimpleNamespace(vertices=np.array([[0.0, 2.0, 3.0], [4.0, 2.0, 5.0]]))
+        mesh = SimpleNamespace(nodes=np.array([[0.0, 2.0, 3.0], [4.0, 2.0, 5.0]]))
 
         np.testing.assert_allclose(_compute_scale(mesh), [1.0, 1.0, 2.0])
         np.testing.assert_allclose(_resolve_scale("auto", mesh), [1.0, 1.0, 2.0])
@@ -184,6 +235,13 @@ class TestVTKHelpers:
 
         zero_mesh = SimpleNamespace(vertices=np.ones((3, 2)))
         np.testing.assert_array_equal(_compute_scale(zero_mesh), [1.0, 1.0])
+
+        with pytest.raises(pybamm.OptionError, match="Unknown scale option"):
+            _resolve_scale("big", mesh)
+        with pytest.raises(pybamm.OptionError, match="one factor per axis"):
+            _resolve_scale(2.0, mesh)
+        with pytest.raises(pybamm.OptionError, match="one factor per axis"):
+            _resolve_scale((1.0, 2.0), mesh)
 
     def test_set_and_update_cell_and_point_scalars(self):
         grid = _build_vtk_grid(_tetra_mesh())
@@ -219,9 +277,9 @@ class TestVTKHelpers:
         electrolyte concentration rendered on current-collector tabs).
         """
         grid = _build_vtk_grid(_tetra_mesh())
-        with pytest.raises(ValueError, match="different meshes"):
+        with pytest.raises(pybamm.ShapeError, match="different meshes"):
             _set_cell_scalars(grid, "cell", [1.0, 2.0])
-        with pytest.raises(ValueError, match="different meshes"):
+        with pytest.raises(pybamm.ShapeError, match="different meshes"):
             _set_point_scalars(grid, "point", [1.0])
 
     def test_processed_variable_helpers(self):
@@ -247,22 +305,18 @@ class TestVTKHelpers:
         assert lut.GetTableValue(0) != lut.GetTableValue(7)
 
     def test_make_render_window_offscreen(self):
-        import sys
-
         window = _make_render_window(off_screen=True)
 
+        assert isinstance(window, vtk.vtkRenderWindow)
         assert window.GetOffScreenRendering() == 1
-        if sys.platform.startswith("linux"):
-            assert isinstance(window, vtk.vtkOSOpenGLRenderWindow)
 
 
 class TestVTKQuickPlot:
     def test_initialisation_accepts_solution_simulation_and_options(self):
-        solution, mesh = _cell_solution()
+        solution, _ = _cell_solution()
 
         default_plot = VTKQuickPlot(solution)
         assert default_plot.output_variables == ["field"]
-        assert default_plot.mesh is mesh
         assert default_plot.spatial_panels == [
             ("field", {"plot_type": "3d", "scale": "auto"})
         ]
@@ -324,6 +378,112 @@ class TestVTKQuickPlot:
         mapped_data = _first_actor(field_renderer).GetMapper().GetInput()
         values = mapped_data.GetPointData().GetArray("field")
         assert values.GetValue(0) == pytest.approx(3.0)
+
+    def test_unwraps_simulation_list_and_rejects_several_solutions(self):
+        solution, _ = _cell_solution()
+        simulation = pybamm.Simulation(solution.all_models[0])
+        simulation._solution = solution
+        # BatchStudy.plot hands over a list of simulations
+        assert VTKQuickPlot([simulation], "field").solution is solution
+        with pytest.raises(pybamm.OptionError, match="single solution"):
+            VTKQuickPlot([solution, solution], "field")
+        with pytest.raises(TypeError, match="at least 1 solution"):
+            VTKQuickPlot([], "field")
+        with pytest.raises(pybamm.OptionError, match="at least one output variable"):
+            VTKQuickPlot(solution, [])
+
+    def test_nan_cells_do_not_poison_colour_range(self):
+        solution, _ = _cell_solution()
+        model = solution.all_models[0]
+        # the time interpolator spreads a NaN to its neighbouring frames, so
+        # leave finite frames at both ends
+        t = np.arange(5.0)
+        y = np.asfortranarray([[1.0, 2.0, np.nan, 4.0, 5.0], 10.0 * np.arange(1.0, 6)])
+        plot = VTKQuickPlot(pybamm.Solution(t, y, model, {}), "field")
+        plot.dynamic_plot(show_plot=False)
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        mapper = _first_actor(renderers.GetNextItem()).GetMapper()
+        np.testing.assert_allclose(mapper.GetScalarRange(), (1.0, 5.0))
+        y[0] = np.nan
+        plot = VTKQuickPlot(pybamm.Solution(t, y, model, {}), "field")
+        with pytest.raises(pybamm.OptionError, match="no finite values"):
+            plot.dynamic_plot(show_plot=False)
+
+    def test_rejects_vector_field_and_structured_variables(self):
+        solution = _triangle_solution()
+        with pytest.raises(pybamm.OptionError, match="cannot plot 'vector'"):
+            VTKQuickPlot(solution, ["vector"])
+        with pytest.raises(pybamm.OptionError, match="cannot plot 'line'"):
+            VTKQuickPlot(solution, ["field", "line"])
+
+    def test_slice_and_axes_follow_each_panels_own_mesh(self):
+        solution, _ = _cell_solution()
+        plot = VTKQuickPlot(
+            solution,
+            ["field", "shifted"],
+            options={"shifted": {"plot_type": "slice", "x": 0.5, "scale": None}},
+        )
+        plot.dynamic_plot(show_plot=False)
+
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        renderers.GetNextItem()
+        shifted_renderer = renderers.GetNextItem()
+        # the cut plane sits at x = 2.5, inside the shifted mesh, so it has cells
+        cut = _first_actor(shifted_renderer).GetMapper().GetInput()
+        assert cut.GetNumberOfCells() > 0
+        np.testing.assert_allclose(cut.GetBounds()[:2], [2.5, 2.5])
+        np.testing.assert_allclose(
+            _cube_axes(shifted_renderer).GetXAxisRange(), [2.0, 3.0]
+        )
+
+    def test_slice_fraction_is_validated_and_kept_inside_the_mesh(self):
+        solution, _ = _cell_solution()
+        with pytest.raises(pybamm.OptionError, match=r"fraction in \[0, 1\]"):
+            VTKQuickPlot(
+                solution,
+                "field",
+                options={"field": {"plot_type": "slice", "x": 1.5}},
+            ).dynamic_plot(show_plot=False)
+
+        # a plane exactly on the boundary face would cut nothing
+        plot = VTKQuickPlot(
+            solution,
+            "field",
+            options={"field": {"plot_type": "slice", "x": 0.0, "scale": None}},
+        )
+        plot.dynamic_plot(show_plot=False)
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        cut = _first_actor(renderers.GetNextItem()).GetMapper().GetInput()
+        assert cut.GetNumberOfCells() > 0
+        np.testing.assert_allclose(cut.GetBounds()[:2], [1e-6, 1e-6], atol=1e-12)
+
+    def test_2d_slice_uses_x_and_z_coordinates(self):
+        solution = _triangle_solution()
+        plot = VTKQuickPlot(
+            solution,
+            "field",
+            options={"field": {"plot_type": "slice", "z": 0.5, "scale": None}},
+        )
+        plot.dynamic_plot(show_plot=False)
+
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        renderer = renderers.GetNextItem()
+        cut = _first_actor(renderer).GetMapper().GetInput()
+        assert cut.GetNumberOfCells() > 0
+        # physical z is drawn on VTK's y axis
+        np.testing.assert_allclose(cut.GetBounds()[2:4], [0.5, 0.5])
+        cube_axes = _cube_axes(renderer)
+        assert cube_axes.GetYTitle() == "z [m]"
+        assert cube_axes.GetZAxisVisibility() == 0
+
+        with pytest.raises(pybamm.OptionError, match="coordinates x, z"):
+            VTKQuickPlot(
+                solution, "field", options={"field": {"plot_type": "slice", "y": 0.5}}
+            ).dynamic_plot(show_plot=False)
 
     def test_dynamic_plot_2d_panels_share_camera(self):
         plot = VTKQuickPlot(
@@ -419,7 +579,9 @@ class TestVTKQuickPlot:
             solution, "field", options={"field": {"plot_type": "slice"}}
         )
 
-        with pytest.raises(ValueError, match="requires one of 'x', 'y', or 'z'"):
+        with pytest.raises(
+            pybamm.OptionError, match="requires one of 'x', 'y', or 'z'"
+        ):
             plot.dynamic_plot(show_plot=False)
 
     def test_save_gif_builds_plot_and_writes_animation(self, tmp_path):
@@ -441,11 +603,19 @@ class TestVTKQuickPlot:
 class TestPlotVTKEntryPoints:
     def test_dynamic_plot_vtk_backend(self):
         solution, _ = _cell_solution()
+        # positional output_variables, as with the matplotlib backend
+        plot = pybamm.dynamic_plot(solution, ["field"], backend="vtk", show_plot=False)
+        assert isinstance(plot, pybamm.VTKQuickPlot)
+        assert hasattr(plot, "_window")
         plot = pybamm.dynamic_plot(
             solution, output_variables=["field"], backend="vtk", show_plot=False
         )
-        assert isinstance(plot, pybamm.VTKQuickPlot)
-        assert hasattr(plot, "_window")
+        assert plot.output_variables == ["field"]
+
+    def test_dynamic_plot_rejects_unknown_backend(self):
+        solution, _ = _cell_solution()
+        with pytest.raises(pybamm.OptionError, match="Unknown plotting backend"):
+            pybamm.dynamic_plot(solution, ["field"], backend="plotly")
 
     def test_viridis_lut_falls_back_without_matplotlib(self, monkeypatch):
         import sys
@@ -454,7 +624,7 @@ class TestPlotVTKEntryPoints:
 
         monkeypatch.setitem(sys.modules, "matplotlib.cm", None)
         lut = _viridis_lut(0.0, 1.0)
-        assert lut.GetRange() == (0.0, 1.0)
+        np.testing.assert_allclose(lut.GetRange(), [0.0, 1.0])
         assert lut.GetNumberOfTableValues() > 0
 
     def test_make_render_window_on_screen_object(self):

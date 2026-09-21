@@ -1,10 +1,10 @@
 [build-system]
 requires = [
     "scikit-build-core>=1.0.3",
-    "pybind11>=3.0.1",
+    "pybind11>=3.1.0",
     # CasADi is pip-installable from PyPI on Windows, but finding the libcasadi.so path is
     # finicky, so we prefer the vcpkg registry for Windows builds.
-    "casadi==3.7.2; platform_system!='Windows'",
+    "casadi==3.8.1; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
     # cross platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
@@ -20,7 +20,7 @@ readme = "README.md"
 # version.py stays the source of truth; a pre-commit hook mirrors it here.
 version = "0.9.1"
 dependencies = [
-    "casadi==3.7.2",
+    "casadi==3.8.1",
     "numpy>=2.0.0",
 ]
 
@@ -34,7 +34,7 @@ dev = [
     # Duplicated from [build-system].requires so editable.auto-rebuild has
     # build tools available in the venv.
     "scikit-build-core>=1.0.3",
-    "pybind11>=3.0.1",
+    "pybind11>=3.1.0",
     "cmake>=4.4.2",
     "ninja",
 ]

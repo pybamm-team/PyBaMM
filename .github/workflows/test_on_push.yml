@@ -97,12 +97,21 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # comment-slop compares against the PR base, which the
+      # shallow checkout lacks, and it fails rather than scanning nothing.
+      - name: Fetch the pull request base branch
+        if: github.base_ref != ''
+        run: |
+          git fetch --depth=1 origin \
+            "+refs/heads/$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
+
       - name: Setup Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: 3.12
 
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "latest"
           enable-cache: true
@@ -128,7 +137,7 @@ jobs:
     # get no token scope).
     permissions:
       contents: read
-    uses: ./.github/workflows/_build_solver_wheels.yml
+    uses: $/.github/workflows/_build_solver_wheels.yml
     with:
       cache_wheels: true
       build_sdist: false
@@ -145,7 +154,7 @@ jobs:
     name: Tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: unit
       legs: >-
@@ -166,7 +175,7 @@ jobs:
     name: Tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: unit
       legs: >-
@@ -179,7 +188,7 @@ jobs:
     name: Coverage
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
@@ -193,7 +202,7 @@ jobs:
     name: Integration tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: integration
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
@@ -225,7 +234,7 @@ jobs:
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "latest"
           enable-cache: true
@@ -241,7 +250,7 @@ jobs:
     name: Doctests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: "doctests docs"
       # Full clone: the docs build's sphinx_last_updated_by_git needs the history.
@@ -254,7 +263,7 @@ jobs:
     name: Example notebooks
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: examples
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
@@ -265,7 +274,7 @@ jobs:
     name: Example scripts
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: scripts
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
@@ -276,7 +285,7 @@ jobs:
     name: Memory tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
       sessions: memory
       texlive: false
