@@ -177,10 +177,11 @@ jobs:
          {"os": "ubuntu-latest", "python": "3.11"},
          {"os": "ubuntu-latest", "python": "3.12"},
          {"os": "ubuntu-latest", "python": "3.14"},
+         {"os": "ubuntu-latest", "python": "3.15"},
          {"os": "ubuntu-24.04-arm", "python": "3.10"},
-         {"os": "ubuntu-24.04-arm", "python": "3.14"},
+         {"os": "ubuntu-24.04-arm", "python": "3.15"},
          {"os": "macos-latest", "python": "3.10"},
-         {"os": "macos-latest", "python": "3.14"}]
+         {"os": "macos-latest", "python": "3.15"}]
 
   # Advisory: reports red on failure but is deliberately absent from ci_gate's
   # needs, so a flaky Windows run never blocks a merge.
@@ -195,7 +196,7 @@ jobs:
       sessions: unit
       legs: >-
         [{"os": "windows-latest", "python": "3.10"},
-         {"os": "windows-latest", "python": "3.14"}]
+         {"os": "windows-latest", "python": "3.15"}]
 
   run_coverage:
     needs: [changes, build_solver]
