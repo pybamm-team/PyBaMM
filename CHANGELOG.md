@@ -7,12 +7,17 @@
 
 ## Bug fixes
 
+- `pybamm.Function(scipy.special.erf, ...)` converts to CasADi again; CasADi 3.8 stopped dispatching scipy's `erf` ufunc onto symbolic values, so the generic `Function` path now maps it to `casadi.erf` explicitly. `pybamm.erf` was unaffected. ([#5761](https://github.com/pybamm-team/PyBaMM/pull/5761))
 - The dimensional minimum particle surface concentration is registered as `"Minimum <domain> particle surface concentration [mol.m-3]"`. An implicit string concatenation repeated its first line, so the variable was only reachable under the doubled name `"Minimum negative particle Minimum negative particle surface concentration [mol.m-3]"`, and the intended name resolved to nothing. The `Maximum` sibling was unaffected. ([#5759](https://github.com/pybamm-team/PyBaMM/pull/5759))
 - `FiniteVolume` node-to-edge shifts now use the true node spacing instead of weights that assume a uniform mesh, so the exterior edge values agree with `boundary_value`. On a non-uniform mesh they did not, which broke lithium conservation wherever a flux is imposed as a gradient divided by a surface value, as the Fickian particle does: with a concentration-dependent particle diffusivity on an `Exponential1DSubMesh`, `ORegan2022` gained 26% of its particle lithium over three 1C cycles. Uniform-mesh results are unchanged. ([#5755](https://github.com/pybamm-team/PyBaMM/pull/5755))
 - A primary-broadcast `Vector` now carries its domain through discretisation, so downstream operations (including DiffSL export) see the correct domain instead of an empty one. ([#5756](https://github.com/pybamm-team/PyBaMM/pull/5756))
 - `BaseModel.parameters` now includes parameter symbols stored in `Variable` scale, reference, and bounds metadata. ([#5753](https://github.com/pybamm-team/PyBaMM/pull/5753))
 - `BasicDFN`, `BasicDFN2D`, `BasicDFNHalfCell` and `BasicDFNComposite` now keep the migration term `t_plus * i_e / F` inside the electrolyte flux, as the modular `Full` electrolyte submodel does, so the electrolyte balance conserves lithium when the transference number depends on concentration (for example `ORegan2022`). ([#5745](https://github.com/pybamm-team/PyBaMM/issues/5745))
 - The `integration` nox session no longer installs the `pydiffsol` extra on macOS Intel CI runners, where it has no working build. ([#5726](https://github.com/pybamm-team/PyBaMM/pull/5726))
+
+## Breaking changes
+
+- Bumped the pinned CasADi version from 3.7.2 to 3.8.1. CasADi 3.8 ships `abi3` wheels, which cover every current and future CPython version, and changes how numpy functions dispatch on CasADi values (casadi#2959). PyBaMM pins the legacy dispatch behaviour via `casadi.GlobalOptions.setNumpyMode(-1)` at import, so expression-tree result types are unchanged. ([#5761](https://github.com/pybamm-team/PyBaMM/pull/5761))
 
 # [v26.8.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.8.0.0) - 2026-08-13
 

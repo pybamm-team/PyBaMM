@@ -226,7 +226,7 @@ jobs:
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_BEFORE_ALL_LINUX: ${{ matrix.before_all }}
           # libcasadi ships as a pip dep (resolved at runtime via $ORIGIN/../casadi).
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --exclude libcasadi.so.3.7 -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --exclude libcasadi.so.3.8 -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "dev"
           CIBW_TEST_COMMAND: |
             set -e -x
