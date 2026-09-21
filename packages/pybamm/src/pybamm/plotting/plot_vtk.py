@@ -370,7 +370,8 @@ class VTKQuickPlot:
 
         panel_idx = 0
 
-        first_3d_cam = None
+        # 3d panels whose scaled grids share bounds (same mesh) share one camera
+        shared_cameras = {}
         spatial_renderers = []
         panel_names = []
         is_cell_data_by_name = {
@@ -603,7 +604,7 @@ class VTKQuickPlot:
             spatial_renderers.append(ren)
 
             # Camera setup: slice panels get independent orthographic cameras;
-            # 3d panels share a single perspective camera.
+            # 3d panels share a perspective camera per set of grid bounds.
             if plot_type == "slice":
                 ren.ResetCamera()
                 cam = ren.GetActiveCamera()
@@ -635,15 +636,18 @@ class VTKQuickPlot:
                 cam.Zoom(0.70)
                 cube_axes.SetCamera(cam)
             else:
-                if first_3d_cam is None:
+                camera_key = tuple(np.round(g.GetBounds(), 12))
+                cam = shared_cameras.get(camera_key)
+                if cam is None:
                     ren.ResetCamera()
-                    first_3d_cam = ren.GetActiveCamera()
+                    cam = ren.GetActiveCamera()
                     if dim == 3:
-                        first_3d_cam.Azimuth(-55)
-                        first_3d_cam.Elevation(25)
+                        cam.Azimuth(-55)
+                        cam.Elevation(25)
+                    shared_cameras[camera_key] = cam
                 else:
-                    ren.SetActiveCamera(first_3d_cam)
-                cube_axes.SetCamera(first_3d_cam)
+                    ren.SetActiveCamera(cam)
+                cube_axes.SetCamera(cam)
 
             panel_idx += 1
 

@@ -500,6 +500,24 @@ class TestVTKQuickPlot:
         assert first.GetActiveCamera() is second.GetActiveCamera()
         assert first.GetActiveCamera().GetParallelProjection() == 0
 
+    def test_dynamic_plot_3d_panels_on_different_meshes_get_own_cameras(self):
+        solution, _ = _cell_solution()
+        plot = VTKQuickPlot(
+            solution,
+            ["field", "shifted"],
+            options={name: {"scale": None} for name in ("field", "shifted")},
+        )
+        plot.dynamic_plot(show_plot=False)
+
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        field_camera = renderers.GetNextItem().GetActiveCamera()
+        shifted_camera = renderers.GetNextItem().GetActiveCamera()
+        assert field_camera is not shifted_camera
+        # each camera is framed on its own mesh, x in [0, 1] and x in [2, 3]
+        assert field_camera.GetFocalPoint()[0] == pytest.approx(0.5)
+        assert shifted_camera.GetFocalPoint()[0] == pytest.approx(2.5)
+
     def test_dynamic_plot_interpolates_cell_data(self):
         solution, _ = _cell_solution()
         plot = VTKQuickPlot(
