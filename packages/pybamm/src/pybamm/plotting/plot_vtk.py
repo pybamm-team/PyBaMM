@@ -347,6 +347,16 @@ class VTKQuickPlot:
         n_rows = int(np.ceil(n_panels / n_cols))
         panel_height = (panel_top - panel_bot) / n_rows
 
+        def viewport(index):
+            """Normalised (xmin, ymin, xmax, ymax) of panel ``index``, row-major."""
+            row, col = divmod(index, n_cols)
+            return (
+                col / n_cols,
+                panel_top - (row + 1) * panel_height,
+                (col + 1) / n_cols,
+                panel_top - row * panel_height,
+            )
+
         window = _make_render_window(off_screen=not show_plot)
         window.SetSize(650 * n_cols, 520 * n_rows)
         window.SetWindowName("PyBaMM - " + ", ".join(self.output_variables))
@@ -509,11 +519,7 @@ class VTKQuickPlot:
             ren.AddViewProp(title_actor)
             ren.SetBackground(1, 1, 1)
 
-            row = panel_idx // n_cols
-            col = panel_idx % n_cols
-            y0 = panel_top - (row + 1) * panel_height
-            y1 = panel_top - row * panel_height
-            ren.SetViewport(col / n_cols, y0, (col + 1) / n_cols, y1)
+            ren.SetViewport(*viewport(panel_idx))
 
             # Cube axes
             if plot_type == "slice":
@@ -709,11 +715,7 @@ class VTKQuickPlot:
             scene.SetRenderer(ren)
             ren.SetBackground(1, 1, 1)
 
-            row = panel_idx // n_cols
-            col = panel_idx % n_cols
-            y0 = panel_top - (row + 1) * panel_height
-            y1 = panel_top - row * panel_height
-            ren.SetViewport(col / n_cols, y0, (col + 1) / n_cols, y1)
+            ren.SetViewport(*viewport(panel_idx))
 
             window.AddRenderer(ren)
             all_renderers.append(ren)
@@ -723,11 +725,7 @@ class VTKQuickPlot:
         while panel_idx < n_rows * n_cols:
             ren = vtk.vtkRenderer()
             ren.SetBackground(1, 1, 1)
-            row = panel_idx // n_cols
-            col = panel_idx % n_cols
-            y0 = panel_top - (row + 1) * panel_height
-            y1 = panel_top - row * panel_height
-            ren.SetViewport(col / n_cols, y0, (col + 1) / n_cols, y1)
+            ren.SetViewport(*viewport(panel_idx))
             window.AddRenderer(ren)
             panel_idx += 1
 
@@ -778,16 +776,6 @@ class VTKQuickPlot:
         # Look-up table for snapping to nearest timestep
         _t_array = np.asarray(self.t_pts)
 
-        # Keep references for interpolated mode
-        _spatial_vars = {
-            name: pv
-            for name, pv in zip(
-                self.spatial_names,
-                self.spatial_vars,
-                strict=True,
-            )
-        }
-
         def on_slider(obj, event):
             t_now = float(obj.GetRepresentation().GetValue())
             t_now = max(t_min, min(t_now, t_max))
@@ -801,7 +789,7 @@ class VTKQuickPlot:
                     cutters,
                     strict=True,
                 ):
-                    vals = _data_at_time(_spatial_vars[sname], t_now).ravel()
+                    vals = _data_at_time(pv_by_name[sname], t_now).ravel()
                     if is_cell_data_by_name[sname]:
                         _set_cell_scalars(g, sname, vals)
                     else:
