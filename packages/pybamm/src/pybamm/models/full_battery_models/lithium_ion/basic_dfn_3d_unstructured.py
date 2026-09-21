@@ -11,20 +11,26 @@ class BasicDFN3DUnstructured(BaseModel):
     """Doyle-Fuller-Newman (DFN) model on a 3D unstructured mesh.
 
     Extends :class:`BasicDFN2DUnstructured` to three spatial dimensions
-    (x, y, z) using tetrahedral elements.  The through-cell direction is
-    *x*, the width direction is *y*, and the height direction is *z*.
+    (x, y, z) on hexahedral or tetrahedral elements.  The through-cell
+    direction is *x*, the width direction is *y*, and the height direction
+    is *z*.
 
     Parameters
     ----------
     name : str, optional
         The name of the model.
+    element_type : str, optional
+        Element type for the built-in mesh generator: ``"hexahedron"``
+        (default, TPFA-orthogonal) or ``"tetrahedron"``.
     """
 
     def __init__(
         self,
         name="Doyle-Fuller-Newman model (3D unstructured)",
+        element_type="hexahedron",
     ):
         super().__init__(name=name)
+        self._element_type = element_type
         pybamm.citations.register("Marquis2019")
 
         ######################
@@ -417,9 +423,15 @@ class BasicDFN3DUnstructured(BaseModel):
     @property
     def default_submesh_types(self):
         return {
-            "negative electrode": pybamm.UnstructuredMeshGenerator(),
-            "separator": pybamm.UnstructuredMeshGenerator(),
-            "positive electrode": pybamm.UnstructuredMeshGenerator(),
+            "negative electrode": pybamm.UnstructuredMeshGenerator(
+                element_type=self._element_type
+            ),
+            "separator": pybamm.UnstructuredMeshGenerator(
+                element_type=self._element_type
+            ),
+            "positive electrode": pybamm.UnstructuredMeshGenerator(
+                element_type=self._element_type
+            ),
             "positive particle": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
             "current collector": pybamm.SubMesh0D,
