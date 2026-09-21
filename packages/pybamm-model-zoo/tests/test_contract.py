@@ -5,13 +5,15 @@ column to this matrix automatically, and adding a check to
 :data:`pybamm_model_zoo.testing.contract.CHECKS` adds a row.
 """
 
+import re
 from pathlib import Path
 
 import pytest
+import yaml
 
 import pybamm_model_zoo as zoo
-from pybamm_model_zoo import _docs
-from pybamm_model_zoo._registry import ModelEntry
+from pybamm_model_zoo import _docs, _paths
+from pybamm_model_zoo._registry import MANIFEST_NAME, ModelEntry
 from pybamm_model_zoo.testing import contract
 
 # An externally-registered model is held only to the portable rules: it is not
@@ -136,6 +138,51 @@ class TestMissingDependencies:
         assert contract.missing_dependencies(
             self.entry(['definitely-not-installed-xyz; python_version >= "3.0"'])
         ) == ['definitely-not-installed-xyz; python_version >= "3.0"']
+
+
+class TestDocsHookWatchesWhatItRegenerates:
+    """The pre-commit hook's `files:` pattern, against the generator's real I/O.
+
+    The pattern went stale once already by naming `scripts/generate.py` while the
+    rendering lived in `_docs`, so it is derived from the files rather than
+    listed by hand.
+    """
+
+    HOOK = "model-zoo-docs"
+
+    @pytest.fixture
+    def pattern(self):
+        config = yaml.safe_load(
+            (_paths.REPO_ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+        )
+        hooks = [
+            hook
+            for repo in config["repos"]
+            for hook in repo["hooks"]
+            if hook["id"] == self.HOOK
+        ]
+        assert len(hooks) == 1, f"expected exactly one '{self.HOOK}' hook"
+        return re.compile(hooks[0]["files"])
+
+    def watched(self, pattern, path):
+        return bool(pattern.match(path.relative_to(_paths.REPO_ROOT).as_posix()))
+
+    def test_it_watches_everything_the_generator_writes(self, pattern):
+        for path in _docs.all_files(zoo.all_entries()):
+            assert self.watched(pattern, path), f"{path} is regenerated but unwatched"
+
+    def test_it_watches_everything_the_generator_reads(self, pattern):
+        sources = [
+            _paths.ZOO_ROOT / "scripts" / "generate.py",
+            _paths.STATUS_FILE,
+            *_paths.PACKAGE_ROOT.rglob("*.py"),
+            *_paths.PACKAGE_ROOT.glob(f"*/{MANIFEST_NAME}"),
+            *_paths.PACKAGE_ROOT.glob("*/README.md"),
+        ]
+        for path in sources:
+            assert self.watched(pattern, path), (
+                f"{path} feeds the docs but is unwatched"
+            )
 
 
 class TestGeneratedFiles:

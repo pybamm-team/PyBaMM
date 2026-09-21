@@ -73,7 +73,7 @@ repos:
         entry: python packages/pybamm-model-zoo/scripts/generate.py
         language: python
         additional_dependencies: ["tomli; python_version < '3.11'"]
-        files: ^(packages/pybamm-model-zoo/(src/pybamm_model_zoo/[^/]+/(model\.toml|README\.md)|status\.json|scripts/generate\.py)|docs/source/model_zoo/.*)$
+        files: ^(packages/pybamm-model-zoo/(src/pybamm_model_zoo/.*|scripts/generate\.py|status\.json|badges/.*)|docs/source/model_zoo/.*)$
         pass_filenames: false
 
       - id: check-ci-gate
