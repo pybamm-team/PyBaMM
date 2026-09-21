@@ -43,4 +43,6 @@ def window_for(entry: ModelEntry, releases: Iterable[str], count: int) -> list[s
     with an upper bound no released cells at all, even though older releases it
     does support are right there.
     """
-    return [release for release in releases if entry.admits(release)][-count:]
+    admitted = [release for release in releases if entry.admits(release)]
+    # `[-0:]` is the whole list, so an empty window has to be spelled out.
+    return admitted[-count:] if count else []

@@ -55,6 +55,10 @@ class TestWindowFor:
     def test_a_model_admitting_nothing_released_gets_no_cells(self):
         assert _versions.window_for(entry(">=99.0"), RELEASES, 2) == []
 
+    def test_no_window_means_no_releases(self):
+        """`--releases 0` says main only; `[-0:]` would have said every release."""
+        assert _versions.window_for(entry(">=26.0"), RELEASES, 0) == []
+
     def test_an_empty_specifier_admits_everything(self):
         assert _versions.window_for(entry(""), RELEASES, 1) == ["26.8.0"]
 
