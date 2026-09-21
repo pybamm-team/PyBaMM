@@ -172,8 +172,6 @@ class TestBasicDFNHalfCell(BaseBasicModelTest):
 
 class TestBasicDFN2DUnstructured:
     def test_solves_and_matches_structured(self):
-        import numpy as np
-
         z_2d = pybamm.SpatialVariable(
             "z_2d",
             domain=["negative electrode", "separator", "positive electrode"],
@@ -199,8 +197,6 @@ class TestBasicDFN2DUnstructured:
 
 class TestBasicDFN3DUnstructured:
     def test_solves_and_matches_2d(self):
-        import numpy as np
-
         t_eval = np.linspace(0, 3600, 20)
 
         model_2d = pybamm.lithium_ion.BasicDFN2DUnstructured(element_type="quad")

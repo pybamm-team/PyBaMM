@@ -48,10 +48,24 @@ class TestBasicModels:
         component = solution["Electrolyte current density x [A.m-2]"]
         assert np.all(np.isfinite(component(t=5)))
 
-    def test_dfn_2d_unstructured(self):
-        model = pybamm.lithium_ion.BasicDFN2DUnstructured(element_type="quad")
+    @pytest.mark.parametrize("element_type", ["quad", "triangle"])
+    def test_dfn_2d_unstructured(self, element_type):
+        model = pybamm.lithium_ion.BasicDFN2DUnstructured(element_type=element_type)
         model.check_well_posedness()
 
-    def test_dfn_3d_unstructured(self):
-        model = pybamm.lithium_ion.BasicDFN3DUnstructured()
+        sim = pybamm.Simulation(model, var_pts={k: 3 for k in model.default_var_pts})
+        sim.build()
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            assert sim.mesh[domain].dimension == 2
+            assert sim.mesh[domain].element_type == element_type
+
+    @pytest.mark.parametrize("element_type", ["hexahedron", "tetrahedron"])
+    def test_dfn_3d_unstructured(self, element_type):
+        model = pybamm.lithium_ion.BasicDFN3DUnstructured(element_type=element_type)
         model.check_well_posedness()
+
+        sim = pybamm.Simulation(model, var_pts={k: 3 for k in model.default_var_pts})
+        sim.build()
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            assert sim.mesh[domain].dimension == 3
+            assert sim.mesh[domain].element_type == element_type

@@ -496,6 +496,18 @@ class TestSpecificFunctions:
         assert isinstance(fun, pybamm.Function)
         assert fun.evaluate(y=y_test) == 1
 
+    @pytest.mark.parametrize("reduce", [pybamm.max, pybamm.min])
+    def test_reductions_collapse_to_scalar(self, reduce):
+        var = pybamm.Variable(
+            "var",
+            domain="negative particle",
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        fun = reduce(var)
+        assert isinstance(fun, pybamm.Reduction)
+        assert all(domain == [] for domain in fun.domains.values())
+        assert fun.evaluate_for_shape().shape == (1, 1)
+
     def test_sin(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.sin(a)
