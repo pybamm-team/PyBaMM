@@ -176,6 +176,9 @@ class TestUnstructuredPlotGrid:
         np.testing.assert_allclose(u_xz[np.isfinite(u_xz)], u_val, rtol=1e-8)
         np.testing.assert_allclose(w_xz[np.isfinite(w_xz)], w_val, rtol=1e-8)
         np.testing.assert_allclose(v_xy[np.isfinite(v_xy)], v_val, rtol=1e-8)
+        # omitting the slice positions falls back to the mesh mid-planes
+        default = quiver_data(flux, 0.5, plot_grid(flux), n_points=6)
+        np.testing.assert_allclose([default[4], default[9]], [0.5, 0.5])
 
 
 class TestQuickPlotUnstructured:

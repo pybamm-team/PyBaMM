@@ -98,7 +98,8 @@ def quiver_data(
     Returns ``(X, Z, U, W)`` in 2D.  In 3D two mid-plane slices are returned
     as ``(X1, Z1, U_xz, W_xz, y_mid, X2, Y2, U_xy, V_xy, z_mid)``: the x-z
     plane at ``slice_positions["y"]`` followed by the x-y plane at
-    ``slice_positions["z"]``.
+    ``slice_positions["z"]``; ``slice_positions`` defaults to the mesh
+    mid-planes.
     """
     x = np.linspace(grid["x"][0], grid["x"][-1], n_points)
     z = np.linspace(grid["z"][0], grid["z"][-1], n_points)
@@ -107,6 +108,8 @@ def quiver_data(
         X, Z = np.meshgrid(x, z, indexing="ij")
         return X, Z, u, w
 
+    if slice_positions is None:
+        slice_positions = default_slice_positions(variable)
     y = np.linspace(grid["y"][0], grid["y"][-1], n_points)
     y_mid, z_mid = slice_positions["y"], slice_positions["z"]
     u_xz, _, w_xz = (
