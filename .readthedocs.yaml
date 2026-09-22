@@ -29,6 +29,8 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.14"
+    # `uv sync` builds pybamm's Rust core, which needs cargo 1.89 or newer
+    rust: "latest"
   jobs:
     post_checkout:
       # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
@@ -36,7 +38,7 @@ build:
       # Exit code 183 cancels a pull request build that changes nothing the docs render or include.
       - |
         if [ "$READTHEDOCS_VERSION_TYPE" = external ] && git diff --quiet origin/main...HEAD -- \
-            docs/ packages/pybamm/src/ packages/pybamm/pyproject.toml packages/pybamm-model-zoo/ \
+            docs/ packages/pybamm/src/ packages/pybamm/pyproject.toml packages/pybamm-rust/ packages/pybamm-model-zoo/ \
             CONTRIBUTING.md RELEASE.md pyproject.toml uv.lock .readthedocs.yaml; then
           exit 183
         fi

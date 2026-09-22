@@ -1,0 +1,22 @@
+[package]
+name = "pybamm-python"
+version = "0.1.0"
+edition = "2024"
+rust-version.workspace = true
+
+[lib]
+name = "_core"
+crate-type = ["cdylib"]
+
+[features]
+default = ["serialize"]
+serialize = ["pybamm-core/serialize", "dep:bincode"]
+
+[dependencies]
+pybamm-core = { path = "../pybamm-core" }
+pyo3 = { version = "0.28" }
+numpy = "0.28"
+bincode = { version = "1", optional = true }
+
+[lints]
+workspace = true
