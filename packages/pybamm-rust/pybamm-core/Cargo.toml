@@ -12,6 +12,9 @@ thiserror = "2"
 libm = "0.2"
 serde = { version = "1", features = ["derive"], optional = true }
 bincode = { version = "1", optional = true }
+diffsol = { version = "0.18.0", optional = true, default-features = false, features = ["faer"] }
+faer = { version = "0.24", optional = true }
+rayon = { version = "1", optional = true }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 # Compiles matrix products for the detected instruction set, so `accumulate` needs no `unsafe`.
@@ -22,7 +25,13 @@ criterion = { version = "0.5", features = ["html_reports"] }
 proptest = "1"
 
 [features]
+default = ["diffsol"]
 serialize = ["serde", "bincode"]
+diffsol = ["dep:diffsol", "dep:faer", "dep:rayon"]
+
+[[test]]
+name = "test_faer_global_parallelism"
+required-features = ["diffsol"]
 
 [[bench]]
 name = "compile"
@@ -36,6 +45,16 @@ harness = false
 name = "sparsity"
 harness = false
 required-features = ["serialize"]
+
+[[bench]]
+name = "solver_setup"
+harness = false
+required-features = ["serialize", "diffsol"]
+
+[[bench]]
+name = "sens_params"
+harness = false
+required-features = ["diffsol"]
 
 [[bench]]
 name = "derivatives"

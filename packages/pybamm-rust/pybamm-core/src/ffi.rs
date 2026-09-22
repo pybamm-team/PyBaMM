@@ -103,6 +103,7 @@ where
         compiled,
         workspace,
     } = unsafe { &mut *user_data.cast::<ModelEvaluator>() };
+    let workspace = workspace.get_mut();
     let input_width = compiled.input_width().get();
     if input_width != 0 && inputs.is_null() {
         return ERROR_NULL_POINTER;
