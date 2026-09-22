@@ -7,16 +7,36 @@ rust-version.workspace = true
 [dependencies]
 rustc-hash = "2"
 thiserror = "2"
-# For the primitives `f64` leaves non-deterministic, so values match on every target.
+# For the primitives `f64` leaves non-deterministic, so values match on every target;
+# `test_primitives_match_libm` pins its outputs, so a bump that moves bits fails.
 libm = "0.2"
 serde = { version = "1", features = ["derive"], optional = true }
 bincode = { version = "1", optional = true }
 
 [dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
 proptest = "1"
 
 [features]
 serialize = ["serde", "bincode"]
+
+[[bench]]
+name = "compile"
+harness = false
+
+[[bench]]
+name = "eval"
+harness = false
+
+[[bench]]
+name = "sparsity"
+harness = false
+required-features = ["serialize"]
+
+[[bench]]
+name = "derivatives"
+harness = false
+required-features = ["serialize"]
 
 [lints]
 workspace = true

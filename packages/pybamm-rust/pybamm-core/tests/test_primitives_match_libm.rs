@@ -6,8 +6,9 @@
 //! IEEE 754 leaves NaN payloads unspecified, so a NaN need only meet a NaN; every other
 //! result, signed zeros and infinities included, must match bit for bit.
 
-use std::f64::consts::{FRAC_PI_2, PI};
+use std::f64::consts::{FRAC_2_SQRT_PI, FRAC_PI_2, PI};
 
+use pybamm_core::adjoint::AdjointTape;
 use pybamm_core::ir::{BinaryOp, UnaryOp};
 use pybamm_core::{Arena, CompiledExpr, DagRef, Node, NodeId, simplify};
 
@@ -15,6 +16,7 @@ type UnaryNode = fn(NodeId) -> Node;
 type BinaryNode = fn(NodeId, NodeId) -> Node;
 type UnaryFn = fn(f64) -> f64;
 type BinaryFn = fn(f64, f64) -> f64;
+type Partials = fn(f64, f64) -> [f64; 2];
 
 const UNARY_OPS: [UnaryOp; 16] = [
     UnaryOp::Neg,
@@ -366,6 +368,71 @@ fn constant_folding_takes_libm_values() {
                     assert_matches(&format!("{op:?} (folded)"), &[x, y], got, reference(x, y));
                 }
             }
+        }
+    }
+}
+
+/// Reverse-mode partials of `root` (reading `y`) at `y`, one per state.
+fn adjoint_partials(arena: &Arena, root: NodeId, y: &[f64]) -> Vec<f64> {
+    let tape = AdjointTape::new(DagRef::new(arena, root), y.len());
+    let (mut scratch, mut bar) = (vec![0.0; tape.scratch_len()], vec![0.0; tape.scratch_len()]);
+    let mut grad = vec![0.0; y.len()];
+    tape.assemble(&mut scratch, &mut bar, &mut grad, 0.0, y, &[], &[]);
+    grad
+}
+
+/// The reverse-mode rules take their transcendental values from libm too. Partials land
+/// by accumulation into zero, so a `-0` partial reads back as `+0`.
+#[test]
+fn adjoint_partials_take_libm_values() {
+    let unary_rules: [(UnaryNode, &str, UnaryFn); 6] = [
+        (Node::Sin, "sin", libm::cos),
+        (Node::Cos, "cos", |x| -libm::sin(x)),
+        (Node::Sinh, "sinh", libm::cosh),
+        (Node::Cosh, "cosh", libm::sinh),
+        (Node::Arcsinh, "arcsinh", |x| 1.0 / libm::sqrt(1.0 + x * x)),
+        (Node::Erf, "erf", |x| FRAC_2_SQRT_PI * libm::exp(-x * x)),
+    ];
+    let xs: Vec<f64> = unary_inputs().into_iter().step_by(48).collect();
+    for (node, label, rule) in unary_rules {
+        let mut arena = Arena::new();
+        let y = state(&mut arena, 0, 1);
+        let root = arena.alloc(node(y));
+        for &x in &xs {
+            let got = adjoint_partials(&arena, root, &[x])[0];
+            let want = rule(x);
+            assert!(
+                same(got, want, true),
+                "d{label}({x:e}) = {got:e}, libm gives {want:e}"
+            );
+        }
+    }
+
+    let binary_rules: [(BinaryNode, &str, Partials); 2] = [
+        (Node::Pow, "pow", |x, y| {
+            let by_exponent = if x > 0.0 {
+                libm::pow(x, y) * libm::log(x)
+            } else {
+                0.0
+            };
+            [y * libm::pow(x, y - 1.0), by_exponent]
+        }),
+        (Node::Hypot, "hypot", |x, y| {
+            [x / libm::hypot(x, y), y / libm::hypot(x, y)]
+        }),
+    ];
+    let (xs, ys) = binary_inputs();
+    for (node, label, rule) in binary_rules {
+        let mut arena = Arena::new();
+        let (lhs, rhs) = (state(&mut arena, 0, 1), state(&mut arena, 1, 2));
+        let root = arena.alloc(node(lhs, rhs));
+        for (&x, &y) in xs.iter().zip(&ys).step_by(48) {
+            let got = adjoint_partials(&arena, root, &[x, y]);
+            let want = rule(x, y);
+            assert!(
+                got.iter().zip(want).all(|(&g, w)| same(g, w, true)),
+                "d{label}({x:e}, {y:e}) = {got:?}, libm gives {want:?}"
+            );
         }
     }
 }

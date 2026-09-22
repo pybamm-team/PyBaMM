@@ -128,7 +128,8 @@ jobs:
 
   rust_tests:
     needs: changes
-    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' }}
+    # The ABI drift test reads pybammsolvers' C++ consumer, so a solver-only change runs it too.
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
