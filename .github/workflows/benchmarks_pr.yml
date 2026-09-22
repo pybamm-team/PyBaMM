@@ -44,6 +44,8 @@ jobs:
               - 'packages/pybamm/tests/benchmarks/**'
               - 'packages/pybamm/conftest.py'
               - 'packages/pybamm/pyproject.toml'
+              - 'packages/pybamm/hatch_build.py'
+              - 'packages/pybamm-rust/**'
               - 'packages/pybammsolvers/**'
               - 'pyproject.toml'
               - 'uv.lock'
