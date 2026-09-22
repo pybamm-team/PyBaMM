@@ -27,6 +27,22 @@ class TestCasadiSolver:
         with pytest.raises(ValueError, match=r"invalid mode"):
             pybamm.CasadiSolver(mode="bad mode")
 
+    def test_rust_model_is_converted_to_casadi(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        model.convert_to_format = "rust"
+        pybamm.Discretisation().process_model(model)
+
+        t_eval = np.linspace(0, 1, 10)
+        solution = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8).solve(model, t_eval)
+
+        assert model.convert_to_format == "casadi"
+        np.testing.assert_allclose(
+            solution.y.full()[0], np.exp(0.1 * t_eval), rtol=1e-6, atol=1e-8
+        )
+
     def test_model_solver(self):
         # Create model
         model = pybamm.BaseModel()
