@@ -2268,6 +2268,13 @@ class TestNonOrthogonalCorrection:
         with pytest.raises(pybamm.GeometryError, match="pointing away"):
             FiniteVolumeUnstructured()._face_geometry(mesh)
 
+    def test_inverted_boundary_face_raises(self):
+        mesh = _make_2d_mesh(2, 2)
+        faces = mesh.boundary_faces["left"]
+        mesh.face_normals[faces] *= -1
+        with pytest.raises(pybamm.GeometryError, match="pointing back"):
+            FiniteVolumeUnstructured()._boundary_decomposition(mesh, faces)
+
     def test_build_warns_on_severe_non_orthogonality(self, caplog):
         import logging
 
@@ -2286,6 +2293,56 @@ class TestNonOrthogonalCorrection:
         with caplog.at_level(logging.WARNING):
             method.build(_MeshMap({("tri",): _make_2d_mesh(3, 3)}))
         assert "non-orthogonality" not in caplog.text
+
+
+class TestSliverStability:
+    """Kuhn tetrahedra of a pouch-cell slab (100 um thick, 20 cm by 14 cm)
+    have faces about 89.9 degrees from their centroid line. Flooring
+    cos(theta) there under-weights the two-point part, and the explicit
+    cross term then gives the diffusion operator growing modes."""
+
+    @staticmethod
+    def _pouch_slab():
+        return _make_3d_mesh(
+            10, 3, 3, x_range=(0, 1e-4), y_range=(0, 0.207), z_range=(0, 0.137)
+        )
+
+    @staticmethod
+    def _assert_no_growing_modes(L):
+        eigenvalues = np.linalg.eigvals(L.toarray())
+        spectral_radius = np.abs(eigenvalues).max()
+        assert eigenvalues.real.max() < 1e-10 * spectral_radius
+
+    def test_mesh_has_severe_slivers(self):
+        mesh = self._pouch_slab()
+        cos_theta = FiniteVolumeUnstructured()._face_geometry(mesh)["cos_theta"]
+        assert cos_theta.min() < 1e-2
+
+    def test_over_relaxed_weight_is_not_floored(self):
+        mesh = self._pouch_slab()
+        method = FiniteVolumeUnstructured()
+        cos_theta = method._face_geometry(mesh)["cos_theta"]
+        np.testing.assert_allclose(method._decomposition(mesh)[0], 1 / cos_theta)
+
+    def test_laplacian_has_no_growing_modes(self):
+        mesh = self._pouch_slab()
+        bcs = {side: (pybamm.Scalar(0), "Neumann") for side in mesh.boundary_faces}
+        L, _ = _laplacian_system(_method_with_mesh(mesh), mesh, bcs)
+        self._assert_no_growing_modes(L)
+
+    def test_div_D_grad_with_material_jump_has_no_growing_modes(self):
+        mesh = self._pouch_slab()
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        y = pybamm.StateVector(slice(0, mesh.npts), domains={"primary": ["test"]})
+        D = np.where(mesh.cell_centroids[:, 0] < 6e-5, 1.0, 0.16)
+        bcs = {side: (pybamm.Scalar(0), "Neumann") for side in mesh.boundary_faces}
+        result = method.div_D_grad(
+            div_symbol, variable, pybamm.Vector(D, domain="test"), y, {variable: bcs}
+        )
+        L = sp_csr(result.jac(y).evaluate(y=np.zeros(mesh.npts)))
+        self._assert_no_growing_modes(L)
 
 
 # ======================================================================

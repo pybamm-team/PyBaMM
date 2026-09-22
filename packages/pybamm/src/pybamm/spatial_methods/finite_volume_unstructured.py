@@ -55,9 +55,6 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     """
 
     _CORRECTIONS = ("over-relaxed", "minimum")
-    # Floor on cos(theta) in the over-relaxed weight (as in OpenFOAM): it
-    # bounds alpha, and k is built from the same alpha so consistency holds.
-    _COS_THETA_FLOOR = 0.05
     # Common CFD mesh-quality limit; beyond it the scheme stays consistent
     # but conditioning degrades.
     _NON_ORTHOGONALITY_WARNING_DEG = 70.0
@@ -616,7 +613,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         """
         if self.options["non-orthogonal correction"] == "minimum":
             return cos_theta
-        return 1.0 / np.maximum(cos_theta, self._COS_THETA_FLOOR)
+        # Not floored: capping alpha on sliver faces lets the explicit cross
+        # term dominate and gives the diffusion operator growing modes
+        return 1.0 / cos_theta
 
     def _decomposition(self, submesh):
         """``(alpha, k)`` per internal face for ``n = alpha e_ij + k``."""
@@ -648,7 +647,15 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         dist = np.linalg.norm(delta, axis=1)
         e_b = delta / dist[:, np.newaxis]
         normals = submesh.face_normals[faces]
-        alpha = self._alpha(np.sum(normals * e_b, axis=1))
+        cos_theta = np.sum(normals * e_b, axis=1)
+        if np.any(cos_theta <= 0):
+            raise pybamm.GeometryError(
+                f"{int(np.count_nonzero(cos_theta <= 0))} boundary face(s) "
+                "have an outward normal pointing back into their cell "
+                "(inverted or non-star-shaped cells), so the two-point flux "
+                "is undefined there. Fix the mesh."
+            )
+        alpha = self._alpha(cos_theta)
         return dist, alpha, self._drop_orthogonal(normals - alpha[:, np.newaxis] * e_b)
 
     def _cross_term_matrices(self, submesh):
