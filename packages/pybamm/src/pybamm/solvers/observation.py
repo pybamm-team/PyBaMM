@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from itertools import accumulate, pairwise
+from typing import cast
 
 import casadi
 import numpy as np
@@ -23,6 +24,9 @@ import pybamm
 from pybamm.solvers.base_processed_variable import BaseProcessedVariable
 from pybamm.solvers.variable_observer import (
     CasadiObserver,
+    NativeObserver,
+    SharedOutputLeaf,
+    SharedOutputs,
     check_variable_in_solve,
     pack_sensitivity_dict,
 )
@@ -31,14 +35,25 @@ from pybamm.solvers.variable_observer import (
 class ObserverCache:
     """The compiled leaves of one model's variables, keyed by variable name.
 
-    A name is assumed to keep one expression for the model's lifetime. Each leaf
-    is built for the input layout and solution options (such as ``compile`` and
+    A name is assumed to keep one expression for the model's lifetime. Each CasADi
+    leaf is built for the input layout and solution options (such as ``compile`` and
     ``cse``) of the first solve that reads it, and later solves reuse it as is.
+    Native leaves compile into the graph bound by :meth:`bind_rust_model`.
     """
 
     def __init__(self):
         # Key -> (leaf, the expression it evaluates, time integral or None)
         self._casadi_leaves: dict[str, tuple] = {}
+        self._rust_model = None
+        self._clear_native()
+
+    def _clear_native(self) -> None:
+        self._native_leaves: dict[str, tuple] = {}
+        # Names, in row order -> one tape evaluating the whole set
+        self._native_sets: dict[tuple[str, ...], object] = {}
+        self._post_sum_leaves: dict[str, object] = {}
+        # Cached, as from_pybamm_var walks the whole tree
+        self._time_integrals: dict[str, pybamm.ProcessedVariableTimeIntegral] = {}
 
     @classmethod
     def of(cls, model: pybamm.BaseModel) -> ObserverCache:
@@ -51,7 +66,95 @@ class ObserverCache:
         """A cache that starts with these leaves and grows independently."""
         new = type(self)()
         new._casadi_leaves = self._casadi_leaves.copy()
+        new._rust_model = self._rust_model
+        new._native_leaves = self._native_leaves.copy()
+        new._native_sets = self._native_sets.copy()
+        new._post_sum_leaves = self._post_sum_leaves.copy()
+        new._time_integrals = self._time_integrals.copy()
         return new
+
+    @property
+    def rust_model(self) -> object | None:
+        """The :class:`pybamm.rust.CompiledModel` native leaves compile into, or None."""
+        return self._rust_model
+
+    def bind_rust_model(self, rust_model) -> None:
+        """Compile native leaves into ``rust_model``'s graph from now on.
+
+        Rebinding drops the previous model's native leaves.
+        """
+        if rust_model is self._rust_model:
+            return
+        self._rust_model = rust_model
+        self._clear_native()
+
+    def time_integral(
+        self, name: str, var_pybamm: pybamm.Symbol
+    ) -> pybamm.ProcessedVariableTimeIntegral | None:
+        """The time integral ``var_pybamm`` reads, or None, found on first use."""
+        if name not in self._time_integrals:
+            self._time_integrals[name] = (
+                pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
+                    var_pybamm, self._rust_model.n_states
+                )
+            )
+        return self._time_integrals[name]
+
+    def native_leaf(
+        self, name: str, var_pybamm: pybamm.Symbol
+    ) -> tuple[object, pybamm.Symbol, pybamm.ProcessedVariableTimeIntegral | None]:
+        """One segment's native leaf for ``var_pybamm``, compiled on first use."""
+        entry = self._native_leaves.get(name)
+        if entry is None:
+            time_integral = self.time_integral(name, var_pybamm)
+            integrand = (
+                var_pybamm if time_integral is None else time_integral.sum_node.child
+            )
+            graph = self._rust_model.graph
+            leaf = graph.compile(
+                integrand.to_rust(graph), name=name, n_states=self._rust_model.n_states
+            )
+            entry = (leaf, integrand, time_integral)
+            self._native_leaves[name] = entry
+        return entry
+
+    def native_set(self, vars_pybamm: Mapping[str, pybamm.Symbol]) -> object:
+        """One tape over a set of variables, compiled on first use.
+
+        The set shares one symbol memo, so common subexpressions are lowered once.
+        """
+        key = tuple(vars_pybamm)
+        function = self._native_sets.get(key)
+        if function is None:
+            graph = self._rust_model.graph
+            rust_symbols = {}
+            function = graph.compile_outputs(
+                {
+                    name: var.to_rust(graph, rust_symbols)
+                    for name, var in vars_pybamm.items()
+                },
+                n_states=self._rust_model.n_states,
+            )
+            self._native_sets[key] = function
+        return function
+
+    def post_sum_leaf(
+        self, name: str, time_integral: pybamm.ProcessedVariableTimeIntegral
+    ) -> object:
+        """A time integral's post-sum tape, whose states are the integral's value."""
+        function = self._post_sum_leaves.get(name)
+        if function is None:
+            n_integral = time_integral.sum_node.evaluate_for_shape().shape[0]
+            # _post_sum_leaf only asks for an integral with a post-sum
+            post_sum_node = cast(pybamm.Symbol, time_integral.post_sum_node)
+            graph = self._rust_model.graph
+            function = graph.compile(
+                post_sum_node.to_rust(graph),
+                name="post_sum",
+                n_states=n_integral,
+            )
+            self._post_sum_leaves[name] = function
+        return function
 
     def casadi_leaf(
         self,
@@ -111,6 +214,11 @@ def build_variable(solution: pybamm.Solution, name: str) -> BaseProcessedVariabl
     vars_pybamm = [
         model.get_processed_variable_or_event(name) for model in solution.all_models
     ]
+    caches = _native_caches(solution)
+    if caches is not None and not any(
+        isinstance(var, pybamm.VectorField) for var in vars_pybamm
+    ):
+        return _build_native_variable(solution, name, vars_pybamm, caches)
     vars_casadi = [None] * len(solution.all_models)
     for i, (model, ys, inputs) in enumerate(
         zip(solution.all_models, solution.all_ys, solution.all_inputs, strict=True)
@@ -136,6 +244,112 @@ def build_variable(solution: pybamm.Solution, name: str) -> BaseProcessedVariabl
         solution,
         time_integral=time_integral,
     )
+
+
+def build_variables(
+    solution: pybamm.Solution, names: Sequence[str]
+) -> dict[str, BaseProcessedVariable]:
+    """The processed variables ``names`` of ``solution``, built as one set.
+
+    On a natively read solution, non-time-integral variables share one tape per
+    segment, so their common subexpressions are evaluated once.
+    """
+    caches = _native_caches(solution)
+    if caches is None:
+        return {name: build_variable(solution, name) for name in names}
+    vars_pybamm = {
+        name: [
+            model.get_processed_variable_or_event(name) for model in solution.all_models
+        ]
+        for name in names
+    }
+    shared = [
+        name
+        for name in names
+        if not any(
+            isinstance(var, pybamm.VectorField)
+            or cache.time_integral(name, var) is not None
+            for var, cache in zip(vars_pybamm[name], caches, strict=True)
+        )
+    ]
+    if len(shared) < 2:
+        return {name: build_variable(solution, name) for name in names}
+    variables = {
+        name: build_variable(solution, name) for name in names if name not in shared
+    }
+    variables.update(_build_native_set(solution, shared, vars_pybamm, caches))
+    return {name: variables[name] for name in names}
+
+
+def _native_caches(solution: pybamm.Solution) -> list[ObserverCache] | None:
+    """Each segment's cache, when every segment reads through a bound Rust model."""
+    caches = []
+    for model in solution.all_models:
+        cache = ObserverCache.of(model)
+        if model.convert_to_format != "rust" or cache.rust_model is None:
+            return None
+        caches.append(cache)
+    return caches
+
+
+def _placeholder_states(solution: pybamm.Solution) -> list[int] | None:
+    """Each segment's state count when the solve stored no states, else None."""
+    if not solution.variables_returned:
+        return None
+    return [model.len_rhs_and_alg for model in solution.all_models]
+
+
+def _post_sum_leaf(cache, name, time_integral) -> object | None:
+    """The post-sum tape a time integral's sensitivities need, or None."""
+    if time_integral is None or time_integral.post_sum_node is None:
+        return None
+    return cache.post_sum_leaf(name, time_integral)
+
+
+def _build_native_variable(
+    solution, name, vars_pybamm, caches
+) -> BaseProcessedVariable:
+    """A lazily evaluated variable whose leaves are native tapes."""
+    time_integral = None
+    leaves = [None] * len(caches)
+    for i, cache in enumerate(caches):
+        check_variable_in_solve(solution, name, vars_pybamm[i])
+        leaves[i], vars_pybamm[i], time_integral = cache.native_leaf(
+            name, vars_pybamm[i]
+        )
+    observer = NativeObserver(
+        leaves,
+        _placeholder_states(solution),
+        _post_sum_leaf(caches[0], name, time_integral),
+    )
+    return pybamm.process_variable(
+        name, vars_pybamm, observer, solution, time_integral=time_integral
+    )
+
+
+def _build_native_set(
+    solution, names, vars_pybamm, caches
+) -> dict[str, BaseProcessedVariable]:
+    """Lazily evaluated variables reading one shared native tape per segment."""
+    segments = []
+    for i, cache in enumerate(caches):
+        for name in names:
+            check_variable_in_solve(solution, name, vars_pybamm[name][i])
+        function = cache.native_set({name: vars_pybamm[name][i] for name in names})
+        segments.append(SharedOutputs(function))
+    placeholder_states = _placeholder_states(solution)
+    return {
+        name: pybamm.process_variable(
+            name,
+            vars_pybamm[name],
+            NativeObserver(
+                [SharedOutputLeaf(shared, name) for shared in segments],
+                placeholder_states,
+            ),
+            solution,
+        )
+        for name in names
+    }
 
 
 class OutputAssembly:

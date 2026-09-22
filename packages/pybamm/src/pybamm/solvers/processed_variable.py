@@ -508,9 +508,12 @@ class ProcessedVariable0D(ProcessedVariable):
     def _observe_postfix(self, entries, t):
         if self.time_integral is None:
             return entries
-        return self.time_integral.postfix(
-            entries, self.t_pts, self.all_inputs_stacked[0]
-        )
+        # A CasADi post-sum takes stacked inputs; the symbolic fallback takes the dict
+        if self.time_integral.post_sum is None:
+            inputs = self.all_inputs[0]
+        else:
+            inputs = self.all_inputs_stacked[0]
+        return self.time_integral.postfix(entries, self.t_pts, inputs)
 
     def _interp_setup(self, entries, t):
         # save attributes for interpolation
