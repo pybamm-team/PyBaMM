@@ -31,6 +31,7 @@ _SOLVER_CLASSES = (
     pybamm.CasadiAlgebraicSolver,
     pybamm.NonlinearSolver,
     pybamm.CompositeSolver,
+    pybamm.DiffsolSolver,
 )
 
 
@@ -87,6 +88,11 @@ def solver_kwargs() -> st.SearchStrategy[dict]:
         elif cls is pybamm.NonlinearSolver:
             kwargs["rtol"] = draw(_POSITIVE_TOL)
             kwargs["atol"] = draw(_POSITIVE_TOL)
+        elif cls is pybamm.DiffsolSolver:
+            kwargs["rtol"] = draw(_POSITIVE_TOL)
+            kwargs["atol"] = draw(_POSITIVE_TOL)
+            kwargs["root_tol"] = draw(_POSITIVE_TOL)
+            kwargs["calc_ic"] = draw(st.booleans())
         elif cls is pybamm.CompositeSolver:
             # Draw two simple solver classes (possibly the same) for sub_solvers.
             sub_cls_a, sub_cls_b = draw(

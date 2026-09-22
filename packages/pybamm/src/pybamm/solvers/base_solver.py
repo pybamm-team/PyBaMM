@@ -29,8 +29,9 @@ class BaseSolver:
         The method to use for integration, specific to each solver
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
-    atol : float, optional
-        The absolute tolerance for the solver (default is 1e-6).
+    atol : float or array-like, optional
+        The absolute tolerance for the solver, one value or one per state
+        (default is 1e-6). Only IDAKLU and Diffsol solvers honour per-state values.
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
         Default is "nonlinear_solver", which uses a custom Newton solver for consistent
@@ -257,6 +258,50 @@ class BaseSolver:
         # clear _model_set_up
         new_solver._model_set_up = {}
         return new_solver
+
+    def _check_atol_type(
+        self, atol: float | list | tuple | np.ndarray, model: pybamm.BaseModel
+    ) -> np.ndarray:
+        """Widen an absolute tolerance to a float64 array with one value per state."""
+        number_of_states = model.len_rhs_and_alg
+        if isinstance(atol, bool) or not isinstance(
+            atol, numbers.Real | list | tuple | np.ndarray
+        ):
+            raise pybamm.SolverError(
+                "Absolute tolerances must be a float, or a list, tuple or array "
+                f"of floats with one value per state, not {type(atol).__name__}"
+            )
+        if isinstance(atol, numbers.Real):
+            return np.full(number_of_states, float(atol))
+
+        try:
+            values = np.asarray(atol)
+        except ValueError as error:
+            raise pybamm.SolverError(
+                "Absolute tolerances must be a flat list, tuple or array"
+            ) from error
+        # NumPy upcasts a bool beside numbers to 1.0 or 0.0, losing it
+        if isinstance(atol, list | tuple) and any(
+            isinstance(value, bool | np.bool_)
+            for value in np.asarray(atol, dtype=object).ravel()
+        ):
+            raise pybamm.SolverError(
+                "Absolute tolerances must be real numbers, not booleans"
+            )
+        # Bool and complex arrays would otherwise cast to float silently
+        if values.dtype.kind not in "iuf":
+            raise pybamm.SolverError(
+                "Absolute tolerances must be real numbers, not an array of "
+                f"dtype {values.dtype}"
+            )
+        if values.ndim == 0:
+            return np.full(number_of_states, float(values))
+        if values.shape not in ((number_of_states,), (number_of_states, 1)):
+            raise pybamm.SolverError(
+                f"Absolute tolerances have shape {values.shape} but "
+                f"({number_of_states},) was expected (one value per state)"
+            )
+        return np.ascontiguousarray(values.ravel(), dtype=np.float64)
 
     def _lowers_via_compiled_model(self, model) -> bool:
         """Whether one shared Rust lowering serves every evaluator of this solve."""
@@ -1450,7 +1495,15 @@ class BaseSolver:
 
         return start_indices, end_indices, t_eval
 
+    @property
+    def _internal_initialisation(self) -> bool:
+        """Whether the integrator finds consistent initial conditions itself."""
+        return False
+
     def _check_event_violation_on_initialisation(self, *args, **kwargs):
+        # An integrator that initialises itself is handed only a guess.
+        if self._internal_initialisation:
+            return
         self._check_event_violation(*args, **kwargs)
 
     def _check_event_violation_post_solve(self, *args, **kwargs):

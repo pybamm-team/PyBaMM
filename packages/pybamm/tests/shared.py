@@ -434,7 +434,7 @@ def get_base_model_with_battery_geometry(**kwargs):
     return model
 
 
-def get_broken_input_model(convert_to_format="casadi"):
+def get_broken_input_model(convert_to_format="rust"):
     """Return the discretised model ``dv/dt = -sqrt(k) * v``.
 
     Its residual is NaN for any input ``k < 0``, whatever the state.

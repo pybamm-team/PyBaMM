@@ -2438,6 +2438,26 @@ class TestSolutionSolverStatistics:
         solution = self._solution(0, statistics)
         assert pickle.loads(pickle.dumps(solution)).solver_statistics == statistics
 
+    def test_statistics_pickled_before_the_diffsol_fields_load(self):
+        # Such a pickle holds a value for each of the five earlier fields only
+        earlier_fields = (
+            "number_of_steps",
+            "number_of_linear_solver_setups",
+            "number_of_nonlinear_solver_iterations",
+            "number_of_nonlinear_solver_fails",
+            "number_of_error_test_failures",
+        )
+        statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
+        state = [getattr(statistics, name) for name in earlier_fields]
+
+        class EarlierPickle:
+            def __reduce__(self):
+                return object.__new__, (pybamm.SolverStatistics,), state
+
+        loaded = pickle.loads(pickle.dumps(EarlierPickle()))
+        assert loaded == statistics
+        assert loaded + statistics == pybamm.SolverStatistics(2, 4, 6, 8, 10)
+
     def test_solution_pickled_before_slots_loads(self, caplog):
         solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
         first_state = solution.first_state

@@ -189,6 +189,14 @@ pub enum CoreError {
     )]
     Y0SensLength { got: usize, expected: usize },
 
+    #[error(
+        "a batch needs one entry per input set, but got {y0} initial state(s) and {inputs} input vector(s)"
+    )]
+    BatchWidths { y0: usize, inputs: usize },
+
+    #[error("a batch of {expected} input set(s) needs {expected} dy0/dp seed(s), but got {got}")]
+    BatchSensWidth { got: usize, expected: usize },
+
     #[error("sens_atol_factor must be finite and > 0, got {got}")]
     SensAtolFactor { got: f64 },
 
