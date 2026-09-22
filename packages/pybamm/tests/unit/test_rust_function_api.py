@@ -862,6 +862,7 @@ class TestExtensionModuleLocation:
             "CompiledFunction",
             "CompiledModel",
             "ExprGraph",
+            "PreparedSolver",
         ):
             assert hasattr(pybamm.rust, name), name
 

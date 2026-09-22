@@ -81,6 +81,31 @@ pub enum Termination {
     },
 }
 
+impl Termination {
+    /// The flag the solver boundary carries: `0` completed, `1` event root.
+    pub const fn as_flag(self) -> i32 {
+        match self {
+            Self::Completed => 0,
+            Self::Event { .. } => 1,
+        }
+    }
+
+    pub const fn event_time(self) -> Option<f64> {
+        match self {
+            Self::Completed => None,
+            Self::Event { t, .. } => Some(t),
+        }
+    }
+
+    /// The registration index of the event whose root ended the solve.
+    pub const fn event_index(self) -> Option<usize> {
+        match self {
+            Self::Completed => None,
+            Self::Event { index, .. } => Some(index),
+        }
+    }
+}
+
 /// What one solve returns, whichever payloads were asked for.
 ///
 /// On an event root, `t` ends at the root time rather than the last requested point.
