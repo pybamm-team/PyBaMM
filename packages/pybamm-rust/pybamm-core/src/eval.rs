@@ -960,6 +960,12 @@ impl CompiledExpr {
         Self::from_ir(TypedIr::from_dag(dag))
     }
 
+    /// Compile with a no-reuse (SSA) slot layout, so after [`eval`](Self::eval) the
+    /// scratch holds every intermediate for reverse-mode AD.
+    pub(crate) fn new_pinned(dag: DagRef<'_>) -> Self {
+        Self::from_ir(TypedIr::from_dag_pinned(dag))
+    }
+
     /// Wrap a pre-built `TypedIr`.
     pub const fn from_ir(ir: TypedIr) -> Self {
         Self { ir }
