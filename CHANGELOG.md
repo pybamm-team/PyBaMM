@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added `pybamm-core` (`packages/pybamm-rust`), a Rust expression compiler for PyBaMM models: an arena DAG with simplification (rewriting a constant power as `x*x` or `1/x` only where that takes `pow`'s value bitwise), CSE and zero propagation, a typed slot-addressed IR, scalar and lane-batched interpreters that run only a `Conditional`'s active branch, and forward-mode AD. `cargo test` and MSRV jobs run in CI, and `cargo fmt`/`cargo clippy` in pre-commit. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))

@@ -1,0 +1,22 @@
+[package]
+name = "pybamm-core"
+version = "0.1.0"
+edition = "2024"
+rust-version.workspace = true
+
+[dependencies]
+rustc-hash = "2"
+thiserror = "2"
+# For the primitives `f64` leaves non-deterministic, so values match on every target.
+libm = "0.2"
+serde = { version = "1", features = ["derive"], optional = true }
+bincode = { version = "1", optional = true }
+
+[dev-dependencies]
+proptest = "1"
+
+[features]
+serialize = ["serde", "bincode"]
+
+[lints]
+workspace = true
