@@ -761,6 +761,21 @@ class Integral(SpatialOperator):
     def integration_variable(self):
         return self._integration_variable
 
+    def to_json(self):
+        if type(self) is not Integral:
+            return super().to_json()
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "children": [self.children[0], *self.integration_variable],
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        if cls is not Integral:
+            return super()._from_json(snippet)
+        return cls(snippet["children"][0], snippet["children"][1:])
+
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
