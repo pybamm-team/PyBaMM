@@ -15,6 +15,7 @@
 - PyBaMM no longer depends on xarray: `ProcessedVariable.xr_array_raw_initialized` is removed, bad interpolation queries raise `ValueError`, and a NaN only affects interpolation next to it. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
 - An interpolation axis of one point gives its value at that point, or everywhere with `fill_value="extrapolate"`, where xarray gave NaN except at the point of a 1D grid. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
 - Solutions saved by 26.10 or earlier load without xarray only through `pybamm.load`, which raises an `ImportError` if the loaded object keeps an xarray or pandas object it could not import. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
+- `pybamm` now ships platform wheels with its Rust core compiled in as `pybamm.rust._core`: one `cp311-abi3` wheel per platform for Python 3.11-3.15. Building from source or the sdist requires `cargo` 1.89+; `pip install --only-binary pybamm pybamm` forces a wheel. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
 
 ## Deprecated
 
@@ -39,6 +40,7 @@
 - `pybamm.UserSuppliedUnstructuredMesh` loads hexahedral mesh files with planar faces, such as structured gmsh meshes of thin pouch-cell layers, with quad boundary tags. Warped or collapsed hexahedra, mixed volume cell types and wedges, pyramids or polyhedra raise `GeometryError`. ([#5850](https://github.com/pybamm-team/PyBaMM/pull/5850))
 - `pybamm-core` compiles a model into a `CompiledModel`: a DAE with a symbolic Jacobian, per-output sparsity, coloured and lane-batched Jacobian sweeps, fused event and output tapes, and a versioned C ABI (`ffi.rs`) that a drift test pins against pybammsolvers' header. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
 - `pybamm-core`'s reverse-mode AD values the primitives through the same definitions as the interpreters, and a test holds its partials bitwise to them. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
+- `pybamm.rust` exposes `ExprGraph`, `CompiledFunction` (one expression, or a named set via `compile_outputs`, with lane-batched trajectory and Hermite evaluation) and `CompiledJacobian`, with hand-written type stubs that `mypy.stubtest` pins against the built extension. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
 
 ## Bug fixes
 
