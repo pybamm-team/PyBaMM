@@ -677,7 +677,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         self._setup = {
             "number_of_states": len(y0),
-            "inputs": len(stacked_inputs),
+            # Not len: an empty stack is 1 x 0, and each solved row must be this wide
+            "inputs": stacked_inputs.size,
             "jac_bandwidth_upper": jac_bw_upper,
             "jac_bandwidth_lower": jac_bw_lower,
             "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,

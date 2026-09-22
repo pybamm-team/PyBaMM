@@ -293,6 +293,16 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   if (len_alg_ > 0 && solver_opts.calc_ic) {
     BuildAlgebraicSolver(id_val);
   }
+
+  // The sensitivity IC solve needs an assembled matrix and a direct solver
+  if (sensitivity && len_alg_ > 0 && solver_opts.calc_ic && J != nullptr &&
+      SUNLinSolGetType(LS) == SUNLINEARSOLVER_DIRECT) {
+    sens_ic_ = std::make_unique<SensitivityICResources>();
+    sens_ic_->number_of_parameters = number_of_parameters;
+    sens_ic_->mass_jac = SUNMatClone(J);
+    sens_ic_->res = N_VCloneVectorArray(number_of_parameters, yy);
+    sens_ic_->delta = N_VClone(yy);
+  }
 }
 
 template <class ExprSet>
@@ -300,6 +310,7 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
   DEBUG("IDAKLUSolverOpenMP::~IDAKLUSolverOpenMP");
 
   alg_state_.reset();
+  sens_ic_.reset();
 
   if (sensitivity) {
       IDASensFree(ida_mem);
@@ -466,6 +477,9 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
 
   length_of_return_vector = ReturnVectorLength();
   i_save_ = 0;
+  stage_out_t_.clear();
+  stage_out_y_.clear();
+  stage_out_first_ = 0;
 
   // Allocate output arrays. Pre-allocate 64 elements for initial storage.
   int est = std::max(n_evals + n_interps, 64);
@@ -683,6 +697,11 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     CaptureStats();
   }
 
+  // Evaluate any tail of staged batched-output points before y is finalized.
+  if (save_outputs_only) {
+    FlushOutputBatch();
+  }
+
   // Finalize output arrays
   if (use_knot_reduction_) {
     knot_reducer->Finalize();
@@ -886,15 +905,142 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationDAE(
 
   // If the model is a standard-form DAE, we can use the Newton solver
   // to solve for the consistent initialization
+  bool newton_success = false;
   if (alg_state_ && alg_state_->solver && icopt == IDA_YA_YDP_INIT) {
-    const bool newton_success = NonlinearSolverInitialConditions(t_val);
-    // Sensitivity requires IDACalcIC to compute its initial conditions
-    if (newton_success && !sensitivity) {
-      return;
+    newton_success = NonlinearSolverInitialConditions(t_val);
+  }
+
+  // IDACalcIC weights sensitivity corrections by their guess, which is zero for
+  // algebraic states, so they are solved for directly once the states are set
+  const bool solve_sensitivities = sens_ic_ && icopt == IDA_YA_YDP_INIT;
+  const bool calc_ic_sensitivities = sensitivity && !solve_sensitivities;
+  if (!newton_success || calc_ic_sensitivities) {
+    if (solve_sensitivities) {
+      IDASensToggleOff(ida_mem);
+    }
+    const bool calc_ic_success =
+      CalcIC(t_val, t_next_perturbed, icopt, calc_ic_sensitivities);
+    if (calc_ic_success && solve_sensitivities) {
+      CheckErrors(IDAGetConsistentIC(ida_mem, yy, yyp), "IDAGetConsistentIC");
     }
   }
 
-  IDACalcIC(ida_mem, icopt, t_next_perturbed);
+  if (solve_sensitivities) {
+    const bool solved = SensitivityInitialConditions(t_val);
+    // Also turns the sensitivities back on
+    ReinitializeIntegrator(t_val);
+    if (!solved) {
+      CalcIC(t_val, t_next_perturbed, icopt, true);
+    }
+  }
+}
+
+template <class ExprSet>
+bool IDAKLUSolverOpenMP<ExprSet>::CalcIC(
+  const sunrealtype& t_val,
+  const sunrealtype& t_next_perturbed,
+  const int& icopt,
+  const bool with_sensitivities) {
+  const int flag = IDACalcIC(ida_mem, icopt, t_next_perturbed);
+  if (flag >= 0) {
+    return true;
+  }
+  log_.log_consistent_init_failed(t_val, sundials_error_message(flag));
+  // The first step corrects the states, but the sensitivities stored at
+  // t_val would keep IDACalcIC's unconverged guess
+  if (with_sensitivities) {
+    CheckErrors(flag, "IDACalcIC");
+  }
+  return false;
+}
+
+template <class ExprSet>
+bool IDAKLUSolverOpenMP<ExprSet>::SensitivityInitialConditions(
+  const sunrealtype& t_val) {
+  DEBUG("IDAKLUSolver::SensitivityInitialConditions");
+
+  auto& sic = *sens_ic_;
+  // A direct solver may factor in place, so both are zeroed first, as IDA does
+  SUNMatZero(J);
+  SUNMatZero(sic.mass_jac);
+  // The unknowns are the algebraic yS and differential ypS, so the matrix is
+  // df/dy (J at cj = 0) in algebraic columns and -M (J1 - J0) elsewhere
+  jacobian_eval<ExprSet>(t_val, SUN_RCONST(0.0), yy, yyp, sic.delta, J,
+    functions.get(), sic.delta, sic.delta, sic.delta);
+  jacobian_eval<ExprSet>(t_val, SUN_RCONST(1.0), yy, yyp, sic.delta,
+    sic.mass_jac, functions.get(), sic.delta, sic.delta, sic.delta);
+
+  const sunrealtype* id_val = N_VGetArrayPointer(id);
+  const auto replace_column = [](sunrealtype* col0, const sunrealtype* col1,
+                                 sunindextype begin, sunindextype end) {
+    for (sunindextype k = begin; k < end; k++) {
+      col0[k] = col1[k] - col0[k];
+    }
+  };
+  switch (SUNMatGetID(J)) {
+    case SUNMATRIX_SPARSE: {
+      if (SUNSparseMatrix_SparseType(J) != CSC_MAT) {
+        return false;
+      }
+      const sunindextype* colptrs = SUNSparseMatrix_IndexPointers(J);
+      for (int j = 0; j < number_of_states; j++) {
+        if (is_differential(id_val[j])) {
+          replace_column(SUNSparseMatrix_Data(J),
+            SUNSparseMatrix_Data(sic.mass_jac), colptrs[j], colptrs[j + 1]);
+        }
+      }
+      break;
+    }
+    case SUNMATRIX_DENSE:
+      for (int j = 0; j < number_of_states; j++) {
+        if (is_differential(id_val[j])) {
+          replace_column(SUNDenseMatrix_Column(J, j),
+            SUNDenseMatrix_Column(sic.mass_jac, j), 0, number_of_states);
+        }
+      }
+      break;
+    case SUNMATRIX_BAND: {
+      // Band columns point at their diagonal, so rows index from -upper
+      const sunindextype upper = SUNBandMatrix_UpperBandwidth(J);
+      const sunindextype lower = SUNBandMatrix_LowerBandwidth(J);
+      for (int j = 0; j < number_of_states; j++) {
+        if (is_differential(id_val[j])) {
+          replace_column(SUNBandMatrix_Column(J, j),
+            SUNBandMatrix_Column(sic.mass_jac, j),
+            -std::min<sunindextype>(upper, j),
+            std::min<sunindextype>(lower, number_of_states - 1 - j) + 1);
+        }
+      }
+      break;
+    }
+    default:
+      return false;
+  }
+
+  // Overwrites IDA's factorization, which its next lsetup after a reinit redoes
+  if (SUNLinSolSetup(LS, J) != 0) {
+    return false;
+  }
+
+  // The system is linear, so one Newton step from the current guess solves it
+  sensitivities_eval<ExprSet>(number_of_parameters, t_val, yy, yyp, nullptr,
+    yyS, yypS, sic.res, functions.get(), nullptr, nullptr, nullptr);
+  for (int p = 0; p < number_of_parameters; p++) {
+    if (SUNLinSolSolve(LS, J, sic.delta, sic.res[p], SUN_RCONST(0.0)) != 0) {
+      return false;
+    }
+    const sunrealtype* delta = N_VGetArrayPointer(sic.delta);
+    sunrealtype* yS_p = N_VGetArrayPointer(yyS[p]);
+    sunrealtype* ypS_p = N_VGetArrayPointer(yypS[p]);
+    for (int i = 0; i < number_of_states; i++) {
+      if (is_differential(id_val[i])) {
+        ypS_p[i] -= delta[i];
+      } else {
+        yS_p[i] -= delta[i];
+      }
+    }
+  }
+  return true;
 }
 
 template <class ExprSet>
@@ -1004,6 +1150,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepFullSensitivities(
   }
 }
 
+// Points per batched output evaluation, bounding the staged state copy.
+static constexpr size_t kOutputBatchPoints = 128;
+
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
     sunrealtype &tval
@@ -1011,17 +1160,52 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
   DEBUG("IDAKLUSolver::SetStepOutput");
   // FLAT STORAGE: Write output variables to y[i_save_ * stride + j]
 
-  sunrealtype* y_dest = &y[i_save_ * length_of_return_vector];
-  size_t j = 0;
-  for (auto& var_fcn : functions->var_fcns) {
-    (*var_fcn)({&tval, y_val_, functions->inputs.data()}, {&res[0]});
-    for (size_t jj = 0; jj < var_fcn->nnz_out(); jj++) {
-      y_dest[j++] = res[jj];
+  if constexpr (ExprSet::kNativeBatchedOutputs) {
+    // Outputs read only y, so they are staged even when the sensitivities below run per point.
+    if (stage_out_t_.empty()) {
+      stage_out_first_ = i_save_;
+      stage_out_t_.reserve(kOutputBatchPoints);
+      stage_out_y_.reserve(kOutputBatchPoints * number_of_states);
+    }
+    stage_out_t_.push_back(tval);
+    stage_out_y_.insert(stage_out_y_.end(), y_val_, y_val_ + number_of_states);
+    if (stage_out_t_.size() == kOutputBatchPoints) {
+      FlushOutputBatch();
+    }
+  } else {
+    sunrealtype* y_dest = &y[i_save_ * length_of_return_vector];
+    size_t j = 0;
+    for (auto& var_fcn : functions->var_fcns) {
+      (*var_fcn)({&tval, y_val_, functions->inputs.data()}, {&res[0]});
+      for (size_t jj = 0; jj < var_fcn->nnz_out(); jj++) {
+        y_dest[j++] = res[jj];
+      }
     }
   }
 
   if (sensitivity) {
-    SetStepOutputSensitivities(tval);
+    if constexpr (ExprSet::kNativeOutputSensitivities) {
+      NativeSetStepOutputSensitivities(tval);
+    } else {
+      SetStepOutputSensitivities(tval);
+    }
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::FlushOutputBatch() {
+  if constexpr (ExprSet::kNativeBatchedOutputs) {
+    const size_t k = stage_out_t_.size();
+    if (k == 0) {
+      return;
+    }
+    DEBUG("IDAKLUSolver::FlushOutputBatch");
+    // The staged points' y rows are contiguous from stage_out_first_.
+    functions->eval_outputs_batch(
+      stage_out_t_.data(), stage_out_y_.data(), static_cast<int>(k),
+      &y[stage_out_first_ * length_of_return_vector]);
+    stage_out_t_.clear();
+    stage_out_y_.clear();
   }
 }
 
@@ -1088,6 +1272,32 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
         // FLAT STORAGE (final layout (i, j, p)): yS[(i * stride + out) * n_params + p]
         yS[yS_base + global_out_idx * number_of_parameters + paramk] = sens;
       }
+    }
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::NativeSetStepOutputSensitivities(
+  sunrealtype &tval
+) {
+  DEBUG("IDAKLUSolver::NativeSetStepOutputSensitivities");
+  const size_t n_params = static_cast<size_t>(number_of_parameters);
+  const size_t stride = length_of_return_vector;
+  const size_t yS_base = i_save_ * n_params * stride;
+
+  yS_flat_.resize(n_params * number_of_states);
+  for (size_t p = 0; p < n_params; ++p) {
+    std::copy(yS_val_[p], yS_val_[p] + number_of_states,
+              yS_flat_.begin() + p * number_of_states);
+  }
+  out_sens_flat_.resize(n_params * stride);
+  functions->project_output_sensitivities(
+      tval, y_val_, functions->inputs.data(),
+      yS_flat_.data(), out_sens_flat_.data());
+  // The projection emits (param, output); yS is (output, param), as the CasADi path writes it.
+  for (size_t p = 0; p < n_params; ++p) {
+    for (size_t o = 0; o < stride; ++o) {
+      yS[yS_base + o * n_params + p] = out_sens_flat_[p * stride + o];
     }
   }
 }
