@@ -259,7 +259,8 @@ class TestSerialise:
 
         # files written before the key existed load with the model's default
         del data["convert_to_format"]
-        assert Serialise().load_model(data).convert_to_format == "casadi"
+        default = pybamm.BaseModel._DEFAULT_CONVERT_TO_FORMAT
+        assert Serialise().load_model(data).convert_to_format == default
 
     @pytest.mark.parametrize("convert_to_format", ["python", "jax", "rust"])
     def test_custom_model_round_trips_convert_to_format(self, convert_to_format):
@@ -275,7 +276,8 @@ class TestSerialise:
         assert loaded.convert_to_format == convert_to_format
 
         del data["model"]["convert_to_format"]
-        assert Serialise.load_custom_model(data).convert_to_format == "casadi"
+        default = pybamm.BaseModel._DEFAULT_CONVERT_TO_FORMAT
+        assert Serialise.load_custom_model(data).convert_to_format == default
 
     def test_save_experiment_model_error(self):
         model = pybamm.lithium_ion.SPM()

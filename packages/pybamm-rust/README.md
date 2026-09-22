@@ -5,7 +5,7 @@ PyBaMM's other backends. Python hands over a discretised model as an expression 
 this workspace turns it into flat instruction tapes it can evaluate, differentiate and
 solve.
 
-Models opt in with `model.convert_to_format = "rust"`.
+Models use it by default; set `model.convert_to_format = "casadi"` to opt out.
 
 ## Layout
 

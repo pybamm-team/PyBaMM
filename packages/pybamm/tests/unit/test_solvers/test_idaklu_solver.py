@@ -1516,6 +1516,8 @@ class TestIDAKLUSolver:
             output_variables=["Negative particle flux [mol.m-2.s-1]"],
         )
         model = pybamm.lithium_ion.DFN()
+        # Rust outputs are dense, so only the casadi path has this guard
+        model.convert_to_format = "casadi"
         params = model.default_parameter_values
         params.update({"Current function [A]": "[input]"})
         sim = pybamm.Simulation(model, solver=solver, parameter_values=params)

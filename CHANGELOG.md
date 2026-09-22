@@ -4,6 +4,7 @@
 
 - `pybamm` now requires `pybammsolvers>=0.12.0`, whose IDAKLU backend evaluates a Rust `CompiledModel`; `pybammsolvers` 0.11 cannot solve a `convert_to_format = "rust"` model. Upgrade `pybammsolvers` together with `pybamm`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - The Rust compute core ships inside the `pybamm` wheel as `pybamm.rust._core`, so `pybamm` is now a platform-specific wheel: one `cp310-abi3` wheel per platform covers Python 3.10-3.14 on macOS (arm64, x86_64), Linux (`manylinux` x86_64, aarch64) and Windows (AMD64). `import pybamm` never loads the extension. Installing from source or from the sdist compiles the core and requires a Rust toolchain (`cargo` 1.89+); use `pip install --only-binary pybamm pybamm` to force a prebuilt wheel. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- Models now default to `convert_to_format = "rust"` instead of `"casadi"`, so every model is lowered to the Rust compute core unless it opts out. Set `model.convert_to_format = "casadi"` to restore the previous backend. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
 ## Features
 

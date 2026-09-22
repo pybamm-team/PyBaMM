@@ -1460,6 +1460,8 @@ class TestSimulationExperiment:
         solutions = {}
         for name, solver in solvers.items():
             model = pybamm.lithium_ion.SPM()
+            if isinstance(solver, pybamm.CasadiSolver):
+                model.convert_to_format = "casadi"
             sim = pybamm.Simulation(model, experiment=experiment_2step, solver=solver)
             solution = sim.solve()
             assert solution.t[-1] == pytest.approx(3600 * len(experiment_2step.steps))

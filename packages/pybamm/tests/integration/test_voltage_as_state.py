@@ -64,6 +64,7 @@ class TestVoltageAsStateOptIn:
     @pytest.mark.parametrize("model_cls", REDUCED_MODELS)
     def test_opt_in_solvable_by_casadi_safe(self, model_cls):
         model = model_cls(options=OPT_IN)
+        model.convert_to_format = "casadi"
         sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver(mode="safe"))
         sol = sim.solve([0, 3600])
         v = sol["Voltage [V]"].entries
