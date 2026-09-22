@@ -3302,8 +3302,8 @@ requires-dist = [
     { name = "tqdm", marker = "extra == 'all'" },
     { name = "tqdm", marker = "extra == 'tqdm'" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
-    { name = "vtk", marker = "extra == 'all'", specifier = ">=9.0.0" },
-    { name = "vtk", marker = "extra == 'vtk'", specifier = ">=9.0.0" },
+    { name = "vtk", marker = "extra == 'all'", specifier = ">=9.3.1" },
+    { name = "vtk", marker = "extra == 'vtk'", specifier = ">=9.3.1" },
     { name = "xarray", specifier = ">=2022.6.0" },
 ]
 provides-extras = ["all", "bpx", "cite", "examples", "jax", "plot", "pydiffsol", "tqdm", "vtk"]
