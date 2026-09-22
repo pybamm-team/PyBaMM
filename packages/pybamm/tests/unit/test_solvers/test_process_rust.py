@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 import scipy.sparse
 
+import pybamm
+
 casadi = pytest.importorskip("casadi")
 
 
@@ -60,6 +62,101 @@ class TestCompiledFunctionADContract:
         jac = cf.jacobian("y")(0.0, np.array([1.5, -2.0]), np.empty(0))
         assert jac.shape == (1, 2)
         np.testing.assert_allclose(jac.toarray(), [[-2.0, 1.5]])
+
+
+class TestTrajectoryFFILooseDtypes:
+    """Trajectory time params coerce lists, float32 and non-contiguous slices."""
+
+    def _cf(self):
+        from pybamm.rust import ExprGraph
+
+        graph = ExprGraph()
+        expr = (2 * pybamm.StateVector(slice(0, 1))).to_rust(graph, {})
+        return graph.compile(expr, name="f", n_states=1)
+
+    def _named(self):
+        from pybamm.rust import ExprGraph
+
+        graph = ExprGraph()
+        expr = (2 * pybamm.StateVector(slice(0, 1))).to_rust(graph, {})
+        return graph.compile_outputs({"double": expr})
+
+    def test_eval_trajectory_hermite_accepts_loose_t_query(self):
+        cf = self._cf()
+        ts = np.array([0.0, 1.0])
+        ys = np.array([[1.0, 2.0]])
+        yps = np.array([[1.0, 1.0]])
+        query = [0.25, 0.75]
+        expected = np.asarray(
+            cf.eval_trajectory_hermite(np.array(query), ts, ys, yps, np.array([]))
+        )
+
+        as_list = query
+        as_float32 = np.array(query, dtype=np.float32)
+        # Two elements: a length-1 strided slice is trivially contiguous.
+        strided = np.array([0.25, -1.0, 0.75, -1.0])[::2]
+        assert not strided.flags["C_CONTIGUOUS"]
+
+        for t_query in (as_list, as_float32, strided):
+            out = np.asarray(
+                cf.eval_trajectory_hermite(t_query, ts, ys, yps, np.array([]))
+            )
+            np.testing.assert_allclose(out, expected)
+
+    def test_eval_trajectory_hermite_accepts_loose_ts(self):
+        cf = self._cf()
+        ys = np.array([[1.0, 2.0]])
+        yps = np.array([[1.0, 1.0]])
+        tq = np.array([0.5])
+        expected = np.asarray(
+            cf.eval_trajectory_hermite(tq, np.array([0.0, 1.0]), ys, yps, np.array([]))
+        )
+        for ts in ([0.0, 1.0], np.array([0.0, 1.0], dtype=np.float32)):
+            out = np.asarray(cf.eval_trajectory_hermite(tq, ts, ys, yps, np.array([])))
+            np.testing.assert_allclose(out, expected)
+
+    def test_eval_trajectory_accepts_loose_ts(self):
+        cf = self._cf()
+        y_traj = np.array([[1.0, 2.0, 3.0]])
+        p = np.array([])
+        expected = np.asarray(cf.eval_trajectory(np.array([0.0, 0.5, 1.0]), y_traj, p))
+        for ts in ([0.0, 0.5, 1.0], np.array([0.0, 0.5, 1.0], dtype=np.float32)):
+            out = np.asarray(cf.eval_trajectory(ts, y_traj, p))
+            np.testing.assert_allclose(out, expected)
+
+    def test_jvp_trajectory_accepts_loose_ts(self):
+        cf = self._cf()
+        y_traj = np.array([[1.0, 2.0, 3.0]])
+        vy_traj = np.array([[0.1, 0.2, 0.3]])
+        p = np.array([])
+        expected = np.asarray(
+            cf.jvp_trajectory(np.array([0.0, 0.5, 1.0]), y_traj, p, vy_traj)
+        )
+        for ts in ([0.0, 0.5, 1.0], np.array([0.0, 0.5, 1.0], dtype=np.float32)):
+            out = np.asarray(cf.jvp_trajectory(ts, y_traj, p, vy_traj))
+            np.testing.assert_allclose(out, expected)
+
+    def test_named_outputs_eval_trajectory_accepts_loose_ts(self):
+        fn = self._named()
+        y_traj = np.array([[1.0, 2.0, 3.0]])
+        p = np.array([])
+        (expected,) = fn.split(fn.eval_trajectory(np.array([0.0, 0.5, 1.0]), y_traj, p))
+        for ts in ([0.0, 0.5, 1.0], np.array([0.0, 0.5, 1.0], dtype=np.float32)):
+            (out,) = fn.split(fn.eval_trajectory(ts, y_traj, p))
+            np.testing.assert_allclose(np.asarray(out), np.asarray(expected))
+
+    def test_named_outputs_eval_trajectory_hermite_accepts_loose_t_query(self):
+        fn = self._named()
+        ts = np.array([0.0, 1.0])
+        ys = np.array([[1.0, 2.0]])
+        yps = np.array([[1.0, 1.0]])
+        p = np.array([])
+        (expected,) = fn.split(
+            fn.eval_trajectory_hermite(np.array([0.5]), ts, ys, yps, p)
+        )
+        for t_query in ([0.5], np.array([0.5], dtype=np.float32)):
+            (out,) = fn.split(fn.eval_trajectory_hermite(t_query, ts, ys, yps, p))
+            np.testing.assert_allclose(np.asarray(out), np.asarray(expected))
 
 
 class TestMatMulLhsValidation:
@@ -168,6 +265,84 @@ class TestVectorWidthInputParameter:
 
 
 class TestPickle:
+    def test_expr_graph_pickle_roundtrip(self):
+        import pickle
+
+        from pybamm.rust import ExprGraph
+
+        graph = ExprGraph()
+        (pybamm.InputParameter("a") * pybamm.StateVector(slice(0, 2))).to_rust(
+            graph, {}
+        )
+        g2 = pickle.loads(pickle.dumps(graph))
+        expr2 = (pybamm.InputParameter("a") * pybamm.StateVector(slice(0, 2))).to_rust(
+            g2, {}
+        )
+        cf = g2.compile(expr2, name="f", n_states=2)
+        np.testing.assert_allclose(
+            np.asarray(cf(0.0, np.array([1.0, 2.0]), np.array([3.0]))).ravel(),
+            [3.0, 6.0],
+        )
+
+    def test_pickle_preserves_input_registration_indices(self):
+        import pickle
+
+        from pybamm.rust import ExprGraph
+
+        graph = ExprGraph()
+        graph.input_parameter("a")
+        graph.input_parameter("b")
+        g2 = pickle.loads(pickle.dumps(graph))
+        # "b" must still resolve to index 1, not 0, on the restored graph.
+        expr_b = (pybamm.InputParameter("b") * pybamm.StateVector(slice(0, 2))).to_rust(
+            g2, {}
+        )
+        cf = g2.compile(expr_b, name="fb", n_states=2)
+        np.testing.assert_allclose(
+            np.asarray(cf(0.0, np.array([1.0, 2.0]), np.array([5.0, 7.0]))).ravel(),
+            [7.0, 14.0],
+        )
+
+    def test_pickle_preserves_input_widths(self):
+        import pickle
+
+        from pybamm.rust import ExprGraph
+
+        graph = ExprGraph()
+        graph.input_parameter("a")
+        graph.input_parameter("b", 2)
+        g2 = pickle.loads(pickle.dumps(graph))
+        with pytest.raises(ValueError, match=r"'b'.*width 1.*width 2"):
+            g2.input_parameter("b", 1)
+        # "b" must keep packed offset 1 and width 2 on the restored graph.
+        b = pybamm.InputParameter("b", expected_size=2)
+        expr_b = (pybamm.Index(b, 0) + pybamm.Index(b, 1)).to_rust(g2, {})
+        cf = g2.compile(expr_b, name="fb", n_states=0)
+        np.testing.assert_allclose(
+            np.asarray(cf(0.0, np.empty(0), np.array([5.0, 7.0, 11.0]))),
+            [18.0],
+        )
+
+    def test_compiled_function_pickle_roundtrip(self):
+        import pickle
+
+        from pybamm.rust import ExprGraph
+
+        graph = ExprGraph()
+        expr = (pybamm.InputParameter("a") * pybamm.StateVector(slice(0, 2))).to_rust(
+            graph, {}
+        )
+        cf = graph.compile(expr, name="f", n_states=2)
+        cf2 = pickle.loads(pickle.dumps(cf))
+        y, p = np.array([1.0, 2.0]), np.array([3.0])
+        np.testing.assert_allclose(
+            np.asarray(cf2(0.0, y, p)), np.asarray(cf(0.0, y, p))
+        )
+        np.testing.assert_allclose(
+            cf2.jacobian("y")(0.0, y, p).toarray(),
+            cf.jacobian("y")(0.0, y, p).toarray(),
+        )
+
     def test_rebuild_rejects_out_of_range_root(self):
         from pybamm.rust import CompiledFunction, ExprGraph
 
