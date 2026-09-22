@@ -2,6 +2,7 @@
 
 ## Breaking changes
 
+- `pybamm` now requires `pybammsolvers>=0.12.0`, whose IDAKLU backend can evaluate a Rust `CompiledModel`. Upgrade `pybammsolvers` together with `pybamm`. ([#5961](https://github.com/pybamm-team/PyBaMM/pull/5961))
 - `pybamm` now ships platform wheels with its Rust core compiled in as `pybamm.rust._core`: one `cp310-abi3` wheel per platform for Python 3.10-3.15. Building from source or the sdist requires `cargo` 1.89+; `pip install --only-binary pybamm pybamm` forces a wheel. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
 
 ## Deprecated
@@ -19,6 +20,7 @@
 - `pybamm.rust` exposes `ExprGraph`, `CompiledFunction` (one expression, or a named set via `compile_outputs`, with lane-batched trajectory and Hermite evaluation) and `CompiledJacobian`, with hand-written type stubs that `mypy.stubtest` pins against the built extension. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
 - `Symbol.to_rust` lowers a discretised expression tree into a `pybamm.rust.ExprGraph`, covering the operators, matrix products, concatenations, `Conditional`, the specific functions, `RegPower` and 1D-3D interpolants. Spatial and tensor operators, such as `Norm` and `Component`, raise `TypeError`. ([#5959](https://github.com/pybamm-team/PyBaMM/pull/5959))
 - `model.convert_to_format = "rust"` evaluates a model's rhs, algebraic, Jacobian and event functions through compiled Rust evaluators, for `ScipySolver`, `AlgebraicSolver` and EIS. ([#5960](https://github.com/pybamm-team/PyBaMM/pull/5960))
+- pybammsolvers gains an IDAKLU backend that evaluates a Rust `CompiledModel` through its C ABI, resolved at runtime so IDAKLU still loads without the Rust extension, with a Rust-backed Newton solver and output sensitivities projected natively in-solver. ([#5961](https://github.com/pybamm-team/PyBaMM/pull/5961))
 
 ## Bug fixes
 
@@ -41,6 +43,8 @@
 - Fixed copying a function without simplification, as `ParameterValues` does for a parameter set loaded with `Serialise.load_parameters`, returning a generic `pybamm.Function`: `pybamm.exp` and the other specific functions lost their class, and an `Arcsinh2` copy could not be evaluated. ([#5954](https://github.com/pybamm-team/PyBaMM/pull/5954))
 - `RegPower` now evaluates the same operations in `evaluate` and CasADi, taking a literal exponent of 0.5 or 2 as square roots, so they agree bitwise; CasADi used a `hypot` form. With `delta=0`, `evaluate` and the Jacobian use `base ** exponent`, as CasADi did. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - CasADi linear and `pchip` interpolants on a uniform grid now find a point's segment by binary search. The `"exact"` lookup could pick the neighbouring segment at or one ulp beside a knot, giving the Jacobian that segment's slope. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
+- `IDAKLUSolver` no longer reads one value past the inputs of a model without input parameters. Inputs with a different number of values than at set-up now raise a `SolverError` instead of being read at the set-up length. ([#5961](https://github.com/pybamm-team/PyBaMM/pull/5961))
+- `IDAKLUSolver` now finds a DAE's consistent initial sensitivities with one linear solve; at tight tolerances `IDACalcIC` could leave them zero at the first time point. A failed `IDACalcIC` is logged, and raises a `SolverError` when computing sensitivities. ([#5961](https://github.com/pybamm-team/PyBaMM/pull/5961))
 
 ## Optimizations
 
