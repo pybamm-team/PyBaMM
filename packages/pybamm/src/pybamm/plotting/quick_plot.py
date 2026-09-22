@@ -677,7 +677,14 @@ class QuickPlot:
                         quiver, ax=ax, label="|" + str(key[0]) + "|"
                     )
                 else:
-                    self._plot_3d_quiver(ax, variable, t_in_seconds, key)
+                    quiver = self._plot_3d_quiver(ax, variable, t_in_seconds, key)
+                    self.colorbars[key] = self.fig.colorbar(
+                        quiver,
+                        ax=ax,
+                        shrink=0.6,
+                        pad=0.1,
+                        label="|" + str(key[0]) + "|",
+                    )
             elif variable_lists[0][0].dimensions == 2:
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
@@ -886,43 +893,66 @@ class QuickPlot:
         return cm.ScalarMappable(norm=norm, cmap=cm.viridis)
 
     def _plot_3d_quiver(self, ax, variable, t, key):
-        """Render quiver arrows on two orthogonal 3D slice planes."""
+        """Render magnitude-coloured arrows on two orthogonal 3D slice planes."""
+        cm = import_optional_dependency("matplotlib", "cm")
+        colors = import_optional_dependency("matplotlib", "colors")
+
         sf = self.spatial_factor
         data = quiver_data(
             variable, t, self._unstructured_grids[key], self._slice_positions[key]
         )
         X1, Z1, U_xz, W_xz, y_mid = data[0:5]
         X2, Y2, U_xy, V_xy, z_mid = data[5:10]
+        magnitude_xz = np.sqrt(U_xz**2 + W_xz**2)
+        magnitude_xy = np.sqrt(U_xy**2 + V_xy**2)
+        vmin, vmax = self.variable_limits[key]
+        if vmin is None:
+            vmin = 0.0
+        if vmax is None:
+            magnitudes = np.concatenate(
+                [
+                    magnitude_xz[np.isfinite(magnitude_xz)],
+                    magnitude_xy[np.isfinite(magnitude_xy)],
+                ]
+            )
+            vmax = float(np.max(magnitudes)) if np.any(magnitudes > 0) else 1.0
+        norm = colors.Normalize(vmin=vmin, vmax=vmax)
 
-        x_span = (X1.max() - X1.min()) * sf
-        arrow_len = x_span * 0.08 if x_span > 0 else 0.08
+        spans = (
+            X1.max() - X1.min(),
+            Y2.max() - Y2.min(),
+            Z1.max() - Z1.min(),
+        )
+        arrow_len = max(spans) * sf * 0.08
 
         self._remove_panel_artists(key)
         Y1_plane = np.full_like(X1, y_mid * sf)
+        finite_xz = np.isfinite(magnitude_xz)
         quiver_xz = ax.quiver(
-            X1 * sf,
-            Y1_plane,
-            Z1 * sf,
-            U_xz,
-            np.zeros_like(U_xz),
-            W_xz,
+            X1[finite_xz] * sf,
+            Y1_plane[finite_xz],
+            Z1[finite_xz] * sf,
+            U_xz[finite_xz],
+            np.zeros(np.count_nonzero(finite_xz)),
+            W_xz[finite_xz],
             length=arrow_len,
             normalize=True,
-            color="steelblue",
+            color=cm.viridis(norm(magnitude_xz[finite_xz])),
             alpha=0.8,
         )
 
         Z2_plane = np.full_like(X2, z_mid * sf)
+        finite_xy = np.isfinite(magnitude_xy)
         quiver_xy = ax.quiver(
-            X2 * sf,
-            Y2 * sf,
-            Z2_plane,
-            U_xy,
-            V_xy,
-            np.zeros_like(U_xy),
+            X2[finite_xy] * sf,
+            Y2[finite_xy] * sf,
+            Z2_plane[finite_xy],
+            U_xy[finite_xy],
+            V_xy[finite_xy],
+            np.zeros(np.count_nonzero(finite_xy)),
             length=arrow_len,
             normalize=True,
-            color="darkorange",
+            color=cm.viridis(norm(magnitude_xy[finite_xy])),
             alpha=0.8,
         )
 
@@ -931,6 +961,16 @@ class QuickPlot:
         ax.set_zlabel(f"$z$ [{self.spatial_unit}]")
         self._panel_artists[key] = [quiver_xz, quiver_xy]
         self.plots[key][0][0] = "quiver_3d"
+        return cm.ScalarMappable(norm=norm, cmap=cm.viridis)
+
+    def _set_slice_positions(self, reference_grid, values):
+        """Map slice positions from a reference mesh to every 3D panel."""
+        for axis, value in values.items():
+            lower, upper = reference_grid[axis][0], reference_grid[axis][-1]
+            fraction = (value - lower) / (upper - lower)
+            for key, positions in self._slice_positions.items():
+                points = self._unstructured_grids[key][axis]
+                positions[axis] = points[0] + fraction * (points[-1] - points[0])
 
     def dynamic_plot(self, show_plot=True, step=None):
         """
@@ -950,12 +990,49 @@ class QuickPlot:
             import ipywidgets as widgets
 
             step = step or self.max_t / 100
+            controls = {
+                "t": widgets.FloatSlider(
+                    min=self.min_t,
+                    max=self.max_t,
+                    step=step,
+                    value=self.min_t,
+                    continuous_update=False,
+                )
+            }
+            if self._has_3d:
+                key_3d = next(
+                    key
+                    for key, variable_lists in self.variables.items()
+                    if variable_lists[0][0].dimensions == 3
+                )
+                grid_3d = self._unstructured_grids[key_3d]
+                positions = self._slice_positions[key_3d]
+                spatial_factor = self.spatial_factor
+                for axis in ("y", "z"):
+                    points = grid_3d[axis] * spatial_factor
+                    controls[axis] = widgets.FloatSlider(
+                        min=points[0],
+                        max=points[-1],
+                        value=positions[axis] * spatial_factor,
+                        description=f"{axis} slice [{self.spatial_unit}]",
+                        continuous_update=False,
+                    )
+
+                def update_plot(t, y, z):
+                    self._set_slice_positions(
+                        grid_3d,
+                        {"y": y / spatial_factor, "z": z / spatial_factor},
+                    )
+                    self.plot(t, dynamic=False)
+
+            else:
+
+                def update_plot(t):
+                    self.plot(t, dynamic=False)
+
             widgets.interact(
-                lambda t: self.plot(t, dynamic=False),
-                t=widgets.FloatSlider(
-                    min=self.min_t, max=self.max_t, step=step, value=self.min_t
-                ),
-                continuous_update=False,
+                update_plot,
+                **controls,
             )
         else:
             plt = import_optional_dependency("matplotlib.pyplot")
@@ -1016,13 +1093,13 @@ class QuickPlot:
                 def _on_slice_change(_):
                     # variables may live on different meshes: carry the slider
                     # across as a fraction of each variable's own extent
-                    for axis in ("y", "z"):
-                        lo, hi = grid_3d[axis][0], grid_3d[axis][-1]
-                        value = self._slice_sliders[axis].val / sf
-                        frac = (value - lo) / (hi - lo) if hi > lo else 0.5
-                        for key, positions in self._slice_positions.items():
-                            pts = self._unstructured_grids[key][axis]
-                            positions[axis] = pts[0] + frac * (pts[-1] - pts[0])
+                    self._set_slice_positions(
+                        grid_3d,
+                        {
+                            axis: self._slice_sliders[axis].val / sf
+                            for axis in ("y", "z")
+                        },
+                    )
                     self.slider_update(self.slider.val)
 
                 self._slice_sliders["y"].on_changed(_on_slice_change)
@@ -1068,7 +1145,9 @@ class QuickPlot:
                     if key in self.colorbars:
                         self.colorbars[key].update_normal(quiver)
                 else:
-                    self._plot_3d_quiver(ax, variable, time_in_seconds, key)
+                    quiver = self._plot_3d_quiver(ax, variable, time_in_seconds, key)
+                    if key in self.colorbars:
+                        self.colorbars[key].update_normal(quiver)
             elif self.variables[key][0][0].dimensions == 2:
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables

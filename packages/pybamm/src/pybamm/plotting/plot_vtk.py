@@ -376,8 +376,7 @@ class VTKQuickPlot:
         spatial_mins = {}
         spatial_maxs = {}
         for name, pv in zip(self.spatial_names, self.spatial_vars, strict=True):
-            # the (points x times) history the variable already holds
-            data = np.asarray(pv.entries, dtype=float)
+            data = np.asarray(pv(self.t_pts), dtype=float)
             spatial_data[name] = data
             spatial_mins[name], spatial_maxs[name] = _finite_range(name, data)
 

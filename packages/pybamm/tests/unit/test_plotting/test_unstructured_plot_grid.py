@@ -1,3 +1,4 @@
+import sys
 from types import SimpleNamespace
 
 import casadi
@@ -230,8 +231,46 @@ class TestQuickPlotUnstructured:
         assert len(quick_plot._panel_artists[("u",)]) == 2
         assert len(scalar_axis.collections) == 2
         assert len(quiver_axis.collections) == 2
+        quiver_xz, quiver_xy = quick_plot._panel_artists[("flux",)]
+        assert not np.allclose(quiver_xz.get_colors()[0], quiver_xy.get_colors()[0])
+        np.testing.assert_allclose(
+            [
+                quick_plot.colorbars[("flux",)].norm.vmin,
+                quick_plot.colorbars[("flux",)].norm.vmax,
+            ],
+            [0, np.sqrt(29)],
+        )
         np.testing.assert_allclose(scalar_axis.get_xlim(), xlim_before)
         assert scalar_axis.get_xlabel() == f"$x$ [{unit}]"
+        pybamm.close_plots()
+
+    def test_notebook_slice_sliders(self, monkeypatch):
+        solution, _ = _unstructured_solution(3, 3)
+        quick_plot = pybamm.QuickPlot(solution, ["u"])
+        interaction = {}
+
+        class FloatSlider:
+            def __init__(self, **kwargs):
+                self.__dict__.update(kwargs)
+
+        def interact(callback, **controls):
+            interaction["callback"] = callback
+            interaction["controls"] = controls
+
+        monkeypatch.setattr(pybamm, "is_notebook", lambda: True)
+        monkeypatch.setitem(
+            sys.modules,
+            "ipywidgets",
+            SimpleNamespace(FloatSlider=FloatSlider, interact=interact),
+        )
+
+        quick_plot.dynamic_plot()
+
+        assert set(interaction["controls"]) == {"t", "y", "z"}
+        assert interaction["controls"]["t"].continuous_update is False
+        interaction["callback"](0.5, 0.25e6, 0.75e6)
+        np.testing.assert_allclose(quick_plot._slice_positions[("u",)]["y"], 0.25)
+        np.testing.assert_allclose(quick_plot._slice_positions[("u",)]["z"], 0.75)
         pybamm.close_plots()
 
     def test_3d_tight_limits_and_wireframe_guard(self):
