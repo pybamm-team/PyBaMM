@@ -12,6 +12,9 @@ thiserror = "2"
 libm = "0.2"
 serde = { version = "1", features = ["derive"], optional = true }
 bincode = { version = "1", optional = true }
+diffsol = { version = "0.17.1", optional = true, default-features = false, features = ["faer"] }
+faer = { version = "0.24", optional = true }
+rayon = { version = "1", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
@@ -19,7 +22,9 @@ proptest = "1"
 rand = "0.9"
 
 [features]
+default = ["diffsol"]
 serialize = ["serde", "bincode"]
+diffsol = ["dep:diffsol", "dep:faer", "dep:rayon"]
 
 [[bench]]
 name = "compile"
@@ -33,6 +38,16 @@ harness = false
 name = "sparsity"
 harness = false
 required-features = ["serialize"]
+
+[[bench]]
+name = "solver_setup"
+harness = false
+required-features = ["serialize", "diffsol"]
+
+[[bench]]
+name = "sens_params"
+harness = false
+required-features = ["diffsol"]
 
 [[bench]]
 name = "derivatives"

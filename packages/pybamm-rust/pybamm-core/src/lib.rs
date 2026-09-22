@@ -12,10 +12,10 @@
 //! 5. **Evaluate**: [`eval`] runs a tape at one time point, [`CompiledExpr::eval_batch`] at
 //!    several at once.
 //!
-//! [`CompiledModel`] assembles a DAE `M y' = f(t, y; p)` with its [`jacobian`], which IDAKLU
-//! drives through the [`ffi`] C ABI. Assembly colors columns that never share a row, costing
-//! one primal pass plus one tangent sweep per color, and leaves rows too wide to color to
-//! reverse mode.
+//! [`CompiledModel`] assembles a DAE `M y' = f(t, y; p)` with its [`jacobian`], driven
+//! in-process by `solver` (diffsol) and through [`ffi`] by IDAKLU. Assembly colors columns
+//! that never share a row, costing one primal pass plus one tangent sweep per color, and
+//! leaves rows too wide to color to reverse mode.
 
 #![deny(unused_must_use)]
 
@@ -43,6 +43,9 @@ mod sparsity;
 pub mod tangent;
 pub mod tangent_batch;
 mod zero_propagate;
+
+#[cfg(feature = "diffsol")]
+pub mod solver;
 
 pub use arena::{Arena, Dag, DagRef, NodeId, ReadExtents, resolve_state_count};
 pub use error::CoreError;

@@ -112,3 +112,10 @@ codegen-units = 16
 inherits = "bench"
 lto = false
 codegen-units = 16
+
+# diffsol's initial-condition fixes (martinjrobins/diffsol#392) until a release
+# carries them; then drop this and bump `diffsol` in pybamm-core.
+[patch.crates-io]
+diffsol = { git = "https://github.com/martinjrobins/diffsol", rev = "f0121971b82890134591c9115e8e82f162b8ca6d" }
+diffsol-la = { git = "https://github.com/martinjrobins/diffsol", rev = "f0121971b82890134591c9115e8e82f162b8ca6d" }
+diffsol-nl = { git = "https://github.com/martinjrobins/diffsol", rev = "f0121971b82890134591c9115e8e82f162b8ca6d" }
