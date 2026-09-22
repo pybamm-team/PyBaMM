@@ -190,8 +190,12 @@ class TestQuickPlotUnstructured:
         image = quick_plot.plots[("u",)][0][1]
         assert image.shape == (200, 200)
         assert np.isfinite(image).mean() > 0.5
+        wireframe = quick_plot._wireframes[("u",)]
         quick_plot.slider_update(1.0)
         assert quick_plot.plots[("flux",)][0][0] is not None
+        # the field is replaced each frame while the static wireframe is kept
+        assert quick_plot._wireframes[("u",)] is wireframe
+        assert len(quick_plot.axes[0].collections) == 2
         pybamm.close_plots()
 
     def test_3d_slices_and_slice_sliders(self):
@@ -259,6 +263,10 @@ class TestQuickPlotUnstructured:
     def test_vector_field_colour_limits(self):
         solution, (u_val, w_val) = _unstructured_solution(2, 4)
         quick_plot = pybamm.QuickPlot(solution, ["flux"])
+        # the default "fixed" limits span the magnitude over all times
+        np.testing.assert_allclose(
+            quick_plot.variable_limits[("flux",)], (0, np.hypot(u_val, w_val))
+        )
         quick_plot.plot(0.5)
         norm = quick_plot.plots[("flux",)][0][0].norm
         np.testing.assert_allclose([norm.vmin, norm.vmax], [0, np.hypot(u_val, w_val)])
@@ -272,7 +280,13 @@ class TestQuickPlotUnstructured:
 
     def test_quiver_colour_scale_ignores_samples_outside_domain(self):
         solution = _triangle_vector_solution()
+        # |(u, u)| with u = 1 + t peaks at 2 sqrt(2) at t = 1 for fixed limits
         quick_plot = pybamm.QuickPlot(solution, ["vector"])
+        quick_plot.plot(0.5)
+        norm = quick_plot.plots[("vector",)][0][0].norm
+        np.testing.assert_allclose(norm.vmax, 2 * np.sqrt(2))
+        # tight limits follow the frame, skipping the NaN samples off the domain
+        quick_plot = pybamm.QuickPlot(solution, ["vector"], variable_limits="tight")
         quick_plot.plot(0.5)
         grid = quick_plot._unstructured_grids[("vector",)]
         _, _, U, _ = quiver_data(solution["vector"], 0.5, grid)
@@ -285,3 +299,9 @@ class TestQuickPlotUnstructured:
         solution = _node_solution()
         with pytest.raises(NotImplementedError, match="VTKQuickPlot"):
             pybamm.QuickPlot(solution, ["node field"])
+        # a structured 3D variable is not sent to VTKQuickPlot, which rejects it
+        solution._variables["structured"] = SimpleNamespace(
+            entries=np.ones(2), dimensions=3, domain=["mesh"]
+        )
+        with pytest.raises(NotImplementedError, match="no QuickPlot support"):
+            pybamm.QuickPlot(solution, ["structured"])

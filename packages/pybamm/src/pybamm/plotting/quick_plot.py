@@ -350,12 +350,20 @@ class QuickPlot:
                         first_variable
                     )
             elif first_variable.dimensions == 3:
+                if isinstance(first_variable, pybamm.ProcessedVariableUnstructured):
+                    hint = (
+                        "Use pybamm.VTKQuickPlot (or pybamm.dynamic_plot(..., "
+                        "backend='vtk')) for node-centred unstructured variables."
+                    )
+                else:
+                    hint = (
+                        "3D structured variables have no QuickPlot support; query "
+                        "them at points with solution[name](t, x=..., y=..., z=...)."
+                    )
                 raise NotImplementedError(
                     f"QuickPlot cannot plot '{variable_tuple[0]}': 3D plotting is "
                     "only supported for variables on unstructured finite-volume "
-                    "meshes. Use pybamm.VTKQuickPlot (or "
-                    "pybamm.dynamic_plot(..., backend='vtk')) for node-centred "
-                    "unstructured variables."
+                    f"meshes. {hint}"
                 )
 
             # Set the x variable (i.e. "x" or "r" for any one-dimensional variables)
@@ -499,8 +507,15 @@ class QuickPlot:
 
             # Get min and max variable values
             if self.is_vector_field.get(key, False):
-                # arrows are coloured by magnitude: keep user limits, else tight
-                if isinstance(self.variable_limits[key], str):
+                # arrows are coloured by magnitude, so fixed limits span the
+                # magnitude over every time and cell
+                if self.variable_limits[key] == "fixed":
+                    components = variable_lists[0][0](self.ts_seconds[0])
+                    magnitude = np.sqrt(sum(np.square(c) for c in components))
+                    var_min, var_max = 0.0, float(np.nanmax(magnitude))
+                    if not var_max > 0:
+                        var_max = 1.0
+                elif self.variable_limits[key] == "tight":
                     var_min, var_max = None, None
                 else:
                     var_min, var_max = self.variable_limits[key]
@@ -778,8 +793,13 @@ class QuickPlot:
         if mesh.dimension != 2:
             return None
         verts = mesh.vertices[mesh.elements] * self.spatial_factor
+        # zorder above the QuadMesh (1) keeps later frames beneath the edges
         poly = PolyCollection(
-            verts, facecolors="none", edgecolors=(0, 0, 0, 0.12), linewidths=0.3
+            verts,
+            facecolors="none",
+            edgecolors=(0, 0, 0, 0.12),
+            linewidths=0.3,
+            zorder=1.5,
         )
         ax.add_collection(poly)
         return poly
@@ -788,19 +808,18 @@ class QuickPlot:
         """Draw a 2D unstructured field on its display grid with a mesh wireframe."""
         import matplotlib
 
-        # replace the previous frame's artists instead of stacking them
+        # replace the previous frame's field instead of stacking them
         previous = self.plots[key][0].get(0)
         if previous is not None:
             previous.remove()
-        wireframe = self._wireframes.pop(key, None)
-        if wireframe is not None:
-            wireframe.remove()
         # NaN (outside the domain) renders white
         cmap = matplotlib.colormaps["viridis"].with_extremes(bad="white")
         mesh_plot = ax.pcolormesh(
             x, y, var, vmin=vmin, vmax=vmax, shading=self.shading, cmap=cmap
         )
-        self._wireframes[key] = self._overlay_mesh_wireframe(ax, variable)
+        # the mesh does not move in time: draw its wireframe once per figure
+        if key not in self._wireframes:
+            self._wireframes[key] = self._overlay_mesh_wireframe(ax, variable)
         return mesh_plot
 
     def _remove_panel_artists(self, key):
