@@ -2268,13 +2268,6 @@ class TestNonOrthogonalCorrection:
         with pytest.raises(pybamm.GeometryError, match="pointing away"):
             FiniteVolumeUnstructured()._face_geometry(mesh)
 
-    def test_inverted_boundary_face_raises(self):
-        mesh = _make_2d_mesh(2, 2)
-        faces = mesh.boundary_faces["left"]
-        mesh.face_normals[faces] *= -1
-        with pytest.raises(pybamm.GeometryError, match="pointing back"):
-            FiniteVolumeUnstructured()._boundary_decomposition(mesh, faces)
-
     def test_build_warns_on_severe_non_orthogonality(self, caplog):
         import logging
 

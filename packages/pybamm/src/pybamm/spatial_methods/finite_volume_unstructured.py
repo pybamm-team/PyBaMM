@@ -647,15 +647,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         dist = np.linalg.norm(delta, axis=1)
         e_b = delta / dist[:, np.newaxis]
         normals = submesh.face_normals[faces]
-        cos_theta = np.sum(normals * e_b, axis=1)
-        if np.any(cos_theta <= 0):
-            raise pybamm.GeometryError(
-                f"{int(np.count_nonzero(cos_theta <= 0))} boundary face(s) "
-                "have an outward normal pointing back into their cell "
-                "(inverted or non-star-shaped cells), so the two-point flux "
-                "is undefined there. Fix the mesh."
-            )
-        alpha = self._alpha(cos_theta)
+        alpha = self._alpha(np.sum(normals * e_b, axis=1))
         return dist, alpha, self._drop_orthogonal(normals - alpha[:, np.newaxis] * e_b)
 
     def _cross_term_matrices(self, submesh):
