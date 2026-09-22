@@ -320,11 +320,11 @@ class TestVTKQuickPlot:
         # never an arbitrary first key such as "Time [s]"
         with pytest.raises(pybamm.OptionError, match="Pass output_variables"):
             VTKQuickPlot(solution)
-        # structured (line) and vector-field defaults are skipped, not errors
+        # grouped defaults are flattened; line and vector are skipped, not errors
         monkeypatch.setattr(
             pybamm.BaseModel,
             "default_quick_plot_variables",
-            property(lambda self: ["line", "vector", "field"]),
+            property(lambda self: [["line", "vector"], "field"]),
         )
         default_plot = VTKQuickPlot(_triangle_solution())
         assert default_plot.output_variables == ["field"]
@@ -654,6 +654,12 @@ class TestVTKQuickPlot:
             VTKQuickPlot(
                 solution, ["field", "scalar"], options={"scalar": {"scale": None}}
             )
+
+    def test_empty_panel_option_list_is_rejected(self):
+        solution, _ = _cell_solution()
+        # an empty list would drop the variable and leave the plot with no panels
+        with pytest.raises(pybamm.OptionError, match="options for 'field' are empty"):
+            VTKQuickPlot(solution, "field", options={"field": []})
 
     def test_unknown_panel_options_and_plot_types_are_rejected(self):
         solution, _ = _cell_solution()

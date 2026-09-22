@@ -319,6 +319,12 @@ class VTKQuickPlot:
                 opt_list = [var_opt]
             else:
                 opt_list = list(var_opt)
+            if not opt_list:
+                raise pybamm.OptionError(
+                    f"The options for '{name}' are empty, so it would get no panel; "
+                    "pass one option dict per panel, or drop it from "
+                    "output_variables."
+                )
             for single_opt in opt_list:
                 unknown_keys = sorted(set(single_opt) - _PANEL_OPTION_KEYS)
                 if unknown_keys:
@@ -338,13 +344,20 @@ class VTKQuickPlot:
     def _default_output_variables(self) -> list[str]:
         """The model's default quick-plot variables that VTK can draw."""
         defaults = self.solution.all_models[0].default_quick_plot_variables or []
+        # a default may group several names onto one QuickPlot axis; VTK draws
+        # one panel per variable, so the groups are flattened
+        names = [
+            name
+            for entry in defaults
+            for name in ([entry] if isinstance(entry, str) else entry)
+        ]
         plottable = [
-            name for name in defaults if _variable_kind(self.solution[name]) is not None
+            name for name in names if _variable_kind(self.solution[name]) is not None
         ]
         if not plottable:
             raise pybamm.OptionError(
                 "VTKQuickPlot has no default variables for this model: none of "
-                f"its default quick-plot variables {list(defaults)} are 0D or on "
+                f"its default quick-plot variables {names} are 0D or on "
                 "an unstructured mesh. Pass output_variables explicitly."
             )
         return plottable
