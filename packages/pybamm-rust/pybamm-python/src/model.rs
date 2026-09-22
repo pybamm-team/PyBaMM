@@ -464,6 +464,12 @@ impl CompiledModel {
             .map(|f| f.clone_ref(py))
     }
 
+    /// The retained derivation graph; roots lowered into it share the solve's indices.
+    #[getter]
+    fn graph(&self, py: Python<'_>) -> Py<ExprGraph> {
+        self.graph.clone_ref(py)
+    }
+
     /// Pure df/dy (cj = 0, no mass): the bundle's composed `JacobianData`.
     #[getter]
     fn jacobian(&self, py: Python<'_>) -> PyResult<Py<CompiledJacobian>> {

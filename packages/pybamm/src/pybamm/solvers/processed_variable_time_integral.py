@@ -20,7 +20,7 @@ class ProcessedVariableTimeIntegral:
     post_sum_node: pybamm.Symbol | None = None
     post_sum: casadi.Function | None = None
 
-    def _sum_over_time(self, entries, t_pts) -> np.ndarray:
+    def sum_over_time(self, entries, t_pts) -> np.ndarray:
         """Sum or integrate the entries over the time points."""
         if self.method == "discrete":
             return np.sum(entries, axis=0, keepdims=True)
@@ -28,7 +28,7 @@ class ProcessedVariableTimeIntegral:
             return np.array([trapezoid(entries, t_pts, axis=0)])
 
     def postfix_sum(self, entries, t_pts) -> np.ndarray:
-        return self._sum_over_time(entries, t_pts) + float(self.initial_condition)
+        return self.sum_over_time(entries, t_pts) + float(self.initial_condition)
 
     def postfix(self, entries, t_pts, inputs) -> np.ndarray:
         """
@@ -44,6 +44,20 @@ class ProcessedVariableTimeIntegral:
         else:
             ret = self.post_sum(0.0, the_integral, inputs).full().reshape(-1)
         return ret
+
+    def check_discrete_times(self, var_name, t_pts) -> None:
+        """Raise if a discrete-time sum's ``t_pts`` are not its discrete times."""
+        if self.method != "discrete":
+            return
+        if len(t_pts) == len(self.discrete_times) and np.allclose(
+            t_pts, self.discrete_times, atol=1e-10
+        ):
+            return
+        raise pybamm.SolverError(
+            f'Processing discrete-time-sum variable "{var_name}": solution times '
+            "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
+            f"ensure the correct times are used.\nSolution times: {t_pts}\nDiscrete Sum times: {self.discrete_times}"
+        )
 
     def postfix_sensitivities(
         self,
@@ -77,21 +91,10 @@ class ProcessedVariableTimeIntegral:
         np.ndarray
             The sensitivities of the postfix value.
         """
-        # post fix for discrete time integral won't give correct result
-        # if ts are not equal to the discrete times. Raise error
-        # in this case
-        if self.method == "discrete" and not (
-            len(t_pts) == len(self.discrete_times)
-            and np.allclose(t_pts, self.discrete_times, atol=1e-10)
-        ):
-            raise pybamm.SolverError(
-                f'Processing discrete-time-sum variable "{var_name}": solution times '
-                "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
-                f"ensure the correct times are used.\nSolution times: {t_pts}\nDiscrete Sum times: {self.discrete_times}"
-            )
+        self.check_discrete_times(var_name, t_pts)
 
         # The initial condition is a constant, so it adds nothing to a sensitivity
-        integral_sensitivities = self._sum_over_time(sensitivities, t_pts)
+        integral_sensitivities = self.sum_over_time(sensitivities, t_pts)
         if self.post_sum_node is None:
             return integral_sensitivities
 

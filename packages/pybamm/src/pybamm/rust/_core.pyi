@@ -403,6 +403,10 @@ class CompiledModel:
         """Primal ``f(t, y, p)`` as a shareable view."""
 
     @property
+    def graph(self) -> ExprGraph:
+        """The retained derivation arena (observation lowers new roots into it)."""
+
+    @property
     def jacobian(self) -> CompiledJacobian:
         """Pure ``df/dy`` (``cj = 0``, no mass), composed over the bundle's tapes."""
 
