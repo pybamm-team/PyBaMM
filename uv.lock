@@ -68,16 +68,16 @@ wheels = [
 
 [[package]]
 name = "anyio"
-version = "4.12.1"
+version = "4.14.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "idna" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/96/f0/5eb65b2bb0d09ac6776f2eb54adee6abe8228ea05b20a5ad0e4945de8aac/anyio-4.12.1.tar.gz", hash = "sha256:41cfcc3a4c85d3f05c932da7c26d0201ac36f72abd4435ba90d0464a3ffed703", size = 228685, upload-time = "2026-01-06T11:45:21.246Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/61/cc/a381afa6efea9f496eff839d4a6a1aed3bfafc7b3ab4b0d1b243a12573dd/anyio-4.14.2.tar.gz", hash = "sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f", size = 260176, upload-time = "2026-07-12T20:29:07.082Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/0e/27be9fdef66e72d64c0cdc3cc2823101b80585f8119b5c112c2e8f5f7dab/anyio-4.12.1-py3-none-any.whl", hash = "sha256:d405828884fc140aa80a3c667b8beed277f1dfedec42ba031bd6ac3db606ab6c", size = 113592, upload-time = "2026-01-06T11:45:19.497Z" },
+    { url = "https://files.pythonhosted.org/packages/da/35/f2287558c17e29fafc8ef3daf819bb9834061cfa43bff8014f7df7f63bdc/anyio-4.14.2-py3-none-any.whl", hash = "sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494", size = 125813, upload-time = "2026-07-12T20:29:05.763Z" },
 ]
 
 [[package]]
@@ -306,43 +306,30 @@ wheels = [
 
 [[package]]
 name = "casadi"
-version = "3.7.2"
+version = "3.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/62/1e98662024915ecb09c6894c26a3f497f4afa66570af3f53db4651fc45f1/casadi-3.7.2.tar.gz", hash = "sha256:b4d7bd8acdc4180306903ae1c9eddaf41be2a3ae2fa7154c57174ae64acdc60d", size = 6053600, upload-time = "2025-09-10T10:05:49.521Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/7a/4d3c8edfbddaedc0a99b64f8154a7169b951ac2462e2f30474aac5c1ee2a/casadi-3.8.1.tar.gz", hash = "sha256:04141daf3ab7934f881a476294bf965173d1599412db0baf19f65341a612f217", size = 6471066, upload-time = "2026-09-16T07:14:25.974Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/75/2c/90d95b99380c6a2c7b2ea9566a91db93fe055d950152a54e74853ea186e7/casadi-3.7.2-cp310-none-macosx_10_13_x86_64.macosx_10_13_intel.whl", hash = "sha256:cf60276b40efe203738309d34a629e149db7c0865db1034aa3e094c9f567a6e3", size = 47115761, upload-time = "2025-09-10T07:51:48.383Z" },
-    { url = "https://files.pythonhosted.org/packages/bd/01/cb72c8330e09c958ae8868d0b8e0f6499abfc3966108d78f55bdf1dc76fc/casadi-3.7.2-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:07c398d2e99847d99adc5a007f303d909be3141f34aca34e53adaa3d040c06ee", size = 42294185, upload-time = "2025-09-10T07:59:33.568Z" },
-    { url = "https://files.pythonhosted.org/packages/1e/2b/c323a405df939d073ec2e9fdc0b1a350289e25ea29a5e4228923fb9e1657/casadi-3.7.2-cp310-none-manylinux2014_aarch64.whl", hash = "sha256:75cd1b446aacb378d3e39d440e16a0e56c27ef0f28438d164b5bbe84399fa5d2", size = 47277287, upload-time = "2025-09-10T08:00:09.745Z" },
-    { url = "https://files.pythonhosted.org/packages/26/96/32fb4cd581644a5928dd19675ace96ac2803790f54ab77f6526116f1a9ee/casadi-3.7.2-cp310-none-manylinux2014_i686.whl", hash = "sha256:b00740ad6d5b5535bf1e5b50d841b577d487bf2493928db0520026305407e774", size = 72438460, upload-time = "2025-09-10T08:01:24.031Z" },
-    { url = "https://files.pythonhosted.org/packages/da/5f/116f67f5c399eda15e23fe0623786d23ce0e46f0b8ad937c5268eb16e72f/casadi-3.7.2-cp310-none-manylinux2014_x86_64.whl", hash = "sha256:e1cb725c95024d5b8f09cb339d3fe65bb74368793783366fbbdffece980f0082", size = 75574457, upload-time = "2025-09-10T08:02:19.889Z" },
-    { url = "https://files.pythonhosted.org/packages/31/c2/cb77fe6a80b3fa6665c5deae1e371ec4e5bd0963589bdeeeabb9b01bd6b5/casadi-3.7.2-cp310-none-win_amd64.whl", hash = "sha256:73f2b1d22879b12cd228dc52f3483226d7451b456da1a58abd25a303d21f0dd4", size = 50994107, upload-time = "2025-09-10T08:02:59.832Z" },
-    { url = "https://files.pythonhosted.org/packages/29/01/d5e3058775ec8e24a01eb74d36099493b872536ef9e39f1e49624b977778/casadi-3.7.2-cp311-none-macosx_10_13_x86_64.macosx_10_13_intel.whl", hash = "sha256:f43b0562d05a5e6e81f1885fc4ae426c382e36eebfd8d27f1baff6052178a9b0", size = 47115880, upload-time = "2025-09-10T07:52:24.399Z" },
-    { url = "https://files.pythonhosted.org/packages/0e/cf/4af27e010d599a5419129d34fdde41637029a1cca2a40bef0965d6d52228/casadi-3.7.2-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:70add3334b437b60a9bc0f864d094350f1a4fcbf9e8bafec870b61aed64674df", size = 42293337, upload-time = "2025-09-10T08:03:32.556Z" },
-    { url = "https://files.pythonhosted.org/packages/ac/4c/d1a50cc840103e00effcbaf8e911b6b3fb6ba2c8f4025466f524854968ed/casadi-3.7.2-cp311-none-manylinux2014_aarch64.whl", hash = "sha256:392d3367a4b33cf223013dad8122a0e549da40b1702a5375f82f85b563e5c0cf", size = 47277175, upload-time = "2025-09-10T08:04:08.811Z" },
-    { url = "https://files.pythonhosted.org/packages/be/29/6e5714d124e6ddafbccc3ed774ca603081caa1175c7f0e1c52484184dfb3/casadi-3.7.2-cp311-none-manylinux2014_i686.whl", hash = "sha256:2ce09e0ced6df33048dccd582b5cfa2c9ff5193b12858b2584078afc17761905", size = 72438460, upload-time = "2025-09-10T08:05:02.769Z" },
-    { url = "https://files.pythonhosted.org/packages/23/32/ac1f3999273aa4aae48516f6f4b7b267e0cc70d8527866989798cb81312f/casadi-3.7.2-cp311-none-manylinux2014_x86_64.whl", hash = "sha256:5086799a46d10ba884b72fd02c21be09dae52cbc189272354a5d424791b55f37", size = 75574474, upload-time = "2025-09-10T08:06:00.709Z" },
-    { url = "https://files.pythonhosted.org/packages/68/78/7fd10709504c1757f70db3893870a891fcb9f1ec9f05e8ef2e3f3b9d7e2f/casadi-3.7.2-cp311-none-win_amd64.whl", hash = "sha256:72aa5727417d781ed216f16b5e93c6ddca5db27d83b0015a729e8ad570cdc465", size = 50994144, upload-time = "2025-09-10T08:06:42.384Z" },
-    { url = "https://files.pythonhosted.org/packages/65/c8/689d085447b1966f42bdb8aa4fbebef49a09697dbee32ab02a865c17ac1b/casadi-3.7.2-cp312-none-macosx_10_13_x86_64.macosx_10_13_intel.whl", hash = "sha256:309ea41a69c9230390d349b0dd899c6a19504d1904c0756bef463e47fb5c8f9a", size = 47116756, upload-time = "2025-09-10T07:53:00.931Z" },
-    { url = "https://files.pythonhosted.org/packages/1e/c0/3c4704394a6fd4dfb2123a4fd71ba64a001f340670a3eba45be7a19ac736/casadi-3.7.2-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:6033381234db810b2247d16c6352e679a009ec4365d04008fc768866e011ed58", size = 42293718, upload-time = "2025-09-10T08:07:16.415Z" },
-    { url = "https://files.pythonhosted.org/packages/f3/24/4cf05469ddf8544da5e92f359f96d716a97e7482999f085a632bc4ef344a/casadi-3.7.2-cp312-none-manylinux2014_aarch64.whl", hash = "sha256:732f2804d0766454bb75596339e4f2da6662ffb669621da0f630ed4af9e83d6a", size = 47276175, upload-time = "2025-09-10T08:08:09.29Z" },
-    { url = "https://files.pythonhosted.org/packages/82/08/b5f57fea03128efd5c860673b6ac44776352e6c1af862b8177f4c503fffe/casadi-3.7.2-cp312-none-manylinux2014_i686.whl", hash = "sha256:cf17298ff0c162735bdf9bf72b765c636ae732130604017a3b52e26e35402857", size = 72430454, upload-time = "2025-09-10T08:09:10.781Z" },
-    { url = "https://files.pythonhosted.org/packages/24/ab/d7233c915b12c005655437c6c4cf0ae46cbbb2b20d743cb5e4881ad3104a/casadi-3.7.2-cp312-none-manylinux2014_x86_64.whl", hash = "sha256:cde616930fa1440ad66f1850670399423edd37354eed9b12e74b3817b98d1187", size = 75568903, upload-time = "2025-09-10T08:10:07.108Z" },
-    { url = "https://files.pythonhosted.org/packages/3e/b9/5b984124f539656efdf079f3d8f09d73667808ec8d0546e6bce6dc60ade6/casadi-3.7.2-cp312-none-win_amd64.whl", hash = "sha256:81d677d2b020c1307c1eb25eae15686e5de199bb066828c3eaabdfaaaf457ffd", size = 50991347, upload-time = "2025-09-10T08:10:46.629Z" },
-    { url = "https://files.pythonhosted.org/packages/85/23/f13181cd2ba693aeabdb23e6025b2bbae856a23b2a75c57d0bf94bfb6642/casadi-3.7.2-cp313-none-macosx_10_13_x86_64.macosx_10_13_intel.whl", hash = "sha256:b53e9cc44e9d45fd0276322e85c721977ab32fefe5147069cf57f23352253479", size = 47112576, upload-time = "2025-09-10T07:53:51.287Z" },
-    { url = "https://files.pythonhosted.org/packages/09/b7/087fcbfe2a0a0b44e236c9853d7fa7c539db6b8c60ab5702fffd73be5a7c/casadi-3.7.2-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:2e37806a2d6a57320da79e200398239ae432a34569afbb0268598dd3381dafb9", size = 42293771, upload-time = "2025-09-10T08:11:30.329Z" },
-    { url = "https://files.pythonhosted.org/packages/69/85/0512e695a9194795ed126825a2d7781bf1f82a116aaeae9c7525bde7c1d9/casadi-3.7.2-cp313-none-manylinux2014_aarch64.whl", hash = "sha256:8c22837ff751ab22ea3333198427e0dd2aa1f3974a10867de897fe26bcb57438", size = 47276199, upload-time = "2025-09-10T08:12:12.487Z" },
-    { url = "https://files.pythonhosted.org/packages/50/30/9d130b6956fb2bc9d6d154b12b6f420b1338ce0bc8d99041465ded3df1eb/casadi-3.7.2-cp313-none-manylinux2014_i686.whl", hash = "sha256:4a92b5c28abb8d00ae24ce243fed36df36c53a511449aedcdf4db54f78efaf64", size = 72430461, upload-time = "2025-09-10T08:13:06.594Z" },
-    { url = "https://files.pythonhosted.org/packages/3f/5b/7120e22f6e22ca77283f4a086ab2e59d107f00bfc952116db41a015385fe/casadi-3.7.2-cp313-none-manylinux2014_x86_64.whl", hash = "sha256:63a406ead6582ddc730ea9bfcb100fc299d0793f2e6b177a967a1495846f9a72", size = 75568903, upload-time = "2025-09-10T08:14:04.404Z" },
-    { url = "https://files.pythonhosted.org/packages/ba/b7/2c80912fc6655deb6a78fa2ae9aa9a4a3c59ac5daa83f2dd549547441a08/casadi-3.7.2-cp313-none-win_amd64.whl", hash = "sha256:d1a996d5904ba74ee2c0bb9991344c9b0963adc08864ddce908fe92cfdf36bf0", size = 50991336, upload-time = "2025-09-10T08:14:43.907Z" },
-    { url = "https://files.pythonhosted.org/packages/19/60/76074fcbd1cc246dd542a91ca53ed638133c3fb52ebf8400ea8edffd7a98/casadi-3.7.2-cp314-none-macosx_10_13_x86_64.macosx_10_13_intel.whl", hash = "sha256:f8faf88720477f63b48e96f443ba557931ddd3f5d7d08fc905148893b5c25917", size = 47116064, upload-time = "2025-09-11T08:15:13.381Z" },
-    { url = "https://files.pythonhosted.org/packages/66/79/b1eda4d4eeefa51f3b75e51f332e3837b86d063b9b889fdbcb92081f6831/casadi-3.7.2-cp314-none-macosx_11_0_arm64.whl", hash = "sha256:08762169bd464d5a00a15bf28d2ff7deac41d24a1da842a13153a833cd247b61", size = 42295048, upload-time = "2025-09-11T08:15:20.517Z" },
-    { url = "https://files.pythonhosted.org/packages/f2/06/e52fdaee135ebb5d0a004827848890d66e9e05b2148b4beb2a0150e7418d/casadi-3.7.2-cp314-none-manylinux2014_i686.whl", hash = "sha256:9b5683d06f7c5c2bc044585f2d3591d81ec0ad81de84db29765a8bca8247f9d7", size = 72430409, upload-time = "2025-09-10T14:09:48.176Z" },
-    { url = "https://files.pythonhosted.org/packages/92/50/8834ae629e425802b66505c9861061439b4510d1aca1c94ea067b129e3b5/casadi-3.7.2-cp314-none-manylinux2014_x86_64.whl", hash = "sha256:8861213b7fc605a67cf9b46b29c05337b70c773c0b9615939a7c8a3361cabed1", size = 75571314, upload-time = "2025-09-10T14:10:45.54Z" },
-    { url = "https://files.pythonhosted.org/packages/59/3a/aaf951d7921a7b657a3402e1e628ccd2c9dfdc6d29bf5aed209dca93073b/casadi-3.7.2-cp314-none-win_amd64.whl", hash = "sha256:62b7b1f943456447205673865e130ec9d97a6f931239968a46d9a7b40ea8c4c3", size = 50991682, upload-time = "2025-09-10T14:11:24.747Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/e5/331310431bbfe0f31aa20d367dc5595c106fc68e182d31e349104673c5f3/casadi-3.8.1-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:c4ae559ebf1ff549ac9d7a957950e210f71ffca6dce8d96b71cbdb5ad5ef916c", size = 52018186, upload-time = "2026-09-16T06:13:58.015Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/ba/09529597a7c84ce6d394d9487432f0315cb8756a4f50978561c59dd32b59/casadi-3.8.1-cp310-none-macosx_11_0_x86_64.macosx_11_0_intel.whl", hash = "sha256:8d62efb5e6b39299c6da37553515faddfdc7965c30f797f472d9b2cf5cac2ef4", size = 53831865, upload-time = "2026-09-16T06:14:35.971Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/67/4d685192eb7ed780bae72bfc90415b8241ce5e675365a367441e04a1a38b/casadi-3.8.1-cp310-none-manylinux2014_aarch64.whl", hash = "sha256:e3ce6e5b9d38917ae0b538c0db839f4016f51aef739cf92ca621a2067e413413", size = 54187085, upload-time = "2026-09-16T06:15:12.806Z" },
+    { url = "https://files.pythonhosted.org/packages/28/25/ab5717064264b71af4d13cf44ebede485a641ae017fa8013308079b748c5/casadi-3.8.1-cp310-none-manylinux2014_i686.whl", hash = "sha256:3290b1fd3a3f5284e66b110d5acd8733e915e6c2bd38e985966764fe230a69c4", size = 83544889, upload-time = "2026-09-16T06:16:06.334Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/02/487a7cfb7c53dd95c504d92e217bf152530031711fa3fd2fc2e2c27a8638/casadi-3.8.1-cp310-none-manylinux2014_x86_64.whl", hash = "sha256:b53e139e72e3f203af9dbdcc74a7ac459c55e96398d12b7637cd4f85ddb5fa8b", size = 88535429, upload-time = "2026-09-16T06:17:06.179Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/22/2fce778a6c6ccacc857d8aeb5b39d5ec6373f6f7dd018140be41470ca0f0/casadi-3.8.1-cp310-none-manylinux_2_28_aarch64.whl", hash = "sha256:ecdfc6096c15c1c5187b2c90711f8655019cc0e72634653f94db8d964db26d0c", size = 56736091, upload-time = "2026-09-16T06:17:43.736Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/a4/d1a802ba457a0a49b2eb0c3d47b0edc2e3e7b0a9dc8551a23edf7a41e364/casadi-3.8.1-cp310-none-manylinux_2_28_x86_64.whl", hash = "sha256:d61686b0a3e1902811a461f14d8f9a1ae072899fc7ce59be10633f02b590b7fb", size = 89401965, upload-time = "2026-09-16T06:18:40.708Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/7f/56bd533b055c7086ed764c3b33cc16b53607601a96939ec6b772fa9e50b0/casadi-3.8.1-cp310-none-win_amd64.whl", hash = "sha256:4507f07d0c22777ad3a5f9f716b5a5899b5a958f90631818a00f28de34d64c3c", size = 57673410, upload-time = "2026-09-16T06:19:17.943Z" },
+    { url = "https://files.pythonhosted.org/packages/21/a8/5a61763109d40c6fed835cdc906a2a4a9c11ce8977b9d311bec0424e5f2f/casadi-3.8.1-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:67bb7c3fd247cd840521d820aba9d7021d4d60d61732861d53ada20844a9410a", size = 52036464, upload-time = "2026-09-16T06:19:52.434Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/7b/312ac1a9eaeaca9dd92f4bfc5b703cb2449ca1c20557664e7524bb5a1542/casadi-3.8.1-cp311-abi3-macosx_11_0_x86_64.macosx_11_0_intel.whl", hash = "sha256:1d3a4f124b28cd4bd0e4218777ab6e8ee204c74a9a8db86cbd21d76703b9c96a", size = 53657225, upload-time = "2026-09-16T06:20:28.097Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/c0/07f34c91d1a9a7a278611f36c212462daaec5d3680731afbbc515b7f68dd/casadi-3.8.1-cp311-abi3-manylinux2014_aarch64.whl", hash = "sha256:dd7c359faa65c1ab77e3ddfe179fa725ff28f4c9f9b1c90a95e7a7bb3495be5d", size = 54202846, upload-time = "2026-09-16T06:21:02.986Z" },
+    { url = "https://files.pythonhosted.org/packages/63/95/e78db537ed7ec4bc637ee493050fa4b1bcaa5aa96093b2fbf3bb8cb83007/casadi-3.8.1-cp311-abi3-manylinux2014_i686.whl", hash = "sha256:110714f57e36e5f9b917de7af6d00cfd41e46ad16f9d265da9965c18a152206d", size = 83550406, upload-time = "2026-09-16T06:21:58.653Z" },
+    { url = "https://files.pythonhosted.org/packages/54/38/80f9d07c6ed55392524e786dc5391f1e068cb9d7a6a13343750c68141f1d/casadi-3.8.1-cp311-abi3-manylinux2014_x86_64.whl", hash = "sha256:c9d161e1427dc306a34ad33bccd25e70d8dd863bad2ee3b4194afb5f0d8d2c8d", size = 88536827, upload-time = "2026-09-16T06:22:55.477Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/b8/3847f0b2c67eb5c12aa0540d780f1dbda965e3376e31b6c1682f54be564c/casadi-3.8.1-cp311-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:61e53644a4a00965a45a5170b2b26e12489952a106aab0ef5118cbcfb772de65", size = 56740071, upload-time = "2026-09-16T06:23:32.389Z" },
+    { url = "https://files.pythonhosted.org/packages/63/88/79cdbd539a62e971b881dd5d598c2b65ab5c646e7d58fe5ba22f2cad5e13/casadi-3.8.1-cp311-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:99c32594513bec827ba51e6b24f6d84bb94abbf95f7fe9c2b924f62bec3e02ea", size = 89403549, upload-time = "2026-09-16T06:24:31.399Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/5b/62721e8962acc2385829ac51a938ce0213e86981fda158ee03c6335d6040/casadi-3.8.1-cp311-abi3-win_amd64.whl", hash = "sha256:7376d81ef20b65e021cc74ff729fea6b37db0a5f6392876130d0cbbc99dc226c", size = 57655196, upload-time = "2026-09-16T06:25:09.021Z" },
 ]
 
 [[package]]
@@ -3287,7 +3274,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "casadi", specifier = "==3.7.2" },
+    { name = "casadi", specifier = "==3.8.1" },
     { name = "cmake", marker = "extra == 'dev'", specifier = ">=4.4.2" },
     { name = "ninja", marker = "extra == 'dev'" },
     { name = "nox", extras = ["uv"], marker = "extra == 'dev'" },
@@ -4339,11 +4326,11 @@ wheels = [
 
 [[package]]
 name = "soupsieve"
-version = "2.8.4"
+version = "2.9"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/47/2c/0a5f6f8ee0d5589e48c7640213ed5175d52cf540a06725b628cc1a45d6ce/soupsieve-2.8.4.tar.gz", hash = "sha256:e121fd02e975c695e4e9e8774a5ee35d74714b59307868dcc5319ad2d9e3328e", size = 121110, upload-time = "2026-05-24T13:55:57.154Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/80/f1/93422647dd7e461f23d254e6b2bfa687a85b53aeb4903fcdbb74474d4584/soupsieve-2.9.tar.gz", hash = "sha256:acee8417325c5653e1377dc31eccad59eb82cbc65942afe6174c53b3aaad63fc", size = 122122, upload-time = "2026-07-19T01:35:18.425Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/f5/0c41cb68dcae6b7de4fac4188a3a9589e21fb31df21ea3a2e888db95e6c9/soupsieve-2.8.4-py3-none-any.whl", hash = "sha256:e7e6b0769c8f51ed59acab6e994b00621096cfb1c640a7509295987388fbaf65", size = 37304, upload-time = "2026-05-24T13:55:55.406Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/d6/3185ab5ad1280319b31986898f3206dd7227cd75e293d4dba2a5e6bf27a0/soupsieve-2.9-py3-none-any.whl", hash = "sha256:a2b2c76d67df2382d245409fd71e321a571717e58463efa32ace87dcadac2c12", size = 37387, upload-time = "2026-07-19T01:35:17.106Z" },
 ]
 
 [[package]]
