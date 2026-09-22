@@ -80,6 +80,30 @@ pub fn dispatch<P: Product>(product: P) -> P::Output {
     }
 }
 
+/// Whether [`dispatch`] fuses on this CPU.
+#[cfg_attr(not(target_arch = "x86_64"), allow(clippy::missing_const_for_fn))]
+#[inline]
+pub fn fused() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    {
+        !matches!(*ARCH, pulp::Arch::Scalar)
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        TARGET_FMA
+    }
+}
+
+/// `acc + a * b` as [`dispatch`] accumulates it, for cold paths that must match it bit for bit.
+#[inline]
+pub fn mul_acc(acc: f64, a: f64, b: f64) -> f64 {
+    if fused() {
+        Fused::mul_acc(acc, a, b)
+    } else {
+        Unfused::mul_acc(acc, a, b)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,5 +142,12 @@ mod tests {
             && std::arch::is_x86_feature_detected!("fma");
         let expected = if has_fma { 2f64.powi(-60) } else { 0.0 };
         assert_eq!(dispatch(CancellingRow).to_bits(), expected.to_bits());
+    }
+
+    #[test]
+    fn the_scalar_helper_matches_dispatch() {
+        let (a, b) = (1.0 + 2f64.powi(-29), 1.0 + 2f64.powi(-30));
+        let scalar = mul_acc(mul_acc(0.0, -1.0, a), b, b);
+        assert_eq!(scalar.to_bits(), dispatch(CancellingRow).to_bits());
     }
 }
