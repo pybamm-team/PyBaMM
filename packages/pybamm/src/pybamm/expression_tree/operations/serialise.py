@@ -483,7 +483,9 @@ class Serialise:
             "base_class": base_cls_str,
             "base_class_mro": base_class_mro,
             "options": getattr(model, "options", {}),
-            "convert_to_format": getattr(model, "convert_to_format", "casadi"),
+            "convert_to_format": getattr(
+                model, "convert_to_format", pybamm.BaseModel._DEFAULT_CONVERT_TO_FORMAT
+            ),
             "rhs": [
                 (
                     convert_symbol_to_json(variable),

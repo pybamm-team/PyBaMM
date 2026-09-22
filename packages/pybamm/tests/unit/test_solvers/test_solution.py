@@ -1184,8 +1184,11 @@ class TestSolution:
         assert save_result.stdout == load_result.stdout
 
     def test_load_solution_pickled_before_variable_observers(self):
+        # Those pickles hold CasADi leaves, so the model must read through CasADi
+        model = pybamm.lithium_ion.SPM()
+        model.convert_to_format = "casadi"
         sim = pybamm.Simulation(
-            pybamm.lithium_ion.SPM(),
+            model,
             experiment=pybamm.Experiment(
                 ["Discharge at 1C for 1 minute", "Rest for 1 minute"]
             ),
@@ -1219,9 +1222,9 @@ class TestSolution:
     def test_load_processed_variable_pickled_before_observers(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values.update({"Current function [A]": "[input]"})
-        sim = pybamm.Simulation(
-            pybamm.lithium_ion.SPM(), parameter_values=parameter_values
-        )
+        model = pybamm.lithium_ion.SPM()
+        model.convert_to_format = "casadi"
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
         solution = sim.solve(
             [0, 600],
             inputs={"Current function [A]": 1.0},
@@ -1351,7 +1354,13 @@ class TestSolution:
     @pytest.mark.parametrize(
         "solver_class,use_post_sum,use_output_var", _solver_classes
     )
-    def test_discrete_data_sum(self, solver_class, use_post_sum, use_output_var):
+    def test_discrete_data_sum(
+        self, solver_class, use_post_sum, use_output_var, monkeypatch
+    ):
+        if solver_class is pybamm.CasadiSolver:
+            monkeypatch.setattr(
+                pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", "casadi"
+            )
         model = pybamm.BaseModel(name="test_model")
         c = pybamm.Variable("c")
         model.rhs = {c: -2 * c}
@@ -1470,7 +1479,13 @@ class TestSolution:
     @pytest.mark.parametrize(
         "solver_class,use_post_sum,use_output_var", _solver_classes
     )
-    def test_explicit_time_integral(self, solver_class, use_post_sum, use_output_var):
+    def test_explicit_time_integral(
+        self, solver_class, use_post_sum, use_output_var, monkeypatch
+    ):
+        if solver_class is pybamm.CasadiSolver:
+            monkeypatch.setattr(
+                pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", "casadi"
+            )
         times = np.linspace(0, 1, 10)
         c = pybamm.Variable("c")
         if solver_class == pybamm.IDAKLUSolver:

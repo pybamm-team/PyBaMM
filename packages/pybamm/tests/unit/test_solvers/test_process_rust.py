@@ -500,12 +500,24 @@ class TestStackedInputPredicate:
 
 
 class TestRustSolverGuards:
-    def test_casadi_solver_converts_rust_model_with_a_warning(self, caplog):
-        model = _toy_dae("rust")
-        with caplog.at_level(logging.WARNING, logger=pybamm.logger.name):
+    @pytest.mark.parametrize(
+        ("convert_to_format", "level"),
+        [("rust", logging.INFO), ("python", logging.WARNING)],
+        ids=["default", "chosen"],
+    )
+    def test_casadi_solver_warns_only_when_converting_a_chosen_format(
+        self, caplog, convert_to_format, level
+    ):
+        model = _toy_dae(convert_to_format)
+        with caplog.at_level(logging.INFO, logger=pybamm.logger.name):
             pybamm.CasadiSolver()._check_and_prepare_model_inplace(model)
         assert model.convert_to_format == "casadi"
-        assert "Converting" in caplog.text
+        levels = [
+            record.levelno
+            for record in caplog.records
+            if record.getMessage().startswith("Converting")
+        ]
+        assert levels == [level]
 
     def test_casadi_root_method_is_kept_while_rust_models_use_newton(self):
         class _DaeSolver(pybamm.BaseSolver):
