@@ -465,6 +465,9 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
 
   length_of_return_vector = ReturnVectorLength();
   i_save_ = 0;
+  stage_out_t_.clear();
+  stage_out_y_.clear();
+  stage_out_first_ = 0;
 
   // Allocate output arrays. Pre-allocate 64 elements for initial storage.
   int est = std::max(n_evals + n_interps, 64);
@@ -680,6 +683,11 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
   SaveStats();
   if (solver_opts.print_stats) {
     CaptureStats();
+  }
+
+  // Evaluate any tail of staged batched-output points before y is finalized.
+  if (save_outputs_only) {
+    FlushOutputBatch();
   }
 
   // Finalize output arrays
@@ -1003,6 +1011,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepFullSensitivities(
   }
 }
 
+// Points per batched output evaluation, bounding the staged state copy.
+static constexpr size_t kOutputBatchPoints = 128;
+
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
     sunrealtype &tval
@@ -1010,17 +1021,52 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
   DEBUG("IDAKLUSolver::SetStepOutput");
   // FLAT STORAGE: Write output variables to y[i_save_ * stride + j]
 
-  sunrealtype* y_dest = &y[i_save_ * length_of_return_vector];
-  size_t j = 0;
-  for (auto& var_fcn : functions->var_fcns) {
-    (*var_fcn)({&tval, y_val_, functions->inputs.data()}, {&res[0]});
-    for (size_t jj = 0; jj < var_fcn->nnz_out(); jj++) {
-      y_dest[j++] = res[jj];
+  if constexpr (ExprSet::kNativeBatchedOutputs) {
+    // Outputs read only y, so they are staged even when the sensitivities below run per point.
+    if (stage_out_t_.empty()) {
+      stage_out_first_ = i_save_;
+      stage_out_t_.reserve(kOutputBatchPoints);
+      stage_out_y_.reserve(kOutputBatchPoints * number_of_states);
+    }
+    stage_out_t_.push_back(tval);
+    stage_out_y_.insert(stage_out_y_.end(), y_val_, y_val_ + number_of_states);
+    if (stage_out_t_.size() == kOutputBatchPoints) {
+      FlushOutputBatch();
+    }
+  } else {
+    sunrealtype* y_dest = &y[i_save_ * length_of_return_vector];
+    size_t j = 0;
+    for (auto& var_fcn : functions->var_fcns) {
+      (*var_fcn)({&tval, y_val_, functions->inputs.data()}, {&res[0]});
+      for (size_t jj = 0; jj < var_fcn->nnz_out(); jj++) {
+        y_dest[j++] = res[jj];
+      }
     }
   }
 
   if (sensitivity) {
-    SetStepOutputSensitivities(tval);
+    if constexpr (ExprSet::kNativeOutputSensitivities) {
+      NativeSetStepOutputSensitivities(tval);
+    } else {
+      SetStepOutputSensitivities(tval);
+    }
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::FlushOutputBatch() {
+  if constexpr (ExprSet::kNativeBatchedOutputs) {
+    const size_t k = stage_out_t_.size();
+    if (k == 0) {
+      return;
+    }
+    DEBUG("IDAKLUSolver::FlushOutputBatch");
+    // The staged points' y rows are contiguous from stage_out_first_.
+    functions->eval_outputs_batch(
+      stage_out_t_.data(), stage_out_y_.data(), static_cast<int>(k),
+      &y[stage_out_first_ * length_of_return_vector]);
+    stage_out_t_.clear();
+    stage_out_y_.clear();
   }
 }
 
@@ -1087,6 +1133,32 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
         // FLAT STORAGE (final layout (i, j, p)): yS[(i * stride + out) * n_params + p]
         yS[yS_base + global_out_idx * number_of_parameters + paramk] = sens;
       }
+    }
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::NativeSetStepOutputSensitivities(
+  sunrealtype &tval
+) {
+  DEBUG("IDAKLUSolver::NativeSetStepOutputSensitivities");
+  const size_t n_params = static_cast<size_t>(number_of_parameters);
+  const size_t stride = length_of_return_vector;
+  const size_t yS_base = i_save_ * n_params * stride;
+
+  yS_flat_.resize(n_params * number_of_states);
+  for (size_t p = 0; p < n_params; ++p) {
+    std::copy(yS_val_[p], yS_val_[p] + number_of_states,
+              yS_flat_.begin() + p * number_of_states);
+  }
+  out_sens_flat_.resize(n_params * stride);
+  functions->project_output_sensitivities(
+      tval, y_val_, functions->inputs.data(),
+      yS_flat_.data(), out_sens_flat_.data());
+  // The projection emits (param, output); yS is (output, param), as the CasADi path writes it.
+  for (size_t p = 0; p < n_params; ++p) {
+    for (size_t o = 0; o < stride; ++o) {
+      yS[yS_base + o * n_params + p] = out_sens_flat_[p * stride + o];
     }
   }
 }

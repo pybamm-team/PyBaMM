@@ -2,6 +2,7 @@
 
 ## Breaking changes
 
+- `pybamm` now requires `pybammsolvers>=0.12.0`, whose IDAKLU backend evaluates a Rust `CompiledModel`; `pybammsolvers` 0.11 cannot solve a `convert_to_format = "rust"` model. Upgrade `pybammsolvers` together with `pybamm`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - The Rust compute core ships inside the `pybamm` wheel as `pybamm.rust._core`, so `pybamm` is now a platform-specific wheel: one `cp310-abi3` wheel per platform covers Python 3.10-3.14 on macOS (arm64, x86_64), Linux (`manylinux` x86_64, aarch64) and Windows (AMD64). `import pybamm` never loads the extension. Installing from source or from the sdist compiles the core and requires a Rust toolchain (`cargo` 1.89+); use `pip install --only-binary pybamm pybamm` to force a prebuilt wheel. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
 ## Features
@@ -12,6 +13,7 @@
 - `pybamm.rust` exposes `ExprGraph`, `CompiledFunction` (one expression, or a named set via `compile_outputs`, with lane-batched trajectory and Hermite evaluation) and `CompiledJacobian`, with hand-written type stubs that `mypy.stubtest` pins against the built extension. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - `Symbol.to_rust` lowers a discretised expression tree into a `pybamm.rust.ExprGraph`: every operator and function, 1D (including vector-valued), 2D and 3D interpolants, `VectorField`, and `RegPower` through the same sequence of operations as `evaluate` and CasADi. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - `model.convert_to_format = "rust"` evaluates a model's rhs, algebraic, Jacobian and event functions through compiled Rust evaluators, for `ScipySolver`, `AlgebraicSolver`, EIS and consistent initialisation. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- pybammsolvers gains an IDAKLU backend that evaluates a Rust `CompiledModel` through its C ABI, resolved at runtime so IDAKLU still loads without the Rust extension, with a Rust-backed Newton solver and output sensitivities projected natively in-solver. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
 ## Bug fixes
 

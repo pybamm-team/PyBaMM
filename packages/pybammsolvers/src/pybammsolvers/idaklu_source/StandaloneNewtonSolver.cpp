@@ -1,5 +1,7 @@
 #include "StandaloneNewtonSolver.hpp"
 
+#include "Expressions/Rust/RustFunctions.hpp"
+
 #include <cstring>
 
 // ────────────────────── StandaloneAlgebraicSystem ──────────────────────
@@ -200,6 +202,37 @@ StandaloneNewtonSolver::StandaloneNewtonSolver(
   bool use_sparse,
   sunrealtype klu_pivot_tolerance)
   : system_(residual_fn, jacobian_fn, use_sparse, klu_pivot_tolerance),
+    solver_(system_, system_.n_vars(), atol.data(), rtol, step_tol,
+            max_iter, max_backtracks, epsNewt),
+    n_vars_(system_.n_vars()),
+    y_work_(n_vars_)
+{
+  solver_.set_log(&log_);
+}
+
+StandaloneNewtonSolver::StandaloneNewtonSolver(
+  std::uintptr_t rust_model_ptr,
+  int n_rhs,
+  int n_alg,
+  const std::vector<expr_int>& jac_rows,
+  const std::vector<expr_int>& jac_cols,
+  const std::vector<sunrealtype>& atol,
+  sunrealtype rtol,
+  sunrealtype step_tol,
+  int max_iter,
+  int max_backtracks,
+  sunrealtype epsNewt,
+  bool use_sparse,
+  sunrealtype klu_pivot_tolerance)
+  : system_(
+      std::make_unique<RustNewtonResExpression>(
+        reinterpret_cast<void*>(rust_model_ptr), n_rhs, n_alg),
+      std::make_unique<RustNewtonJacExpression>(
+        reinterpret_cast<void*>(rust_model_ptr), n_rhs, n_alg,
+        static_cast<int>(jac_rows.size()), jac_rows, jac_cols),
+      n_alg,
+      use_sparse,
+      klu_pivot_tolerance),
     solver_(system_, system_.n_vars(), atol.data(), rtol, step_tol,
             max_iter, max_backtracks, epsNewt),
     n_vars_(system_.n_vars()),
