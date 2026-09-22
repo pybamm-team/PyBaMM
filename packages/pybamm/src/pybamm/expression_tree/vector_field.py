@@ -107,6 +107,11 @@ class VectorField(TensorField):
             *self._children_to_casadi(t, y, y_dot, inputs, casadi_symbols)
         )
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        return graph.concat(self._children_to_rust(graph, rust_symbols))
+
     def evaluates_on_edges(self, dimension: str) -> bool:
         statuses = [c.evaluates_on_edges(dimension) for c in self.components]
         if all(statuses):
