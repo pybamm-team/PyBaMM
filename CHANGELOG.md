@@ -8,6 +8,8 @@
 ## Features
 
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
+- Added `pybamm-core` (`packages/pybamm-rust`), a Rust expression compiler: an arena DAG with simplification, CSE and zero propagation, a typed IR, scalar and lane-batched interpreters, and forward-mode AD. CI runs `cargo test`, an MSRV check, `cargo fmt`, `cargo clippy` and CodeQL. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
+- `pybamm-core` evaluates `exp`, `log`, `pow` and the other transcendental functions through the `libm` crate, in every interpreter and in constant folding, so a model evaluates bitwise identically on every platform. `minimum`/`maximum` follow IEEE 754-2019, ordering `-0 < +0`. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
 
 ## Bug fixes
 
