@@ -8,6 +8,10 @@ from pybamm.rust._core import (
     CompiledModel,
     Expr,
     ExprGraph,
+    PreparedSolver,
+    SolveOutcome,
+    SolverStatistics,
+    default_solver_options,
 )
 
 __all__ = [
@@ -16,4 +20,8 @@ __all__ = [
     "CompiledModel",
     "Expr",
     "ExprGraph",
+    "PreparedSolver",
+    "SolveOutcome",
+    "SolverStatistics",
+    "default_solver_options",
 ]

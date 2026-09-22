@@ -84,12 +84,12 @@ pub struct CompiledModel {
     pub(crate) compiled: Arc<core_model::CompiledModel>,
     /// Workspaces for the direct `eval_*`/`assemble_*` helpers.
     scratch_pool: ScratchPool<core_model::Workspace>,
-    /// Retained derivation source for the bundle views.
-    graph: Py<ExprGraph>,
+    /// Retained derivation source for the bundle views and `PreparedSolver`.
+    pub(crate) graph: Py<ExprGraph>,
     /// How many nodes the graph held when compiled; nodes are only appended, so the graph as
     /// compiled, without any input registered since, is its first `n_nodes`.
     n_nodes: usize,
-    rhs_root: NodeId,
+    pub(crate) rhs_root: NodeId,
     output_roots: Vec<NodeId>,
     event_roots: Vec<NodeId>,
     upsampling_root: Option<NodeId>,
