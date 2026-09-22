@@ -21,6 +21,7 @@
 - `Symbol.to_rust` lowers a discretised expression tree into a `pybamm.rust.ExprGraph`, covering the operators, matrix products, concatenations, `Conditional`, the specific functions, `RegPower` and 1D-3D interpolants. Spatial and tensor operators, such as `Norm` and `Component`, raise `TypeError`. ([#5959](https://github.com/pybamm-team/PyBaMM/pull/5959))
 - `model.convert_to_format = "rust"` evaluates a model's rhs, algebraic, Jacobian and event functions through compiled Rust evaluators, for `ScipySolver`, `AlgebraicSolver` and EIS. ([#5960](https://github.com/pybamm-team/PyBaMM/pull/5960))
 - pybammsolvers gains an IDAKLU backend that evaluates a Rust `CompiledModel` through its C ABI, resolved at runtime so IDAKLU still loads without the Rust extension, with a Rust-backed Newton solver and output sensitivities projected natively in-solver. ([#5961](https://github.com/pybamm-team/PyBaMM/pull/5961))
+- `IDAKLUSolver` solves `convert_to_format = "rust"` models through a Rust `CompiledModel`, one evaluator per thread, so `num_threads` parallelises input sets. `output_variables` support sensitivities and time integrals, and `NonlinearSolver` compiles its own model. ([#5962](https://github.com/pybamm-team/PyBaMM/pull/5962))
 
 ## Bug fixes
 

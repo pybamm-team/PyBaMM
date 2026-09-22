@@ -182,6 +182,40 @@ impl CompiledFunction {
         Ok(this)
     }
 
+    /// Bundle-view constructor: shares an existing tape (no recompilation).
+    pub(crate) fn from_shared(
+        py: Python<'_>,
+        expr: Arc<CompiledExpr>,
+        graph: Py<ExprGraph>,
+        root: NodeId,
+        n_states: usize,
+        name: Option<String>,
+    ) -> PyResult<Self> {
+        let g = graph.try_borrow(py).map_err(|_| {
+            PyValueError::new_err("from_shared: graph borrow conflict while preparing bundle view")
+        })?;
+        let metadata = FunctionMetadata {
+            params: g.params().clone(),
+            n_states, // bundle views always carry the full system width
+            uses_y_dot: ReadExtents::scan(g.arena(), root).y_dot.is_some(),
+            output_len: expr.output_len(),
+            name,
+        };
+        drop(g);
+        Ok(Self {
+            expr,
+            metadata,
+            pool: ScratchPool::default(),
+            graph,
+            root,
+            layout: None,
+            tangent_y: OnceLock::new(),
+            tangent_p: OnceLock::new(),
+            jac_y: PyOnceLock::new(),
+            jac_p: PyOnceLock::new(),
+        })
+    }
+
     fn eval_inner(
         &self,
         t: f64,
