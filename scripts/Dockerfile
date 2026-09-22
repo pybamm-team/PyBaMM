@@ -1,5 +1,10 @@
 FROM python:3.14-slim-bookworm
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+# pybamm compiles its Rust core when installed from source
+COPY --from=rust:1.89-slim-bookworm /usr/local/rustup /usr/local/rustup
+COPY --from=rust:1.89-slim-bookworm /usr/local/cargo/bin /usr/local/cargo/bin
+ENV RUSTUP_HOME=/usr/local/rustup \
+    PATH=/usr/local/cargo/bin:$PATH
 
 WORKDIR /
 
