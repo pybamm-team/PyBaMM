@@ -246,7 +246,7 @@ class TestQuickPlotUnstructured:
 
     def test_notebook_slice_sliders(self, monkeypatch):
         solution, _ = _unstructured_solution(3, 3)
-        quick_plot = pybamm.QuickPlot(solution, ["u"])
+        quick_plot = pybamm.QuickPlot(solution, ["u"], spatial_unit="m")
         interaction = {}
 
         class FloatSlider:
@@ -268,7 +268,11 @@ class TestQuickPlotUnstructured:
 
         assert set(interaction["controls"]) == {"t", "y", "z"}
         assert interaction["controls"]["t"].continuous_update is False
-        interaction["callback"](0.5, 0.25e6, 0.75e6)
+        # the slice step resolves a unit-extent mesh in metres
+        for axis in ("y", "z"):
+            slider = interaction["controls"][axis]
+            assert slider.step == pytest.approx((slider.max - slider.min) / 100)
+        interaction["callback"](0.5, 0.25, 0.75)
         np.testing.assert_allclose(quick_plot._slice_positions[("u",)]["y"], 0.25)
         np.testing.assert_allclose(quick_plot._slice_positions[("u",)]["z"], 0.75)
         pybamm.close_plots()

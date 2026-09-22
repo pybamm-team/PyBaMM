@@ -1013,6 +1013,8 @@ class QuickPlot:
                     controls[axis] = widgets.FloatSlider(
                         min=points[0],
                         max=points[-1],
+                        # ipywidgets' default step of 0.1 exceeds a metre-unit mesh
+                        step=(points[-1] - points[0]) / 100,
                         value=positions[axis] * spatial_factor,
                         description=f"{axis} slice [{self.spatial_unit}]",
                         continuous_update=False,
