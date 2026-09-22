@@ -13,7 +13,7 @@ import yaml
 
 import pybamm_model_zoo as zoo
 from pybamm_model_zoo import _docs, _paths
-from pybamm_model_zoo._registry import MANIFEST_NAME, ModelEntry
+from pybamm_model_zoo._registry import MANIFEST_NAME, ModelEntry, Registry
 from pybamm_model_zoo.testing import contract
 
 # An externally-registered model is held only to the portable rules: it is not
@@ -39,8 +39,9 @@ def contract_cases():
 
 @pytest.mark.parametrize(("entry", "check"), contract_cases())
 def test_contract(entry, check):
-    if check.name in entry.tests.skip_contract:
-        # A reviewed, per-check escape hatch, visible in the manifest diff.
+    if check.waivable and check.name in entry.tests.skip_contract:
+        # A reviewed, per-check escape hatch, visible in the manifest diff. An
+        # unwaivable check runs anyway: it is what reports the bad waiver.
         pytest.skip(f"{entry.slug}: '{check.name}' waived by {entry.manifest_path}")
     if entry.error is not None and check.name != "manifest":
         # Nothing else has inputs to check, so 'manifest' carries the one failure.
@@ -67,6 +68,90 @@ class TestContractItself:
             assert check.run.__doc__, (
                 f"{name}: needs a docstring saying what it asserts"
             )
+
+
+WAIVER_MANIFEST = """
+[model]
+slug = {slug}
+name = "AModel"
+title = "A title"
+summary = "A summary."
+class = "pybamm_model_zoo.a_model:AModel"
+tier = "core"
+pybamm_requires = ">=26.0"
+added = "2026-01-01"
+license = "BSD-3-Clause"
+
+[[model.maintainers]]
+name = "A. Author"
+github = "ahandle"
+
+[model.citation]
+key = "Author2026"
+
+[model.tests]
+skip_contract = [{waived}]
+"""
+
+
+class TestTheManifestCheckCannotBeWaived:
+    """``waivable=False``, held where the waiver is read rather than inside it.
+
+    ``_check_tests_block`` is what rejects an unwaivable waiver, and it runs
+    *inside* ``check_manifest`` -- so a waiver that switched the check off would
+    take its own enforcement with it.
+    """
+
+    def entry(self, tmp_path, *, slug='"a_model"', waived='"manifest"'):
+        folder = tmp_path / "a_model"
+        folder.mkdir()
+        (folder / MANIFEST_NAME).write_text(
+            WAIVER_MANIFEST.format(slug=slug, waived=waived), encoding="utf-8"
+        )
+        return Registry([tmp_path]).by_slug("a_model")
+
+    def run(self, entry, name):
+        """One check, with a skip surfaced as a failure rather than swallowed.
+
+        ``Skipped`` is a ``BaseException``, so an unfixed waiver would otherwise
+        skip its way straight out of ``pytest.raises`` and pass.
+        """
+        try:
+            test_contract(entry, contract.CHECKS[name])
+        except pytest.skip.Exception as skipped:
+            pytest.fail(f"'{name}' was skipped rather than run: {skipped}")
+
+    def test_a_valid_manifest_waiving_it_is_rejected(self, tmp_path):
+        entry = self.entry(tmp_path)
+        assert entry.error is None
+        with pytest.raises(AssertionError, match=r"\['manifest'\] cannot be waived"):
+            self.run(entry, "manifest")
+
+    def test_a_broken_manifest_waiving_it_is_still_reported(self, tmp_path):
+        """The waiver is read from the very manifest that failed to parse."""
+        entry = self.entry(tmp_path, slug="3")
+        assert entry.error is not None
+        with pytest.raises(AssertionError, match=r"\[model\].slug must be a non-empty"):
+            self.run(entry, "manifest")
+
+    def test_a_broken_manifest_waiving_it_does_not_run_green(self, tmp_path):
+        """It declares no tier, so every run keeps it -- and must see one failure."""
+        entry = self.entry(tmp_path, slug="3")
+        assert entry.in_tier("core")
+        failed = []
+        for check in contract.checks_in_scope(*IN_TREE_SCOPES):
+            try:
+                test_contract(entry, check)
+            except pytest.skip.Exception:
+                continue
+            except AssertionError:
+                failed.append(check.name)
+        assert failed == ["manifest"], "a broken manifest contributed no failure"
+
+    def test_a_waivable_check_is_still_waived(self, tmp_path):
+        entry = self.entry(tmp_path, waived='"solve"')
+        with pytest.raises(pytest.skip.Exception, match=r"'solve' waived by"):
+            test_contract(entry, contract.CHECKS["solve"])
 
 
 class TestDependencyAgreement:
