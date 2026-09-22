@@ -8,13 +8,12 @@ from pybamm.plotting.plot_vtk import (
     VTKQuickPlot,
     _build_vtk_grid,
     _compute_scale,
-    _data_at_time,
-    _is_unstructured_spatial_variable,
     _make_render_window,
     _mesh_vertices,
     _resolve_scale,
     _set_cell_scalars,
     _set_point_scalars,
+    _variable_kind,
     _viridis_lut,
 )
 
@@ -269,6 +268,15 @@ class TestVTKHelpers:
             [point_array.GetValue(i) for i in range(4)], [4, 3, 2, 1]
         )
 
+    def test_scalars_keep_double_precision(self):
+        grid = _build_vtk_grid(_tetra_mesh())
+        values = 298.15 + np.array([0.0, 5e-6, 1e-5, 2e-5])
+        _set_point_scalars(grid, "point", values)
+        point_array = grid.GetPointData().GetArray("point")
+        np.testing.assert_allclose(
+            [point_array.GetValue(i) for i in range(4)], values, rtol=0, atol=1e-12
+        )
+
     def test_scalar_length_mismatch_raises(self):
         """A variable must not attach to a grid built from a different mesh.
 
@@ -289,11 +297,10 @@ class TestVTKHelpers:
         node_solution, _ = _node_solution()
         node_variable = node_solution["node field"]
 
-        assert _is_unstructured_spatial_variable(cell_variable)
-        assert _is_unstructured_spatial_variable(node_variable)
-        assert not _is_unstructured_spatial_variable(scalar_variable)
-        np.testing.assert_allclose(_data_at_time(cell_variable, 0.5), [[1.5]])
-        assert _data_at_time(scalar_variable, 0.5) == pytest.approx(0.5)
+        assert _variable_kind(cell_variable) == "cell"
+        assert _variable_kind(node_variable) == "node"
+        assert _variable_kind(scalar_variable) == "scalar"
+        assert _variable_kind(_triangle_solution()["vector"]) is None
 
     def test_viridis_lookup_table(self):
         lut = _viridis_lut(-2.0, 4.0, n=8)
@@ -312,10 +319,20 @@ class TestVTKHelpers:
 
 
 class TestVTKQuickPlot:
-    def test_initialisation_accepts_solution_simulation_and_options(self):
+    def test_initialisation_accepts_solution_simulation_and_options(self, monkeypatch):
         solution, _ = _cell_solution()
 
-        default_plot = VTKQuickPlot(solution)
+        # the default variables are the model's plottable quick-plot defaults,
+        # never an arbitrary first key such as "Time [s]"
+        with pytest.raises(pybamm.OptionError, match="Pass output_variables"):
+            VTKQuickPlot(solution)
+        # grouped defaults are flattened; line and vector are skipped, not errors
+        monkeypatch.setattr(
+            pybamm.BaseModel,
+            "default_quick_plot_variables",
+            property(lambda self: [["line", "vector"], "field"]),
+        )
+        default_plot = VTKQuickPlot(_triangle_solution())
         assert default_plot.output_variables == ["field"]
         assert default_plot.spatial_panels == [
             ("field", {"plot_type": "3d", "scale": "auto"})
@@ -378,6 +395,11 @@ class TestVTKQuickPlot:
         mapped_data = _first_actor(field_renderer).GetMapper().GetInput()
         values = mapped_data.GetPointData().GetArray("field")
         assert values.GetValue(0) == pytest.approx(3.0)
+        # the label and chart marker show the snapped time that is drawn
+        snapped = float(solution.t[np.argmin(np.abs(solution.t - 1.6))])
+        assert plot._time_text.GetInput() == f"t = {snapped:.4g} s"
+        for marker in plot._time_markers:
+            assert marker.GetValue(0) == pytest.approx(snapped)
 
     def test_unwraps_simulation_list_and_rejects_several_solutions(self):
         solution, _ = _cell_solution()
@@ -410,6 +432,30 @@ class TestVTKQuickPlot:
         with pytest.raises(pybamm.OptionError, match="no finite values"):
             plot.dynamic_plot(show_plot=False)
 
+    def test_nan_samples_do_not_poison_0d_chart_range(self):
+        model = pybamm.BaseModel()
+        model.variables = {"state": pybamm.StateVector(slice(0, 1))}
+        model.update_processed_variables(model.variables)
+        t = np.arange(4.0)
+        y = np.asfortranarray([[1.0, np.nan, 3.0, 5.0]])
+        plot = VTKQuickPlot(pybamm.Solution(t, y, model, {}), "state")
+        plot.dynamic_plot(show_plot=False)
+
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        props = renderers.GetNextItem().GetViewProps()
+        props.InitTraversal()
+        chart = props.GetNextProp().GetScene().GetItem(0)
+        # the finite range [1, 5] padded by 5 %
+        np.testing.assert_allclose(
+            [chart.GetAxis(0).GetMinimum(), chart.GetAxis(0).GetMaximum()], [0.8, 5.2]
+        )
+
+        y[:] = np.nan
+        plot = VTKQuickPlot(pybamm.Solution(t, y, model, {}), "state")
+        with pytest.raises(pybamm.OptionError, match="no finite values"):
+            plot.dynamic_plot(show_plot=False)
+
     def test_rejects_vector_field_and_structured_variables(self):
         solution = _triangle_solution()
         with pytest.raises(pybamm.OptionError, match="cannot plot 'vector'"):
@@ -434,8 +480,26 @@ class TestVTKQuickPlot:
         cut = _first_actor(shifted_renderer).GetMapper().GetInput()
         assert cut.GetNumberOfCells() > 0
         np.testing.assert_allclose(cut.GetBounds()[:2], [2.5, 2.5])
+        # the axes label the cut triangle, which spans half the mesh in y and z
+        cube_axes = _cube_axes(shifted_renderer)
+        np.testing.assert_allclose(cube_axes.GetXAxisRange(), [2.5, 2.5])
+        np.testing.assert_allclose(cube_axes.GetYAxisRange(), [0.0, 0.5])
+        np.testing.assert_allclose(cube_axes.GetZAxisRange(), [0.0, 0.5])
+
+    @pytest.mark.parametrize("axis", ["x", "y", "z"])
+    def test_slice_camera_looks_along_the_plane_normal(self, axis):
+        solution, _ = _cell_solution()
+        plot = VTKQuickPlot(
+            solution, "field", options={"field": {"plot_type": "slice", axis: 0.4}}
+        )
+        plot.dynamic_plot(show_plot=False)
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        camera = renderers.GetNextItem().GetActiveCamera()
+        normal = np.zeros(3)
+        normal["xyz".index(axis)] = 1.0
         np.testing.assert_allclose(
-            _cube_axes(shifted_renderer).GetXAxisRange(), [2.0, 3.0]
+            camera.GetDirectionOfProjection(), normal, atol=1e-12
         )
 
     def test_slice_fraction_is_validated_and_kept_inside_the_mesh(self):
@@ -499,6 +563,24 @@ class TestVTKQuickPlot:
         second = renderers.GetNextItem()
         assert first.GetActiveCamera() is second.GetActiveCamera()
         assert first.GetActiveCamera().GetParallelProjection() == 0
+
+    def test_dynamic_plot_3d_panels_on_different_meshes_get_own_cameras(self):
+        solution, _ = _cell_solution()
+        plot = VTKQuickPlot(
+            solution,
+            ["field", "shifted"],
+            options={name: {"scale": None} for name in ("field", "shifted")},
+        )
+        plot.dynamic_plot(show_plot=False)
+
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        field_camera = renderers.GetNextItem().GetActiveCamera()
+        shifted_camera = renderers.GetNextItem().GetActiveCamera()
+        assert field_camera is not shifted_camera
+        # each camera is framed on its own mesh, x in [0, 1] and x in [2, 3]
+        assert field_camera.GetFocalPoint()[0] == pytest.approx(0.5)
+        assert shifted_camera.GetFocalPoint()[0] == pytest.approx(2.5)
 
     def test_dynamic_plot_interpolates_cell_data(self):
         solution, _ = _cell_solution()
@@ -580,9 +662,45 @@ class TestVTKQuickPlot:
         )
 
         with pytest.raises(
-            pybamm.OptionError, match="requires one of 'x', 'y', or 'z'"
+            pybamm.OptionError, match=r"exactly one of 'x', 'y', or 'z'.*got \[\]"
         ):
             plot.dynamic_plot(show_plot=False)
+
+        plot = VTKQuickPlot(
+            solution,
+            "field",
+            options={"field": {"plot_type": "slice", "y": 0.5, "z": 0.5}},
+        )
+        with pytest.raises(pybamm.OptionError, match=r"got \['y', 'z'\]"):
+            plot.dynamic_plot(show_plot=False)
+
+    def test_options_for_unknown_variables_are_rejected(self):
+        solution, _ = _cell_solution()
+        with pytest.raises(pybamm.OptionError, match=r"\['Field'\].*not spatial"):
+            VTKQuickPlot(solution, "field", options={"Field": {"plot_type": "3d"}})
+        # 0D variables have no panel options either
+        with pytest.raises(pybamm.OptionError, match=r"\['scalar'\]"):
+            VTKQuickPlot(
+                solution, ["field", "scalar"], options={"scalar": {"scale": None}}
+            )
+
+    def test_empty_panel_option_list_is_rejected(self):
+        solution, _ = _cell_solution()
+        # an empty list would drop the variable and leave the plot with no panels
+        with pytest.raises(pybamm.OptionError, match="options for 'field' are empty"):
+            VTKQuickPlot(solution, "field", options={"field": []})
+
+    def test_unknown_panel_options_and_plot_types_are_rejected(self):
+        solution, _ = _cell_solution()
+        # a typo'd key or plot_type must not fall through to a silent 3D panel
+        with pytest.raises(pybamm.OptionError, match=r"\['scael'\] for 'field'"):
+            VTKQuickPlot(solution, "field", options={"field": {"scael": None}})
+        with pytest.raises(pybamm.OptionError, match=r"plot_type 'Slice'"):
+            VTKQuickPlot(
+                solution,
+                "field",
+                options={"field": [{"plot_type": "3d"}, {"plot_type": "Slice"}]},
+            )
 
     def test_save_gif_builds_plot_and_writes_animation(self, tmp_path):
         Image = pytest.importorskip("PIL.Image")

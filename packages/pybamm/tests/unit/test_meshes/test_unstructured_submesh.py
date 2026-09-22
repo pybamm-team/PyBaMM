@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import pybamm
 from pybamm.meshes.unstructured_submesh import (
@@ -1553,6 +1554,31 @@ class TestContainsPoints:
         np.testing.assert_array_equal(
             mesh.contains_points(points), [True, True, True, False]
         )
+
+    @pytest.mark.parametrize("hexahedra", [False, True])
+    def test_3d_surface_points_of_a_rotated_mesh_are_inside(self, hexahedra):
+        # off-axis faces leave round-off in the coplanar solid angles, whose
+        # sign used to flip surface points outside
+        edges = [np.array([0.0, 0.3, 1.0])] * 3
+        if hexahedra:
+            nodes, elements = _hex_grid(*edges)
+        else:
+            nodes, elements = _hex_to_tet(*edges)
+        rotation, _ = np.linalg.qr(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 10.0]]))
+        mesh = UnstructuredSubMesh(1e-4 * nodes @ rotation.T, elements)
+
+        grid = np.linspace(0, 1, 15)
+        a, b = (c.ravel() for c in np.meshgrid(grid, grid, indexing="ij"))
+        faces = [
+            np.insert(np.column_stack([a, b]), axis, value, axis=1)
+            for axis in range(3)
+            for value in (0.0, 1.0)
+        ]
+        surface = np.vstack(faces)
+        outside = surface + 1e-3 * (surface - 0.5)
+        inside = mesh.contains_points(1e-4 * surface @ rotation.T)
+        assert inside.all()
+        assert not mesh.contains_points(1e-4 * outside @ rotation.T).any()
 
     def test_3d_chunked_evaluation_matches_single_chunk(self, monkeypatch):
         from pybamm.meshes import unstructured_submesh

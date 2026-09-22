@@ -22,6 +22,8 @@ _VTK_CELL_TYPE = {
     "tetrahedron": 10,  # VTK_TETRA
     "hexahedron": 12,  # VTK_HEXAHEDRON
 }
+_PLOT_TYPES = frozenset({"3d", "slice"})
+_PANEL_OPTION_KEYS = frozenset({"plot_type", "scale", "x", "y", "z"})
 
 
 def _mesh_vertices(mesh):
@@ -121,7 +123,9 @@ def _set_scalars(attribute_data, expected, kind, name, values):
     """Set (or update) a named float scalar array on cell or point data."""
     numpy_support = pybamm.import_optional_dependency("vtk.util.numpy_support")
 
-    values = np.ascontiguousarray(values, dtype=np.float32).ravel()
+    # float64: float32 would collapse a small spread on a large offset (298.15 K
+    # +- 1e-5) onto a few colours while the colour bar shows the full range
+    values = np.ascontiguousarray(values, dtype=np.float64).ravel()
     if len(values) != expected:
         raise pybamm.ShapeError(
             f"Cannot attach {len(values)} {kind} values for {name!r} to a grid "
@@ -152,20 +156,28 @@ def _set_point_scalars(grid, name, values):
     grid.Modified()
 
 
-def _is_unstructured_spatial_variable(pv):
-    return isinstance(
-        pv,
-        (
-            pybamm.ProcessedVariableUnstructuredFVM,
-            pybamm.ProcessedVariableUnstructured,
-        ),
-    )
+def _variable_kind(pv):
+    """Classify a processed variable for VTK plotting.
+
+    Returns ``"cell"`` for cell-centred unstructured data, ``"node"`` for
+    node-centred unstructured data, ``"scalar"`` for a 0D time series and
+    ``None`` for anything VTKQuickPlot cannot draw.
+    """
+    if isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM):
+        return "cell"
+    if isinstance(pv, pybamm.ProcessedVariableUnstructured):
+        return "node"
+    if getattr(pv, "dimensions", None) == 0:
+        return "scalar"
+    return None
 
 
-def _data_at_time(pv, t):
-    if hasattr(pv, "_data_at_time"):
-        return pv._data_at_time(t)
-    return pv(t)
+def _finite_range(name, values):
+    """Min and max of the finite samples; NaNs must not set the range."""
+    finite = values[np.isfinite(values)]
+    if finite.size == 0:
+        raise pybamm.OptionError(f"'{name}' has no finite values to plot")
+    return float(finite.min()), float(finite.max())
 
 
 def _viridis_lut(vmin, vmax, n=256):
@@ -215,7 +227,9 @@ class VTKQuickPlot:
     ----------
     solutions : :class:`pybamm.Solution` or :class:`pybamm.Simulation`
         The solution to plot; a single-element list is also accepted.
-    output_variables : list of str
+    output_variables : str or list of str, optional
+        Variables to plot. Defaults to the model's default quick-plot
+        variables that are 0D or live on an unstructured mesh.
     options : dict, optional
         Per-variable options keyed by variable name.  Each value is a dict
         that may contain:
@@ -256,7 +270,7 @@ class VTKQuickPlot:
         self.solution = solutions[0]
 
         if output_variables is None:
-            output_variables = list(self.solution.all_models[0].variables.keys())[:1]
+            output_variables = self._default_output_variables()
         if isinstance(output_variables, str):
             output_variables = [output_variables]
         if len(output_variables) == 0:
@@ -272,15 +286,12 @@ class VTKQuickPlot:
 
         for name in output_variables:
             pv = self.solution[name]
-            if isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM):
+            kind = _variable_kind(pv)
+            if kind in ("cell", "node"):
                 self.spatial_names.append(name)
                 self.spatial_vars.append(pv)
-                self.spatial_is_cell_data.append(True)
-            elif isinstance(pv, pybamm.ProcessedVariableUnstructured):
-                self.spatial_names.append(name)
-                self.spatial_vars.append(pv)
-                self.spatial_is_cell_data.append(False)
-            elif getattr(pv, "dimensions", None) == 0:
+                self.spatial_is_cell_data.append(kind == "cell")
+            elif kind == "scalar":
                 self.scalar_names.append(name)
                 self.scalar_vars.append(pv)
             else:
@@ -297,8 +308,13 @@ class VTKQuickPlot:
 
         _defaults = {"plot_type": "3d", "scale": "auto"}
         raw_opts = options or {}
+        unknown = sorted(set(raw_opts) - set(self.spatial_names))
+        if unknown:
+            raise pybamm.OptionError(
+                f"Options were given for {unknown}, which are not spatial output "
+                f"variables of this plot ({self.spatial_names})."
+            )
 
-        # Build spatial_panels: flat list of (name, opts_dict) tuples.
         self.spatial_panels = []
         for name in self.spatial_names:
             var_opt = raw_opts.get(name, _defaults)
@@ -306,14 +322,53 @@ class VTKQuickPlot:
                 opt_list = [var_opt]
             else:
                 opt_list = list(var_opt)
+            if not opt_list:
+                raise pybamm.OptionError(
+                    f"The options for '{name}' are empty, so it would get no panel; "
+                    "pass one option dict per panel, or drop it from "
+                    "output_variables."
+                )
             for single_opt in opt_list:
+                unknown_keys = sorted(set(single_opt) - _PANEL_OPTION_KEYS)
+                if unknown_keys:
+                    raise pybamm.OptionError(
+                        f"Unknown option(s) {unknown_keys} for '{name}'; the panel "
+                        f"options are {sorted(_PANEL_OPTION_KEYS)}."
+                    )
                 merged = dict(_defaults)
                 merged.update(single_opt)
+                if merged["plot_type"] not in _PLOT_TYPES:
+                    raise pybamm.OptionError(
+                        f"Unknown plot_type {merged['plot_type']!r} for '{name}'; "
+                        f"use one of {sorted(_PLOT_TYPES)}."
+                    )
                 self.spatial_panels.append((name, merged))
+
+    def _default_output_variables(self) -> list[str]:
+        """The model's default quick-plot variables that VTK can draw."""
+        defaults = self.solution.all_models[0].default_quick_plot_variables or []
+        # a default may group several names onto one QuickPlot axis; VTK draws
+        # one panel per variable, so the groups are flattened
+        names = [
+            name
+            for entry in defaults
+            for name in ([entry] if isinstance(entry, str) else entry)
+        ]
+        plottable = [
+            name for name in names if _variable_kind(self.solution[name]) is not None
+        ]
+        if not plottable:
+            raise pybamm.OptionError(
+                "VTKQuickPlot has no default variables for this model: none of "
+                f"its default quick-plot variables {names} are 0D or on "
+                "an unstructured mesh. Pass output_variables explicitly."
+            )
+        return plottable
 
     def dynamic_plot(self, show_plot: bool = True) -> None:
         """Launch an interactive VTK window with a time slider."""
         vtk = pybamm.import_optional_dependency("vtk")
+        numpy_support = pybamm.import_optional_dependency("vtk.util.numpy_support")
 
         n_spatial = len(self.spatial_panels)
         n_scalar = len(self.scalar_names)
@@ -323,23 +378,16 @@ class VTKQuickPlot:
         spatial_mins = {}
         spatial_maxs = {}
         for name, pv in zip(self.spatial_names, self.spatial_vars, strict=True):
-            pv.initialise()
-            # the (points x times) history the variable already holds
-            data = np.asarray(pv._entries_raw, dtype=float)
+            data = np.asarray(pv(self.t_pts), dtype=float)
             spatial_data[name] = data
-            finite = data[np.isfinite(data)]
-            if finite.size == 0:
-                raise pybamm.OptionError(f"'{name}' has no finite values to plot")
-            # NaN cells must not swallow the colour range of the whole panel
-            spatial_mins[name] = float(finite.min())
-            spatial_maxs[name] = float(finite.max())
+            spatial_mins[name], spatial_maxs[name] = _finite_range(name, data)
 
-        # --- Precompute scalar (0D) data ---
         scalar_data = {}
+        scalar_ranges = {}
         for name, pv in zip(self.scalar_names, self.scalar_vars, strict=True):
-            pv.initialise()
-            vals = np.array([float(pv(t).ravel()[0]) for t in self.t_pts])
+            vals = np.asarray(pv(self.t_pts), dtype=float).ravel()
             scalar_data[name] = vals
+            scalar_ranges[name] = _finite_range(name, vals)
 
         slider_h = 0.08
         panel_top = 1.0
@@ -349,20 +397,31 @@ class VTKQuickPlot:
         n_rows = int(np.ceil(n_panels / n_cols))
         panel_height = (panel_top - panel_bot) / n_rows
 
+        def viewport(index):
+            """Normalised (xmin, ymin, xmax, ymax) of panel ``index``, row-major."""
+            row, col = divmod(index, n_cols)
+            return (
+                col / n_cols,
+                panel_top - (row + 1) * panel_height,
+                (col + 1) / n_cols,
+                panel_top - row * panel_height,
+            )
+
         window = _make_render_window(off_screen=not show_plot)
         window.SetSize(650 * n_cols, 520 * n_rows)
         window.SetWindowName("PyBaMM - " + ", ".join(self.output_variables))
 
         all_renderers = []
         spatial_grids = []
-        c2p_filters = []
+        cell_to_point_filters = []
         cutters = []
         chart_views = []
         time_markers = []
 
         panel_idx = 0
 
-        first_3d_cam = None
+        # 3d panels whose scaled grids share bounds (same mesh) share one camera
+        shared_cameras = {}
         spatial_renderers = []
         panel_names = []
         is_cell_data_by_name = {
@@ -395,23 +454,26 @@ class VTKQuickPlot:
                 _set_point_scalars(g, name, spatial_data[name][:, 0])
             spatial_grids.append(g)
 
-            c2p = None
+            cell_to_point = None
             if is_cell_data:
-                c2p = vtk.vtkCellDataToPointData()
-                c2p.SetInputData(g)
-                c2p.Update()
-            c2p_filters.append(c2p)
+                cell_to_point = vtk.vtkCellDataToPointData()
+                cell_to_point.SetInputData(g)
+                cell_to_point.Update()
+            cell_to_point_filters.append(cell_to_point)
 
-            # Determine pipeline source: cutter for slices, direct/converted for 3d
-            pipeline_source = c2p.GetOutputPort() if c2p is not None else g
+            pipeline_source = (
+                cell_to_point.GetOutputPort() if cell_to_point is not None else g
+            )
             cutter = None
             if plot_type == "slice":
-                axis_key = next((ak for ak in ("x", "y", "z") if ak in opts), None)
-                if axis_key is None:
+                axes_given = [ak for ak in ("x", "y", "z") if ak in opts]
+                if len(axes_given) != 1:
                     raise pybamm.OptionError(
-                        f"plot_type='slice' for '{name}' requires one of "
-                        f"'x', 'y', or 'z' specifying the slice fraction"
+                        f"plot_type='slice' for '{name}' requires exactly one of "
+                        f"'x', 'y', or 'z' specifying the slice fraction, got "
+                        f"{axes_given}."
                     )
+                axis_key = axes_given[0]
                 if axis_key not in axis_columns:
                     raise pybamm.OptionError(
                         f"Cannot slice '{name}' along '{axis_key}': its "
@@ -445,7 +507,7 @@ class VTKQuickPlot:
 
                 cutter = vtk.vtkCutter()
                 cutter.SetCutFunction(plane)
-                if c2p is not None:
+                if cell_to_point is not None:
                     cutter.SetInputConnection(pipeline_source)
                 else:
                     cutter.SetInputData(pipeline_source)
@@ -453,7 +515,7 @@ class VTKQuickPlot:
 
                 mapper_source = cutter.GetOutputPort()
             else:
-                if c2p is not None:
+                if cell_to_point is not None:
                     mapper_source = pipeline_source
                 else:
                     mapper_source = None
@@ -511,13 +573,8 @@ class VTKQuickPlot:
             ren.AddViewProp(title_actor)
             ren.SetBackground(1, 1, 1)
 
-            row = panel_idx // n_cols
-            col = panel_idx % n_cols
-            y0 = panel_top - (row + 1) * panel_height
-            y1 = panel_top - row * panel_height
-            ren.SetViewport(col / n_cols, y0, (col + 1) / n_cols, y1)
+            ren.SetViewport(*viewport(panel_idx))
 
-            # Cube axes
             if plot_type == "slice":
                 # Use the cutter output bounds so axes align with
                 # the visible slice geometry, not the full 3D grid.
@@ -537,8 +594,14 @@ class VTKQuickPlot:
             # print coordinates as they are, without a "(x10^-6)" factor
             cube_axes.SetLabelScaling(False, 0, 0, 0)
 
+            # label what is drawn: a slice can span less than its mesh, so the
+            # physical ranges come from the (scaled) bounds of the drawn geometry
+            axis_scale = var_scale if var_scale is not None else np.ones(dim)
             orig_ranges = [
-                (float(panel_nodes[:, d].min()), float(panel_nodes[:, d].max()))
+                (
+                    axes_bounds[2 * d] / axis_scale[d],
+                    axes_bounds[2 * d + 1] / axis_scale[d],
+                )
                 for d in range(dim)
             ]
             if dim >= 1:
@@ -599,12 +662,11 @@ class VTKQuickPlot:
             spatial_renderers.append(ren)
 
             # Camera setup: slice panels get independent orthographic cameras;
-            # 3d panels share a single perspective camera.
+            # 3d panels share a perspective camera per set of grid bounds.
             if plot_type == "slice":
                 ren.ResetCamera()
                 cam = ren.GetActiveCamera()
                 cam.SetParallelProjection(True)
-                pos = list(cam.GetPosition())
                 fp = list(cam.GetFocalPoint())
                 gb = g.GetBounds()
                 offset = (
@@ -615,8 +677,9 @@ class VTKQuickPlot:
                     )
                     * 2
                 )
-                # Look from the negative side so OuterEdges places
-                # axis labels on the top/left edges (more viewport room).
+                # face-on from the negative side: OuterEdges then puts the axis
+                # labels on the top/left edges, where the viewport has room
+                pos = list(fp)
                 pos[axis_idx] = fp[axis_idx] - offset
                 cam.SetPosition(pos)
                 view_up = [0, 0, 0]
@@ -631,22 +694,24 @@ class VTKQuickPlot:
                 cam.Zoom(0.70)
                 cube_axes.SetCamera(cam)
             else:
-                if first_3d_cam is None:
+                camera_key = tuple(np.round(g.GetBounds(), 12))
+                cam = shared_cameras.get(camera_key)
+                if cam is None:
                     ren.ResetCamera()
-                    first_3d_cam = ren.GetActiveCamera()
+                    cam = ren.GetActiveCamera()
                     if dim == 3:
-                        first_3d_cam.Azimuth(-55)
-                        first_3d_cam.Elevation(25)
+                        cam.Azimuth(-55)
+                        cam.Elevation(25)
+                    shared_cameras[camera_key] = cam
                 else:
-                    ren.SetActiveCamera(first_3d_cam)
-                cube_axes.SetCamera(first_3d_cam)
+                    ren.SetActiveCamera(cam)
+                cube_axes.SetCamera(cam)
 
             panel_idx += 1
 
-        # --- Scalar (0D chart) panels ---
         for name in self.scalar_names:
             vals = scalar_data[name]
-            v_min, v_max = float(vals.min()), float(vals.max())
+            v_min, v_max = scalar_ranges[name]
             v_pad = max((v_max - v_min) * 0.05, 1e-10)
 
             chart = vtk.vtkChartXY()
@@ -654,27 +719,23 @@ class VTKQuickPlot:
             chart.GetTitleProperties().SetFontSize(36)
             chart.GetTitleProperties().SetBold(True)
             chart.GetTitleProperties().SetColor(0, 0, 0)
-            chart.GetAxis(1).SetTitle("Time [s]")
-            chart.GetAxis(0).SetTitle(name)
-            chart.GetAxis(1).GetTitleProperties().SetFontSize(28)
-            chart.GetAxis(1).GetTitleProperties().SetColor(0, 0, 0)
-            chart.GetAxis(1).GetLabelProperties().SetFontSize(22)
-            chart.GetAxis(1).GetLabelProperties().SetColor(0, 0, 0)
-            chart.GetAxis(0).GetTitleProperties().SetFontSize(28)
-            chart.GetAxis(0).GetTitleProperties().SetColor(0, 0, 0)
-            chart.GetAxis(0).GetLabelProperties().SetFontSize(22)
-            chart.GetAxis(0).GetLabelProperties().SetColor(0, 0, 0)
+            for axis_index, title in ((1, "Time [s]"), (0, name)):
+                axis = chart.GetAxis(axis_index)
+                axis.SetTitle(title)
+                axis.GetTitleProperties().SetFontSize(28)
+                axis.GetTitleProperties().SetColor(0, 0, 0)
+                axis.GetLabelProperties().SetFontSize(22)
+                axis.GetLabelProperties().SetColor(0, 0, 0)
             chart.GetAxis(1).SetRange(float(self.t_pts[0]), float(self.t_pts[-1]))
             chart.GetAxis(0).SetRange(v_min - v_pad, v_max + v_pad)
 
             table = vtk.vtkTable()
-            t_arr = vtk.vtkFloatArray()
+            t_arr = numpy_support.numpy_to_vtk(
+                np.asarray(self.t_pts, dtype=np.float64), deep=True
+            )
             t_arr.SetName("Time")
-            v_arr = vtk.vtkFloatArray()
+            v_arr = numpy_support.numpy_to_vtk(vals.astype(np.float64), deep=True)
             v_arr.SetName(name)
-            for i in range(len(self.t_pts)):
-                t_arr.InsertNextValue(float(self.t_pts[i]))
-                v_arr.InsertNextValue(float(vals[i]))
             table.AddColumn(t_arr)
             table.AddColumn(v_arr)
 
@@ -711,11 +772,7 @@ class VTKQuickPlot:
             scene.SetRenderer(ren)
             ren.SetBackground(1, 1, 1)
 
-            row = panel_idx // n_cols
-            col = panel_idx % n_cols
-            y0 = panel_top - (row + 1) * panel_height
-            y1 = panel_top - row * panel_height
-            ren.SetViewport(col / n_cols, y0, (col + 1) / n_cols, y1)
+            ren.SetViewport(*viewport(panel_idx))
 
             window.AddRenderer(ren)
             all_renderers.append(ren)
@@ -725,15 +782,10 @@ class VTKQuickPlot:
         while panel_idx < n_rows * n_cols:
             ren = vtk.vtkRenderer()
             ren.SetBackground(1, 1, 1)
-            row = panel_idx // n_cols
-            col = panel_idx % n_cols
-            y0 = panel_top - (row + 1) * panel_height
-            y1 = panel_top - row * panel_height
-            ren.SetViewport(col / n_cols, y0, (col + 1) / n_cols, y1)
+            ren.SetViewport(*viewport(panel_idx))
             window.AddRenderer(ren)
             panel_idx += 1
 
-        # --- Slider background (white strip at bottom) ---
         slider_bg = vtk.vtkRenderer()
         slider_bg.SetBackground(1, 1, 1)
         slider_bg.SetViewport(0, 0, 1, slider_h)
@@ -742,7 +794,6 @@ class VTKQuickPlot:
         interactor = vtk.vtkRenderWindowInteractor()
         interactor.SetRenderWindow(window)
 
-        # Time label
         time_text = vtk.vtkTextActor()
         time_text.SetInput(f"t = {self.t_pts[0]:.4g} s")
         time_text.GetTextProperty().SetFontSize(28)
@@ -777,61 +828,36 @@ class VTKQuickPlot:
         slider_rep.GetCapProperty().SetColor(0.5, 0.5, 0.5)
         slider_rep.GetSelectedProperty().SetColor(0.3, 0.5, 0.9)
 
-        # Look-up table for snapping to nearest timestep
         _t_array = np.asarray(self.t_pts)
-
-        # Keep references for interpolated mode
-        _spatial_vars = {
-            name: pv
-            for name, pv in zip(
-                self.spatial_names,
-                self.spatial_vars,
-                strict=True,
-            )
-        }
 
         def on_slider(obj, event):
             t_now = float(obj.GetRepresentation().GetValue())
             t_now = max(t_min, min(t_now, t_max))
-
-            if self.interpolate_time:
-                # Evaluate every spatial variable at exact time
-                for sname, g, c2p, cut in zip(
-                    panel_names,
-                    spatial_grids,
-                    c2p_filters,
-                    cutters,
-                    strict=True,
-                ):
-                    vals = _data_at_time(_spatial_vars[sname], t_now).ravel()
-                    if is_cell_data_by_name[sname]:
-                        _set_cell_scalars(g, sname, vals)
-                    else:
-                        _set_point_scalars(g, sname, vals)
-                    if c2p is not None:
-                        c2p.Modified()
-                        c2p.Update()
-                    if cut is not None:
-                        cut.Update()
-            else:
-                # Snap to nearest stored timestep (fast)
+            if not self.interpolate_time:
                 t_idx = int(np.argmin(np.abs(_t_array - t_now)))
-                for sname, g, c2p, cut in zip(
-                    panel_names,
-                    spatial_grids,
-                    c2p_filters,
-                    cutters,
-                    strict=True,
-                ):
-                    if is_cell_data_by_name[sname]:
-                        _set_cell_scalars(g, sname, spatial_data[sname][:, t_idx])
-                    else:
-                        _set_point_scalars(g, sname, spatial_data[sname][:, t_idx])
-                    if c2p is not None:
-                        c2p.Modified()
-                        c2p.Update()
-                    if cut is not None:
-                        cut.Update()
+                # label the stored time that is drawn, not the raw slider value
+                t_now = float(_t_array[t_idx])
+
+            for sname, g, cell_to_point, cut in zip(
+                panel_names,
+                spatial_grids,
+                cell_to_point_filters,
+                cutters,
+                strict=True,
+            ):
+                if self.interpolate_time:
+                    vals = pv_by_name[sname](t_now).ravel()
+                else:
+                    vals = spatial_data[sname][:, t_idx]
+                if is_cell_data_by_name[sname]:
+                    _set_cell_scalars(g, sname, vals)
+                else:
+                    _set_point_scalars(g, sname, vals)
+                if cell_to_point is not None:
+                    cell_to_point.Modified()
+                    cell_to_point.Update()
+                if cut is not None:
+                    cut.Update()
 
             for mt_arr, mtable in time_markers:
                 mt_arr.SetValue(0, t_now)
@@ -857,6 +883,8 @@ class VTKQuickPlot:
         self._window = window
         self._interactor = interactor
         self._slider = slider
+        self._time_text = time_text
+        self._time_markers = [mt_arr for mt_arr, _ in time_markers]
 
     def save_gif(
         self,

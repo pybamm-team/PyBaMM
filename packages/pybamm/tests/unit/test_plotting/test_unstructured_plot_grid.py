@@ -6,12 +6,7 @@ import pytest
 
 import pybamm
 from pybamm.plotting.quick_plot import ax_max, ax_min
-from pybamm.plotting.unstructured_plot_grid import (
-    default_slice_positions,
-    midplane_slices,
-    plot_grid,
-    quiver_data,
-)
+from pybamm.plotting.unstructured_plot_grid import plot_grid, quiver_data
 
 
 def _to_casadi(symbol, y):
@@ -67,9 +62,10 @@ def _unstructured_solution(dim, n):
     return pybamm.Solution(t_sol, y_sol, model_disc, {}), components
 
 
-def _triangle_vector_solution():
-    """Vector field ``(u, u)`` with ``u = 1 + t`` on one triangle, so the
-    bounding-box display grid samples points outside the domain."""
+def _triangle_vector_solution(values=(1.0, 2.0)):
+    """Vector field ``(u, u)`` with ``u`` taking ``values`` over time on one
+    triangle, so the bounding-box display grid samples points outside the
+    domain."""
     mesh = pybamm.UnstructuredSubMesh(
         np.array([[0.0, 0.0], [2.0, 0.0], [0.0, 1.0]]), np.array([[0, 1, 2]])
     )
@@ -89,7 +85,7 @@ def _triangle_vector_solution():
     model.variables = {"vector": vector}
     model.update_processed_variables(model.variables)
     return pybamm.Solution(
-        np.array([0.0, 1.0]), np.asfortranarray([[1.0, 2.0]]), model, {}
+        np.array([0.0, 1.0]), np.asfortranarray([list(values)]), model, {}
     )
 
 
@@ -129,31 +125,8 @@ class TestUnstructuredPlotGrid:
         assert list(grid) == ["x", "z"]
         assert all(len(pts) == 200 for pts in grid.values())
         np.testing.assert_allclose([grid["x"][0], grid["x"][-1]], [0, 1])
-        solution_3d, _ = _unstructured_solution(3, 3)
-        grid = plot_grid(solution_3d["u"], n_points=7)
-        assert list(grid) == ["x", "y", "z"]
+        grid = plot_grid(solution["u"], n_points=7)
         assert all(len(pts) == 7 for pts in grid.values())
-        assert len(plot_grid(solution_3d["u"])["z"]) == 80
-
-    def test_midplane_slices(self):
-        solution, _ = _unstructured_solution(3, 3)
-        variable = solution["u"]
-        grid = plot_grid(variable, n_points=12)
-        positions = default_slice_positions(variable)
-        np.testing.assert_allclose([positions["y"], positions["z"]], 0.5)
-        s1, xx1, yy1, zz1, s2, xx2, yy2, zz2 = midplane_slices(
-            variable, 1.0, grid, positions
-        )
-        for arr in (s1, xx1, yy1, zz1, s2, xx2, yy2, zz2):
-            assert arr.shape == (12, 12)
-        np.testing.assert_allclose(yy1, 0.5)
-        np.testing.assert_allclose(zz2, 0.5)
-        # the grid spans the closed unit box, so every sample is in the domain
-        assert np.isfinite(s1).all() and np.isfinite(s2).all()
-        # u = 2x at t = 1 is exact between the first and last centroid
-        for values, xx in ((s1, xx1), (s2, xx2)):
-            interior = (xx > 0.2) & (xx < 0.8)
-            np.testing.assert_allclose(values[interior], 2 * xx[interior], atol=1e-8)
 
     def test_quiver_data_2d(self):
         solution, (u_val, w_val) = _unstructured_solution(2, 4)
@@ -163,19 +136,6 @@ class TestUnstructuredPlotGrid:
             assert arr.shape == (20, 20)
         np.testing.assert_allclose(U[np.isfinite(U)], u_val, rtol=1e-8)
         np.testing.assert_allclose(W[np.isfinite(W)], w_val, rtol=1e-8)
-
-    def test_quiver_data_3d(self):
-        solution, (u_val, v_val, w_val) = _unstructured_solution(3, 3)
-        flux = solution["flux"]
-        positions = {"y": 0.4, "z": 0.6}
-        data = quiver_data(flux, 0.5, plot_grid(flux), positions, n_points=6)
-        X1, Z1, u_xz, w_xz, y_mid, X2, Y2, u_xy, v_xy, z_mid = data
-        np.testing.assert_allclose([y_mid, z_mid], [0.4, 0.6])
-        for arr in (X1, Z1, u_xz, w_xz, X2, Y2, u_xy, v_xy):
-            assert arr.shape == (6, 6)
-        np.testing.assert_allclose(u_xz[np.isfinite(u_xz)], u_val, rtol=1e-8)
-        np.testing.assert_allclose(w_xz[np.isfinite(w_xz)], w_val, rtol=1e-8)
-        np.testing.assert_allclose(v_xy[np.isfinite(v_xy)], v_val, rtol=1e-8)
 
 
 class TestQuickPlotUnstructured:
@@ -187,51 +147,12 @@ class TestQuickPlotUnstructured:
         image = quick_plot.plots[("u",)][0][1]
         assert image.shape == (200, 200)
         assert np.isfinite(image).mean() > 0.5
+        wireframe = quick_plot._wireframes[("u",)]
         quick_plot.slider_update(1.0)
         assert quick_plot.plots[("flux",)][0][0] is not None
-        pybamm.close_plots()
-
-    def test_3d_slices_and_slice_sliders(self):
-        solution, _ = _unstructured_solution(3, 3)
-        quick_plot = pybamm.QuickPlot(solution, ["u", "flux"])
-        np.testing.assert_allclose(quick_plot._slice_positions[("u",)]["y"], 0.5)
-        quick_plot.dynamic_plot(show_plot=False)
-        s1, _ = quick_plot.plots[("u",)][0][0]
-        assert s1.shape == (80, 80)
-        # axes and sliders are in the display unit (um for a unit box in metres)
-        scalar_axis, quiver_axis = quick_plot.axes[0], quick_plot.axes[1]
-        unit = quick_plot.spatial_unit
-        assert scalar_axis.get_xlabel() == quiver_axis.get_xlabel() == f"$x$ [{unit}]"
-        np.testing.assert_allclose(scalar_axis.get_xlim(), quiver_axis.get_xlim())
-        np.testing.assert_allclose(quick_plot._slice_sliders["y"].val, 0.5e6)
-        # a variable on a taller mesh follows the slider as a fraction of its extent
-        quick_plot._unstructured_grids[("flux",)]["y"] = np.linspace(0.0, 2.0, 80)
-        xlim_before = scalar_axis.get_xlim()
-        quick_plot._slice_sliders["y"].set_val(0.25e6)
-        np.testing.assert_allclose(quick_plot._slice_positions[("u",)]["y"], 0.25)
-        np.testing.assert_allclose(quick_plot._slice_positions[("flux",)]["y"], 0.5)
-        assert quick_plot.plots[("flux",)][0][0] == "quiver_3d"
-        # frames replace their artists rather than clearing the axes
-        assert len(quick_plot._panel_artists[("u",)]) == 2
-        assert len(scalar_axis.collections) == 2
-        assert len(quiver_axis.collections) == 2
-        np.testing.assert_allclose(scalar_axis.get_xlim(), xlim_before)
-        assert scalar_axis.get_xlabel() == f"$x$ [{unit}]"
-        pybamm.close_plots()
-
-    def test_3d_tight_limits_and_wireframe_guard(self):
-        solution, _ = _unstructured_solution(3, 3)
-        quick_plot = pybamm.QuickPlot(solution, ["u"], variable_limits="tight")
-        quick_plot.plot(0.5)
-        quick_plot.slider_update(1.0)
-        s1, _ = quick_plot.plots[("u",)][0][0]
-        assert np.isfinite(s1).any()
-        # the colorbar follows the per-frame range of the slices
-        data = solution["u"](1.0)
-        norm = quick_plot.colorbars[("u",)].norm
-        np.testing.assert_allclose([norm.vmin, norm.vmax], [ax_min(data), ax_max(data)])
-        # the 2D wireframe overlay is a no-op on a 3D mesh (returns before drawing)
-        assert quick_plot._overlay_mesh_wireframe(None, solution["u"]) is None
+        # the field is replaced each frame while the static wireframe is kept
+        assert quick_plot._wireframes[("u",)] is wireframe
+        assert len(quick_plot.axes[0].collections) == 2
         pybamm.close_plots()
 
     def test_fixed_limits_use_cell_values(self):
@@ -249,6 +170,10 @@ class TestQuickPlotUnstructured:
     def test_vector_field_colour_limits(self):
         solution, (u_val, w_val) = _unstructured_solution(2, 4)
         quick_plot = pybamm.QuickPlot(solution, ["flux"])
+        # the default "fixed" limits span the magnitude over all times
+        np.testing.assert_allclose(
+            quick_plot.variable_limits[("flux",)], (0, np.hypot(u_val, w_val))
+        )
         quick_plot.plot(0.5)
         norm = quick_plot.plots[("flux",)][0][0].norm
         np.testing.assert_allclose([norm.vmin, norm.vmax], [0, np.hypot(u_val, w_val)])
@@ -260,9 +185,25 @@ class TestQuickPlotUnstructured:
         np.testing.assert_allclose([norm.vmin, norm.vmax], [1.0, 5.0])
         pybamm.close_plots()
 
+    def test_zero_vector_field_gets_a_usable_colour_range(self):
+        solution = _triangle_vector_solution(values=(0.0, 0.0))
+        quick_plot = pybamm.QuickPlot(solution, ["vector"])
+        # a degenerate (0, 0) range would leave every arrow the same colour
+        assert quick_plot.variable_limits[("vector",)] == (0.0, 1.0)
+        quick_plot.plot(0.5)
+        norm = quick_plot.plots[("vector",)][0][0].norm
+        np.testing.assert_allclose([norm.vmin, norm.vmax], [0.0, 1.0])
+        pybamm.close_plots()
+
     def test_quiver_colour_scale_ignores_samples_outside_domain(self):
         solution = _triangle_vector_solution()
+        # |(u, u)| with u = 1 + t peaks at 2 sqrt(2) at t = 1 for fixed limits
         quick_plot = pybamm.QuickPlot(solution, ["vector"])
+        quick_plot.plot(0.5)
+        norm = quick_plot.plots[("vector",)][0][0].norm
+        np.testing.assert_allclose(norm.vmax, 2 * np.sqrt(2))
+        # tight limits follow the frame, skipping the NaN samples off the domain
+        quick_plot = pybamm.QuickPlot(solution, ["vector"], variable_limits="tight")
         quick_plot.plot(0.5)
         grid = quick_plot._unstructured_grids[("vector",)]
         _, _, U, _ = quiver_data(solution["vector"], 0.5, grid)
@@ -271,7 +212,19 @@ class TestQuickPlotUnstructured:
         np.testing.assert_allclose(norm.vmax, 1.5 * np.sqrt(2))
         pybamm.close_plots()
 
-    def test_3d_node_centred_variable_points_to_vtk(self):
+    def test_3d_variables_are_rejected(self):
+        # 3D plotting is VTKQuickPlot's job; QuickPlot says where to go instead
+        solution, _ = _unstructured_solution(3, 3)
+        with pytest.raises(NotImplementedError, match="VTKQuickPlot"):
+            pybamm.QuickPlot(solution, ["u"])
+        with pytest.raises(NotImplementedError, match="3D vector fields"):
+            pybamm.QuickPlot(solution, ["flux"])
         solution = _node_solution()
         with pytest.raises(NotImplementedError, match="VTKQuickPlot"):
             pybamm.QuickPlot(solution, ["node field"])
+        # a structured 3D variable is not sent to VTKQuickPlot, which rejects it
+        solution._variables["structured"] = SimpleNamespace(
+            entries=np.ones(2), dimensions=3, domain=["mesh"]
+        )
+        with pytest.raises(NotImplementedError, match="3D structured"):
+            pybamm.QuickPlot(solution, ["structured"])
