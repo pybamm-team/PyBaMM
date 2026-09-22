@@ -184,6 +184,43 @@ impl CompiledFunction {
         Ok(this)
     }
 
+    /// A view sharing an already compiled `expr`, whose extent must fit in `n_states`.
+    pub(crate) fn from_shared(
+        py: Python<'_>,
+        expr: Arc<CompiledExpr>,
+        graph: Py<ExprGraph>,
+        root: NodeId,
+        n_states: usize,
+        name: Option<String>,
+    ) -> PyResult<Self> {
+        let g = graph.try_borrow(py).map_err(|_| {
+            PyValueError::new_err("from_shared: graph borrow conflict while preparing bundle view")
+        })?;
+        let extents = ReadExtents::scan(g.arena(), root);
+        // Bundle views carry the full system width, which must cover what the root reads.
+        let n_states = resolve_n_states(extents.n_states(), Some(n_states), name.as_deref())?;
+        let metadata = FunctionMetadata {
+            params: g.params().clone(),
+            n_states,
+            uses_y_dot: extents.y_dot.is_some(),
+            output_len: expr.output_len(),
+            name,
+        };
+        drop(g);
+        Ok(Self {
+            expr,
+            metadata,
+            pool: ScratchPool::default(),
+            graph,
+            root,
+            layout: None,
+            tangent_y: OnceLock::new(),
+            tangent_p: OnceLock::new(),
+            jac_y: PyOnceLock::new(),
+            jac_p: PyOnceLock::new(),
+        })
+    }
+
     /// Evaluate at one point into `out`, after checking every argument's length.
     fn eval_inner(
         &self,
