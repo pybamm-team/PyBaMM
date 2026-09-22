@@ -1,5 +1,5 @@
 #
-# Basic Doyle-Fuller-Newman (DFN) Model — 2D Unstructured FVM
+# Basic Doyle-Fuller-Newman (DFN) Model — 2D/3D Unstructured FVM
 #
 from __future__ import annotations
 
@@ -9,46 +9,52 @@ from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import
 )
 
 
-class BasicDFN2DUnstructured(BaseModel):
-    """Doyle-Fuller-Newman (DFN) model on a 2D unstructured mesh.
+class BasicDFNUnstructured(BaseModel):
+    """Doyle-Fuller-Newman (DFN) model on a 2D or 3D unstructured mesh.
 
-    Identical physics to :class:`BasicDFN2D` but uses
-    :class:`~pybamm.FiniteVolumeUnstructured` on triangle or quad elements
-    instead of the structured tensor-product grid. The through-cell direction
-    is *x* and the height direction is *z*.
+    Identical physics to :class:`BasicDFN2D` but discretised with
+    :class:`~pybamm.FiniteVolumeUnstructured`. The through-cell direction is
+    *x*, the width direction is *y* (3D only) and the height direction is *z*.
 
     Parameters
     ----------
+    dimension : int, optional
+        Number of spatial dimensions of the electrodes and separator, 2
+        (x, z; default) or 3 (x, y, z).
+    element_type : str, optional
+        Element type for the built-in mesh generator: ``"quad"`` or
+        ``"triangle"`` in 2D, ``"hexahedron"`` or ``"tetrahedron"`` in 3D.
+        Defaults to the TPFA-orthogonal ``"quad"`` / ``"hexahedron"``.
     name : str, optional
         The name of the model.
-    element_type : str, optional
-        Element type for the built-in mesh generator: ``"quad"`` (default,
-        TPFA-orthogonal) or ``"triangle"``.
-    """
 
-    _three_dimensional = False
-    _default_var_pts: dict[str, int] = {
-        "x_n": 20,
-        "x_s": 30,
-        "x_p": 20,
-        "r_p": 20,
-        "r_n": 20,
-        "z": 10,
-    }
+    Raises
+    ------
+    pybamm.OptionError
+        If ``dimension`` is not 2 or 3.
+    """
 
     def __init__(
         self,
-        name: str = "Doyle-Fuller-Newman model (2D unstructured)",
-        element_type: str = "quad",
+        dimension: int = 2,
+        element_type: str | None = None,
+        name: str | None = None,
     ):
+        if dimension not in (2, 3):
+            raise pybamm.OptionError(f"dimension must be 2 or 3, not {dimension!r}")
+        if name is None:
+            name = f"Doyle-Fuller-Newman model ({dimension}D unstructured)"
+        if element_type is None:
+            element_type = "quad" if dimension == 2 else "hexahedron"
         super().__init__(name=name)
+        self.dimension = dimension
         self._element_type = element_type
         pybamm.citations.register("Marquis2019")
 
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        axes = ["x", "y", "z"] if self._three_dimensional else ["x", "z"]
+        axes = ["x", "y", "z"] if self.dimension == 3 else ["x", "z"]
         coords_n = [
             pybamm.SpatialVariable(
                 f"{axis}_n", "negative electrode", coord_sys="cartesian"
@@ -81,7 +87,7 @@ class BasicDFN2DUnstructured(BaseModel):
 
         # A 2D slice stands for a cell of width L_y, so volume integrals are
         # scaled by the width the mesh does not resolve
-        width = 1 if self._three_dimensional else self.param.L_y
+        width = 1 if self.dimension == 3 else self.param.L_y
 
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
@@ -218,7 +224,7 @@ class BasicDFN2DUnstructured(BaseModel):
         # Multiply by L_x**2 * L_z**2 to improve conditioning
         L_scale = self.param.L_x**2 * self.param.L_z**2
         sides = ["left", "right", "top", "bottom"]
-        if self._three_dimensional:
+        if self.dimension == 3:
             sides += ["front", "back"]
         zero_flux = {side: (pybamm.Scalar(0), "Neumann") for side in sides}
         sigma_eff_n = self.param.n.sigma(sto_surf_n, T) * eps_s_n**self.param.n.b_s
@@ -330,7 +336,7 @@ class BasicDFN2DUnstructured(BaseModel):
     @property
     def default_geometry(self):
         transverse = {"z": {"min": 0, "max": self.param.L_z}}
-        if self._three_dimensional:
+        if self.dimension == 3:
             transverse = {"y": {"min": 0, "max": self.param.L_y}, **transverse}
         return {
             "negative electrode": {
@@ -389,4 +395,14 @@ class BasicDFN2DUnstructured(BaseModel):
 
     @property
     def default_var_pts(self):
-        return dict(self._default_var_pts)
+        if self.dimension == 2:
+            return {"x_n": 20, "x_s": 30, "x_p": 20, "r_n": 20, "r_p": 20, "z": 10}
+        return {
+            "x_n": 10,
+            "x_s": 10,
+            "x_p": 10,
+            "r_n": 20,
+            "r_p": 20,
+            "y": 5,
+            "z": 5,
+        }
