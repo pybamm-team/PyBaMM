@@ -1,5 +1,4 @@
 # mypy: ignore-errors
-import dataclasses
 import logging
 import numbers
 import warnings
@@ -22,6 +21,15 @@ from pybamm.solvers.observation import ObserverCache, OutputAssembly
 from pybamm.solvers.rust_lowering import RustModelLowering
 
 _UNSET = object()
+
+# The SolverStatistics fields IDAS reports; the others keep their defaults
+_IDAS_STATISTICS = (
+    "number_of_steps",
+    "number_of_linear_solver_setups",
+    "number_of_nonlinear_solver_iterations",
+    "number_of_nonlinear_solver_fails",
+    "number_of_error_test_failures",
+)
 
 
 def _state_sensitivities(yS: np.ndarray, sensitivity_names: list[str]) -> dict:
@@ -459,70 +467,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             raise pybamm.SolverError("compile must be a bool")
 
         _check_klu_pivot_tolerance(options["klu_pivot_tolerance"])
-
-    def _check_atol_type(
-        self, atol: float | list | tuple | np.ndarray, model: pybamm.BaseModel
-    ) -> np.ndarray:
-        """Widen an absolute tolerance to one value per state.
-
-        Parameters
-        ----------
-        atol : float, list, tuple or :class:`numpy.ndarray`
-            One tolerance for every state, or one per state with shape ``(n,)``
-            or ``(n, 1)``, where ``n`` is the number of states.
-        model : :class:`pybamm.BaseModel`
-            The discretised model.
-
-        Returns
-        -------
-        :class:`numpy.ndarray`
-            Float64 tolerances with shape ``(n,)``.
-
-        Raises
-        ------
-        :class:`pybamm.SolverError`
-            If ``atol`` is not a real number, or a list, tuple or array of real
-            numbers with one value per state.
-        """
-        number_of_states = model.len_rhs_and_alg
-        if isinstance(atol, bool) or not isinstance(
-            atol, numbers.Real | list | tuple | np.ndarray
-        ):
-            raise pybamm.SolverError(
-                "Absolute tolerances must be a float, or a list, tuple or array "
-                f"of floats with one value per state, not {type(atol).__name__}"
-            )
-        if isinstance(atol, numbers.Real):
-            return np.full(number_of_states, float(atol))
-
-        try:
-            values = np.asarray(atol)
-        except ValueError as error:
-            raise pybamm.SolverError(
-                "Absolute tolerances must be a flat list, tuple or array"
-            ) from error
-        # NumPy upcasts a bool beside numbers to 1.0 or 0.0, losing it
-        if isinstance(atol, list | tuple) and any(
-            isinstance(value, bool | np.bool_)
-            for value in np.asarray(atol, dtype=object).ravel()
-        ):
-            raise pybamm.SolverError(
-                "Absolute tolerances must be real numbers, not booleans"
-            )
-        # Bool and complex arrays would otherwise cast to float silently
-        if values.dtype.kind not in "iuf":
-            raise pybamm.SolverError(
-                "Absolute tolerances must be real numbers, not an array of "
-                f"dtype {values.dtype}"
-            )
-        if values.ndim == 0:
-            return np.full(number_of_states, float(values))
-        if values.shape not in ((number_of_states,), (number_of_states, 1)):
-            raise pybamm.SolverError(
-                f"Absolute tolerances have shape {values.shape} but "
-                f"({number_of_states},) was expected (one value per state)"
-            )
-        return np.ascontiguousarray(values.ravel(), dtype=np.float64)
 
     def _set_up_rust(self, model, inputs_dict, y0):
         """Set up solver with Rust evaluation backend."""
@@ -1035,11 +979,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def _internal_initialisation(self) -> bool:
         return bool(self._options["calc_ic"])
 
-    def _check_event_violation_on_initialisation(self, *args, **kwargs):
-        if self._internal_initialisation:
-            return
-        return self._check_event_violation(*args, **kwargs)
-
     def _check_event_violation_post_solve(self, *args, **kwargs):
         if not self._internal_initialisation:
             return
@@ -1155,10 +1094,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         newsol.integration_time = integration_time
         newsol.solver_statistics = pybamm.SolverStatistics(
-            **{
-                field.name: getattr(sol.stats, field.name)
-                for field in dataclasses.fields(pybamm.SolverStatistics)
-            }
+            **{name: getattr(sol.stats, name) for name in _IDAS_STATISTICS}
         )
         if not save_outputs_only:
             return newsol

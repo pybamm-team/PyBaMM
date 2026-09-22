@@ -66,8 +66,8 @@ pub struct CompiledModel {
     /// Scratch for the direct `eval_*`/`assemble_*` helpers, bound on first use.
     scratch: Option<core_model::Workspace>,
     /// Retained derivation source for the bundle views and `PreparedSolver`.
-    graph: Py<ExprGraph>,
-    rhs_root: NodeId,
+    pub(crate) graph: Py<ExprGraph>,
+    pub(crate) rhs_root: NodeId,
     output_roots: Vec<NodeId>,
     event_roots: Vec<NodeId>,
     /// The algebraic block's root and its strictly-ascending global state indices.

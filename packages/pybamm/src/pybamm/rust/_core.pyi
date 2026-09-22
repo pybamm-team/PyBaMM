@@ -14,6 +14,11 @@ __all__ = [
     "EvaluatorPool",
     "Expr",
     "ExprGraph",
+    "PreparedSolver",
+    "SolveOutcome",
+    "SolverStatistics",
+    "_pool_ids",
+    "default_solver_options",
 ]
 
 _FloatArray: TypeAlias = npt.NDArray[np.float64]
@@ -24,6 +29,25 @@ _IntSequence: TypeAlias = Sequence[int] | npt.NDArray[np.integer]
 _TimeGrid: TypeAlias = (
     Sequence[float] | npt.NDArray[np.floating] | npt.NDArray[np.integer]
 )
+
+class _SolverOptions(TypedDict):
+    """Integrator tuning dict; every key is required (defaults live Python-side)."""
+
+    max_nonlinear_solver_iterations: int
+    max_error_test_failures: int
+    max_nonlinear_solver_failures: int
+    nonlinear_solver_tolerance: float
+    min_timestep: float
+    max_timestep_growth: float | None
+    min_timestep_growth: float | None
+    max_timestep_shrink: float | None
+    min_timestep_shrink: float | None
+    update_jacobian_after_steps: int
+    update_rhs_jacobian_after_steps: int
+    threshold_to_update_jacobian: float
+    threshold_to_update_rhs_jacobian: float
+    pi_control_proportional: float
+    pi_control_integral: float
 
 class _JacobianStats(TypedDict):
     """Assembly stats returned by :meth:`CompiledModel.jacobian_stats`."""
@@ -506,3 +530,130 @@ class EvaluatorPool:
         """Address of evaluator ``index``, handed out once; the pool must outlive it."""
 
     def __len__(self) -> int: ...
+
+@final
+class SolverStatistics:
+    """BDF solver statistics for one solve."""
+
+    @property
+    def number_of_steps(self) -> int: ...
+    @property
+    def number_of_linear_solver_setups(self) -> int: ...
+    @property
+    def number_of_nonlinear_solver_iterations(self) -> int: ...
+    @property
+    def number_of_nonlinear_solver_fails(self) -> int: ...
+    @property
+    def number_of_error_test_failures(self) -> int: ...
+    @property
+    def number_of_linear_solver_setups_from_checkpoint(self) -> int: ...
+    @property
+    def number_of_linear_solver_setups_from_first_convergence_fail(self) -> int: ...
+    @property
+    def number_of_linear_solver_setups_from_second_convergence_fail(self) -> int: ...
+    @property
+    def number_of_linear_solver_setups_from_error_test_fail(self) -> int: ...
+    @property
+    def number_of_linear_solver_setups_from_step_success(self) -> int: ...
+    @property
+    def problem_setup_time_secs(self) -> float: ...
+    @property
+    def ic_time_secs(self) -> float: ...
+    @property
+    def solver_setup_time_secs(self) -> float: ...
+    @property
+    def integration_time_secs(self) -> float: ...
+    @property
+    def sens_error_control_relaxed(self) -> bool: ...
+
+@final
+class SolveOutcome:
+    """What one diffsol solve returns, whichever payloads it was asked for."""
+
+    @property
+    def flag(self) -> int:
+        """0 = success, 1 = root found."""
+
+    @property
+    def t_event(self) -> float | None: ...
+    @property
+    def statistics(self) -> SolverStatistics: ...
+    @property
+    def t(self) -> _FloatArray: ...
+    @property
+    def y(self) -> _FloatArray:
+        """Trajectory ``(n_rows, n_times)`` of states, or of outputs when requested."""
+
+    @property
+    def yp(self) -> _FloatArray | None:
+        """Row derivatives ``(n_rows, n_times)``, or ``None`` without ``store_yp`` or for outputs."""
+
+    @property
+    def yS(self) -> list[_FloatArray] | None:
+        """Per-parameter sensitivities in the flat layout of ``y``, or ``None``."""
+
+    @property
+    def y_event(self) -> _FloatArray | None:
+        """The full state where the trajectory ends, never an outputs row."""
+
+    @property
+    def y_start(self) -> _FloatArray:
+        """The full state after the initial-condition solve, never an outputs row."""
+
+    @property
+    def yS_start(self) -> list[_FloatArray] | None:
+        """Per-parameter state sensitivities at ``y_start``, or ``None``."""
+
+    @property
+    def yS_event(self) -> list[_FloatArray] | None:
+        """Per-parameter state sensitivities at ``y_event``, or ``None``."""
+
+@final
+class PreparedSolver:
+    """Prepare-once/execute-many diffsol solver for repeated integrations."""
+
+    def __new__(
+        cls,
+        model: CompiledModel,
+        rtol: float = 1e-6,
+        atol: float | _FloatArray = ...,
+        sens_atol_factor: float = 1.0,
+        options: _SolverOptions | None = None,
+        store_yp: bool = False,
+    ) -> PreparedSolver: ...
+    def solve(
+        self,
+        t_eval: _FloatArray,
+        t_stop: _FloatArray,
+        y0: _FloatArray,
+        inputs: _FloatArray,
+        *,
+        outputs: bool = False,
+        sensitivities: bool = False,
+        y0_sens: _FloatArray | None = None,
+        num_threads: int = 1,
+    ) -> SolveOutcome:
+        """Integrate over ``t_eval``, landing exactly on each ``t_stop``.
+
+        ``num_threads`` workers of the shared pool factorise the sparse LU.
+        """
+
+    def solve_batch(
+        self,
+        t_eval: _FloatArray,
+        t_stop: _FloatArray,
+        y0: _FloatArray,
+        inputs: _FloatArray,
+        num_threads: int,
+        *,
+        outputs: bool = False,
+        sensitivities: bool = False,
+        y0_sens: _FloatArray | None = None,
+    ) -> list[SolveOutcome | Exception]:
+        """Solve one row per set; a failed set yields its exception, unraised."""
+
+def default_solver_options() -> _SolverOptions:
+    """Diffsol's own integrator defaults, the dict PyBaMM overlays onto."""
+
+def _pool_ids() -> dict[int, int]:
+    """Cached rayon pools as ``{thread_count: pool identity}`` (test introspection)."""

@@ -26,6 +26,7 @@ def _native_idaklu(native=True):
 
 SOLVERS = [
     ("idaklu", pybamm.IDAKLUSolver, {}),
+    ("diffsol", pybamm.DiffsolSolver, {}),
 ]
 NATIVE_IDS = [s[0] for s in SOLVERS]
 
@@ -185,6 +186,46 @@ def test_experiment_parity():
     )
 
 
+def test_diffsol_native_by_default():
+    t_eval = np.linspace(0, 3600, 51)
+
+    model = pybamm.lithium_ion.SPM()
+    sim = pybamm.Simulation(model, solver=pybamm.DiffsolSolver())
+    sol = sim.solve(t_eval=t_eval)
+    assert _native_caches(sol) is not None
+
+    # Cross-solver comparison at default tolerances, hence rtol=1e-4.
+    cmodel = pybamm.lithium_ion.SPM()
+    cmodel.convert_to_format = "casadi"
+    csim = pybamm.Simulation(cmodel, solver=pybamm.IDAKLUSolver())
+    csol = csim.solve(t_eval=t_eval, t_interp=t_eval)
+    np.testing.assert_allclose(
+        sol["Terminal voltage [V]"].entries,
+        csol["Terminal voltage [V]"].entries,
+        rtol=1e-4,
+        atol=1e-6,
+    )
+
+
+def test_diffsol_does_not_build_casadi_observation(monkeypatch):
+    import pybamm.solvers.solution as solution_mod
+
+    model = pybamm.lithium_ion.SPM()
+    sim = pybamm.Simulation(model, solver=pybamm.DiffsolSolver())
+    sol = sim.solve([0, 600])
+
+    called = {"casadi": False}
+    orig = solution_mod.Solution._convert_to_casadi
+
+    def spy(self, *a, **k):
+        called["casadi"] = True
+        return orig(self, *a, **k)
+
+    monkeypatch.setattr(solution_mod.Solution, "_convert_to_casadi", spy)
+    _ = sol["Terminal voltage [V]"]
+    assert called["casadi"] is False
+
+
 def test_multistep_time_integral_parity():
     # A time integral over a multi-segment solution integrates once, not per segment.
     def _build(native):
@@ -282,7 +323,7 @@ def test_native_observation_nonfloat_input_parity(input_val):
     )
 
 
-@pytest.mark.parametrize("solver_cls", [pybamm.IDAKLUSolver])
+@pytest.mark.parametrize("solver_cls", [pybamm.IDAKLUSolver, pybamm.DiffsolSolver])
 def test_dense_trajectory_parity(solver_cls):
     t_interp = np.linspace(0, 3600, 500)
 

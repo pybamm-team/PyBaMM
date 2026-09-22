@@ -1,4 +1,3 @@
-import dataclasses
 import io
 import itertools
 import json
@@ -2106,6 +2105,21 @@ class TestIDAKLUSolver:
         for a, b in zip(before, after, strict=True):
             np.testing.assert_array_equal(a, b)
 
+    def test_rust_diffsol_event_termination(self):
+        params = pybamm.ParameterValues("Chen2020")
+        params["Lower voltage cut-off [V]"] = 3.5
+        model = pybamm.lithium_ion.SPMe()
+        model.convert_to_format = "rust"
+        sim = pybamm.Simulation(
+            model, parameter_values=params, solver=pybamm.DiffsolSolver()
+        )
+        sol = sim.solve(np.linspace(0, 3600, 100))
+        assert sol.termination.startswith("event:"), (
+            f"expected diffsol root-finding to terminate on an event, "
+            f"got {sol.termination!r}"
+        )
+        assert float(sol.t[-1]) < 3600.0
+
     def test_simulation_period(self):
         model = pybamm.lithium_ion.DFN()
         parameter_values = pybamm.ParameterValues("Chen2020")
@@ -3591,7 +3605,11 @@ class TestIDAKLUSolverStatistics:
                 "Number of error test failures"
             ),
         )
-        assert all(count > 0 for count in dataclasses.astuple(stats))
+        # Only the fields IDAS reports; the diffsol-only ones stay at zero
+        assert all(
+            getattr(stats, name) > 0
+            for name in pybamm.solvers.idaklu_solver._IDAS_STATISTICS
+        )
         assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
 
     def test_statistics_accumulate_across_a_breakpoint(self, decay_model):

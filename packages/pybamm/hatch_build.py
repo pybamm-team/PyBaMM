@@ -12,7 +12,7 @@ from pathlib import Path
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 # One wheel per platform for CPython 3.10-3.14, at a small per-FFI-call cost.
-FEATURES = "pyo3/abi3-py310"
+FEATURES = "pyo3/abi3-py310,diffsol"
 
 CRATE_MANIFEST = Path("pybamm-python") / "Cargo.toml"
 DESTINATION = Path("src") / "pybamm" / "rust"
