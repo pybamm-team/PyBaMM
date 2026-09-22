@@ -1074,7 +1074,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
         inputs_dict = inputs_dict or {}
         if model.uses_stacked_inputs:
-            input_eval = stack_inputs(inputs_dict)
+            input_eval = stack_inputs(inputs_dict, model.convert_to_format)
         else:
             input_eval = inputs_dict
 

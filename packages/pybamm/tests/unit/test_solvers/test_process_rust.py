@@ -1,8 +1,11 @@
+import logging
+
 import numpy as np
 import pytest
 import scipy.sparse
 
 import pybamm
+from tests import get_discretisation_for_testing
 
 casadi = pytest.importorskip("casadi")
 
@@ -159,6 +162,25 @@ class TestTrajectoryFFILooseDtypes:
             np.testing.assert_allclose(np.asarray(out), np.asarray(expected))
 
 
+class TestDenseMatrixToRust:
+    def test_dense_matrix_matmul_to_rust(self):
+        from pybamm.rust import ExprGraph
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        A = np.arange(6.0).reshape(2, 3)
+        y = pybamm.StateVector(slice(0, 3))
+        expr = pybamm.Matrix(A) @ y
+        graph = ExprGraph()
+        cf = graph.compile(expr.to_rust(graph, {}), name="f", n_states=3)
+        yv = np.array([1.0, 2.0, 3.0])
+        np.testing.assert_allclose(
+            np.asarray(cf(0.0, yv, np.array([]))).ravel(), A @ yv
+        )
+        # Jacobian path: d(A @ y)/dy == A.
+        ev = RustEvaluator(cf, "jac")
+        np.testing.assert_allclose(ev(0.0, yv, np.array([])).toarray(), A)
+
+
 class TestMatMulLhsValidation:
     def test_matmul_non_constant_lhs_raises_clean_error(self):
         from pybamm.rust import ExprGraph
@@ -191,6 +213,268 @@ class TestExpressionShapeValidation:
 
         with pytest.raises(ValueError, match=r"incompatible operand widths 2 and 3"):
             graph.compile(invalid, name="invalid", n_states=5)
+
+
+class TestRustEvaluatorWrappers:
+    def _cf(self):
+        from pybamm.rust import ExprGraph
+
+        graph = ExprGraph()
+        a = graph.input_parameter("a")
+        y0 = graph.state_vector(0, 1)
+        y1 = graph.state_vector(1, 2)
+        expr = graph.concat([y0 * a - y1, y0 + y1 * y1])
+        return graph.compile(expr, name="rhs", n_states=2)
+
+    def test_func_returns_column(self):
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        cf = self._cf()
+        out = RustEvaluator(cf, "func")(0.0, np.array([[1.5], [-2.0]]), np.array([3.0]))
+        assert out.shape == (2, 1)
+        np.testing.assert_allclose(out.ravel(), [6.5, 5.5])
+
+    def test_jac_returns_scipy_csc(self):
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        cf = self._cf()
+        jac = RustEvaluator(cf, "jac")(0.0, np.array([1.5, -2.0]), np.array([3.0]))
+        assert scipy.sparse.issparse(jac)
+        np.testing.assert_allclose(jac.toarray(), [[3.0, -1.0], [1.0, -4.0]])
+
+    def test_jac_action_matches_jac_matvec(self):
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        cf = self._cf()
+        y, p, v = np.array([1.5, -2.0]), np.array([3.0]), np.array([0.3, 0.7])
+        jv = RustEvaluator(cf, "jac_action")(0.0, y, p, v)
+        full = RustEvaluator(cf, "jac")(0.0, y, p).toarray() @ v
+        np.testing.assert_allclose(jv.ravel(), full)
+
+    def test_jacp_tuple_per_param(self):
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        cf = self._cf()
+        out = RustEvaluator(cf, "jacp", sens_indices=[0])(
+            0.0, np.array([1.5, -2.0]), np.array([3.0])
+        )
+        assert isinstance(out, tuple) and len(out) == 1
+        np.testing.assert_allclose(out[0].ravel(), [1.5, 0.0])
+
+    def test_jacobian_is_derived_lazily(self):
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        cf = self._cf()
+        ev = RustEvaluator(cf, "jac")
+        assert ev._jac is None
+        ev(0.0, np.array([1.5, -2.0]), np.array([3.0]))
+        assert ev._jac is not None
+
+    def test_func_accepts_eval_only(self):
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        cf = self._cf()
+        out = RustEvaluator(cf, "func")(0.0, np.array([1.5, -2.0]), np.array([3.0]))
+        assert out.shape == (2, 1)
+        np.testing.assert_allclose(out.ravel(), [6.5, 5.5])
+
+
+def _jacp_as_list(result):
+    """Normalise a jacp result to a list of 1-D arrays (casadi returns a bare DM)."""
+    if isinstance(result, casadi.DM):
+        result = (result,)
+    return [np.asarray(j).ravel() for j in result]
+
+
+def _toy_dae(convert_to_format):
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    v = pybamm.Variable("v")
+    a = pybamm.InputParameter("a")
+    model.rhs = {u: -2 * u + a * v}
+    model.algebraic = {v: 2 * u - v}
+    model.initial_conditions = {u: 1.0, v: 2.0}
+    model.events = [pybamm.Event("u-0.05", u - 0.05)]
+    model.variables = {"u": u, "v": v}
+    disc = pybamm.Discretisation()
+    disc.process_model(model)
+    model.convert_to_format = convert_to_format
+    return model
+
+
+class TestProcessRustParity:
+    @pytest.fixture
+    def pair(self):
+        from pybamm.solvers.base_solver import BaseSolver
+
+        inputs = {"a": 0.5}
+        out = {}
+        for fmt in ("casadi", "rust"):
+            model = _toy_dae(fmt)
+            model.calculate_sensitivities = ["a"]
+            vars_ = BaseSolver._get_vars_for_processing(model, inputs)
+            rhs_alg = pybamm.numpy_concatenation(
+                model.concatenated_rhs, model.concatenated_algebraic
+            )
+            out[fmt] = (model, vars_, rhs_alg)
+        return out
+
+    def _stack(self, fmt, inputs):
+        if fmt == "casadi":
+            return casadi.vertcat(*inputs.values())
+        return np.array(list(inputs.values()), dtype=np.float64)
+
+    def test_rhs_algebraic_func_jac_action_jacp(self, pair):
+        from pybamm.solvers.base_solver import process
+
+        t, y, inputs = 0.3, np.array([1.1, 0.4]), {"a": 0.5}
+        results = {}
+        for fmt, (_model, vars_, rhs_alg) in pair.items():
+            func, jac, jacp, jac_action = process(rhs_alg, "rhs_algebraic", vars_)
+            p = self._stack(fmt, inputs)
+            jac_mat = jac(t, y, p)
+            results[fmt] = {
+                "f": np.asarray(func(t, y, p)).ravel(),
+                "jac": np.asarray(
+                    jac_mat.toarray() if hasattr(jac_mat, "toarray") else jac_mat
+                ),
+                "jv": np.asarray(jac_action(t, y, p, np.array([0.2, -0.3]))).ravel(),
+                "jacp": _jacp_as_list(jacp(t, y, p)),
+            }
+        for key in ("f", "jac", "jv"):
+            np.testing.assert_allclose(
+                results["rust"][key], results["casadi"][key], rtol=1e-12, atol=1e-14
+            )
+        for r, c in zip(
+            results["rust"]["jacp"], results["casadi"]["jacp"], strict=True
+        ):
+            np.testing.assert_allclose(r, c, rtol=1e-12, atol=1e-14)
+
+    def test_event_and_ic_eval_only(self, pair):
+        from pybamm.solvers.base_solver import process
+
+        t, y, inputs = 0.0, np.array([1.0, 2.0]), {"a": 0.5}
+        vals = {}
+        for fmt, (model, vars_, _) in pair.items():
+            ev = process(
+                model.events[0].expression, "event_0", vars_, use_jacobian=False
+            )[0]
+            ic = process(
+                model.concatenated_initial_conditions,
+                "initial_conditions",
+                vars_,
+                use_jacobian=False,
+            )[0]
+            p = self._stack(fmt, inputs)
+            vals[fmt] = (
+                float(np.asarray(ev(t, y, p)).item()),
+                np.asarray(ic(t, np.zeros((2, 1)), p)).ravel(),
+            )
+        assert vals["rust"][0] == pytest.approx(vals["casadi"][0], rel=1e-12)
+        np.testing.assert_allclose(vals["rust"][1], vals["casadi"][1], rtol=1e-12)
+
+    def test_rectangular_group_jacobian_matches_casadi(self, pair):
+        from pybamm.solvers.base_solver import process
+
+        t, y = 0.3, np.array([1.1, 0.4])
+        mats = {}
+        for fmt, (model, vars_, _) in pair.items():
+            _, jac, _, jac_action = process(model.concatenated_rhs, "RHS", vars_)
+            assert jac is not None and jac_action is not None
+            p = self._stack(fmt, inputs={"a": 0.5})
+            jm = jac(t, y, p)
+            mats[fmt] = np.asarray(jm.toarray() if hasattr(jm, "toarray") else jm)
+        np.testing.assert_allclose(mats["rust"], mats["casadi"], rtol=1e-12, atol=1e-14)
+
+
+class TestProcessRustDuplication:
+    def test_lazy_jac_not_built_for_uncalled_groups(self):
+        from pybamm.solvers.base_solver import BaseSolver, process
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        model = _toy_dae("rust")
+        model.calculate_sensitivities = []
+        vars_ = BaseSolver._get_vars_for_processing(model, {"a": 0.5})
+        _, jac, _, jac_action = process(model.concatenated_rhs, "RHS", vars_)
+        assert (
+            isinstance(jac, RustEvaluator)
+            and jac._jac is None
+            and jac_action is not None
+        )
+
+
+class TestStackedInputPredicate:
+    def test_stack_inputs_rust_is_ndarray(self):
+        from pybamm.solvers.base_solver import stack_inputs
+
+        out = stack_inputs({"a": 1.0, "b": np.array([2.0, 3.0])}, "rust")
+        np.testing.assert_allclose(out, [1.0, 2.0, 3.0])
+        assert stack_inputs({}, "rust").size == 0
+
+    def test_set_initial_conditions_and_event_check_rust(self):
+        from pybamm.solvers.base_solver import BaseSolver
+
+        class _DaeSolver(BaseSolver):
+            def _run(self, *a, **kw):  # pragma: no cover
+                raise NotImplementedError
+
+        model = _toy_dae("rust")
+        solver = _DaeSolver()
+        solver.set_up(model, inputs=[{"a": 0.5}], ics_only=True)
+        y0 = np.asarray(model.y0_list[0]).ravel()
+        np.testing.assert_allclose(y0, [1.0, 2.0])
+        model.terminate_events_eval = []
+        solver._check_event_violation([0.0], model, y0, {"a": 0.5})
+
+
+class TestRustSolverGuards:
+    def test_casadi_solver_converts_rust_model_with_a_warning(self, caplog):
+        model = _toy_dae("rust")
+        with caplog.at_level(logging.WARNING, logger=pybamm.logger.name):
+            pybamm.CasadiSolver()._check_and_prepare_model_inplace(model)
+        assert model.convert_to_format == "casadi"
+        assert "Converting" in caplog.text
+
+    def test_casadi_root_method_switches_to_rust_newton(self):
+        class _DaeSolver(pybamm.BaseSolver):
+            def _run(self, *a, **kw):  # pragma: no cover
+                raise NotImplementedError
+
+        model = _toy_dae("rust")
+        solver = _DaeSolver()
+        solver.root_method = "casadi"
+        solver._check_and_prepare_model_inplace(model)
+        assert isinstance(solver.root_method, pybamm.NonlinearSolver)
+        assert model.convert_to_format == "rust"  # never silently forced
+
+
+class TestRustAlgebraicMinimize:
+    def test_minimize_converges_on_rust_model(self):
+        # jac_norm's broadcasting must hold for numpy jacobians as well as casadi DM.
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.algebraic = {var1: var1 - 3, var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(4)}
+        model.variables = {"var1": var1, "var2": var2}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+        model.convert_to_format = "rust"
+
+        solution = pybamm.AlgebraicSolver("minimize", tol=1e-8).solve(model)
+        np.testing.assert_allclose(
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
+            3,
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            model.get_processed_variable("var2").evaluate(t=None, y=solution.y),
+            6,
+            rtol=1e-7,
+            atol=1e-6,
+        )
 
 
 class TestVectorWidthInputParameter:
@@ -359,3 +643,17 @@ class TestPickle:
         mm = graph.matmul(graph.state_vector(0, 2), graph.state_vector(0, 2))
         with pytest.raises(NotImplementedError, match=r"MatMul left operand"):
             CompiledFunction._rebuild(graph, mm.id, None, None)
+
+    def test_rust_evaluator_pickle_rederives_jacobian(self):
+        import pickle
+
+        from pybamm.rust import ExprGraph
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        graph = ExprGraph()
+        expr = (3 * pybamm.StateVector(slice(0, 2))).to_rust(graph, {})
+        ev = RustEvaluator(graph.compile(expr, name="f", n_states=2), "jac")
+        y, p = np.array([1.0, 2.0]), np.array([])
+        expected = ev(0.0, y, p).toarray()  # populates the _jac cache
+        ev2 = pickle.loads(pickle.dumps(ev))
+        np.testing.assert_allclose(ev2(0.0, y, p).toarray(), expected)

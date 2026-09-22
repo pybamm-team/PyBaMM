@@ -92,7 +92,7 @@ class BaseModel:
     """
 
     _DEFAULT_CONVERT_TO_FORMAT = "casadi"
-    _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax")
+    _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax", "rust")
 
     def __init__(self, name="Unnamed model"):
         self.name = name
@@ -240,6 +240,7 @@ class BaseModel:
             - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
             - "casadi": convert to CasADi expression tree for Jacobian calculation.
             - "jax": convert to JAX expression tree.
+            - "rust": convert to a compiled Rust expression graph.
 
         Default is "casadi". ``None`` is deprecated: it evaluates as "python" and
         raises a ``DeprecationWarning`` when set.
@@ -266,8 +267,8 @@ class BaseModel:
     @property
     def uses_stacked_inputs(self) -> bool:
         """Whether the converted evaluators take the inputs stacked into one
-        column vector rather than as a dict."""
-        return self._convert_to_format == "casadi"
+        vector (a CasADi column, or a flat array for "rust") rather than as a dict."""
+        return self._convert_to_format in ("casadi", "rust")
 
     @property
     def rhs(self):

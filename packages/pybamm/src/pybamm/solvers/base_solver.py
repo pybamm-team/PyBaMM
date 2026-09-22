@@ -410,7 +410,7 @@ class BaseSolver:
         model.y0S_list = [] if model.jacp_initial_conditions_eval is not None else None
         for ipts in inputs:
             if stacked:
-                inputs_y0_ics = stack_inputs(ipts)
+                inputs_y0_ics = stack_inputs(ipts, model.convert_to_format)
             else:
                 inputs_y0_ics = ipts
 
@@ -493,19 +493,23 @@ class BaseSolver:
 
         if (
             isinstance(self, pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver)
-        ) and model.convert_to_format != "casadi":
+            and model.convert_to_format != "casadi"
+        ):
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for solving with CasADi solver"
             )
             model.convert_to_format = "casadi"
-        if (
-            isinstance(self.root_method, pybamm.CasadiAlgebraicSolver)
-            and model.convert_to_format != "casadi"
-        ):
-            pybamm.logger.warning(
-                f"Converting {model.name} to CasADi for calculating ICs with CasADi"
-            )
-            model.convert_to_format = "casadi"
+        if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver):
+            if model.convert_to_format == "rust":
+                pybamm.logger.warning(
+                    f"Switching root method to NonlinearSolver for rust model {model.name}"
+                )
+                self.root_method = "nonlinear_solver"
+            elif model.convert_to_format != "casadi":
+                pybamm.logger.warning(
+                    f"Converting {model.name} to CasADi for calculating ICs with CasADi"
+                )
+                model.convert_to_format = "casadi"
 
     @staticmethod
     def _get_vars_for_processing(model, inputs: dict):
@@ -513,7 +517,11 @@ class BaseSolver:
             "model": model,
         }
 
-        if model.convert_to_format != "casadi":
+        if model.convert_to_format == "rust":
+            vars_for_processing.update({"input_names": list(inputs.keys())})
+            return vars_for_processing
+
+        elif model.convert_to_format != "casadi":
             # Create Jacobian from concatenated rhs and algebraic
             y = pybamm.StateVector(slice(0, model.len_rhs_and_alg))
             # set up Jacobian object, for re-use of dict
@@ -1224,7 +1232,7 @@ class BaseSolver:
 
         inputs = inputs_dict
         if model.uses_stacked_inputs:
-            inputs = stack_inputs(inputs_dict)
+            inputs = stack_inputs(inputs_dict, model.convert_to_format)
 
         events_eval = np.empty(num_terminate_events)
         for idx, event in enumerate(model.terminate_events_eval):
@@ -1900,6 +1908,31 @@ class BaseSolver:
         return ordered_inputs
 
 
+def rust_input_parameter_widths(model: pybamm.BaseModel) -> dict[str, int]:
+    """Map each input parameter name to its packed width for the Rust backend."""
+    return {ip.name: ip._expected_size or 1 for ip in model.input_parameters}
+
+
+def validate_rust_sensitivity_widths(
+    model: pybamm.BaseModel, calculate_sensitivities: list[str]
+) -> None:
+    """Reject sensitivity requests for vector-width inputs on the Rust backend."""
+    widths = rust_input_parameter_widths(model)
+    wide_params = sorted(
+        name for name in calculate_sensitivities if widths.get(name, 1) > 1
+    )
+    if wide_params:
+        raise pybamm.SolverError(
+            "convert_to_format='rust' sensitivities are not supported "
+            f"for vector-width input parameters: {wide_params}. The Rust "
+            "backend's tangent/JVP machinery assumes one scalar direction "
+            "per named parameter, so seeding a sensitivity direction for "
+            "a vector input would silently compute the wrong derivative. "
+            "Use convert_to_format='casadi' for sensitivities with "
+            "respect to these inputs."
+        )
+
+
 def flatten_inputs(inputs_dict: dict) -> npt.NDArray[np.float64]:
     """Flatten ``{name: value}`` into one 1D array.
 
@@ -1926,19 +1959,26 @@ def flatten_inputs(inputs_dict: dict) -> npt.NDArray[np.float64]:
     )
 
 
-def stack_inputs(inputs_dict: dict) -> casadi.DM:
+def stack_inputs(
+    inputs_dict: dict, convert_to_format: str
+) -> casadi.DM | npt.NDArray[np.float64]:
     """Stack ``{name: value}`` into one column vector, in dict-key order.
 
     Parameters
     ----------
     inputs_dict : dict
         Input values for one input set.
+    convert_to_format : str
+        The format of the evaluators the vector is for.
 
     Returns
     -------
-    :class:`casadi.DM`
-        Column vector of the input values, with zero rows for an empty dict.
+    :class:`casadi.DM` or numpy.ndarray
+        The input values, with zero rows for an empty dict: a flat numpy array
+        for ``"rust"``, and a column :class:`casadi.DM` otherwise.
     """
+    if convert_to_format == "rust":
+        return flatten_inputs(inputs_dict)
     return casadi.vertcat(*inputs_dict.values())
 
 
@@ -1964,25 +2004,29 @@ def process(
     -------
     func: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJax` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for the function $f(y, t, p)$ given by `symbol`
 
     jac: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxJacobian` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for the Jacobian $\\frac{\\partial f}{\\partial y}$
         of the function given by `symbol`
 
     jacp: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxSensitivities` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for the parameter sensitivities
         $\frac{\\partial f}{\\partial p}$
         of the function given by `symbol`
 
     jac_action: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJax` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for product of the Jacobian with a vector $v$,
         i.e. $\\frac{\\partial f}{\\partial y} * v$
     """
@@ -2011,6 +2055,49 @@ def process(
             report(f"Calculating jacobian for {name} using jax")
             jac = func.get_jacobian()
             jac_action = func.get_jacobian_action()
+        else:
+            jac = None
+            jac_action = None
+
+    elif model.convert_to_format == "rust":
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+        from pybamm.solvers.rust_lowering import rust_graph_with_inputs
+
+        report(f"Converting {name} to Rust")
+        input_names = vars_for_processing["input_names"]
+
+        graph = rust_graph_with_inputs(model, input_names)
+        rust_expr = symbol.to_rust(graph, {})
+
+        # Full system width, so rectangular sub-groups differentiate wrt all states
+        cf = graph.compile(rust_expr, name=name, n_states=model.len_rhs_and_alg)
+        if return_jacp_stacked:
+            raise pybamm.SolverError(
+                "return_jacp_stacked is not supported for convert_to_format='rust'. "
+                "Use the per-parameter tuple returned by jacp instead."
+            )
+
+        func = RustEvaluator(cf, "func")
+
+        if model.calculate_sensitivities:
+            report(
+                f"Calculating sensitivities for {name} with respect "
+                f"to parameters {model.calculate_sensitivities} using Rust"
+            )
+            # The graph's registry numbers the parameters; `input_names` only filters
+            sens_indices = []
+            for p in model.calculate_sensitivities:
+                index = graph.input_index(p)
+                if index is not None and p in input_names:
+                    sens_indices.append(index)
+            jacp = RustEvaluator(cf, "jacp", sens_indices=sens_indices)
+        else:
+            jacp = None
+
+        if use_jacobian:
+            report(f"Calculating jacobian for {name} using Rust")
+            jac = RustEvaluator(cf, "jac")
+            jac_action = RustEvaluator(cf, "jac_action")
         else:
             jac = None
             jac_action = None

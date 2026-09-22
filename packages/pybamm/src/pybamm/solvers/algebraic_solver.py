@@ -107,7 +107,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
         """
         inputs_dict = inputs_dict or {}
         if model.uses_stacked_inputs:
-            inputs = stack_inputs(inputs_dict)
+            inputs = stack_inputs(inputs_dict, model.convert_to_format)
         else:
             inputs = inputs_dict
 

@@ -5,7 +5,7 @@ PyBaMM's other backends. Python hands over a discretised model as an expression 
 this workspace turns it into flat instruction tapes it can evaluate, differentiate and
 solve.
 
-Python reaches it through `pybamm.rust`.
+Models opt in with `model.convert_to_format = "rust"`.
 
 ## Layout
 
