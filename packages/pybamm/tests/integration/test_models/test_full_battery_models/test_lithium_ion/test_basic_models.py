@@ -139,19 +139,39 @@ class TestElectrolyteConservation:
         ],
         ids=["2d_unstructured", "3d_unstructured"],
     )
-    def test_basic_dfn_unstructured(self, model):
+    @pytest.mark.parametrize(
+        "graded", [False, True], ids=["uniform_loading", "graded_loading"]
+    )
+    def test_basic_dfn_unstructured(self, model, graded):
         model.variables["Total lithium inventory [mol]"] = (
             model.variables["Total lithium [mol]"]
             + model.variables["Total solid lithium [mol]"]
         )
         parameter_values = pybamm.ParameterValues("ORegan2022")
+        if graded:
+            L_n = parameter_values["Negative electrode thickness [m]"]
+            L_s = parameter_values["Separator thickness [m]"]
+            L_p = parameter_values["Positive electrode thickness [m]"]
+            for domain, x_min, thickness in [
+                ("Negative", 0, L_n),
+                ("Positive", L_n + L_s, L_p),
+            ]:
+                name = f"{domain} electrode active material volume fraction"
+                mean = parameter_values[name]
+
+                # +/-10% linear grading through the electrode thickness
+                def graded_fraction(x, *_, mean=mean, x_min=x_min, thickness=thickness):
+                    return mean * (0.9 + 0.2 * (x - x_min) / thickness)
+
+                parameter_values[name] = graded_fraction
         sim = pybamm.Simulation(
             model,
             parameter_values=parameter_values,
             var_pts=coarse_unstructured_var_pts(model),
             solver=pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8),
         )
-        sol = sim.solve([0, 1200], initial_soc=0.5)
+        # initial_soc needs a spatially uniform loading to compute capacities
+        sol = sim.solve([0, 1200], initial_soc=None if graded else 0.5)
         li = sol["Total lithium inventory [mol]"].entries
         np.testing.assert_allclose(li, li[0], rtol=1e-8)
 

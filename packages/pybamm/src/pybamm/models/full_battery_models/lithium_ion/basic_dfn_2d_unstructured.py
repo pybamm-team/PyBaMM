@@ -173,8 +173,8 @@ class BasicDFN2DUnstructured(BaseModel):
         tor = pybamm.concatenation(
             eps_n**self.param.n.b_e, eps_s**self.param.s.b_e, eps_p**self.param.p.b_e
         )
-        a_n = 3 * self.param.n.prim.epsilon_s_av / self.param.n.prim.R_typ
-        a_p = 3 * self.param.p.prim.epsilon_s_av / self.param.p.prim.R_typ
+        a_n = 3 * eps_s_n / self.param.n.prim.R_typ
+        a_p = 3 * eps_s_p / self.param.p.prim.R_typ
 
         # Interfacial reactions
         c_s_surf_n = pybamm.surf(c_s_n)
