@@ -161,8 +161,8 @@ class BasicDFN2D(BaseModel):
         tor = pybamm.concatenation(
             eps_n**self.param.n.b_e, eps_s**self.param.s.b_e, eps_p**self.param.p.b_e
         )
-        a_n = 3 * self.param.n.prim.epsilon_s_av / self.param.n.prim.R_typ
-        a_p = 3 * self.param.p.prim.epsilon_s_av / self.param.p.prim.R_typ
+        a_n = 3 * eps_s_n / self.param.n.prim.R_typ
+        a_p = 3 * eps_s_p / self.param.p.prim.R_typ
 
         # Interfacial reactions
         # Surf takes the surface value of a variable, i.e. its boundary value on the
