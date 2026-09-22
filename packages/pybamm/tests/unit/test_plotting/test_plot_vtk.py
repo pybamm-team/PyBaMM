@@ -631,6 +631,18 @@ class TestVTKQuickPlot:
                 solution, ["field", "scalar"], options={"scalar": {"scale": None}}
             )
 
+    def test_unknown_panel_options_and_plot_types_are_rejected(self):
+        solution, _ = _cell_solution()
+        # a typo'd key or plot_type must not fall through to a silent 3D panel
+        with pytest.raises(pybamm.OptionError, match=r"\['scael'\] for 'field'"):
+            VTKQuickPlot(solution, "field", options={"field": {"scael": None}})
+        with pytest.raises(pybamm.OptionError, match=r"plot_type 'Slice'"):
+            VTKQuickPlot(
+                solution,
+                "field",
+                options={"field": [{"plot_type": "3d"}, {"plot_type": "Slice"}]},
+            )
+
     def test_save_gif_builds_plot_and_writes_animation(self, tmp_path):
         Image = pytest.importorskip("PIL.Image")
         solution, _ = _cell_solution()

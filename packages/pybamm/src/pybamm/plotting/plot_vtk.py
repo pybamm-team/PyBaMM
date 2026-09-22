@@ -22,6 +22,8 @@ _VTK_CELL_TYPE = {
     "tetrahedron": 10,  # VTK_TETRA
     "hexahedron": 12,  # VTK_HEXAHEDRON
 }
+_PLOT_TYPES = frozenset({"3d", "slice"})
+_PANEL_OPTION_KEYS = frozenset({"plot_type", "scale", "x", "y", "z"})
 
 
 def _mesh_vertices(mesh):
@@ -318,8 +320,19 @@ class VTKQuickPlot:
             else:
                 opt_list = list(var_opt)
             for single_opt in opt_list:
+                unknown_keys = sorted(set(single_opt) - _PANEL_OPTION_KEYS)
+                if unknown_keys:
+                    raise pybamm.OptionError(
+                        f"Unknown option(s) {unknown_keys} for '{name}'; the panel "
+                        f"options are {sorted(_PANEL_OPTION_KEYS)}."
+                    )
                 merged = dict(_defaults)
                 merged.update(single_opt)
+                if merged["plot_type"] not in _PLOT_TYPES:
+                    raise pybamm.OptionError(
+                        f"Unknown plot_type {merged['plot_type']!r} for '{name}'; "
+                        f"use one of {sorted(_PLOT_TYPES)}."
+                    )
                 self.spatial_panels.append((name, merged))
 
     def _default_output_variables(self) -> list[str]:
