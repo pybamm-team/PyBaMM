@@ -1,5 +1,10 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added `pybamm-core` (`packages/pybamm-rust`), a Rust expression compiler for PyBaMM models: an arena DAG with simplification (rewriting a constant power as `x*x` or `1/x` only where that takes `pow`'s value bitwise), CSE and zero propagation, a typed slot-addressed IR, a scalar interpreter that runs only a `Conditional`'s active branch and a lane-batched one that runs every branch some lane selects, and forward-mode AD. `cargo test` and MSRV jobs run in CI, and `cargo fmt`/`cargo clippy` in pre-commit. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
+- `pybamm-core` values the transcendental primitives (`exp`, `log`, `pow`, `sin`, `cos`, `tanh`, `sinh`, `cosh`, `asinh`, `atan`, `hypot`, `erf`) through the `libm` crate rather than the platform's libm, in every interpreter and in constant folding, so a model evaluates bitwise identically on every platform; operations IEEE 754 specifies exactly (`sqrt`, `floor`, `ceil`, `abs`, `%`) stay on `f64`. `minimum`/`maximum` follow IEEE 754-2019 `minimumNumber`/`maximumNumber` via `libm`, ordering `-0 < +0`. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
+
 ## Bug fixes
 
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))

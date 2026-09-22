@@ -1,0 +1,7 @@
+/target/
+*/target/
+*.so
+*.dylib
+*.pyd
+.venv/
+uv.lock
