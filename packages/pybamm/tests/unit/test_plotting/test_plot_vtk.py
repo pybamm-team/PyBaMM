@@ -268,6 +268,15 @@ class TestVTKHelpers:
             [point_array.GetValue(i) for i in range(4)], [4, 3, 2, 1]
         )
 
+    def test_scalars_keep_double_precision(self):
+        grid = _build_vtk_grid(_tetra_mesh())
+        values = 298.15 + np.array([0.0, 5e-6, 1e-5, 2e-5])
+        _set_point_scalars(grid, "point", values)
+        point_array = grid.GetPointData().GetArray("point")
+        np.testing.assert_allclose(
+            [point_array.GetValue(i) for i in range(4)], values, rtol=0, atol=1e-12
+        )
+
     def test_scalar_length_mismatch_raises(self):
         """A variable must not attach to a grid built from a different mesh.
 

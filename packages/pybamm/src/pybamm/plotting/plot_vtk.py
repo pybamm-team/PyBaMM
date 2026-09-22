@@ -123,7 +123,9 @@ def _set_scalars(attribute_data, expected, kind, name, values):
     """Set (or update) a named float scalar array on cell or point data."""
     numpy_support = pybamm.import_optional_dependency("vtk.util.numpy_support")
 
-    values = np.ascontiguousarray(values, dtype=np.float32).ravel()
+    # float64: float32 would collapse a small spread on a large offset (298.15 K
+    # +- 1e-5) onto a few colours while the colour bar shows the full range
+    values = np.ascontiguousarray(values, dtype=np.float64).ravel()
     if len(values) != expected:
         raise pybamm.ShapeError(
             f"Cannot attach {len(values)} {kind} values for {name!r} to a grid "
@@ -729,10 +731,10 @@ class VTKQuickPlot:
 
             table = vtk.vtkTable()
             t_arr = numpy_support.numpy_to_vtk(
-                np.asarray(self.t_pts, dtype=np.float32), deep=True
+                np.asarray(self.t_pts, dtype=np.float64), deep=True
             )
             t_arr.SetName("Time")
-            v_arr = numpy_support.numpy_to_vtk(vals.astype(np.float32), deep=True)
+            v_arr = numpy_support.numpy_to_vtk(vals.astype(np.float64), deep=True)
             v_arr.SetName(name)
             table.AddColumn(t_arr)
             table.AddColumn(v_arr)
