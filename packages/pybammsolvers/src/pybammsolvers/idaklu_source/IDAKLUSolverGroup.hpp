@@ -13,11 +13,18 @@ public:
 
   /**
    * @brief Default constructor
+   *
+   * `number_of_inputs` is the width each solver copies from an inputs row. `rust_owner` keeps
+   * the Python object owning the expression sets' memory alive with the group (none for
+   * CasADi); pybind11 destroys the group with the GIL held.
    */
-  IDAKLUSolverGroup(std::vector<std::unique_ptr<IDAKLUSolver>> solvers, int number_of_states, int number_of_parameters):
+  IDAKLUSolverGroup(std::vector<std::unique_ptr<IDAKLUSolver>> solvers, int number_of_states, int number_of_parameters,
+                    int number_of_inputs, py::object rust_owner):
+    m_rust_owner(std::move(rust_owner)),
     m_solvers(std::move(solvers)),
     number_of_states(number_of_states),
-    number_of_parameters(number_of_parameters)
+    number_of_parameters(number_of_parameters),
+    number_of_inputs(number_of_inputs)
     {}
 
   // no copy constructor (unique_ptr cannot be copied)
@@ -54,9 +61,12 @@ public:
      */
     void set_loggers(py::object logger);
 
+    // Declared first so it is destroyed last, after the solvers that borrow its memory.
+    py::object m_rust_owner;
     std::vector<std::unique_ptr<IDAKLUSolver>> m_solvers;
     int number_of_states;
     int number_of_parameters;
+    int number_of_inputs;
 };
 
 #endif // PYBAMM_IDAKLU_SOLVER_GROUP_HPP

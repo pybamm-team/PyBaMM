@@ -1,6 +1,10 @@
 #include "StandaloneNewtonSolver.hpp"
 
+#include "Expressions/Rust/RustFunctions.hpp"
+
 #include <cstring>
+#include <stdexcept>
+#include <string>
 
 // ────────────────────── StandaloneAlgebraicSystem ──────────────────────
 
@@ -200,6 +204,51 @@ StandaloneNewtonSolver::StandaloneNewtonSolver(
   bool use_sparse,
   sunrealtype klu_pivot_tolerance)
   : system_(residual_fn, jacobian_fn, use_sparse, klu_pivot_tolerance),
+    solver_(system_, system_.n_vars(), atol.data(), rtol, step_tol,
+            max_iter, max_backtracks, epsNewt),
+    n_vars_(system_.n_vars()),
+    y_work_(n_vars_)
+{
+  solver_.set_log(&log_);
+}
+
+namespace {
+
+// `solver_` reads one tolerance per algebraic variable as it initialises.
+int checked_atol_width(const std::vector<sunrealtype>& atol, int n_alg) {
+  if (atol.size() != static_cast<size_t>(n_alg)) {
+    throw std::invalid_argument(
+      "pybammsolvers: atol has length " + std::to_string(atol.size()) +
+      " but n_alg is " + std::to_string(n_alg) + ".");
+  }
+  return n_alg;
+}
+
+}  // namespace
+
+StandaloneNewtonSolver::StandaloneNewtonSolver(
+  std::uintptr_t rust_model_ptr,
+  int n_rhs,
+  int n_alg,
+  const std::vector<expr_int>& jac_rows,
+  const std::vector<expr_int>& jac_cols,
+  const std::vector<sunrealtype>& atol,
+  sunrealtype rtol,
+  sunrealtype step_tol,
+  int max_iter,
+  int max_backtracks,
+  sunrealtype epsNewt,
+  bool use_sparse,
+  sunrealtype klu_pivot_tolerance)
+  : system_(
+      std::make_unique<RustNewtonResExpression>(
+        reinterpret_cast<void*>(rust_model_ptr), n_rhs, n_alg),
+      std::make_unique<RustNewtonJacExpression>(
+        reinterpret_cast<void*>(rust_model_ptr), n_rhs, n_alg,
+        static_cast<int>(jac_rows.size()), jac_rows, jac_cols),
+      checked_atol_width(atol, n_alg),
+      use_sparse,
+      klu_pivot_tolerance),
     solver_(system_, system_.n_vars(), atol.data(), rtol, step_tol,
             max_iter, max_backtracks, epsNewt),
     n_vars_(system_.n_vars()),

@@ -10,6 +10,11 @@ class ExpressionSet
 {
 public:
 
+  // Compile-time markers, overridden by RustFunctions.
+  static constexpr bool kNativeOutputSensitivities = false;
+  static constexpr bool kNativeBatchedOutputs = false;
+  static constexpr bool kNativeBatchedJacActions = false;
+
   /**
    * @brief Constructor
    */
