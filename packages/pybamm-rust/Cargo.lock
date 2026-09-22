@@ -1331,6 +1331,7 @@ dependencies = [
  "numpy",
  "pybamm-core",
  "pyo3",
+ "rayon",
 ]
 
 [[package]]

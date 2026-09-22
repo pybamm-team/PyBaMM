@@ -16,7 +16,7 @@ variables to configure.
 **How the pieces connect:**
 
 - `pybamm.rust` provides the Python API that lowers a discretised model to a
-  `CompiledModel` for the IDAKLU solver.
+  `CompiledModel` and drives the diffsol solver.
 - pybammsolvers does **not** link against the Rust core (the package
   dependency only flows the other way). The IDAKLU C++ consumer resolves the
   `extern "C"` entry points at runtime — `dlsym(RTLD_DEFAULT)` on POSIX, a
@@ -105,6 +105,9 @@ cd packages/pybamm-rust && cargo test --workspace
 # Rust-IDAKLU integration tests (from the repo root)
 uv run --group dev pytest packages/pybamm/tests/integration/test_rust_idaklu_parity.py
 uv run --group dev pytest packages/pybamm/tests/integration/test_rust_idaklu_spm.py
+
+# Diffsol solver unit tests
+uv run --group dev pytest packages/pybamm/tests/unit/test_solvers/test_diffsol_solver.py
 ```
 
 ## Verifying FFI symbols

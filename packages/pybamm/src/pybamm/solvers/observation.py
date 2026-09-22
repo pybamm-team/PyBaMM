@@ -494,6 +494,28 @@ class OutputAssembly:
             )
             solution._variables[name] = variable
 
+    def stack_parameter_blocks(
+        self,
+        blocks: Sequence[npt.ArrayLike],
+        n_timesteps: int,
+        sensitivity_names: Sequence[str],
+    ) -> npt.NDArray[np.float64]:
+        """``(n_t, n_rows, n_p)`` sensitivities from one flat block per parameter.
+
+        Each block holds ``n_t * n_rows`` values, time-outer/output-inner.
+        """
+        if len(blocks) != len(sensitivity_names):
+            raise pybamm.SolverError(
+                f"Sensitivity block count mismatch: expected "
+                f"{len(sensitivity_names)} parameter blocks (from "
+                f"model.calculate_sensitivities) but the solver returned "
+                f"{len(blocks)}."
+            )
+        return np.stack(
+            [np.asarray(block).reshape(n_timesteps, self.n_rows) for block in blocks],
+            axis=-1,
+        )
+
     def _checked_rows(self, data):
         """``data`` as a ``(n_t, n_rows)`` array, or a complaint about its width."""
         array = np.asarray(data)
