@@ -12,6 +12,7 @@
 - `pybamm-core`'s reverse-mode AD values the transcendental primitives through `libm` too, and a test holds every evaluation path bitwise to `libm` and pins `libm`'s outputs, so a dependency bump that moves bits fails. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
 - `pybamm.rust` exposes `ExprGraph`, `CompiledFunction` (one expression, or a named set via `compile_outputs`, with lane-batched trajectory and Hermite evaluation) and `CompiledJacobian`, with hand-written type stubs that `mypy.stubtest` pins against the built extension. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
 - `Symbol.to_rust` lowers a discretised expression tree into a `pybamm.rust.ExprGraph`: the arithmetic, comparison and elementwise operators, matrix products, `Index`, concatenations, `Conditional`, the specific functions, `Arcsinh2`, `VectorField`, 1D (including vector-valued), 2D and 3D interpolants, and `RegPower` through the same sequence of operations as `evaluate` and CasADi. `KroneckerProduct`, `TensorProduct`, `Transpose`, `Magnitude`, `Component`, `Norm` and the spatial operators raise `TypeError`. ([#5959](https://github.com/pybamm-team/PyBaMM/pull/5959))
+- `model.convert_to_format = "rust"` evaluates a model's rhs, algebraic, Jacobian and event functions through compiled Rust evaluators, for `ScipySolver`, `AlgebraicSolver` and EIS. ([#5960](https://github.com/pybamm-team/PyBaMM/pull/5960))
 
 ## Bug fixes
 

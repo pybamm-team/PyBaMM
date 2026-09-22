@@ -124,13 +124,17 @@ class EISSimulation(BaseSimulation):
         model = self._built_model
         inputs_dict = inputs_dict or {}
 
-        # Convert inputs to casadi format for Jacobian evaluation
+        # Inputs in the format the compiled Jacobian expects for each backend
         if model.convert_to_format == "casadi":
             from casadi import vertcat
 
-            casadi_inputs = vertcat(*inputs_dict.values()) if inputs_dict else []
+            eval_inputs = vertcat(*inputs_dict.values()) if inputs_dict else []
+        elif model.convert_to_format == "rust":
+            from pybamm.solvers.base_solver import stack_inputs
+
+            eval_inputs = stack_inputs(inputs_dict, "rust")
         else:
-            casadi_inputs = inputs_dict
+            eval_inputs = inputs_dict
 
         # Only compile Jacobian/model functions on first call; the compiled
         # functions persist on the model and work with any inputs/y0 values.
@@ -150,8 +154,10 @@ class EISSimulation(BaseSimulation):
         self._output_jacobian = Function(
             "eis_outputs", [y], [jacobian(output_expression, y)]
         )(y0).sparse()
-        J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
-        neg_J = -csc_matrix(J_sparse)
+        J = model.jac_rhs_algebraic_eval(0, y0, eval_inputs)
+        if model.convert_to_format == "casadi":
+            J = J.sparse()
+        neg_J = -csc_matrix(J)
 
         # State ordering and matrices are fixed until the model is rebuilt.
         if getattr(self, "_matrix_model", None) is not model:
