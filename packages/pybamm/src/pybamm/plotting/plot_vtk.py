@@ -152,14 +152,20 @@ def _set_point_scalars(grid, name, values):
     grid.Modified()
 
 
-def _is_unstructured_spatial_variable(pv):
-    return isinstance(
-        pv,
-        (
-            pybamm.ProcessedVariableUnstructuredFVM,
-            pybamm.ProcessedVariableUnstructured,
-        ),
-    )
+def _variable_kind(pv):
+    """Classify a processed variable for VTK plotting.
+
+    Returns ``"cell"`` for cell-centred unstructured data, ``"node"`` for
+    node-centred unstructured data, ``"scalar"`` for a 0D time series and
+    ``None`` for anything VTKQuickPlot cannot draw.
+    """
+    if isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM):
+        return "cell"
+    if isinstance(pv, pybamm.ProcessedVariableUnstructured):
+        return "node"
+    if getattr(pv, "dimensions", None) == 0:
+        return "scalar"
+    return None
 
 
 def _data_at_time(pv, t):
@@ -215,7 +221,9 @@ class VTKQuickPlot:
     ----------
     solutions : :class:`pybamm.Solution` or :class:`pybamm.Simulation`
         The solution to plot; a single-element list is also accepted.
-    output_variables : list of str
+    output_variables : str or list of str, optional
+        Variables to plot. Defaults to the model's default quick-plot
+        variables that are 0D or live on an unstructured mesh.
     options : dict, optional
         Per-variable options keyed by variable name.  Each value is a dict
         that may contain:
@@ -256,7 +264,7 @@ class VTKQuickPlot:
         self.solution = solutions[0]
 
         if output_variables is None:
-            output_variables = list(self.solution.all_models[0].variables.keys())[:1]
+            output_variables = self._default_output_variables()
         if isinstance(output_variables, str):
             output_variables = [output_variables]
         if len(output_variables) == 0:
@@ -272,15 +280,12 @@ class VTKQuickPlot:
 
         for name in output_variables:
             pv = self.solution[name]
-            if isinstance(pv, pybamm.ProcessedVariableUnstructuredFVM):
+            kind = _variable_kind(pv)
+            if kind in ("cell", "node"):
                 self.spatial_names.append(name)
                 self.spatial_vars.append(pv)
-                self.spatial_is_cell_data.append(True)
-            elif isinstance(pv, pybamm.ProcessedVariableUnstructured):
-                self.spatial_names.append(name)
-                self.spatial_vars.append(pv)
-                self.spatial_is_cell_data.append(False)
-            elif getattr(pv, "dimensions", None) == 0:
+                self.spatial_is_cell_data.append(kind == "cell")
+            elif kind == "scalar":
                 self.scalar_names.append(name)
                 self.scalar_vars.append(pv)
             else:
@@ -316,6 +321,20 @@ class VTKQuickPlot:
                 merged = dict(_defaults)
                 merged.update(single_opt)
                 self.spatial_panels.append((name, merged))
+
+    def _default_output_variables(self) -> list[str]:
+        """The model's default quick-plot variables that VTK can draw."""
+        defaults = self.solution.all_models[0].default_quick_plot_variables or []
+        plottable = [
+            name for name in defaults if _variable_kind(self.solution[name]) is not None
+        ]
+        if not plottable:
+            raise pybamm.OptionError(
+                "VTKQuickPlot has no default variables for this model: none of "
+                f"its default quick-plot variables {list(defaults)} are 0D or on "
+                "an unstructured mesh. Pass output_variables explicitly."
+            )
+        return plottable
 
     def dynamic_plot(self, show_plot: bool = True) -> None:
         """Launch an interactive VTK window with a time slider."""

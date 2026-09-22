@@ -9,12 +9,12 @@ from pybamm.plotting.plot_vtk import (
     _build_vtk_grid,
     _compute_scale,
     _data_at_time,
-    _is_unstructured_spatial_variable,
     _make_render_window,
     _mesh_vertices,
     _resolve_scale,
     _set_cell_scalars,
     _set_point_scalars,
+    _variable_kind,
     _viridis_lut,
 )
 
@@ -289,9 +289,10 @@ class TestVTKHelpers:
         node_solution, _ = _node_solution()
         node_variable = node_solution["node field"]
 
-        assert _is_unstructured_spatial_variable(cell_variable)
-        assert _is_unstructured_spatial_variable(node_variable)
-        assert not _is_unstructured_spatial_variable(scalar_variable)
+        assert _variable_kind(cell_variable) == "cell"
+        assert _variable_kind(node_variable) == "node"
+        assert _variable_kind(scalar_variable) == "scalar"
+        assert _variable_kind(_triangle_solution()["vector"]) is None
         np.testing.assert_allclose(_data_at_time(cell_variable, 0.5), [[1.5]])
         assert _data_at_time(scalar_variable, 0.5) == pytest.approx(0.5)
 
@@ -312,10 +313,20 @@ class TestVTKHelpers:
 
 
 class TestVTKQuickPlot:
-    def test_initialisation_accepts_solution_simulation_and_options(self):
+    def test_initialisation_accepts_solution_simulation_and_options(self, monkeypatch):
         solution, _ = _cell_solution()
 
-        default_plot = VTKQuickPlot(solution)
+        # the default variables are the model's plottable quick-plot defaults,
+        # never an arbitrary first key such as "Time [s]"
+        with pytest.raises(pybamm.OptionError, match="Pass output_variables"):
+            VTKQuickPlot(solution)
+        # structured (line) and vector-field defaults are skipped, not errors
+        monkeypatch.setattr(
+            pybamm.BaseModel,
+            "default_quick_plot_variables",
+            property(lambda self: ["line", "vector", "field"]),
+        )
+        default_plot = VTKQuickPlot(_triangle_solution())
         assert default_plot.output_variables == ["field"]
         assert default_plot.spatial_panels == [
             ("field", {"plot_type": "3d", "scale": "auto"})
