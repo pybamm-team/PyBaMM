@@ -1556,7 +1556,7 @@ pub(crate) mod tests {
         assert_eq!(plans(&arena, root, 2000), (3, 4, MAX_LANES));
     }
 
-    /// The bench fixtures' tapes batch, so real models take the lane-batched sweep.
+    /// The bench fixtures' tapes batch, as the Python sweep budgets for real models assume.
     #[cfg(feature = "serialize")]
     #[test]
     fn real_model_tapes_batch() {
