@@ -24,6 +24,16 @@ def _make_fn(name=None):
     return g, g.compile(expr, name=name)
 
 
+def _full_residual_symbol(built_model):
+    """rhs concatenated with algebraic, matching the solver's residual."""
+    if built_model.len_alg > 0:
+        return pybamm.numpy_concatenation(
+            built_model.concatenated_rhs,
+            built_model.concatenated_algebraic,
+        )
+    return built_model.concatenated_rhs
+
+
 class TestSignature:
     def test_properties(self):
         _, f = _make_fn(name="RHS")
@@ -327,6 +337,35 @@ class TestJacobian:
         with pytest.raises(ValueError):
             m1.indices[0] = m1.indices[0]
         assert m1.data.flags.writeable
+
+    def test_spme_vaas_dense_row_coloring(self):
+        # The voltage row is dense; without the split, coloring needs ~65 colors.
+        model = pybamm.lithium_ion.SPMe(options={"voltage as a state": "true"})
+        model.events = []
+        sim = pybamm.Simulation(model)
+        sim.build()
+        built = sim.built_model
+        g = ExprGraph()
+        fn = g.compile(
+            _full_residual_symbol(built).to_rust(g, {}),
+            name="spme",
+            n_states=built.len_rhs_and_alg,
+        )
+        jac = fn.jacobian()
+        assert jac.n_dense_rows == 1
+        assert jac.n_colors <= 8
+
+        y0 = built.concatenated_initial_conditions.evaluate().flatten()
+        J = jac(0.0, y0, np.array([])).toarray()
+        h = 1e-7
+        for col in [0, built.len_rhs_and_alg // 2, built.len_rhs_and_alg - 1]:
+            yp, ym = y0.copy(), y0.copy()
+            yp[col] += h
+            ym[col] -= h
+            fd = (fn(0.0, yp, np.array([])) - fn(0.0, ym, np.array([]))) / (2 * h)
+            np.testing.assert_allclose(
+                J[:, col], np.asarray(fd).flatten(), rtol=1e-4, atol=1e-6
+            )
 
 
 class TestEvalTrajectory:

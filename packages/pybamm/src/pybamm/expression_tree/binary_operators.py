@@ -237,6 +237,48 @@ class BinaryOperator(pybamm.Symbol):
         )
         return self._casadi_evaluate(converted_left, converted_right)
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        if isinstance(self, MatrixMultiplication):
+            left = self.left._to_rust_matmul_left(graph, rust_symbols)
+            right = self.right._to_rust_inner(graph, rust_symbols)
+            return graph.matmul(left, right)
+        left, right = self._children_to_rust(graph, rust_symbols)
+        if isinstance(self, Addition):
+            return graph.add(left, right)
+        elif isinstance(self, Subtraction):
+            return graph.sub(left, right)
+        elif isinstance(self, Multiplication):
+            return graph.mul(left, right)
+        elif isinstance(self, Division):
+            return graph.div(left, right)
+        elif isinstance(self, Power):
+            return graph.pow(left, right)
+        elif isinstance(self, Inner):
+            return graph.mul(left, right)
+        elif isinstance(self, Minimum):
+            return graph.minimum(left, right)
+        elif isinstance(self, Maximum):
+            return graph.maximum(left, right)
+        elif isinstance(self, Modulo):
+            return graph.modulo(left, right)
+        elif isinstance(self, Hypot):
+            return graph.hypot(left, right)
+        elif isinstance(self, EqualHeaviside):
+            return graph.equal_heaviside(left, right)
+        elif isinstance(self, NotEqualHeaviside):
+            return graph.not_equal_heaviside(left, right)
+        elif isinstance(self, Equality):
+            return graph.equality(left, right)
+        else:
+            raise TypeError(
+                f"Cannot convert binary operator of type '{type(self).__name__}' "
+                "to the Rust backend. Use a CasADi-backed model (set "
+                "`model.convert_to_format = 'casadi'`) for models using "
+                "this operator."
+            )
+
     def _evaluates_on_edges(self, dimension: str) -> bool | str:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(
