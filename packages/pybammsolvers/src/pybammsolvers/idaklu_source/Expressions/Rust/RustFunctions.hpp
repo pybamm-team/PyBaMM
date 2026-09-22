@@ -15,12 +15,41 @@
 
 namespace pybamm_rust_detail {
 
+/* Rust models reach C++ as the integer address Python holds, so the cast is unavoidable. */
+inline void* model_from_address(std::uintptr_t address) {
+    return reinterpret_cast<void*>(address);  // NOLINT(performance-no-int-to-ptr)
+}
+
 /* Throw unless `given`, a count C++ sizes buffers from, equals the Rust model's `rust`. */
 inline void check_dim(const char* name, int64_t given, int64_t rust) {
     if (given != rust) {
         throw std::invalid_argument(
             std::string("pybammsolvers: ") + name + " is " + std::to_string(given) +
             " but the Rust model has " + std::to_string(rust) + ".");
+    }
+}
+
+/* Throw unless CSC `(colptrs, rowvals)` holds `nnz` entries of an `n` x `n` matrix. */
+inline void check_csc_pattern(const std::vector<int64_t>& colptrs,
+                              const std::vector<int64_t>& rowvals, int nnz, int n) {
+    if (colptrs.size() != static_cast<size_t>(n) + 1 || colptrs.front() != 0 ||
+        colptrs.back() != nnz || rowvals.size() != static_cast<size_t>(nnz)) {
+        throw std::invalid_argument(
+            "pybammsolvers: the Jacobian pattern's " + std::to_string(colptrs.size()) +
+            " column pointers and " + std::to_string(rowvals.size()) +
+            " row indices do not fit a " + std::to_string(n) + " x " + std::to_string(n) +
+            " matrix with nnz = " + std::to_string(nnz) + ".");
+    }
+    if (!std::is_sorted(colptrs.begin(), colptrs.end())) {
+        throw std::invalid_argument(
+            "pybammsolvers: the Jacobian pattern's column pointers must be non-decreasing.");
+    }
+    for (size_t k = 0; k < rowvals.size(); ++k) {
+        if (rowvals[k] < 0 || rowvals[k] >= n) {
+            throw std::invalid_argument(
+                "pybammsolvers: Jacobian entry " + std::to_string(k) + " has row " +
+                std::to_string(rowvals[k]) + ", outside its " + std::to_string(n) + " rows.");
+        }
     }
 }
 
@@ -394,23 +423,6 @@ public:
         const std::vector<int>& output_lens,
         const SetupOptions& options
     ) :
-        m_n_sens_params(n_sens_params),
-        tmp_state_vector(n_states),
-        tmp_sparse_jacobian_data(nnz),
-        m_sens_directions(static_cast<size_t>(n_states) * n_sens_params),
-        m_sens_jac_actions(m_sens_directions.size()),
-        m_rhs(rust_model, n_states),
-        m_jac(rust_model, nnz,
-              convert_to_expr_int(rowvals),
-              csc_rowvals_to_coo_cols(colptrs, rowvals, nnz)),
-        m_jac_action(rust_model, n_states),
-        m_mass_action(rust_model, n_states),
-        m_events(rust_model, n_events),
-        m_sens(rust_model, n_states, n_sens_params),
-        m_alg_res(rust_model, n_alg),
-        m_alg_jac(rust_model, alg_jac_nnz,
-                  convert_to_expr_int(alg_rowvals),
-                  convert_to_expr_int(alg_colvals)),
         ExpressionSet<RustRhsExpression>(
             static_cast<Expression*>(&m_rhs),
             static_cast<Expression*>(&m_jac),
@@ -431,7 +443,24 @@ public:
             options,
             static_cast<Expression*>(&m_alg_res),
             static_cast<Expression*>(&m_alg_jac)
-        )
+        ),
+        m_n_sens_params(n_sens_params),
+        tmp_state_vector(n_states),
+        tmp_sparse_jacobian_data(nnz),
+        m_sens_directions(static_cast<size_t>(n_states) * n_sens_params),
+        m_sens_jac_actions(m_sens_directions.size()),
+        m_rhs(rust_model, n_states),
+        m_jac(rust_model, nnz,
+              convert_to_expr_int(rowvals),
+              csc_rowvals_to_coo_cols(colptrs, rowvals, nnz, n_states)),
+        m_jac_action(rust_model, n_states),
+        m_mass_action(rust_model, n_states),
+        m_events(rust_model, n_events),
+        m_sens(rust_model, n_states, n_sens_params),
+        m_alg_res(rust_model, n_alg),
+        m_alg_jac(rust_model, alg_jac_nnz,
+                  convert_to_expr_int(alg_rowvals),
+                  convert_to_expr_int(alg_colvals))
     {
         m_model = rust_model;
         jac_times_cjmass_colptrs = colptrs;
@@ -569,19 +598,17 @@ private:
     }
 
     static std::vector<expr_int> convert_to_expr_int(const std::vector<int64_t>& v) {
-        std::vector<expr_int> result;
-        result.reserve(v.size());
-        for (const auto& val : v) {
-            result.push_back(static_cast<expr_int>(val));
-        }
-        return result;
+        return std::vector<expr_int>(v.begin(), v.end());
     }
 
+    // The column of each CSC entry, after refusing a pattern that would index past `nnz`.
     static std::vector<expr_int> csc_rowvals_to_coo_cols(
         const std::vector<int64_t>& colptrs,
         const std::vector<int64_t>& rowvals,
-        int nnz
+        int nnz,
+        int n_states
     ) {
+        pybamm_rust_detail::check_csc_pattern(colptrs, rowvals, nnz, n_states);
         std::vector<expr_int> cols(nnz);
         int n_cols = static_cast<int>(colptrs.size()) - 1;
         for (int col = 0; col < n_cols; ++col) {
