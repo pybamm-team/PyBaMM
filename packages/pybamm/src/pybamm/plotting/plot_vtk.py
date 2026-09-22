@@ -592,8 +592,14 @@ class VTKQuickPlot:
             # print coordinates as they are, without a "(x10^-6)" factor
             cube_axes.SetLabelScaling(False, 0, 0, 0)
 
+            # label what is drawn: a slice can span less than its mesh, so the
+            # physical ranges come from the (scaled) bounds of the drawn geometry
+            axis_scale = var_scale if var_scale is not None else np.ones(dim)
             orig_ranges = [
-                (float(panel_nodes[:, d].min()), float(panel_nodes[:, d].max()))
+                (
+                    axes_bounds[2 * d] / axis_scale[d],
+                    axes_bounds[2 * d + 1] / axis_scale[d],
+                )
                 for d in range(dim)
             ]
             if dim >= 1:

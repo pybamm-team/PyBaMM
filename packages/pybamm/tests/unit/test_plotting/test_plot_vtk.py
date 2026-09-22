@@ -471,9 +471,11 @@ class TestVTKQuickPlot:
         cut = _first_actor(shifted_renderer).GetMapper().GetInput()
         assert cut.GetNumberOfCells() > 0
         np.testing.assert_allclose(cut.GetBounds()[:2], [2.5, 2.5])
-        np.testing.assert_allclose(
-            _cube_axes(shifted_renderer).GetXAxisRange(), [2.0, 3.0]
-        )
+        # the axes label the cut triangle, which spans half the mesh in y and z
+        cube_axes = _cube_axes(shifted_renderer)
+        np.testing.assert_allclose(cube_axes.GetXAxisRange(), [2.5, 2.5])
+        np.testing.assert_allclose(cube_axes.GetYAxisRange(), [0.0, 0.5])
+        np.testing.assert_allclose(cube_axes.GetZAxisRange(), [0.0, 0.5])
 
     @pytest.mark.parametrize("axis", ["x", "y", "z"])
     def test_slice_camera_looks_along_the_plane_normal(self, axis):
