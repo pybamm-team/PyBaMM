@@ -11,6 +11,7 @@ import textwrap
 import warnings
 from contextlib import redirect_stdout
 
+import casadi
 import numpy as np
 import pandas as pd
 import pytest
@@ -20,6 +21,8 @@ from scipy.sparse import csc_matrix
 
 import pybamm
 from pybamm.solvers.idaklu_solver import _csc_bandwidths
+from pybamm.solvers.observation import ObserverCache
+from pybamm.solvers.variable_observer import NativeObserver
 from tests import (
     get_broken_input_model,
     get_discretisation_for_testing,
@@ -2748,6 +2751,26 @@ class TestIDAKLUSolver:
         assert "nnz" in ax.get_title()
         plt.close("all")
 
+    def test_reduce_solution_keeps_native_observation(self):
+        model = pybamm.lithium_ion.SPM()
+        model.convert_to_format = "rust"
+        solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8)
+        sol = pybamm.Simulation(model, solver=solver).solve([0, 3600])
+        leaf = sol["Terminal voltage [V]"]._observer.leaves[0]
+
+        reduced = solver.reduce_solution(sol, hermite_reduction_factor=2.0)
+
+        assert reduced.all_models == sol.all_models
+        assert isinstance(reduced["Terminal voltage [V]"]._observer, NativeObserver)
+        assert reduced["Terminal voltage [V]"]._observer.leaves[0] is leaf
+        t = np.linspace(0, 3600, 51)
+        np.testing.assert_allclose(
+            reduced["Terminal voltage [V]"](t),
+            sol["Terminal voltage [V]"](t),
+            rtol=0,
+            atol=1e-4,
+        )
+
     def test_reduce_solution_vs_online(self):
         """Compare post-hoc reduce_solution with online knot reduction on a drive cycle.
 
@@ -2950,6 +2973,62 @@ class TestIDAKLUNativeObservation:
                 rust[name](t_interp), cas[name](t_interp), rtol=1e-6, atol=1e-6
             )
 
+    def test_native_processed_variable_matches_casadi_direct(self):
+        t_interp = np.linspace(0, 3600, 41)
+        cas, _ = self._solve("casadi", calculate_sensitivities=True, t_interp=t_interp)
+        sol, _ = self._solve("rust", calculate_sensitivities=True, t_interp=t_interp)
+
+        name = "Terminal voltage [V]"
+        vars_pybamm = [m.get_processed_variable_or_event(name) for m in sol.all_models]
+        rust_fns = [
+            ObserverCache.of(m).native_leaf(name, vp)[0]
+            for m, vp in zip(sol.all_models, vars_pybamm, strict=True)
+        ]
+        pv = pybamm.process_variable(
+            name, vars_pybamm, NativeObserver(rust_fns), sol, time_integral=None
+        )
+
+        np.testing.assert_allclose(pv.entries, cas[name].entries, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(
+            pv(t_interp), cas[name](t_interp), rtol=1e-6, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            pv.sensitivities["Current function [A]"],
+            cas[name].sensitivities["Current function [A]"],
+            rtol=1e-5,
+            atol=1e-6,
+        )
+
+    def test_flip_compiles_no_casadi_observe(self):
+        rust, _ = self._solve("rust")
+        v = rust["Terminal voltage [V]"]
+        _ = v.entries  # force observation
+        assert isinstance(v._observer, NativeObserver)
+        assert not any(isinstance(f, casadi.Function) for f in v._observer.leaves)
+
+    def test_offgrid_values_native_backed(self):
+        rust, _ = self._solve("rust")
+        for name in [
+            "Terminal voltage [V]",
+            "X-averaged negative particle concentration [mol.m-3]",
+        ]:
+            v = rust[name]
+            _ = v.entries
+            assert isinstance(v._observer, NativeObserver)
+            assert not any(isinstance(f, casadi.Function) for f in v._observer.leaves)
+
+    def test_sensitivities_match_casadi(self):
+        cas, _ = self._solve("casadi", calculate_sensitivities=True)
+        rust, _ = self._solve("rust", calculate_sensitivities=True)
+        for name in ["Terminal voltage [V]"]:
+            assert isinstance(rust[name]._observer, NativeObserver)
+            np.testing.assert_allclose(
+                rust[name].sensitivities["Current function [A]"],
+                cas[name].sensitivities["Current function [A]"],
+                rtol=1e-5,
+                atol=1e-6,
+            )
+
     def _solve_output_vars(
         self, convert_to_format, output_variables, model=None, inputs=None, var_pts=None
     ):
@@ -3078,6 +3157,38 @@ class TestIDAKLUNativeObservation:
         assert rust.variables_returned is True
 
     @staticmethod
+    def _discretise_dfn(convert_to_format):
+        model = pybamm.lithium_ion.DFN()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        var_pts = {"x_n": 20, "x_s": 20, "x_p": 20, "r_n": 10, "r_p": 10}
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        model.convert_to_format = convert_to_format
+        return model
+
+    def test_spatial_1d_2d_variables_match_casadi(self):
+        t_interp = np.linspace(0, 3600, 51)
+        cas = pybamm.IDAKLUSolver().solve(
+            self._discretise_dfn("casadi"), [0, 3600], t_interp=t_interp
+        )
+        rust = pybamm.IDAKLUSolver().solve(
+            self._discretise_dfn("rust"), [0, 3600], t_interp=t_interp
+        )
+        off = t_interp[:-1] + np.diff(t_interp) / 3
+        for name in [
+            "Electrolyte concentration [mol.m-3]",  # 1D in x
+            "Negative particle concentration [mol.m-3]",  # 2D (r, x)
+        ]:
+            assert isinstance(rust[name]._observer, NativeObserver)
+            np.testing.assert_allclose(
+                rust[name](off), cas[name](off), rtol=1e-6, atol=1e-6
+            )
+
+    @staticmethod
     def _discretise_spm(convert_to_format, as_input=False):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry
@@ -3091,6 +3202,92 @@ class TestIDAKLUNativeObservation:
         disc.process_model(model)
         model.convert_to_format = convert_to_format
         return model
+
+    def test_multi_segment_experiment_matches_casadi(self):
+        def stepped(convert_to_format):
+            model = self._discretise_spm(convert_to_format)
+            solver = pybamm.IDAKLUSolver()
+            sol = None
+            for _ in range(2):
+                sol = solver.step(sol, model, dt=1800)
+            return sol
+
+        cas = stepped("casadi")
+        rust = stepped("rust")
+        assert len(rust.all_ys) == 2
+        off = np.linspace(0, rust.t[-1], 73)[1:-1] + 5.0
+        off = off[off < rust.t[-1]]
+        for name in ["Terminal voltage [V]"]:
+            assert isinstance(rust[name]._observer, NativeObserver)
+            np.testing.assert_allclose(
+                rust[name](off), cas[name](off), rtol=1e-6, atol=1e-6
+            )
+
+    def test_event_termination_matches_casadi(self):
+        cas = pybamm.IDAKLUSolver().solve(self._discretise_spm("casadi"), [0, 100000])
+        rust = pybamm.IDAKLUSolver().solve(self._discretise_spm("rust"), [0, 100000])
+        assert rust.termination.startswith("event:")
+        name = "Terminal voltage [V]"
+        assert isinstance(rust[name]._observer, NativeObserver)
+        t_end = min(rust.t[-1], cas.t[-1])
+        off = np.linspace(0, t_end, 40)[1:-1] + 1.0
+        off = off[off < t_end]
+        np.testing.assert_allclose(
+            rust[name](off), cas[name](off), rtol=1e-6, atol=1e-6
+        )
+
+    def test_hermite_off_still_native_no_casadi(self):
+        solver_kwargs = {"options": {"hermite_interpolation": False}}
+        cas = pybamm.IDAKLUSolver(**solver_kwargs).solve(
+            self._discretise_spm("casadi"), [0, 3600]
+        )
+        rust = pybamm.IDAKLUSolver(**solver_kwargs).solve(
+            self._discretise_spm("rust"), [0, 3600]
+        )
+        assert not rust.hermite_interpolation
+        v = rust["Terminal voltage [V]"]
+        assert isinstance(v._observer, NativeObserver)
+        assert not any(isinstance(f, casadi.Function) for f in v._observer.leaves)
+        np.testing.assert_allclose(
+            v.entries, cas["Terminal voltage [V]"].entries, rtol=1e-6, atol=1e-6
+        )
+
+    def test_time_integral_sensitivities_match_casadi(self):
+        inputs = {"Current function [A]": 0.68}
+        cas = pybamm.IDAKLUSolver().solve(
+            self._discretise_spm("casadi", as_input=True),
+            [0, 3600],
+            inputs=inputs,
+            calculate_sensitivities=True,
+        )
+        rust = pybamm.IDAKLUSolver().solve(
+            self._discretise_spm("rust", as_input=True),
+            [0, 3600],
+            inputs=inputs,
+            calculate_sensitivities=True,
+        )
+        name = "Discharge capacity [A.h]"
+        assert isinstance(rust[name]._observer, NativeObserver)
+        np.testing.assert_allclose(
+            rust[name].sensitivities["Current function [A]"],
+            cas[name].sensitivities["Current function [A]"],
+            rtol=1e-5,
+            atol=1e-6,
+        )
+
+    def test_output_variables_first_last_state_observe_natively(self):
+        def solve(output_variables):
+            model = self._discretise_spm("rust")
+            solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+            return solver.solve(model, [0, 3600])
+
+        full = solve(None)
+        outputs_only = solve(["Voltage [V]"])
+        name = "Total lithium in electrolyte [mol]"
+        assert isinstance(outputs_only.last_state[name]._observer, NativeObserver)
+        np.testing.assert_array_equal(
+            outputs_only.last_state[name].data, full.last_state[name].data
+        )
 
     def test_output_variables_stay_aligned_across_the_batch_window(self):
         # 200 points cross the Rust FFI's 128-point batched-evaluation window.

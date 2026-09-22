@@ -67,6 +67,9 @@ class BaseSolver:
     # Set by solvers integrating a whole-model CompiledModel, to skip per-group lowering
     _integrates_via_compiled_model = False
 
+    # Whether set-up binds a rust model's CompiledModel to its ObserverCache
+    _observes_via_compiled_model = False
+
     def __init__(
         self,
         method=None,
