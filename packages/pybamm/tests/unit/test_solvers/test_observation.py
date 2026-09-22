@@ -13,15 +13,22 @@ import pybamm
 from pybamm.solvers.observation import ObserverCache
 from pybamm.solvers.variable_observer import (
     CasadiObserver,
+    NativeObserver,
     SegmentSelector,
+    SharedOutputLeaf,
+    SharedOutputs,
+    _sweep_sensitivities,
     as_observer,
+    chain_rule_sensitivities,
     pack_sensitivity_dict,
 )
 
 
 @pytest.fixture(scope="module")
 def spm_solution():
+    # CasADi whatever the default, since these tests read CasADi leaves
     model = pybamm.lithium_ion.SPM()
+    model.convert_to_format = "casadi"
     return pybamm.Simulation(model).solve([0, 600])
 
 
@@ -137,6 +144,317 @@ class TestObserverCache:
         assert spy.call_count == 3
 
 
+def _rust_decay_model(factor):
+    model = _decay_model(factor)
+    model.convert_to_format = "rust"
+    return model
+
+
+class TestNativeReading:
+    def test_a_rust_solve_binds_its_compiled_model(self):
+        model = _rust_decay_model(2)
+        solver = pybamm.IDAKLUSolver()
+        solution = solver.solve(model, [0, 1])
+
+        assert ObserverCache.of(model).rust_model is solver._setup["rust_model"]
+        assert isinstance(solution["w"]._observer, NativeObserver)
+        np.testing.assert_allclose(solution["w"].entries, 2 * solution["u"].entries)
+
+    def test_derived_solutions_read_through_the_same_tapes(self):
+        solution = pybamm.IDAKLUSolver().solve(_rust_decay_model(2), [0, 1])
+        leaf = solution["w"]._observer.leaves[0]
+
+        for derived in (solution.copy(), solution.first_state, solution.last_state):
+            assert derived["w"]._observer.leaves == [leaf]
+
+    def test_solutions_of_two_rust_models_join_natively(self):
+        first = pybamm.IDAKLUSolver().solve(_rust_decay_model(2), [0, 1])
+        second = pybamm.IDAKLUSolver().solve(_rust_decay_model(3), [1, 2])
+
+        joined = first + second
+
+        assert isinstance(joined["w"]._observer, NativeObserver)
+        np.testing.assert_allclose(joined["w"](0.5), 2 * first["u"](0.5), rtol=1e-6)
+        np.testing.assert_allclose(joined["w"](1.5), 3 * second["u"](1.5), rtol=1e-6)
+
+    def test_a_join_with_a_casadi_segment_reads_through_casadi(self):
+        casadi_model = _decay_model(3)
+        casadi_model.convert_to_format = "casadi"
+        first = pybamm.IDAKLUSolver().solve(_rust_decay_model(2), [0, 1])
+        second = pybamm.IDAKLUSolver().solve(casadi_model, [1, 2])
+
+        joined = first + second
+
+        assert isinstance(joined["w"]._observer, CasadiObserver)
+        np.testing.assert_allclose(joined["w"](0.5), 2 * first["u"](0.5), rtol=1e-6)
+        np.testing.assert_allclose(joined["w"](1.5), 3 * second["u"](1.5), rtol=1e-6)
+
+    def test_a_model_switched_back_to_casadi_reads_through_casadi(self):
+        model = _rust_decay_model(2)
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
+
+        model.convert_to_format = "casadi"
+
+        assert isinstance(solution["w"]._observer, CasadiObserver)
+
+    def test_setting_up_again_drops_the_previous_graph_s_tapes(self):
+        model = _rust_decay_model(2)
+        pybamm.IDAKLUSolver().solve(model, [0, 1])["w"]
+        cache = ObserverCache.of(model)
+        cache.bind_rust_model(cache.rust_model)
+        assert "w" in cache._native_leaves
+
+        solver = pybamm.IDAKLUSolver()
+        solver.set_up(model)
+
+        assert cache.rust_model is solver._setup["rust_model"]
+        assert "w" not in cache._native_leaves
+
+    def test_rebinding_leaves_how_a_solution_without_yps_is_read(self):
+        model = _rust_decay_model(2)
+        solver = pybamm.IDAKLUSolver(options={"hermite_interpolation": False})
+        solution = solver.solve(model, [0, 1])
+        assert not solution.hermite_interpolation
+        before = solution["w"].entries
+
+        pybamm.IDAKLUSolver().set_up(model)
+        solution.update("w")
+
+        assert isinstance(solution["w"]._observer, NativeObserver)
+        np.testing.assert_array_equal(solution["w"].entries, before)
+
+    def test_a_model_copy_keeps_the_binding_and_its_tapes(self):
+        model = _rust_decay_model(2)
+        leaf = pybamm.IDAKLUSolver().solve(model, [0, 1])["w"]._observer.leaves[0]
+
+        cache = ObserverCache.of(model.new_copy())
+
+        assert cache.rust_model is ObserverCache.of(model).rust_model
+        assert cache._native_leaves["w"][0] is leaf
+
+
+class _Variable:
+    """The slice of ProcessedVariable an observer is allowed to read."""
+
+    def __init__(self, all_ts, all_ys, all_yps=None):
+        self.all_ts = all_ts
+        self.all_ys = all_ys
+        self.all_yps = all_yps
+        self.all_inputs = [{} for _ in all_ts]
+        self.t_pts = np.concatenate(all_ts)
+        self.time_integral = None
+
+    @property
+    def hermite_interpolation(self):
+        return self.all_yps is not None
+
+    def _shape(self, t):
+        return [len(t)]
+
+
+class _Leaf:
+    """Stand-in for a compiled tape: records its calls, returns 2*y0."""
+
+    def __init__(self):
+        self.trajectory_calls = []
+        self.hermite_calls = []
+
+    def eval_trajectory(self, ts, ys, inputs):
+        self.trajectory_calls.append((ts, ys))
+        return np.asfortranarray(2.0 * np.asarray(ys)[:1, :])
+
+    def eval_trajectory_hermite(self, t_query, ts, ys, yps, inputs):
+        self.hermite_calls.append(t_query)
+        return np.asfortranarray(np.zeros((1, len(t_query))))
+
+
+class TestNativeObserverStandalone:
+    def test_observe_raw_evaluates_every_segment(self):
+        leaves = [_Leaf(), _Leaf()]
+        observer = NativeObserver(leaves)
+        variable = _Variable(
+            [np.array([0.0, 1.0]), np.array([2.0])],
+            [np.array([[1.0, 2.0]]), np.array([[3.0]])],
+        )
+
+        np.testing.assert_allclose(observer.observe_raw(variable), [2.0, 4.0, 6.0])
+        assert observer.leaves is leaves
+
+    def test_outputs_only_solves_evaluate_on_shaped_zeros(self):
+        leaf = _Leaf()
+        observer = NativeObserver([leaf], placeholder_states=[3])
+        variable = _Variable([np.array([0.0, 1.0])], [np.zeros((0, 0))])
+
+        np.testing.assert_allclose(observer.observe_raw(variable), [0.0, 0.0])
+        _, ys = leaf.trajectory_calls[0]
+        assert ys.shape == (3, 2)
+
+    def test_empty_segments_are_skipped(self):
+        leaves = [_Leaf(), _Leaf()]
+        observer = NativeObserver(leaves)
+        variable = _Variable(
+            [np.array([]), np.array([0.0, 1.0])],
+            [np.zeros((1, 0)), np.array([[1.0, 2.0]])],
+        )
+
+        np.testing.assert_allclose(observer.observe_raw(variable), [2.0, 4.0])
+        assert leaves[0].trajectory_calls == []
+
+    def test_the_query_times_a_leaf_is_handed_are_the_observer_s_own(self):
+        # A shared tape keeps its last call, so a leaf must not see the caller's array.
+        leaf = _Leaf()
+        observer = NativeObserver([leaf])
+        variable = _Variable(
+            [np.array([0.0, 1.0])],
+            [np.array([[1.0, 2.0]])],
+            all_yps=[np.array([[0.0, 0.0]])],
+        )
+
+        t = np.array([0.2, 0.7])
+        observer.observe_hermite(variable, t)
+        t[:] = [0.9, 0.95]
+        np.testing.assert_array_equal(leaf.hermite_calls[0], [0.2, 0.7])
+
+    def test_segment_selection_is_computed_once_per_observer(self):
+        observer = NativeObserver([_Leaf()])
+        variable = _Variable([np.array([0.0, 1.0])], [np.array([[1.0, 2.0]])])
+
+        observer.observe_raw(variable)
+        selector = observer._selector
+        observer.observe_raw(variable)
+        assert observer._selector is selector
+
+
+class _SharedFunction:
+    """Stand-in for a multi-output CompiledFunction: records its calls."""
+
+    output_names = ("a", "b")
+    output_lens = (2, 1)
+    input_names = ("p",)
+    n_inputs = 1
+
+    output_len = 3
+
+    def __init__(self):
+        self.calls = []
+        self.jvp_calls = []
+
+    def eval_trajectory(self, ts, ys, inputs):
+        self.calls.append(("eval_trajectory", ts))
+        return np.vstack(
+            [
+                np.asarray(ys)[:1] * 2.0,
+                np.asarray(ys)[:1] * 3.0,
+                np.asarray(ys)[:1] * 5.0,
+            ]
+        )
+
+    def jvp_trajectory(self, ts, ys, inputs, vy_traj, vp=None):
+        self.jvp_calls.append((vy_traj, vp))
+        seed = 0.0 if vp is None else float(vp[0])
+        row = np.asarray(vy_traj)[:1]
+        return np.vstack([row * 2.0, row * 3.0, row * 5.0]) + seed
+
+
+class TestSharedOutputs:
+    def _shared(self):
+        function = _SharedFunction()
+        shared = SharedOutputs(function)
+        return (
+            function,
+            shared,
+            SharedOutputLeaf(shared, "a"),
+            SharedOutputLeaf(shared, "b"),
+        )
+
+    def test_each_leaf_sees_only_its_own_rows(self):
+        _, _, leaf_a, leaf_b = self._shared()
+        ys = np.array([[1.0, 2.0]])
+        np.testing.assert_allclose(
+            leaf_a.eval_trajectory(np.array([0.0, 1.0]), ys, {}),
+            [[2.0, 4.0], [3.0, 6.0]],
+        )
+        np.testing.assert_allclose(
+            leaf_b.eval_trajectory(np.array([0.0, 1.0]), ys, {}), [[5.0, 10.0]]
+        )
+        assert leaf_a.output_len == 2
+        assert leaf_b.output_len == 1
+
+    def test_one_evaluation_serves_every_leaf_of_a_call(self):
+        function, _, leaf_a, leaf_b = self._shared()
+        ts, ys = np.array([0.0, 1.0]), np.array([[1.0, 2.0]])
+        leaf_a.eval_trajectory(ts, ys, {})
+        leaf_b.eval_trajectory(ts, ys, {})
+        assert len(function.calls) == 1
+
+    def test_a_different_call_evaluates_afresh(self):
+        function, _, leaf_a, leaf_b = self._shared()
+        ys = np.array([[1.0, 2.0]])
+        leaf_a.eval_trajectory(np.array([0.0, 1.0]), ys, {})
+        leaf_b.eval_trajectory(np.array([2.0, 3.0]), ys, {})
+        assert len(function.calls) == 2
+
+    def test_equal_arrays_from_different_objects_still_share(self):
+        function, _, leaf_a, leaf_b = self._shared()
+        leaf_a.eval_trajectory(np.array([0.0, 1.0]), np.array([[1.0, 2.0]]), {})
+        leaf_b.eval_trajectory(np.array([0.0, 1.0]), np.array([[1.0, 2.0]]), {})
+        assert len(function.calls) == 1
+
+    def test_the_held_result_is_released_once_every_leaf_has_read_it(self):
+        _, shared, leaf_a, leaf_b = self._shared()
+        ts, ys = np.array([0.0, 1.0]), np.array([[1.0, 2.0]])
+        leaf_a.eval_trajectory(ts, ys, {})
+        assert shared._result is not None
+        leaf_b.eval_trajectory(ts, ys, {})
+        assert shared._result is None
+
+    @staticmethod
+    def _sweep_arguments():
+        """``(ts, ys, dy_dp)`` for a two-time, one-state, two-parameter sweep."""
+        return (
+            np.array([0.0, 1.0]),
+            np.array([[1.0, 2.0]]),
+            np.array([[1.0, 0.5], [0.25, 2.0]]),
+        )
+
+    def test_one_sweep_per_parameter_serves_the_whole_set(self):
+        function, _, leaf_a, leaf_b = self._shared()
+        ts, ys, dy_dp = self._sweep_arguments()
+
+        # sensitivity_names is rebuilt per variable: equal, but not the same list.
+        chain_rule_sensitivities(leaf_a, ts, ys, {}, dy_dp, ["p", "q"])
+        chain_rule_sensitivities(leaf_b, ts, ys, {}, dy_dp, ["p", "q"])
+        assert len(function.jvp_calls) == 2
+
+    def test_each_leaf_takes_its_own_rows_of_the_set_s_sweep(self):
+        function, _, leaf_a, leaf_b = self._shared()
+        ts, ys, dy_dp = self._sweep_arguments()
+        names = ["p", "q"]
+
+        blocks = _sweep_sensitivities(function, ts, ys, {}, dy_dp, names).reshape(
+            len(ts), function.output_len, len(names)
+        )
+        np.testing.assert_array_equal(
+            chain_rule_sensitivities(leaf_a, ts, ys, {}, dy_dp, names),
+            blocks[:, 0:2, :].reshape(2 * len(ts), len(names)),
+        )
+        np.testing.assert_array_equal(
+            chain_rule_sensitivities(leaf_b, ts, ys, {}, dy_dp, names),
+            blocks[:, 2:3, :].reshape(len(ts), len(names)),
+        )
+
+    def test_pickling_drops_the_held_result(self):
+        import pickle
+
+        function = _SharedFunction()
+        shared = SharedOutputs(function)
+        leaf = SharedOutputLeaf(shared, "a")
+        leaf.eval_trajectory(np.array([0.0]), np.array([[1.0]]), {})
+        restored = pickle.loads(pickle.dumps(shared))
+        assert restored._result is None
+        assert restored.span("b") == slice(2, 3)
+
+
 class TestSegmentSelector:
     def test_full_range_keeps_every_nonempty_segment(self):
         selector = SegmentSelector(
@@ -194,6 +512,10 @@ class TestObserverCoercion:
 
     def test_an_observer_is_passed_through(self):
         observer = CasadiObserver([None])
+        assert as_observer(observer) is observer
+
+    def test_a_native_observer_is_passed_through(self):
+        observer = NativeObserver([_Leaf()])
         assert as_observer(observer) is observer
 
     def test_process_variable_accepts_either_form(self, spm_solution):

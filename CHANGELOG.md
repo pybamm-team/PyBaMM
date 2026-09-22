@@ -46,6 +46,7 @@
 - pybammsolvers gains an IDAKLU backend that evaluates a Rust `CompiledModel` through its C ABI, resolved at runtime so IDAKLU still loads without the Rust extension, with a Rust-backed Newton solver and output sensitivities projected natively in-solver. ([#5961](https://github.com/pybamm-team/PyBaMM/pull/5961))
 - `IDAKLUSolver` solves `convert_to_format = "rust"` models through a Rust `CompiledModel`, one evaluator per thread, so `num_threads` parallelises input sets. `output_variables` support sensitivities and time integrals, and `NonlinearSolver` compiles its own model. ([#5962](https://github.com/pybamm-team/PyBaMM/pull/5962))
 - `IDAKLUSolver`'s `upsampling_tolerance` also upsamples `convert_to_format = "rust"` models, through an upsampling output compiled into their `CompiledModel`. ([#5962](https://github.com/pybamm-team/PyBaMM/pull/5962))
+- `IDAKLUSolver` observes rust-model solutions natively: variables and their sensitivities are evaluated on tapes compiled into the solve's Rust graph, with no CasADi function, and `Solution.update([...])` compiles a set of variables into one tape per segment. ([#5963](https://github.com/pybamm-team/PyBaMM/pull/5963))
 
 ## Bug fixes
 
