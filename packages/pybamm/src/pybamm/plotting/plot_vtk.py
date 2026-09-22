@@ -170,10 +170,12 @@ def _variable_kind(pv):
     return None
 
 
-def _data_at_time(pv, t):
-    if hasattr(pv, "_data_at_time"):
-        return pv._data_at_time(t)
-    return pv(t)
+def _finite_range(name, values):
+    """Min and max of the finite samples; NaNs must not set the range."""
+    finite = values[np.isfinite(values)]
+    if finite.size == 0:
+        raise pybamm.OptionError(f"'{name}' has no finite values to plot")
+    return float(finite.min()), float(finite.max())
 
 
 def _viridis_lut(vmin, vmax, n=256):
@@ -311,7 +313,6 @@ class VTKQuickPlot:
                 f"variables of this plot ({self.spatial_names})."
             )
 
-        # Build spatial_panels: flat list of (name, opts_dict) tuples.
         self.spatial_panels = []
         for name in self.spatial_names:
             var_opt = raw_opts.get(name, _defaults)
@@ -378,24 +379,14 @@ class VTKQuickPlot:
             # the (points x times) history the variable already holds
             data = np.asarray(pv.entries, dtype=float)
             spatial_data[name] = data
-            finite = data[np.isfinite(data)]
-            if finite.size == 0:
-                raise pybamm.OptionError(f"'{name}' has no finite values to plot")
-            # NaN cells must not swallow the colour range of the whole panel
-            spatial_mins[name] = float(finite.min())
-            spatial_maxs[name] = float(finite.max())
+            spatial_mins[name], spatial_maxs[name] = _finite_range(name, data)
 
-        # --- Precompute scalar (0D) data ---
         scalar_data = {}
         scalar_ranges = {}
         for name, pv in zip(self.scalar_names, self.scalar_vars, strict=True):
             vals = np.asarray(pv(self.t_pts), dtype=float).ravel()
-            finite = vals[np.isfinite(vals)]
-            if finite.size == 0:
-                raise pybamm.OptionError(f"'{name}' has no finite values to plot")
             scalar_data[name] = vals
-            # a NaN sample must not turn the chart's axis range into NaN
-            scalar_ranges[name] = (float(finite.min()), float(finite.max()))
+            scalar_ranges[name] = _finite_range(name, vals)
 
         slider_h = 0.08
         panel_top = 1.0
@@ -421,7 +412,7 @@ class VTKQuickPlot:
 
         all_renderers = []
         spatial_grids = []
-        c2p_filters = []
+        cell_to_point_filters = []
         cutters = []
         chart_views = []
         time_markers = []
@@ -462,15 +453,16 @@ class VTKQuickPlot:
                 _set_point_scalars(g, name, spatial_data[name][:, 0])
             spatial_grids.append(g)
 
-            c2p = None
+            cell_to_point = None
             if is_cell_data:
-                c2p = vtk.vtkCellDataToPointData()
-                c2p.SetInputData(g)
-                c2p.Update()
-            c2p_filters.append(c2p)
+                cell_to_point = vtk.vtkCellDataToPointData()
+                cell_to_point.SetInputData(g)
+                cell_to_point.Update()
+            cell_to_point_filters.append(cell_to_point)
 
-            # Determine pipeline source: cutter for slices, direct/converted for 3d
-            pipeline_source = c2p.GetOutputPort() if c2p is not None else g
+            pipeline_source = (
+                cell_to_point.GetOutputPort() if cell_to_point is not None else g
+            )
             cutter = None
             if plot_type == "slice":
                 axes_given = [ak for ak in ("x", "y", "z") if ak in opts]
@@ -514,7 +506,7 @@ class VTKQuickPlot:
 
                 cutter = vtk.vtkCutter()
                 cutter.SetCutFunction(plane)
-                if c2p is not None:
+                if cell_to_point is not None:
                     cutter.SetInputConnection(pipeline_source)
                 else:
                     cutter.SetInputData(pipeline_source)
@@ -522,7 +514,7 @@ class VTKQuickPlot:
 
                 mapper_source = cutter.GetOutputPort()
             else:
-                if c2p is not None:
+                if cell_to_point is not None:
                     mapper_source = pipeline_source
                 else:
                     mapper_source = None
@@ -582,7 +574,6 @@ class VTKQuickPlot:
 
             ren.SetViewport(*viewport(panel_idx))
 
-            # Cube axes
             if plot_type == "slice":
                 # Use the cutter output bounds so axes align with
                 # the visible slice geometry, not the full 3D grid.
@@ -711,7 +702,6 @@ class VTKQuickPlot:
 
             panel_idx += 1
 
-        # --- Scalar (0D chart) panels ---
         for name in self.scalar_names:
             vals = scalar_data[name]
             v_min, v_max = scalar_ranges[name]
@@ -722,16 +712,13 @@ class VTKQuickPlot:
             chart.GetTitleProperties().SetFontSize(36)
             chart.GetTitleProperties().SetBold(True)
             chart.GetTitleProperties().SetColor(0, 0, 0)
-            chart.GetAxis(1).SetTitle("Time [s]")
-            chart.GetAxis(0).SetTitle(name)
-            chart.GetAxis(1).GetTitleProperties().SetFontSize(28)
-            chart.GetAxis(1).GetTitleProperties().SetColor(0, 0, 0)
-            chart.GetAxis(1).GetLabelProperties().SetFontSize(22)
-            chart.GetAxis(1).GetLabelProperties().SetColor(0, 0, 0)
-            chart.GetAxis(0).GetTitleProperties().SetFontSize(28)
-            chart.GetAxis(0).GetTitleProperties().SetColor(0, 0, 0)
-            chart.GetAxis(0).GetLabelProperties().SetFontSize(22)
-            chart.GetAxis(0).GetLabelProperties().SetColor(0, 0, 0)
+            for axis_index, title in ((1, "Time [s]"), (0, name)):
+                axis = chart.GetAxis(axis_index)
+                axis.SetTitle(title)
+                axis.GetTitleProperties().SetFontSize(28)
+                axis.GetTitleProperties().SetColor(0, 0, 0)
+                axis.GetLabelProperties().SetFontSize(22)
+                axis.GetLabelProperties().SetColor(0, 0, 0)
             chart.GetAxis(1).SetRange(float(self.t_pts[0]), float(self.t_pts[-1]))
             chart.GetAxis(0).SetRange(v_min - v_pad, v_max + v_pad)
 
@@ -792,7 +779,6 @@ class VTKQuickPlot:
             window.AddRenderer(ren)
             panel_idx += 1
 
-        # --- Slider background (white strip at bottom) ---
         slider_bg = vtk.vtkRenderer()
         slider_bg.SetBackground(1, 1, 1)
         slider_bg.SetViewport(0, 0, 1, slider_h)
@@ -801,7 +787,6 @@ class VTKQuickPlot:
         interactor = vtk.vtkRenderWindowInteractor()
         interactor.SetRenderWindow(window)
 
-        # Time label
         time_text = vtk.vtkTextActor()
         time_text.SetInput(f"t = {self.t_pts[0]:.4g} s")
         time_text.GetTextProperty().SetFontSize(28)
@@ -836,51 +821,34 @@ class VTKQuickPlot:
         slider_rep.GetCapProperty().SetColor(0.5, 0.5, 0.5)
         slider_rep.GetSelectedProperty().SetColor(0.3, 0.5, 0.9)
 
-        # Look-up table for snapping to nearest timestep
         _t_array = np.asarray(self.t_pts)
 
         def on_slider(obj, event):
             t_now = float(obj.GetRepresentation().GetValue())
             t_now = max(t_min, min(t_now, t_max))
-
-            if self.interpolate_time:
-                # Evaluate every spatial variable at exact time
-                for sname, g, c2p, cut in zip(
-                    panel_names,
-                    spatial_grids,
-                    c2p_filters,
-                    cutters,
-                    strict=True,
-                ):
-                    vals = _data_at_time(pv_by_name[sname], t_now).ravel()
-                    if is_cell_data_by_name[sname]:
-                        _set_cell_scalars(g, sname, vals)
-                    else:
-                        _set_point_scalars(g, sname, vals)
-                    if c2p is not None:
-                        c2p.Modified()
-                        c2p.Update()
-                    if cut is not None:
-                        cut.Update()
-            else:
-                # Snap to nearest stored timestep (fast)
+            if not self.interpolate_time:
                 t_idx = int(np.argmin(np.abs(_t_array - t_now)))
-                for sname, g, c2p, cut in zip(
-                    panel_names,
-                    spatial_grids,
-                    c2p_filters,
-                    cutters,
-                    strict=True,
-                ):
-                    if is_cell_data_by_name[sname]:
-                        _set_cell_scalars(g, sname, spatial_data[sname][:, t_idx])
-                    else:
-                        _set_point_scalars(g, sname, spatial_data[sname][:, t_idx])
-                    if c2p is not None:
-                        c2p.Modified()
-                        c2p.Update()
-                    if cut is not None:
-                        cut.Update()
+
+            for sname, g, cell_to_point, cut in zip(
+                panel_names,
+                spatial_grids,
+                cell_to_point_filters,
+                cutters,
+                strict=True,
+            ):
+                if self.interpolate_time:
+                    vals = pv_by_name[sname](t_now).ravel()
+                else:
+                    vals = spatial_data[sname][:, t_idx]
+                if is_cell_data_by_name[sname]:
+                    _set_cell_scalars(g, sname, vals)
+                else:
+                    _set_point_scalars(g, sname, vals)
+                if cell_to_point is not None:
+                    cell_to_point.Modified()
+                    cell_to_point.Update()
+                if cut is not None:
+                    cut.Update()
 
             for mt_arr, mtable in time_markers:
                 mt_arr.SetValue(0, t_now)

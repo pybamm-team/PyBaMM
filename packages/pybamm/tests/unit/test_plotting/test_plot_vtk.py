@@ -8,7 +8,6 @@ from pybamm.plotting.plot_vtk import (
     VTKQuickPlot,
     _build_vtk_grid,
     _compute_scale,
-    _data_at_time,
     _make_render_window,
     _mesh_vertices,
     _resolve_scale,
@@ -293,8 +292,6 @@ class TestVTKHelpers:
         assert _variable_kind(node_variable) == "node"
         assert _variable_kind(scalar_variable) == "scalar"
         assert _variable_kind(_triangle_solution()["vector"]) is None
-        np.testing.assert_allclose(_data_at_time(cell_variable, 0.5), [[1.5]])
-        assert _data_at_time(scalar_variable, 0.5) == pytest.approx(0.5)
 
     def test_viridis_lookup_table(self):
         lut = _viridis_lut(-2.0, 4.0, n=8)
