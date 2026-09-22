@@ -100,6 +100,12 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
       "inputs has wrong number of rows. Expected " + std::to_string(number_of_groups) +
       " but got " + std::to_string(inputs.shape()[0]));
 
+  // Each solver copies `number_of_inputs` values from its row, so a narrower row is over-read
+  if (inputs.shape()[1] != number_of_inputs)
+    throw std::domain_error(
+      "inputs has wrong number of cols. Expected " + std::to_string(number_of_inputs) +
+      " but got " + std::to_string(inputs.shape()[1]));
+
   // pbar is optional: an empty array leaves IDAS at its unit default.
   const bool has_pbar = pbar.size() > 0;
   if (has_pbar) {

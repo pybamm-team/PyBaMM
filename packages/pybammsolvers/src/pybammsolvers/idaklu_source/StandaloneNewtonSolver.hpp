@@ -4,6 +4,7 @@
 #include "NonlinearSolver.hpp"
 #include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "common.hpp"
+#include <cstdint>
 #include <memory>
 #include <utility>
 
@@ -89,6 +90,22 @@ public:
   StandaloneNewtonSolver(
     const casadi::Function &residual_fn,
     const casadi::Function &jacobian_fn,
+    const std::vector<sunrealtype>& atol,
+    sunrealtype rtol,
+    sunrealtype step_tol,
+    int max_iter,
+    int max_backtracks,
+    sunrealtype epsNewt,
+    bool use_sparse,
+    sunrealtype klu_pivot_tolerance);
+
+  /** @brief Rust-backed constructor from an opaque Rust model handle. */
+  StandaloneNewtonSolver(
+    std::uintptr_t rust_model_ptr,
+    int n_rhs,
+    int n_alg,
+    const std::vector<expr_int>& jac_rows,
+    const std::vector<expr_int>& jac_cols,
     const std::vector<sunrealtype>& atol,
     sunrealtype rtol,
     sunrealtype step_tol,
