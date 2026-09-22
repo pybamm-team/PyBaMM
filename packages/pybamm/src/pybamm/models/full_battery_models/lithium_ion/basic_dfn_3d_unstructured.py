@@ -25,16 +25,16 @@ class BasicDFN3DUnstructured(BasicDFN2DUnstructured):
         (default, TPFA-orthogonal) or ``"tetrahedron"``.
     """
 
-    _transverse_directions = (("y", "fb", "Horizontal"), ("z", "tb", "Vertical"))
-    _transverse_sides = ("top", "bottom", "front", "back")
-    _default_through_cell_pts = {
+    _transverse_axes = ("y", "z")
+    _default_var_pts = {
         "x_n": 10,
         "x_s": 10,
         "x_p": 10,
         "r_p": 20,
         "r_n": 20,
+        "y": 5,
+        "z": 5,
     }
-    _default_transverse_pts = 5
 
     def __init__(
         self,

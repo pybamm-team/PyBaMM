@@ -8,6 +8,13 @@ from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import
     BaseModel,
 )
 
+# FunctionParameter input label and zero-flux boundary sides of each axis
+_AXES = {
+    "x": ("Through-cell", ("left", "right")),
+    "y": ("Horizontal", ("front", "back")),
+    "z": ("Vertical", ("top", "bottom")),
+}
+
 
 class BasicDFN2DUnstructured(BaseModel):
     """Doyle-Fuller-Newman (DFN) model on a 2D unstructured mesh.
@@ -26,20 +33,15 @@ class BasicDFN2DUnstructured(BaseModel):
         TPFA-orthogonal) or ``"triangle"``.
     """
 
-    # Transverse directions as (coordinate letter, direction tag, label used in
-    # the FunctionParameter input names) and their zero-flux boundary sides.
-    _transverse_directions: tuple[tuple[str, str, str], ...] = (
-        ("z", "tb", "Vertical"),
-    )
-    _transverse_sides: tuple[str, ...] = ("top", "bottom")
-    _default_through_cell_pts: dict[str, int] = {
+    _transverse_axes: tuple[str, ...] = ("z",)
+    _default_var_pts: dict[str, int] = {
         "x_n": 20,
         "x_s": 30,
         "x_p": 20,
         "r_p": 20,
         "r_n": 20,
+        "z": 10,
     }
-    _default_transverse_pts: int = 10
 
     def __init__(
         self,
@@ -52,52 +54,41 @@ class BasicDFN2DUnstructured(BaseModel):
 
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        subdomains = {
+        axes = ("x", *self._transverse_axes)
+        domains = {
             "n": "negative electrode",
             "s": "separator",
             "p": "positive electrode",
+            "": ["negative electrode", "separator", "positive electrode"],
+        }
+        # coords[suffix] holds one spatial variable per axis, e.g. [x_n, z_n]
+        coords = {
+            suffix: [
+                pybamm.SpatialVariable(
+                    f"{axis}_{suffix}" if suffix else axis,
+                    domain=domain,
+                    coord_sys="cartesian",
+                )
+                for axis in axes
+            ]
+            for suffix, domain in domains.items()
         }
 
-        def spatial_variable(name, domain, direction):
-            return pybamm.SpatialVariable(
-                name, domain=domain, coord_sys="cartesian", direction=direction
-            )
-
-        x = spatial_variable("x", whole_cell, "lr")
-        x_n = spatial_variable("x_n", subdomains["n"], "lr")
-        x_s = spatial_variable("x_s", subdomains["s"], "lr")
-        x_p = spatial_variable("x_p", subdomains["p"], "lr")
-        through_cell = {"n": x_n, "s": x_s, "p": x_p, "": x}
-
-        # transverse[letter][suffix] is e.g. z_n for ("z", "n") and z for ("z", "")
-        transverse = {}
-        for letter, direction, _ in self._transverse_directions:
-            transverse[letter] = {
-                suffix: spatial_variable(f"{letter}_{suffix}", domain, direction)
-                for suffix, domain in subdomains.items()
-            }
-            transverse[letter][""] = spatial_variable(letter, whole_cell, direction)
-
         def position_inputs(suffix):
-            inputs = {"Through-cell distance (x) [m]": through_cell[suffix]}
-            for letter, _, label in self._transverse_directions:
-                inputs[f"{label} distance ({letter}) [m]"] = transverse[letter][suffix]
-            return inputs
+            return {
+                f"{_AXES[axis][0]} distance ({axis}) [m]": var
+                for axis, var in zip(axes, coords[suffix], strict=True)
+            }
 
         # A 2D slice stands for a cell of width L_y, so volume integrals are
         # scaled by the length of every direction the mesh does not resolve
         unresolved_length = pybamm.Scalar(1)
-        for letter in ("y", "z"):
-            if letter not in transverse:
-                unresolved_length *= getattr(self.param, f"L_{letter}")
+        for axis in ("y", "z"):
+            if axis not in axes:
+                unresolved_length *= getattr(self.param, f"L_{axis}")
 
         def volume_integral(integrand, suffix):
-            integration_variables = [through_cell[suffix]] + [
-                transverse[letter][suffix]
-                for letter, _, _ in self._transverse_directions
-            ]
-            return unresolved_length * pybamm.Integral(integrand, integration_variables)
+            return unresolved_length * pybamm.Integral(integrand, coords[suffix])
 
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
@@ -239,7 +230,8 @@ class BasicDFN2DUnstructured(BaseModel):
         L_scale = self.param.L_x**2 * self.param.L_z**2
         zero_flux = {
             side: (pybamm.Scalar(0), "Neumann")
-            for side in ("left", "right", *self._transverse_sides)
+            for axis in axes
+            for side in _AXES[axis][1]
         }
         sigma_eff_n = self.param.n.sigma(sto_surf_n, T) * eps_s_n**self.param.n.b_s
         sigma_eff_p = self.param.p.sigma(sto_surf_p, T) * eps_s_p**self.param.p.b_s
@@ -342,40 +334,16 @@ class BasicDFN2DUnstructured(BaseModel):
             "Negative solid lithium [mol]": solid_lithium_negative,
             "Total solid lithium [mol]": total_solid_lithium,
         }
-        for var in through_cell.values():
-            self.variables[var.name] = var
-        for variables_by_suffix in transverse.values():
-            for var in variables_by_suffix.values():
-                self.variables[var.name] = var
         self.events += [
             pybamm.Event("Minimum voltage [V]", voltage - self.param.voltage_low_cut),
             pybamm.Event("Maximum voltage [V]", self.param.voltage_high_cut - voltage),
         ]
 
-    def _transverse_geometry(
-        self,
-    ) -> list[tuple[pybamm.SpatialVariable, pybamm.Symbol]]:
-        """Whole-cell transverse spatial variables keyed like ``z_2d`` with the
-        cell dimension each one spans."""
-        ndim = 1 + len(self._transverse_directions)
-        return [
-            (
-                pybamm.SpatialVariable(
-                    f"{letter}_{ndim}d",
-                    domain=["negative electrode", "separator", "positive electrode"],
-                    coord_sys="cartesian",
-                    direction=direction,
-                ),
-                getattr(self.param, f"L_{letter}"),
-            )
-            for letter, direction, _ in self._transverse_directions
-        ]
-
     @property
     def default_geometry(self):
         transverse = {
-            var: {"min": 0, "max": length}
-            for var, length in self._transverse_geometry()
+            axis: {"min": 0, "max": getattr(self.param, f"L_{axis}")}
+            for axis in self._transverse_axes
         }
         return {
             "negative electrode": {
@@ -434,7 +402,4 @@ class BasicDFN2DUnstructured(BaseModel):
 
     @property
     def default_var_pts(self):
-        var_pts = dict(self._default_through_cell_pts)
-        for var, _ in self._transverse_geometry():
-            var_pts[var] = self._default_transverse_pts
-        return var_pts
+        return dict(self._default_var_pts)

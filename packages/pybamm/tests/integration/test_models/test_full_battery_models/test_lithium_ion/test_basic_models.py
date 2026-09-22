@@ -26,14 +26,16 @@ def lithium_per_area(model, electrolyte_domains, particles):
     return n
 
 
-def coarse_unstructured_var_pts(model):
-    """Coarse mesh for the unstructured DFN models: 5 through-cell points per
-    domain, 10 radial points and 3 points in each transverse direction."""
-    var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_p": 10, "r_n": 10}
-    for var in model.default_var_pts:
-        if not isinstance(var, str):
-            var_pts[var] = 3
-    return var_pts
+# Coarse mesh for the unstructured DFN models
+COARSE_UNSTRUCTURED_VAR_PTS = {
+    "x_n": 5,
+    "x_s": 5,
+    "x_p": 5,
+    "r_p": 10,
+    "r_n": 10,
+    "y": 3,
+    "z": 3,
+}
 
 
 class TestElectrolyteConservation:
@@ -167,7 +169,7 @@ class TestElectrolyteConservation:
         sim = pybamm.Simulation(
             model,
             parameter_values=parameter_values,
-            var_pts=coarse_unstructured_var_pts(model),
+            var_pts=COARSE_UNSTRUCTURED_VAR_PTS,
             solver=pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8),
         )
         # initial_soc needs a spatially uniform loading to compute capacities
@@ -231,11 +233,16 @@ class TestBasicDFN2DUnstructured(BaseBasicModelTest):
 
     def test_matches_structured(self):
         t_eval = np.linspace(0, 3600, 20)
-        var_pts = coarse_unstructured_var_pts(self.model)
-
         model_s = pybamm.lithium_ion.BasicDFN2D()
-        sol_s = pybamm.Simulation(model_s, var_pts=var_pts).solve(t_eval)
-        sol_u = pybamm.Simulation(self.model, var_pts=var_pts).solve(t_eval)
+        # BasicDFN2D keys its transverse points by its own z_2d spatial variable
+        var_pts_s = {
+            var: COARSE_UNSTRUCTURED_VAR_PTS.get(var, 3)
+            for var in model_s.default_var_pts
+        }
+        sol_s = pybamm.Simulation(model_s, var_pts=var_pts_s).solve(t_eval)
+        sol_u = pybamm.Simulation(
+            self.model, var_pts=COARSE_UNSTRUCTURED_VAR_PTS
+        ).solve(t_eval)
 
         V_s = sol_s["Voltage [V]"](t=t_eval)
         V_u = sol_u["Voltage [V]"](t=t_eval)
@@ -256,14 +263,10 @@ class TestBasicDFN3DUnstructured(BaseBasicModelTest):
         t_eval = np.linspace(0, 3600, 20)
 
         model_2d = pybamm.lithium_ion.BasicDFN2DUnstructured(element_type="quad")
-        sim_2d = pybamm.Simulation(
-            model_2d, var_pts=coarse_unstructured_var_pts(model_2d)
-        )
+        sim_2d = pybamm.Simulation(model_2d, var_pts=COARSE_UNSTRUCTURED_VAR_PTS)
         sol_2d = sim_2d.solve(t_eval)
 
-        sim_3d = pybamm.Simulation(
-            self.model, var_pts=coarse_unstructured_var_pts(self.model)
-        )
+        sim_3d = pybamm.Simulation(self.model, var_pts=COARSE_UNSTRUCTURED_VAR_PTS)
         sol_3d = sim_3d.solve(t_eval)
 
         V_2d = sol_2d["Voltage [V]"](t=t_eval)
