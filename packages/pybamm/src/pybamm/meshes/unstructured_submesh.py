@@ -10,9 +10,9 @@ from .meshes import MeshGenerator, SubMesh
 # (query points x boundary triangles) pairs evaluated per chunk in contains_points_3d;
 # each pair carries ~10 float64 temporaries, so this keeps a chunk under ~20 MB
 _CONTAINS_POINTS_CHUNK_PAIRS = 200_000
-# solid angle (sr) above which a point counts as inside; exterior points sum to
-# ~0 with round-off far below this, surface points to at least a corner's angle
-_CONTAINS_POINTS_TOL = 1e-6
+# boundary inflation, as a fraction of the mesh span, that puts surface points
+# strictly inside: exactly on the surface the solid-angle sign is round-off
+_CONTAINS_POINTS_INFLATION = 1e-9
 # containment masks remembered per mesh, keyed by the query-point array
 _CONTAINS_POINTS_CACHE_SIZE = 8
 
@@ -674,7 +674,9 @@ class UnstructuredSubMesh(SubMesh):
         Uses the generalized winding number (Van Oosterom--Strackee signed
         solid angle sum over all boundary triangles).  Points inside the
         domain or on its surface return ``True``; points outside or inside
-        internal cavities return ``False``.
+        internal cavities return ``False``.  The boundary is inflated by
+        ``1e-9`` of the mesh span, so points that close outside it also count
+        as inside.
         """
         query_pts = np.asarray(query_pts, dtype=np.float64)
         bnd_start = self._boundary_face_start
@@ -695,17 +697,29 @@ class UnstructuredSubMesh(SubMesh):
                 f"contains_points_3d: unsupported face with {n_vpf} vertices"
             )
 
-        v0 = self.vertices[tri_idx[:, 0]]
-        v1 = self.vertices[tri_idx[:, 1]]
-        v2 = self.vertices[tri_idx[:, 2]]
-
+        vertices = self.vertices
         # Ensure consistent CCW orientation from outside (matching outward normals)
-        cross = np.cross(v1 - v0, v2 - v0)
+        cross = np.cross(
+            vertices[tri_idx[:, 1]] - vertices[tri_idx[:, 0]],
+            vertices[tri_idx[:, 2]] - vertices[tri_idx[:, 0]],
+        )
         flip = np.sum(cross * tri_normals, axis=1) < 0
-        v1_fixed = v1.copy()
-        v2_fixed = v2.copy()
-        v1_fixed[flip] = v2[flip]
-        v2_fixed[flip] = v1[flip]
+        tri_idx = tri_idx.copy()
+        tri_idx[flip, 1], tri_idx[flip, 2] = tri_idx[flip, 2], tri_idx[flip, 1]
+
+        # move each boundary vertex outward along its mean face normal; the
+        # surface stays closed, so the winding number stays exactly 0 or 4*pi
+        unit_normals = tri_normals / np.linalg.norm(tri_normals, axis=1)[:, None]
+        vertex_normals = np.zeros_like(vertices)
+        np.add.at(vertex_normals, tri_idx.ravel(), np.repeat(unit_normals, 3, axis=0))
+        lengths = np.linalg.norm(vertex_normals, axis=1)
+        vertex_normals[lengths > 0] /= lengths[lengths > 0, None]
+        span = np.ptp(vertices, axis=0).max()
+        vertices = vertices + _CONTAINS_POINTS_INFLATION * span * vertex_normals
+
+        v0 = vertices[tri_idx[:, 0]]
+        v1_fixed = vertices[tri_idx[:, 1]]
+        v2_fixed = vertices[tri_idx[:, 2]]
 
         n_query = len(query_pts)
         winding = np.zeros(n_query)
@@ -733,9 +747,8 @@ class UnstructuredSubMesh(SubMesh):
 
             winding[start : start + chunk] = 2.0 * np.arctan2(num, den).sum(axis=1)
 
-        # exterior points sum to 0 and interior ones to 4*pi; a surface point
-        # subtends a positive angle (2*pi on a face), so it counts as inside
-        return winding > _CONTAINS_POINTS_TOL
+        # exterior points sum to 0 and interior ones (surface included) to 4*pi
+        return winding > 2.0 * np.pi
 
 
 # ======================================================================
