@@ -421,6 +421,30 @@ class TestVTKQuickPlot:
         with pytest.raises(pybamm.OptionError, match="no finite values"):
             plot.dynamic_plot(show_plot=False)
 
+    def test_nan_samples_do_not_poison_0d_chart_range(self):
+        model = pybamm.BaseModel()
+        model.variables = {"state": pybamm.StateVector(slice(0, 1))}
+        model.update_processed_variables(model.variables)
+        t = np.arange(4.0)
+        y = np.asfortranarray([[1.0, np.nan, 3.0, 5.0]])
+        plot = VTKQuickPlot(pybamm.Solution(t, y, model, {}), "state")
+        plot.dynamic_plot(show_plot=False)
+
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        props = renderers.GetNextItem().GetViewProps()
+        props.InitTraversal()
+        chart = props.GetNextProp().GetScene().GetItem(0)
+        # the finite range [1, 5] padded by 5 %
+        np.testing.assert_allclose(
+            [chart.GetAxis(0).GetMinimum(), chart.GetAxis(0).GetMaximum()], [0.8, 5.2]
+        )
+
+        y[:] = np.nan
+        plot = VTKQuickPlot(pybamm.Solution(t, y, model, {}), "state")
+        with pytest.raises(pybamm.OptionError, match="no finite values"):
+            plot.dynamic_plot(show_plot=False)
+
     def test_rejects_vector_field_and_structured_variables(self):
         solution = _triangle_solution()
         with pytest.raises(pybamm.OptionError, match="cannot plot 'vector'"):

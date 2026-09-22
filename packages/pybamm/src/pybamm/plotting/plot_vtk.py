@@ -352,6 +352,7 @@ class VTKQuickPlot:
     def dynamic_plot(self, show_plot: bool = True) -> None:
         """Launch an interactive VTK window with a time slider."""
         vtk = pybamm.import_optional_dependency("vtk")
+        numpy_support = pybamm.import_optional_dependency("vtk.util.numpy_support")
 
         n_spatial = len(self.spatial_panels)
         n_scalar = len(self.scalar_names)
@@ -373,8 +374,15 @@ class VTKQuickPlot:
 
         # --- Precompute scalar (0D) data ---
         scalar_data = {}
+        scalar_ranges = {}
         for name, pv in zip(self.scalar_names, self.scalar_vars, strict=True):
-            scalar_data[name] = np.asarray(pv(self.t_pts), dtype=float).ravel()
+            vals = np.asarray(pv(self.t_pts), dtype=float).ravel()
+            finite = vals[np.isfinite(vals)]
+            if finite.size == 0:
+                raise pybamm.OptionError(f"'{name}' has no finite values to plot")
+            scalar_data[name] = vals
+            # a NaN sample must not turn the chart's axis range into NaN
+            scalar_ranges[name] = (float(finite.min()), float(finite.max()))
 
         slider_h = 0.08
         panel_top = 1.0
@@ -693,7 +701,7 @@ class VTKQuickPlot:
         # --- Scalar (0D chart) panels ---
         for name in self.scalar_names:
             vals = scalar_data[name]
-            v_min, v_max = float(vals.min()), float(vals.max())
+            v_min, v_max = scalar_ranges[name]
             v_pad = max((v_max - v_min) * 0.05, 1e-10)
 
             chart = vtk.vtkChartXY()
@@ -715,13 +723,12 @@ class VTKQuickPlot:
             chart.GetAxis(0).SetRange(v_min - v_pad, v_max + v_pad)
 
             table = vtk.vtkTable()
-            t_arr = vtk.vtkFloatArray()
+            t_arr = numpy_support.numpy_to_vtk(
+                np.asarray(self.t_pts, dtype=np.float32), deep=True
+            )
             t_arr.SetName("Time")
-            v_arr = vtk.vtkFloatArray()
+            v_arr = numpy_support.numpy_to_vtk(vals.astype(np.float32), deep=True)
             v_arr.SetName(name)
-            for i in range(len(self.t_pts)):
-                t_arr.InsertNextValue(float(self.t_pts[i]))
-                v_arr.InsertNextValue(float(vals[i]))
             table.AddColumn(t_arr)
             table.AddColumn(v_arr)
 
