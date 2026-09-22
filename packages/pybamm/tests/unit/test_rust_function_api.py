@@ -588,6 +588,99 @@ class TestInstructionCounts:
         assert reported(2) == reported(6)
 
 
+class TestCompiledModelBundle:
+    def _setup(self):
+        from pybamm.rust import CompiledModel
+
+        g = ExprGraph()
+        a = g.input_parameter("a")
+        y0 = g.state_vector(0, 1)
+        y1 = g.state_vector(1, 2)
+        rhs = g.concat([g.mul(a, y1), g.neg(y0)])
+        out = g.mul(y0, y1)
+        event = g.sub(y0, g.scalar(10.0))
+        mass = np.array([1.0, 1.0])
+        indptr = np.array([0, 1, 2], dtype=np.int64)
+        indices = np.array([0, 1], dtype=np.int64)
+        model = CompiledModel.from_expr(
+            g,
+            rhs,
+            mass,
+            indptr,
+            indices,
+            n_inputs=1,
+            output_exprs=[out],
+            event_exprs=[event],
+        )
+        return g, model
+
+    def test_rhs_view(self):
+        _, model = self._setup()
+        f = model.rhs
+        y = np.array([1.0, 2.0])
+        p = np.array([3.0])
+        np.testing.assert_array_equal(f(0.0, y, p), [6.0, -1.0])
+        assert f.n_states == 2
+
+    def test_jacobian_view_is_pure_df_dy(self):
+        _, model = self._setup()
+        J = model.jacobian
+        mat = J(0.0, np.array([1.0, 2.0]), np.array([3.0]))
+        # df/dy = [[0, a], [-1, 0]] — no mass, no cj
+        np.testing.assert_allclose(mat.toarray(), [[0.0, 3.0], [-1.0, 0.0]])
+
+    def test_outputs_and_events_views(self):
+        _, model = self._setup()
+        (out_fn,) = model.outputs
+        (event_fn,) = model.events
+        y = np.array([1.0, 2.0])
+        p = np.array([3.0])
+        np.testing.assert_array_equal(out_fn(0.0, y, p), [2.0])
+        np.testing.assert_array_equal(event_fn(0.0, y, p), [-9.0])
+
+    def test_algebraic_views_none_for_ode(self):
+        _, model = self._setup()
+        assert model.algebraic_residual is None
+        assert model.algebraic_jacobian is None
+
+    def test_algebraic_jacobian_view_is_the_compiled_artifact(self):
+        model = pybamm.lithium_ion.DFN()
+        model.convert_to_format = "rust"
+        sim = pybamm.Simulation(model)
+        sim.build()
+        sim.solver.set_up(sim.built_model, inputs=[{}])
+        rust_model = sim.solver._setup["rust_model"]
+        assert rust_model.has_algebraic
+
+        view = rust_model.algebraic_jacobian
+        n_algebraic = rust_model.n_algebraic
+        assert view.shape == (n_algebraic, n_algebraic)
+        assert view.nnz == rust_model.algebraic_jacobian_nnz
+        rows, _ = rust_model.algebraic_jacobian_sparsity_pattern()
+        assert sorted(np.asarray(rows).tolist()) == sorted(
+            np.asarray(view.sparsity()[1]).tolist()
+        )
+
+    def test_views_are_cached_objects(self):
+        _, model = self._setup()
+        assert model.rhs is model.rhs
+        assert model.jacobian is model.jacobian
+        assert model.outputs[0] is model.outputs[0]
+        assert model.events[0] is model.events[0]
+
+    def test_kept_solver_surface(self):
+        _, model = self._setup()
+        assert model.n_states == 2
+        assert model.nnz >= 2
+        assert model.n_colors >= 1
+        assert isinstance(model.evaluator_pool(1).as_ptr(0), int)
+        model.csc_sparsity_pattern()
+        stats = model.jacobian_stats()
+        assert stats["n_dense_rows"] == 0
+        assert stats["dense_row_entries"] == 0
+        assert stats["dense_row_tape_instructions"] == 0
+
+
 class TestJvpTrajectory:
     def _setup(self):
         _, f = _make_fn()
@@ -767,6 +860,7 @@ class TestExtensionModuleLocation:
 
         for name in (
             "CompiledFunction",
+            "CompiledModel",
             "ExprGraph",
         ):
             assert hasattr(pybamm.rust, name), name

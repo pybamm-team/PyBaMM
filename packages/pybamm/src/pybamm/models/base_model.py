@@ -108,9 +108,9 @@ class BaseModel:
     y0S_list: list[Any] | None
     initial_conditions_eval: Callable[..., Any]
     jacp_initial_conditions_eval: Callable[..., Any] | None
-    rhs_eval: Callable[..., Any]
-    algebraic_eval: Callable[..., Any]
-    rhs_algebraic_eval: Callable[..., Any]
+    rhs_eval: Callable[..., Any] | None
+    algebraic_eval: Callable[..., Any] | None
+    rhs_algebraic_eval: Callable[..., Any] | None
     jac_rhs_eval: Callable[..., Any] | None
     jac_rhs_action_eval: Callable[..., Any] | None
     jacp_rhs_eval: Callable[..., Any] | None

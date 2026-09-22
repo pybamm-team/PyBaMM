@@ -1,8 +1,9 @@
 # Building the Rust Backend
 
-This guide covers building the Rust compute core and its Python bindings for
-development. Everything lives in this repository's `uv` workspace; there are
-no side-by-side clones or environment variables to configure.
+This guide covers building the Rust compute core, its Python bindings, and the
+Rust-capable IDAKLU solver for development. Everything lives in this
+repository's `uv` workspace; there are no side-by-side clones or environment
+variables to configure.
 
 ## Components
 
@@ -10,11 +11,29 @@ no side-by-side clones or environment variables to configure.
 |-----------|----------|------------|--------|
 | `pybamm-core` | `packages/pybamm-rust/pybamm-core` | Cargo | Rust library (rlib) |
 | `pybamm-python` | `packages/pybamm-rust/pybamm-python` | maturin (via `uv sync`) | `pybamm.rust._core` extension module |
+| pybammsolvers | `packages/pybammsolvers` | scikit-build-core / CMake | `idaklu` extension module |
 
 **How the pieces connect:**
 
-- `pybamm.rust` provides the Python API that compiles expressions into
-  evaluable functions and sparse Jacobians.
+- `pybamm.rust` provides the Python API that lowers a discretised model to a
+  `CompiledModel` for the IDAKLU solver.
+- pybammsolvers does **not** link against the Rust core (the package
+  dependency only flows the other way). The IDAKLU C++ consumer resolves the
+  `extern "C"` entry points at runtime — `dlsym(RTLD_DEFAULT)` on POSIX, a
+  loaded-module walk with `GetProcAddress` on Windows — once
+  `pybamm.rust._core` is imported in-process.
+- The FFI contract's source of truth is the `extern "C"` exports in
+  `packages/pybamm-rust/pybamm-core/src/ffi.rs` (symbols carry a
+  `pybamm_rust_` prefix). The C++ consumer mirrors them as a function-pointer
+  table in
+  `packages/pybammsolvers/src/pybammsolvers/idaklu_source/Expressions/Rust/pybamm_rust_ffi.h`.
+  A version handshake (`pybamm_rust_abi_version()` /
+  `PYBAMM_RUST_ABI_VERSION`) and the `test_ffi_abi_contract` drift test keep
+  the two sides in lockstep.
+- Rust reads and writes the C++ buffers at the Rust model's own sizes, so
+  `create_rust_solver_group` checks every count it sizes a buffer from
+  (states, inputs, Jacobian non-zeros, sensitivity parameters, outputs and
+  events) against the model, raising `ValueError` on a mismatch.
 
 ## Prerequisites
 
@@ -36,12 +55,14 @@ git submodule update --init --recursive
 uv sync --extra all --group dev
 ```
 
-Verify the extension imports:
+Verify the two halves see each other:
 
 ```bash
 uv run python -c "
-from pybamm.rust import ExprGraph
-print('Rust bindings:', ExprGraph)
+from pybamm.rust import CompiledModel
+from pybammsolvers import idaklu
+print('Rust bindings:', CompiledModel)
+print('Rust FFI available:', hasattr(idaklu, 'create_rust_solver_group'))
 "
 ```
 
@@ -50,12 +71,56 @@ print('Rust bindings:', ExprGraph)
 `uv`'s cache keys cover the Rust sources, so a plain `uv sync` rebuilds
 `pybamm.rust._core` whenever a `.rs` file changes.
 
+pybammsolvers' cache key is only its `pyproject.toml`. After changing any of
+its C++ sources — including `pybamm_rust_ffi.h` — force a rebuild:
+
+```bash
+uv cache clean pybammsolvers
+uv sync --extra all --group dev --reinstall-package pybammsolvers
+```
+
+## Changing the FFI surface
+
+The drift test parses both sides of the boundary, so the workflow is
+mechanical:
+
+1. Edit the exports in `ffi.rs` and the consumer table in
+   `pybamm_rust_ffi.h` together. The table mirrors the exports exactly: the
+   drift test fails on an export the table does not bind, a binding with no
+   export, or a binding `RustFunctions.hpp` never calls.
+2. Run `cargo test -p pybamm-core --test test_ffi_abi_contract` from
+   `packages/pybamm-rust/`. On any change to the exported surface it fails
+   and prints the new `EXPECTED_ABI_HASH`; update it in `ffi.rs` and bump
+   `RUST_ABI_VERSION` / `PYBAMM_RUST_ABI_VERSION` in lockstep.
+3. Rebuild both extensions (previous section). A stale pybammsolvers binary
+   fails loudly at first use — either an unresolvable symbol or an ABI
+   version mismatch — rather than corrupting an evaluation.
+
 ## Running tests
 
 ```bash
 # Rust unit + contract tests
 cd packages/pybamm-rust && cargo test --workspace
+
+# Rust-IDAKLU integration tests (from the repo root)
+uv run --group dev pytest packages/pybamm/tests/integration/test_rust_idaklu_parity.py
+uv run --group dev pytest packages/pybamm/tests/integration/test_rust_idaklu_spm.py
 ```
+
+## Verifying FFI symbols
+
+The entry points are exported by `pybamm.rust._core` and resolved from it at
+runtime, so they should be *defined* there and appear nowhere in idaklu:
+
+```bash
+# macOS (Linux: nm -D --defined-only)
+nm -gU packages/pybamm/src/pybamm/rust/_core.abi3.so | grep pybamm_rust_
+```
+
+Expected output lists symbols like `_pybamm_rust_eval_rhs` and
+`_pybamm_rust_abi_version`. If a Rust-backed solve fails with an
+unresolvable-symbol error instead, the loaded extension predates the current
+FFI surface — rebuild both extensions from the same source tree.
 
 ## Running benchmarks
 
@@ -67,8 +132,31 @@ cargo bench
 
 ## Troubleshooting
 
+### Segfaults in SUNDIALS callbacks
+
+Crashes during `solve()` (especially in residual/Jacobian callbacks) usually
+indicate a **SuiteSparse version mismatch**: the `.idaklu/` build directory
+holds a stale build while the submodules (or a Homebrew install picked up via
+`@rpath`) moved on. Rebuild the native dependencies from the current
+submodules:
+
+```bash
+cd packages/pybammsolvers
+rm -rf .idaklu
+uv run python install_KLU_Sundials.py
+cd ../.. && uv sync --extra all --group dev --reinstall-package pybammsolvers
+```
+
+Do **not** point the build at Homebrew's suite-sparse; version mismatches
+between it and the local SUNDIALS build cause runtime crashes.
+
 ### `pybamm.rust._core` import fails
 
 ```bash
 uv sync --extra all --group dev --reinstall-package pybamm
 ```
+
+### Other symbol errors
+
+An ABI mismatch between components — rebuild both extensions from the same
+tree (see "Rebuilding after changes").
