@@ -2,6 +2,8 @@
 # Tests for the base model class
 #
 
+import random
+
 import numpy as np
 import pytest
 from scipy.sparse import block_diag, issparse
@@ -1410,3 +1412,48 @@ class TestDiscretise:
             assert isinstance(var, (pybamm.Variable | pybamm.Concatenation)), (
                 f"Unexpected new variable '{name}' added by process_model"
             )
+
+    def test_process_model_is_independent_of_variable_order(self):
+        # a one-point integration or broadcast can simplify back to its child,
+        # which discretisation caches and would otherwise be mutated in place
+        def discretise(shuffle_seed):
+            model = pybamm.lithium_ion.SPMe()
+            names = list(model.variables)
+            if shuffle_seed is not None:
+                random.Random(shuffle_seed).shuffle(names)
+            model.variables = pybamm.FuzzyDict(
+                {name: model.variables[name] for name in names}
+            )
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            parameter_values.process_model(model)
+            geometry = model.default_geometry
+            parameter_values.process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
+            return model.get_processed_variables_dict()
+
+        reference = discretise(None)
+        for seed in (1, 2):
+            shuffled = discretise(seed)
+            differing = [
+                name for name, expr in reference.items() if expr.id != shuffled[name].id
+            ]
+            assert differing == []
+
+    def test_process_model_copies_function_subclass_child(self):
+        # a one-point integration simplifies back to its child; copying that child
+        # must go through the subclass, or Arcsinh2's bound `eps` is lost
+        model = pybamm.lithium_ion.SPM({"thermal": "lumped"})
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.process_model(model)
+        geometry = model.default_geometry
+        parameter_values.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+
+        disc.process_model(model)
+
+        assert "Voltage [V]" in model.get_processed_variables_dict()

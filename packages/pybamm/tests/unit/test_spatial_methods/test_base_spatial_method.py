@@ -8,6 +8,7 @@ import pytest
 import pybamm
 from tests import (
     get_1p1d_mesh_for_testing,
+    get_discretisation_for_testing,
     get_mesh_for_testing,
     get_size_distribution_mesh_for_testing,
 )
@@ -148,3 +149,30 @@ class TestSpatialMethod:
         symbol = pybamm.BoundaryGradient(child, "left")
         with pytest.raises(NotImplementedError, match=r"Cannot process 2D symbol"):
             spatial_method.boundary_value_or_flux(symbol, child)
+
+    @pytest.mark.parametrize(
+        "broadcast_class", [pybamm.FullBroadcast, pybamm.PrimaryBroadcast]
+    )
+    def test_broadcast_does_not_mutate_child(self, broadcast_class):
+        # Broadcasting onto a one-point current collector can simplify back to the
+        # child itself, which is shared via the discretisation cache
+        times = np.array([0.0, 1800.0])
+        temperatures = np.array([298.15, 318.15])
+        disc = get_discretisation_for_testing()
+
+        interpolant = pybamm.Interpolant(times, temperatures, pybamm.t)
+        disc_interpolant = disc.process_symbol(interpolant)
+        child_domains = {k: list(v) for k, v in disc_interpolant.domains.items()}
+        child_id = disc_interpolant.id
+
+        broadcast = disc.process_symbol(
+            broadcast_class(interpolant, "current collector")
+        )
+
+        assert broadcast is not disc_interpolant
+        assert disc_interpolant.domains == child_domains
+        assert disc_interpolant.id == child_id
+        assert broadcast.domain == ["current collector"]
+        np.testing.assert_allclose(
+            broadcast.evaluate(t=900.0), [[308.15]], rtol=1e-12, atol=1e-12
+        )
