@@ -675,9 +675,8 @@ class VTKQuickPlot:
                     )
                     * 2
                 )
-                # Look from the negative side so OuterEdges places
-                # axis labels on the top/left edges (more viewport room).
-                # offset along the plane normal only, so the view is face-on
+                # face-on from the negative side: OuterEdges then puts the axis
+                # labels on the top/left edges, where the viewport has room
                 pos = list(fp)
                 pos[axis_idx] = fp[axis_idx] - offset
                 cam.SetPosition(pos)
