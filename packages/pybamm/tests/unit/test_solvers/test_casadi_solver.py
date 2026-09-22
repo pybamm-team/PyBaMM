@@ -11,6 +11,12 @@ from tests import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _casadi_default(monkeypatch):
+    # This file tests the CasADi solvers, so build CasADi models instead of converting.
+    monkeypatch.setattr(pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", "casadi")
+
+
 class TestCasadiSolver:
     def test_no_sensitivities_error(self):
         model = pybamm.lithium_ion.SPM()

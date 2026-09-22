@@ -23,6 +23,7 @@ maxdepth: 2
 fundamentals/index
 fundamentals/battery_models
 fundamentals/public_api
+rust_backend
 ```
 
 ```{toctree}
