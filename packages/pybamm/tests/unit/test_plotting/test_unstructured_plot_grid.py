@@ -67,9 +67,10 @@ def _unstructured_solution(dim, n):
     return pybamm.Solution(t_sol, y_sol, model_disc, {}), components
 
 
-def _triangle_vector_solution():
-    """Vector field ``(u, u)`` with ``u = 1 + t`` on one triangle, so the
-    bounding-box display grid samples points outside the domain."""
+def _triangle_vector_solution(values=(1.0, 2.0)):
+    """Vector field ``(u, u)`` with ``u`` taking ``values`` over time on one
+    triangle, so the bounding-box display grid samples points outside the
+    domain."""
     mesh = pybamm.UnstructuredSubMesh(
         np.array([[0.0, 0.0], [2.0, 0.0], [0.0, 1.0]]), np.array([[0, 1, 2]])
     )
@@ -89,7 +90,7 @@ def _triangle_vector_solution():
     model.variables = {"vector": vector}
     model.update_processed_variables(model.variables)
     return pybamm.Solution(
-        np.array([0.0, 1.0]), np.asfortranarray([[1.0, 2.0]]), model, {}
+        np.array([0.0, 1.0]), np.asfortranarray([list(values)]), model, {}
     )
 
 
@@ -276,6 +277,16 @@ class TestQuickPlotUnstructured:
         quick_plot.plot(0.5)
         norm = quick_plot.plots[("flux",)][0][0].norm
         np.testing.assert_allclose([norm.vmin, norm.vmax], [1.0, 5.0])
+        pybamm.close_plots()
+
+    def test_zero_vector_field_gets_a_usable_colour_range(self):
+        solution = _triangle_vector_solution(values=(0.0, 0.0))
+        quick_plot = pybamm.QuickPlot(solution, ["vector"])
+        # a degenerate (0, 0) range would leave every arrow the same colour
+        assert quick_plot.variable_limits[("vector",)] == (0.0, 1.0)
+        quick_plot.plot(0.5)
+        norm = quick_plot.plots[("vector",)][0][0].norm
+        np.testing.assert_allclose([norm.vmin, norm.vmax], [0.0, 1.0])
         pybamm.close_plots()
 
     def test_quiver_colour_scale_ignores_samples_outside_domain(self):
