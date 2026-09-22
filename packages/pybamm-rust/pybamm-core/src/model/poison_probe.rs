@@ -1,6 +1,6 @@
 //! No entry point trusts per-caller scratch left by an earlier call, finished or unwound.
 //!
-//! Every entry point the FFI reaches runs on a fresh [`Workspace`], then on one that
+//! Every entry point the FFI and diffsol reach runs on a fresh [`Workspace`], then on one that
 //! every entry point has dirtied and that was then overwritten whole; both give the same bits.
 
 use super::test_fixtures::{

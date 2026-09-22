@@ -135,6 +135,36 @@ impl CompiledModel {
         }
     }
 
+    /// Compute `y = M @ x + beta * y` in place.
+    ///
+    /// When `beta == 0`, `y` is overwritten without being read, as in BLAS.
+    pub fn mass_gemv(&self, x: &[f64], beta: f64, y: &mut [f64]) {
+        if beta == 0.0 {
+            self.mass_action(x, y);
+            return;
+        }
+        let n = self.n_states;
+        match &self.mass_kind {
+            MassKind::Identity => {
+                for (y_i, &x_i) in y[..n].iter_mut().zip(&x[..n]) {
+                    *y_i = beta * *y_i + x_i;
+                }
+            },
+            MassKind::DiagonalSelector => {
+                let mask = self.state_kinds.algebraic_mask();
+                for ((y_i, &x_i), &algebraic) in y[..n].iter_mut().zip(&x[..n]).zip(mask) {
+                    let mx = if algebraic { 0.0 } else { x_i };
+                    *y_i = beta * *y_i + mx;
+                }
+            },
+            MassKind::General => {
+                for (row, y_i) in y[..n].iter_mut().enumerate() {
+                    *y_i = beta * *y_i + csr_row_dot(&self.mass_matrix, row, x);
+                }
+            },
+        }
+    }
+
     /// Compute mass matrix action: M @ x (no beta term).
     pub(crate) fn mass_action(&self, x: &[f64], mv: &mut [f64]) {
         let n = self.n_states;
@@ -359,6 +389,28 @@ mod tests {
             data,
             shape: Shape::matrix(2, 2),
         })
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)] // exact equality is the point
+    fn mass_gemv_is_m_x_plus_beta_y_on_every_mass_kind() {
+        let x = [3.0, -2.0];
+        for mass in masses_of_every_kind() {
+            let mut arena = Arena::new();
+            let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
+            let model = compile(&arena, y, mass, 2, 0);
+
+            let mut mx = [0.0; 2];
+            model.mass_action(&x, &mut mx);
+            let mut out = [10.0, 20.0];
+            model.mass_gemv(&x, 0.5, &mut out);
+            assert_eq!(out, [0.5 * 10.0 + mx[0], 0.5 * 20.0 + mx[1]]);
+
+            // beta == 0 must not read y, so a NaN there cannot leak through.
+            let mut out = [f64::NAN; 2];
+            model.mass_gemv(&x, 0.0, &mut out);
+            assert_eq!(out, mx);
+        }
     }
 
     #[test]

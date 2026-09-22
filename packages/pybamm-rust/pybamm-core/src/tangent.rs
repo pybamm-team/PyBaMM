@@ -15,16 +15,28 @@ pub enum DiffTarget {
     Params,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DiffMode {
+    Tangent(DiffTarget),
+    Time,
+}
+
 /// Build the tangent expression for `(d expr/dy) @ dy`.
 #[must_use]
 pub fn tangent_wrt_states(arena: &mut Arena, expr: NodeId) -> NodeId {
-    differentiate_root(arena, expr, DiffTarget::States, None)
+    differentiate_root(arena, expr, DiffMode::Tangent(DiffTarget::States), None)
 }
 
 /// Build the tangent expression for `(d expr/dp) @ dp`.
 #[must_use]
 pub fn tangent_wrt_params(arena: &mut Arena, expr: NodeId) -> NodeId {
-    differentiate_root(arena, expr, DiffTarget::Params, None)
+    differentiate_root(arena, expr, DiffMode::Tangent(DiffTarget::Params), None)
+}
+
+/// Build the partial derivative `d expr/dt`, holding states and inputs fixed.
+#[must_use]
+pub fn derivative_wrt_time(arena: &mut Arena, expr: NodeId) -> NodeId {
+    differentiate_root(arena, expr, DiffMode::Time, None)
 }
 
 /// [`tangent_wrt_states`] seeding only `StateVector` nodes that overlap `active_indices`.
@@ -41,14 +53,19 @@ pub(crate) fn tangent_wrt_subset(
         active_indices.is_sorted(),
         "active state indices must ascend"
     );
-    differentiate_root(arena, expr, DiffTarget::States, Some(active_indices))
+    differentiate_root(
+        arena,
+        expr,
+        DiffMode::Tangent(DiffTarget::States),
+        Some(active_indices),
+    )
 }
 
 /// Differentiate `expr`, seeding only states in `state_filter` when one is given.
 fn differentiate_root(
     arena: &mut Arena,
     expr: NodeId,
-    mode: DiffTarget,
+    mode: DiffMode,
     state_filter: Option<&[usize]>,
 ) -> NodeId {
     let mut pending = arena.topological_order(expr);
@@ -83,7 +100,7 @@ fn differentiate_root(
 /// A rule missing a child's derivative queues the child and is retried after it, so nodes
 /// are allocated in exactly the order a depth-first recursion would allocate them.
 struct Differentiator<'a> {
-    mode: DiffTarget,
+    mode: DiffMode,
     state_filter: Option<&'a [usize]>,
     /// Primal output widths.
     widths: Vec<usize>,
@@ -200,8 +217,10 @@ impl Differentiator<'_> {
         let width = self.widths[id.index()];
 
         let result = match *arena.get(id) {
+            Node::Time if mode == DiffMode::Time => arena.alloc(Node::Scalar(1.0)),
+
             Node::StateVector { start, end }
-                if mode == DiffTarget::States
+                if mode == DiffMode::Tangent(DiffTarget::States)
                     && state_filter.is_none_or(|filter| overlaps(filter, start, end)) =>
             {
                 arena.alloc(Node::TangentStateVector { start, end })
@@ -211,7 +230,7 @@ impl Differentiator<'_> {
                 index,
                 width: param_width,
                 ..
-            } if mode == DiffTarget::Params => {
+            } if mode == DiffMode::Tangent(DiffTarget::Params) => {
                 // Replicated to the packed width so an `Index` slice stays inside the buffer slot.
                 let tangent = arena.alloc(Node::TangentParameter { index });
                 if param_width == 1 {
@@ -543,10 +562,10 @@ impl Differentiator<'_> {
 mod tests {
     use super::*;
     use crate::adjoint::AdjointTape;
-    use crate::arena::DagRef;
+    use crate::arena::{Dag, DagRef};
     use crate::eval::{CompiledExpr, TangentInputs};
     use crate::node::InterpolantData;
-    use crate::simplify::{cse, dce, simplify};
+    use crate::simplify::{cse, dce, simplify, simplify_pipeline};
     use crate::zero_propagate::zero_propagate;
 
     /// Run the tangent pipeline end to end and return the compiled tape.
@@ -1131,6 +1150,80 @@ mod tests {
         };
         let result = compiled.eval_with_tangent(&mut scratch, 0.0, &[3.0], &[], &[], &seed);
         assert_eq!(result, [0.0]);
+    }
+
+    #[test]
+    fn time_partial_holds_states_and_parameters_fixed_and_preserves_widths() {
+        let mut arena = Arena::new();
+        let states = arena.alloc(Node::StateVector { start: 0, end: 3 });
+        let state = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let parameter = arena.alloc(Node::InputParameter {
+            name: "scale".into(),
+            index: 0,
+            offset: 0,
+            width: 1,
+        });
+        let time = arena.alloc(Node::Time);
+        let square = arena.alloc(Node::Mul(time, time));
+        let scaled = arena.alloc(Node::Mul(parameter, square));
+        let product = arena.alloc(Node::Mul(state, scaled));
+        let root = arena.alloc(Node::Concat(vec![states, product]));
+        let derivative = derivative_wrt_time(&mut arena, root);
+        let derivative = simplify_pipeline(Dag::new(arena, derivative));
+        let compiled = CompiledExpr::new(derivative.as_ref());
+        let mut scratch = vec![0.0; compiled.scratch_len()];
+        let result = compiled.eval(&mut scratch, 3.0, &[4.0, 5.0, 6.0], &[], &[2.0]);
+
+        assert_eq!(result.len(), 4);
+        for (&actual, expected) in result.iter().zip([0.0, 0.0, 0.0, 48.0]) {
+            assert!((actual - expected).abs() < 1e-12);
+        }
+    }
+
+    #[test]
+    fn time_partial_uses_the_active_conditional_branch() {
+        let mut arena = Arena::new();
+        let time = arena.alloc(Node::Time);
+        let corner = arena.alloc(Node::Scalar(1.0));
+        let after = arena.alloc(Node::NotEqualHeaviside(corner, time));
+        let selector = arena.alloc(Node::Add(corner, after));
+        let square = arena.alloc(Node::Mul(time, time));
+        let cube = arena.alloc(Node::Mul(square, time));
+        let root = arena.alloc(Node::Conditional {
+            selector,
+            branches: vec![square, cube],
+        });
+        let derivative = derivative_wrt_time(&mut arena, root);
+        let derivative = simplify_pipeline(Dag::new(arena, derivative));
+        let compiled = CompiledExpr::new(derivative.as_ref());
+        let mut scratch = vec![0.0; compiled.scratch_len()];
+
+        for (time, expected) in [(0.5, 1.0), (1.0, 2.0), (2.0, 12.0)] {
+            let result = compiled.eval(&mut scratch, time, &[], &[], &[]);
+            assert!((result[0] - expected).abs() < 1e-12);
+        }
+    }
+
+    #[test]
+    fn time_partial_uses_the_interpolant_slope_on_each_side_of_a_knot() {
+        let mut arena = Arena::new();
+        let time = arena.alloc(Node::Time);
+        let root = arena.alloc(Node::Interpolant1DLinear {
+            data: Box::new(
+                InterpolantData::try_new(vec![0.0, 1.0, 2.0], vec![0.0, 10.0, 30.0])
+                    .expect("valid interpolant"),
+            ),
+            child: time,
+        });
+        let derivative = derivative_wrt_time(&mut arena, root);
+        let derivative = simplify_pipeline(Dag::new(arena, derivative));
+        let compiled = CompiledExpr::new(derivative.as_ref());
+        let mut scratch = vec![0.0; compiled.scratch_len()];
+
+        for (time, expected) in [(0.5, 10.0), (1.5, 20.0)] {
+            let result = compiled.eval(&mut scratch, time, &[], &[], &[]);
+            assert!((result[0] - expected).abs() < 1e-12);
+        }
     }
 
     #[test]

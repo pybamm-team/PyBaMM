@@ -6,7 +6,7 @@
 //! 3. **Differentiate**: [`tangent`] in forward mode, and [`adjoint`] for wide Jacobian rows.
 //! 4. **Lower**: [`ir`] flattens the DAG into fixed-size instructions over one scratch buffer.
 //! 5. **Evaluate**: [`eval`] runs a tape, [`CompiledExpr::eval_batch`] at several time points.
-//! 6. **Assemble**: [`CompiledModel`] and its colored [`jacobian`], driven by IDAKLU via [`ffi`].
+//! 6. **Assemble**: [`CompiledModel`] and its colored [`jacobian`], driven by `solver` or [`ffi`].
 
 #![deny(unused_must_use)]
 
@@ -34,6 +34,9 @@ mod sparsity;
 pub mod tangent;
 pub mod tangent_batch;
 mod zero_propagate;
+
+#[cfg(feature = "diffsol")]
+pub mod solver;
 
 pub use arena::{Arena, Dag, DagRef, NodeId, ReadExtents, resolve_state_count};
 pub use error::CoreError;
