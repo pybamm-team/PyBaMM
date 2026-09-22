@@ -23,6 +23,16 @@ differentiate, lower and evaluate. The crate-level doc walks through them, links
 module, and explains how the Jacobian is assembled (see
 [Finding your way around](#finding-your-way-around)).
 
+## Who consumes it
+
+- **IDAKLU**, through the C ABI in `ffi.rs`. `pybammsolvers` cannot link against this
+  crate, because PyBaMM depends on `pybammsolvers` and not the reverse. So the FFI entry
+  points are compiled into the Python extension, and the C++ side resolves them at
+  runtime with `dlsym` once that extension is loaded. IDAKLU therefore has no undefined
+  symbols and loads standalone, with the Rust path resolved lazily on first use. The two
+  sides agree on an ABI version and refuse to proceed on a mismatch; bumping the Rust
+  constant means bumping the C++ one in the same change.
+
 ## Building
 
 Build through the workspace, not `cargo` or `maturin` directly:
@@ -53,7 +63,8 @@ uv run --group dev pytest -m unit packages/pybamm/tests    # python side, from r
 
 Rust and Python tests cover different things. The Rust suite owns the compiler and
 interpreter, including property tests that check AD against finite differences and the
-split primal/tangent tape against a monolithic one. The Python suite owns the bindings.
+split primal/tangent tape against a monolithic one. The Python suite owns parity: the
+same model solved through Rust and through CasADi must agree.
 
 ## Benchmarking
 

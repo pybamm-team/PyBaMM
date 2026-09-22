@@ -123,6 +123,10 @@ impl ExprGraph {
         exprs.iter().map(|e| e.get().node_id_in(slf)).collect()
     }
 
+    pub(crate) const fn params(&self) -> &ParamRegistry {
+        &self.params
+    }
+
     /// The registry as it stood at `vp_len` registration indices (all of them for `None`),
     /// refusing a cut that drops an input the expression `reads`.
     pub(crate) fn registry_at(
