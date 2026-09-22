@@ -17,6 +17,7 @@
 - Solutions saved by 26.10 or earlier load without xarray only through `pybamm.load`, which raises an `ImportError` if the loaded object keeps an xarray or pandas object it could not import. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
 - `IDAKLUSolver` needs the next `pybammsolvers` release, whose IDAKLU backend can evaluate a Rust `CompiledModel`, to solve a model with `convert_to_format="rust"`. Upgrade `pybammsolvers` together with `pybamm`. ([#5961](https://github.com/pybamm-team/PyBaMM/pull/5961))
 - `pybamm` now ships platform wheels with its Rust core compiled in as `pybamm.rust._core`: one `cp311-abi3` wheel per platform for Python 3.11-3.15. Building from source or the sdist requires `cargo` 1.89+; `pip install --only-binary pybamm pybamm` forces a wheel. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
+- Models now default to `convert_to_format = "rust"` instead of `"casadi"`, so every model is lowered to the Rust compute core unless it opts out. Set `model.convert_to_format = "casadi"` to restore the previous backend. ([#5966](https://github.com/pybamm-team/PyBaMM/pull/5966))
 
 ## Deprecated
 

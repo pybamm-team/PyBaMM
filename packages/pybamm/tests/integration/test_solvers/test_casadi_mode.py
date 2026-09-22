@@ -25,6 +25,7 @@ class TestCasadiModes:
         for solver in solvers:
             # define model
             model = pybamm.lithium_ion.SPM()
+            model.convert_to_format = "casadi"
 
             # solve simulation
             sim = pybamm.Simulation(
@@ -57,6 +58,7 @@ class TestCasadiModes:
         solutions = []
         for mode in ["safe", "fast"]:
             model = pybamm.lithium_ion.SPM()
+            model.convert_to_format = "casadi"
             solver = pybamm.CasadiSolver(mode=mode, atol=1e-6, rtol=1e-6)
             sim = pybamm.Simulation(model, solver=solver)
             solutions.append(sim.solve(t_eval))
