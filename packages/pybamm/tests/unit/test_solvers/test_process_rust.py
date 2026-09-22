@@ -402,6 +402,61 @@ class TestProcessRustDuplication:
             and jac_action is not None
         )
 
+    def test_whole_model_solver_skips_every_per_group_lowering(self, monkeypatch):
+        from pybamm.solvers.base_solver import BaseSolver
+
+        class _WholeModelSolver(BaseSolver):
+            _integrates_via_compiled_model = True
+
+            def _run(self, *a, **kw):  # pragma: no cover
+                raise NotImplementedError
+
+        model = _toy_dae("rust")
+        solver = _WholeModelSolver()
+
+        monkeypatch.setattr(
+            BaseSolver, "_set_initial_conditions", lambda *a, **kw: None
+        )
+        monkeypatch.setattr(
+            BaseSolver,
+            "_set_up_events",
+            lambda *a, **kw: ([], [], [], {}, []),
+        )
+
+        solver.set_up(model, inputs=[{"a": 0.5}])
+
+        assert model.rhs_eval is None
+        assert model.jac_rhs_eval is None
+        assert model.jac_rhs_action_eval is None
+        assert model.jacp_rhs_eval is None
+        assert model.algebraic_eval is None
+        assert model.rhs_algebraic_eval is None
+
+    def test_rust_output_block_skipped(self, monkeypatch):
+        from pybamm.solvers.base_solver import BaseSolver
+
+        class _WholeModelSolver(BaseSolver):
+            _integrates_via_compiled_model = True
+
+            def _run(self, *a, **kw):  # pragma: no cover
+                raise NotImplementedError
+
+        model = _toy_dae("rust")
+        solver = _WholeModelSolver(output_variables=["u"])
+
+        monkeypatch.setattr(
+            BaseSolver, "_set_initial_conditions", lambda *a, **kw: None
+        )
+        monkeypatch.setattr(
+            BaseSolver,
+            "_set_up_events",
+            lambda *a, **kw: ([], [], [], {}, []),
+        )
+
+        solver.set_up(model, inputs=[{"a": 0.5}])
+
+        assert solver.computed_var_fcns == {}
+
 
 class TestStackedInputPredicate:
     def test_stack_inputs_rust_is_ndarray(self):
@@ -643,6 +698,27 @@ class TestPickle:
         mm = graph.matmul(graph.state_vector(0, 2), graph.state_vector(0, 2))
         with pytest.raises(NotImplementedError, match=r"MatMul left operand"):
             CompiledFunction._rebuild(graph, mm.id, None, None)
+
+    def test_compiled_model_pickle_roundtrip(self):
+        import pickle
+
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 2 * u - v}
+        model.initial_conditions = {u: 0, v: 0}
+        model.convert_to_format = "rust"
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        solver = pybamm.IDAKLUSolver()
+        solver.solve(model, np.array([0.0, 1.0]))
+        rm = solver._setup["rust_model"]
+        rm2 = pickle.loads(pickle.dumps(rm))
+        assert rm2.nnz == rm.nnz
+        np.testing.assert_array_equal(
+            rm2.csc_sparsity_pattern()[0], rm.csc_sparsity_pattern()[0]
+        )
 
     def test_rust_evaluator_pickle_rederives_jacobian(self):
         import pickle

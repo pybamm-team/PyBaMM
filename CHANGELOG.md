@@ -14,6 +14,7 @@
 - `Symbol.to_rust` lowers a discretised expression tree into a `pybamm.rust.ExprGraph`: every operator and function, 1D (including vector-valued), 2D and 3D interpolants, `VectorField`, and `RegPower` through the same sequence of operations as `evaluate` and CasADi. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - `model.convert_to_format = "rust"` evaluates a model's rhs, algebraic, Jacobian and event functions through compiled Rust evaluators, for `ScipySolver`, `AlgebraicSolver`, EIS and consistent initialisation. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - pybammsolvers gains an IDAKLU backend that evaluates a Rust `CompiledModel` through its C ABI, resolved at runtime so IDAKLU still loads without the Rust extension, with a Rust-backed Newton solver and output sensitivities projected natively in-solver. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `IDAKLUSolver` solves `convert_to_format = "rust"` models through a Rust `CompiledModel`, with one `ModelEvaluator` per solver thread from `CompiledModel.evaluator_pool(n)`, so `options={"num_threads": N}` parallelises input sets. `output_variables` supports `calculate_sensitivities`, projected in-solver; genuine `ExplicitTimeIntegral`/`DiscreteTimeSum` output variables and tensor `VectorField` outputs raise `SolverError` on this path. `NonlinearSolver` drives its Newton iteration through the same compiled model. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
 ## Bug fixes
 

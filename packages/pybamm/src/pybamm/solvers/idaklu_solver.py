@@ -13,8 +13,13 @@ from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
-from pybamm.solvers.base_solver import flatten_inputs, stack_inputs
+from pybamm.solvers.base_solver import (
+    flatten_inputs,
+    stack_inputs,
+    validate_rust_sensitivity_widths,
+)
 from pybamm.solvers.observation import OutputAssembly
+from pybamm.solvers.rust_lowering import RustModelLowering
 
 _UNSET = object()
 
@@ -111,6 +116,31 @@ def _check_klu_pivot_tolerance(value):
         raise pybamm.SolverError("klu_pivot_tolerance must be a real number")
     if not 0 < value <= 1:
         raise pybamm.SolverError(f"klu_pivot_tolerance must be in (0, 1], got {value}")
+
+
+def _csc_bandwidths(colptrs, rowvals) -> tuple[int, int]:
+    """
+    Lower and upper half-bandwidths of a CSC sparsity pattern.
+
+    Parameters
+    ----------
+    colptrs : array-like of int
+        Column pointers of the pattern.
+    rowvals : array-like of int
+        Row index of each structural non-zero.
+
+    Returns
+    -------
+    tuple[int, int]
+        The largest ``row - column`` and ``column - row`` offsets, each at least 0.
+    """
+    colptrs = np.asarray(colptrs, dtype=np.int64)
+    rowvals = np.asarray(rowvals, dtype=np.int64)
+    if rowvals.size == 0:
+        return 0, 0
+    columns = np.repeat(np.arange(colptrs.size - 1), np.diff(colptrs))
+    offsets = rowvals - columns
+    return max(int(offsets.max()), 0), max(int(-offsets.min()), 0)
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
@@ -287,10 +317,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "t_no_progress": 0.0,
             }
 
-        Note: These options only have an effect if model.convert_to_format == 'casadi'
+        Note: Options apply to both 'casadi' and 'rust' formats except where noted.
 
 
     """
+
+    _integrates_via_compiled_model = True
 
     class StateID(IntEnum):
         ALGEBRAIC = 0
@@ -337,6 +369,21 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
+
+    def _validate_rust_compatibility(self, model, inputs):
+        """Runtime guards for unsupported Rust backend features."""
+        if not model.use_jacobian:
+            raise pybamm.SolverError("KLU requires the Jacobian")
+        # One thread per solver avoids OpenMP N_Vectors (slower, not reproducible)
+        num_threads = self._options["num_threads"]
+        if self._options.get("num_solvers", num_threads) != num_threads:
+            pybamm.logger.warning(
+                "The Rust backend runs one solver per thread; num_solvers is "
+                f"set to num_threads ({num_threads})."
+            )
+        self._options["num_solvers"] = num_threads
+        if model.calculate_sensitivities:
+            validate_rust_sensitivity_widths(model, model.calculate_sensitivities)
 
     def _combine_options(self, user_options: dict | None) -> dict:
         user_options = user_options or {}
@@ -476,8 +523,126 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
         return np.ascontiguousarray(values.ravel(), dtype=np.float64)
 
+    def _set_up_rust(self, model, inputs_dict, y0):
+        """Set up solver with Rust evaluation backend."""
+        lowering = RustModelLowering(model, inputs_dict)
+        lowering.state_residual()
+
+        _, sensitivity_names = lowering.sensitivity_indices(
+            model.calculate_sensitivities
+        )
+
+        if self._options["hermite_reduction_factor"] > 1.0 and sensitivity_names:
+            warnings.warn(
+                "Setting hermite_reduction_factor > 1.0 is not currently supported "
+                "with sensitivities. The hermite_reduction_factor option will be "
+                "ignored.",
+                pybamm.SolverWarning,
+                stacklevel=2,
+            )
+
+        # Time-integral outputs lower to their integrand; the sum runs post-solve
+        _, output_lens = lowering.outputs(
+            self.output_variables, time_integral_vars=self._time_integral_vars
+        )
+
+        lowering.algebraic_block()
+        lowering.termination_events()
+
+        n_inputs = lowering.n_inputs
+        rust_model = lowering.compile()
+        lowering.bind_generic_evaluators(rust_model, root_method=self.root_method)
+
+        colptrs, rowinds = rust_model.csc_sparsity_pattern()
+        nnz = rust_model.nnz
+        jac_bw_lower, jac_bw_upper = _csc_bandwidths(colptrs, rowinds)
+        # IDA `id` vector (1.0 differential, 0.0 algebraic), from the mass matrix
+        ids = np.asarray(rust_model.algebraic_ids(), dtype=np.float64)
+
+        # The sub-block Newton IC needs a standard-form DAE
+        enable_alg_subblock = (
+            self._options.get("newton_mode", "auto") == "auto"
+            and model.is_standard_form_dae
+            and rust_model.has_algebraic
+        )
+        if enable_alg_subblock:
+            alg_jac_rows, alg_jac_cols = (
+                rust_model.algebraic_jacobian_sparsity_pattern()
+            )
+            alg_jac_nnz = rust_model.algebraic_jacobian_nnz
+            n_alg = rust_model.n_algebraic
+            # IDAKLU sizes the sub-block buffers from `ids` and the pattern, Rust from its block
+            n_alg_ids = int(np.count_nonzero(ids <= 0.5))
+            if n_alg != n_alg_ids or not (
+                len(alg_jac_rows) == len(alg_jac_cols) == alg_jac_nnz
+            ):
+                raise pybamm.SolverError(
+                    f"The Rust algebraic block has {n_alg} variables and "
+                    f"{alg_jac_nnz} Jacobian entries, but the mass matrix marks "
+                    f"{n_alg_ids} states algebraic and the pattern holds "
+                    f"{len(alg_jac_rows)} rows and {len(alg_jac_cols)} columns"
+                )
+        else:
+            alg_jac_rows = np.array([], dtype=np.int64)
+            alg_jac_cols = np.array([], dtype=np.int64)
+            alg_jac_nnz = 0
+            n_alg = 0
+
+        atol = self._check_atol_type(getattr(model, "atol", self.atol), model)
+
+        self._setup = {
+            "rust_model": rust_model,
+            # One evaluator per parallel solver, all sharing rust_model's tape.
+            "rust_evaluators": rust_model.evaluator_pool(self._options["num_solvers"]),
+            "number_of_states": len(y0),
+            "number_of_inputs": n_inputs,
+            "number_of_sensitivity_parameters": rust_model.n_sens_params,
+            "sensitivity_names": sensitivity_names,
+            "output_lens": output_lens,
+            "output_assembly": OutputAssembly.dense(
+                self.output_variables,
+                output_lens,
+                time_integrals=self._time_integral_vars,
+            ),
+            "jac_colptrs": np.asarray(colptrs, dtype=np.int64),
+            "jac_rowvals": np.asarray(rowinds, dtype=np.int64),
+            "jac_nnz": nnz,
+            "jac_bandwidth_lower": jac_bw_lower,
+            "jac_bandwidth_upper": jac_bw_upper,
+            "n_alg": n_alg,
+            "alg_jac_rowvals": np.asarray(alg_jac_rows, dtype=np.int64),
+            "alg_jac_colvals": np.asarray(alg_jac_cols, dtype=np.int64),
+            "alg_jac_nnz": alg_jac_nnz,
+            "ids": ids,
+            "atol": atol,
+            # Same key as the CasADi setup, for `_post_process_solution`
+            "num_of_events": rust_model.n_events,
+        }
+
+        self._setup["solver"] = idaklu.create_rust_solver_group(
+            rust_evaluators=self._setup["rust_evaluators"],
+            number_of_states=self._setup["number_of_states"],
+            number_of_inputs=self._setup["number_of_inputs"],
+            number_of_sens_params=self._setup["number_of_sensitivity_parameters"],
+            number_of_events=self._setup["num_of_events"],
+            output_lens=self._setup["output_lens"],
+            jac_colptrs=self._setup["jac_colptrs"],
+            jac_rowvals=self._setup["jac_rowvals"],
+            jac_nnz=self._setup["jac_nnz"],
+            jac_bandwidth_lower=self._setup["jac_bandwidth_lower"],
+            jac_bandwidth_upper=self._setup["jac_bandwidth_upper"],
+            n_alg=self._setup["n_alg"],
+            alg_jac_rowvals=self._setup["alg_jac_rowvals"],
+            alg_jac_colvals=self._setup["alg_jac_colvals"],
+            alg_jac_nnz=self._setup["alg_jac_nnz"],
+            rhs_alg_id=self._setup["ids"],
+            atol=self._setup["atol"],
+            rtol=self.rtol,
+            options=self._options,
+        )
+
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
-        if model.convert_to_format != "casadi":
+        if model.convert_to_format not in ("casadi", "rust"):
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for solving with IDAKLUSolver"
             )
@@ -503,6 +668,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         y0 = y0.flatten()
 
         if ics_only:
+            return base_set_up_return
+
+        if model.convert_to_format == "rust":
+            self._validate_rust_compatibility(model, inputs_dict)
+            self._set_up_rust(model, inputs_dict, y0)
             return base_set_up_return
 
         if model.convert_to_format != "casadi":
@@ -792,7 +962,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
         Overloads the _integrate method from BaseSolver to use the IDAKLU solver
         """
-        if model.convert_to_format != "casadi":  # pragma: no cover
+        if model.convert_to_format not in ("casadi", "rust"):  # pragma: no cover
             raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
 
         inputs_list = inputs_list or [{}]
@@ -957,17 +1127,28 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options=solution_options,
         )
 
-        # Set closest_event_idx so BaseSolver.get_termination_reason doesn't
-        # re-walk every event's symbolic expression on the Python side.
-        if sol.flag == _IDA_ROOT_RETURN and self._setup["num_of_events"] > 0:
-            event_values = np.asarray(
-                self._setup["rootfn_casadi"](
-                    float(sol.t[-1]),
-                    np.asarray(y_event).reshape(-1),
-                    flatten_inputs(inputs_dict),
+        # Set closest_event_idx so BaseSolver doesn't re-walk events symbolically
+        if sol.flag == _IDA_ROOT_RETURN and self._setup.get("num_of_events", 0) > 0:
+            t_event = float(sol.t[-1])
+            y_event_flat = np.asarray(y_event).reshape(-1)
+            if "rootfn_casadi" in self._setup:
+                event_values = np.asarray(
+                    self._setup["rootfn_casadi"](
+                        t_event,
+                        y_event_flat,
+                        flatten_inputs(inputs_dict),
+                    )
+                ).reshape(-1)
+                newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
+            elif model.convert_to_format == "rust":
+                stacked = stack_inputs(inputs_dict, "rust")
+                event_values = np.array(
+                    [
+                        float(np.asarray(fn(t_event, y_event_flat, stacked)).ravel()[0])
+                        for fn in model.terminate_events_eval
+                    ]
                 )
-            ).reshape(-1)
-            newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
+                newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
 
         newsol.integration_time = integration_time
         newsol.solver_statistics = pybamm.SolverStatistics(
@@ -1115,10 +1296,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         """
 
-        if isinstance(y0S, casadi.DM):
+        if isinstance(y0S, casadi.DM | np.ndarray):
             y0S = (y0S,)
 
-        if isinstance(y0S[0], casadi.DM):
+        if y0S and isinstance(y0S[0], casadi.DM):
             y0S = (x.full() for x in y0S)
         y0S = [x.flatten() for x in y0S]
 
@@ -1299,9 +1480,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         setup = getattr(self, "_setup", None)
         if setup is None:
             raise pybamm.SolverError("Solver not set up. Call set_up() first.")
-        indptr = setup["jac_times_cjmass_colptrs"]
-        indices = setup["jac_times_cjmass_rowvals"]
-        nnz = setup["jac_times_cjmass_nnz"]
+        if "rust_model" in setup:
+            indptr, indices = setup["jac_colptrs"], setup["jac_rowvals"]
+            nnz = setup["jac_nnz"]
+        else:
+            indptr = setup["jac_times_cjmass_colptrs"]
+            indices = setup["jac_times_cjmass_rowvals"]
+            nnz = setup["jac_times_cjmass_nnz"]
         n = setup["number_of_states"]
         data = np.ones(nnz)
         return csc_matrix((data, indices, indptr), shape=(n, n))

@@ -63,6 +63,9 @@ class BaseSolver:
         Default is False.
     """
 
+    # Set by solvers integrating a whole-model CompiledModel, to skip per-group lowering
+    _integrates_via_compiled_model = False
+
     def __init__(
         self,
         method=None,
@@ -221,6 +224,10 @@ class BaseSolver:
         new_solver._model_set_up = {}
         return new_solver
 
+    def _lowers_via_compiled_model(self, model) -> bool:
+        """Whether one shared Rust lowering serves every evaluator of this solve."""
+        return self._integrates_via_compiled_model and model.convert_to_format == "rust"
+
     def set_up(
         self,
         model: pybamm.BaseModel,
@@ -276,32 +283,38 @@ class BaseSolver:
             pybamm.logger.info("Finish solver set-up")
             return
 
-        # Process rhs, algebraic, residual and event expressions
-        # and wrap in callables
-        rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(
-            model.concatenated_rhs, "RHS", vars_for_processing
-        )
-
-        algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
-            model.concatenated_algebraic, "algebraic", vars_for_processing
-        )
-
-        # combine rhs and algebraic functions
-        if len(model.rhs) == 0:
-            rhs_algebraic = model.concatenated_algebraic
-        elif len(model.algebraic) == 0:
-            rhs_algebraic = model.concatenated_rhs
+        skip_per_group = self._lowers_via_compiled_model(model)
+        if skip_per_group:
+            rhs = jac_rhs = jacp_rhs = jac_rhs_action = None
+            algebraic = jac_algebraic = jacp_algebraic = jac_algebraic_action = None
+            rhs_algebraic = jac_rhs_algebraic = jacp_rhs_algebraic = (
+                jac_rhs_algebraic_action
+            ) = None
         else:
-            rhs_algebraic = pybamm.NumpyConcatenation(
-                model.concatenated_rhs, model.concatenated_algebraic
+            rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(
+                model.concatenated_rhs, "RHS", vars_for_processing
             )
 
-        (
-            rhs_algebraic,
-            jac_rhs_algebraic,
-            jacp_rhs_algebraic,
-            jac_rhs_algebraic_action,
-        ) = process(rhs_algebraic, "rhs_algebraic", vars_for_processing)
+            algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
+                model.concatenated_algebraic, "algebraic", vars_for_processing
+            )
+
+            # combine rhs and algebraic functions
+            if len(model.rhs) == 0:
+                rhs_algebraic = model.concatenated_algebraic
+            elif len(model.algebraic) == 0:
+                rhs_algebraic = model.concatenated_rhs
+            else:
+                rhs_algebraic = pybamm.NumpyConcatenation(
+                    model.concatenated_rhs, model.concatenated_algebraic
+                )
+
+            (
+                rhs_algebraic,
+                jac_rhs_algebraic,
+                jacp_rhs_algebraic,
+                jac_rhs_algebraic_action,
+            ) = process(rhs_algebraic, "rhs_algebraic", vars_for_processing)
 
         (
             casadi_switch_events,
@@ -369,19 +382,23 @@ class BaseSolver:
         self.computed_dvar_dp_fcns = {}
         self._time_integral_vars = {}
         for key in self.output_variables:
-            # Check for any ExplicitTimeIntegral or DiscreteTimeSum variables
+            # Check for any ExplicitTimeIntegral or DiscreteTimeSum variables.
+            # We will evaluate the sum node in the solver and sum it afterwards
             processed_time_integral = (
                 pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
                     model.get_processed_variable_or_event(key),
                     model.len_rhs_and_alg,
                 )
             )
-            # We will evaluate the sum node in the solver and sum it afterwards
+            if processed_time_integral is not None:
+                self._time_integral_vars[key] = processed_time_integral
+            if model.convert_to_format == "rust":
+                # Rust outputs come from CompiledModel.outputs, not computed_var_fcns
+                continue
             if processed_time_integral is None:
                 var = model.get_processed_variable_or_event(key)
             else:
                 var = processed_time_integral.sum_node
-                self._time_integral_vars[key] = processed_time_integral
 
             # Generate Casadi function to calculate variable and derivates
             # to enable sensitivites to be computed within the solver
@@ -630,6 +647,7 @@ class BaseSolver:
         terminate_events = []
         interpolant_extrapolation_events = []
         discontinuity_events = []
+        skip_event_lowering = self._lowers_via_compiled_model(model)
         for n, event in enumerate(model.events):
             if event.event_type == pybamm.EventType.DISCONTINUITY:
                 # discontinuity events are evaluated before the solver is called,
@@ -669,6 +687,9 @@ class BaseSolver:
                 )[0]
                 # use the actual casadi object as this will go into the rhs
                 casadi_switch_events.append(event_casadi)
+            elif skip_event_lowering:
+                # Served by the solver's own lowering; nothing reads extrapolation
+                continue
             else:
                 # use the function call
                 event_call = process(

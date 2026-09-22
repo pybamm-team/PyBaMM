@@ -143,8 +143,8 @@ class OutputAssembly:
 
     A solve run with ``output_variables`` propagates no state trajectory: the
     solver evaluates the requested variables itself and returns one row per
-    non-zero of each variable's CasADi function, in variable order, so a vector
-    variable spans several consecutive rows.
+    non-zero of each variable's CasADi function (per value, for :meth:`dense`),
+    in variable order, so a vector variable spans several consecutive rows.
 
     Parameters
     ----------
@@ -166,18 +166,43 @@ class OutputAssembly:
         time_integrals: Mapping[str, pybamm.ProcessedVariableTimeIntegral]
         | None = None,
     ):
-        self._names = tuple(names)
-        self._casadi_fns = {name: casadi_fns[name] for name in self._names}
-        self._time_integrals = dict(time_integrals or {})
+        names = tuple(names)
+        self._casadi_fns = {name: casadi_fns[name] for name in names}
         lens = []
         # name -> sparsity of the variables whose rows are sparse
         self._sparse = {}
-        for name in self._names:
+        for name in names:
             sparsity = self._casadi_fns[name].sparsity_out(0)
             lens.append(sparsity.nnz())
             if sparsity.nnz() != sparsity.numel():
                 self._sparse[name] = sparsity
-        offsets = list(accumulate(lens, initial=0))
+        self._set_layout(names, lens, time_integrals)
+
+    @classmethod
+    def dense(
+        cls,
+        names: Sequence[str],
+        lens: Sequence[int],
+        *,
+        time_integrals: Mapping[str, pybamm.ProcessedVariableTimeIntegral]
+        | None = None,
+    ) -> OutputAssembly:
+        """The layout of a payload that carries every value of each variable."""
+        assembly = cls.__new__(cls)
+        assembly._casadi_fns = {}
+        assembly._sparse = {}
+        assembly._set_layout(tuple(names), lens, time_integrals)
+        return assembly
+
+    def _set_layout(self, names, lens, time_integrals):
+        if len(names) != len(lens):
+            raise pybamm.SolverError(
+                f"Output layout mismatch: {len(names)} output variables but "
+                f"{len(lens)} row lengths."
+            )
+        self._names = names
+        self._time_integrals = dict(time_integrals or {})
+        offsets = list(accumulate((int(length) for length in lens), initial=0))
         self._n_rows = offsets[-1]
         # One slice of payload rows per output variable
         self._rows = tuple(slice(start, end) for start, end in pairwise(offsets))
@@ -240,7 +265,7 @@ class OutputAssembly:
                 )
             variable = pybamm.ProcessedVariableComputed(
                 [model.get_processed_variable_or_event(name)],
-                [self._casadi_fns[name]],
+                [self._casadi_fns.get(name)],
                 [values],
                 solution,
                 time_integral=time_integral,

@@ -434,7 +434,7 @@ def get_base_model_with_battery_geometry(**kwargs):
     return model
 
 
-def get_broken_input_model():
+def get_broken_input_model(convert_to_format="casadi"):
     """Return the discretised model ``dv/dt = -sqrt(k) * v``.
 
     Its residual is NaN for any input ``k < 0``, whatever the state.
@@ -444,6 +444,7 @@ def get_broken_input_model():
     model.rhs = {v: -pybamm.sqrt(pybamm.InputParameter("k")) * v}
     model.initial_conditions = {v: 1.0}
     model.variables = {"v": v}
+    model.convert_to_format = convert_to_format
     pybamm.Discretisation().process_model(model)
     return model
 
@@ -621,4 +622,49 @@ def assert_symbolic_mesh_matches_numeric(
         symbolic.jac(state).evaluate(0, y, inputs=inputs).toarray(),
         numeric.jac(state).evaluate(0, y).toarray(),
         **tolerance,
+    )
+
+
+POUCH_OPTIONS = {"current collector": "potential pair", "dimensionality": 2}
+POUCH_PTS = {"x_n": 4, "x_s": 4, "x_p": 4, "r_n": 4, "r_p": 4, "y": 8, "z": 8}
+
+
+def build_rust_model(model, var_pts=None):
+    """Set up `model` on the Rust backend, returning its built model and core."""
+    model.convert_to_format = "rust"
+    sim = pybamm.Simulation(model, var_pts=var_pts)
+    sim.build()
+    sim.solver.set_up(sim.built_model, inputs=[{}])
+    return sim.built_model, sim.solver._setup["rust_model"]
+
+
+def dense_rust_jacobian(built_model, rust_model):
+    """Assemble the Rust merged CSC at `y0` and scatter it dense."""
+    import numpy as np
+    from scipy import sparse
+
+    n = built_model.len_rhs_and_alg
+    y = np.ascontiguousarray(np.asarray(built_model.y0_list[0]).flatten().astype(float))
+    jac_data = np.zeros(rust_model.nnz)
+    rust_model.assemble_jacobian_csc_into(0.0, y, 0.0, np.array([]), jac_data)
+    colptr, rowind = rust_model.csc_sparsity_pattern()
+    dense = sparse.csc_matrix(
+        (jac_data, np.asarray(rowind), np.asarray(colptr)), shape=(n, n)
+    ).toarray()
+    return y, dense
+
+
+def dense_casadi_jacobian(model, y, var_pts=None):
+    """The same Jacobian off the CasADi backend, for a value comparison."""
+    import casadi
+    import numpy as np
+
+    model.convert_to_format = "casadi"
+    sim = pybamm.Simulation(model, var_pts=var_pts)
+    sim.build()
+    sim.solver.set_up(sim.built_model, inputs=[{}])
+    return np.array(
+        sim.built_model.jac_rhs_algebraic_eval(
+            casadi.DM(0.0), casadi.DM(y), casadi.DM(np.zeros((0, 1)))
+        )
     )
