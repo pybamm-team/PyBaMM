@@ -34,6 +34,8 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.14"
+    # `uv sync` builds pybamm's Rust core, which needs cargo 1.89 or newer
+    rust: "latest"
   jobs:
     pre_build:
       # linkcheck is advisory: external link flake (bot-blocks, transient 5xx) must

@@ -1,11 +1,16 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- The Rust compute core ships inside the `pybamm` wheel as `pybamm.rust._core`, so `pybamm` is now a platform-specific wheel: one `cp310-abi3` wheel per platform covers Python 3.10-3.15 on macOS (arm64, x86_64), Linux (`manylinux` x86_64, aarch64) and Windows (AMD64). `import pybamm` never loads the extension. Installing from source or from the sdist compiles the core and requires a Rust toolchain (`cargo` 1.89+); use `pip install --only-binary pybamm pybamm` to force a prebuilt wheel. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
+
 ## Features
 
 - Added `pybamm-core` (`packages/pybamm-rust`), a Rust expression compiler for PyBaMM models: an arena DAG with simplification (rewriting a constant power as `x*x` or `1/x` only where that takes `pow`'s value bitwise), CSE and zero propagation, a typed slot-addressed IR, a scalar interpreter that runs only a `Conditional`'s active branch and a lane-batched one that runs every branch some lane selects, and forward-mode AD. `cargo test` and MSRV jobs run in CI, and `cargo fmt`/`cargo clippy` in pre-commit. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
 - `pybamm-core` values the transcendental primitives (`exp`, `log`, `pow`, `sin`, `cos`, `tanh`, `sinh`, `cosh`, `asinh`, `atan`, `hypot`, `erf`) through the `libm` crate rather than the platform's libm, in every interpreter and in constant folding, so a model evaluates bitwise identically on every platform; operations IEEE 754 specifies exactly (`sqrt`, `floor`, `ceil`, `abs`, `%`) stay on `f64`. `minimum`/`maximum` follow IEEE 754-2019 `minimumNumber`/`maximumNumber` via `libm`, ordering `-0 < +0`. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
 - `pybamm-core` compiles a model into a `CompiledModel`: a DAE with a symbolic Jacobian, per-output sparsity, column colouring with compile-time constant entries and K-lane batched sweeps, dense rows assembled by reverse mode, fused event and output tapes, and a C ABI (`ffi.rs`) with a version handshake that a drift test pins against the pybammsolvers consumer header. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
 - `pybamm-core`'s reverse-mode AD values the transcendental primitives through `libm` too, and a test holds every evaluation path bitwise to `libm` and pins `libm`'s outputs, so a dependency bump that moves bits fails. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
+- `pybamm.rust` exposes `ExprGraph`, `CompiledFunction` (one expression, or a named set via `compile_outputs`, with lane-batched trajectory and Hermite evaluation) and `CompiledJacobian`, with hand-written type stubs that `mypy.stubtest` pins against the built extension. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
 
 ## Bug fixes
 
