@@ -659,7 +659,6 @@ class VTKQuickPlot:
                 ren.ResetCamera()
                 cam = ren.GetActiveCamera()
                 cam.SetParallelProjection(True)
-                pos = list(cam.GetPosition())
                 fp = list(cam.GetFocalPoint())
                 gb = g.GetBounds()
                 offset = (
@@ -672,6 +671,8 @@ class VTKQuickPlot:
                 )
                 # Look from the negative side so OuterEdges places
                 # axis labels on the top/left edges (more viewport room).
+                # offset along the plane normal only, so the view is face-on
+                pos = list(fp)
                 pos[axis_idx] = fp[axis_idx] - offset
                 cam.SetPosition(pos)
                 view_up = [0, 0, 0]

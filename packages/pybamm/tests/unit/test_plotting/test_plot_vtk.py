@@ -475,6 +475,22 @@ class TestVTKQuickPlot:
             _cube_axes(shifted_renderer).GetXAxisRange(), [2.0, 3.0]
         )
 
+    @pytest.mark.parametrize("axis", ["x", "y", "z"])
+    def test_slice_camera_looks_along_the_plane_normal(self, axis):
+        solution, _ = _cell_solution()
+        plot = VTKQuickPlot(
+            solution, "field", options={"field": {"plot_type": "slice", axis: 0.4}}
+        )
+        plot.dynamic_plot(show_plot=False)
+        renderers = plot._window.GetRenderers()
+        renderers.InitTraversal()
+        camera = renderers.GetNextItem().GetActiveCamera()
+        normal = np.zeros(3)
+        normal["xyz".index(axis)] = 1.0
+        np.testing.assert_allclose(
+            camera.GetDirectionOfProjection(), normal, atol=1e-12
+        )
+
     def test_slice_fraction_is_validated_and_kept_inside_the_mesh(self):
         solution, _ = _cell_solution()
         with pytest.raises(pybamm.OptionError, match=r"fraction in \[0, 1\]"):
