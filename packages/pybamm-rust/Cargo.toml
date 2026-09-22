@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "pybamm-core",
+    "pybamm-python",
 ]
 
 [workspace.package]
