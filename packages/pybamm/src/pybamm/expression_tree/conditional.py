@@ -193,6 +193,13 @@ class Conditional(pybamm.Symbol):
         index = casadi.if_else(on_boundary, -1, floored - 1)
         return switch(index, *shared)
 
+    def _to_rust(self, graph, rust_symbols):
+        converted_selector = self.selector._to_rust_inner(graph, rust_symbols)
+        converted_branches = [
+            branch._to_rust_inner(graph, rust_symbols) for branch in self.branches
+        ]
+        return graph.conditional(converted_selector, converted_branches)
+
     def to_equation(self):
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)

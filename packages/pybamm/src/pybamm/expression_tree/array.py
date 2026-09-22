@@ -134,6 +134,39 @@ class Array(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
 
+    def _to_rust(self, graph, rust_symbols):
+        entries = self.evaluate()
+        # A Rust sparse matrix only feeds a matrix product, so a value is dense
+        if issparse(entries):
+            entries = entries.toarray()
+        entries = np.asarray(entries, dtype=float)
+        if entries.ndim == 2 and entries.shape[1] > 1:
+            return graph.dense_matrix(
+                np.ascontiguousarray(entries).ravel(),
+                entries.shape[0],
+                entries.shape[1],
+            )
+        return graph.array(entries.flatten())
+
+    def _to_rust_matmul_left(self, graph, rust_symbols):
+        entries = self.evaluate()
+        if not issparse(entries):
+            return self._to_rust_inner(graph, rust_symbols)
+        # Keyed apart from the dense value of the same symbol
+        key = (self.id, "matmul left")
+        cached = rust_symbols.get(key)
+        if cached is None:
+            csr = csr_matrix(entries)
+            cached = graph.sparse_matrix(
+                csr.indptr.tolist(),
+                csr.indices.tolist(),
+                csr.data.astype(float),
+                csr.shape[0],
+                csr.shape[1],
+            )
+            rust_symbols[key] = cached
+        return cached
+
     def _jac(self, variable) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
         # Return zeros of correct size
