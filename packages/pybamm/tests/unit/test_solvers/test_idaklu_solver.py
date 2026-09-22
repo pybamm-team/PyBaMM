@@ -176,6 +176,8 @@ class TestIDAKLUSolver:
         rate = pybamm.InputParameter("rate")
         model.rhs = {var: -rate * var}
         model.initial_conditions = {var: 2}
+        # Rust runs one solver per thread, so only casadi has num_solvers < num_threads
+        model.convert_to_format = "casadi"
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
@@ -1518,6 +1520,8 @@ class TestIDAKLUSolver:
             output_variables=["Negative particle flux [mol.m-2.s-1]"],
         )
         model = pybamm.lithium_ion.DFN()
+        # Rust outputs are dense, so only the casadi path has this guard
+        model.convert_to_format = "casadi"
         params = model.default_parameter_values
         params.update({"Current function [A]": "[input]"})
         sim = pybamm.Simulation(model, solver=solver, parameter_values=params)

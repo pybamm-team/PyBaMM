@@ -323,6 +323,7 @@ class TestIDAKLUSolverAOTCompilation:
     @staticmethod
     def _build_model():
         model = pybamm.lithium_ion.SPMe()
+        model.convert_to_format = "casadi"
         geometry = model.default_geometry
         param = model.default_parameter_values
         param.process_model(model)
