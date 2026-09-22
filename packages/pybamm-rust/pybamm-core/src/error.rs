@@ -29,6 +29,21 @@ pub enum CoreError {
     #[error("y0 has length {got} but the model has {expected} states")]
     Y0Length { got: usize, expected: usize },
 
+    /// A sensitivity index names no registered input parameter.
+    #[error(
+        "sensitivity index {index} names no input parameter; the model registers {n_registered}"
+    )]
+    SensParamIndex { index: usize, n_registered: usize },
+
+    /// A sensitivity was requested for a vector-valued input; a column is one scalar direction.
+    #[error(
+        "sensitivity index {index} names an input of width {width}; only a width-1 input can be differentiated"
+    )]
+    SensParamVector { index: usize, width: usize },
+
+    #[error("sensitivity index {index} was requested more than once")]
+    SensParamRepeated { index: usize },
+
     /// The declared state count was below the extent the expression reads.
     #[error("n_states={declared} is below the expression's state extent {extent}")]
     StateCountTooSmall { declared: usize, extent: usize },
@@ -36,6 +51,18 @@ pub enum CoreError {
     /// The declared state count was past the `u32` range tape state indices are stored in.
     #[error("n_states={declared} exceeds the largest state count a tape can index, {max}")]
     StateCountTooLarge { declared: usize, max: u32 },
+
+    /// The residual's length differed from the declared state count.
+    #[error("the residual has {got} rows but n_states={n_states}")]
+    ResidualLength { got: usize, n_states: usize },
+
+    /// The mass matrix was not `n_states x n_states`.
+    #[error("the mass matrix is {rows}x{cols} but n_states={n_states}")]
+    MassMatrixShape {
+        rows: usize,
+        cols: usize,
+        n_states: usize,
+    },
 
     /// The declared packed input width was below what the graph's inputs occupy.
     ///
@@ -103,6 +130,32 @@ pub enum CoreError {
     /// A parameter node's registration index reached past its arena, which no registration yields.
     #[error("input parameter index {index} is out of range for an arena of {n_nodes} nodes")]
     ParamIndexRange { index: usize, n_nodes: usize },
+
+    /// An observable's graph puts a parameter the model registered at another packed slot.
+    #[error(
+        "input parameter index {index} sits at another packed slot in the observables' graph than in the model's"
+    )]
+    ObservableParamSlot { index: usize },
+
+    #[error("algebraic variable index {index} is out of range for n_states={n_states}")]
+    AlgebraicVariableIndex { index: usize, n_states: usize },
+
+    /// An algebraic block's variable indices repeated or went backwards.
+    #[error(
+        "algebraic variable indices must be strictly ascending, but {index} follows {previous}"
+    )]
+    AlgebraicVariableOrder { previous: usize, index: usize },
+
+    /// An algebraic block named a state the mass matrix makes differential.
+    #[error(
+        "algebraic variable index {index} names a differential state; its mass-matrix column is non-zero"
+    )]
+    AlgebraicVariableDifferential { index: usize },
+
+    #[error(
+        "algebraic block has {rows} residual rows but {columns} variable columns; it must be square"
+    )]
+    AlgebraicBlockNotSquare { rows: usize, columns: usize },
 
     #[error(
         "y0_sens has length {got} but must be empty or {expected} (n_states x n_sens_params, column-major)"

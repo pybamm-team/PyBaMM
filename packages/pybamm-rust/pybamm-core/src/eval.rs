@@ -879,7 +879,7 @@ impl CompiledExpr {
 
     /// Compile with a no-reuse (SSA) slot layout, so after [`eval`](Self::eval) the
     /// scratch holds every intermediate for reverse-mode AD.
-    pub fn new_pinned(dag: DagRef<'_>) -> Self {
+    pub(crate) fn new_pinned(dag: DagRef<'_>) -> Self {
         Self::from_ir(TypedIr::from_dag_pinned(dag))
     }
 
@@ -1091,6 +1091,16 @@ impl PrimalCache<'_> {
             EvalContext::tangent_only(tangent),
         );
         &self.scratch[ir.root_slot().bounds()]
+    }
+
+    /// [`run_tangent_batch`](crate::tangent_batch::run_tangent_batch) on the cached primal region.
+    pub(crate) fn eval_tangent_batch<'t>(
+        &self,
+        lanes: usize,
+        tangent: &'t mut [f64],
+        seeds: &[f64],
+    ) -> &'t [f64] {
+        crate::tangent_batch::run_tangent_batch(self.expr, lanes, self.scratch, tangent, seeds)
     }
 }
 
