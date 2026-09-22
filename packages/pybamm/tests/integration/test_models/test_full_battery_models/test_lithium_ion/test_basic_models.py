@@ -251,5 +251,11 @@ class TestBasicDFN3DUnstructured(BaseBasicModelTest):
         # The 3D model is uniform in y, so it reproduces the 2D solution
         np.testing.assert_allclose(V_3d, V_2d, atol=1e-4)
 
+        # Both models report the lithium of the whole cell, in mol
+        for name in ["Total lithium [mol]", "Total solid lithium [mol]"]:
+            np.testing.assert_allclose(
+                sol_3d[name](t=t_eval), sol_2d[name](t=t_eval), rtol=1e-6
+            )
+
         N_e = sol_3d["Electrolyte flux [mol.m-2.s-1]"]
         assert len(N_e.entries) == 3

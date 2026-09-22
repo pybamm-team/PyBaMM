@@ -85,11 +85,19 @@ class BasicDFN2DUnstructured(BaseModel):
                 inputs[f"{label} distance ({letter}) [m]"] = transverse[letter][suffix]
             return inputs
 
-        def integration_variables(suffix):
-            return [through_cell[suffix]] + [
+        # A 2D slice stands for a cell of width L_y, so volume integrals are
+        # scaled by the length of every direction the mesh does not resolve
+        unresolved_length = pybamm.Scalar(1)
+        for letter in ("y", "z"):
+            if letter not in transverse:
+                unresolved_length *= getattr(self.param, f"L_{letter}")
+
+        def volume_integral(integrand, suffix):
+            integration_variables = [through_cell[suffix]] + [
                 transverse[letter][suffix]
                 for letter, _, _ in self._transverse_directions
             ]
+            return unresolved_length * pybamm.Integral(integrand, integration_variables)
 
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
@@ -220,12 +228,8 @@ class BasicDFN2DUnstructured(BaseModel):
 
         c_s_n_av = pybamm.RAverage(c_s_n)
         c_s_p_av = pybamm.RAverage(c_s_p)
-        solid_lithium_negative = pybamm.Integral(
-            c_s_n_av * eps_s_n, integration_variables("n")
-        )
-        solid_lithium_positive = pybamm.Integral(
-            c_s_p_av * eps_s_p, integration_variables("p")
-        )
+        solid_lithium_negative = volume_integral(c_s_n_av * eps_s_n, "n")
+        solid_lithium_positive = volume_integral(c_s_p_av * eps_s_p, "p")
         total_solid_lithium = solid_lithium_negative + solid_lithium_positive
 
         ######################
@@ -296,7 +300,7 @@ class BasicDFN2DUnstructured(BaseModel):
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
-        total_lithium = pybamm.Integral(c_e * eps, integration_variables(""))
+        total_lithium = volume_integral(c_e * eps, "")
         self.variables = {
             "Negative particle concentration [mol.m-3]": c_s_n,
             "Total lithium [mol]": total_lithium,
@@ -319,7 +323,7 @@ class BasicDFN2DUnstructured(BaseModel):
             "Battery voltage [V]": voltage * num_cells,
             "Time [s]": pybamm.t,
             "Discharge capacity [A.h]": Q,
-            "Current density [A.m-2]": a_j,
+            "Sum of volumetric interfacial current densities [A.m-3]": a_j,
             "Electrolyte current density [A.m-2]": i_e,
             "Negative electrode surface concentration [mol.m-3]": c_s_surf_n,
             "Negative electrode surface stoichiometry": sto_surf_n,
