@@ -25,7 +25,7 @@ class BasicDFN3DUnstructured(BasicDFN2DUnstructured):
         (default, TPFA-orthogonal) or ``"tetrahedron"``.
     """
 
-    _transverse_axes = ("y", "z")
+    _three_dimensional = True
     _default_var_pts = {
         "x_n": 10,
         "x_s": 10,

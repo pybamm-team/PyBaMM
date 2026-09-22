@@ -8,13 +8,6 @@ from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import
     BaseModel,
 )
 
-# FunctionParameter input label and zero-flux boundary sides of each axis
-_AXES = {
-    "x": ("Through-cell", ("left", "right")),
-    "y": ("Horizontal", ("front", "back")),
-    "z": ("Vertical", ("top", "bottom")),
-}
-
 
 class BasicDFN2DUnstructured(BaseModel):
     """Doyle-Fuller-Newman (DFN) model on a 2D unstructured mesh.
@@ -33,7 +26,7 @@ class BasicDFN2DUnstructured(BaseModel):
         TPFA-orthogonal) or ``"triangle"``.
     """
 
-    _transverse_axes: tuple[str, ...] = ("z",)
+    _three_dimensional = False
     _default_var_pts: dict[str, int] = {
         "x_n": 20,
         "x_s": 30,
@@ -54,41 +47,41 @@ class BasicDFN2DUnstructured(BaseModel):
 
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
-        axes = ("x", *self._transverse_axes)
-        domains = {
-            "n": "negative electrode",
-            "s": "separator",
-            "p": "positive electrode",
-            "": ["negative electrode", "separator", "positive electrode"],
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        axes = ["x", "y", "z"] if self._three_dimensional else ["x", "z"]
+        coords_n = [
+            pybamm.SpatialVariable(
+                f"{axis}_n", "negative electrode", coord_sys="cartesian"
+            )
+            for axis in axes
+        ]
+        coords_s = [
+            pybamm.SpatialVariable(f"{axis}_s", "separator", coord_sys="cartesian")
+            for axis in axes
+        ]
+        coords_p = [
+            pybamm.SpatialVariable(
+                f"{axis}_p", "positive electrode", coord_sys="cartesian"
+            )
+            for axis in axes
+        ]
+        coords = [
+            pybamm.SpatialVariable(axis, whole_cell, coord_sys="cartesian")
+            for axis in axes
+        ]
+        axis_input_names = {
+            "x": "Through-cell distance (x) [m]",
+            "y": "Horizontal distance (y) [m]",
+            "z": "Vertical distance (z) [m]",
         }
-        # coords[suffix] holds one spatial variable per axis, e.g. [x_n, z_n]
-        coords = {
-            suffix: [
-                pybamm.SpatialVariable(
-                    f"{axis}_{suffix}" if suffix else axis,
-                    domain=domain,
-                    coord_sys="cartesian",
-                )
-                for axis in axes
-            ]
-            for suffix, domain in domains.items()
-        }
-
-        def position_inputs(suffix):
-            return {
-                f"{_AXES[axis][0]} distance ({axis}) [m]": var
-                for axis, var in zip(axes, coords[suffix], strict=True)
-            }
+        input_names = [axis_input_names[axis] for axis in axes]
+        inputs_n = dict(zip(input_names, coords_n, strict=True))
+        inputs_s = dict(zip(input_names, coords_s, strict=True))
+        inputs_p = dict(zip(input_names, coords_p, strict=True))
 
         # A 2D slice stands for a cell of width L_y, so volume integrals are
-        # scaled by the length of every direction the mesh does not resolve
-        unresolved_length = pybamm.Scalar(1)
-        for axis in ("y", "z"):
-            if axis not in axes:
-                unresolved_length *= getattr(self.param, f"L_{axis}")
-
-        def volume_integral(integrand, suffix):
-            return unresolved_length * pybamm.Integral(integrand, coords[suffix])
+        # scaled by the width the mesh does not resolve
+        width = 1 if self._three_dimensional else self.param.L_y
 
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
@@ -143,22 +136,18 @@ class BasicDFN2DUnstructured(BaseModel):
         ######################
         i_cell = self.param.current_density_with_time
 
-        eps_n = pybamm.FunctionParameter(
-            "Negative electrode porosity", position_inputs("n")
-        )
-        eps_s = pybamm.FunctionParameter("Separator porosity", position_inputs("s"))
-        eps_p = pybamm.FunctionParameter(
-            "Positive electrode porosity", position_inputs("p")
-        )
+        eps_n = pybamm.FunctionParameter("Negative electrode porosity", inputs_n)
+        eps_s = pybamm.FunctionParameter("Separator porosity", inputs_s)
+        eps_p = pybamm.FunctionParameter("Positive electrode porosity", inputs_p)
         eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         eps_s_n = pybamm.FunctionParameter(
             "Negative electrode active material volume fraction",
-            position_inputs("n"),
+            inputs_n,
         )
         eps_s_p = pybamm.FunctionParameter(
             "Positive electrode active material volume fraction",
-            position_inputs("p"),
+            inputs_p,
         )
 
         tor = pybamm.concatenation(
@@ -219,8 +208,8 @@ class BasicDFN2DUnstructured(BaseModel):
 
         c_s_n_av = pybamm.RAverage(c_s_n)
         c_s_p_av = pybamm.RAverage(c_s_p)
-        solid_lithium_negative = volume_integral(c_s_n_av * eps_s_n, "n")
-        solid_lithium_positive = volume_integral(c_s_p_av * eps_s_p, "p")
+        solid_lithium_negative = width * pybamm.Integral(c_s_n_av * eps_s_n, coords_n)
+        solid_lithium_positive = width * pybamm.Integral(c_s_p_av * eps_s_p, coords_p)
         total_solid_lithium = solid_lithium_negative + solid_lithium_positive
 
         ######################
@@ -228,11 +217,10 @@ class BasicDFN2DUnstructured(BaseModel):
         ######################
         # Multiply by L_x**2 * L_z**2 to improve conditioning
         L_scale = self.param.L_x**2 * self.param.L_z**2
-        zero_flux = {
-            side: (pybamm.Scalar(0), "Neumann")
-            for axis in axes
-            for side in _AXES[axis][1]
-        }
+        sides = ["left", "right", "top", "bottom"]
+        if self._three_dimensional:
+            sides += ["front", "back"]
+        zero_flux = {side: (pybamm.Scalar(0), "Neumann") for side in sides}
         sigma_eff_n = self.param.n.sigma(sto_surf_n, T) * eps_s_n**self.param.n.b_s
         sigma_eff_p = self.param.p.sigma(sto_surf_p, T) * eps_s_p**self.param.p.b_s
         self.algebraic[phi_s_n] = L_scale * (
@@ -292,7 +280,7 @@ class BasicDFN2DUnstructured(BaseModel):
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
-        total_lithium = volume_integral(c_e * eps, "")
+        total_lithium = width * pybamm.Integral(c_e * eps, coords)
         self.variables = {
             "Negative particle concentration [mol.m-3]": c_s_n,
             "Total lithium [mol]": total_lithium,
@@ -341,10 +329,9 @@ class BasicDFN2DUnstructured(BaseModel):
 
     @property
     def default_geometry(self):
-        transverse = {
-            axis: {"min": 0, "max": getattr(self.param, f"L_{axis}")}
-            for axis in self._transverse_axes
-        }
+        transverse = {"z": {"min": 0, "max": self.param.L_z}}
+        if self._three_dimensional:
+            transverse = {"y": {"min": 0, "max": self.param.L_y}, **transverse}
         return {
             "negative electrode": {
                 "x_n": {"min": 0, "max": self.param.n.L},
