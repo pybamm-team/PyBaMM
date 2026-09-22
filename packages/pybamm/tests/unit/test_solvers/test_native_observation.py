@@ -350,6 +350,29 @@ class TestObservationCacheAcrossSolves:
         )
 
 
+class TestDiffsolObservationCache:
+    def test_compiled_fn_reused_across_solves(self):
+        import pybamm
+
+        model = pybamm.lithium_ion.SPM()
+        model.events = []
+        model.convert_to_format = "rust"
+        sim = pybamm.Simulation(model, solver=pybamm.DiffsolSolver())
+
+        sol1 = sim.solve(np.linspace(0, 600, 50))
+        _ = sol1["Terminal voltage [V]"]
+        cache = ObserverCache.of(sol1.all_models[0])
+        assert cache.rust_model is sim._solver._rust_model
+        fn1 = cache._native_leaves["Terminal voltage [V]"][0]
+        nodes_after_first = sim._solver._rust_model.graph.n_nodes
+
+        sol2 = sim.solve(np.linspace(0, 600, 50))
+        _ = sol2["Terminal voltage [V]"]
+        assert ObserverCache.of(sol2.all_models[0]) is cache
+        assert cache._native_leaves["Terminal voltage [V]"][0] is fn1
+        assert sim._solver._rust_model.graph.n_nodes == nodes_after_first
+
+
 class TestBatchedNativeObservation:
     """`update([...])` shares one tape per segment across the whole set."""
 

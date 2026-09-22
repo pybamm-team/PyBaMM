@@ -229,6 +229,7 @@ from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
 from .solvers.idaklu_solver import IDAKLUSolver
+from .solvers.diffsol_solver import DiffsolSolver
 from .solvers.nonlinear_solver import NonlinearSolver
 
 # Experiments

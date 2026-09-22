@@ -26,6 +26,7 @@ def _native_idaklu(native=True):
 
 SOLVERS = [
     ("idaklu", pybamm.IDAKLUSolver, {}),
+    ("diffsol", pybamm.DiffsolSolver, {}),
 ]
 NATIVE_IDS = [s[0] for s in SOLVERS]
 
@@ -193,28 +194,69 @@ class TestSteppedSolutionParity:
         )
 
 
-def test_multistep_time_integral_parity():
-    # A time integral over a multi-segment solution integrates once, not per segment.
-    def _build(native):
-        model = pybamm.lithium_ion.SPM()
-        model.variables["Integrated current [A.s]"] = pybamm.ExplicitTimeIntegral(
-            model.variables["Current [A]"], pybamm.Scalar(0.0)
-        )
-        solver = pybamm.IDAKLUSolver()
-        model.convert_to_format = "rust"
-        solver._observes_via_compiled_model = native
-        sim = pybamm.Simulation(model, solver=solver)
-        for _ in range(3):
-            sim.step(360)
-        return sim.solution
+class TestDiffsolNativeObservation:
+    def test_diffsol_native_by_default(self):
+        t_eval = np.linspace(0, 3600, 51)
 
-    native_sol = _build(native=True)
-    casadi_sol = _build(native=False)
-    assert _native_caches(native_sol) is not None
-    nv = native_sol["Integrated current [A.s]"].entries
-    cv = casadi_sol["Integrated current [A.s]"].entries
-    assert nv.shape == (1,), f"expected single scalar, got shape {nv.shape}"
-    np.testing.assert_allclose(nv, cv, rtol=1e-8, atol=1e-10)
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, solver=pybamm.DiffsolSolver())
+        sol = sim.solve(t_eval=t_eval, t_interp=t_eval)
+        assert _native_caches(sol) is not None
+
+        # Cross-solver comparison at default tolerances, hence rtol=1e-4.
+        cmodel = pybamm.lithium_ion.SPM()
+        cmodel.convert_to_format = "casadi"
+        csim = pybamm.Simulation(cmodel, solver=pybamm.IDAKLUSolver())
+        csol = csim.solve(t_eval=t_eval, t_interp=t_eval)
+        np.testing.assert_allclose(
+            sol["Terminal voltage [V]"].entries,
+            csol["Terminal voltage [V]"].entries,
+            rtol=1e-4,
+            atol=1e-6,
+        )
+
+    def test_diffsol_does_not_build_casadi_observation(self, monkeypatch):
+        import pybamm.solvers.solution as solution_mod
+
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, solver=pybamm.DiffsolSolver())
+        sol = sim.solve([0, 600])
+
+        called = {"casadi": False}
+        orig = solution_mod.Solution._convert_to_casadi
+
+        def spy(self, *a, **k):
+            called["casadi"] = True
+            return orig(self, *a, **k)
+
+        monkeypatch.setattr(solution_mod.Solution, "_convert_to_casadi", spy)
+        _ = sol["Terminal voltage [V]"]
+        assert called["casadi"] is False
+
+
+class TestMultiStepTimeIntegralParity:
+    def test_multistep_time_integral_parity(self):
+        # A time integral over a multi-segment solution integrates once, not per segment.
+        def _build(native):
+            model = pybamm.lithium_ion.SPM()
+            model.variables["Integrated current [A.s]"] = pybamm.ExplicitTimeIntegral(
+                model.variables["Current [A]"], pybamm.Scalar(0.0)
+            )
+            solver = pybamm.IDAKLUSolver()
+            model.convert_to_format = "rust"
+            solver._observes_via_compiled_model = native
+            sim = pybamm.Simulation(model, solver=solver)
+            for _ in range(3):
+                sim.step(360)
+            return sim.solution
+
+        native_sol = _build(native=True)
+        casadi_sol = _build(native=False)
+        assert _native_caches(native_sol) is not None
+        nv = native_sol["Integrated current [A.s]"].entries
+        cv = casadi_sol["Integrated current [A.s]"].entries
+        assert nv.shape == (1,), f"expected single scalar, got shape {nv.shape}"
+        np.testing.assert_allclose(nv, cv, rtol=1e-8, atol=1e-10)
 
 
 class TestDiscreteTimeSumParity:
@@ -295,27 +337,28 @@ class TestNativeInputParity:
         )
 
 
-@pytest.mark.parametrize("solver_cls", [pybamm.IDAKLUSolver])
-def test_dense_trajectory_parity(solver_cls):
-    t_interp = np.linspace(0, 3600, 500)
+class TestDenseTrajectoryParity:
+    @pytest.mark.parametrize("solver_cls", [pybamm.IDAKLUSolver, pybamm.DiffsolSolver])
+    def test_dense_trajectory_parity(self, solver_cls):
+        t_interp = np.linspace(0, 3600, 500)
 
-    def build(native):
-        model = pybamm.lithium_ion.SPMe()
-        model.convert_to_format = "rust"
-        solver = solver_cls()
-        solver._observes_via_compiled_model = native
-        return pybamm.Simulation(model, solver=solver).solve(
-            t_eval=[0, 3600], t_interp=t_interp
-        )
+        def build(native):
+            model = pybamm.lithium_ion.SPMe()
+            model.convert_to_format = "rust"
+            solver = solver_cls()
+            solver._observes_via_compiled_model = native
+            return pybamm.Simulation(model, solver=solver).solve(
+                t_eval=[0, 3600], t_interp=t_interp
+            )
 
-    native_sol = build(native=True)
-    casadi_sol = build(native=False)
-    assert _native_caches(native_sol) is not None
-    assert native_sol["Terminal voltage [V]"].entries.shape[-1] == len(t_interp)
-    for var in ("Terminal voltage [V]", "Electrolyte concentration [mol.m-3]"):
-        np.testing.assert_allclose(
-            native_sol[var].entries, casadi_sol[var].entries, rtol=1e-8, atol=1e-10
-        )
+        native_sol = build(native=True)
+        casadi_sol = build(native=False)
+        assert _native_caches(native_sol) is not None
+        assert native_sol["Terminal voltage [V]"].entries.shape[-1] == len(t_interp)
+        for var in ("Terminal voltage [V]", "Electrolyte concentration [mol.m-3]"):
+            np.testing.assert_allclose(
+                native_sol[var].entries, casadi_sol[var].entries, rtol=1e-8, atol=1e-10
+            )
 
 
 class TestFieldLayoutParity:

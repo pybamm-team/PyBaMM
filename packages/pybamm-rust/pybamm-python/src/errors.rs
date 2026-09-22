@@ -17,11 +17,18 @@ pub fn graph_err_to_py(err: GraphError) -> PyErr {
     }
 }
 
-/// Map a refused graph as [`graph_err_to_py`] does, and any other core error to a
-/// `ValueError`: a caller-argument or invalid-data problem.
+/// Map a core error to `RuntimeError` for integration failures and a refused graph as
+/// [`graph_err_to_py`] does, else `ValueError`.
 pub fn core_err_to_py(err: CoreError) -> PyErr {
     match err {
         CoreError::Graph(graph) => graph_err_to_py(graph),
+        #[cfg(feature = "diffsol")]
+        CoreError::Diffsol(source) => {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("diffsol error: {source}"))
+        },
+        retry @ CoreError::SensRetryFailed { .. } => {
+            pyo3::exceptions::PyRuntimeError::new_err(retry.to_string())
+        },
         other => PyValueError::new_err(other.to_string()),
     }
 }
