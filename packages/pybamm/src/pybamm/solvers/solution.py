@@ -17,7 +17,7 @@ from scipy.io import savemat
 import pybamm
 from pybamm.codegen.compilation import aot_compile
 from pybamm.solvers.base_solver import flatten_inputs
-from pybamm.solvers.observation import build_variable
+from pybamm.solvers.observation import build_variable, build_variables
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -394,7 +394,9 @@ class Solution(SolutionBase):
             all_ts = [all_ts]
         if _validate_time_structure:
             self._ensure_sorted_t(all_ts, "all_ts")
-        if not isinstance(all_ys, list):
+        if all_ys is None:
+            all_ys = [None]
+        elif not isinstance(all_ys, list):
             all_ys = [all_ys]
         if not isinstance(all_models, list):
             all_models = [all_models]
@@ -636,6 +638,9 @@ class Solution(SolutionBase):
         # We only care about the cases where y is growing too large without any
         # restraint, so if y gets large in the middle then comes back down that is ok
         t, y, model = self.all_ts[-1], self.all_ys[-1], self.all_models[-1]
+        if y is None:
+            # Outputs-only solve - no full state to check
+            return
         t = t[-1]
         y = y[:, -1]
 
@@ -877,14 +882,24 @@ class Solution(SolutionBase):
         )
 
     def update(self, variables: str | list[str]):
-        """Add ProcessedVariables to the dictionary of variables in the solution"""
-        # Single variable
-        if isinstance(variables, str):
-            variables = [variables]
+        """Add ProcessedVariables to the dictionary of variables in the solution.
 
-        # Process
-        for variable in variables:
-            self._update_variable(variable)
+        Every listed variable is rebuilt; a list is built as one set.
+        """
+        if isinstance(variables, str):
+            self._update_variable(variables)
+            return
+        names = list(dict.fromkeys(variables))
+        self._variables.update(build_variables(self, names))
+
+    def _build_missing(self, names: list[str]) -> None:
+        """Build, as one set, the variables in ``names`` not yet built.
+
+        Built variables are kept: one computed during the solve has no states.
+        """
+        missing = [name for name in dict.fromkeys(names) if name not in self._variables]
+        if missing:
+            self._variables.update(build_variables(self, missing))
 
     def _update_variable(self, name: str):
         self._variables[name] = build_variable(self, name)
@@ -1059,6 +1074,7 @@ class Solution(SolutionBase):
         else:
             if isinstance(variables, str):
                 variables = [variables]
+            self._build_missing(variables)
             # otherwise, save only the variables specified
             data_long_names = {}
             for name in variables:

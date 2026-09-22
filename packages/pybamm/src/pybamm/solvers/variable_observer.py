@@ -267,6 +267,236 @@ class CasadiObserver(VariableObserver):
         return pack_sensitivity_dict(S_var, sensitivity_names)
 
 
+class NativeObserver(VariableObserver):
+    """Observation through compiled Rust tapes lowered into the retained graph.
+
+    ``placeholder_states`` holds each segment's state count for outputs-only
+    solves, which store no states; ``None`` when states are real.
+    """
+
+    def __init__(self, leaves, placeholder_states=None, post_sum_leaf=None):
+        self._leaves = leaves
+        self._placeholder_states = placeholder_states
+        self._post_sum_leaf = post_sum_leaf
+
+    @property
+    def leaves(self):
+        return self._leaves
+
+    def _setup(self, variable, t, full_range):
+        """Per-segment ``(ts, ys, yps, inputs, leaves)``; inputs stay dicts."""
+        idxs = self.segments(variable, t, full_range)
+        ts = [variable.all_ts[idx] for idx in idxs]
+        if self._placeholder_states is None:
+            ys = [variable.all_ys[idx] for idx in idxs]
+        else:
+            ys = [
+                np.zeros((self._placeholder_states[idx], ti.size))
+                for idx, ti in zip(idxs, ts, strict=True)
+            ]
+        yps = (
+            [variable.all_yps[idx] for idx in idxs]
+            if variable.hermite_interpolation
+            else None
+        )
+        inputs = [variable.all_inputs[idx] for idx in idxs]
+        leaves = [self._leaves[idx] for idx in idxs]
+        return ts, ys, yps, inputs, leaves
+
+    def observe_raw(self, variable):
+        # eval_trajectory returns (output_len, n_t), so reshape in order="F"
+        t = variable.t_pts
+        ts, ys, _, inputs, leaves = self._setup(variable, t, full_range=True)
+        cols = [
+            np.asarray(leaf.eval_trajectory(t_i, y_i, inp_i))
+            for leaf, t_i, y_i, inp_i in zip(leaves, ts, ys, inputs, strict=True)
+        ]
+        return np.concatenate(cols, axis=1).reshape(variable._shape(t), order="F")
+
+    def observe_hermite(self, variable, t):
+        # Route query times to segments as observe.cpp's knot-window scan does
+        ts, ys, yps, inputs, leaves = self._setup(variable, t, full_range=False)
+        n_segments = len(ts)
+        cols = []
+        i = 0
+        n = len(t)
+        for seg_idx, (leaf, t_i, y_i, yp_i, inp_i) in enumerate(
+            zip(leaves, ts, ys, yps, inputs, strict=True)
+        ):
+            if i >= n:
+                break
+            is_last_segment = seg_idx == n_segments - 1
+            if is_last_segment:
+                j = n
+            else:
+                j = i + np.searchsorted(t[i:], t_i[-1], side="right")
+            if j <= i:
+                continue
+            # Copy: the caller may mutate t, and a shared leaf holds its arguments
+            query = np.array(t[i:j])
+            if t_i.size < 2:
+                # A single knot: hold its state constant and evaluate directly
+                y_query = np.repeat(y_i, len(query), axis=1)
+                cols.append(np.asarray(leaf.eval_trajectory(query, y_query, inp_i)))
+            else:
+                cols.append(
+                    np.asarray(
+                        leaf.eval_trajectory_hermite(query, t_i, y_i, yp_i, inp_i)
+                    )
+                )
+            i = j
+        return np.concatenate(cols, axis=1).reshape(variable._shape(t), order="F")
+
+    def sensitivities(self, variable):
+        segments = list(
+            zip(
+                self._leaves,
+                variable.all_ts,
+                variable.all_ys,
+                variable.all_inputs,
+                strict=True,
+            )
+        )
+        sensitivity_names = variable.sensitivity_names
+        sensitivities = native_sensitivities(
+            segments, variable.all_solution_sensitivities["all"], sensitivity_names
+        )
+        if variable.time_integral is not None:
+            # The value sums over every segment at once, so its sensitivity must too
+            sensitivities = native_postfix_sensitivities(
+                variable.time_integral,
+                variable._name,
+                variable.t_pts,
+                self.observe_raw(variable),
+                sensitivities,
+                variable.all_inputs[0],
+                sensitivity_names,
+                self._post_sum_leaf,
+            )
+        return pack_sensitivity_dict(sensitivities, sensitivity_names)
+
+
+def _row_spans(function):
+    """``{name: slice}`` over the rows of a multi-output compiled tape."""
+    spans = {}
+    offset = 0
+    for name, length in zip(function.output_names, function.output_lens, strict=True):
+        spans[name] = slice(offset, offset + length)
+        offset += length
+    return spans
+
+
+def _same_argument(previous, current):
+    """Whether two call arguments select the same evaluation; unknowns differ."""
+    if previous is current:
+        return True
+    if isinstance(previous, np.ndarray) and isinstance(current, np.ndarray):
+        return previous.shape == current.shape and np.array_equal(previous, current)
+    if isinstance(previous, dict) and isinstance(current, dict):
+        return previous.keys() == current.keys() and all(
+            _same_argument(previous[key], current[key]) for key in previous
+        )
+    if isinstance(previous, list | tuple) and isinstance(current, list | tuple):
+        return len(previous) == len(current) and all(
+            _same_argument(was, now) for was, now in zip(previous, current, strict=True)
+        )
+    if np.isscalar(previous) and np.isscalar(current):
+        return previous == current
+    return False
+
+
+class SharedOutputs:
+    """One segment's tape over several variables, evaluated once for all of them.
+
+    A result is held until every leaf has read its rows. Held arguments must be
+    arrays PyBaMM owns and never mutates; copy a caller's array first.
+    """
+
+    def __init__(self, function):
+        self.function = function
+        self._spans = _row_spans(function)
+        self._call = None
+        self._result = None
+        self._unread = 0
+
+    def __getstate__(self):
+        """Pickle the tape, never a held result."""
+        return {"function": self.function}
+
+    def __setstate__(self, state):
+        self.__init__(state["function"])
+
+    def span(self, name):
+        """The rows ``name`` owns in this tape's output."""
+        return self._spans[name]
+
+    def _hold(self, call, compute):
+        """``compute()``'s result, reused while an identical call is still held."""
+        if self._call is None or not _same_argument(self._call, call):
+            self._result = compute()
+            self._call = call
+            self._unread = len(self._spans)
+        result = self._result
+        self._unread -= 1
+        if self._unread <= 0:
+            self._call = None
+            self._result = None
+        return result
+
+    def evaluate(self, method, args):
+        """``method(*args)`` on the shared tape, reusing an identical held call."""
+        return self._hold(
+            (method, args),
+            lambda: np.asarray(getattr(self.function, method)(*args)),
+        )
+
+    def chain_rule(self, ts, ys, inputs, dy_dp, sens_names):
+        """The whole set's ``dvar/dp`` for one sub-solution, swept once.
+
+        Shape ``(n_t * function.output_len, n_p)``, time-outer / output-inner.
+        """
+        args = (ts, ys, inputs, dy_dp, sens_names)
+        return self._hold(
+            ("chain_rule", args), lambda: _sweep_sensitivities(self.function, *args)
+        )
+
+
+class SharedOutputLeaf:
+    """One variable's rows of a :class:`SharedOutputs` tape, used as its own tape."""
+
+    def __init__(self, shared, name):
+        self._shared = shared
+        self._name = name
+        self._rows = shared.span(name)
+
+    @property
+    def output_len(self):
+        return self._rows.stop - self._rows.start
+
+    @property
+    def input_names(self):
+        return self._shared.function.input_names
+
+    @property
+    def n_inputs(self):
+        return self._shared.function.n_inputs
+
+    def eval_trajectory(self, ts, ys, inputs):
+        return self._shared.evaluate("eval_trajectory", (ts, ys, inputs))[self._rows]
+
+    def eval_trajectory_hermite(self, t_query, ts, ys, yps, inputs):
+        return self._shared.evaluate(
+            "eval_trajectory_hermite", (t_query, ts, ys, yps, inputs)
+        )[self._rows]
+
+    def chain_rule(self, ts, ys, inputs, dy_dp, sens_names):
+        """This variable's rows of the set's chain-rule sweep."""
+        full = self._shared.chain_rule(ts, ys, inputs, dy_dp, sens_names)
+        n_p = len(sens_names)
+        rows = full.reshape(len(ts), -1, n_p)[:, self._rows, :]
+        return rows.reshape(len(ts) * self.output_len, n_p)
+
+
 def as_observer(leaves: VariableObserver | list) -> VariableObserver:
     """Coerce leaves to an observer.
 
@@ -314,6 +544,87 @@ def check_variable_in_solve(
             "solve. Please re-run the solve with `output_variables` set to "
             "include this variable."
         )
+
+
+def native_sensitivities(
+    segments, dy_dp_segments, sensitivity_names
+) -> npt.NDArray[np.float64]:
+    """Forward sensitivities ``(N, n_p)`` of a natively observed variable.
+
+    ``segments`` holds one ``(leaf, ts, ys, inputs)`` per sub-solution, stacked in
+    solve order.
+    """
+    return np.vstack(
+        [
+            chain_rule_sensitivities(leaf, ts, ys, inputs, dy_dp, sensitivity_names)
+            for (leaf, ts, ys, inputs), dy_dp in zip(
+                segments, dy_dp_segments, strict=True
+            )
+        ]
+    )
+
+
+def native_postfix_sensitivities(
+    time_integral,
+    var_name,
+    t_pts,
+    entries,
+    sensitivities,
+    inputs,
+    sensitivity_names,
+    post_sum_leaf,
+) -> npt.NDArray[np.float64]:
+    """Sensitivities ``(n_integral, n_p)`` of a time integral's value, natively."""
+    time_integral.check_discrete_times(var_name, t_pts)
+
+    # The initial condition is a constant, so it adds nothing to a sensitivity
+    integral_sensitivities = time_integral.sum_over_time(sensitivities, t_pts)
+    if time_integral.post_sum_node is None:
+        return integral_sensitivities
+
+    integral = np.ascontiguousarray(
+        time_integral.postfix_sum(entries, t_pts), dtype=np.float64
+    ).ravel()
+    p_stacked = post_sum_leaf.pack(inputs)
+    dpost_dy = post_sum_leaf.jacobian("y")(0.0, integral, p_stacked).toarray()
+    dpost_dp_all = post_sum_leaf.jacobian("p")(0.0, integral, p_stacked).toarray()
+    input_names = list(post_sum_leaf.input_names)
+    dpost_dp = np.zeros((dpost_dy.shape[0], len(sensitivity_names)))
+    for k, name in enumerate(sensitivity_names):
+        if name in input_names:
+            dpost_dp[:, k] = dpost_dp_all[:, input_names.index(name)]
+    return dpost_dy @ integral_sensitivities + dpost_dp
+
+
+def chain_rule_sensitivities(cf, ts, ys, inputs, dy_dp, sens_names):
+    """Variable sensitivities ``dvar/dp`` for one sub-solution via jvp_trajectory.
+
+    ``dy_dp`` is ``(n_t * n_states, n_p)`` and the result ``(n_t * output_len, n_p)``,
+    both time-outer, with columns ordered as ``sens_names``.
+    """
+    if isinstance(cf, SharedOutputLeaf):
+        return cf.chain_rule(ts, ys, inputs, dy_dp, sens_names)
+    return _sweep_sensitivities(cf, ts, ys, inputs, dy_dp, sens_names)
+
+
+def _sweep_sensitivities(cf, ts, ys, inputs, dy_dp, sens_names):
+    """One forward sweep per sensitivity parameter over ``cf``'s whole output."""
+    n_states, n_t = ys.shape
+    out_len = cf.output_len
+    input_names = cf.input_names
+    sensitivities = np.empty((n_t * out_len, len(sens_names)))
+    for k, name in enumerate(sens_names):
+        vy_k = np.ascontiguousarray(dy_dp[:, k].reshape(n_t, n_states).T)
+        if name in input_names:
+            vp = np.zeros(cf.n_inputs)
+            vp[input_names.index(name)] = 1.0
+            col = cf.jvp_trajectory(ts, ys, inputs, vy_k, vp=vp)
+        else:
+            # variable has no direct dependence on this parameter; dvar_dp == 0
+            col = cf.jvp_trajectory(ts, ys, inputs, vy_k)
+        # (out_len, n_t) -> time-outer / output-inner flat column
+        sensitivities[:, k] = np.asarray(col).T.reshape(-1)
+    return sensitivities
 
 
 def pack_sensitivity_dict(
