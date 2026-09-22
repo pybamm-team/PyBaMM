@@ -827,6 +827,8 @@ class VTKQuickPlot:
             t_now = max(t_min, min(t_now, t_max))
             if not self.interpolate_time:
                 t_idx = int(np.argmin(np.abs(_t_array - t_now)))
+                # label the stored time that is drawn, not the raw slider value
+                t_now = float(_t_array[t_idx])
 
             for sname, g, cell_to_point, cut in zip(
                 panel_names,
@@ -873,6 +875,8 @@ class VTKQuickPlot:
         self._window = window
         self._interactor = interactor
         self._slider = slider
+        self._time_text = time_text
+        self._time_markers = [mt_arr for mt_arr, _ in time_markers]
 
     def save_gif(
         self,

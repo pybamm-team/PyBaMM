@@ -386,6 +386,11 @@ class TestVTKQuickPlot:
         mapped_data = _first_actor(field_renderer).GetMapper().GetInput()
         values = mapped_data.GetPointData().GetArray("field")
         assert values.GetValue(0) == pytest.approx(3.0)
+        # the label and chart marker show the snapped time that is drawn
+        snapped = float(solution.t[np.argmin(np.abs(solution.t - 1.6))])
+        assert plot._time_text.GetInput() == f"t = {snapped:.4g} s"
+        for marker in plot._time_markers:
+            assert marker.GetValue(0) == pytest.approx(snapped)
 
     def test_unwraps_simulation_list_and_rejects_several_solutions(self):
         solution, _ = _cell_solution()
