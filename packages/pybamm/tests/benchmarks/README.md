@@ -16,6 +16,10 @@ Run memory benchmarks (Linux/macOS only):
 nox -s benchmark-memory
 ```
 
+The session passes `--trace-python-allocators`, so memray records each small-object
+allocation instead of whole 1 MiB pymalloc arenas; the `limit_memory` values assume it.
+Pass the same flag when running the memory benchmarks through `pytest` directly.
+
 ### Comparing timing benchmarks against a baseline
 
 To detect regressions between two states of the code:

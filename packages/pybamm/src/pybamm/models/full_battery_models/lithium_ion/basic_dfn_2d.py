@@ -65,6 +65,11 @@ class BasicDFN2D(BaseModel):
             direction="tb",
         )
 
+        # A 2D slice stands for a cell of width L_y, so volume integrals are
+        # scaled by the unresolved length L_y
+        def volume_integral(integrand, integration_variables):
+            return self.param.L_y * pybamm.Integral(integrand, integration_variables)
+
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
@@ -161,8 +166,8 @@ class BasicDFN2D(BaseModel):
         tor = pybamm.concatenation(
             eps_n**self.param.n.b_e, eps_s**self.param.s.b_e, eps_p**self.param.p.b_e
         )
-        a_n = 3 * self.param.n.prim.epsilon_s_av / self.param.n.prim.R_typ
-        a_p = 3 * self.param.p.prim.epsilon_s_av / self.param.p.prim.R_typ
+        a_n = 3 * eps_s_n / self.param.n.prim.R_typ
+        a_p = 3 * eps_s_p / self.param.p.prim.R_typ
 
         # Interfacial reactions
         # Surf takes the surface value of a variable, i.e. its boundary value on the
@@ -229,8 +234,8 @@ class BasicDFN2D(BaseModel):
 
         c_s_n_av = pybamm.RAverage(c_s_n)
         c_s_p_av = pybamm.RAverage(c_s_p)
-        solid_lithium_negative = pybamm.Integral(c_s_n_av * eps_s_n, [x_n, z_n])
-        solid_lithium_positive = pybamm.Integral(c_s_p_av * eps_s_p, [x_p, z_p])
+        solid_lithium_negative = volume_integral(c_s_n_av * eps_s_n, [x_n, z_n])
+        solid_lithium_positive = volume_integral(c_s_p_av * eps_s_p, [x_p, z_p])
         total_solid_lithium = solid_lithium_negative + solid_lithium_positive
 
         ######################
@@ -322,7 +327,7 @@ class BasicDFN2D(BaseModel):
         )
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
-        total_lithium = pybamm.Integral(c_e * eps, [x, z])
+        total_lithium = volume_integral(c_e * eps, [x, z])
         self.variables = {
             "Negative particle concentration [mol.m-3]": c_s_n,
             "Total lithium [mol]": total_lithium,
@@ -348,7 +353,7 @@ class BasicDFN2D(BaseModel):
             "Discharge capacity [A.h]": Q,
             "x": x,
             "z": z,
-            "Current density [A.m-2]": a_j,
+            "Sum of volumetric interfacial current densities [A.m-3]": a_j,
             "Electrolyte current density [A.m-2]": i_e,
             "x_n": x_n,
             "x_s": x_s,

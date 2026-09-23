@@ -133,16 +133,8 @@ class TestElectrolyteConservation:
         li = sol["Lithium per area [mol.m-2]"].entries
         np.testing.assert_allclose(li, li[0], rtol=1e-8)
 
-    @pytest.mark.parametrize(
-        "dimensionality", [1, 2], ids=["2d_unstructured", "3d_unstructured"]
-    )
-    @pytest.mark.parametrize(
-        "graded", [False, True], ids=["uniform_loading", "graded_loading"]
-    )
-    def test_basic_dfn_unstructured(self, dimensionality, graded):
-        model = pybamm.lithium_ion.BasicDFNUnstructured(
-            {"dimensionality": dimensionality}
-        )
+    @staticmethod
+    def assert_total_lithium_conserved(model, graded, var_pts):
         model.variables["Total lithium inventory [mol]"] = (
             model.variables["Total lithium [mol]"]
             + model.variables["Total solid lithium [mol]"]
@@ -167,13 +159,33 @@ class TestElectrolyteConservation:
         sim = pybamm.Simulation(
             model,
             parameter_values=parameter_values,
-            var_pts=COARSE_UNSTRUCTURED_VAR_PTS,
+            var_pts=var_pts,
             solver=pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8),
         )
         # initial_soc needs a spatially uniform loading to compute capacities
         sol = sim.solve([0, 1200], initial_soc=None if graded else 0.5)
         li = sol["Total lithium inventory [mol]"].entries
         np.testing.assert_allclose(li, li[0], rtol=1e-8)
+
+    @pytest.mark.parametrize(
+        "graded", [False, True], ids=["uniform_loading", "graded_loading"]
+    )
+    def test_basic_dfn_2d(self, graded):
+        model = pybamm.lithium_ion.BasicDFN2D()
+        var_pts = {name: pts // 2 for name, pts in model.default_var_pts.items()}
+        self.assert_total_lithium_conserved(model, graded, var_pts)
+
+    @pytest.mark.parametrize(
+        "dimensionality", [1, 2], ids=["2d_unstructured", "3d_unstructured"]
+    )
+    @pytest.mark.parametrize(
+        "graded", [False, True], ids=["uniform_loading", "graded_loading"]
+    )
+    def test_basic_dfn_unstructured(self, dimensionality, graded):
+        model = pybamm.lithium_ion.BasicDFNUnstructured(
+            {"dimensionality": dimensionality}
+        )
+        self.assert_total_lithium_conserved(model, graded, COARSE_UNSTRUCTURED_VAR_PTS)
 
 
 class BaseBasicModelTest:
