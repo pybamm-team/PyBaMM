@@ -9,6 +9,7 @@
 ## Deprecated
 
 - Setting `Array.entries_string` or `Interpolant.entries_string`, and calling `StateVector.set_evaluation_array`, are in-place symbol updates and now emit `SymbolMutationDeprecationWarning`. Construct a new symbol instead. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
+- The `base_variables_casadi` argument and attribute of `ProcessedVariable` are deprecated. Pass the CasADi functions as the third positional argument or as `observer=`, and call the variable to evaluate it rather than reading the functions back. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
 
 ## Features
 
@@ -16,6 +17,7 @@
 - A multi-input `IDAKLUSolver` solve now hands each thread its next input set as soon as it is free, instead of splitting the sets into equal static blocks plus a serial remainder solved on the calling thread, so a heterogeneous sweep (for example a current sweep whose high currents stop early on a voltage cut-off) no longer waits on its slowest block. A failing set no longer hides the others: the `SolverError` names every set that failed, whether it failed from the start or part-way through, each prefixed `input set N: `, and a single-set solve's message now starts with `input set 0: `. Each `on_failure="warn"` warning names its set the same way. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - Added `Solution.sensitivity_names`, the sensitivity inputs in the column order of `sensitivities["all"]`. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 - An outputs-only `pybammsolvers` solution also returns `y_init`, `yS_init` and `yS_term`: its initial states and its states' sensitivities at both ends. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Evaluating a `ProcessedVariable` again, for example at new times, no longer re-serialises its CasADi functions or rescans every sub-solution's time span: a repeat `solution["Voltage [V]"](t)` on an SPMe discharge is about 40% faster, and finding the sub-solutions that cover the requested times, across 60 of them, takes 1 µs rather than 10 µs. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
 
 ## Bug fixes
 

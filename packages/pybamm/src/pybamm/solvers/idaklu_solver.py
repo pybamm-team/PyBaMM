@@ -1,7 +1,6 @@
 # mypy: ignore-errors
 import dataclasses
 import logging
-import math
 import numbers
 import warnings
 from enum import IntEnum
@@ -15,6 +14,7 @@ from scipy.sparse.linalg import spsolve
 import pybamm
 from pybamm.codegen.compilation import aot_compile
 from pybamm.solvers.base_solver import flatten_inputs, stack_inputs
+from pybamm.solvers.observation import OutputAssembly
 
 _UNSET = object()
 
@@ -675,6 +675,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
             "standard_form_dae": model.is_standard_form_dae,
             "output_variables": self.output_variables,
+            "output_assembly": OutputAssembly(
+                self.output_variables,
+                self.computed_var_fcns,
+                time_integrals=self._time_integral_vars,
+            ),
             "var_fcns": self.computed_var_fcns,
             "var_idaklu_fcns": [],
             "dvar_dy_idaklu_fcns": [],
@@ -968,84 +973,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 sol.yS_term, sensitivity_names
             )
 
-        # Populate variables and sensitivities dictionaries directly
-        number_of_samples = sol.y.shape[0] // number_of_timesteps
-        sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
-        sensitivity_params = (
-            model.calculate_sensitivities if model.calculate_sensitivities else []
+        # On this path `sol.y` carries the concatenated outputs rather than the
+        # states, and `sol.yS` their sensitivities as (n_t, n_rows, n_p).
+        self._setup["output_assembly"].attach(
+            newsol,
+            np.asarray(sol.y).reshape(number_of_timesteps, -1),
+            sensitivities=(
+                np.asarray(sol.yS) if number_of_sensitivity_parameters else None
+            ),
+            sensitivity_names=sensitivity_names,
         )
-
-        start_idx = 0
-        for var in self.output_variables:
-            var_nnz, var_shape, base_variables = self._get_variable_info(model, var)
-            end_idx = start_idx + var_nnz
-            data = sol.y[:, start_idx:end_idx]
-            if var_nnz != math.prod(var_shape):
-                # Scatter the returned structural nonzeros to their flat indices
-                indices = base_variables[0].sparsity_out(0).find()
-                dense = np.zeros((number_of_timesteps, math.prod(var_shape)))
-                dense[:, indices] = data
-                data = dense
-            time_integral = self._time_integral_vars.get(var)
-            values = data
-
-            # handle any time integral variables
-            if time_integral is not None:
-                # time integral variables should all be 1D
-                values = time_integral.postfix(data.reshape(-1), sol.t, inputs_dict)
-
-            newsol._variables[var] = pybamm.ProcessedVariableComputed(
-                [model.get_processed_variable_or_event(var)],
-                base_variables,
-                [values],
-                newsol,
-                time_integral=time_integral,
-            )
-
-            # Add sensitivities
-            newsol[var]._sensitivities = {}
-            if sensitivity_params:
-                if var_nnz != math.prod(var_shape):
-                    raise pybamm.SolverError(
-                        f"Sensitivity of sparse variables not supported. {var} is a sparse variable with number of non-zeros {var_nnz} and shape {var_shape}"
-                    )
-                sens_data = sol.yS[:, start_idx:end_idx, :]
-                sens_data = sens_data.reshape(
-                    number_of_timesteps * (end_idx - start_idx),
-                    number_of_sensitivity_parameters,
-                )
-                if time_integral is not None:
-                    sens_data = time_integral.postfix_sensitivities(
-                        var,
-                        data.reshape(-1),
-                        sol.t,
-                        inputs_dict,
-                        sensitivity_names,
-                        sens_data,
-                    )
-                newsol[var]._sensitivities["all"] = sens_data
-
-                # Add the individual sensitivity
-                for i, name in enumerate(sensitivity_names):
-                    sens = newsol[var]._sensitivities["all"][:, i : i + 1].reshape(-1)
-                    newsol[var]._sensitivities[name] = sens
-
-            start_idx += var_nnz
         return newsol
-
-    def _get_variable_info(self, model, var) -> tuple:
-        """Get variable length and base variables based on model format."""
-        if model.convert_to_format == "casadi":
-            base_var = self._setup["var_fcns"][var]
-            sparsity = base_var.sparsity_out(0)
-            var_nnz = sparsity.nnz()
-            var_shape = sparsity.shape
-            return var_nnz, var_shape, [base_var]
-        else:  # pragma: no cover
-            raise pybamm.SolverError(
-                f"Unsupported evaluation engine for convert_to_format="
-                f"{model.convert_to_format}"
-            )
 
     def _set_consistent_initialization(self, model, time, inputs_list):
         """
