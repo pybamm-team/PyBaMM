@@ -60,6 +60,83 @@ class TestDFN(BaseIntegrationTestLithiumIon):
 
         assert sol.termination == "final time"
 
+    def test_time_dependent_ambient_temperature_with_nonlinear_electrolyte_parameters(
+        self,
+    ):
+        times = np.arange(0, 1810, 10)
+        final_time = times[-1]
+        ambient_temperature = pybamm.Interpolant(
+            times, 298.15 + 20 * times / final_time, pybamm.t
+        )
+
+        def cation_transference_number(c_e, T):
+            return 0.25 + 1e-10 * c_e * T
+
+        def thermodynamic_factor(c_e, T):
+            return 1 + 1e-10 * c_e * T
+
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {
+                "Ambient temperature [K]": ambient_temperature,
+                "Cation transference number": cation_transference_number,
+                "Initial temperature [K]": 298.15,
+                "Thermodynamic factor": thermodynamic_factor,
+            }
+        )
+
+        # outputs that a mutated broadcast child corrupted; they are only built
+        # when every output is processed, which Simulation defers
+        affected = [
+            "X-averaged concentration overpotential [V]",
+            "X-averaged electrolyte ohmic losses [V]",
+        ]
+
+        def process_all_outputs(affected_first):
+            model = pybamm.lithium_ion.DFN()
+            rest = [name for name in model.variables if name not in affected]
+            order = affected + rest if affected_first else rest + affected
+            model.variables = pybamm.FuzzyDict(
+                {name: model.variables[name] for name in order}
+            )
+            parameter_values.process_model(model)
+            geometry = model.default_geometry
+            parameter_values.process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
+            return model
+
+        # discretisation must not depend on the order outputs are processed in
+        discretised = [
+            process_all_outputs(first).get_processed_variables_dict()
+            for first in (True, False)
+        ]
+        for name in affected:
+            first, last = discretised[0][name], discretised[1][name]
+            assert first.shape_for_testing == (1, 1)
+            assert first.id == last.id
+
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            experiment=pybamm.Experiment([f"Discharge at 1C for {final_time} s"]),
+            parameter_values=parameter_values,
+        )
+
+        solution = simulation.solve()
+
+        assert np.isfinite(solution["Voltage [V]"](final_time)).all()
+        for name in affected:
+            assert np.isfinite(solution[name](final_time)).all()
+        np.testing.assert_allclose(
+            solution["Ambient temperature [K]"]([0, final_time]),
+            [298.15, 318.15],
+            rtol=1e-10,
+            atol=1e-10,
+        )
+
 
 class TestDFNWithSizeDistribution:
     @pytest.fixture(autouse=True)

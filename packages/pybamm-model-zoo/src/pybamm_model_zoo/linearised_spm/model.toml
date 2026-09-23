@@ -1,0 +1,27 @@
+[model]
+slug = "linearised_spm"
+name = "LinearisedSPM"
+title = "Single Particle Model with a linearised open-circuit potential"
+summary = "SPM linearised about its starting stoichiometry, for fitting diffusivity to GITT pulses."
+class = "pybamm_model_zoo.linearised_spm:LinearisedSPM"
+tier = "core"
+pybamm_requires = ">=26.0"
+added = "2026-08-20"
+license = "BSD-3-Clause"
+
+[[model.maintainers]]
+name = "The PyBaMM Team"
+github = "pybamm-team/maintainers"
+
+[model.citation]
+key = "PyBaMMModelZoo2026"
+
+[model.tests]
+# A GITT pulse, not a discharge: the linearisation is local to the starting
+# stoichiometry, so a full discharge is outside what this model claims.
+solve_time = 300
+key_variables = [
+    "Voltage [V]",
+    "Positive electrode open-circuit potential gradient [V]",
+]
+skip_contract = []

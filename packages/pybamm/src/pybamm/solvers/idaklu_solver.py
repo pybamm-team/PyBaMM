@@ -8,6 +8,7 @@ from enum import IntEnum
 import casadi
 import numpy as np
 from pybammsolvers import idaklu
+from scipy.sparse import csc_matrix
 from scipy.sparse.linalg import spsolve
 
 import pybamm
@@ -1193,3 +1194,84 @@ class IDAKLUSolver(pybamm.BaseSolver):
         new_sol.set_up_time = solution.set_up_time
 
         return new_sol
+
+    def get_jacobian_sparsity(self) -> csc_matrix:
+        """Get the sparsity pattern of the iteration matrix that IDA factorizes.
+
+        This is the pattern of ``J - cj * M``, where ``J`` is the Jacobian of the
+        model residuals with respect to the states, ``M`` is the mass matrix and
+        ``cj`` is IDA's step-size-dependent scalar. It is the union of the patterns
+        of ``J`` and ``M``, so every differential state has a diagonal entry even
+        where ``J`` has none.
+
+        Returns
+        -------
+        :class:`scipy.sparse.csc_matrix`
+            The sparsity pattern of ``J - cj * M``, with every stored entry set to 1.
+        """
+        setup = getattr(self, "_setup", None)
+        if setup is None:
+            raise pybamm.SolverError("Solver not set up. Call set_up() first.")
+        indptr = setup["jac_times_cjmass_colptrs"]
+        indices = setup["jac_times_cjmass_rowvals"]
+        nnz = setup["jac_times_cjmass_nnz"]
+        n = setup["number_of_states"]
+        data = np.ones(nnz)
+        return csc_matrix((data, indices, indptr), shape=(n, n))
+
+    def spy(self, ax=None, *, show_plot=None, **kwargs):
+        """Plot the sparsity pattern of the Jacobian, delineating differential
+        and algebraic states.
+
+        Requires matplotlib (imported on call).
+
+        Parameters
+        ----------
+        ax : :class:`matplotlib.axes.Axes`, optional
+            Axes to plot on. If ``None``, a new figure is created.
+        show_plot : bool, optional
+            Whether to show the plot. Default is True.
+        **kwargs
+            Forwarded to :meth:`matplotlib.axes.Axes.spy`.
+
+        Returns
+        -------
+        ax : :class:`matplotlib.axes.Axes`
+        """
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError as e:
+            raise ImportError(
+                "matplotlib is required for IDAKLUSolver.spy. "
+                "Install it with: pip install matplotlib"
+            ) from e
+
+        if show_plot is None:
+            show_plot = True
+
+        J = self.get_jacobian_sparsity()
+
+        n = J.shape[0]
+        nnz = J.nnz
+        n_rhs = int(self._setup["ids"].sum())
+        n_alg = n - n_rhs
+        sparsity = 100.0 * (1 - nnz / (n * n) if n > 0 else 0.0)
+        created_figure = ax is None
+        if created_figure:
+            fig, ax = plt.subplots(1, 1)
+
+        ax.spy(J, **kwargs)
+
+        ax.set_xlabel("State index")
+        ax.set_ylabel("Equation index")
+
+        info = f"{nnz} nnz, {sparsity:.2f}% sparse"
+        info += f"\n{n} states: {n_rhs} differential and {n_alg} algebraic"
+        ax.set_title(info, fontsize=10)
+        if created_figure:
+            fig.tight_layout()
+
+        if show_plot:
+            plt.show()
+
+        return ax
