@@ -53,9 +53,7 @@ class ProcessedVariable(BaseProcessedVariable):
         self.all_yps = solution.all_yps
         self.all_inputs = solution.all_inputs
         self.all_inputs_stacked = solution.all_inputs_stacked
-        self.sensitivity_names = [
-            name for name in solution._all_sensitivities if name != "all"
-        ]
+        self.sensitivity_names = solution.sensitivity_names
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
@@ -284,7 +282,9 @@ class ProcessedVariable(BaseProcessedVariable):
         else:
             processed_entries = entries
 
-        if not is_sorted:
+        # Only the Hermite route interpolates at the sorted times; the xarray
+        # route is given the caller's t, so its output is already in query order
+        if not is_sorted and hermite_time_interp:
             idxs_unsort = np.empty_like(idxs_sort)
             idxs_unsort[idxs_sort] = np.arange(len(t_observe))
 

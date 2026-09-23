@@ -8,7 +8,9 @@
 
 import casadi
 import numpy as np
+import pandas as pd
 import pytest
+import xarray as xr
 
 import pybamm
 import tests
@@ -109,6 +111,84 @@ class TestProcessedVariableComputed:
         comb_sol = sol + sol_2
         comb_var = processed_var.update(processed_var2, comb_sol)
         np.testing.assert_array_equal(comb_var.entries, np.append(y_sol, y_sol2))
+
+    def _build_0D_var(self, t_sol=None):
+        # entries are 5 * t, so linear interpolation is exact
+        if t_sol is None:
+            t_sol = np.linspace(0, 1)
+        y_sol = 5 * t_sol[np.newaxis, :]
+        var = pybamm.t * pybamm.StateVector(slice(0, 1))
+        return pybamm.ProcessedVariableComputed(
+            [var],
+            [to_casadi(var, y_sol)],
+            [y_sol],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+        )
+
+    @pytest.mark.parametrize(
+        ("t_query", "shape"),
+        [
+            (0.5, ()),
+            (np.float64(0.5), ()),
+            (np.array(0.5), ()),
+            ([0.9, 0.3], (2,)),
+            (np.array([0.9, 0.3, 0.6]), (3,)),
+            (np.array([-0.5, 0.0, 0.5, 1.0, 2.0]), (5,)),
+        ],
+    )
+    def test_0D_call_matches_the_xarray_route(self, t_query, shape):
+        processed_var = self._build_0D_var()
+        values = processed_var(t_query)
+        expected = processed_var._xr_data_array.interp(t=t_query).values
+
+        assert isinstance(values, np.ndarray)
+        assert values.shape == shape
+        np.testing.assert_allclose(values, expected, rtol=1e-14)
+        t_array = np.asarray(t_query)
+        in_range = (t_array >= 0) & (t_array <= 1)
+        np.testing.assert_allclose(values[in_range], 5 * t_array[in_range])
+        # out-of-range queries are NaN, as xarray fills them
+        assert np.isnan(values[~in_range]).all()
+
+    def test_0D_call_keeps_xarray_errors(self):
+        # a multi-dimensional t is rejected, as for every other dimension
+        processed_var = self._build_0D_var()
+        with pytest.raises(IndexError, match=r"multi-dimensional"):
+            processed_var(np.array([[0.1, 0.2], [0.3, 0.4]]))
+
+        # a repeated solution time has no single value to interpolate from
+        processed_var = self._build_0D_var(np.array([0.0, 0.5, 0.5, 1.0]))
+        with pytest.raises(pd.errors.InvalidIndexError):
+            processed_var(0.25)
+
+    def test_data_array_is_built_on_first_interpolation(self):
+        # .data, .entries and 0D time-only reads never build the xr.DataArray
+        processed_var = self._build_0D_var()
+        processed_var.data
+        processed_var.entries
+        processed_var(np.array([0.25, 0.75]))
+        assert processed_var._xr_data_array_cache is None
+
+        var = pybamm.Variable("var", domain=["negative electrode", "separator"])
+        x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
+        processed_var = pybamm.ProcessedVariableComputed(
+            [var_sol],
+            [to_casadi(var_sol, y_sol)],
+            [y_sol],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+        )
+        processed_var.entries
+        assert processed_var._xr_data_array_cache is None
+
+        processed_var(t_sol, x_sol)
+        assert isinstance(processed_var._xr_data_array_cache, xr.DataArray)
+        assert processed_var._xr_interp_args is None
 
     # check empty sensitivity works
     def test_processed_variable_0D_no_sensitivity(self):
@@ -531,10 +611,11 @@ class TestProcessedVariableComputed:
         var_casadi = to_casadi(var_sol, u_sol)
         geometry_options = {"options": {"particle size": "distribution"}}
         model = tests.get_base_model_with_battery_geometry(**geometry_options)
+        # base_variables_data is time-major (n_t, output); u_sol is (output, n_t)
         processed_var = pybamm.ProcessedVariableComputed(
             [var_sol],
             [var_casadi],
-            [u_sol],
+            [u_sol.T],
             pybamm.Solution(t_sol, u_sol, model, {}),
         )
 
@@ -572,10 +653,11 @@ class TestProcessedVariableComputed:
         u_sol = np.ones(len(x_sol) * len(y_sol) * len(z_sol))[:, np.newaxis] * t_sol
 
         var_casadi = to_casadi(var_sol, u_sol)
+        # base_variables_data is time-major (n_t, output); u_sol is (output, n_t)
         processed_var = pybamm.ProcessedVariableComputed(
             [var_sol],
             [var_casadi],
-            [u_sol],
+            [u_sol.T],
             pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
         )
 
@@ -589,3 +671,27 @@ class TestProcessedVariableComputed:
         np.testing.assert_array_equal(
             processed_var.unroll(), u_sol.reshape(Nx, 6, 7, 2)
         )
+
+    def test_3D_output_variable_matches_full_solve(self):
+        name = "Negative particle concentration distribution [mol.m-3]"
+        parameter_values = pybamm.get_size_distribution_parameters(
+            pybamm.ParameterValues("Marquis2019")
+        )
+        var_pts = {"x_n": 3, "x_s": 2, "x_p": 3, "r_n": 4, "r_p": 4, "R_n": 3, "R_p": 3}
+        variables = []
+        for solver in [
+            pybamm.IDAKLUSolver(),
+            pybamm.IDAKLUSolver(output_variables=[name]),
+        ]:
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.DFN({"particle size": "distribution"}),
+                parameter_values=parameter_values,
+                var_pts=var_pts,
+                solver=solver,
+            )
+            sol = sim.solve([0, 600], t_interp=np.linspace(0, 600, 4))
+            variables.append(sol[name])
+        full, computed = variables
+
+        assert isinstance(computed, pybamm.ProcessedVariableComputed)
+        np.testing.assert_allclose(computed.entries, full.entries, rtol=1e-6)

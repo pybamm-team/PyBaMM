@@ -653,6 +653,42 @@ class TestSolution:
         for c, s in zip(casadi_inputs, stacked, strict=True):
             np.testing.assert_array_equal(np.array(c).flatten(), s)
 
+    def test_all_inputs_stacked_mixed_scalar_and_vector(self):
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        inputs = {"a": 1.0, "b": np.array([2.0, 3.0]), "c": np.array([[4.0]])}
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), inputs)
+
+        (stacked,) = sol.all_inputs_stacked
+        np.testing.assert_array_equal(stacked, [1.0, 2.0, 3.0, 4.0])
+        np.testing.assert_array_equal(
+            np.array(sol.all_inputs_casadi[0]).flatten(), stacked
+        )
+
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        (stacked,) = sol.all_inputs_stacked
+        assert stacked.shape == (0,)
+
+    def test_sensitivity_names(self):
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (2, 1))
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        assert sol.sensitivity_names == []
+
+        sensitivities = {
+            "b": np.ones((20, 1)),
+            "a": np.ones((20, 2)),
+            "all": np.ones((20, 3)),
+        }
+        sol = pybamm.Solution(
+            t,
+            y,
+            pybamm.BaseModel(),
+            {"a": np.array([1.0, 2.0]), "b": 3.0},
+            all_sensitivities=sensitivities,
+        )
+        assert sol.sensitivity_names == ["b", "a"]
+
     def test_last_state(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]

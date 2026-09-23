@@ -357,6 +357,14 @@ class Solution(SolutionBase):
     def has_sensitivities(self) -> bool:
         return len(self._all_sensitivities) > 0
 
+    @property
+    def sensitivity_names(self) -> list[str]:
+        """
+        Names of the inputs this solution has sensitivities for, in the column
+        order of ``sensitivities["all"]``.
+        """
+        return [key for key in self._all_sensitivities if key != "all"]
+
     @staticmethod
     def _ensure_t_evals(all_ts, all_t_evals):
         # all_ts is already checked upstream
@@ -509,8 +517,12 @@ class Solution(SolutionBase):
     @property
     def all_inputs_stacked(self) -> list[np.ndarray]:
         if self._all_inputs_stacked is None:
+            # Mixed scalar and vector inputs are ragged, so ravel each first
             self._all_inputs_stacked = [
-                np.asarray(list(inp.values())).reshape(-1) for inp in self.all_inputs
+                np.concatenate([np.ravel(value) for value in inp.values()])
+                if inp
+                else np.array([])
+                for inp in self.all_inputs
             ]
         return self._all_inputs_stacked
 
