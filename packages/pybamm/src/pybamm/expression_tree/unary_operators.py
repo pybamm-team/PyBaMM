@@ -97,8 +97,8 @@ class UnaryOperator(pybamm.Symbol):
         child = self._children_for_copying(new_children)[0]
 
         new_symbol = self._unary_new_copy(child, perform_simplifications)
-        new_symbol = new_symbol.with_domains(self)
-        return new_symbol
+        # new children determine the domains; a plain copy keeps this node's
+        return new_symbol if new_children else new_symbol.with_domains(self)
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         """Make a new copy of the unary operator, with child `child`"""
@@ -462,11 +462,7 @@ class Index(UnaryOperator):
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-        # this
-        new_index = self.__class__(child, self.index, check_size=False)
-        # Keep same domains
-        new_index = new_index.with_domains(self)
-        return new_index
+        return self.__class__(child, self.index, check_size=False)
 
     def _evaluate_for_shape(self):
         return self._unary_evaluate(self._children[0].evaluate_for_shape())

@@ -176,9 +176,8 @@ class BinaryOperator(pybamm.Symbol):
             # additional simplifications, rather than just calling the constructor
             out = self._binary_new_copy(children[0], children[1])
 
-        out = out.with_domains(self)
-
-        return out
+        # new children determine the domains; a plain copy keeps this node's
+        return out if new_children else out.with_domains(self)
 
     def _binary_new_copy(self, left: ChildSymbol, right: ChildSymbol):
         """

@@ -137,6 +137,16 @@ class TestTreeMapAndReplace:
         result = pybamm.replace(pybamm.Integral(a, x), {a: b, x: y})
         assert result == pybamm.Integral(b, y)
 
+    def test_replace_moves_parent_to_the_new_child_domain(self):
+        a = pybamm.Variable("a", domain="negative electrode")
+        b = pybamm.Variable("b", domain="separator")
+        result = pybamm.replace(pybamm.Negate(a), {a: b})
+        assert result.domain == ["separator"]
+        assert result == pybamm.Negate(b)
+        # a plain copy keeps the node's own domains
+        annotated = pybamm.Negate(a).with_domains({"primary": ["separator"]})
+        assert annotated.create_copy().domain == ["separator"]
+
     def test_replace_rejects_none_replacement(self):
         symbol = pybamm.Variable("a")
         with pytest.raises(ValueError, match="cannot be converted"):
