@@ -21,6 +21,40 @@ class TestBasicModels:
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
         model.check_well_posedness()
 
+    def test_dfn_half_cell_total_lithium_in_electrolyte(self):
+        model = pybamm.lithium_ion.BasicDFNHalfCell(
+            options={"working electrode": "positive"}
+        )
+        parameter_values = model.default_parameter_values
+        solution = pybamm.Simulation(model, parameter_values=parameter_values).solve(
+            [0, 1]
+        )
+
+        area = (
+            parameter_values["Electrode width [m]"]
+            * parameter_values["Electrode height [m]"]
+            * parameter_values[
+                "Number of electrodes connected in parallel to make a cell"
+            ]
+        )
+        expected_electrolyte_lithium = (
+            area
+            * parameter_values["Initial concentration in electrolyte [mol.m-3]"]
+            * (
+                parameter_values["Separator porosity"]
+                * parameter_values["Separator thickness [m]"]
+                + parameter_values["Positive electrode porosity"]
+                * parameter_values["Positive electrode thickness [m]"]
+            )
+        )
+
+        np.testing.assert_allclose(
+            solution["Total lithium in electrolyte [mol]"](0),
+            expected_electrolyte_lithium,
+            rtol=1e-12,
+            atol=1e-12,
+        )
+
     def test_dfn_composite_well_posed(self):
         model = pybamm.lithium_ion.BasicDFNComposite()
         model.check_well_posedness()
