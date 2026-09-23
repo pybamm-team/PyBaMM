@@ -38,6 +38,23 @@ One of the hooks, [`comment-slop`](https://github.com/ionworks/comment-slop), re
 
 Coding agents get the same report as they write, through the `PostToolUse` hook in the tracked `.claude/settings.json`, which runs `.claude/hooks/comment-slop.sh`. The write-time hook reports while the author still knows whether a comment was required, and the pre-commit hook covers everything that reaches a commit, whatever wrote it.
 
+## Contributing a model to the model zoo
+
+Contributed battery models live in the [model zoo](https://github.com/pybamm-team/PyBaMM/tree/main/packages/pybamm-model-zoo),
+not in `pybamm` itself: one self-contained folder per model, with its own
+maintainer, tests, examples, and citation. A declarative `model.toml` manifest is
+the only boilerplate you write — the registry, the contract test suite, the docs
+page, the CI routing, and your status badge are all derived from it.
+
+```bash
+nox -s zoo-new -- --slug my_model --name MyModel --author "A. Author" --github ahandle
+nox -s zoo -- --zoo-model=my_model
+```
+
+See [the zoo's contributing guide](https://docs.pybamm.org/en/latest/source/model_zoo/contributing.html)
+for the tier policy, what the contract suite checks for you, and the review
+checklist.
+
 ## Workflow
 
 We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedia.org/wiki/GitHub) to coordinate our work. When making any kind of update, we try to follow the procedure below.

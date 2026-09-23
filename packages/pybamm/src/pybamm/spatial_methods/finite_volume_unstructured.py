@@ -486,7 +486,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         if out is symbol:
             # simplification can hand back the child itself (e.g. ones-vector
             # multiply); copy before stamping domains on a possibly shared node
-            out = symbol.create_copy(perform_simplifications=False)
+            out = symbol.create_copy()
         out.domains = domains.copy()
         return out
 
