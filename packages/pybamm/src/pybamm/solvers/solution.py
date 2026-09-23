@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import numbers
 import pickle
+from dataclasses import astuple, dataclass
 from functools import cached_property
 from itertools import chain
 
@@ -30,6 +31,57 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         # won't be called since we only need to convert numpy arrays
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
+
+
+@dataclass(frozen=True)
+class SolverStatistics:
+    """Counts of the work an integrator did to produce a solution.
+
+    Attributes
+    ----------
+    number_of_steps : int
+        Internal time steps taken.
+    number_of_linear_solver_setups : int
+        Calls to the linear solver setup, such as Jacobian factorisations.
+    number_of_nonlinear_solver_iterations : int
+        Iterations of the nonlinear (Newton) solver.
+    number_of_nonlinear_solver_fails : int
+        Convergence failures of the nonlinear solver.
+    number_of_error_test_failures : int
+        Steps rejected by the local error test.
+    """
+
+    number_of_steps: int = 0
+    number_of_linear_solver_setups: int = 0
+    number_of_nonlinear_solver_iterations: int = 0
+    number_of_nonlinear_solver_fails: int = 0
+    number_of_error_test_failures: int = 0
+
+    def __add__(self, other: SolverStatistics) -> SolverStatistics:
+        if not isinstance(other, SolverStatistics):
+            return NotImplemented
+        return SolverStatistics(
+            *(a + b for a, b in zip(astuple(self), astuple(other), strict=True))
+        )
+
+
+def _sum_solver_statistics(solutions) -> SolverStatistics | None:
+    """Total the solver statistics of ``solutions``.
+
+    Parameters
+    ----------
+    solutions : list of :class:`pybamm.Solution`
+        The solutions whose statistics are summed.
+
+    Returns
+    -------
+    :class:`pybamm.SolverStatistics` or None
+        The field-wise sum, or None if any solution has no statistics.
+    """
+    statistics = [solution.solver_statistics for solution in solutions]
+    if any(stats is None for stats in statistics):
+        return None
+    return sum(statistics[1:], statistics[0])
 
 
 class SolutionBase:
@@ -240,6 +292,9 @@ class Solution(SolutionBase):
         the same backend as the integration.
 
     """
+
+    # A class default, so solutions pickled before this attribute existed load
+    solver_statistics: SolverStatistics | None = None
 
     def __init__(
         self,
@@ -620,6 +675,7 @@ class Solution(SolutionBase):
 
         new_sol.solve_time = 0
         new_sol.integration_time = 0
+        new_sol.solver_statistics = SolverStatistics()
         new_sol.set_up_time = 0
 
         return new_sol
@@ -663,6 +719,7 @@ class Solution(SolutionBase):
         new_sol._sub_solutions = self.sub_solutions[-1:]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
+        new_sol.solver_statistics = SolverStatistics()
         new_sol.set_up_time = 0
 
         return new_sol
@@ -1177,6 +1234,7 @@ class Solution(SolutionBase):
                 and getattr(other, attr, None) is not None
             ):
                 setattr(new_sol, attr, getattr(self, attr) + getattr(other, attr))
+        new_sol.solver_statistics = _sum_solver_statistics([self, other])
 
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
@@ -1291,6 +1349,7 @@ class Solution(SolutionBase):
             vals = [getattr(s, attr, None) for s in segments]
             if all(v is not None for v in vals):
                 setattr(new_sol, attr, sum(vals))
+        new_sol.solver_statistics = _sum_solver_statistics(segments)
 
         # output_variables path: reproduce __add__'s pairwise left-fold.
         if any(s.variables_returned for s in segments):
@@ -1329,6 +1388,7 @@ class Solution(SolutionBase):
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
+        new_sol.solver_statistics = self.solver_statistics
         new_sol.set_up_time = self.set_up_time
 
         # copy over variables which were derived at the solver stage
