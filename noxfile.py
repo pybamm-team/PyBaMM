@@ -222,6 +222,9 @@ def run_benchmark_memory(session):
         "-o",
         "addopts=",
         "--memray",
+        # Without this memray sees pymalloc only as whole 1 MiB arenas, so
+        # results jump by 1 MiB depending on heap state left by earlier tests.
+        "--trace-python-allocators",
         "--benchmark-disable",
     )
 
