@@ -58,6 +58,20 @@ def legacy_property(slot: str, replacement: str, convert=None, doc=None):
     return property(operator.attrgetter(slot), fset, doc=doc)
 
 
+def _process_bounds(values):
+    from pybamm.expression_tree.variable import _process_bounds
+
+    return _process_bounds(values)
+
+
+bounds_property = legacy_property(
+    "_bounds",
+    "Use symbol = symbol.create_copy(bounds=value).",
+    convert=_process_bounds,
+    doc="Physical bounds on the variable.",
+)
+
+
 def _intern_domains(domains):
     from pybamm.expression_tree.symbol import _intern_domains
 

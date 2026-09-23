@@ -17,6 +17,26 @@ from pybamm.type_definitions import (
 )
 
 
+def _process_bounds(
+    values: tuple[Numeric, Numeric] | None,
+) -> tuple[pybamm.Symbol, pybamm.Symbol]:
+    """Validate ``(lower, upper)`` bounds (default unbounded) and convert them to symbols."""
+    if values is None:
+        values = (-np.inf, np.inf)
+
+    if all(isinstance(b, numbers.Number) for b in values) and values[0] >= values[1]:
+        raise ValueError(
+            f"Invalid bounds {values}. "
+            + "Lower bound should be strictly less than upper bound."
+        )
+
+    if len(values) != 2:
+        raise ValueError(f"Invalid bounds {values}. Must be a tuple of length 2.")
+    lb, ub = values
+
+    return (pybamm.convert_to_symbol(lb), pybamm.convert_to_symbol(ub))
+
+
 class VariableBase(pybamm.Symbol):
     """
     A node in the expression tree represending a dependent variable.
@@ -75,7 +95,7 @@ class VariableBase(pybamm.Symbol):
             reference = 0
         self._scale = pybamm.convert_to_symbol(scale)
         self._reference = pybamm.convert_to_symbol(reference)
-        self._bounds = self._process_bounds(bounds)
+        self._bounds = _process_bounds(bounds)
         super().__init__(
             name,
             domain=domain,
@@ -87,40 +107,9 @@ class VariableBase(pybamm.Symbol):
             print_name = name  # use name by default
         self.print_name = print_name
 
-    def _process_bounds(
-        self, values: tuple[Numeric, Numeric] | None
-    ) -> tuple[pybamm.Symbol, pybamm.Symbol]:
-        if values is None:
-            values = (-np.inf, np.inf)
-
-        if (
-            all(isinstance(b, numbers.Number) for b in values)
-            and values[0] >= values[1]
-        ):
-            raise ValueError(
-                f"Invalid bounds {values}. "
-                + "Lower bound should be strictly less than upper bound."
-            )
-
-        if len(values) != 2:
-            raise ValueError(f"Invalid bounds {values}. Must be a tuple of length 2.")
-        lb, ub = values
-
-        return (pybamm.convert_to_symbol(lb), pybamm.convert_to_symbol(ub))
-
     _leaf_fields = ("_scale", "_reference", "_bounds")
 
-    @property
-    def bounds(self) -> tuple[pybamm.Symbol, pybamm.Symbol]:
-        """Physical bounds on the variable."""
-        return self._bounds
-
-    @bounds.setter
-    def bounds(self, value: tuple[Numeric, Numeric] | None) -> None:
-        pybamm.expression_tree.symbol._warn_mutation(
-            "bounds", "Use symbol = symbol.create_copy(bounds=value)."
-        )
-        object.__setattr__(self, "_bounds", self._process_bounds(value))
+    bounds = pybamm.expression_tree.legacy_mutation.bounds_property
 
     def create_copy(
         self,

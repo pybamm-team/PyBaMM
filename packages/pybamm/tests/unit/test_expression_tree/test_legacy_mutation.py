@@ -96,6 +96,12 @@ class TestLegacyMutation:
             assert symbol.reference == pybamm.Scalar(3)
             mutate(lambda: setattr(symbol, "bounds", (0, 5)))
             assert symbol.bounds == (pybamm.Scalar(0), pybamm.Scalar(5))
+            concatenation = pybamm.ConcatenationVariable(
+                pybamm.Variable("c_n", domain="negative electrode"),
+                pybamm.Variable("c_p", domain="positive electrode"),
+            )
+            mutate(lambda: setattr(concatenation, "bounds", (0, 1)))
+            assert concatenation.bounds == (pybamm.Scalar(0), pybamm.Scalar(1))
             for attribute in ("mesh", "secondary_mesh", "tertiary_mesh"):
                 mesh = object()
                 mutate(lambda: setattr(symbol, attribute, mesh))

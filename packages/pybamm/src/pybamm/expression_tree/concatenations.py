@@ -602,10 +602,7 @@ class ConcatenationVariable(Concatenation):
 
         self.print_name = print_name
 
-    @property
-    def bounds(self) -> tuple[pybamm.Symbol, pybamm.Symbol]:
-        """Physical bounds shared by all children."""
-        return self._bounds
+    bounds = pybamm.expression_tree.legacy_mutation.bounds_property
 
 
 def substrings(s: str):
