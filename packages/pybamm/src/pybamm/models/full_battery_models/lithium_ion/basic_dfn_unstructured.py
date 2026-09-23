@@ -208,10 +208,12 @@ class BasicDFNUnstructured(BaseModel):
         ######################
         # Current in the solid
         ######################
-        # Multiply by L_x**2 * L_z**2 to improve conditioning
+        # Multiply by the squared length of each meshed direction to improve
+        # conditioning
         L_scale = self.param.L_x**2 * self.param.L_z**2
         sides = ["left", "right", "top", "bottom"]
         if three_dimensional:
+            L_scale *= self.param.L_y**2
             sides += ["front", "back"]
         zero_flux = {side: (pybamm.Scalar(0), "Neumann") for side in sides}
         sigma_eff_n = self.param.n.sigma(sto_surf_n, T) * eps_s_n**self.param.n.b_s
