@@ -102,10 +102,12 @@ class TestBasicModels:
             submesh_types=submesh_types,
             var_pts={k: 3 for k in model.default_var_pts},
         )
-        sim.build()
+        solution = sim.solve([0, 60])
         for domain in ["negative electrode", "separator", "positive electrode"]:
             assert sim.mesh[domain].dimension == dimensionality + 1
             assert sim.mesh[domain].element_type == element_type
+        assert solution.t[-1] == pytest.approx(60)
+        assert np.all(np.isfinite(solution["Voltage [V]"](t=[0, 30, 60])))
 
     @pytest.mark.parametrize(
         ("options", "element_type"),
