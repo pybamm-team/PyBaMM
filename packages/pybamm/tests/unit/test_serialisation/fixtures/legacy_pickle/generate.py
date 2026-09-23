@@ -7,12 +7,14 @@
 """
 
 import gzip
+import json
 import pathlib
 import pickle
 
 import numpy as np
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import convert_symbol_to_json
 
 HERE = pathlib.Path(__file__).parent
 TIMES = np.linspace(0, 3600, 13)
@@ -27,8 +29,6 @@ def symbol_cases():
     ):
         sim = pybamm.Simulation(model)
         sim.build()
-        n_states = sim.built_model.concatenated_initial_conditions.shape[0]
-        y = np.linspace(0.1, 0.9, n_states)[:, None]
         for source, discretised in ((model, False), (sim.built_model, True)):
             expressions = [
                 *source.rhs.values(),
@@ -39,21 +39,14 @@ def symbol_cases():
             for expression in expressions:
                 for symbol in expression.pre_order():
                     key = (type(symbol).__qualname__, discretised)
-                    if key in cases:
-                        continue
-                    reference = None
-                    if discretised:
-                        try:
-                            reference = symbol.evaluate(t=10.0, y=y, inputs={})
-                        except Exception:  # noqa: BLE001 - not evaluable here
-                            reference = None
-                    cases[key] = {
-                        "symbol": symbol,
-                        "y": y,
-                        "reference": reference,
-                        "str": str(symbol),
-                        "domains": {k: list(v) for k, v in symbol.domains.items()},
-                    }
+                    if key not in cases:
+                        cases[key] = {
+                            "symbol": symbol,
+                            # machine-independent: floats are written exactly
+                            "json": json.dumps(convert_symbol_to_json(symbol)),
+                            "str": str(symbol),
+                            "domains": {k: list(v) for k, v in symbol.domains.items()},
+                        }
     return cases
 
 

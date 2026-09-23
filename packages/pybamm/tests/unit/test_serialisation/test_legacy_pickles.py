@@ -7,13 +7,14 @@ against a pre-slot checkout.
 from __future__ import annotations
 
 import gzip
+import json
 import pathlib
 import pickle
 
 import numpy as np
-from scipy.sparse import issparse
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import convert_symbol_to_json
 
 _FIX = pathlib.Path(__file__).parent / "fixtures" / "legacy_pickle"
 
@@ -21,10 +22,6 @@ _FIX = pathlib.Path(__file__).parent / "fixtures" / "legacy_pickle"
 def _load(name):
     with gzip.open(_FIX / name, "rb") as f:
         return pickle.load(f)  # nosec B301 - trusted, generated fixture
-
-
-def _dense(value):
-    return value.toarray() if issparse(value) else np.asarray(value)
 
 
 class TestLegacyPickles:
@@ -37,11 +34,8 @@ class TestLegacyPickles:
             assert {k: list(v) for k, v in symbol.domains.items()} == case["domains"]
             assert str(symbol) == case["str"]
             assert pybamm.replace(symbol, {}) is symbol
-            if case["reference"] is not None:
-                np.testing.assert_array_equal(
-                    _dense(symbol.evaluate(t=10.0, y=case["y"], inputs={})),
-                    _dense(case["reference"]),
-                )
+            # the whole tree, entries included, exactly as the pre-slot release wrote it
+            assert json.dumps(convert_symbol_to_json(symbol)) == case["json"]
 
     def test_saved_simulation_solves_identically(self):
         sim = _load("spm_simulation.pkl.gz")
