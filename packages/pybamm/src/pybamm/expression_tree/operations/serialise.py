@@ -185,6 +185,7 @@ class Serialise:
             "pybamm_version": pybamm.__version__,
             "name": model.name,
             "options": model.options,
+            "convert_to_format": model.convert_to_format,
             "bounds": [bound.tolist() for bound in model.bounds],  # type: ignore[attr-defined]
             "concatenated_rhs": encode(model._concatenated_rhs),
             "concatenated_algebraic": encode(model._concatenated_algebraic),
@@ -333,6 +334,8 @@ class Serialise:
         recon_model_dict["_solution_observable"] = model_data.get(
             "_solution_observable", False
         )
+        if "convert_to_format" in model_data:
+            recon_model_dict["convert_to_format"] = model_data["convert_to_format"]
 
         if battery_model:
             return battery_model.deserialise(recon_model_dict)
@@ -475,6 +478,7 @@ class Serialise:
             "base_class": base_cls_str,
             "base_class_mro": base_class_mro,
             "options": getattr(model, "options", {}),
+            "convert_to_format": getattr(model, "convert_to_format", "casadi"),
             "rhs": [
                 (
                     convert_symbol_to_json(variable),
@@ -1554,6 +1558,10 @@ class Serialise:
                 raise ValueError(
                     f"Failed to convert variable '{variable_name}': {e!s}"
                 ) from e
+
+        model.convert_to_format = model_data.get(
+            "convert_to_format", model.convert_to_format
+        )
 
         # Restore observable state
         model._solution_observable = False

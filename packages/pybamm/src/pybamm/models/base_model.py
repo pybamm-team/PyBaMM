@@ -102,6 +102,9 @@ class BaseModel:
         different submodels in the full concatenated solution vector.
     """
 
+    _DEFAULT_CONVERT_TO_FORMAT = "casadi"
+    _VALID_CONVERT_TO_FORMATS = (None, "python", "casadi", "jax")
+
     def __init__(self, name="Unnamed model"):
         self.name = name
         self._options = {}
@@ -141,7 +144,7 @@ class BaseModel:
 
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
-        self.convert_to_format = "casadi"
+        self.convert_to_format = self._DEFAULT_CONVERT_TO_FORMAT
 
         # Model is not initially discretised or parameterised
         self.is_discretised = False
@@ -177,6 +180,9 @@ class BaseModel:
     @classmethod
     def generic_deserialise(cls, instance, properties):
         # Initialise model with stored variables that have already been discretised
+        instance.convert_to_format = properties.get(
+            "convert_to_format", instance.convert_to_format
+        )
         instance._concatenated_rhs = properties["concatenated_rhs"]
         instance._concatenated_algebraic = properties["concatenated_algebraic"]
         instance._concatenated_initial_conditions = properties[
@@ -236,6 +242,34 @@ class BaseModel:
     @name.setter
     def name(self, value):
         self._name = value
+
+    def __setstate__(self, state: dict) -> None:
+        # Pickles from before convert_to_format was a property hold it under the
+        # public name, which the property shadows; copy rather than mutate state.
+        if "convert_to_format" in state:
+            state = dict(state)
+            state["_convert_to_format"] = state.pop("convert_to_format")
+        self.__dict__.update(state)
+
+    @property
+    def convert_to_format(self) -> str | None:
+        """The format the solver converts the model's expression trees to."""
+        return self._convert_to_format
+
+    @convert_to_format.setter
+    def convert_to_format(self, value: str | None) -> None:
+        if value not in self._VALID_CONVERT_TO_FORMATS:
+            valid = ", ".join(repr(v) for v in self._VALID_CONVERT_TO_FORMATS)
+            raise pybamm.OptionError(
+                f"convert_to_format must be one of {valid}, got {value!r}"
+            )
+        self._convert_to_format = value
+
+    @property
+    def uses_stacked_inputs(self) -> bool:
+        """Whether the converted evaluators take the inputs stacked into one
+        column vector rather than as a dict."""
+        return self._convert_to_format == "casadi"
 
     @property
     def rhs(self):

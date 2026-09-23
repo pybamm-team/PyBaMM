@@ -2,6 +2,7 @@
 # Tests for the Base Solver class
 #
 
+import multiprocessing as mp
 import re
 
 import casadi
@@ -23,6 +24,14 @@ class TestBaseSolver:
         assert solver.rtol == 1e-5
         solver.rtol = 1e-7
         assert solver.rtol == 1e-7
+
+    def test_root_method_takes_the_tightest_entry_of_a_per_state_atol(self):
+        # The root solver takes a single tolerance, so a per-state atol has to
+        # reduce rather than reach the comparison against root_tol as an array.
+        solver = pybamm.BaseSolver(
+            atol=np.array([1e-6, 1e-9]), root_method="nonlinear_solver", root_tol=1e-3
+        )
+        assert solver.root_method.atol == 1e-9
 
     def test_root_method_init(self):
         solver = pybamm.BaseSolver(root_method="nonlinear_solver")
@@ -161,6 +170,7 @@ class TestBaseSolver:
                     "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
                 self.convert_to_format = "casadi"
+                self.uses_stacked_inputs = True
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
                 self.len_rhs_and_alg = 1
                 self.events = []
@@ -200,6 +210,7 @@ class TestBaseSolver:
                     "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
                 self.convert_to_format = "casadi"
+                self.uses_stacked_inputs = True
                 self.bounds = (-np.inf * np.ones(4), np.inf * np.ones(4))
                 self.len_rhs = 1
                 self.len_rhs_and_alg = 4
@@ -479,6 +490,7 @@ class TestBaseSolver:
         [
             "casadi",
             "python",
+            None,
             pytest.param(
                 "jax",
                 marks=pytest.mark.skipif(
@@ -526,6 +538,40 @@ class TestBaseSolver:
         ):
             solver._integrate_single(model, np.array([0, 1]), {}, np.array([1]))
 
+    def test_one_process_solves_input_sets_without_a_pool(self, monkeypatch):
+        # calc_ic=False routes consistent initialisation through the root
+        # solver's BaseSolver._integrate, once for all input sets with nproc=1.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        k = pybamm.InputParameter("k")
+        model.rhs = {u: -u}
+        model.algebraic = {v: v - k * u}
+        model.initial_conditions = {u: 1.0, v: 0.0}
+        model.variables = {"u": u, "v": v}
+        pybamm.Discretisation().process_model(model)
+
+        def no_pools(*args, **kwargs):
+            raise AssertionError("a solve with nproc=1 built a process pool")
+
+        monkeypatch.setattr(mp, "get_context", no_pools)
+
+        solver = pybamm.IDAKLUSolver(options={"calc_ic": False})
+        t_eval = np.linspace(0, 1, 10)
+        solutions = solver.solve(model, t_eval, inputs=[{"k": 1.0}, {"k": 2.0}])
+        for solution, k in zip(solutions, [1.0, 2.0], strict=True):
+            np.testing.assert_allclose(
+                solution["v"](t_eval), k * np.exp(-t_eval), rtol=1e-3, atol=1e-5
+            )
+
+    def test_single_input_set_uses_the_first_initial_state(self):
+        solver = pybamm.BaseSolver()
+        solver._integrate_single = lambda model, t_eval, inputs, y0: y0
+        model = pybamm.BaseModel()
+        model.y0_list = [np.array([1.0]), np.array([2.0])]
+        (y0,) = solver._integrate(model, np.array([0.0]), [{}])
+        np.testing.assert_array_equal(y0, [1.0])
+
     def test_discontinuity_events_different_times_error(self):
         # Test that an error is raised when discontinuity events occur at different
         # times for different input parameter sets
@@ -550,3 +596,69 @@ class TestBaseSolver:
             match="Discontinuity events occur at different times between input parameter sets",
         ):
             solver.solve(model, t_eval, inputs=inputs_list)
+
+    @pytest.mark.parametrize(
+        "all_sensitivities",
+        [
+            pytest.param({}, id="no_sensitivities_stored"),
+            # IDAKLU stores output-width sensitivities here, which cannot seed
+            # a state-width dy0/dp.
+            pytest.param(
+                {"p": np.zeros((2, 1)), "all": np.zeros((2, 1))}, id="output_width"
+            ),
+        ],
+    )
+    def test_check_restart_sensitivities_rejects_outputs_only(self, all_sensitivities):
+        solution = pybamm.Solution(
+            [np.array([0.0, 1.0])],
+            [np.zeros((0, 2))],
+            pybamm.BaseModel(),
+            [{}],
+            variables_returned=True,
+        )
+        solution._all_sensitivities = all_sensitivities
+
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"Cannot continue a sensitivity solve from a solution that "
+            r"returned output variables only",
+        ):
+            pybamm.BaseSolver._check_restart_sensitivities(solution)
+
+    def test_step_rejects_a_sensitivity_restart_from_output_variables(self):
+        # Output and state widths match here, so the restart would otherwise
+        # seed the state sensitivities from the output ones without an error.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -pybamm.InputParameter("k") * u, v: u - 2 * v}
+        model.initial_conditions = {u: 1.0, v: 0.5}
+        model.variables = {"2u": 2 * u, "v": v}
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver(output_variables=["2u", "v"])
+
+        solution = solver.step(
+            None, model, 1.0, inputs={"k": 1.3}, calculate_sensitivities=True
+        )
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"returned output variables only",
+        ):
+            solver.step(
+                solution, model, 1.0, inputs={"k": 1.3}, calculate_sensitivities=True
+            )
+
+    def test_check_restart_sensitivities_allows_full_state(self):
+        solution = pybamm.Solution(
+            [np.array([0.0, 1.0])],
+            [np.zeros((3, 2))],
+            pybamm.BaseModel(),
+            [{}],
+            variables_returned=False,
+        )
+        solution._all_sensitivities = {"p": np.zeros((6, 1))}
+
+        pybamm.BaseSolver._check_restart_sensitivities(solution)
+
+    def test_check_restart_sensitivities_allows_empty_solution(self):
+        pybamm.BaseSolver._check_restart_sensitivities(pybamm.EmptySolution())
