@@ -21,6 +21,17 @@ _MODELS = [
 ]
 
 
+@pytest.fixture(scope="module", autouse=True)
+def _warm_up():
+    # Pay one-off costs such as lazy imports before memray starts tracking,
+    # so they don't land on whichever test happens to run first.
+    pybamm.Simulation(
+        pybamm.lithium_ion.SPM(),
+        parameter_values=pybamm.ParameterValues("Chen2020"),
+        experiment=pybamm.Experiment(_EXPERIMENT_DESCRIPTIONS["CCCV"]),
+    )
+
+
 @pytest.mark.limit_memory("2.5 MB")
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("parameters", ["Marquis2019", "Chen2020"])

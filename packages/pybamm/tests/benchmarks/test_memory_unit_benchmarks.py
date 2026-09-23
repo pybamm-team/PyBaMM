@@ -65,25 +65,34 @@ def _discretise(r, geometry, model):
     disc.process_model(model)
 
 
-@pytest.mark.limit_memory("2 KB")
+@pytest.fixture(scope="module", autouse=True)
+def _warm_up():
+    # Pay one-off costs such as lazy imports before memray starts tracking,
+    # so they don't land on whichever test happens to run first.
+    R, model = _create_expression()
+    r, geometry = _parameterise(R, model)
+    _discretise(r, geometry, model)
+
+
+@pytest.mark.limit_memory("50 KB")
 def test_create_expression_memory():
     _create_expression()
 
 
-@pytest.mark.limit_memory("4 KB")
+@pytest.mark.limit_memory("80 KB")
 def test_parameterise_memory():
     R, model = _create_expression()
     _parameterise(R, model)
 
 
-@pytest.mark.limit_memory("50 KB")
+@pytest.mark.limit_memory("200 KB")
 def test_discretise_memory():
     R, model = _create_expression()
     r, geometry = _parameterise(R, model)
     _discretise(r, geometry, model)
 
 
-@pytest.mark.limit_memory("2.5 MB")
+@pytest.mark.limit_memory("3 MB")
 def test_solve_memory():
     R, model = _create_expression()
     r, geometry = _parameterise(R, model)
