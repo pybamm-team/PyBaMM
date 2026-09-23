@@ -1289,6 +1289,15 @@ class TestDiscretise:
         disc.process_model(model)
         assert len(model.rhs) == 1
 
+    def test_discretised_nodes_keep_symbol_domains(self):
+        # a boundary value discretises onto the current collector; its parents
+        # must still carry the symbol's (empty) domains
+        model = pybamm.lithium_ion.SPM({"SEI": "reaction limited"})
+        sim = pybamm.Simulation(model)
+        sim.build()
+        name = "Loss of lithium to negative SEI [mol]"
+        assert sim.built_model.get_processed_variable(name).domain == []
+
     def test_independent_rhs_keeps_last_equation(self):
         x, y = pybamm.Variable("x"), pybamm.Variable("y")
         model = pybamm.BaseModel()

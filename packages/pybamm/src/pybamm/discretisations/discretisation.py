@@ -942,8 +942,11 @@ class Discretisation:
         handler = self._handler_for(type(symbol))
         discretised_symbol = handler(self, symbol, new_leaves[: len(symbol._children)])
         discretised_symbol.test_shape()
-        # processed variables read the meshes of the symbol's domains off the result
-        return discretised_symbol.with_meshes(self.mesh, symbol._domains)
+        # a discretised node keeps its symbol's domains, and processed variables read
+        # the meshes of those domains off the result
+        return discretised_symbol.with_domains(symbol).with_meshes(
+            self.mesh, symbol._domains
+        )
 
     def _spatial_method_of(self, symbol):
         """The spatial method of a symbol's primary domain (None if it has none)."""
