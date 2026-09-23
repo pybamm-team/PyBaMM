@@ -106,9 +106,7 @@ def _get_initial_conditions(options, soc_init):
     for name, var in variables.items():
         if "100" in name and "x" in name:
             ics[var] = 0.85
-        elif "0" in name and "x" in name:
-            ics[var] = 0.15
-        elif "100" in name and "y" in name:
+        elif ("0" in name and "x" in name) or ("100" in name and "y" in name):
             ics[var] = 0.15
         elif "0" in name and "y" in name:
             ics[var] = 0.85
@@ -880,7 +878,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             )
         sol = esoh_sim.solve([0], inputs=all_inputs)
 
-        return {var: sol[var].entries[0] for var in sol.all_models[0].variables.keys()}
+        return {var: sol[var].entries[0] for var in sol.all_models[0].variables}
 
 
 def get_initial_stoichiometries_composite(

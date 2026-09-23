@@ -155,7 +155,7 @@ class TestBPX:
         temp_file.write_text(json.dumps(copy.deepcopy(self.base)))
 
         params = pybamm.ParameterValues.create_from_bpx(temp_file)
-        assert "check_already_exists" not in params.keys()
+        assert "check_already_exists" not in params
 
     def test_bpx_emits_current_particle_diffusivity_name(self, tmp_path):
         # a BPX-derived set must use only the current "particle diffusivity" name;
@@ -273,6 +273,27 @@ class TestBPX:
             assert isinstance(OCP, pybamm.Interpolant)
             dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](c)
             assert isinstance(dUdT, pybamm.Interpolant)
+
+    @pytest.mark.parametrize("form", ["function", "constant", "table"])
+    def test_bpx_to_json_roundtrip(self, tmp_path, form):
+        """create_from_bpx stores functional parameters as keyword-bound partials;
+        serialising them must not raise (regression for the partial arg handling
+        in convert_function_to_symbolic_expression)."""
+        bpx_obj = copy.deepcopy(self.base)
+        if form != "function":
+            value = 1 if form == "constant" else {"x": [0, 1], "y": [0, 1]}
+            for section in ["Electrolyte", "Negative electrode", "Positive electrode"]:
+                bpx_obj["Parameterisation"][section]["Diffusivity [m2.s-1]"] = value
+            bpx_obj["Parameterisation"]["Electrolyte"]["Conductivity [S.m-1]"] = value
+
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(bpx_obj))
+        param = pybamm.ParameterValues.create_from_bpx(temp_file)
+
+        out_file = tmp_path / "out.json"
+        param.to_json(out_file)
+        # the round-tripped values load back without error
+        pybamm.ParameterValues.from_json(out_file)
 
     def test_bpx_soc_error(self):
         bpx_obj = copy.deepcopy(self.base)
@@ -944,3 +965,43 @@ class TestBPX:
         ]
         param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
         assert param["Total heat transfer coefficient [W.m-2.K-1]"] == 0
+
+    # Optional thermal material properties (bpx>=1.1.1). BPX makes the cell
+    # density and specific heat capacity optional; many vendor files ship none.
+    # When they are absent PyBaMM must omit them rather than inject ``None``,
+    # so the isothermal path keeps working and the thermal path fails with the
+    # usual, named "parameter not found" error instead of a cryptic type error.
+    def _thermal_less_bpx_obj(self):
+        bpx_obj = copy.deepcopy(self.base)
+        del bpx_obj["Parameterisation"]["Cell"]["Specific heat capacity [J.K-1.kg-1]"]
+        del bpx_obj["Parameterisation"]["Cell"]["Density [kg.m-3]"]
+        return bpx_obj
+
+    def test_bpx_absent_thermal_properties_are_omitted_not_none(self):
+        param = pybamm.ParameterValues.create_from_bpx_obj(self._thermal_less_bpx_obj())
+        # No absent optional property may leak into ParameterValues as ``None``.
+        none_keys = [k for k, v in param.items() if v is None]
+        assert none_keys == [], f"BPX emitted None-valued parameters: {none_keys}"
+        # The specific thermal keys are absent entirely (not present-but-None).
+        for key in (
+            "Density [kg.m-3]",
+            "Specific heat capacity [J.K-1.kg-1]",
+            "Negative electrode density [kg.m-3]",
+            "Positive electrode specific heat capacity [J.kg-1.K-1]",
+            "Separator density [kg.m-3]",
+            "Negative current collector specific heat capacity [J.kg-1.K-1]",
+        ):
+            assert key not in param
+
+    def test_bpx_isothermal_model_builds_without_thermal_data(self):
+        param = pybamm.ParameterValues.create_from_bpx_obj(self._thermal_less_bpx_obj())
+        model = pybamm.lithium_ion.SPMe()  # isothermal: never reads thermal props
+        pybamm.Simulation(model, parameter_values=param).build()
+
+    def test_bpx_thermal_model_without_thermal_data_raises_named_error(self):
+        param = pybamm.ParameterValues.create_from_bpx_obj(self._thermal_less_bpx_obj())
+        model = pybamm.lithium_ion.SPMe({"thermal": "lumped"})
+        with pytest.raises(KeyError, match="not found") as excinfo:
+            pybamm.Simulation(model, parameter_values=param).build()
+        # the error names a specific missing thermal parameter, not a cryptic type error
+        assert "density [kg.m-3]" in str(excinfo.value).lower()

@@ -56,16 +56,15 @@ class ProcessedVariableTimeIntegral:
         # post fix for discrete time integral won't give correct result
         # if ts are not equal to the discrete times. Raise error
         # in this case
-        if self.method == "discrete":
-            if not (
-                len(t_pts) == len(self.discrete_times)
-                and np.allclose(t_pts, self.discrete_times, atol=1e-10)
-            ):
-                raise pybamm.SolverError(
-                    f'Processing discrete-time-sum variable "{var_name}": solution times '
-                    "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
-                    f"ensure the correct times are used.\nSolution times: {t_pts}\nDiscrete Sum times: {self.discrete_times}"
-                )
+        if self.method == "discrete" and not (
+            len(t_pts) == len(self.discrete_times)
+            and np.allclose(t_pts, self.discrete_times, atol=1e-10)
+        ):
+            raise pybamm.SolverError(
+                f'Processing discrete-time-sum variable "{var_name}": solution times '
+                "and discrete times of the time integral are not equal. Set 't_interp=discrete_sum_times' to "
+                f"ensure the correct times are used.\nSolution times: {t_pts}\nDiscrete Sum times: {self.discrete_times}"
+            )
 
         the_integral = self.postfix_sum(sensitivities, t_pts)
         if self.post_sum_node is None:

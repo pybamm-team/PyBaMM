@@ -317,6 +317,16 @@ class QuickPlot:
             # just use the first solution to check this
             first_solution = variables[0]
             first_variable = first_solution[0]
+            if isinstance(
+                first_variable,
+                pybamm.ProcessedVariableUnstructuredFVM
+                | pybamm.ProcessedVariableVectorFieldUnstructuredFVM,
+            ):
+                raise NotImplementedError(
+                    f"QuickPlot cannot plot '{variable_tuple[0]}': variables on "
+                    "unstructured meshes have no plotting support yet. Query the "
+                    "variable at points with solution[name](t, x=..., z=...) instead."
+                )
             domain = first_variable.domain
             # check all other solutions against the first solution
             for idx, variable in enumerate(first_solution):

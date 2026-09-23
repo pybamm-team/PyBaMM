@@ -49,15 +49,14 @@ class TestCasadiModes:
                 solutions[0][var].data, solutions[1][var].data, rtol=1e-6, atol=1e-6
             )
 
-    def test_casadi_fast_matches_safe_legacy_ode(self):
-        # numerical equivalence of "fast" and "safe" on the legacy pure-ODE
-        # configuration, solved over a fixed window ("fast" ignores events)
-        legacy = {"voltage as a state": "false", "surface form": "false"}
+    def test_casadi_fast_matches_safe_default_ode(self):
+        # Numerical equivalence of "fast" and "safe" on the default pure-ODE
+        # configuration, solved over a fixed window ("fast" ignores events).
         t_eval = np.linspace(0, 3600, 100)
 
         solutions = []
         for mode in ["safe", "fast"]:
-            model = pybamm.lithium_ion.SPM(legacy)
+            model = pybamm.lithium_ion.SPM()
             solver = pybamm.CasadiSolver(mode=mode, atol=1e-6, rtol=1e-6)
             sim = pybamm.Simulation(model, solver=solver)
             solutions.append(sim.solve(t_eval))

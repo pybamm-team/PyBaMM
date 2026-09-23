@@ -36,7 +36,7 @@ class SpatialMethod:
 
     def build(self, mesh):
         # add npts_for_broadcast to mesh domains for this particular discretisation
-        for dom in mesh.keys():
+        for dom in mesh:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
         self._mesh = mesh
 
@@ -119,7 +119,9 @@ class SpatialMethod:
             # Make copies of the child stacked on top of each other
             sub_vector = np.ones((primary_domain_size, 1))
             if symbol.shape_for_testing == ():
-                out = symbol * pybamm.Vector(sub_vector)
+                # Carry `domains` on the broadcast vector itself so binary-op
+                # simplifications can preserve the domain across rewrites.
+                out = symbol * pybamm.Vector(sub_vector, domains=domains)
             else:
                 # Repeat for secondary points
                 matrix = csr_matrix(kron(eye(symbol.shape_for_testing[0]), sub_vector))
@@ -329,6 +331,32 @@ class SpatialMethod:
         """
 
         raise NotImplementedError
+
+    def set_internal_bcs_for_concat(self, disc, var, children, outer_bcs):
+        """
+        Hook for spatial methods that own their internal-BC logic for
+        concatenated variables (e.g. graph topologies on unstructured
+        meshes).
+
+        Parameters
+        ----------
+        disc : :class:`pybamm.Discretisation`
+            The discretisation, for processing child symbols
+        var : :class:`pybamm.Concatenation`
+            The concatenated variable whose boundary conditions are being set
+        children : list of :class:`pybamm.Symbol`
+            The orphaned children of ``var``
+        outer_bcs : dict
+            The user-supplied boundary conditions for ``var``,
+            ``{side: (value, type)}``
+
+        Returns
+        -------
+        dict or None
+            ``{child: {side: (value, type)}}`` to replace the default
+            1D-stack pairwise routine, or ``None`` to use it.
+        """
+        return
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """

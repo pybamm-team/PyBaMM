@@ -49,7 +49,7 @@ _FLOAT_SENTINELS_INV = {
 
 
 def _encode_float(value: float):
-    if value != value:  # NaN
+    if np.isnan(value):
         return {TAG: "builtins.float", "value": "NaN"}
     if value in _FLOAT_SENTINELS:
         return {TAG: "builtins.float", "value": _FLOAT_SENTINELS[value]}

@@ -58,6 +58,53 @@ class TestFiniteVolume:
         with pytest.raises(ValueError, match=r"method"):
             fin_vol.shift(c, "shift key", "bad method")
 
+    @pytest.mark.parametrize("method", ["arithmetic", "harmonic"])
+    def test_node_to_edge_exterior_matches_boundary_value(self, method):
+        # On a non-uniform mesh the exterior edge values must agree with
+        # boundary_value. A flux written as `D * grad(c)` takes D to the edges
+        # through node_to_edge, while a Neumann condition written as
+        # `-j / surf(D)` uses boundary_value; if the two disagree the imposed
+        # flux is wrong and mass is not conserved.
+        r = pybamm.SpatialVariable(
+            "r", domain=["negative particle"], coord_sys="spherical polar"
+        )
+        geometry = {
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
+        submesh_types = {
+            "negative particle": pybamm.MeshGenerator(
+                pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
+            )
+        }
+        n = 16
+        mesh = pybamm.Mesh(geometry, submesh_types, {r: n})
+        fin_vol = pybamm.FiniteVolume()
+        fin_vol.build(mesh)
+
+        submesh = mesh["negative particle"]
+        c = pybamm.StateVector(slice(0, n), domain=["negative particle"])
+        # Linear field, so the exact edge values are known
+        y_test = 1 + 2 * submesh.nodes
+
+        edges = np.ravel(fin_vol.node_to_edge(c, method=method).evaluate(None, y_test))
+        for side, index in [("left", 0), ("right", -1)]:
+            boundary = np.ravel(
+                fin_vol.boundary_value_or_flux(
+                    pybamm.BoundaryValue(c, side), c
+                ).evaluate(None, y_test)
+            )
+            np.testing.assert_allclose(edges[index], boundary, rtol=1e-12, atol=1e-12)
+            np.testing.assert_allclose(
+                edges[index], 1 + 2 * submesh.edges[index], rtol=1e-12, atol=1e-12
+            )
+
+        if method == "arithmetic":
+            # Linear interpolation of a linear field is exact everywhere, which
+            # 0.5/0.5 interior weights are not on a non-uniform mesh
+            np.testing.assert_allclose(
+                edges, 1 + 2 * submesh.edges, rtol=1e-12, atol=1e-12
+            )
+
     def test_node_to_edge_to_node_symbolic(self):
         # Create discretisation
         mesh = get_mesh_for_testing_symbolic()

@@ -64,7 +64,7 @@ class TestCoupledVariable:
             solution["a"].entries, solution["b"].entries, decimal=10
         )
 
-        assert set(model.list_coupled_variables()) == set(["a", "b"])
+        assert set(model.list_coupled_variables()) == {"a", "b"}
 
     def test_create_copy(self):
         a = pybamm.CoupledVariable("a")

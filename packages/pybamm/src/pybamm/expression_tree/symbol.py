@@ -405,7 +405,7 @@ class Symbol:
         """Combine domains from children, at all levels."""
         domains: dict = {}
         for child in children:
-            for level in child.domains.keys():
+            for level in child.domains:
                 if child.domains[level] == []:
                     pass
                 elif (
@@ -756,10 +756,11 @@ class Symbol:
         """
         if variable == self:
             return pybamm.Scalar(1)
-        elif any(variable == x for x in self.pre_order()):
-            return self._diff(variable)
-        elif variable == pybamm.t and self.has_symbol_of_classes(
-            (pybamm.VariableBase, pybamm.StateVectorBase)
+        elif any(variable == x for x in self.pre_order()) or (
+            variable == pybamm.t
+            and self.has_symbol_of_classes(
+                (pybamm.VariableBase, pybamm.StateVectorBase)
+            )
         ):
             return self._diff(variable)
         else:
@@ -907,12 +908,13 @@ class Symbol:
         except TypeError as error:
             # return None if specific TypeError is raised
             # (there is a e.g. StateVector in the tree)
-            if error.args[0] == "StateVector cannot evaluate input 'y=None'":
-                return None
-            elif error.args[0] == "StateVectorDot cannot evaluate input 'y_dot=None'":
+            if (
+                error.args[0] == "StateVector cannot evaluate input 'y=None'"
+                or error.args[0] == "StateVectorDot cannot evaluate input 'y_dot=None'"
+            ):
                 return None
             else:  # pragma: no cover
-                raise error
+                raise
         except ValueError as error:
             # return None if specific ValueError is raised
             # (there is a e.g. Time in the tree)
@@ -1108,7 +1110,7 @@ class Symbol:
         new_children: list[Symbol] | None = None,
         perform_simplifications: bool = True,
     ):
-        """ """
+        """Deprecated alias for :meth:`create_copy`."""
         warnings.warn(
             "The 'new_copy' function for expression tree symbols is deprecated, use "
             "'create_copy' instead.",
@@ -1236,5 +1238,5 @@ def convert_to_symbol(value) -> Symbol:
     try:
         # Try to convert the input to a pybamm.Symbol
         return value * pybamm.Scalar(1)
-    except Exception:
+    except (NotImplementedError, TypeError, ValueError):
         raise ValueError("Input cannot be converted to a `pybamm.Symbol`") from None

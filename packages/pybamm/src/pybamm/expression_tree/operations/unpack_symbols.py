@@ -94,9 +94,11 @@ class SymbolUnpacker:
         """See :meth:`SymbolUnpacker.unpack()`."""
         # found a symbol of the right class -> return it
         if isinstance(symbol, self.classes_to_find):
-            return set([symbol])
+            return {symbol}
 
         children = symbol.children
+        if isinstance(symbol, pybamm.Variable):
+            children = (*children, symbol.scale, symbol.reference, *symbol.bounds)
 
         if len(children) == 0:
             # not the right class and no children so the class to find doesn't appear

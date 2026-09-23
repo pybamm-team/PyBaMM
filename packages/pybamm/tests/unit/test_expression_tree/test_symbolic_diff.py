@@ -15,11 +15,9 @@ class TestSymbolicDifferentiation:
         b = pybamm.StateVector(slice(1, 2))
         y = np.array([5, 3])
 
-        #
         func = (a * 2 + 5 * (-b)) / (a * b)
         assert func.diff(a).evaluate(y=y) == 1 / 5
         assert func.diff(b).evaluate(y=y) == -2 / 9
-        #
         func = a * b**a
         testing.assert_allclose(
             func.diff(a).evaluate(y=y)[0], 3**5 * (5 * np.log(3) + 1)
@@ -31,13 +29,11 @@ class TestSymbolicDifferentiation:
         b = pybamm.StateVector(slice(1, 2))
         y = np.array([5, 3])
 
-        #
         func = a * pybamm.exp(b)
         assert func.diff(a).evaluate(y=y)[0] == pytest.approx(np.exp(3))
         func = pybamm.exp(a + 2 * b + a * b) + a * pybamm.exp(b)
         assert func.diff(a).evaluate(y=y) == (4 * np.exp(3 * 5 + 5 + 2 * 3) + np.exp(3))
         assert func.diff(b).evaluate(y=y) == np.exp(3) * (7 * np.exp(3 * 5 + 5 + 3) + 5)
-        #
         func = pybamm.sin(pybamm.cos(a * 4) / 2) * pybamm.cos(4 * pybamm.exp(b / 3))
         assert func.diff(a).evaluate(y=y) == -2 * np.sin(20) * np.cos(
             np.cos(20) / 2
@@ -45,7 +41,6 @@ class TestSymbolicDifferentiation:
         assert func.diff(b).evaluate(y=y) == -4 / 3 * np.exp(1) * np.sin(
             4 * np.exp(1)
         ) * np.sin(np.cos(20) / 2)
-        #
         func = pybamm.sin(a * b)
         assert func.diff(a).evaluate(y=y) == 3 * np.cos(15)
 

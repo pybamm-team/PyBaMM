@@ -563,11 +563,11 @@ class Solution(SolutionBase):
             return
 
         # Collect unique reasons from all models
-        unique_reasons = set(
+        unique_reasons = {
             model.solution_observable_status
             for model in self.all_models
             if not model.solution_observable
-        )
+        }
         if unique_reasons:
             reasons_str = ", ".join(sorted(unique_reasons))
             raise ValueError(f"Solution is not observable: {reasons_str}")
@@ -748,16 +748,30 @@ class Solution(SolutionBase):
                     "solve. Please re-run the solve with `output_variables` set to "
                     "include this variable."
                 )
-            var_casadi, var_pybamm, time_integral = self._update_model_variable(
-                model,
-                _var_pybamm,
-                inputs=inputs,
-                ys_shape=ys.shape,
-                time_integral=time_integral,
-                cache_key=name,
-            )
-            vars_pybamm[i] = var_pybamm
-            vars_casadi[i] = var_casadi
+            if isinstance(_var_pybamm, pybamm.VectorField):
+                comp_casadi = []
+                for k, comp in enumerate(_var_pybamm.components):
+                    cc, _, _ = self._update_model_variable(
+                        model,
+                        comp,
+                        inputs=inputs,
+                        ys_shape=ys.shape,
+                        time_integral=None,
+                        cache_key=f"{name}[{k}]",
+                    )
+                    comp_casadi.append(cc)
+                vars_casadi[i] = comp_casadi
+            else:
+                var_casadi, var_pybamm, time_integral = self._update_model_variable(
+                    model,
+                    _var_pybamm,
+                    inputs=inputs,
+                    ys_shape=ys.shape,
+                    time_integral=time_integral,
+                    cache_key=name,
+                )
+                vars_pybamm[i] = var_pybamm
+                vars_casadi[i] = var_casadi
         var = pybamm.process_variable(
             name, vars_pybamm, vars_casadi, self, time_integral=time_integral
         )
@@ -858,7 +872,7 @@ class Solution(SolutionBase):
             var_casadi_out = var_casadi.expand()
         except RuntimeError as error:
             if "'eval_sx' not defined for" not in str(error):
-                raise error  # pragma: no cover
+                raise  # pragma: no cover
             var_casadi_out = var_casadi
 
         return var_casadi_out
@@ -1010,7 +1024,7 @@ class Solution(SolutionBase):
             if filename is None:
                 raise ValueError("matlab format must be written to a file")
             # Check all the variable names only contain a-z, A-Z or _ or numbers
-            for name in data.keys():
+            for name in data:
                 # Check the string only contains the following ASCII:
                 # a-z (97-122)
                 # A-Z (65-90)

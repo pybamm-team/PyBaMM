@@ -299,7 +299,7 @@ class UserSuppliedSubmesh3D(pybamm.MeshGenerator):
         if coord_sys:
             self.coord_sys = coord_sys
         else:
-            if any("r_min" in k or "r_max" in k for k in boundary_mapping.keys()):
+            if any("r_min" in k or "r_max" in k for k in boundary_mapping):
                 self.coord_sys = "cylindrical polar"
             else:
                 self.coord_sys = "cartesian"
@@ -642,7 +642,7 @@ class ScikitFemSubMesh3D(pybamm.SubMesh):
                                 f"No boundary facets found for '{name}' with tag {tag}"
                             )
 
-        except Exception as e:
+        except (KeyError, IndexError, AttributeError, TypeError, ValueError) as e:
             pybamm.logger.warning(
                 f"Could not extract boundary information from '{file_path}': {e}"
             )

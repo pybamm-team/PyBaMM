@@ -1116,22 +1116,20 @@ class BaseModel:
         """Find all the instances of `typ` in the model"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.fixed_input_parameters
-        unpacker = pybamm.SymbolUnpacker(typ)
         all_items = chain(
+            self.rhs.keys(),
             self.rhs.values(),
+            self.algebraic.keys(),
             self.algebraic.values(),
+            self.initial_conditions.keys(),
             self.initial_conditions.values(),
-            (
-                x[side][0]
-                for x in self.boundary_conditions.values()
-                for side in x.keys()
-            ),
+            self.boundary_conditions.keys(),
+            (x[side][0] for x in self.boundary_conditions.values() for side in x),
             self.variables.values(),
             fixed_input_parameters,
             (event.expression for event in self.events),
         )
-        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
-        return list(all_input_parameters)
+        return list(pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items))
 
     def _find_symbols_by_submodel(
         self, typ, submodel, fixed_input_parameters=None
@@ -1139,22 +1137,24 @@ class BaseModel:
         """Find all the instances of `typ` in the submodel"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.submodels[submodel].fixed_input_parameters
-        unpacker = pybamm.SymbolUnpacker(typ)
         all_items = chain(
+            self.submodels[submodel].rhs.keys(),
             self.submodels[submodel].rhs.values(),
+            self.submodels[submodel].algebraic.keys(),
             self.submodels[submodel].algebraic.values(),
+            self.submodels[submodel].initial_conditions.keys(),
             self.submodels[submodel].initial_conditions.values(),
+            self.submodels[submodel].boundary_conditions.keys(),
             (
                 x[side][0]
                 for x in self.submodels[submodel].boundary_conditions.values()
-                for side in x.keys()
+                for side in x
             ),
             self._variables_by_submodel[submodel].values(),
             fixed_input_parameters,
             (event.expression for event in self.submodels[submodel].events),
         )
-        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
-        return list(all_input_parameters)
+        return list(pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items))
 
     def new_copy(self):
         """
@@ -1347,7 +1347,7 @@ class BaseModel:
             ):
                 return None
             var_id = var.id
-            for sol_var in solution_model.y_slices.keys():
+            for sol_var in solution_model.y_slices:
                 if sol_var.id == var_id:
                     return sol_var
             return None
@@ -1461,13 +1461,11 @@ class BaseModel:
                 ) from e
 
         for var in self.initial_conditions:
-            if isinstance(var, pybamm.Variable) or isinstance(
-                var, pybamm.Concatenation
-            ):
+            if isinstance(var, (pybamm.Variable, pybamm.Concatenation)):
                 try:
                     final_state = get_variable_state(var)
                     final_state_eval = get_final_state_eval(final_state)
-                except pybamm.ModelError as e:
+                except pybamm.ModelError:
                     if isinstance(var, pybamm.Concatenation):
                         children = []
                         for child in var.orphans:
@@ -1476,7 +1474,7 @@ class BaseModel:
                             children.append(final_state_eval)
                         final_state_eval = np.concatenate(children)
                     else:
-                        raise e
+                        raise
             else:
                 raise NotImplementedError(
                     "Variable must have type 'Variable' or 'Concatenation'"
@@ -1499,7 +1497,7 @@ class BaseModel:
             # Unpack slices for sorting
             y_slices = {var: slce for var, slce in self.y_slices.items()}
             slices = []
-            for symbol in self.initial_conditions.keys():
+            for symbol in self.initial_conditions:
                 if isinstance(symbol, pybamm.Concatenation):
                     # must append the slice for the whole concatenation, so that
                     # equations get sorted correctly
@@ -1621,8 +1619,8 @@ class BaseModel:
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
-        ids1 = set(x for x in dict1.keys())
-        ids2 = set(x for x in dict2.keys())
+        ids1 = set(dict1.keys())
+        ids2 = set(dict2.keys())
         if len(ids1.intersection(ids2)) != 0:
             variables = ids1.intersection(ids2)
             raise pybamm.ModelError(
@@ -1725,8 +1723,8 @@ class BaseModel:
                 ]
             )
             all_vars_in_eqns.update(vars_in_eqns)
-        for _, side_eqn in self.boundary_conditions.items():
-            for _, (eqn, _) in side_eqn.items():
+        for side_eqn in self.boundary_conditions.values():
+            for eqn, _ in side_eqn.values():
                 vars_in_eqns = unpacker.unpack_symbol(eqn)
                 all_vars_in_eqns.update(vars_in_eqns)
 
@@ -1770,8 +1768,8 @@ class BaseModel:
     def check_ics_bcs(self):
         """Check that the initial and boundary conditions are well-posed."""
         # Initial conditions
-        for var in self.rhs.keys():
-            if var not in self.initial_conditions.keys():
+        for var in self.rhs:
+            if var not in self.initial_conditions:
                 raise pybamm.ModelError(
                     f"no initial condition given for variable '{var}'"
                 )
@@ -1829,14 +1827,14 @@ class BaseModel:
         symbol = find_symbol_in_model(self, symbol_name)
 
         if symbol is None:
-            return None
+            return
 
         print(div)
         print(symbol_name, "\n")
         print(type(symbol))
 
         if isinstance(symbol, pybamm.FunctionParameter):
-            print("")
+            print()
             print("Inputs:")
             symbol.print_input_names()
 
@@ -2142,18 +2140,18 @@ class BaseModel:
             ) from file_err
 
     @staticmethod
-    def _find_builtin_module(cls):
-        """Return the pybamm sub-module name if *cls* is a built-in model
+    def _find_builtin_module(model_class):
+        """Return the pybamm sub-module name if *model_class* is a built-in model
         class, else ``None``.
 
-        A class is "built-in" when ``getattr(pybamm.<mod>, cls.__name__)``
+        A class is "built-in" when ``getattr(pybamm.<mod>, model_class.__name__)``
         returns the exact same class object (identity check).
         """
         for mod_name in _BUILTIN_MODULE_NAMES:
             mod = getattr(pybamm, mod_name, None)
             if mod is not None:
-                candidate = getattr(mod, cls.__name__, None)
-                if candidate is cls:
+                candidate = getattr(mod, model_class.__name__, None)
+                if candidate is model_class:
                     return mod_name
         return None
 
@@ -2293,15 +2291,15 @@ class BaseModel:
                     model_config["geometry"] = Serialise.serialise_custom_geometry(
                         self.default_geometry
                     )
-                except Exception:
-                    pass
+                except (pybamm.SerialisationError, ValueError) as err:
+                    pybamm.logger.debug(f"Could not serialise default geometry: {err}")
             if hasattr(self, "default_var_pts"):
                 try:
                     model_config["var_pts"] = Serialise.serialise_var_pts(
                         self.default_var_pts
                     )
-                except Exception:
-                    pass
+                except (pybamm.SerialisationError, ValueError) as err:
+                    pybamm.logger.debug(f"Could not serialise default var_pts: {err}")
             if hasattr(self, "default_spatial_methods"):
                 try:
                     model_config["spatial_methods"] = (
@@ -2309,15 +2307,19 @@ class BaseModel:
                             self.default_spatial_methods
                         )
                     )
-                except Exception:
-                    pass
+                except (pybamm.SerialisationError, ValueError) as err:
+                    pybamm.logger.debug(
+                        f"Could not serialise default spatial methods: {err}"
+                    )
             if hasattr(self, "default_submesh_types"):
                 try:
                     model_config["submesh_types"] = Serialise.serialise_submesh_types(
                         self.default_submesh_types
                     )
-                except Exception:
-                    pass
+                except (pybamm.SerialisationError, ValueError) as err:
+                    pybamm.logger.debug(
+                        f"Could not serialise default submesh types: {err}"
+                    )
 
         if filename is not None:
             self._write_json_to_file(model_config, filename, label="model config")
@@ -2572,7 +2574,7 @@ class BoundaryConditionsDict(dict):
             for side, bc in bcs.items():
                 if isinstance(bc[0], numbers.Number):
                     # typ is the type of the bc, e.g. "Dirichlet" or "Neumann"
-                    eqn, typ = boundary_conditions[var][side]
+                    eqn, typ = bc
                     boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
                 # Check types
                 if bc[1] not in ["Dirichlet", "Neumann"]:

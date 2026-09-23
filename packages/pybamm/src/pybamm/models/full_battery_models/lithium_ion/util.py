@@ -6,10 +6,7 @@ def check_if_composite(options, electrode):
         options = pybamm.BatteryModelOptions(options)
     domain_options = getattr(options, electrode)
     particle_phases = domain_options["particle phases"]
-    if particle_phases == "2":
-        return True
-    else:
-        return False
+    return particle_phases == "2"
 
 
 def _has_hysteresis(electrode, options, phase=None):

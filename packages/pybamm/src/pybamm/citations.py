@@ -32,7 +32,7 @@ class Citations:
     def __init__(self):
         self._check_for_bibtex()
         # Dict mapping citations keys to BibTex entries
-        self._all_citations: dict[str, str] = dict()
+        self._all_citations: dict[str, str] = {}
 
         self.read_citations()
         self._reset()
@@ -47,7 +47,7 @@ class Citations:
         """Reset citations to default only (only for testing purposes)"""
         self._papers_to_cite = set()
         self._unknown_citations = set()
-        self._citation_tags = dict()
+        self._citation_tags = {}
         # Register the PyBaMM paper and the NumPy paper
         self.register("Sulzer2021")
         self.register("Harris2020")
@@ -152,9 +152,9 @@ class Citations:
                     raise PybtexError("no entries found")
 
                 # Add and register all citations
-                for key, entry in bib_data.entries.items():
-                    self._add_citation(key, entry)
-                    self._papers_to_cite.add(key)
+                for entry_key, entry in bib_data.entries.items():
+                    self._add_citation(entry_key, entry)
+                    self._papers_to_cite.add(entry_key)
                 return
             except PybtexError as error:
                 raise KeyError(
@@ -263,7 +263,7 @@ class Citations:
 def print_citations(filename=None, output_format="text", verbose=False):
     """See :meth:`Citations.print`"""
     if verbose and filename is not None:  # pragma: no cover
-        raise Exception(
+        raise ValueError(
             "Verbose output is available only for the terminal and not for printing to files",
         )
     pybamm.citations.print(filename, output_format, verbose)

@@ -90,7 +90,7 @@ def aot_compile(fn_or_fns, **kwargs):
     fns = [fn_or_fns] if is_single else list(fn_or_fns)
     try:
         out = _aot_compile(fns, **kwargs)
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as e:
         names = ", ".join(fn.name() for fn in fns)
         logger.warning(f"Failed to compile [{names}] with error: {e}")
         out = list(fns)
@@ -222,7 +222,7 @@ def _maybe_sweep_stale(cdir: str) -> None:
                 continue
 
             is_per_attempt = bool(_PER_ATTEMPT_TOKEN.search(name))
-            if is_per_attempt and (name.endswith(".tmp") or name.endswith(".c")):
+            if is_per_attempt and (name.endswith((".tmp", ".c"))):
                 os.remove(path)
                 continue
 

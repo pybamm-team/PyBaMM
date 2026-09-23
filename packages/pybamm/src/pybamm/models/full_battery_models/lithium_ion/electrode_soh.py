@@ -239,11 +239,14 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         param=None,
         solve_for=None,
         known_value="cyclable lithium capacity",
+        options=None,
     ):
         pybamm.citations.register("Baker2018")
         super().__init__()
 
-        param = param or pybamm.LithiumIonParameters({"open-circuit potential": "MSMR"})
+        param = param or pybamm.LithiumIonParameters(
+            options or {"open-circuit potential": "MSMR"}
+        )
         solve_for = solve_for or ["Un_0", "Un_100"]
 
         if known_value == "cell capacity" and solve_for != ["Un_0", "Un_100"]:
@@ -369,6 +372,7 @@ class ElectrodeSOHSolver:
         self._get_electrode_soh_sims_split = lru_cache()(
             self.__get_electrode_soh_sims_split
         )
+        self._get_energy_ocv_function = lru_cache()(self.__get_energy_ocv_function)
 
     def __getstate__(self):
         """
@@ -377,6 +381,7 @@ class ElectrodeSOHSolver:
         result = self.__dict__.copy()
         result["_get_electrode_soh_sims_full"] = None  # Exclude LRU cache
         result["_get_electrode_soh_sims_split"] = None  # Exclude LRU cache
+        result["_get_energy_ocv_function"] = None  # Exclude LRU cache
         return result
 
     def __setstate__(self, state):
@@ -390,6 +395,7 @@ class ElectrodeSOHSolver:
         self._get_electrode_soh_sims_split = lru_cache()(
             self.__get_electrode_soh_sims_split
         )
+        self._get_energy_ocv_function = lru_cache()(self.__get_energy_ocv_function)
 
     def _get_lims_ocp(self, direction):
         parameter_values = self.parameter_values
@@ -428,11 +434,17 @@ class ElectrodeSOHSolver:
     def __get_electrode_soh_sims_full(self, direction):
         if self.options["open-circuit potential"] == "MSMR":
             full_model = _ElectrodeSOHMSMR(
-                direction, param=self.param, known_value=self.known_value
+                direction,
+                param=self.param,
+                known_value=self.known_value,
+                options=self.options,
             )
         else:
             full_model = _ElectrodeSOH(
-                direction, param=self.param, known_value=self.known_value
+                direction,
+                param=self.param,
+                known_value=self.known_value,
+                options=self.options,
             )
         return pybamm.Simulation(full_model, parameter_values=self.parameter_values)
 
@@ -443,12 +455,14 @@ class ElectrodeSOHSolver:
                 param=self.param,
                 solve_for=["Un_100"],
                 known_value=self.known_value,
+                options=self.options,
             )
             x0_model = _ElectrodeSOHMSMR(
                 direction,
                 param=self.param,
                 solve_for=["Un_0"],
                 known_value=self.known_value,
+                options=self.options,
             )
         else:
             x100_model = _ElectrodeSOH(
@@ -456,12 +470,14 @@ class ElectrodeSOHSolver:
                 param=self.param,
                 solve_for=["x_100"],
                 known_value=self.known_value,
+                options=self.options,
             )
             x0_model = _ElectrodeSOH(
                 direction,
                 param=self.param,
                 solve_for=["x_0"],
                 known_value=self.known_value,
+                options=self.options,
             )
         x100_sim = pybamm.Simulation(x100_model, parameter_values=self.parameter_values)
         x0_sim = pybamm.Simulation(x0_model, parameter_values=self.parameter_values)
@@ -475,13 +491,13 @@ class ElectrodeSOHSolver:
             # just in case solving one by one works better
             try:
                 sol = self._solve_split(inputs, ics, direction)
-            except pybamm.SolverError as split_error:
+            except pybamm.SolverError:
                 # check if the error is due to the simulation not being feasible
                 self._check_esoh_feasible(inputs, direction)
                 # if that didn't raise an error, raise the original error instead
-                raise split_error
+                raise
 
-        sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables.keys()}
+        sol_dict = {key: sol[key].data[0] for key in sol.all_models[0].variables}
 
         # Calculate theoretical energy
         # TODO: energy calc for MSMR
@@ -998,6 +1014,20 @@ class ElectrodeSOHSolver:
         sol = self.solve(all_inputs)
         return [sol["Un(x_0)"], sol["Un(x_100)"], sol["Up(y_100)"], sol["Up(y_0)"]]
 
+    def __get_energy_ocv_function(self, points, direction):
+        """
+        Processed OCV expression over `points` stoichiometries, which are inputs "x"
+        and "y" rather than literals so that the expression can be reused.
+        """
+        T = self.param.T_amb_av(0)
+        x = pybamm.InputParameter("x", expected_size=points)
+        y = pybamm.InputParameter("y", expected_size=points)
+        pos = get_lithiation_delithiation(direction, "positive", self.options)
+        neg = get_lithiation_delithiation(direction, "negative", self.options)
+        return self.parameter_values.process_symbol(
+            self.param.p.prim.U(y, T, pos) - self.param.n.prim.U(x, T, neg)
+        )
+
     def theoretical_energy_integral(self, inputs, points=1000, direction="discharge"):
         x_0 = inputs["x_0"]
         y_0 = inputs["y_0"]
@@ -1007,31 +1037,16 @@ class ElectrodeSOHSolver:
         x_vals = np.linspace(x_100, x_0, num=points)
         y_vals = np.linspace(y_100, y_0, num=points)
         # Calculate OCV at each stoichiometry
-        T = self.param.T_amb_av(0)
-        Vs = self.parameter_values.evaluate(
-            self.param.p.prim.U(
-                y_vals,
-                T,
-                get_lithiation_delithiation(direction, "positive", self.options),
-            )
-            - self.param.n.prim.U(
-                x_vals,
-                T,
-                get_lithiation_delithiation(direction, "negative", self.options),
-            ),
-            inputs=inputs,
-        ).flatten()
+        Vs = (
+            self._get_energy_ocv_function(points, direction)
+            .evaluate(inputs={**inputs, "x": x_vals, "y": y_vals})
+            .flatten()
+        )
         # Calculate dQ
         Q = Q_p * (y_0 - y_100)
         dQ = Q / (points - 1)
         # Integrate and convert to W-h
-        # Use trapezoid for newer NumPy, trapz for older NumPy (backwards
-        # compatible)
-        if hasattr(np, "trapezoid"):
-            E = np.trapezoid(Vs, dx=dQ)
-        else:
-            # Fallback to trapz for older NumPy versions
-            E = np.trapz(Vs, dx=dQ)
+        E = np.trapezoid(Vs, dx=dQ)
         return E
 
 

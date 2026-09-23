@@ -568,7 +568,7 @@ class EvaluatorJax:
 
         # get a list of constant arguments to input to the function
         self._arg_list = [
-            id_to_python_variable(symbol_id, True) for symbol_id in constants.keys()
+            id_to_python_variable(symbol_id, True) for symbol_id in constants
         ]
 
         # get a list of hashable arguments to make static

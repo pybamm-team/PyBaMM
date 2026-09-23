@@ -378,7 +378,6 @@ class TestFiniteVolume2DGradDiv:
         a Neumann boundary conditions on the other side in Cartesian coordinates
         """
         # Create discretisation
-        domain = domain
         mesh = mesh_2d
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh, spatial_methods)

@@ -146,9 +146,9 @@ class TestBaseModel:
         assert "v+f+i" in model.variables_and_events
         assert "Event: u=e" in model.variables_and_events
 
-        assert set([x.name for x in model.parameters]) == set(
-            [x.name for x in [a, b, c, d, e, f, g, h, i]]
-        )
+        assert {x.name for x in model.parameters} == {
+            x.name for x in [a, b, c, d, e, f, g, h, i]
+        }
         assert all(
             isinstance(x, pybamm.Parameter | pybamm.InputParameter)
             for x in model.parameters
@@ -158,6 +158,28 @@ class TestBaseModel:
             "v+f+i": v + pybamm.FunctionParameter("f", {"Time [s]": pybamm.t}) + i
         }
         model.print_parameter_info()
+
+    def test_read_parameters_from_variable_metadata(self):
+        model = pybamm.BaseModel()
+        scale = pybamm.Parameter("scale")
+        reference = pybamm.Parameter("reference")
+        lower_bound = pybamm.Parameter("lower bound")
+        upper_bound = pybamm.Parameter("upper bound")
+        state = pybamm.Variable(
+            "state",
+            scale=scale,
+            reference=reference,
+            bounds=(lower_bound, upper_bound),
+        )
+        model.rhs = {state: pybamm.Scalar(0)}
+        model.initial_conditions = {state: pybamm.Scalar(0)}
+
+        assert {parameter.name for parameter in model.parameters} == {
+            "scale",
+            "reference",
+            "lower bound",
+            "upper bound",
+        }
 
     @pytest.mark.parametrize("symbols", ["c", "d", "e", "f", "h", "i"])
     def test_get_parameter_info(self, symbols):
@@ -412,9 +434,9 @@ class TestBaseModel:
         model.events = [pybamm.Event("u=e", u - e)]
         model.variables = {"v+f": v + f}
 
-        assert set([x.name for x in model.input_parameters]) == set(
-            [x.name for x in [a, b, c, d, e, f]]
-        )
+        assert {x.name for x in model.input_parameters} == {
+            x.name for x in [a, b, c, d, e, f]
+        }
         assert all(isinstance(x, pybamm.InputParameter) for x in model.input_parameters)
 
     def test_update(self):
@@ -806,7 +828,9 @@ class TestBaseModel:
         model.generate("test.c", ["a+b"], input_parameter_order=["p", "q"])
 
         # Compile
-        subprocess.run(["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"])  # nosec
+        subprocess.run(
+            ["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"], check=True
+        )  # nosec
 
         # Read the generated functions
         x0_fn = casadi.external("x0", "./test.so")

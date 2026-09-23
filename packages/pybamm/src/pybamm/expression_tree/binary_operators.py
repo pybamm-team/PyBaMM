@@ -1125,11 +1125,12 @@ def _simplified_binary_broadcast_concatenation(
                 raise AssertionError(
                     "Concatenations must have the same number of children"
                 )
-    if isinstance(right, pybamm.Concatenation) and not isinstance(
-        right, pybamm.ConcatenationVariable
+    if (
+        isinstance(right, pybamm.Concatenation)
+        and not isinstance(right, pybamm.ConcatenationVariable)
+        and left.evaluates_to_constant_number()
     ):
-        if left.evaluates_to_constant_number():
-            return right.create_copy([operator(left, child) for child in right.orphans])
+        return right.create_copy([operator(left, child) for child in right.orphans])
     return None
 
 
@@ -1166,15 +1167,16 @@ def simplified_power(
                 new_right = l_right**right
                 if new_left.is_constant() or new_right.is_constant():
                     return new_left * new_right
-        elif isinstance(left, Division):
+        elif isinstance(left, Division) and (
+            left.left.is_constant() or left.right.is_constant()
+        ):
             # Simplify (a / b) ** c to (a ** c) / (b ** c)
             # if (a ** c) is constant or (b ** c) is constant
-            if left.left.is_constant() or left.right.is_constant():
-                l_left, l_right = left.orphans
-                new_left = l_left**right
-                new_right = l_right**right
-                if new_left.is_constant() or new_right.is_constant():
-                    return new_left / new_right
+            l_left, l_right = left.orphans
+            new_left = l_left**right
+            new_right = l_right**right
+            if new_left.is_constant() or new_right.is_constant():
+                return new_left / new_right
 
     return pybamm.simplify_if_constant(pybamm.Power(left, right))
 
@@ -1216,7 +1218,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in left.domains.keys()
+            for dim in left.domains
         ):
             return right
 
@@ -1248,21 +1250,23 @@ def add(left: ChildSymbol, right: ChildSymbol):
     if isinstance(left, pybamm.Negate) and not left.is_constant():
         return right - left.orphans[0]
 
-    if left.is_constant() and not is_tracing():
-        if isinstance(right, Addition | Subtraction) and right.left.is_constant():
-            # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
-            r_left, r_right = right.orphans
-            return right.create_copy([left + r_left, r_right])
-    if isinstance(left, Subtraction):
-        if right == left.right:
-            # Simplify (a - b) + b to a
-            # Make sure shape is preserved
-            return left.left * pybamm.ones_like(left.right)
-    if isinstance(right, Subtraction):
-        if left == right.right:
-            # Simplify a + (b - a) to b
-            # Make sure shape is preserved
-            return right.left * pybamm.ones_like(right.right)
+    if (
+        left.is_constant()
+        and not is_tracing()
+        and isinstance(right, Addition | Subtraction)
+        and right.left.is_constant()
+    ):
+        # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
+        r_left, r_right = right.orphans
+        return right.create_copy([left + r_left, r_right])
+    if isinstance(left, Subtraction) and right == left.right:
+        # Simplify (a - b) + b to a
+        # Make sure shape is preserved
+        return left.left * pybamm.ones_like(left.right)
+    if isinstance(right, Subtraction) and left == right.right:
+        # Simplify a + (b - a) to b
+        # Make sure shape is preserved
+        return right.left * pybamm.ones_like(right.right)
 
     return pybamm.simplify_if_constant(Addition(left, right))
 
@@ -1307,7 +1311,7 @@ def subtract(
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in left.domains.keys()
+            for dim in left.domains
         ):
             return -right
 
@@ -1346,10 +1350,9 @@ def subtract(
         if left == right.right:
             # Simplify a - (b + a) to -b
             return -right.left
-    elif isinstance(right, Subtraction):
-        if left == right.left:
-            # Simplify a - (a - b) to b
-            return right.right
+    elif isinstance(right, Subtraction) and left == right.left:
+        # Simplify a - (a - b) to b
+        return right.right
 
     return pybamm.simplify_if_constant(Subtraction(left, right))
 
@@ -1397,7 +1400,7 @@ def multiply(
     try:
         if left.shape_for_testing == right.shape_for_testing and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in left.domains.keys()
+            for dim in left.domains
         ):
             if pybamm.is_matrix_one(left):
                 return right
@@ -1464,14 +1467,12 @@ def multiply(
                             return (left * r_left) - (left * r_right)
 
     # Cancelling out common terms
-    if isinstance(left, Division):
-        # Simplify (a / b) * b to a
-        if left.right == right:
-            return left.left
-    if isinstance(right, Division):
-        # Simplify a * (b / a) to b
-        if left == right.right:
-            return right.left
+    # Simplify (a / b) * b to a
+    if isinstance(left, Division) and left.right == right:
+        return left.left
+    # Simplify a * (b / a) to b
+    if isinstance(right, Division) and left == right.right:
+        return right.left
 
     # Negation simplifications
     if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
@@ -1520,14 +1521,17 @@ def divide(
     if left.is_constant() and right.is_constant():
         return pybamm.simplify_if_constant(Division(left, right))
 
-    if left.is_constant():
-        if isinstance(right, Multiplication | Division) and right.left.is_constant():
-            r_left, r_right = right.orphans
-            # Simplify a / (b */ c) to (a / b) /* c if (a / b) is constant
-            if isinstance(right, Multiplication):
-                return (left / r_left) / r_right
-            elif isinstance(right, Division):
-                return (left / r_left) * r_right
+    if (
+        left.is_constant()
+        and isinstance(right, Multiplication | Division)
+        and right.left.is_constant()
+    ):
+        r_left, r_right = right.orphans
+        # Simplify a / (b */ c) to (a / b) /* c if (a / b) is constant
+        if isinstance(right, Multiplication):
+            return (left / r_left) / r_right
+        elif isinstance(right, Division):
+            return (left / r_left) * r_right
 
     # Cancelling out common terms
     if isinstance(left, Multiplication):
@@ -1566,11 +1570,14 @@ def matmul(
     if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
         return pybamm.zeros_like(MatrixMultiplication(left, right))
 
-    if isinstance(right, Multiplication) and left.is_constant():
-        # Simplify A @ (b * c) to (A * b) @ c if (A * b) is constant
-        if right.left.evaluates_to_constant_number():
-            r_left, r_right = right.orphans
-            return (left * r_left) @ r_right
+    # Simplify A @ (b * c) to (A * b) @ c if (A * b) is constant
+    if (
+        isinstance(right, Multiplication)
+        and left.is_constant()
+        and right.left.evaluates_to_constant_number()
+    ):
+        r_left, r_right = right.orphans
+        return (left * r_left) @ r_right
 
     # Simplify A @ (B @ c) to (A @ B) @ c if (A @ B) is constant
     # This is a common construction that appears from discretisation of spatial
@@ -1692,10 +1699,9 @@ def _heaviside(left: ChildSymbol, right: ChildSymbol, equal):
         left.is_constant()
         and isinstance(right, BinaryOperator)
         and right.left.is_constant()
-    ):
-        if isinstance(right, Addition):
-            # simplify heaviside(a, b + var) to heaviside(a - b, var)
-            return _heaviside(left - right.left, right.right, equal=equal)
+    ) and isinstance(right, Addition):
+        # simplify heaviside(a, b + var) to heaviside(a - b, var)
+        return _heaviside(left - right.left, right.right, equal=equal)
         # elif isinstance(right, Multiplication):
         #     # simplify heaviside(a, b * var) to heaviside(a/b, var)
         #     if right.left.evaluate() > 0:

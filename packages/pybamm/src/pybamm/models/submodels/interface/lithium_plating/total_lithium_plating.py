@@ -25,10 +25,14 @@ class TotalLithiumPlating(pybamm.BaseSubModel):
         # For each of the variables, the variable name without the phase name
         # is constructed by summing all of the variable names with the phases
         for variable_template in [
-            f"{Domain} electrode {{}}lithium plating volumetric "
-            "interfacial current density [A.m-3]",
-            f"X-averaged {domain} electrode {{}}lithium plating volumetric "
-            "interfacial current density [A.m-3]",
+            (
+                f"{Domain} electrode {{}}lithium plating volumetric "
+                "interfacial current density [A.m-3]"
+            ),
+            (
+                f"X-averaged {domain} electrode {{}}lithium plating volumetric "
+                "interfacial current density [A.m-3]"
+            ),
             f"Loss of lithium to {domain} {{}}lithium plating [mol]",
             f"Loss of capacity to {domain} {{}}lithium plating [A.h]",
         ]:

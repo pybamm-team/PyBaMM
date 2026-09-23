@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
-import matplotlib.tri as tri
 import numpy as np
+from matplotlib import tri
 from scipy.interpolate import griddata
 
 import pybamm

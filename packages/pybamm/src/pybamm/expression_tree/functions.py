@@ -14,6 +14,10 @@ from typing_extensions import TypeVar
 
 import pybamm
 
+# CasADi 3.8 stopped dispatching scipy's erf ufunc onto symbolic values, so the
+# generic Function path needs the CasADi equivalent spelled out.
+_CASADI_EQUIVALENTS = {special.erf: casadi.erf}
+
 
 def _is_constant_value(x, value: float) -> bool:
     # True iff ``x`` is a scalar constant equal to ``value``. Conservative on
@@ -85,7 +89,7 @@ class Function(pybamm.Symbol):
             return pybamm.Scalar(1)
         else:
             children = self.orphans
-            partial_derivatives: list[None | pybamm.Symbol] = [None] * len(children)
+            partial_derivatives: list[pybamm.Symbol | None] = [None] * len(children)
             for i, child in enumerate(self.children):
                 # if variable appears in the function, differentiate
                 # function, and apply chain rule
@@ -169,6 +173,9 @@ class Function(pybamm.Symbol):
     def _casadi_evaluate(self, *converted_children):
         """CasADi analog of :meth:`_function_evaluate`. Override in subclasses where the
         CasADi function differs from the numpy one."""
+        equivalent = _CASADI_EQUIVALENTS.get(self.function)
+        if equivalent is not None:
+            return equivalent(*converted_children)
         return self._function_evaluate(converted_children)
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):

@@ -117,7 +117,13 @@ from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 # Parameter classes and methods
-from .parameters.parameter_values import ParameterValues, scalarize_dict, arrayize_dict
+from .parameters.parameter_values import (
+    ParameterValues,
+    scalarize_dict,
+    arrayize_dict,
+    serialize_parameter_value,
+    deserialize_parameter_value,
+)
 from .parameters import constants
 from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
 from .parameters.electrical_parameters import (
@@ -162,6 +168,15 @@ from .meshes.scikit_fem_submeshes_3d import (
     UserSuppliedSubmesh3D,
 )
 
+
+from .meshes.unstructured_submesh import (
+    UnstructuredSubMesh,
+    UnstructuredMeshGenerator,
+    UserSuppliedUnstructuredMesh,
+    TaggedSubMeshGenerator,
+    compute_interface_data,
+)
+
 # Serialisation
 from .models.base_model import load_model
 
@@ -177,6 +192,7 @@ from .spatial_methods.finite_volume_2d import FiniteVolume2D
 from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
+from .spatial_methods.finite_volume_unstructured import FiniteVolumeUnstructured
 
 # Solver classes
 from .solvers.solution import (
@@ -187,7 +203,7 @@ from .solvers.solution import (
     make_cycle_solution,
 )
 from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
-from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, process_variable
+from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, ProcessedVariableUnstructuredFVM, ProcessedVariableVectorFieldUnstructuredFVM, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.processed_variable import ProcessedVariableUnstructured
 from .solvers.summary_variable import SummaryVariables
@@ -242,7 +258,16 @@ import os
 import pathlib
 import sysconfig
 
+import casadi
+
 os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path("purelib")) / "casadi")
+
+# CasADi 3.8 changed the result type of numpy functions applied to CasADi values
+# (casadi#2959). Function nodes rely on the legacy types, so keep them.
+try:
+    casadi.GlobalOptions.setNumpyMode(-1)
+except AttributeError:
+    pass
 
 __all__ = [
     "batch_study",

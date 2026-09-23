@@ -735,7 +735,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         if self_sensitivities or other_sensitivities:
             new_var._sensitivities = {
                 k: np.concatenate((self_sensitivities[k], other_sensitivities[k]))
-                for k in self_sensitivities.keys()
+                for k in self_sensitivities
             }
 
         return new_var

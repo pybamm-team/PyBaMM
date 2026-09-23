@@ -1,5 +1,7 @@
 import io
 import itertools
+import logging
+import sys
 import warnings
 from contextlib import redirect_stdout
 
@@ -72,6 +74,18 @@ def _hermite_wrms(sol_base, sol_reduced, atol, rtol) -> list[tuple[int, float]]:
         wrms_values.append((seg, wrms))
 
     return wrms_values
+
+
+@pytest.fixture
+def decay_model():
+    """Discretised ``du/dt = -a u``, with ``a`` as the only input parameter."""
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    model.rhs = {u: -pybamm.InputParameter("a") * u}
+    model.initial_conditions = {u: 1}
+    model.variables = {"u": u}
+    pybamm.Discretisation().process_model(model)
+    return model
 
 
 class TestIDAKLUSolver:
@@ -686,6 +700,116 @@ class TestIDAKLUSolver:
 
         np.testing.assert_allclose(soln.y, soln_banded.y, rtol=1e-6, atol=1e-5)
 
+    @pytest.mark.parametrize(
+        ("num_threads", "n_inputs", "all_on_calling_thread"),
+        [
+            # One solver, so every solve runs on the GIL-holding thread
+            (1, 2, True),
+            # Fewer input sets than solvers, so all of them land in the
+            # serial remainder loop, which also runs on that thread
+            (4, 2, True),
+            # Two solves per solver, so a worker thread must buffer its share
+            (2, 4, False),
+        ],
+    )
+    def test_diagnostics_emitted_once_per_input_set(
+        self, decay_model, num_threads, n_inputs, all_on_calling_thread, caplog, capsys
+    ):
+        t_eval = np.linspace(0, 1, 3)
+        inputs = [{"a": 1.0 + i} for i in range(n_inputs)]
+        solver = pybamm.IDAKLUSolver(
+            options={"print_stats": True, "num_threads": num_threads}
+        )
+
+        # Send the log to stdout too, so it can be ordered against py::print
+        handler = logging.StreamHandler(sys.stdout)
+        pybamm.logger.addHandler(handler)
+        try:
+            with caplog.at_level(logging.DEBUG, logger=pybamm.logger.name):
+                solver.solve(decay_model, t_eval, t_interp=t_eval, inputs=inputs)
+        finally:
+            pybamm.logger.removeHandler(handler)
+
+        lines = capsys.readouterr().out.splitlines()
+        starts = [i for i, line in enumerate(lines) if line.startswith("Integrating")]
+        stats = [i for i, line in enumerate(lines) if line.startswith("Solver Stats:")]
+        assert len(starts) == len(stats) == n_inputs
+        # Values are printed through py::print, so the tab prefix is preserved
+        assert "\tNumber of steps =" in "\n".join(lines)
+        if all_on_calling_thread:
+            # Buffering would emit every trace before the first statistics block
+            assert stats[0] < starts[1]
+
+    def test_debug_log_emitted_when_solve_fails(self, caplog):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a * u**2}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        # Two solves per solver, so one solver buffers on a worker thread and
+        # only the flush at the end of the parallel region can emit its trace
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 2})
+        inputs = [{"a": 1.0 + i} for i in range(4)]
+        # u' = a u^2 blows up at t = 1/a, so integrating to t = 5 fails
+        with (
+            caplog.at_level(logging.DEBUG, logger=pybamm.logger.name),
+            pytest.raises(pybamm.SolverError, match="IDA_ERR_FAIL"),
+        ):
+            solver.solve(model, np.array([0.0, 5.0]), inputs=inputs)
+
+        # A partial solution is still returned, so every solve runs and the two
+        # traces beyond the calling thread's own prove its buffer was drained
+        starts = [m for m in caplog.messages if m.startswith("Integrating from t =")]
+        assert len(starts) == len(inputs)
+        assert any(m.startswith("Step ") for m in caplog.messages)
+
+    def test_debug_log_flushed_when_solve_raises(self, caplog):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        # The residual is NaN from t = 0, so the C++ solve throws instead of
+        # returning a partial solution, taking the rethrow path out of the group
+        model.rhs = {u: a * pybamm.sqrt(-u)}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        # Two solves per solver, so one solver buffers on a worker thread
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 2})
+        inputs = [{"a": 1.0 + i} for i in range(4)]
+        with (
+            caplog.at_level(logging.DEBUG, logger=pybamm.logger.name),
+            pytest.raises(pybamm.SolverError),
+        ):
+            solver.solve(model, np.array([0.0, 5.0]), inputs=inputs)
+
+        # Each solver throws on its first solve, and the calling thread streams
+        # its own, so the second trace can only come from the pre-rethrow flush
+        starts = [m for m in caplog.messages if m.startswith("Integrating from t =")]
+        assert len(starts) == 2
+
+    def test_solve_interrupted_from_debug_logger(self, caplog, monkeypatch):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        _debug_logger = pybamm.logger.debug
+
+        # applies a ctrl-C to keyboard interrupt on the first step of the simulation
+        def logger_interrupts_on_first_step(msg, *args, **kwargs):
+            _debug_logger(msg, *args, **kwargs)
+            if isinstance(msg, str) and msg.startswith("Step "):
+                raise KeyboardInterrupt
+
+        monkeypatch.setattr(pybamm.logger, "debug", logger_interrupts_on_first_step)
+        with (
+            caplog.at_level(logging.DEBUG, logger=pybamm.logger.name),
+            pytest.raises(KeyboardInterrupt),
+        ):
+            sim.solve([0, 3600])
+
+        assert not any(m.startswith("Integration complete") for m in caplog.messages)
+
     def test_setup_options(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
@@ -811,8 +935,8 @@ class TestIDAKLUSolver:
         }
 
         # test everything works
-        for option in options_success:
-            options = {option: options_success[option]}
+        for option, value in options_success.items():
+            options = {option: value}
             solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
             soln = solver.solve(model, t_eval)
             # Hermite upsample y
@@ -835,8 +959,8 @@ class TestIDAKLUSolver:
         }
 
         # test that the solver throws a warning
-        for option in options_fail:
-            options = {option: options_fail[option]}
+        for option, value in options_fail.items():
+            options = {option: value}
             with pytest.raises(pybamm.SolverError):
                 solver = pybamm.IDAKLUSolver(options=options)
                 solver.solve(model, t_eval)

@@ -44,6 +44,7 @@ _SUBMESH_EXEMPT: set[type] = {
     pybamm.Uniform2DSubMesh,  # cannot serialise (no _from_json)
     pybamm.UserSupplied1DSubMesh,  # cannot serialise (no _from_json)
     pybamm.UserSupplied2DSubMesh,  # cannot serialise (no _from_json)
+    pybamm.UnstructuredSubMesh,  # cannot serialise (no _from_json)
 }
 
 

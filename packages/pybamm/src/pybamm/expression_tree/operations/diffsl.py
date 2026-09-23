@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from itertools import chain
 
@@ -578,6 +579,73 @@ class DiffSLExport:
         is_event: bool = False,
         num_terminal_states: int = 0,
     ) -> int:
+        # Tensors that cannot be inlined, hoisted bottom-up.
+        #
+        # Two constructs have to become tensors of their own before anything
+        # stringifies an expression containing them:
+        #
+        #   * `DomainConcatenation`, because `equation_to_diffeq` has no case
+        #     for it — it can only emit the name of a tensor already hoisted,
+        #     and raises `TypeError: DomainConcatenation not implemented`
+        #     otherwise.
+        #   * `A @ x` with a matrix `A`, because it is emitted with a
+        #     contraction index (`constant7_ij * y_j`), which is only
+        #     meaningful in a tensor of its own. Inlined into a concatenation
+        #     slice the contraction binds to the slice's index instead, and the
+        #     model compiles and evaluates to the wrong numbers.
+        #
+        # They nest both ways round: a concatenation's children contain matrix
+        # products, and matrix products contain concatenations. So neither can
+        # be given its own pass ahead of the other — `post_order` is what makes
+        # this work, visiting descendants before the expressions that contain
+        # them, so whichever is inner is already a tensor by the time the outer
+        # one is written out.
+        #
+        # Skips the top-level symbol: a construct that *is* the equation needs
+        # no tensor of its own.
+        for child in eqn.children:
+            for symbol in child.post_order():
+                if symbol in symbol_to_tensor_name:
+                    continue
+                is_matmul = (
+                    isinstance(symbol, pybamm.BinaryOperator)
+                    and symbol.name == "@"
+                    and isinstance(symbol.left, pybamm.Matrix)
+                )
+                if is_matmul:
+                    tensor_index = self._materialize_expression_tensor(
+                        symbol,
+                        symbol_to_tensor_name,
+                        tensor_index,
+                        y_slice_to_label,
+                        diffeq,
+                        is_variable=is_variable,
+                        is_event=is_event,
+                    )
+                elif isinstance(symbol, pybamm.DomainConcatenation):
+                    new_line = "\n"
+                    tensor_name = DiffSLExport._name_tensor(
+                        symbol, tensor_index, is_variable, is_event
+                    )
+                    tensor_index += 1
+                    lines = [f"{tensor_name}_i " + "{"]
+                    for conc_child, slices in zip(
+                        symbol.children, symbol._children_slices, strict=False
+                    ):
+                        eqn_str = equation_to_diffeq(
+                            conc_child,
+                            y_slice_to_label,
+                            symbol_to_tensor_name,
+                            float_precision=self.float_precision,
+                            use_model_index=self._has_experiment,
+                        )
+                        for child_dom, child_slice in slices.items():
+                            for i, _slice in enumerate(child_slice):
+                                sl = symbol._slices[child_dom][i]
+                                lines += [f"  ({sl.start}:{sl.stop}): {eqn_str},"]
+                    symbol_to_tensor_name[symbol] = tensor_name
+                    diffeq[tensor_name] = new_line.join(lines) + new_line + "}"
+
         for symbol in eqn.post_order():
             if isinstance(symbol, pybamm.Conditional):
                 tensor_index = self._materialize_conditional_tensor(
@@ -631,32 +699,6 @@ class DiffSLExport:
                         is_variable=is_variable,
                         is_event=is_event,
                     )
-
-                elif isinstance(symbol, pybamm.DomainConcatenation):
-                    if symbol in symbol_to_tensor_name:
-                        continue
-                    new_line = "\n"
-                    tensor_name = DiffSLExport._name_tensor(
-                        symbol, tensor_index, is_variable, is_event
-                    )
-                    tensor_index += 1
-                    lines = [f"{tensor_name}_i " + "{"]
-                    for child, slices in zip(
-                        symbol.children, symbol._children_slices, strict=False
-                    ):
-                        eqn_str = equation_to_diffeq(
-                            child,
-                            y_slice_to_label,
-                            symbol_to_tensor_name,
-                            float_precision=self.float_precision,
-                            use_model_index=self._has_experiment,
-                        )
-                        for child_dom, child_slice in slices.items():
-                            for i, _slice in enumerate(child_slice):
-                                s = symbol._slices[child_dom][i]
-                                lines += [f"  ({s.start}:{s.stop}): {eqn_str},"]
-                    symbol_to_tensor_name[symbol] = tensor_name
-                    diffeq[tensor_name] = new_line.join(lines) + new_line + "}"
 
         return tensor_index
 
@@ -722,6 +764,7 @@ class DiffSLExport:
         symbol_to_tensor_name = {}
         vectors = {}
         matrices = {}
+        interpolants = {}
         termination_events = stop_expressions
         for eqn in chain(
             model.rhs.values(),
@@ -730,13 +773,24 @@ class DiffSLExport:
             termination_events,
         ):
             for symbol in eqn.pre_order():
-                if isinstance(symbol, pybamm.Vector):
+                if isinstance(symbol, pybamm.Interpolant):
+                    interpolants[symbol] = None
+                elif isinstance(symbol, pybamm.Vector):
                     vectors[symbol] = None
                 elif isinstance(symbol, pybamm.Matrix):
                     matrices[symbol] = None
 
+        # Declare each Interpolant's lookup-table data as constant tensors for
+        # DiffSL's interp1d; _interpolant_to_diffeq references the same
+        # (content-hashed) names, so identical tables share one declaration.
+        for interp in interpolants:
+            for name, block in _interpolant_data_tensors(
+                interp, float_precision=self.float_precision
+            ):
+                diffeq.setdefault(name, block)
+
         tensor_index = 0
-        for symbol in vectors.keys():
+        for symbol in vectors:
             tensor_name, tensor_def = DiffSLExport.vector_to_diffeq(
                 symbol, tensor_index, float_precision=self.float_precision
             )
@@ -744,7 +798,7 @@ class DiffSLExport:
             symbol_to_tensor_name[symbol] = tensor_name
             diffeq[tensor_name] = tensor_def
 
-        for symbol in matrices.keys():
+        for symbol in matrices:
             tensor_name, tensor_def = DiffSLExport.matrix_to_diffeq(
                 symbol, tensor_index, float_precision=self.float_precision
             )
@@ -1045,26 +1099,26 @@ class DiffSLExport:
         # inputs and constants
         if "in" in diffeq:
             all_lines = [diffeq["in"]]
-        for key in diffeq.keys():
+        for key, line in diffeq.items():
             if key.startswith("constant"):
-                all_lines += [diffeq[key]]
+                all_lines += [line]
         for key in state_tensors:
             all_lines += [diffeq[key]]
-        for key in diffeq.keys():
+        for key, line in diffeq.items():
             if key.startswith("varying"):
-                all_lines += [diffeq[key]]
+                all_lines += [line]
         for key in f_and_g:
             all_lines += [diffeq[key]]
-        for key in diffeq.keys():
+        for key, line in diffeq.items():
             if key.startswith("event"):
-                all_lines += [diffeq[key]]
+                all_lines += [line]
         for key in stop:
             all_lines += [diffeq[key]]
         if "reset" in diffeq:
             all_lines += [diffeq["reset"]]
-        for key in diffeq.keys():
+        for key, line in diffeq.items():
             if key.startswith("variable"):
-                all_lines += [diffeq[key]]
+                all_lines += [line]
         for key in out:
             all_lines += [diffeq[key]]
 
@@ -1136,6 +1190,122 @@ class DiffSLExport:
         return np.array(values, dtype=float)
 
 
+def _interp_tensor_name(kind, values):
+    """Deterministic DiffSL tensor name for interpolant table data.
+
+    Named by a hash of the contents so the declaration (emitted once by
+    ``to_diffeq``) and every reference (emitted here) agree without threading a
+    lookup through the recursion, and so identical tables share one tensor.
+    """
+    arr = np.ascontiguousarray(np.asarray(values, dtype=np.float64).ravel())
+    # Not security-sensitive: just a stable id for the table contents.
+    digest = hashlib.md5(arr.tobytes(), usedforsecurity=False).hexdigest()[:12]
+    # "constant" prefix (no underscore after it -- DiffSL lexes `constant` as a
+    # keyword) so to_diffeq's assembly emits it in the constants block.
+    return f"constantInterp{kind.upper()}{digest}"
+
+
+def _interp_tensor_block(name, values, float_precision):
+    """A DiffSL constant 1D tensor holding the given values (one entry per row,
+    matching the ``(i:i+1): value`` form the other constant tensors use)."""
+    vals = np.asarray(values).ravel()
+    lines = [f"{name}_i " + "{"]
+    for i, v in enumerate(vals):
+        lines.append(f"  ({i}:{i + 1}): {float(v):.{float_precision}g},")
+    return "\n".join(lines) + "\n}"
+
+
+def _interpolant_data_tensors(equation, float_precision=20):
+    """Constant tensors an Interpolant needs for ``interp1d``, as (name, block).
+
+    Declared up front by ``to_diffeq``; ``_interpolant_to_diffeq`` references the
+    same (content-hashed) names. 1D needs its x and y; 2D needs the shared inner
+    (x1) axis plus one y tensor per x0 row (the outer x0 blend uses inline
+    breakpoints). Higher dimensions have no ``interp2d`` yet, so none are
+    declared and the emit path raises.
+    """
+    dim = equation.dimension
+    if dim == 1:
+        x = np.asarray(equation.x[0]).ravel()
+        y = np.asarray(equation.y).ravel()
+        data = [(_interp_tensor_name("x", x), x), (_interp_tensor_name("y", y), y)]
+    elif dim == 2:
+        x0 = np.asarray(equation.x[0]).ravel()
+        x1 = np.asarray(equation.x[1]).ravel()
+        y_2d = np.asarray(equation.y).reshape(len(x0), len(x1))
+        data = [(_interp_tensor_name("x", x1), x1)]
+        data += [
+            (_interp_tensor_name("y", y_2d[i, :]), y_2d[i, :]) for i in range(len(x0))
+        ]
+    else:
+        return []
+    return [
+        (name, _interp_tensor_block(name, vals, float_precision)) for name, vals in data
+    ]
+
+
+def _interpolant_to_diffeq(
+    equation,
+    y_slice_to_label,
+    symbol_to_tensor_name,
+    float_precision=20,
+    transpose=False,
+    use_model_index=False,
+):
+    """Convert a pybamm.Interpolant to a DiffSL expression using ``interp1d``.
+
+    DiffSL's ``interp1d(xs, ys, q)`` does piecewise-linear interpolation with
+    endpoint clamping -- the same as ``numpy.interp`` and pybamm's own linear
+    interpolant -- over table data declared as constant tensors (see
+    ``_interpolant_data_tensors``). 2D is successive 1D: interpolate along the
+    inner axis at each outer breakpoint, then linearly blend those along the
+    outer axis (until DiffSL gains an ``interp2d``).
+    """
+    args = [
+        _equation_to_diffeq(
+            child,
+            y_slice_to_label,
+            symbol_to_tensor_name,
+            float_precision=float_precision,
+            transpose=transpose,
+            use_model_index=use_model_index,
+        )
+        for child in equation.children
+    ]
+
+    dim = equation.dimension
+    if dim == 1:
+        xs = _interp_tensor_name("x", np.asarray(equation.x[0]).ravel())
+        ys = _interp_tensor_name("y", np.asarray(equation.y).ravel())
+        return f"interp1d({xs}_i, {ys}_i, {args[0]})"
+    elif dim == 2:
+        x0 = np.asarray(equation.x[0]).ravel()
+        x1 = np.asarray(equation.x[1]).ravel()
+        y_2d = np.asarray(equation.y).reshape(len(x0), len(x1))
+        x1s = _interp_tensor_name("x", x1)
+        rows = [
+            f"interp1d({x1s}_i, {_interp_tensor_name('y', y_2d[i, :])}_i, {args[1]})"
+            for i in range(len(x0))
+        ]
+        # Linear blend of the per-row interpolations along x0 (clamped to
+        # range), equivalent to bilinear interpolation.
+        x0_lo = f"{x0[0]:.{float_precision}g}"
+        x0_hi = f"{x0[-1]:.{float_precision}g}"
+        clamped0 = f"max(min({args[0]}, {x0_hi}), {x0_lo})"
+        terms = [rows[0]]
+        for i in range(len(x0) - 1):
+            dx = x0[i + 1] - x0[i]
+            xi = f"{x0[i]:.{float_precision}g}"
+            dxi = f"{dx:.{float_precision}g}"
+            weight = f"(max(min(({clamped0} - {xi}), {dxi}), 0) / {dxi})"
+            terms.append(f"({weight} * ({rows[i + 1]} - {rows[i]}))")
+        return "(" + " + ".join(terms) + ")"
+    else:
+        raise NotImplementedError(
+            f"DiffSL export for {dim}D Interpolant not implemented"
+        )
+
+
 def _equation_to_diffeq(
     equation: pybamm.Symbol,
     y_slice_to_label: dict[tuple[int], str],
@@ -1204,6 +1374,17 @@ def _equation_to_diffeq(
                 use_model_index=use_model_index,
             )
             + ")"
+        )
+    elif isinstance(equation, pybamm.Interpolant):
+        # Interpolant is a Function subclass — handle before generic Function.
+        # Emitted via DiffSL's native interp1d over declared table tensors.
+        return _interpolant_to_diffeq(
+            equation,
+            y_slice_to_label,
+            symbol_to_tensor_name,
+            float_precision=float_precision,
+            transpose=transpose,
+            use_model_index=use_model_index,
         )
     elif isinstance(equation, pybamm.Function):
         name = equation.function.__name__

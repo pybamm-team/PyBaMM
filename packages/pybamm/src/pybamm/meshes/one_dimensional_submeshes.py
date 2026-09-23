@@ -38,7 +38,7 @@ class SubMesh1D(SubMesh):
         self.dimension = 1
 
         # Add tab locations in terms of "left" and "right"
-        if tabs and "negative tab" not in tabs.keys():
+        if tabs and "negative tab" not in tabs:
             self.tabs = {}
             l_z = self.edges[-1]
 
@@ -158,7 +158,7 @@ class Uniform1DSubMesh(SubMesh1D):
     def _from_json(cls, snippet: dict):
         instance = cls.__new__(cls)
 
-        tabs = snippet["tabs"] if "tabs" in snippet.keys() else None
+        tabs = snippet.get("tabs", None)
 
         super(Uniform1DSubMesh, instance).__init__(
             np.array(snippet["edges"]), snippet["coord_sys"], tabs=tabs
@@ -236,13 +236,13 @@ class Exponential1DSubMesh(SubMesh1D):
 
         # Create edges according to "side"
         if side == "left":
-            ii = np.array(range(0, npts + 1))
+            ii = np.array(range(npts + 1))
             edges = a + (b - a) * (np.exp(stretch * ii / npts) - 1) / (
                 np.exp(stretch) - 1
             )
 
         elif side == "right":
-            ii = np.array(range(0, npts + 1))
+            ii = np.array(range(npts + 1))
             edges = b - (b - a) * (np.exp(stretch * (npts - ii) / npts) - 1) / (
                 np.exp(stretch) - 1
             )
@@ -250,9 +250,9 @@ class Exponential1DSubMesh(SubMesh1D):
         elif side == "symmetric":
             # Mesh half-interval [a, (a+b)/2]
             if npts % 2 == 0:
-                ii = np.array(range(0, int((npts) / 2)))
+                ii = np.array(range(int((npts) / 2)))
             else:
-                ii = np.array(range(0, int((npts + 1) / 2)))
+                ii = np.array(range(int((npts + 1) / 2)))
             midpoint = (a + b) / 2
             x_exp_left = a + (midpoint - a) * (np.exp(stretch * ii / npts) - 1) / (
                 np.exp(stretch) - 1

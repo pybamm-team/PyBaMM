@@ -175,7 +175,7 @@ class SpatialVariable(IndependentVariable):
                 "domain must be positive particle if name is 'r_p'"
             )
         elif name in ["x", "y", "z", "x_n", "x_s", "x_p"] and any(
-            ["particle" in dom for dom in domain]
+            "particle" in dom for dom in domain
         ):
             raise pybamm.DomainError(f"domain cannot be particle if name is '{name}'")
 

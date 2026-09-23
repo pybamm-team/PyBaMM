@@ -10,7 +10,7 @@ class TestSymbolUnpacker:
         unpacker = pybamm.SymbolUnpacker(pybamm.Scalar)
 
         unpacked = unpacker.unpack_symbol(a)
-        assert unpacked == set([a])
+        assert unpacked == {a}
 
         b = pybamm.Parameter("b")
         unpacker_param = pybamm.SymbolUnpacker(pybamm.Parameter)
@@ -19,7 +19,7 @@ class TestSymbolUnpacker:
         assert unpacked == set()
 
         unpacked = unpacker_param.unpack_symbol(b)
-        assert unpacked == set([b])
+        assert unpacked == {b}
 
     def test_binary(self):
         a = pybamm.Scalar(1)
@@ -27,11 +27,27 @@ class TestSymbolUnpacker:
 
         unpacker = pybamm.SymbolUnpacker(pybamm.Scalar)
         unpacked = unpacker.unpack_symbol(a + b)
-        assert unpacked == set([a])
+        assert unpacked == {a}
 
         unpacker_param = pybamm.SymbolUnpacker(pybamm.Parameter)
         unpacked = unpacker_param.unpack_symbol(a + b)
-        assert unpacked == set([b])
+        assert unpacked == {b}
+
+    def test_unpack_variable_metadata(self):
+        scale = pybamm.Parameter("scale")
+        reference = pybamm.Parameter("reference")
+        lower_bound = pybamm.Parameter("lower bound")
+        upper_bound = pybamm.Parameter("upper bound")
+        variable = pybamm.Variable(
+            "variable",
+            scale=scale,
+            reference=reference,
+            bounds=(lower_bound, upper_bound),
+        )
+
+        unpacked = pybamm.SymbolUnpacker(pybamm.Parameter).unpack_symbol(variable)
+
+        assert unpacked == {scale, reference, lower_bound, upper_bound}
 
     def test_unpack_list_of_symbols(self):
         a = pybamm.Scalar(1)
@@ -40,7 +56,7 @@ class TestSymbolUnpacker:
 
         unpacker = pybamm.SymbolUnpacker(pybamm.Parameter)
         unpacked = unpacker.unpack_list_of_symbols([a + b, a - c, b + c])
-        assert unpacked == set([b, c])
+        assert unpacked == {b, c}
 
     def test_unpack_parameter_values(self):
         a = pybamm.Scalar(1)

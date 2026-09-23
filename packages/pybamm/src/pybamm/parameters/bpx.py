@@ -499,9 +499,7 @@ def _get_pybamm_name(pybamm_name, domain):
       * ``<Domain> particle delithiation hysteresis decay rate``
     """
     pybamm_name_lower = pybamm_name[:1].lower() + pybamm_name[1:]
-    if pybamm_name.startswith("Initial concentration") or pybamm_name.startswith(
-        "Maximum concentration"
-    ):
+    if pybamm_name.startswith(("Initial concentration", "Maximum concentration")):
         init_len = len("Initial concentration ")
         return [
             pybamm_name[:init_len]
@@ -541,12 +539,21 @@ _BPX_OCP_HYSTERESIS_RENAMES = {
     "OCP (lithiation) [V]": "lithiation OCP [V]",
     "OCP (delithiation) [V]": "delithiation OCP [V]",
 }
-_OPTIONAL_HYSTERESIS_FIELDS = {"ocp_lith", "ocp_delith", "gamma_hys"}
 
 
 def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) -> dict:
     """
-    Turns a BPX instance in to a dictionary of parameters for PyBaMM for a given domain
+    Turns a BPX instance in to a dictionary of parameters for PyBaMM for a given domain.
+
+    Fields the BPX schema marks optional (e.g. the cell density and specific heat
+    capacity, or the electrode hysteresis branches) surface as ``None`` when absent,
+    because pydantic only guarantees *required* fields are populated. Such ``None``s
+    are omitted rather than written into ``pybamm_dict``: injecting ``None`` would
+    leave a broken parameter in ``ParameterValues`` that fails with a cryptic type
+    error deep in the expression tree if a model later needs it. Omitting them keeps
+    the isothermal path working when a BPX ships no thermal data, and lets PyBaMM's
+    usual "parameter not found" error name the missing parameter if a thermal model
+    does need it.
     """
     # Loop over fields in BPX instance and add to pybamm dictionary
     for name, field in instance.model_fields.items():
@@ -564,7 +571,7 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
                 # Loop over fields in phase instance and add to pybamm dictionary
                 for name_to_add, field_to_add in phase_instance.model_fields.items():
                     value = getattr(phase_instance, name_to_add)
-                    if value is None and name_to_add in _OPTIONAL_HYSTERESIS_FIELDS:
+                    if value is None:  # absent optional field: omit, don't emit None
                         continue
                     pybamm_names = _get_pybamm_name(field_to_add.alias, domain)
                     value = process_float_function_table(value, name_to_add)
@@ -572,7 +579,7 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
                         pybamm_dict[PHASE_NAMES[i] + pybamm_name] = value
         # Handle other fields, which correspond directly to parameters
         else:
-            if value is None and name in _OPTIONAL_HYSTERESIS_FIELDS:
+            if value is None:  # absent optional field: omit, don't emit None
                 continue
             pybamm_names = _get_pybamm_name(field.alias, domain)
             value = process_float_function_table(value, name)

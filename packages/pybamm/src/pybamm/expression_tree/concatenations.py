@@ -564,8 +564,7 @@ class ConcatenationVariable(Concatenation):
         print_name = intersect(children[0]._raw_print_name, children[1]._raw_print_name)
         for child in children[2:]:
             print_name = intersect(print_name, child._raw_print_name)
-        if print_name.endswith("_"):
-            print_name = print_name[:-1]
+        print_name = print_name.removesuffix("_")
 
         self.print_name = print_name
 

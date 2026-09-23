@@ -87,9 +87,8 @@ def ask_user_opt_in(timeout=10):
                 input("Do you want to enable telemetry? (Y/n): ").strip().lower()
             )
             answer.append(user_input)
-        except Exception:
-            # Handle any input errors
-            pass
+        except (EOFError, OSError) as err:
+            pybamm.logger.debug(f"Could not read telemetry prompt response: {err}")
 
     time_start = time.time()
 

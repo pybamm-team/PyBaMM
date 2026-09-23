@@ -756,7 +756,7 @@ class BaseSolver:
         if isinstance(calculate_sensitivities, bool):
             if calculate_sensitivities:
                 calculate_sensitivities_list = [
-                    p for p in inputs.keys() if p not in excluded_sensitivity_inputs
+                    p for p in inputs if p not in excluded_sensitivity_inputs
                 ]
             else:
                 calculate_sensitivities_list = []
@@ -1284,7 +1284,7 @@ class BaseSolver:
         # discretised
         # Unpack slices for sorting
         y_slices = {var: slce for var, slce in model.y_slices.items()}
-        slices = [y_slices[symbol][0] for symbol in model.initial_conditions.keys()]
+        slices = [y_slices[symbol][0] for symbol in model.initial_conditions]
 
         # sort equations according to slices
         concatenated_initial_conditions = [

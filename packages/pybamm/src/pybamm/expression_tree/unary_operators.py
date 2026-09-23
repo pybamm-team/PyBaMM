@@ -761,6 +761,21 @@ class Integral(SpatialOperator):
     def integration_variable(self):
         return self._integration_variable
 
+    def to_json(self):
+        if type(self) is not Integral:
+            return super().to_json()
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "children": [self.children[0], *self.integration_variable],
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        if cls is not Integral:
+            return super()._from_json(snippet)
+        return cls(snippet["children"][0], snippet["children"][1:])
+
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
@@ -1156,12 +1171,14 @@ class BoundaryOperator(SpatialOperator):
     def __init__(self, name, child, side):
         # side can only be "negative tab" or "positive tab" if domain is
         # "current collector"
-        if side in ["negative tab", "positive tab"]:
-            if child.domain[0] != "current collector":
-                raise pybamm.ModelError(
-                    "Can only take boundary value on the tabs in the domain "
-                    f"'current collector', but {child} has domain {child.domain[0]}"
-                )
+        if (
+            side in ["negative tab", "positive tab"]
+            and child.domain[0] != "current collector"
+        ):
+            raise pybamm.ModelError(
+                "Can only take boundary value on the tabs in the domain "
+                f"'current collector', but {child} has domain {child.domain[0]}"
+            )
         self.side = side
         # boundary value of a child takes the primary domain from secondary domain
         # of the child
@@ -1505,6 +1522,54 @@ class Magnitude(UnaryOperator):
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.direction)
+
+
+class Component(UnaryOperator):
+    """
+    Extract component *index* from a VectorField.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        A VectorField symbol.
+    index : int
+        Zero-based component index.
+    """
+
+    def __init__(self, child, index):
+        super().__init__(f"component({index})", child)
+        self.index = index
+
+    def to_json(self):
+        return {
+            "name": self.name,
+            "domains": self.domains,
+            "index": self.index,
+        }
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0], snippet["index"])
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        return self.__class__(child, self.index)
+
+
+class Norm(UnaryOperator):
+    """
+    Euclidean norm of a VectorField: ``sqrt(sum(comp_i ** 2))``.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        A VectorField symbol.
+    """
+
+    def __init__(self, child):
+        super().__init__("norm", child)
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        return self.__class__(child)
 
 
 class Upwind(UpwindDownwind):

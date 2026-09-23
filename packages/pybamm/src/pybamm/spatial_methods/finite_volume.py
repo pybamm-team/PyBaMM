@@ -40,7 +40,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         super().build(mesh)
 
         # add npts_for_broadcast to mesh domains for this particular discretisation
-        for dom in mesh.keys():
+        for dom in mesh:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
 
     def spatial_variable(self, symbol):
@@ -305,8 +305,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                 d_edges = (r_edges_right**3 - r_edges_left**3) / 3
             elif submesh.coord_sys == "cylindrical polar":
                 d_edges = (r_edges_right**2 - r_edges_left**2) / 2
-        else:
-            d_edges = d_edges
         e = 1 / d_edges
 
         # Create matrix using submesh
@@ -408,8 +406,6 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             if vector_type == "row":
                 d_edges = pybamm.Transpose(d_edges)
-            elif vector_type == "column":
-                d_edges = d_edges
 
             # repeat matrix for each node in secondary dimensions
             second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
@@ -824,7 +820,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Catch if no boundary conditions are defined
-        if "left" not in bcs.keys() and "right" not in bcs.keys():
+        if "left" not in bcs and "right" not in bcs:
             raise ValueError(f"No boundary conditions have been provided for {symbol}")
 
         # Allow to only pass one boundary condition (for upwind/downwind)
@@ -1544,6 +1540,25 @@ class FiniteVolume(pybamm.SpatialMethod):
             `shift_key = "edge to node"`)
         """
 
+        def exterior_edge_rows(submesh):
+            """Linear extrapolation from the two nearest nodes onto the exterior edges.
+
+            Uses the true node positions, so the result agrees with
+            :meth:`boundary_value_or_flux`. On a uniform mesh it reduces to the
+            usual ``[1.5, -0.5]``; on a non-uniform one it must not, or a flux
+            imposed as a gradient divided by a surface value is inconsistent
+            with the flux the gradient actually produces.
+            """
+            n = submesh.npts
+            left = 0.5 * submesh.d_edges[0] / submesh.d_nodes[0]
+            right = 0.5 * submesh.d_edges[-1] / submesh.d_nodes[-1]
+            return (
+                csr_matrix(([1 + left, -left], ([0, 0], [0, 1])), shape=(1, n)),
+                csr_matrix(
+                    ([-right, 1 + right], ([0, 0], [n - 2, n - 1])), shape=(1, n)
+                ),
+            )
+
         def arithmetic_mean(array):
             """Calculate the arithmetic mean of an array using matrix multiplication"""
             # Create appropriate submesh by combining submeshes in domain
@@ -1553,15 +1568,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             n = submesh.npts
 
             if shift_key == "node to edge":
-                sub_matrix_left = csr_matrix(
-                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
-                )
+                # Interior edges sit between unevenly spaced nodes on a
+                # non-uniform mesh, so weight by the true distances.
+                d_edges = submesh.d_edges
+                weight = d_edges[:-1] / (d_edges[:-1] + d_edges[1:])
                 sub_matrix_center = diags(
-                    [0.5, 0.5], [0, 1], shape=(n - 1, n), dtype=None
+                    [1 - weight, weight], [0, 1], shape=(n - 1, n), dtype=None
                 )
-                sub_matrix_right = csr_matrix(
-                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
-                )
+                sub_matrix_left, sub_matrix_right = exterior_edge_rows(submesh)
                 sub_matrix = vstack(
                     [sub_matrix_left, sub_matrix_center, sub_matrix_right]
                 )
@@ -1621,13 +1635,10 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             if shift_key == "node to edge":
                 # Matrix to compute values at the exterior edges
-                edges_sub_matrix_left = csr_matrix(
-                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
+                edges_sub_matrix_left, edges_sub_matrix_right = exterior_edge_rows(
+                    submesh
                 )
                 edges_sub_matrix_center = csr_matrix((n - 1, n))
-                edges_sub_matrix_right = csr_matrix(
-                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
-                )
                 edges_sub_matrix = vstack(
                     [
                         edges_sub_matrix_left,

@@ -512,6 +512,25 @@ class TestSolution:
         assert sol_sum.observable == expected  # computed on access
         assert sol_sum._observable == expected  # and cached
 
+    def test_vector_field_variable(self, mesh_2d):
+        # structured 2D FV does not support reading VectorField solution variables
+        model = pybamm.BaseModel()
+        var = pybamm.Variable(
+            "var", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        model.rhs = {var: pybamm.Scalar(-1)}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        model.variables = {"var": var, "flux": pybamm.VectorField(var, 2 * var)}
+
+        disc = pybamm.Discretisation(mesh_2d, {"macroscale": pybamm.FiniteVolume2D()})
+        disc.process_model(model)
+        solution = pybamm.IDAKLUSolver().solve(model, np.linspace(0, 1, 5))
+
+        with pytest.raises(
+            NotImplementedError, match=r"structured 2D finite-volume meshes"
+        ):
+            solution["flux"]
+
     def test_add_solutions_different_models(self):
         # Set up first solution
         t1 = np.linspace(0, 1)
@@ -611,9 +630,7 @@ class TestSolution:
 
         sol2 = sol1.copy()
 
-        assert (
-            sol1._variables[k] == sol2._variables[k] for k in sol1._variables.keys()
-        )
+        assert (sol1._variables[k] == sol2._variables[k] for k in sol1._variables)
         assert sol2.variables_returned is True
 
     def test_all_inputs(self):
@@ -1307,10 +1324,8 @@ class TestSolution:
         assert all(not model.solution_observable for model in sol.all_models)
 
         model = sol.all_models[0]
-        assert set(ip.name for ip in model.input_parameters) == set(input_names)
-        assert set(ip.name for ip in model.required_input_parameters) == set(
-            inputs.keys()
-        )
+        assert {ip.name for ip in model.input_parameters} == set(input_names)
+        assert {ip.name for ip in model.required_input_parameters} == set(inputs.keys())
         # check that missing input is set to DUMMY_INPUT_PARAMETER_VALUE (np.nan)
         assert np.isnan(sol.all_inputs[0]["dummy"])
 

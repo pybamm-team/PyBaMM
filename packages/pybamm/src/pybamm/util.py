@@ -77,9 +77,7 @@ class FuzzyDict(dict):
                     raise KeyError(
                         f"'{key}' not found. Use the dimensional version '{k}' instead."
                     ) from error
-                elif key in k and (
-                    k.startswith("Primary") or k.startswith("Secondary")
-                ):
+                elif key in k and (k.startswith(("Primary", "Secondary"))):
                     raise KeyError(
                         f"'{key}' not found. If you are using a composite model, you may need to use {k} instead. Otherwise, best matches are {best_matches}"
                     ) from error

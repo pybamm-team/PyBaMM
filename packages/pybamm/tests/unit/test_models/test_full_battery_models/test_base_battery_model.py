@@ -53,7 +53,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'transport efficiency': 'Bruggeman' (possible: ['Bruggeman', 'ordered packing', 'hyperbola of revolution', 'overlapping spheres', 'tortuosity factor', 'random overlapping cylinders', 'heterogeneous catalyst', 'cation-exchange membrane'])
-'voltage as a state': 'true' (possible: ['false', 'true'])
+'voltage as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
 'use lumped thermal capacity': 'false' (possible: ['false', 'true'])
@@ -566,14 +566,14 @@ class TestBaseBatteryModel:
         model = pybamm.lithium_ion.SPM({"voltage as a state": "true"})
         assert model.options["voltage as a state"] == "true"
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
-        assert "Voltage [V]" in [v.name for v in model.algebraic.keys()]
+        assert "Voltage [V]" in [v.name for v in model.algebraic]
 
         model = pybamm.lithium_ion.SPM(
             {"voltage as a state": "true", "operating mode": "voltage"}
         )
         assert model.options["voltage as a state"] == "true"
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
-        assert "Voltage [V]" in [v.name for v in model.algebraic.keys()]
+        assert "Voltage [V]" in [v.name for v in model.algebraic]
 
     def test_explicit_modes_default_voltage_as_state(self):
         for mode in ["explicit power", "explicit resistance"]:
@@ -686,9 +686,8 @@ class TestOptions:
     def test_default_options_independent_of_possible_options_order(self):
         """Defaults should be set explicitly, not derived from possible_options[0]."""
         options = pybamm.BatteryModelOptions({})
-        # voltage as a state defaults to "true" although possible_options
-        # lists "false" first: defaults are explicit, not derived from order
-        assert options["voltage as a state"] == "true"
+        # defaults are set explicitly, not derived from list order
+        assert options["voltage as a state"] == "false"
         # surface form: possible_options lists "false" first, default is "false"
         assert options["surface form"] == "false"
 
@@ -722,3 +721,49 @@ class TestVaasNormalization:
         """When VAAS is false and surface form not set, surface form stays false."""
         options = pybamm.BatteryModelOptions({"voltage as a state": "false"})
         assert options["surface form"] == "false"
+
+
+def repeated_words(name):
+    """Return the repeated run in `name`, e.g. "a b a b" in "a b a b c", else None."""
+    words = name.split()
+    for length in range(1, len(words) // 2 + 1):
+        for start in range(len(words) - 2 * length + 1):
+            run = words[start : start + length]
+            if run == words[start + length : start + 2 * length]:
+                return " ".join(run * 2)
+    return None
+
+
+class TestVariableNames:
+    @pytest.mark.parametrize(
+        ("model_class", "options"),
+        [
+            (pybamm.lithium_ion.SPM, {}),
+            (pybamm.lithium_ion.SPMe, {}),
+            (pybamm.lithium_ion.DFN, {}),
+            (pybamm.lithium_ion.MPM, {}),
+            (pybamm.lithium_ion.NewmanTobias, {}),
+            (pybamm.lithium_ion.DFN, {"working electrode": "positive"}),
+            (
+                pybamm.lithium_ion.DFN,
+                {
+                    "particle phases": ("2", "1"),
+                    "thermal": "x-full",
+                    "SEI": "solvent-diffusion limited",
+                    "lithium plating": "reversible",
+                    "particle mechanics": "swelling and cracking",
+                },
+            ),
+            (pybamm.lead_acid.Full, {}),
+            (pybamm.lead_acid.LOQS, {}),
+        ],
+    )
+    def test_no_repeated_words(self, model_class, options):
+        # catches names built from a duplicated implicit string concatenation
+        model = model_class(options)
+        duplicated = {
+            name: repeated_words(name)
+            for name in model.variables
+            if repeated_words(name)
+        }
+        assert duplicated == {}

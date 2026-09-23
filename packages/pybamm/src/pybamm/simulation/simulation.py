@@ -509,9 +509,7 @@ class Simulation(BaseSimulation):
         if not pv_input_parameters:
             return
 
-        check_keys = set(
-            [self._INITIAL_TEMPERATURE_INPUT, self._AMBIENT_TEMPERATURE_INPUT]
-        )
+        check_keys = {self._INITIAL_TEMPERATURE_INPUT, self._AMBIENT_TEMPERATURE_INPUT}
         for step in self.experiment.steps:
             if step.is_implicit():
                 check_keys.update(step.get_parameter_values([]).keys())
@@ -1176,10 +1174,11 @@ class Simulation(BaseSimulation):
                     last_termination = cycle_solution.termination
 
             if steps:
-                if all(isinstance(s, pybamm.EmptySolution) for s in steps):
-                    if self._check_infeasible_steps(steps, step, step_str, cycle_num):
-                        last_termination = steps[0].termination
-                        continue
+                if all(
+                    isinstance(s, pybamm.EmptySolution) for s in steps
+                ) and self._check_infeasible_steps(steps, step, step_str, cycle_num):
+                    last_termination = steps[0].termination
+                    continue
                 cycle_sol = pybamm.make_cycle_solution(
                     steps,
                     esoh_solver=esoh_solver,
