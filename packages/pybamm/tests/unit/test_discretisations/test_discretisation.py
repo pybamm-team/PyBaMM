@@ -1289,6 +1289,19 @@ class TestDiscretise:
         disc.process_model(model)
         assert len(model.rhs) == 1
 
+    def test_independent_rhs_keeps_last_equation(self):
+        x, y = pybamm.Variable("x"), pybamm.Variable("y")
+        model = pybamm.BaseModel()
+        model.rhs = {x: 1, y: 2}
+        model.initial_conditions = {x: 0, y: 0}
+        model.variables = {"x": x, "y": y}
+        disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
+        disc.process_model(model)
+        assert len(model.rhs) == 1
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
+        np.testing.assert_allclose(solution["x"](1), 1, rtol=1e-6)
+        np.testing.assert_allclose(solution["y"](1), 2, rtol=1e-6)
+
     def test_independent_rhs_with_event(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")

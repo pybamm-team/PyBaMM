@@ -1417,8 +1417,6 @@ class Discretisation:
         return this_var_is_independent
 
     def remove_independent_variables_from_rhs(self, model):
-        if len(model.rhs) <= 1:
-            return model
         unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
         eqns_to_check = itertools.chain(
             model.rhs.values(),
@@ -1437,6 +1435,9 @@ class Discretisation:
 
         vars_to_update = {}
         for var in list(model.rhs.keys()):
+            # a model needs at least one differential equation to solve
+            if len(model.rhs) <= 1:
+                break
             if not self.is_variable_independent(var, all_vars_in_eqns):
                 continue
             pybamm.logger.info(f"removing variable {var} from rhs")
