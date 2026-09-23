@@ -254,7 +254,9 @@ class BasicDFNHalfCell(BaseModel):
             "Number of cells connected in series to make a battery"
         )
 
-        c_e_total = pybamm.x_average(eps * c_e)
+        n_Li_e = pybamm.Integral(
+            eps * c_e, pybamm.SpatialVariable("x", domain=c_e.domain)
+        )
         c_s_surf_w_av = pybamm.x_average(c_s_surf_w)
 
         c_s_rav = pybamm.r_average(c_s_w)
@@ -301,9 +303,7 @@ class BasicDFNHalfCell(BaseModel):
             "Electrolyte concentration [mol.m-3]": c_e,
             "Separator electrolyte concentration [mol.m-3]": c_e_s,
             "Positive electrolyte concentration [mol.m-3]": c_e_w,
-            "Total lithium in electrolyte [mol]": c_e_total
-            * self.param.L_x
-            * self.param.A_cc,
+            "Total lithium in electrolyte [mol]": n_Li_e * self.param.A_cc,
             "Current [A]": I,
             "Current variable [A]": I,  # for compatibility with pybamm.Experiment
             "Current density [A.m-2]": i_cell,
