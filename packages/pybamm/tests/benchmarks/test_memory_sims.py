@@ -22,14 +22,17 @@ _MODELS = [
 
 
 @pytest.fixture(scope="module", autouse=True)
-def _warm_up():
-    # Pay one-off costs such as lazy imports before memray starts tracking,
-    # so they don't land on whichever test happens to run first.
-    pybamm.Simulation(
-        pybamm.lithium_ion.SPM(),
-        parameter_values=pybamm.ParameterValues("Chen2020"),
-        experiment=pybamm.Experiment(_EXPERIMENT_DESCRIPTIONS["CCCV"]),
-    )
+def _warm_up(tmp_path_factory):
+    # Run once under memray so lazy imports and the per-function monitoring
+    # data its profiler allocates on first call don't count against any test.
+    memray = pytest.importorskip("memray")
+    path = tmp_path_factory.mktemp("memray") / "warm_up.bin"
+    with memray.Tracker(path, trace_python_allocators=True):
+        pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=pybamm.ParameterValues("Chen2020"),
+            experiment=pybamm.Experiment(_EXPERIMENT_DESCRIPTIONS["CCCV"]),
+        )
 
 
 @pytest.mark.limit_memory("2.5 MB")

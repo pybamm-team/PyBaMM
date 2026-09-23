@@ -65,39 +65,46 @@ def _discretise(r, geometry, model):
     disc.process_model(model)
 
 
+def _solve(model):
+    solver = pybamm.IDAKLUSolver()
+    t_eval = np.linspace(0, 3600, 600)
+    solver.solve(model, t_eval=t_eval)
+
+
 @pytest.fixture(scope="module", autouse=True)
-def _warm_up():
-    # Pay one-off costs such as lazy imports before memray starts tracking,
-    # so they don't land on whichever test happens to run first.
-    R, model = _create_expression()
-    r, geometry = _parameterise(R, model)
-    _discretise(r, geometry, model)
+def _warm_up(tmp_path_factory):
+    # Run once under memray so lazy imports and the per-function monitoring
+    # data its profiler allocates on first call don't count against any test.
+    memray = pytest.importorskip("memray")
+    path = tmp_path_factory.mktemp("memray") / "warm_up.bin"
+    with memray.Tracker(path, trace_python_allocators=True):
+        R, model = _create_expression()
+        r, geometry = _parameterise(R, model)
+        _discretise(r, geometry, model)
+        _solve(model)
 
 
-@pytest.mark.limit_memory("50 KB")
+@pytest.mark.limit_memory("25 KB")
 def test_create_expression_memory():
     _create_expression()
 
 
-@pytest.mark.limit_memory("80 KB")
+@pytest.mark.limit_memory("45 KB")
 def test_parameterise_memory():
     R, model = _create_expression()
     _parameterise(R, model)
 
 
-@pytest.mark.limit_memory("200 KB")
+@pytest.mark.limit_memory("125 KB")
 def test_discretise_memory():
     R, model = _create_expression()
     r, geometry = _parameterise(R, model)
     _discretise(r, geometry, model)
 
 
-@pytest.mark.limit_memory("3 MB")
+@pytest.mark.limit_memory("2.5 MB")
 def test_solve_memory():
     R, model = _create_expression()
     r, geometry = _parameterise(R, model)
     _discretise(r, geometry, model)
-
-    solver = pybamm.IDAKLUSolver()
-    t_eval = np.linspace(0, 3600, 600)
-    solver.solve(model, t_eval=t_eval)
+    _solve(model)
