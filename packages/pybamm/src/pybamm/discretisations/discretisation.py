@@ -934,22 +934,23 @@ class Discretisation:
     def _discretise_node(self, symbol, new_leaves):
         """Discretise one node given its discretised children; the callback for
         :func:`pybamm.tree_map`."""
-        if symbol.domain != [] and self.bcs:
+        if symbol._domains["primary"] != [] and self.bcs:
             # If boundary conditions are provided, need to check for BCs on tabs
             key_id = next(iter(self.bcs.keys()))
             if LEGACY_TAB_SIDES & set(self.bcs[key_id].keys()):
                 self.bcs[key_id] = self.check_tab_conditions(symbol, self.bcs[key_id])
         handler = self._handler_for(type(symbol))
-        discretised_symbol = handler(self, symbol, new_leaves[: len(symbol.children)])
+        discretised_symbol = handler(self, symbol, new_leaves[: len(symbol._children)])
         discretised_symbol.test_shape()
         # processed variables read the meshes of the symbol's domains off the result
-        return discretised_symbol.with_meshes(self.mesh, symbol.domains)
+        return discretised_symbol.with_meshes(self.mesh, symbol._domains)
 
     def _spatial_method_of(self, symbol):
         """The spatial method of a symbol's primary domain (None if it has none)."""
-        if symbol.domain == []:
+        domain = symbol._domains["primary"]
+        if domain == []:
             return None
-        return self.spatial_methods[symbol.domain[0]]
+        return self.spatial_methods[domain[0]]
 
     # -- handlers ---------------------------------------------------------
 
@@ -962,7 +963,7 @@ class Discretisation:
 
     def _disc_binary(self, symbol, disc_children):
         spatial_method = self._spatial_method_of(symbol)
-        left, right = symbol.children
+        left, right = symbol._children
         disc_left, disc_right = disc_children
         # A scalar diffusion coefficient becomes an identity-like vector field
         if isinstance(spatial_method, pybamm.FiniteVolume2D):

@@ -239,7 +239,11 @@ class BinaryOperator(pybamm.Symbol):
 
     def is_constant(self):
         """See :meth:`pybamm.Symbol.is_constant()`."""
-        return self.left.is_constant() and self.right.is_constant()
+        # memoised: simplification asks this of every subtree as it is built
+        if self._cached_is_constant is None:
+            left, right = self._children
+            self._cached_is_constant = left.is_constant() and right.is_constant()
+        return self._cached_is_constant
 
     def _sympy_operator(self, left, right):
         """Apply appropriate SymPy operators."""

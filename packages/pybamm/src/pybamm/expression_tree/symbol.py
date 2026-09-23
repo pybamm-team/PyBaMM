@@ -69,7 +69,7 @@ class Domains(dict):
     with the same domains shares one object and identity hashes it in O(1).
     """
 
-    __slots__ = ("_hash",)
+    __slots__ = ("_hash", "_interned")
 
     def __init__(self, mapping):
         super().__init__(
@@ -77,6 +77,7 @@ class Domains(dict):
             for level, names in _canonical_domain_items(mapping)
         )
         self._hash = hash(tuple((level, tuple(names)) for level, names in self.items()))
+        self._interned = False
 
     def __hash__(self):
         return self._hash
@@ -118,6 +119,7 @@ def _intern_domains(domains: dict[str, Sequence[str]]) -> Domains:
         interned = _INTERNED_DOMAINS.setdefault(
             key, Domains({level: list(names) for level, names in key})
         )
+        interned._interned = True
     return interned
 
 
@@ -329,6 +331,7 @@ class Symbol:
     """
 
     __slots__ = (
+        "_cached_is_constant",
         "_cached_shape",
         "_cached_size",
         "_children",
@@ -359,6 +362,7 @@ class Symbol:
         self._cached_shape = None
         self._cached_size = None
         self._saved_evaluate_for_shape = None
+        self._cached_is_constant = None
         self._saved_evaluates_on_edges = None
         # pinned by 2D finite volumes for single-direction edge evaluations
         self._edges_direction = None
@@ -475,11 +479,7 @@ class Symbol:
         """Validate a domains dict, fill in the missing levels and intern it. Each
         distinct input is validated once."""
         if type(domains) is Domains:
-            key = tuple(
-                (level, tuple(names))
-                for level, names in _canonical_domain_items(domains)
-            )
-            if _INTERNED_DOMAINS.get(key) is domains:
+            if domains._interned:
                 return domains
             domains = dict(domains)
         try:
@@ -699,6 +699,8 @@ class Symbol:
         domains: DomainsType,
     ):
         if domains is None:
+            if domain is None and not auxiliary_domains:
+                return EMPTY_DOMAINS
             if isinstance(domain, str):
                 domain = [domain]
             elif domain is None:
@@ -881,8 +883,11 @@ class Symbol:
         a
         b
         """
-        anytree = import_optional_dependency("anytree")
-        return anytree.PreOrderIter(self)
+        stack = [self]
+        while stack:
+            node = stack.pop()
+            yield node
+            stack.extend(reversed(node._children))
 
     def post_order(self, filter=None):
         """

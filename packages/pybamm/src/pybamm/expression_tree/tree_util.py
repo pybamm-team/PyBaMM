@@ -21,6 +21,7 @@ _TRANSIENT_SLOTS = frozenset(
         "_id",
         "_cached_shape",
         "_cached_size",
+        "_cached_is_constant",
         "_saved_evaluate_for_shape",
         "_saved_evaluates_on_edges",
     }
@@ -126,9 +127,16 @@ def identity_key(symbol: pybamm.Symbol, leaf_ids: Sequence[int]) -> tuple:
     static fields and the ids of its leaves.
     """
     cls = type(symbol)
+    domains_type = pybamm.expression_tree.symbol.Domains
     key = [cls]
     for field in layout(cls)[2]:
-        key.append(_hashable(getattr(symbol, field, None)))
+        value = getattr(symbol, field, None)
+        value_type = type(value)
+        # most fields are names and domains: skip the generic conversion
+        if value_type is str or value_type is domains_type or value is None:
+            key.append(value)
+        else:
+            key.append(_hashable(value))
     key.extend(leaf_ids)
     return tuple(key)
 
