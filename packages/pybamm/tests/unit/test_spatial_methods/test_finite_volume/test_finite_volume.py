@@ -8,6 +8,7 @@ from scipy.sparse import eye, kron
 
 import pybamm
 from tests import (
+    assert_symbolic_mesh_matches_numeric,
     get_1p1d_mesh_for_testing,
     get_mesh_for_testing,
     get_mesh_for_testing_symbolic,
@@ -276,6 +277,39 @@ class TestFiniteVolume:
             x_edges_disc.evaluate(),
             mesh["domain"].edges[:, np.newaxis] * mesh["domain"].length,
         )
+
+    def test_internal_neumann_condition_symbolic_length(self):
+        x_left = pybamm.SpatialVariable("x_left", ["left"], coord_sys="cartesian")
+        x_right = pybamm.SpatialVariable("x_right", ["right"], coord_sys="cartesian")
+        a = pybamm.Variable("a", "left")
+        b = pybamm.Variable("b", "right")
+
+        def condition(middle, end, submesh):
+            geometry = {
+                "left": {x_left: {"min": pybamm.Scalar(0), "max": middle}},
+                "right": {x_right: {"min": middle, "max": end}},
+            }
+            mesh = pybamm.Mesh(
+                geometry, {"left": submesh, "right": submesh}, {x_left: 5, x_right: 5}
+            )
+            spatial_methods = {
+                "left": pybamm.FiniteVolume(),
+                "right": pybamm.FiniteVolume(),
+            }
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc.set_variable_slices([a, b])
+            return spatial_methods["left"].internal_neumann_condition(
+                disc.process_symbol(a),
+                disc.process_symbol(b),
+                mesh["left"],
+                mesh["right"],
+            )
+
+        length = pybamm.InputParameter("L")
+        symbolic = condition(length, 2 * length, pybamm.SymbolicUniform1DSubMesh)
+        numeric = condition(pybamm.Scalar(2), pybamm.Scalar(4), pybamm.Uniform1DSubMesh)
+        y = np.linspace(0, 1, 10)[:, np.newaxis] ** 2
+        assert_symbolic_mesh_matches_numeric(symbolic, numeric, y, {"L": 2})
 
     def test_mass_matrix_shape(self):
         # Create model
