@@ -13,6 +13,8 @@
 
 - `Solution.solver_statistics` reports the integrator's step, linear-solver-setup, nonlinear-iteration, nonlinear-failure and error-test-failure counts as a `pybamm.SolverStatistics` dataclass. `IDAKLUSolver` fills it for every solution, counting across `t_eval` breakpoints and separately for each input set, and the counts are summed when solutions are combined, so a stepped or experiment solution reports its total, including the cycles that `save_at_cycles` does not keep. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - A multi-input `IDAKLUSolver` solve now hands each thread its next input set as soon as it is free, instead of splitting the sets into equal static blocks plus a serial remainder solved on the calling thread, so a heterogeneous sweep (for example a current sweep whose high currents stop early on a voltage cut-off) no longer waits on its slowest block. A failing set no longer hides the others: the `SolverError` names every set that failed, whether it failed from the start or part-way through, each prefixed `input set N: `, and a single-set solve's message now starts with `input set 0: `. Each `on_failure="warn"` warning names its set the same way. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
+- Added `Solution.sensitivity_names`, the inputs a solution has sensitivities for, in the column order of `sensitivities["all"]`. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- Faster reads of variables computed during the solve (`ProcessedVariableComputed`, e.g. from `IDAKLUSolver(output_variables=...)`). The interpolating `xr.DataArray` is built on the first interpolated read instead of on first access, so `.data` and `.entries` no longer pay for it, and time-only reads of a 0D variable use `np.interp`. For an SPM, `solution["Voltage [V]"](t)` at an off-grid `t` drops from about 420 us to about 1 us. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 
 ## Bug fixes
 
@@ -21,6 +23,9 @@
 - Discretising a model whose differential variables are all scalars or on zero-dimensional domains (such as a lumped current collector) no longer raises SciPy 1.18's `block_diag` `DeprecationWarning`, and its mass matrix stays a sparse matrix rather than becoming a sparse array once SciPy changes `block_diag`'s return type. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - The CI test matrix now installs every dependency from `uv.lock`, as local nox sessions do, instead of resolving the latest releases, so only the prebuilt `pybammsolvers` wheel is installed outside the lock. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - An editable `pybammsolvers` install, such as the one `uv sync` creates, can be imported on its own: `import pybammsolvers` no longer fails to load `libcasadi` unless `casadi` was imported first. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
+- `ProcessedVariable` returns unsorted time queries in the order given when it interpolates without Hermite data (for example `IDAKLUSolver(options={"hermite_interpolation": False})`); the values came back permuted. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- `ProcessedVariableComputed` unrolls 3D variables time-major, the layout `IDAKLUSolver` returns, so a 3D variable requested through `output_variables` (such as `"Negative particle concentration distribution [mol.m-3]"`) is no longer scrambled. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- `Solution.all_inputs_stacked` handles a mix of scalar and vector inputs; reading any variable from such a solve raised a `ValueError`. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 
 ## Optimizations
 
