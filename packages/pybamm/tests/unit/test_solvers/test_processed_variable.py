@@ -292,7 +292,7 @@ class TestProcessedVariable:
 
         # On edges
         x_s_edge = pybamm.Matrix(disc.mesh["separator"].edges, domain="separator")
-        x_s_edge.mesh = disc.mesh["separator"]
+        x_s_edge = x_s_edge.with_mesh(disc.mesh["separator"])
         x_s_casadi = to_casadi(x_s_edge, y_sol)
         processed_x_s_edge = pybamm.process_variable(
             "test",
@@ -350,7 +350,7 @@ class TestProcessedVariable:
         )
 
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
-        c.mesh = mesh["SEI layer"]
+        c = c.with_mesh(mesh["SEI layer"])
         c_casadi = to_casadi(c, y_sol)
         pybamm.process_variable("test", [c], [c_casadi], solution)
 
@@ -559,8 +559,9 @@ class TestProcessedVariable:
             domain="separator",
             auxiliary_domains={"secondary": "current collector"},
         )
-        x_s_edge.mesh = disc.mesh["separator"]
-        x_s_edge.secondary_mesh = disc.mesh["current collector"]
+        x_s_edge = x_s_edge.with_mesh(
+            disc.mesh["separator"], secondary_mesh=disc.mesh["current collector"]
+        )
         x_s_casadi = to_casadi(x_s_edge, y_sol)
         processed_x_s_edge = pybamm.process_variable(
             "test",
@@ -618,7 +619,7 @@ class TestProcessedVariable:
         y = disc.mesh["current collector"].edges["y"]
         z = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
+        var_sol = var_sol.with_mesh(disc.mesh["current collector"])
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
         yp_sol = self._get_yps(u_sol, hermite_interp)
@@ -643,7 +644,7 @@ class TestProcessedVariable:
         y = disc.mesh["current collector"].edges["y"]
         z = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
+        var_sol = var_sol.with_mesh(disc.mesh["current collector"])
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
         yp_sol = self._get_yps(u_sol, hermite_interp)
@@ -802,7 +803,7 @@ class TestProcessedVariable:
         r_n = pybamm.Matrix(
             disc.mesh["negative particle"].nodes, domain="negative particle"
         )
-        r_n.mesh = disc.mesh["negative particle"]
+        r_n = r_n.with_mesh(disc.mesh["negative particle"])
         r_n_casadi = to_casadi(r_n, y_sol)
         processed_r_n = pybamm.process_variable(
             "test",
@@ -820,7 +821,7 @@ class TestProcessedVariable:
         R_n = pybamm.Matrix(
             disc.mesh["negative particle size"].nodes, domain="negative particle size"
         )
-        R_n.mesh = disc.mesh["negative particle size"]
+        R_n = R_n.with_mesh(disc.mesh["negative particle size"])
         R_n_casadi = to_casadi(R_n, y_sol)
         model = tests.get_base_model_with_battery_geometry(
             options={"particle size": "distribution"}
@@ -1123,7 +1124,7 @@ class TestProcessedVariable:
         y_sol = disc.mesh["current collector"].edges["y"]
         z_sol = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
+        var_sol = var_sol.with_mesh(disc.mesh["current collector"])
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
         yp_sol = self._get_yps(u_sol, hermite_interp)
@@ -1171,7 +1172,7 @@ class TestProcessedVariable:
         y_sol = disc.mesh["current collector"].edges["y"]
         z_sol = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
+        var_sol = var_sol.with_mesh(disc.mesh["current collector"])
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
         yp_sol = self._get_yps(u_sol, hermite_interp)
@@ -2280,9 +2281,7 @@ class TestProcessedVariableUnstructuredFVM:
         var = pybamm.Variable("u", domain=["negative electrode"])
         disc.set_variable_slices([var])
         grad_disc = disc.process_symbol(pybamm.grad(var))
-        grad_disc.mesh = submesh
-        for comp in grad_disc.components:
-            comp.mesh = submesh
+        grad_disc = grad_disc.with_mesh(submesh)
 
         t_sol = np.array([0.0, 1.0])
         y_sol = np.ones((submesh.npts, 2))
@@ -2306,7 +2305,7 @@ class TestProcessedVariableUnstructuredFVM:
         # unstructured mesh) but evaluate to one value: 0D in space
         geometry, submesh, _, _, var_disc = self._make_setup(dim=2, n=3)
         max_disc = pybamm.Max(var_disc)
-        max_disc.mesh = submesh
+        max_disc = max_disc.with_mesh(submesh)
         t_sol = np.array([0.0, 1.0])
         y_sol = np.arange(submesh.npts)[:, np.newaxis] * (1 + t_sol)[np.newaxis, :]
         var_casadi = to_casadi(max_disc, y_sol)
@@ -2334,7 +2333,7 @@ class TestProcessedVariableUnstructuredFVM:
         )
         submesh.detect_box_boundaries()
         var_disc = pybamm.StateVector(slice(0, 1))
-        var_disc.mesh = submesh
+        var_disc = var_disc.with_mesh(submesh)
         t_sol = np.array([0.0, 1.0])
         y_sol = np.array([[1.0, 2.0]])
         var_casadi = to_casadi(var_disc, y_sol)
@@ -2359,7 +2358,7 @@ class TestProcessedVariableUnstructuredFVM:
         submesh.detect_box_boundaries()
 
         var_disc = pybamm.StateVector(slice(0, submesh.npts))
-        var_disc.mesh = submesh
+        var_disc = var_disc.with_mesh(submesh)
         t_sol = np.array([0.0, 1.0])
         y_sol = np.ones((submesh.npts, 2))
         geometry = {"domain": {}}
@@ -2376,7 +2375,7 @@ class TestProcessedVariableUnstructuredFVM:
         # variable's discretisation would produce
         repeats = 4
         var_disc = pybamm.StateVector(slice(0, submesh.npts * repeats))
-        var_disc.mesh = submesh
+        var_disc = var_disc.with_mesh(submesh)
         t_sol = np.array([0.0, 1.0])
         y_sol = np.ones((submesh.npts * repeats, 2))
         with pytest.raises(NotImplementedError, match="auxiliary domains"):

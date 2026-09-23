@@ -980,7 +980,10 @@ class TestParameterValues:
         var_av_proc = param.process_symbol(var_av)
 
         assert isinstance(var_av_proc, pybamm.SizeAverage)
-        R = pybamm.SpatialVariable("R_n", "negative particle size")
+        # the same spatial variable the size average was built with
+        R = pybamm.SpatialVariable(
+            "R_n", domain="negative particle size", coord_sys="cartesian"
+        )
         assert var_av_proc.f_a_dist == R**2
 
     def test_process_not_constant(self):
@@ -1184,6 +1187,23 @@ class TestParameterValues:
 
         # Verify result is a symbol
         assert isinstance(result, pybamm.Symbol)
+
+    def test_expression_function_parameter_rebinds_metadata_leaf_domains(self):
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        x = pybamm.SpatialVariable("x", domain="negative electrode")
+        template = pybamm.Variable("v", scale=pybamm.Parameter("x"))
+        expression = ExpressionFunctionParameter("f", template, "f", ["x"])
+        parameter_values = pybamm.ParameterValues({"f": expression})
+
+        result = parameter_values.process_symbol(
+            pybamm.FunctionParameter("f", {"x": x})
+        )
+
+        (variable,) = pybamm.SymbolUnpacker(pybamm.Variable).unpack_symbol(result)
+        assert variable.scale.domains == x.domains
 
     def test_process_function_parameter_with_nested_function_parameters(self):
         """Test _process_function_parameter with FunctionParameter children."""

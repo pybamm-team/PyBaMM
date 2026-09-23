@@ -1075,7 +1075,6 @@ class TestDiscretise:
 
         # Without simplification
         conc = pybamm.concatenation(2 * a, 3 * b, 4 * c)
-        conc.bounds = (-np.inf, np.inf)
         disc.set_variable_slices([a, b, c])
         expr = disc.process_symbol(conc)
         assert isinstance(expr, pybamm.DomainConcatenation)

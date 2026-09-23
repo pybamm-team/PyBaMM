@@ -56,6 +56,8 @@ class VariableBase(pybamm.Symbol):
         Default is 0.
     """
 
+    __slots__ = ("_bounds", "_reference", "_scale")
+
     def __init__(
         self,
         name: str,
@@ -106,47 +108,48 @@ class VariableBase(pybamm.Symbol):
 
         return (pybamm.convert_to_symbol(lb), pybamm.convert_to_symbol(ub))
 
+    _leaf_fields = ("_scale", "_reference", "_bounds")
+
     @property
     def bounds(self) -> tuple[pybamm.Symbol, pybamm.Symbol]:
         """Physical bounds on the variable."""
         return self._bounds
 
     @bounds.setter
-    def bounds(self, values: tuple[Numeric, Numeric]):
-        self._bounds = self._process_bounds(values)
-        self.set_id()
-
-    def set_id(self):
-        domains_tuple = tuple((k, tuple(v)) for k, v in self.domains.items() if v != [])
-        self._id = hash(
-            (
-                self.__class__,
-                self._name,
-                self._scale,
-                self._reference,
-                self._bounds,
-                domains_tuple,
-            )
+    def bounds(self, value: tuple[Numeric, Numeric] | None) -> None:
+        pybamm.expression_tree.symbol._warn_mutation(
+            "bounds", "Use symbol = symbol.create_copy(bounds=value)."
         )
+        object.__setattr__(self, "_bounds", self._process_bounds(value))
 
     def create_copy(
         self,
         new_children=None,
         perform_simplifications=True,
+        scale: Numeric | pybamm.Symbol | None = None,
+        reference: Numeric | pybamm.Symbol | None = None,
+        bounds: tuple[Numeric, Numeric] | None = None,
     ):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
+        """
+        See :meth:`pybamm.Symbol.new_copy()`.
+
+        Parameters
+        ----------
+        scale, reference, bounds : optional
+            Values for the copy. Any left as ``None`` are taken from ``self``.
+        """
         return self.__class__(
             self.name,
-            domains=self.domains,
-            bounds=self.bounds,
+            domains=self._domains,
+            bounds=self.bounds if bounds is None else bounds,
             print_name=self._raw_print_name,
-            scale=self.scale,
-            reference=self.reference,
+            scale=self.scale if scale is None else scale,
+            reference=self.reference if reference is None else reference,
         )
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(self.domains)
+        return pybamm.evaluate_for_shape_using_domain(self._domains)
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
@@ -158,7 +161,7 @@ class VariableBase(pybamm.Symbol):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self.domains,
+            "domains": self._domains,
             "children": [self._scale, self._reference, self.bounds[0], self.bounds[1]],
             "print_name": self._raw_print_name,
         }
@@ -230,13 +233,15 @@ class Variable(VariableBase):
         Default is 0.
     """
 
+    __slots__ = ()
+
     def diff(self, variable: pybamm.Symbol):
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:
             # reference gets differentiated out
             return pybamm.VariableDot(
-                self.name + "'", domains=self.domains, scale=self.scale
+                self.name + "'", domains=self._domains, scale=self.scale
             )
         else:
             return pybamm.Scalar(0)
@@ -284,6 +289,8 @@ class VariableDot(VariableBase):
         Default is 0.
     """
 
+    __slots__ = ()
+
     def get_variable(self) -> pybamm.Variable:
         """
         return a :class:`.Variable` corresponding to this VariableDot
@@ -291,7 +298,7 @@ class VariableDot(VariableBase):
         Note: Variable._jac adds a dash to the name of the corresponding VariableDot, so
         we remove this here
         """
-        return Variable(self.name[:-1], domains=self.domains, scale=self.scale)
+        return Variable(self.name[:-1], domains=self._domains, scale=self.scale)
 
     def diff(self, variable: pybamm.Symbol) -> pybamm.Scalar:
         if variable == self:

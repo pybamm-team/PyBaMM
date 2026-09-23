@@ -28,6 +28,13 @@ from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
 def _preprocess_binary(
     left: ChildSymbol, right: ChildSymbol
 ) -> tuple[pybamm.Symbol, pybamm.Symbol]:
+    # fast exit: two symbols on the same (interned) domains need no broadcasting
+    if (
+        isinstance(left, pybamm.Symbol)
+        and isinstance(right, pybamm.Symbol)
+        and left._domains is right._domains
+    ):
+        return left, right
     if isinstance(left, float | int | np.number):
         left = pybamm.Scalar(left)
     elif isinstance(left, np.ndarray):
@@ -48,11 +55,15 @@ def _preprocess_binary(
         )
 
     # Do some broadcasting in special cases, to avoid having to do this manually
-    if left.domain != [] and right.domain != [] and left.domain != right.domain:
-        if left.domain == right.secondary_domain:
-            left = pybamm.PrimaryBroadcast(left, right.domain)
-        elif right.domain == left.secondary_domain:
-            right = pybamm.PrimaryBroadcast(right, left.domain)
+    if (
+        left._domains["primary"] != []
+        and right._domains["primary"] != []
+        and left._domains["primary"] != right._domains["primary"]
+    ):
+        if left._domains["primary"] == right._domains["secondary"]:
+            left = pybamm.PrimaryBroadcast(left, right._domains["primary"])
+        elif right._domains["primary"] == left._domains["secondary"]:
+            right = pybamm.PrimaryBroadcast(right, left._domains["primary"])
 
     return left, right
 
@@ -74,6 +85,8 @@ class BinaryOperator(pybamm.Symbol):
         rhs child node (converted to :class:`Scalar` if Number)
     """
 
+    __slots__ = ()
+
     def __init__(
         self, name: str, left_child: ChildSymbol, right_child: ChildSymbol
     ) -> None:
@@ -81,23 +94,45 @@ class BinaryOperator(pybamm.Symbol):
 
         domains = self.get_children_domains([left, right])
         super().__init__(name, children=[left, right], domains=domains)
-        self.left = self.children[0]
-        self.right = self.children[1]
+
+    @property
+    def left(self) -> pybamm.Symbol:
+        return self._children[0]
+
+    @left.setter
+    def left(self, value: ChildSymbol) -> None:
+        pybamm.expression_tree.symbol._warn_mutation(
+            "left", "Use symbol.create_copy(new_children=...) to replace children."
+        )
+        children = list(self._children)
+        children[0] = pybamm.convert_to_symbol(value)
+        object.__setattr__(self, "_children", children)
+
+    @property
+    def right(self) -> pybamm.Symbol:
+        return self._children[1]
+
+    @right.setter
+    def right(self, value: ChildSymbol) -> None:
+        pybamm.expression_tree.symbol._warn_mutation(
+            "right", "Use symbol.create_copy(new_children=...) to replace children."
+        )
+        children = list(self._children)
+        children[1] = pybamm.convert_to_symbol(value)
+        object.__setattr__(self, "_children", children)
 
     @classmethod
     def _from_json(cls, snippet: dict):
         """Use to instantiate when deserialising; discretisation has
         already occurred so pre-processing of binaries is not necessary."""
 
+        name, domains = snippet["name"], snippet["domains"]
         instance = cls.__new__(cls)
-
         super(BinaryOperator, instance).__init__(
-            snippet["name"],
+            name,
             children=[snippet["children"][0], snippet["children"][1]],
-            domains=snippet["domains"],
+            domains=domains,
         )
-        instance.left = instance.children[0]
-        instance.right = instance.children[1]
 
         return instance
 
@@ -141,7 +176,7 @@ class BinaryOperator(pybamm.Symbol):
             # additional simplifications, rather than just calling the constructor
             out = self._binary_new_copy(children[0], children[1])
 
-        out.copy_domains(self)
+        out = out.with_domains(self)
 
         return out
 
@@ -171,8 +206,8 @@ class BinaryOperator(pybamm.Symbol):
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape()`."""
-        left = self.children[0].evaluate_for_shape()
-        right = self.children[1].evaluate_for_shape()
+        left = self._children[0].evaluate_for_shape()
+        right = self._children[1].evaluate_for_shape()
         return self._binary_evaluate(left, right)
 
     def _binary_jac(self, left_jac, right_jac):
@@ -216,7 +251,7 @@ class BinaryOperator(pybamm.Symbol):
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
-            child1, child2 = self.children
+            child1, child2 = self._children
             eq1 = child1.to_equation()
             eq2 = child2.to_equation()
             return self._sympy_operator(eq1, eq2)
@@ -226,7 +261,7 @@ class BinaryOperator(pybamm.Symbol):
         Method to serialise a BinaryOperator object into JSON.
         """
 
-        json_dict = {"name": self.name, "domains": self.domains}
+        json_dict = {"name": self.name, "domains": self._domains}
 
         return json_dict
 
@@ -239,6 +274,8 @@ class Power(BinaryOperator):
     """
     A node in the expression tree representing a `**` power operator.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -293,6 +330,8 @@ class Addition(BinaryOperator):
     A node in the expression tree representing an addition operator.
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -318,6 +357,8 @@ class Subtraction(BinaryOperator):
     """
     A node in the expression tree representing a subtraction operator.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -347,6 +388,8 @@ class Multiplication(BinaryOperator):
     (Hadamard product). Overloads cases where the "*" operator would usually return a
     matrix multiplication (e.g. scipy.sparse.coo.coo_matrix)
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -388,6 +431,8 @@ class KroneckerProduct(BinaryOperator):
     """
     A node in the expression tree representing a matrix multiplication operator.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -445,6 +490,10 @@ class TensorProduct(BinaryOperator):
     The result rank is capped at 2.
     """
 
+    __slots__ = ("_result_rank",)
+    # derived from the children's ranks
+    _id_excluded_fields = ("_result_rank",)
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -498,6 +547,8 @@ class MatrixMultiplication(BinaryOperator):
     A node in the expression tree representing a matrix multiplication operator.
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -537,7 +588,7 @@ class MatrixMultiplication(BinaryOperator):
 
     def _casadi_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
-        result = try_repeated_row_matmul(self.children[0], right)
+        result = try_repeated_row_matmul(self._children[0], right)
         return result if result is not None else self._binary_evaluate(left, right)
 
     def _sympy_operator(self, left, right):
@@ -551,6 +602,8 @@ class Division(BinaryOperator):
     """
     A node in the expression tree representing a division operator.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -601,6 +654,8 @@ class Inner(BinaryOperator):
     the inner product of the vector onto the scalar part of the grid if required
     by a particular discretisation.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -679,6 +734,8 @@ class Equality(BinaryOperator):
     nodes. Returns 1 if the two nodes evaluate to the same thing and 0 otherwise.
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -736,6 +793,8 @@ class _Heaviside(BinaryOperator):
     DISCONTINUITY event will automatically be added by the solver.
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         name: str,
@@ -762,8 +821,8 @@ class _Heaviside(BinaryOperator):
         Returns an array of NaNs of the correct shape.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`.
         """
-        left = self.children[0].evaluate_for_shape()
-        right = self.children[1].evaluate_for_shape()
+        left = self._children[0].evaluate_for_shape()
+        right = self._children[1].evaluate_for_shape()
         # _binary_evaluate will return an array of bools, so we multiply by NaN to get
         # an array of NaNs
         return self._binary_evaluate(left, right) * np.nan
@@ -783,6 +842,8 @@ class _Heaviside(BinaryOperator):
 
 class EqualHeaviside(_Heaviside):
     """A heaviside function with equality (return 1 when left = right)"""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -816,6 +877,8 @@ class EqualHeaviside(_Heaviside):
 class NotEqualHeaviside(_Heaviside):
     """A heaviside function without equality (return 0 when left = right)"""
 
+    __slots__ = ()
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -846,6 +909,8 @@ class NotEqualHeaviside(_Heaviside):
 
 class Modulo(BinaryOperator):
     """Calculates the remainder of an integer division."""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -904,6 +969,8 @@ class Modulo(BinaryOperator):
 class Minimum(BinaryOperator):
     """Returns the smaller of two objects."""
 
+    __slots__ = ()
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -952,6 +1019,8 @@ class Minimum(BinaryOperator):
 class Maximum(BinaryOperator):
     """Returns the greater of two objects."""
 
+    __slots__ = ()
+
     def __init__(
         self,
         left: ChildSymbol,
@@ -999,6 +1068,8 @@ class Maximum(BinaryOperator):
 
 class Hypot(BinaryOperator):
     """Returns the hypotenuse: sqrt(left**2 + right**2)."""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -1062,21 +1133,21 @@ def _simplify_elementwise_binary_broadcasts(
 
     def unpack_broadcast_recursive(symbol: pybamm.Symbol) -> pybamm.Symbol:
         if isinstance(symbol, pybamm.Broadcast):
-            if symbol.child.domain == []:
+            if symbol.child._domains["primary"] == []:
                 return symbol.orphans[0]
             elif (
                 isinstance(symbol.child, pybamm.Broadcast)
                 and symbol.child.broadcasts_to_nodes
             ):
                 out = unpack_broadcast_recursive(symbol.orphans[0])
-                if out.domain == []:
+                if out._domains["primary"] == []:
                     return out
         return symbol
 
     # No need to broadcast if the other symbol already has the shape that is being
     # broadcasted to
     # Do this recursively
-    if left.domains == right.domains:
+    if left._domains == right._domains:
         if isinstance(left, pybamm.Broadcast) and left.broadcasts_to_nodes:
             left = unpack_broadcast_recursive(left)
         elif isinstance(right, pybamm.Broadcast) and right.broadcasts_to_nodes:
@@ -1095,9 +1166,9 @@ def _simplified_binary_broadcast_concatenation(
     with
     """
     # Broadcast commutes with elementwise operators
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
+    if isinstance(left, pybamm.Broadcast) and right._domains["primary"] == []:
         return left.create_copy([operator(left.orphans[0], right)])
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
+    elif isinstance(right, pybamm.Broadcast) and left._domains["primary"] == []:
         return right.create_copy([operator(left, right.orphans[0])])
 
     # Concatenation commutes with elementwise operators
@@ -1218,7 +1289,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in left.domains
+            for dim in left._domains
         ):
             return right
 
@@ -1239,7 +1310,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
         new_left = l_left + r_left
         if new_left.is_constant():
             new_sum = new_left @ l_right
-            new_sum.copy_domains(Addition(left, right))
+            new_sum = new_sum.with_domains(Addition(left, right))
             return new_sum
 
     # Turn a + (-b) into a - b
@@ -1311,7 +1382,7 @@ def subtract(
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in left.domains
+            for dim in left._domains
         ):
             return -right
 
@@ -1398,9 +1469,13 @@ def multiply(
     # dimensions
     # (and possibly more generally, but not implemented here)
     try:
-        if left.shape_for_testing == right.shape_for_testing and all(
-            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in left.domains
+        if (
+            left.is_constant()  # only a constant can be a matrix of ones
+            and left.shape_for_testing == right.shape_for_testing
+            and all(
+                left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+                for dim in left._domains
+            )
         ):
             if pybamm.is_matrix_one(left):
                 return right
@@ -1421,10 +1496,10 @@ def multiply(
             r_left, r_right = right.orphans
             new_left = left * r_left
             # be careful about domains to avoid weird errors
-            new_left.clear_domains()
+            new_left = new_left.without_domains()
             new_mul = new_left @ r_right
             # Keep the domain of the old right
-            new_mul.copy_domains(right)
+            new_mul = new_mul.with_domains(right)
             return new_mul
 
         elif not is_tracing():
@@ -1458,8 +1533,12 @@ def multiply(
                     )
                 ):
                     r_left, r_right = right.orphans
-                    if (r_left.domain == right.domain or r_left.domain == []) and (
-                        r_right.domain == right.domain or r_right.domain == []
+                    if (
+                        r_left._domains["primary"] == right._domains["primary"]
+                        or r_left._domains["primary"] == []
+                    ) and (
+                        r_right._domains["primary"] == right._domains["primary"]
+                        or r_right._domains["primary"] == []
                     ):
                         if isinstance(right, Addition):
                             return (left * r_left) + (left * r_right)
@@ -1590,10 +1669,10 @@ def matmul(
         r_left, r_right = right.orphans
         new_left = left @ r_left
         # be careful about domains to avoid weird errors
-        new_left.clear_domains()
+        new_left = new_left.without_domains()
         new_mul = new_left @ r_right
         # Keep the domain of the old right
-        new_mul.copy_domains(right)
+        new_mul = new_mul.with_domains(right)
         return new_mul
 
     elif left.is_constant() and isinstance(right, Addition | Subtraction):
@@ -1617,8 +1696,8 @@ def matmul(
             right.left.size_for_testing == 1 or right.right.size_for_testing == 1
         ):
             r_left, r_right = right.orphans
-            r_left.domains = right.domains
-            r_right.domains = right.domains
+            r_left = r_left.with_domains(right)
+            r_right = r_right.with_domains(right)
             if isinstance(right, Addition):
                 return (left @ r_left) + (left @ r_right)
             elif isinstance(right, Subtraction):
@@ -1811,7 +1890,7 @@ def source(
         corresponding to a source term in the bulk.
     """
     # Broadcast if left is number
-    right_domain = right.domain
+    right_domain = right._domains["primary"]
     if isinstance(left, numbers.Number):
         left = pybamm.PrimaryBroadcast(left, right_domain)
 
@@ -1819,10 +1898,13 @@ def source(
     left = cast(pybamm.Symbol, left)
 
     allowed_domains = [["cell"], ["current collector"]]
-    if left.domain not in allowed_domains or right_domain not in allowed_domains:
+    if (
+        left._domains["primary"] not in allowed_domains
+        or right_domain not in allowed_domains
+    ):
         raise pybamm.DomainError(
             "'source' only implemented in the 'cell' or 'current collector' domains, "
-            f"but symbols have domains {left.domain} and {right_domain}"
+            f"but symbols have domains {left._domains['primary']} and {right_domain}"
         )
     if boundary:
         return pybamm.BoundaryMass(right) @ left

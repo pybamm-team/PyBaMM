@@ -45,7 +45,9 @@ class TestSymbol:
     def test_symbol_init(self):
         sym = pybamm.Symbol("a symbol")
         with pytest.raises(TypeError):
-            sym.name = 1
+            pybamm.Symbol(1)
+        with pytest.raises(AttributeError):
+            sym.name = "renamed"
         assert sym.name == "a symbol"
         assert str(sym) == "a symbol"
 
@@ -65,8 +67,9 @@ class TestSymbol:
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain="test")
         assert a.domain == ["test"]
-        # test for updating domain with same as existing domain
-        a.domains = {"primary": ["test"]}
+        # domains are fixed at construction
+        with pytest.raises(AttributeError):
+            a.domains = {"primary": ["test"]}
         assert a.domains["primary"] == ["test"]
         a = pybamm.Symbol("a", domain=["t", "e", "s"])
         assert a.domain == ["t", "e", "s"]
@@ -82,7 +85,7 @@ class TestSymbol:
         )
 
         with pytest.raises(pybamm.DomainError, match=r"keys must be one of"):
-            b.domains = {"test": "test"}
+            pybamm.Symbol("b", domains={"test": "test"})
         with pytest.raises(ValueError, match=r"Only one of 'domain' or 'domains'"):
             pybamm.Symbol("b", domain="test", domains={"primary": "test"})
         with pytest.raises(
@@ -122,11 +125,10 @@ class TestSymbol:
         assert a.domain == ["t", "e", "s"]
         with pytest.raises(TypeError):
             a = pybamm.Symbol("a", domain=1)
-        b = pybamm.Symbol("b", domain="test sec")
         with pytest.raises(pybamm.DomainError, match=r"All domains must be different"):
-            b.domains = {"primary": "test", "secondary": "test"}
+            pybamm.Symbol("b", domains={"primary": "test", "secondary": "test"})
         with pytest.raises(pybamm.DomainError, match=r"All domains must be different"):
-            b = pybamm.Symbol(
+            pybamm.Symbol(
                 "b",
                 domain="test",
                 auxiliary_domains={"secondary": ["test sec"], "tertiary": ["test sec"]},
@@ -538,11 +540,7 @@ class TestSymbol:
         assert np.exp(x) == pybamm.exp(x)
 
     def test_setstate_refreshes_id(self, monkeypatch):
-        # Regression test for #5444: Python's hash() of strings is randomised
-        # per process (PYTHONHASHSEED), so a Symbol's cached _id from another
-        # process is invalid here. Symbol.__setstate__ must call set_id() so
-        # that dicts keyed on Symbols (e.g. Discretisation.y_slices) end up
-        # rebuilt with hashes consistent with the unpickling process.
+        # #5444: string hashes differ per process, so unpickling must drop the id
         var = pybamm.Variable("test_var")
         expected_hash = hash(var)
 
@@ -555,6 +553,126 @@ class TestSymbol:
         loaded = pickle.loads(pickled)  # nosec B301
         assert hash(loaded) == expected_hash
         assert hash(loaded) == hash(pybamm.Variable("test_var"))
+
+    def test_id_is_computed_once(self):
+        a = pybamm.Variable("a", domain="negative electrode")
+        b = pybamm.Variable("b", domain="negative electrode")
+        expr = a * b + pybamm.Scalar(2)
+        first = expr.id
+        assert expr.id == first
+        assert hash(expr) == first
+        assert expr == a * b + pybamm.Scalar(2)
+
+    def test_immutable_once_hashed(self):
+        var = pybamm.Variable("var", domain="negative electrode")
+        hash(var)
+        # legacy identity setters are forbidden throughout the test suite
+        with pytest.raises(AttributeError):
+            var.name = "other"
+        with pytest.raises(AttributeError):
+            var.domains = {"primary": ["separator"]}
+        # validation cannot bypass the mutation guard
+        for attr in ("scale", "reference", "bounds"):
+            with pytest.raises(AttributeError):
+                setattr(var, attr, 1)
+        # and arbitrary attributes cannot be attached
+        with pytest.raises(AttributeError):
+            var.arbitrary = 1
+        assert not hasattr(var, "__dict__")
+
+    def test_annotations_are_read_only(self):
+        a = pybamm.Variable("a", domain="negative electrode")
+        for attr in ("mesh", "secondary_mesh", "tertiary_mesh"):
+            assert getattr(a, attr) is None
+            with pytest.raises(AttributeError):
+                setattr(a, attr, 1)
+        vf = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        assert vf.disc_state_vector is None
+        with pytest.raises(AttributeError):
+            vf.disc_state_vector = 1
+
+    def test_construction_across_threads(self):
+        from concurrent.futures import ThreadPoolExecutor
+
+        def build(i):
+            return pybamm.Variable(f"v{i}", domain="negative electrode", scale=i + 1)
+
+        with ThreadPoolExecutor(8) as executor:
+            symbols = list(executor.map(build, range(200)))
+        assert [symbol.scale.value for symbol in symbols] == list(range(1, 201))
+        with pytest.raises(AttributeError, match=r"immutable once constructed"):
+            symbols[0]._name = "changed"
+
+    def test_edge_direction_is_part_of_identity(self):
+        a = pybamm.Variable("a", domain="negative electrode")
+        pinned = a._replace(_edges_direction="lr")
+        assert pinned != a
+        assert pinned.evaluates_on_edges("primary") == "lr"
+        assert a.evaluates_on_edges("primary") is False
+
+    def test_all_symbol_subclasses_define_slots(self):
+        def subclasses(cls):
+            for sub in cls.__subclasses__():
+                yield sub
+                yield from subclasses(sub)
+
+        missing = [
+            cls.__qualname__
+            for cls in subclasses(pybamm.Symbol)
+            if cls.__module__.startswith("pybamm.") and "__slots__" not in cls.__dict__
+        ]
+        assert missing == []
+
+    def test_with_domains_returns_copy(self):
+        a = pybamm.Variable("a", domain="negative electrode")
+        expr = 2 * a
+        id_before = expr.id
+        cleared = expr.without_domains()
+        assert cleared is not expr
+        assert cleared.domains == {} or all(v == [] for v in cleared.domains.values())
+        assert expr.id == id_before
+        assert expr.domain == ["negative electrode"]
+        assert cleared.id != expr.id
+        # children are shared, not copied
+        assert cleared.children[1] is expr.children[1]
+        # same domains gives back the same object
+        assert expr.with_domains(expr) is expr
+        assert cleared.with_domains(a).domains == a.domains
+
+    @pytest.mark.parametrize(
+        "domains",
+        [
+            {"bogus": ["x"]},
+            {"secondary": ["s"]},
+            {"primary": ["x"], "secondary": ["x"]},
+            pybamm.Domains({"bogus": ["x"]}),
+            pybamm.Domains({"secondary": ["s"]}),
+            pybamm.Domains({"primary": ["x"], "secondary": ["x"]}),
+        ],
+    )
+    def test_with_domains_validates_domain_mapping(self, domains):
+        with pytest.raises(pybamm.DomainError):
+            pybamm.Variable("a").with_domains(domains)
+
+    def test_domain_interning_is_not_public(self):
+        assert not hasattr(pybamm, "intern_domains")
+
+    def test_create_copy_with_new_scale(self):
+        a = pybamm.Variable("a", domain="negative electrode", scale=2, reference=1)
+        b = a.create_copy(scale=3)
+        assert a.scale == 2 and b.scale == 3
+        assert b.reference == a.reference
+        assert a != b
+        assert a.create_copy() == a
+
+    def test_pickle_roundtrip_preserves_slots_and_id(self):
+        a = pybamm.Variable("a", domain="negative electrode", scale=2)
+        expr = pybamm.grad(a) * 3
+        loaded = pickle.loads(pickle.dumps(expr))  # nosec B301
+        assert loaded == expr
+        (loaded_a,) = pybamm.SymbolUnpacker(pybamm.Variable).unpack_symbol(loaded)
+        assert loaded_a.scale == 2
+        assert not hasattr(loaded, "__dict__")
 
     def test_to_from_json(self, mocker):
         symc1 = pybamm.Symbol("child1", domain=["domain_1"])
