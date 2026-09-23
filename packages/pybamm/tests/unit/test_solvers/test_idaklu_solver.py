@@ -1989,3 +1989,148 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(
             loaded["2u"].entries, sol["2u"].entries, rtol=1e-12, atol=1e-12
         )
+
+
+class TestIDAKLUSensitivityScales:
+    """IDAS ``pbar``, the scale of each differentiated parameter."""
+
+    @staticmethod
+    def _rescalable_model():
+        """``du/dt = -(a / s) u``: at ``a = s``, ``u = exp(-t)`` whatever the
+        magnitude of ``s``, and ``a du/da = -t exp(-t)``."""
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        s = pybamm.InputParameter("s")
+        model.rhs = {u: -(a / s) * u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    def test_scales_are_the_parameter_magnitudes_in_column_order(self):
+        # Dict order would have the right length too, so a mix-up would
+        # degrade the weighting silently instead of raising.
+        scales = pybamm.solvers.idaklu_solver._sensitivity_scales(
+            {"a": -3.0, "b": 4e-15, "c": 1.0}, ["b", "a"]
+        )
+        np.testing.assert_allclose(scales, [4e-15, 3.0])
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (np.array([-2.0]), 2.0),
+            (np.array([[7.0]]), 7.0),
+            # The solver owns the zero clamp, so a raw 0 reaches it.
+            (0.0, 0.0),
+            (np.array([]), 0.0),
+        ],
+    )
+    def test_scale_of_each_input_form(self, value, expected):
+        scales = pybamm.solvers.idaklu_solver._sensitivity_scales({"a": value}, ["a"])
+        np.testing.assert_allclose(scales, [expected])
+
+    def test_a_zero_parameter_still_solves(self):
+        # IDAS rejects pbar = 0, so the solver has to clamp it to the unit scale.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -u + a}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        sol = solver.solve(
+            model,
+            np.linspace(0, 1, 10),
+            inputs={"a": 0.0},
+            calculate_sensitivities=True,
+        )
+        # du/da = 1 - exp(-t) regardless of a, so the clamp must not skew it.
+        np.testing.assert_allclose(
+            np.asarray(sol["u"].sensitivities["a"]).ravel(),
+            1.0 - np.exp(-sol.t),
+            rtol=1e-5,
+            atol=1e-7,
+        )
+
+    def test_each_input_set_hands_over_its_own_row(self):
+        model = self._rescalable_model()
+        solver = pybamm.IDAKLUSolver()
+        solve_kwargs = {
+            "inputs": [{"a": 1e-14, "s": 1e-14}, {"a": 1e3, "s": 1e3}],
+            "calculate_sensitivities": ["a"],
+        }
+        # Solve once so the second solve reuses this group rather than rebuilding
+        # it, which would discard the spy.
+        solver.solve(model, [0, 1], **solve_kwargs)
+
+        seen = {}
+        original = solver._setup["solver"].solve
+
+        def spy(*args, **kwargs):
+            seen["pbar"] = np.asarray(kwargs["pbar"])
+            return original(*args, **kwargs)
+
+        solver._setup["solver"] = type("Spy", (), {"solve": staticmethod(spy)})()
+        solver.solve(model, [0, 1], **solve_kwargs)
+        np.testing.assert_allclose(seen["pbar"], [[1e-14], [1e3]])
+
+    def test_each_input_set_is_solved_at_its_own_scale(self):
+        # a = s is one problem in different units, so pbar = |a| hands IDAS the
+        # same scaled system; powers of two make that scaling exact.
+        scales = [2.0**-47, 2.0**10]
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        solutions = solver.solve(
+            self._rescalable_model(),
+            [0, 3],
+            inputs=[{"a": scale, "s": scale} for scale in scales],
+            calculate_sensitivities=["a"],
+        )
+        tiny, large = (
+            scale * np.asarray(sol["u"].sensitivities["a"]).ravel()
+            for scale, sol in zip(scales, solutions, strict=True)
+        )
+        np.testing.assert_array_equal(solutions[0].t, solutions[1].t)
+        np.testing.assert_array_equal(tiny, large)
+        np.testing.assert_allclose(
+            tiny, -solutions[0].t * np.exp(-solutions[0].t), rtol=1e-5, atol=1e-7
+        )
+
+    def test_a_tight_dfn_diffusivity_gradient_matches_finite_differences(self):
+        # D_p is 4e-15, so dy/dD_p reaches ~1e14: at the unit scale no absolute
+        # tolerance can hold that column and the corrector fails to converge.
+        name = "Positive particle diffusivity [m2.s-1]"
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        nominal = parameter_values[name]
+        parameter_values[name] = pybamm.InputParameter("D_p")
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-10),
+        )
+        t_eval = [0, 3000]
+        t_interp = np.linspace(0, 3000, 31)
+        sol = simulation.solve(
+            t_eval,
+            inputs={"D_p": nominal},
+            calculate_sensitivities=["D_p"],
+            t_interp=t_interp,
+        )
+        gradient = np.asarray(sol["Voltage [V]"].sensitivities["D_p"]).ravel()
+
+        step = 1e-3 * nominal
+        plus, minus = (
+            simulation.solve(t_eval, inputs={"D_p": value}, t_interp=t_interp)[
+                "Voltage [V]"
+            ](sol.t)
+            for value in (nominal + step, nominal - step)
+        )
+        finite_difference = (plus - minus) / (2 * step)
+        np.testing.assert_allclose(
+            gradient,
+            finite_difference,
+            rtol=1e-4,
+            atol=1e-5 * np.abs(finite_difference).max(),
+        )

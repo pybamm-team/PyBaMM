@@ -34,6 +34,7 @@ public:
     const sunrealtype *y0,
     const sunrealtype *yp0,
     const sunrealtype *inputs,
+    const sunrealtype *pbar,
     bool save_adaptive_steps,
     bool save_interp_steps
   ) = 0;

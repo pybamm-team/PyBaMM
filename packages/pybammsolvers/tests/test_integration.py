@@ -232,3 +232,53 @@ class TestExponentialDecaySolver:
             for idx, sol in enumerate(solutions):
                 expected = model_y0 * np.exp(-decay_constants[idx] * sol.t)
                 np.testing.assert_allclose(sol.y, expected, rtol=1e-5, atol=1e-8)
+
+
+class TestSensitivityScales:
+    """The optional ``pbar`` argument carrying IDAS's sensitivity scales."""
+
+    pytestmark = pytest.mark.integration
+
+    @staticmethod
+    def _args(solver_data):
+        t_eval = solver_data["model"]["t_eval"]
+        return (
+            t_eval,
+            t_eval,
+            solver_data["y0"],
+            solver_data["yp0"],
+            solver_data["inputs"],
+        )
+
+    def test_an_empty_pbar_matches_omitting_it(self, exponential_decay_solver):
+        solver = exponential_decay_solver["solver"]
+        args = self._args(exponential_decay_solver)
+
+        without = solver.solve(*args)[0]
+        with_empty = solver.solve(*args, pbar=np.empty((0, 0)))[0]
+
+        np.testing.assert_array_equal(without.t, with_empty.t)
+        np.testing.assert_array_equal(without.y, with_empty.y)
+
+    def test_logger_stays_the_sixth_positional_argument(self, exponential_decay_solver):
+        messages = []
+        exponential_decay_solver["solver"].solve(
+            *self._args(exponential_decay_solver), messages.append
+        )
+        assert messages
+
+    @pytest.mark.parametrize(
+        ("pbar", "match"),
+        [
+            (np.ones(3), "pbar has wrong number of dimensions"),
+            (np.ones((1, 1, 1)), "pbar has wrong number of dimensions"),
+            (np.ones((2, 1)), "pbar has wrong number of rows"),
+            # This fixture has no sensitivity parameters, so any column is extra.
+            (np.ones((1, 3)), "pbar has wrong number of cols"),
+        ],
+    )
+    def test_a_misshapen_pbar_is_rejected(self, exponential_decay_solver, pbar, match):
+        # A silently ignored pbar would leave the scales at 1 with no warning.
+        solver = exponential_decay_solver["solver"]
+        with pytest.raises(ValueError, match=match):
+            solver.solve(*self._args(exponential_decay_solver), pbar=pbar)
