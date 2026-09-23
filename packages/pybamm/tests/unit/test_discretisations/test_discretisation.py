@@ -1457,3 +1457,23 @@ class TestDiscretise:
         disc.process_model(model)
 
         assert "Voltage [V]" in model.get_processed_variables_dict()
+
+    def test_one_point_integral_copies_time_derivative_child(self):
+        # a one-point integration simplifies back to its child; the copy made to
+        # spare the cached child must still read y_dot rather than y
+        disc = get_discretisation_for_testing(
+            cc_method=pybamm.ZeroDimensionalSpatialMethod
+        )
+        variable = pybamm.Variable("variable", domain="current collector")
+        disc.y_slices = {variable: [slice(0, 1)]}
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        time_derivative = variable.diff(pybamm.t)
+        disc_time_derivative = disc.process_symbol(time_derivative)
+
+        integral = disc.process_symbol(pybamm.Integral(time_derivative, z))
+
+        assert integral is not disc_time_derivative
+        assert type(integral) is pybamm.StateVectorDot
+        np.testing.assert_array_equal(
+            integral.evaluate(y=np.array([7.0]), y_dot=np.array([3.0])), [[3.0]]
+        )

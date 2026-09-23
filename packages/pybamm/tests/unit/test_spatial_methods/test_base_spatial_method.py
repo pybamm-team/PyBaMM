@@ -150,29 +150,37 @@ class TestSpatialMethod:
         with pytest.raises(NotImplementedError, match=r"Cannot process 2D symbol"):
             spatial_method.boundary_value_or_flux(symbol, child)
 
-    @pytest.mark.parametrize(
-        "broadcast_class", [pybamm.FullBroadcast, pybamm.PrimaryBroadcast]
-    )
-    def test_broadcast_does_not_mutate_child(self, broadcast_class):
+    @pytest.mark.parametrize("child_type", ["interpolant", "time derivative"])
+    def test_broadcast_does_not_mutate_child(self, child_type):
         # Broadcasting onto a one-point current collector can simplify back to the
         # child itself, which is shared via the discretisation cache
-        times = np.array([0.0, 1800.0])
-        temperatures = np.array([298.15, 318.15])
         disc = get_discretisation_for_testing()
-
-        interpolant = pybamm.Interpolant(times, temperatures, pybamm.t)
-        disc_interpolant = disc.process_symbol(interpolant)
-        child_domains = {k: list(v) for k, v in disc_interpolant.domains.items()}
-        child_id = disc_interpolant.id
+        if child_type == "interpolant":
+            times = np.array([0.0, 1800.0])
+            temperatures = np.array([298.15, 318.15])
+            child = pybamm.Interpolant(times, temperatures, pybamm.t)
+            expected = 308.15
+        else:
+            variable = pybamm.Variable("variable")
+            disc.y_slices = {variable: [slice(0, 1)]}
+            child = variable.diff(pybamm.t)
+            expected = 3.0
+        disc_child = disc.process_symbol(child)
+        child_domains = {k: list(v) for k, v in disc_child.domains.items()}
+        child_id = disc_child.id
 
         broadcast = disc.process_symbol(
-            broadcast_class(interpolant, "current collector")
+            pybamm.FullBroadcast(child, "current collector")
         )
 
-        assert broadcast is not disc_interpolant
-        assert disc_interpolant.domains == child_domains
-        assert disc_interpolant.id == child_id
+        assert broadcast is not disc_child
+        assert type(broadcast) is type(disc_child)
+        assert disc_child.domains == child_domains
+        assert disc_child.id == child_id
         assert broadcast.domain == ["current collector"]
         np.testing.assert_allclose(
-            broadcast.evaluate(t=900.0), [[308.15]], rtol=1e-12, atol=1e-12
+            broadcast.evaluate(t=900.0, y=np.array([7.0]), y_dot=np.array([3.0])),
+            [[expected]],
+            rtol=1e-12,
+            atol=1e-12,
         )

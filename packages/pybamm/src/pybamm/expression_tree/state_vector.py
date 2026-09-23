@@ -199,7 +199,7 @@ class StateVectorBase(pybamm.Symbol):
         perform_simplifications=True,
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return StateVector(
+        return self.__class__(
             *self.y_slices,
             name=self.name,
             domains=self.domains,
