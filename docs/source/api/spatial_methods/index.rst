@@ -10,3 +10,4 @@ Discretisation and spatial methods
   scikit_finite_element
   zero_dimensional_method
   scikit_finite_element_3d
+  finite_volume_unstructured

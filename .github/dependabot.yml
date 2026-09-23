@@ -12,3 +12,21 @@ updates:
           - "*"
     cooldown:
       default-days: 7
+
+  # Maintain Python dependencies via uv lockfile
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    exclude-paths:
+      - "LICENSE.txt"
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+      python-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 7

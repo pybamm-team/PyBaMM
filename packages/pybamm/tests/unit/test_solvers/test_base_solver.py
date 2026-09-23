@@ -1,0 +1,552 @@
+#
+# Tests for the Base Solver class
+#
+
+import re
+
+import casadi
+import numpy as np
+import pytest
+from scipy.sparse import csr_matrix
+
+import pybamm
+from pybamm.models.base_model import ModelSolutionObservability
+
+
+class TestBaseSolver:
+    def test_base_solver_init(self):
+        solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
+        assert solver.rtol == 1e-2
+        assert solver.atol == 1e-4
+
+        solver.rtol = 1e-5
+        assert solver.rtol == 1e-5
+        solver.rtol = 1e-7
+        assert solver.rtol == 1e-7
+
+    def test_root_method_init(self):
+        solver = pybamm.BaseSolver(root_method="nonlinear_solver")
+        assert isinstance(solver.root_method, pybamm.NonlinearSolver)
+
+        with pytest.warns(
+            DeprecationWarning, match="root_method='casadi' is deprecated"
+        ):
+            solver = pybamm.BaseSolver(root_method="casadi")
+        assert isinstance(solver.root_method, pybamm.CasadiAlgebraicSolver)
+
+        solver = pybamm.BaseSolver(root_method="lm")
+        assert isinstance(solver.root_method, pybamm.AlgebraicSolver)
+        assert solver.root_method.method == "lm"
+
+        root_solver = pybamm.AlgebraicSolver()
+        solver = pybamm.BaseSolver(root_method=root_solver)
+        assert solver.root_method == root_solver
+
+        with pytest.raises(
+            pybamm.SolverError, match=r"Root method must be an algebraic solver"
+        ):
+            pybamm.BaseSolver(root_method=pybamm.ScipySolver())
+
+    def test_additional_inputs_provided(self):
+        # if additional inputs are provided that are not in the model, this should run as normal
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        sol1 = sim.solve([0, 3600])["Voltage [V]"].entries
+        sol2 = sim.solve([0, 3600], inputs={"Current function [A]": 1})[
+            "Voltage [V]"
+        ].entries
+        sol3 = sim.solve(
+            [0, 3600], inputs=[{"Current function [A]": 1}, {"Current function [A]": 2}]
+        )[0]["Voltage [V]"].entries
+        # check that the solutions are the same
+        np.testing.assert_allclose(sol1, sol2)
+        np.testing.assert_allclose(sol2, sol3)
+
+    def test_step_or_solve_empty_model(self):
+        model = pybamm.BaseModel()
+        solver = pybamm.BaseSolver()
+        error = "Cannot simulate an empty model"
+        with pytest.raises(pybamm.ModelError, match=error):
+            solver.step(None, model, None)
+        with pytest.raises(pybamm.ModelError, match=error):
+            solver.solve(model, None)
+
+    def test_t_eval_none(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: 1}
+        model.initial_conditions = {v: 1}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+        with pytest.raises(ValueError, match=r"t_eval cannot be None"):
+            solver.solve(model, None)
+
+    def test_nonmonotonic_teval(self):
+        solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
+        model = pybamm.BaseModel()
+        a = pybamm.Scalar(0)
+        model.rhs = {a: a}
+        with pytest.raises(
+            pybamm.SolverError, match=r"t_eval must increase monotonically"
+        ):
+            solver.solve(model, np.array([1, 2, 3, 2]))
+
+        # Check stepping with step size too small
+        dt = -1e-9
+        with pytest.raises(pybamm.SolverError, match=r"Step time must be >0"):
+            solver.step(None, model, dt)
+
+        # Checking if array t_eval lies within range
+        dt = 2
+        t_eval = np.array([0, 1])
+        with pytest.raises(
+            pybamm.SolverError,
+            match=re.escape(
+                "The final `t_eval` value (1) must be equal to the step time `dt` (2)"
+            ),
+        ):
+            solver.step(None, model, dt, t_eval=t_eval)
+
+        t_eval = np.array([1, dt])
+        with pytest.raises(
+            pybamm.SolverError,
+            match=re.escape("The first `t_eval` value (1) must be 0"),
+        ):
+            solver.step(None, model, dt, t_eval=t_eval)
+
+    def test_solution_time_length_fail(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Scalar(1)
+        model.variables = {"v": v}
+        solver = pybamm.DummySolver()
+        t_eval = np.array([0])
+        with pytest.raises(
+            pybamm.SolverError, match=r"Solution time vector has length 1"
+        ):
+            solver.solve(model, t_eval)
+
+    def test_block_symbolic_inputs(self):
+        solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        p = pybamm.InputParameter("p")
+        model.rhs = {a: a * p}
+        with pytest.raises(
+            pybamm.SolverError, match=re.escape("No value provided for input: ['p']")
+        ):
+            solver.solve(model, np.array([1, 2, 3]))
+
+    def test_ode_solver_fail_with_dae(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Scalar(1)
+        model.algebraic = {a: a}
+        model.concatenated_initial_conditions = pybamm.Scalar(0)
+        solver = pybamm.ScipySolver()
+        with pytest.raises(pybamm.SolverError, match=r"Cannot use ODE solver"):
+            solver.set_up(model)
+
+    def test_find_consistent_initialization(self):
+        # Simple system: a single algebraic equation
+        class ScalarModel:
+            def __init__(self):
+                self.y0_list = [np.array([2])]
+                self.y0S_list = None
+                self.rhs = {}
+                self.jac_algebraic_eval = None
+                t = casadi.MX.sym("t")
+                y = casadi.MX.sym("y")
+                p = casadi.MX.sym("p")
+                self.casadi_algebraic = casadi.Function(
+                    "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
+                )
+                self.convert_to_format = "casadi"
+                self.bounds = (np.array([-np.inf]), np.array([np.inf]))
+                self.len_rhs_and_alg = 1
+                self.events = []
+                self.solution_observable = ModelSolutionObservability.DISABLED
+                self.algebraic_root_solver = None
+
+            def rhs_eval(self, t, y, inputs):
+                return np.array([])
+
+            def algebraic_eval(self, t, y, inputs):
+                return y + 2
+
+        solver = pybamm.BaseSolver(root_method="lm")
+        model = ScalarModel()
+        init_states = solver.calculate_consistent_state(model)
+        np.testing.assert_array_equal(init_states, -2)
+        # with casadi
+        solver_with_casadi = pybamm.BaseSolver(root_method="casadi", root_tol=1e-12)
+        model = ScalarModel()
+        init_states = solver_with_casadi.calculate_consistent_state(model)
+        np.testing.assert_array_equal(init_states, -2)
+
+        # More complicated system
+        vec = np.array([0.0, 1.0, 1.5, 2.0])
+
+        class VectorModel:
+            def __init__(self):
+                self.y0_list = [np.zeros_like(vec)]
+                self.y0S_list = None
+                self.rhs = {"test": "test"}
+                self.concatenated_rhs = np.array([1])
+                self.jac_algebraic_eval = None
+                t = casadi.MX.sym("t")
+                y = casadi.MX.sym("y", vec.size)
+                p = casadi.MX.sym("p")
+                self.casadi_algebraic = casadi.Function(
+                    "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
+                )
+                self.convert_to_format = "casadi"
+                self.bounds = (-np.inf * np.ones(4), np.inf * np.ones(4))
+                self.len_rhs = 1
+                self.len_rhs_and_alg = 4
+                self.events = []
+                self.solution_observable = ModelSolutionObservability.DISABLED
+                self.algebraic_root_solver = None
+
+            def rhs_eval(self, t, y, inputs):
+                return y[0:1]
+
+            def algebraic_eval(self, t, y, inputs):
+                return (y[1:] - vec[1:]) ** 2
+
+        model = VectorModel()
+        [init_states] = solver.calculate_consistent_state(model)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
+        # with casadi
+        solver_with_casadi.root_method.step_tol = 1e-12
+        [init_states] = solver_with_casadi.calculate_consistent_state(model)
+        np.testing.assert_allclose(
+            init_states.full().flatten(), vec, rtol=1e-7, atol=1e-6
+        )
+
+        # With Jacobian
+        def jac_dense(t, y, inputs):
+            return 2 * np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
+
+        model.jac_algebraic_eval = jac_dense
+        [init_states] = solver.calculate_consistent_state(model)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
+
+        # With sparse Jacobian
+        def jac_sparse(t, y, inputs):
+            return 2 * csr_matrix(
+                np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
+            )
+
+        model.jac_algebraic_eval = jac_sparse
+        [init_states] = solver.calculate_consistent_state(model)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
+
+    def test_fail_consistent_initialization(self):
+        class Model(pybamm.BaseModel):
+            def __init__(self):
+                self.y0_list = [np.array([2])]
+                self.y0S_list = None
+                self.rhs = {}
+                self.jac_algebraic_eval = None
+                t = casadi.MX.sym("t")
+                y = casadi.MX.sym("y")
+                p = casadi.MX.sym("p")
+                self.casadi_algebraic = casadi.Function(
+                    "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
+                )
+                self.convert_to_format = "casadi"
+                self.bounds = (np.array([-np.inf]), np.array([np.inf]))
+                self.algebraic_root_solver = None
+
+            def rhs_eval(self, t, y, inputs):
+                return np.array([])
+
+            def algebraic_eval(self, t, y, inputs):
+                # algebraic equation has no root
+                return y**2 + 1
+
+        solver = pybamm.BaseSolver(root_method="hybr")
+
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"Could not find acceptable solution",
+        ):
+            solver.calculate_consistent_state(Model())
+        solver = pybamm.BaseSolver(root_method="lm")
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"Could not find acceptable solution",
+        ):
+            solver.calculate_consistent_state(Model())
+        # with casadi
+        solver = pybamm.BaseSolver(root_method="casadi")
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"Could not find acceptable solution",
+        ):
+            solver.calculate_consistent_state(Model())
+
+    def test_discretise_model(self):
+        # Make sure 0D model is automatically discretised
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+
+        solver = pybamm.BaseSolver()
+        assert not model.is_discretised
+        solver.set_up(model, {})
+        assert model.is_discretised
+
+        # 1D model cannot be automatically discretised
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v", domain="line")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+
+        with pytest.raises(
+            pybamm.DiscretisationError, match=r"Cannot automatically discretise model"
+        ):
+            solver.set_up(model, {})
+
+    def test_convert_to_casadi_format(self):
+        # Make sure model is converted to casadi format
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model.convert_to_format = "python"
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver(root_method="casadi")
+        pybamm.set_logging_level("ERROR")
+        solver.set_up(model, {})
+        assert model.convert_to_format == "casadi"
+        pybamm.set_logging_level("WARNING")
+
+    def test_inputs_step(self):
+        # Make sure interpolant inputs are dropped
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        x = np.array([0, 1])
+        interp = pybamm.Interpolant(x, x, pybamm.t)
+        solver = pybamm.IDAKLUSolver()
+        for input_key in ["Current input [A]", "Voltage input [V]", "Power input [W]"]:
+            sol = solver.step(
+                old_solution=None, model=model, dt=1.0, inputs={input_key: interp}
+            )
+            assert input_key not in sol.all_inputs[0]
+
+    def test_extrapolation_warnings(self):
+        # Make sure the extrapolation warnings work
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model.events.append(
+            pybamm.Event(
+                "Triggered event",
+                v - 0.5,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        model.events.append(
+            pybamm.Event(
+                "Ignored event",
+                v + 10,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        solver = pybamm.ScipySolver()
+        solver.set_up(model)
+
+        with pytest.warns(pybamm.SolverWarning):
+            solver.step(old_solution=None, model=model, dt=1.0)
+
+        with pytest.warns(pybamm.SolverWarning):
+            solver.solve(model, t_eval=[0, 1])
+
+    def test_multiple_models_error(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model2 = pybamm.BaseModel()
+        v2 = pybamm.Variable("v")
+        model2.rhs = {v2: -1}
+        model2.initial_conditions = {v2: 1}
+
+        solver = pybamm.ScipySolver()
+        solver.solve(model, t_eval=[0, 1])
+        with pytest.raises(RuntimeError, match=r"already been initialised"):
+            solver.solve(model2, t_eval=[0, 1])
+
+    def test_multiprocess_context(self):
+        solver = pybamm.BaseSolver()
+        assert solver.get_platform_context("Win") == "spawn"
+        assert solver.get_platform_context("Darwin") == "spawn"
+
+        if pybamm.has_jax():
+            # JAX is incompatible with fork (see https://github.com/jax-ml/jax/issues/1805)
+            # Causes issues with tests crashing in CI
+            assert solver.get_platform_context("Linux") == "spawn"
+        else:
+            assert solver.get_platform_context("Linux") == "fork"
+
+    def test_sensitivities(self):
+        def exact_diff_a(y, a, b):
+            return np.array([[y[0] ** 2 + 2 * a], [y[0]]])
+
+        @pytest.mark.skipif(
+            not pybamm.has_jax(), reason="jax or jaxlib is not installed"
+        )
+        def exact_diff_b(y, a, b):
+            return np.array([[y[0]], [0]])
+
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        model.rhs = {v: a * v**2 + b * v + a**2}
+        model.algebraic = {u: a * v - u}
+        model.initial_conditions = {v: 1, u: a * 1}
+        model.convert_to_format = "casadi"
+        solver = pybamm.IDAKLUSolver(root_method="lm")
+        model.calculate_sensitivities = ["a", "b"]
+        solver.set_up(model, inputs={"a": 0, "b": 0})
+        all_inputs = []
+        for v_value in [0.1, -0.2, 1.5, 8.4]:
+            for u_value in [0.13, -0.23, 1.3, 13.4]:
+                for a_value in [0.12, 1.5]:
+                    for b_value in [0.82, 1.9]:
+                        y = np.array([v_value, u_value])
+                        t = 0
+                        inputs = {"a": a_value, "b": b_value}
+                        all_inputs.append((t, y, inputs))
+        for t, y, inputs in all_inputs:
+            use_inputs = casadi.vertcat(*list(inputs.values()))
+
+            sens = model.jacp_rhs_algebraic_eval(t, y, use_inputs)
+
+            sens_a = sens[0]
+            sens_b = sens[1]
+
+            np.testing.assert_allclose(
+                sens_a, exact_diff_a(y, inputs["a"], inputs["b"])
+            )
+            np.testing.assert_allclose(
+                sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
+            )
+
+    def test_on_extrapolation_and_on_failure_settings(self):
+        # Test setting different on_extrapolation and on_failure values on BaseSolver
+        base_solver = pybamm.BaseSolver()
+
+        # Test valid on_extrapolation values
+        base_solver.on_extrapolation = "warn"
+        assert base_solver.on_extrapolation == "warn"
+        base_solver.on_extrapolation = "error"
+        assert base_solver.on_extrapolation == "error"
+        base_solver.on_extrapolation = "ignore"
+        assert base_solver.on_extrapolation == "ignore"
+
+        # Test valid on_failure values
+        base_solver.on_failure = "warn"
+        assert base_solver.on_failure == "warn"
+        base_solver.on_failure = "error"
+        assert base_solver.on_failure == "error"
+        base_solver.on_failure = "ignore"
+        assert base_solver.on_failure == "ignore"
+
+        # Test invalid value
+        with pytest.raises(
+            ValueError, match=r"on_extrapolation must be 'warn', 'error', or 'ignore'"
+        ):
+            base_solver.on_extrapolation = "invalid"
+
+        with pytest.raises(
+            ValueError, match=r"on_failure must be 'warn', 'error', or 'ignore'"
+        ):
+            base_solver.on_failure = "invalid"
+
+    @pytest.mark.parametrize(
+        "format",
+        [
+            "casadi",
+            "python",
+            pytest.param(
+                "jax",
+                marks=pytest.mark.skipif(
+                    not pybamm.has_jax(),
+                    reason="jax or jaxlib is not installed",
+                ),
+            ),
+        ],
+    )
+    def test_events_fail_on_initialisation_multiple_input_params(self, format):
+        # Test that events fail on initialisation when multiple input parameters are used
+        # if it's not the first set of parameters
+        model = pybamm.BaseModel()
+        model.convert_to_format = format
+        u = pybamm.Variable("u")
+        u0 = pybamm.InputParameter("u0")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: u0}
+        model.events.append(pybamm.Event("test event", u - 0.2))
+        model.variables = {"u": u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+
+        initial_condition_input = [{"u0": 5}, {"u0": 0.1}]
+        t_eval = np.array([0, 1])
+
+        with pytest.raises(
+            pybamm.SolverError,
+            match=re.escape(
+                "Events ['test event'] are non-positive at initial conditions with inputs {'u0': 0.1}"
+            ),
+        ):
+            solver.solve(model, t_eval, initial_condition_input)
+
+    def test_integrate_single_error(self):
+        solver = pybamm.BaseSolver()
+        model = pybamm.BaseModel()
+
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape("BaseSolver does not implement _integrate_single."),
+        ):
+            solver._integrate_single(model, np.array([0, 1]), {}, np.array([1]))
+
+    def test_discontinuity_events_different_times_error(self):
+        # Test that an error is raised when discontinuity events occur at different
+        # times for different input parameter sets
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        t_event = pybamm.InputParameter("t_event")
+        model.rhs = {v: pybamm.t > t_event}
+        model.initial_conditions = {v: 0}
+        model.variables = {"v": v}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+        t_eval = np.linspace(0, 10)
+
+        # Different input sets with discontinuities at different times
+        inputs_list = [{"t_event": 3.0}, {"t_event": 5.0}]
+
+        with pytest.raises(
+            pybamm.SolverError,
+            match="Discontinuity events occur at different times between input parameter sets",
+        ):
+            solver.solve(model, t_eval, inputs=inputs_list)

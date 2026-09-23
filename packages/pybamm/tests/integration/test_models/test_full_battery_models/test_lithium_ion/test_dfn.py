@@ -1,0 +1,269 @@
+#
+# Tests for the lithium-ion DFN model
+#
+import numpy as np
+import pytest
+
+import pybamm
+import tests
+from tests import BaseIntegrationTestLithiumIon
+
+
+class TestDFN(BaseIntegrationTestLithiumIon):
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.model = pybamm.lithium_ion.DFN
+
+    def test_particle_distribution_in_x(self):
+        model = pybamm.lithium_ion.DFN()
+        param = model.default_parameter_values
+        L_n = model.param.n.L
+        L_p = model.param.p.L
+        L = model.param.L_x
+
+        def negative_radius(x):
+            return (1 + x / L_n) * 1e-5
+
+        def positive_radius(x):
+            return (1 + (x - L_p) / (L - L_p)) * 1e-5
+
+        param["Negative particle radius [m]"] = negative_radius
+        param["Positive particle radius [m]"] = positive_radius
+        # Only get 3dp of accuracy in some tests at 1C with particle distribution
+        # TODO: investigate if there is a bug or some way to improve the
+        # implementation
+        param["Current function [A]"] = 0.5 * param["Nominal cell capacity [A.h]"]
+        self.run_basic_processing_test({}, parameter_values=param)
+
+    def test_cycling_extreme_conditions(self):
+        # test cycling with difficult conditions: full discharge and very low
+        # current cutoff. This exercises the regularised expressions (RegPower,
+        # Arcsinh2) and OCP asymptotes at extreme stoichiometries.
+        model = pybamm.lithium_ion.DFN()
+        param = pybamm.ParameterValues("Chen2020")
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at 1C for 100 hours or until 2.5 V",
+                "Rest for 1 hour",
+                # extreme C-rate charge and low C-rate cutoff
+                "Hold at 4.2 V until C/10000",
+                "Rest for 1 hour",
+            ]
+            * 2
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+        )
+        sol = sim.solve()
+
+        assert sol.termination == "final time"
+
+    def test_time_dependent_ambient_temperature_with_nonlinear_electrolyte_parameters(
+        self,
+    ):
+        times = np.arange(0, 1810, 10)
+        final_time = times[-1]
+        ambient_temperature = pybamm.Interpolant(
+            times, 298.15 + 20 * times / final_time, pybamm.t
+        )
+
+        def cation_transference_number(c_e, T):
+            return 0.25 + 1e-10 * c_e * T
+
+        def thermodynamic_factor(c_e, T):
+            return 1 + 1e-10 * c_e * T
+
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {
+                "Ambient temperature [K]": ambient_temperature,
+                "Cation transference number": cation_transference_number,
+                "Initial temperature [K]": 298.15,
+                "Thermodynamic factor": thermodynamic_factor,
+            }
+        )
+
+        # outputs that a mutated broadcast child corrupted; they are only built
+        # when every output is processed, which Simulation defers
+        affected = [
+            "X-averaged concentration overpotential [V]",
+            "X-averaged electrolyte ohmic losses [V]",
+        ]
+
+        def process_all_outputs(affected_first):
+            model = pybamm.lithium_ion.DFN()
+            rest = [name for name in model.variables if name not in affected]
+            order = affected + rest if affected_first else rest + affected
+            model.variables = pybamm.FuzzyDict(
+                {name: model.variables[name] for name in order}
+            )
+            parameter_values.process_model(model)
+            geometry = model.default_geometry
+            parameter_values.process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
+            return model
+
+        # discretisation must not depend on the order outputs are processed in
+        discretised = [
+            process_all_outputs(first).get_processed_variables_dict()
+            for first in (True, False)
+        ]
+        for name in affected:
+            first, last = discretised[0][name], discretised[1][name]
+            assert first.shape_for_testing == (1, 1)
+            assert first.id == last.id
+
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            experiment=pybamm.Experiment([f"Discharge at 1C for {final_time} s"]),
+            parameter_values=parameter_values,
+        )
+
+        solution = simulation.solve()
+
+        assert np.isfinite(solution["Voltage [V]"](final_time)).all()
+        for name in affected:
+            assert np.isfinite(solution[name](final_time)).all()
+        np.testing.assert_allclose(
+            solution["Ambient temperature [K]"]([0, final_time]),
+            [298.15, 318.15],
+            rtol=1e-10,
+            atol=1e-10,
+        )
+
+
+class TestDFNWithSizeDistribution:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        params = pybamm.ParameterValues("Marquis2019")
+        self.params = pybamm.get_size_distribution_parameters(params)
+
+        self.var_pts = {
+            "x_n": 5,
+            "x_s": 5,
+            "x_p": 5,
+            "r_n": 5,
+            "r_p": 5,
+            "R_n": 3,
+            "R_p": 3,
+            "y": 5,
+            "z": 5,
+            "R_n_prim": 3,
+            "R_n_sec": 3,
+            "R_p_prim": 3,
+            "R_p_sec": 3,
+        }
+
+    def test_basic_processing(self):
+        options = {"particle size": "distribution"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=self.params, var_pts=self.var_pts
+        )
+        modeltest.test_all()
+
+    def test_composite(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "particle size": "distribution",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        name = "Negative electrode active material volume fraction"
+        x = 0.1
+        parameter_values.update(
+            {f"Primary: {name}": (1 - x) * 0.75, f"Secondary: {name}": x * 0.75}
+        )
+        parameter_values = pybamm.get_size_distribution_parameters(
+            parameter_values,
+            composite="negative",
+            R_min_n_prim=0.9,
+            R_min_n_sec=0.9,
+            R_max_n_prim=1.1,
+            R_max_n_sec=1.1,
+        )
+        # self.run_basic_processing_test(options, parameter_values=parameter_values)
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_basic_processing_tuple(self):
+        options = {"particle size": ("single", "distribution")}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=self.params, var_pts=self.var_pts
+        )
+        modeltest.test_all()
+
+    def test_uniform_profile(self):
+        options = {"particle size": "distribution", "particle": "uniform profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=self.params, var_pts=self.var_pts
+        )
+        modeltest.test_all()
+
+    def test_basic_processing_4D(self):
+        # 4 dimensions: particle, particle size, electrode, current collector
+        options = {
+            "particle size": "distribution",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=self.params, var_pts=self.var_pts
+        )
+        modeltest.test_all(skip_output_tests=True)
+
+    def test_conservation_each_electrode(self):
+        # Test that surface areas are being calculated from the distribution correctly
+        # for any discretization in the size domain.
+        # We test that the amount of lithium removed or added to each electrode
+        # is the same as for the standard DFN with the same parameters
+        models = [
+            pybamm.lithium_ion.DFN(),
+            pybamm.lithium_ion.DFN(options={"particle size": "distribution"}),
+        ]
+
+        # reduce number of particle sizes, for a crude discretization
+        var_pts = {"R_n": 3, "R_p": 3}
+
+        # solve
+        neg_Li = []
+        pos_Li = []
+        t_eval = [0, 3500]
+        t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
+        for model in models:
+            sim = pybamm.Simulation(
+                model, parameter_values=self.params, var_pts=self.var_pts
+            )
+            sim.var_pts.update(var_pts)
+            solution = sim.solve(t_eval, t_interp=t_interp)
+            neg = solution["Total lithium in negative electrode [mol]"].entries[-1]
+            pos = solution["Total lithium in positive electrode [mol]"].entries[-1]
+            neg_Li.append(neg)
+            pos_Li.append(pos)
+
+        # compare
+        np.testing.assert_allclose(neg_Li[0], neg_Li[1], rtol=1e-13, atol=1e-12)
+        np.testing.assert_allclose(pos_Li[0], pos_Li[1], rtol=1e-13, atol=1e-12)
+
+    def test_basic_processing_nonlinear_diffusion(self):
+        options = {
+            "particle size": "distribution",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        # Ecker2015 has a nonlinear diffusion coefficient
+        parameter_values = pybamm.ParameterValues("Ecker2015")
+        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=parameter_values, var_pts=self.var_pts
+        )
+        modeltest.test_all(skip_output_tests=True)

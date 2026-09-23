@@ -16,6 +16,10 @@ Before you commit any code, please perform the following checks:
 `PyBaMM` uses a set of `pre-commit` hooks and the `pre-commit` bot to format and prettify the codebase. The hooks can be installed locally using -
 
 ```bash
+# Using uv
+uvx pre-commit install
+
+# Or using pip
 pip install pre-commit
 pre-commit install
 ```
@@ -27,6 +31,29 @@ pre-commit run --all-files
 ```
 
 If you would like to skip the failing checks and push the code for further discussion, use the `--no-verify` option with `git commit`.
+
+### Comment slop
+
+One of the hooks, [`comment-slop`](https://github.com/ionworks/comment-slop), reports comments that restate the code, narrate an edit, record what the code used to do, or leak task and review chatter — the [`AGENTS.md`](https://github.com/pybamm-team/PyBaMM/blob/main/AGENTS.md) rule that a comment should explain the non-obvious *why*. It reports; it never edits a file. Only the lines your commit changed are checked, and on a pull request the comparison is made against the base branch.
+
+Coding agents get the same report as they write, through the `PostToolUse` hook in the tracked `.claude/settings.json`, which runs `.claude/hooks/comment-slop.sh`. The write-time hook reports while the author still knows whether a comment was required, and the pre-commit hook covers everything that reaches a commit, whatever wrote it.
+
+## Contributing a model to the model zoo
+
+Contributed battery models live in the [model zoo](https://github.com/pybamm-team/PyBaMM/tree/main/packages/pybamm-model-zoo),
+not in `pybamm` itself: one self-contained folder per model, with its own
+maintainer, tests, examples, and citation. A declarative `model.toml` manifest is
+the only boilerplate you write — the registry, the contract test suite, the docs
+page, the CI routing, and your status badge are all derived from it.
+
+```bash
+nox -s zoo-new -- --slug my_model --name MyModel --author "A. Author" --github ahandle
+nox -s zoo -- --zoo-model=my_model
+```
+
+See [the zoo's contributing guide](https://docs.pybamm.org/en/latest/source/model_zoo/contributing.html)
+for the tier policy, what the contract suite checks for you, and the review
+checklist.
 
 ## Workflow
 
@@ -62,6 +89,21 @@ You now have everything you need to start making changes!
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
 
+## Changelog entries
+
+Every PR that ships user-visible behaviour must add an entry to the `# [Unreleased]` section at the top of [`CHANGELOG.md`](https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md). Pick the section that matches the change:
+
+- `## Breaking changes` — removing or renaming public API, signature/default/return-type changes that existing code would notice, default model/solver changes that move outputs, dropping Python/OS/dependency support, on-disk format changes without a backward-compatible reader. Include a one-line migration note.
+- `## Deprecated` — when you add a `DeprecationWarning` to a public API that will be removed in a later release. Note when removal is planned.
+- `## Features` — new functionality (new optional kwargs, new submodels, new public API, etc.).
+- `## Bug fixes` — corrections to existing behaviour.
+
+If your PR is internal-only (refactor, docs typo, CI tweak, tests), no changelog entry is needed.
+
+Each entry is a single bullet ending in a PR link, e.g. `([#1234](https://github.com/pybamm-team/PyBaMM/pull/1234))`. Use the full URL so the rendered markdown on docs.pybamm.org links correctly.
+
+For the full release policy — what counts as "public API", deprecation horizon, version scheme — see [`RELEASE.md`](https://github.com/pybamm-team/PyBaMM/blob/main/RELEASE.md).
+
 ## Coding style guidelines
 
 PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them. We recommend using pre-commit hooks to check your code before committing it. See [installing and using pre-commit](#installing-and-using-pre-commit) section for more details.
@@ -71,7 +113,11 @@ PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-00
 We use [ruff](https://github.com/astral-sh/ruff) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
 
 ```bash
-python -m pip install pre-commit
+# Using uv
+uvx pre-commit run ruff
+
+# Or using pip
+pip install pre-commit
 pre-commit run ruff
 ```
 
@@ -157,13 +203,17 @@ We use following plugins for various needs:
 
 [pytest-xdist](https://pypi.org/project/pytest-xdist/) : plugins to run tests in parallel.
 
-If you have `nox` installed, to run unit tests, type
+To run unit tests using `nox`:
 
 ```bash
+# Using uv
+uv run nox -s unit
+
+# Or with nox installed directly
 nox -s unit
 ```
 
-else, type
+Alternatively, you can run tests directly with `pytest`:
 
 ```bash
 pytest -m unit
@@ -413,7 +463,7 @@ pybamm.print_citations()
 
 to the end of a script will print all citations that were used by that script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead.
 
-When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](https://github.com/pybamm-team/PyBaMM/blob/main/src/pybamm/CITATIONS.bib). Then, add the line
+When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](https://github.com/pybamm-team/PyBaMM/blob/main/packages/pybamm/src/pybamm/CITATIONS.bib). Then, add the line
 
 ```python3
 pybamm.citations.register("your_paper_bibtex_identifier")
@@ -425,11 +475,14 @@ wherever code is called that uses that citation (for example, in functions or in
 
 ### Installation
 
-Installation of PyBaMM and its dependencies is handled via [pip](https://pip.pypa.io/en/stable/)
+Installation of PyBaMM and its dependencies is handled via [uv](https://docs.astral.sh/uv/) or [pip](https://pip.pypa.io/en/stable/).
+A `uv.lock` lockfile is maintained in version control to ensure reproducible environments.
+Dependabot keeps the locked dependencies up to date via weekly PRs.
 
 Configuration files:
 ```
 pyproject.toml
+uv.lock
 ```
 
 ### Continuous Integration using GitHub Actions

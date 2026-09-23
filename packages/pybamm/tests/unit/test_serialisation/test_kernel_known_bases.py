@@ -1,0 +1,205 @@
+from __future__ import annotations
+
+import json
+
+import pytest
+
+import pybamm
+from pybamm.expression_tree.operations import serialise_kernel as sk
+
+
+class _DictBacked(dict):
+    """A dict subclass with a hook -- stands in for Mesh in the engine-ordering test."""
+
+    def to_json(self):
+        return {"marker": "kept"}
+
+    @classmethod
+    def _from_json(cls, snippet):
+        inst = cls()
+        inst["marker"] = snippet["marker"]
+        return inst
+
+
+def test_registered_dict_subclass_dispatches_to_codec_not_dict_branch(monkeypatch):
+    # Register _DictBacked as a known base for the duration of the test.
+    monkeypatch.setattr(sk, "_KNOWN_BASES", (*sk._KNOWN_BASES, _DictBacked))
+    obj = _DictBacked()
+    node = sk.encode(obj)
+    assert node[sk.TAG] == sk._class_path(_DictBacked)
+    assert node["marker"] == "kept"
+
+
+def test_plain_dict_still_recurses():
+    assert sk.encode({"a": [1, 2]}) == {"a": [1, 2]}
+    assert sk.decode(sk.encode({"a": [1, 2]})) == {"a": [1, 2]}
+
+
+def test_known_bases_resolve_to_hook_codec():
+    # Event/Mesh/SubMesh all define their own to_json/_from_json -> HookCodec.
+    for cls in (pybamm.Event, pybamm.Mesh, pybamm.Uniform1DSubMesh):
+        assert isinstance(sk._lookup_codec(cls), sk.HookCodec), cls
+
+
+def test_unregistered_non_symbol_returns_none():
+    # An unregistered class is not a known base -> no codec (encode then raises
+    # the generic "no codec registered" message elsewhere).
+    class _NoHookBase:
+        pass
+
+    assert sk._lookup_codec(_NoHookBase) is None
+
+
+def test_registered_non_symbol_base_without_hook_raises(monkeypatch):
+    # A registered non-Symbol base with no hook must raise loudly rather than fall
+    # through to the Symbol-only DefaultCodec.
+    class _NoHookBase:
+        pass
+
+    monkeypatch.setattr(sk, "_KNOWN_BASES", (*sk._KNOWN_BASES, _NoHookBase))
+    with pytest.raises(sk.SerialisationError, match="missing to_json and _from_json"):
+        sk._lookup_codec(_NoHookBase)
+
+
+def test_submesh_without_from_json_raises_naming_only_missing_hook():
+    # Exponential1DSubMesh inherits to_json from SubMesh1D but has no _from_json;
+    # the message must name only the hook that is actually missing.
+    with pytest.raises(sk.SerialisationError, match="missing _from_json"):
+        sk._lookup_codec(pybamm.Exponential1DSubMesh)
+
+
+def test_event_round_trip_through_kernel():
+    expr = pybamm.Variable(
+        "u", domains={"primary": ["negative electrode"]}
+    ) - pybamm.Scalar(1.0)
+    event = pybamm.Event("my event", expr, pybamm.EventType.TERMINATION)
+    restored = sk.decode(json.loads(json.dumps(sk.encode(event))))
+    assert isinstance(restored, pybamm.Event)
+    assert restored.name == "my event"
+    assert restored.event_type == pybamm.EventType.TERMINATION
+    assert restored.expression.id == expr.id
+
+
+def test_event_from_json_tolerates_legacy_expression_field():
+    # Old discretised files carried "expression" as a sibling, not in children.
+    expr = pybamm.Scalar(2.0)
+    snippet = {
+        "name": "legacy",
+        "event_type": ["EventType.TERMINATION", 0],
+        "expression": expr,
+    }  # decoded expression, legacy shape
+    restored = pybamm.Event._from_json(snippet)
+    assert restored.expression.id == expr.id
+
+
+def test_concrete_submeshes_round_trip_through_kernel():
+    import numpy as np
+
+    # lims/npts are in _serialise_derived_params; each subclass reconstructs from
+    # edges/coord_sys via its own _from_json.
+    model = pybamm.lithium_ion.SPM()
+    sim = pybamm.Simulation(model)
+    sim.build()
+    checked = 0
+    for k, v in sim.mesh.items():
+        if len(k) == 1 and "ghost cell" not in k[0]:
+            restored = sk.decode(json.loads(json.dumps(sk.encode(v))))
+            assert type(restored) is type(v), k
+            assert np.array_equal(restored.edges, v.edges), k
+            checked += 1
+    assert checked, "no concrete submesh exercised"
+
+
+def test_mesh_round_trip_through_kernel():
+    model = pybamm.lithium_ion.SPM()
+    sim = pybamm.Simulation(model)
+    sim.build()
+    mesh = sim.mesh
+    restored = sk.decode(json.loads(json.dumps(sk.encode(mesh))))
+    assert isinstance(restored, pybamm.Mesh)
+    assert restored.submesh_pts == mesh.submesh_pts
+    assert set(restored.base_domains) == set(mesh.base_domains)
+    # every non-ghost submesh survived with matching edges
+    import numpy as np
+
+    for k, v in mesh.items():
+        if len(k) == 1 and "ghost cell" not in k[0]:
+            assert np.array_equal(restored[k[0]].edges, v.edges), k
+
+
+def test_relocate_legacy_moves_expression_into_children():
+    from pybamm.expression_tree.operations.serialise import _relocate_legacy_model_tree
+
+    legacy = {
+        "py/object": "pybamm.models.event.Event",
+        "py/id": 1,
+        "name": "e",
+        "event_type": ["EventType.TERMINATION", 0],
+        "expression": {
+            "py/object": "pybamm.Scalar",
+            "py/id": 2,
+            "name": "2.0",
+            "id": 9,
+            "value": 2.0,
+            "children": [],
+        },
+    }
+    out = _relocate_legacy_model_tree(legacy)
+    assert "expression" not in out
+    assert out["children"][0]["name"] == "2.0"
+
+
+def test_relocate_legacy_moves_initial_condition_after_child():
+    from pybamm.expression_tree.operations.serialise import _relocate_legacy_model_tree
+
+    child = {
+        "py/object": "pybamm.Scalar",
+        "py/id": 3,
+        "name": "1.0",
+        "id": 1,
+        "value": 1.0,
+        "children": [],
+    }
+    ic = {
+        "py/object": "pybamm.Scalar",
+        "py/id": 4,
+        "name": "0.0",
+        "id": 2,
+        "value": 0.0,
+        "children": [],
+    }
+    legacy = {
+        "py/object": "pybamm.ExplicitTimeIntegral",
+        "py/id": 5,
+        "name": "x",
+        "id": 7,
+        "domains": {},
+        "children": [child],
+        "initial_condition": ic,
+    }
+    out = _relocate_legacy_model_tree(legacy)
+    assert "initial_condition" not in out
+    assert [c["name"] for c in out["children"]] == ["1.0", "0.0"]
+
+
+def test_relocate_legacy_converts_sub_meshes_dict():
+    from pybamm.expression_tree.operations.serialise import _relocate_legacy_model_tree
+
+    legacy = {
+        "py/object": "pybamm.Mesh",
+        "py/id": 6,
+        "submesh_pts": {},
+        "base_domains": ["negative electrode"],
+        "sub_meshes": {
+            "negative electrode": {
+                "py/object": "pybamm.SubMesh1D",
+                "py/id": 7,
+                "edges": [0.0, 1.0],
+                "coord_sys": "cartesian",
+            }
+        },
+    }
+    out = _relocate_legacy_model_tree(legacy)
+    assert "sub_meshes" not in out
+    assert out["sub_mesh_domains"] == ["negative electrode"]
+    assert out["children"][0]["coord_sys"] == "cartesian"
