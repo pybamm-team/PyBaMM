@@ -1867,6 +1867,14 @@ class TestIDAKLUSolver:
         assert ax is not None
         assert "nnz" in ax.get_title()
 
+        import matplotlib.pyplot as plt
+
+        _, existing_axes = plt.subplots(1, 2)
+        ax = solver.spy(ax=existing_axes[1], show_plot=False)
+        assert ax is existing_axes[1]
+        assert "nnz" in ax.get_title()
+        plt.close("all")
+
     def test_reduce_solution_vs_online(self):
         """Compare post-hoc reduce_solution with online knot reduction on a drive cycle.
 

@@ -19,13 +19,24 @@ class Full(BaseElectrolyteDiffusion):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
+    x_average_state : bool, optional
+        Whether to make the x-averaged electrolyte concentration an algebraic state
+        when a surface form is used. This keeps the Jacobian sparse for the
+        composite conductivity submodels, which read the x-average in every
+        equation, but only adds an extra state for the full conductivity submodel,
+        which never reads it. Default is False.
     """
 
-    def __init__(self, param, options=None):
+    def __init__(self, param, options=None, x_average_state=False):
         super().__init__(param, options)
+        self.x_average_state = x_average_state
+
+    @property
+    def _c_e_av_is_state(self) -> bool:
+        return self.x_average_state and self.options["surface form"] != "false"
 
     def _get_standard_whole_cell_concentration_variables(self, c_e):
-        if self.options["surface form"] == "false":
+        if not self._c_e_av_is_state:
             return super()._get_standard_whole_cell_concentration_variables(c_e)
 
         c_e.print_name = "c_e"
@@ -122,7 +133,7 @@ class Full(BaseElectrolyteDiffusion):
         self.rhs = {eps_c_e: -pybamm.div(N_e) + source_terms - c_e * div_Vbox}
 
     def set_algebraic(self, variables):
-        if self.options["surface form"] == "false":
+        if not self._c_e_av_is_state:
             return
         c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
         c_e = variables["Electrolyte concentration [mol.m-3]"]
@@ -136,7 +147,7 @@ class Full(BaseElectrolyteDiffusion):
             eps_c_e: self.param.epsilon_init * self.param.c_e_init
         }
 
-        if self.options["surface form"] != "false":
+        if self._c_e_av_is_state:
             c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
             self.initial_conditions[c_e_av] = self.param.c_e_init
 

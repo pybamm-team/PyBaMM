@@ -1196,12 +1196,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
         return new_sol
 
     def get_jacobian_sparsity(self) -> csc_matrix:
-        """Get the sparsity pattern of the Jacobian matrix.
+        """Get the sparsity pattern of the iteration matrix that IDA factorizes.
+
+        This is the pattern of ``J - cj * M``, where ``J`` is the Jacobian of the
+        model residuals with respect to the states, ``M`` is the mass matrix and
+        ``cj`` is IDA's step-size-dependent scalar. It is the union of the patterns
+        of ``J`` and ``M``, so every differential state has a diagonal entry even
+        where ``J`` has none.
 
         Returns
         -------
         :class:`scipy.sparse.csc_matrix`
-            The sparsity pattern of the Jacobian matrix.
+            The sparsity pattern of ``J - cj * M``, with every stored entry set to 1.
         """
         setup = getattr(self, "_setup", None)
         if setup is None:
@@ -1236,7 +1242,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             import matplotlib.pyplot as plt
         except ImportError as e:
             raise ImportError(
-                "matplotlib is required for plot_jacobian_sparsity. "
+                "matplotlib is required for IDAKLUSolver.spy. "
                 "Install it with: pip install matplotlib"
             ) from e
 
@@ -1250,7 +1256,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         n_rhs = int(self._setup["ids"].sum())
         n_alg = n - n_rhs
         sparsity = 100.0 * (1 - nnz / (n * n) if n > 0 else 0.0)
-        if ax is None:
+        created_figure = ax is None
+        if created_figure:
             fig, ax = plt.subplots(1, 1)
 
         ax.spy(J, **kwargs)
@@ -1261,7 +1268,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         info = f"{nnz} nnz, {sparsity:.2f}% sparse"
         info += f"\n{n} states: {n_rhs} differential and {n_alg} algebraic"
         ax.set_title(info, fontsize=10)
-        fig.tight_layout()
+        if created_figure:
+            fig.tight_layout()
 
         if show_plot:
             plt.show()
