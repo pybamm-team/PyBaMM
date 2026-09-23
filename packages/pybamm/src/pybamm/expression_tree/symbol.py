@@ -22,6 +22,7 @@ from pybamm.expression_tree.legacy_mutation import (
     _SymbolList,
     _warn_mutation,
     legacy_property,
+    upgrade_pickled_state,
 )
 from pybamm.expression_tree.printing.print_name import prettify_print_name
 from pybamm.util import import_optional_dependency
@@ -784,6 +785,8 @@ class Symbol:
         return state
 
     def __setstate__(self, state):
+        if "_orphans" in state:  # pickled before symbols were slotted
+            state = upgrade_pickled_state(type(self), state)
         # string hashes are randomised per process, so a pickled id is stale here
         for key, value in state.items():
             object.__setattr__(self, key, value)

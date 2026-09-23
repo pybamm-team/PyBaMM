@@ -72,6 +72,34 @@ bounds_property = legacy_property(
 )
 
 
+# attributes stored under a different slot name before symbols were slotted
+_RENAMED_PICKLED_FIELDS = {
+    "mesh": "_mesh",
+    "secondary_mesh": "_secondary_mesh",
+    "tertiary_mesh": "_tertiary_mesh",
+    "bounds": "_bounds",
+}
+
+
+def upgrade_pickled_state(cls: type, state: dict) -> dict:
+    """Convert the ``__dict__`` of a symbol pickled before symbols were slotted
+    into the current slot state of ``cls``."""
+    from pybamm.expression_tree.symbol import Symbol
+    from pybamm.expression_tree.tree_util import layout
+
+    leaf_fields, state_fields, _ = layout(cls)
+    slots = {*leaf_fields, *state_fields}
+    state = {
+        _RENAMED_PICKLED_FIELDS.get(key, key): value for key, value in state.items()
+    }
+    upgraded = dict.fromkeys(slots)
+    upgraded.update((key, value) for key, value in state.items() if key in slots)
+    upgraded["_domains"] = Symbol._normalise_domains(state["_domains"])
+    if upgraded.get("_raw_print_name") is None:
+        upgraded["_raw_print_name"] = state.get("_print_name")
+    return upgraded
+
+
 def _intern_domains(domains):
     from pybamm.expression_tree.symbol import _intern_domains
 
