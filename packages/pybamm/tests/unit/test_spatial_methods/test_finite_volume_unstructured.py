@@ -1199,18 +1199,25 @@ class TestFiniteVolumeUnstructuredBehavior:
         assert secondary.domain == primary["primary"]
         assert secondary.domains["secondary"] == primary["secondary"]
 
-    def test_broadcast_does_not_mutate_simplified_child(self):
+    @pytest.mark.parametrize(
+        ("child_class", "expected"),
+        [(pybamm.StateVector, 7), (pybamm.StateVectorDot, 3)],
+    )
+    def test_broadcast_does_not_mutate_simplified_child(self, child_class, expected):
         mesh = pybamm.SubMesh1D(np.array([0, 1]), "cartesian")
         method = _method_with_mesh(mesh)
-        child = pybamm.StateVector(slice(0, 1))
+        child = child_class(slice(0, 1))
         domains = {"primary": ["test"], "secondary": []}
 
         result = method.broadcast(child, domains, "full to nodes")
 
         assert result is not child
+        assert type(result) is child_class
         assert child.domain == []
         assert result.domains["primary"] == ["test"]
-        np.testing.assert_array_equal(result.evaluate(y=np.array([7])), [[7]])
+        np.testing.assert_array_equal(
+            result.evaluate(y=np.array([7]), y_dot=np.array([3])), [[expected]]
+        )
 
     def test_laplacian_and_boundary_conditions(self):
         mesh = _make_2d_mesh(2, 2)
