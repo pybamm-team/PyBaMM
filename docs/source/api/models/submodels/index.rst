@@ -17,6 +17,7 @@ Submodels
     particle/index
     particle_mechanics/index
     porosity/index
+    positive_electrode_degradation/index
     thermal/index
     transport_efficiency/index
     equivalent_circuit_elements/index

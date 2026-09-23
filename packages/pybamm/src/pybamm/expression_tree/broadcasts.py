@@ -138,6 +138,8 @@ class PrimaryBroadcast(Broadcast):
                 "positive electrode",
             ]
             or "particle" in broadcast_domain[0]
+            or broadcast_domain[0]
+            in ["positive core", "positive shell", "positive shell oxygen"]
         ):
             raise pybamm.DomainError(
                 """Primary broadcast from current collector domain must be to electrode
@@ -151,6 +153,8 @@ class PrimaryBroadcast(Broadcast):
                 "positive electrode",
             ]
             and "particle" not in broadcast_domain[0]
+            and broadcast_domain[0]
+            not in ["positive core", "positive shell", "positive shell oxygen"]
         ):
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle

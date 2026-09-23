@@ -631,14 +631,22 @@ class QuickPlot:
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
-                        x, y, var, levels=100, vmin=vmin, vmax=vmax
+                        x,
+                        y,
+                        var,
+                        levels=100,
+                        vmin=vmin,
+                        vmax=vmax,
+                        cmap="rainbow",
                     )
                 self.plots[key][0][1] = var
                 if vmin is None and vmax is None:
                     vmin = ax_min(var)
                     vmax = ax_max(var)
                 self.colorbars[key] = self.fig.colorbar(
-                    cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax)),
+                    cm.ScalarMappable(
+                        colors.Normalize(vmin=vmin, vmax=vmax), cmap="rainbow"
+                    ),
                     ax=ax,
                 )
             # Set either y label or legend entries
@@ -787,7 +795,13 @@ class QuickPlot:
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
-                        x, y, var, levels=100, vmin=vmin, vmax=vmax
+                        x,
+                        y,
+                        var,
+                        levels=100,
+                        vmin=vmin,
+                        vmax=vmax,
+                        cmap="rainbow",
                     )
                 self.plots[key][0][1] = var
                 if (vmin, vmax) == (None, None):
@@ -795,7 +809,9 @@ class QuickPlot:
                     vmax = ax_max(var)
                     cb = self.colorbars[key]
                     cb.update_normal(
-                        cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax))
+                        cm.ScalarMappable(
+                            colors.Normalize(vmin=vmin, vmax=vmax), cmap="rainbow"
+                        )
                     )
 
         self.fig.canvas.draw_idle()

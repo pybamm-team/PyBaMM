@@ -990,3 +990,33 @@ class TestExtrapolation:
         # Check child property
         assert left_mesh_size_symbol.child == var
         assert right_mesh_size_symbol.child == var
+
+    @pytest.mark.parametrize(
+        "submesh_type",
+        [
+            pybamm.Uniform1DSubMesh,
+            pybamm.MeshGenerator(
+                pybamm.Exponential1DSubMesh,
+                submesh_params={"side": "right", "stretch": 2},
+            ),
+        ],
+    )
+    def test_boundary_cell_value_and_length(self, submesh_type):
+        geometry = {"domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        mesh = pybamm.Mesh(geometry, {"domain": submesh_type}, {"x": 6})
+        disc = pybamm.Discretisation(mesh, {"domain": pybamm.FiniteVolume()})
+        var = pybamm.Variable("var", domain="domain")
+        disc.set_variable_slices([var])
+        submesh = mesh["domain"]
+        y = np.arange(1.0, 7.0)
+
+        for side, node_value, length in [
+            ("left", y[0], submesh.nodes[0] - submesh.edges[0]),
+            ("right", y[-1], submesh.edges[-1] - submesh.nodes[-1]),
+        ]:
+            value_disc = disc.process_symbol(pybamm.BoundaryCellValue(var, side))
+            length_disc = disc.process_symbol(pybamm.BoundaryCellLength(var, side))
+            np.testing.assert_array_equal(value_disc.evaluate(None, y), node_value)
+            np.testing.assert_allclose(
+                length_disc.evaluate(None, y), length, rtol=1e-12, atol=0
+            )

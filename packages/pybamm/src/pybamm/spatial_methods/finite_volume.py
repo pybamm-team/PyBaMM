@@ -1345,6 +1345,30 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
+        elif isinstance(symbol, pybamm.BoundaryCellValue):
+            # Value at the boundary cell
+            if symbol.side == "left":
+                sub_matrix = csr_matrix(([1], ([0], [0])), shape=(1, prim_pts))
+                additive = pybamm.Scalar(0)
+            elif symbol.side == "right":
+                sub_matrix = csr_matrix(
+                    ([1], ([0], [prim_pts - 1])), shape=(1, prim_pts)
+                )
+                additive = pybamm.Scalar(0)
+            additive_multiplicative = pybamm.Scalar(1)
+            multiplicative = pybamm.Scalar(1)
+
+        elif isinstance(symbol, pybamm.BoundaryCellLength):
+            # Distance from boundary node to the edge
+            if symbol.side == "left":
+                sub_matrix = csr_matrix((1, prim_pts))
+                additive = pybamm.Scalar(dx0)
+            elif symbol.side == "right":
+                sub_matrix = csr_matrix((1, prim_pts))
+                additive = pybamm.Scalar(dxN)
+            additive_multiplicative = pybamm.Scalar(1)
+            multiplicative = pybamm.Scalar(1)
+
         matrix = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
 
         # Return boundary value with domain given by symbol
