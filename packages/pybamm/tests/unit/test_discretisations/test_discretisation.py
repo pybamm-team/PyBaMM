@@ -2,6 +2,8 @@
 # Tests for the base model class
 #
 
+import random
+
 import numpy as np
 import pytest
 from scipy.sparse import block_diag, issparse
@@ -1410,3 +1412,68 @@ class TestDiscretise:
             assert isinstance(var, (pybamm.Variable | pybamm.Concatenation)), (
                 f"Unexpected new variable '{name}' added by process_model"
             )
+
+    def test_process_model_is_independent_of_variable_order(self):
+        # a one-point integration or broadcast can simplify back to its child,
+        # which discretisation caches and would otherwise be mutated in place
+        def discretise(shuffle_seed):
+            model = pybamm.lithium_ion.SPMe()
+            names = list(model.variables)
+            if shuffle_seed is not None:
+                random.Random(shuffle_seed).shuffle(names)
+            model.variables = pybamm.FuzzyDict(
+                {name: model.variables[name] for name in names}
+            )
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            parameter_values.process_model(model)
+            geometry = model.default_geometry
+            parameter_values.process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
+            return model.get_processed_variables_dict()
+
+        reference = discretise(None)
+        for seed in (1, 2):
+            shuffled = discretise(seed)
+            differing = [
+                name for name, expr in reference.items() if expr.id != shuffled[name].id
+            ]
+            assert differing == []
+
+    def test_process_model_copies_function_subclass_child(self):
+        # a one-point integration simplifies back to its child; copying that child
+        # must go through the subclass, or Arcsinh2's bound `eps` is lost
+        model = pybamm.lithium_ion.SPM({"thermal": "lumped"})
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.process_model(model)
+        geometry = model.default_geometry
+        parameter_values.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+
+        disc.process_model(model)
+
+        assert "Voltage [V]" in model.get_processed_variables_dict()
+
+    def test_one_point_integral_copies_time_derivative_child(self):
+        # a one-point integration simplifies back to its child; the copy made to
+        # spare the cached child must still read y_dot rather than y
+        disc = get_discretisation_for_testing(
+            cc_method=pybamm.ZeroDimensionalSpatialMethod
+        )
+        variable = pybamm.Variable("variable", domain="current collector")
+        disc.y_slices = {variable: [slice(0, 1)]}
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        time_derivative = variable.diff(pybamm.t)
+        disc_time_derivative = disc.process_symbol(time_derivative)
+
+        integral = disc.process_symbol(pybamm.Integral(time_derivative, z))
+
+        assert integral is not disc_time_derivative
+        assert type(integral) is pybamm.StateVectorDot
+        np.testing.assert_array_equal(
+            integral.evaluate(y=np.array([7.0]), y_dot=np.array([3.0])), [[3.0]]
+        )

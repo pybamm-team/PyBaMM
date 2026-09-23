@@ -139,6 +139,10 @@ class SpatialMethod:
         elif broadcast_type.startswith("full"):
             out = symbol * pybamm.Vector(np.ones(full_domain_size), domains=domains)
 
+        if out is symbol:
+            # simplification can hand back the child itself (e.g. ones-vector
+            # multiply); copy before stamping domains on a possibly shared node
+            out = symbol.create_copy()
         out.domains = domains.copy()
         return out
 
