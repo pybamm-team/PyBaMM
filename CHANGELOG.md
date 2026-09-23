@@ -16,6 +16,7 @@
 - `BaseModel.parameters` now includes parameter symbols stored in `Variable` scale, reference, and bounds metadata. ([#5753](https://github.com/pybamm-team/PyBaMM/pull/5753))
 - `BasicDFN`, `BasicDFN2D`, `BasicDFNHalfCell` and `BasicDFNComposite` now keep the migration term `t_plus * i_e / F` inside the electrolyte flux, as the modular `Full` electrolyte submodel does, so the electrolyte balance conserves lithium when the transference number depends on concentration (for example `ORegan2022`). ([#5745](https://github.com/pybamm-team/PyBaMM/issues/5745))
 - The `integration` nox session no longer installs the `pydiffsol` extra on macOS Intel CI runners, where it has no working build. ([#5726](https://github.com/pybamm-team/PyBaMM/pull/5726))
+- The composite electrode-SOH model's phase-capacity inputs are renamed `Q_n_1` -> `Q_n_prim`, `Q_n_2` -> `Q_n_sec`, `Q_p_1` -> `Q_p_prim`, `Q_p_2` -> `Q_p_sec`. The numbered form matched the deprecated-MSMR name pattern, so every composite solve emitted a `DeprecationWarning` naming an input the caller never set and cannot change. No documented API takes these names, but they are visible in `all_inputs` on the ESOH sub-simulation's solution, so code introspecting those keys must use the new spellings. ([#5738](https://github.com/pybamm-team/PyBaMM/pull/5738))
 
 ## Breaking changes
 
