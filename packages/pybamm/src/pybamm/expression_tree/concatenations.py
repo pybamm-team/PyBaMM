@@ -557,8 +557,8 @@ class SparseStack(Concatenation):
 class ConcatenationVariable(Concatenation):
     """A Variable representing a concatenation of variables."""
 
+    # scale, reference and bounds are derived from the children, not inputs
     __slots__ = ("_bounds", "_reference", "_scale")
-    _leaf_fields = ("_scale", "_reference", "_bounds")
 
     @classmethod
     def _from_json(cls, snippet: dict):

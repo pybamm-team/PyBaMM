@@ -119,6 +119,24 @@ class TestTreeUtil:
 
 
 class TestTreeMapAndReplace:
+    def test_replace_rederives_concatenation_scale(self):
+        a = pybamm.Variable("a", domain="negative electrode")
+        b = pybamm.Variable("b", domain="positive electrode")
+        concatenation = pybamm.ConcatenationVariable(a, b)
+        result = pybamm.replace(
+            concatenation, {a: a.create_copy(scale=2), b: b.create_copy(scale=2)}
+        )
+        assert result.scale == pybamm.Scalar(2)
+        assert all(child.scale == pybamm.Scalar(2) for child in result.children)
+
+    def test_replace_child_and_extra_leaf_together(self):
+        a = pybamm.Variable("a", domain="negative electrode")
+        b = pybamm.Variable("b", domain="separator")
+        x = pybamm.SpatialVariable("x", domain="negative electrode")
+        y = pybamm.SpatialVariable("y", domain="separator")
+        result = pybamm.replace(pybamm.Integral(a, x), {a: b, x: y})
+        assert result == pybamm.Integral(b, y)
+
     def test_replace_rejects_none_replacement(self):
         symbol = pybamm.Variable("a")
         with pytest.raises(ValueError, match="cannot be converted"):

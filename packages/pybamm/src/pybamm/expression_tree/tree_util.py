@@ -250,22 +250,20 @@ def rebuild(
     if all(map(_same, new_leaves, leaves)):
         return node
     n_children = len(node._children)
-    children_changed = not all(map(_same, new_leaves[:n_children], leaves[:n_children]))
-    if not children_changed:
-        # only the other leaf fields changed: the structure is unaffected
+    new_children = list(new_leaves[:n_children])
+    template = node
+    if not all(map(_same, new_leaves[n_children:], leaves[n_children:])):
+        # install the other rewritten leaves first, so the constructor sees them all
         _, treedef = tree_flatten(node)
-        return tree_unflatten(treedef, new_leaves)
-    # children changed: the constructor derives names, domains and simplifications
-    rebuilt = node.create_copy(
-        new_children=list(new_leaves[:n_children]), perform_simplifications=simplify
+        template = tree_unflatten(
+            treedef, [*leaves[:n_children], *new_leaves[n_children:]]
+        )
+    if all(map(_same, new_children, leaves[:n_children])):
+        return template
+    # the constructor derives names, domains and simplifications from the inputs
+    return template.create_copy(
+        new_children=new_children, perform_simplifications=simplify
     )
-    if type(rebuilt) is not type(node) or n_children == len(leaves):
-        return rebuilt  # nothing beyond children to carry over
-    rebuilt_leaves, rebuilt_treedef = tree_flatten(rebuilt)
-    extra = list(new_leaves[n_children:])
-    if all(map(_same, extra, rebuilt_leaves[n_children:])):
-        return rebuilt
-    return tree_unflatten(rebuilt_treedef, [*rebuilt_leaves[:n_children], *extra])
 
 
 def tree_map(
