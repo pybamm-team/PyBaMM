@@ -10,17 +10,13 @@ from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import
 
 
 class BasicDFNUnstructured(BaseModel):
-    """Doyle-Fuller-Newman (DFN) model on a 2D or 3D unstructured mesh.
+    """Doyle-Fuller-Newman (DFN) model discretised with
+    :class:`~pybamm.FiniteVolumeUnstructured`.
 
-    Identical physics to :class:`BasicDFN2D` but discretised with
-    :class:`~pybamm.FiniteVolumeUnstructured`. The through-cell direction is
-    *x*, the width direction is *y* (3D only) and the height direction is *z*.
-
-    The ``"mesh dimensionality"`` option sets the mesh: 2 (x, z; default) or
-    3 (x, y, z). The mesh uses TPFA-orthogonal quads in 2D and hexahedra in 3D;
-    pass ``submesh_types`` to :class:`pybamm.Simulation` with
-    ``pybamm.UnstructuredMeshGenerator(element_type="triangle")`` (or
-    ``"tetrahedron"``) for simplex elements.
+    The ``"dimensionality"`` option is the number of directions resolved besides
+    the through-cell *x*: 1 (default) meshes (x, z) with quads and 2 meshes
+    (x, y, z) with hexahedra. Pass ``submesh_types`` to
+    :class:`pybamm.Simulation` for triangles or tetrahedra.
 
     Parameters
     ----------
@@ -32,19 +28,20 @@ class BasicDFNUnstructured(BaseModel):
     """
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman model (unstructured)"):
-        options = {"mesh dimensionality": 2, **(options or {})}
+        options = {"dimensionality": 1, **(options or {})}
         super().__init__(options, name)
-        dimension = self.options["mesh dimensionality"]
-        if dimension == 1:
+        if self.options["dimensionality"] not in (1, 2):
             raise pybamm.OptionError(
-                "BasicDFNUnstructured needs a 'mesh dimensionality' of 2 or 3"
+                "BasicDFNUnstructured needs a 'dimensionality' of 1 (x-z mesh) "
+                "or 2 (x-y-z mesh)"
             )
+        three_dimensional = self.options["dimensionality"] == 2
         pybamm.citations.register("Marquis2019")
 
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        axes = ["x", "y", "z"] if dimension == 3 else ["x", "z"]
+        axes = ["x", "y", "z"] if three_dimensional else ["x", "z"]
         coords_n = [
             pybamm.SpatialVariable(
                 f"{axis}_n", "negative electrode", coord_sys="cartesian"
@@ -77,7 +74,7 @@ class BasicDFNUnstructured(BaseModel):
 
         # A 2D slice stands for a cell of width L_y, so volume integrals are
         # scaled by the width the mesh does not resolve
-        width = 1 if dimension == 3 else self.param.L_y
+        width = 1 if three_dimensional else self.param.L_y
 
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
@@ -214,7 +211,7 @@ class BasicDFNUnstructured(BaseModel):
         # Multiply by L_x**2 * L_z**2 to improve conditioning
         L_scale = self.param.L_x**2 * self.param.L_z**2
         sides = ["left", "right", "top", "bottom"]
-        if dimension == 3:
+        if three_dimensional:
             sides += ["front", "back"]
         zero_flux = {side: (pybamm.Scalar(0), "Neumann") for side in sides}
         sigma_eff_n = self.param.n.sigma(sto_surf_n, T) * eps_s_n**self.param.n.b_s
@@ -326,7 +323,7 @@ class BasicDFNUnstructured(BaseModel):
     @property
     def default_geometry(self):
         transverse = {"z": {"min": 0, "max": self.param.L_z}}
-        if self.options["mesh dimensionality"] == 3:
+        if self.options["dimensionality"] == 2:
             transverse = {"y": {"min": 0, "max": self.param.L_y}, **transverse}
         return {
             "negative electrode": {
@@ -368,7 +365,7 @@ class BasicDFNUnstructured(BaseModel):
 
     @property
     def default_submesh_types(self):
-        if self.options["mesh dimensionality"] == 2:
+        if self.options["dimensionality"] == 1:
             element_type = "quad"
         else:
             element_type = "hexahedron"
@@ -387,7 +384,7 @@ class BasicDFNUnstructured(BaseModel):
 
     @property
     def default_var_pts(self):
-        if self.options["mesh dimensionality"] == 2:
+        if self.options["dimensionality"] == 1:
             return {"x_n": 20, "x_s": 30, "x_p": 20, "r_n": 20, "r_p": 20, "z": 10}
         return {
             "x_n": 10,

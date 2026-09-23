@@ -136,8 +136,8 @@ class TestElectrolyteConservation:
     @pytest.mark.parametrize(
         "model",
         [
-            pybamm.lithium_ion.BasicDFNUnstructured({"mesh dimensionality": 2}),
-            pybamm.lithium_ion.BasicDFNUnstructured({"mesh dimensionality": 3}),
+            pybamm.lithium_ion.BasicDFNUnstructured({"dimensionality": 1}),
+            pybamm.lithium_ion.BasicDFNUnstructured({"dimensionality": 2}),
         ],
         ids=["2d_unstructured", "3d_unstructured"],
     )
@@ -229,7 +229,7 @@ class TestBasicDFNHalfCell(BaseBasicModelTest):
 class TestBasicDFNUnstructured2D(BaseBasicModelTest):
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.model = pybamm.lithium_ion.BasicDFNUnstructured({"mesh dimensionality": 2})
+        self.model = pybamm.lithium_ion.BasicDFNUnstructured({"dimensionality": 1})
 
     def test_matches_structured(self):
         t_eval = np.linspace(0, 3600, 20)
@@ -257,12 +257,12 @@ class TestBasicDFNUnstructured2D(BaseBasicModelTest):
 class TestBasicDFNUnstructured3D(BaseBasicModelTest):
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.model = pybamm.lithium_ion.BasicDFNUnstructured({"mesh dimensionality": 3})
+        self.model = pybamm.lithium_ion.BasicDFNUnstructured({"dimensionality": 2})
 
     def test_matches_2d(self):
         t_eval = np.linspace(0, 3600, 20)
 
-        model_2d = pybamm.lithium_ion.BasicDFNUnstructured({"mesh dimensionality": 2})
+        model_2d = pybamm.lithium_ion.BasicDFNUnstructured({"dimensionality": 1})
         sim_2d = pybamm.Simulation(model_2d, var_pts=COARSE_UNSTRUCTURED_VAR_PTS)
         sol_2d = sim_2d.solve(t_eval)
 

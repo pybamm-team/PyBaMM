@@ -177,10 +177,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "asymmetric stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
-            * "mesh dimensionality" : int
-                Sets the number of spatial dimensions of the electrode and separator
-                mesh. Can be 1 (default), 2 or 3. Only
-                :class:`pybamm.lithium_ion.BasicDFNUnstructured` supports 2 or 3.
             * "number of MSMR reactions" : str
                 Sets the number of reactions to use in the MSMR model in each electrode.
                 A 2-tuple can be provided to give a different number of reactions in
@@ -376,7 +372,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress and reaction-driven",
                 "asymmetric stress and reaction-driven",
             ],
-            "mesh dimensionality": [1, 2, 3],
             "number of MSMR reactions": ["none"],
             "open-circuit potential": [
                 "single",
@@ -462,7 +457,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "lithium plating": "none",
             "lithium plating porosity change": "false",
             "loss of active material": "none",
-            "mesh dimensionality": 1,
             "number of MSMR reactions": "none",
             "open-circuit potential": "single",
             "operating mode": "current",
@@ -890,7 +884,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         for option, value in options.items():
             if isinstance(value, str) or option in [
                 "dimensionality",
-                "mesh dimensionality",
                 "operating mode",
             ]:  # some options accept non-strings
                 value = (value,)
@@ -1223,12 +1216,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "electrolyte conductivity '{}' not suitable for SPMe".format(
                     options["electrolyte conductivity"]
                 )
-            )
-        if options.get("mesh dimensionality", 1) != 1 and not isinstance(
-            self, pybamm.lithium_ion.BasicDFNUnstructured
-        ):
-            raise pybamm.OptionError(
-                "'mesh dimensionality' 2 or 3 is only supported by BasicDFNUnstructured"
             )
         if (
             isinstance(self, pybamm.lithium_ion.SPM)

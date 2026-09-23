@@ -35,7 +35,6 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating': 'none' (possible: ['none', 'reversible', 'partially reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'asymmetric stress-driven', 'reaction-driven', 'current-driven', 'stress and reaction-driven', 'asymmetric stress and reaction-driven'])
-'mesh dimensionality': 1 (possible: [1, 2, 3])
 'number of MSMR reactions': 'none' (possible: ['none'])
 'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR', 'one-state hysteresis', 'one-state differential capacity hysteresis'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
@@ -204,10 +203,6 @@ class TestBaseBatteryModel:
             pybamm.BaseBatteryModel({"cell geometry": "bad geometry"})
         with pytest.raises(pybamm.OptionError, match=r"dimensionality"):
             pybamm.BaseBatteryModel({"dimensionality": 5})
-        with pytest.raises(pybamm.OptionError, match=r"mesh dimensionality"):
-            pybamm.BaseBatteryModel({"mesh dimensionality": 4})
-        with pytest.raises(pybamm.OptionError, match=r"only supported by"):
-            pybamm.lithium_ion.DFN({"mesh dimensionality": 2})
         with pytest.raises(pybamm.OptionError, match=r"current collector"):
             pybamm.BaseBatteryModel(
                 {"dimensionality": 1, "current collector": "bad option"}

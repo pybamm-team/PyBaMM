@@ -3,7 +3,7 @@
 ## Features
 
 - Added VTK-based plotting (`VTKQuickPlot`, also via `pybamm.dynamic_plot(..., backend="vtk")`) for unstructured mesh solutions, matplotlib `QuickPlot` support for 2D unstructured scalar and vector-field variables, and headless CI OpenGL setup. ([#5689](https://github.com/pybamm-team/PyBaMM/pull/5689))
-- Added a basic DFN model on 2D or 3D unstructured meshes (`BasicDFNUnstructured`), selected with the new `"mesh dimensionality"` model option. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
+- Added a basic DFN model on 2D or 3D unstructured meshes (`BasicDFNUnstructured`); the `"dimensionality"` option selects an x-z (1) or x-y-z (2) mesh. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
 - Added the [`comment-slop`](https://github.com/ionworks/comment-slop) detector as a developer check, in two layers: a `pre-commit` hook that gates every commit and pull request, and a `PostToolUse` hook in the newly tracked `.claude/settings.json` that reports to coding agents as they write. It reports comments that restate the code, narrate an edit, or leak process chatter, on changed lines only, and never edits a file. ([#5764](https://github.com/pybamm-team/PyBaMM/pull/5764))
 - `DiffSLExport` now supports `Interpolant` nodes, so models with interpolated parameters (e.g. OCP or diffusivity lookup tables) can be exported to DiffSL. 1D interpolants use DiffSL's native `interp1d` over the table data; 2D interpolants use successive 1D interpolation. ([#5756](https://github.com/pybamm-team/PyBaMM/pull/5756))
 
