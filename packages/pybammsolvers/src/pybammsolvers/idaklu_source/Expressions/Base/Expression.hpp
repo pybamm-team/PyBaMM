@@ -13,6 +13,11 @@ public:  // method declarations
   Expression() = default;
 
   /**
+   * @brief Virtual destructor (required for safe polymorphic deletion via base pointer)
+   */
+  virtual ~Expression() = default;
+
+  /**
    * @brief Evaluation operator (for use after setting input and output data references)
    */
   virtual void operator()() = 0;

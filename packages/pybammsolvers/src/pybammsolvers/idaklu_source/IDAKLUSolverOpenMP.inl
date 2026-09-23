@@ -630,10 +630,8 @@ void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   i_eval++;
   t_eval_next = t_eval[i_eval];
   CheckErrors(IDASetStopTime(ida_mem, t_eval_next), "IDASetStopTime");
-  if (solver_opts.print_stats) {
-    // Save stats before reinitializing (reinit resets IDA counters)
-    SaveStats();
-  }
+  // Save stats before reinitializing (reinit resets IDA counters)
+  SaveStats();
 
   // Reinitialize the solver to deal with the discontinuity at t = t_val
   ReinitializeIntegrator(t_val);
@@ -648,8 +646,8 @@ template <class ExprSet>
 SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
   DEBUG("IDAKLUSolver::BuildSolutionData");
 
+  SaveStats();
   if (solver_opts.print_stats) {
-    SaveStats();
     CaptureStats();
   }
 
@@ -694,7 +692,8 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     arg_sens0,
     arg_sens1,
     arg_sens2,
-    save_hermite
+    save_hermite,
+    accumulated_stats
   );
 }
 
@@ -1116,6 +1115,10 @@ PendingStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
   if (setup_opts.using_iterative_solver) {
     CheckErrors(IDAGetNumLinIters(ida_mem, &stats.nliters), "IDAGetNumLinIters");
     CheckErrors(IDAGetNumLinConvFails(ida_mem, &stats.nlcfails), "IDAGetNumLinConvFails");
+  }
+  // Without IDABBDPrecInit, IDA's preconditioner data is the user data, which
+  // this call would misread as the BBD preconditioner's.
+  if (setup_opts.preconditioner != "none") {
     CheckErrors(IDABBDPrecGetNumGfnEvals(ida_mem, &stats.ngevalsBBDP), "IDABBDPrecGetNumGfnEvals");
   }
 
