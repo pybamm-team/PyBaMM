@@ -134,17 +134,15 @@ class TestElectrolyteConservation:
         np.testing.assert_allclose(li, li[0], rtol=1e-8)
 
     @pytest.mark.parametrize(
-        "model",
-        [
-            pybamm.lithium_ion.BasicDFNUnstructured({"dimensionality": 1}),
-            pybamm.lithium_ion.BasicDFNUnstructured({"dimensionality": 2}),
-        ],
-        ids=["2d_unstructured", "3d_unstructured"],
+        "dimensionality", [1, 2], ids=["2d_unstructured", "3d_unstructured"]
     )
     @pytest.mark.parametrize(
         "graded", [False, True], ids=["uniform_loading", "graded_loading"]
     )
-    def test_basic_dfn_unstructured(self, model, graded):
+    def test_basic_dfn_unstructured(self, dimensionality, graded):
+        model = pybamm.lithium_ion.BasicDFNUnstructured(
+            {"dimensionality": dimensionality}
+        )
         model.variables["Total lithium inventory [mol]"] = (
             model.variables["Total lithium [mol]"]
             + model.variables["Total solid lithium [mol]"]
