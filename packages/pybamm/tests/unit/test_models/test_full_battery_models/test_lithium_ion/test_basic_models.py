@@ -88,26 +88,36 @@ class TestBasicModels:
     )
     def test_dfn_unstructured(self, dimension, element_type):
         model = pybamm.lithium_ion.BasicDFNUnstructured(
-            dimension=dimension, element_type=element_type
+            {"mesh dimensionality": dimension}
         )
         model.check_well_posedness()
 
-        sim = pybamm.Simulation(model, var_pts={k: 3 for k in model.default_var_pts})
+        submesh_types = model.default_submesh_types
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            submesh_types[domain] = pybamm.UnstructuredMeshGenerator(
+                element_type=element_type
+            )
+        sim = pybamm.Simulation(
+            model,
+            submesh_types=submesh_types,
+            var_pts={k: 3 for k in model.default_var_pts},
+        )
         sim.build()
         for domain in ["negative electrode", "separator", "positive electrode"]:
             assert sim.mesh[domain].dimension == dimension
             assert sim.mesh[domain].element_type == element_type
 
     @pytest.mark.parametrize(
-        ("dimension", "element_type"), [(2, "quad"), (3, "hexahedron")]
+        ("options", "dimension", "element_type"),
+        [(None, 2, "quad"), ({"mesh dimensionality": 3}, 3, "hexahedron")],
     )
-    def test_dfn_unstructured_default_element_type(self, dimension, element_type):
-        model = pybamm.lithium_ion.BasicDFNUnstructured(dimension=dimension)
-        assert model.name == f"Doyle-Fuller-Newman model ({dimension}D unstructured)"
+    def test_dfn_unstructured_defaults(self, options, dimension, element_type):
+        model = pybamm.lithium_ion.BasicDFNUnstructured(options)
+        assert model.options["mesh dimensionality"] == dimension
         sim = pybamm.Simulation(model, var_pts={k: 3 for k in model.default_var_pts})
         sim.build()
         assert sim.mesh["negative electrode"].element_type == element_type
 
-    def test_dfn_unstructured_bad_dimension(self):
-        with pytest.raises(pybamm.OptionError, match=r"dimension must be 2 or 3"):
-            pybamm.lithium_ion.BasicDFNUnstructured(dimension=1)
+    def test_dfn_unstructured_1d_mesh_raises(self):
+        with pytest.raises(pybamm.OptionError, match=r"2 or 3"):
+            pybamm.lithium_ion.BasicDFNUnstructured({"mesh dimensionality": 1})

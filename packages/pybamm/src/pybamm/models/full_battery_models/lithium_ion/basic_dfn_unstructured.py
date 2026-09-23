@@ -16,45 +16,35 @@ class BasicDFNUnstructured(BaseModel):
     :class:`~pybamm.FiniteVolumeUnstructured`. The through-cell direction is
     *x*, the width direction is *y* (3D only) and the height direction is *z*.
 
+    The ``"mesh dimensionality"`` option sets the mesh: 2 (x, z; default) or
+    3 (x, y, z). The mesh uses TPFA-orthogonal quads in 2D and hexahedra in 3D;
+    pass ``submesh_types`` to :class:`pybamm.Simulation` with
+    ``pybamm.UnstructuredMeshGenerator(element_type="triangle")`` (or
+    ``"tetrahedron"``) for simplex elements.
+
     Parameters
     ----------
-    dimension : int, optional
-        Number of spatial dimensions of the electrodes and separator, 2
-        (x, z; default) or 3 (x, y, z).
-    element_type : str, optional
-        Element type for the built-in mesh generator: ``"quad"`` or
-        ``"triangle"`` in 2D, ``"hexahedron"`` or ``"tetrahedron"`` in 3D.
-        Defaults to the TPFA-orthogonal ``"quad"`` / ``"hexahedron"``.
+    options : dict, optional
+        A dictionary of options to be passed to the model. See
+        :class:`pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
-
-    Raises
-    ------
-    pybamm.OptionError
-        If ``dimension`` is not 2 or 3.
     """
 
-    def __init__(
-        self,
-        dimension: int = 2,
-        element_type: str | None = None,
-        name: str | None = None,
-    ):
-        if dimension not in (2, 3):
-            raise pybamm.OptionError(f"dimension must be 2 or 3, not {dimension!r}")
-        if name is None:
-            name = f"Doyle-Fuller-Newman model ({dimension}D unstructured)"
-        if element_type is None:
-            element_type = "quad" if dimension == 2 else "hexahedron"
-        super().__init__(name=name)
-        self.dimension = dimension
-        self._element_type = element_type
+    def __init__(self, options=None, name="Doyle-Fuller-Newman model (unstructured)"):
+        options = {"mesh dimensionality": 2, **(options or {})}
+        super().__init__(options, name)
+        dimension = self.options["mesh dimensionality"]
+        if dimension == 1:
+            raise pybamm.OptionError(
+                "BasicDFNUnstructured needs a 'mesh dimensionality' of 2 or 3"
+            )
         pybamm.citations.register("Marquis2019")
 
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        axes = ["x", "y", "z"] if self.dimension == 3 else ["x", "z"]
+        axes = ["x", "y", "z"] if dimension == 3 else ["x", "z"]
         coords_n = [
             pybamm.SpatialVariable(
                 f"{axis}_n", "negative electrode", coord_sys="cartesian"
@@ -87,7 +77,7 @@ class BasicDFNUnstructured(BaseModel):
 
         # A 2D slice stands for a cell of width L_y, so volume integrals are
         # scaled by the width the mesh does not resolve
-        width = 1 if self.dimension == 3 else self.param.L_y
+        width = 1 if dimension == 3 else self.param.L_y
 
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
@@ -224,7 +214,7 @@ class BasicDFNUnstructured(BaseModel):
         # Multiply by L_x**2 * L_z**2 to improve conditioning
         L_scale = self.param.L_x**2 * self.param.L_z**2
         sides = ["left", "right", "top", "bottom"]
-        if self.dimension == 3:
+        if dimension == 3:
             sides += ["front", "back"]
         zero_flux = {side: (pybamm.Scalar(0), "Neumann") for side in sides}
         sigma_eff_n = self.param.n.sigma(sto_surf_n, T) * eps_s_n**self.param.n.b_s
@@ -336,7 +326,7 @@ class BasicDFNUnstructured(BaseModel):
     @property
     def default_geometry(self):
         transverse = {"z": {"min": 0, "max": self.param.L_z}}
-        if self.dimension == 3:
+        if self.options["mesh dimensionality"] == 3:
             transverse = {"y": {"min": 0, "max": self.param.L_y}, **transverse}
         return {
             "negative electrode": {
@@ -378,15 +368,17 @@ class BasicDFNUnstructured(BaseModel):
 
     @property
     def default_submesh_types(self):
+        if self.options["mesh dimensionality"] == 2:
+            element_type = "quad"
+        else:
+            element_type = "hexahedron"
         return {
             "negative electrode": pybamm.UnstructuredMeshGenerator(
-                element_type=self._element_type
+                element_type=element_type
             ),
-            "separator": pybamm.UnstructuredMeshGenerator(
-                element_type=self._element_type
-            ),
+            "separator": pybamm.UnstructuredMeshGenerator(element_type=element_type),
             "positive electrode": pybamm.UnstructuredMeshGenerator(
-                element_type=self._element_type
+                element_type=element_type
             ),
             "positive particle": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
@@ -395,7 +387,7 @@ class BasicDFNUnstructured(BaseModel):
 
     @property
     def default_var_pts(self):
-        if self.dimension == 2:
+        if self.options["mesh dimensionality"] == 2:
             return {"x_n": 20, "x_s": 30, "x_p": 20, "r_n": 20, "r_p": 20, "z": 10}
         return {
             "x_n": 10,
