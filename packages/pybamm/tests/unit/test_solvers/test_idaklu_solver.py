@@ -1191,6 +1191,43 @@ class TestIDAKLUSolver:
                     err_msg=f"Failed for '{varname}', sensitivity '{key}'",
                 )
 
+    def test_output_variables_sensitivities_are_keyed_by_sensitivity_parameters(
+        self,
+    ):
+        # An input that no sensitivity was requested for takes no key or column.
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        inputs = {
+            "Current function [A]": 0.68,
+            "Electrode height [m]": parameter_values["Electrode height [m]"],
+        }
+        parameter_values.update({key: "[input]" for key in inputs})
+        name = "Voltage [V]"
+        t_interp = np.linspace(0, 600, 11)
+
+        def voltage_sensitivities(output_variables):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                solver=pybamm.IDAKLUSolver(output_variables=output_variables),
+            )
+            solution = sim.solve(
+                [0, 600],
+                t_interp=t_interp,
+                inputs=inputs,
+                calculate_sensitivities=["Current function [A]"],
+            )
+            return solution[name].sensitivities
+
+        full = voltage_sensitivities(None)
+        outputs_only = voltage_sensitivities([name])
+        assert set(outputs_only) == {"all", "Current function [A]"}
+        np.testing.assert_allclose(
+            outputs_only["Current function [A]"],
+            full["Current function [A]"],
+            rtol=1e-6,
+            atol=1e-10,
+        )
+
     def test_with_output_variables_and_event_termination(self):
         model = pybamm.lithium_ion.DFN()
         parameter_values = pybamm.ParameterValues("Chen2020")

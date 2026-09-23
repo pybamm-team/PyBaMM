@@ -7,6 +7,7 @@
 - Added the [`comment-slop`](https://github.com/ionworks/comment-slop) detector as a developer check, in two layers: a `pre-commit` hook that gates every commit and pull request, and a `PostToolUse` hook in the newly tracked `.claude/settings.json` that reports to coding agents as they write. It reports comments that restate the code, narrate an edit, or leak process chatter, on changed lines only, and never edits a file. ([#5764](https://github.com/pybamm-team/PyBaMM/pull/5764))
 - `DiffSLExport` now supports `Interpolant` nodes, so models with interpolated parameters (e.g. OCP or diffusivity lookup tables) can be exported to DiffSL. 1D interpolants use DiffSL's native `interp1d` over the table data; 2D interpolants use successive 1D interpolation. ([#5756](https://github.com/pybamm-team/PyBaMM/pull/5756))
 - Added the model zoo (`packages/pybamm-model-zoo/`), a home for community- and partner-contributed models: one self-contained folder per model, with a declarative `model.toml` manifest as the only boilerplate a contributor writes. Models are either `community` tier (advisory CI) or `core` tier (in the merge gate); nothing in `pybamm` itself changed. ([#5727](https://github.com/pybamm-team/PyBaMM/pull/5727))
+- Evaluating a `ProcessedVariable` again, for example at new times, no longer re-serialises its CasADi functions or rescans every sub-solution's time span: a repeat `solution["Voltage [V]"](t)` on an SPMe discharge is about 40% faster, and finding the sub-solutions that cover the requested times, across 60 of them, takes 1 µs rather than 10 µs. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
 
 ## Bug fixes
 
@@ -25,10 +26,15 @@
 - The `integration` nox session no longer installs the `pydiffsol` extra on macOS Intel CI runners, where it has no working build. ([#5726](https://github.com/pybamm-team/PyBaMM/pull/5726))
 - The Read the Docs build uses Read the Docs' native `uv` support (`python.install` with `method: uv`) instead of installing `uv` from a GitHub release tarball through `asdf` in `build.jobs`. The tarball fetch failed the build whenever GitHub's release CDN returned a 5xx; `uv` now ships in the build image. The generated command, `uv sync --group docs --extra all`, is unchanged. ([#5727](https://github.com/pybamm-team/PyBaMM/pull/5727))
 - The memray memory benchmarks no longer fail at random. memray saw Python's small-object allocations only as whole 1 MiB pymalloc arenas, so a test's result jumped by 1 MiB whenever the heap left by earlier tests ran out of space: `test_discretise_memory` intermittently reported 1.0 MiB against its 50 KiB limit. The `benchmark-memory` session now traces every Python allocation, each memory benchmark module warms up under memray before its tests are measured, and the limits are recalibrated to the traced figures. ([#5777](https://github.com/pybamm-team/PyBaMM/pull/5777))
+- The per-variable sensitivities of an `output_variables` solve are keyed by the sensitivity parameters only. Every input used to take a key in turn, so an input no sensitivity was requested for, such as an experiment's step index, gained a spurious key, or took a parameter's column and shifted the labels after it. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
 
 ## Breaking changes
 
 - Bumped the pinned CasADi version from 3.7.2 to 3.8.1. CasADi 3.8 ships `abi3` wheels, which cover every current and future CPython version, and changes how numpy functions dispatch on CasADi values (casadi#2959). PyBaMM pins the legacy dispatch behaviour via `casadi.GlobalOptions.setNumpyMode(-1)` at import, so expression-tree result types are unchanged. ([#5761](https://github.com/pybamm-team/PyBaMM/pull/5761))
+
+## Deprecated
+
+- The `base_variables_casadi` argument and attribute of `ProcessedVariable` are deprecated. Pass the CasADi functions as the third positional argument or as `observer=`, and call the variable to evaluate it rather than reading the functions back. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
 
 # [v26.8.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.8.0.0) - 2026-08-13
 
