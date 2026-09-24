@@ -7,12 +7,15 @@ import pytest
 
 import pybamm
 from tests import (
+    assert_constant_matrix_factors,
+    assert_symbolic_mesh_matches_numeric,
     get_1p1d_mesh_for_testing,
     get_cylindrical_mesh_for_testing,
     get_cylindrical_mesh_for_testing_symbolic,
     get_mesh_for_testing,
     get_mesh_for_testing_symbolic,
     get_spherical_mesh_for_testing_symbolic,
+    get_symbolic_length_discretisation_for_testing,
 )
 
 
@@ -199,6 +202,42 @@ class TestFiniteVolumeIntegration:
             4 * np.pi * 2.0**3 / 3,
             rtol=1e-5,
             atol=1e-4,
+        )
+
+    @pytest.mark.parametrize(
+        "coord_sys", ["cartesian", "cylindrical polar", "spherical polar"]
+    )
+    def test_definite_integral_symbolic_length_with_secondary_domain(self, coord_sys):
+        auxiliary_domains = {"secondary": "electrode"}
+        c = pybamm.Variable("c", "particle", auxiliary_domains=auxiliary_domains)
+        r = pybamm.SpatialVariable(
+            "r", ["particle"], auxiliary_domains=auxiliary_domains, coord_sys=coord_sys
+        )
+        x = pybamm.SpatialVariable("x", ["electrode"], coord_sys="cartesian")
+        expressions = [pybamm.Integral(c, r), pybamm.Integral(c, x)]
+        column = pybamm.DefiniteIntegralVector(c, vector_type="column")
+
+        def discretise(radius, length):
+            disc = get_symbolic_length_discretisation_for_testing(
+                radius, electrode_length=length, coord_sys=coord_sys
+            )
+            disc.set_variable_slices([c])
+            return [disc.process_symbol(expr) for expr in [*expressions, column]]
+
+        *symbolic, symbolic_column = discretise(
+            pybamm.InputParameter("R"), pybamm.InputParameter("L")
+        )
+        *numeric, numeric_column = discretise(pybamm.Scalar(2), pybamm.Scalar(3))
+        inputs = {"R": 2, "L": 3}
+        y = np.linspace(0, 1, 18)[:, np.newaxis] ** 2
+        for symbolic_expr, numeric_expr in zip(symbolic, numeric, strict=True):
+            assert_symbolic_mesh_matches_numeric(symbolic_expr, numeric_expr, y, inputs)
+        assert_constant_matrix_factors(symbolic_column)
+        np.testing.assert_allclose(
+            symbolic_column.evaluate(inputs=inputs).toarray(),
+            numeric_column.evaluate().toarray(),
+            rtol=1e-12,
+            atol=1e-12,
         )
 
     def test_integral_secondary_tertiary_domain(self):
@@ -673,6 +712,42 @@ class TestFiniteVolumeIntegration:
         phi_exact = np.ones_like(submesh.nodes)
         phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
         np.testing.assert_allclose(x_end**2 / 2, phi_approx, rtol=1e-7, atol=1e-6)
+
+    @pytest.mark.parametrize(
+        "integral", [pybamm.IndefiniteIntegral, pybamm.BackwardIndefiniteIntegral]
+    )
+    def test_indefinite_integral_symbolic_length_with_secondary_domain(self, integral):
+        auxiliary_domains = {"secondary": "electrode"}
+        c = pybamm.Variable("c", "particle", auxiliary_domains=auxiliary_domains)
+        r = pybamm.SpatialVariable(
+            "r",
+            ["particle"],
+            auxiliary_domains=auxiliary_domains,
+            coord_sys="cartesian",
+        )
+        # integrands on the nodes and on the edges
+        expressions = [integral(c, r), integral(pybamm.grad(c), r)]
+
+        def discretise(radius):
+            disc = get_symbolic_length_discretisation_for_testing(
+                radius, coord_sys="cartesian"
+            )
+            disc.set_variable_slices([c])
+            disc.bcs = {
+                c: {
+                    "left": (pybamm.Scalar(1), "Neumann"),
+                    "right": (pybamm.Scalar(2), "Neumann"),
+                }
+            }
+            return [disc.process_symbol(expr) for expr in expressions]
+
+        y = np.linspace(0, 1, 18)[:, np.newaxis] ** 2
+        for symbolic, numeric in zip(
+            discretise(pybamm.InputParameter("R")),
+            discretise(pybamm.Scalar(2)),
+            strict=True,
+        ):
+            assert_symbolic_mesh_matches_numeric(symbolic, numeric, y, {"R": 2})
 
     def test_indefinite_integral_on_nodes(self):
         mesh = get_mesh_for_testing()
