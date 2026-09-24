@@ -115,6 +115,7 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
 
   // num_threads() scopes the team to this region, unlike the process-wide
   // omp_set_num_threads; the runtime may still start fewer threads than asked.
+  // cppcheck-suppress unreadVariable
   const int team_size = std::max<int>(1, std::min<int>(m_solvers.size(), number_of_groups));
   // A plain atomic, not schedule(dynamic): the macOS wheels' libomp lacks
   // __kmpc_dispatch_deinit, and MSVC needs -openmp:llvm for omp atomic capture.

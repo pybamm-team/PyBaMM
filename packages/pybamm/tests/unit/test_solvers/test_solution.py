@@ -4,7 +4,7 @@
 import io
 import json
 import logging
-import pickle
+import pickle  # nosec B403 - used in tests with trusted input
 import subprocess  # nosec B404 - used in tests with trusted input
 import sys
 from unittest import mock
@@ -1903,10 +1903,10 @@ class TestSolutionSolverStatistics:
     def test_statistics_survive_pickling(self):
         statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
         solution = self._solution(0, statistics)
-        assert pickle.loads(pickle.dumps(solution)).solver_statistics == statistics
+        assert pickle.loads(pickle.dumps(solution)).solver_statistics == statistics  # nosec B301
 
     def test_solution_pickled_without_statistics_loads(self):
         solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
         # A solution pickled before the attribute existed has no such state
         del solution.__dict__["solver_statistics"]
-        assert pickle.loads(pickle.dumps(solution)).solver_statistics is None
+        assert pickle.loads(pickle.dumps(solution)).solver_statistics is None  # nosec B301
