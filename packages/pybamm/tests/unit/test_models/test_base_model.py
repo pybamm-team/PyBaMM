@@ -3,7 +3,7 @@
 #
 
 import os
-import pickle
+import pickle  # nosec B403 - used in tests with trusted input
 import platform
 import subprocess  # nosec
 import sys
@@ -1818,7 +1818,7 @@ class TestBaseModel:
         data = pickle.dumps(model)
         monkeypatch.undo()
 
-        restored = pickle.loads(data)
+        restored = pickle.loads(data)  # nosec B301
         assert restored.convert_to_format == "python"
         assert "convert_to_format" not in vars(restored)
         solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])

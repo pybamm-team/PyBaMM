@@ -1,4 +1,4 @@
-import pickle
+import pickle  # nosec B403 - used in tests with trusted input
 
 import numpy as np
 import pytest
@@ -188,7 +188,7 @@ class TestBaseSimulationPickle:
         data = pickle.dumps(sim)
         monkeypatch.undo()
 
-        loaded = pickle.loads(data)
+        loaded = pickle.loads(data)  # nosec B301
         assert loaded.built_model.convert_to_format == "casadi"
         solution = loaded.solve([0, 100])
         np.testing.assert_allclose(
