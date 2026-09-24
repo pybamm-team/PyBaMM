@@ -1191,14 +1191,18 @@ class TestIDAKLUSolver:
                     err_msg=f"Failed for '{varname}', sensitivity '{key}'",
                 )
 
+    @pytest.mark.parametrize(
+        "other_input", ["Electrode height [m]", "Ambient temperature [K]"]
+    )
     def test_output_variables_sensitivities_are_keyed_by_sensitivity_parameters(
-        self,
+        self, other_input
     ):
-        # An input that no sensitivity was requested for takes no key or column.
+        # An input that no sensitivity was requested for takes no key or column,
+        # whether it is stacked after the sensitivity input or before it.
         parameter_values = pybamm.ParameterValues("Chen2020")
         inputs = {
             "Current function [A]": 0.68,
-            "Electrode height [m]": parameter_values["Electrode height [m]"],
+            other_input: parameter_values[other_input],
         }
         parameter_values.update({key: "[input]" for key in inputs})
         name = "Voltage [V]"

@@ -1842,7 +1842,8 @@ def process(
     use_jacobian: bool, optional
         whether to return Jacobian functions
     return_jacp_stacked: bool, optional
-        returns Jacobian function wrt stacked parameters instead of jacp
+        returns one Jacobian function wrt the stacked sensitivity parameters
+        instead of jacp
 
     Returns
     -------
@@ -1945,13 +1946,16 @@ def process(
                 f"to parameters {model.calculate_sensitivities} using "
                 "CasADi"
             )
-            # Compute derivate wrt p-stacked (can be passed to solver to
-            # compute sensitivities online)
             if return_jacp_stacked:
+                # Columns are the sensitivity parameters only, in the solver's
+                # sensitivity-state order, which is how IDAKLU indexes them.
+                sensitivity_parameters = casadi.vertcat(
+                    *[p_casadi[pname] for pname in model.calculate_sensitivities]
+                )
                 jacp = casadi.Function(
                     f"d{name}_dp",
                     [t_casadi, y_casadi, p_casadi_stacked],
-                    [casadi.jacobian(casadi_expression, p_casadi_stacked)],
+                    [casadi.jacobian(casadi_expression, sensitivity_parameters)],
                 )
             else:
                 # WARNING, jacp for convert_to_format=casadi does not return a dict
