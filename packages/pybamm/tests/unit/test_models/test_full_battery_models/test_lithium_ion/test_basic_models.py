@@ -117,3 +117,51 @@ class TestBasicModels:
 
         component = solution["Electrolyte current density x [A.m-2]"]
         assert np.all(np.isfinite(component(t=5)))
+
+    @pytest.mark.parametrize(
+        ("dimensionality", "element_type"),
+        [(1, "quad"), (1, "triangle"), (2, "hexahedron"), (2, "tetrahedron")],
+    )
+    def test_dfn_unstructured(self, dimensionality, element_type):
+        model = pybamm.lithium_ion.BasicDFNUnstructured(
+            {"dimensionality": dimensionality}
+        )
+        model.check_well_posedness()
+
+        submesh_types = model.default_submesh_types
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            submesh_types[domain] = pybamm.UnstructuredMeshGenerator(
+                element_type=element_type
+            )
+        sim = pybamm.Simulation(
+            model,
+            submesh_types=submesh_types,
+            var_pts={k: 3 for k in model.default_var_pts},
+        )
+        solution = sim.solve([0, 60])
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            assert sim.mesh[domain].dimension == dimensionality + 1
+            assert sim.mesh[domain].element_type == element_type
+        assert solution.t[-1] == pytest.approx(60)
+        assert np.all(np.isfinite(solution["Voltage [V]"](t=[0, 30, 60])))
+
+    @pytest.mark.parametrize(
+        ("options", "element_type"),
+        [(None, "quad"), ({"dimensionality": 2}, "hexahedron")],
+    )
+    def test_dfn_unstructured_default_element_type(self, options, element_type):
+        model = pybamm.lithium_ion.BasicDFNUnstructured(options)
+        sim = pybamm.Simulation(model, var_pts={k: 3 for k in model.default_var_pts})
+        sim.build()
+        assert sim.mesh["negative electrode"].element_type == element_type
+
+    def test_dfn_unstructured_default_dimensionality(self):
+        model = pybamm.lithium_ion.BasicDFNUnstructured()
+        assert model.options["dimensionality"] == 1
+
+    @pytest.mark.parametrize("dimensionality", [0, 3])
+    def test_dfn_unstructured_bad_dimensionality(self, dimensionality):
+        with pytest.raises(pybamm.OptionError, match=r"1 \(x-z mesh\) or 2"):
+            pybamm.lithium_ion.BasicDFNUnstructured(
+                {"dimensionality": dimensionality, "cell geometry": "pouch"}
+            )
