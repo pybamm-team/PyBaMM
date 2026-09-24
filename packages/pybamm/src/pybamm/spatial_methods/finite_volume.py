@@ -569,9 +569,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.Symbol`
-            The finite volume integral matrix for the domain. On a mesh with a
-            symbolic length it is a constant matrix with symbolically scaled columns.
+        :class:`pybamm.Matrix`
+            The finite volume integral matrix for the domain
 
         Notes
         -----
