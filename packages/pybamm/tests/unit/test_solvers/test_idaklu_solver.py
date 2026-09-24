@@ -906,8 +906,9 @@ class TestIDAKLUSolver:
     def test_solve_interrupted_stops_every_thread(
         self, decay_model, caplog, monkeypatch
     ):
-        # The other thread may finish the set it holds, but takes no more
-        n_inputs = 16
+        # The other thread may finish the set it holds, but takes no more. Enough
+        # sets that it cannot finish them all before thread 0's first step
+        n_inputs = 4000
         started = self._count_sets_started_after_interrupt(
             decay_model, 2, n_inputs, caplog, monkeypatch
         )
