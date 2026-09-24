@@ -55,8 +55,8 @@ private:
   void BuildSparseResources(int jac_nnz);
   void BuildDenseResources();
 
-  std::unique_ptr<Expression> res_;
-  std::unique_ptr<Expression> jac_;
+  std::unique_ptr<Expression> res_;  // cppcheck-suppress unusedStructMember
+  std::unique_ptr<Expression> jac_;  // cppcheck-suppress unusedStructMember
   int n_vars_;
   bool use_sparse_;
 

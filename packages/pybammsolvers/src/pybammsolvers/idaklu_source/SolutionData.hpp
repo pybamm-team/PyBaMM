@@ -49,7 +49,7 @@ class SolutionData
       ptrdiff_t arg_sens1,
       ptrdiff_t arg_sens2,
       bool save_hermite,
-      IDAKLUStats stats)
+      const IDAKLUStats &stats)
       : flag(flag),
         t_vec(std::move(t)),
         y_vec(std::move(y)),
