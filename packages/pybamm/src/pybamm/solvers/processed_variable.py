@@ -282,8 +282,7 @@ class ProcessedVariable(BaseProcessedVariable):
         else:
             processed_entries = entries
 
-        # Only the Hermite route interpolates at the sorted times; the xarray
-        # route is given the caller's t, so its output is already in query order
+        # Only the Hermite route sorts t; the xarray route keeps the caller's order
         if not is_sorted and hermite_time_interp:
             idxs_unsort = np.empty_like(idxs_sort)
             idxs_unsort[idxs_sort] = np.arange(len(t_observe))
@@ -545,11 +544,9 @@ class ProcessedVariable(BaseProcessedVariable):
                 self.t_pts,
             )
 
-        entries = self.entries  # shape: (..., n_t)
-
-        # Move time to axis 0, then flatten spatial dims per timestep
-        reshaped = np.moveaxis(entries, -1, 0)  # shape: (n_t, ...)
-        base_data = [reshaped.reshape(reshaped.shape[0], -1)]  # (n_t, n_vars)
+        # Rows as an output_variables solve returns them: before per-class reordering
+        observed = self._observe_raw() if self.time_integral is None else self.entries
+        base_data = [observed.reshape(-1, len(self.t_pts), order="F").T]
 
         cpv = pybamm.ProcessedVariableComputed(
             self.base_variables,
