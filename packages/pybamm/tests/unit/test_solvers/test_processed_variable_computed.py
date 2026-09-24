@@ -672,20 +672,41 @@ class TestProcessedVariableComputed:
             processed_var.unroll(), u_sol.reshape(Nx, 6, 7, 2)
         )
 
-    def test_3D_output_variable_matches_full_solve(self):
-        name = "Negative particle concentration distribution [mol.m-3]"
-        parameter_values = pybamm.get_size_distribution_parameters(
-            pybamm.ParameterValues("Marquis2019")
-        )
-        var_pts = {"x_n": 3, "x_s": 2, "x_p": 3, "r_n": 4, "r_p": 4, "R_n": 3, "R_p": 3}
+    @pytest.mark.parametrize(
+        ("model", "name", "parameter_values", "var_pts"),
+        [
+            pytest.param(
+                lambda: pybamm.lithium_ion.DFN({"particle size": "distribution"}),
+                "Negative particle concentration distribution [mol.m-3]",
+                lambda: pybamm.get_size_distribution_parameters(
+                    pybamm.ParameterValues("Marquis2019")
+                ),
+                {"x_n": 3, "x_s": 2, "x_p": 3, "r_n": 4, "r_p": 4, "R_n": 3, "R_p": 3},
+                id="r-R-x",
+            ),
+            pytest.param(
+                lambda: pybamm.lithium_ion.SPMe(
+                    {"current collector": "potential pair", "dimensionality": 2}
+                ),
+                "Electrolyte concentration [mol.m-3]",
+                lambda: pybamm.ParameterValues("Marquis2019"),
+                # y and z differ, so swapping them changes the layout
+                {"x_n": 3, "x_s": 2, "x_p": 3, "r_n": 4, "r_p": 4, "y": 3, "z": 4},
+                id="x-y-z",
+            ),
+        ],
+    )
+    def test_3D_output_variable_matches_full_solve(
+        self, model, name, parameter_values, var_pts
+    ):
         variables = []
         for solver in [
             pybamm.IDAKLUSolver(),
             pybamm.IDAKLUSolver(output_variables=[name]),
         ]:
             sim = pybamm.Simulation(
-                pybamm.lithium_ion.DFN({"particle size": "distribution"}),
-                parameter_values=parameter_values,
+                model(),
+                parameter_values=parameter_values(),
                 var_pts=var_pts,
                 solver=solver,
             )
@@ -695,3 +716,4 @@ class TestProcessedVariableComputed:
 
         assert isinstance(computed, pybamm.ProcessedVariableComputed)
         np.testing.assert_allclose(computed.entries, full.entries, rtol=1e-6)
+        np.testing.assert_array_equal(full.as_computed().entries, full.entries)

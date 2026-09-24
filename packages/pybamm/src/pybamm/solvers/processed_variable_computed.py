@@ -663,12 +663,13 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         len_x = len(x_sol)
         len_y = len(y_sol)
         len_z = len(z_sol)
+        # x varies fastest, then the current-collector nodes, which run z-fastest
         entries = self.unroll_3D(
             realdata=None,
-            n_dim1=len_z,
-            n_dim2=len_y,
+            n_dim1=len_y,
+            n_dim2=len_z,
             n_dim3=len_x,
-            axis_swaps=[(0, 3), (0, 2), (0, 1)],
+            axis_swaps=[(0, 3), (2, 0)],
         )
 
         # assign attributes for reference

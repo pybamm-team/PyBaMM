@@ -1707,7 +1707,8 @@ class TestProcessedVariable:
         r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
+        # Varies in space, so a round trip that transposes r and x cannot pass
+        y_sol = np.linspace(1, 2, len(x_sol) * len(r_sol))[:, np.newaxis] * t_sol
         yp_sol = self._get_yps(y_sol, False)
 
         var_casadi = to_casadi(var_sol, y_sol)
@@ -1719,13 +1720,14 @@ class TestProcessedVariable:
         )
 
         computed_var = processed_var.as_computed()
+        np.testing.assert_array_equal(computed_var.entries, processed_var.entries)
         # 3 vectors
         np.testing.assert_array_equal(
             computed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
         )
         np.testing.assert_allclose(
             computed_var(t_sol, x_sol, r_sol),
-            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
+            processed_var(t=t_sol, x=x_sol, r=r_sol),
             rtol=1e-7,
             atol=1e-6,
         )
@@ -1758,7 +1760,9 @@ class TestProcessedVariable:
         r_sol = disc.mesh["negative particle"].nodes
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(R_sol) * len(r_sol))[:, np.newaxis] * t_sol
+        # Varies in space, so a round trip that reorders r, R and x cannot pass
+        n_space = len(x_sol) * len(R_sol) * len(r_sol)
+        y_sol = np.linspace(1, 2, n_space)[:, np.newaxis] * t_sol
         yp_sol = self._get_yps(y_sol, False)
 
         var_casadi = to_casadi(var_sol, y_sol)
@@ -1771,6 +1775,7 @@ class TestProcessedVariable:
             self._sol_default(t_sol, y_sol, yp_sol, model),
         )
         computed_var = processed_var.as_computed()
+        np.testing.assert_array_equal(computed_var.entries, processed_var.entries)
 
         # 4 vectors
         np.testing.assert_array_equal(
