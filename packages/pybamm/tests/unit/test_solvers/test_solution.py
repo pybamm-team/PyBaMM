@@ -50,7 +50,7 @@ class _PicklerBeforeObservationBackends(pickle.Pickler):
 def _round_trip_before_observation_backends(obj):
     buffer = io.BytesIO()
     _PicklerBeforeObservationBackends(buffer, pickle.HIGHEST_PROTOCOL).dump(obj)
-    return pickle.loads(buffer.getvalue())
+    return pickle.loads(buffer.getvalue())  # nosec B301
 
 
 class TestSolution:

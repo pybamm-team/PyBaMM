@@ -1,6 +1,6 @@
 """Tests for observation backends and variable observers."""
 
-import pickle
+import pickle  # nosec B403 - used in tests with trusted input
 from itertools import pairwise
 from types import SimpleNamespace
 
@@ -62,7 +62,7 @@ class TestSegmentSlicing:
 
     def test_casadi_backends_are_interchangeable(self):
         # A Solution unpickled from a derived one carries its own instance.
-        restored = pickle.loads(pickle.dumps(CASADI_OBSERVATION))
+        restored = pickle.loads(pickle.dumps(CASADI_OBSERVATION))  # nosec B301
         assert restored is not CASADI_OBSERVATION
         assert restored == CASADI_OBSERVATION
         assert hash(restored) == hash(CASADI_OBSERVATION)
@@ -74,7 +74,7 @@ class TestJoin:
         assert joined is CASADI_OBSERVATION
 
     def test_equal_backends_join_to_the_first(self):
-        restored = pickle.loads(pickle.dumps(CASADI_OBSERVATION))
+        restored = pickle.loads(pickle.dumps(CASADI_OBSERVATION))  # nosec B301
         assert join_observations([restored, CASADI_OBSERVATION]) is restored
 
     def test_different_backends_do_not_join(self):
@@ -208,7 +208,7 @@ class TestCasadiObserverCaches:
         assert observer._serialised is not None
         assert observer._selector is not None
 
-        restored = pickle.loads(pickle.dumps(observer))
+        restored = pickle.loads(pickle.dumps(observer))  # nosec B301
 
         for cache in ("_selector", "_selector_ts", "_serialised"):
             assert cache not in restored.__dict__
