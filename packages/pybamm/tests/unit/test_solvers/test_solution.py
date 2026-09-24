@@ -5,7 +5,7 @@ import copyreg
 import io
 import json
 import logging
-import pickle
+import pickle  # nosec B403 - used in tests with trusted input
 import subprocess  # nosec B404 - used in tests with trusted input
 import sys
 from unittest import mock
@@ -43,7 +43,7 @@ class _PicklerBeforeObservationBackends(pickle.Pickler):
 def _round_trip_before_observation_backends(obj):
     buffer = io.BytesIO()
     _PicklerBeforeObservationBackends(buffer, pickle.HIGHEST_PROTOCOL).dump(obj)
-    return pickle.loads(buffer.getvalue())
+    return pickle.loads(buffer.getvalue())  # nosec B301
 
 
 class TestSolution:
