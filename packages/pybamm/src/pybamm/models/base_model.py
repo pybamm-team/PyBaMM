@@ -84,17 +84,6 @@ class BaseModel:
         A dictionary of submodels that the model is composed of.
     use_jacobian: bool
         Whether to use the Jacobian when solving the model (default is True).
-    convert_to_format: str
-        Specifies the format to convert the expression trees representing the RHS,
-        algebraic equations, Jacobian, and events.
-        Options are:
-
-            - None: retain PyBaMM expression tree structure.
-            - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
-            - "casadi": convert to CasADi expression tree for Jacobian calculation.
-            - "jax": convert to JAX expression tree.
-
-        Default is "casadi".
     is_discretised: bool
         Indicates whether the model has been discretised (default is False).
     y_slices: None or list
@@ -253,7 +242,17 @@ class BaseModel:
 
     @property
     def convert_to_format(self) -> str | None:
-        """The format the solver converts the model's expression trees to."""
+        """
+        The format the solver converts the RHS, algebraic equations, Jacobian and
+        events to. Options are:
+
+            - None: retain PyBaMM expression tree structure.
+            - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
+            - "casadi": convert to CasADi expression tree for Jacobian calculation.
+            - "jax": convert to JAX expression tree.
+
+        Default is "casadi".
+        """
         return self._convert_to_format
 
     @convert_to_format.setter
