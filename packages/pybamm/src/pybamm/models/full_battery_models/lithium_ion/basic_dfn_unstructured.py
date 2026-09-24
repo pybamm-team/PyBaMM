@@ -16,9 +16,9 @@ class BasicDFNUnstructured(BaseModel):
     The ``"dimensionality"`` option is the number of directions resolved besides
     the through-cell *x*: 1 (default) meshes (x, z) with quads and 2 meshes
     (x, y, z) with hexahedra. Pass ``submesh_types`` to
-    :class:`pybamm.Simulation` for triangles. Tetrahedra are not supported:
-    on the thin cell they form sliver elements, on which the diffusion
-    operator is unstable beyond coarse meshes.
+    :class:`pybamm.Simulation` for triangles or tetrahedra. Tetrahedra only
+    solve on coarse meshes: on the thin cell they form sliver elements, on
+    which the diffusion operator is unstable at the default ``var_pts``.
 
     Parameters
     ----------
