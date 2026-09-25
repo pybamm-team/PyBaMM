@@ -586,6 +586,33 @@ class TestSolution:
         # check solution still tagged as 'variables_returned'
         assert sol_sum.variables_returned is True
 
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    def test_join_computed_variables_at_shared_boundaries(self, join):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: pybamm.Scalar(1)}
+        model.initial_conditions = {u: 0}
+        model.variables = {"2u": 2 * u}
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver(output_variables=["2u"])
+        # Each segment starts at the time the previous one ends, from u = 0
+        segments = [
+            solver.solve(model, [t0, t0 + 1], t_interp=np.array([t0, t0 + 0.5, t0 + 1]))
+            for t0 in range(3)
+        ]
+
+        if join == "add":
+            joined = segments[0] + segments[1] + segments[2]
+        else:
+            joined = pybamm.Solution.from_sub_solutions(segments)
+
+        t = np.linspace(0, 3, 7)
+        # The join keeps the earlier segment's sample at each shared time
+        expected = 2 * (t - np.array([0, 0, 0, 1, 1, 2, 2]))
+        np.testing.assert_array_equal(joined.t, t)
+        np.testing.assert_allclose(joined["2u"].entries, expected, atol=1e-6)
+        np.testing.assert_allclose(joined["2u"](t), expected, atol=1e-6)
+
     def test_copy(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]

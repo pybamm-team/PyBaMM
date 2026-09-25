@@ -47,6 +47,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
     time_indep : bool, optional
         Whether the variable is time-independent. Default is False. Used for
         time integral or sum variables
+    time_integral : :class:`pybamm.ProcessedVariableTimeIntegral`, optional
+        The time integral or sum whose value the variable holds. Setting it makes
+        the variable time-independent.
     """
 
     def __init__(
@@ -57,6 +60,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         solution,
         cumtrapz_ic=None,
         time_indep=False,
+        time_integral=None,
     ):
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
@@ -71,11 +75,14 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.domain = base_variables[0].domain
         self.domains = base_variables[0].domains
         self.cumtrapz_ic = cumtrapz_ic
-        self.time_indep = time_indep
+        self.time_integral = time_integral
+        self.time_indep = time_indep or time_integral is not None
 
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
+        # Set by a join that has no value; reading the variable then raises
+        self._unjoinable = False
 
         # Store time
         self.t_pts = solution.t
@@ -143,6 +150,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         # Not thread-safe: concurrent first reads may run initialise twice.
         # Instances are constructed and read on the same thread in the standard
         # solve flow, so callers parallelising reads must serialise them.
+        self._raise_if_unjoinable()
         if not self._initialised:
             self._initialise_method()
             self._initialised = True
@@ -727,6 +735,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
         points, and n_p is the size of the input parameter
         """
+        self._raise_if_unjoinable()
         # No sensitivities if there are no inputs
         if len(self.all_inputs[0]) == 0:
             return {}
@@ -736,9 +745,11 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self, other: pybamm.ProcessedVariableComputed, new_sol: pybamm.Solution
     ) -> pybamm.ProcessedVariableComputed:
         """
-        Returns a new ProcessedVariableComputed object that is the result of appending
-        the data from other to this object. Used exclusively in running experiments, to
-        append the data from one cycle to the next.
+        Returns a new ProcessedVariableComputed object holding the data from this
+        object followed by the data from other. A first time point of other that
+        repeats the last time point of this object is dropped, and an
+        ``ExplicitTimeIntegral`` becomes the integral over both. Any other time
+        integral gives a variable that raises ``NotImplementedError`` when read.
 
         Parameters
         ----------
@@ -747,19 +758,89 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         new_sol : :class:`pybamm.Solution`
             The new solution object to be used to create the processed variables
         """
+        # Solution.__add__ drops other's first time point when it repeats self's last
+        n_repeated = int(other.t_pts[0] == self.t_pts[-1])
+        joins_time_integrals = self.time_indep or other.time_indep
+        unjoinable = (
+            self._unjoinable
+            or other._unjoinable
+            or (joins_time_integrals and not self._time_integrals_joinable(other))
+        )
 
-        bv = self.base_variables + other.base_variables
-        bvc = self.base_variables_casadi + other.base_variables_casadi
-        bvd = self.base_variables_data + other.base_variables_data
+        if unjoinable:
+            # Raise on read rather than here, so the rest of the solution still joins
+            base_variables_data = self.base_variables_data + other.base_variables_data
+            sensitivities = None
+        elif joins_time_integrals:
+            base_variables_data, sensitivities = self._join_time_integral(other)
+        else:
+            base_variables_data, sensitivities = self._join_samples(other, n_repeated)
 
-        new_var = self.__class__(bv, bvc, bvd, new_sol)
-
-        self_sensitivities = self.sensitivities or {}
-        other_sensitivities = other.sensitivities or {}
-        if self_sensitivities or other_sensitivities:
-            new_var._sensitivities = {
-                k: np.concatenate((self_sensitivities[k], other_sensitivities[k]))
-                for k in self_sensitivities
-            }
-
+        new_var = self.__class__(
+            self.base_variables + other.base_variables,
+            self.base_variables_casadi + other.base_variables_casadi,
+            base_variables_data,
+            new_sol,
+            time_indep=joins_time_integrals,
+            time_integral=self.time_integral,
+        )
+        # new_sol can run past other (from_sub_solutions passes the final solution
+        # to every join), so keep the times the data were sampled at
+        new_var.t_pts = np.concatenate((self.t_pts, other.t_pts[n_repeated:]))
+        new_var._sensitivities = sensitivities
+        new_var._unjoinable = unjoinable
         return new_var
+
+    def _join_samples(self, other, n_repeated):
+        """
+        Return the data and sensitivities of this variable's time points followed
+        by other's, leaving out other's first ``n_repeated`` time points.
+        """
+        # Data and sensitivities are time-major, so the repeat is their first rows
+        first_data, *later_data = other.base_variables_data
+        base_variables_data = [
+            *self.base_variables_data,
+            first_data[n_repeated:],
+            *later_data,
+        ]
+        other_sensitivities = other.sensitivities or {}
+        sensitivities = {}
+        for k, value in (self.sensitivities or {}).items():
+            later = other_sensitivities[k]
+            rows_repeated = n_repeated * len(later) // len(other.t_pts)
+            sensitivities[k] = np.concatenate((value, later[rows_repeated:]))
+        return base_variables_data, sensitivities
+
+    def _join_time_integral(self, other):
+        """
+        Return the data and sensitivities of the time integral over this
+        variable's segment followed by other's.
+        """
+        other_sensitivities = other.sensitivities or {}
+        sensitivities = {
+            k: value + other_sensitivities[k]
+            for k, value in (self.sensitivities or {}).items()
+        }
+        # other's integral starts again from its initial condition
+        initial_condition = float(other.time_integral.initial_condition)
+        return [self.entries + other.entries - initial_condition], sensitivities
+
+    def _time_integrals_joinable(self, other):
+        """Return whether this variable and other are joinable time integrals."""
+        # Every segment samples its end points, so a DiscreteTimeSum would count the
+        # boundary twice; a function of an integral cannot be split across segments
+        return all(
+            time_integral is not None
+            and time_integral.method == "continuous"
+            and time_integral.post_sum_node is None
+            for time_integral in (self.time_integral, other.time_integral)
+        )
+
+    def _raise_if_unjoinable(self):
+        if self._unjoinable:
+            raise NotImplementedError(
+                "This variable joins solution segments (multi-step experiments or "
+                "solution addition), which only an ExplicitTimeIntegral output "
+                "variable supports; a DiscreteTimeSum or an expression of a time "
+                "integral has no value over the joined segments."
+            )

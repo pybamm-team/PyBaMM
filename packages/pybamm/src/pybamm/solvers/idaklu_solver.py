@@ -885,21 +885,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
             var_nnz, var_shape, base_variables = self._get_variable_info(model, var)
             end_idx = start_idx + var_nnz
             data = sol.y[:, start_idx:end_idx]
-            time_indep = False
+            time_integral = self._time_integral_vars.get(var)
 
             # handle any time integral variables
-            if var in self._time_integral_vars:
+            if time_integral is not None:
                 # time integral variables should all be 1D
-                tiv = self._time_integral_vars[var]
-                data = tiv.postfix(data.reshape(-1), sol.t, inputs_dict)
-                time_indep = True
+                data = time_integral.postfix(data.reshape(-1), sol.t, inputs_dict)
 
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
                 [model.get_processed_variable_or_event(var)],
                 base_variables,
                 [data],
                 newsol,
-                time_indep=time_indep,
+                time_integral=time_integral,
             )
 
             # Add sensitivities
