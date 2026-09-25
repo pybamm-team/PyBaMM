@@ -544,15 +544,25 @@ class ProcessedVariable(BaseProcessedVariable):
                 self.t_pts,
             )
 
-        # Rows as an output_variables solve returns them: before per-class reordering
-        observed = self._observe_raw() if self.time_integral is None else self.entries
-        base_data = [observed.reshape(-1, len(self.t_pts), order="F").T]
+        if self.time_integral is None:
+            # Rows as an output_variables solve returns them: before per-class reordering
+            observed = self._observe_raw()
+            base_data = [observed.reshape(-1, len(self.t_pts), order="F").T]
+        elif isinstance(self, ProcessedVariable0D):
+            # output_variables stores a time integral as its single summed value
+            base_data = [self.entries]
+        else:
+            raise NotImplementedError(
+                f"Variable {self._name!r}: as_computed() does not support time "
+                "integrals of spatially varying variables."
+            )
 
         cpv = pybamm.ProcessedVariableComputed(
             self.base_variables,
             self.base_variables_casadi,
             base_data,
             _stub_solution(self),
+            time_indep=self.time_integral is not None,
         )
 
         # add sensitivities if they exist

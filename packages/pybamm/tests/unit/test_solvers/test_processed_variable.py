@@ -1782,6 +1782,17 @@ class TestProcessedVariable:
             computed_var(t=t_sol, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx, 50)
         )
 
+    def test_as_computed_spatial_time_integral(self):
+        model = pybamm.lithium_ion.SPM()
+        name = "Time-integrated electrolyte concentration [mol.m-3.s]"
+        model.variables[name] = pybamm.ExplicitTimeIntegral(
+            model.variables["Electrolyte concentration [mol.m-3]"], pybamm.Scalar(0)
+        )
+        solution = pybamm.Simulation(model).solve([0, 600])
+
+        with pytest.raises(NotImplementedError, match=r"spatially varying"):
+            solution[name].as_computed()
+
     def test_processed_variable_unstructured_3d_pouch(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
 

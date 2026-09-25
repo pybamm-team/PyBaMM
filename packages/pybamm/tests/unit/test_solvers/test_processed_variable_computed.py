@@ -6,6 +6,9 @@
 #  values itself since it does not have access to the full state vector
 #
 
+import typing
+from functools import cache
+
 import casadi
 import numpy as np
 import pandas as pd
@@ -14,6 +17,15 @@ import xarray as xr
 
 import pybamm
 import tests
+from pybamm.solvers.processed_variable import (
+    ProcessedVariable0D,
+    ProcessedVariable1D,
+    ProcessedVariable2D,
+    ProcessedVariable2DSciKitFEM,
+    ProcessedVariable3D,
+    ProcessedVariable3DSciKitFEM,
+    ProcessedVariableRawFVM,
+)
 
 
 def to_casadi(var_pybamm, y, inputs=None):
@@ -67,6 +79,154 @@ def process_and_check_2D_variable(
     #    tests/integration/test_solvers/test_idaklu_solver.py
     #    ::test_output_variables
     return y_sol, first_sol, second_sol, t_sol
+
+
+_T_INTERP = np.linspace(0, 600, 4)
+
+
+def _dfn_with_time_integrals():
+    model = pybamm.lithium_ion.DFN()
+    voltage = model.variables["Voltage [V]"]
+    model.variables["Charge throughput [A.s]"] = pybamm.ExplicitTimeIntegral(
+        model.variables["Current [A]"], pybamm.Scalar(0)
+    )
+    model.variables["Squared voltage integral [V2.s2]"] = (
+        pybamm.ExplicitTimeIntegral(voltage, pybamm.Scalar(0)) ** 2
+    )
+    data = pybamm.DiscreteTimeData(
+        _T_INTERP, np.full_like(_T_INTERP, 3.7), "Voltage data"
+    )
+    model.variables["Voltage sum of squares [V2]"] = pybamm.DiscreteTimeSum(
+        (voltage - data) ** 2
+    )
+    return model
+
+
+_OUTPUT_VARIABLE_MODELS = {
+    "DFN": (
+        _dfn_with_time_integrals,
+        lambda: pybamm.ParameterValues("Marquis2019"),
+        {"x_n": 4, "x_s": 3, "x_p": 4, "r_n": 5, "r_p": 5},
+    ),
+    "DFN size distribution": (
+        lambda: pybamm.lithium_ion.DFN({"particle size": "distribution"}),
+        lambda: pybamm.get_size_distribution_parameters(
+            pybamm.ParameterValues("Marquis2019")
+        ),
+        {"x_n": 3, "x_s": 2, "x_p": 3, "r_n": 4, "r_p": 4, "R_n": 3, "R_p": 3},
+    ),
+    "SPMe 2+1D": (
+        lambda: pybamm.lithium_ion.SPMe(
+            {"current collector": "potential pair", "dimensionality": 2}
+        ),
+        lambda: pybamm.ParameterValues("Marquis2019"),
+        # y and z differ, so swapping them changes the layout
+        {"x_n": 3, "x_s": 2, "x_p": 3, "r_n": 4, "r_p": 4, "y": 3, "z": 4},
+    ),
+}
+
+_OUTPUT_VARIABLE_CASES = [
+    pytest.param("DFN", "Voltage [V]", ProcessedVariable0D, None, id="0D"),
+    pytest.param(
+        "DFN",
+        "Electrolyte concentration [mol.m-3]",
+        ProcessedVariable1D,
+        None,
+        id="1D-x",
+    ),
+    pytest.param(
+        "DFN",
+        "Negative particle concentration [mol.m-3]",
+        ProcessedVariable2D,
+        None,
+        id="2D-r-x",
+    ),
+    pytest.param(
+        "SPMe 2+1D",
+        "Negative current collector potential [V]",
+        ProcessedVariable2DSciKitFEM,
+        None,
+        id="2D-y-z",
+    ),
+    pytest.param(
+        "DFN size distribution",
+        "Negative particle concentration distribution [mol.m-3]",
+        ProcessedVariable3D,
+        None,
+        id="3D-r-R-x",
+    ),
+    pytest.param(
+        "SPMe 2+1D",
+        "Electrolyte concentration [mol.m-3]",
+        ProcessedVariable3DSciKitFEM,
+        None,
+        id="3D-x-y-z",
+    ),
+    pytest.param(
+        "DFN",
+        "Charge throughput [A.s]",
+        ProcessedVariable0D,
+        "continuous",
+        id="0D-time-integral",
+    ),
+    pytest.param(
+        "DFN",
+        "Squared voltage integral [V2.s2]",
+        ProcessedVariable0D,
+        "continuous",
+        id="0D-time-integral-post-sum",
+    ),
+    pytest.param(
+        "DFN",
+        "Voltage sum of squares [V2]",
+        ProcessedVariable0D,
+        "discrete",
+        id="0D-discrete-time-sum",
+    ),
+]
+
+# ProcessedVariableComputed has no initialiser for these layouts
+_NOT_COMPUTABLE = {
+    pybamm.ProcessedVariable2DFVM,
+    ProcessedVariableRawFVM,
+    pybamm.ProcessedVariableUnstructured,
+    pybamm.ProcessedVariableUnstructuredFVM,
+}
+
+
+@cache
+def _solve_full_and_computed(model_key):
+    """
+    Solve a model once with the full state vector and once with its cases as
+    ``output_variables``.
+
+    Parameters
+    ----------
+    model_key : str
+        Key into ``_OUTPUT_VARIABLE_MODELS``.
+
+    Returns
+    -------
+    tuple of :class:`pybamm.Solution`
+        The full solution and the output_variables solution.
+    """
+    model, parameter_values, var_pts = _OUTPUT_VARIABLE_MODELS[model_key]
+    names = [
+        case.values[1] for case in _OUTPUT_VARIABLE_CASES if case.values[0] == model_key
+    ]
+    solutions = []
+    for solver in [
+        pybamm.IDAKLUSolver(),
+        pybamm.IDAKLUSolver(output_variables=names),
+    ]:
+        sim = pybamm.Simulation(
+            model(),
+            parameter_values=parameter_values(),
+            var_pts=var_pts,
+            solver=solver,
+        )
+        solutions.append(sim.solve([0, 600], t_interp=_T_INTERP))
+    return tuple(solutions)
 
 
 class TestProcessedVariableComputed:
@@ -673,47 +833,48 @@ class TestProcessedVariableComputed:
         )
 
     @pytest.mark.parametrize(
-        ("model", "name", "parameter_values", "var_pts"),
-        [
-            pytest.param(
-                lambda: pybamm.lithium_ion.DFN({"particle size": "distribution"}),
-                "Negative particle concentration distribution [mol.m-3]",
-                lambda: pybamm.get_size_distribution_parameters(
-                    pybamm.ParameterValues("Marquis2019")
-                ),
-                {"x_n": 3, "x_s": 2, "x_p": 3, "r_n": 4, "r_p": 4, "R_n": 3, "R_p": 3},
-                id="r-R-x",
-            ),
-            pytest.param(
-                lambda: pybamm.lithium_ion.SPMe(
-                    {"current collector": "potential pair", "dimensionality": 2}
-                ),
-                "Electrolyte concentration [mol.m-3]",
-                lambda: pybamm.ParameterValues("Marquis2019"),
-                # y and z differ, so swapping them changes the layout
-                {"x_n": 3, "x_s": 2, "x_p": 3, "r_n": 4, "r_p": 4, "y": 3, "z": 4},
-                id="x-y-z",
-            ),
-        ],
+        ("model_key", "name", "layout", "time_integral_method"), _OUTPUT_VARIABLE_CASES
     )
-    def test_3D_output_variable_matches_full_solve(
-        self, model, name, parameter_values, var_pts
+    def test_output_variable_matches_full_solve(
+        self, model_key, name, layout, time_integral_method
     ):
-        variables = []
-        for solver in [
-            pybamm.IDAKLUSolver(),
-            pybamm.IDAKLUSolver(output_variables=[name]),
-        ]:
-            sim = pybamm.Simulation(
-                model(),
-                parameter_values=parameter_values(),
-                var_pts=var_pts,
-                solver=solver,
-            )
-            sol = sim.solve([0, 600], t_interp=np.linspace(0, 600, 4))
-            variables.append(sol[name])
-        full, computed = variables
+        full_solution, computed_solution = _solve_full_and_computed(model_key)
+        full, computed = full_solution[name], computed_solution[name]
+
+        # A routing change must not quietly move a case off the path it covers
+        assert type(full) is layout
+        method = full.time_integral.method if full.time_integral else None
+        assert method == time_integral_method
 
         assert isinstance(computed, pybamm.ProcessedVariableComputed)
         np.testing.assert_allclose(computed.entries, full.entries, rtol=1e-6)
-        np.testing.assert_array_equal(full.as_computed().entries, full.entries)
+
+        # Solution.__add__ merges with an output_variables solve via as_computed()
+        converted = full.as_computed()
+        assert converted.time_indep == computed.time_indep
+        np.testing.assert_array_equal(converted.entries, full.entries)
+        t = None if computed.time_indep else np.array([150.0, 450.0])
+        np.testing.assert_allclose(converted(t=t), computed(t=t), rtol=1e-6)
+
+    def test_output_variable_cases_cover_every_layout(self):
+        subclasses, stack = set(), [pybamm.ProcessedVariable]
+        while stack:
+            for subclass in stack.pop().__subclasses__():
+                subclasses.add(subclass)
+                stack.append(subclass)
+        layouts = {c for c in subclasses if c.__module__.startswith("pybamm")}
+        covered = {case.values[2] for case in _OUTPUT_VARIABLE_CASES}
+        missing = layouts - covered - _NOT_COMPUTABLE
+        assert not missing, (
+            "Add a case to _OUTPUT_VARIABLE_CASES, or add the class to "
+            "_NOT_COMPUTABLE: " + ", ".join(sorted(c.__name__ for c in missing))
+        )
+
+        methods = typing.get_args(
+            typing.get_type_hints(pybamm.ProcessedVariableTimeIntegral)["method"]
+        )
+        covered_methods = {case.values[3] for case in _OUTPUT_VARIABLE_CASES}
+        assert set(methods) <= covered_methods, (
+            "Add a time-integral case to _OUTPUT_VARIABLE_CASES for: "
+            + ", ".join(sorted(set(methods) - covered_methods))
+        )
