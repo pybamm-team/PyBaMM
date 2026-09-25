@@ -593,7 +593,7 @@ class TestProcessedVariableComputed:
         model.rhs = {y: 0 * y}
         model.initial_conditions = {y: 1}
         model.variables = {
-            "Integral": pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(0))
+            "Integral": pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(1))
         }
         solver = pybamm.IDAKLUSolver(output_variables=["Integral"])
         first, later = (
@@ -603,9 +603,9 @@ class TestProcessedVariableComputed:
 
         combined = (first + later)["Integral"]
 
-        # a * y = 2 integrated over [0, 3]
-        np.testing.assert_allclose(combined.entries, [6.0])
-        np.testing.assert_allclose(combined(), [6.0])
+        # 1 plus a * y = 2 integrated over [0, 3]
+        np.testing.assert_allclose(combined.entries, [7.0])
+        np.testing.assert_allclose(combined(), [7.0])
         np.testing.assert_allclose(combined.sensitivities["a"], [3.0])
         np.testing.assert_allclose(combined.sensitivities["all"], [[3.0]])
 

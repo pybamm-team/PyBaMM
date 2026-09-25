@@ -1269,6 +1269,34 @@ class TestSolution:
                 )
                 assert isinstance(sol["integral"].sensitivities["a"], np.ndarray)
 
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_explicit_time_integral_initial_condition_sensitivity(self, use_output_var):
+        times = np.linspace(0, 1, 10)
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        a = pybamm.InputParameter("a")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables["integral"] = pybamm.ExplicitTimeIntegral(c, pybamm.Scalar(5))
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["integral"] if use_output_var else None
+        )
+
+        sol = solver.solve(
+            model,
+            [0, 1],
+            t_interp=times,
+            inputs={"a": 1.0},
+            calculate_sensitivities=True,
+        )
+
+        # The initial condition does not depend on a, so only the integral does
+        expected = scipy.integrate.trapezoid(-times * np.exp(-times), times)
+        np.testing.assert_allclose(sol["integral"](), [5 + 1 - np.exp(-1)], rtol=1e-3)
+        np.testing.assert_allclose(
+            sol["integral"].sensitivities["a"], [expected], rtol=1e-3
+        )
+
     def test_observe(self):
         """Test the observe method with pybamm symbols, comparing with model variables."""
         # Set up a simple model

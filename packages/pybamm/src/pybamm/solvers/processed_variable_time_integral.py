@@ -20,15 +20,15 @@ class ProcessedVariableTimeIntegral:
     post_sum_node: pybamm.Symbol | None = None
     post_sum: casadi.Function | None = None
 
-    def postfix_sum(self, entries, t_pts) -> np.ndarray:
+    def _sum_over_time(self, entries, t_pts) -> np.ndarray:
+        """Sum or integrate the entries over the time points."""
         if self.method == "discrete":
-            return np.sum(
-                entries, axis=0, initial=self.initial_condition, keepdims=True
-            )
+            return np.sum(entries, axis=0, keepdims=True)
         else:
-            return np.array(
-                [trapezoid(entries, t_pts, axis=0) + float(self.initial_condition)]
-            )
+            return np.array([trapezoid(entries, t_pts, axis=0)])
+
+    def postfix_sum(self, entries, t_pts) -> np.ndarray:
+        return self._sum_over_time(entries, t_pts) + float(self.initial_condition)
 
     def postfix(self, entries, t_pts, inputs) -> np.ndarray:
         """
@@ -66,7 +66,8 @@ class ProcessedVariableTimeIntegral:
                 f"ensure the correct times are used.\nSolution times: {t_pts}\nDiscrete Sum times: {self.discrete_times}"
             )
 
-        the_integral = self.postfix_sum(sensitivities, t_pts)
+        # The initial condition is a constant, so it adds nothing to a sensitivity
+        the_integral = self._sum_over_time(sensitivities, t_pts)
         if self.post_sum_node is None:
             return the_integral
 
