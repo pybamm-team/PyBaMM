@@ -268,9 +268,13 @@ class SEIGrowth(BaseModel):
         # This is done here by replacing a with a_cr using a *= roughness - 1
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
-                roughness = variables[f"X-averaged {domain} electrode roughness ratio"]
+                roughness = variables[
+                    f"X-averaged {domain} {self.phase_name}electrode roughness ratio"
+                ]
             else:
-                roughness = variables[f"{Domain} electrode roughness ratio"]
+                roughness = variables[
+                    f"{Domain} {self.phase_name}electrode roughness ratio"
+                ]
             a *= roughness - 1  # Replace surface area with crack area
 
         # a * j_sei / F is the rate of consumption of Li moles by SEI reaction
