@@ -3364,7 +3364,7 @@ provides-extras = ["zoo-all"]
 
 [[package]]
 name = "pybammsolvers"
-version = "0.9.1"
+version = "0.10.0"
 source = { editable = "packages/pybammsolvers" }
 dependencies = [
     { name = "casadi" },
