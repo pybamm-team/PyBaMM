@@ -553,11 +553,27 @@ class TestElectrodeSOHComposite:
                         f"Stoichiometry {key} out of bounds: {results[key]}"
                     )
 
+    def test_phase_capacity_input_names(self):
+        options = {"particle phases": ("2", "1")}
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.ElectrodeSOHComposite(options),
+            parameter_values=pybamm.ParameterValues("Chen2020_composite"),
+        )
+        simulation.build()
+
+        capacity_names = {
+            parameter.name
+            for parameter in simulation.built_model.input_parameters
+            if parameter.name.endswith("electrode capacity [A.h]")
+        }
+
+        assert capacity_names == {
+            "Primary: Negative electrode capacity [A.h]",
+            "Secondary: Negative electrode capacity [A.h]",
+            "Primary: Positive electrode capacity [A.h]",
+        }
+
     def test_phase_capacity_inputs_are_not_deprecated_msmr_names(self):
-        # The phase capacities are named "Q_n_prim"/"Q_n_sec" rather than
-        # "Q_n_1"/"Q_n_2" because the numbered form matches the deprecated-MSMR
-        # name pattern, so check_parameter_values would report every composite
-        # solve as using a renamed parameter the caller never set.
         pvals = pybamm.ParameterValues("Chen2020_composite")
         options = {"particle phases": ("2", "1")}
 

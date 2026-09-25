@@ -133,6 +133,16 @@ def _get_prefix(electrode):
         return "x"
 
 
+def _get_phase_capacity_name(electrode, phase):
+    """Get the input name for an electrode phase capacity."""
+    return f"{phase.capitalize()}: {electrode.capitalize()} electrode capacity [A.h]"
+
+
+def _get_phase_capacity_input(electrode, phase):
+    """Get the input parameter for an electrode phase capacity."""
+    return pybamm.InputParameter(_get_phase_capacity_name(electrode, phase))
+
+
 def _get_electrode_capacity_equation(options, electrode):
     """
     Build equation for electrode capacity in composite electrodes.
@@ -140,18 +150,17 @@ def _get_electrode_capacity_equation(options, electrode):
     Returns Q = sum_i Q_i * (stoich_100_i - stoich_0_i) for all phases.
     """
     prefix = _get_prefix(electrode)
-    e = electrode[0]
     i_am_composite = check_if_composite(options, electrode)
     stoich_variables = _get_stoich_variables(options)
     direction = _get_direction(electrode)
-    Q_1 = pybamm.InputParameter(f"Q_{e}_prim")
+    Q_1 = _get_phase_capacity_input(electrode, "primary")
     Q = (
         direction
         * (stoich_variables[f"{prefix}_100_1"] - stoich_variables[f"{prefix}_0_1"])
         * Q_1
     )
     if i_am_composite:
-        Q_2 = pybamm.InputParameter(f"Q_{e}_sec")
+        Q_2 = _get_phase_capacity_input(electrode, "secondary")
         Q += (
             direction
             * (stoich_variables[f"{prefix}_100_2"] - stoich_variables[f"{prefix}_0_2"])
@@ -168,18 +177,18 @@ def _get_cyclable_lithium_equation(options, soc="100"):
     """
     x_soc_1 = pybamm.Variable(f"x_{soc}_1", bounds=(0, 1))
     y_soc_1 = pybamm.Variable(f"y_{soc}_1", bounds=(0, 1))
-    Q_n_prim = pybamm.InputParameter("Q_n_prim")
-    Q_p_prim = pybamm.InputParameter("Q_p_prim")
+    Q_n_prim = _get_phase_capacity_input("negative", "primary")
+    Q_p_prim = _get_phase_capacity_input("positive", "primary")
     lithium_primary_phases = Q_n_prim * x_soc_1 + Q_p_prim * y_soc_1
     lithium_secondary_phases = 0.0
     is_positive_composite = check_if_composite(options, "positive")
     is_negative_composite = check_if_composite(options, "negative")
     if is_positive_composite:
-        Q_p_sec = pybamm.InputParameter("Q_p_sec")
+        Q_p_sec = _get_phase_capacity_input("positive", "secondary")
         y_soc_2 = pybamm.Variable(f"y_{soc}_2", bounds=(0, 1))
         lithium_secondary_phases += Q_p_sec * y_soc_2
     if is_negative_composite:
-        Q_n_sec = pybamm.InputParameter("Q_n_sec")
+        Q_n_sec = _get_phase_capacity_input("negative", "secondary")
         x_soc_2 = pybamm.Variable(f"x_{soc}_2", bounds=(0, 1))
         lithium_secondary_phases += Q_n_sec * x_soc_2
     return lithium_primary_phases + lithium_secondary_phases
@@ -470,18 +479,26 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             )
         elif initialization_method == "SOC":
             soc_init = pybamm.InputParameter("SOC_init")
-            negative_soc = x_init_1 * pybamm.InputParameter("Q_n_prim")
+            negative_soc = x_init_1 * _get_phase_capacity_input("negative", "primary")
             if is_negative_composite:
                 x_init_2 = variables["x_init_2"]
-                negative_soc += x_init_2 * pybamm.InputParameter("Q_n_sec")
+                negative_soc += x_init_2 * _get_phase_capacity_input(
+                    "negative", "secondary"
+                )
 
-            negative_0_soc = x_0_1 * pybamm.InputParameter("Q_n_prim")
+            negative_0_soc = x_0_1 * _get_phase_capacity_input("negative", "primary")
             if is_negative_composite:
-                negative_0_soc += x_0_2 * pybamm.InputParameter("Q_n_sec")
+                negative_0_soc += x_0_2 * _get_phase_capacity_input(
+                    "negative", "secondary"
+                )
 
-            negative_100_soc = x_100_1 * pybamm.InputParameter("Q_n_prim")
+            negative_100_soc = x_100_1 * _get_phase_capacity_input(
+                "negative", "primary"
+            )
             if is_negative_composite:
-                negative_100_soc += x_100_2 * pybamm.InputParameter("Q_n_sec")
+                negative_100_soc += x_100_2 * _get_phase_capacity_input(
+                    "negative", "secondary"
+                )
             self.algebraic[x_init_1] = (
                 (negative_soc - negative_0_soc) / (negative_100_soc - negative_0_soc)
             ) - soc_init
@@ -586,13 +603,16 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
 
         Q_n_prim = parameter_values.evaluate(param.n.prim.Q_init, inputs=inputs)
         Q_p_prim = parameter_values.evaluate(param.p.prim.Q_init, inputs=inputs)
-        Qs = {"Q_n_prim": Q_n_prim, "Q_p_prim": Q_p_prim}
+        Qs = {
+            _get_phase_capacity_name("negative", "primary"): Q_n_prim,
+            _get_phase_capacity_name("positive", "primary"): Q_p_prim,
+        }
         if is_positive_composite:
             Q_p_sec = parameter_values.evaluate(param.p.sec.Q_init, inputs=inputs)
-            Qs["Q_p_sec"] = Q_p_sec
+            Qs[_get_phase_capacity_name("positive", "secondary")] = Q_p_sec
         if is_negative_composite:
             Q_n_sec = parameter_values.evaluate(param.n.sec.Q_init, inputs=inputs)
-            Qs["Q_n_sec"] = Q_n_sec
+            Qs[_get_phase_capacity_name("negative", "secondary")] = Q_n_sec
 
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init, inputs=inputs)
 
@@ -621,8 +641,12 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
                 f"{initial_value!r} of type {type(initial_value).__name__}"
             )
 
-        Q_n_total = Q_n_prim + (Qs.get("Q_n_sec", 0))
-        Q_p_total = Q_p_prim + (Qs.get("Q_p_sec", 0))
+        Q_n_total = Q_n_prim + (
+            Qs.get(_get_phase_capacity_name("negative", "secondary"), 0)
+        )
+        Q_p_total = Q_p_prim + (
+            Qs.get(_get_phase_capacity_name("positive", "secondary"), 0)
+        )
 
         primary_options = _get_primary_only_options(options)
         # _ElectrodeSOH uses get_equilibrium_direction internally for the equilibrium
@@ -821,13 +845,16 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
 
         Q_n_prim = parameter_values.evaluate(param.n.prim.Q_init, inputs=inputs)
         Q_p_prim = parameter_values.evaluate(param.p.prim.Q_init, inputs=inputs)
-        Qs = {"Q_n_prim": Q_n_prim, "Q_p_prim": Q_p_prim}
+        Qs = {
+            _get_phase_capacity_name("negative", "primary"): Q_n_prim,
+            _get_phase_capacity_name("positive", "primary"): Q_p_prim,
+        }
         if is_positive_composite:
             Q_p_sec = parameter_values.evaluate(param.p.sec.Q_init, inputs=inputs)
-            Qs["Q_p_sec"] = Q_p_sec
+            Qs[_get_phase_capacity_name("positive", "secondary")] = Q_p_sec
         if is_negative_composite:
             Q_n_sec = parameter_values.evaluate(param.n.sec.Q_init, inputs=inputs)
-            Qs["Q_n_sec"] = Q_n_sec
+            Qs[_get_phase_capacity_name("negative", "secondary")] = Q_n_sec
 
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init, inputs=inputs)
 
