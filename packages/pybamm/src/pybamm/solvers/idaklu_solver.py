@@ -13,6 +13,7 @@ from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.solution import _flatten_inputs
 
 _UNSET = object()
 
@@ -41,13 +42,6 @@ def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.n
         [np.max(np.abs(inputs_dict[name]), initial=0.0) for name in sensitivity_names],
         dtype=np.float64,
     )
-
-
-def _flatten_inputs(inputs_dict):
-    """Flatten ``{name: value}`` into a 1-D float array in dict-key order."""
-    if not inputs_dict:
-        return np.zeros(0)
-    return np.concatenate([np.asarray(v).reshape(-1) for v in inputs_dict.values()])
 
 
 # Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
@@ -885,21 +879,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
             var_nnz, var_shape, base_variables = self._get_variable_info(model, var)
             end_idx = start_idx + var_nnz
             data = sol.y[:, start_idx:end_idx]
-            time_indep = False
+            time_integral = self._time_integral_vars.get(var)
 
             # handle any time integral variables
-            if var in self._time_integral_vars:
+            if time_integral is not None:
                 # time integral variables should all be 1D
-                tiv = self._time_integral_vars[var]
-                data = tiv.postfix(data.reshape(-1), sol.t, inputs_dict)
-                time_indep = True
+                data = time_integral.postfix(data.reshape(-1), sol.t, inputs_dict)
 
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
                 [model.get_processed_variable_or_event(var)],
                 base_variables,
                 [data],
                 newsol,
-                time_indep=time_indep,
+                time_integral=time_integral,
             )
 
             # Add sensitivities

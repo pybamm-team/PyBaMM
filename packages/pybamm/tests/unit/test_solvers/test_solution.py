@@ -586,6 +586,33 @@ class TestSolution:
         # check solution still tagged as 'variables_returned'
         assert sol_sum.variables_returned is True
 
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    def test_join_computed_variables_at_shared_boundaries(self, join):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: pybamm.Scalar(1)}
+        model.initial_conditions = {u: 0}
+        model.variables = {"2u": 2 * u}
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver(output_variables=["2u"])
+        # Each segment starts at the time the previous one ends, from u = 0
+        segments = [
+            solver.solve(model, [t0, t0 + 1], t_interp=np.array([t0, t0 + 0.5, t0 + 1]))
+            for t0 in range(3)
+        ]
+
+        if join == "add":
+            joined = segments[0] + segments[1] + segments[2]
+        else:
+            joined = pybamm.Solution.from_sub_solutions(segments)
+
+        t = np.linspace(0, 3, 7)
+        # The join keeps the earlier segment's sample at each shared time
+        expected = 2 * (t - np.array([0, 0, 0, 1, 1, 2, 2]))
+        np.testing.assert_array_equal(joined.t, t)
+        np.testing.assert_allclose(joined["2u"].entries, expected, atol=1e-6)
+        np.testing.assert_allclose(joined["2u"](t), expected, atol=1e-6)
+
     def test_copy(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
@@ -652,6 +679,56 @@ class TestSolution:
         assert len(casadi_inputs) == 2
         for c, s in zip(casadi_inputs, stacked, strict=True):
             np.testing.assert_array_equal(np.array(c).flatten(), s)
+
+    def test_all_inputs_stacked_mixed_scalar_and_vector(self):
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        inputs = {"a": 1.0, "b": np.array([2.0, 3.0]), "c": np.array([[4.0]])}
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), inputs)
+
+        (stacked,) = sol.all_inputs_stacked
+        np.testing.assert_array_equal(stacked, [1.0, 2.0, 3.0, 4.0])
+        np.testing.assert_array_equal(
+            np.array(sol.all_inputs_casadi[0]).flatten(), stacked
+        )
+
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        (stacked,) = sol.all_inputs_stacked
+        assert stacked.shape == (0,)
+
+        # Reading a variable stacks the inputs
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", expected_size=2)
+        model.rhs = {u: a * pybamm.Index(b, 1)}
+        model.initial_conditions = {u: 0}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+        sol = pybamm.IDAKLUSolver().solve(
+            model, [0, 1], inputs={"a": 2.0, "b": np.array([3.0, 4.0])}
+        )
+        np.testing.assert_allclose(sol["u"](t=1.0), 8.0, rtol=1e-6)
+
+    def test_sensitivity_names(self):
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (2, 1))
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        assert sol.sensitivity_names == []
+
+        sensitivities = {
+            "b": np.ones((20, 1)),
+            "a": np.ones((20, 2)),
+            "all": np.ones((20, 3)),
+        }
+        sol = pybamm.Solution(
+            t,
+            y,
+            pybamm.BaseModel(),
+            {"a": np.array([1.0, 2.0]), "b": 3.0},
+            all_sensitivities=sensitivities,
+        )
+        assert sol.sensitivity_names == ["b", "a"]
 
     def test_last_state(self):
         # Set up first solution

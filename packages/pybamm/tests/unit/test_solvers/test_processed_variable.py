@@ -1576,6 +1576,31 @@ class TestProcessedVariable:
         # Check that the unsorted and sorted arrays are the same
         assert np.all(y_unsorted == y_sorted[idxs_unsort])
 
+    @pytest.mark.parametrize("hermite_interp", _hermite_args)
+    def test_unsorted_t_query_returns_query_order(self, hermite_interp):
+        # Both interpolation routes must return values in the caller's order:
+        # only the hermite route consumes the internally sorted times.
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        var = t * y
+        model = pybamm.BaseModel()
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        yp_sol = self._get_yps(y_sol, hermite_interp, values=5)
+        var_casadi = to_casadi(var, y_sol)
+        processed_var = pybamm.process_variable(
+            "test",
+            [var],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+
+        t_unsorted = np.array([0.9, 0.3, 0.6])
+        # var = t * y = 5 t^2; atol covers linear-interp error on the xr route
+        np.testing.assert_allclose(
+            processed_var(t_unsorted), 5 * t_unsorted**2, atol=2e-3
+        )
+
     def test_as_computed_0D(self):
         # 0D
         t = pybamm.t
@@ -1682,7 +1707,8 @@ class TestProcessedVariable:
         r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
+        # Varies in space, so a round trip that transposes r and x cannot pass
+        y_sol = np.linspace(1, 2, len(x_sol) * len(r_sol))[:, np.newaxis] * t_sol
         yp_sol = self._get_yps(y_sol, False)
 
         var_casadi = to_casadi(var_sol, y_sol)
@@ -1694,13 +1720,14 @@ class TestProcessedVariable:
         )
 
         computed_var = processed_var.as_computed()
+        np.testing.assert_array_equal(computed_var.entries, processed_var.entries)
         # 3 vectors
         np.testing.assert_array_equal(
             computed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
         )
         np.testing.assert_allclose(
             computed_var(t_sol, x_sol, r_sol),
-            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
+            processed_var(t=t_sol, x=x_sol, r=r_sol),
             rtol=1e-7,
             atol=1e-6,
         )
@@ -1733,7 +1760,9 @@ class TestProcessedVariable:
         r_sol = disc.mesh["negative particle"].nodes
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(R_sol) * len(r_sol))[:, np.newaxis] * t_sol
+        # Varies in space, so a round trip that reorders r, R and x cannot pass
+        n_space = len(x_sol) * len(R_sol) * len(r_sol)
+        y_sol = np.linspace(1, 2, n_space)[:, np.newaxis] * t_sol
         yp_sol = self._get_yps(y_sol, False)
 
         var_casadi = to_casadi(var_sol, y_sol)
@@ -1746,11 +1775,23 @@ class TestProcessedVariable:
             self._sol_default(t_sol, y_sol, yp_sol, model),
         )
         computed_var = processed_var.as_computed()
+        np.testing.assert_array_equal(computed_var.entries, processed_var.entries)
 
         # 4 vectors
         np.testing.assert_array_equal(
             computed_var(t=t_sol, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx, 50)
         )
+
+    def test_as_computed_spatial_time_integral(self):
+        model = pybamm.lithium_ion.SPM()
+        name = "Time-integrated electrolyte concentration [mol.m-3.s]"
+        model.variables[name] = pybamm.ExplicitTimeIntegral(
+            model.variables["Electrolyte concentration [mol.m-3]"], pybamm.Scalar(0)
+        )
+        solution = pybamm.Simulation(model).solve([0, 600])
+
+        with pytest.raises(NotImplementedError, match=r"spatially varying"):
+            solution[name].as_computed()
 
     def test_processed_variable_unstructured_3d_pouch(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D

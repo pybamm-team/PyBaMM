@@ -6,12 +6,26 @@
 #  values itself since it does not have access to the full state vector
 #
 
+import typing
+from functools import cache
+
 import casadi
 import numpy as np
+import pandas as pd
 import pytest
+import xarray as xr
 
 import pybamm
 import tests
+from pybamm.solvers.processed_variable import (
+    ProcessedVariable0D,
+    ProcessedVariable1D,
+    ProcessedVariable2D,
+    ProcessedVariable2DSciKitFEM,
+    ProcessedVariable3D,
+    ProcessedVariable3DSciKitFEM,
+    ProcessedVariableRawFVM,
+)
 
 
 def to_casadi(var_pybamm, y, inputs=None):
@@ -67,6 +81,174 @@ def process_and_check_2D_variable(
     return y_sol, first_sol, second_sol, t_sol
 
 
+_T_INTERP = np.linspace(0, 600, 4)
+
+
+def _dfn_with_time_integrals():
+    model = pybamm.lithium_ion.DFN()
+    voltage = model.variables["Voltage [V]"]
+    # A nonzero initial condition must be counted once when segments are joined
+    model.variables["Charge throughput [A.s]"] = pybamm.ExplicitTimeIntegral(
+        model.variables["Current [A]"], pybamm.Scalar(100)
+    )
+    model.variables["Squared voltage integral [V2.s2]"] = (
+        pybamm.ExplicitTimeIntegral(voltage, pybamm.Scalar(0)) ** 2
+    )
+    data = pybamm.DiscreteTimeData(
+        _T_INTERP, np.full_like(_T_INTERP, 3.7), "Voltage data"
+    )
+    model.variables["Voltage sum of squares [V2]"] = pybamm.DiscreteTimeSum(
+        (voltage - data) ** 2
+    )
+    return model
+
+
+_OUTPUT_VARIABLE_MODELS = {
+    "DFN": (
+        _dfn_with_time_integrals,
+        lambda: pybamm.ParameterValues("Marquis2019"),
+        {"x_n": 4, "x_s": 3, "x_p": 4, "r_n": 5, "r_p": 5},
+    ),
+    "DFN size distribution": (
+        lambda: pybamm.lithium_ion.DFN({"particle size": "distribution"}),
+        lambda: pybamm.get_size_distribution_parameters(
+            pybamm.ParameterValues("Marquis2019")
+        ),
+        {"x_n": 3, "x_s": 2, "x_p": 3, "r_n": 4, "r_p": 4, "R_n": 3, "R_p": 3},
+    ),
+    "SPMe 2+1D": (
+        lambda: pybamm.lithium_ion.SPMe(
+            {"current collector": "potential pair", "dimensionality": 2}
+        ),
+        lambda: pybamm.ParameterValues("Marquis2019"),
+        # y and z differ, so swapping them changes the layout
+        {"x_n": 3, "x_s": 2, "x_p": 3, "r_n": 4, "r_p": 4, "y": 3, "z": 4},
+    ),
+}
+
+_OUTPUT_VARIABLE_CASES = [
+    pytest.param("DFN", "Voltage [V]", ProcessedVariable0D, None, id="0D"),
+    pytest.param(
+        "DFN",
+        "Electrolyte concentration [mol.m-3]",
+        ProcessedVariable1D,
+        None,
+        id="1D-x",
+    ),
+    pytest.param(
+        "DFN",
+        "Negative particle concentration [mol.m-3]",
+        ProcessedVariable2D,
+        None,
+        id="2D-r-x",
+    ),
+    pytest.param(
+        "SPMe 2+1D",
+        "Negative current collector potential [V]",
+        ProcessedVariable2DSciKitFEM,
+        None,
+        id="2D-y-z",
+    ),
+    pytest.param(
+        "DFN size distribution",
+        "Negative particle concentration distribution [mol.m-3]",
+        ProcessedVariable3D,
+        None,
+        id="3D-r-R-x",
+    ),
+    pytest.param(
+        "SPMe 2+1D",
+        "Electrolyte concentration [mol.m-3]",
+        ProcessedVariable3DSciKitFEM,
+        None,
+        id="3D-x-y-z",
+    ),
+    pytest.param(
+        "DFN",
+        "Charge throughput [A.s]",
+        ProcessedVariable0D,
+        "continuous",
+        id="0D-time-integral",
+    ),
+    pytest.param(
+        "DFN",
+        "Squared voltage integral [V2.s2]",
+        ProcessedVariable0D,
+        "continuous",
+        id="0D-time-integral-post-sum",
+    ),
+    pytest.param(
+        "DFN",
+        "Voltage sum of squares [V2]",
+        ProcessedVariable0D,
+        "discrete",
+        id="0D-discrete-time-sum",
+    ),
+]
+
+# ProcessedVariableComputed has no initialiser for these layouts
+_NOT_COMPUTABLE = {
+    pybamm.ProcessedVariable2DFVM,
+    ProcessedVariableRawFVM,
+    pybamm.ProcessedVariableUnstructured,
+    pybamm.ProcessedVariableUnstructuredFVM,
+}
+
+
+# A DiscreteTimeSum, or a function of a time integral, has no value over joined segments
+_NOT_JOINABLE = {"Squared voltage integral [V2.s2]", "Voltage sum of squares [V2]"}
+
+
+@cache
+def _solve(model_key, t_start=0.0, output_variables=()):
+    """
+    Solve a model over the 600 s from ``t_start``.
+
+    Parameters
+    ----------
+    model_key : str
+        Key into ``_OUTPUT_VARIABLE_MODELS``.
+    t_start : float, optional
+        Start time [s].
+    output_variables : tuple of str, optional
+        Variables for the solver to return. If empty, the solver returns the full
+        state vector.
+
+    Returns
+    -------
+    :class:`pybamm.Solution`
+    """
+    model, parameter_values, var_pts = _OUTPUT_VARIABLE_MODELS[model_key]
+    sim = pybamm.Simulation(
+        model(),
+        parameter_values=parameter_values(),
+        var_pts=var_pts,
+        solver=pybamm.IDAKLUSolver(output_variables=list(output_variables)),
+    )
+    return sim.solve([t_start, t_start + 600], t_interp=t_start + _T_INTERP)
+
+
+def _solve_full_and_computed(model_key):
+    """
+    Solve a model once with the full state vector and once with its cases as
+    ``output_variables``.
+
+    Parameters
+    ----------
+    model_key : str
+        Key into ``_OUTPUT_VARIABLE_MODELS``.
+
+    Returns
+    -------
+    tuple of :class:`pybamm.Solution`
+        The full solution and the output_variables solution.
+    """
+    names = tuple(
+        case.values[1] for case in _OUTPUT_VARIABLE_CASES if case.values[0] == model_key
+    )
+    return _solve(model_key), _solve(model_key, output_variables=names)
+
+
 class TestProcessedVariableComputed:
     def test_processed_variable_0D(self):
         # without space
@@ -109,6 +291,84 @@ class TestProcessedVariableComputed:
         comb_sol = sol + sol_2
         comb_var = processed_var.update(processed_var2, comb_sol)
         np.testing.assert_array_equal(comb_var.entries, np.append(y_sol, y_sol2))
+
+    def _build_0D_var(self, t_sol=None):
+        # entries are 5 * t, so linear interpolation is exact
+        if t_sol is None:
+            t_sol = np.linspace(0, 1)
+        y_sol = 5 * t_sol[np.newaxis, :]
+        var = pybamm.t * pybamm.StateVector(slice(0, 1))
+        return pybamm.ProcessedVariableComputed(
+            [var],
+            [to_casadi(var, y_sol)],
+            [y_sol],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+        )
+
+    @pytest.mark.parametrize(
+        ("t_query", "shape"),
+        [
+            (0.5, ()),
+            (np.float64(0.5), ()),
+            (np.array(0.5), ()),
+            ([0.9, 0.3], (2,)),
+            (np.array([0.9, 0.3, 0.6]), (3,)),
+            (np.array([-0.5, 0.0, 0.5, 1.0, 2.0]), (5,)),
+        ],
+    )
+    def test_0D_call_matches_the_xarray_route(self, t_query, shape):
+        processed_var = self._build_0D_var()
+        values = processed_var(t_query)
+        expected = processed_var._xr_data_array.interp(t=t_query).values
+
+        assert isinstance(values, np.ndarray)
+        assert values.shape == shape
+        np.testing.assert_allclose(values, expected, rtol=1e-14)
+        t_array = np.asarray(t_query)
+        in_range = (t_array >= 0) & (t_array <= 1)
+        np.testing.assert_allclose(values[in_range], 5 * t_array[in_range])
+        # out-of-range queries are NaN, as xarray fills them
+        assert np.isnan(values[~in_range]).all()
+
+    def test_0D_call_keeps_xarray_errors(self):
+        # a multi-dimensional t is rejected, as for every other dimension
+        processed_var = self._build_0D_var()
+        with pytest.raises(IndexError, match=r"multi-dimensional"):
+            processed_var(np.array([[0.1, 0.2], [0.3, 0.4]]))
+
+        # a repeated solution time has no single value to interpolate from
+        processed_var = self._build_0D_var(np.array([0.0, 0.5, 0.5, 1.0]))
+        with pytest.raises(pd.errors.InvalidIndexError):
+            processed_var(0.25)
+
+    def test_data_array_is_built_on_first_interpolation(self):
+        # .data, .entries and 0D time-only reads never build the xr.DataArray
+        processed_var = self._build_0D_var()
+        processed_var.data
+        processed_var.entries
+        processed_var(np.array([0.25, 0.75]))
+        assert processed_var._xr_data_array_cache is None
+
+        var = pybamm.Variable("var", domain=["negative electrode", "separator"])
+        x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
+        processed_var = pybamm.ProcessedVariableComputed(
+            [var_sol],
+            [to_casadi(var_sol, y_sol)],
+            [y_sol],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+        )
+        processed_var.entries
+        assert processed_var._xr_data_array_cache is None
+
+        processed_var(t_sol, x_sol)
+        assert isinstance(processed_var._xr_data_array_cache, xr.DataArray)
+        assert processed_var._xr_interp_args is None
 
     # check empty sensitivity works
     def test_processed_variable_0D_no_sensitivity(self):
@@ -287,7 +547,12 @@ class TestProcessedVariableComputed:
         )
         np.testing.assert_array_equal(comb_var.entries, comb_var.data)
 
-    def test_processed_variable_0D_update_sensitivities(self):
+    @pytest.mark.parametrize(
+        ("t_later", "expected"),
+        [([2, 3], [2.0, 2.0, 2.0, 2.0]), ([1, 2], [2.0, 2.0, 2.0])],
+        ids=["gap", "shared-boundary"],
+    )
+    def test_processed_variable_0D_update_sensitivities(self, t_later, expected):
         def solve_processed_var(t_eval, calculate_sensitivities):
             model = pybamm.BaseModel()
             y = pybamm.Variable("y")
@@ -310,19 +575,65 @@ class TestProcessedVariableComputed:
         assert processed_var_no_sens.sensitivities == {}
 
         sol1, processed_var1 = solve_processed_var([0, 1], True)
-        sol2, processed_var2 = solve_processed_var([2, 3], True)
+        sol2, processed_var2 = solve_processed_var(t_later, True)
 
         combined_sol = sol1 + sol2
         combined_var = processed_var1.update(processed_var2, combined_sol)
 
+        np.testing.assert_array_equal(combined_var.entries, np.array(expected))
         np.testing.assert_array_equal(
-            combined_var.entries,
-            np.array([2.0, 2.0, 2.0, 2.0]),
+            combined_var.sensitivities["a"], np.ones(len(expected))
         )
-        np.testing.assert_array_equal(
-            combined_var.sensitivities["a"],
-            np.array([1.0, 1.0, 1.0, 1.0]),
+        assert len(combined_var.entries) == len(combined_sol.t)
+
+    def test_time_integral_update_sums_segments(self):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        a = pybamm.InputParameter("a")
+        model.rhs = {y: 0 * y}
+        model.initial_conditions = {y: 1}
+        model.variables = {
+            "Integral": pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(0))
+        }
+        solver = pybamm.IDAKLUSolver(output_variables=["Integral"])
+        first, later = (
+            solver.solve(model, t_eval, inputs={"a": 2.0}, calculate_sensitivities=True)
+            for t_eval in ([0, 1], [1, 3])
         )
+
+        combined = (first + later)["Integral"]
+
+        # a * y = 2 integrated over [0, 3]
+        np.testing.assert_allclose(combined.entries, [6.0])
+        np.testing.assert_allclose(combined(), [6.0])
+        np.testing.assert_allclose(combined.sensitivities["a"], [3.0])
+        np.testing.assert_allclose(combined.sensitivities["all"], [[3.0]])
+
+    @pytest.mark.parametrize("first_output_variables", [False, True])
+    def test_time_integral_update_leaves_out_a_gap(self, first_output_variables):
+        def solve(t_eval, output_variables):
+            model = pybamm.BaseModel()
+            y = pybamm.Variable("y")
+            a = pybamm.InputParameter("a")
+            model.rhs = {y: 0 * y}
+            model.initial_conditions = {y: 1}
+            model.variables = {
+                "Integral": pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(0))
+            }
+            solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+            return solver.solve(
+                model, t_eval, inputs={"a": 2.0}, calculate_sensitivities=True
+            )
+
+        first = solve([0, 1], ["Integral"] if first_output_variables else None)
+        later = solve([2, 3], ["Integral"])
+
+        combined = (first + later)["Integral"]
+
+        # Each segment integrates a * y = 2 over its own unit interval; [1, 2] is
+        # not integrated
+        np.testing.assert_allclose(combined.entries, [4.0])
+        np.testing.assert_allclose(combined.sensitivities["a"], [2.0])
 
     def test_processed_variable_2D_x_r(self):
         var = pybamm.Variable(
@@ -531,10 +842,11 @@ class TestProcessedVariableComputed:
         var_casadi = to_casadi(var_sol, u_sol)
         geometry_options = {"options": {"particle size": "distribution"}}
         model = tests.get_base_model_with_battery_geometry(**geometry_options)
+        # base_variables_data is time-major (n_t, output); u_sol is (output, n_t)
         processed_var = pybamm.ProcessedVariableComputed(
             [var_sol],
             [var_casadi],
-            [u_sol],
+            [u_sol.T],
             pybamm.Solution(t_sol, u_sol, model, {}),
         )
 
@@ -572,10 +884,11 @@ class TestProcessedVariableComputed:
         u_sol = np.ones(len(x_sol) * len(y_sol) * len(z_sol))[:, np.newaxis] * t_sol
 
         var_casadi = to_casadi(var_sol, u_sol)
+        # base_variables_data is time-major (n_t, output); u_sol is (output, n_t)
         processed_var = pybamm.ProcessedVariableComputed(
             [var_sol],
             [var_casadi],
-            [u_sol],
+            [u_sol.T],
             pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
         )
 
@@ -588,4 +901,76 @@ class TestProcessedVariableComputed:
         # Check unroll function (3D)
         np.testing.assert_array_equal(
             processed_var.unroll(), u_sol.reshape(Nx, 6, 7, 2)
+        )
+
+    @pytest.mark.parametrize(
+        ("model_key", "name", "layout", "time_integral_method"), _OUTPUT_VARIABLE_CASES
+    )
+    def test_output_variable_matches_full_solve(
+        self, model_key, name, layout, time_integral_method
+    ):
+        full_solution, computed_solution = _solve_full_and_computed(model_key)
+        full, computed = full_solution[name], computed_solution[name]
+
+        # A routing change must not quietly move a case off the path it covers
+        assert type(full) is layout
+        method = full.time_integral.method if full.time_integral else None
+        assert method == time_integral_method
+
+        assert isinstance(computed, pybamm.ProcessedVariableComputed)
+        np.testing.assert_allclose(computed.entries, full.entries, rtol=1e-6)
+
+        # Solution.__add__ merges with an output_variables solve via as_computed()
+        converted = full.as_computed()
+        assert converted.time_indep == computed.time_indep
+        np.testing.assert_array_equal(converted.entries, full.entries)
+        t = None if computed.time_indep else np.array([150.0, 450.0])
+        np.testing.assert_allclose(converted(t=t), computed(t=t), rtol=1e-6)
+
+    @pytest.mark.parametrize(
+        ("model_key", "name", "layout", "time_integral_method"), _OUTPUT_VARIABLE_CASES
+    )
+    def test_output_variable_joins_at_shared_boundary(
+        self, model_key, name, layout, time_integral_method
+    ):
+        full_solution = _solve(model_key)
+        # Both later segments start at 600 s, where the first ends
+        later_full = _solve(model_key, t_start=600.0)
+        later_computed = _solve(model_key, t_start=600.0, output_variables=(name,))
+        # copy() drops full-state variables other tests read from the cached solve
+        first = full_solution.copy()
+
+        joined = (first + later_computed)[name]
+        if name in _NOT_JOINABLE:
+            with pytest.raises(NotImplementedError, match=r"ExplicitTimeIntegral"):
+                joined.entries
+            return
+
+        # A full-state sum evaluates the variable on the joined states, not via _concat
+        expected = (full_solution + later_full)[name]
+        np.testing.assert_allclose(joined.entries, expected.entries, rtol=1e-6)
+        t = None if joined.time_indep else np.array([150.0, 750.0])
+        np.testing.assert_allclose(joined(t=t), expected.as_computed()(t=t), rtol=1e-6)
+
+    def test_output_variable_cases_cover_every_layout(self):
+        subclasses, stack = set(), [pybamm.ProcessedVariable]
+        while stack:
+            for subclass in stack.pop().__subclasses__():
+                subclasses.add(subclass)
+                stack.append(subclass)
+        layouts = {c for c in subclasses if c.__module__.startswith("pybamm")}
+        covered = {case.values[2] for case in _OUTPUT_VARIABLE_CASES}
+        missing = layouts - covered - _NOT_COMPUTABLE
+        assert not missing, (
+            "Add a case to _OUTPUT_VARIABLE_CASES, or add the class to "
+            "_NOT_COMPUTABLE: " + ", ".join(sorted(c.__name__ for c in missing))
+        )
+
+        methods = typing.get_args(
+            typing.get_type_hints(pybamm.ProcessedVariableTimeIntegral)["method"]
+        )
+        covered_methods = {case.values[3] for case in _OUTPUT_VARIABLE_CASES}
+        assert set(methods) <= covered_methods, (
+            "Add a time-integral case to _OUTPUT_VARIABLE_CASES for: "
+            + ", ".join(sorted(set(methods) - covered_methods))
         )

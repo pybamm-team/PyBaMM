@@ -53,9 +53,7 @@ class ProcessedVariable(BaseProcessedVariable):
         self.all_yps = solution.all_yps
         self.all_inputs = solution.all_inputs
         self.all_inputs_stacked = solution.all_inputs_stacked
-        self.sensitivity_names = [
-            name for name in solution._all_sensitivities if name != "all"
-        ]
+        self.sensitivity_names = solution.sensitivity_names
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
@@ -284,7 +282,8 @@ class ProcessedVariable(BaseProcessedVariable):
         else:
             processed_entries = entries
 
-        if not is_sorted:
+        # Only the Hermite route sorts t; the xarray route keeps the caller's order
+        if not is_sorted and hermite_time_interp:
             idxs_unsort = np.empty_like(idxs_sort)
             idxs_unsort[idxs_sort] = np.arange(len(t_observe))
 
@@ -545,17 +544,25 @@ class ProcessedVariable(BaseProcessedVariable):
                 self.t_pts,
             )
 
-        entries = self.entries  # shape: (..., n_t)
-
-        # Move time to axis 0, then flatten spatial dims per timestep
-        reshaped = np.moveaxis(entries, -1, 0)  # shape: (n_t, ...)
-        base_data = [reshaped.reshape(reshaped.shape[0], -1)]  # (n_t, n_vars)
+        if self.time_integral is None:
+            # Rows as an output_variables solve returns them: before per-class reordering
+            observed = self._observe_raw()
+            base_data = [observed.reshape(-1, len(self.t_pts), order="F").T]
+        elif isinstance(self, ProcessedVariable0D):
+            # output_variables stores a time integral as its single summed value
+            base_data = [self.entries]
+        else:
+            raise NotImplementedError(
+                f"Variable {self._name!r}: as_computed() does not support time "
+                "integrals of spatially varying variables."
+            )
 
         cpv = pybamm.ProcessedVariableComputed(
             self.base_variables,
             self.base_variables_casadi,
             base_data,
             _stub_solution(self),
+            time_integral=self.time_integral,
         )
 
         # add sensitivities if they exist
