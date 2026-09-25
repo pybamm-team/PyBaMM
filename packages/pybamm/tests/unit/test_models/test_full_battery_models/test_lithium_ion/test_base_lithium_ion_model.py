@@ -81,3 +81,20 @@ class TestBaseLithiumIonModel:
         assert (
             "Negative electrode primary phase capacity [A.h]" in model.summary_variables
         )
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            pybamm.lithium_ion.SPMe,
+            pybamm.lithium_ion.MPM,
+            pybamm.lithium_ion.NewmanTobias,
+        ],
+    )
+    def test_positive_electrode_degradation_not_implemented(self, model):
+        with pytest.raises(pybamm.OptionError, match=r"is not implemented for"):
+            model({"positive electrode degradation": "true"})
+
+    def test_positive_electrode_degradation_default_parameters(self):
+        model = pybamm.lithium_ion.SPM({"positive electrode degradation": "true"})
+        parameter_values = model.default_parameter_values
+        assert parameter_values["Initial phase boundary location [m]"] == 3.75e-06

@@ -102,6 +102,7 @@ from .models.submodels import (
     transport_efficiency,
     particle_mechanics,
     equivalent_circuit_elements,
+    positive_electrode_degradation,
 )
 from .models.submodels.interface import kinetics
 from .models.submodels.interface import sei

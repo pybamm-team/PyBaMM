@@ -231,6 +231,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Sets the model to include a single active particle size or a
                 distribution of sizes at any macroscale location. Can be "single"
                 (default) or "distribution". Option applies to both electrodes.
+            * "positive electrode degradation" : str
+                Sets the positive electrode to undergo core to shell degradation
+                (Ghosh et al., 2021; Zhuo et al., 2023). This is due to in which an
+                oxygen release that causes the shell to grow from the particle surface inward as the core shrinks.
+                Options are: "false" (default) or "true".
+                Note: It is only available for the SPM and DFN
             * "SEI" : str
                 Set the SEI submodel to be used. Options are:
 
@@ -402,6 +408,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "particle phases": ["1", "2"],
             "particle shape": ["spherical", "no particles"],
             "particle size": ["single", "distribution"],
+            "positive electrode degradation": ["false", "true"],
             "SEI": [
                 "none",
                 "constant",
@@ -479,6 +486,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "working electrode": "both",
             "x-average side reactions": "false",
             "use lumped thermal capacity": "false",
+            "positive electrode degradation": "false",
         }
         extra_options = extra_options or {}
 
@@ -739,6 +747,24 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "'voltage as a state' set to 'false'. Explicit power and "
                 "resistance control require voltage as an algebraic state."
             )
+        # If "positive electrode degradation" is "true" then "total
+        # interfacial current density as a state" must be "true"
+        if options["positive electrode degradation"] == "true":
+            options["total interfacial current density as a state"] = "true"
+            # Check that extra_options did not try to provide a clashing option
+            if (
+                extra_options.get("total interfacial current density as a state")
+                == "false"
+            ):
+                raise pybamm.OptionError(
+                    "If 'positive electrode degradation' is 'true' then "
+                    "'total interfacial current density as a state' must be 'true'"
+                )
+            if options["working electrode"] != "both":
+                raise pybamm.OptionError(
+                    "'positive electrode degradation' requires 'working electrode' "
+                    "to be 'both'"
+                )
 
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
@@ -1079,11 +1105,29 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_geometry(self):
         if self.options["cell geometry"] == "cylindrical":
-            return pybamm.battery_geometry(
+            base_geometry = pybamm.battery_geometry(
                 options=self.options, form_factor="cylindrical"
             )
         else:
-            return pybamm.battery_geometry(options=self.options)
+            base_geometry = pybamm.battery_geometry(options=self.options)
+
+        # Positive electrode degradation spatial variables
+        if self.options["positive electrode degradation"] == "true":
+            var = pybamm.standard_spatial_vars
+            base_geometry.update(
+                {
+                    "positive core": {
+                        var.eta: {"min": pybamm.Scalar(0.0), "max": pybamm.Scalar(1)}
+                    },
+                    "positive shell": {
+                        var.chi: {"min": pybamm.Scalar(0.0), "max": pybamm.Scalar(1)}
+                    },
+                    "positive shell oxygen": {
+                        var.psi: {"min": pybamm.Scalar(0.0), "max": pybamm.Scalar(1)}
+                    },
+                }
+            )
+        return base_geometry
 
     @property
     def default_var_pts(self):
@@ -1109,6 +1153,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Reduce the default points for 2D current collectors
         if self.options["dimensionality"] == 2:
             base_var_pts.update({"x_n": 10, "x_s": 10, "x_p": 10})
+
+        if self.options["positive electrode degradation"] == "true":
+            base_var_pts.update({"eta": 20, "chi": 20, "psi": 20})
         return base_var_pts
 
     @property
@@ -1148,6 +1195,16 @@ class BaseBatteryModel(pybamm.BaseModel):
                 base_submeshes["cell"] = pybamm.ScikitFemGenerator3D(
                     geom_type="cylinder", h="0.1"
                 )
+
+        if self.options["positive electrode degradation"] == "true":
+            base_submeshes.update(
+                {
+                    "positive core": pybamm.Uniform1DSubMesh,
+                    "positive shell": pybamm.Uniform1DSubMesh,
+                    "positive shell oxygen": pybamm.Uniform1DSubMesh,
+                }
+            )
+
         return base_submeshes
 
     @property
@@ -1181,6 +1238,15 @@ class BaseBatteryModel(pybamm.BaseModel):
                 pybamm.ZeroDimensionalSpatialMethod()
             )
             base_spatial_methods["cell"] = pybamm.ScikitFiniteElement3D()
+
+        if self.options["positive electrode degradation"] == "true":
+            base_spatial_methods.update(
+                {
+                    "positive core": pybamm.FiniteVolume(),
+                    "positive shell": pybamm.FiniteVolume(),
+                    "positive shell oxygen": pybamm.FiniteVolume(),
+                }
+            )
         return base_spatial_methods
 
     @property

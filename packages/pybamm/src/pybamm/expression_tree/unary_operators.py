@@ -1614,6 +1614,56 @@ class NotConstant(UnaryOperator):
         return False
 
 
+class BoundaryCellValue(BoundaryOperator):
+    """
+    A node in the expression tree which gets the value of a variable in the
+    boundary cell, without extrapolating to the edge.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary cell value to take
+    side : str
+        Which side to take the boundary cell value on ("left" or "right")
+
+    **Extends:** :class:`BoundaryOperator`
+    """
+
+    _json_extra_fields = ("side",)
+
+    def __init__(self, child, side):
+        super().__init__("boundary cell value", child, side)
+
+    def _unary_new_copy(self, child, perform_simplifications=False):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return boundary_cell_value(child, self.side)
+
+
+class BoundaryCellLength(BoundaryOperator):
+    """
+    A node in the expression tree which gets the distance from the boundary node
+    of a variable's mesh to the boundary edge.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary cell length to take
+    side : str
+        Which side to take the boundary cell length on ("left" or "right")
+
+    **Extends:** :class:`BoundaryOperator`
+    """
+
+    _json_extra_fields = ("side",)
+
+    def __init__(self, child, side):
+        super().__init__("boundary cell length", child, side)
+
+    def _unary_new_copy(self, child, perform_simplifications=False):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return boundary_cell_length(child, self.side)
+
+
 #
 # Methods to call Gradient, Divergence, Laplacian and GradientSquared
 #
@@ -1835,3 +1885,41 @@ def smooth_absolute_value(symbol, k):
     exp = pybamm.exp
     kx = k * symbol
     return x * (exp(kx) - exp(-kx)) / (exp(kx) + exp(-kx))
+
+
+def boundary_cell_value(symbol, side):
+    """
+    Convenience function for creating a :class:`pybamm.BoundaryCellValue`
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The symbol whose boundary cell value to take
+    side : str
+        Which side to take the boundary cell value on ("left" or "right")
+
+    Returns
+    -------
+    :class:`BoundaryCellValue`
+        The new expression tree
+    """
+    return BoundaryCellValue(symbol, side)
+
+
+def boundary_cell_length(symbol, side):
+    """
+    Convenience function for creating a :class:`pybamm.BoundaryCellLength`
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The symbol whose boundary cell length to take
+    side : str
+        Which side to take the boundary cell length on ("left" or "right")
+
+    Returns
+    -------
+    :class:`BoundaryCellLength`
+        The new expression tree
+    """
+    return BoundaryCellLength(symbol, side)

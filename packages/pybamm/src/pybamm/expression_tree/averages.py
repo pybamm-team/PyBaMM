@@ -93,10 +93,21 @@ class XAverage(_BaseAverage):
         "positive electrode",
     )
 
+    # Shrinking-core domains sit inside the positive electrode but have no
+    # "particle" in their name, so the substring checks below would miss them
+    POSITIVE_ELECTRODE_DEGRADATION_DOMAINS: ClassVar[tuple[str, ...]] = (
+        "positive core",
+        "positive shell",
+        "positive shell oxygen",
+    )
+
     def __init__(self, child: pybamm.Symbol) -> None:
         if all(n in child.domain[0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
-        elif all(n in child.domain[0] for n in ["positive", "particle"]):
+        elif (
+            all(n in child.domain[0] for n in ["positive", "particle"])
+            or child.domain[0] in self.POSITIVE_ELECTRODE_DEGRADATION_DOMAINS
+        ):
             x = pybamm.standard_spatial_vars.x_p
         else:
             x = pybamm.SpatialVariable("x", domain=child.domain)
@@ -308,6 +319,21 @@ class RAverage(_BaseAverage):
         if symbol.evaluates_on_edges("primary"):
             raise ValueError(
                 "Can't take the r-average of a symbol that evaluates on edges"
+            )
+
+        # For the shrinking-core domains the volume weighting depends on the moving
+        # boundary s, so a plain r-average is the wrong approach.
+
+        if symbol.domain in [
+            ["positive core"],
+            ["positive shell"],
+            ["positive shell oxygen"],
+        ]:
+            raise pybamm.DomainError(
+                "r_average for domain 'positive core or shell (oxygen)' is "
+                "implemented as `_pe_r_average` in "
+                "base_positive_electrode_degradation.py, since the volume "
+                "weighting depends on the moving phase boundary."
             )
 
         if not has_particle_domain:

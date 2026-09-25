@@ -668,6 +668,10 @@ class ProcessedVariable1D(ProcessedVariable):
         }
         self.first_dimension = self.spatial_variable_names["primary"]
 
+        # Spatial variables for positive electrode degradation submodel
+        if self.first_dimension in ("eta", "chi", "psi"):
+            self.first_dimension = "x"
+
         # assign attributes for reference
         pts_for_interp = space
         self.internal_boundaries = self.mesh.internal_boundaries
@@ -807,6 +811,12 @@ class ProcessedVariable2D(ProcessedVariable):
 
         self.first_dimension = self.spatial_variable_names["primary"]
         self.second_dimension = self.spatial_variable_names["secondary"]
+
+        # Spatial variables for positive electrode degradation submodel
+        if self.first_dimension in ("eta", "chi", "psi") and (
+            self.second_dimension == "x"
+        ):
+            self.first_dimension = "r"
 
         # assign attributes for reference
         first_dim_pts_for_interp = first_dim_pts

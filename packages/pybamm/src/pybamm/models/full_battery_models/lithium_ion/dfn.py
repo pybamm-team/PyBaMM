@@ -88,6 +88,28 @@ class DFN(BaseModel):
                     )
                 )
 
+    def set_positive_electrode_degradation_submodel(self):
+        """
+        Substitutes the positive particles with the many particle
+        shrinking-core degradation submodel.
+        """
+        if type(self) is not DFN:
+            super().set_positive_electrode_degradation_submodel()
+            return
+        if self.options["positive electrode degradation"] == "true":
+            self._check_positive_electrode_degradation_options()
+            if "positive primary particle" in self.submodels:
+                self.submodels["positive primary particle"] = (
+                    pybamm.positive_electrode_degradation.PositiveElectrodeDegradationManyParticle(
+                        self.param, "Positive"
+                    )
+                )
+            else:
+                raise pybamm.ModelError(
+                    "The particle submodel has not been called yet. Make sure it "
+                    "is invoked before calling the phase transition submodel."
+                )
+
     def set_solid_submodel(self):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "planar":

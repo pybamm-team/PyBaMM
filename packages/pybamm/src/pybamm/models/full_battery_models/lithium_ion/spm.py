@@ -131,6 +131,30 @@ class SPM(BaseModel):
                     )
                 )
 
+    def set_positive_electrode_degradation_submodel(self):
+        """
+        Replace the positive particle with the x-averaged shrinking-core
+        degradation submodel.
+        """
+        if type(self) is not SPM:
+            super().set_positive_electrode_degradation_submodel()
+            return
+        if self.options["positive electrode degradation"] == "true":
+            self._check_positive_electrode_degradation_options()
+            if "positive primary particle" in self.submodels:
+                self.submodels["positive primary particle"] = (
+                    pybamm.positive_electrode_degradation.PositiveElectrodeDegradationSingleParticle(
+                        self.param, "Positive"
+                    )
+                )
+                pybamm.citations.register("Ghosh2021")
+                pybamm.citations.register("Zhuo2023")
+            else:
+                raise pybamm.ModelError(
+                    "The particle submodel has not been called yet. Make sure it "
+                    "is invoked before calling the phase transition submodel."
+                )
+
     def set_solid_submodel(self):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "planar":
