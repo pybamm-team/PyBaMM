@@ -51,10 +51,8 @@ def _cell_solution():
         },
     }
 
-    field = pybamm.StateVector(slice(0, 1), domain="mesh")
-    field.mesh = mesh
-    shifted = pybamm.StateVector(slice(1, 2), domain="shifted")
-    shifted.mesh = shifted_mesh
+    field = pybamm.StateVector(slice(0, 1), domain="mesh").with_mesh(mesh)
+    shifted = pybamm.StateVector(slice(1, 2), domain="shifted").with_mesh(shifted_mesh)
     model.variables = {"field": field, "shifted": shifted, "scalar": pybamm.t}
     model.update_processed_variables(model.variables)
 
@@ -79,12 +77,11 @@ def _triangle_solution():
         },
         "line": {x_line: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
     }
-    field = pybamm.StateVector(slice(0, 1), domain="mesh")
-    field.mesh = mesh
-    vector = pybamm.VectorField(field, field)
-    vector.mesh = mesh
-    line = pybamm.StateVector(slice(0, 2), domain="line")
-    line.mesh = pybamm.SubMesh1D(np.array([0.0, 0.5, 1.0]), "cartesian")
+    field = pybamm.StateVector(slice(0, 1), domain="mesh").with_mesh(mesh)
+    vector = pybamm.VectorField(field, field).with_mesh(mesh)
+    line = pybamm.StateVector(slice(0, 2), domain="line").with_mesh(
+        pybamm.SubMesh1D(np.array([0.0, 0.5, 1.0]), "cartesian")
+    )
     model.variables = {"field": field, "vector": vector, "line": line}
     model.update_processed_variables(model.variables)
     solution = pybamm.Solution(
@@ -114,8 +111,7 @@ def _node_solution():
         "mesh": {var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)} for var in xyz}
     }
 
-    field = pybamm.StateVector(slice(0, 4), domain="mesh")
-    field.mesh = mesh
+    field = pybamm.StateVector(slice(0, 4), domain="mesh").with_mesh(mesh)
     model.variables = {"node field": field}
     model.update_processed_variables(model.variables)
 

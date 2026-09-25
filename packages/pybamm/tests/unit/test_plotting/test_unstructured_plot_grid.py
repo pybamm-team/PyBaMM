@@ -78,10 +78,8 @@ def _triangle_vector_solution(values=(1.0, 2.0)):
             z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
     }
-    field = pybamm.StateVector(slice(0, 1), domain="mesh")
-    field.mesh = mesh
-    vector = pybamm.VectorField(field, field)
-    vector.mesh = mesh
+    field = pybamm.StateVector(slice(0, 1), domain="mesh").with_mesh(mesh)
+    vector = pybamm.VectorField(field, field).with_mesh(mesh)
     model.variables = {"vector": vector}
     model.update_processed_variables(model.variables)
     return pybamm.Solution(
@@ -104,8 +102,7 @@ def _node_solution():
     model._geometry = {
         "mesh": {var: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)} for var in xyz}
     }
-    field = pybamm.StateVector(slice(0, 4), domain="mesh")
-    field.mesh = mesh
+    field = pybamm.StateVector(slice(0, 4), domain="mesh").with_mesh(mesh)
     model.variables = {"node field": field}
     model.update_processed_variables(model.variables)
     t = np.array([0.0, 1.0])
