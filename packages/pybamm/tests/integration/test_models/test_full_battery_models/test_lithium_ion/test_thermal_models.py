@@ -222,3 +222,37 @@ class TestThermal:
             # cell heats up above the reference, so R (and hence the contact
             # overpotential magnitude) is larger than the constant case
             np.testing.assert_array_less(np.abs(dphi_const[1:]), np.abs(dphi_fn[1:]))
+
+    @pytest.mark.parametrize(
+        ("interpolator", "rtol"), [("linear", 1e-2), ("pchip", 1e-3), ("cubic", 1e-4)]
+    )
+    @pytest.mark.parametrize("model", [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN])
+    def test_heat_of_mixing_tabulated_ocp(self, model, interpolator, rtol):
+        # The heat of mixing differentiates the OCP, so a tabulated OCP must give a
+        # derivative the solver can use, converging to the analytic OCP's
+        from pybamm.input.parameters.lithium_ion.Chen2020 import (
+            graphite_LGM50_ocp_Chen2020,
+        )
+
+        options = {"thermal": "lumped", "heat of mixing": "true"}
+        t_eval = [0, 3000]
+        t_interp = np.linspace(0, 3000, 61)
+        name = "Volume-averaged heat of mixing [W.m-3]"
+
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        analytic = pybamm.Simulation(
+            model(options), parameter_values=parameter_values
+        ).solve(t_eval=t_eval, t_interp=t_interp)[name](t_interp)
+
+        sto = np.linspace(0, 1, 201)
+        ocp = graphite_LGM50_ocp_Chen2020(sto)
+        parameter_values["Negative electrode OCP [V]"] = lambda x: pybamm.Interpolant(
+            sto, ocp, x, interpolator=interpolator
+        )
+        tabulated = pybamm.Simulation(
+            model(options), parameter_values=parameter_values
+        ).solve(t_eval=t_eval, t_interp=t_interp)[name](t_interp)
+
+        np.testing.assert_allclose(
+            tabulated, analytic, rtol=0, atol=rtol * np.max(np.abs(analytic))
+        )

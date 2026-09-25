@@ -128,7 +128,13 @@ class Interpolant(pybamm.Function):
         self.dimension = ndim
         if ndim == 1:
             x1 = x[0]
-            if interpolator == "linear":
+            if interpolator == "linear" and _num_derivatives > 0:
+                # interp1d cannot be differentiated, so use the equivalent degree-1
+                # spline; a second derivative is zero, so differentiate zero data
+                data = y if _num_derivatives == 1 else np.zeros_like(y)
+                interpolating_function = interpolate.make_interp_spline(x1, data, k=1)
+                interpolating_function.extrapolate = extrapolate
+            elif interpolator == "linear":
                 fill_value: float | str = "extrapolate" if extrapolate else np.nan
                 interpolating_function = interpolate.interp1d(
                     x1,
@@ -164,7 +170,9 @@ class Interpolant(pybamm.Function):
 
         # Differentiate the interpolating function if necessary
         self._num_derivatives = _num_derivatives
-        for _ in range(_num_derivatives):
+        for _ in range(
+            min(_num_derivatives, 1) if interpolator == "linear" else _num_derivatives
+        ):
             interpolating_function = interpolating_function.derivative()
 
         super().__init__(interpolating_function, *children, name=name)
@@ -285,6 +293,8 @@ class Interpolant(pybamm.Function):
             )
 
     def _linear_to_casadi(self, converted_children):
+        if self._num_derivatives > 0:
+            return self._linear_derivative_to_casadi(converted_children)
         if self.dimension == 1:
             v = self.y.flatten()
         else:
@@ -294,6 +304,24 @@ class Interpolant(pybamm.Function):
             self.x, v, converted_children, {"lookup_mode": lookup_modes}
         )
         if result.shape[0] == 1 and result.shape[1] > 1:
+            result = result.T
+        return result
+
+    def _linear_derivative_to_casadi(self, converted_children):
+        # The derivative of a piecewise-linear interpolant is the slope of the
+        # interval containing x (right-continuous, matching scipy); higher ones are 0
+        x_np = np.asarray(self.x[0], dtype=np.float64)
+        y_np = np.asarray(self.y, dtype=np.float64)
+        y_2d = y_np if y_np.ndim > 1 else y_np[:, np.newaxis]
+        slopes = np.diff(y_2d, axis=0) / np.diff(x_np)[:, np.newaxis]
+        if self._num_derivatives > 1:
+            slopes = np.zeros_like(slopes)
+        x = converted_children[0]
+        lookup_mode = "exact" if _is_uniform_grid(x_np) else "binary"
+        idx = casadi.low(casadi.MX(x_np), x, {"lookup_mode": lookup_mode})
+        idx = casadi.fmin(casadi.fmax(idx, 0), len(x_np) - 2)
+        result = casadi.MX(slopes)[idx, :]
+        if y_np.ndim > 1:
             result = result.T
         return result
 
@@ -311,8 +339,10 @@ class Interpolant(pybamm.Function):
             # Differentiate the spline to match scipy's evaluate (#5582)
             for _ in range(self._num_derivatives):
                 bspline = bspline.derivative()
-            c_flat = bspline.c.flatten()
+            # scipy pads a derivative's coefficients past the basis size and ignores
+            # the extra; CasADi's own derivative of the spline rejects them
             n_basis = len(bspline.t) - bspline.k - 1
+            c_flat = bspline.c[:n_basis].flatten()
             m = c_flat.size // n_basis
             f = casadi.Function.bspline(
                 self.name, [bspline.t], c_flat.tolist(), [bspline.k], m
