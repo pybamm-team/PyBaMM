@@ -562,7 +562,7 @@ class ProcessedVariable(BaseProcessedVariable):
             self.base_variables_casadi,
             base_data,
             _stub_solution(self),
-            time_indep=self.time_integral is not None,
+            time_integral=self.time_integral,
         )
 
         # add sensitivities if they exist
