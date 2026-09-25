@@ -240,13 +240,15 @@ class TestThermal:
         parameter_values = pybamm.ParameterValues("Chen2020")
         if composite:
             # Split the positive electrode, which carries most of the heat of mixing,
-            # into two identical halves, and give the second hysteresis about its OCP.
-            # The branches are tilted so that their slopes differ from the OCP's
+            # into two identical halves, and give the second hysteresis about its OCP
+            # and a direction-dependent diffusivity. The OCP branches are tilted so
+            # that their slopes differ from the OCP's
             options["particle phases"] = ("1", "2")
             options["open-circuit potential"] = (
                 "single",
                 ("single", "current sigmoid"),
             )
+            options["diffusivity"] = ("single", ("single", "current sigmoid"))
             for name in [
                 "Positive electrode OCP [V]",
                 "Positive electrode OCP entropic change [V.K-1]",
@@ -265,6 +267,9 @@ class TestThermal:
                 )
                 del parameter_values[name]
             mean_ocp = parameter_values["Secondary: Positive electrode OCP [V]"]
+            diffusivity = parameter_values[
+                "Secondary: Positive particle diffusivity [m2.s-1]"
+            ]
             parameter_values.update(
                 {
                     "Secondary: Positive electrode lithiation OCP [V]": lambda sto: (
@@ -272,6 +277,12 @@ class TestThermal:
                     ),
                     "Secondary: Positive electrode delithiation OCP [V]": lambda sto: (
                         mean_ocp(sto) + 0.005 + 0.1 * sto
+                    ),
+                    "Secondary: Positive particle lithiation diffusivity [m2.s-1]": (
+                        diffusivity / 2
+                    ),
+                    "Secondary: Positive particle delithiation diffusivity [m2.s-1]": (
+                        diffusivity * 2
                     ),
                 },
                 check_already_exists=False,

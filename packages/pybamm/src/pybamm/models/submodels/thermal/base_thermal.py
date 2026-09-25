@@ -391,6 +391,10 @@ class BaseThermal(pybamm.BaseSubModel):
         referenced to, not the hysteresis-weighted OCP that sets the voltage. Energy
         only balances if both heat sources share that reference.
         """
+        phase_options = getattr(getattr(self.options, domain), phase_param.phase)
+        if phase_options["particle"] == "uniform profile":
+            # no concentration gradient, so nothing to mix
+            return pybamm.FullBroadcast(0, [f"{domain} electrode"], "current collector")
         Domain = domain.capitalize()
         F = pybamm.constants.F.value
         a = variables[
@@ -398,17 +402,25 @@ class BaseThermal(pybamm.BaseSubModel):
         ]
         R = variables[f"{Domain} {phase_name}particle radius [m]"]
         N = a / (4 * np.pi * R**2)
+        # the diffusivity the particle flux actually uses, including any current
+        # sigmoid or stress-induced diffusion, so the dissipation matches the flux
         if self.x_average:
             c = variables[
                 f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
             ]
             T = variables[f"X-averaged {domain} electrode temperature [K]"]
+            D = variables[
+                f"X-averaged {domain} {phase_name}particle effective "
+                "diffusivity [m2.s-1]"
+            ]
         else:
             c = variables[f"{Domain} {phase_name}particle concentration [mol.m-3]"]
             T = variables[f"{Domain} electrode temperature [K]"]
+            D = variables[
+                f"{Domain} {phase_name}particle effective diffusivity [m2.s-1]"
+            ]
         T_part = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
         dc_dr2 = pybamm.inner(pybamm.grad(c), pybamm.grad(c))
-        D = phase_param.D(c, T_part)
         dUeq = phase_param.U(c / phase_param.c_max, T_part).diff(c)
         integrand_r = D * dc_dr2 * dUeq
         integration_variable_r = [
