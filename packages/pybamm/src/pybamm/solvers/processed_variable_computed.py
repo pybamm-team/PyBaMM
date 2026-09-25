@@ -712,8 +712,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             and all(arg is None for arg in (x, r, y, z, R))
             and self._t_pts_increasing
         ):
-            # Same values as xr.interp at a fraction of the cost; other queries,
-            # including N-D t, keep the xarray route and its errors.
+            # Same values as xr.interp at a fraction of the cost, and also takes an
+            # empty or tuple t; other queries, including N-D t, keep the xarray route
             values = np.interp(t, self.t_pts, self.entries, left=np.nan, right=np.nan)
             return np.asarray(values)
         kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
