@@ -133,3 +133,54 @@ def test_parse_termination_requires_operator_for_input_parameter():
         pybamm.experiment.step.base_step._parse_termination(
             "2A", pybamm.InputParameter("I_app")
         )
+
+
+def _crate_one(t):
+    """A C-rate callable that ignores time. Defined at module scope so
+    that the regression tests below carry a real ``callable(value) is True``
+    rather than relying on lambdas that ``pickle`` cannot round-trip."""
+    return 1.0
+
+
+def test_crate_default_duration_with_callable_falls_back_to_24h():
+    """Guards #4926: ``CRate(callable)`` used to raise
+    ``TypeError: bad operand type for abs(): 'function'`` from
+    ``CRate._default_timespan`` evaluating ``1 / abs(value) * 3600 * 2``
+    on the function object instead of its return value.
+
+    The fix delegates to the base class's 24-hour default whenever the
+    value is callable, matching how every other ``step.*`` subclass
+    (``Current``, ``Voltage``, ``Power``, ``Resistance``) behaves for
+    callables. ``CRate(scalar)`` keeps the C-rate-derived bound."""
+    step = pybamm.step.CRate(_crate_one)
+    assert step.duration == 24 * 3600
+    assert step.uses_default_duration is True
+
+
+def test_crate_default_duration_with_scalar_unchanged():
+    """Non-regression for the existing fast path: a numeric C-rate
+    still resolves to ``1 / |C| * 3600 * 2`` seconds."""
+    step = pybamm.step.CRate(0.5)
+    assert step.duration == pytest.approx(1 / 0.5 * 3600 * 2)
+    step = pybamm.step.CRate(-2.0)
+    assert step.duration == pytest.approx(1 / 2.0 * 3600 * 2)
+
+
+def test_all_step_types_accept_callable_for_default_duration():
+    """Every explicit/implicit step subclass must accept a callable
+    without crashing in ``default_duration``. Before #4926's fix only
+    ``CRate`` was broken; this test pins all five to the same contract."""
+    for step_cls in (
+        pybamm.step.Current,
+        pybamm.step.CRate,
+        pybamm.step.Voltage,
+        pybamm.step.Power,
+        pybamm.step.Resistance,
+    ):
+        step = step_cls(_crate_one)
+        assert step.duration == 24 * 3600
+        # ``BaseStep.__init__`` materialises ``value`` by calling the
+        # function at ``t=0``, so ``step.value`` is the scalar result
+        # rather than the function object; the contract under test is
+        # that construction succeeds with the 24-hour fallback duration.
+        assert step.is_python_function is True
