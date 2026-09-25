@@ -215,13 +215,8 @@ class TestJacobian:
         a = 2 * pybamm.PrimaryBroadcast(curr_coll_vector, a_dom)
         b = pybamm.PrimaryBroadcast(curr_coll_vector, b_dom)
         c = 3 * pybamm.PrimaryBroadcast(curr_coll_vector, c_dom)
-        # Add bounds for compatibility with the discretisation
-        a.bounds = (pybamm.Scalar(-np.inf), pybamm.Scalar(np.inf))
-        b.bounds = (pybamm.Scalar(-np.inf), pybamm.Scalar(np.inf))
-        c.bounds = (pybamm.Scalar(-np.inf), pybamm.Scalar(np.inf))
 
         conc = pybamm.concatenation(a, b, c)
-        conc.bounds = a.bounds
         disc.set_variable_slices([conc])
         conc_disc = disc.process_symbol(conc)
         jac = conc_disc.jac(y).evaluate().toarray()

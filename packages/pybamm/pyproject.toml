@@ -27,7 +27,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers>=0.9.0,<0.10.0",
+    "pybammsolvers>=0.10.0,<0.11.0",
     "black",
     "numpy>=2.0.0",
     "scipy>=1.11.4,!=1.18.0", # 1.18.0 breaks pickling/deepcopy of interpolators, fixed in 1.18.1 (scipy#25489)
@@ -126,6 +126,7 @@ Sulzer2019 = "pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values"
 Ai2020 = "pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values"
 Chen2020 = "pybamm.input.parameters.lithium_ion.Chen2020:get_parameter_values"
 Chen2020_composite = "pybamm.input.parameters.lithium_ion.Chen2020_composite:get_parameter_values"
+Bonkile2024 = "pybamm.input.parameters.lithium_ion.Bonkile2024:get_parameter_values"
 Ecker2015 = "pybamm.input.parameters.lithium_ion.Ecker2015:get_parameter_values"
 Ecker2015_graphite_halfcell = "pybamm.input.parameters.lithium_ion.Ecker2015_graphite_halfcell:get_parameter_values"
 Marquis2019 = "pybamm.input.parameters.lithium_ion.Marquis2019:get_parameter_values"

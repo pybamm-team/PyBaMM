@@ -39,6 +39,10 @@ class Array(pybamm.Symbol):
         String representing the entries (slow to recalculate when copying)
     """
 
+    __slots__ = ("_entries", "_entries_string")
+    # the entries are identified through their (cheap) string form
+    _id_excluded_fields = ("_entries",)
+
     # entries_string is a derived hash cache of entries, which to_json emits.
     _serialise_derived_params = frozenset({"entries_string"})
 
@@ -122,12 +126,6 @@ class Array(pybamm.Symbol):
             else:
                 self._entries_string = (entries.tobytes(),)
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`."""
-        self._id = hash(
-            (self.__class__, self.name, *self.entries_string, *tuple(self.domain))
-        )
-
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
@@ -147,7 +145,7 @@ class Array(pybamm.Symbol):
         return self.__class__(
             self.entries,
             self.name,
-            domains=self.domains,
+            domains=self._domains,
             entries_string=self.entries_string,
         )
 
@@ -187,7 +185,7 @@ class Array(pybamm.Symbol):
 
         json_dict = {
             "name": self.name,
-            "domains": self.domains,
+            "domains": self._domains,
             "entries": matrix,
         }
 

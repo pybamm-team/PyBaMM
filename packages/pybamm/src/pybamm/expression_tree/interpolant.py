@@ -51,6 +51,18 @@ class Interpolant(pybamm.Function):
         the higher potential for errors in extrapolation.
     """
 
+    __slots__ = (
+        "_entries_string",
+        "_num_derivatives",
+        "dimension",
+        "extrapolate",
+        "interpolator",
+        "x",
+        "y",
+    )
+    # the data arrays are identified through their string form
+    _id_excluded_fields = ("x", "y")
+
     # entries_string is a derived hash cache of x/y, which are emitted by to_json.
     _serialise_derived_params = frozenset({"entries_string"})
 
@@ -197,19 +209,6 @@ class Interpolant(pybamm.Function):
             for i, x in enumerate(self.x):
                 self._entries_string += "x" + str(i) + "_" + str(x.tobytes())
             self._entries_string += "y_" + str(self.y.tobytes())
-
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`."""
-        self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.entries_string,
-                *tuple([child.id for child in self.children]),
-                *tuple(self.domain),
-                self._num_derivatives,
-            )
-        )
 
     def create_copy(self, new_children=None, perform_simplifications=True):
         """See :meth:`pybamm.Symbol.new_copy()`."""

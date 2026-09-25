@@ -17,6 +17,32 @@ from pybamm.codegen.compilation import aot_compile
 _UNSET = object()
 
 
+def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.ndarray:
+    """IDAS ``pbar``: the magnitude of each differentiated parameter.
+
+    IDAS weights the scaled sensitivity ``pbar_i * dy/dp_i`` like a state, so
+    ``pbar_i = |p_i|`` weights each column independently of the units of
+    ``p_i``.
+
+    Parameters
+    ----------
+    inputs_dict : dict
+        Input values for one input set.
+    sensitivity_names : list of str
+        Differentiated parameter names, in the solver's column order.
+
+    Returns
+    -------
+    numpy.ndarray
+        ``|p|`` for each name in ``sensitivity_names``, or 0 for a value with no
+        entries.
+    """
+    return np.array(
+        [np.max(np.abs(inputs_dict[name]), initial=0.0) for name in sensitivity_names],
+        dtype=np.float64,
+    )
+
+
 def _flatten_inputs(inputs_dict):
     """Flatten ``{name: value}`` into a 1-D float array in dict-key order."""
     if not inputs_dict:
@@ -685,6 +711,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             inputs = np.array([[]] * len(inputs_list))
 
+        sensitivity_names = self._setup["sensitivity_names"]
+        if sensitivity_names:
+            pbar = np.vstack(
+                [_sensitivity_scales(d, sensitivity_names) for d in inputs_list]
+            )
+        else:
+            pbar = np.empty((0, 0))
+
         # y0full is now a list with length = number of input sets
         y0full = np.vstack(model.y0full)
         ydot0full = np.vstack(model.ydot0full)
@@ -705,6 +739,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 ydot0full,
                 inputs,
                 logger=logger,
+                pbar=pbar,
             )
         except ValueError as e:
             # Return from None to replace the C++ runtime error

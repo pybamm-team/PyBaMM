@@ -7,9 +7,6 @@ class EntryPoint(Mapping):
     """
     A mapping interface for accessing PyBaMM models and parameter sets through entry points.
 
-    This class provides a unified way to load, and instantiate PyBaMM models
-    and parameter sets that have been registered as entry points.
-
     Access via :py:data:`pybamm.parameter_sets` for parameter sets - provides access
     to all registered battery parameter sets (e.g., 'Chen2020', 'Ai2020') that can
     be used to parameterise battery models.
@@ -26,7 +23,7 @@ class EntryPoint(Mapping):
     Listing available parameter sets:
         >>> import pybamm
         >>> list(pybamm.parameter_sets)  # doctest: +ELLIPSIS
-        ['Ai2020', 'Chayambuka2022', ...]
+        ['Ai2020', 'Bonkile2024', 'Chayambuka2022', ...]
 
     Listing available models:
         >>> import pybamm

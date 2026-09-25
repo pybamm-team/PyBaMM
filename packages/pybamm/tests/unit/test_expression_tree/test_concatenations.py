@@ -111,7 +111,7 @@ class TestConcatenations:
         assert conc.reference == 0
 
         id_old = a.id
-        a.scale = 2
+        a = a.create_copy(scale=2)
         assert a.id != id_old
         with pytest.raises(
             ValueError, match=r"Cannot concatenate symbols with different scales"
@@ -119,38 +119,38 @@ class TestConcatenations:
             pybamm.concatenation(a, b)
 
         id_old = b.id
-        b.scale = 2
+        b = b.create_copy(scale=2)
         assert b.id != id_old
         conc = pybamm.concatenation(a, b)
         assert conc.scale == 2
 
         id_old = a.id
-        a.reference = 3
+        a = a.create_copy(reference=3)
         assert a.id != id_old
-        a.reference = 3
+        assert a.create_copy(reference=3).id == a.id
         with pytest.raises(
             ValueError, match=r"Cannot concatenate symbols with different references"
         ):
             pybamm.concatenation(a, b)
 
         id_old = b.id
-        b.reference = 3
+        b = b.create_copy(reference=3)
         assert b.id != id_old
         conc = pybamm.concatenation(a, b)
         assert conc.reference == 3
 
-        a.bounds = (-100, 100)
+        a = a.create_copy(bounds=(-100, 100))
         id_old = a.id
-        a.bounds = (0, 1)
+        a = a.create_copy(bounds=(0, 1))
         assert a.id != id_old
         with pytest.raises(
             ValueError, match=r"Cannot concatenate symbols with different bounds"
         ):
             pybamm.concatenation(a, b)
 
-        b.bounds = (-100, 100)
+        b = b.create_copy(bounds=(-100, 100))
         id_old = b.id
-        b.bounds = (0, 1)
+        b = b.create_copy(bounds=(0, 1))
         assert b.id != id_old
         conc = pybamm.concatenation(a, b)
         assert conc.bounds == (0, 1)
@@ -243,7 +243,7 @@ class TestConcatenations:
             "positive electrode",
         ]
 
-        conc.secondary_dimensions_npts = 2
+        conc = conc._replace(secondary_dimensions_npts=2)
         with pytest.raises(ValueError, match=r"Concatenation and children must have"):
             conc.create_slices(None)
 
