@@ -196,6 +196,7 @@ from .spatial_methods.finite_volume_unstructured import FiniteVolumeUnstructured
 
 # Solver classes
 from .solvers.solution import (
+    SolverStatistics,
     SolutionBase,
     Solution,
     EISSolution,

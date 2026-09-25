@@ -1,7 +1,13 @@
+import dataclasses
 import io
 import itertools
+import json
 import logging
+import os
+import re
+import subprocess  # nosec B404 - runs this interpreter on a fixed script
 import sys
+import textwrap
 import warnings
 from contextlib import redirect_stdout
 
@@ -13,7 +19,11 @@ from scipy.interpolate import CubicHermiteSpline
 from scipy.sparse import csc_matrix
 
 import pybamm
-from tests import get_discretisation_for_testing, no_internet_connection
+from tests import (
+    get_broken_input_model,
+    get_discretisation_for_testing,
+    no_internet_connection,
+)
 
 
 def _hermite_wrms(sol_base, sol_reduced, atol, rtol) -> list[tuple[int, float]]:
@@ -169,6 +179,55 @@ class TestIDAKLUSolver:
                     atol=1e-4,
                     rtol=1e-4,
                 )
+
+    def test_every_failing_input_set_is_named(self):
+        model = get_broken_input_model()
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 4})
+        inputs_list = [{"k": k} for k in (1.0, -1.0, 2.0, -2.0, 3.0)]
+        with pytest.raises(pybamm.SolverError) as error:
+            solver.solve(model, np.linspace(0, 1, 10), inputs=inputs_list)
+        assert re.findall(r"input set (\d+): ", str(error.value)) == ["1", "3"]
+
+    def test_a_single_input_set_failure_is_named(self):
+        model = get_broken_input_model()
+        with pytest.raises(pybamm.SolverError, match=r"^input set 0: "):
+            pybamm.IDAKLUSolver().solve(model, [0, 1], inputs={"k": -1.0})
+
+    def test_every_input_set_is_solved_by_a_smaller_team(self):
+        # The OpenMP runtime reads OMP_THREAD_LIMIT once, so this needs a fresh
+        # process; the team then has fewer threads than the solver has solvers.
+        script = textwrap.dedent(
+            """
+            import json
+
+            import numpy as np
+
+            import pybamm
+
+            model = pybamm.BaseModel()
+            u = pybamm.Variable("u")
+            model.rhs = {u: -pybamm.InputParameter("a") * u}
+            model.initial_conditions = {u: 1}
+            model.variables = {"u": u}
+            pybamm.Discretisation().process_model(model)
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8, atol=1e-10, options={"num_threads": 4}
+            )
+            inputs = [{"a": 1.0 + i} for i in range(6)]
+            solutions = solver.solve(model, [0, 1], inputs=inputs)
+            print(json.dumps([float(np.squeeze(s["u"](1.0))) for s in solutions]))
+            """
+        )
+        result = subprocess.run(  # nosec B603 - fixed arguments, no shell
+            [sys.executable, "-c", script],
+            env={**os.environ, "OMP_THREAD_LIMIT": "2"},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        values = json.loads(result.stdout.strip().splitlines()[-1])
+        np.testing.assert_allclose(values, np.exp(-(1.0 + np.arange(6))), rtol=1e-6)
 
     def test_model_events(self):
         # Create model
@@ -702,19 +761,19 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(soln.y, soln_banded.y, rtol=1e-6, atol=1e-5)
 
     @pytest.mark.parametrize(
-        ("num_threads", "n_inputs", "all_on_calling_thread"),
+        ("num_threads", "n_inputs"),
         [
             # One solver, so every solve runs on the GIL-holding thread
-            (1, 2, True),
-            # Fewer input sets than solvers, so all of them land in the
-            # serial remainder loop, which also runs on that thread
-            (4, 2, True),
-            # Two solves per solver, so a worker thread must buffer its share
-            (2, 4, False),
+            (1, 2),
+            # More solvers than input sets, so the team is capped at one thread
+            # per set and the worker buffers its set
+            (4, 2),
+            # More input sets than threads, so each thread solves several
+            (2, 4),
         ],
     )
     def test_diagnostics_emitted_once_per_input_set(
-        self, decay_model, num_threads, n_inputs, all_on_calling_thread, caplog, capsys
+        self, decay_model, num_threads, n_inputs, caplog, capsys
     ):
         t_eval = np.linspace(0, 1, 3)
         inputs = [{"a": 1.0 + i} for i in range(n_inputs)]
@@ -737,9 +796,9 @@ class TestIDAKLUSolver:
         assert len(starts) == len(stats) == n_inputs
         # Values are printed through py::print, so the tab prefix is preserved
         assert "\tNumber of steps =" in "\n".join(lines)
-        if all_on_calling_thread:
-            # Buffering would emit every trace before the first statistics block
-            assert stats[0] < starts[1]
+        # The calling thread streams its first set live, so that set's
+        # statistics come before every later trace
+        assert stats[0] < starts[1]
 
     def test_debug_log_emitted_when_solve_fails(self, caplog):
         model = pybamm.BaseModel()
@@ -750,8 +809,8 @@ class TestIDAKLUSolver:
         model.variables = {"u": u}
         pybamm.Discretisation().process_model(model)
 
-        # Two solves per solver, so one solver buffers on a worker thread and
-        # only the flush at the end of the parallel region can emit its trace
+        # More input sets than threads, so the worker thread buffers the sets it
+        # takes and only the flush after the parallel region can emit them
         solver = pybamm.IDAKLUSolver(options={"num_threads": 2})
         inputs = [{"a": 1.0 + i} for i in range(4)]
         # u' = a u^2 blows up at t = 1/a, so integrating to t = 5 fails
@@ -761,8 +820,8 @@ class TestIDAKLUSolver:
         ):
             solver.solve(model, np.array([0.0, 5.0]), inputs=inputs)
 
-        # A partial solution is still returned, so every solve runs and the two
-        # traces beyond the calling thread's own prove its buffer was drained
+        # A partial solution is still returned, so every set is solved and the
+        # worker's traces prove its buffer was drained
         starts = [m for m in caplog.messages if m.startswith("Integrating from t =")]
         assert len(starts) == len(inputs)
         assert any(m.startswith("Step ") for m in caplog.messages)
@@ -778,7 +837,7 @@ class TestIDAKLUSolver:
         model.variables = {"u": u}
         pybamm.Discretisation().process_model(model)
 
-        # Two solves per solver, so one solver buffers on a worker thread
+        # More input sets than threads, so the worker thread buffers its sets
         solver = pybamm.IDAKLUSolver(options={"num_threads": 2})
         inputs = [{"a": 1.0 + i} for i in range(4)]
         with (
@@ -787,10 +846,10 @@ class TestIDAKLUSolver:
         ):
             solver.solve(model, np.array([0.0, 5.0]), inputs=inputs)
 
-        # Each solver throws on its first solve, and the calling thread streams
-        # its own, so the second trace can only come from the pre-rethrow flush
+        # A failing set does not stop the others, and the worker's traces can
+        # only come from the flush before the rethrow
         starts = [m for m in caplog.messages if m.startswith("Integrating from t =")]
-        assert len(starts) == 2
+        assert len(starts) == 4
 
     def test_solve_interrupted_from_debug_logger(self, caplog, monkeypatch):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -810,6 +869,50 @@ class TestIDAKLUSolver:
             sim.solve([0, 3600])
 
         assert not any(m.startswith("Integration complete") for m in caplog.messages)
+
+    @staticmethod
+    def _count_sets_started_after_interrupt(
+        model, num_threads, n_inputs, caplog, monkeypatch
+    ):
+        _debug_logger = pybamm.logger.debug
+        interrupted = []
+
+        # Interrupts only once, so the flush after the parallel region still
+        # emits the traces other threads buffered
+        def logger_interrupts_on_first_step(msg, *args, **kwargs):
+            _debug_logger(msg, *args, **kwargs)
+            if not interrupted and isinstance(msg, str) and msg.startswith("Step "):
+                interrupted.append(msg)
+                raise KeyboardInterrupt
+
+        monkeypatch.setattr(pybamm.logger, "debug", logger_interrupts_on_first_step)
+        solver = pybamm.IDAKLUSolver(options={"num_threads": num_threads})
+        inputs = [{"a": 1.0 + i} for i in range(n_inputs)]
+        with (
+            caplog.at_level(logging.DEBUG, logger=pybamm.logger.name),
+            pytest.raises(KeyboardInterrupt),
+        ):
+            solver.solve(model, np.array([0.0, 5.0]), inputs=inputs)
+        return sum(m.startswith("Integrating from t =") for m in caplog.messages)
+
+    def test_solve_interrupted_stops_later_input_sets(
+        self, decay_model, caplog, monkeypatch
+    ):
+        started = self._count_sets_started_after_interrupt(
+            decay_model, 1, 5, caplog, monkeypatch
+        )
+        assert started == 1
+
+    def test_solve_interrupted_stops_every_thread(
+        self, decay_model, caplog, monkeypatch
+    ):
+        # The other thread may finish the set it holds, but takes no more. Enough
+        # sets that it cannot finish them all before thread 0's first step
+        n_inputs = 4000
+        started = self._count_sets_started_after_interrupt(
+            decay_model, 2, n_inputs, caplog, monkeypatch
+        )
+        assert started < n_inputs
 
     def test_setup_options(self):
         model = pybamm.BaseModel()
@@ -1989,3 +2092,254 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(
             loaded["2u"].entries, sol["2u"].entries, rtol=1e-12, atol=1e-12
         )
+
+
+class TestIDAKLUAtol:
+    def _two_state_model(self, atol=None):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        w = pybamm.Variable("w")
+        model.rhs = {u: -u, w: -2 * w}
+        model.initial_conditions = {u: 1.0, w: 1.0}
+        model.variables = {"u": u, "w": w}
+        pybamm.Discretisation().process_model(model)
+        if atol is not None:
+            model.atol = atol
+        return model
+
+    def _steps(self, model, atol):
+        solution = pybamm.IDAKLUSolver(rtol=1e-6, atol=atol).solve(
+            model, np.linspace(0, 1, 5)
+        )
+        return solution.solver_statistics.number_of_steps
+
+    def test_a_per_state_model_atol_wins_over_the_solvers(self):
+        tight = self._steps(self._two_state_model(), 1e-12)
+        loose = self._steps(self._two_state_model(), 1e-1)
+        assert self._steps(self._two_state_model(np.full(2, 1e-1)), 1e-12) == loose
+        assert loose < tight
+
+    def test_a_wrong_width_model_atol_is_rejected(self):
+        model = self._two_state_model(np.full(3, 1e-6))
+        with pytest.raises(pybamm.SolverError, match=r"shape \(3,\) but \(2,\)"):
+            self._steps(model, 1e-6)
+
+    @pytest.mark.parametrize(
+        "atol",
+        [
+            1e-3,
+            1,
+            np.float32(1e-3),
+            np.array(1e-3),
+            [1e-3, 1e-3],
+            (1e-3, 1e-3),
+            np.full(2, 1e-3),
+            np.full((2, 1), 1e-3),
+        ],
+    )
+    def test_accepted_atol_widens_to_one_value_per_state(self, atol):
+        model = self._two_state_model()
+        widened = pybamm.IDAKLUSolver()._check_atol_type(atol, model)
+        assert widened.dtype == np.float64
+        assert widened.shape == (2,)
+        np.testing.assert_allclose(widened, np.full(2, float(np.ravel(atol)[0])))
+
+    @pytest.mark.parametrize(
+        ("atol", "match"),
+        [
+            (True, r"must be a float, or a list, tuple or array"),
+            ({"u": 1e-3}, r"must be a float, or a list, tuple or array"),
+            ("1e-3", r"must be a float, or a list, tuple or array"),
+            ([True, False], r"must be real numbers"),
+            (["a", "b"], r"must be real numbers"),
+            (np.array([1e-3 + 1j, 1e-3]), r"must be real numbers"),
+            ([[1e-3], [1e-3, 1e-3]], r"must be a flat list"),
+            ([1e-3, 1e-3, 1e-3], r"shape \(3,\) but \(2,\)"),
+            (np.full((1, 2), 1e-3), r"shape \(1, 2\) but \(2,\)"),
+            (np.full((2, 2), 1e-3), r"shape \(2, 2\) but \(2,\)"),
+        ],
+    )
+    def test_invalid_atol_is_rejected(self, atol, match):
+        model = self._two_state_model()
+        with pytest.raises(pybamm.SolverError, match=match):
+            pybamm.IDAKLUSolver()._check_atol_type(atol, model)
+
+    @pytest.mark.parametrize("sequence", [list, tuple])
+    def test_solve_with_a_sequence_atol(self, sequence):
+        model = self._two_state_model()
+        t_eval = np.linspace(0, 1, 5)
+        expected = pybamm.IDAKLUSolver(atol=np.array([1e-3, 1e-9])).solve(model, t_eval)
+        solution = pybamm.IDAKLUSolver(atol=sequence([1e-3, 1e-9])).solve(model, t_eval)
+        assert solution.solver_statistics == expected.solver_statistics
+        np.testing.assert_allclose(solution.y, expected.y, rtol=1e-12, atol=0)
+
+    def test_per_state_atol_survives_a_config_round_trip(self):
+        model = self._two_state_model()
+        t_eval = np.linspace(0, 1, 5)
+        solver = pybamm.IDAKLUSolver(atol=np.array([1e-3, 1e-9]))
+        restored = pybamm.BaseSolver.from_config(solver.to_config())
+        assert isinstance(restored.atol, list)
+        expected = solver.solve(model, t_eval)
+        solution = restored.solve(model, t_eval)
+        assert solution.solver_statistics == expected.solver_statistics
+
+
+def _van_der_pol_model():
+    """Discretised stiff van der Pol oscillator."""
+    model = pybamm.BaseModel()
+    x = pybamm.Variable("x")
+    y = pybamm.Variable("y")
+    model.rhs = {x: y, y: 1000 * (1 - x**2) * y - x}
+    model.initial_conditions = {x: 2, y: 0}
+    model.variables = {"x": x}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+class TestIDAKLUSolverStatistics:
+    def test_statistics_match_the_printed_statistics(self):
+        # A cap of two Newton iterations makes every counter nonzero
+        solver = pybamm.IDAKLUSolver(
+            options={"print_stats": True, "max_nonlinear_iterations": 2}
+        )
+        printed = io.StringIO()
+        with redirect_stdout(printed):
+            solution = solver.solve(_van_der_pol_model(), [0, 3000])
+
+        def printed_count(label):
+            return int(re.search(rf"\t{label} = (\d+)", printed.getvalue())[1])
+
+        stats = solution.solver_statistics
+        assert stats == pybamm.SolverStatistics(
+            number_of_steps=printed_count("Number of steps"),
+            number_of_linear_solver_setups=printed_count(
+                "Number of linear solver setup calls"
+            ),
+            number_of_nonlinear_solver_iterations=printed_count(
+                "Number of nonlinear iterations performed"
+            ),
+            number_of_nonlinear_solver_fails=printed_count(
+                "Number of nonlinear convergence failures"
+            ),
+            number_of_error_test_failures=printed_count(
+                "Number of error test failures"
+            ),
+        )
+        assert all(count > 0 for count in dataclasses.astuple(stats))
+        assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
+
+    def test_statistics_accumulate_across_a_breakpoint(self, decay_model):
+        solver = pybamm.IDAKLUSolver()
+        inputs = {"a": 50.0}
+        first = solver.solve(decay_model, [0, 1], inputs=inputs).solver_statistics
+        # The breakpoint at t = 1 reinitialises the integrator, which resets
+        # its own counters; the tail after it takes far fewer steps than [0, 1]
+        both = solver.solve(
+            decay_model, np.array([0.0, 1.0, 2.0]), inputs=inputs
+        ).solver_statistics
+        assert both.number_of_steps > first.number_of_steps
+        assert (
+            both.number_of_nonlinear_solver_iterations
+            > first.number_of_nonlinear_solver_iterations
+        )
+
+    def test_each_input_set_has_its_own_statistics(self, decay_model):
+        rates = (0.1, 1.0, 10.0, 100.0)
+        solutions = pybamm.IDAKLUSolver(options={"num_threads": 2}).solve(
+            decay_model, [0, 1], inputs=[{"a": a} for a in rates]
+        )
+        alone = [
+            pybamm.IDAKLUSolver().solve(decay_model, [0, 1], inputs={"a": a})
+            for a in rates
+        ]
+        assert [s.solver_statistics for s in solutions] == [
+            s.solver_statistics for s in alone
+        ]
+        assert len({s.solver_statistics.number_of_steps for s in solutions}) > 1
+
+    def test_reused_solver_resets_statistics(self, decay_model):
+        solver = pybamm.IDAKLUSolver()
+        first = solver.solve(decay_model, [0, 1], inputs={"a": 10.0})
+        second = solver.solve(decay_model, [0, 1], inputs={"a": 10.0})
+        assert second.solver_statistics == first.solver_statistics
+
+    def test_step_with_save_sums_statistics(self, decay_model):
+        solver = pybamm.IDAKLUSolver()
+        first = solver.step(None, decay_model, 1, inputs={"a": 10.0})
+        second = solver.step(first, decay_model, 1, inputs={"a": 10.0}, save=False)
+        combined = solver.step(first, decay_model, 1, inputs={"a": 10.0})
+        assert combined.solver_statistics == (
+            first.solver_statistics + second.solver_statistics
+        )
+
+    def test_experiment_solution_sums_its_steps(self):
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at 1C for 10 minutes",
+                    "Rest for 5 minutes",
+                    "Charge at 1C until 4.1 V",
+                )
+            ]
+            * 2
+        )
+        solution = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), experiment=experiment
+        ).solve()
+        steps = [step for cycle in solution.cycles for step in cycle.steps]
+        assert all(step.solver_statistics is not None for step in steps)
+        total = sum(
+            (step.solver_statistics for step in steps), pybamm.SolverStatistics()
+        )
+        assert solution.solver_statistics == total
+        assert solution.cycles[0].solver_statistics.number_of_steps > 0
+
+    def test_reduced_solution_keeps_statistics(self, decay_model):
+        solver = pybamm.IDAKLUSolver(options={"hermite_reduction_factor": 1.0})
+        solution = solver.solve(decay_model, [0, 1], inputs={"a": 10.0})
+        reduced = solver.reduce_solution(solution)
+        assert reduced.solver_statistics == solution.solver_statistics
+
+    @pytest.mark.parametrize(
+        ("preconditioner", "uses_preconditioner"), [("none", False), ("BBDP", True)]
+    )
+    def test_iterative_linear_solver_statistics(
+        self, preconditioner, uses_preconditioner
+    ):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -pybamm.InputParameter("a") * u}
+        model.algebraic = {v: v - u}
+        model.initial_conditions = {u: 1, v: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+        # Output variables with sensitivities fill the model data that a BBD
+        # counter read without a BBD preconditioner would alias
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["u"],
+            options={
+                "linear_solver": "SUNLinSol_SPBCGS",
+                "preconditioner": preconditioner,
+                "print_stats": True,
+            },
+        )
+        printed = io.StringIO()
+        with redirect_stdout(printed):
+            solution = solver.solve(
+                model,
+                np.linspace(0, 1, 3),
+                inputs={"a": 0.1},
+                calculate_sensitivities=True,
+            )
+
+        evaluations = re.search(
+            r"residual function in preconditioner = (-?\d+)", printed.getvalue()
+        )
+        if uses_preconditioner:
+            assert int(evaluations[1]) > 0
+        else:
+            assert int(evaluations[1]) == 0
+        stats = solution.solver_statistics
+        assert stats.number_of_steps > 0
+        assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps

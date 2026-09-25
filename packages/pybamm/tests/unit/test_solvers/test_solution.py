@@ -4,6 +4,7 @@
 import io
 import json
 import logging
+import pickle  # nosec B403 - used in tests with trusted input
 import subprocess  # nosec B404 - used in tests with trusted input
 import sys
 from unittest import mock
@@ -1839,3 +1840,73 @@ class TestSolution:
         assert out.hermite_interpolation == folded.hermite_interpolation
         assert out.hermite_interpolation is True
         np.testing.assert_array_equal(out.yp, folded.yp)
+
+
+class TestSolutionSolverStatistics:
+    @staticmethod
+    def _solution(start, statistics):
+        t = np.linspace(start, start + 1, 5)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        solution.solver_statistics = statistics
+        return solution
+
+    def test_statistics_add_field_wise(self):
+        total = pybamm.SolverStatistics(1, 2, 3, 4, 5) + pybamm.SolverStatistics(
+            10, 20, 30, 40, 50
+        )
+        assert total == pybamm.SolverStatistics(11, 22, 33, 44, 55)
+        assert pybamm.SolverStatistics() == pybamm.SolverStatistics(0, 0, 0, 0, 0)
+        with pytest.raises(TypeError):
+            pybamm.SolverStatistics() + 1
+
+    def test_a_new_solution_has_no_statistics(self):
+        t = np.linspace(0, 1)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        assert solution.solver_statistics is None
+
+    def test_add_sums_statistics(self):
+        first = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        second = self._solution(1, pybamm.SolverStatistics(10, 20, 30, 40, 50))
+        assert (first + second).solver_statistics == pybamm.SolverStatistics(
+            11, 22, 33, 44, 55
+        )
+
+    def test_add_is_none_when_a_side_has_no_statistics(self):
+        statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
+        with_none_after = self._solution(0, statistics) + self._solution(1, None)
+        assert with_none_after.solver_statistics is None
+        with_none_before = self._solution(0, None) + self._solution(1, statistics)
+        assert with_none_before.solver_statistics is None
+
+    def test_copy_and_adding_nothing_keep_statistics(self):
+        statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
+        solution = self._solution(0, statistics)
+        assert solution.copy().solver_statistics == statistics
+        assert (solution + None).solver_statistics == statistics
+        assert (None + solution).solver_statistics == statistics
+        assert (pybamm.EmptySolution() + solution).solver_statistics == statistics
+
+    def test_from_sub_solutions_sums_statistics(self):
+        solutions = [
+            self._solution(i, pybamm.SolverStatistics(i, i, i, i, i)) for i in range(4)
+        ]
+        combined = pybamm.Solution.from_sub_solutions(solutions)
+        assert combined.solver_statistics == pybamm.SolverStatistics(6, 6, 6, 6, 6)
+        solutions[2].solver_statistics = None
+        assert pybamm.Solution.from_sub_solutions(solutions).solver_statistics is None
+
+    def test_first_and_last_state_report_no_work(self):
+        solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        assert solution.first_state.solver_statistics == pybamm.SolverStatistics()
+        assert solution.last_state.solver_statistics == pybamm.SolverStatistics()
+
+    def test_statistics_survive_pickling(self):
+        statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
+        solution = self._solution(0, statistics)
+        assert pickle.loads(pickle.dumps(solution)).solver_statistics == statistics  # nosec B301
+
+    def test_solution_pickled_without_statistics_loads(self):
+        solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        # A solution pickled before the attribute existed has no such state
+        del solution.__dict__["solver_statistics"]
+        assert pickle.loads(pickle.dumps(solution)).solver_statistics is None  # nosec B301

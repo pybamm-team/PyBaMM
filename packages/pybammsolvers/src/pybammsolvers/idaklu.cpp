@@ -272,6 +272,17 @@ PYBIND11_MODULE(idaklu, m)
 
   py::class_<casadi::Function>(m, "Function");
 
+  py::class_<IDAKLUStats>(m, "SolverStats")
+    .def_readonly("number_of_steps", &IDAKLUStats::nsteps)
+    .def_readonly("number_of_residual_evaluations", &IDAKLUStats::nrevals)
+    .def_readonly("number_of_linear_solver_setups", &IDAKLUStats::nlinsetups)
+    .def_readonly("number_of_error_test_failures", &IDAKLUStats::netfails)
+    .def_readonly("number_of_nonlinear_solver_iterations", &IDAKLUStats::nniters)
+    .def_readonly("number_of_nonlinear_solver_fails", &IDAKLUStats::nncfails)
+    .def_readonly("number_of_jacobian_evaluations", &IDAKLUStats::njevals)
+    .def_readonly("number_of_linear_iterations", &IDAKLUStats::nliters)
+    .def_readonly("number_of_linear_convergence_failures", &IDAKLUStats::nlcfails);
+
   py::class_<Solution>(m, "solution")
     .def_readwrite("t", &Solution::t)
     .def_readwrite("y", &Solution::y)
@@ -279,6 +290,7 @@ PYBIND11_MODULE(idaklu, m)
     .def_readwrite("yS", &Solution::yS)
     .def_readwrite("ypS", &Solution::ypS)
     .def_readwrite("y_term", &Solution::y_term)
-    .def_readwrite("flag", &Solution::flag);
+    .def_readwrite("flag", &Solution::flag)
+    .def_readonly("stats", &Solution::stats);
 
 }
