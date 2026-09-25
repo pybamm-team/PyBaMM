@@ -976,8 +976,10 @@ class Solution(SolutionBase):
                     [data_short_names["Cycle"], i * np.ones_like(cycle.t)]
                 )
                 for j, step in enumerate(cycle.steps):
+                    repeated = j > 0 and cycle.steps[j - 1].t[-1] == step.t[0]
+                    first = slice(1, None) if repeated else slice(None)
                     data_short_names["Step"] = np.concatenate(
-                        [data_short_names["Step"], j * np.ones_like(step.t)]
+                        [data_short_names["Step"], j * np.ones_like(step.t[first])]
                     )
 
         return data_short_names
