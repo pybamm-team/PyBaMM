@@ -1445,6 +1445,47 @@ class TestSolution:
         np.testing.assert_allclose(joined.entries, [value], rtol=1e-6)
         np.testing.assert_allclose(joined.sensitivities["a"], [sensitivity], rtol=1e-6)
 
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    @pytest.mark.parametrize("sensitivity_name", ["a", "b"])
+    def test_explicit_time_integral_post_sum_sensitivity_to_one_input(
+        self, sensitivity_name, use_output_var
+    ):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables["value"] = pybamm.ExplicitTimeIntegral(c, 0) ** 2 * b
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["value"] if use_output_var else None,
+            rtol=1e-8,
+            atol=1e-10,
+        )
+        times = np.linspace(0, 1, 11)
+
+        sol = solver.solve(
+            model,
+            [0, 1],
+            t_interp=times,
+            inputs={"a": 1.0, "b": 2.0},
+            calculate_sensitivities=[sensitivity_name],
+        )
+
+        # value = I^2 b, with I and dI/da the trapezoid rule over the solution times
+        integral = scipy.integrate.trapezoid(np.exp(-times), times)
+        dintegral_da = scipy.integrate.trapezoid(-times * np.exp(-times), times)
+        expected = {
+            "a": 2 * integral * 2.0 * dintegral_da,
+            "b": integral**2,
+        }[sensitivity_name]
+        sensitivities = sol["value"].sensitivities
+        assert sorted(sensitivities) == sorted(["all", sensitivity_name])
+        np.testing.assert_allclose(sensitivities["all"], [[expected]], rtol=1e-6)
+        np.testing.assert_allclose(
+            sensitivities[sensitivity_name], [expected], rtol=1e-6
+        )
+
     def test_observe(self):
         """Test the observe method with pybamm symbols, comparing with model variables."""
         # Set up a simple model

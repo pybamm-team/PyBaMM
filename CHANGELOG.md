@@ -53,6 +53,7 @@
 - Solutions with sensitivities joined at a shared time point no longer raise a CasADi `RuntimeError` when their sensitivities are read, and a time integral's sensitivities over joined solutions are summed like its value. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - `Solution.first_state` carries the sensitivities of the first time point and, for an `output_variables` solve, that solve's consistent initial states instead of the model's latest `y0`, which gave wrong `"Change in ..."` summary variables in experiments. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - Solutions solved with `output_variables` join without an `IndexError` or `ValueError` when a variable has structural zeros, such as `"Electrolyte current density [A.m-2]"`. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Sensitivities with respect to some of the inputs, e.g. `calculate_sensitivities=["b"]` with inputs `a` and `b`, are correct for `output_variables` and for expressions of a time integral. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - `Solution.all_inputs_stacked` handles a mix of scalar and vector inputs; reading any variable from such a solve raised a `ValueError`. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 
 ## Breaking changes

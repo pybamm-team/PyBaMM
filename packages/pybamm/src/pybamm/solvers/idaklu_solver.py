@@ -919,12 +919,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 )
                 if time_integral is not None:
                     sens_data = time_integral.postfix_sensitivities(
-                        var, data.reshape(-1), sol.t, inputs_dict, sens_data
+                        var,
+                        data.reshape(-1),
+                        sol.t,
+                        inputs_dict,
+                        sensitivity_names,
+                        sens_data,
                     )
                 newsol[var]._sensitivities["all"] = sens_data
 
                 # Add the individual sensitivity
-                for i, name in enumerate(inputs_dict.keys()):
+                for i, name in enumerate(sensitivity_names):
                     sens = newsol[var]._sensitivities["all"][:, i : i + 1].reshape(-1)
                     newsol[var]._sensitivities[name] = sens
 
