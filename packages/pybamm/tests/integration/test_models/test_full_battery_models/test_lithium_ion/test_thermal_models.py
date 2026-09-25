@@ -222,3 +222,122 @@ class TestThermal:
             # cell heats up above the reference, so R (and hence the contact
             # overpotential magnitude) is larger than the constant case
             np.testing.assert_array_less(np.abs(dphi_const[1:]), np.abs(dphi_fn[1:]))
+
+    @pytest.mark.parametrize("composite", [False, True], ids=["one-phase", "composite"])
+    def test_heat_of_mixing_energy_balance(self, composite):
+        """
+        Electrical work plus heat must equal the fall in stored chemical energy,
+        -F * sum over the particles of int_0^c U_eq dc, where U_eq is the OCP the
+        hysteresis heat is referenced to. The SPM keeps the electrolyte uniform and
+        the isothermal model with zero entropic change keeps the stored energy
+        independent of temperature, so the particles are the only energy store
+        """
+        options = {
+            "thermal": "isothermal",
+            "calculate heat source for isothermal models": "true",
+            "heat of mixing": "true",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        if composite:
+            # Split the positive electrode, which carries most of the heat of mixing,
+            # into two identical halves, and give the second hysteresis about its OCP.
+            # The branches are tilted so that their slopes differ from the OCP's
+            options["particle phases"] = ("1", "2")
+            options["open-circuit potential"] = (
+                "single",
+                ("single", "current sigmoid"),
+            )
+            for name in [
+                "Positive electrode OCP [V]",
+                "Positive electrode OCP entropic change [V.K-1]",
+                "Maximum concentration in positive electrode [mol.m-3]",
+                "Initial concentration in positive electrode [mol.m-3]",
+                "Positive particle radius [m]",
+                "Positive particle diffusivity [m2.s-1]",
+                "Positive electrode exchange-current density [A.m-2]",
+                "Positive electrode active material volume fraction",
+            ]:
+                value = parameter_values[name]
+                if name.endswith("volume fraction"):
+                    value = value / 2
+                parameter_values.update(
+                    {f"Primary: {name}": value, f"Secondary: {name}": value}
+                )
+                del parameter_values[name]
+            mean_ocp = parameter_values["Secondary: Positive electrode OCP [V]"]
+            parameter_values.update(
+                {
+                    "Secondary: Positive electrode lithiation OCP [V]": lambda sto: (
+                        mean_ocp(sto) - 0.005 - 0.1 * sto
+                    ),
+                    "Secondary: Positive electrode delithiation OCP [V]": lambda sto: (
+                        mean_ocp(sto) + 0.005 + 0.1 * sto
+                    ),
+                },
+                check_already_exists=False,
+            )
+            particles = [
+                ("negative", ""),
+                ("positive", "primary "),
+                ("positive", "secondary "),
+            ]
+        else:
+            particles = [("negative", ""), ("positive", "")]
+
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(options),
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(rtol=1e-9, atol=1e-11),
+        )
+        solution = sim.solve([0, 3000])
+        t = np.linspace(0, solution.t[-1], 2001)
+
+        F = pybamm.constants.F.value
+        area = (
+            parameter_values["Electrode width [m]"]
+            * parameter_values["Electrode height [m]"]
+        )
+        stored_energy = 0
+        for domain, phase in particles:
+            Domain = domain.capitalize()
+            prefix = phase.strip().capitalize() + ": " if phase else ""
+            c_max = parameter_values[
+                f"{prefix}Maximum concentration in {domain} electrode [mol.m-3]"
+            ]
+            # int_0^sto U_eq, avoiding the OCP asymptotes at the ends
+            sto_table = np.linspace(1e-4, 1 - 1e-4, 4001)
+            ocp = parameter_values[f"{prefix}{Domain} electrode OCP [V]"]
+            ocp_table = np.ravel(ocp(pybamm.Vector(sto_table)).evaluate())
+            integral_table = np.concatenate(
+                [
+                    [0],
+                    np.cumsum(
+                        (ocp_table[1:] + ocp_table[:-1]) / 2 * np.diff(sto_table)
+                    ),
+                ]
+            )
+            c = solution[
+                f"X-averaged {domain} {phase}particle concentration [mol.m-3]"
+            ](t=t)
+            energy_density = (
+                -F * c_max * np.interp(c / c_max, sto_table, integral_table)
+            )
+            # finite volume cells are spherical shells
+            edges = sim.mesh[f"{domain} {phase}particle"].edges
+            shell_fraction = (edges[1:] ** 3 - edges[:-1] ** 3) / edges[-1] ** 3
+            solid_volume = (
+                parameter_values[
+                    f"{prefix}{Domain} electrode active material volume fraction"
+                ]
+                * parameter_values[f"{Domain} electrode thickness [m]"]
+                * area
+            )
+            stored_energy += solid_volume * (shell_fraction @ energy_density)
+
+        released = stored_energy[0] - stored_energy[-1]
+        work = np.trapezoid(solution["Current [A]"](t) * solution["Voltage [V]"](t), t)
+        heat = np.trapezoid(solution["Total heating [W]"](t), t)
+        heat_of_mixing = np.trapezoid(solution["Heat of mixing [W]"](t), t)
+        np.testing.assert_allclose(released, work + heat, rtol=0, atol=5e-3 * heat)
+        # without the heat of mixing the balance fails, so the check has teeth
+        assert abs(released - (work + heat - heat_of_mixing)) > 0.2 * heat

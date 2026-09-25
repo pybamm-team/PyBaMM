@@ -384,7 +384,13 @@ class BaseThermal(pybamm.BaseSubModel):
         return Q_s_cn, Q_s_cp
 
     def _phase_heat_of_mixing(self, variables, domain, phase_name, phase_param):
-        """Compute the heat of mixing source term for a single particle phase."""
+        """
+        Compute the heat of mixing source term for a single particle phase.
+
+        The OCP is the phase's equilibrium OCP, the same one the hysteresis heat is
+        referenced to, not the hysteresis-weighted OCP that sets the voltage. Energy
+        only balances if both heat sources share that reference.
+        """
         Domain = domain.capitalize()
         F = pybamm.constants.F.value
         a = variables[
