@@ -696,6 +696,20 @@ class TestSolution:
         (stacked,) = sol.all_inputs_stacked
         assert stacked.shape == (0,)
 
+        # Reading a variable stacks the inputs
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", expected_size=2)
+        model.rhs = {u: a * pybamm.Index(b, 1)}
+        model.initial_conditions = {u: 0}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+        sol = pybamm.IDAKLUSolver().solve(
+            model, [0, 1], inputs={"a": 2.0, "b": np.array([3.0, 4.0])}
+        )
+        np.testing.assert_allclose(sol["u"](t=1.0), 8.0, rtol=1e-6)
+
     def test_sensitivity_names(self):
         t = np.linspace(0, 1, 10)
         y = np.tile(t, (2, 1))
