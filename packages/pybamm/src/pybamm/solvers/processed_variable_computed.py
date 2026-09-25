@@ -748,8 +748,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         Returns a new ProcessedVariableComputed object holding the data from this
         object followed by the data from other. A first time point of other that
         repeats the last time point of this object is dropped, and an
-        ``ExplicitTimeIntegral`` becomes the integral over both. Any other time
-        integral gives a variable that raises ``NotImplementedError`` when read.
+        ``ExplicitTimeIntegral`` becomes the sum of the integrals over each, so
+        a gap between them adds nothing. Any other time integral gives a
+        variable that raises ``NotImplementedError`` when read.
 
         Parameters
         ----------
@@ -814,7 +815,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
     def _join_time_integral(self, other):
         """
         Return the data and sensitivities of the time integral over this
-        variable's segment followed by other's.
+        variable's segments plus the one over other's.
         """
         other_sensitivities = other.sensitivities or {}
         sensitivities = {

@@ -609,6 +609,32 @@ class TestProcessedVariableComputed:
         np.testing.assert_allclose(combined.sensitivities["a"], [3.0])
         np.testing.assert_allclose(combined.sensitivities["all"], [[3.0]])
 
+    @pytest.mark.parametrize("first_output_variables", [False, True])
+    def test_time_integral_update_leaves_out_a_gap(self, first_output_variables):
+        def solve(t_eval, output_variables):
+            model = pybamm.BaseModel()
+            y = pybamm.Variable("y")
+            a = pybamm.InputParameter("a")
+            model.rhs = {y: 0 * y}
+            model.initial_conditions = {y: 1}
+            model.variables = {
+                "Integral": pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(0))
+            }
+            solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+            return solver.solve(
+                model, t_eval, inputs={"a": 2.0}, calculate_sensitivities=True
+            )
+
+        first = solve([0, 1], ["Integral"] if first_output_variables else None)
+        later = solve([2, 3], ["Integral"])
+
+        combined = (first + later)["Integral"]
+
+        # Each segment integrates a * y = 2 over its own unit interval; [1, 2] is
+        # not integrated
+        np.testing.assert_allclose(combined.entries, [4.0])
+        np.testing.assert_allclose(combined.sensitivities["a"], [2.0])
+
     def test_processed_variable_2D_x_r(self):
         var = pybamm.Variable(
             "var",
