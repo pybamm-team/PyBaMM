@@ -1174,10 +1174,9 @@ class TestSolution:
                 y_sol = np.exp(b * -a * data_times)
                 dy_sol_da = -data_times * y_sol
                 if use_post_sum:
-                    expected_sens = (
-                        0.5
-                        * (expected ** (-0.5))
-                        * np.sum(2 * (y_sol - data_values) * dy_sol_da)
+                    # expected is the square root of the sum
+                    expected_sens = np.sum(2 * (y_sol - data_values) * dy_sol_da) / (
+                        2 * expected
                     )
                 else:
                     expected_sens = np.sum(2 * (y_sol - data_values) * dy_sol_da)
@@ -1200,12 +1199,15 @@ class TestSolution:
                     rtol=1e-3,
                     atol=1e-2,
                 )
-                np.testing.assert_allclose(
-                    sol["data_comparison"].sensitivities["a"],
-                    expected_sens,
-                    rtol=1e-3,
-                    atol=1e-2,
-                )
+                # At a = 2 the model reproduces the data, and the square root of a
+                # zero sum has no derivative
+                if not (use_post_sum and a == 2.0):
+                    np.testing.assert_allclose(
+                        sol["data_comparison"].sensitivities["a"],
+                        expected_sens,
+                        rtol=1e-3,
+                        atol=1e-2,
+                    )
                 assert isinstance(sol["data_comparison"].sensitivities["a"], np.ndarray)
                 assert sol["data_comparison"].sensitivities["a"].shape == (1,)
 
@@ -1260,11 +1262,10 @@ class TestSolution:
                 model, t_eval=t_eval, t_interp=t_interp, inputs={"a": a, "b": b}
             )
             y_sol = np.exp(b * -a * times)
-            expected = -(1.0 / b / a) * (
+            integral = -(1.0 / b / a) * (
                 np.exp(b * -a * times[-1]) - np.exp(b * -a * times[0])
             )
-            if use_post_sum:
-                expected = expected**2
+            expected = integral**2 if use_post_sum else integral
             np.testing.assert_allclose(
                 sol["integral"](), expected, rtol=1e-3, atol=1e-2
             )
@@ -1283,7 +1284,7 @@ class TestSolution:
                 dy_sol_da = -b * times * y_sol
                 expected_sens = scipy.integrate.trapezoid(dy_sol_da, times)
                 if use_post_sum:
-                    expected_sens = 2 * expected * expected_sens
+                    expected_sens = 2 * integral * expected_sens
 
                 np.testing.assert_allclose(
                     sol["c"].data,
@@ -1333,21 +1334,23 @@ class TestSolution:
             sol["integral"].sensitivities["a"], [expected], rtol=1e-3
         )
 
+    @pytest.mark.parametrize("use_post_sum", [False, True])
     @pytest.mark.parametrize(
         ("t_later", "integral", "integral_sensitivity"),
         [([1, 3], 6.0, 3.0), ([2, 4], 8.0, 4.0)],
         ids=["shared-boundary", "gap"],
     )
     def test_explicit_time_integral_sensitivity_over_joined_solutions(
-        self, t_later, integral, integral_sensitivity
+        self, t_later, integral, integral_sensitivity, use_post_sum
     ):
         model = pybamm.BaseModel()
         y = pybamm.Variable("y")
         a = pybamm.InputParameter("a")
         model.rhs = {y: 0 * y}
         model.initial_conditions = {y: 1}
-        model.variables["integral"] = pybamm.ExplicitTimeIntegral(
-            a * y, pybamm.Scalar(1)
+        time_integral = pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(1))
+        model.variables["integral"] = (
+            time_integral**2 if use_post_sum else time_integral
         )
         solver = pybamm.IDAKLUSolver()
         first, later = (
@@ -1359,10 +1362,11 @@ class TestSolution:
 
         # A full-state join integrates a * y = 2 across any gap between the
         # solutions; an output_variables join leaves the gap out
-        np.testing.assert_allclose(joined.entries, [1 + integral], rtol=1e-6)
-        np.testing.assert_allclose(
-            joined.sensitivities["a"], [integral_sensitivity], rtol=1e-6
-        )
+        value, sensitivity = 1 + integral, integral_sensitivity
+        if use_post_sum:
+            value, sensitivity = value**2, 2 * value * sensitivity
+        np.testing.assert_allclose(joined.entries, [value], rtol=1e-6)
+        np.testing.assert_allclose(joined.sensitivities["a"], [sensitivity], rtol=1e-6)
 
     def test_observe(self):
         """Test the observe method with pybamm symbols, comparing with model variables."""

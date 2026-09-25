@@ -886,16 +886,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 dense[:, rows] = data
                 data = dense
             time_integral = self._time_integral_vars.get(var)
+            values = data
 
             # handle any time integral variables
             if time_integral is not None:
                 # time integral variables should all be 1D
-                data = time_integral.postfix(data.reshape(-1), sol.t, inputs_dict)
+                values = time_integral.postfix(data.reshape(-1), sol.t, inputs_dict)
 
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
                 [model.get_processed_variable_or_event(var)],
                 base_variables,
-                [data],
+                [values],
                 newsol,
                 time_integral=time_integral,
             )
@@ -912,10 +913,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     number_of_timesteps * (end_idx - start_idx),
                     number_of_sensitivity_parameters,
                 )
-                if var in self._time_integral_vars:
-                    tiv = self._time_integral_vars[var]
-                    sens_data = tiv.postfix_sensitivities(
-                        var, data, sol.t, inputs_dict, sens_data
+                if time_integral is not None:
+                    sens_data = time_integral.postfix_sensitivities(
+                        var, data.reshape(-1), sol.t, inputs_dict, sens_data
                     )
                 newsol[var]._sensitivities["all"] = sens_data
 
