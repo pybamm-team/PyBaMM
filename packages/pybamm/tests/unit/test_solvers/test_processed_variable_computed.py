@@ -87,8 +87,9 @@ _T_INTERP = np.linspace(0, 600, 4)
 def _dfn_with_time_integrals():
     model = pybamm.lithium_ion.DFN()
     voltage = model.variables["Voltage [V]"]
+    # A nonzero initial condition must be counted once when segments are joined
     model.variables["Charge throughput [A.s]"] = pybamm.ExplicitTimeIntegral(
-        model.variables["Current [A]"], pybamm.Scalar(0)
+        model.variables["Current [A]"], pybamm.Scalar(100)
     )
     model.variables["Squared voltage integral [V2.s2]"] = (
         pybamm.ExplicitTimeIntegral(voltage, pybamm.Scalar(0)) ** 2
@@ -194,7 +195,39 @@ _NOT_COMPUTABLE = {
 }
 
 
+# A DiscreteTimeSum, or a function of a time integral, has no value over joined segments
+_NOT_JOINABLE = {"Squared voltage integral [V2.s2]", "Voltage sum of squares [V2]"}
+
+
 @cache
+def _solve(model_key, t_start=0.0, output_variables=()):
+    """
+    Solve a model over the 600 s from ``t_start``.
+
+    Parameters
+    ----------
+    model_key : str
+        Key into ``_OUTPUT_VARIABLE_MODELS``.
+    t_start : float, optional
+        Start time [s].
+    output_variables : tuple of str, optional
+        Variables for the solver to return. If empty, the solver returns the full
+        state vector.
+
+    Returns
+    -------
+    :class:`pybamm.Solution`
+    """
+    model, parameter_values, var_pts = _OUTPUT_VARIABLE_MODELS[model_key]
+    sim = pybamm.Simulation(
+        model(),
+        parameter_values=parameter_values(),
+        var_pts=var_pts,
+        solver=pybamm.IDAKLUSolver(output_variables=list(output_variables)),
+    )
+    return sim.solve([t_start, t_start + 600], t_interp=t_start + _T_INTERP)
+
+
 def _solve_full_and_computed(model_key):
     """
     Solve a model once with the full state vector and once with its cases as
@@ -210,23 +243,10 @@ def _solve_full_and_computed(model_key):
     tuple of :class:`pybamm.Solution`
         The full solution and the output_variables solution.
     """
-    model, parameter_values, var_pts = _OUTPUT_VARIABLE_MODELS[model_key]
-    names = [
+    names = tuple(
         case.values[1] for case in _OUTPUT_VARIABLE_CASES if case.values[0] == model_key
-    ]
-    solutions = []
-    for solver in [
-        pybamm.IDAKLUSolver(),
-        pybamm.IDAKLUSolver(output_variables=names),
-    ]:
-        sim = pybamm.Simulation(
-            model(),
-            parameter_values=parameter_values(),
-            var_pts=var_pts,
-            solver=solver,
-        )
-        solutions.append(sim.solve([0, 600], t_interp=_T_INTERP))
-    return tuple(solutions)
+    )
+    return _solve(model_key), _solve(model_key, output_variables=names)
 
 
 class TestProcessedVariableComputed:
@@ -527,7 +547,12 @@ class TestProcessedVariableComputed:
         )
         np.testing.assert_array_equal(comb_var.entries, comb_var.data)
 
-    def test_processed_variable_0D_update_sensitivities(self):
+    @pytest.mark.parametrize(
+        ("t_later", "expected"),
+        [([2, 3], [2.0, 2.0, 2.0, 2.0]), ([1, 2], [2.0, 2.0, 2.0])],
+        ids=["gap", "shared-boundary"],
+    )
+    def test_processed_variable_0D_update_sensitivities(self, t_later, expected):
         def solve_processed_var(t_eval, calculate_sensitivities):
             model = pybamm.BaseModel()
             y = pybamm.Variable("y")
@@ -550,19 +575,39 @@ class TestProcessedVariableComputed:
         assert processed_var_no_sens.sensitivities == {}
 
         sol1, processed_var1 = solve_processed_var([0, 1], True)
-        sol2, processed_var2 = solve_processed_var([2, 3], True)
+        sol2, processed_var2 = solve_processed_var(t_later, True)
 
         combined_sol = sol1 + sol2
         combined_var = processed_var1.update(processed_var2, combined_sol)
 
+        np.testing.assert_array_equal(combined_var.entries, np.array(expected))
         np.testing.assert_array_equal(
-            combined_var.entries,
-            np.array([2.0, 2.0, 2.0, 2.0]),
+            combined_var.sensitivities["a"], np.ones(len(expected))
         )
-        np.testing.assert_array_equal(
-            combined_var.sensitivities["a"],
-            np.array([1.0, 1.0, 1.0, 1.0]),
+        assert len(combined_var.entries) == len(combined_sol.t)
+
+    def test_time_integral_update_sums_segments(self):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        a = pybamm.InputParameter("a")
+        model.rhs = {y: 0 * y}
+        model.initial_conditions = {y: 1}
+        model.variables = {
+            "Integral": pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(0))
+        }
+        solver = pybamm.IDAKLUSolver(output_variables=["Integral"])
+        first, later = (
+            solver.solve(model, t_eval, inputs={"a": 2.0}, calculate_sensitivities=True)
+            for t_eval in ([0, 1], [1, 3])
         )
+
+        combined = (first + later)["Integral"]
+
+        # a * y = 2 integrated over [0, 3]
+        np.testing.assert_allclose(combined.entries, [6.0])
+        np.testing.assert_allclose(combined(), [6.0])
+        np.testing.assert_allclose(combined.sensitivities["a"], [3.0])
+        np.testing.assert_allclose(combined.sensitivities["all"], [[3.0]])
 
     def test_processed_variable_2D_x_r(self):
         var = pybamm.Variable(
@@ -855,6 +900,31 @@ class TestProcessedVariableComputed:
         np.testing.assert_array_equal(converted.entries, full.entries)
         t = None if computed.time_indep else np.array([150.0, 450.0])
         np.testing.assert_allclose(converted(t=t), computed(t=t), rtol=1e-6)
+
+    @pytest.mark.parametrize(
+        ("model_key", "name", "layout", "time_integral_method"), _OUTPUT_VARIABLE_CASES
+    )
+    def test_output_variable_joins_at_shared_boundary(
+        self, model_key, name, layout, time_integral_method
+    ):
+        full_solution = _solve(model_key)
+        # Both later segments start at 600 s, where the first ends
+        later_full = _solve(model_key, t_start=600.0)
+        later_computed = _solve(model_key, t_start=600.0, output_variables=(name,))
+        # copy() drops full-state variables other tests read from the cached solve
+        first = full_solution.copy()
+
+        joined = (first + later_computed)[name]
+        if name in _NOT_JOINABLE:
+            with pytest.raises(NotImplementedError, match=r"ExplicitTimeIntegral"):
+                joined.entries
+            return
+
+        # A full-state sum evaluates the variable on the joined states, not via _concat
+        expected = (full_solution + later_full)[name]
+        np.testing.assert_allclose(joined.entries, expected.entries, rtol=1e-6)
+        t = None if joined.time_indep else np.array([150.0, 750.0])
+        np.testing.assert_allclose(joined(t=t), expected.as_computed()(t=t), rtol=1e-6)
 
     def test_output_variable_cases_cover_every_layout(self):
         subclasses, stack = set(), [pybamm.ProcessedVariable]
