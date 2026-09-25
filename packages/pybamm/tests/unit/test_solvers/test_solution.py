@@ -788,6 +788,33 @@ class TestSolution:
         assert sol_last_state.solve_time == 0
         assert sol_last_state.integration_time == 0
 
+    def test_first_and_last_state_sensitivities(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u, v: 2 * a + 0 * v}
+        model.initial_conditions = {u: 0, v: 0}
+        solution = pybamm.IDAKLUSolver().solve(
+            model,
+            [0, 1],
+            t_interp=np.array([0, 0.5, 1]),
+            inputs={"a": 1.0},
+            calculate_sensitivities=True,
+        )
+
+        # u = a t and v = 2 a t
+        for state, expected in [
+            (solution.first_state, [0, 0]),
+            (solution.last_state, [1, 2]),
+        ]:
+            np.testing.assert_allclose(
+                state.sensitivities["a"][:, 0], expected, atol=1e-6
+            )
+            np.testing.assert_allclose(
+                state.sensitivities["all"][:, 0], expected, atol=1e-6
+            )
+
     def test_first_last_state_empty_y(self):
         # check that first and last state work when y is empty
         # due to only variables being returned (required for experiments)

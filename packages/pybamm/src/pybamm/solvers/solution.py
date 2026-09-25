@@ -603,7 +603,7 @@ class Solution(SolutionBase):
         sensitivities = {}
         n_states = self.all_models[0].len_rhs_and_alg
         for key in self._all_sensitivities:
-            sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
+            sensitivities[key] = self._all_sensitivities[key][0][:n_states, :]
 
         if self.all_yps is None:
             all_yps = None
