@@ -1293,14 +1293,17 @@ class BaseSolver:
         Raises
         ------
         :class:`pybamm.SolverError`
-            If ``old_solution`` returned output variables only and so holds no
+            If ``old_solution`` returned output variables only and holds no
             state sensitivities to seed ``dy0/dp`` from.
         """
         if isinstance(old_solution, pybamm.EmptySolution):
             return
         # Not gated on _all_sensitivities: IDAKLU populates it at output width,
         # which cannot seed a state-width dy0/dp.
-        if old_solution.variables_returned:
+        if (
+            old_solution.variables_returned
+            and old_solution._y_event_sensitivities is None
+        ):
             raise pybamm.SolverError(
                 "Cannot continue a sensitivity solve from a solution that "
                 "returned output variables only: the step boundary has no "
