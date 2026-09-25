@@ -1,9 +1,11 @@
 #
 # Tests for the Solution class
 #
+import copyreg
 import io
 import json
 import logging
+import pickle  # nosec B403 - used in tests with trusted input
 import subprocess  # nosec B404 - used in tests with trusted input
 import sys
 from unittest import mock
@@ -17,6 +19,31 @@ from scipy.io import loadmat
 import pybamm
 from pybamm.solvers.solution import _DEFAULT_SOLUTION_OPTIONS, make_cycle_solution
 from tests import get_discretisation_for_testing
+
+
+class _PicklerBeforeObservationBackends(pickle.Pickler):
+    """Pickles Solutions and ProcessedVariables in their earlier layout.
+
+    That layout has no ``Solution._observation``, and keeps a processed
+    variable's CasADi functions as ``base_variables_casadi``.
+    """
+
+    def reducer_override(self, obj):
+        if isinstance(obj, pybamm.Solution):
+            state = dict(obj.__dict__)
+            state.pop("_observation", None)
+        elif isinstance(obj, pybamm.ProcessedVariable):
+            state = dict(obj.__dict__)
+            state["base_variables_casadi"] = state.pop("_observer").leaves
+        else:
+            return NotImplemented
+        return copyreg.__newobj__, (type(obj),), state
+
+
+def _round_trip_before_observation_backends(obj):
+    buffer = io.BytesIO()
+    _PicklerBeforeObservationBackends(buffer, pickle.HIGHEST_PROTOCOL).dump(obj)
+    return pickle.loads(buffer.getvalue())  # nosec B301
 
 
 class TestSolution:
@@ -930,6 +957,82 @@ class TestSolution:
         # fresh process loading the pickle.
         assert "DATA" in save_result.stdout
         assert save_result.stdout == load_result.stdout
+
+    def test_load_solution_pickled_before_observation_backends(self):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=pybamm.Experiment(
+                ["Discharge at 1C for 1 minute", "Rest for 1 minute"]
+            ),
+        )
+        solution = sim.solve(calc_esoh=False)
+        t = np.linspace(0, 120, 7)
+        solution["Voltage [V]"].entries
+
+        loaded = _round_trip_before_observation_backends(solution)
+
+        assert "_observation" not in loaded.__dict__
+        np.testing.assert_allclose(
+            loaded["Voltage [V]"](t), solution["Voltage [V]"](t), rtol=1e-12
+        )
+        np.testing.assert_allclose(
+            loaded["Current [A]"](t), solution["Current [A]"](t), rtol=1e-12
+        )
+        np.testing.assert_allclose(
+            loaded.first_state["Voltage [V]"].entries,
+            solution.first_state["Voltage [V]"].entries,
+        )
+        joined = loaded.sub_solutions[0] + loaded.sub_solutions[1]
+        np.testing.assert_allclose(
+            joined["Voltage [V]"](t), solution["Voltage [V]"](t), rtol=1e-12
+        )
+        summary = solution.summary_variables.get_summary_variables()
+        loaded_summary = loaded.summary_variables.get_summary_variables()
+        assert loaded_summary.keys() == summary.keys()
+        for name, value in summary.items():
+            np.testing.assert_allclose(loaded_summary[name], value, rtol=1e-12)
+
+    def test_load_processed_variable_pickled_before_observers(self):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update({"Current function [A]": "[input]"})
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), parameter_values=parameter_values
+        )
+        solution = sim.solve(
+            [0, 600],
+            inputs={"Current function [A]": 1.0},
+            calculate_sensitivities=True,
+        )
+        voltage = solution["Voltage [V]"]
+        t = np.linspace(0, 600, 7)
+
+        loaded = _round_trip_before_observation_backends(voltage)
+
+        assert "base_variables_casadi" not in loaded.__dict__
+        np.testing.assert_allclose(loaded(t), voltage(t), rtol=1e-12)
+        np.testing.assert_allclose(
+            loaded.sensitivities["Current function [A]"],
+            voltage.sensitivities["Current function [A]"],
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            loaded.as_computed().entries, voltage.entries, rtol=1e-12
+        )
+
+    def test_update_rebuilds_every_listed_variable(self):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables = {"c": c, "2c": 2 * c}
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
+        built = solution["c"]
+
+        solution.update(["c", "2c"])
+
+        assert solution["c"] is not built
+        np.testing.assert_allclose(solution["c"].entries, built.entries)
+        assert "2c" in solution._variables
 
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
