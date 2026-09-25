@@ -1333,6 +1333,31 @@ class TestSimulationExperiment:
         with pytest.raises(NotImplementedError, match=match):
             sum_of_squares.sensitivities
 
+    def test_run_experiment_output_variables_repeated_step(self):
+        # Repeated steps share one built model, which the second step solves again
+        experiment = pybamm.Experiment([("Discharge at 1C for 10 minutes",) * 2])
+        solutions = [
+            pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(output_variables=output_variables),
+            ).solve()
+            for output_variables in (None, ["Voltage [V]"])
+        ]
+        full_solution, solution = solutions
+
+        np.testing.assert_allclose(
+            solution.cycles[0].first_state.y,
+            full_solution.cycles[0].first_state.y,
+            rtol=1e-6,
+        )
+        change = "Change in throughput capacity [A.h]"
+        np.testing.assert_allclose(
+            solution.summary_variables[change],
+            full_solution.summary_variables[change],
+            rtol=1e-6,
+        )
+
     def test_run_experiment_cccv_solvers(self):
         experiment_2step = pybamm.Experiment(
             [
