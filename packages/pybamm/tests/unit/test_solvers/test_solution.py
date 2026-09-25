@@ -392,6 +392,42 @@ class TestSolution:
         assert len(a._all_sensitivities["p"]) == before  # a unchanged
         assert len(b._all_sensitivities["p"]) == 1  # b unchanged
 
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    def test_join_sensitivities_at_shared_boundary(self, join):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u}
+        model.initial_conditions = {u: 0}
+        model.variables = {"2u": 2 * u}
+        solver = pybamm.IDAKLUSolver()
+        # The second segment starts at the time the first ends, from u = 0
+        first, later = (
+            solver.solve(
+                model,
+                [t0, t0 + 1],
+                t_interp=np.array([t0, t0 + 0.5, t0 + 1]),
+                inputs={"a": 1.0},
+                calculate_sensitivities=True,
+            )
+            for t0 in (0, 1)
+        )
+
+        if join == "add":
+            joined = first + later
+        else:
+            joined = pybamm.Solution.from_sub_solutions([first, later])
+
+        # The join keeps the first segment's sample at t = 1
+        expected = np.array([0, 0.5, 1, 0.5, 1])
+        np.testing.assert_allclose(joined.sensitivities["a"][:, 0], expected, atol=1e-6)
+        np.testing.assert_allclose(
+            joined.sensitivities["all"][:, 0], expected, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            joined["2u"].sensitivities["a"], 2 * expected, atol=1e-6
+        )
+
     def test_add_validates_only_boundary(self):
         # __add__ must validate only the joined region, not re-scan the whole
         # accumulation (that re-scan was the O(N^2) source).
@@ -1295,6 +1331,37 @@ class TestSolution:
         np.testing.assert_allclose(sol["integral"](), [5 + 1 - np.exp(-1)], rtol=1e-3)
         np.testing.assert_allclose(
             sol["integral"].sensitivities["a"], [expected], rtol=1e-3
+        )
+
+    @pytest.mark.parametrize(
+        ("t_later", "integral", "integral_sensitivity"),
+        [([1, 3], 6.0, 3.0), ([2, 4], 8.0, 4.0)],
+        ids=["shared-boundary", "gap"],
+    )
+    def test_explicit_time_integral_sensitivity_over_joined_solutions(
+        self, t_later, integral, integral_sensitivity
+    ):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        a = pybamm.InputParameter("a")
+        model.rhs = {y: 0 * y}
+        model.initial_conditions = {y: 1}
+        model.variables["integral"] = pybamm.ExplicitTimeIntegral(
+            a * y, pybamm.Scalar(1)
+        )
+        solver = pybamm.IDAKLUSolver()
+        first, later = (
+            solver.solve(model, t_eval, inputs={"a": 2.0}, calculate_sensitivities=True)
+            for t_eval in ([0, 1], t_later)
+        )
+
+        joined = (first + later)["integral"]
+
+        # A full-state join integrates a * y = 2 across any gap between the
+        # solutions; an output_variables join leaves the gap out
+        np.testing.assert_allclose(joined.entries, [1 + integral], rtol=1e-6)
+        np.testing.assert_allclose(
+            joined.sensitivities["a"], [integral_sensitivity], rtol=1e-6
         )
 
     def test_observe(self):

@@ -1098,10 +1098,13 @@ class Solution(SolutionBase):
         return ts, ys, yps, tev
 
     @staticmethod
-    def _merge_sensitivities(acc, s):
-        """Fold one segment's sensitivities into the running dict ``acc``."""
-        for key, val in s._all_sensitivities.items():
-            acc.setdefault(key, []).extend(val)
+    def _merge_sensitivities(acc, s, repeated):
+        """Fold one segment's sensitivities into the running dict ``acc``,
+        dropping the leading time point's rows when ``repeated``."""
+        for key, (first, *rest) in s._all_sensitivities.items():
+            # Rows are time-major, one block per time point, as in _segment_series
+            rows_repeated = len(first) // len(s.all_ts[0]) if repeated else 0
+            acc.setdefault(key, []).extend([first[rows_repeated:], *rest])
 
     def __add__(self, other):
         """Adds two solutions together, e.g. when stepping"""
@@ -1159,7 +1162,7 @@ class Solution(SolutionBase):
         all_sensitivities = {
             key: list(value) for key, value in self._all_sensitivities.items()
         }
-        self._merge_sensitivities(all_sensitivities, other)
+        self._merge_sensitivities(all_sensitivities, other, repeated)
 
         options = self.user_options | other.user_options
 
@@ -1266,8 +1269,8 @@ class Solution(SolutionBase):
 
         # sensitivities: fresh dict, no aliasing of any input solution's dict
         all_sensitivities = {}
-        for s in segments:
-            cls._merge_sensitivities(all_sensitivities, s)
+        for s, repeated in kept:
+            cls._merge_sensitivities(all_sensitivities, s, repeated)
 
         options = {}
         for s in segments:
