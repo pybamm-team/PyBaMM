@@ -185,7 +185,13 @@ class TestCompareOutputsTwoPhase:
         Every heat source is a sum over the particle phases, so splitting one graphite
         phase into two identical halves must reproduce the one-phase heat sources
         """
-        options = {**thermal_options, "heat of mixing": "true"}
+        # composite models default to the algebraic surface form, so pin it for the
+        # one-phase model too and compare like with like
+        options = {
+            **thermal_options,
+            "heat of mixing": "true",
+            "surface form": "algebraic",
+        }
         t_eval = [0, 3600]
         t_interp = np.linspace(0, 3600)
 
@@ -266,6 +272,7 @@ class TestCompareOutputsTwoPhase:
             pytest.param(model_class, options, parameter_set, id=f"{name}-{label}")
             for name, model_class in [
                 ("SPM", pybamm.lithium_ion.SPM),
+                ("SPMe", pybamm.lithium_ion.SPMe),
                 ("DFN", pybamm.lithium_ion.DFN),
             ]
             for label, options, parameter_set in [
