@@ -413,19 +413,17 @@ class BaseThermal(pybamm.BaseSubModel):
 
     def _electrode_heat_of_mixing(self, variables, domain):
         """Sum the heat of mixing over the particle phases of one electrode."""
-        electrode_param = getattr(self.param, domain[0])
-        num_phases = int(getattr(self.options, domain)["particle phases"])
-        if num_phases == 1:
+        electrode_param = self.param.domain_params[domain]
+        phases = self.options.phases[domain]
+        if len(phases) == 1:
             return self._phase_heat_of_mixing(
                 variables, domain, "", electrode_param.prim
             )
         return sum(
-            self._phase_heat_of_mixing(variables, domain, phase_name, phase_param)
-            for phase_name, phase_param in zip(
-                ["primary ", "secondary "],
-                [electrode_param.prim, electrode_param.sec],
-                strict=True,
+            self._phase_heat_of_mixing(
+                variables, domain, f"{phase} ", electrode_param.phase_params[phase]
             )
+            for phase in phases
         )
 
     def _heat_of_mixing(self, variables):

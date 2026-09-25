@@ -177,24 +177,38 @@ class TestCompareOutputsTwoPhase:
         model_class = pybamm.lithium_ion.DFN
         self.compare_outputs_two_phase_silicon_graphite(model_class)
 
-    def compare_heat_sources_two_phase_graphite_graphite(self, model_class):
+    def compare_heat_sources_two_phase_graphite_graphite(self, model_class, thermal):
         """
         Every heat source is a sum over the particle phases, so splitting one graphite
         phase into two identical halves must reproduce the one-phase heat sources
         """
-        options = {
-            "thermal": "isothermal",
-            "calculate heat source for isothermal models": "true",
-        }
+        if thermal == "isothermal":
+            options = {
+                "thermal": "isothermal",
+                "calculate heat source for isothermal models": "true",
+            }
+        else:
+            options = {"thermal": thermal}
+        options["heat of mixing"] = "true"
         t_eval = [0, 3600]
         t_interp = np.linspace(0, 3600)
 
+        # Chen2020 has zero entropic change, which would leave the reversible heat
+        # and the temperature dependence of the heat of mixing untested
+        entropic_change = pybamm.ParameterValues("Ai2020")
         parameter_values = pybamm.ParameterValues("Chen2020")
+        for domain in ["Negative", "Positive"]:
+            name = f"{domain} electrode OCP entropic change [V.K-1]"
+            parameter_values[name] = entropic_change[name]
+
+        # the default rtol lets a temperature state near 300 K drift by ~0.03 K,
+        # which is comparable to the one- and two-phase differences being tested
+        solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8)
         sol = pybamm.Simulation(
-            model_class(options), parameter_values=parameter_values
+            model_class(options), parameter_values=parameter_values, solver=solver
         ).solve(t_eval=t_eval, t_interp=t_interp)
 
-        parameter_values_two_phase = pybamm.ParameterValues("Chen2020")
+        parameter_values_two_phase = parameter_values.copy()
         for parameter in [
             "Negative electrode OCP [V]",
             "Negative electrode OCP entropic change [V.K-1]",
@@ -216,24 +230,100 @@ class TestCompareOutputsTwoPhase:
         sol_two_phase = pybamm.Simulation(
             model_class({"particle phases": ("2", "1"), **options}),
             parameter_values=parameter_values_two_phase,
+            solver=solver,
         ).solve(t_eval=t_eval, t_interp=t_interp)
 
         for variable in [
             "Volume-averaged irreversible electrochemical heating [W.m-3]",
             "Volume-averaged reversible heating [W.m-3]",
             "Volume-averaged hysteresis electrochemical heating [W.m-3]",
+            "Volume-averaged heat of mixing [W.m-3]",
             "Volume-averaged total heating [W.m-3]",
             "Voltage [V]",
         ]:
+            one_phase = sol[variable](t_interp)
+            # scale atol to the variable, since the reversible heat changes sign
             np.testing.assert_allclose(
-                sol[variable](t_interp),
                 sol_two_phase[variable](t_interp),
+                one_phase,
                 rtol=1e-2,
-                atol=1e-8,
+                atol=1e-3 * np.nanmax(np.abs(one_phase)) + 1e-8,
+            )
+
+        if thermal != "isothermal":
+            temperature = "Volume-averaged cell temperature [K]"
+            temperature_rise = sol[temperature](t_interp) - sol[temperature](0)
+            temperature_rise_two_phase = sol_two_phase[temperature](
+                t_interp
+            ) - sol_two_phase[temperature](0)
+            np.testing.assert_allclose(
+                temperature_rise_two_phase,
+                temperature_rise,
+                rtol=1e-2,
+                atol=1e-3 * np.nanmax(temperature_rise),
             )
 
     def test_compare_heat_sources_SPM_graphite_graphite(self):
-        self.compare_heat_sources_two_phase_graphite_graphite(pybamm.lithium_ion.SPM)
+        self.compare_heat_sources_two_phase_graphite_graphite(
+            pybamm.lithium_ion.SPM, "isothermal"
+        )
 
     def test_compare_heat_sources_DFN_graphite_graphite(self):
-        self.compare_heat_sources_two_phase_graphite_graphite(pybamm.lithium_ion.DFN)
+        self.compare_heat_sources_two_phase_graphite_graphite(
+            pybamm.lithium_ion.DFN, "isothermal"
+        )
+
+    def test_compare_heat_sources_SPM_graphite_graphite_lumped(self):
+        self.compare_heat_sources_two_phase_graphite_graphite(
+            pybamm.lithium_ion.SPM, "lumped"
+        )
+
+    def test_compare_heat_sources_DFN_graphite_graphite_lumped(self):
+        self.compare_heat_sources_two_phase_graphite_graphite(
+            pybamm.lithium_ion.DFN, "lumped"
+        )
+
+    def heat_of_mixing_silicon_graphite(self, model_class):
+        # Check the heat of mixing of two genuinely different phases heats the cell
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "thermal": "lumped",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        # thermal properties are per layer, but the set only has per-phase densities
+        parameter_values.update(
+            {"Negative electrode density [kg.m-3]": 1657.0},
+            check_already_exists=False,
+        )
+        # the shipped graphite OCP is a cubic Interpolant, whose derivative cannot
+        # yet be converted for the solver, so use the analytic Chen2020 fit
+        parameter_values["Primary: Negative electrode OCP [V]"] = (
+            pybamm.ParameterValues("Chen2020")["Negative electrode OCP [V]"]
+        )
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600)
+
+        solutions = {
+            heat_of_mixing: pybamm.Simulation(
+                model_class({**options, "heat of mixing": heat_of_mixing}),
+                parameter_values=parameter_values,
+            ).solve(t_eval=t_eval, t_interp=t_interp)
+            for heat_of_mixing in ["false", "true"]
+        }
+
+        heat_of_mixing = solutions["true"]["Volume-averaged heat of mixing [W.m-3]"](
+            t_interp
+        )
+        heat_of_mixing = heat_of_mixing[~np.isnan(heat_of_mixing)]
+        assert np.all(heat_of_mixing > 0)
+        temperature = "Volume-averaged cell temperature [K]"
+        assert solutions["true"][temperature](t_interp[-2]) > solutions["false"][
+            temperature
+        ](t_interp[-2])
+
+    def test_heat_of_mixing_SPM_silicon_graphite(self):
+        self.heat_of_mixing_silicon_graphite(pybamm.lithium_ion.SPM)
+
+    def test_heat_of_mixing_DFN_silicon_graphite(self):
+        self.heat_of_mixing_silicon_graphite(pybamm.lithium_ion.DFN)
