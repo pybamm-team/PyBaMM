@@ -5,9 +5,7 @@ import numpy as np
 import pybamm
 
 
-# -----------------------------------------------------------------------------
 # Lithium plating (from O'Kane et al. 2020 / 2022)
-# -----------------------------------------------------------------------------
 def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
     """
     Exchange-current density for Li plating reaction [A.m-2].
@@ -95,9 +93,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     return gamma
 
 
-# -----------------------------------------------------------------------------
 # Graphite (primary phase) kinetics, diffusivity and mechanics
-# -----------------------------------------------------------------------------
 def graphite_LGM50_diffusivity_Chen2020(sto, T):
     """
     Graphite diffusivity as a function of stoichiometry (taken as constant, with
@@ -242,9 +238,7 @@ def graphite_cracking_rate_Ai2020(T_dim):
     return k_cr * arrhenius
 
 
-# -----------------------------------------------------------------------------
 # Silicon (secondary phase) OCP, kinetics, diffusivity and mechanics
-# -----------------------------------------------------------------------------
 def silicon_ocp_lithiation_Mark2016(sto):
     """
     silicon Open-circuit Potential (OCP) as a a function of the
@@ -453,9 +447,7 @@ def silicon_cracking_rate_Ai2020(T_dim):
     return k_cr * arrhenius
 
 
-# -----------------------------------------------------------------------------
 # NMC (positive electrode) OCP, kinetics, diffusivity and mechanics
-# -----------------------------------------------------------------------------
 def nmc_LGM50_diffusivity_Chen2020(sto, T):
     """
      NMC diffusivity as a function of stoichiometry (taken as constant, with Arrhenius
@@ -616,9 +608,7 @@ def cracking_rate_Ai2020(T_dim):
     return k_cr * arrhenius
 
 
-# -----------------------------------------------------------------------------
 # Electrolyte (Nyman 2008 with Ecker 2015 Arrhenius temperature dependence)
-# -----------------------------------------------------------------------------
 def electrolyte_diffusivity_Nyman2008_arrhenius(c_e, T):
     """
     Diffusivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
@@ -709,29 +699,18 @@ def graphite_ocp_Enertech_Ai2020(sto):
 def get_parameter_values():
     """
     Parameters for a composite graphite/silicon negative electrode with degradation,
-    combining the composite electrode model of :footcite:t:`Ai2022` (based on
-    :footcite:t:`Chen2020`) with the degradation submodels (lithium plating,
-    SEI on cracks and particle mechanics/cracking/LAM) of :footcite:t:`OKane2022`.
-
-    Beginning-of-life and degradation (mechanical, cracking, LAM) parameters for the
-    graphite (primary) and silicon (secondary) phases are taken from the supplementary
-    information of :footcite:t:`Bonkile2024`, which itself draws on
-    :footcite:t:`Chen2020`, :footcite:t:`Ai2022` and :footcite:t:`Ai2019`.
-
-    SEI parameters are example parameters for composite SEI on silicon/graphite. Both
-    phases use the same values, from the paper :footcite:t:`Yang2017`.
+    from :footcite:t:`Bonkile2024`, building on :footcite:t:`Chen2020`,
+    :footcite:t:`Ai2022` and :footcite:t:`OKane2022`. Both phases share the SEI
+    parameters of :footcite:t:`Yang2017`.
 
     .. note::
-        This parameter set does not claim to be representative of the true parameter
-        values. Instead these are parameter values assembled to run composite-electrode
-        degradation studies.
+        These values were assembled for composite-electrode degradation studies and
+        are not claimed to represent a real cell.
     """
     return {
         "chemistry": "lithium_ion",
-        # lithium plating
-        # (the negative electrode is composite, so the plating reaction parameters are
-        # phase-specific and carry the "Primary:"/"Secondary:" prefix; the kinetic rate
-        # constant, dead-lithium decay constant and Li metal molar volume are global)
+        # Plating reaction parameters are per phase; the rate constant, dead-lithium
+        # decay constant and Li metal molar volume are shared by both phases
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
         "Lithium plating kinetic rate constant [m.s-1]": 1e-09,
         "Dead lithium decay constant [s-1]": 1e-06,
@@ -753,7 +732,6 @@ def get_parameter_values():
         "Secondary: Dead lithium decay rate [s-1]": SEI_limited_dead_lithium_OKane2022,
         # global initial SEI thickness (read by the dead-lithium decay-rate function)
         "Initial SEI thickness [m]": 5e-09,
-        # sei
         "Primary: Ratio of lithium moles to SEI moles": 2.0,
         "Primary: SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "Primary: SEI reaction exchange current density [A.m-2]": 1.5e-07,
@@ -788,7 +766,6 @@ def get_parameter_values():
         "Secondary: SEI growth activation energy [J.mol-1]": 38000.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
-        # cell
         "Negative current collector thickness [m]": 1.2e-05,
         "Negative electrode thickness [m]": 8.52e-05,
         "Separator thickness [m]": 1.2e-05,
@@ -912,19 +889,16 @@ def get_parameter_values():
         "Positive electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Positive electrode LAM constant exponential term": 2.0,
         "Positive electrode critical stress [Pa]": 375000000.0,
-        # separator
         "Separator porosity": 0.47,
         "Separator Bruggeman coefficient (electrolyte)": 1.5,
         "Separator density [kg.m-3]": 397.0,
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.16,
-        # electrolyte
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.2594,
         "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008_arrhenius,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008_arrhenius,
-        # experiment
         "Reference temperature [K]": 298.15,
         "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Ambient temperature [K]": 298.15,
@@ -937,7 +911,6 @@ def get_parameter_values():
         "Initial concentration in negative electrode [mol.m-3]": 29866.0,
         "Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,
-        # citations
         "citations": [
             "Bonkile2024",
             "Chen2020",
