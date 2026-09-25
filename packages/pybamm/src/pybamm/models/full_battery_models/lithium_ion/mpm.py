@@ -22,7 +22,7 @@ class MPM(SPM):
 
     def __init__(self, options=None, name="Many-Particle Model", build=True):
         # Necessary/default options
-        options = options or {}
+        options = dict(options or {})
         if "particle size" in options and options["particle size"] != "distribution":
             raise pybamm.OptionError(
                 "particle size must be 'distribution' for MPM not '{}'".format(

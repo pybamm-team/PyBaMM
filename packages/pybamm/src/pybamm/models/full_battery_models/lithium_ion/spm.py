@@ -28,7 +28,8 @@ class SPM(BaseModel):
         # Use 'algebraic' surface form when the explicit-current closure is
         # unavailable: non-default kinetics have no inverse form, and
         # particle-size distributions require a surface formulation.
-        options = options or {}
+        # copy, so the defaults set below do not leak into the caller's dict
+        options = dict(options or {})
         if options.get("surface form") is None and (
             options.get("intercalation kinetics") is not None
             or "distribution" in options.get("particle size", "")
@@ -47,7 +48,7 @@ class SPM(BaseModel):
 
         self.set_submodels(build)
 
-        if self.__class__ != "MPM":
+        if self.__class__ is not pybamm.lithium_ion.MPM:
             pybamm.citations.register("Marquis2019")
 
         if (
