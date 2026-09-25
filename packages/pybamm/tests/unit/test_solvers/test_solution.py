@@ -788,14 +788,16 @@ class TestSolution:
         assert sol_last_state.solve_time == 0
         assert sol_last_state.integration_time == 0
 
-    def test_first_and_last_state_sensitivities(self):
+    @pytest.mark.parametrize("output_variables", [None, ["u"]])
+    def test_first_and_last_state_sensitivities(self, output_variables):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
         a = pybamm.InputParameter("a")
         model.rhs = {u: a + 0 * u, v: 2 * a + 0 * v}
-        model.initial_conditions = {u: 0, v: 0}
-        solution = pybamm.IDAKLUSolver().solve(
+        model.initial_conditions = {u: a, v: 3 * a}
+        model.variables = {"u": u}
+        solution = pybamm.IDAKLUSolver(output_variables=output_variables).solve(
             model,
             [0, 1],
             t_interp=np.array([0, 0.5, 1]),
@@ -803,10 +805,10 @@ class TestSolution:
             calculate_sensitivities=True,
         )
 
-        # u = a t and v = 2 a t
+        # u = a (1 + t) and v = a (3 + 2 t), both states even when only u is output
         for state, expected in [
-            (solution.first_state, [0, 0]),
-            (solution.last_state, [1, 2]),
+            (solution.first_state, [1, 3]),
+            (solution.last_state, [2, 5]),
         ]:
             np.testing.assert_allclose(
                 state.sensitivities["a"][:, 0], expected, atol=1e-6
@@ -815,7 +817,7 @@ class TestSolution:
                 state.sensitivities["all"][:, 0], expected, atol=1e-6
             )
 
-    def test_first_state_of_output_variables_solve(self):
+    def test_first_and_last_state_of_output_variables_solve(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -844,6 +846,13 @@ class TestSolution:
         ):
             np.testing.assert_allclose(
                 solution.first_state.all_ys[0], [[1], [3]], rtol=1e-12
+            )
+            # u = a (1 + t - t0) and v = a (3 + 2 (t - t0)) in each solve
+            np.testing.assert_allclose(
+                solution.first_state.sensitivities["a"], [[1], [3]], rtol=1e-6
+            )
+            np.testing.assert_allclose(
+                solution.last_state.sensitivities["a"], [[2], [5]], rtol=1e-6
             )
 
     def test_first_state_of_output_variables_solve_is_consistent(self):

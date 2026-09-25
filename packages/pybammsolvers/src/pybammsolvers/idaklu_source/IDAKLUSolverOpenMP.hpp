@@ -192,6 +192,8 @@ public:
   // State at t0 after consistent initialization, kept when save_outputs_only
   // returns outputs in place of the states
   std::vector<sunrealtype> y_init_;
+  // Its sensitivities, (number_of_parameters, number_of_states) row-major
+  std::vector<sunrealtype> yS_init_;
   // |p| per sensitivity parameter, so IDAS weights the scaled sensitivity
   // pbar*yS like a state. Empty leaves IDAS at its pbar = 1 default.
   std::vector<sunrealtype> sens_scales_;
@@ -407,6 +409,13 @@ public:
    * @brief Store the initial point (t0) after consistent initialization
    */
   void StoreInitialPoint(sunrealtype t0);
+
+  /**
+   * @brief Copy the current state sensitivities into out, one row per parameter
+   * @param out Replaced by the (number_of_parameters, number_of_states) values,
+   * or emptied without sensitivities
+   */
+  void CopyStateSensitivities(std::vector<sunrealtype> &out) const;
 
   /**
    * @brief Save a solution point (delegates to Hermite knot reduction or direct save path)

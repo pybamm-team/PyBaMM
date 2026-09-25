@@ -602,12 +602,27 @@ void IDAKLUSolverOpenMP<ExprSet>::StoreInitialPoint(sunrealtype t0) {
   DEBUG("IDAKLUSolver::StoreInitialPoint");
   if (save_outputs_only) {
     y_init_.assign(y_val_, y_val_ + number_of_states);
+    CopyStateSensitivities(yS_init_);
   }
   // First point: always a breakpoint (must be kept)
   if (use_knot_reduction_) {
     knot_reducer->ProcessPoint(t0, y_val_, yp_val_, /*is_breakpoint=*/true);
   } else {
     SetStep(t0);
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::CopyStateSensitivities(
+  std::vector<sunrealtype> &out
+) const {
+  out.clear();
+  if (!sensitivity) {
+    return;
+  }
+  out.reserve(size_t(number_of_parameters) * number_of_states);
+  for (int p = 0; p < number_of_parameters; ++p) {
+    out.insert(out.end(), yS_val_[p], yS_val_[p] + number_of_states);
   }
 }
 
@@ -693,10 +708,12 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     ReorderSensitivities(yS_reordered, ypS_reordered);
   }
 
-  // Final state slice (for outputs_only mode)
+  // Final state slice and its sensitivities (for outputs_only mode)
   std::vector<sunrealtype> yterm_vec;
+  std::vector<sunrealtype> yS_term_vec;
   if (save_outputs_only) {
     yterm_vec.assign(y_val_, y_val_ + number_of_states);
+    CopyStateSensitivities(yS_term_vec);
   }
 
   return SolutionData(
@@ -708,6 +725,8 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     std::move(ypS_reordered),
     std::move(y_init_),
     std::move(yterm_vec),
+    std::move(yS_init_),
+    std::move(yS_term_vec),
     arg_sens0,
     arg_sens1,
     arg_sens2,

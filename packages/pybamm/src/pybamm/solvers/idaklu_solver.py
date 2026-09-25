@@ -18,6 +18,30 @@ from pybamm.solvers.solution import _flatten_inputs
 _UNSET = object()
 
 
+def _state_sensitivities(yS: np.ndarray, sensitivity_names: list[str]) -> dict:
+    """Sensitivities of one state vector, keyed as in ``Solution``.
+
+    Parameters
+    ----------
+    yS : numpy.ndarray
+        Sensitivities of the states, one row per name in ``sensitivity_names``.
+    sensitivity_names : list of str
+        Differentiated parameter names, in the solver's column order.
+
+    Returns
+    -------
+    dict
+        An ``(n_states, 1)`` column per name, and all of them under ``"all"``.
+    """
+    all_sensitivities = yS.T
+    sensitivities = {
+        name: all_sensitivities[:, i : i + 1]
+        for i, name in enumerate(sensitivity_names)
+    }
+    sensitivities["all"] = all_sensitivities
+    return sensitivities
+
+
 def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.ndarray:
     """IDAS ``pbar``: the magnitude of each differentiated parameter.
 
@@ -788,15 +812,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # (#timesteps * #states (where t is changing the quickest),)
         # to match format used by Solution
         # note that yS is (n_p, n_t, n_y)
-        if number_of_sensitivity_parameters != 0:
+        if number_of_sensitivity_parameters == 0:
+            yS_out = {}
+        elif save_outputs_only:
+            # yS holds the outputs' sensitivities; the states have none, like y_out
+            yS_out = {name: np.zeros((0, 1)) for name in sensitivity_names}
+            yS_out["all"] = np.zeros((0, number_of_sensitivity_parameters))
+        else:
             yS_out = {
                 name: sol.yS[i].reshape(-1, 1)
                 for i, name in enumerate(sensitivity_names)
             }
             # add "all" stacked sensitivities ((#timesteps * #states,#sens_params))
             yS_out["all"] = np.hstack([yS_out[name] for name in sensitivity_names])
-        else:
-            yS_out = {}
 
         # IDA_SUCCESS (0) = solved for all t_eval
         # IDA_ROOT_RETURN (2) = found root(s)
@@ -867,8 +895,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not save_outputs_only:
             return newsol
 
-        # The states at t0 after consistent initialization, for first_state
+        # The states at t0 after consistent initialization, for first_state, and the
+        # states' sensitivities at both ends, for first_state and last_state
         newsol._y0 = sol.y_init
+        if number_of_sensitivity_parameters != 0:
+            newsol._y0_sensitivities = _state_sensitivities(
+                sol.yS_init, sensitivity_names
+            )
+            newsol._y_event_sensitivities = _state_sensitivities(
+                sol.yS_term, sensitivity_names
+            )
 
         # Populate variables and sensitivities dictionaries directly
         number_of_samples = sol.y.shape[0] // number_of_timesteps
@@ -1231,6 +1267,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         new_sol._all_inputs_casadi = solution.all_inputs_casadi
         new_sol.closest_event_idx = solution.closest_event_idx
         new_sol._y0 = solution._y0
+        new_sol._y0_sensitivities = solution._y0_sensitivities
+        new_sol._y_event_sensitivities = solution._y_event_sensitivities
 
         new_sol.solve_time = solution.solve_time
         new_sol.integration_time = solution.integration_time

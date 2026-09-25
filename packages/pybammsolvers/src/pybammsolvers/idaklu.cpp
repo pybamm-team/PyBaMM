@@ -282,6 +282,8 @@ PYBIND11_MODULE(idaklu, m)
     .def_readwrite("ypS", &Solution::ypS)
     .def_readwrite("y_init", &Solution::y_init)
     .def_readwrite("y_term", &Solution::y_term)
+    .def_readwrite("yS_init", &Solution::yS_init)
+    .def_readwrite("yS_term", &Solution::yS_term)
     .def_readwrite("flag", &Solution::flag);
 
 }

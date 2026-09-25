@@ -198,6 +198,10 @@ class TestExponentialDecaySolver:
 
         np.testing.assert_allclose(sol.y_init, model_y0, rtol=1e-10)
         assert sol.y_init.shape == sol.y_term.shape
+        # One row of state sensitivities per sensitivity parameter, of which
+        # this solver has none
+        assert sol.yS_init.shape == (0, sol.y_init.size)
+        assert sol.yS_term.shape == sol.yS_init.shape
 
     def test_solution_dimensions_consistency(self, exponential_decay_solver):
         """
