@@ -883,10 +883,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             end_idx = start_idx + var_nnz
             data = sol.y[:, start_idx:end_idx]
             if var_nnz != math.prod(var_shape):
-                # The solver returns only the structural nonzeros; store every entry
-                rows = base_variables[0](0.0, 0.0, 0.0).sparsity().row()
+                # pybammsolvers returns only the structural nonzeros; scatter them
+                # into every entry at their flat (column-major) indices
+                indices = base_variables[0].sparsity_out(0).find()
                 dense = np.zeros((number_of_timesteps, math.prod(var_shape)))
-                dense[:, rows] = data
+                dense[:, indices] = data
                 data = dense
             time_integral = self._time_integral_vars.get(var)
             values = data
@@ -934,9 +935,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """Get variable length and base variables based on model format."""
         if model.convert_to_format == "casadi":
             base_var = self._setup["var_fcns"][var]
-            var_eval = base_var(0.0, 0.0, 0.0)
-            var_nnz = var_eval.sparsity().nnz()
-            var_shape = var_eval.shape
+            sparsity = base_var.sparsity_out(0)
+            var_nnz = sparsity.nnz()
+            var_shape = sparsity.shape
             return var_nnz, var_shape, [base_var]
         else:  # pragma: no cover
             raise pybamm.SolverError(
