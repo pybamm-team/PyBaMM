@@ -21,7 +21,7 @@ class TestParameterValuesWithModel:
                     "SEI": "solvent-diffusion limited",
                     "lithium plating": "partially reversible",
                     "particle mechanics": (
-                        "swelling and cracking",
+                        ("swelling and cracking", "swelling only"),
                         "swelling only",
                     ),
                     "loss of active material": "stress-driven",

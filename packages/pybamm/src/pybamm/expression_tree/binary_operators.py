@@ -87,7 +87,7 @@ class BinaryOperator(pybamm.Symbol):
     @classmethod
     def _from_json(cls, snippet: dict):
         """Use to instantiate when deserialising; discretisation has
-        already occured so pre-processing of binaries is not necessary."""
+        already occurred so pre-processing of binaries is not necessary."""
 
         instance = cls.__new__(cls)
 

@@ -7,7 +7,7 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.16.7"
+    rev: "v0.16.8"
     hooks:
       - id: ruff-check
         args: [--fix, --show-fixes]
@@ -67,6 +67,14 @@ repos:
         language: python
         additional_dependencies: ["comment-slop==0.1.0"]
         require_serial: true
+
+      - id: model-zoo-docs
+        name: Regenerate model zoo docs pages and badges from the manifests
+        entry: python packages/pybamm-model-zoo/scripts/generate.py
+        language: python
+        additional_dependencies: ["tomli; python_version < '3.11'"]
+        files: ^(packages/pybamm-model-zoo/(src/pybamm_model_zoo/.*|scripts/generate\.py|status\.json|badges/.*)|docs/source/model_zoo/.*)$
+        pass_filenames: false
 
       - id: check-ci-gate
         name: Check every CI job is merge-gated or explicitly advisory

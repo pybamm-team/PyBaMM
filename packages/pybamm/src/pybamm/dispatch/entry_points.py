@@ -26,7 +26,7 @@ class EntryPoint(Mapping):
     Listing available parameter sets:
         >>> import pybamm
         >>> list(pybamm.parameter_sets)  # doctest: +ELLIPSIS
-        ['Ai2020', 'Chayambuka2022', ...]
+        ['Ai2020', 'Bonkile2024', 'Chayambuka2022', ...]
 
     Listing available models:
         >>> import pybamm

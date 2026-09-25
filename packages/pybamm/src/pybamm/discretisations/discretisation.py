@@ -1119,6 +1119,10 @@ class Discretisation:
                     symbol._integration_dimension,
                     symbol.integration_variable,
                 )
+                if out is disc_child:
+                    # as in SpatialMethod.broadcast: a one-point integration
+                    # simplifies back to the child, which discretisation caches
+                    out = out.create_copy()
                 out.copy_domains(symbol)
                 return out
 

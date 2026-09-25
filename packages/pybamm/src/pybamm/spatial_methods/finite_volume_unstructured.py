@@ -55,9 +55,6 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     """
 
     _CORRECTIONS = ("over-relaxed", "minimum")
-    # Floor on cos(theta) in the over-relaxed weight (as in OpenFOAM): it
-    # bounds alpha, and k is built from the same alpha so consistency holds.
-    _COS_THETA_FLOOR = 0.05
     # Common CFD mesh-quality limit; beyond it the scheme stays consistent
     # but conditioning degrades.
     _NON_ORTHOGONALITY_WARNING_DEG = 70.0
@@ -486,7 +483,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         if out is symbol:
             # simplification can hand back the child itself (e.g. ones-vector
             # multiply); copy before stamping domains on a possibly shared node
-            out = symbol.create_copy(perform_simplifications=False)
+            out = symbol.create_copy()
         out.domains = domains.copy()
         return out
 
@@ -616,7 +613,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         """
         if self.options["non-orthogonal correction"] == "minimum":
             return cos_theta
-        return 1.0 / np.maximum(cos_theta, self._COS_THETA_FLOOR)
+        # Not floored: capping alpha on sliver faces lets the explicit cross
+        # term dominate and gives the diffusion operator growing modes
+        return 1.0 / cos_theta
 
     def _decomposition(self, submesh):
         """``(alpha, k)`` per internal face for ``n = alpha e_ij + k``."""

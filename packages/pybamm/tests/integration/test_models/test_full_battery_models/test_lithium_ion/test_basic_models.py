@@ -26,6 +26,18 @@ def lithium_per_area(model, electrolyte_domains, particles):
     return n
 
 
+# Coarse mesh for the unstructured DFN models
+COARSE_UNSTRUCTURED_VAR_PTS = {
+    "x_n": 5,
+    "x_s": 5,
+    "x_p": 5,
+    "r_p": 10,
+    "r_n": 10,
+    "y": 3,
+    "z": 3,
+}
+
+
 class TestElectrolyteConservation:
     """The electrolyte balance must conserve lithium when the transference number
     depends on concentration (issue #5745). The check is on the total lithium
@@ -121,6 +133,60 @@ class TestElectrolyteConservation:
         li = sol["Lithium per area [mol.m-2]"].entries
         np.testing.assert_allclose(li, li[0], rtol=1e-8)
 
+    @staticmethod
+    def assert_total_lithium_conserved(model, graded, var_pts):
+        model.variables["Total lithium inventory [mol]"] = (
+            model.variables["Total lithium [mol]"]
+            + model.variables["Total solid lithium [mol]"]
+        )
+        parameter_values = pybamm.ParameterValues("ORegan2022")
+        if graded:
+            L_n = parameter_values["Negative electrode thickness [m]"]
+            L_s = parameter_values["Separator thickness [m]"]
+            L_p = parameter_values["Positive electrode thickness [m]"]
+            for domain, x_min, thickness in [
+                ("Negative", 0, L_n),
+                ("Positive", L_n + L_s, L_p),
+            ]:
+                name = f"{domain} electrode active material volume fraction"
+                mean = parameter_values[name]
+
+                # +/-10% linear grading through the electrode thickness
+                def graded_fraction(x, *_, mean=mean, x_min=x_min, thickness=thickness):
+                    return mean * (0.9 + 0.2 * (x - x_min) / thickness)
+
+                parameter_values[name] = graded_fraction
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            var_pts=var_pts,
+            solver=pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8),
+        )
+        # initial_soc needs a spatially uniform loading to compute capacities
+        sol = sim.solve([0, 1200], initial_soc=None if graded else 0.5)
+        li = sol["Total lithium inventory [mol]"].entries
+        np.testing.assert_allclose(li, li[0], rtol=1e-8)
+
+    @pytest.mark.parametrize(
+        "graded", [False, True], ids=["uniform_loading", "graded_loading"]
+    )
+    def test_basic_dfn_2d(self, graded):
+        model = pybamm.lithium_ion.BasicDFN2D()
+        var_pts = {name: pts // 2 for name, pts in model.default_var_pts.items()}
+        self.assert_total_lithium_conserved(model, graded, var_pts)
+
+    @pytest.mark.parametrize(
+        "dimensionality", [1, 2], ids=["2d_unstructured", "3d_unstructured"]
+    )
+    @pytest.mark.parametrize(
+        "graded", [False, True], ids=["uniform_loading", "graded_loading"]
+    )
+    def test_basic_dfn_unstructured(self, dimensionality, graded):
+        model = pybamm.lithium_ion.BasicDFNUnstructured(
+            {"dimensionality": dimensionality}
+        )
+        self.assert_total_lithium_conserved(model, graded, COARSE_UNSTRUCTURED_VAR_PTS)
+
 
 class BaseBasicModelTest:
     def test_with_experiment(self):
@@ -168,3 +234,61 @@ class TestBasicDFNHalfCell(BaseBasicModelTest):
     def setup(self):
         options = {"working electrode": "positive"}
         self.model = pybamm.lithium_ion.BasicDFNHalfCell(options)
+
+
+class TestBasicDFNUnstructured2D(BaseBasicModelTest):
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.model = pybamm.lithium_ion.BasicDFNUnstructured({"dimensionality": 1})
+
+    def test_matches_structured(self):
+        t_eval = np.linspace(0, 3600, 20)
+        model_s = pybamm.lithium_ion.BasicDFN2D()
+        # BasicDFN2D keys its transverse points by its own z_2d spatial variable
+        var_pts_s = {
+            var: COARSE_UNSTRUCTURED_VAR_PTS.get(var, 3)
+            for var in model_s.default_var_pts
+        }
+        sol_s = pybamm.Simulation(model_s, var_pts=var_pts_s).solve(t_eval)
+        sol_u = pybamm.Simulation(
+            self.model, var_pts=COARSE_UNSTRUCTURED_VAR_PTS
+        ).solve(t_eval)
+
+        V_s = sol_s["Voltage [V]"](t=t_eval)
+        V_u = sol_u["Voltage [V]"](t=t_eval)
+        np.testing.assert_allclose(V_u, V_s, atol=5e-3)
+
+        # The electrolyte current density is a two-component vector field
+        i_e_u = sol_u["Electrolyte current density [A.m-2]"]
+        assert len(i_e_u.entries) == 2
+        assert all(np.all(np.isfinite(component)) for component in i_e_u.entries)
+
+
+class TestBasicDFNUnstructured3D(BaseBasicModelTest):
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.model = pybamm.lithium_ion.BasicDFNUnstructured({"dimensionality": 2})
+
+    def test_matches_2d(self):
+        t_eval = np.linspace(0, 3600, 20)
+
+        model_2d = pybamm.lithium_ion.BasicDFNUnstructured({"dimensionality": 1})
+        sim_2d = pybamm.Simulation(model_2d, var_pts=COARSE_UNSTRUCTURED_VAR_PTS)
+        sol_2d = sim_2d.solve(t_eval)
+
+        sim_3d = pybamm.Simulation(self.model, var_pts=COARSE_UNSTRUCTURED_VAR_PTS)
+        sol_3d = sim_3d.solve(t_eval)
+
+        V_2d = sol_2d["Voltage [V]"](t=t_eval)
+        V_3d = sol_3d["Voltage [V]"](t=t_eval)
+        # The 3D model is uniform in y, so it reproduces the 2D solution
+        np.testing.assert_allclose(V_3d, V_2d, atol=1e-4)
+
+        # Both models report the lithium of the whole cell, in mol
+        for name in ["Total lithium [mol]", "Total solid lithium [mol]"]:
+            np.testing.assert_allclose(
+                sol_3d[name](t=t_eval), sol_2d[name](t=t_eval), rtol=1e-6
+            )
+
+        N_e = sol_3d["Electrolyte flux [mol.m-2.s-1]"]
+        assert len(N_e.entries) == 3
