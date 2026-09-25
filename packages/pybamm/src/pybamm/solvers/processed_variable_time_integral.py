@@ -53,6 +53,27 @@ class ProcessedVariableTimeIntegral:
         inputs,
         sensitivities,
     ) -> np.ndarray:
+        """
+        Compute the sensitivities of the postfix sum or integral.
+
+        Parameters
+        ----------
+        var_name : str
+            The name of the variable, for error messages.
+        entries : np.ndarray
+            The summed variable at each time point, as passed to ``postfix``.
+        t_pts : np.ndarray
+            The time points.
+        inputs : dict
+            The input parameters.
+        sensitivities : np.ndarray
+            The sensitivities of the summed variable at each time point.
+
+        Returns
+        -------
+        np.ndarray
+            The sensitivities of the postfix value.
+        """
         # post fix for discrete time integral won't give correct result
         # if ts are not equal to the discrete times. Raise error
         # in this case
@@ -67,12 +88,14 @@ class ProcessedVariableTimeIntegral:
             )
 
         # The initial condition is a constant, so it adds nothing to a sensitivity
-        the_integral = self._sum_over_time(sensitivities, t_pts)
+        integral_sensitivities = self._sum_over_time(sensitivities, t_pts)
         if self.post_sum_node is None:
-            return the_integral
+            return integral_sensitivities
 
-        y_casadi = casadi.MX.sym("y", entries.shape[0])
-        sens_casadi = casadi.MX.sym("s_var", the_integral.shape)
+        # The chain rule needs the post-sum expression's derivative at the integral
+        integral = self.postfix_sum(entries, t_pts)
+        y_casadi = casadi.MX.sym("y", integral.shape[0])
+        sens_casadi = casadi.MX.sym("s_var", integral_sensitivities.shape)
         t_casadi = casadi.MX.sym("t")
         p_casadi = {
             name: casadi.MX.sym(
@@ -94,7 +117,7 @@ class ProcessedVariableTimeIntegral:
             [t_casadi, y_casadi, p_casadi_stacked, sens_casadi],
             [sens],
         )
-        sens_values = sens_fun(0.0, entries, inputs_stacked, the_integral)
+        sens_values = sens_fun(0.0, integral, inputs_stacked, integral_sensitivities)
         return sens_values.full()
 
     @staticmethod
