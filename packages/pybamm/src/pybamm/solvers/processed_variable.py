@@ -486,7 +486,7 @@ class ProcessedVariable(BaseProcessedVariable):
         if self.time_integral is not None:
             # The value sums over every segment at once, so its sensitivity must too
             S_var = self.time_integral.postfix_sensitivities(
-                self._name, self.data, self.t_pts, self.all_inputs[0], S_var
+                self._name, self._observe_raw(), self.t_pts, self.all_inputs[0], S_var
             )
         sensitivities = {"all": S_var}
 

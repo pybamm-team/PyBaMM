@@ -26,7 +26,7 @@
 - Fixed 3D variables requested through `output_variables` coming back scrambled. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 - Fixed `ProcessedVariable.as_computed()` reordering the spatial axes of 2D and 3D variables and raising on 0D time integrals; spatial time integrals raise `NotImplementedError`. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 - Fixed reading variables from joined `output_variables` solutions; a joined `DiscreteTimeSum`, or expression of a time integral, raises `NotImplementedError` when read. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
-- The sensitivities of an `ExplicitTimeIntegral` leave out its initial condition; with `ExplicitTimeIntegral(c, 5)`, each came back 5 too large. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- The sensitivities of a time integral leave out its initial condition, and an expression of one, such as `ExplicitTimeIntegral(c, 0) ** 2`, is differentiated at the integral instead of at its own value. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - Solutions with sensitivities joined at a shared time point no longer raise a CasADi `RuntimeError` when their sensitivities are read, and a time integral's sensitivities over joined solutions are summed like its value. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - Solutions solved with `output_variables` join without an `IndexError` or `ValueError` when a variable has structural zeros, such as `"Electrolyte current density [A.m-2]"`. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - Fixed a `ValueError` when reading variables from a solve with both scalar and vector inputs. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
