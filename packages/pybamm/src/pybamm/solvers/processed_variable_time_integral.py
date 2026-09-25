@@ -51,6 +51,7 @@ class ProcessedVariableTimeIntegral:
         entries,
         t_pts,
         inputs,
+        sensitivity_names,
         sensitivities,
     ) -> np.ndarray:
         """
@@ -66,6 +67,8 @@ class ProcessedVariableTimeIntegral:
             The time points.
         inputs : dict
             The input parameters.
+        sensitivity_names : list of str
+            The inputs the sensitivities are with respect to, in column order.
         sensitivities : np.ndarray
             The sensitivities of the summed variable at each time point.
 
@@ -97,16 +100,16 @@ class ProcessedVariableTimeIntegral:
         y_casadi = casadi.MX.sym("y", integral.shape[0])
         sens_casadi = casadi.MX.sym("s_var", integral_sensitivities.shape)
         t_casadi = casadi.MX.sym("t")
-        p_casadi = {
-            name: casadi.MX.sym(
-                name, 1 if not isinstance(value, np.ndarray) else value.shape[0]
-            )
-            for name, value in inputs.items()
-        }
+        # Symbolic for the sensitivity inputs only; the others keep their values
+        p_casadi = {}
+        for name in sensitivity_names:
+            value = inputs[name]
+            size = 1 if not isinstance(value, np.ndarray) else value.shape[0]
+            p_casadi[name] = casadi.MX.sym(name, size)
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
-        inputs_stacked = casadi.vertcat(*[v for v in inputs.values()])
+        inputs_stacked = casadi.vertcat(*[inputs[name] for name in sensitivity_names])
         post_sum_casadi = self.post_sum_node.to_casadi(
-            t_casadi, y_casadi, inputs=p_casadi
+            t_casadi, y_casadi, inputs={**inputs, **p_casadi}
         )
 
         dpost_dy = casadi.jacobian(post_sum_casadi, y_casadi)
