@@ -16,6 +16,7 @@ from scipy.io import savemat
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import flatten_inputs
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -661,13 +662,7 @@ class Solution(SolutionBase):
     @property
     def all_inputs_stacked(self) -> list[np.ndarray]:
         if self._all_inputs_stacked is None:
-            # Mixed scalar and vector inputs are ragged, so ravel each first
-            self._all_inputs_stacked = [
-                np.concatenate([np.ravel(value) for value in inp.values()])
-                if inp
-                else np.array([])
-                for inp in self.all_inputs
-            ]
+            self._all_inputs_stacked = [flatten_inputs(inp) for inp in self.all_inputs]
         return self._all_inputs_stacked
 
     @property
