@@ -18,6 +18,13 @@ import pybamm
 from pybamm.codegen.compilation import aot_compile
 
 
+def _flatten_inputs(inputs_dict):
+    """Flatten ``{name: value}`` into a 1-D float array in dict-key order."""
+    if not inputs_dict:
+        return np.zeros(0)
+    return np.concatenate([np.asarray(v).reshape(-1) for v in inputs_dict.values()])
+
+
 class NumpyEncoder(json.JSONEncoder):
     """
     Numpy serialiser helper class that converts numpy arrays to a list.
@@ -517,13 +524,7 @@ class Solution(SolutionBase):
     @property
     def all_inputs_stacked(self) -> list[np.ndarray]:
         if self._all_inputs_stacked is None:
-            # Mixed scalar and vector inputs are ragged, so ravel each first
-            self._all_inputs_stacked = [
-                np.concatenate([np.ravel(value) for value in inp.values()])
-                if inp
-                else np.array([])
-                for inp in self.all_inputs
-            ]
+            self._all_inputs_stacked = [_flatten_inputs(inp) for inp in self.all_inputs]
         return self._all_inputs_stacked
 
     @property

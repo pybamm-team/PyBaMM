@@ -13,6 +13,7 @@ from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.solution import _flatten_inputs
 
 _UNSET = object()
 
@@ -41,13 +42,6 @@ def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.n
         [np.max(np.abs(inputs_dict[name]), initial=0.0) for name in sensitivity_names],
         dtype=np.float64,
     )
-
-
-def _flatten_inputs(inputs_dict):
-    """Flatten ``{name: value}`` into a 1-D float array in dict-key order."""
-    if not inputs_dict:
-        return np.zeros(0)
-    return np.concatenate([np.asarray(v).reshape(-1) for v in inputs_dict.values()])
 
 
 # Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
