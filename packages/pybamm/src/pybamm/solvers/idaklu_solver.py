@@ -13,15 +13,9 @@ from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import flatten_inputs, stack_inputs
 
 _UNSET = object()
-
-
-def _flatten_inputs(inputs_dict):
-    """Flatten ``{name: value}`` into a 1-D float array in dict-key order."""
-    if not inputs_dict:
-        return np.zeros(0)
-    return np.concatenate([np.asarray(v).reshape(-1) for v in inputs_dict.values()])
 
 
 # Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
@@ -324,13 +318,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "num_steps_no_progress": 0,
             "t_no_progress": 0.0,
         }
-        if not user_options:
-            return default_options
-
-        options = default_options | user_options
-
+        options = self._overlay_options(
+            default_options, user_options, solver_name="IDAKLU"
+        )
         self._check_options(options)
-
         return options
 
     def _check_options(self, options: dict):
@@ -681,7 +672,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # stack inputs so that they are a 2D array of shape (number_of_inputs, number_of_parameters)
         if inputs_list and inputs_list[0]:
-            inputs = np.vstack([_flatten_inputs(d) for d in inputs_list])
+            inputs = np.vstack([flatten_inputs(d) for d in inputs_list])
         else:
             inputs = np.array([[]] * len(inputs_list))
 
@@ -829,7 +820,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self._setup["rootfn_casadi"](
                     float(sol.t[-1]),
                     np.asarray(y_event).reshape(-1),
-                    _flatten_inputs(inputs_dict),
+                    flatten_inputs(inputs_dict),
                 )
             ).reshape(-1)
             newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
@@ -926,8 +917,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # set model.y0_list
         super()._set_consistent_initialization(model, time, inputs_list)
 
-        casadi_format = model.convert_to_format == "casadi"
-
         def handle_y0(y0):
             if isinstance(y0, casadi.DM):
                 y0 = y0.full()
@@ -945,7 +934,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             ydot0_list = [np.zeros_like(y0) for y0 in y0_list]
 
-        sensitivity = model.y0S_list and casadi_format
+        sensitivity = model.y0S_list and model.uses_stacked_inputs
         if sensitivity:
             y0S_list = model.y0S_list
             y0full = []
@@ -983,20 +972,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving.
 
         """
-        casadi_format = model.convert_to_format == "casadi"
-
         inputs_dict = inputs_dict or {}
-        # stack inputs
-        if inputs_dict:
-            arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
-            inputs = np.vstack(arrays_to_stack)
+        if model.uses_stacked_inputs:
+            input_eval = stack_inputs(inputs_dict)
         else:
-            inputs = np.array([[]])
+            input_eval = inputs_dict
 
         ydot0 = np.zeros_like(y0)
-        # calculate the time derivatives of the differential equations
-        input_eval = inputs if casadi_format else inputs_dict
-
         rhs0 = model.rhs_eval(time, y0, input_eval)
         if isinstance(rhs0, casadi.DM):
             rhs0 = rhs0.full()

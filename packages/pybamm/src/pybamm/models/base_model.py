@@ -84,23 +84,15 @@ class BaseModel:
         A dictionary of submodels that the model is composed of.
     use_jacobian: bool
         Whether to use the Jacobian when solving the model (default is True).
-    convert_to_format: str
-        Specifies the format to convert the expression trees representing the RHS,
-        algebraic equations, Jacobian, and events.
-        Options are:
-
-            - None: retain PyBaMM expression tree structure.
-            - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
-            - "casadi": convert to CasADi expression tree for Jacobian calculation.
-            - "jax": convert to JAX expression tree.
-
-        Default is "casadi".
     is_discretised: bool
         Indicates whether the model has been discretised (default is False).
     y_slices: None or list
         Slices of the concatenated state vector after discretisation, used to track
         different submodels in the full concatenated solution vector.
     """
+
+    _DEFAULT_CONVERT_TO_FORMAT = "casadi"
+    _VALID_CONVERT_TO_FORMATS = (None, "python", "casadi", "jax")
 
     def __init__(self, name="Unnamed model"):
         self.name = name
@@ -141,7 +133,7 @@ class BaseModel:
 
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
-        self.convert_to_format = "casadi"
+        self.convert_to_format = self._DEFAULT_CONVERT_TO_FORMAT
 
         # Model is not initially discretised or parameterised
         self.is_discretised = False
@@ -177,6 +169,9 @@ class BaseModel:
     @classmethod
     def generic_deserialise(cls, instance, properties):
         # Initialise model with stored variables that have already been discretised
+        instance.convert_to_format = properties.get(
+            "convert_to_format", instance.convert_to_format
+        )
         instance._concatenated_rhs = properties["concatenated_rhs"]
         instance._concatenated_algebraic = properties["concatenated_algebraic"]
         instance._concatenated_initial_conditions = properties[
@@ -236,6 +231,44 @@ class BaseModel:
     @name.setter
     def name(self, value):
         self._name = value
+
+    def __setstate__(self, state: dict) -> None:
+        # Pickles from before convert_to_format was a property hold it under the
+        # public name, which the property shadows; copy rather than mutate state.
+        if "convert_to_format" in state:
+            state = dict(state)
+            state["_convert_to_format"] = state.pop("convert_to_format")
+        self.__dict__.update(state)
+
+    @property
+    def convert_to_format(self) -> str | None:
+        """
+        The format the solver converts the RHS, algebraic equations, Jacobian and
+        events to. Options are:
+
+            - None: retain PyBaMM expression tree structure.
+            - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
+            - "casadi": convert to CasADi expression tree for Jacobian calculation.
+            - "jax": convert to JAX expression tree.
+
+        Default is "casadi".
+        """
+        return self._convert_to_format
+
+    @convert_to_format.setter
+    def convert_to_format(self, value: str | None) -> None:
+        if value not in self._VALID_CONVERT_TO_FORMATS:
+            valid = ", ".join(repr(v) for v in self._VALID_CONVERT_TO_FORMATS)
+            raise pybamm.OptionError(
+                f"convert_to_format must be one of {valid}, got {value!r}"
+            )
+        self._convert_to_format = value
+
+    @property
+    def uses_stacked_inputs(self) -> bool:
+        """Whether the converted evaluators take the inputs stacked into one
+        column vector rather than as a dict."""
+        return self._convert_to_format == "casadi"
 
     @property
     def rhs(self):

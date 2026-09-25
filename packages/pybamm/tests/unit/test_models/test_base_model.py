@@ -3,6 +3,7 @@
 #
 
 import os
+import pickle  # nosec B403 - used in tests with trusted input
 import platform
 import subprocess  # nosec
 import sys
@@ -1774,3 +1775,51 @@ class TestBaseModel:
     def test_y0_property(self):
         model = pybamm.BaseModel()
         assert model.y0 is None
+
+    def test_convert_to_format_validated(self):
+        model = pybamm.BaseModel()
+        for valid in (None, "python", "casadi", "jax"):
+            model.convert_to_format = valid
+            assert model.convert_to_format == valid
+        with pytest.raises(
+            pybamm.OptionError, match="convert_to_format must be one of"
+        ):
+            model.convert_to_format = "fortran"
+
+    def test_uses_stacked_inputs(self):
+        model = pybamm.BaseModel()
+        for convert_to_format, stacked in [
+            ("casadi", True),
+            ("python", False),
+            ("jax", False),
+            (None, False),
+        ]:
+            model.convert_to_format = convert_to_format
+            assert model.uses_stacked_inputs is stacked
+
+    def test_unpickle_convert_to_format_under_its_public_name(self, monkeypatch):
+        # Pickles written before convert_to_format became a property store it
+        # in the instance dict under the public name.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1.0}
+        model.variables = {"u": u}
+        model.convert_to_format = "python"
+
+        def public_name_state(self):
+            state = self.__dict__.copy()
+            state["convert_to_format"] = state.pop("_convert_to_format")
+            return state
+
+        monkeypatch.setattr(
+            pybamm.BaseModel, "__getstate__", public_name_state, raising=False
+        )
+        data = pickle.dumps(model)
+        monkeypatch.undo()
+
+        restored = pickle.loads(data)  # nosec B301
+        assert restored.convert_to_format == "python"
+        assert "convert_to_format" not in vars(restored)
+        solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])
+        np.testing.assert_allclose(solution["u"](1.0), np.exp(-1.0), rtol=1e-3)

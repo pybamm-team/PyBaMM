@@ -6,6 +6,7 @@ from pybammsolvers import idaklu
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import flatten_inputs
 
 _DEFAULT_OPTIONS = {
     "compile": False,
@@ -89,7 +90,9 @@ class NonlinearSolver(pybamm.BaseSolver):
         self.on_failure = on_failure or "error"
         self._algebraic_solver = True
         self._user_options = options or {}
-        self._options = _DEFAULT_OPTIONS | self._user_options
+        self._options = self._overlay_options(
+            _DEFAULT_OPTIONS, self._user_options, solver_name="Nonlinear"
+        )
 
     @staticmethod
     def _check_tolerance(value):
@@ -195,11 +198,7 @@ class NonlinearSolver(pybamm.BaseSolver):
         root_solver = self.get_root_solver(model, inputs_dict, t_eval)
         len_rhs = model.len_rhs
 
-        inputs_flat = (
-            np.concatenate([np.atleast_1d(v).ravel() for v in inputs_dict.values()])
-            if inputs_dict
-            else np.empty(0)
-        )
+        inputs_flat = flatten_inputs(inputs_dict)
 
         y0_np = np.asarray(y0).ravel()
         y0_diff = y0_np[:len_rhs]

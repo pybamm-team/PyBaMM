@@ -242,6 +242,41 @@ class TestSerialise:
         newest_solver = newest_model.default_solver
         newest_solver.solve(newest_model, [0, 3600])
 
+    @pytest.mark.parametrize("convert_to_format", [None, "python"])
+    def test_discretised_model_round_trips_convert_to_format(self, convert_to_format):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        model.rhs = {a: -a}
+        model.initial_conditions = {a: 1}
+        model.variables = {"a": a}
+        pybamm.Discretisation().process_model(model)
+        model.convert_to_format = convert_to_format
+
+        data = json.loads(json.dumps(Serialise().serialise_model(model)))
+        assert Serialise().load_model(data).convert_to_format == convert_to_format
+        loaded = Serialise().load_model(data, battery_model=pybamm.BaseModel)
+        assert loaded.convert_to_format == convert_to_format
+
+        # files written before the key existed load with the model's default
+        del data["convert_to_format"]
+        assert Serialise().load_model(data).convert_to_format == "casadi"
+
+    @pytest.mark.parametrize("convert_to_format", [None, "python"])
+    def test_custom_model_round_trips_convert_to_format(self, convert_to_format):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        model.rhs = {a: -a}
+        model.initial_conditions = {a: 1}
+        model.variables = {"a": a}
+        model.convert_to_format = convert_to_format
+
+        data = json.loads(json.dumps(Serialise.serialise_custom_model(model)))
+        loaded = Serialise.load_custom_model(data)
+        assert loaded.convert_to_format == convert_to_format
+
+        del data["model"]["convert_to_format"]
+        assert Serialise.load_custom_model(data).convert_to_format == "casadi"
+
     def test_save_experiment_model_error(self):
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment(["Discharge at 1C for 1 hour"])
