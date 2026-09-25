@@ -867,6 +867,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not save_outputs_only:
             return newsol
 
+        # The states at t0 after consistent initialization, for first_state
+        newsol._y0 = sol.y_init
+
         # Populate variables and sensitivities dictionaries directly
         number_of_samples = sol.y.shape[0] // number_of_timesteps
         sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
@@ -1221,6 +1224,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         new_sol._all_inputs_stacked = solution.all_inputs_stacked
         new_sol._all_inputs_casadi = solution.all_inputs_casadi
         new_sol.closest_event_idx = solution.closest_event_idx
+        new_sol._y0 = solution._y0
 
         new_sol.solve_time = solution.solve_time
         new_sol.integration_time = solution.integration_time

@@ -600,6 +600,9 @@ void IDAKLUSolverOpenMP<ExprSet>::GetSolutionDerivatives(sunrealtype t) {
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::StoreInitialPoint(sunrealtype t0) {
   DEBUG("IDAKLUSolver::StoreInitialPoint");
+  if (save_outputs_only) {
+    y_init_.assign(y_val_, y_val_ + number_of_states);
+  }
   // First point: always a breakpoint (must be kept)
   if (use_knot_reduction_) {
     knot_reducer->ProcessPoint(t0, y_val_, yp_val_, /*is_breakpoint=*/true);
@@ -703,6 +706,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     save_hermite ? std::move(yp) : std::vector<sunrealtype>(),
     std::move(yS_reordered),
     std::move(ypS_reordered),
+    std::move(y_init_),
     std::move(yterm_vec),
     arg_sens0,
     arg_sens1,

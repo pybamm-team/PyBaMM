@@ -179,6 +179,26 @@ class TestExponentialDecaySolver:
         # For our model, the output variable is simply the final state slice
         np.testing.assert_allclose(sol.y_term, y_exact[-1], rtol=1e-5)
 
+    def test_solution_initial_state(self, exponential_decay_solver):
+        """
+        Verify Solution returns the initial state alongside the outputs.
+
+        Tests that y_init holds the state at t0, which the outputs do not.
+        """
+        solver_data = exponential_decay_solver
+        solver = solver_data["solver"]
+        y0 = solver_data["y0"]
+        yp0 = solver_data["yp0"]
+        inputs = solver_data["inputs"]
+        t_eval = solver_data["model"]["t_eval"]
+        model_y0 = solver_data["model"]["y0"]
+
+        solution = solver.solve(t_eval, t_eval, y0, yp0, inputs)
+        sol = solution[0]
+
+        np.testing.assert_allclose(sol.y_init, model_y0, rtol=1e-10)
+        assert sol.y_init.shape == sol.y_term.shape
+
     def test_solution_dimensions_consistency(self, exponential_decay_solver):
         """
         Verify Solution arrays have consistent dimensions.

@@ -815,6 +815,56 @@ class TestSolution:
                 state.sensitivities["all"][:, 0], expected, atol=1e-6
             )
 
+    def test_first_state_of_output_variables_solve(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u, v: 2 * a + 0 * v}
+        model.initial_conditions = {u: a, v: 3 * a}
+        model.variables = {"u": u}
+        solver = pybamm.IDAKLUSolver(output_variables=["u"])
+        first, later = (
+            solver.solve(
+                model,
+                [t0, t0 + 1],
+                inputs={"a": a_value},
+                calculate_sensitivities=True,
+            )
+            for t0, a_value in [(0, 1.0), (1, 2.0)]
+        )
+
+        # Solving the model again must leave the first solution's initial state
+        # alone, and the sensitivities must stay out of it
+        for solution in (
+            first,
+            first.copy(),
+            first + later,
+            pybamm.Solution.from_sub_solutions([first, later]),
+        ):
+            np.testing.assert_allclose(
+                solution.first_state.all_ys[0], [[1], [3]], rtol=1e-12
+            )
+
+    def test_first_state_of_output_variables_solve_is_consistent(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -u}
+        model.algebraic = {v: v - 2 * u}
+        # Consistent initialization corrects this guess for v to 2 u
+        model.initial_conditions = {u: 1, v: 0}
+        model.variables = {"u": u}
+        full_solution, solution = (
+            pybamm.IDAKLUSolver(output_variables=output_variables).solve(model, [0, 1])
+            for output_variables in (None, ["u"])
+        )
+
+        np.testing.assert_allclose(solution.first_state.y, [[1], [2]], rtol=1e-6)
+        np.testing.assert_allclose(
+            solution.first_state.y, full_solution.first_state.y, rtol=1e-6
+        )
+
     def test_first_last_state_empty_y(self):
         # check that first and last state work when y is empty
         # due to only variables being returned (required for experiments)

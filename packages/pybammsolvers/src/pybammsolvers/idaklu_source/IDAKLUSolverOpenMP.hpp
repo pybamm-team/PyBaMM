@@ -189,6 +189,9 @@ public:
   sunrealtype *yp_val_ = nullptr;
   vector<sunrealtype *> yS_val_;
   vector<sunrealtype *> ypS_val_;
+  // State at t0 after consistent initialization, kept when save_outputs_only
+  // returns outputs in place of the states
+  std::vector<sunrealtype> y_init_;
   // |p| per sensitivity parameter, so IDAS weights the scaled sensitivity
   // pbar*yS like a state. Empty leaves IDAS at its pbar = 1 default.
   std::vector<sunrealtype> sens_scales_;

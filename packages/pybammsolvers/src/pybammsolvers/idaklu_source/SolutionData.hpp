@@ -44,6 +44,7 @@ class SolutionData
       std::vector<sunrealtype>&& yp,
       std::vector<sunrealtype>&& yS,
       std::vector<sunrealtype>&& ypS,
+      std::vector<sunrealtype>&& yinit,
       std::vector<sunrealtype>&& yterm,
       ptrdiff_t arg_sens0,
       ptrdiff_t arg_sens1,
@@ -55,6 +56,7 @@ class SolutionData
         yp_vec(std::move(yp)),
         yS_vec(std::move(yS)),
         ypS_vec(std::move(ypS)),
+        yinit_vec(std::move(yinit)),
         yterm_vec(std::move(yterm)),
         arg_sens0(arg_sens0),
         arg_sens1(arg_sens1),
@@ -81,6 +83,7 @@ class SolutionData
         vector_to_numpy_3d(std::move(yS_vec), arg_sens0, arg_sens1, arg_sens2),
         vector_to_numpy_3d(std::move(ypS_vec),
                            save_hermite ? arg_sens0 : 0, arg_sens1, arg_sens2),
+        vector_to_numpy(std::move(yinit_vec)),
         vector_to_numpy(std::move(yterm_vec))
       );
     }
@@ -92,6 +95,7 @@ private:
     std::vector<sunrealtype> yp_vec;
     std::vector<sunrealtype> yS_vec;
     std::vector<sunrealtype> ypS_vec;
+    std::vector<sunrealtype> yinit_vec;
     std::vector<sunrealtype> yterm_vec;
     ptrdiff_t arg_sens0 = 0;
     ptrdiff_t arg_sens1 = 0;

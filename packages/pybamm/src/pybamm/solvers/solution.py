@@ -324,6 +324,8 @@ class Solution(SolutionBase):
         self._y_event = y_event
         self._termination = termination
         self.closest_event_idx = None
+        # Initial state of a solve that returns only output variables, so no states
+        self._y0 = None
 
         super().__init__()
         self.integration_time = None
@@ -610,11 +612,10 @@ class Solution(SolutionBase):
         else:
             all_yps = self.all_yps[0][:, :1]
 
-        if not self.variables_returned:
+        if self._y0 is None:
             all_ys = self.all_ys[0][:, :1]
         else:
-            # Get first state from initial conditions as all_ys is empty
-            all_ys = self.all_models[0].y0full[0].reshape(-1, 1)
+            all_ys = self._y0.reshape(-1, 1)
 
         new_sol = Solution(
             self.all_ts[0][:1],
@@ -1183,6 +1184,7 @@ class Solution(SolutionBase):
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
+        new_sol._y0 = self._y0
         new_sol._all_inputs_stacked = self.all_inputs_stacked + other.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
@@ -1300,6 +1302,7 @@ class Solution(SolutionBase):
         # keeps the running closest_event_idx, so a trailing duplicate must not
         # overwrite it.
         new_sol.closest_event_idx = segments[-1].closest_event_idx
+        new_sol._y0 = segments[0]._y0
         # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
         new_sol._sub_solutions = sub_sols
 
@@ -1342,6 +1345,7 @@ class Solution(SolutionBase):
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
         new_sol.closest_event_idx = self.closest_event_idx
+        new_sol._y0 = self._y0
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
