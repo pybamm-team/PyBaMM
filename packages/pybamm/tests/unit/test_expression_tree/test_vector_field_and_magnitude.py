@@ -42,7 +42,9 @@ class TestVectorFieldAndMagnitude:
         )
         assert vf_processed == pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
 
-        with pytest.raises(ValueError, match=r"applied to a vector field"):
+        with pytest.raises(
+            pybamm.DiscretisationError, match=r"applied to a vector field"
+        ):
             disc.process_symbol(pybamm.Magnitude(pybamm.Scalar(1), "lr"))
 
         assert negative_vf_processed == pybamm.VectorField(
@@ -55,14 +57,18 @@ class TestVectorFieldAndMagnitude:
             pybamm.VectorField(thing_lr, thing_tb)
 
         vf_evaluates_on_edges = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
-        vf_evaluates_on_edges.lr_field._evaluates_on_edges = lambda _: True
-        vf_evaluates_on_edges.tb_field._evaluates_on_edges = lambda _: False
+        vf_evaluates_on_edges.lr_field._saved_evaluates_on_edges = dict.fromkeys(
+            pybamm.expression_tree.symbol.DOMAIN_LEVELS, True
+        )
+        vf_evaluates_on_edges.tb_field._saved_evaluates_on_edges = dict.fromkeys(
+            pybamm.expression_tree.symbol.DOMAIN_LEVELS, False
+        )
         with pytest.raises(ValueError, match=r"must either"):
             vf_evaluates_on_edges.evaluates_on_edges("primary")
 
         assert magnitude_lr.new_copy([vector_field]) == magnitude_lr
 
-        with pytest.raises(ValueError, match=r"Invalid direction"):
+        with pytest.raises(pybamm.DiscretisationError, match=r"Invalid direction"):
             disc.process_symbol(pybamm.Magnitude(vector_field, "asdf"))
 
     def test_component_and_norm_discretisation(self, mesh_2d):
@@ -116,11 +122,12 @@ class TestVectorFieldAndMagnitude:
         vector_field = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
         disc_vf = disc.process_symbol(vector_field)
         marker = pybamm.StateVector(slice(0, 1))
-        disc_vf._disc_state_vector = marker
+        disc_vf = pybamm.VectorField(*disc_vf.components, disc_state_vector=marker)
+        disc._discretised_symbols[vector_field] = disc_vf
 
         one = pybamm.Constant(1, "one")
         disc_sum = disc.process_symbol(vector_field + one)
-        assert disc_sum._disc_state_vector is marker
+        assert disc_sum.disc_state_vector is marker
 
         disc_neg = disc.process_symbol(-vector_field)
-        assert disc_neg._disc_state_vector is marker
+        assert disc_neg.disc_state_vector is marker

@@ -17,29 +17,6 @@ from scipy.sparse import (
 import pybamm
 
 
-class _EvaluatesOnEdgesOverride:
-    __slots__ = ("direction", "fallback")
-
-    def __init__(self, direction, fallback):
-        self.direction = direction
-        self.fallback = fallback
-
-    def __call__(self, dim):
-        if dim == "primary":
-            return self.direction
-        return self.fallback(dim)
-
-
-def _evaluates_on_edges_one_side(symbol, direction):
-    if hasattr(symbol, "_evaluates_on_edges_original"):
-        return symbol
-    symbol._evaluates_on_edges_original = symbol._evaluates_on_edges
-    symbol._evaluates_on_edges = _EvaluatesOnEdgesOverride(
-        direction, symbol._evaluates_on_edges_original
-    )
-    return symbol
-
-
 class FiniteVolume2D(pybamm.SpatialMethod):
     """
     A class which implements the steps specific to the finite volume method during
@@ -139,7 +116,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         gradient_matrix = self.gradient_matrix(domain, symbol.domains, direction)
 
         grad = gradient_matrix @ discretised_symbol
-        grad.copy_domains(symbol)
+        grad = grad.with_domains(symbol)
 
         # Add Neumann boundary conditions, if defined
         if symbol in boundary_conditions:
@@ -160,9 +137,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         """
         # Multiply by gradient matrix
         grad_lr = self._gradient(symbol, discretised_symbol, boundary_conditions, "lr")
-        grad_lr = _evaluates_on_edges_one_side(grad_lr, "lr")
+        grad_lr = grad_lr._replace(_edges_direction="lr")
         grad_tb = self._gradient(symbol, discretised_symbol, boundary_conditions, "tb")
-        grad_tb = _evaluates_on_edges_one_side(grad_tb, "tb")
+        grad_tb = grad_tb._replace(_edges_direction="tb")
         grad = pybamm.VectorField(grad_lr, grad_tb)
         return grad
 
@@ -540,9 +517,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         left_mesh_x = left_mesh.nodes_lr[-1]
         dx = right_mesh_x - left_mesh_x
         dy_r = (right_matrix / dx) @ right_symbol_disc
-        dy_r.clear_domains()
+        dy_r = dy_r.without_domains()
         dy_l = (left_matrix / dx) @ left_symbol_disc
-        dy_l.clear_domains()
+        dy_l = dy_l.without_domains()
 
         return dy_r - dy_l
 
@@ -804,7 +781,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Need to match the domain. E.g. in the case of the boundary condition
         # on the particle, the gradient has domain particle but the bcs_vector
         # has domain electrode, since it is a function of the macroscopic variables
-        bcs_vector.copy_domains(discretised_symbol)
+        bcs_vector = bcs_vector.with_domains(discretised_symbol)
 
         # Make matrix to calculate ghost nodes
         # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
@@ -1073,7 +1050,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Need to match the domain. E.g. in the case of the boundary condition
         # on the particle, the gradient has domain particle but the bcs_vector
         # has domain electrode, since it is a function of the macroscopic variables
-        bcs_vector.copy_domains(discretised_gradient)
+        bcs_vector = bcs_vector.with_domains(discretised_gradient)
 
         # Make matrix which makes "gaps" in the the discretised gradient into
         # which the known Neumann values will be added. E.g. in 1D if the left
@@ -1899,9 +1876,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # Return boundary value with domain given by symbol
         matrix = pybamm.Matrix(matrix)
         boundary_value = matrix @ discretised_child
-        boundary_value.copy_domains(symbol)
+        boundary_value = boundary_value.with_domains(symbol)
 
-        additive.copy_domains(symbol)
+        additive = additive.with_domains(symbol)
         boundary_value += additive
 
         return boundary_value
@@ -2251,10 +2228,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         See :meth:`pybamm.FiniteVolume.shift`
         """
         new_symbol = self.shift(discretised_symbol, "node to edge", method, direction)
-        if direction == "lr":
-            new_symbol = _evaluates_on_edges_one_side(new_symbol, "lr")
-        elif direction == "tb":
-            new_symbol = _evaluates_on_edges_one_side(new_symbol, "tb")
+        if direction in ("lr", "tb"):
+            new_symbol = new_symbol._replace(_edges_direction=direction)
         return new_symbol
 
     def shift(self, discretised_symbol, shift_key, method, direction="lr"):

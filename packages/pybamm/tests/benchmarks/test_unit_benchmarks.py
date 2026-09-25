@@ -69,6 +69,43 @@ def test_create_expression(benchmark):
     benchmark(_create_expression)
 
 
+class TestTreeUtilityBenchmarks:
+    @pytest.mark.parametrize("structure", ["tree", "dfn"])
+    @pytest.mark.parametrize("matched", [False, True])
+    @pytest.mark.parametrize("shared_cache", [False, True])
+    def test_replace_symbols(self, benchmark, structure, matched, shared_cache):
+        if structure == "tree":
+            leaves = [pybamm.Parameter(f"p{index}") for index in range(4096)]
+            target = leaves[0]
+            while len(leaves) > 1:
+                leaves = [
+                    pybamm.Addition(leaves[index], leaves[index + 1])
+                    for index in range(0, len(leaves), 2)
+                ]
+            roots = leaves
+        else:
+            model = pybamm.lithium_ion.DFN()
+            roots = [
+                *model.rhs.values(),
+                *model.algebraic.values(),
+                *model.variables.values(),
+            ]
+            target = pybamm.Parameter(
+                "Maximum concentration in negative electrode [mol.m-3]"
+            )
+        if not matched:
+            target = pybamm.Parameter("absent replacement target")
+        mapping = {target: 1234}
+        for root in roots:
+            hash(root)
+
+        def run():
+            cache = {} if shared_cache else None
+            return [pybamm.replace(root, mapping, cache=cache) for root in roots]
+
+        benchmark(run)
+
+
 def test_parameterise(benchmark):
     def setup():
         R, model = _create_expression()

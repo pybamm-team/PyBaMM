@@ -35,6 +35,8 @@ class IndependentVariable(pybamm.Symbol):
         deprecated.
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         name: str,
@@ -52,7 +54,7 @@ class IndependentVariable(pybamm.Symbol):
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(self.domains)
+        return pybamm.evaluate_for_shape_using_domain(self._domains)
 
     def _jac(self, variable) -> pybamm.Scalar:
         """See :meth:`pybamm.Symbol._jac()`."""
@@ -71,13 +73,15 @@ class IndependentVariable(pybamm.Symbol):
         perform_simplifications=True,
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return self.__class__(self.name, domains=self.domains)
+        return self.__class__(self.name, domains=self._domains)
 
 
 class Time(IndependentVariable):
     """
     A node in the expression tree representing time.
     """
+
+    __slots__ = ()
 
     def __init__(self):
         super().__init__("time")
@@ -142,6 +146,8 @@ class SpatialVariable(IndependentVariable):
         deprecated.
     """
 
+    __slots__ = ("coord_sys", "direction")
+
     def __init__(
         self,
         name: str,
@@ -155,7 +161,7 @@ class SpatialVariable(IndependentVariable):
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
-        domain = self.domain
+        domain = self._domains["primary"]
         self.direction = direction
 
         if domain == []:
@@ -185,12 +191,14 @@ class SpatialVariable(IndependentVariable):
         perform_simplifications=True,
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return self.__class__(self.name, domains=self.domains, coord_sys=self.coord_sys)
+        return self.__class__(
+            self.name, domains=self._domains, coord_sys=self.coord_sys
+        )
 
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self.domains,
+            "domains": self._domains,
             "coord_sys": self.coord_sys,
             "direction": getattr(self, "direction", None),
         }
@@ -223,6 +231,8 @@ class SpatialVariableEdge(SpatialVariable):
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
     """
+
+    __slots__ = ()
 
     def _evaluates_on_edges(self, dimension):
         return True

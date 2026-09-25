@@ -557,7 +557,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # condition on the particle, the gradient has domain particle
         # but the bcs_vector has domain electrode, since it is a
         # function of the macroscopic variables
-        bcs_vector.copy_domains(discretised_symbol)
+        bcs_vector = bcs_vector.with_domains(discretised_symbol)
 
         # Make matrix which makes "gaps" at the boundaries into which
         # the known Dirichlet values will be added. If the boundary
@@ -654,7 +654,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # condition on the particle, the gradient has domain particle
         # but the bcs_vector has domain electrode, since it is a
         # function of the macroscopic variables
-        bcs_vector.copy_domains(discretised_gradient)
+        bcs_vector = bcs_vector.with_domains(discretised_gradient)
 
         # Make matrix which makes "gaps" at the boundaries into which
         # the known Neumann values will be added. If the boundary

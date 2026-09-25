@@ -7,7 +7,6 @@ from scipy.sparse.linalg import spsolve
 import pybamm
 
 from .base_simulation import BaseSimulation
-from .eis_utils import SymbolReplacer
 
 
 class EISSimulation(BaseSimulation):
@@ -42,27 +41,23 @@ class EISSimulation(BaseSimulation):
         skip_surface_form_check=False,
     ):
         timer = pybamm.Timer()
-        model_name = model.name
-
-        parameter_values = parameter_values or model.default_parameter_values
 
         # Validate required variables and surface form before any processing
         self._validate_model_for_eis(model, skip_surface_form_check)
 
+        model_name = model.name
+
+        parameter_values = parameter_values or model.default_parameter_values
+        parameter_values = parameter_values.copy()
+
         pybamm.logger.info(f"Setting up {model_name} for EIS")
-        eis_model = self._set_up_model_for_eis(model)
-
-        # Compute impedance scale factor after model transformation: the
-        # external-circuit FunctionControl swap rescales "Current [A]" by
-        # the nominal cell capacity, which must be reflected in z = V/I.
-        V_scale = getattr(eis_model.variables["Voltage [V]"], "scale", 1)
-        I_scale = getattr(eis_model.variables["Current [A]"], "scale", 1)
-        self._z_scale = parameter_values.evaluate(V_scale / I_scale)
-
-        parameter_values["Current function [A]"] = 0
+        # set current to zero as an algebraic state
+        step = pybamm.step.CustomStepImplicit(lambda v: v["Current [A]"] - 0)
+        model, parameter_values = step.set_up(model.new_copy(), parameter_values)
+        model.initial_conditions[model.variables["Current [A]"]] = pybamm.Scalar(0)
 
         super().__init__(
-            eis_model,
+            model,
             parameter_values=parameter_values,
             geometry=geometry,
             submesh_types=submesh_types,
@@ -104,60 +99,6 @@ class EISSimulation(BaseSimulation):
                 f'options={{"surface form": "differential"}})'
             )
 
-    @staticmethod
-    def _set_up_model_for_eis(model):
-        """Prepare a model for frequency-domain EIS.
-
-        Creates a copy of the model with voltage and current as algebraic
-        state variables, suitable for extracting the mass matrix and Jacobian
-        needed by the frequency-domain solver.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            Original model.
-
-        Returns
-        -------
-        new_model : :class:`pybamm.BaseModel`
-            Modified model copy.
-        """
-
-        new_model = model.new_copy()
-
-        # Add voltage as an algebraic state variable
-        V_cell = pybamm.Variable("Voltage variable [V]")
-        new_model.variables["Voltage variable [V]"] = V_cell
-        V = new_model.variables["Voltage [V]"]
-        new_model.algebraic[V_cell] = V_cell - V
-        new_model.initial_conditions[V_cell] = new_model.param.ocv_init
-
-        # Replace current with a FunctionControl variable
-        external_circuit_variables = pybamm.external_circuit.FunctionControl(
-            model.param, None, model.options, control="algebraic"
-        ).get_fundamental_variables()
-
-        symbol_replacement_map = {
-            new_model.variables[name]: variable
-            for name, variable in external_circuit_variables.items()
-            if name in new_model.variables
-        }
-        replacer = SymbolReplacer(
-            symbol_replacement_map, process_initial_conditions=False
-        )
-        replacer.process_model(new_model, inplace=True)
-
-        # Add algebraic equation for current: I = I_applied (= 0 at equilibrium)
-        I_var = new_model.variables["Current variable [A]"]
-        I_ = new_model.variables["Current [A]"]
-        I_applied = pybamm.FunctionParameter(
-            "Current function [A]", {"Time [s]": pybamm.t}
-        )
-        new_model.algebraic[I_var] = I_ - I_applied
-        new_model.initial_conditions[I_var] = 0
-
-        return new_model
-
     def _build_matrix_problem(self, inputs_dict=None):
         """Build the mass matrix, Jacobian, and forcing vector.
 
@@ -198,21 +139,34 @@ class EISSimulation(BaseSimulation):
             solver.set_up(model, inputs=inputs_dict)
 
         y0 = model.concatenated_initial_conditions.evaluate(0, inputs=inputs_dict)
-        J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
-        neg_J = -J_sparse if isinstance(J_sparse, csc_matrix) else -csc_matrix(J_sparse)
+        outputs = pybamm.numpy_concatenation(
+            model.get_processed_variable("Voltage [V]"),
+            model.get_processed_variable("Current [A]"),
+        )
+        from casadi import MX, Function, jacobian
 
-        # M and b are independent of operating point and cached after first call,
-        # but we have a defensive guard to invalidate it if the state vector size changes
-        n = y0.shape[0]
-        if not hasattr(self, "_cached_M") or self._cached_b.shape[0] != n:
+        y = MX.sym("y", y0.size)
+        output_expression = outputs.to_casadi(t=0, y=y, inputs=inputs_dict)
+        self._output_jacobian = Function(
+            "eis_outputs", [y], [jacobian(output_expression, y)]
+        )(y0).sparse()
+        J_sparse = model.jac_rhs_algebraic_eval(0, y0, casadi_inputs).sparse()
+        neg_J = -csc_matrix(J_sparse)
+
+        # State ordering and matrices are fixed until the model is rebuilt.
+        if getattr(self, "_matrix_model", None) is not model:
+            indices = {
+                var.name: slices[0].start for var, slices in model.y_slices.items()
+            }
+            self._current_index = indices["Current variable [A]"]
             self._cached_M = csc_matrix(model.mass_matrix.entries)
-            self._cached_b = np.zeros(n)
-            self._cached_b[-1] = -1
+            self._cached_b = np.zeros(y0.shape[0])
+            self._cached_b[self._current_index] = -1
+            self._matrix_model = model
 
         return self._cached_M, neg_J, self._cached_b
 
-    @staticmethod
-    def _calculate_impedance(frequency, M, neg_J, b):
+    def _calculate_impedance(self, frequency, M, neg_J, b):
         """Calculate impedance at a single frequency.
 
         Parameters
@@ -229,13 +183,12 @@ class EISSimulation(BaseSimulation):
         Returns
         -------
         z : complex
-            Complex impedance value (unscaled).
+            Complex impedance in Ohms.
         """
-        A = 1.0j * 2 * np.pi * frequency * M + neg_J
+        A = (1.0j * 2 * np.pi * frequency) * M + neg_J
         x = spsolve(A, b)
-        # Voltage is penultimate, current is last (by construction in
-        # _set_up_model_for_eis)
-        return -x[-2] / x[-1]
+        voltage, current = self._output_jacobian @ x
+        return -voltage / current
 
     def solve(self, frequencies, inputs=None, initial_soc=None):
         """Compute impedance at the given frequencies.
@@ -262,15 +215,12 @@ class EISSimulation(BaseSimulation):
         pybamm.logger.info(f"Start calculating impedance for {model_name}")
         timer = pybamm.Timer()
 
-        if initial_soc is not None:
-            self.build(initial_soc=initial_soc, inputs=inputs)
-        elif self._built_model is None:
-            self.build()
+        self.build(initial_soc=initial_soc, inputs=inputs)
 
         M, neg_J, b = self._build_matrix_problem(inputs_dict=inputs)
 
         zs = [self._calculate_impedance(f, M, neg_J, b) for f in frequencies]
-        impedance = np.array(zs) * self._z_scale
+        impedance = np.array(zs)
         self._solution = pybamm.EISSolution(frequencies, impedance)
         self._solution.set_up_time = self.set_up_time
 
