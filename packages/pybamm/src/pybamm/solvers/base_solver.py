@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import itertools
 import multiprocessing as mp
@@ -117,7 +119,7 @@ class BaseSolver:
         return Serialise.serialise_solver(self)
 
     @staticmethod
-    def from_config(data: dict) -> "BaseSolver":
+    def from_config(data: dict) -> BaseSolver:
         """Create a solver from a config dict.
 
         Parameters
