@@ -392,6 +392,42 @@ class TestSolution:
         assert len(a._all_sensitivities["p"]) == before  # a unchanged
         assert len(b._all_sensitivities["p"]) == 1  # b unchanged
 
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    def test_join_sensitivities_at_shared_boundary(self, join):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u}
+        model.initial_conditions = {u: 0}
+        model.variables = {"2u": 2 * u}
+        solver = pybamm.IDAKLUSolver()
+        # The second segment starts at the time the first ends, from u = 0
+        first, later = (
+            solver.solve(
+                model,
+                [t0, t0 + 1],
+                t_interp=np.array([t0, t0 + 0.5, t0 + 1]),
+                inputs={"a": 1.0},
+                calculate_sensitivities=True,
+            )
+            for t0 in (0, 1)
+        )
+
+        if join == "add":
+            joined = first + later
+        else:
+            joined = pybamm.Solution.from_sub_solutions([first, later])
+
+        # The join keeps the first segment's sample at t = 1
+        expected = np.array([0, 0.5, 1, 0.5, 1])
+        np.testing.assert_allclose(joined.sensitivities["a"][:, 0], expected, atol=1e-6)
+        np.testing.assert_allclose(
+            joined.sensitivities["all"][:, 0], expected, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            joined["2u"].sensitivities["a"], 2 * expected, atol=1e-6
+        )
+
     def test_add_validates_only_boundary(self):
         # __add__ must validate only the joined region, not re-scan the whole
         # accumulation (that re-scan was the O(N^2) source).
@@ -751,6 +787,92 @@ class TestSolution:
         assert sol_last_state.set_up_time == 0
         assert sol_last_state.solve_time == 0
         assert sol_last_state.integration_time == 0
+
+    @pytest.mark.parametrize("output_variables", [None, ["u"]])
+    def test_first_and_last_state_sensitivities(self, output_variables):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u, v: 2 * a + 0 * v}
+        model.initial_conditions = {u: a, v: 3 * a}
+        model.variables = {"u": u}
+        solution = pybamm.IDAKLUSolver(output_variables=output_variables).solve(
+            model,
+            [0, 1],
+            t_interp=np.array([0, 0.5, 1]),
+            inputs={"a": 1.0},
+            calculate_sensitivities=True,
+        )
+
+        # u = a (1 + t) and v = a (3 + 2 t), both states even when only u is output
+        for state, expected in [
+            (solution.first_state, [1, 3]),
+            (solution.last_state, [2, 5]),
+        ]:
+            np.testing.assert_allclose(
+                state.sensitivities["a"][:, 0], expected, atol=1e-6
+            )
+            np.testing.assert_allclose(
+                state.sensitivities["all"][:, 0], expected, atol=1e-6
+            )
+
+    def test_first_and_last_state_of_output_variables_solve(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u, v: 2 * a + 0 * v}
+        model.initial_conditions = {u: a, v: 3 * a}
+        model.variables = {"u": u}
+        solver = pybamm.IDAKLUSolver(output_variables=["u"])
+        first, later = (
+            solver.solve(
+                model,
+                [t0, t0 + 1],
+                inputs={"a": a_value},
+                calculate_sensitivities=True,
+            )
+            for t0, a_value in [(0, 1.0), (1, 2.0)]
+        )
+
+        # Solving the model again must leave the first solution's initial state
+        # alone, and the sensitivities must stay out of it
+        for solution in (
+            first,
+            first.copy(),
+            first + later,
+            pybamm.Solution.from_sub_solutions([first, later]),
+        ):
+            np.testing.assert_allclose(
+                solution.first_state.all_ys[0], [[1], [3]], rtol=1e-12
+            )
+            # u = a (1 + t - t0) and v = a (3 + 2 (t - t0)) in each solve
+            np.testing.assert_allclose(
+                solution.first_state.sensitivities["a"], [[1], [3]], rtol=1e-6
+            )
+            np.testing.assert_allclose(
+                solution.last_state.sensitivities["a"], [[2], [5]], rtol=1e-6
+            )
+
+    def test_first_state_of_output_variables_solve_is_consistent(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -u}
+        model.algebraic = {v: v - 2 * u}
+        # Consistent initialization corrects this guess for v to 2 u
+        model.initial_conditions = {u: 1, v: 0}
+        model.variables = {"u": u}
+        full_solution, solution = (
+            pybamm.IDAKLUSolver(output_variables=output_variables).solve(model, [0, 1])
+            for output_variables in (None, ["u"])
+        )
+
+        np.testing.assert_allclose(solution.first_state.y, [[1], [2]], rtol=1e-6)
+        np.testing.assert_allclose(
+            solution.first_state.y, full_solution.first_state.y, rtol=1e-6
+        )
 
     def test_first_last_state_empty_y(self):
         # check that first and last state work when y is empty
@@ -1138,10 +1260,9 @@ class TestSolution:
                 y_sol = np.exp(b * -a * data_times)
                 dy_sol_da = -data_times * y_sol
                 if use_post_sum:
-                    expected_sens = (
-                        0.5
-                        * (expected ** (-0.5))
-                        * np.sum(2 * (y_sol - data_values) * dy_sol_da)
+                    # expected is the square root of the sum
+                    expected_sens = np.sum(2 * (y_sol - data_values) * dy_sol_da) / (
+                        2 * expected
                     )
                 else:
                     expected_sens = np.sum(2 * (y_sol - data_values) * dy_sol_da)
@@ -1164,12 +1285,15 @@ class TestSolution:
                     rtol=1e-3,
                     atol=1e-2,
                 )
-                np.testing.assert_allclose(
-                    sol["data_comparison"].sensitivities["a"],
-                    expected_sens,
-                    rtol=1e-3,
-                    atol=1e-2,
-                )
+                # At a = 2 the model reproduces the data, and the square root of a
+                # zero sum has no derivative
+                if not (use_post_sum and a == 2.0):
+                    np.testing.assert_allclose(
+                        sol["data_comparison"].sensitivities["a"],
+                        expected_sens,
+                        rtol=1e-3,
+                        atol=1e-2,
+                    )
                 assert isinstance(sol["data_comparison"].sensitivities["a"], np.ndarray)
                 assert sol["data_comparison"].sensitivities["a"].shape == (1,)
 
@@ -1224,11 +1348,10 @@ class TestSolution:
                 model, t_eval=t_eval, t_interp=t_interp, inputs={"a": a, "b": b}
             )
             y_sol = np.exp(b * -a * times)
-            expected = -(1.0 / b / a) * (
+            integral = -(1.0 / b / a) * (
                 np.exp(b * -a * times[-1]) - np.exp(b * -a * times[0])
             )
-            if use_post_sum:
-                expected = expected**2
+            expected = integral**2 if use_post_sum else integral
             np.testing.assert_allclose(
                 sol["integral"](), expected, rtol=1e-3, atol=1e-2
             )
@@ -1247,7 +1370,7 @@ class TestSolution:
                 dy_sol_da = -b * times * y_sol
                 expected_sens = scipy.integrate.trapezoid(dy_sol_da, times)
                 if use_post_sum:
-                    expected_sens = 2 * expected * expected_sens
+                    expected_sens = 2 * integral * expected_sens
 
                 np.testing.assert_allclose(
                     sol["c"].data,
@@ -1268,6 +1391,109 @@ class TestSolution:
                     atol=1e-2,
                 )
                 assert isinstance(sol["integral"].sensitivities["a"], np.ndarray)
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_explicit_time_integral_initial_condition_sensitivity(self, use_output_var):
+        times = np.linspace(0, 1, 10)
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        a = pybamm.InputParameter("a")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables["integral"] = pybamm.ExplicitTimeIntegral(c, pybamm.Scalar(5))
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["integral"] if use_output_var else None
+        )
+
+        sol = solver.solve(
+            model,
+            [0, 1],
+            t_interp=times,
+            inputs={"a": 1.0},
+            calculate_sensitivities=True,
+        )
+
+        # The initial condition does not depend on a, so only the integral does
+        expected = scipy.integrate.trapezoid(-times * np.exp(-times), times)
+        np.testing.assert_allclose(sol["integral"](), [5 + 1 - np.exp(-1)], rtol=1e-3)
+        np.testing.assert_allclose(
+            sol["integral"].sensitivities["a"], [expected], rtol=1e-3
+        )
+
+    @pytest.mark.parametrize("use_post_sum", [False, True])
+    @pytest.mark.parametrize(
+        ("t_later", "integral", "integral_sensitivity"),
+        [([1, 3], 6.0, 3.0), ([2, 4], 8.0, 4.0)],
+        ids=["shared-boundary", "gap"],
+    )
+    def test_explicit_time_integral_sensitivity_over_joined_solutions(
+        self, t_later, integral, integral_sensitivity, use_post_sum
+    ):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        a = pybamm.InputParameter("a")
+        model.rhs = {y: 0 * y}
+        model.initial_conditions = {y: 1}
+        time_integral = pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(1))
+        model.variables["integral"] = (
+            time_integral**2 if use_post_sum else time_integral
+        )
+        solver = pybamm.IDAKLUSolver()
+        first, later = (
+            solver.solve(model, t_eval, inputs={"a": 2.0}, calculate_sensitivities=True)
+            for t_eval in ([0, 1], t_later)
+        )
+
+        joined = (first + later)["integral"]
+
+        # A full-state join integrates a * y = 2 across any gap between the
+        # solutions; an output_variables join leaves the gap out
+        value, sensitivity = 1 + integral, integral_sensitivity
+        if use_post_sum:
+            value, sensitivity = value**2, 2 * value * sensitivity
+        np.testing.assert_allclose(joined.entries, [value], rtol=1e-6)
+        np.testing.assert_allclose(joined.sensitivities["a"], [sensitivity], rtol=1e-6)
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    @pytest.mark.parametrize("sensitivity_name", ["a", "b"])
+    def test_explicit_time_integral_post_sum_sensitivity_to_one_input(
+        self, sensitivity_name, use_output_var
+    ):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables["value"] = pybamm.ExplicitTimeIntegral(c, 0) ** 2 * b
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["value"] if use_output_var else None,
+            rtol=1e-8,
+            atol=1e-10,
+        )
+        times = np.linspace(0, 1, 11)
+
+        sol = solver.solve(
+            model,
+            [0, 1],
+            t_interp=times,
+            inputs={"a": 1.0, "b": 2.0},
+            calculate_sensitivities=[sensitivity_name],
+        )
+
+        # value = I^2 b, with I and dI/da the trapezoid rule over the solution times
+        integral = scipy.integrate.trapezoid(np.exp(-times), times)
+        dintegral_da = scipy.integrate.trapezoid(-times * np.exp(-times), times)
+        expected = {
+            "a": 2 * integral * 2.0 * dintegral_da,
+            "b": integral**2,
+        }[sensitivity_name]
+        sensitivities = sol["value"].sensitivities
+        assert sorted(sensitivities) == sorted(["all", sensitivity_name])
+        np.testing.assert_allclose(sensitivities["all"], [[expected]], rtol=1e-6)
+        np.testing.assert_allclose(
+            sensitivities[sensitivity_name], [expected], rtol=1e-6
+        )
 
     def test_observe(self):
         """Test the observe method with pybamm symbols, comparing with model variables."""

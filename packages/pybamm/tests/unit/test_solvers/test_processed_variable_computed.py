@@ -82,6 +82,9 @@ def process_and_check_2D_variable(
 
 
 _T_INTERP = np.linspace(0, 600, 4)
+# The full-state path evaluates (x - 1) + 1, which rounds values within about
+# 1e-16 of zero to zero
+_TOLERANCES = {"rtol": 1e-6, "atol": 1e-12}
 
 
 def _dfn_with_time_integrals():
@@ -141,6 +144,21 @@ _OUTPUT_VARIABLE_CASES = [
         ProcessedVariable2D,
         None,
         id="2D-r-x",
+    ),
+    # The zero-flux boundary edges are structural zeros, which the solver leaves out
+    pytest.param(
+        "DFN",
+        "Electrolyte current density [A.m-2]",
+        ProcessedVariable1D,
+        None,
+        id="1D-x-sparse",
+    ),
+    pytest.param(
+        "DFN",
+        "Negative particle flux [mol.m-2.s-1]",
+        ProcessedVariable2D,
+        None,
+        id="2D-r-x-sparse",
     ),
     pytest.param(
         "SPMe 2+1D",
@@ -593,7 +611,7 @@ class TestProcessedVariableComputed:
         model.rhs = {y: 0 * y}
         model.initial_conditions = {y: 1}
         model.variables = {
-            "Integral": pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(0))
+            "Integral": pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(1))
         }
         solver = pybamm.IDAKLUSolver(output_variables=["Integral"])
         first, later = (
@@ -603,9 +621,9 @@ class TestProcessedVariableComputed:
 
         combined = (first + later)["Integral"]
 
-        # a * y = 2 integrated over [0, 3]
-        np.testing.assert_allclose(combined.entries, [6.0])
-        np.testing.assert_allclose(combined(), [6.0])
+        # 1 plus a * y = 2 integrated over [0, 3]
+        np.testing.assert_allclose(combined.entries, [7.0])
+        np.testing.assert_allclose(combined(), [7.0])
         np.testing.assert_allclose(combined.sensitivities["a"], [3.0])
         np.testing.assert_allclose(combined.sensitivities["all"], [[3.0]])
 
@@ -918,27 +936,31 @@ class TestProcessedVariableComputed:
         assert method == time_integral_method
 
         assert isinstance(computed, pybamm.ProcessedVariableComputed)
-        np.testing.assert_allclose(computed.entries, full.entries, rtol=1e-6)
+        np.testing.assert_allclose(computed.entries, full.entries, **_TOLERANCES)
 
         # Solution.__add__ merges with an output_variables solve via as_computed()
         converted = full.as_computed()
         assert converted.time_indep == computed.time_indep
         np.testing.assert_array_equal(converted.entries, full.entries)
         t = None if computed.time_indep else np.array([150.0, 450.0])
-        np.testing.assert_allclose(converted(t=t), computed(t=t), rtol=1e-6)
+        np.testing.assert_allclose(converted(t=t), computed(t=t), **_TOLERANCES)
 
+    @pytest.mark.parametrize("first_output_variables", [False, True])
     @pytest.mark.parametrize(
         ("model_key", "name", "layout", "time_integral_method"), _OUTPUT_VARIABLE_CASES
     )
     def test_output_variable_joins_at_shared_boundary(
-        self, model_key, name, layout, time_integral_method
+        self, model_key, name, layout, time_integral_method, first_output_variables
     ):
         full_solution = _solve(model_key)
         # Both later segments start at 600 s, where the first ends
         later_full = _solve(model_key, t_start=600.0)
         later_computed = _solve(model_key, t_start=600.0, output_variables=(name,))
-        # copy() drops full-state variables other tests read from the cached solve
-        first = full_solution.copy()
+        if first_output_variables:
+            first = _solve(model_key, output_variables=(name,))
+        else:
+            # copy() drops full-state variables other tests read from the cached solve
+            first = full_solution.copy()
 
         joined = (first + later_computed)[name]
         if name in _NOT_JOINABLE:
@@ -948,9 +970,11 @@ class TestProcessedVariableComputed:
 
         # A full-state sum evaluates the variable on the joined states, not via _concat
         expected = (full_solution + later_full)[name]
-        np.testing.assert_allclose(joined.entries, expected.entries, rtol=1e-6)
+        np.testing.assert_allclose(joined.entries, expected.entries, **_TOLERANCES)
         t = None if joined.time_indep else np.array([150.0, 750.0])
-        np.testing.assert_allclose(joined(t=t), expected.as_computed()(t=t), rtol=1e-6)
+        np.testing.assert_allclose(
+            joined(t=t), expected.as_computed()(t=t), **_TOLERANCES
+        )
 
     def test_output_variable_cases_cover_every_layout(self):
         subclasses, stack = set(), [pybamm.ProcessedVariable]

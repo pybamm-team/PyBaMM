@@ -324,6 +324,11 @@ class Solution(SolutionBase):
         self._y_event = y_event
         self._termination = termination
         self.closest_event_idx = None
+        # Initial state of a solve that returns only output variables, so no states
+        self._y0 = None
+        # Such a solve's state sensitivities at its first and last time points
+        self._y0_sensitivities = None
+        self._y_event_sensitivities = None
 
         super().__init__()
         self.integration_time = None
@@ -600,21 +605,24 @@ class Solution(SolutionBase):
         than the full solution when only the first state is needed (e.g. to initialize
         a model with the solution)
         """
-        sensitivities = {}
         n_states = self.all_models[0].len_rhs_and_alg
-        for key in self._all_sensitivities:
-            sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
+        if self._y0_sensitivities is None:
+            sensitivities = {
+                key: value[0][:n_states, :]
+                for key, value in self._all_sensitivities.items()
+            }
+        else:
+            sensitivities = self._y0_sensitivities
 
         if self.all_yps is None:
             all_yps = None
         else:
             all_yps = self.all_yps[0][:, :1]
 
-        if not self.variables_returned:
+        if self._y0 is None:
             all_ys = self.all_ys[0][:, :1]
         else:
-            # Get first state from initial conditions as all_ys is empty
-            all_ys = self.all_models[0].y0full[0].reshape(-1, 1)
+            all_ys = self._y0.reshape(-1, 1)
 
         new_sol = Solution(
             self.all_ts[0][:1],
@@ -644,10 +652,14 @@ class Solution(SolutionBase):
         than the full solution when only the final state is needed (e.g. to initialize
         a model with the solution)
         """
-        sensitivities = {}
         n_states = self.all_models[-1].len_rhs_and_alg
-        for key in self._all_sensitivities:
-            sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
+        if self._y_event_sensitivities is None:
+            sensitivities = {
+                key: value[-1][-n_states:, :]
+                for key, value in self._all_sensitivities.items()
+            }
+        else:
+            sensitivities = self._y_event_sensitivities
 
         if self.all_yps is None:
             all_yps = None
@@ -1098,10 +1110,13 @@ class Solution(SolutionBase):
         return ts, ys, yps, tev
 
     @staticmethod
-    def _merge_sensitivities(acc, s):
-        """Fold one segment's sensitivities into the running dict ``acc``."""
-        for key, val in s._all_sensitivities.items():
-            acc.setdefault(key, []).extend(val)
+    def _merge_sensitivities(acc, s, repeated):
+        """Fold one segment's sensitivities into the running dict ``acc``,
+        dropping the leading time point's rows when ``repeated``."""
+        for key, (first, *rest) in s._all_sensitivities.items():
+            # Rows are time-major, one block per time point, as in _segment_series
+            rows_repeated = len(first) // len(s.all_ts[0]) if repeated else 0
+            acc.setdefault(key, []).extend([first[rows_repeated:], *rest])
 
     def __add__(self, other):
         """Adds two solutions together, e.g. when stepping"""
@@ -1159,7 +1174,7 @@ class Solution(SolutionBase):
         all_sensitivities = {
             key: list(value) for key, value in self._all_sensitivities.items()
         }
-        self._merge_sensitivities(all_sensitivities, other)
+        self._merge_sensitivities(all_sensitivities, other, repeated)
 
         options = self.user_options | other.user_options
 
@@ -1180,6 +1195,9 @@ class Solution(SolutionBase):
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
+        new_sol._y0 = self._y0
+        new_sol._y0_sensitivities = self._y0_sensitivities
+        new_sol._y_event_sensitivities = other._y_event_sensitivities
         new_sol._all_inputs_stacked = self.all_inputs_stacked + other.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
@@ -1266,8 +1284,8 @@ class Solution(SolutionBase):
 
         # sensitivities: fresh dict, no aliasing of any input solution's dict
         all_sensitivities = {}
-        for s in segments:
-            cls._merge_sensitivities(all_sensitivities, s)
+        for s, repeated in kept:
+            cls._merge_sensitivities(all_sensitivities, s, repeated)
 
         options = {}
         for s in segments:
@@ -1297,6 +1315,9 @@ class Solution(SolutionBase):
         # keeps the running closest_event_idx, so a trailing duplicate must not
         # overwrite it.
         new_sol.closest_event_idx = segments[-1].closest_event_idx
+        new_sol._y0 = segments[0]._y0
+        new_sol._y0_sensitivities = segments[0]._y0_sensitivities
+        new_sol._y_event_sensitivities = segments[-1]._y_event_sensitivities
         # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
         new_sol._sub_solutions = sub_sols
 
@@ -1339,6 +1360,9 @@ class Solution(SolutionBase):
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
         new_sol.closest_event_idx = self.closest_event_idx
+        new_sol._y0 = self._y0
+        new_sol._y0_sensitivities = self._y0_sensitivities
+        new_sol._y_event_sensitivities = self._y_event_sensitivities
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time

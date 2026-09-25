@@ -20,15 +20,15 @@ class ProcessedVariableTimeIntegral:
     post_sum_node: pybamm.Symbol | None = None
     post_sum: casadi.Function | None = None
 
-    def postfix_sum(self, entries, t_pts) -> np.ndarray:
+    def _sum_over_time(self, entries, t_pts) -> np.ndarray:
+        """Sum or integrate the entries over the time points."""
         if self.method == "discrete":
-            return np.sum(
-                entries, axis=0, initial=self.initial_condition, keepdims=True
-            )
+            return np.sum(entries, axis=0, keepdims=True)
         else:
-            return np.array(
-                [trapezoid(entries, t_pts, axis=0) + float(self.initial_condition)]
-            )
+            return np.array([trapezoid(entries, t_pts, axis=0)])
+
+    def postfix_sum(self, entries, t_pts) -> np.ndarray:
+        return self._sum_over_time(entries, t_pts) + float(self.initial_condition)
 
     def postfix(self, entries, t_pts, inputs) -> np.ndarray:
         """
@@ -51,8 +51,32 @@ class ProcessedVariableTimeIntegral:
         entries,
         t_pts,
         inputs,
+        sensitivity_names,
         sensitivities,
     ) -> np.ndarray:
+        """
+        Compute the sensitivities of the postfix sum or integral.
+
+        Parameters
+        ----------
+        var_name : str
+            The name of the variable, for error messages.
+        entries : np.ndarray
+            The summed variable at each time point, as passed to ``postfix``.
+        t_pts : np.ndarray
+            The time points.
+        inputs : dict
+            The input parameters.
+        sensitivity_names : list of str
+            The inputs the sensitivities are with respect to, in column order.
+        sensitivities : np.ndarray
+            The sensitivities of the summed variable at each time point.
+
+        Returns
+        -------
+        np.ndarray
+            The sensitivities of the postfix value.
+        """
         # post fix for discrete time integral won't give correct result
         # if ts are not equal to the discrete times. Raise error
         # in this case
@@ -66,23 +90,26 @@ class ProcessedVariableTimeIntegral:
                 f"ensure the correct times are used.\nSolution times: {t_pts}\nDiscrete Sum times: {self.discrete_times}"
             )
 
-        the_integral = self.postfix_sum(sensitivities, t_pts)
+        # The initial condition is a constant, so it adds nothing to a sensitivity
+        integral_sensitivities = self._sum_over_time(sensitivities, t_pts)
         if self.post_sum_node is None:
-            return the_integral
+            return integral_sensitivities
 
-        y_casadi = casadi.MX.sym("y", entries.shape[0])
-        sens_casadi = casadi.MX.sym("s_var", the_integral.shape)
+        # The chain rule needs the post-sum expression's derivative at the integral
+        integral = self.postfix_sum(entries, t_pts)
+        y_casadi = casadi.MX.sym("y", integral.shape[0])
+        sens_casadi = casadi.MX.sym("s_var", integral_sensitivities.shape)
         t_casadi = casadi.MX.sym("t")
-        p_casadi = {
-            name: casadi.MX.sym(
-                name, 1 if not isinstance(value, np.ndarray) else value.shape[0]
-            )
-            for name, value in inputs.items()
-        }
+        # Symbolic for the sensitivity inputs only; the others keep their values
+        p_casadi = {}
+        for name in sensitivity_names:
+            value = inputs[name]
+            size = 1 if not isinstance(value, np.ndarray) else value.shape[0]
+            p_casadi[name] = casadi.MX.sym(name, size)
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
-        inputs_stacked = casadi.vertcat(*[v for v in inputs.values()])
+        inputs_stacked = casadi.vertcat(*[inputs[name] for name in sensitivity_names])
         post_sum_casadi = self.post_sum_node.to_casadi(
-            t_casadi, y_casadi, inputs=p_casadi
+            t_casadi, y_casadi, inputs={**inputs, **p_casadi}
         )
 
         dpost_dy = casadi.jacobian(post_sum_casadi, y_casadi)
@@ -93,7 +120,7 @@ class ProcessedVariableTimeIntegral:
             [t_casadi, y_casadi, p_casadi_stacked, sens_casadi],
             [sens],
         )
-        sens_values = sens_fun(0.0, entries, inputs_stacked, the_integral)
+        sens_values = sens_fun(0.0, integral, inputs_stacked, integral_sensitivities)
         return sens_values.full()
 
     @staticmethod

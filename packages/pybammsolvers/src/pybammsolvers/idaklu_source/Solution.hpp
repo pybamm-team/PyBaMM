@@ -18,9 +18,11 @@ public:
    * @brief Constructor
    */
   Solution(int retval, np_array t_np, np_array y_np, np_array yp_np,
-           np_array yS_np, np_array ypS_np, np_array y_term_np)
+           np_array yS_np, np_array ypS_np, np_array y_init_np,
+           np_array y_term_np, np_array yS_init_np, np_array yS_term_np)
       : flag(retval), t(t_np), y(y_np), yp(yp_np), yS(yS_np), ypS(ypS_np),
-        y_term(y_term_np)
+        y_init(y_init_np), y_term(y_term_np), yS_init(yS_init_np),
+        yS_term(yS_term_np)
   {
   }
 
@@ -35,7 +37,10 @@ public:
   np_array yp;
   np_array yS;
   np_array ypS;
+  np_array y_init;
   np_array y_term;
+  np_array yS_init;
+  np_array yS_term;
 };
 
 #endif // PYBAMM_IDAKLU_SOLUTION_HPP
