@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from functools import cached_property
 
-import casadi
 import numpy as np
 import xarray as xr
 from scipy.integrate import cumulative_trapezoid
@@ -178,44 +177,22 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         return self
 
     def add_sensitivity(self, param, data):
-        # unroll from sparse representation into n-d matrix
-        # then flatten for consistency with full state-vector
-        # ProcessedVariable sensitivities
+        # Flat, like the sensitivities of a full state-vector ProcessedVariable
         self._sensitivities[param] = self.unroll(data).flatten()
 
-    def _unroll_nnz(self, realdata=None):
-        # unroll in nnz != numel, otherwise copy
+    def _concatenate(self, realdata=None):
+        # Each segment holds every entry of each of its time points, time-major
         if realdata is None:
             realdata = self.base_variables_data
-        if isinstance(self.base_variables_casadi[0], casadi.Function):  # casadi fcn
-            sp = self.base_variables_casadi[0](0, 0, 0).sparsity()
-            nnz = sp.nnz()
-            numel = sp.numel()
-            row = sp.row()
-        if nnz != numel:
-            data = [None] * len(realdata)
-            for datak in range(len(realdata)):
-                data[datak] = np.zeros(self.base_eval_shape[0] * len(self.t_pts))
-                var_data = realdata[0].flatten()
-                k = 0
-                for t_i in range(len(self.t_pts)):
-                    base = t_i * numel
-                    for r in row:
-                        data[datak][base + r] = var_data[k]
-                        k = k + 1
-        else:
-            data = realdata
-        return data
+        return np.concatenate(realdata, axis=0)
 
     def unroll_0D(self, realdata=None):
-        if realdata is None:
-            realdata = self.base_variables_data
-        return np.concatenate(realdata, axis=0).flatten()
+        return self._concatenate(realdata).flatten()
 
     def unroll_1D(self, realdata=None):
         len_space = self.base_eval_shape[0]
         return (
-            np.concatenate(self._unroll_nnz(realdata), axis=0)
+            self._concatenate(realdata)
             .reshape((len(self.t_pts), len_space))
             .transpose()
         )
@@ -233,9 +210,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             n_dim1 = self.unroll_params["n_dim1"]
             n_dim2 = self.unroll_params["n_dim2"]
             axis_swaps = self.unroll_params["axis_swaps"]
-        entries = np.concatenate(self._unroll_nnz(realdata), axis=0).reshape(
-            (len(self.t_pts), n_dim1, n_dim2)
-        )
+        entries = self._concatenate(realdata).reshape((len(self.t_pts), n_dim1, n_dim2))
         for a, b in axis_swaps:
             entries = np.moveaxis(entries, a, b)
         return entries
@@ -256,7 +231,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             n_dim3 = self.unroll_params["n_dim3"]
             axis_swaps = self.unroll_params["axis_swaps"]
         # time-major (n_t, output), like unroll_1D/2D
-        entries = np.concatenate(self._unroll_nnz(realdata), axis=0).reshape(
+        entries = self._concatenate(realdata).reshape(
             (len(self.t_pts), n_dim1, n_dim2, n_dim3)
         )
         for a, b in axis_swaps:

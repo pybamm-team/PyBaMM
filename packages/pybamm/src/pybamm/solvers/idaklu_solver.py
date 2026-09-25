@@ -879,6 +879,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
             var_nnz, var_shape, base_variables = self._get_variable_info(model, var)
             end_idx = start_idx + var_nnz
             data = sol.y[:, start_idx:end_idx]
+            if var_nnz != math.prod(var_shape):
+                # The solver returns only the structural nonzeros; store every entry
+                rows = base_variables[0](0.0, 0.0, 0.0).sparsity().row()
+                dense = np.zeros((number_of_timesteps, math.prod(var_shape)))
+                dense[:, rows] = data
+                data = dense
             time_integral = self._time_integral_vars.get(var)
 
             # handle any time integral variables
