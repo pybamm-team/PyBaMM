@@ -2,6 +2,7 @@
 # Tests for the surface formulation
 #
 import numpy as np
+import pytest
 
 import pybamm
 
@@ -177,29 +178,25 @@ class TestCompareOutputsTwoPhase:
         model_class = pybamm.lithium_ion.DFN
         self.compare_outputs_two_phase_silicon_graphite(model_class)
 
-    def compare_heat_sources_two_phase_graphite_graphite(self, model_class, thermal):
+    def compare_heat_sources_two_phase_graphite_graphite(
+        self, model_class, thermal_options, parameter_set="Chen2020"
+    ):
         """
         Every heat source is a sum over the particle phases, so splitting one graphite
         phase into two identical halves must reproduce the one-phase heat sources
         """
-        if thermal == "isothermal":
-            options = {
-                "thermal": "isothermal",
-                "calculate heat source for isothermal models": "true",
-            }
-        else:
-            options = {"thermal": thermal}
-        options["heat of mixing"] = "true"
+        options = {**thermal_options, "heat of mixing": "true"}
         t_eval = [0, 3600]
         t_interp = np.linspace(0, 3600)
 
-        # Chen2020 has zero entropic change, which would leave the reversible heat
-        # and the temperature dependence of the heat of mixing untested
-        entropic_change = pybamm.ParameterValues("Ai2020")
-        parameter_values = pybamm.ParameterValues("Chen2020")
-        for domain in ["Negative", "Positive"]:
-            name = f"{domain} electrode OCP entropic change [V.K-1]"
-            parameter_values[name] = entropic_change[name]
+        parameter_values = pybamm.ParameterValues(parameter_set)
+        if parameter_set == "Chen2020":
+            # Chen2020 has zero entropic change, which would leave the reversible
+            # heat and the temperature dependence of the heat of mixing untested
+            entropic_change = pybamm.ParameterValues("Ai2020")
+            for domain in ["Negative", "Positive"]:
+                name = f"{domain} electrode OCP entropic change [V.K-1]"
+                parameter_values[name] = entropic_change[name]
 
         # the default rtol lets a temperature state near 300 K drift by ~0.03 K,
         # which is comparable to the one- and two-phase differences being tested
@@ -250,7 +247,7 @@ class TestCompareOutputsTwoPhase:
                 atol=1e-3 * np.nanmax(np.abs(one_phase)) + 1e-8,
             )
 
-        if thermal != "isothermal":
+        if options["thermal"] != "isothermal":
             temperature = "Volume-averaged cell temperature [K]"
             temperature_rise = sol[temperature](t_interp) - sol[temperature](0)
             temperature_rise_two_phase = sol_two_phase[temperature](
@@ -263,24 +260,49 @@ class TestCompareOutputsTwoPhase:
                 atol=1e-3 * np.nanmax(temperature_rise),
             )
 
-    def test_compare_heat_sources_SPM_graphite_graphite(self):
+    @pytest.mark.parametrize(
+        ("model_class", "thermal_options", "parameter_set"),
+        [
+            pytest.param(model_class, options, parameter_set, id=f"{name}-{label}")
+            for name, model_class in [
+                ("SPM", pybamm.lithium_ion.SPM),
+                ("DFN", pybamm.lithium_ion.DFN),
+            ]
+            for label, options, parameter_set in [
+                (
+                    "isothermal",
+                    {
+                        "thermal": "isothermal",
+                        "calculate heat source for isothermal models": "true",
+                    },
+                    "Chen2020",
+                ),
+                ("lumped", {"thermal": "lumped"}, "Chen2020"),
+                # x-full resolves the temperature in x, so the heat of mixing uses
+                # the local rather than the x-averaged electrode temperature
+                (
+                    "x-full",
+                    {"thermal": "x-full", "cell geometry": "pouch"},
+                    "Marquis2019",
+                ),
+                (
+                    "x-lumped-1plus1D",
+                    {
+                        "thermal": "x-lumped",
+                        "cell geometry": "pouch",
+                        "current collector": "potential pair",
+                        "dimensionality": 1,
+                    },
+                    "Marquis2019",
+                ),
+            ]
+        ],
+    )
+    def test_compare_heat_sources_graphite_graphite(
+        self, model_class, thermal_options, parameter_set
+    ):
         self.compare_heat_sources_two_phase_graphite_graphite(
-            pybamm.lithium_ion.SPM, "isothermal"
-        )
-
-    def test_compare_heat_sources_DFN_graphite_graphite(self):
-        self.compare_heat_sources_two_phase_graphite_graphite(
-            pybamm.lithium_ion.DFN, "isothermal"
-        )
-
-    def test_compare_heat_sources_SPM_graphite_graphite_lumped(self):
-        self.compare_heat_sources_two_phase_graphite_graphite(
-            pybamm.lithium_ion.SPM, "lumped"
-        )
-
-    def test_compare_heat_sources_DFN_graphite_graphite_lumped(self):
-        self.compare_heat_sources_two_phase_graphite_graphite(
-            pybamm.lithium_ion.DFN, "lumped"
+            model_class, thermal_options, parameter_set
         )
 
     def heat_of_mixing_silicon_graphite(self, model_class):
