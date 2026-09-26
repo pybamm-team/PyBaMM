@@ -36,6 +36,25 @@ def _per_electrode(value, index):
     return value
 
 
+def _flatten_option(value):
+    """Leaves of a scalar, per-electrode or per-phase option value."""
+    if isinstance(value, (tuple, list)):
+        return [leaf for item in value for leaf in _flatten_option(item)]
+    return [value]
+
+
+def _electrodes_with(value, target):
+    """``(negative, positive)`` flags for whether ``value`` takes ``target`` on
+    each electrode, in any phase for per-phase tuples. A scalar applies to both.
+    """
+    if isinstance(value, (tuple, list)) and len(value) != 2:
+        # malformed tuples are rejected by the option validation later on
+        return (False, False)
+    return tuple(
+        target in _flatten_option(_per_electrode(value, index)) for index in (0, 1)
+    )
+
+
 def _rename_option(options_dict, option_name, old_name, new_name):
     if option_name not in options_dict:
         return
@@ -534,7 +553,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # provided
         # return "none" if option not given
         sei_option = extra_options.get("SEI", "none")
-        if sei_option == "none":
+        if all(sei == "none" for sei in _flatten_option(sei_option)):
             default_options["SEI film resistance"] = "none"
         else:
             default_options["SEI film resistance"] = "distributed"
@@ -546,40 +565,29 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # return "false", "false" and "none" respectively if options not given
         SEI_cracks_option = extra_options.get("SEI on cracks", "false")
         LAM_opt = extra_options.get("loss of active material", "none")
-        if SEI_cracks_option == "true":
-            default_options["particle mechanics"] = "swelling and cracking"
-        elif SEI_cracks_option == ("true", "false"):
-            if any(
-                s in LAM_opt
-                for s in [
-                    "stress-driven",
-                    "stress and reaction-driven",
-                    "asymmetric stress-driven",
-                    "asymmetric stress and reaction-driven",
-                ]
-            ):
-                default_options["particle mechanics"] = (
-                    "swelling and cracking",
-                    "swelling only",
-                )
-            else:
-                default_options["particle mechanics"] = (
-                    "swelling and cracking",
-                    "none",
-                )
+        # stress-driven LAM anywhere in the cell asks for swelling on both electrodes
+        if any(
+            s in LAM_opt
+            for s in [
+                "stress-driven",
+                "stress and reaction-driven",
+                "asymmetric stress-driven",
+                "asymmetric stress and reaction-driven",
+            ]
+        ):
+            no_cracks_mechanics = "swelling only"
         else:
-            if any(
-                s in LAM_opt
-                for s in [
-                    "stress-driven",
-                    "stress and reaction-driven",
-                    "asymmetric stress-driven",
-                    "asymmetric stress and reaction-driven",
-                ]
-            ):
-                default_options["particle mechanics"] = "swelling only"
-            else:
-                default_options["particle mechanics"] = "none"
+            no_cracks_mechanics = "none"
+        cracks_per_electrode = _electrodes_with(SEI_cracks_option, "true")
+        mechanics_per_electrode = tuple(
+            "swelling and cracking" if has_cracks else no_cracks_mechanics
+            for has_cracks in cracks_per_electrode
+        )
+        if isinstance(SEI_cracks_option, (tuple, list)) and any(cracks_per_electrode):
+            default_options["particle mechanics"] = mechanics_per_electrode
+        else:
+            # scalar input (half cell) or no cracks anywhere: both entries agree
+            default_options["particle mechanics"] = mechanics_per_electrode[0]
         # The "particle mechanics" option will still be overridden by extra_options if
         # provided
 
@@ -620,12 +628,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # Change default SEI model based on which lithium plating option is provided
         # return "none" if option not given
         plating_option = extra_options.get("lithium plating", "none")
-        if plating_option == "partially reversible":
-            default_options["SEI"] = "constant"
-        elif plating_option == ("partially reversible", "none"):
-            default_options["SEI"] = ("constant", "none")
+        plating_per_electrode = _electrodes_with(plating_option, "partially reversible")
+        SEI_per_electrode = tuple(
+            "constant" if partially_reversible else "none"
+            for partially_reversible in plating_per_electrode
+        )
+        if isinstance(plating_option, (tuple, list)) and any(plating_per_electrode):
+            default_options["SEI"] = SEI_per_electrode
         else:
-            default_options["SEI"] = "none"
+            default_options["SEI"] = SEI_per_electrode[0]
         # The "SEI" option will still be overridden by extra_options if provided
 
         options = pybamm.FuzzyDict(default_options)

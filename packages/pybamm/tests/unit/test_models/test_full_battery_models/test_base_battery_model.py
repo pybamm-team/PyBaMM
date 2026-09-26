@@ -259,6 +259,16 @@ class TestBaseBatteryModel:
         model = pybamm.BaseBatteryModel({"SEI": "constant"})
         assert model.options["SEI film resistance"] == "distributed"
         assert model.options["total interfacial current density as a state"] == "true"
+        # the explicit per-electrode form of the default keeps the default
+        model = pybamm.BaseBatteryModel({"SEI": ("none", "none")})
+        assert model.options["SEI film resistance"] == "none"
+        assert model.options["total interfacial current density as a state"] == "false"
+        model = pybamm.BaseBatteryModel({"SEI": ("none", "constant")})
+        assert model.options["SEI film resistance"] == "distributed"
+        model = pybamm.BaseBatteryModel(
+            {"particle phases": ("2", "1"), "SEI": (("none", "constant"), "none")}
+        )
+        assert model.options["SEI film resistance"] == "distributed"
         model = pybamm.BaseBatteryModel(
             {"SEI film resistance": "average", "particle phases": "2"}
         )
@@ -312,6 +322,36 @@ class TestBaseBatteryModel:
         )
         assert model.options["particle mechanics"] == "swelling and cracking"
         assert model.options["stress-induced diffusion"] == "true"
+        # SEI on cracks on the positive electrode or on both electrodes
+        model = pybamm.BaseBatteryModel({"SEI on cracks": ("false", "true")})
+        assert model.options["particle mechanics"] == ("none", "swelling and cracking")
+        assert model.options["stress-induced diffusion"] == "true"
+        model = pybamm.BaseBatteryModel(
+            {
+                "loss of active material": "stress-driven",
+                "SEI on cracks": ("false", "true"),
+            }
+        )
+        assert model.options["particle mechanics"] == (
+            "swelling only",
+            "swelling and cracking",
+        )
+        model = pybamm.BaseBatteryModel({"SEI on cracks": ("true", "true")})
+        assert model.options["particle mechanics"] == (
+            "swelling and cracking",
+            "swelling and cracking",
+        )
+        # a tuple with no cracks anywhere keeps the scalar default
+        model = pybamm.BaseBatteryModel({"SEI on cracks": ("false", "false")})
+        assert model.options["particle mechanics"] == "none"
+        assert model.options["stress-induced diffusion"] == "false"
+        # giving "particle mechanics" explicitly remains valid
+        pybamm.BaseBatteryModel(
+            {
+                "SEI on cracks": ("false", "true"),
+                "particle mechanics": ("none", "swelling and cracking"),
+            }
+        )
 
         # crack model
         with pytest.raises(pybamm.OptionError, match=r"particle mechanics"):
@@ -330,6 +370,44 @@ class TestBaseBatteryModel:
         # plating model
         with pytest.raises(pybamm.OptionError, match=r"lithium plating"):
             pybamm.BaseBatteryModel({"lithium plating": "bad plating"})
+        with pytest.raises(pybamm.OptionError, match=r"lithium plating"):
+            # can't have a 1-tuple
+            pybamm.BaseBatteryModel({"lithium plating": ("partially reversible",)})
+        # partially reversible plating defaults "SEI" to "constant" on the
+        # electrodes that plate, with no film resistance
+        model = pybamm.BaseBatteryModel({"lithium plating": "partially reversible"})
+        assert model.options["SEI"] == ("constant", "none")
+        assert model.options["SEI film resistance"] == "none"
+        model = pybamm.BaseBatteryModel(
+            {"lithium plating": ("none", "partially reversible")}
+        )
+        assert model.options["SEI"] == ("none", "constant")
+        assert model.options["SEI film resistance"] == "none"
+        model = pybamm.BaseBatteryModel(
+            {"lithium plating": ("partially reversible", "partially reversible")}
+        )
+        assert model.options["SEI"] == ("constant", "constant")
+        model = pybamm.BaseBatteryModel(
+            {
+                "particle phases": ("2", "1"),
+                "lithium plating": (("partially reversible", "none"), "none"),
+            }
+        )
+        assert model.options["SEI"] == ("constant", "none")
+        model = pybamm.BaseBatteryModel(
+            {"working electrode": "positive", "lithium plating": "partially reversible"}
+        )
+        assert model.options["SEI"] == "constant"
+        # a tuple with no partially reversible plating keeps the scalar default
+        model = pybamm.BaseBatteryModel({"lithium plating": ("reversible", "none")})
+        assert model.options["SEI"] == "none"
+        # giving "SEI" explicitly remains valid
+        pybamm.BaseBatteryModel(
+            {
+                "SEI": ("none", "constant"),
+                "lithium plating": ("none", "partially reversible"),
+            }
+        )
         with pytest.raises(
             pybamm.OptionError, match=r"lithium plating porosity change"
         ):
