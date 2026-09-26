@@ -44,8 +44,10 @@ def _flatten_option(value):
 
 
 def _electrodes_with(value, target):
-    """``(negative, positive)`` flags for whether ``value`` takes ``target`` on
-    each electrode, in any phase for per-phase tuples. A scalar applies to both.
+    """Whether a possibly per-electrode option takes ``target`` on each electrode.
+
+    Returns ``(negative, positive)`` flags. A scalar applies to both electrodes
+    and a per-phase entry matches if any of its phases does.
     """
     if isinstance(value, (tuple, list)) and len(value) != 2:
         # malformed tuples are rejected by the option validation later on
@@ -578,16 +580,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             no_cracks_mechanics = "swelling only"
         else:
             no_cracks_mechanics = "none"
-        cracks_per_electrode = _electrodes_with(SEI_cracks_option, "true")
-        mechanics_per_electrode = tuple(
+        negative, positive = (
             "swelling and cracking" if has_cracks else no_cracks_mechanics
-            for has_cracks in cracks_per_electrode
+            for has_cracks in _electrodes_with(SEI_cracks_option, "true")
         )
-        if isinstance(SEI_cracks_option, (tuple, list)) and any(cracks_per_electrode):
-            default_options["particle mechanics"] = mechanics_per_electrode
-        else:
-            # scalar input (half cell) or no cracks anywhere: both entries agree
-            default_options["particle mechanics"] = mechanics_per_electrode[0]
+        default_options["particle mechanics"] = (
+            negative if negative == positive else (negative, positive)
+        )
         # The "particle mechanics" option will still be overridden by extra_options if
         # provided
 
@@ -628,15 +627,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # Change default SEI model based on which lithium plating option is provided
         # return "none" if option not given
         plating_option = extra_options.get("lithium plating", "none")
-        plating_per_electrode = _electrodes_with(plating_option, "partially reversible")
-        SEI_per_electrode = tuple(
+        negative, positive = (
             "constant" if partially_reversible else "none"
-            for partially_reversible in plating_per_electrode
+            for partially_reversible in _electrodes_with(
+                plating_option, "partially reversible"
+            )
         )
-        if isinstance(plating_option, (tuple, list)) and any(plating_per_electrode):
-            default_options["SEI"] = SEI_per_electrode
-        else:
-            default_options["SEI"] = SEI_per_electrode[0]
+        default_options["SEI"] = (
+            negative if negative == positive else (negative, positive)
+        )
         # The "SEI" option will still be overridden by extra_options if provided
 
         options = pybamm.FuzzyDict(default_options)
