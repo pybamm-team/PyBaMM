@@ -1321,3 +1321,31 @@ class TestModelDefaultOptions:
     def test_incompatible_identity_overrides(self, model_class, supplied, match):
         with pytest.raises(pybamm.OptionError, match=match):
             model_class(supplied)
+
+    @pytest.mark.parametrize(
+        "model_class, supplied",
+        [
+            (
+                pybamm.lithium_ion.DFN,
+                {"SEI": "reaction limited", "lithium plating": "partially reversible"},
+            ),
+            (
+                pybamm.lithium_ion.DFN,
+                {
+                    "particle phases": ("2", "1"),
+                    "particle mechanics": (("swelling only", "none"), "none"),
+                },
+            ),
+            (pybamm.lithium_ion.SPM, {"intercalation kinetics": "linear"}),
+            (pybamm.lithium_ion.MPM, {}),
+            (pybamm.lithium_ion.MSMR, {"number of MSMR reactions": ("6", "4")}),
+            (pybamm.lithium_ion.NewmanTobias, {}),
+            (LithiumMetalDFN, {}),
+            (pybamm.lead_acid.LOQS, {}),
+            (pybamm.lithium_ion.Yang2017, {}),
+        ],
+    )
+    def test_reprocessing_options_is_idempotent(self, model_class, supplied):
+        model = model_class(supplied)
+        assert BatteryModelOptions(dict(model.options)) == model.options
+        assert model_class(dict(model.options)).options == model.options
