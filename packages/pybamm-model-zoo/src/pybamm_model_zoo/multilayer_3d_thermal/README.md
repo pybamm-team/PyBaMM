@@ -164,5 +164,9 @@ lists them.
 
 ## Maintainer
 
-Brady Planden (@BradyPlanden) — tier: community. First contributed by @mleot in
+mleot (@mleot) — tier: community. First contributed in
 [#5489](https://github.com/pybamm-team/PyBaMM/pull/5489).
+
+Code owners need write access to the repository, so the PyBaMM maintainers
+(@pybamm-team/maintainers) own this folder in `.github/CODEOWNERS` and approve
+pull requests to it. Support for the model rests with its maintainer.

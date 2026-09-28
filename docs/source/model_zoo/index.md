@@ -35,7 +35,7 @@ See [contributing a model](contributing.md) to add your own.
 | Model | Tier | Maintainer | PyBaMM | Added |
 | --- | --- | --- | --- | --- |
 | [Single Particle Model with a linearised open-circuit potential](models/linearised_spm.md) | core | @pybamm-team/maintainers | `>=26.0` | 2026-08-20 |
-| [Multilayer pouch cell stack with a 3D temperature field in every zone](models/multilayer_3d_thermal.md) | community | [@BradyPlanden](https://github.com/BradyPlanden) | `>=26.8` | 2026-09-28 |
+| [Multilayer pouch cell stack with a 3D temperature field in every zone](models/multilayer_3d_thermal.md) | community | [@mleot](https://github.com/mleot) | `>=26.8` | 2026-09-28 |
 
 ## Compatibility
 
