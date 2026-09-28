@@ -843,11 +843,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Whether to use the surface formulation of the problem. Can be "false"
                 (default), "differential" or "algebraic". Should be given
                 explicitly as "algebraic" when an electrode has multiple
-                particle phases, or (for SPM/MPM) when "intercalation kinetics"
-                or a "distribution" "particle size" is supplied; for now it
-                still defaults to "algebraic" in those cases, with a
+                particle phases, or (for SPM, but not MPM) when
+                "intercalation kinetics" or a "distribution" "particle size"
+                is supplied; for now it still defaults to "algebraic" in
+                those cases, with a
                 :class:`pybamm.OptionDefaultDeprecationWarning`, and a future
-                release will raise an ``OptionError`` instead.
+                release will raise an ``OptionError`` instead. MPM always
+                defaults "surface form" to "algebraic" as part of its own
+                model identity, which is not deprecated.
             * "surface temperature" : str
                 Sets the surface temperature model to use. Can be "ambient" (default),
                 which sets the surface temperature equal to the ambient temperature, or
