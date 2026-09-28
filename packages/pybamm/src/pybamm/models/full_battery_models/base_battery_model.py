@@ -14,7 +14,7 @@ _FORBID_LEGACY_OPTION_DEFAULTS = (
 )
 
 
-def legacy_default_message(fired):
+def _legacy_default_message(fired):
     """Describe options that were set from other options.
 
     Parameters
@@ -35,7 +35,7 @@ def legacy_default_message(fired):
     )
 
 
-def warn_legacy_defaults(fired):
+def _warn_legacy_defaults(fired):
     """Warn that options were set from other options.
 
     Parameters
@@ -50,7 +50,7 @@ def warn_legacy_defaults(fired):
     """
     if not fired:
         return
-    message = legacy_default_message(fired)
+    message = _legacy_default_message(fired)
     if _FORBID_LEGACY_OPTION_DEFAULTS:
         raise pybamm.OptionError(message)
     pybamm.util.warn_outside_pybamm(message, pybamm.OptionDefaultDeprecationWarning)
@@ -1112,7 +1112,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         fired = _apply_legacy_defaults(options, set(extra_options))
         if not legacy:
             _check_electrode_compatibility(options)
-        warn_legacy_defaults(fired)
+        _warn_legacy_defaults(fired)
 
         # All-or-nothing on full cells: if any of OCP/particle/intercalation
         # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.

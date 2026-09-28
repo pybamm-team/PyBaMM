@@ -2,7 +2,7 @@
 # Single Particle Model (SPM)
 #
 import pybamm
-from pybamm.models.full_battery_models.base_battery_model import warn_legacy_defaults
+from pybamm.models.full_battery_models.base_battery_model import _warn_legacy_defaults
 
 from .base_lithium_ion_model import BaseModel
 
@@ -34,7 +34,7 @@ class SPM(BaseModel):
             )
         ):
             defaults["surface form"] = "algebraic"
-            warn_legacy_defaults({"surface form": "algebraic"})
+            _warn_legacy_defaults({"surface form": "algebraic"})
         if type(self) in (pybamm.lithium_ion.SPM, pybamm.lithium_ion.MPM):
             defaults["x-average side reactions"] = "true"
         return defaults
