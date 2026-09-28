@@ -10,8 +10,8 @@ added = "2026-09-28"
 license = "BSD-3-Clause"
 
 [[model.maintainers]]
-name = "Brady Planden"
-github = "BradyPlanden"
+name = "mleot"
+github = "mleot"
 
 [model.citation]
 key = "MultiLayer3DThermal2026"
