@@ -503,6 +503,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         where a 2-tuple of strings can be provided instead to indicate a different
         option for the negative and positive electrodes.
 
+        An option that varies by electrode takes a ``(negative, positive)`` 2-tuple.
+        An option that also varies by particle phase takes a ``(primary, secondary)``
+        2-tuple inside the entry for that electrode. A scalar value applies to
+        everywhere below it (both electrodes, or both phases of an electrode).
+
             * "calculate discharge energy": str
                 Whether to calculate the discharge energy, throughput energy and
                 throughput capacity in addition to discharge capacity. Must be one of
@@ -560,7 +565,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Can be "full" (default), "constant", or "current-driven".
             * "lithium plating" : str
                 Sets the model for lithium plating. Can be "none" (default),
-                "reversible", "partially reversible", or "irreversible".
+                "reversible", "partially reversible", or "irreversible". In a full
+                cell, a scalar (non-default) value applies to the negative electrode
+                only; use a 2-tuple to also set the positive electrode.
+                ``options["lithium plating"]`` stores the value as given.
             * "lithium plating porosity change" : str
                 Whether to include porosity change due to lithium plating, can be
                 "false" (default) or "true".
@@ -608,10 +616,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 provided for different behaviour in negative and positive electrodes.
             * "particle mechanics" : str
                 Sets the model to account for mechanical effects such as particle
-                swelling and cracking. Can be "none" (default), "swelling only",
-                or "swelling and cracking".
-                A 2-tuple can be provided for different behaviour in negative and
-                positive electrodes.
+                swelling and cracking. Can be "none", "swelling only",
+                or "swelling and cracking". A 2-tuple can be provided for different
+                behaviour in negative and positive electrodes. The default is
+                derived per electrode: "swelling and cracking" if "SEI on cracks"
+                is "true" there, else "swelling only" if "loss of active material"
+                is stress-driven there, else "none".
             * "particle phases": str
                 Number of phases present in the electrode. A 2-tuple can be provided for
                 different behaviour in negative and positive electrodes.
@@ -635,6 +645,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "interstitial-diffusion limited", "ec reaction limited" ,   \
                     "VonKolzenberg2020", "tunnelling limited",\
                     or "ec reaction limited (asymmetric)": :class:`pybamm.sei.SEIGrowth`
+
+                In a full cell, a scalar (non-default) value applies to the negative
+                electrode only; use a 2-tuple to also set the positive electrode.
+                ``options["SEI"]`` stores the value as given. The default is
+                "constant" on an electrode where "lithium plating" is "partially
+                reversible" there and "SEI" was not supplied.
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 The default value is "none" if the "SEI" option is "none", and
@@ -662,15 +678,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
             * "SEI on cracks" : str
                 Whether to include SEI growth on particle cracks, can be "false"
-                (default) or "true".
+                (default) or "true". In a full cell, a scalar (non-default) value
+                applies to the negative electrode only; use a 2-tuple to also set
+                the positive electrode. ``options["SEI on cracks"]`` stores the
+                value as given.
             * "SEI porosity change" : str
                 Whether to include porosity change due to SEI formation, can be "false"
                 (default) or "true".
             * "stress-induced diffusion" : str
                 Whether to include stress-induced diffusion, can be "false" or "true".
-                The default is "false" if "particle mechanics" is "none" and "true"
-                otherwise. A 2-tuple can be provided for different behaviour in negative
-                and positive electrodes.
+                The default is derived per electrode (and phase): "false" if
+                "particle mechanics" is "none" there and "true" otherwise. A 2-tuple
+                can be provided for different behaviour in negative and positive
+                electrodes.
             * "surface form" : str
                 Whether to use the surface formulation of the problem. Can be "false"
                 (default), "differential" or "algebraic".
