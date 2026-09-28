@@ -273,6 +273,95 @@ def _is_msmr(value):
     return value == "MSMR"
 
 
+def _apply_legacy_defaults(options, supplied):
+    """Fill options whose default depends on other options.
+
+    Parameters
+    ----------
+    options : pybamm.FuzzyDict
+        The merged options, updated in place.
+    supplied : set of str
+        Option names given by the caller; these are never changed.
+    """
+    working_electrode = options["working electrode"]
+
+    def electrode_leaves(option):
+        # per-phase entries are flattened, so a check matches if any phase does
+        leaves = []
+        for domain in _ELECTRODES:
+            value = resolve_option(
+                option, options[option], domain, working_electrode=working_electrode
+            )
+            leaves.append(value if isinstance(value, tuple) else (value,))
+        return leaves
+
+    def set_default(option, value):
+        if option not in supplied:
+            options[option] = value
+
+    def set_per_electrode_default(option, values):
+        set_default(option, join_electrode_values(option, *values, working_electrode))
+
+    multi_phase = any(
+        phases != ("1",) for phases in electrode_leaves("particle phases")
+    )
+
+    if options["dimensionality"] in (1, 2) or options["thermal"] == "x-full":
+        set_default("cell geometry", "pouch")
+    # derived from the SEI supplied, before plating adds its own "constant" SEI
+    if any(sei != "none" for leaves in electrode_leaves("SEI") for sei in leaves):
+        set_default("SEI film resistance", "distributed")
+    set_per_electrode_default(
+        "SEI",
+        [
+            "constant" if "partially reversible" in leaves else "none"
+            for leaves in electrode_leaves("lithium plating")
+        ],
+    )
+    mechanics = []
+    for cracks, lam in zip(
+        electrode_leaves("SEI on cracks"),
+        electrode_leaves("loss of active material"),
+        strict=True,
+    ):
+        if "true" in cracks:
+            mechanics.append("swelling and cracking")
+        elif any("stress" in leaf for leaf in lam):
+            mechanics.append("swelling only")
+        else:
+            mechanics.append("none")
+    set_per_electrode_default("particle mechanics", mechanics)
+    stress = []
+    for leaves in electrode_leaves("particle mechanics"):
+        # per phase, so a phase without mechanics never gets stress diffusion
+        flags = tuple("true" if leaf != "none" else "false" for leaf in leaves)
+        stress.append(flags[0] if len(set(flags)) == 1 else flags)
+    set_per_electrode_default("stress-induced diffusion", stress)
+    if multi_phase:
+        set_default("surface form", "algebraic")
+    film_resistance = options["SEI film resistance"]
+    if film_resistance == "distributed" or (film_resistance != "none" and multi_phase):
+        set_default("total interfacial current density as a state", "true")
+    if options["operating mode"] in ("explicit power", "explicit resistance"):
+        set_default("voltage as a state", "true")
+
+    current_state = options["total interfacial current density as a state"]
+    if film_resistance == "distributed" and current_state == "false":
+        raise dependency_error(
+            "SEI film resistance",
+            "distributed",
+            "total interfacial current density as a state",
+            "'true'",
+        )
+    if film_resistance != "none" and multi_phase and current_state == "false":
+        raise dependency_error(
+            "SEI film resistance",
+            film_resistance,
+            "total interfacial current density as a state",
+            "'true' when an electrode has multiple particle phases",
+        )
+
+
 def _per_electrode(value, index):
     """Resolve a possibly per-electrode option to one electrode.
 
@@ -709,137 +798,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "one-state hysteresis",
         )
 
-        working_electrode_option = extra_options.get("working electrode", "both")
-        SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
-        SEI_cr_option = extra_options.get("SEI on cracks", "false")
-        plating_option = extra_options.get("lithium plating", "none")
-        # For the full cell model, if "SEI", "SEI on cracks" and "lithium plating"
-        # options are not provided as tuples, change them to tuples with "none" or
-        # "false" on the positive electrode. To use these options on the positive
-        # electrode of a full cell, the tuple must be provided by the user
-        if working_electrode_option == "both":
-            if not (isinstance(SEI_option, tuple)) and SEI_option != "none":
-                extra_options["SEI"] = (SEI_option, "none")
-            if not (isinstance(SEI_cr_option, tuple)) and SEI_cr_option != "false":
-                extra_options["SEI on cracks"] = (SEI_cr_option, "false")
-            if not (isinstance(plating_option, tuple)) and plating_option != "none":
-                extra_options["lithium plating"] = (plating_option, "none")
-
-        # Change the default for cell geometry based on the current collector
-        # dimensionality
-        # return "none" if option not given
-        dimensionality_option = extra_options.get("dimensionality", "none")
-        if dimensionality_option in [1, 2]:
-            default_options["cell geometry"] = "pouch"
-        # The "cell geometry" option will still be overridden by extra_options if
-        # provided
-
-        # Change the default for cell geometry based on the thermal model
-        # return "none" if option not given
-        thermal_option = extra_options.get("thermal", "none")
-        if thermal_option == "x-full":
-            default_options["cell geometry"] = "pouch"
-        # The "cell geometry" option will still be overridden by extra_options if
-        # provided
-
-        # Change the default for SEI film resistance based on which SEI option is
-        # provided
-        # return "none" if option not given
-        sei_option = extra_options.get("SEI", "none")
-        if sei_option == "none":
-            default_options["SEI film resistance"] = "none"
-        else:
-            default_options["SEI film resistance"] = "distributed"
-        # The "SEI film resistance" option will still be overridden by extra_options if
-        # provided
-
-        # Change the default for particle mechanics based on which half-cell,
-        # SEI on cracks and LAM options are provided
-        # return "false", "false" and "none" respectively if options not given
-        SEI_cracks_option = extra_options.get("SEI on cracks", "false")
-        LAM_opt = extra_options.get("loss of active material", "none")
-        if SEI_cracks_option == "true":
-            default_options["particle mechanics"] = "swelling and cracking"
-        elif SEI_cracks_option == ("true", "false"):
-            if any(
-                s in LAM_opt
-                for s in [
-                    "stress-driven",
-                    "stress and reaction-driven",
-                    "asymmetric stress-driven",
-                    "asymmetric stress and reaction-driven",
-                ]
-            ):
-                default_options["particle mechanics"] = (
-                    "swelling and cracking",
-                    "swelling only",
-                )
-            else:
-                default_options["particle mechanics"] = (
-                    "swelling and cracking",
-                    "none",
-                )
-        else:
-            if any(
-                s in LAM_opt
-                for s in [
-                    "stress-driven",
-                    "stress and reaction-driven",
-                    "asymmetric stress-driven",
-                    "asymmetric stress and reaction-driven",
-                ]
-            ):
-                default_options["particle mechanics"] = "swelling only"
-            else:
-                default_options["particle mechanics"] = "none"
-        # The "particle mechanics" option will still be overridden by extra_options if
-        # provided
-
-        # Change the default for stress-induced diffusion based on which particle
-        # mechanics option is provided. If the user doesn't supply a particle mechanics
-        # option set the default stress-induced diffusion option based on the default
-        # particle mechanics option which may change depending on other options
-        # (e.g. for stress-driven LAM the default mechanics option is "swelling only")
-        mechanics_option = extra_options.get("particle mechanics", "none")
-        if (
-            mechanics_option == "none"
-            and default_options["particle mechanics"] == "none"
-        ):
-            default_options["stress-induced diffusion"] = "false"
-        else:
-            default_options["stress-induced diffusion"] = "true"
-        # The "stress-induced diffusion" option will still be overridden by
-        # extra_options if provided
-
-        # Change the default for surface form based on which particle
-        # phases option is provided.
-        # return "1" if option not given
-        phases_option = extra_options.get("particle phases", "1")
-        if phases_option == "1":
-            default_options["surface form"] = "false"
-        else:
-            default_options["surface form"] = "algebraic"
-        # The "surface form" option will still be overridden by
-        # extra_options if provided
-
-        # Explicit power/resistance control requires voltage as a state:
-        # I = P/V (or I = V/R) is circular when V is an expression that
-        # itself depends on I.
-        mode_option = extra_options.get("operating mode", "current")
-        if mode_option in ("explicit power", "explicit resistance"):
-            default_options["voltage as a state"] = "true"
-
-        # Change default SEI model based on which lithium plating option is provided
-        # return "none" if option not given
-        plating_option = extra_options.get("lithium plating", "none")
-        if plating_option == "partially reversible":
-            default_options["SEI"] = "constant"
-        elif plating_option == ("partially reversible", "none"):
-            default_options["SEI"] = ("constant", "none")
-        else:
-            default_options["SEI"] = "none"
-        # The "SEI" option will still be overridden by extra_options if provided
-
         options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
         for name, opt in extra_options.items():
@@ -869,6 +827,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         for option, value in options.items():
             for path, leaf in iter_option_leaves(option, value):
                 validate_option_value(option, leaf, self.possible_options[option], path)
+
+        _apply_legacy_defaults(options, set(extra_options))
 
         # All-or-nothing on full cells: if any of OCP/particle/intercalation
         # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.
@@ -908,38 +868,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "'number of MSMR reactions' must be a positive integer for "
                     f"the {domain} electrode when it uses 'MSMR' "
                     f"(got {domain_count!r})"
-                )
-
-        # If "SEI film resistance" is "distributed" then "total interfacial current
-        # density as a state" must be "true"
-        if options["SEI film resistance"] == "distributed":
-            options["total interfacial current density as a state"] = "true"
-            # Check that extra_options did not try to provide a clashing option
-            if (
-                extra_options.get("total interfacial current density as a state")
-                == "false"
-            ):
-                raise pybamm.OptionError(
-                    "If 'sei film resistance' is 'distributed' then 'total interfacial "
-                    "current density as a state' must be 'true'"
-                )
-
-        # If "SEI film resistance" is not "none" and there are multiple phases
-        # then "total interfacial current density as a state" must be "true"
-        if (
-            options["SEI film resistance"] != "none"
-            and options["particle phases"] != "1"
-        ):
-            options["total interfacial current density as a state"] = "true"
-            # Check that extra_options did not try to provide a clashing option
-            if (
-                extra_options.get("total interfacial current density as a state")
-                == "false"
-            ):
-                raise pybamm.OptionError(
-                    "If 'SEI film resistance' is not 'none' "
-                    "and there are multiple phases then 'total interfacial "
-                    "current density as a state' must be 'true'"
                 )
 
         # Options not yet compatible with contact resistance
@@ -1083,14 +1011,37 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "lumped surface temperature model only compatible with isothermal "
                 "or lumped thermal model"
             )
-        if "true" in options["SEI on cracks"]:
-            sei_on_cr = options["SEI on cracks"]
-            p_mechanics = options["particle mechanics"]
-            if isinstance(p_mechanics, str) and isinstance(sei_on_cr, tuple):
-                p_mechanics = (p_mechanics, p_mechanics)
+        # Resolve per electrode: "SEI on cracks" may be a negative-only shorthand
+        # scalar, so it is no longer stored in the same shape as "particle mechanics".
+        working_electrode = options["working electrode"]
+        for domain in _ELECTRODES:
+            cracks_value = resolve_option(
+                "SEI on cracks",
+                options["SEI on cracks"],
+                domain,
+                working_electrode=working_electrode,
+            )
+            mechanics_value = resolve_option(
+                "particle mechanics",
+                options["particle mechanics"],
+                domain,
+                working_electrode=working_electrode,
+            )
+            cracks_leaves = (
+                cracks_value if isinstance(cracks_value, tuple) else (cracks_value,)
+            )
+            mech_leaves = (
+                mechanics_value
+                if isinstance(mechanics_value, tuple)
+                else (mechanics_value,)
+            )
+            if len(cracks_leaves) == 1 and len(mech_leaves) > 1:
+                cracks_leaves = cracks_leaves * len(mech_leaves)
+            elif len(mech_leaves) == 1 and len(cracks_leaves) > 1:
+                mech_leaves = mech_leaves * len(cracks_leaves)
             if any(
                 sei == "true" and mech != "swelling and cracking"
-                for mech, sei in zip(p_mechanics, sei_on_cr, strict=False)
+                for sei, mech in zip(cracks_leaves, mech_leaves, strict=False)
             ):
                 raise pybamm.OptionError(
                     "If 'SEI on cracks' is 'true' then 'particle mechanics' must be "

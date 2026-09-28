@@ -144,8 +144,9 @@ def test_model_options_round_trip(kwargs):
     model_cls = kwargs.pop("_cls")
     try:
         original = model_cls(options=kwargs)
-    except (pybamm.OptionError, NotImplementedError, ValueError):
-        # BatteryModelOptions validates illegal combos; discard rejected combos.
+    except (pybamm.OptionError, NotImplementedError, ValueError, pybamm.ModelError):
+        # ModelError: some illegal combos (e.g. stress-driven LAM with
+        # "particle mechanics": "none") aren't validated at option level yet.
         assume(False)
     config = json.loads(json.dumps(original.to_config()))
     restored = pybamm.BaseModel.from_config(config)
