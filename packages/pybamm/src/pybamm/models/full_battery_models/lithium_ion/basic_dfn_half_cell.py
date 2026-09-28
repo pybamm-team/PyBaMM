@@ -31,14 +31,16 @@ class BasicDFNHalfCell(BaseModel):
     """
 
     def _model_default_options(self, supplied):
-        if (
-            any(key != "working electrode" for key in supplied)
-            or supplied.get("working electrode", "positive") != "positive"
-        ):
-            raise pybamm.OptionError(
-                "BasicDFNHalfCell only supports 'working electrode': 'positive'."
-            )
-        return {"working electrode": "positive"}
+        defaults = {"working electrode": "positive"}
+        # reprocessed or deserialised options carry every key at its default value
+        processed_defaults = pybamm.BatteryModelOptions(defaults)
+        for key, value in supplied.items():
+            if dict.get(processed_defaults, key) != value:
+                raise pybamm.OptionError(
+                    "BasicDFNHalfCell only supports its default options, not "
+                    f"'{key}': {value!r}."
+                )
+        return defaults
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman half cell model"):
         super().__init__(options, name)

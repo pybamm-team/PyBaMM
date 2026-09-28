@@ -729,6 +729,12 @@ class TestSerialise:
         assert "positive particle" in loaded.default_geometry
         assert "positive particle" in loaded.default_spatial_methods
 
+    def test_basic_dfn_half_cell_round_trip(self):
+        model = pybamm.lithium_ion.BasicDFNHalfCell()
+        payload = Serialise.serialise_custom_model(model)
+        loaded = Serialise.load_custom_model(payload)
+        assert loaded.options == model.options
+
     def test_serialise_records_base_class_mro(self, tmp_path):
         from pybamm.models.full_battery_models.lithium_ion.base_lithium_ion_model import (
             BaseModel as LiIonBaseModel,
