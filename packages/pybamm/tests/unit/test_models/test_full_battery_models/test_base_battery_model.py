@@ -274,14 +274,20 @@ class TestBaseBatteryModel:
             {"SEI film resistance": "average", "particle phases": "2"}
         )
         assert model.options["total interfacial current density as a state"] == "true"
-        with pytest.raises(pybamm.OptionError, match=r"must be 'true'"):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"'total interfacial current density as a state' to be 'true'",
+        ):
             pybamm.BaseBatteryModel(
                 {
                     "SEI film resistance": "distributed",
                     "total interfacial current density as a state": "false",
                 }
             )
-        with pytest.raises(pybamm.OptionError, match=r"must be 'true'"):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"'total interfacial current density as a state' to be 'true'",
+        ):
             pybamm.BaseBatteryModel(
                 {
                     "SEI film resistance": "average",
@@ -603,6 +609,157 @@ class TestBaseBatteryModel:
         model.variables["Voltage [V]"] = pybamm.Variable("Voltage [V]")
         with pytest.raises(pybamm.ModelError, match="Voltage expression"):
             model._constrain_voltage_to_expression()
+
+
+class TestLegacyDependentDefaults:
+    def test_shorthand_is_not_rewritten(self):
+        options = BatteryModelOptions({"SEI": "constant"})
+        assert options["SEI"] == "constant"
+        assert options.negative["SEI"] == "constant"
+        assert options.positive["SEI"] == "none"
+
+    def test_sei_film_resistance_follows_sei_per_electrode(self):
+        # 5807: ("none", "none") is no SEI anywhere
+        options = BatteryModelOptions({"SEI": ("none", "none")})
+        assert options["SEI film resistance"] == "none"
+        assert options["total interfacial current density as a state"] == "false"
+        options = BatteryModelOptions({"SEI": ("none", "constant")})
+        assert options["SEI film resistance"] == "distributed"
+        assert options["total interfacial current density as a state"] == "true"
+        options = BatteryModelOptions(
+            {"particle phases": ("2", "1"), "SEI": (("none", "constant"), "none")}
+        )
+        assert options["SEI film resistance"] == "distributed"
+
+    def test_partial_plating_defaults_sei_per_electrode(self):
+        options = BatteryModelOptions({"lithium plating": "partially reversible"})
+        assert options.negative["SEI"] == "constant"
+        assert options.positive["SEI"] == "none"
+        # plating-derived SEI does not switch on film resistance
+        assert options["SEI film resistance"] == "none"
+        options = BatteryModelOptions(
+            {"lithium plating": ("none", "partially reversible")}
+        )
+        assert options.negative["SEI"] == "none"
+        assert options.positive["SEI"] == "constant"
+        options = BatteryModelOptions(
+            {"lithium plating": ("partially reversible", "partially reversible")}
+        )
+        assert options.negative["SEI"] == "constant"
+        assert options.positive["SEI"] == "constant"
+        options = BatteryModelOptions(
+            {
+                "particle phases": ("2", "1"),
+                "lithium plating": (("partially reversible", "none"), "none"),
+            }
+        )
+        assert options.negative["SEI"] == "constant"
+        assert options.positive["SEI"] == "none"
+        options = BatteryModelOptions(
+            {"working electrode": "positive", "lithium plating": "partially reversible"}
+        )
+        assert options.positive["SEI"] == "constant"
+
+    def test_mechanics_defaults_per_electrode(self):
+        options = BatteryModelOptions({"SEI on cracks": "true"})
+        assert options.negative["particle mechanics"] == "swelling and cracking"
+        assert options.positive["particle mechanics"] == "none"
+        options = BatteryModelOptions({"SEI on cracks": ("false", "true")})
+        assert options.negative["particle mechanics"] == "none"
+        assert options.positive["particle mechanics"] == "swelling and cracking"
+        options = BatteryModelOptions(
+            {
+                "loss of active material": "stress-driven",
+                "SEI on cracks": ("false", "true"),
+            }
+        )
+        assert options.negative["particle mechanics"] == "swelling only"
+        assert options.positive["particle mechanics"] == "swelling and cracking"
+        options = BatteryModelOptions(
+            {"loss of active material": ("stress-driven", "none")}
+        )
+        assert options.negative["particle mechanics"] == "swelling only"
+        assert options.positive["particle mechanics"] == "none"
+
+    def test_stress_diffusion_default_only_where_mechanics(self):
+        # 4943
+        options = BatteryModelOptions(
+            {"particle mechanics": ("swelling and cracking", "none")}
+        )
+        assert options.negative["stress-induced diffusion"] == "true"
+        assert options.positive["stress-induced diffusion"] == "false"
+        options = BatteryModelOptions({"particle mechanics": "swelling only"})
+        assert options["stress-induced diffusion"] == "true"
+        options = BatteryModelOptions({})
+        assert options["stress-induced diffusion"] == "false"
+        options = BatteryModelOptions(
+            {
+                "particle phases": ("2", "1"),
+                "particle mechanics": (("swelling only", "none"), "none"),
+            }
+        )
+        assert options.negative.primary["stress-induced diffusion"] == "true"
+        assert options.negative.secondary["stress-induced diffusion"] == "false"
+        assert options.positive["stress-induced diffusion"] == "false"
+
+    def test_all_single_phase_tuple_is_single_phase(self):
+        # 3532 / 5680 / 4910
+        options = BatteryModelOptions({"particle phases": ("1", "1")})
+        assert options["surface form"] == "false"
+        options = BatteryModelOptions(
+            {
+                "particle phases": ("1", "1"),
+                "SEI": "constant",
+                "SEI film resistance": "average",
+            }
+        )
+        assert options["total interfacial current density as a state"] == "false"
+        options = BatteryModelOptions({"particle phases": ("2", "1")})
+        assert options["surface form"] == "algebraic"
+
+    def test_supplied_values_are_never_overridden(self):
+        options = BatteryModelOptions(
+            {
+                "SEI": "reaction limited",
+                "SEI film resistance": "average",
+                "particle mechanics": ("swelling only", "none"),
+                "stress-induced diffusion": "false",
+                "dimensionality": 1,
+                "cell geometry": "arbitrary",
+            }
+        )
+        assert options["SEI film resistance"] == "average"
+        assert options["stress-induced diffusion"] == "false"
+        assert options["cell geometry"] == "arbitrary"
+
+    def test_distributed_film_resistance_rejects_explicit_false_state(self):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"Option 'SEI film resistance' is 'distributed', which requires "
+            r"'total interfacial current density as a state' to be 'true'",
+        ):
+            BatteryModelOptions(
+                {
+                    "SEI": "constant",
+                    "SEI film resistance": "distributed",
+                    "total interfacial current density as a state": "false",
+                }
+            )
+
+    def test_multi_phase_film_resistance_rejects_explicit_false_state(self):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"'total interfacial current density as a state' to be 'true'",
+        ):
+            BatteryModelOptions(
+                {
+                    "particle phases": ("2", "1"),
+                    "surface form": "algebraic",
+                    "SEI": "constant",
+                    "SEI film resistance": "average",
+                    "total interfacial current density as a state": "false",
+                }
+            )
 
 
 class TestOptions:
