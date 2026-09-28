@@ -266,13 +266,6 @@ def dependency_error(option, value, companion, requirement, path=()):
     )
 
 
-def _is_msmr(value):
-    """True if an option requests MSMR, including inside a per-electrode tuple."""
-    if isinstance(value, (tuple, list)):
-        return "MSMR" in value
-    return value == "MSMR"
-
-
 def _apply_legacy_defaults(options, supplied):
     """Fill options whose default depends on other options.
 
@@ -399,15 +392,78 @@ def _apply_legacy_defaults(options, supplied):
                 )
 
 
-def _per_electrode(value, index):
-    """Resolve a possibly per-electrode option to one electrode.
+def _check_electrode_compatibility(options):
+    """Check options that depend on each other within one electrode or phase.
 
-    Per-electrode tuples are ``(negative, positive)``; a scalar applies to
-    both. ``index`` is 0 for the negative electrode, 1 for the positive.
+    Parameters
+    ----------
+    options : pybamm.FuzzyDict
+        The merged options, after dependent defaults are applied.
+
+    Raises
+    ------
+    pybamm.OptionError
+        If a per-electrode or per-phase combination is incompatible.
     """
-    if isinstance(value, (tuple, list)):
-        return value[index]
-    return value
+    working_electrode = options["working electrode"]
+    electrodes = _ELECTRODES if working_electrode == "both" else ("positive",)
+    for domain in electrodes:
+        number_of_phases = int(
+            resolve_option("particle phases", options["particle phases"], domain)
+        )
+        phases = _PHASES[:number_of_phases]
+        if number_of_phases > 1 and (
+            options["surface form"] == "false"
+            or any(
+                resolve_option("particle", options["particle"], domain, phase)
+                != "Fickian diffusion"
+                for phase in phases
+            )
+        ):
+            raise pybamm.OptionError(
+                f"Electrode at {domain} has multiple particle phases, which "
+                "requires 'surface form' to be 'differential' or 'algebraic' and "
+                "'particle' to be 'Fickian diffusion'."
+            )
+        for phase in phases:
+            path = (domain, phase) if number_of_phases > 1 else (domain,)
+
+            def value(option, domain=domain, phase=phase):
+                return resolve_option(
+                    option, options[option], domain, phase, working_electrode
+                )
+
+            if (
+                value("lithium plating") == "partially reversible"
+                and value("SEI") == "none"
+            ):
+                raise dependency_error(
+                    "lithium plating",
+                    "partially reversible",
+                    "SEI",
+                    "a model other than 'none' (e.g. 'constant')",
+                    path,
+                )
+            if value("SEI on cracks") == "true" and (
+                value("particle mechanics") != "swelling and cracking"
+            ):
+                raise dependency_error(
+                    "SEI on cracks",
+                    "true",
+                    "particle mechanics",
+                    "'swelling and cracking'",
+                    path,
+                )
+            if value("stress-induced diffusion") == "true" and (
+                value("particle mechanics") == "none"
+            ):
+                raise dependency_error(
+                    "stress-induced diffusion",
+                    "true",
+                    "particle mechanics",
+                    "a model other than 'none'",
+                    path,
+                )
 
 
 def _rename_option(options_dict, option_name, old_name, new_name):
@@ -866,12 +922,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 validate_option_value(option, leaf, self.possible_options[option], path)
 
         _apply_legacy_defaults(options, set(extra_options))
+        _check_electrode_compatibility(options)
 
         # All-or-nothing on full cells: if any of OCP/particle/intercalation
         # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.
         # Half-cells are loosened -- a tuple sets MSMR in the working electrode.
         msmr_check_list = [
-            _is_msmr(options[opt])
+            any(leaf == "MSMR" for _, leaf in iter_option_leaves(opt, options[opt]))
             for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
         ]
         if (
@@ -886,20 +943,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Validate per electrode so a mixed full cell (MSMR in one electrode,
         # conventional in the other) is accepted.
-        if options["working electrode"] == "both":
-            electrode_domains = [("negative", 0), ("positive", 1)]
-        else:
-            electrode_domains = [("positive", 1)]
-        for domain, index in electrode_domains:
+        electrode_domains = (
+            _ELECTRODES if options["working electrode"] == "both" else ("positive",)
+        )
+        for domain in electrode_domains:
             domain_uses_msmr = any(
-                _per_electrode(options[opt], index) == "MSMR"
+                resolve_option(opt, options[opt], domain) == "MSMR"
                 for opt in [
                     "open-circuit potential",
                     "particle",
                     "intercalation kinetics",
                 ]
             )
-            domain_count = _per_electrode(options["number of MSMR reactions"], index)
+            domain_count = resolve_option(
+                "number of MSMR reactions", options["number of MSMR reactions"], domain
+            )
             if domain_uses_msmr and not represents_positive_integer(domain_count):
                 raise pybamm.OptionError(
                     "'number of MSMR reactions' must be a positive integer for "
@@ -1009,15 +1067,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "models"
             )
 
-        if isinstance(options["stress-induced diffusion"], str) and (
-            options["stress-induced diffusion"] == "true"
-            and options["particle mechanics"] == "none"
-        ):
-            raise pybamm.OptionError(
-                "cannot have stress-induced diffusion without a particle "
-                "mechanics model"
-            )
-
         if options["working electrode"] != "both":
             if options["thermal"] == "x-full":
                 raise pybamm.OptionError(
@@ -1030,16 +1079,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current collectors in a half-cell configuration"
                 )
 
-        if options["particle phases"] not in ["1", ("1", "1")] and not (
-            options["surface form"] != "false"
-            and options["particle"] == "Fickian diffusion"
-        ):
-            raise pybamm.OptionError(
-                "If there are multiple particle phases: 'surface form' cannot be "
-                "'false', 'particle size' must be 'single', 'particle' must be "
-                "'Fickian diffusion'."
-            )
-
         if options["surface temperature"] == "lumped" and options["thermal"] not in [
             "isothermal",
             "lumped",
@@ -1048,43 +1087,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "lumped surface temperature model only compatible with isothermal "
                 "or lumped thermal model"
             )
-        # Resolve per electrode: "SEI on cracks" may be a negative-only shorthand
-        # scalar, so it is no longer stored in the same shape as "particle mechanics".
-        working_electrode = options["working electrode"]
-        for domain in _ELECTRODES:
-            cracks_value = resolve_option(
-                "SEI on cracks",
-                options["SEI on cracks"],
-                domain,
-                working_electrode=working_electrode,
-            )
-            mechanics_value = resolve_option(
-                "particle mechanics",
-                options["particle mechanics"],
-                domain,
-                working_electrode=working_electrode,
-            )
-            cracks_leaves = (
-                cracks_value if isinstance(cracks_value, tuple) else (cracks_value,)
-            )
-            mech_leaves = (
-                mechanics_value
-                if isinstance(mechanics_value, tuple)
-                else (mechanics_value,)
-            )
-            if len(cracks_leaves) == 1 and len(mech_leaves) > 1:
-                cracks_leaves = cracks_leaves * len(mech_leaves)
-            elif len(mech_leaves) == 1 and len(cracks_leaves) > 1:
-                mech_leaves = mech_leaves * len(cracks_leaves)
-            if any(
-                sei == "true" and mech != "swelling and cracking"
-                for sei, mech in zip(cracks_leaves, mech_leaves, strict=False)
-            ):
-                raise pybamm.OptionError(
-                    "If 'SEI on cracks' is 'true' then 'particle mechanics' must be "
-                    "'swelling and cracking'."
-                )
-
         super().__init__(options.items())
 
     @property
