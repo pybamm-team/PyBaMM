@@ -9,7 +9,15 @@ from contextlib import redirect_stdout
 import pytest
 
 import pybamm
-from pybamm.models.full_battery_models.base_battery_model import BatteryModelOptions
+from pybamm.models.full_battery_models.base_battery_model import (
+    BatteryModelOptions,
+    dependency_error,
+    iter_option_leaves,
+    join_electrode_values,
+    replace_option_leaf,
+    resolve_option,
+    validate_option_value,
+)
 
 OPTIONS_DICT = {
     "surface form": "differential",
@@ -767,3 +775,116 @@ class TestVariableNames:
             if repeated_words(name)
         }
         assert duplicated == {}
+
+
+class TestOptionHelpers:
+    def test_iter_option_leaves_scalar(self):
+        assert iter_option_leaves("thermal", "lumped") == [((), "lumped")]
+
+    def test_iter_option_leaves_per_electrode_and_phase(self):
+        assert iter_option_leaves(
+            "particle mechanics", (("swelling only", "none"), "none")
+        ) == [
+            (("negative", "primary"), "swelling only"),
+            (("negative", "secondary"), "none"),
+            (("positive",), "none"),
+        ]
+
+    @pytest.mark.parametrize(
+        "option, value",
+        [
+            ("thermal", ("lumped", "lumped")),
+            ("particle", ("Fickian diffusion",)),
+            ("particle", ("a", "b", "c")),
+            ("particle phases", (("1", "1"), "1")),
+            ("particle", (("a", "b", "c"), "b")),
+            ("particle", ((("a", "b"), "c"), "d")),
+            ("particle", ["Fickian diffusion", "Fickian diffusion"]),
+        ],
+    )
+    def test_iter_option_leaves_rejects_bad_shapes(self, option, value):
+        with pytest.raises(pybamm.OptionError, match=rf"option '{option}'"):
+            iter_option_leaves(option, value)
+
+    def test_resolve_option(self):
+        assert resolve_option("particle", "a", "positive") == "a"
+        assert resolve_option("particle", ("a", "b"), "positive") == "b"
+        assert resolve_option("particle", (("a", "b"), "c"), "negative") == ("a", "b")
+        assert (
+            resolve_option("particle", (("a", "b"), "c"), "negative", "secondary")
+            == "b"
+        )
+        assert (
+            resolve_option("particle", (("a", "b"), "c"), "positive", "secondary")
+            == "c"
+        )
+        assert resolve_option("particle", "a", "negative", "secondary") == "a"
+
+    def test_resolve_option_negative_only_shorthand(self):
+        assert resolve_option("SEI", "constant", "negative") == "constant"
+        assert resolve_option("SEI", "constant", "positive") == "none"
+        assert resolve_option("SEI on cracks", "true", "positive") == "false"
+        assert resolve_option("lithium plating", "reversible", "positive") == "none"
+        # half cells and explicit tuples are not affected
+        assert (
+            resolve_option("SEI", "constant", "positive", working_electrode="positive")
+            == "constant"
+        )
+        assert resolve_option("SEI", ("constant", "constant"), "positive") == "constant"
+        assert resolve_option("SEI", "none", "positive") == "none"
+
+    def test_validate_option_value(self):
+        validate_option_value("thermal", "lumped", ["isothermal", "lumped"])
+        validate_option_value("operating mode", lambda t: 1, ["current"])
+        validate_option_value("number of MSMR reactions", "3", ["none"])
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"'bad' is not recognized in option 'particle' at positive",
+        ):
+            validate_option_value("particle", "bad", ["a"], ("positive",))
+        with pytest.raises(pybamm.OptionError, match=r"'0' is not recognized"):
+            validate_option_value("number of MSMR reactions", "0", ["none"])
+
+    def test_replace_option_leaf(self):
+        assert replace_option_leaf("Axen", "Axen", "new") == "new"
+        assert replace_option_leaf((("Axen", "single"), "Axen"), "Axen", "new") == (
+            ("new", "single"),
+            "new",
+        )
+        assert replace_option_leaf("single", "Axen", "new") == "single"
+
+    def test_join_electrode_values(self):
+        assert join_electrode_values("particle", "a", "a") == "a"
+        assert join_electrode_values("particle", "a", "b") == ("a", "b")
+        # a scalar SEI in a full cell means negative-only
+        assert join_electrode_values("SEI", "constant", "none") == "constant"
+        assert join_electrode_values("SEI", "constant", "constant") == (
+            "constant",
+            "constant",
+        )
+        assert (
+            join_electrode_values(
+                "SEI", "constant", "constant", working_electrode="positive"
+            )
+            == "constant"
+        )
+        assert join_electrode_values("SEI", "none", "none") == "none"
+
+    def test_dependency_error(self):
+        error = dependency_error(
+            "lithium plating",
+            "partially reversible",
+            "SEI",
+            "a model other than 'none' (e.g. 'constant')",
+            ("negative", "primary"),
+        )
+        assert isinstance(error, pybamm.OptionError)
+        assert str(error) == (
+            "Option 'lithium plating' at negative.primary is 'partially reversible', "
+            "which requires 'SEI' to be a model other than 'none' (e.g. 'constant')."
+        )
+        assert str(
+            dependency_error("thermal", "x-full", "cell geometry", "'pouch'")
+        ) == (
+            "Option 'thermal' is 'x-full', which requires 'cell geometry' to be 'pouch'."
+        )
