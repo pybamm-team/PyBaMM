@@ -268,7 +268,8 @@ class TestScikitFiniteElement:
         )
 
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 2}
+            include_particles=False,
+            options={"dimensionality": 2, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
 
@@ -332,7 +333,8 @@ class TestScikitFiniteElement:
         )
 
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 2}
+            include_particles=False,
+            options={"dimensionality": 2, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
 
