@@ -1901,22 +1901,10 @@ def source(
     left = cast(pybamm.Symbol, left)
 
     allowed_domains = [["cell"], ["current collector"]]
-
-    # Allow per-layer thermal domains used by MultiLayer3DThermalSPM
-    # (e.g. "cell layer 0", "cell layer 1", ...). These share the
-    # ScikitFiniteElement3D spatial method and therefore support Mass().
-    def _is_layer_domain(domain):
-        return (
-            isinstance(domain, list)
-            and len(domain) == 1
-            and isinstance(domain[0], str)
-            and domain[0].startswith("cell layer ")
-        )
-
-    left_domain = left._domains["primary"]
-    left_ok = left_domain in allowed_domains or _is_layer_domain(left_domain)
-    right_ok = right_domain in allowed_domains or _is_layer_domain(right_domain)
-    if not (left_ok and right_ok):
+    if (
+        left._domains["primary"] not in allowed_domains
+        or right_domain not in allowed_domains
+    ):
         raise pybamm.DomainError(
             "'source' only implemented in the 'cell' or 'current collector' domains, "
             f"but symbols have domains {left._domains['primary']} and {right_domain}"
