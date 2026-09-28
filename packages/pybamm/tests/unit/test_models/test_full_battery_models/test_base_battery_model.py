@@ -14,9 +14,11 @@ from pybamm.models.full_battery_models import base_battery_model
 from pybamm.models.full_battery_models.base_battery_model import (
     BatteryModelDomainOptions,
     BatteryModelOptions,
+    active_electrodes,
     dependency_error,
     iter_option_leaves,
     join_electrode_values,
+    option_values_match,
     replace_option_leaf,
     resolve_option,
     validate_option_value,
@@ -1310,6 +1312,20 @@ class TestOptionHelpers:
         )
         assert join_electrode_values("SEI", "none", "none") == "none"
 
+    def test_active_electrodes(self):
+        assert active_electrodes("both") == ("negative", "positive")
+        assert active_electrodes("positive") == ("positive",)
+
+    def test_option_values_match(self):
+        assert option_values_match("SEI", "constant", ("constant", "none"))
+        assert not option_values_match("SEI", "constant", ("constant", "constant"))
+        assert option_values_match(
+            "SEI", "constant", ("constant", "constant"), working_electrode="positive"
+        )
+        assert option_values_match("particle", ("a", "a"), "a")
+        assert option_values_match("particle", (("a", "a"), "b"), ("a", "b"))
+        assert not option_values_match("particle", ("a", "b"), "a")
+
     def test_dependency_error(self):
         error = dependency_error(
             "lithium plating",
@@ -1364,6 +1380,17 @@ class TestModelDefaultOptions:
         pybamm.lithium_ion.SPM(options)
         dfn = pybamm.lithium_ion.DFN(options)
         assert dfn.options["x-average side reactions"] == "false"
+
+    def test_identity_checks_accept_equivalent_spellings(self):
+        # the scalar shorthand resolves to Yang2017's negative-only SEI
+        pybamm.lithium_ion.Yang2017({"SEI": "ec reaction limited"})
+        model = pybamm.lithium_ion.MSMR(
+            {
+                "number of MSMR reactions": ("6", "4"),
+                "open-circuit potential": ("MSMR", "MSMR"),
+            }
+        )
+        assert model.options.negative["open-circuit potential"] == "MSMR"
 
     def test_identity_defaults(self):
         assert pybamm.lithium_ion.SPM().options["x-average side reactions"] == "true"

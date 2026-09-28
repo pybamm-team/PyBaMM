@@ -286,6 +286,47 @@ def join_electrode_values(option, negative, positive, working_electrode="both"):
     return negative if resolves_to_both else (negative, positive)
 
 
+def active_electrodes(working_electrode):
+    """Return the electrodes present in a cell.
+
+    Parameters
+    ----------
+    working_electrode : str
+        The ``"working electrode"`` option.
+
+    Returns
+    -------
+    tuple of str
+        Both electrodes for a full cell, only ``"positive"`` for a half cell.
+    """
+    return _ELECTRODES if working_electrode == "both" else ("positive",)
+
+
+def option_values_match(option, first, second, working_electrode="both"):
+    """Check whether two values of an option resolve the same everywhere.
+
+    Parameters
+    ----------
+    option : str
+        The option name.
+    first, second : object
+        The option values to compare, in any supported shape.
+    working_electrode : str, optional
+        The ``"working electrode"`` option. Default is ``"both"``.
+
+    Returns
+    -------
+    bool
+        Whether both values give the same leaf for every electrode and phase.
+    """
+    return all(
+        resolve_option(option, first, domain, phase, working_electrode)
+        == resolve_option(option, second, domain, phase, working_electrode)
+        for domain in _ELECTRODES
+        for phase in _PHASES
+    )
+
+
 def dependency_error(option, value, companion, requirement, path=()):
     """Build the error for an option whose companion option is incompatible.
 
@@ -416,8 +457,7 @@ def _apply_legacy_defaults(options, supplied):
 
     # Stress-driven LAM needs a mechanical model on the same electrode/phase to
     # supply the particle stress it acts on.
-    electrodes = _ELECTRODES if working_electrode == "both" else ("positive",)
-    for domain in electrodes:
+    for domain in active_electrodes(working_electrode):
         num_phases = int(
             resolve_option(
                 "particle phases",
@@ -468,8 +508,7 @@ def _check_electrode_compatibility(options):
         If a per-electrode or per-phase combination is incompatible.
     """
     working_electrode = options["working electrode"]
-    electrodes = _ELECTRODES if working_electrode == "both" else ("positive",)
-    for domain in electrodes:
+    for domain in active_electrodes(working_electrode):
         number_of_phases = int(
             resolve_option("particle phases", options["particle phases"], domain)
         )
@@ -1061,10 +1100,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Validate per electrode so a mixed full cell (MSMR in one electrode,
         # conventional in the other) is accepted.
-        electrode_domains = (
-            _ELECTRODES if options["working electrode"] == "both" else ("positive",)
-        )
-        for domain in electrode_domains:
+        for domain in active_electrodes(options["working electrode"]):
             domain_uses_msmr = any(
                 resolve_option(opt, options[opt], domain) == "MSMR"
                 for opt in [

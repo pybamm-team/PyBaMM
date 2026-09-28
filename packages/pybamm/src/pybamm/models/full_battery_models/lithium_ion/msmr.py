@@ -1,6 +1,7 @@
 import re
 
 import pybamm
+from pybamm.models.full_battery_models.base_battery_model import option_values_match
 
 from .dfn import DFN
 
@@ -11,30 +12,13 @@ class MSMR(DFN):
             raise pybamm.OptionError(
                 "number of MSMR reactions must be specified for MSMR"
             )
-        if (
-            "open-circuit potential" in supplied
-            and supplied["open-circuit potential"] != "MSMR"
-        ):
-            raise pybamm.OptionError(
-                "'open-circuit potential' must be 'MSMR' for MSMR not '{}'".format(
-                    supplied["open-circuit potential"]
+        for option in ["open-circuit potential", "particle", "intercalation kinetics"]:
+            if option in supplied and not option_values_match(
+                option, supplied[option], "MSMR"
+            ):
+                raise pybamm.OptionError(
+                    f"'{option}' must be 'MSMR' for MSMR not '{supplied[option]}'"
                 )
-            )
-        if "particle" in supplied and supplied["particle"] != "MSMR":
-            raise pybamm.OptionError(
-                "'particle' must be 'MSMR' for MSMR not '{}'".format(
-                    supplied["particle"]
-                )
-            )
-        if (
-            "intercalation kinetics" in supplied
-            and supplied["intercalation kinetics"] != "MSMR"
-        ):
-            raise pybamm.OptionError(
-                "'intercalation kinetics' must be 'MSMR' for MSMR not '{}'".format(
-                    supplied["intercalation kinetics"]
-                )
-            )
         return {
             "open-circuit potential": "MSMR",
             "particle": "MSMR",

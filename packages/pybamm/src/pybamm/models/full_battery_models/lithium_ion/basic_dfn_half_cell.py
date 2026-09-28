@@ -2,6 +2,7 @@
 # Basic Doyle-Fuller-Newman (DFN) Half Cell Model
 #
 import pybamm
+from pybamm.models.full_battery_models.base_battery_model import option_values_match
 
 from .base_lithium_ion_model import BaseModel
 
@@ -35,7 +36,9 @@ class BasicDFNHalfCell(BaseModel):
         # reprocessed or deserialised options carry every key at its default value
         processed_defaults = pybamm.BatteryModelOptions(defaults)
         for key, value in supplied.items():
-            if dict.get(processed_defaults, key) != value:
+            if key not in processed_defaults or not option_values_match(
+                key, value, processed_defaults[key], "positive"
+            ):
                 raise pybamm.OptionError(
                     "BasicDFNHalfCell only supports its default options, not "
                     f"'{key}': {value!r}."
