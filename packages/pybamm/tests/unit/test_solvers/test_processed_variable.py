@@ -651,7 +651,7 @@ class TestProcessedVariable:
 
         var_casadi = to_casadi(var_sol, u_sol)
         model = tests.get_base_model_with_battery_geometry(
-            options={"dimensionality": 2}
+            options={"dimensionality": 2, "cell geometry": "pouch"}
         )
         processed_var = pybamm.process_variable(
             "test",
