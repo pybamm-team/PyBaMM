@@ -12,4 +12,4 @@ PyBaMM's.
   `linearised_spm` reference entry ([#5727](https://github.com/pybamm-team/PyBaMM/pull/5727))
 - `multilayer_3d_thermal`: a pouch cell stack resolved through its thickness into
   SPM, SPMe, or DFN zones, each with its own 3D temperature field, connected in
-  parallel or series ([#5489](https://github.com/pybamm-team/PyBaMM/pull/5489))
+  parallel or series ([#5815](https://github.com/pybamm-team/PyBaMM/pull/5815))
