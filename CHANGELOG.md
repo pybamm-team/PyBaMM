@@ -43,7 +43,6 @@
 
 ## Features
 
-- Added `MultiLayer3DThermalSPMe` and `MultiLayer3DThermalDFN` model classes extending the multilayer 3D thermal framework to SPMe and DFN electrochemistry fidelity levels. Each layer can now resolve spatially-varying electrolyte concentration, potential, and solid-phase charge conservation, enabling higher-fidelity through-stack thermal predictions. ([#5505](https://github.com/pybamm-team/PyBaMM/pull/5505))
 - Added the `Bonkile2024` parameter set for a graphite/silicon composite negative electrode (NMC positive electrode), with parameters for stress-driven loss of active material, solvent-diffusion-limited SEI, partially reversible lithium plating, and particle mechanics (swelling and cracking for graphite, swelling only for silicon and NMC). ([#5694](https://github.com/pybamm-team/PyBaMM/pull/5694))
 - Added VTK-based plotting (`VTKQuickPlot`, also via `pybamm.dynamic_plot(..., backend="vtk")`) for unstructured mesh solutions, matplotlib `QuickPlot` support for 2D unstructured scalar and vector-field variables, and headless CI OpenGL setup. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
 - Added a basic DFN model on 2D or 3D unstructured meshes (`BasicDFNUnstructured`); the `"dimensionality"` option selects an x-z (1) or x-y-z (2) mesh. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
