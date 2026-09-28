@@ -285,62 +285,26 @@ def _per_electrode(value, index):
 
 
 def _rename_option(options_dict, option_name, old_name, new_name):
-    if option_name not in options_dict:
+    """Rename every leaf equal to ``old_name`` in ``options_dict[option_name]``.
+
+    Parameters
+    ----------
+    options_dict : dict
+        The options dict to update in place (a caller-owned copy).
+    option_name : str
+        The option key to rename leaves within.
+    old_name, new_name : str
+        The leaf value to replace and its replacement.
+    """
+    value = options_dict.get(option_name)
+    if value is None:
         return
-
-    option = options_dict[option_name]
-
-    if option is None:
-        return
-
-    if isinstance(option, str):
-        if option == old_name:
-            pybamm.logger.warning(
-                f"The '{old_name}' {option_name} model has been renamed to '{new_name}'"
-            )
-            options_dict[option_name] = new_name
-        return
-
-    if isinstance(option, tuple):
-        # Handle tuple of tuples case
-        if isinstance(option[0], tuple):
-            # Check if any element contains old_name
-            has_old_name = False
-            for x in option:
-                if isinstance(x, tuple):
-                    if isinstance(x[0], tuple):
-                        # Handle 2-tuple of 2-tuple of 2-tuple case
-                        for y in x:
-                            if isinstance(y, tuple) and old_name in y:
-                                has_old_name = True
-                    # Handle 2-tuple of 2-tuple case
-                    elif old_name in x:
-                        has_old_name = True
-                elif x == old_name:
-                    has_old_name = True
-
-            if has_old_name:
-                pybamm.logger.warning(
-                    f"The '{old_name}' {option_name} model has been renamed to "
-                    f"'{new_name}'"
-                )
-
-                # Replace old_name with new_name at any nesting level
-                def replace_name(t):
-                    if isinstance(t, tuple):
-                        return tuple(replace_name(x) for x in t)
-                    return new_name if t == old_name else t
-
-                options_dict[option_name] = replace_name(option)
-
-        # Handle single tuple case
-        elif old_name in option:
-            pybamm.logger.warning(
-                f"The '{old_name}' {option_name} model has been renamed to '{new_name}'"
-            )
-            options_dict[option_name] = tuple(
-                new_name if x == old_name else x for x in option
-            )
+    renamed = replace_option_leaf(value, old_name, new_name)
+    if renamed != value:
+        pybamm.logger.warning(
+            f"The '{old_name}' {option_name} model has been renamed to '{new_name}'"
+        )
+        options_dict[option_name] = renamed
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):
@@ -728,7 +692,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "x-average side reactions": "false",
             "use lumped thermal capacity": "false",
         }
-        extra_options = extra_options or {}
+        extra_options = dict(extra_options or {})
 
         # Handle OCP option renaming
         _rename_option(
@@ -891,6 +855,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     raise pybamm.OptionError(
                         f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                     )
+
+        for option, value in options.items():
+            for path, leaf in iter_option_leaves(option, value):
+                validate_option_value(option, leaf, self.possible_options[option], path)
 
         # All-or-nothing on full cells: if any of OCP/particle/intercalation
         # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.
@@ -1128,67 +1096,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "'swelling and cracking'."
                 )
 
-        # Check options are valid
-        for option, value in options.items():
-            if isinstance(value, str) or option in [
-                "dimensionality",
-                "operating mode",
-            ]:  # some options accept non-strings
-                value = (value,)
-            else:
-                if not (
-                    option
-                    in [
-                        "diffusivity",
-                        "exchange-current density",
-                        "intercalation kinetics",
-                        "interface utilisation",
-                        "lithium plating",
-                        "loss of active material",
-                        "number of MSMR reactions",
-                        "open-circuit potential",
-                        "particle",
-                        "particle mechanics",
-                        "particle phases",
-                        "particle size",
-                        "SEI",
-                        "SEI on cracks",
-                        "stress-induced diffusion",
-                    ]
-                    and isinstance(value, tuple)
-                    and len(value) == 2
-                ):
-                    # more possible options that can take 2-tuples to be added
-                    # as they come
-                    raise pybamm.OptionError(
-                        f"\n'{value}' is not recognized in option '{option}'. "
-                        "Values must be strings or (in some cases) "
-                        "2-tuples of strings"
-                    )
-            # flatten value
-            value_list = []
-            for val in value:
-                if isinstance(val, tuple):
-                    value_list.extend(list(val))
-                else:
-                    value_list.append(val)
-            for val in value_list:
-                if val not in self.possible_options[option]:
-                    if option == "operating mode" and callable(val):
-                        # "operating mode" can be a function
-                        pass
-                    elif (
-                        option == "number of MSMR reactions"
-                        and represents_positive_integer(val)
-                    ):
-                        # "number of MSMR reactions" can be a positive integer
-                        pass
-                    else:
-                        raise pybamm.OptionError(
-                            f"\n'{val}' is not recognized in option '{option}'. "
-                            f"Possible values are {self.possible_options[option]}"
-                        )
-
         super().__init__(options.items())
 
     @property
@@ -1259,12 +1166,12 @@ class BatteryModelDomainOptions(dict):
         self.index = index
 
     def __getitem__(self, key):
-        options = super().__getitem__(key)
-        if isinstance(options, str):
-            return options
-        else:
-            # 2-tuple, first is negative domain, second is positive domain
-            return options[self.index]
+        return resolve_option(
+            key,
+            super().__getitem__(key),
+            _ELECTRODES[self.index],
+            working_electrode=self.get("working electrode", "both"),
+        )
 
     @property
     def primary(self):
@@ -1282,12 +1189,13 @@ class BatteryModelPhaseOptions(dict):
         self.index = index
 
     def __getitem__(self, key):
-        options = self.domain_options.__getitem__(key)
-        if isinstance(options, str):
-            return options
-        else:
-            # 2-tuple, first is primary phase, second is secondary phase
-            return options[self.index]
+        return resolve_option(
+            key,
+            dict.__getitem__(self.domain_options, key),
+            _ELECTRODES[self.domain_options.index],
+            _PHASES[self.index],
+            working_electrode=self.domain_options.get("working electrode", "both"),
+        )
 
 
 class BaseBatteryModel(pybamm.BaseModel):

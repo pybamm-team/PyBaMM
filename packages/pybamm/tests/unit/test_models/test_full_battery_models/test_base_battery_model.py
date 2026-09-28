@@ -10,6 +10,7 @@ import pytest
 
 import pybamm
 from pybamm.models.full_battery_models.base_battery_model import (
+    BatteryModelDomainOptions,
     BatteryModelOptions,
     dependency_error,
     iter_option_leaves,
@@ -203,7 +204,9 @@ class TestBaseBatteryModel:
     def test_options(self):
         with pytest.raises(pybamm.OptionError, match=r"Option"):
             pybamm.BaseBatteryModel({"bad option": "bad option"})
-        with pytest.raises(pybamm.OptionError, match=r"current collector model"):
+        with pytest.raises(
+            pybamm.OptionError, match=r"is not recognized in option 'current collector'"
+        ):
             pybamm.BaseBatteryModel({"current collector": "bad current collector"})
         with pytest.raises(pybamm.OptionError, match=r"thermal"):
             pybamm.BaseBatteryModel({"thermal": "bad thermal"})
@@ -243,7 +246,9 @@ class TestBaseBatteryModel:
             pybamm.BaseBatteryModel({"particle": "bad particle"})
         with pytest.raises(pybamm.OptionError, match=r"working electrode"):
             pybamm.BaseBatteryModel({"working electrode": "bad working electrode"})
-        with pytest.raises(pybamm.OptionError, match=r"The 'negative' working"):
+        with pytest.raises(
+            pybamm.OptionError, match=r"is not recognized in option 'working electrode'"
+        ):
             pybamm.BaseBatteryModel({"working electrode": "negative"})
         with pytest.raises(pybamm.OptionError, match=r"particle shape"):
             pybamm.BaseBatteryModel({"particle shape": "bad particle shape"})
@@ -704,6 +709,51 @@ class TestOptions:
         options = pybamm.BatteryModelOptions({})
         for key in options.possible_options:
             assert key in options, f"Missing default for option '{key}'"
+
+    def test_input_not_mutated(self):
+        supplied = {
+            "SEI": "constant",
+            "SEI on cracks": "true",
+            "lithium plating": "reversible",
+            "open-circuit potential": ("Axen", "single"),
+        }
+        snapshot = dict(supplied)
+        BatteryModelOptions(supplied)
+        assert supplied == snapshot
+
+    def test_renamed_ocp_nested_three_levels(self):
+        options = BatteryModelOptions(
+            {
+                "particle phases": ("2", "1"),
+                "open-circuit potential": (("Axen", "Wycisk"), "Axen"),
+            }
+        )
+        assert options.negative.primary["open-circuit potential"] == (
+            "one-state hysteresis"
+        )
+        assert options.negative.secondary["open-circuit potential"] == (
+            "one-state differential capacity hysteresis"
+        )
+        assert options.positive["open-circuit potential"] == "one-state hysteresis"
+
+    def test_invalid_leaf_reports_path(self):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"'bad' is not recognized in option 'particle' at positive",
+        ):
+            BatteryModelOptions({"particle": ("Fickian diffusion", "bad")})
+
+    def test_invalid_shape_reports_option(self):
+        with pytest.raises(pybamm.OptionError, match=r"option 'particle'"):
+            BatteryModelOptions(
+                {"particle": (("Fickian diffusion", "a", "b"), "Fickian diffusion")}
+            )
+
+    def test_domain_options_resolve_negative_only_shorthand(self):
+        items = {"SEI": "constant", "working electrode": "both"}.items()
+        assert BatteryModelDomainOptions(items, 0)["SEI"] == "constant"
+        assert BatteryModelDomainOptions(items, 1)["SEI"] == "none"
+        assert BatteryModelDomainOptions(items, 1).primary["SEI"] == "none"
 
 
 class TestVaasNormalization:
