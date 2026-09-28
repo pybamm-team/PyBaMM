@@ -339,7 +339,9 @@ class TestBaseBatteryModel:
         # SEI on cracks
         with pytest.raises(pybamm.OptionError, match=r"SEI on cracks"):
             pybamm.BaseBatteryModel({"SEI on cracks": "bad SEI on cracks"})
-        with pytest.raises(pybamm.OptionError, match=r"'SEI on cracks' is 'true'"):
+        with pytest.raises(
+            pybamm.OptionError, match=r"'SEI on cracks' at negative is 'true'"
+        ):
             pybamm.BaseBatteryModel(
                 {"SEI on cracks": "true", "particle mechanics": "swelling only"}
             )
@@ -383,7 +385,10 @@ class TestBaseBatteryModel:
             )
 
         # stress-induced diffusion
-        with pytest.raises(pybamm.OptionError, match=r"cannot have stress"):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"'stress-induced diffusion' at negative is 'true'",
+        ):
             pybamm.BaseBatteryModel({"stress-induced diffusion": "true"})
 
         # hydrolysis
@@ -796,6 +801,109 @@ class TestLegacyDependentDefaults:
         )
         assert options.negative["particle mechanics"] == "swelling only"
         assert options.positive["particle mechanics"] == "none"
+
+
+class TestElectrodeCompatibility:
+    @pytest.mark.parametrize(
+        "plating, sei, path",
+        [
+            ("partially reversible", "none", "negative"),
+            (("none", "partially reversible"), "constant", "positive"),
+            (
+                ("partially reversible", "partially reversible"),
+                ("constant", "none"),
+                "positive",
+            ),
+        ],
+    )
+    def test_partial_plating_requires_sei(self, plating, sei, path):
+        # 5709
+        with pytest.raises(
+            pybamm.OptionError,
+            match=rf"Option 'lithium plating' at {path} is 'partially reversible', "
+            r"which requires 'SEI' to be a model other than 'none'",
+        ):
+            BatteryModelOptions({"lithium plating": plating, "SEI": sei})
+
+    def test_partial_plating_with_sei_is_valid(self):
+        BatteryModelOptions(
+            {"lithium plating": "partially reversible", "SEI": "constant"}
+        )
+        BatteryModelOptions(
+            {
+                "lithium plating": ("none", "partially reversible"),
+                "SEI": ("none", "constant"),
+            }
+        )
+
+    def test_partial_plating_sei_none_fails_at_model_construction(self):
+        with pytest.raises(pybamm.OptionError, match=r"'lithium plating'"):
+            pybamm.lithium_ion.DFN(
+                {"lithium plating": "partially reversible", "SEI": "none"}
+            )
+
+    def test_sei_on_cracks_requires_cracking_per_electrode(self):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"Option 'SEI on cracks' at positive is 'true', which requires "
+            r"'particle mechanics' to be 'swelling and cracking'",
+        ):
+            BatteryModelOptions(
+                {
+                    "SEI on cracks": ("true", "true"),
+                    "particle mechanics": ("swelling and cracking", "swelling only"),
+                }
+            )
+
+    def test_stress_diffusion_requires_mechanics_per_electrode(self):
+        # 4943
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"Option 'stress-induced diffusion' at positive is 'true', which "
+            r"requires 'particle mechanics' to be a model other than 'none'",
+        ):
+            BatteryModelOptions(
+                {
+                    "particle mechanics": ("swelling only", "none"),
+                    "stress-induced diffusion": "true",
+                }
+            )
+        BatteryModelOptions(
+            {
+                "particle mechanics": ("swelling only", "none"),
+                "stress-induced diffusion": ("true", "false"),
+            }
+        )
+
+    def test_multi_phase_requirements_per_electrode(self):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"at negative has multiple particle phases",
+        ):
+            BatteryModelOptions(
+                {"particle phases": ("2", "1"), "surface form": "false"}
+            )
+        with pytest.raises(pybamm.OptionError, match=r"'Fickian diffusion'"):
+            BatteryModelOptions(
+                {
+                    "particle phases": ("2", "1"),
+                    "particle": (
+                        ("Fickian diffusion", "uniform profile"),
+                        "Fickian diffusion",
+                    ),
+                }
+            )
+        # a non-Fickian particle in the single-phase electrode is fine
+        BatteryModelOptions(
+            {
+                "particle phases": ("2", "1"),
+                "particle": ("Fickian diffusion", "uniform profile"),
+            }
+        )
+        # particle-size distributions remain supported for composite electrodes
+        BatteryModelOptions(
+            {"particle phases": ("2", "1"), "particle size": "distribution"}
+        )
 
 
 class TestOptions:
