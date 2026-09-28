@@ -22,6 +22,7 @@
 
 ## Bug fixes
 
+- Repeated identical experiment steps now keep their own `start_time` schedule. Before, every repeat took the `next_start_time` and `end_time` of its first occurrence, so padding rests were skipped or steps were cut off at an end time already in the past. ([#5817](https://github.com/pybamm-team/PyBaMM/pull/5817))
 - Per-phase `"particle mechanics"` options, e.g. `(("swelling and cracking", "swelling only"), "none")`, now set the mechanics submodel of each phase. Before, the option was read per electrode, so a per-phase tuple built no mechanics submodel and the model failed to build. ([#5694](https://github.com/pybamm-team/PyBaMM/pull/5694))
 - `BasicDFN2D` reports the interfacial current density as `"Negative/Positive electrode interfacial current density [A.m-2]"`. It was stored under `"Negative/Positive electrode current density [A.m-2]"`, which every other model uses for the solid-phase current density. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
 - `FiniteVolumeUnstructured` no longer floors `cos(theta)` in the over-relaxed two-point weight. The floor of 0.05 capped the weight on sliver faces, such as the tetrahedra of a thin pouch-cell slab, and the cross term then gave the diffusion operator growing modes: a tetrahedral `BasicDFN3DUnstructured` on the default geometry blew up within seconds. Meshes whose faces never reached the floor are unchanged. ([#5774](https://github.com/pybamm-team/PyBaMM/pull/5774))
