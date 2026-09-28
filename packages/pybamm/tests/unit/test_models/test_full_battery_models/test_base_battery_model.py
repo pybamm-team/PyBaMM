@@ -1237,3 +1237,86 @@ class TestOptionHelpers:
         ) == (
             "Option 'thermal' is 'x-full', which requires 'cell geometry' to be 'pouch'."
         )
+
+
+class TestModelDefaultOptions:
+    @pytest.mark.parametrize(
+        "model_class, supplied",
+        [
+            (pybamm.lithium_ion.SPM, {"SEI": "reaction limited"}),
+            (pybamm.lithium_ion.SPM, {"intercalation kinetics": "linear"}),
+            (pybamm.lithium_ion.SPMe, {"particle size": "distribution"}),
+            (pybamm.lithium_ion.MPM, {"SEI": "reaction limited"}),
+            (pybamm.lithium_ion.MSMR, {"number of MSMR reactions": ("6", "4")}),
+            (pybamm.lithium_ion.NewmanTobias, {"SEI": "constant"}),
+            (pybamm.lithium_metal.DFN, {"thermal": "lumped"}),
+            (pybamm.lead_acid.LOQS, {"thermal": "isothermal"}),
+            (pybamm.lithium_ion.Yang2017, {"thermal": "lumped"}),
+            (pybamm.lithium_ion.BasicDFNHalfCell, {"working electrode": "positive"}),
+        ],
+    )
+    def test_constructor_does_not_mutate_options(self, model_class, supplied):
+        # 5801
+        snapshot = dict(supplied)
+        model_class(supplied)
+        assert supplied == snapshot
+
+    def test_spm_options_do_not_leak_into_later_models(self):
+        # 5801
+        options = {"SEI": "reaction limited"}
+        pybamm.lithium_ion.SPM(options)
+        dfn = pybamm.lithium_ion.DFN(options)
+        assert dfn.options["x-average side reactions"] == "false"
+
+    def test_identity_defaults(self):
+        assert pybamm.lithium_ion.SPM().options["x-average side reactions"] == "true"
+        assert pybamm.lithium_ion.SPMe().options["x-average side reactions"] == "false"
+        model = pybamm.lithium_ion.SPM({"intercalation kinetics": "linear"})
+        assert model.options["surface form"] == "algebraic"
+        model = pybamm.lithium_ion.MPM()
+        assert model.options["particle size"] == "distribution"
+        assert model.options["surface form"] == "algebraic"
+        model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
+        assert model.options["particle"] == "MSMR"
+        assert (
+            pybamm.lithium_ion.NewmanTobias().options["particle"] == "uniform profile"
+        )
+        assert pybamm.lithium_metal.DFN().options["working electrode"] == "positive"
+        assert pybamm.lead_acid.LOQS().options["particle shape"] == "no particles"
+        assert pybamm.lithium_ion.Yang2017().options.negative["SEI"] == (
+            "ec reaction limited"
+        )
+        model = pybamm.lithium_ion.Yang2017({"thermal": "lumped"})
+        assert model.options["thermal"] == "lumped"
+
+    @pytest.mark.parametrize(
+        "model_class, supplied, match",
+        [
+            (pybamm.lithium_ion.MPM, {"particle size": "single"}, r"particle size"),
+            (pybamm.lithium_ion.MPM, {"surface form": "false"}, r"surface form"),
+            (pybamm.lithium_ion.MSMR, {}, r"number of MSMR reactions"),
+            (
+                pybamm.lithium_ion.MSMR,
+                {
+                    "number of MSMR reactions": ("6", "4"),
+                    "particle": "Fickian diffusion",
+                },
+                r"'particle' must be 'MSMR'",
+            ),
+            (
+                pybamm.lithium_metal.DFN,
+                {"working electrode": "both"},
+                r"working electrode",
+            ),
+            (pybamm.lead_acid.LOQS, {"particle shape": "spherical"}, r"particle shape"),
+            (pybamm.lithium_ion.Yang2017, {"SEI": "constant"}, r"Yang2017"),
+            (
+                pybamm.lithium_ion.BasicDFNHalfCell,
+                {"thermal": "lumped"},
+                r"BasicDFNHalfCell",
+            ),
+        ],
+    )
+    def test_incompatible_identity_overrides(self, model_class, supplied, match):
+        with pytest.raises(pybamm.OptionError, match=match):
+            model_class(supplied)

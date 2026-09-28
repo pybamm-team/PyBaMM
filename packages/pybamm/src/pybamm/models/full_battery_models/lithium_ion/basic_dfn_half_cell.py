@@ -30,8 +30,17 @@ class BasicDFNHalfCell(BaseModel):
 
     """
 
+    def _model_default_options(self, supplied):
+        if (
+            any(key != "working electrode" for key in supplied)
+            or supplied.get("working electrode", "positive") != "positive"
+        ):
+            raise pybamm.OptionError(
+                "BasicDFNHalfCell only supports 'working electrode': 'positive'."
+            )
+        return {"working electrode": "positive"}
+
     def __init__(self, options=None, name="Doyle-Fuller-Newman half cell model"):
-        options = {"working electrode": "positive"}
         super().__init__(options, name)
         pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for

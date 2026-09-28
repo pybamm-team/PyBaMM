@@ -1330,6 +1330,26 @@ class BaseBatteryModel(pybamm.BaseModel):
             base_spatial_methods["cell"] = pybamm.ScikitFiniteElement3D()
         return base_spatial_methods
 
+    def _model_default_options(self, supplied):
+        """Return the options that define this model, merged under the caller's.
+
+        Parameters
+        ----------
+        supplied : dict
+            The options given by the caller.
+
+        Returns
+        -------
+        dict
+            The model's default options.
+
+        Raises
+        ------
+        pybamm.OptionError
+            If a supplied option is incompatible with the model.
+        """
+        return {}
+
     @property
     def options(self):
         return self._options
@@ -1340,7 +1360,10 @@ class BaseBatteryModel(pybamm.BaseModel):
         # this does not catch cases that subclass the dict type
         # so other submodels can pass in their own options class if needed
         if extra_options is None or type(extra_options) == dict:
-            options = BatteryModelOptions(extra_options)
+            supplied = dict(extra_options or {})
+            options = BatteryModelOptions(
+                {**self._model_default_options(supplied), **supplied}
+            )
         else:
             options = extra_options
 
