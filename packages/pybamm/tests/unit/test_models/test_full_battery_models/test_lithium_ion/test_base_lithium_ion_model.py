@@ -54,6 +54,24 @@ class TestBaseLithiumIonModel:
             model.calc_esoh = "Yes"
 
     @pytest.mark.parametrize(
+        "phases, calc_esoh", [(("2", "1"), False), (("1", "1"), True)]
+    )
+    def test_calc_esoh_per_electrode_phases(self, phases, calc_esoh):
+        model = pybamm.lithium_ion.SPM({"particle phases": phases})
+        assert model.calc_esoh is calc_esoh
+
+    @pytest.mark.parametrize(
+        "options, explicit",
+        [({}, True), ({"SEI": ("reaction limited", "none")}, False)],
+    )
+    def test_half_cell_counter_electrode_reads_its_own_sei(self, options, explicit):
+        model = pybamm.lithium_ion.DFN({"working electrode": "positive", **options})
+        submodel = model.submodels["negative electrode potential"]
+        assert (
+            isinstance(submodel, pybamm.electrode.ohm.LithiumMetalExplicit) is explicit
+        )
+
+    @pytest.mark.parametrize(
         "options",
         [
             {},
