@@ -19,6 +19,7 @@ from pybamm.models.full_battery_models.base_battery_model import (
     resolve_option,
     validate_option_value,
 )
+from pybamm.models.full_battery_models.lithium_metal.dfn import DFN as LithiumMetalDFN
 
 OPTIONS_DICT = {
     "surface form": "differential",
@@ -1249,7 +1250,7 @@ class TestModelDefaultOptions:
             (pybamm.lithium_ion.MPM, {"SEI": "reaction limited"}),
             (pybamm.lithium_ion.MSMR, {"number of MSMR reactions": ("6", "4")}),
             (pybamm.lithium_ion.NewmanTobias, {"SEI": "constant"}),
-            (pybamm.lithium_metal.DFN, {"thermal": "lumped"}),
+            (LithiumMetalDFN, {"thermal": "lumped"}),
             (pybamm.lead_acid.LOQS, {"thermal": "isothermal"}),
             (pybamm.lithium_ion.Yang2017, {"thermal": "lumped"}),
             (pybamm.lithium_ion.BasicDFNHalfCell, {"working electrode": "positive"}),
@@ -1281,7 +1282,7 @@ class TestModelDefaultOptions:
         assert (
             pybamm.lithium_ion.NewmanTobias().options["particle"] == "uniform profile"
         )
-        assert pybamm.lithium_metal.DFN().options["working electrode"] == "positive"
+        assert LithiumMetalDFN().options["working electrode"] == "positive"
         assert pybamm.lead_acid.LOQS().options["particle shape"] == "no particles"
         assert pybamm.lithium_ion.Yang2017().options.negative["SEI"] == (
             "ec reaction limited"
@@ -1304,7 +1305,7 @@ class TestModelDefaultOptions:
                 r"'particle' must be 'MSMR'",
             ),
             (
-                pybamm.lithium_metal.DFN,
+                LithiumMetalDFN,
                 {"working electrode": "both"},
                 r"working electrode",
             ),
