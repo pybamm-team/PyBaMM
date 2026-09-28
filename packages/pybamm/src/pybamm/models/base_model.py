@@ -92,7 +92,7 @@ class BaseModel:
     """
 
     _DEFAULT_CONVERT_TO_FORMAT = "casadi"
-    _VALID_CONVERT_TO_FORMATS = (None, "python", "casadi", "jax")
+    _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax")
 
     def __init__(self, name="Unnamed model"):
         self.name = name
@@ -234,18 +234,26 @@ class BaseModel:
         The format the solver converts the RHS, algebraic equations, Jacobian and
         events to. Options are:
 
-            - None: retain PyBaMM expression tree structure.
             - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
             - "casadi": convert to CasADi expression tree for Jacobian calculation.
             - "jax": convert to JAX expression tree.
 
-        Default is "casadi".
+        Default is "casadi". ``None`` is deprecated: it evaluates as "python" and
+        raises a ``DeprecationWarning`` when set.
         """
         return self._convert_to_format
 
     @convert_to_format.setter
     def convert_to_format(self, value: str | None) -> None:
-        if value not in self._VALID_CONVERT_TO_FORMATS:
+        if value is None:
+            warnings.warn(
+                "convert_to_format=None is deprecated and will be removed in a "
+                "future release. It evaluates as 'python'; set "
+                "convert_to_format='python' or leave the default instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        elif value not in self._VALID_CONVERT_TO_FORMATS:
             valid = ", ".join(repr(v) for v in self._VALID_CONVERT_TO_FORMATS)
             raise pybamm.OptionError(
                 f"convert_to_format must be one of {valid}, got {value!r}"

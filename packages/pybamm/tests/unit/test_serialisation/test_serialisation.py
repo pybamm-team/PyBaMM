@@ -242,7 +242,7 @@ class TestSerialise:
         newest_solver = newest_model.default_solver
         newest_solver.solve(newest_model, [0, 3600])
 
-    @pytest.mark.parametrize("convert_to_format", [None, "python"])
+    @pytest.mark.parametrize("convert_to_format", ["python", "jax"])
     def test_discretised_model_round_trips_convert_to_format(self, convert_to_format):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
@@ -261,7 +261,7 @@ class TestSerialise:
         del data["convert_to_format"]
         assert Serialise().load_model(data).convert_to_format == "casadi"
 
-    @pytest.mark.parametrize("convert_to_format", [None, "python"])
+    @pytest.mark.parametrize("convert_to_format", ["python", "jax"])
     def test_custom_model_round_trips_convert_to_format(self, convert_to_format):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")

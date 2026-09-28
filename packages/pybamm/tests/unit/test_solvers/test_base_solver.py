@@ -490,7 +490,12 @@ class TestBaseSolver:
         [
             "casadi",
             "python",
-            None,
+            pytest.param(
+                None,
+                marks=pytest.mark.filterwarnings(
+                    "ignore:convert_to_format=None is deprecated:DeprecationWarning"
+                ),
+            ),
             pytest.param(
                 "jax",
                 marks=pytest.mark.skipif(

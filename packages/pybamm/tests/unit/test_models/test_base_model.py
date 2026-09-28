@@ -1778,7 +1778,7 @@ class TestBaseModel:
 
     def test_convert_to_format_validated(self):
         model = pybamm.BaseModel()
-        for valid in (None, "python", "casadi", "jax"):
+        for valid in ("python", "casadi", "jax"):
             model.convert_to_format = valid
             assert model.convert_to_format == valid
         with pytest.raises(
@@ -1786,13 +1786,21 @@ class TestBaseModel:
         ):
             model.convert_to_format = "fortran"
 
+    def test_convert_to_format_none_deprecated(self):
+        model = pybamm.BaseModel()
+        with pytest.warns(
+            DeprecationWarning, match=r"convert_to_format=None is deprecated"
+        ):
+            model.convert_to_format = None
+        assert model.convert_to_format is None
+        assert model.uses_stacked_inputs is False
+
     def test_uses_stacked_inputs(self):
         model = pybamm.BaseModel()
         for convert_to_format, stacked in [
             ("casadi", True),
             ("python", False),
             ("jax", False),
-            (None, False),
         ]:
             model.convert_to_format = convert_to_format
             assert model.uses_stacked_inputs is stacked
