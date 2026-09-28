@@ -246,9 +246,7 @@ class TestBaseBatteryModel:
             pybamm.BaseBatteryModel({"particle": "bad particle"})
         with pytest.raises(pybamm.OptionError, match=r"working electrode"):
             pybamm.BaseBatteryModel({"working electrode": "bad working electrode"})
-        with pytest.raises(
-            pybamm.OptionError, match=r"is not recognized in option 'working electrode'"
-        ):
+        with pytest.raises(pybamm.OptionError, match=r"The 'negative' working"):
             pybamm.BaseBatteryModel({"working electrode": "negative"})
         with pytest.raises(pybamm.OptionError, match=r"particle shape"):
             pybamm.BaseBatteryModel({"particle shape": "bad particle shape"})
