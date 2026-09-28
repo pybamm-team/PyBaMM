@@ -3,6 +3,9 @@ import os
 # Forbid symbol mutation in this process and its children; must precede pybamm.
 os.environ["PYBAMM_TEST_FORBID_SYMBOL_MUTATION"] = "1"
 
+# Forbid dependent option defaults so PyBaMM's own code and tests stay explicit.
+os.environ["PYBAMM_TEST_FORBID_LEGACY_OPTION_DEFAULTS"] = "1"
+
 import numpy as np
 import pytest
 from hypothesis import settings as hypothesis_settings
