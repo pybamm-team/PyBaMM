@@ -2,7 +2,7 @@
 
 ## Bug fixes
 
-- `BasicDFNUnstructured` now reports `"Voltage [V]"` as the area-weighted mean of the positive electrode potential over the positive face, rather than the value of the single cell nearest the top-right corner. The old value depended on the in-plane mesh and, in 3D, on cell ordering whenever properties vary over the face. ([#PR](https://github.com/pybamm-team/PyBaMM/pull/PR))
+- `BasicDFNUnstructured` now reports `"Voltage [V]"` as the area-weighted mean of the positive electrode potential over the positive face, rather than the value of the single cell nearest the top-right corner. The old value depended on the in-plane mesh and, in 3D, on cell ordering whenever properties vary over the face. ([#5822](https://github.com/pybamm-team/PyBaMM/pull/5822))
 
 # [v26.9.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.9.0.0) - 2026-09-28
 
