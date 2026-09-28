@@ -15,7 +15,7 @@
 ## Features
 
 - Added the `Bonkile2024` parameter set for a graphite/silicon composite negative electrode (NMC positive electrode), with parameters for stress-driven loss of active material, solvent-diffusion-limited SEI, partially reversible lithium plating, and particle mechanics (swelling and cracking for graphite, swelling only for silicon and NMC). ([#5694](https://github.com/pybamm-team/PyBaMM/pull/5694))
-- Added VTK-based plotting (`VTKQuickPlot`, also via `pybamm.dynamic_plot(..., backend="vtk")`) for unstructured mesh solutions, matplotlib `QuickPlot` support for 2D unstructured scalar and vector-field variables, and headless CI OpenGL setup. ([#5689](https://github.com/pybamm-team/PyBaMM/pull/5689))
+- Added VTK-based plotting (`VTKQuickPlot`, also via `pybamm.dynamic_plot(..., backend="vtk")`) for unstructured mesh solutions, matplotlib `QuickPlot` support for 2D unstructured scalar and vector-field variables, and headless CI OpenGL setup. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
 - Added a basic DFN model on 2D or 3D unstructured meshes (`BasicDFNUnstructured`); the `"dimensionality"` option selects an x-z (1) or x-y-z (2) mesh. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
 - Improved performance of composite particle models. ([#5439](https://github.com/pybamm-team/PyBaMM/pull/5439))
 - Added `get_jacobian_sparsity()` and `spy()` methods to `IDAKLUSolver` for inspecting Jacobian structure. ([#5439](https://github.com/pybamm-team/PyBaMM/pull/5439))
