@@ -12,13 +12,12 @@ import pybamm
 def _is_independent_of(
     symbol: pybamm.Symbol, domain_matches: Callable[[str], bool]
 ) -> bool:
-    """True if no Variable/SpatialVariable leaf has any domain (primary or
-    auxiliary) that ``domain_matches`` matches. Broadcasts from a non-matching
-    domain are therefore treated as independent even if the broadcast itself
-    carries a matching domain.
+    """True if no leaf of ``symbol`` has any domain (primary or auxiliary) that
+    ``domain_matches`` matches. Only leaves are inspected, so a broadcast of an
+    independent child is itself independent.
     """
     for node in symbol.pre_order():
-        if isinstance(node, pybamm.Variable | pybamm.SpatialVariable) and any(
+        if not node.children and any(
             domain_matches(dom) for doms in node._domains.values() for dom in doms
         ):
             return False
@@ -84,13 +83,12 @@ class _BaseAverage(pybamm.Integral):
         if isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
             left, right = symbol.orphans
             return operator(average_fn(left), average_fn(right))
-        if isinstance(symbol, pybamm.Multiplication):
+        if isinstance(symbol, pybamm.Multiplication | pybamm.Division):
             left, right = symbol.orphans
-            if cls.symbol_is_constant(left) or cls.symbol_is_constant(right):
-                return operator(average_fn(left), average_fn(right))
-        if isinstance(symbol, pybamm.Division):
-            left, right = symbol.orphans
-            if cls.symbol_is_constant(right):
+            if cls.symbol_is_constant(right) or (
+                isinstance(symbol, pybamm.Multiplication)
+                and cls.symbol_is_constant(left)
+            ):
                 return operator(average_fn(left), average_fn(right))
         return None
 

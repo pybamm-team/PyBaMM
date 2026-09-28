@@ -222,6 +222,10 @@ class TestUnaryOperators:
         out = pybamm.x_average(eps * c_s_rav)
         assert out == pybamm.XAverage(eps * c_s_rav)
 
+        # non-Variable leaves carrying an x domain are x-dependent too
+        coupled = pybamm.CoupledVariable("c", domain="negative electrode")
+        assert isinstance(pybamm.x_average(coupled * eps), pybamm.XAverage)
+
     def test_x_average_does_not_split_when_both_sides_x_dependent(self):
         f1 = pybamm.Variable("f1", domain="negative electrode")
         f2 = pybamm.Variable("f2", domain="negative electrode")
