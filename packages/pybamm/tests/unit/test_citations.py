@@ -11,6 +11,8 @@ import pybamm
 class TestCitations:
     def test_citations(self):
         citations = pybamm.citations
+        # other tests on the same worker may have registered papers
+        citations._reset()
         # Default papers should be in both _all_citations dict and in the papers to cite
         assert "Sulzer2021" in citations._all_citations
         assert "Sulzer2021" in citations._papers_to_cite
