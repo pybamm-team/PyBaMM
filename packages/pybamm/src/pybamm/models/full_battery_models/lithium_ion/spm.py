@@ -34,7 +34,7 @@ class SPM(BaseModel):
             )
         ):
             defaults["surface form"] = "algebraic"
-            _warn_legacy_defaults({"surface form": "algebraic"})
+            _warn_legacy_defaults({"surface form": defaults["surface form"]})
         if type(self) in (pybamm.lithium_ion.SPM, pybamm.lithium_ion.MPM):
             defaults["x-average side reactions"] = "true"
         return defaults

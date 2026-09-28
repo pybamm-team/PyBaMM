@@ -636,6 +636,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         2-tuple inside the entry for that electrode. A scalar value applies to
         everywhere below it (both electrodes, or both phases of an electrode).
 
+        Some options below "should be given" when another option is set. If
+        they are not, they still take a legacy default derived from the other
+        option, with a :class:`pybamm.OptionDefaultDeprecationWarning` naming the
+        options to pass; a future release will raise an ``OptionError`` instead.
+
             * "calculate discharge energy": str
                 Whether to calculate the discharge energy, throughput energy and
                 throughput capacity in addition to discharge capacity. Must be one of
@@ -648,9 +653,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 (if thermal effects are included) solves a lumped thermal model
                 with prescribed surface area for cooling. Should be given as
                 "pouch" when "dimensionality" is 1 or 2, or "thermal" is
-                "x-full"; for now it still defaults to "pouch" in that case,
-                with a :class:`pybamm.OptionDefaultDeprecationWarning`, and a
-                future release will raise an ``OptionError`` instead.
+                "x-full" (legacy default: "pouch").
             * "calculate heat source for isothermal models" : str
                 Whether to calculate the heat source terms during isothermal operation.
                 Can be "true" or "false". If "false", the heat source terms are set
@@ -753,11 +756,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 behaviour in negative and positive electrodes. Should be given
                 explicitly on an electrode where "SEI on cracks" is "true"
                 (then "swelling and cracking" is intended) or "loss of active
-                material" is stress-driven (then "swelling only"); for now it
-                still defaults per electrode to "swelling and cracking",
-                "swelling only", or "none" as above, with a
-                :class:`pybamm.OptionDefaultDeprecationWarning`, and a future
-                release will raise an ``OptionError`` instead.
+                material" is stress-driven (then "swelling only"); the legacy
+                default is set per electrode in the same way, else "none".
             * "particle phases": str
                 Number of phases present in the electrode. A 2-tuple can be provided for
                 different behaviour in negative and positive electrodes.
@@ -786,19 +786,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 electrode only; use a 2-tuple to also set the positive electrode.
                 ``options["SEI"]`` stores the value as given. Should be given
                 explicitly as "constant" on an electrode where "lithium plating"
-                is "partially reversible"; for now it still defaults to
-                "constant" there (which also pins the "SEI film resistance"
-                default, see below), with a
-                :class:`pybamm.OptionDefaultDeprecationWarning`, and a future
-                release will raise an ``OptionError`` instead.
+                is "partially reversible" (legacy default: "constant" there,
+                which leaves the "SEI film resistance" default at "none").
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 Should be given explicitly as "distributed" on any electrode where
-                the "SEI" option is not "none"; for now it still defaults to
-                "distributed" in that case (and to "none" if "SEI" is "none" on
-                every electrode), with a
-                :class:`pybamm.OptionDefaultDeprecationWarning`, and a future
-                release will raise an ``OptionError`` instead. This is because
+                the "SEI" option is not "none" (legacy default: "distributed"
+                then, else "none"). This is because
                 the "distributed" model is more complex than the model with no
                 additional resistance, which adds unnecessary complexity if
                 there is no SEI in the first place
@@ -833,10 +827,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "stress-induced diffusion" : str
                 Whether to include stress-induced diffusion, can be "false" or "true".
                 Should be given explicitly on an electrode (and phase) where
-                "particle mechanics" is not "none"; for now it still defaults
-                per electrode and phase to "true" there and "false" otherwise,
-                with a :class:`pybamm.OptionDefaultDeprecationWarning`, and a
-                future release will raise an ``OptionError`` instead. A 2-tuple
+                "particle mechanics" is not "none" (legacy default, per
+                electrode and phase: "true" there, else "false"). A 2-tuple
                 can be provided for different behaviour in negative and positive
                 electrodes.
             * "surface form" : str
@@ -845,10 +837,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 explicitly as "algebraic" when an electrode has multiple
                 particle phases, or (for SPM and SPMe, but not MPM) when
                 "intercalation kinetics" is given or a "distribution"
-                "particle size" is set; for now it still defaults to "algebraic" in
-                those cases, with a
-                :class:`pybamm.OptionDefaultDeprecationWarning`, and a future
-                release will raise an ``OptionError`` instead. MPM always
+                "particle size" is set (legacy default: "algebraic"). MPM always
                 defaults "surface form" to "algebraic" as part of its own
                 model identity, which is not deprecated.
             * "surface temperature" : str
@@ -867,16 +856,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 solve an algebraic equation for it. Should be given explicitly as
                 "true" when "SEI film resistance" is "distributed", or when it
                 is not "none" and an electrode has multiple particle phases;
-                for now it still defaults to "true" in those cases (otherwise
-                "false"), with a :class:`pybamm.OptionDefaultDeprecationWarning`,
-                and a future release will raise an ``OptionError`` instead.
+                (legacy default: "true" then, else "false").
             * "voltage as a state" : str
                 Whether to promote voltage to an algebraic state variable.
                 Can be "false" (default) or "true". Should be given explicitly
                 as "true" when "operating mode" is "explicit power" or
-                "explicit resistance"; for now it still defaults to "true" in
-                that case, with a :class:`pybamm.OptionDefaultDeprecationWarning`,
-                and a future release will raise an ``OptionError`` instead.
+                "explicit resistance" (legacy default: "true").
                 When "true", the model is a DAE
                 and requires a DAE-capable solver (e.g. the default
                 IDAKLUSolver). When "false", voltage is computed as an
