@@ -2,10 +2,58 @@
 # Base battery model class
 #
 
+import os
 from functools import cached_property
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+
+# set by PyBaMM's test suites; read at import so every process agrees
+_FORBID_LEGACY_OPTION_DEFAULTS = (
+    os.environ.get("PYBAMM_TEST_FORBID_LEGACY_OPTION_DEFAULTS") == "1"
+)
+
+
+def legacy_default_message(fired):
+    """Describe options that were set from other options.
+
+    Parameters
+    ----------
+    fired : dict
+        Option names and the values they were given.
+
+    Returns
+    -------
+    str
+        The deprecation message.
+    """
+    return (
+        f"Options were set from other options because they were not given: "
+        f"{fired!r}. Relying on these defaults is deprecated and a future release "
+        "will raise an OptionError instead. Pass these options explicitly to keep "
+        "the current behaviour."
+    )
+
+
+def warn_legacy_defaults(fired):
+    """Warn that options were set from other options.
+
+    Parameters
+    ----------
+    fired : dict
+        Option names and the values they were given; nothing happens if empty.
+
+    Raises
+    ------
+    pybamm.OptionError
+        If legacy defaults are forbidden (in PyBaMM's own tests).
+    """
+    if not fired:
+        return
+    message = legacy_default_message(fired)
+    if _FORBID_LEGACY_OPTION_DEFAULTS:
+        raise pybamm.OptionError(message)
+    pybamm.util.warn_outside_pybamm(message, pybamm.OptionDefaultDeprecationWarning)
 
 
 def represents_positive_integer(s):
@@ -331,8 +379,15 @@ def _apply_legacy_defaults(options, supplied):
         The merged options, updated in place.
     supplied : set of str
         Option names given by the caller; these are never changed.
+
+    Returns
+    -------
+    dict
+        Option names and the values they were given, for options that were
+        not supplied and whose default differed from the value already set.
     """
     working_electrode = options["working electrode"]
+    fired = {}
 
     def electrode_leaves(option):
         # per-phase entries are flattened, so a check matches if any phase does
@@ -346,6 +401,8 @@ def _apply_legacy_defaults(options, supplied):
 
     def set_default(option, value):
         if option not in supplied:
+            if value != options[option]:
+                fired[option] = value
             options[option] = value
 
     def set_per_electrode_default(option, values):
@@ -367,6 +424,9 @@ def _apply_legacy_defaults(options, supplied):
             for leaves in electrode_leaves("lithium plating")
         ],
     )
+    if "SEI" in fired and "SEI film resistance" not in supplied:
+        # pin it explicitly so migrating "SEI" alone can't let this fire later
+        fired["SEI film resistance"] = options["SEI film resistance"]
     mechanics = []
     for cracks, lam in zip(
         electrode_leaves("SEI on cracks"),
@@ -410,6 +470,7 @@ def _apply_legacy_defaults(options, supplied):
             "'true' when an electrode has multiple particle phases",
         )
 
+    return fired
 
 def _check_electrode_compatibility(options):
     """Check options that depend on each other within one electrode or phase.
@@ -1013,9 +1074,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             for path, leaf in iter_option_leaves(option, value):
                 validate_option_value(option, leaf, self.possible_options[option], path)
 
-        _apply_legacy_defaults(options, set(extra_options))
+        fired = _apply_legacy_defaults(options, set(extra_options))
         if not legacy:
             _check_electrode_compatibility(options)
+        warn_legacy_defaults(fired)
 
         # All-or-nothing on full cells: if any of OCP/particle/intercalation
         # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.

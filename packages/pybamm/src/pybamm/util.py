@@ -7,7 +7,9 @@ import numbers
 import os
 import pathlib
 import pickle
+import sys
 import timeit
+import warnings
 from warnings import warn
 
 import pybamm
@@ -16,6 +18,27 @@ import pybamm
 def root_dir():
     """return the root directory of the PyBaMM install directory"""
     return str(pathlib.Path(pybamm.__path__[0]).parent.parent)
+
+
+_PYBAMM_DIRECTORY = os.path.dirname(os.path.abspath(__file__)) + os.sep
+
+
+def warn_outside_pybamm(message, category):
+    """Issue a warning attributed to the first caller outside PyBaMM.
+
+    Parameters
+    ----------
+    message : str
+        The warning message.
+    category : type
+        The warning class.
+    """
+    frame = sys._getframe(1)
+    stacklevel = 2
+    while frame is not None and frame.f_code.co_filename.startswith(_PYBAMM_DIRECTORY):
+        frame = frame.f_back
+        stacklevel += 1
+    warnings.warn(message, category, stacklevel=stacklevel)
 
 
 class FuzzyDict(dict):
