@@ -12,6 +12,7 @@
 
 - Setting `Array.entries_string` or `Interpolant.entries_string`, and calling `StateVector.set_evaluation_array`, are in-place symbol updates and now emit `SymbolMutationDeprecationWarning`. Construct a new symbol instead. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
 - `ProcessedVariable`'s `base_variables_casadi` argument and attribute are deprecated; pass the CasADi functions positionally or as `observer=`, and call the variable to evaluate it. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
+- Battery-model options that were set from another option because they were not given (`"cell geometry"`, `"SEI film resistance"`, `"SEI"` on an electrode with partially reversible lithium plating, `"particle mechanics"`, `"stress-induced diffusion"`, `"surface form"` for multi-phase electrodes and for SPM/MPM with non-default `"intercalation kinetics"` or a particle-size `"distribution"`, `"total interfacial current density as a state"`, and `"voltage as a state"`) now emit `pybamm.OptionDefaultDeprecationWarning`, naming the options that should be passed explicitly. Relying on these defaults is planned for removal no earlier than two feature releases from now, after which a future release will raise an `OptionError` instead. To migrate, pass the options named in the warning message with the same values to keep the current behaviour. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
 ## Features
 
