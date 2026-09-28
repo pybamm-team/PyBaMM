@@ -480,12 +480,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             matrix = vstack([identity for _ in range(reps)])
             out = pybamm.Matrix(matrix) @ symbol
 
-        if out is symbol:
-            # simplification can hand back the child itself (e.g. ones-vector
-            # multiply); copy before stamping domains on a possibly shared node
-            out = symbol.create_copy()
-        out.domains = domains.copy()
-        return out
+        return out.with_domains(domains)
 
     # ==================================================================
     #  Core operators
@@ -1528,7 +1523,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         bv_vector = pybamm.Matrix(mat)
 
         out = bv_vector @ discretised_child
-        out.clear_domains()
+        out = out.without_domains()
         return out
 
     def _corner_boundary_value(self, submesh, n, repeats, side, discretised_child):
@@ -1570,7 +1565,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         )
         mat = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
         out = pybamm.Matrix(mat) @ discretised_child
-        out.clear_domains()
+        out = out.without_domains()
         return out
 
     # ------------------------------------------------------------------
@@ -1687,10 +1682,6 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 csr_matrix(kron(eye(repeats, dtype=np.float64), matrix))
             )
 
-        def without_domains(expr):
-            expr.clear_domains()
-            return expr
-
         def tile(values):
             return pybamm.Vector(np.tile(values, repeats))
 
@@ -1715,9 +1706,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         k_vec = normals - alpha[:, np.newaxis] * e_ij
 
         two_point = diags(alpha / dist)
-        value = without_domains(
-            lift(two_point @ right_sub) @ right_symbol_disc
-        ) - without_domains(lift(two_point @ left_sub) @ left_symbol_disc)
+        value = (lift(two_point @ right_sub) @ right_symbol_disc).without_domains() - (
+            lift(two_point @ left_sub) @ left_symbol_disc
+        ).without_domains()
 
         k_vec = self._drop_orthogonal(k_vec)
         if not k_vec.any():
@@ -1740,9 +1731,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 mesh, bcs, repeats, interface=interface_rows
             )
             return [
-                without_domains(lift(G[k]) @ own_disc)
-                + without_domains(lift(G_cross[k]) @ other_disc)
-                + without_domains(bc_vecs[k])
+                (lift(G[k]) @ own_disc).without_domains()
+                + (lift(G_cross[k]) @ other_disc).without_domains()
+                + bc_vecs[k].without_domains()
                 for k in range(d)
             ]
 
@@ -1802,9 +1793,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         dx = right_mesh_x - left_mesh_x
 
         dy_r = (right_matrix / dx) @ right_symbol_disc
-        dy_r.clear_domains()
+        dy_r = dy_r.without_domains()
         dy_l = (left_matrix / dx) @ left_symbol_disc
-        dy_l.clear_domains()
+        dy_l = dy_l.without_domains()
 
         return dy_r - dy_l
 

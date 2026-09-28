@@ -1,3 +1,4 @@
+import hashlib
 from enum import Enum
 
 import numpy as np
@@ -5,6 +6,15 @@ import numpy as np
 import pybamm
 
 from .meshes import MeshGenerator, SubMesh
+
+# (query points x boundary triangles) pairs evaluated per chunk in contains_points_3d;
+# each pair carries ~10 float64 temporaries, so this keeps a chunk under ~20 MB
+_CONTAINS_POINTS_CHUNK_PAIRS = 200_000
+# boundary inflation, as a fraction of the mesh span, that puts surface points
+# strictly inside: exactly on the surface the solid-angle sign is round-off
+_CONTAINS_POINTS_INFLATION = 1e-9
+# containment masks remembered per mesh, keyed by the query-point array
+_CONTAINS_POINTS_CACHE_SIZE = 8
 
 
 class ElementType(str, Enum):
@@ -560,20 +570,37 @@ class UnstructuredSubMesh(SubMesh):
         :meth:`contains_points_3d`.  Returns ``None`` for a 2D mesh without
         boundary edges.
         """
-        query_pts = np.asarray(query_pts, dtype=np.float64)
-        if self.dimension == 3:
-            return self.contains_points_3d(query_pts)
-        if not hasattr(self, "_cached_boundary_loops"):
-            self._cached_boundary_loops = self.boundary_loops()
-        loops = self._cached_boundary_loops
-        if loops is None or len(loops) == 0:
-            return None
-        radius = 1e-9 * max(np.ptp(self.vertices, axis=0).max(), np.finfo(float).tiny)
-        containment_count = sum(
-            path.contains_points(query_pts[:, :2], radius=radius).astype(int)
-            for path in loops
+        query_pts = np.ascontiguousarray(query_pts, dtype=np.float64)
+        # plotting asks about the same display grid every frame: remember the mask
+        cache = self.__dict__.setdefault("_contains_points_cache", {})
+        cache_key = (
+            query_pts.shape,
+            hashlib.sha1(query_pts.tobytes(), usedforsecurity=False).digest(),
         )
-        return (containment_count % 2) == 1
+        if cache_key in cache:
+            return cache[cache_key].copy()
+
+        if self.dimension == 3:
+            inside = self.contains_points_3d(query_pts)
+        else:
+            if not hasattr(self, "_cached_boundary_loops"):
+                self._cached_boundary_loops = self.boundary_loops()
+            loops = self._cached_boundary_loops
+            if loops is None or len(loops) == 0:
+                return None
+            radius = 1e-9 * max(
+                np.ptp(self.vertices, axis=0).max(), np.finfo(float).tiny
+            )
+            containment_count = sum(
+                path.contains_points(query_pts[:, :2], radius=radius).astype(int)
+                for path in loops
+            )
+            inside = (containment_count % 2) == 1
+
+        if len(cache) >= _CONTAINS_POINTS_CACHE_SIZE:
+            del cache[next(iter(cache))]
+        cache[cache_key] = inside.copy()
+        return inside
 
     def boundary_loops(self):
         """Return boundary loops as a list of ``matplotlib.path.Path`` (2D only).
@@ -646,8 +673,10 @@ class UnstructuredSubMesh(SubMesh):
 
         Uses the generalized winding number (Van Oosterom--Strackee signed
         solid angle sum over all boundary triangles).  Points inside the
-        domain return ``True``; points outside or inside internal cavities
-        return ``False``.
+        domain or on its surface return ``True``; points outside or inside
+        internal cavities return ``False``.  The boundary is inflated by
+        ``1e-9`` of the mesh span, so points that close outside it also count
+        as inside.
         """
         query_pts = np.asarray(query_pts, dtype=np.float64)
         bnd_start = self._boundary_face_start
@@ -668,43 +697,57 @@ class UnstructuredSubMesh(SubMesh):
                 f"contains_points_3d: unsupported face with {n_vpf} vertices"
             )
 
-        v0 = self.vertices[tri_idx[:, 0]]
-        v1 = self.vertices[tri_idx[:, 1]]
-        v2 = self.vertices[tri_idx[:, 2]]
-
+        vertices = self.vertices
         # Ensure consistent CCW orientation from outside (matching outward normals)
-        cross = np.cross(v1 - v0, v2 - v0)
+        cross = np.cross(
+            vertices[tri_idx[:, 1]] - vertices[tri_idx[:, 0]],
+            vertices[tri_idx[:, 2]] - vertices[tri_idx[:, 0]],
+        )
         flip = np.sum(cross * tri_normals, axis=1) < 0
-        v1_fixed = v1.copy()
-        v2_fixed = v2.copy()
-        v1_fixed[flip] = v2[flip]
-        v2_fixed[flip] = v1[flip]
+        tri_idx = tri_idx.copy()
+        tri_idx[flip, 1], tri_idx[flip, 2] = tri_idx[flip, 2], tri_idx[flip, 1]
+
+        # move each boundary vertex outward along its mean face normal; the
+        # surface stays closed, so the winding number stays exactly 0 or 4*pi
+        unit_normals = tri_normals / np.linalg.norm(tri_normals, axis=1)[:, None]
+        vertex_normals = np.zeros_like(vertices)
+        np.add.at(vertex_normals, tri_idx.ravel(), np.repeat(unit_normals, 3, axis=0))
+        lengths = np.linalg.norm(vertex_normals, axis=1)
+        vertex_normals[lengths > 0] /= lengths[lengths > 0, None]
+        span = np.ptp(vertices, axis=0).max()
+        vertices = vertices + _CONTAINS_POINTS_INFLATION * span * vertex_normals
+
+        v0 = vertices[tri_idx[:, 0]]
+        v1_fixed = vertices[tri_idx[:, 1]]
+        v2_fixed = vertices[tri_idx[:, 2]]
 
         n_query = len(query_pts)
         winding = np.zeros(n_query)
 
-        # Loop over query points (usually few), vectorised over the many
-        # boundary triangles — the reverse nesting costs O(n_triangles)
-        # per point regardless of how few points are asked about.
-        for i in range(n_query):
-            a = v0 - query_pts[i]
-            b = v1_fixed - query_pts[i]
-            c = v2_fixed - query_pts[i]
+        # vectorise over (points x triangles) in chunks so the temporaries stay
+        # bounded however many points are asked about
+        chunk = max(1, _CONTAINS_POINTS_CHUNK_PAIRS // max(len(v0), 1))
+        for start in range(0, n_query, chunk):
+            q = query_pts[start : start + chunk, np.newaxis, :]
+            a = v0[np.newaxis] - q
+            b = v1_fixed[np.newaxis] - q
+            c = v2_fixed[np.newaxis] - q
 
-            an = np.linalg.norm(a, axis=1)
-            bn = np.linalg.norm(b, axis=1)
-            cn = np.linalg.norm(c, axis=1)
+            an = np.linalg.norm(a, axis=2)
+            bn = np.linalg.norm(b, axis=2)
+            cn = np.linalg.norm(c, axis=2)
 
-            num = np.einsum("ij,ij->i", a, np.cross(b, c))
+            num = np.einsum("ijk,ijk->ij", a, np.cross(b, c))
             den = (
                 an * bn * cn
-                + np.einsum("ij,ij->i", a, b) * cn
-                + np.einsum("ij,ij->i", a, c) * bn
-                + np.einsum("ij,ij->i", b, c) * an
+                + np.einsum("ijk,ijk->ij", a, b) * cn
+                + np.einsum("ijk,ijk->ij", a, c) * bn
+                + np.einsum("ijk,ijk->ij", b, c) * an
             )
 
-            winding[i] = 2.0 * np.arctan2(num, den).sum()
+            winding[start : start + chunk] = 2.0 * np.arctan2(num, den).sum(axis=1)
 
+        # exterior points sum to 0 and interior ones (surface included) to 4*pi
         return winding > 2.0 * np.pi
 
 

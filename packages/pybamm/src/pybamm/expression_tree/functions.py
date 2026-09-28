@@ -48,6 +48,10 @@ class Function(pybamm.Symbol):
         The function which was differentiated to obtain this one. Default is None.
     """
 
+    __slots__ = ("differentiated_function", "function")
+    # callables are identified by the symbol's name, not by object identity
+    _id_excluded_fields = ("differentiated_function", "function")
+
     def __init__(
         self,
         function: Callable,
@@ -61,9 +65,7 @@ class Function(pybamm.Symbol):
             if isinstance(child, float | int | np.number):
                 children[idx] = pybamm.Scalar(child)
 
-        if name is not None:
-            self.name = name
-        else:
+        if name is None:
             try:
                 name = f"function ({function.__name__})"
             except AttributeError:
@@ -78,7 +80,7 @@ class Function(pybamm.Symbol):
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         out = f"{self.name[10:-1]}("
-        for child in self.children:
+        for child in self._children:
             out += f"{child!s}, "
         out = out[:-2] + ")"
         return out
@@ -90,7 +92,7 @@ class Function(pybamm.Symbol):
         else:
             children = self.orphans
             partial_derivatives: list[pybamm.Symbol | None] = [None] * len(children)
-            for i, child in enumerate(self.children):
+            for i, child in enumerate(self._children):
                 # if variable appears in the function, differentiate
                 # function, and apply chain rule
                 if variable in child.pre_order():
@@ -120,7 +122,7 @@ class Function(pybamm.Symbol):
     def _function_jac(self, children_jacs):
         """Calculate the Jacobian of a function."""
 
-        if all(child.evaluates_to_constant_number() for child in self.children):
+        if all(child.evaluates_to_constant_number() for child in self._children):
             jacobian = pybamm.Scalar(0)
         else:
             # if at least one child contains variable dependence, then
@@ -130,7 +132,7 @@ class Function(pybamm.Symbol):
             for i, child in enumerate(children):
                 if not child.evaluates_to_constant_number():
                     jac_fun = self._function_diff(children, i) * children_jacs[i]
-                    jac_fun.clear_domains()
+                    jac_fun = jac_fun.without_domains()
                     if jacobian is None:
                         jacobian = jac_fun
                     else:
@@ -147,24 +149,24 @@ class Function(pybamm.Symbol):
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         evaluated_children = [
-            child.evaluate(t, y, y_dot, inputs) for child in self.children
+            child.evaluate(t, y, y_dot, inputs) for child in self._children
         ]
         return self._function_evaluate(evaluated_children)
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
-        return any(child.evaluates_on_edges(dimension) for child in self.children)
+        return any(child.evaluates_on_edges(dimension) for child in self._children)
 
     def is_constant(self):
         """See :meth:`pybamm.Symbol.is_constant()`."""
-        return all(child.is_constant() for child in self.children)
+        return all(child.is_constant() for child in self._children)
 
     def _evaluate_for_shape(self):
         """
         Default behaviour: has same shape as all child
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        evaluated_children = [child.evaluate_for_shape() for child in self.children]
+        evaluated_children = [child.evaluate_for_shape() for child in self._children]
         return self._function_evaluate(evaluated_children)
 
     def _function_evaluate(self, evaluated_children):
@@ -238,7 +240,7 @@ class Function(pybamm.Symbol):
             return sympy.Symbol(self.print_name)
         else:
             eq_list = []
-            for child in self.children:
+            for child in self._children:
                 eq = child.to_equation()
                 eq_list.append(eq)
             return self._sympy_operator(*eq_list)
@@ -267,6 +269,8 @@ class SpecificFunction(Function):
     child : :class:`pybamm.Symbol`
         The child to apply the function to
     """
+
+    __slots__ = ()
 
     def __init__(self, function: Callable, child: pybamm.Symbol):
         super().__init__(function, child)
@@ -348,6 +352,8 @@ def simplified_function(func_class: type[SF], child: pybamm.Symbol):
 class Arcsinh(SpecificFunction):
     """Arcsinh function."""
 
+    __slots__ = ()
+
     def __init__(self, child):
         super().__init__(np.arcsinh, child)
 
@@ -399,6 +405,8 @@ class Arcsinh2(Function):
     pybamm.Symbol
         The regularised arcsinh(a/b) value
     """
+
+    __slots__ = ("eps",)
 
     # a and b are Symbol operands carried via children (Function base); eps is emitted.
     _serialise_derived_params = frozenset({"a", "b"})
@@ -544,6 +552,8 @@ def arcsinh2(
 class Arctan(SpecificFunction):
     """Arctan function."""
 
+    __slots__ = ()
+
     def __init__(self, child):
         super().__init__(np.arctan, child)
 
@@ -575,6 +585,8 @@ def arctan(child: pybamm.Symbol):
 class Cos(SpecificFunction):
     """Cosine function."""
 
+    __slots__ = ()
+
     def __init__(self, child):
         super().__init__(np.cos, child)
 
@@ -602,6 +614,8 @@ def cos(child: pybamm.Symbol):
 class Cosh(SpecificFunction):
     """Hyberbolic cosine function."""
 
+    __slots__ = ()
+
     def __init__(self, child):
         super().__init__(np.cosh, child)
 
@@ -628,6 +642,8 @@ def cosh(child: pybamm.Symbol):
 
 class Erf(SpecificFunction):
     """Error function."""
+
+    __slots__ = ()
 
     def __init__(self, child):
         super().__init__(special.erf, child)
@@ -661,6 +677,8 @@ def erfc(child: pybamm.Symbol):
 class Exp(SpecificFunction):
     """Exponential function."""
 
+    __slots__ = ()
+
     def __init__(self, child):
         super().__init__(np.exp, child)
 
@@ -687,6 +705,8 @@ def exp(child: pybamm.Symbol):
 
 class Log(SpecificFunction):
     """Logarithmic function."""
+
+    __slots__ = ()
 
     def __init__(self, child):
         super().__init__(np.log, child)
@@ -729,6 +749,8 @@ def log10(child: pybamm.Symbol):
 class Max(SpecificFunction):
     """Max function."""
 
+    __slots__ = ()
+
     def __init__(self, child):
         super().__init__(np.max, child)
 
@@ -759,6 +781,8 @@ def max(child: pybamm.Symbol):
 
 class Min(SpecificFunction):
     """Min function."""
+
+    __slots__ = ()
 
     def __init__(self, child):
         super().__init__(np.min, child)
@@ -796,6 +820,8 @@ def sech(child: pybamm.Symbol):
 class Sin(SpecificFunction):
     """Sine function."""
 
+    __slots__ = ()
+
     def __init__(self, child):
         super().__init__(np.sin, child)
 
@@ -823,6 +849,8 @@ def sin(child: pybamm.Symbol):
 class Sinh(SpecificFunction):
     """Hyperbolic sine function."""
 
+    __slots__ = ()
+
     def __init__(self, child):
         super().__init__(np.sinh, child)
 
@@ -849,6 +877,8 @@ def sinh(child: pybamm.Symbol):
 
 class Sqrt(SpecificFunction):
     """Square root function."""
+
+    __slots__ = ()
 
     def __init__(self, child):
         super().__init__(np.sqrt, child)
@@ -909,6 +939,8 @@ class RegPower(Function):
     ----------
     .. [1] Modelica.Fluid.Utilities.regPow
     """
+
+    __slots__ = ("delta",)
 
     # base, exponent, scale are Symbol operands carried via children; delta is emitted.
     _serialise_derived_params = frozenset({"base", "exponent", "scale"})
@@ -1005,7 +1037,7 @@ class RegPower(Function):
             dreg_dx = (x2_d2 ** ((exponent - 3) / 2)) * (exponent * x**2 + delta**2)
             dreg_dbase = dreg_dx * (scale ** (exponent - 1))
             jac_term = dreg_dbase * children_jacs[0]
-            jac_term.clear_domains()
+            jac_term = jac_term.without_domains()
             jacobian = jac_term
 
         # Exponent Jacobian
@@ -1013,7 +1045,7 @@ class RegPower(Function):
             reg_val = x * (x2_d2 ** ((exponent - 1) / 2)) * scale_factor
             dreg_da = reg_val * (pybamm.log(x2_d2) / 2 + pybamm.log(scale))
             jac_term = dreg_da * children_jacs[1]
-            jac_term.clear_domains()
+            jac_term = jac_term.without_domains()
             if jacobian is None:
                 jacobian = jac_term
             else:
@@ -1027,7 +1059,7 @@ class RegPower(Function):
                 reg_val * exponent - base * dreg_dx * (scale ** (exponent - 1))
             ) / scale
             jac_term = dreg_dscale * children_jacs[2]
-            jac_term.clear_domains()
+            jac_term = jac_term.without_domains()
             if jacobian is None:
                 jacobian = jac_term
             else:
@@ -1078,7 +1110,7 @@ class RegPower(Function):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        base, exponent, scale = self.children
+        base, exponent, scale = self._children
         return f"reg_power({base!s}, {exponent!s}, scale={scale!s})"
 
     def to_json(self):
@@ -1135,6 +1167,8 @@ def reg_power(
 
 class Tanh(SpecificFunction):
     """Hyperbolic tan function."""
+
+    __slots__ = ()
 
     def __init__(self, child):
         super().__init__(np.tanh, child)

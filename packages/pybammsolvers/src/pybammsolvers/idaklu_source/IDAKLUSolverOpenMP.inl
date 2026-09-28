@@ -330,6 +330,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   const sunrealtype *y0,
   const sunrealtype *yp0,
   const sunrealtype *inputs,
+  const sunrealtype *pbar,
   bool save_adaptive_steps,
   bool save_interp_steps
 )
@@ -344,7 +345,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   // setup
   InitializeSolveStorage(number_of_evals, t_interp.size());
-  SetupInitialState(t_eval, y0, yp0, inputs);
+  SetupInitialState(t_eval, y0, yp0, inputs, pbar);
 
   sunrealtype t0 = t_eval.front();
   sunrealtype tf = t_eval.back();
@@ -515,13 +516,25 @@ void IDAKLUSolverOpenMP<ExprSet>::SetupInitialState(
   const std::vector<sunrealtype> &t_eval,
   const sunrealtype *y0,
   const sunrealtype *yp0,
-  const sunrealtype *inputs
+  const sunrealtype *inputs,
+  const sunrealtype *pbar
 ) {
   DEBUG("IDAKLUSolver::SetupInitialState");
 
   // Set inputs
   for (size_t i = 0; i < functions->inputs.size(); i++) {
     functions->inputs[i] = inputs[i];
+  }
+
+  // Sanitised once per solve, then re-applied unchanged after each reinit.
+  // IDAS rejects a zero pbar, and a zero parameter has no scale of its own.
+  sens_scales_.clear();
+  if (sensitivity && pbar != nullptr) {
+    sens_scales_.reserve(number_of_parameters);
+    for (int i = 0; i < number_of_parameters; i++) {
+      sunrealtype const scale = std::abs(pbar[i]);
+      sens_scales_.push_back((std::isfinite(scale) && scale > 0.0) ? scale : 1.0);
+    }
   }
 
   // Setup SUNDIALS vector pointers (member state)
@@ -780,7 +793,18 @@ void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const sunrealtype& t_va
   CheckErrors(IDAReInit(ida_mem, t_val, yy, yyp), "IDAReInit");
   if (sensitivity) {
     CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, yypS), "IDASensReInit");
+    ApplySensitivityScales();
   }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::ApplySensitivityScales() {
+  if (sens_scales_.empty()) {
+    return;
+  }
+  CheckErrors(
+    IDASetSensParams(ida_mem, nullptr, sens_scales_.data(), nullptr),
+    "IDASetSensParams");
 }
 
 template <class ExprSet>

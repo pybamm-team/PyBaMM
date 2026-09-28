@@ -139,11 +139,7 @@ class SpatialMethod:
         elif broadcast_type.startswith("full"):
             out = symbol * pybamm.Vector(np.ones(full_domain_size), domains=domains)
 
-        if out is symbol:
-            # simplification can hand back the child itself (e.g. ones-vector
-            # multiply); copy before stamping domains on a possibly shared node
-            out = symbol.create_copy()
-        out.domains = domains.copy()
+        out = out.with_domains(domains)
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
@@ -407,7 +403,7 @@ class SpatialMethod:
 
         out = bv_vector @ discretised_child
         # boundary value removes domain
-        out.clear_domains()
+        out = out.without_domains()
         return out
 
     def evaluate_at(self, symbol, discretised_child, position):

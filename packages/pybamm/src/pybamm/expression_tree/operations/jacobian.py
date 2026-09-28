@@ -98,5 +98,5 @@ class Jacobian:
 
         # Jacobian by default removes the domain(s)
         if self._clear_domain:
-            jac.clear_domains()
+            jac = jac.without_domains()
         return jac

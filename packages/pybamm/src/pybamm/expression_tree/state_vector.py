@@ -37,6 +37,10 @@ class StateVectorBase(pybamm.Symbol):
         evaluation_array is computed from y_slices.
     """
 
+    __slots__ = ("_evaluation_array", "_first_point", "_last_point", "_y_slices")
+    # the evaluation array determines the slices and end points
+    _id_excluded_fields = ("_y_slices", "_first_point", "_last_point")
+
     def __init__(
         self,
         *y_slices: slice,
@@ -116,17 +120,6 @@ class StateVectorBase(pybamm.Symbol):
                 array[y_slice] = True
             self._evaluation_array = [bool(x) for x in array]
 
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`"""
-        self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                tuple(self.evaluation_array),
-                *tuple(self.domain),
-            )
-        )
-
     def _jac_diff_vector(self, variable: pybamm.StateVectorBase):
         """
         Differentiate a slice of a StateVector of size m with respect to another slice
@@ -202,7 +195,7 @@ class StateVectorBase(pybamm.Symbol):
         return self.__class__(
             *self.y_slices,
             name=self.name,
-            domains=self.domains,
+            domains=self._domains,
             evaluation_array=self.evaluation_array,
         )
 
@@ -221,7 +214,7 @@ class StateVectorBase(pybamm.Symbol):
 
         json_dict = {
             "name": self.name,
-            "domains": self.domains,
+            "domains": self._domains,
             "y_slice": [
                 {
                     "start": y.start,
@@ -260,6 +253,8 @@ class StateVector(StateVectorBase):
         List of boolean arrays representing slices. Default is None, in which case the
         evaluation_array is computed from y_slices.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -307,7 +302,7 @@ class StateVector(StateVectorBase):
             return StateVectorDot(
                 *self._y_slices,
                 name=self.name + "'",
-                domains=self.domains,
+                domains=self._domains,
                 evaluation_array=self.evaluation_array,
             )
         else:
@@ -350,6 +345,8 @@ class StateVectorDot(StateVectorBase):
         List of boolean arrays representing slices. Default is None, in which case the
         evaluation_array is computed from y_slices.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,

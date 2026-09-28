@@ -15,6 +15,13 @@ PYBAMM_ENV = {
     "PYTHONIOENCODING": "utf-8",
     "MPLBACKEND": "Agg",
 }
+# Headless Linux renders VTK through OSMesa (the CI workflows install libosmesa6)
+if sys.platform.startswith("linux") and not (
+    os.getenv("DISPLAY") or os.getenv("WAYLAND_DISPLAY")
+):
+    PYBAMM_ENV["VTK_DEFAULT_OPENGL_WINDOW"] = os.getenv(
+        "VTK_DEFAULT_OPENGL_WINDOW", "vtkOSOpenGLRenderWindow"
+    )
 VENV_DIR = Path("./venv").resolve()
 
 

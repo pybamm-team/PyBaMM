@@ -1,8 +1,10 @@
 #
 # Interface for discretisation
 #
+import functools
 import itertools
 from collections import OrderedDict, defaultdict
+from collections.abc import Callable
 
 import numpy as np
 from scipy.sparse import block_diag, csr_matrix
@@ -181,10 +183,9 @@ class Discretisation:
         # Search Equations for Independence
         if self._remove_independent_variables_from_rhs_flag:
             model = self.remove_independent_variables_from_rhs(model)
-        variables = list(model.rhs.keys()) + list(model.algebraic.keys())
         # Find those RHS's that are constant
-        if self.spatial_methods == {} and any(var.domain != [] for var in variables):
-            for var in variables:
+        if self.spatial_methods == {}:
+            for var in itertools.chain(model.rhs, model.algebraic):
                 if var.domain != []:
                     raise pybamm.DiscretisationError(
                         "Spatial method has not been given "
@@ -193,7 +194,7 @@ class Discretisation:
 
         # Set the y split for variables
         pybamm.logger.verbose(f"Set variable slices for {model.name}")
-        self.set_variable_slices(variables)
+        self.set_variable_slices(itertools.chain(model.rhs, model.algebraic))
 
         # set boundary conditions (only need key ids for boundary_conditions)
         pybamm.logger.verbose(f"Discretise boundary conditions for {model.name}")
@@ -233,7 +234,9 @@ class Discretisation:
         # pre-process variables so that all state variables are included
         # This is the ONLY place where model.variables should be modified
         pre_processed_variables = self._pre_process_variables(
-            model.variables, model.initial_conditions
+            model.variables,
+            model.initial_conditions,
+            comparable_variables=model.variables_matching_keys(),
         )
         model_disc.variables = pybamm.FuzzyDict(pre_processed_variables)
 
@@ -304,42 +307,25 @@ class Discretisation:
     def _resolve_coupled_variables_in_model(self, model):
         """Resolve CoupledVariables in rhs, algebraic, initial_conditions, and boundary_conditions."""
 
-        def resolve_symbol(symbol):
-            if isinstance(symbol, pybamm.CoupledVariable):
-                if symbol.name not in model.variables:
-                    raise pybamm.DiscretisationError(
-                        f"CoupledVariable '{symbol.name}' not found in model.variables."
-                    )
-                return resolve_symbol(model.variables[symbol.name])
-            elif hasattr(symbol, "children") and symbol.children:
-                new_children = []
-                changed = False
-                for child in symbol.children:
-                    new_child = resolve_symbol(child)
-                    new_children.append(new_child)
-                    if new_child is not child:
-                        changed = True
-                if changed:
-                    return symbol.create_copy(new_children=new_children)
-            return symbol
+        resolve_symbol = model._resolve_coupled_variables
 
-        for var, expr in list(model.rhs.items()):
+        for var, expr in model.rhs.items():
             resolved = resolve_symbol(expr)
             if resolved is not expr:
                 model.rhs[var] = resolved
 
-        for var, expr in list(model.algebraic.items()):
+        for var, expr in model.algebraic.items():
             resolved = resolve_symbol(expr)
             if resolved is not expr:
                 model.algebraic[var] = resolved
 
-        for var, expr in list(model.initial_conditions.items()):
+        for var, expr in model.initial_conditions.items():
             resolved = resolve_symbol(expr)
             if resolved is not expr:
                 model.initial_conditions[var] = resolved
 
-        for var, bcs in list(model.boundary_conditions.items()):
-            for side, (expr, bc_type) in list(bcs.items()):
+        for var, bcs in model.boundary_conditions.items():
+            for side, (expr, bc_type) in bcs.items():
                 resolved = resolve_symbol(expr)
                 if resolved is not expr:
                     model.boundary_conditions[var][side] = (resolved, bc_type)
@@ -432,12 +418,15 @@ class Discretisation:
                 else:
                     return bound.evaluate()
 
-            lower_bounds.extend(
-                [evaluate_bound(variable.bounds[0], "lower")] * (end - start)
-            )
-            upper_bounds.extend(
-                [evaluate_bound(variable.bounds[1], "upper")] * (end - start)
-            )
+            # symbols without physical bounds (e.g. constants) are unbounded
+            bounds = getattr(variable, "bounds", None)
+            if bounds is None:
+                lower, upper = -np.inf, np.inf
+            else:
+                lower = evaluate_bound(bounds[0], "lower")
+                upper = evaluate_bound(bounds[1], "upper")
+            lower_bounds.extend([lower] * (end - start))
+            upper_bounds.extend([upper] * (end - start))
             # Increment start
             start = end
 
@@ -489,7 +478,8 @@ class Discretisation:
                 left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
             )
 
-        bc_keys = list(self.bcs.keys())
+        # ``self.bcs`` is only extended after this loop, so read it live.
+        bc_keys = self.bcs
 
         internal_bcs = {}
         for var in model.boundary_conditions:
@@ -670,16 +660,16 @@ class Discretisation:
             # send boundary conditions applied on the tabs to "left" or "right"
             # depending on the tab location stored in the mesh
             for tab in ["negative tab", "positive tab"]:
-                if any(tab in side for side in list(bcs.keys())):
+                if any(tab in side for side in bcs):
                     bcs[mesh.tabs[tab]] = bcs.pop(tab)
             # if there was a tab at either end, then the boundary conditions
             # have now been set on "left" and "right" as required by the spatial
             # method, so there is no need to further modify the bcs dict
-            if all(side in list(bcs.keys()) for side in ["left", "right"]):
+            if "left" in bcs and "right" in bcs:
                 pass
             # if both tabs are located at z=0 then the "right" boundary condition
             # (at z=1) is the condition for "no tab"
-            elif "left" in list(bcs.keys()):
+            elif "left" in bcs:
                 bcs["right"] = bcs.pop("no tab")
             # else if both tabs are located at z=1, the "left" boundary condition
             # (at z=0) is the condition for "no tab"
@@ -751,13 +741,9 @@ class Discretisation:
 
         # get a list of model rhs variables that are sorted according to
         # where they are in the state vector
-        model_variables = model.rhs.keys()
-        model_slices = []
-        for v in model_variables:
-            model_slices.append(self.y_slices[v][0])
-        sorted_model_variables = [
-            v for _, v in sorted(zip(model_slices, model_variables, strict=False))
-        ]
+        sorted_model_variables = sorted(
+            model.rhs, key=lambda var: self.y_slices[var][0]
+        )
 
         # Process mass matrices for the differential equations
         for var in sorted_model_variables:
@@ -793,11 +779,16 @@ class Discretisation:
         self,
         variables: dict[str, pybamm.Symbol],
         initial_conditions: dict[pybamm.Variable, pybamm.Symbol],
+        comparable_variables: dict[str, pybamm.Symbol] | None = None,
     ):
         """
         Pre-process variables before discretisation. This involves:
         - ensuring that all the state variables are included in the variables,
           any missing are added
+        - checking, by symbol identity, that state variables already present are
+          the state variables themselves. ``comparable_variables`` holds the
+          expressions at the same processing stage as the keys (default:
+          ``variables``).
 
         Parameters
         ----------
@@ -817,14 +808,15 @@ class Discretisation:
             If any state variable names are already included but with
             incorrect expressions
         """
+        if comparable_variables is None:
+            comparable_variables = variables
         new_variables = dict(variables)
         for var in initial_conditions:
             if var.name not in new_variables:
                 new_variables[var.name] = var
-            else:
-                existing_var = new_variables[var.name]
-                # Compare by name and domains, not identity (handles unpickling case)
-                if existing_var.name != var.name or existing_var.domains != var.domains:
+            elif var.name in comparable_variables:
+                existing_var = comparable_variables[var.name]
+                if existing_var != var:
                     raise pybamm.ModelError(
                         f"Variable '{var.name}' should have expression "
                         f"'{var}', but has expression '{existing_var}'"
@@ -912,36 +904,374 @@ class Discretisation:
             Discretised symbol
 
         """
-        _discretised_symbol = self._discretised_symbols.get(symbol)
-        if _discretised_symbol is not None:
-            return _discretised_symbol
-        discretised_symbol = self._process_symbol(symbol)
-        self._discretised_symbols[symbol] = discretised_symbol
+        return pybamm.tree_map(
+            self._discretise_node,
+            symbol,
+            cache=self._discretised_symbols,
+            is_leaf=self._discretises_own_children,
+        )
+
+    # classes whose handler discretises what it needs itself (see is_leaf)
+    _self_discretising: tuple[type, ...] = ()
+
+    @classmethod
+    @functools.cache
+    def _handler_for(cls, symbol_class: type) -> Callable:
+        for klass in symbol_class.__mro__:
+            handler = cls._handlers.get(klass)
+            if handler is not None:
+                return handler
+        raise pybamm.DiscretisationError(  # pragma: no cover
+            f"No discretisation handler registered for {symbol_class.__name__}"
+        )
+
+    @classmethod
+    def _discretises_own_children(cls, symbol):
+        """Symbols whose handler builds and discretises its own expressions rather
+        than receiving discretised children (the ``is_leaf`` of the tree map)."""
+        return isinstance(symbol, cls._self_discretising)
+
+    def _discretise_node(self, symbol, new_leaves):
+        """Discretise one node given its discretised children; the callback for
+        :func:`pybamm.tree_map`."""
+        if symbol._domains["primary"] != [] and self.bcs:
+            # If boundary conditions are provided, need to check for BCs on tabs
+            key_id = next(iter(self.bcs.keys()))
+            if LEGACY_TAB_SIDES & set(self.bcs[key_id].keys()):
+                self.bcs[key_id] = self.check_tab_conditions(symbol, self.bcs[key_id])
+        handler = self._handler_for(type(symbol))
+        discretised_symbol = handler(self, symbol, new_leaves[: len(symbol._children)])
         discretised_symbol.test_shape()
+        # a discretised node keeps its symbol's domains, and processed variables read
+        # the meshes of those domains off the result
+        return discretised_symbol.with_domains(symbol).with_meshes(
+            self.mesh, symbol._domains
+        )
 
-        # Assign mesh as an attribute to the processed variable
+    def _spatial_method_of(self, symbol):
+        """The spatial method of a symbol's primary domain (None if it has none)."""
+        domain = symbol._domains["primary"]
+        if domain == []:
+            return None
+        return self.spatial_methods[domain[0]]
+
+    # -- handlers ---------------------------------------------------------
+
+    def _disc_default(self, symbol, disc_children):
+        # leaves such as scalars, arrays and state vectors are already discrete
+        return symbol
+
+    def _disc_children_copy(self, symbol, disc_children):
+        return symbol.create_copy(list(disc_children))
+
+    def _disc_binary(self, symbol, disc_children):
+        spatial_method = self._spatial_method_of(symbol)
+        left, right = symbol._children
+        disc_left, disc_right = disc_children
+        # A scalar diffusion coefficient becomes an identity-like vector field
+        if isinstance(spatial_method, pybamm.FiniteVolume2D):
+            n_components = 2
+        elif isinstance(spatial_method, pybamm.FiniteVolumeUnstructured):
+            n_components = self.mesh[symbol.domain[0]].dimension
+        else:
+            n_components = None
+        if n_components is not None:
+            if isinstance(left, pybamm.Scalar) and isinstance(
+                right, pybamm.VectorField | pybamm.Gradient
+            ):
+                left = pybamm.VectorField(*[left] * n_components)
+                disc_left = pybamm.VectorField(*[disc_left] * n_components)
+            elif isinstance(right, pybamm.Scalar) and isinstance(
+                left, pybamm.VectorField | pybamm.Gradient
+            ):
+                right = pybamm.VectorField(*[right] * n_components)
+                disc_right = pybamm.VectorField(*[disc_right] * n_components)
+        if symbol.domain == []:
+            if isinstance(disc_left, pybamm.VectorField) or isinstance(
+                disc_right, pybamm.VectorField
+            ):
+                return self._process_vector_field_binary(symbol, disc_left, disc_right)
+            return pybamm.simplify_if_constant(
+                symbol.create_copy(new_children=[disc_left, disc_right])
+            )
+        return spatial_method.process_binary_operators(
+            symbol, left, right, disc_left, disc_right
+        )
+
+    def _disc_average(self, symbol, disc_children):
+        # Create a new Integral operator and process it
+        child = symbol.orphans[0]
+        if isinstance(symbol, pybamm.SizeAverage):
+            R = symbol.integration_variable[0]
+            f_a_dist = symbol.f_a_dist
+            # take average using Integral and distribution f_a_dist
+            average = pybamm.Integral(f_a_dist * child, R) / pybamm.Integral(
+                f_a_dist, R
+            )
+        else:
+            x = symbol.integration_variable
+            v = pybamm.ones_like(child)
+            average = pybamm.Integral(child, x) / pybamm.Integral(v, x)
+        return self.process_symbol(average)
+
+    def _disc_unary_default(self, symbol, disc_children):
+        (disc_child,) = disc_children
+        if isinstance(disc_child, pybamm.VectorField):
+            new_comps = [
+                symbol.create_copy(new_children=[c]) for c in disc_child.components
+            ]
+            return pybamm.VectorField(
+                *new_comps, disc_state_vector=disc_child.disc_state_vector
+            )
+        return symbol.create_copy(new_children=[disc_child])
+
+    def _child_spatial_method(self, symbol):
+        return self.spatial_methods[symbol.child.domain[0]]
+
+    def _disc_gradient(self, symbol, disc_children):
+        return self._child_spatial_method(symbol).gradient(
+            symbol.child, disc_children[0], self.bcs
+        )
+
+    def _disc_divergence(self, symbol, disc_children):
+        child = symbol.child
+        if child.domain != []:
+            child_spatial_method = self.spatial_methods[child.domain[0]]
+            # Intercept div(grad(u)) and div(D*grad(u)) before processing
+            # children, to avoid the expensive Green-Gauss gradient assembly.
+            if isinstance(child_spatial_method, pybamm.FiniteVolumeUnstructured):
+                grad_sym = None
+                coeff_sym = None
+                if isinstance(child, pybamm.Gradient):
+                    grad_sym = child
+                    coeff_sym = pybamm.Scalar(1)
+                elif isinstance(child, pybamm.Multiplication):
+                    left_c, right_c = child.children
+                    if isinstance(right_c, pybamm.Gradient):
+                        grad_sym, coeff_sym = right_c, left_c
+                    elif isinstance(left_c, pybamm.Gradient):
+                        grad_sym, coeff_sym = left_c, right_c
+                if grad_sym is not None:
+                    return child_spatial_method.div_D_grad(
+                        symbol,
+                        grad_sym.child,
+                        self.process_symbol(coeff_sym),
+                        self.process_symbol(grad_sym.child),
+                        self.bcs,
+                    )
+        return self._child_spatial_method(symbol).divergence(
+            child, self.process_symbol(child), self.bcs
+        )
+
+    def _disc_laplacian(self, symbol, disc_children):
+        return self._child_spatial_method(symbol).laplacian(
+            symbol.child, disc_children[0], self.bcs
+        )
+
+    def _disc_gradient_squared(self, symbol, disc_children):
+        return self._child_spatial_method(symbol).gradient_squared(
+            symbol.child, disc_children[0], self.bcs
+        )
+
+    def _disc_mass(self, symbol, disc_children):
+        return self._child_spatial_method(symbol).mass_matrix(symbol.child, self.bcs)
+
+    def _disc_boundary_mass(self, symbol, disc_children):
+        return self._child_spatial_method(symbol).boundary_mass_matrix(
+            symbol.child, self.bcs
+        )
+
+    def _disc_indefinite_integral(self, symbol, disc_children):
+        return self._child_spatial_method(symbol).indefinite_integral(
+            symbol.child, disc_children[0], "forward"
+        )
+
+    def _disc_backward_indefinite_integral(self, symbol, disc_children):
+        return self._child_spatial_method(symbol).indefinite_integral(
+            symbol.child, disc_children[0], "backward"
+        )
+
+    def _disc_integral(self, symbol, disc_children):
+        integral_spatial_method = self.spatial_methods[
+            symbol.integration_variable[0].domain[0]
+        ]
+        out = integral_spatial_method.integral(
+            symbol.child,
+            disc_children[0],
+            symbol._integration_dimension,
+            symbol.integration_variable,
+        )
+        return out.with_domains(symbol)
+
+    def _disc_definite_integral_vector(self, symbol, disc_children):
+        return self._child_spatial_method(symbol).definite_integral_matrix(
+            symbol.child, vector_type=symbol.vector_type
+        )
+
+    def _disc_one_dimensional_integral(self, symbol, disc_children):
+        spatial_method = self.spatial_methods[symbol.integration_domain[0]]
+        return spatial_method.one_dimensional_integral(
+            symbol,
+            symbol.child,
+            disc_children[0],
+            symbol.integration_domain,
+            symbol.direction,
+        )
+
+    def _disc_boundary_integral(self, symbol, disc_children):
+        return self._child_spatial_method(symbol).boundary_integral(
+            symbol.child, disc_children[0], symbol.region
+        )
+
+    def _disc_broadcast(self, symbol, disc_children):
+        # Broadcast new_child to the domain specified by symbol.domain
+        # Different discretisations may broadcast differently
+        return self._spatial_method_of(symbol).broadcast(
+            disc_children[0], symbol.domains, symbol.broadcast_type
+        )
+
+    def _disc_delta_function(self, symbol, disc_children):
+        return self._spatial_method_of(symbol).delta_function(symbol, disc_children[0])
+
+    def _disc_boundary_operator(self, symbol, disc_children):
+        # if boundary operator applied on "negative tab" or "positive tab" *and*
+        # the mesh is 1D then change side to "left" or "right" as appropriate
+        if symbol.side in ["negative tab", "positive tab"]:
+            mesh = self.mesh[symbol.children[0].domain[0]]
+            if isinstance(mesh, pybamm.SubMesh1D):
+                symbol = symbol._replace(side=mesh.tabs[symbol.side])
+        return self._child_spatial_method(symbol).boundary_value_or_flux(
+            symbol, disc_children[0], self.bcs
+        )
+
+    def _disc_evaluate_at(self, symbol, disc_children):
+        return self._child_spatial_method(symbol).evaluate_at(
+            symbol, disc_children[0], symbol.position
+        )
+
+    def _disc_upwind_downwind_2d(self, symbol, disc_children):
+        return self._spatial_method_of(symbol).upwind_or_downwind(
+            symbol.child,
+            disc_children[0],
+            self.bcs,
+            symbol.lr_direction,
+            symbol.tb_direction,
+        )
+
+    def _disc_node_to_edge_2d(self, symbol, disc_children):
+        return self._spatial_method_of(symbol).node_to_edge(
+            disc_children[0], method="arithmetic", direction=symbol.direction
+        )
+
+    def _disc_upwind_downwind(self, symbol, disc_children):
+        direction = symbol.name  # upwind or downwind
+        return self._spatial_method_of(symbol).upwind_or_downwind(
+            symbol.child, disc_children[0], self.bcs, direction
+        )
+
+    def _disc_not_constant(self, symbol, disc_children):
+        # After discretisation, we can make the symbol constant
+        return disc_children[0]
+
+    def _disc_component(self, symbol, disc_children):
+        (disc_child,) = disc_children
+        if not isinstance(disc_child, pybamm.VectorField):
+            raise pybamm.DiscretisationError(
+                "Component can only be applied to a VectorField"
+            )
+        if symbol.index >= disc_child.n_components:
+            raise pybamm.DiscretisationError(
+                f"Component index {symbol.index} is out of range for a "
+                f"VectorField with {disc_child.n_components} components"
+            )
+        return disc_child.components[symbol.index]
+
+    def _disc_norm(self, symbol, disc_children):
+        (disc_child,) = disc_children
+        if not isinstance(disc_child, pybamm.VectorField):
+            raise pybamm.DiscretisationError(
+                "Norm can only be applied to a VectorField"
+            )
+        return sum(c**2 for c in disc_child.components) ** 0.5
+
+    def _disc_magnitude(self, symbol, disc_children):
+        (disc_child,) = disc_children
+        if not isinstance(disc_child, pybamm.VectorField):
+            raise pybamm.DiscretisationError(
+                "Magnitude can only be applied to a vector field"
+            )
+        direction = symbol.direction
+        if direction == "lr":
+            return disc_child.lr_field
+        elif direction == "tb":
+            return disc_child.tb_field
+        else:
+            raise pybamm.DiscretisationError("Invalid direction")
+
+    def _disc_variable_dot(self, symbol, disc_children):
+        # Add symbol's reference and multiply by the symbol's scale
+        # so that the state vector is of order 1
+        return symbol.reference + symbol.scale * pybamm.StateVectorDot(
+            *self.y_slices[symbol.get_variable()],
+            domains=symbol.domains,
+        )
+
+    def _disc_variable(self, symbol, disc_children):
+        # check_well_posedness usually catches this, but not without debug_mode
+        try:
+            y_slices = self.y_slices[symbol]
+        except KeyError as error:
+            raise pybamm.ModelError(
+                f"No key set for variable '{symbol.name}'. Make sure it is included in either "
+                "model.rhs or model.algebraic in an unmodified form "
+                "(e.g. not Broadcasted)"
+            ) from error
+        # Add symbol's reference and multiply by the symbol's scale
+        # so that the state vector is of order 1
+        return symbol.reference + symbol.scale * pybamm.StateVector(
+            *y_slices, domains=symbol.domains
+        )
+
+    def _disc_spatial_variable(self, symbol, disc_children):
+        return self._spatial_method_of(symbol).spatial_variable(symbol)
+
+    def _disc_concatenation_variable(self, symbol, disc_children):
+        # create new children without scale and reference
+        # the scale and reference will be applied to the concatenation instead
+        new_children = []
+        old_y_slices = self.y_slices.copy()
+        for child in symbol.children:
+            child_no_scale = child.create_copy(scale=1, reference=0)
+            self.y_slices[child_no_scale] = self.y_slices[child]
+            new_children.append(self.process_symbol(child_no_scale))
+        self.y_slices = old_y_slices
+        new_symbol = self._spatial_method_of(symbol).concatenation(new_children)
+        # apply scale to the whole concatenation
+        return symbol.reference + symbol.scale * new_symbol
+
+    def _disc_concatenation(self, symbol, disc_children):
+        return self._spatial_method_of(symbol).concatenation(list(disc_children))
+
+    def _disc_input_parameter(self, symbol, disc_children):
         if symbol.domain != []:
-            mesh_for_symbol = self.mesh[symbol.domain]
-            discretised_symbol.mesh = mesh_for_symbol
-            if isinstance(discretised_symbol, pybamm.VectorField):
-                for comp in discretised_symbol.components:
-                    comp.mesh = mesh_for_symbol
+            expected_size = self._get_variable_size(symbol)
         else:
-            discretised_symbol.mesh = None
+            expected_size = None
+        if symbol._expected_size is not None:
+            expected_size = symbol._expected_size
+        return pybamm.InputParameter(
+            symbol.name, symbol.domain, expected_size=expected_size
+        )
 
-        # Assign secondary mesh
-        if symbol.domains["secondary"] != []:
-            discretised_symbol.secondary_mesh = self.mesh[symbol.domains["secondary"]]
-        else:
-            discretised_symbol.secondary_mesh = None
+    def _disc_coupled_variable(self, symbol, disc_children):
+        raise pybamm.DiscretisationError(
+            f"CoupledVariable '{symbol.name}' was not resolved before discretisation. "
+            "Ensure the variable exists in model.variables."
+        )
 
-        # Assign tertiary mesh
-        if symbol.domains["tertiary"] != []:
-            discretised_symbol.tertiary_mesh = self.mesh[symbol.domains["tertiary"]]
-        else:
-            discretised_symbol.tertiary_mesh = None
-
-        return discretised_symbol
+    def _disc_constant(self, symbol, disc_children):
+        # after discretisation we just care about the value, not the name
+        return self.process_symbol(pybamm.Scalar(symbol.value))
 
     def _process_vector_field_binary(self, symbol, disc_left, disc_right):
         """Broadcast a scalar side, then apply ``symbol`` component-wise."""
@@ -968,355 +1298,11 @@ class Discretisation:
             )
             for k in range(n)
         ]
-        result = pybamm.VectorField(*new_comps)
-        if disc_left._disc_state_vector is not None:
-            result._disc_state_vector = disc_left._disc_state_vector
+        if disc_left.disc_state_vector is not None:
+            disc_state_vector = disc_left.disc_state_vector
         else:
-            result._disc_state_vector = disc_right._disc_state_vector
-        return result
-
-    def _process_symbol(self, symbol):
-        """See :meth:`Discretisation.process_symbol()`."""
-
-        if symbol.domain != []:
-            spatial_method = self.spatial_methods[symbol.domain[0]]
-            # If boundary conditions are provided, need to check for BCs on tabs
-            if self.bcs:
-                key_id = next(iter(self.bcs.keys()))
-                if LEGACY_TAB_SIDES & set(self.bcs[key_id].keys()):
-                    self.bcs[key_id] = self.check_tab_conditions(
-                        symbol, self.bcs[key_id]
-                    )
-        else:
-            spatial_method = None
-
-        if isinstance(symbol, pybamm.BinaryOperator):
-            # Pre-process children
-            left, right = symbol.children
-            # Catch case where diffusion is a scalar and turn it into an identity matrix vector field.
-            if isinstance(spatial_method, pybamm.FiniteVolume2D):
-                if isinstance(left, pybamm.Scalar) and (
-                    isinstance(right, (pybamm.VectorField, pybamm.Gradient))
-                ):
-                    left = pybamm.VectorField(left, left)
-                elif isinstance(right, pybamm.Scalar) and (
-                    isinstance(left, (pybamm.VectorField, pybamm.Gradient))
-                ):
-                    right = pybamm.VectorField(right, right)
-            elif isinstance(spatial_method, pybamm.FiniteVolumeUnstructured):
-                dim = self.mesh[symbol.domain[0]].dimension
-                if isinstance(left, pybamm.Scalar) and isinstance(
-                    right, pybamm.VectorField | pybamm.Gradient
-                ):
-                    left = pybamm.VectorField(*[left] * dim)
-                elif isinstance(right, pybamm.Scalar) and isinstance(
-                    left, pybamm.VectorField | pybamm.Gradient
-                ):
-                    right = pybamm.VectorField(*[right] * dim)
-            disc_left = self.process_symbol(left)
-            disc_right = self.process_symbol(right)
-            if symbol.domain == []:
-                if isinstance(disc_left, pybamm.VectorField) or isinstance(
-                    disc_right, pybamm.VectorField
-                ):
-                    return self._process_vector_field_binary(
-                        symbol, disc_left, disc_right
-                    )
-
-                return pybamm.simplify_if_constant(
-                    symbol.create_copy(new_children=[disc_left, disc_right])
-                )
-            else:
-                return spatial_method.process_binary_operators(
-                    symbol, left, right, disc_left, disc_right
-                )
-        elif isinstance(symbol, pybamm._BaseAverage):
-            # Create a new Integral operator and process it
-            child = symbol.orphans[0]
-            if isinstance(symbol, pybamm.SizeAverage):
-                R = symbol.integration_variable[0]
-                f_a_dist = symbol.f_a_dist
-                # take average using Integral and distribution f_a_dist
-                average = pybamm.Integral(f_a_dist * child, R) / pybamm.Integral(
-                    f_a_dist, R
-                )
-            else:
-                x = symbol.integration_variable
-                v = pybamm.ones_like(child)
-                average = pybamm.Integral(child, x) / pybamm.Integral(v, x)
-            return self.process_symbol(average)
-
-        elif isinstance(symbol, pybamm.UnaryOperator):
-            child = symbol.child
-
-            # Intercept div(grad(u)) and div(D*grad(u)) before processing
-            # children, to avoid the expensive Green-Gauss gradient assembly.
-            if isinstance(symbol, pybamm.Divergence) and child.domain != []:
-                child_spatial_method = self.spatial_methods[child.domain[0]]
-                if isinstance(child_spatial_method, pybamm.FiniteVolumeUnstructured):
-                    grad_sym = None
-                    coeff_sym = None
-                    if isinstance(child, pybamm.Gradient):
-                        grad_sym = child
-                        coeff_sym = pybamm.Scalar(1)
-                    elif isinstance(child, pybamm.Multiplication):
-                        left_c, right_c = child.children
-                        if isinstance(right_c, pybamm.Gradient):
-                            grad_sym, coeff_sym = right_c, left_c
-                        elif isinstance(left_c, pybamm.Gradient):
-                            grad_sym, coeff_sym = left_c, right_c
-                    if grad_sym is not None:
-                        disc_coeff = self.process_symbol(coeff_sym)
-                        disc_u = self.process_symbol(grad_sym.child)
-                        return child_spatial_method.div_D_grad(
-                            symbol,
-                            grad_sym.child,
-                            disc_coeff,
-                            disc_u,
-                            self.bcs,
-                        )
-
-            disc_child = self.process_symbol(child)
-            if child.domain != []:
-                child_spatial_method = self.spatial_methods[child.domain[0]]
-
-            if isinstance(symbol, pybamm.Gradient):
-                return child_spatial_method.gradient(child, disc_child, self.bcs)
-
-            elif isinstance(symbol, pybamm.Divergence):
-                return child_spatial_method.divergence(child, disc_child, self.bcs)
-
-            elif isinstance(symbol, pybamm.Laplacian):
-                return child_spatial_method.laplacian(child, disc_child, self.bcs)
-
-            elif isinstance(symbol, pybamm.GradientSquared):
-                return child_spatial_method.gradient_squared(
-                    child, disc_child, self.bcs
-                )
-
-            elif isinstance(symbol, pybamm.Mass):
-                return child_spatial_method.mass_matrix(child, self.bcs)
-
-            elif isinstance(symbol, pybamm.BoundaryMass):
-                return child_spatial_method.boundary_mass_matrix(child, self.bcs)
-
-            elif isinstance(symbol, pybamm.IndefiniteIntegral):
-                return child_spatial_method.indefinite_integral(
-                    child, disc_child, "forward"
-                )
-            elif isinstance(symbol, pybamm.BackwardIndefiniteIntegral):
-                return child_spatial_method.indefinite_integral(
-                    child, disc_child, "backward"
-                )
-
-            elif isinstance(symbol, pybamm.Integral):
-                integral_spatial_method = self.spatial_methods[
-                    symbol.integration_variable[0].domain[0]
-                ]
-                out = integral_spatial_method.integral(
-                    child,
-                    disc_child,
-                    symbol._integration_dimension,
-                    symbol.integration_variable,
-                )
-                if out is disc_child:
-                    # as in SpatialMethod.broadcast: a one-point integration
-                    # simplifies back to the child, which discretisation caches
-                    out = out.create_copy()
-                out.copy_domains(symbol)
-                return out
-
-            elif isinstance(symbol, pybamm.DefiniteIntegralVector):
-                return child_spatial_method.definite_integral_matrix(
-                    child, vector_type=symbol.vector_type
-                )
-
-            elif isinstance(symbol, pybamm.OneDimensionalIntegral):
-                child_spatial_method = self.spatial_methods[
-                    symbol.integration_domain[0]
-                ]
-                return child_spatial_method.one_dimensional_integral(
-                    symbol,
-                    child,
-                    disc_child,
-                    symbol.integration_domain,
-                    symbol.direction,
-                )
-            elif isinstance(symbol, pybamm.BoundaryIntegral):
-                return child_spatial_method.boundary_integral(
-                    child, disc_child, symbol.region
-                )
-
-            elif isinstance(symbol, pybamm.Broadcast):
-                # Broadcast new_child to the domain specified by symbol.domain
-                # Different discretisations may broadcast differently
-                return spatial_method.broadcast(
-                    disc_child, symbol.domains, symbol.broadcast_type
-                )
-
-            elif isinstance(symbol, pybamm.DeltaFunction):
-                return spatial_method.delta_function(symbol, disc_child)
-
-            elif isinstance(symbol, pybamm.BoundaryOperator):
-                # if boundary operator applied on "negative tab" or
-                # "positive tab" *and* the mesh is 1D then change side to
-                # "left" or "right" as appropriate
-                if symbol.side in ["negative tab", "positive tab"]:
-                    mesh = self.mesh[symbol.children[0].domain[0]]
-                    if isinstance(mesh, pybamm.SubMesh1D):
-                        symbol.side = mesh.tabs[symbol.side]
-                return child_spatial_method.boundary_value_or_flux(
-                    symbol, disc_child, self.bcs
-                )
-            elif isinstance(symbol, pybamm.EvaluateAt):
-                return child_spatial_method.evaluate_at(
-                    symbol, disc_child, symbol.position
-                )
-            elif isinstance(symbol, pybamm.UpwindDownwind2D):
-                return spatial_method.upwind_or_downwind(
-                    child,
-                    disc_child,
-                    self.bcs,
-                    symbol.lr_direction,
-                    symbol.tb_direction,
-                )
-            elif isinstance(symbol, pybamm.NodeToEdge2D):
-                return spatial_method.node_to_edge(
-                    disc_child,
-                    method="arithmetic",
-                    direction=symbol.direction,
-                )
-            elif isinstance(symbol, pybamm.UpwindDownwind):
-                direction = symbol.name  # upwind or downwind
-                return spatial_method.upwind_or_downwind(
-                    child, disc_child, self.bcs, direction
-                )
-            elif isinstance(symbol, pybamm.NotConstant):
-                # After discretisation, we can make the symbol constant
-                return disc_child
-            elif isinstance(symbol, pybamm.Component):
-                if not isinstance(disc_child, pybamm.VectorField):
-                    raise pybamm.DiscretisationError(
-                        "Component can only be applied to a VectorField"
-                    )
-                if symbol.index >= disc_child.n_components:
-                    raise pybamm.DiscretisationError(
-                        f"Component index {symbol.index} is out of range for a "
-                        f"VectorField with {disc_child.n_components} components"
-                    )
-                return disc_child.components[symbol.index]
-            elif isinstance(symbol, pybamm.Norm):
-                if not isinstance(disc_child, pybamm.VectorField):
-                    raise pybamm.DiscretisationError(
-                        "Norm can only be applied to a VectorField"
-                    )
-                return sum(c**2 for c in disc_child.components) ** 0.5
-            elif isinstance(symbol, pybamm.Magnitude):
-                if not isinstance(disc_child, pybamm.VectorField):
-                    raise ValueError("Magnitude can only be applied to a vector field")
-                direction = symbol.direction
-                if direction == "lr":
-                    return disc_child.lr_field
-                elif direction == "tb":
-                    return disc_child.tb_field
-                else:
-                    raise ValueError("Invalid direction")
-            else:
-                if isinstance(disc_child, pybamm.VectorField):
-                    new_comps = [
-                        symbol.create_copy(new_children=[c])
-                        for c in disc_child.components
-                    ]
-                    result = pybamm.VectorField(*new_comps)
-                    result._disc_state_vector = disc_child._disc_state_vector
-                    return result
-                else:
-                    return symbol.create_copy(new_children=[disc_child])
-
-        elif isinstance(symbol, (pybamm.Function, pybamm.Conditional)):
-            disc_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol.create_copy(disc_children)
-
-        elif isinstance(symbol, pybamm.VariableDot):
-            # Add symbol's reference and multiply by the symbol's scale
-            # so that the state vector is of order 1
-            return symbol.reference + symbol.scale * pybamm.StateVectorDot(
-                *self.y_slices[symbol.get_variable()],
-                domains=symbol.domains,
-            )
-
-        elif isinstance(symbol, pybamm.Variable):
-            # add a try except block for a more informative error if a variable
-            # can't be found. This should usually be caught earlier by
-            # model.check_well_posedness, but won't be if debug_mode is False
-            try:
-                y_slices = self.y_slices[symbol]
-            except KeyError as error:
-                raise pybamm.ModelError(
-                    f"No key set for variable '{symbol.name}'. Make sure it is included in either "
-                    "model.rhs or model.algebraic in an unmodified form "
-                    "(e.g. not Broadcasted)"
-                ) from error
-            # Add symbol's reference and multiply by the symbol's scale
-            # so that the state vector is of order 1
-            return symbol.reference + symbol.scale * pybamm.StateVector(
-                *y_slices, domains=symbol.domains
-            )
-
-        elif isinstance(symbol, pybamm.SpatialVariable):
-            return spatial_method.spatial_variable(symbol)
-
-        elif isinstance(symbol, pybamm.ConcatenationVariable):
-            # create new children without scale and reference
-            # the scale and reference will be applied to the concatenation instead
-            new_children = []
-            old_y_slices = self.y_slices.copy()
-            for child in symbol.children:
-                child_no_scale = child.create_copy()
-                child_no_scale.scale = 1
-                child_no_scale.reference = 0
-                self.y_slices[child_no_scale] = self.y_slices[child]
-                new_children.append(self.process_symbol(child_no_scale))
-            self.y_slices = old_y_slices
-            new_symbol = spatial_method.concatenation(new_children)
-            # apply scale to the whole concatenation
-            return symbol.reference + symbol.scale * new_symbol
-
-        elif isinstance(symbol, pybamm.Concatenation):
-            new_children = [self.process_symbol(child) for child in symbol.children]
-            new_symbol = spatial_method.concatenation(new_children)
-            return new_symbol
-
-        elif isinstance(symbol, pybamm.InputParameter):
-            if symbol.domain != []:
-                expected_size = self._get_variable_size(symbol)
-            else:
-                expected_size = None
-            if symbol._expected_size is None:
-                symbol._expected_size = expected_size
-            return symbol.create_copy()
-
-        elif isinstance(symbol, pybamm.CoupledVariable):
-            raise pybamm.DiscretisationError(
-                f"CoupledVariable '{symbol.name}' was not resolved before discretisation. "
-                "Ensure the variable exists in model.variables."
-            )
-
-        elif isinstance(symbol, pybamm.VectorField):
-            processed = [self.process_symbol(c) for c in symbol.components]
-            return symbol.create_copy(new_children=processed)
-
-        elif isinstance(symbol, pybamm.TensorField):
-            # General TensorField handling (rank-2 tensors)
-            processed_children = [self.process_symbol(c) for c in symbol.children]
-            return symbol.create_copy(new_children=processed_children)
-
-        elif isinstance(symbol, pybamm.Constant):
-            # after discretisation we just care about the value, not the name
-            return self.process_symbol(pybamm.Scalar(symbol.value))
-        else:
-            # Backup option: return the object
-            return symbol
+            disc_state_vector = disc_right.disc_state_vector
+        return pybamm.VectorField(*new_comps, disc_state_vector=disc_state_vector)
 
     def concatenate(self, *symbols, sparse=False):
         if sparse:
@@ -1352,31 +1338,30 @@ class Discretisation:
 
         """
         # Unpack symbols in variables that are concatenations of variables
-        unpacked_variables = []
-        slices = []
+        unpacked_variables = set()
         for symbol in var_eqn_dict:
+            unpacked_variables.add(symbol)
             if isinstance(symbol, pybamm.ConcatenationVariable):
-                unpacked_variables.extend([symbol] + [var for var in symbol.children])
-            else:
-                unpacked_variables.append(symbol)
-            slices.append(self.y_slices[symbol][0])
+                unpacked_variables.update(symbol.children)
 
-        if check_complete:
-            # Check keys from the given var_eqn_dict against self.y_slices
-            unpacked_variables_set = set(unpacked_variables)
-            if unpacked_variables_set != set(self.y_slices.keys()):
-                given_variable_names = [v.name for v in var_eqn_dict]
-                raise pybamm.ModelError(
-                    "Initial conditions are insufficient. Only "
-                    f"provided for {given_variable_names} "
-                )
-
-        equations = list(var_eqn_dict.values())
+        # Check keys from the given var_eqn_dict against self.y_slices
+        if check_complete and unpacked_variables != self.y_slices.keys():
+            given_variable_names = [v.name for v in var_eqn_dict]
+            raise pybamm.ModelError(
+                "Initial conditions are insufficient. Only "
+                f"provided for {given_variable_names} "
+            )
 
         # sort equations according to slices
-        sorted_equations = [eq for _, eq in sorted(zip(slices, equations, strict=True))]
-
-        return self.concatenate(*sorted_equations, sparse=sparse)
+        return self.concatenate(
+            *(
+                eq
+                for _, eq in sorted(
+                    var_eqn_dict.items(), key=lambda item: self.y_slices[item[0]][0]
+                )
+            ),
+            sparse=sparse,
+        )
 
     def check_model(self, model):
         """Perform some basic checks to make sure the discretised model makes sense."""
@@ -1426,9 +1411,9 @@ class Discretisation:
         if not isinstance(var, pybamm.Variable):
             return False
 
-        this_var_is_independent = var.name not in all_vars_in_eqns
-        not_in_y_slices = var not in list(self.y_slices.keys())
-        not_in_discretised = var not in list(self._discretised_symbols.keys())
+        this_var_is_independent = var not in all_vars_in_eqns
+        not_in_y_slices = var not in self.y_slices
+        not_in_discretised = var not in self._discretised_symbols
         is_0D = len(var.domain) == 0
         this_var_is_independent = (
             this_var_is_independent and not_in_y_slices and not_in_discretised and is_0D
@@ -1436,43 +1421,96 @@ class Discretisation:
         return this_var_is_independent
 
     def remove_independent_variables_from_rhs(self, model):
-        rhs_vars_to_search_over = list(model.rhs.keys())
         unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
-        eqns_to_check = (
-            list(model.rhs.values())
-            + list(model.algebraic.values())
-            + [x[side][0] for x in model.boundary_conditions.values() for side in x]
+        eqns_to_check = itertools.chain(
+            model.rhs.values(),
+            model.algebraic.values(),
+            (x[side][0] for x in model.boundary_conditions.values() for side in x),
             # only check children of variables, this will skip the variable itself
             # and catch any other cases
-            + [child for var in model.variables.values() for child in var.children]
-            + [event.expression for event in model.events]
+            (
+                child
+                for var in model.variables_matching_keys().values()
+                for child in var.children
+            ),
+            (event.expression for event in model.events),
         )
         all_vars_in_eqns = unpacker.unpack_list_of_symbols(eqns_to_check)
-        all_vars_in_eqns = [var.name for var in all_vars_in_eqns]
 
-        for var in rhs_vars_to_search_over:
-            this_var_is_independent = self.is_variable_independent(
-                var, all_vars_in_eqns
+        vars_to_update = {}
+        for var in list(model.rhs.keys()):
+            # a model needs at least one differential equation to solve
+            if len(model.rhs) <= 1:
+                break
+            if not self.is_variable_independent(var, all_vars_in_eqns):
+                continue
+            pybamm.logger.info(f"removing variable {var} from rhs")
+            _rhs = model.rhs.pop(var)
+            _initial_condition = model.initial_conditions.pop(var)
+            explicit_integral = pybamm.ExplicitTimeIntegral(_rhs, _initial_condition)
+            # Collect variables to update in _variables_processed
+            # Do NOT modify model.variables - only update _variables_processed
+            vars_to_update[var.name] = explicit_integral
+            # edge case where a variable appears
+            # in variables twice under different names
+            vars_to_update.update(
+                {
+                    key: explicit_integral
+                    for key, value in model.variables_matching_keys().items()
+                    if value == var
+                }
             )
-            if this_var_is_independent:
-                if len(model.rhs) != 1:
-                    pybamm.logger.info(f"removing variable {var} from rhs")
-                    my_initial_condition = model.initial_conditions[var]
-                    explicit_integral = pybamm.ExplicitTimeIntegral(
-                        model.rhs[var], my_initial_condition
-                    )
-                    # Collect variables to update in _variables_processed
-                    # Do NOT modify model.variables - only update _variables_processed
-                    vars_to_update = {var.name: explicit_integral}
-                    # edge case where a variable appears
-                    # in variables twice under different names
-                    for key in model.variables:
-                        if model.variables[key] == var:
-                            vars_to_update[key] = explicit_integral
-                    # Update _variables_processed using the proper method
-                    model.update_processed_variables(vars_to_update)
-                    del model.rhs[var]
-                    del model.initial_conditions[var]
-                else:
-                    break
+
+        model.update_processed_variables(vars_to_update)
         return model
+
+
+# {class: handler(disc, symbol, disc_children)}; subclasses use their nearest
+# registered base class's handler
+Discretisation._handlers = {
+    pybamm.Symbol: Discretisation._disc_default,
+    pybamm.BinaryOperator: Discretisation._disc_binary,
+    pybamm._BaseAverage: Discretisation._disc_average,
+    pybamm.UnaryOperator: Discretisation._disc_unary_default,
+    pybamm.Gradient: Discretisation._disc_gradient,
+    pybamm.Divergence: Discretisation._disc_divergence,
+    pybamm.Laplacian: Discretisation._disc_laplacian,
+    pybamm.GradientSquared: Discretisation._disc_gradient_squared,
+    pybamm.Mass: Discretisation._disc_mass,
+    pybamm.BoundaryMass: Discretisation._disc_boundary_mass,
+    pybamm.IndefiniteIntegral: Discretisation._disc_indefinite_integral,
+    pybamm.BackwardIndefiniteIntegral: Discretisation._disc_backward_indefinite_integral,
+    pybamm.Integral: Discretisation._disc_integral,
+    pybamm.DefiniteIntegralVector: Discretisation._disc_definite_integral_vector,
+    pybamm.OneDimensionalIntegral: Discretisation._disc_one_dimensional_integral,
+    pybamm.BoundaryIntegral: Discretisation._disc_boundary_integral,
+    pybamm.Broadcast: Discretisation._disc_broadcast,
+    pybamm.DeltaFunction: Discretisation._disc_delta_function,
+    pybamm.BoundaryOperator: Discretisation._disc_boundary_operator,
+    pybamm.EvaluateAt: Discretisation._disc_evaluate_at,
+    pybamm.UpwindDownwind2D: Discretisation._disc_upwind_downwind_2d,
+    pybamm.NodeToEdge2D: Discretisation._disc_node_to_edge_2d,
+    pybamm.UpwindDownwind: Discretisation._disc_upwind_downwind,
+    pybamm.NotConstant: Discretisation._disc_not_constant,
+    pybamm.Component: Discretisation._disc_component,
+    pybamm.Norm: Discretisation._disc_norm,
+    pybamm.Magnitude: Discretisation._disc_magnitude,
+    pybamm.Function: Discretisation._disc_children_copy,
+    pybamm.Conditional: Discretisation._disc_children_copy,
+    pybamm.VariableDot: Discretisation._disc_variable_dot,
+    pybamm.Variable: Discretisation._disc_variable,
+    pybamm.SpatialVariable: Discretisation._disc_spatial_variable,
+    pybamm.ConcatenationVariable: Discretisation._disc_concatenation_variable,
+    pybamm.Concatenation: Discretisation._disc_concatenation,
+    pybamm.InputParameter: Discretisation._disc_input_parameter,
+    pybamm.CoupledVariable: Discretisation._disc_coupled_variable,
+    pybamm.TensorField: Discretisation._disc_children_copy,
+    pybamm.Constant: Discretisation._disc_constant,
+}
+
+Discretisation._self_discretising = (
+    pybamm._BaseAverage,
+    pybamm.ConcatenationVariable,
+    pybamm.Constant,
+    pybamm.Divergence,
+)

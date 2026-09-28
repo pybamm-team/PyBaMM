@@ -269,7 +269,9 @@ class TestFiniteVolume:
         # test spatial variable on edges
         x = pybamm.SpatialVariable("x", ["domain"])
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        x._evaluates_on_edges = lambda _: True
+        x._saved_evaluates_on_edges = dict.fromkeys(
+            pybamm.expression_tree.symbol.DOMAIN_LEVELS, True
+        )
         x_edges_disc = disc.process_symbol(x)
         assert isinstance(x_edges_disc, pybamm.Vector)
         np.testing.assert_array_equal(

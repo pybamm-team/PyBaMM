@@ -83,208 +83,189 @@ class ParameterSubstitutor:
         >>> processed = processor.process_symbol(param)
         >>> result = processed.evaluate()  # Returns evaluated value
         """
+        if isinstance(symbol, numbers.Number):
+            return pybamm.Scalar(symbol)
+        return pybamm.tree_map(
+            self._substitute, symbol, cache=self._cache, is_leaf=self._is_leaf
+        )
+
+    def _is_leaf(self, symbol: pybamm.Symbol) -> bool:
+        """
+        A FunctionParameter whose value is scalar-like keeps its children
+        unprocessed: they are only used for shape, so may hold unset parameters.
+        """
+        if not isinstance(symbol, pybamm.FunctionParameter):
+            return False
         try:
-            return self._cache[symbol]
+            value = self._store[symbol.name]
         except KeyError:
-            if not isinstance(symbol, pybamm.FunctionParameter):
-                processed_symbol = self._process_symbol(symbol)
-            else:
-                processed_symbol = self._process_function_parameter(symbol)
-            self._cache[symbol] = processed_symbol
-            return processed_symbol
+            return False  # reported when the node itself is processed
+        # expression-valued parameters process their own children
+        return isinstance(
+            value,
+            numbers.Number
+            | pybamm.Interpolant
+            | pybamm.InputParameter
+            | pybamm.ExpressionFunctionParameter,
+        ) or (isinstance(value, pybamm.Symbol) and value.size_for_testing == 1)
 
-    def _process_symbol(self, symbol: pybamm.Symbol) -> pybamm.Symbol:
-        """Internal symbol processing implementation."""
+    def _substitute(self, symbol: pybamm.Symbol, new_leaves) -> pybamm.Symbol:
+        """
+        Rewrite one node given its already-processed leaves; the callback for
+        :func:`pybamm.tree_map`.
+        """
         if isinstance(symbol, pybamm.Parameter):
-            try:
-                value = self._store[symbol.name]
-            except KeyError as err:
-                # Handle renamed parameter with helpful error message
-                if (
-                    "Exchange-current density for lithium metal electrode [A.m-2]"
-                    in symbol.name
-                    and "Exchange-current density for plating [A.m-2]" in self._store
-                ):
-                    raise KeyError(
-                        "'Exchange-current density for plating [A.m-2]' has been renamed "
-                        "to 'Exchange-current density for lithium metal electrode [A.m-2]' "
-                        "when referring to the reaction at the surface of a lithium metal "
-                        "electrode. This is to avoid confusion with the exchange-current "
-                        "density for the lithium plating reaction in a porous negative "
-                        "electrode. To avoid this error, change your parameter file to use "
-                        "the new name."
-                    ) from err
-                raise
-            if isinstance(value, numbers.Number):
-                # Check not NaN (parameter in csv file but no value given)
-                if np.isnan(value):
-                    raise ValueError(f"Parameter '{symbol.name}' not found")
-                # Scalar inherits name
-                return pybamm.Scalar(value, name=symbol.name)
-            elif isinstance(value, pybamm.Symbol):
-                new_value = self.process_symbol(value)
-                new_value.copy_domains(symbol)
-                return new_value
-            else:
-                raise TypeError(f"Cannot process parameter '{value}'")
+            return self._process_parameter(symbol)
 
-        elif isinstance(symbol, pybamm.FunctionParameter):
-            function_name = self._store[symbol.name]
-            if isinstance(
-                function_name,
-                numbers.Number | pybamm.Interpolant | pybamm.InputParameter,
-            ) or (
-                isinstance(function_name, pybamm.Symbol)
-                and function_name.size_for_testing == 1
-            ):
-                # no need to process children, they will only be used for shape
-                new_children = symbol.children
-            else:
-                # process children
-                new_children = []
-                for child in symbol.children:
-                    if symbol.diff_variable is not None and any(
-                        x == symbol.diff_variable for x in child.pre_order()
-                    ):
-                        # Wrap with NotConstant to avoid simplification,
-                        # which would stop symbolic diff from working properly
-                        new_child = pybamm.NotConstant(child)
-                        new_children.append(self.process_symbol(new_child))
-                    else:
-                        new_children.append(self.process_symbol(child))
+        if isinstance(symbol, pybamm.FunctionParameter):
+            if isinstance(self._store[symbol.name], pybamm.ExpressionFunctionParameter):
+                return self._process_function_parameter(symbol)
+            return self._process_callable_function_parameter(symbol, new_leaves)
 
-            # Create Function or Interpolant or Scalar object
-            if isinstance(function_name, tuple):
-                if len(function_name) == 2:  # CSV or JSON parsed data
-                    # to create an Interpolant
-                    name, data = function_name
-
-                    if len(data[0]) == 1:
-                        input_data = data[0][0], data[1]
-                    else:
-                        input_data = data
-
-                    # For parameters provided as data we use a cubic interpolant
-                    # Note: the cubic interpolant can be differentiated
-                    function = pybamm.Interpolant(
-                        input_data[0],
-                        input_data[-1],
-                        new_children,
-                        name=name,
-                    )
-                else:  # pragma: no cover
-                    raise ValueError(
-                        f"Invalid function name length: {len(function_name)}"
-                    )
-
-            elif isinstance(function_name, numbers.Number):
-                # Check not NaN (parameter in csv file but no value given)
-                if np.isnan(function_name):
-                    raise ValueError(
-                        f"Parameter '{symbol.name}' (possibly a function) not found"
-                    )
-                # If the "function" is provided is actually a scalar, return a Scalar
-                # object instead of throwing an error.
-                function = pybamm.Scalar(function_name, name=symbol.name)
-            elif callable(function_name):
-                # otherwise evaluate the function to create a new PyBaMM object
-                self._check_electrode_conductivity_signature(symbol, function_name)
-                function = function_name(*new_children)
-            elif isinstance(
-                function_name, pybamm.Interpolant | pybamm.InputParameter
-            ) or (
-                isinstance(function_name, pybamm.Symbol)
-                and function_name.size_for_testing == 1
-            ):
-                function = function_name
-            else:
-                raise TypeError(
-                    f"Parameter provided for '{symbol.name}' "
-                    + "is of the wrong type (should either be scalar-like or callable)"
-                )
-
-            # Apply post_processor if provided (e.g., for regularisation)
-            if symbol.post_processor is not None:
-                # Build input dict mapping input names to processed symbols
-                input_dict = {
-                    symbol.input_names[i]: new_children[i]
-                    for i in range(len(symbol.input_names))
-                }
-                function = symbol.post_processor(function, inputs=input_dict)
-
-            # Differentiate if necessary
-            if symbol.diff_variable is None:
-                # Use ones_like so that we get the right shapes
-                function_out = function * pybamm.ones_like(*new_children)
-            else:
-                # return differentiated function
-                new_diff_variable = self.process_symbol(symbol.diff_variable)
-                function_out = function.diff(new_diff_variable)
-
-            # Process again just to be sure
-            return self.process_symbol(function_out)
-
-        # Unary operators
-        elif isinstance(symbol, pybamm.UnaryOperator):
-            new_child = self.process_symbol(symbol.child)
-            new_symbol = symbol.create_copy(new_children=[new_child])
-            # x_average can sometimes create a new symbol with electrode thickness
-            # parameters, so we process again to make sure these parameters are set
-            if isinstance(symbol, pybamm.XAverage) and not isinstance(
-                new_symbol, pybamm.XAverage
-            ):
-                new_symbol = self.process_symbol(new_symbol)
-            # f_a_dist in the size average needs to be processed
-            if isinstance(new_symbol, pybamm.SizeAverage):
-                new_symbol.f_a_dist = self.process_symbol(new_symbol.f_a_dist)
-            # position in evaluate at needs to be processed, and should be a Scalar
-            if isinstance(new_symbol, pybamm.EvaluateAt):
-                new_symbol_position = self.process_symbol(new_symbol.position)
-                if not isinstance(new_symbol_position, pybamm.Scalar):
-                    raise ValueError(
-                        "'position' in 'EvaluateAt' must evaluate to a scalar"
-                    )
-                else:
-                    new_symbol.position = new_symbol_position
-            return new_symbol
-
-        # Functions, BinaryOperators & Concatenations
-        elif isinstance(
-            symbol,
-            (
-                pybamm.Function,
-                pybamm.Concatenation,
-                pybamm.BinaryOperator,
-                pybamm.Conditional,
-            ),
-        ):
-            new_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol.create_copy(new_children)
-
-        elif isinstance(symbol, pybamm.VectorField):
-            left_symbol = self.process_symbol(symbol.lr_field)
-            right_symbol = self.process_symbol(symbol.tb_field)
-            return symbol.create_copy(new_children=[left_symbol, right_symbol])
-
-        # Variables: update scale
-        elif isinstance(symbol, pybamm.Variable):
-            new_symbol = symbol.create_copy()
-            new_symbol.scale = self.process_symbol(symbol.scale)
-            reference = self.process_symbol(symbol.reference)
+        if isinstance(symbol, pybamm.Variable):
+            n_children = len(symbol.children)
+            scale, reference, *bounds = new_leaves[n_children:]
             if isinstance(reference, pybamm.Vector):
                 # address numpy 1.25 deprecation warning: array should have ndim=0
                 # before conversion
                 reference = pybamm.Scalar((reference.evaluate()).item())
-            new_symbol.reference = reference
-            new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
-            return new_symbol
+            return symbol.create_copy(
+                scale=scale, reference=reference, bounds=tuple(bounds)
+            )
 
-        elif isinstance(symbol, numbers.Number):
-            return pybamm.Scalar(symbol)
+        new_symbol = pybamm.rebuild(symbol, new_leaves)
 
+        # x_average can sometimes create a new symbol with electrode thickness
+        # parameters, so we process again to make sure these parameters are set
+        if isinstance(symbol, pybamm.XAverage) and not isinstance(
+            new_symbol, pybamm.XAverage
+        ):
+            new_symbol = self.process_symbol(new_symbol)
+        if isinstance(new_symbol, pybamm.EvaluateAt) and not isinstance(
+            new_symbol.position, pybamm.Scalar
+        ):
+            raise ValueError("'position' in 'EvaluateAt' must evaluate to a scalar")
+        return new_symbol
+
+    def _process_parameter(self, symbol: pybamm.Parameter) -> pybamm.Symbol:
+        try:
+            value = self._store[symbol.name]
+        except KeyError as err:
+            # Handle renamed parameter with helpful error message
+            if (
+                "Exchange-current density for lithium metal electrode [A.m-2]"
+                in symbol.name
+                and "Exchange-current density for plating [A.m-2]" in self._store
+            ):
+                raise KeyError(
+                    "'Exchange-current density for plating [A.m-2]' has been renamed "
+                    "to 'Exchange-current density for lithium metal electrode [A.m-2]' "
+                    "when referring to the reaction at the surface of a lithium metal "
+                    "electrode. This is to avoid confusion with the exchange-current "
+                    "density for the lithium plating reaction in a porous negative "
+                    "electrode. To avoid this error, change your parameter file to use "
+                    "the new name."
+                ) from err
+            raise
+        if isinstance(value, numbers.Number):
+            # Check not NaN (parameter in csv file but no value given)
+            if np.isnan(value):
+                raise ValueError(f"Parameter '{symbol.name}' not found")
+            # Scalar inherits name
+            return pybamm.Scalar(value, name=symbol.name)
+        elif isinstance(value, pybamm.Symbol):
+            return self.process_symbol(value).with_domains(symbol)
         else:
-            # Backup option: return the object
-            return symbol
+            raise TypeError(f"Cannot process parameter '{value}'")
+
+    def _process_callable_function_parameter(
+        self, symbol: pybamm.FunctionParameter, new_leaves
+    ) -> pybamm.Symbol:
+        """Process a FunctionParameter whose stored value is a number, callable,
+        data table or scalar-like symbol."""
+        function_name = self._store[symbol.name]
+        n_children = len(symbol.children)
+        if new_leaves:
+            new_children = list(new_leaves[:n_children])
+        else:
+            # scalar-like value (see ``_is_leaf``): children only give the shape
+            new_children = list(symbol.children)
+        if symbol.diff_variable is not None:
+            # Wrap children containing the diff variable with NotConstant to avoid
+            # simplification, which would stop symbolic diff from working properly
+            new_children = [
+                pybamm.NotConstant(new_child)
+                if any(x == symbol.diff_variable for x in child.pre_order())
+                else new_child
+                for child, new_child in zip(symbol.children, new_children, strict=True)
+            ]
+
+        # Create Function or Interpolant or Scalar object
+        if isinstance(function_name, tuple):
+            if len(function_name) == 2:  # CSV or JSON parsed data
+                # to create an Interpolant
+                name, data = function_name
+
+                if len(data[0]) == 1:
+                    input_data = data[0][0], data[1]
+                else:
+                    input_data = data
+
+                # For parameters provided as data we use a cubic interpolant
+                # Note: the cubic interpolant can be differentiated
+                function = pybamm.Interpolant(
+                    input_data[0],
+                    input_data[-1],
+                    new_children,
+                    name=name,
+                )
+            else:  # pragma: no cover
+                raise ValueError(f"Invalid function name length: {len(function_name)}")
+
+        elif isinstance(function_name, numbers.Number):
+            # Check not NaN (parameter in csv file but no value given)
+            if np.isnan(function_name):
+                raise ValueError(
+                    f"Parameter '{symbol.name}' (possibly a function) not found"
+                )
+            # If the "function" is provided is actually a scalar, return a Scalar
+            # object instead of throwing an error.
+            function = pybamm.Scalar(function_name, name=symbol.name)
+        elif callable(function_name):
+            # otherwise evaluate the function to create a new PyBaMM object
+            self._check_electrode_conductivity_signature(symbol, function_name)
+            function = function_name(*new_children)
+        elif isinstance(function_name, pybamm.Interpolant | pybamm.InputParameter) or (
+            isinstance(function_name, pybamm.Symbol)
+            and function_name.size_for_testing == 1
+        ):
+            function = function_name
+        else:
+            raise TypeError(
+                f"Parameter provided for '{symbol.name}' "
+                + "is of the wrong type (should either be scalar-like or callable)"
+            )
+
+        # Apply post_processor if provided (e.g., for regularisation)
+        if symbol.post_processor is not None:
+            # Build input dict mapping input names to processed symbols
+            input_dict = dict(zip(symbol.input_names, new_children, strict=True))
+            function = symbol.post_processor(function, inputs=input_dict)
+
+        # Differentiate if necessary
+        if symbol.diff_variable is None:
+            # Use ones_like so that we get the right shapes
+            function_out = function * pybamm.ones_like(*new_children)
+        else:
+            if new_leaves:
+                # the processed diff variable is the leaf after the children
+                new_diff_variable = new_leaves[n_children]
+            else:
+                new_diff_variable = self.process_symbol(symbol.diff_variable)
+            function_out = function.diff(new_diff_variable)
+
+        # Process again just to be sure
+        return self.process_symbol(function_out)
 
     @staticmethod
     def _check_electrode_conductivity_signature(symbol, function_name):
@@ -329,90 +310,88 @@ class ParameterSubstitutor:
         """Process ExpressionFunctionParameter symbols."""
         function_parameter = self._store[symbol.name]
 
-        # Handle symbolic function parameter case
-        if isinstance(function_parameter, pybamm.ExpressionFunctionParameter):
-            # Process children
-            new_children = []
-            for child in symbol.children:
-                if symbol.diff_variable is not None and any(
-                    x == symbol.diff_variable for x in child.pre_order()
-                ):
-                    # Wrap with NotConstant to avoid simplification,
-                    # which would stop symbolic diff from working properly
-                    new_child = pybamm.NotConstant(child)
-                    new_children.append(self.process_symbol(new_child))
-                else:
-                    new_children.append(self.process_symbol(child))
-
-            # Get the expression and inputs for the function.
-            expression = function_parameter.child
-            inputs = {
-                arg: child
-                for arg, child in zip(
-                    function_parameter.func_args, new_children, strict=False
-                )
-            }
-
-            # Set domains for function inputs in post-order traversal
-            for node in expression.post_order():
-                if node.name in inputs:
-                    node.domains = inputs[node.name].domains
-                else:
-                    node.domains = node.get_children_domains(node.children)
-
-            # Create a combined processor with inputs as additional parameters
-            # We need to import here to avoid circular imports
-            from .parameter_store import ParameterStore
-
-            combined_store = ParameterStore(dict(self._store._data))
-            combined_store.update(inputs)
-            combined_processor = ParameterSubstitutor(combined_store)
-
-            # Process any FunctionParameter children first to avoid recursion
-            for child in expression.pre_order():
-                if isinstance(child, pybamm.FunctionParameter):
-                    # Build new child with parent inputs
-                    new_child_children = [
-                        inputs[child_child.name]
-                        if isinstance(child_child, pybamm.Parameter)
-                        and child_child.name in inputs
-                        else child_child
-                        for child_child in child.children
-                    ]
-                    new_child = pybamm.FunctionParameter(
-                        child.name,
-                        dict(zip(child.input_names, new_child_children, strict=False)),
-                        diff_variable=child.diff_variable,
-                        print_name=child.print_name,
-                    )
-
-                    # For this local combined processor, process the new child
-                    # and store the result as the processed symbol for this child
-                    combined_processor._cache[child] = (
-                        combined_processor.process_symbol(new_child)
-                    )
-
-            # Process function with combined processor to get a symbolic expression
-            function = combined_processor.process_symbol(expression)
-
-            # Apply post_processor if provided (e.g., for regularisation)
-            if symbol.post_processor is not None:
-                function = symbol.post_processor(function, inputs=inputs)
-
-            # Differentiate if necessary
-            if symbol.diff_variable is None:
-                # Use ones_like so that we get the right shapes
-                function_out = function * pybamm.ones_like(*new_children)
+        # Process children
+        new_children = []
+        for child in symbol.children:
+            if symbol.diff_variable is not None and any(
+                x == symbol.diff_variable for x in child.pre_order()
+            ):
+                # Wrap with NotConstant to avoid simplification,
+                # which would stop symbolic diff from working properly
+                new_child = pybamm.NotConstant(child)
+                new_children.append(self.process_symbol(new_child))
             else:
-                # return differentiated function
-                new_diff_variable = self.process_symbol(symbol.diff_variable)
-                function_out = function.diff(new_diff_variable)
+                new_children.append(self.process_symbol(child))
 
-            return function_out
+        # Get the expression and inputs for the function.
+        expression = function_parameter.child
+        inputs = {
+            arg: child
+            for arg, child in zip(
+                function_parameter.func_args, new_children, strict=False
+            )
+        }
+        # the template refers to each argument as a Parameter placeholder
+        placeholders = {pybamm.Parameter(arg): child for arg, child in inputs.items()}
 
-        # Handle non-symbolic function_name case
+        # Rebuild the expression with the inputs' domains, leaves first, so the
+        # stored template is never modified.
+        def rebind_domains(node, new_leaves):
+            new_node = pybamm.rebuild(node, new_leaves, simplify=False)
+            if node in placeholders:
+                return new_node.with_domains(placeholders[node])
+            return new_node.with_domains(
+                new_node.get_children_domains(new_node.children)
+            )
+
+        expression = pybamm.tree_map(rebind_domains, expression)
+
+        # Create a combined processor with inputs as additional parameters
+        # We need to import here to avoid circular imports
+        from .parameter_store import ParameterStore
+
+        combined_store = ParameterStore(dict(self._store._data))
+        combined_store.update(inputs)
+        combined_processor = ParameterSubstitutor(combined_store)
+
+        # Process any FunctionParameter children first to avoid recursion
+        for child in expression.pre_order():
+            if isinstance(child, pybamm.FunctionParameter):
+                # Build new child with parent inputs
+                new_child_children = [
+                    placeholders.get(child_child, child_child)
+                    for child_child in child.children
+                ]
+                new_child = pybamm.FunctionParameter(
+                    child.name,
+                    dict(zip(child.input_names, new_child_children, strict=False)),
+                    diff_variable=child.diff_variable,
+                    print_name=child.print_name,
+                )
+
+                # For this local combined processor, process the new child
+                # and store the result as the processed symbol for this child
+                combined_processor._cache[child] = combined_processor.process_symbol(
+                    new_child
+                )
+
+        # Process function with combined processor to get a symbolic expression
+        function = combined_processor.process_symbol(expression)
+
+        # Apply post_processor if provided (e.g., for regularisation)
+        if symbol.post_processor is not None:
+            function = symbol.post_processor(function, inputs=inputs)
+
+        # Differentiate if necessary
+        if symbol.diff_variable is None:
+            # Use ones_like so that we get the right shapes
+            function_out = function * pybamm.ones_like(*new_children)
         else:
-            return self._process_symbol(symbol)
+            # return differentiated function
+            new_diff_variable = self.process_symbol(symbol.diff_variable)
+            function_out = function.diff(new_diff_variable)
+
+        return function_out
 
     def process_model(
         self,

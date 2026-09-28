@@ -44,6 +44,8 @@ def _experiment_step_factories() -> dict:
 
 
 class ExpressionFunctionParameter(pybamm.UnaryOperator):
+    __slots__ = ("func_args", "func_name")
+
     def __init__(self, name, child, func_name, func_args):
         super().__init__(name, child)
         self.func_name = func_name
@@ -116,7 +118,8 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
             elif (
                 isinstance(child, pybamm.Parameter) and child.name not in self.func_args
             ):
-                child.name = f'Parameter("{child.name}")'
+                # set _print_name directly, as for Interpolant above
+                child._print_name = f'Parameter("{child.name}")'
 
         src += f"    return {expression.to_equation()}"
 

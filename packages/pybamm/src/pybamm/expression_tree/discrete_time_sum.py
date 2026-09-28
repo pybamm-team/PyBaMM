@@ -23,6 +23,8 @@ class DiscreteTimeData(pybamm.Interpolant):
 
     """
 
+    __slots__ = ()
+
     def __init__(
         self, time_points: npt.NDArray[np.float64], data: npt.NDArray[Any], name: str
     ):
@@ -31,7 +33,7 @@ class DiscreteTimeData(pybamm.Interpolant):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self.domains,
+            "domains": self._domains,
             "time_points": self.x[0].tolist(),
             "data": self.y.tolist(),
         }
@@ -81,21 +83,30 @@ class DiscreteTimeSum(pybamm.UnaryOperator):
         contains multiple :class:`pybamm.DiscreteTimeData` nodes.
     """
 
+    __slots__ = ()
+
     def __init__(self, child: pybamm.Symbol):
-        self.data = None
-        for node in child.pre_order():
-            if isinstance(node, DiscreteTimeData):
-                # Check that there is exactly one DiscreteTimeData node in the child
-                if self.data is not None:
-                    raise pybamm.ModelError(
-                        "DiscreteTimeSum can only have one DiscreteTimeData node in the child"
-                    )
-                self.data = node
-        if self.data is None:
+        data_nodes = [
+            node for node in child.pre_order() if isinstance(node, DiscreteTimeData)
+        ]
+        if len(data_nodes) > 1:
+            raise pybamm.ModelError(
+                "DiscreteTimeSum can only have one DiscreteTimeData node in the child"
+            )
+        if not data_nodes:
             raise pybamm.ModelError(
                 "DiscreteTimeSum must contain a DiscreteTimeData node"
             )
         super().__init__("discrete time sum", child)
+
+    @property
+    def data(self) -> DiscreteTimeData:
+        """The (unique) :class:`DiscreteTimeData` node inside the child."""
+        return next(
+            node
+            for node in self.child.pre_order()
+            if isinstance(node, DiscreteTimeData)
+        )
 
     @classmethod
     def _from_json(cls, snippet):
