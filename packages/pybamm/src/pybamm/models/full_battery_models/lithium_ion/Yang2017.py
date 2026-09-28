@@ -8,6 +8,7 @@ _YANG2017_OPTIONS = {
     "SEI porosity change": "true",
     "lithium plating": ("irreversible", "none"),
     "lithium plating porosity change": "true",
+    "total interfacial current density as a state": "true",
 }
 
 
