@@ -148,10 +148,7 @@ class BaseIntegrationTestLithiumIon:
         self.run_basic_processing_test(options)
 
     def test_kinetics_asymmetric_butler_volmer(self):
-        options = {
-            "intercalation kinetics": "asymmetric Butler-Volmer",
-            "surface form": "algebraic",
-        }
+        options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
         solver = pybamm.IDAKLUSolver(atol=1e-14, rtol=1e-14)
 
         parameter_values = pybamm.ParameterValues("Marquis2019")
@@ -166,14 +163,11 @@ class BaseIntegrationTestLithiumIon:
         )
 
     def test_kinetics_linear(self):
-        options = {"intercalation kinetics": "linear", "surface form": "algebraic"}
+        options = {"intercalation kinetics": "linear"}
         self.run_basic_processing_test(options)
 
     def test_kinetics_mhc(self):
-        options = {
-            "intercalation kinetics": "Marcus-Hush-Chidsey",
-            "surface form": "algebraic",
-        }
+        options = {"intercalation kinetics": "Marcus-Hush-Chidsey"}
         parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update(
             {
