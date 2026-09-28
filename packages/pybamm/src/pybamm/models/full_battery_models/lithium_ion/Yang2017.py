@@ -1,4 +1,5 @@
 import pybamm
+from pybamm.models.full_battery_models.base_battery_model import option_values_match
 
 from .dfn import DFN
 
@@ -13,8 +14,11 @@ _YANG2017_OPTIONS = {
 
 class Yang2017(DFN):
     def _model_default_options(self, supplied):
+        working_electrode = supplied.get("working electrode", "both")
         for key, value in _YANG2017_OPTIONS.items():
-            if key in supplied and supplied[key] != value:
+            if key in supplied and not option_values_match(
+                key, supplied[key], value, working_electrode
+            ):
                 raise pybamm.OptionError(f"Yang2017 requires '{key}' to be {value!r}.")
         return dict(_YANG2017_OPTIONS)
 
