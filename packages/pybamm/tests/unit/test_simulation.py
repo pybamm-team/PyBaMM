@@ -329,7 +329,11 @@ class TestSimulation:
 
         # Test whether initial_soc works with half cell composite positive electrode
         # Use actual negative electrode parameters from Chen2020_composite
-        options = {"working electrode": "positive", "particle phases": ("1", "2")}
+        options = {
+            "working electrode": "positive",
+            "particle phases": ("1", "2"),
+            "surface form": "algebraic",
+        }
         model = pybamm.lithium_ion.SPM(options)
         param = pybamm.ParameterValues("Chen2020_composite")
 
@@ -1098,6 +1102,7 @@ class TestSimulation:
             "particle": "MSMR",
             "number of MSMR reactions": ("6", "4"),
             "intercalation kinetics": "MSMR",
+            "surface form": "algebraic",
         }
         model = pybamm.lithium_ion.SPM(options)
         param = pybamm.ParameterValues("MSMR_Example")
@@ -1111,7 +1116,7 @@ class TestSimulation:
         assert fp1 is fp2
 
     def test_cache_esoh_composite(self):
-        options = {"particle phases": ("2", "1")}
+        options = {"particle phases": ("2", "1"), "surface form": "algebraic"}
         model = pybamm.lithium_ion.SPM(options=options)
         param = pybamm.ParameterValues("Chen2020_composite")
         param.update(
@@ -1133,6 +1138,7 @@ class TestSimulation:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "surface form": "algebraic",
         }
         model = pybamm.lithium_ion.SPM(options=options)
         param = pybamm.ParameterValues("Chen2020_composite")
@@ -1258,7 +1264,7 @@ class TestSimulation:
         assert voltage[0] == pytest.approx(4.0, abs=1e-3)
 
     def test_initial_soc_composite_model(self):
-        options = {"particle phases": ("2", "1")}
+        options = {"particle phases": ("2", "1"), "surface form": "algebraic"}
         model = pybamm.lithium_ion.SPM(options=options)
         param = pybamm.ParameterValues("Chen2020_composite")
         param.update(
