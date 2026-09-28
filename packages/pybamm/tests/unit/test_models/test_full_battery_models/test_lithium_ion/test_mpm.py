@@ -32,7 +32,7 @@ class TestMPM:
         model.check_well_posedness()
 
     def test_x_full_thermal_not_implemented(self):
-        options = {"thermal": "x-full"}
+        options = {"thermal": "x-full", "cell geometry": "pouch"}
         with pytest.raises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
@@ -41,6 +41,7 @@ class TestMPM:
             "current collector": "potential pair",
             "dimensionality": 1,
             "thermal": "x-lumped",
+            "cell geometry": "pouch",
         }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
@@ -159,22 +160,38 @@ class TestMPMExternalCircuits:
 
 class TestMPMWithSEI:
     def test_reaction_limited(self):
-        options = {"SEI": "reaction limited"}
+        options = {
+            "SEI": "reaction limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
     def test_solvent_diffusion_limited(self):
-        options = {"SEI": "solvent-diffusion limited"}
+        options = {
+            "SEI": "solvent-diffusion limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
     def test_electron_migration_limited(self):
-        options = {"SEI": "electron-migration limited"}
+        options = {
+            "SEI": "electron-migration limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
     def test_interstitial_diffusion_limited(self):
-        options = {"SEI": "interstitial-diffusion limited"}
+        options = {
+            "SEI": "interstitial-diffusion limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
@@ -182,6 +199,8 @@ class TestMPMWithSEI:
         options = {
             "SEI": "ec reaction limited",
             "SEI porosity change": "true",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
         }
         with pytest.raises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
