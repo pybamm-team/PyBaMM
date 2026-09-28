@@ -856,6 +856,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                     )
 
+        # Must run before generic value validation so users see migration
+        # guidance, not just "not recognized", for this removed option.
+        if options["working electrode"] == "negative":
+            raise pybamm.OptionError(
+                "The 'negative' working electrode option has been removed because "
+                "the voltage - and therefore the energy stored - would be negative."
+                "Use the 'positive' working electrode option instead and set whatever "
+                "would normally be the negative electrode as the positive electrode."
+            )
+
         for option, value in options.items():
             for path, leaf in iter_option_leaves(option, value):
                 validate_option_value(option, leaf, self.possible_options[option], path)
@@ -988,15 +998,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "X-full thermal submodels do not yet support particle-size"
                     " distributions."
                 )
-
-        # Renamed options
-        if options["working electrode"] == "negative":
-            raise pybamm.OptionError(
-                "The 'negative' working electrode option has been removed because "
-                "the voltage - and therefore the energy stored - would be negative."
-                "Use the 'positive' working electrode option instead and set whatever "
-                "would normally be the negative electrode as the positive electrode."
-            )
 
         # Some standard checks to make sure options are compatible
         if options["dimensionality"] == 0:
