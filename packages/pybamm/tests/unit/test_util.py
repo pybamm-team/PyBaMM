@@ -50,18 +50,14 @@ class TestUtil:
 
         # jax and jaxlib are installed with a supported version
         with (
-            mock.patch.object(
-                importlib.util, "find_spec", return_value=mock.Mock()
-            ),
+            mock.patch.object(importlib.util, "find_spec", return_value=mock.Mock()),
             mock.patch.object(importlib.metadata, "version", return_value="0.8.1"),
         ):
             assert pybamm.has_jax()
 
         # jax and jaxlib are installed with an unsupported version
         with (
-            mock.patch.object(
-                importlib.util, "find_spec", return_value=mock.Mock()
-            ),
+            mock.patch.object(importlib.util, "find_spec", return_value=mock.Mock()),
             mock.patch.object(importlib.metadata, "version", return_value="0.9.0"),
         ):
             assert not pybamm.has_jax()
