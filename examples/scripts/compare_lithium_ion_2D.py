@@ -20,10 +20,20 @@ else:
 # load models
 models = [
     pybamm.lithium_ion.SPM(
-        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D SPM"
+        {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "cell geometry": "pouch",
+        },
+        name="1+1D SPM",
     ),
     pybamm.lithium_ion.SPMe(
-        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D SPMe"
+        {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "cell geometry": "pouch",
+        },
+        name="1+1D SPMe",
     ),
 ]
 
