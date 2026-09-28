@@ -1386,6 +1386,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         else:
             options = extra_options
+            # processed options carry every key, so only the model checks matter
+            self._model_default_options(dict(options))
 
         # Options that are incompatible with models
         if (

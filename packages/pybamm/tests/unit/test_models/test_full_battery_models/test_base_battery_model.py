@@ -1343,9 +1343,28 @@ class TestModelDefaultOptions:
             (LithiumMetalDFN, {}),
             (pybamm.lead_acid.LOQS, {}),
             (pybamm.lithium_ion.Yang2017, {}),
+            (pybamm.lithium_ion.BasicDFNHalfCell, {}),
         ],
     )
     def test_reprocessing_options_is_idempotent(self, model_class, supplied):
         model = model_class(supplied)
         assert BatteryModelOptions(dict(model.options)) == model.options
         assert model_class(dict(model.options)).options == model.options
+        assert model_class(model.options).options == model.options
+
+    def test_basic_dfn_half_cell_accepts_its_defaults(self):
+        model = pybamm.lithium_ion.BasicDFNHalfCell()
+        options = model.options
+        model.options = dict(options)
+        assert model.options == options
+
+    @pytest.mark.parametrize(
+        "model_class, match",
+        [
+            (pybamm.lead_acid.LOQS, r"particle shape"),
+            (pybamm.lithium_ion.MPM, r"particle size"),
+        ],
+    )
+    def test_processed_options_are_checked_against_model(self, model_class, match):
+        with pytest.raises(pybamm.OptionError, match=match):
+            model_class(BatteryModelOptions({}))
