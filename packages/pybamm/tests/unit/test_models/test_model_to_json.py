@@ -314,6 +314,7 @@ class TestBaseModelToConfig:
             options={
                 "current collector": "potential pair",
                 "dimensionality": 1,
+                "cell geometry": "pouch",
             }
         )
         config = model.to_config()
@@ -325,7 +326,9 @@ class TestBaseModelToConfig:
 
     def test_from_config_builtin_with_actual_tuple_valued_options_round_trip(self):
         """Tuple-valued options (e.g. particle phases) survive JSON round-trip."""
-        model = pybamm.lithium_ion.DFN(options={"particle phases": ("2", "1")})
+        model = pybamm.lithium_ion.DFN(
+            options={"particle phases": ("2", "1"), "surface form": "algebraic"}
+        )
         config = model.to_config()
         # Simulate JSON round-trip (tuples become lists)
         config = json.loads(json.dumps(config))
