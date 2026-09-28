@@ -843,6 +843,39 @@ class TestElectrodeCompatibility:
                 {"lithium plating": "partially reversible", "SEI": "none"}
             )
 
+    @pytest.mark.parametrize(
+        "options",
+        [
+            {"lithium plating": "partially reversible"},
+            {"lithium plating": "partially reversible", "SEI": "constant"},
+        ],
+    )
+    def test_partial_plating_processes_okane2022(self, options):
+        # 5709
+        model = pybamm.lithium_ion.DFN(options)
+        pybamm.ParameterValues("OKane2022").process_model(model)
+
+    def test_partial_plating_half_cell(self):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"Option 'lithium plating' at positive is 'partially reversible'",
+        ):
+            BatteryModelOptions(
+                {
+                    "working electrode": "positive",
+                    "lithium plating": "partially reversible",
+                    "SEI": ("constant", "none"),
+                }
+            )
+        # a scalar applies to the working (positive) electrode in a half cell
+        BatteryModelOptions(
+            {
+                "working electrode": "positive",
+                "lithium plating": "partially reversible",
+                "SEI": "constant",
+            }
+        )
+
     def test_sei_on_cracks_requires_cracking_per_electrode(self):
         with pytest.raises(
             pybamm.OptionError,
