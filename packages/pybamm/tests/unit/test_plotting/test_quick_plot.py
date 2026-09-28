@@ -406,7 +406,11 @@ class TestQuickPlot:
 
     def test_plot_1plus1D_spme(self):
         spm = pybamm.lithium_ion.SPMe(
-            {"current collector": "potential pair", "dimensionality": 1}
+            {
+                "current collector": "potential pair",
+                "dimensionality": 1,
+                "cell geometry": "pouch",
+            }
         )
         geometry = spm.default_geometry
         param = spm.default_parameter_values
@@ -442,7 +446,11 @@ class TestQuickPlot:
 
     def test_plot_2plus1D_spm(self):
         spm = pybamm.lithium_ion.SPM(
-            {"current collector": "potential pair", "dimensionality": 2}
+            {
+                "current collector": "potential pair",
+                "dimensionality": 2,
+                "cell geometry": "pouch",
+            }
         )
         geometry = spm.default_geometry
         param = spm.default_parameter_values
