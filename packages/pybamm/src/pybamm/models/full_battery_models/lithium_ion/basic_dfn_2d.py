@@ -321,7 +321,9 @@ class BasicDFN2D(BaseModel):
         ######################
         # (Some) variables
         ######################
-        voltage = pybamm.boundary_value(phi_s_p, "top-right")
+        # z-average of phi_s_p over the positive face, where the uniform current
+        # leaves; phi_s_n is pinned to 0 on the negative face by its Dirichlet BC
+        voltage = pybamm.BoundaryIntegral(phi_s_p, "right") / self.param.L_z
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
