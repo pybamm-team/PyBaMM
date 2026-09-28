@@ -230,16 +230,44 @@ class TestCitations:
         citations._reset()
         assert "BrosaPlanella2022" not in citations._papers_to_cite
         pybamm.lithium_ion.SPM(build=False, options={"SEI": "none"})
-        pybamm.lithium_ion.SPM(build=False, options={"SEI": "constant"})
+        pybamm.lithium_ion.SPM(
+            build=False,
+            options={
+                "SEI": "constant",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            },
+        )
         pybamm.lithium_ion.SPMe(build=False, options={"SEI": "none"})
-        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "constant"})
+        pybamm.lithium_ion.SPMe(
+            build=False,
+            options={
+                "SEI": "constant",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            },
+        )
         assert "BrosaPlanella2022" not in citations._papers_to_cite
 
-        pybamm.lithium_ion.SPM(build=False, options={"SEI": "ec reaction limited"})
+        pybamm.lithium_ion.SPM(
+            build=False,
+            options={
+                "SEI": "ec reaction limited",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            },
+        )
         assert "BrosaPlanella2022" in citations._papers_to_cite
         citations._reset()
 
-        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "ec reaction limited"})
+        pybamm.lithium_ion.SPMe(
+            build=False,
+            options={
+                "SEI": "ec reaction limited",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            },
+        )
         assert "BrosaPlanella2022" in citations._papers_to_cite
         citations._reset()
 
@@ -257,10 +285,31 @@ class TestCitations:
     @pytest.mark.parametrize(
         "options, cited",
         [
-            ({"SEI": "reaction limited"}, True),
+            (
+                {
+                    "SEI": "reaction limited",
+                    "SEI film resistance": "distributed",
+                    "total interfacial current density as a state": "true",
+                },
+                True,
+            ),
             ({"lithium plating": "irreversible"}, True),
-            ({"SEI": "constant"}, False),
-            ({"SEI": ("none", "constant")}, False),
+            (
+                {
+                    "SEI": "constant",
+                    "SEI film resistance": "distributed",
+                    "total interfacial current density as a state": "true",
+                },
+                False,
+            ),
+            (
+                {
+                    "SEI": ("none", "constant"),
+                    "SEI film resistance": "distributed",
+                    "total interfacial current density as a state": "true",
+                },
+                False,
+            ),
         ],
     )
     def test_brosaplanella_2022_per_electrode(self, options, cited):
@@ -277,11 +326,25 @@ class TestCitations:
         citations._reset()
         assert "VonKolzenberg2020" not in citations._papers_to_cite
 
-        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "VonKolzenberg2020"})
+        pybamm.lithium_ion.SPMe(
+            build=False,
+            options={
+                "SEI": "VonKolzenberg2020",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            },
+        )
         assert "VonKolzenberg2020" in citations._papers_to_cite
         citations._reset()
 
-        pybamm.lithium_ion.SPM(build=False, options={"SEI": "VonKolzenberg2020"})
+        pybamm.lithium_ion.SPM(
+            build=False,
+            options={
+                "SEI": "VonKolzenberg2020",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            },
+        )
         assert "VonKolzenberg2020" in citations._papers_to_cite
         citations._reset()
 
@@ -292,11 +355,25 @@ class TestCitations:
         citations._reset()
         assert "Tang2012" not in citations._papers_to_cite
 
-        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "tunnelling limited"})
+        pybamm.lithium_ion.SPMe(
+            build=False,
+            options={
+                "SEI": "tunnelling limited",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            },
+        )
         assert "Tang2012" in citations._papers_to_cite
         citations._reset()
 
-        pybamm.lithium_ion.SPM(build=False, options={"SEI": "tunnelling limited"})
+        pybamm.lithium_ion.SPM(
+            build=False,
+            options={
+                "SEI": "tunnelling limited",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            },
+        )
         assert "Tang2012" in citations._papers_to_cite
         citations._reset()
 
