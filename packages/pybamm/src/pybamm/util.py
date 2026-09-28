@@ -9,7 +9,6 @@ import pathlib
 import pickle
 import sys
 import timeit
-import warnings
 from warnings import warn
 
 import pybamm
@@ -38,7 +37,7 @@ def warn_outside_pybamm(message, category):
     while frame is not None and frame.f_code.co_filename.startswith(_PYBAMM_DIRECTORY):
         frame = frame.f_back
         stacklevel += 1
-    warnings.warn(message, category, stacklevel=stacklevel)
+    warn(message, category, stacklevel=stacklevel)
 
 
 class FuzzyDict(dict):

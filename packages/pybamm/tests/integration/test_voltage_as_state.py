@@ -9,7 +9,6 @@ import numpy as np
 import pytest
 
 import pybamm
-from pybamm.models.full_battery_models import base_battery_model
 
 OPT_IN = {"voltage as a state": "true"}
 LI_ION_MODELS = [
@@ -78,13 +77,10 @@ class TestVoltageAsStateOptIn:
             sim.solve([0, 3600])
 
 
+@pytest.mark.usefixtures("allow_legacy_defaults")
 class TestExplicitPowerResistance:
     """Explicit power/resistance control needs voltage as a state: I = P/V
     (or I = V/R) is circular when V is an expression depending on I."""
-
-    @pytest.fixture(autouse=True)
-    def allow_legacy_defaults(self, monkeypatch):
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", False)
 
     @pytest.mark.parametrize(
         "operating_mode", ["explicit power", "explicit resistance"]
@@ -120,13 +116,10 @@ class TestExplicitPowerResistance:
             )
 
 
+@pytest.mark.usefixtures("allow_legacy_defaults")
 class TestSurfaceFormConditionalDefaults:
     """SPM/SPMe promote surface form to 'algebraic' only when the
     explicit-current closure is unavailable."""
-
-    @pytest.fixture(autouse=True)
-    def allow_legacy_defaults(self, monkeypatch):
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", False)
 
     @pytest.mark.parametrize("model_cls", REDUCED_MODELS)
     def test_plain_models_keep_false_surface_form(self, model_cls):

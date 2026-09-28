@@ -209,10 +209,8 @@ class TestBaseBatteryModel:
             pybamm.ScikitFiniteElement3D,
         )
 
-    def test_options(self, monkeypatch):
-        # this test exercises several legacy dependent defaults directly
-        # (e.g. "SEI film resistance" following "SEI"), so allow them here
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", False)
+    # exercises several legacy dependent defaults directly
+    def test_options(self, allow_legacy_defaults):
         with pytest.raises(pybamm.OptionError, match=r"Option"):
             pybamm.BaseBatteryModel({"bad option": "bad option"})
         with pytest.raises(
@@ -610,8 +608,7 @@ class TestBaseBatteryModel:
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
         assert "Voltage [V]" in [v.name for v in model.algebraic]
 
-    def test_explicit_modes_default_voltage_as_state(self, monkeypatch):
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", False)
+    def test_explicit_modes_default_voltage_as_state(self, allow_legacy_defaults):
         for mode in ["explicit power", "explicit resistance"]:
             with pytest.warns(pybamm.OptionDefaultDeprecationWarning):
                 options = pybamm.BatteryModelOptions({"operating mode": mode})
@@ -631,11 +628,8 @@ class TestBaseBatteryModel:
             model._constrain_voltage_to_expression()
 
 
+@pytest.mark.usefixtures("allow_legacy_defaults")
 class TestLegacyDependentDefaults:
-    @pytest.fixture(autouse=True)
-    def allow_legacy_defaults(self, monkeypatch):
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", False)
-
     def test_shorthand_is_not_rewritten(self):
         options = BatteryModelOptions({"SEI": "constant"})
         assert options["SEI"] == "constant"
@@ -1346,13 +1340,8 @@ class TestOptionHelpers:
         )
 
 
+@pytest.mark.usefixtures("allow_legacy_defaults")
 class TestModelDefaultOptions:
-    @pytest.fixture(autouse=True)
-    def allow_legacy_defaults(self, monkeypatch):
-        # these tests exercise identity/idempotency of model default options
-        # across many model classes, several of which rely on legacy defaults
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", False)
-
     @pytest.mark.parametrize(
         "model_class, supplied",
         [
@@ -1525,11 +1514,8 @@ LEGACY_DEFAULT_CASES = [
 ]
 
 
+@pytest.mark.usefixtures("allow_legacy_defaults")
 class TestLegacyDefaultDeprecation:
-    @pytest.fixture(autouse=True)
-    def allow_legacy_defaults(self, monkeypatch):
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", False)
-
     @pytest.mark.parametrize("supplied, fired", LEGACY_DEFAULT_CASES)
     def test_legacy_default_warns_once_with_explicit_options(self, supplied, fired):
         with pytest.warns(pybamm.OptionDefaultDeprecationWarning) as record:
