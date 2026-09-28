@@ -18,6 +18,254 @@ def represents_positive_integer(s):
         return val > 0
 
 
+_ELECTRODES = ("negative", "positive")
+_PHASES = ("primary", "secondary")
+
+_PER_ELECTRODE_OPTIONS = frozenset(
+    {
+        "diffusivity",
+        "exchange-current density",
+        "intercalation kinetics",
+        "interface utilisation",
+        "lithium plating",
+        "loss of active material",
+        "number of MSMR reactions",
+        "open-circuit potential",
+        "particle",
+        "particle mechanics",
+        "particle phases",
+        "particle size",
+        "SEI",
+        "SEI on cracks",
+        "stress-induced diffusion",
+    }
+)
+_PER_PHASE_OPTIONS = _PER_ELECTRODE_OPTIONS - {"particle phases"}
+
+# In a full cell a scalar non-default value applies to the negative electrode only;
+# the positive electrode takes the value given here.
+_NEGATIVE_ONLY_SHORTHAND = {
+    "SEI": "none",
+    "SEI on cracks": "false",
+    "lithium plating": "none",
+}
+
+
+def format_option_path(path):
+    """Format an electrode/phase path, e.g. ``("negative", "primary")``.
+
+    Parameters
+    ----------
+    path : tuple of str
+        Electrode and optionally phase names.
+
+    Returns
+    -------
+    str
+        The dotted path, e.g. ``"negative.primary"``.
+    """
+    return ".".join(path)
+
+
+def iter_option_leaves(option, value):
+    """Validate the tuple shape of an option value and return its leaves.
+
+    Parameters
+    ----------
+    option : str
+        The option name.
+    value : object
+        A scalar, a ``(negative, positive)`` tuple, or a tuple whose electrode
+        entries may be ``(primary, secondary)`` tuples.
+
+    Returns
+    -------
+    list of tuple
+        ``(path, leaf)`` pairs, where ``path`` is ``()``, ``(electrode,)`` or
+        ``(electrode, phase)``.
+
+    Raises
+    ------
+    pybamm.OptionError
+        If the value is not a scalar or a supported tuple shape for the option.
+    """
+    if not isinstance(value, (tuple, list)):
+        return [((), value)]
+    if (
+        isinstance(value, list)
+        or option not in _PER_ELECTRODE_OPTIONS
+        or len(value) != 2
+    ):
+        raise pybamm.OptionError(
+            f"\n'{value}' is not recognized in option '{option}'. Values must be "
+            "strings or (in some cases) 2-tuples of strings"
+        )
+    leaves = []
+    for domain, electrode_value in zip(_ELECTRODES, value, strict=True):
+        if not isinstance(electrode_value, (tuple, list)):
+            leaves.append(((domain,), electrode_value))
+            continue
+        if (
+            isinstance(electrode_value, list)
+            or option not in _PER_PHASE_OPTIONS
+            or len(electrode_value) != 2
+            or any(isinstance(leaf, (tuple, list)) for leaf in electrode_value)
+        ):
+            raise pybamm.OptionError(
+                f"\n'{electrode_value}' at {domain} is not recognized in option "
+                f"'{option}'. Per-phase values must be 2-tuples of strings"
+            )
+        leaves.extend(
+            ((domain, phase), leaf)
+            for phase, leaf in zip(_PHASES, electrode_value, strict=True)
+        )
+    return leaves
+
+
+def resolve_option(option, value, domain, phase=None, working_electrode="both"):
+    """Resolve an option value for one electrode and, optionally, one phase.
+
+    Parameters
+    ----------
+    option : str
+        The option name.
+    value : object
+        The stored option value.
+    domain : str
+        ``"negative"`` or ``"positive"``.
+    phase : str, optional
+        ``"primary"`` or ``"secondary"``. If not given, an electrode's
+        per-phase tuple is returned unresolved.
+    working_electrode : str, optional
+        The ``"working electrode"`` option, which controls the negative-only
+        shorthand for side reactions. Default is ``"both"``.
+
+    Returns
+    -------
+    object
+        The resolved value.
+    """
+    positive_default = _NEGATIVE_ONLY_SHORTHAND.get(option)
+    if (
+        positive_default is not None
+        and working_electrode == "both"
+        and not isinstance(value, tuple)
+        and value != positive_default
+    ):
+        value = (value, positive_default)
+    if isinstance(value, tuple):
+        value = value[_ELECTRODES.index(domain)]
+    if phase is not None and isinstance(value, tuple):
+        value = value[_PHASES.index(phase)]
+    return value
+
+
+def validate_option_value(option, value, possible_values, path=()):
+    """Check that one option leaf is an allowed value.
+
+    Parameters
+    ----------
+    option : str
+        The option name.
+    value : object
+        A single (non-tuple) option value.
+    possible_values : list
+        The allowed values for the option.
+    path : tuple of str, optional
+        The electrode/phase path of the leaf, used in the error message.
+
+    Raises
+    ------
+    pybamm.OptionError
+        If the value is not allowed.
+    """
+    if value in possible_values:
+        return
+    if option == "operating mode" and callable(value):
+        return
+    if option == "number of MSMR reactions" and represents_positive_integer(value):
+        return
+    location = f" at {format_option_path(path)}" if path else ""
+    raise pybamm.OptionError(
+        f"\n'{value}' is not recognized in option '{option}'{location}. "
+        f"Possible values are {possible_values}"
+    )
+
+
+def replace_option_leaf(value, old, new):
+    """Replace every leaf equal to ``old`` with ``new``, keeping tuple structure.
+
+    Parameters
+    ----------
+    value : object
+        A scalar or (nested) tuple option value.
+    old, new : object
+        The leaf to replace and its replacement.
+
+    Returns
+    -------
+    object
+        The value with replacements made.
+    """
+    if isinstance(value, tuple):
+        return tuple(replace_option_leaf(leaf, old, new) for leaf in value)
+    return new if value == old else value
+
+
+def join_electrode_values(option, negative, positive, working_electrode="both"):
+    """Store per-electrode values in the shortest form that resolves to them.
+
+    Parameters
+    ----------
+    option : str
+        The option name.
+    negative, positive : object
+        The values for each electrode.
+    working_electrode : str, optional
+        The ``"working electrode"`` option. Default is ``"both"``.
+
+    Returns
+    -------
+    object
+        ``negative`` if it resolves to both values on its own, otherwise the
+        ``(negative, positive)`` tuple.
+    """
+    resolves_to_both = all(
+        resolve_option(option, negative, domain, working_electrode=working_electrode)
+        == expected
+        for domain, expected in zip(_ELECTRODES, (negative, positive), strict=True)
+    )
+    return negative if resolves_to_both else (negative, positive)
+
+
+def dependency_error(option, value, companion, requirement, path=()):
+    """Build the error for an option whose companion option is incompatible.
+
+    Parameters
+    ----------
+    option : str
+        The option that imposes the requirement.
+    value : object
+        Its value.
+    companion : str
+        The option that must satisfy the requirement.
+    requirement : str
+        What the companion must be, e.g. ``"'pouch'"``.
+    path : tuple of str, optional
+        The electrode/phase path, omitted for whole-cell options.
+
+    Returns
+    -------
+    pybamm.OptionError
+        The error, for the caller to raise.
+    """
+    location = f" at {format_option_path(path)}" if path else ""
+    return pybamm.OptionError(
+        f"Option '{option}'{location} is '{value}', which requires "
+        f"'{companion}' to be {requirement}."
+    )
+
+
 def _is_msmr(value):
     """True if an option requests MSMR, including inside a per-electrode tuple."""
     if isinstance(value, (tuple, list)):
