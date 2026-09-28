@@ -528,3 +528,92 @@ class TestExtrapolationFiniteVolume2D:
         discretised_bottom = disc.process_symbol(boundary_value_bottom)
         result_bottom = discretised_bottom.evaluate(y=tb).flatten()
         np.testing.assert_allclose(result_bottom, expected_bottom)
+
+
+def get_coarse_mesh_2d(npts_lr, npts_tb):
+    x = pybamm.SpatialVariable("x", ["negative electrode"], direction="lr")
+    z = pybamm.SpatialVariable("z", ["negative electrode"], direction="tb")
+    geometry = {
+        "negative electrode": {
+            x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)},
+        }
+    }
+    return pybamm.Mesh(
+        geometry,
+        {"negative electrode": pybamm.Uniform2DSubMesh},
+        {x: npts_lr, z: npts_tb},
+    )
+
+
+class TestExtrapolationCoarseMesh2D:
+    @pytest.mark.parametrize("order", ["linear", "quadratic"])
+    def test_lr_extrapolation_with_two_tb_nodes(self, order):
+        mesh = get_coarse_mesh_2d(npts_lr=10, npts_tb=2)
+        submesh = mesh["negative electrode"]
+        disc = pybamm.Discretisation(
+            mesh,
+            {
+                "negative electrode": pybamm.FiniteVolume2D(
+                    {
+                        "extrapolation": {
+                            "order": {"gradient": "linear", "value": order},
+                            "use bcs": False,
+                        }
+                    }
+                )
+            },
+        )
+        var = pybamm.Variable("var", ["negative electrode"])
+        disc.set_variable_slices([var])
+
+        # f(x, z) = x is reproduced exactly by linear and quadratic extrapolation
+        LR, _ = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        y = LR.flatten()
+        for side, expected in [("left", 0), ("right", 1)]:
+            boundary_value = disc.process_symbol(pybamm.BoundaryValue(var, side))
+            np.testing.assert_allclose(
+                boundary_value.evaluate(y=y).flatten(), expected, atol=1e-12
+            )
+
+        # the right boundary has length 2, so integrating f = x over it gives 2
+        boundary_integral = disc.process_symbol(pybamm.BoundaryIntegral(var, "right"))
+        np.testing.assert_allclose(boundary_integral.evaluate(y=y), 2, rtol=1e-12)
+
+    @pytest.mark.parametrize(
+        "symbol_class,order,side,npts_lr,npts_tb,required_npts",
+        [
+            (pybamm.BoundaryValue, "quadratic", "top", 10, 2, 3),
+            (pybamm.BoundaryValue, "quadratic", "bottom", 10, 2, 3),
+            (pybamm.BoundaryValue, "linear", "left", 1, 10, 2),
+            (pybamm.BoundaryValue, "quadratic", "right", 2, 10, 3),
+            (pybamm.BoundaryGradient, "quadratic", "left", 2, 10, 3),
+            (pybamm.BoundaryGradient, "linear", "top", 10, 1, 2),
+        ],
+    )
+    def test_mesh_too_coarse_for_extrapolation(
+        self, symbol_class, order, side, npts_lr, npts_tb, required_npts
+    ):
+        mesh = get_coarse_mesh_2d(npts_lr=npts_lr, npts_tb=npts_tb)
+        disc = pybamm.Discretisation(
+            mesh,
+            {
+                "negative electrode": pybamm.FiniteVolume2D(
+                    {
+                        "extrapolation": {
+                            "order": {"gradient": order, "value": order},
+                            "use bcs": False,
+                        }
+                    }
+                )
+            },
+        )
+        var = pybamm.Variable("var", ["negative electrode"])
+        disc.set_variable_slices([var])
+        direction = "lr" if side in ["left", "right"] else "tb"
+        with pytest.raises(
+            pybamm.DiscretisationError,
+            match=rf"{order.capitalize()} extrapolation .* at least {required_npts} "
+            rf"nodes in the '{direction}' direction",
+        ):
+            disc.process_symbol(symbol_class(var, side))

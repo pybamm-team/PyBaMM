@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- Fixed `FiniteVolume2D` boundary values, gradients and integrals raising an `IndexError` on 2D meshes with fewer than 3 nodes in either direction, even when the extrapolation only needed the other direction. Meshes too coarse for the requested extrapolation order now raise a `DiscretisationError`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+
 # [v26.9.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.9.0.0) - 2026-09-28
 
 ## Breaking changes
