@@ -1508,7 +1508,7 @@ class TestLegacyDefaultDeprecation:
         with pytest.warns(pybamm.OptionDefaultDeprecationWarning) as record:
             options = BatteryModelOptions(supplied)
         assert len(record) == 1
-        assert str(record[0].message) == base_battery_model.legacy_default_message(
+        assert str(record[0].message) == base_battery_model._legacy_default_message(
             fired
         )
         # passing the named options reproduces the configuration without a warning
@@ -1518,7 +1518,7 @@ class TestLegacyDefaultDeprecation:
         assert explicit == options
 
     def test_message(self):
-        assert base_battery_model.legacy_default_message(
+        assert base_battery_model._legacy_default_message(
             {"cell geometry": "pouch"}
         ) == (
             "Options were set from other options because they were not given: "
@@ -1541,7 +1541,7 @@ class TestLegacyDefaultDeprecation:
         with pytest.warns(pybamm.OptionDefaultDeprecationWarning) as record:
             model = pybamm.lithium_ion.SPM({"intercalation kinetics": "linear"})
         assert [str(r.message) for r in record] == [
-            base_battery_model.legacy_default_message({"surface form": "algebraic"})
+            base_battery_model._legacy_default_message({"surface form": "algebraic"})
         ]
         assert model.options["surface form"] == "algebraic"
         with warnings.catch_warnings():
