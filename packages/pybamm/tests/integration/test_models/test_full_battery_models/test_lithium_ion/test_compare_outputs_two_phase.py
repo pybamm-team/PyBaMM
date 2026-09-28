@@ -21,7 +21,9 @@ class TestCompareOutputsTwoPhase:
         sol = sim.solve(t_eval=t_eval, t_interp=t_interp)
 
         # Two phase model
-        model_two_phase = model_class({"particle phases": ("2", "1")})
+        model_two_phase = model_class(
+            {"particle phases": ("2", "1"), "surface form": "algebraic"}
+        )
 
         ratio = pybamm.InputParameter("ratio")
         parameter_values_two_phase = pybamm.ParameterValues("Chen2020")
@@ -132,6 +134,7 @@ class TestCompareOutputsTwoPhase:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "surface form": "algebraic",
         }
         model = model_class(options)
 
@@ -214,7 +217,13 @@ class TestCompareOutputsTwoPhase:
             del parameter_values_two_phase[parameter]
 
         sol_two_phase = pybamm.Simulation(
-            model_class({"particle phases": ("2", "1"), **options}),
+            model_class(
+                {
+                    "particle phases": ("2", "1"),
+                    "surface form": "algebraic",
+                    **options,
+                }
+            ),
             parameter_values=parameter_values_two_phase,
         ).solve(t_eval=t_eval, t_interp=t_interp)
 
