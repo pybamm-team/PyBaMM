@@ -361,6 +361,43 @@ def _apply_legacy_defaults(options, supplied):
             "'true' when an electrode has multiple particle phases",
         )
 
+    # Stress-driven LAM needs a mechanical model on the same electrode/phase to
+    # supply the particle stress it acts on.
+    electrodes = _ELECTRODES if working_electrode == "both" else ("positive",)
+    for domain in electrodes:
+        num_phases = int(
+            resolve_option(
+                "particle phases",
+                options["particle phases"],
+                domain,
+                working_electrode=working_electrode,
+            )
+        )
+        for phase in _PHASES[:num_phases]:
+            lam_leaf = resolve_option(
+                "loss of active material",
+                options["loss of active material"],
+                domain,
+                phase,
+                working_electrode=working_electrode,
+            )
+            mechanics_leaf = resolve_option(
+                "particle mechanics",
+                options["particle mechanics"],
+                domain,
+                phase,
+                working_electrode=working_electrode,
+            )
+            if "stress" in lam_leaf and mechanics_leaf == "none":
+                path = (domain,) if num_phases == 1 else (domain, phase)
+                raise dependency_error(
+                    "loss of active material",
+                    lam_leaf,
+                    "particle mechanics",
+                    "a model other than 'none'",
+                    path,
+                )
+
 
 def _per_electrode(value, index):
     """Resolve a possibly per-electrode option to one electrode.

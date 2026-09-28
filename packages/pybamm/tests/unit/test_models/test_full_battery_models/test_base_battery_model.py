@@ -731,6 +731,8 @@ class TestLegacyDependentDefaults:
         assert options["SEI film resistance"] == "average"
         assert options["stress-induced diffusion"] == "false"
         assert options["cell geometry"] == "arbitrary"
+        assert options.negative["particle mechanics"] == "swelling only"
+        assert options.positive["particle mechanics"] == "none"
 
     def test_distributed_film_resistance_rejects_explicit_false_state(self):
         with pytest.raises(
@@ -760,6 +762,40 @@ class TestLegacyDependentDefaults:
                     "total interfacial current density as a state": "false",
                 }
             )
+
+    def test_stress_driven_lam_requires_particle_mechanics(self):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"Option 'loss of active material' at negative is "
+            r"'stress-driven', which requires 'particle mechanics' to be a "
+            r"model other than 'none'",
+        ):
+            BatteryModelOptions(
+                {
+                    "loss of active material": "stress-driven",
+                    "particle mechanics": "none",
+                }
+            )
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"Option 'loss of active material' at positive is "
+            r"'stress-driven', which requires 'particle mechanics' to be a "
+            r"model other than 'none'",
+        ):
+            BatteryModelOptions(
+                {
+                    "loss of active material": ("none", "stress-driven"),
+                    "particle mechanics": ("swelling only", "none"),
+                }
+            )
+        options = BatteryModelOptions(
+            {
+                "loss of active material": ("stress-driven", "none"),
+                "particle mechanics": ("swelling only", "none"),
+            }
+        )
+        assert options.negative["particle mechanics"] == "swelling only"
+        assert options.positive["particle mechanics"] == "none"
 
 
 class TestOptions:
