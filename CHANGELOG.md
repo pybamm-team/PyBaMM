@@ -1,8 +1,12 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.9.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.9.0.0) - 2026-09-28
+
 ## Breaking changes
 
 - Symbols use slots, so arbitrary undeclared attributes cannot be attached. Third-party `Symbol` subclasses must declare `__slots__` (use `__slots__ = ()` when they add no state, or list every custom attribute). Model checks now compare variable identity through `BaseModel.variables_matching_keys`. ([#5779](https://github.com/pybamm-team/PyBaMM/pull/5779))
+- `pybamm` now requires `pybammsolvers>=0.10.0`, because `IDAKLUSolver` uses IDAKLU binding features the 0.9 series does not have. Upgrade `pybammsolvers` together with `pybamm`. ([#5783](https://github.com/pybamm-team/PyBaMM/pull/5783))
+- Bumped the pinned CasADi version from 3.7.2 to 3.8.1. CasADi 3.8 ships `abi3` wheels, which cover every current and future CPython version, and changes how numpy functions dispatch on CasADi values (casadi#2959). PyBaMM pins the legacy dispatch behaviour via `casadi.GlobalOptions.setNumpyMode(-1)` at import, so expression-tree result types are unchanged. ([#5761](https://github.com/pybamm-team/PyBaMM/pull/5761))
 
 ## Deprecated
 
@@ -11,7 +15,7 @@
 ## Features
 
 - Added the `Bonkile2024` parameter set for a graphite/silicon composite negative electrode (NMC positive electrode), with parameters for stress-driven loss of active material, solvent-diffusion-limited SEI, partially reversible lithium plating, and particle mechanics (swelling and cracking for graphite, swelling only for silicon and NMC). ([#5694](https://github.com/pybamm-team/PyBaMM/pull/5694))
-- Added VTK-based plotting (`VTKQuickPlot`, also via `pybamm.dynamic_plot(..., backend="vtk")`) for unstructured mesh solutions, matplotlib `QuickPlot` support for 2D unstructured scalar and vector-field variables, and headless CI OpenGL setup. ([#5689](https://github.com/pybamm-team/PyBaMM/pull/5689))
+- Added VTK-based plotting (`VTKQuickPlot`, also via `pybamm.dynamic_plot(..., backend="vtk")`) for unstructured mesh solutions, matplotlib `QuickPlot` support for 2D unstructured scalar and vector-field variables, and headless CI OpenGL setup. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
 - Added a basic DFN model on 2D or 3D unstructured meshes (`BasicDFNUnstructured`); the `"dimensionality"` option selects an x-z (1) or x-y-z (2) mesh. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
 - Improved performance of composite particle models. ([#5439](https://github.com/pybamm-team/PyBaMM/pull/5439))
 - Added `get_jacobian_sparsity()` and `spy()` methods to `IDAKLUSolver` for inspecting Jacobian structure. ([#5439](https://github.com/pybamm-team/PyBaMM/pull/5439))
@@ -19,6 +23,8 @@
 - `DiffSLExport` now supports `Interpolant` nodes, so models with interpolated parameters (e.g. OCP or diffusivity lookup tables) can be exported to DiffSL. 1D interpolants use DiffSL's native `interp1d` over the table data; 2D interpolants use successive 1D interpolation. ([#5756](https://github.com/pybamm-team/PyBaMM/pull/5756))
 - Added the model zoo (`packages/pybamm-model-zoo/`), a home for community- and partner-contributed models: one self-contained folder per model, with a declarative `model.toml` manifest as the only boilerplate a contributor writes. Models are either `community` tier (advisory CI) or `core` tier (in the merge gate); nothing in `pybamm` itself changed. ([#5727](https://github.com/pybamm-team/PyBaMM/pull/5727))
 - Added symbol-tree utilities (`tree_flatten`, `tree_unflatten`, `tree_map` and `replace`) with iterative, memoised traversal and shared unchanged subtrees. Replacement accepts a single symbol root; process multiple expressions with explicit loops and a shared cache. Parameter substitution and discretisation use the same traversal. Symbol identity is computed uniformly from class layout and lazily cached. Internal domain storage is interned to reduce memory and identity-hashing cost. ([#5779](https://github.com/pybamm-team/PyBaMM/pull/5779))
+- Added `FiniteVolumeUnstructured` spatial method and unstructured processed-variable support for cell-centered data on arbitrary meshes. The TPFA Laplacian carries an implicit non-orthogonal correction (`"non-orthogonal correction"` option: `"over-relaxed"` or `"minimum"`) and gradients use a least-squares reconstruction, so both are exact on linear fields and second-order on skewed triangle and tetrahedral meshes. Diffusion coefficients reach faces through the distance-weighted harmonic mean, as in `FiniteVolume`, so material interfaces carry the exact series flux. ([#5688](https://github.com/pybamm-team/PyBaMM/pull/5688))
+- Re-implemented the benchmark suite with `pytest-benchmark` and `pytest-memray` in `tests/benchmarks/`, replacing `asv`. Timing benchmarks are tracked with Bencher on bare metal hardware instead of on GitHub runners. ([#5630](https://github.com/pybamm-team/PyBaMM/pull/5630))
 
 ## Bug fixes
 
@@ -43,20 +49,13 @@
 - The memray memory benchmarks no longer fail at random. memray saw Python's small-object allocations only as whole 1 MiB pymalloc arenas, so a test's result jumped by 1 MiB whenever the heap left by earlier tests ran out of space: `test_discretise_memory` intermittently reported 1.0 MiB against its 50 KiB limit. The `benchmark-memory` session now traces every Python allocation, each memory benchmark module warms up under memray before its tests are measured, and the limits are recalibrated to the traced figures. ([#5777](https://github.com/pybamm-team/PyBaMM/pull/5777))
 - `IDAKLUSolver` now hands IDAS each differentiated parameter's magnitude as its sensitivity scale `pbar` (`IDASetSensParams`), where it left every scale at 1. IDAS holds `pbar * dy/dp` to the state tolerances, so the unscaled column of a parameter as small as `Chen2020`'s positive particle diffusivity (4e-15, `dy/dp` around 1e14) broke the corrector: a DFN solve for that sensitivity failed with `IDA_CONV_FAIL` at every `rtol = atol` from 1e-8 to 1e-12 and now completes, matching finite differences to 3e-7, and at the default tolerances it runs 4.7x faster. The sensitivity to a large parameter, such as a temperature, is now held to the state tolerances too, which costs up to 1.6x at the default tolerances. ([#5783](https://github.com/pybamm-team/PyBaMM/pull/5783))
 
-## Breaking changes
-
-- `pybamm` now requires `pybammsolvers>=0.10.0`, because `IDAKLUSolver` uses IDAKLU binding features the 0.9 series does not have. Upgrade `pybammsolvers` together with `pybamm`. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782), [#5783](https://github.com/pybamm-team/PyBaMM/pull/5783))
-- Bumped the pinned CasADi version from 3.7.2 to 3.8.1. CasADi 3.8 ships `abi3` wheels, which cover every current and future CPython version, and changes how numpy functions dispatch on CasADi values (casadi#2959). PyBaMM pins the legacy dispatch behaviour via `casadi.GlobalOptions.setNumpyMode(-1)` at import, so expression-tree result types are unchanged. ([#5761](https://github.com/pybamm-team/PyBaMM/pull/5761))
-
 # [v26.8.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.8.0.0) - 2026-08-13
 
 ## Features
 
-- Added `FiniteVolumeUnstructured` spatial method and unstructured processed-variable support for cell-centered data on arbitrary meshes. The TPFA Laplacian carries an implicit non-orthogonal correction (`"non-orthogonal correction"` option: `"over-relaxed"` or `"minimum"`) and gradients use a least-squares reconstruction, so both are exact on linear fields and second-order on skewed triangle and tetrahedral meshes. Diffusion coefficients reach faces through the distance-weighted harmonic mean, as in `FiniteVolume`, so material interfaces carry the exact series flux. ([#5688](https://github.com/pybamm-team/PyBaMM/pull/5688))
 - Added unstructured mesh support (`UnstructuredSubMesh`, generators, and interface coupling) for arbitrary 2D/3D domains. Hexahedra must have planar faces (warped hexes raise a `GeometryError`), and `UserSuppliedUnstructuredMesh` accepts tetrahedral, triangular, and quadrilateral cells only. ([#5687](https://github.com/pybamm-team/PyBaMM/pull/5687))
 - Generalised `VectorField` to N components and added `Component`/`Norm` operators for multi-dimensional vector fields. ([#5686](https://github.com/pybamm-team/PyBaMM/pull/5686))
 - Removed the left sidebar from the documentation home page for a cleaner landing experience. ([#5699](https://github.com/pybamm-team/PyBaMM/pull/5699))
-- Re-implemented the benchmark suite with `pytest-benchmark` and `pytest-memray` in `tests/benchmarks/`, replacing `asv`. Timing benchmarks are tracked with Bencher on bare metal hardware instead of on GitHub runners. ([#5630](https://github.com/pybamm-team/PyBaMM/pull/5630))
 
 ## Bug fixes
 
