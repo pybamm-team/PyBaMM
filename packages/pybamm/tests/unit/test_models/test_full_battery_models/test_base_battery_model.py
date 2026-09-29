@@ -1527,6 +1527,34 @@ class TestLegacyDefaultDeprecation:
         with pytest.raises(pybamm.OptionError, match=r"'cell geometry': 'pouch'"):
             BatteryModelOptions({"dimensionality": 1})
 
+    def test_invalid_values_precede_model_legacy_defaults(self, monkeypatch):
+        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"is not recognized in option 'intercalation kinetics'",
+        ):
+            pybamm.lithium_ion.SPM({"intercalation kinetics": "bad"})
+
+    def test_invalid_combinations_precede_legacy_defaults(self, monkeypatch):
+        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        with pytest.raises(pybamm.OptionError, match=r"X-full.*1D current collectors"):
+            BatteryModelOptions({"thermal": "x-full", "dimensionality": 1})
+
+    def test_forbidden_model_defaults_do_not_update_options(self, monkeypatch):
+        model = pybamm.lithium_ion.SPM()
+        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        with pytest.raises(pybamm.OptionError, match=r"SEI film resistance"):
+            model.options = {"SEI": "constant"}
+        assert model.options["SEI"] == "none"
+
+    def test_processed_options_do_not_warn_twice(self):
+        with pytest.warns(pybamm.OptionDefaultDeprecationWarning):
+            options = BatteryModelOptions({"SEI": "constant"})
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always", pybamm.OptionDefaultDeprecationWarning)
+            pybamm.lithium_ion.DFN(options)
+        assert record == []
+
     def test_spm_surface_form_default_warns(self):
         with pytest.warns(pybamm.OptionDefaultDeprecationWarning) as record:
             model = pybamm.lithium_ion.SPM({"intercalation kinetics": "linear"})

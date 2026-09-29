@@ -890,7 +890,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         checks are skipped. Default is False.
     """
 
-    def __init__(self, extra_options, legacy=False):
+    def __init__(self, extra_options, legacy=False, warn_legacy_defaults=True):
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
             "calculate heat source for isothermal models": ["false", "true"],
@@ -1097,7 +1097,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         fired = _apply_legacy_defaults(options, set(extra_options))
         if not legacy:
             _check_electrode_compatibility(options)
-        _warn_legacy_defaults(fired)
 
         # All-or-nothing on full cells: if any of OCP/particle/intercalation
         # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.
@@ -1260,6 +1259,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "or lumped thermal model"
             )
         super().__init__(options.items())
+        self._legacy_defaults = fired
+        if warn_legacy_defaults:
+            _warn_legacy_defaults(fired)
 
     @property
     def phases(self):
@@ -1525,6 +1527,10 @@ class BaseBatteryModel(pybamm.BaseModel):
         """
         return {}
 
+    def _model_legacy_defaults(self, supplied):
+        """Return legacy defaults introduced by this model."""
+        return {}
+
     @property
     def options(self):
         return self._options
@@ -1539,9 +1545,14 @@ class BaseBatteryModel(pybamm.BaseModel):
             options = BatteryModelOptions(
                 {**self._model_default_options(supplied), **supplied},
                 legacy=isinstance(extra_options, LegacyOptions),
+                warn_legacy_defaults=False,
             )
+            legacy_defaults = options._legacy_defaults
+            model_legacy_defaults = self._model_legacy_defaults(supplied)
         else:
             options = extra_options
+            legacy_defaults = {}
+            model_legacy_defaults = {}
             # processed options carry every key, so only the model checks matter
             self._model_default_options(dict(options))
 
@@ -1604,6 +1615,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 f"must use surface formulation to solve {self!s} with hydrolysis"
             )
+        _warn_legacy_defaults(legacy_defaults)
+        _warn_legacy_defaults(model_legacy_defaults)
         self._options = options
         # rebuild whenever options are (re)assigned.
         # No-op unless the subclass overrides ``_rebuild_param``.
