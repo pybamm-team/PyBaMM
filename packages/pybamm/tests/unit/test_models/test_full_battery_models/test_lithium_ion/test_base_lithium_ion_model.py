@@ -139,3 +139,23 @@ class TestBaseLithiumIonModel:
             model.submodels["positive primaryparticle mechanics"],
             pybamm.particle_mechanics.NoMechanics,
         )
+
+    def test_per_phase_sei_on_cracks(self):
+        model = pybamm.lithium_ion.DFN(
+            options={
+                "particle phases": ("2", "1"),
+                "particle mechanics": (
+                    ("swelling and cracking", "swelling and cracking"),
+                    "none",
+                ),
+                "SEI": (("none", "solvent-diffusion limited"), "none"),
+                "SEI on cracks": "true",
+                "SEI porosity change": "true",
+            }
+        )
+        assert isinstance(
+            model.submodels["negative primary sei on cracks"], pybamm.sei.NoSEI
+        )
+        assert isinstance(
+            model.submodels["negative secondary sei on cracks"], pybamm.sei.SEIGrowth
+        )

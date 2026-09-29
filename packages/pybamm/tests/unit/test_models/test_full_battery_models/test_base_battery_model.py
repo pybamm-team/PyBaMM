@@ -1117,6 +1117,29 @@ class TestOptions:
         )
         assert options.positive["open-circuit potential"] == "one-state hysteresis"
 
+    def test_rejects_phase_kinetics(self):
+        with pytest.raises(pybamm.OptionError, match=r"Per-phase values"):
+            BatteryModelOptions(
+                {
+                    "intercalation kinetics": (
+                        ("symmetric Butler-Volmer", "asymmetric Butler-Volmer"),
+                        "symmetric Butler-Volmer",
+                    )
+                }
+            )
+
+    def test_accepts_phase_exchange_current_density(self):
+        options = BatteryModelOptions(
+            {
+                "exchange-current density": (
+                    ("current sigmoid", "single"),
+                    "single",
+                )
+            }
+        )
+        assert options.negative.primary["exchange-current density"] == "current sigmoid"
+        assert options.negative.secondary["exchange-current density"] == "single"
+
     def test_invalid_leaf_reports_path(self):
         with pytest.raises(
             pybamm.OptionError,
@@ -1423,6 +1446,11 @@ class TestModelDefaultOptions:
             ),
             (pybamm.lead_acid.LOQS, {"particle shape": "spherical"}, r"particle shape"),
             (pybamm.lithium_ion.Yang2017, {"SEI": "constant"}, r"Yang2017"),
+            (
+                pybamm.lithium_ion.Yang2017,
+                {"working electrode": "positive"},
+                r"working electrode",
+            ),
             (
                 pybamm.lithium_ion.BasicDFNHalfCell,
                 {"thermal": "lumped"},

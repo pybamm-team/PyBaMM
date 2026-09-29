@@ -88,7 +88,17 @@ _PER_ELECTRODE_OPTIONS = frozenset(
         "stress-induced diffusion",
     }
 )
-_PER_PHASE_OPTIONS = _PER_ELECTRODE_OPTIONS - {"particle phases"}
+_PER_PHASE_OPTIONS = frozenset(
+    {
+        "diffusivity",
+        "exchange-current density",
+        "lithium plating",
+        "open-circuit potential",
+        "particle mechanics",
+        "SEI",
+        "stress-induced diffusion",
+    }
+)
 
 # In a full cell a scalar non-default value applies to the negative electrode only;
 # the positive electrode takes the value given here.
