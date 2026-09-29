@@ -15,6 +15,10 @@ _YANG2017_OPTIONS = {
 class Yang2017(DFN):
     def _model_default_options(self, supplied):
         working_electrode = supplied.get("working electrode", "both")
+        if working_electrode != "both":
+            raise pybamm.OptionError(
+                "Yang2017 requires 'working electrode' to be 'both'."
+            )
         for key, value in _YANG2017_OPTIONS.items():
             if key in supplied and not option_values_match(
                 key, supplied[key], value, working_electrode
