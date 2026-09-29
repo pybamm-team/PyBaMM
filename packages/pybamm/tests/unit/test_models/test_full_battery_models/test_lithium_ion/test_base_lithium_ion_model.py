@@ -151,6 +151,10 @@ class TestBaseLithiumIonModel:
                 "SEI": (("none", "solvent-diffusion limited"), "none"),
                 "SEI on cracks": "true",
                 "SEI porosity change": "true",
+                "SEI film resistance": "distributed",
+                "stress-induced diffusion": ("true", "false"),
+                "surface form": "algebraic",
+                "total interfacial current density as a state": "true",
             }
         )
         assert isinstance(
