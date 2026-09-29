@@ -37,10 +37,23 @@ public:
     np_array y0_np,
     np_array yp0_np,
     np_array inputs,
-    py::object logger = py::none());
+    py::object logger = py::none(),
+    np_array pbar = np_array());
 
 
   private:
+    /**
+     * @brief Emit each solver's buffered diagnostics (GIL held, serial only)
+     */
+    void flush_logs();
+
+    /**
+     * Copying a py::object touches Python reference counts, so this MUST run in
+     * a serial section, before any OpenMP region.
+     * @brief Give every solver the logger to write debug output through
+     */
+    void set_loggers(py::object logger);
+
     std::vector<std::unique_ptr<IDAKLUSolver>> m_solvers;
     int number_of_states;
     int number_of_parameters;

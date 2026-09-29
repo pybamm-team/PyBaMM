@@ -1,0 +1,3 @@
+from pybamm_model_zoo.${slug}.model import ${ModelName}
+
+__all__ = ["${ModelName}"]

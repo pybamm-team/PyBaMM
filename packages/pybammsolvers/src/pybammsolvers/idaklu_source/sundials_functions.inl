@@ -205,6 +205,8 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
   }
   else if (p_python_functions->setup_opts.using_sparse_matrix)
   {
+    // Re-copied every call: the KLU linear solver resets the matrix index
+    // arrays during setup, so a one-time copy in Initialize does not survive
     if (SUNSparseMatrix_SparseType(JJ) == CSC_MAT)
     {
       sunindextype *jac_colptrs = SUNSparseMatrix_IndexPointers(JJ);
@@ -214,8 +216,7 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
       auto p_jac_times_cjmass_rowvals =
           p_python_functions->jac_times_cjmass_rowvals.data();
 
-      // just copy across row vals (do I need to do this every time?)
-      // (or just in the setup?)
+      // just copy across row vals
       for (int i = 0; i < n_row_vals; i++)
       {
         jac_rowvals[i] = p_jac_times_cjmass_rowvals[i];
@@ -225,7 +226,7 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
       auto p_jac_times_cjmass_colptrs =
           p_python_functions->jac_times_cjmass_colptrs.data();
 
-      // just copy across col ptrs (do I need to do this every time?)
+      // just copy across col ptrs
       for (int i = 0; i < n_col_ptrs; i++)
       {
         jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];

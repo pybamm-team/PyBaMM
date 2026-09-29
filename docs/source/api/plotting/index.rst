@@ -10,3 +10,5 @@ Plotting
   plot_summary_variables
   plot_3d_cross_section
   plot_3d_heatmap
+  plot_vtk
+  unstructured_plot_grid

@@ -20,6 +20,14 @@ from .citations import Citations, citations, print_citations
 from . import config
 
 # Classes for the Expression Tree
+from .expression_tree.tree_util import (
+    TreeDef,
+    rebuild,
+    replace,
+    tree_flatten,
+    tree_map,
+    tree_unflatten,
+)
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.tracing import is_tracing, tracing
@@ -168,6 +176,15 @@ from .meshes.scikit_fem_submeshes_3d import (
     UserSuppliedSubmesh3D,
 )
 
+
+from .meshes.unstructured_submesh import (
+    UnstructuredSubMesh,
+    UnstructuredMeshGenerator,
+    UserSuppliedUnstructuredMesh,
+    TaggedSubMeshGenerator,
+    compute_interface_data,
+)
+
 # Serialisation
 from .models.base_model import load_model
 
@@ -183,6 +200,7 @@ from .spatial_methods.finite_volume_2d import FiniteVolume2D
 from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 from .spatial_methods.scikit_finite_element_3d import ScikitFiniteElement3D
+from .spatial_methods.finite_volume_unstructured import FiniteVolumeUnstructured
 
 # Solver classes
 from .solvers.solution import (
@@ -193,7 +211,7 @@ from .solvers.solution import (
     make_cycle_solution,
 )
 from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
-from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, process_variable
+from .solvers.processed_variable import ProcessedVariable, ProcessedVariable2DFVM, ProcessedVariableUnstructuredFVM, ProcessedVariableVectorFieldUnstructuredFVM, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.processed_variable import ProcessedVariableUnstructured
 from .solvers.summary_variable import SummaryVariables
@@ -227,6 +245,7 @@ from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
 from .plotting.plot_3d_cross_section import plot_3d_cross_section
 from .plotting.plot_3d_heatmap import plot_3d_heatmap
+from .plotting.plot_vtk import VTKQuickPlot
 from .plotting.nyquist_plot import nyquist_plot
 
 # Simulation
@@ -248,7 +267,16 @@ import os
 import pathlib
 import sysconfig
 
+import casadi
+
 os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path("purelib")) / "casadi")
+
+# CasADi 3.8 changed the result type of numpy functions applied to CasADi values
+# (casadi#2959). Function nodes rely on the legacy types, so keep them.
+try:
+    casadi.GlobalOptions.setNumpyMode(-1)
+except AttributeError:
+    pass
 
 __all__ = [
     "batch_study",

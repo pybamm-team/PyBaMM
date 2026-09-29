@@ -202,7 +202,7 @@ class TestProcessedVariableComputed:
             "random-non-specific-domain",
         ]
         for domain in domain_list:
-            processed_var.domain[0] = domain
+            processed_var.domain = [domain]
             processed_var.entries
 
     def test_processed_variable_1D_unknown_domain(self):
@@ -229,7 +229,7 @@ class TestProcessedVariableComputed:
         )
 
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
-        c.mesh = mesh["SEI layer"]
+        c = c.with_mesh(mesh["SEI layer"])
         c_casadi = to_casadi(c, y_sol)
         pybamm.ProcessedVariableComputed([c], [c_casadi], [y_sol], solution)
 
@@ -429,8 +429,9 @@ class TestProcessedVariableComputed:
             domain="separator",
             auxiliary_domains={"secondary": "current collector"},
         )
-        x_s_edge.mesh = disc.mesh["separator"]
-        x_s_edge.secondary_mesh = disc.mesh["current collector"]
+        x_s_edge = x_s_edge.with_mesh(
+            disc.mesh["separator"], secondary_mesh=disc.mesh["current collector"]
+        )
         x_s_casadi = to_casadi(x_s_edge, y_sol)
         processed_x_s_edge = pybamm.process_variable(
             "test",
@@ -494,7 +495,7 @@ class TestProcessedVariableComputed:
         y = disc.mesh["current collector"].edges["y"]
         z = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
+        var_sol = var_sol.with_mesh(disc.mesh["current collector"])
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 

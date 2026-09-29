@@ -19,7 +19,7 @@ def _is_independent_of(
     """
     for node in symbol.pre_order():
         if isinstance(node, pybamm.Variable | pybamm.SpatialVariable) and any(
-            domain_matches(dom) for dom in node.domain
+            domain_matches(dom) for dom in node._domains["primary"]
         ):
             return False
     return True
@@ -35,6 +35,16 @@ class _BaseAverage(pybamm.Integral):
         The child node
     """
 
+    __slots__ = ()
+
+    def to_json(self):
+        # the integration variable is derived from the child, so only it is stored
+        return pybamm.Symbol.to_json(self)
+
+    @classmethod
+    def _from_json(cls, snippet):
+        return cls(snippet["children"][0])
+
     def __init__(
         self,
         child: pybamm.Symbol,
@@ -43,8 +53,7 @@ class _BaseAverage(pybamm.Integral):
             list[pybamm.IndependentVariable] | pybamm.IndependentVariable
         ),
     ) -> None:
-        super().__init__(child, integration_variable)
-        self.name = name
+        super().__init__(child, integration_variable, name=name)
 
     @classmethod
     def domain_matches(cls, d: str) -> bool:
@@ -87,6 +96,7 @@ class _BaseAverage(pybamm.Integral):
 
 
 class XAverage(_BaseAverage):
+    __slots__ = ()
     DOMAINS: ClassVar[tuple[str, ...]] = (
         "negative electrode",
         "separator",
@@ -94,12 +104,12 @@ class XAverage(_BaseAverage):
     )
 
     def __init__(self, child: pybamm.Symbol) -> None:
-        if all(n in child.domain[0] for n in ["negative", "particle"]):
+        if all(n in child._domains["primary"][0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
-        elif all(n in child.domain[0] for n in ["positive", "particle"]):
+        elif all(n in child._domains["primary"][0] for n in ["positive", "particle"]):
             x = pybamm.standard_spatial_vars.x_p
         else:
-            x = pybamm.SpatialVariable("x", domain=child.domain)
+            x = pybamm.SpatialVariable("x", domain=child._domains["primary"])
         super().__init__(child, "x-average", x)
 
     def _unary_new_copy(
@@ -127,7 +137,7 @@ class XAverage(_BaseAverage):
         # If symbol doesn't have an electrode domain, return unchanged
         if not any(
             any(dom in cls.DOMAINS for dom in domain)
-            for domain in symbol.domains.values()
+            for domain in symbol._domains.values()
         ):
             return symbol
 
@@ -143,23 +153,23 @@ class XAverage(_BaseAverage):
                     cls.from_symbol(symbol.orphans[0]), symbol.broadcast_domain
                 )
             elif isinstance(symbol, pybamm.FullBroadcast) and all(
-                dom in cls.DOMAINS for dom in symbol.secondary_domain
+                dom in cls.DOMAINS for dom in symbol._domains["secondary"]
             ):
                 domains = {
-                    "primary": symbol.domains["primary"],
-                    "secondary": symbol.domains["tertiary"],
-                    "tertiary": symbol.domains["quaternary"],
+                    "primary": symbol._domains["primary"],
+                    "secondary": symbol._domains["tertiary"],
+                    "tertiary": symbol._domains["quaternary"],
                 }
                 return pybamm.FullBroadcast(
                     symbol.orphans[0], broadcast_domains=domains
                 )
             elif isinstance(symbol, pybamm.FullBroadcast) and all(
-                dom in cls.DOMAINS for dom in symbol.tertiary_domain
+                dom in cls.DOMAINS for dom in symbol._domains["tertiary"]
             ):
                 domains = {
-                    "primary": symbol.domains["primary"],
-                    "secondary": symbol.domains["secondary"],
-                    "tertiary": symbol.domains["quaternary"],
+                    "primary": symbol._domains["primary"],
+                    "secondary": symbol._domains["secondary"],
+                    "tertiary": symbol._domains["quaternary"],
                 }
                 return pybamm.FullBroadcast(
                     symbol.orphans[0], broadcast_domains=domains
@@ -179,8 +189,9 @@ class XAverage(_BaseAverage):
                 ("separator", "positive electrode"): geo.s.L + geo.p.L,
             }
             out = sum(
-                ls[tuple(orp.domain)] * cls.from_symbol(orp) for orp in symbol.orphans
-            ) / sum(ls[tuple(orp.domain)] for orp in symbol.orphans)
+                ls[tuple(orp._domains["primary"])] * cls.from_symbol(orp)
+                for orp in symbol.orphans
+            ) / sum(ls[tuple(orp._domains["primary"])] for orp in symbol.orphans)
             return out
 
         # Linearity + constant-factor pull-out
@@ -192,6 +203,7 @@ class XAverage(_BaseAverage):
 
 
 class ZAverage(_BaseAverage):
+    __slots__ = ()
     DOMAINS: ClassVar[tuple[str, ...]] = ("current collector",)
 
     def __init__(self, child: pybamm.Symbol) -> None:
@@ -219,13 +231,13 @@ class ZAverage(_BaseAverage):
                 "Can't take the z-average of a symbol that evaluates on edges"
             )
 
-        if symbol.domain not in [[], ["current collector"]]:
+        if symbol._domains["primary"] not in [[], ["current collector"]]:
             raise pybamm.DomainError(
                 "z-average only implemented in the 'current collector' domain, "
-                f"but symbol has domains {symbol.domain}"
+                f"but symbol has domains {symbol._domains['primary']}"
             )
 
-        if symbol.domain == []:
+        if symbol._domains["primary"] == []:
             return symbol
 
         if isinstance(symbol, pybamm.Broadcast):
@@ -239,6 +251,7 @@ class ZAverage(_BaseAverage):
 
 
 class YZAverage(_BaseAverage):
+    __slots__ = ()
     DOMAINS: ClassVar[tuple[str, ...]] = ("current collector",)
 
     def __init__(self, child: pybamm.Symbol) -> None:
@@ -261,13 +274,13 @@ class YZAverage(_BaseAverage):
     @classmethod
     def from_symbol(cls, symbol: pybamm.Symbol) -> pybamm.Symbol:
         """Create yz-average with simplifications."""
-        if symbol.domain not in [[], ["current collector"]]:
+        if symbol._domains["primary"] not in [[], ["current collector"]]:
             raise pybamm.DomainError(
                 "y-z-average only implemented in the 'current collector' domain, "
-                f"but symbol has domains {symbol.domain}"
+                f"but symbol has domains {symbol._domains['primary']}"
             )
 
-        if symbol.domain == []:
+        if symbol._domains["primary"] == []:
             return symbol
 
         if isinstance(symbol, pybamm.Broadcast):
@@ -281,9 +294,11 @@ class YZAverage(_BaseAverage):
 
 
 class RAverage(_BaseAverage):
+    __slots__ = ()
+
     def __init__(self, child: pybamm.Symbol) -> None:
         integration_variable: list[pybamm.IndependentVariable] = [
-            pybamm.SpatialVariable("r", child.domain)
+            pybamm.SpatialVariable("r", child._domains["primary"])
         ]
         super().__init__(child, "r-average", integration_variable)
 
@@ -301,9 +316,9 @@ class RAverage(_BaseAverage):
     @classmethod
     def from_symbol(cls, symbol: pybamm.Symbol) -> pybamm.Symbol:
         """Create r-average with simplifications."""
-        has_particle_domain = symbol.domain != [] and symbol.domain[0].endswith(
-            "particle"
-        )
+        has_particle_domain = symbol._domains["primary"] != [] and symbol._domains[
+            "primary"
+        ][0].endswith("particle")
 
         if symbol.evaluates_on_edges("primary"):
             raise ValueError(
@@ -314,12 +329,12 @@ class RAverage(_BaseAverage):
             return symbol
 
         # SecondaryBroadcast onto electrode: r-average child then broadcast back
-        if isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
+        if isinstance(symbol, pybamm.SecondaryBroadcast) and symbol._domains[
             "secondary"
         ] in [["positive electrode"], ["negative electrode"]]:
             child = symbol.orphans[0]
             child_av = cls.from_symbol(child)
-            return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
+            return pybamm.PrimaryBroadcast(child_av, symbol._domains["secondary"])
 
         # PrimaryBroadcast/FullBroadcast onto particle domain: reduce
         if (
@@ -341,6 +356,9 @@ class SizeAverage(_BaseAverage):
     meaningfully reassigned to sub-expressions.
     """
 
+    __slots__ = ("f_a_dist",)
+    _leaf_fields = ("f_a_dist",)
+
     DOMAINS: ClassVar[tuple[list[str], ...]] = (
         ["negative particle size"],
         ["positive particle size"],
@@ -351,7 +369,7 @@ class SizeAverage(_BaseAverage):
     )
 
     def __init__(self, child: pybamm.Symbol, f_a_dist) -> None:
-        R = pybamm.SpatialVariable("R", domains=child.domains, coord_sys="cartesian")
+        R = pybamm.SpatialVariable("R", domains=child._domains, coord_sys="cartesian")
         integration_variable: list[pybamm.IndependentVariable] = [R]
         super().__init__(child, "size-average", integration_variable)
         self.f_a_dist = f_a_dist
@@ -359,8 +377,8 @@ class SizeAverage(_BaseAverage):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self.domains,
-            "children": [self.children[0], self.f_a_dist],
+            "domains": self._domains,
+            "children": [self._children[0], self.f_a_dist],
         }
 
     @classmethod
@@ -381,27 +399,25 @@ class SizeAverage(_BaseAverage):
     @classmethod
     def _has_size_domain(cls, symbol: pybamm.Symbol) -> bool:
         """Check if symbol has any particle size domain."""
-        return any(
-            list(domain) in list(cls.DOMAINS) for domain in symbol.domains.values()
-        )
+        return any(list(domain) in cls.DOMAINS for domain in symbol._domains.values())
 
     @classmethod
     def _get_f_a_dist(cls, symbol: pybamm.Symbol) -> pybamm.Symbol | None:
         """Compute area-weighted distribution for the symbol's domain."""
         geo = pybamm.geometric_parameters
         name = "R"
-        if "negative" in symbol.domain[0]:
+        if "negative" in symbol._domains["primary"][0]:
             name += "_n"
-        elif "positive" in symbol.domain[0]:
+        elif "positive" in symbol._domains["primary"][0]:
             name += "_p"
-        if "primary" in symbol.domain[0]:
+        if "primary" in symbol._domains["primary"][0]:
             name += "_prim"
-        elif "secondary" in symbol.domain[0]:
+        elif "secondary" in symbol._domains["primary"][0]:
             name += "_sec"
 
-        R = pybamm.SpatialVariable(name, domains=symbol.domains, coord_sys="cartesian")
+        R = pybamm.SpatialVariable(name, domains=symbol._domains, coord_sys="cartesian")
 
-        domains = symbol.domains
+        domains = symbol._domains
         if ["negative particle size"] in domains.values() or [
             "negative primary particle size"
         ] in domains.values():
@@ -432,18 +448,20 @@ class SizeAverage(_BaseAverage):
             )
 
         # If no size domain, return unchanged
-        if symbol.domain == [] or not cls._has_size_domain(symbol):
+        if symbol._domains["primary"] == [] or not cls._has_size_domain(symbol):
             return symbol
 
         # PrimaryBroadcast to particle size: return orphan
-        if isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
+        if isinstance(symbol, pybamm.PrimaryBroadcast) and symbol._domains[
+            "primary"
+        ] in [
             ["negative particle size"],
             ["positive particle size"],
         ]:
             return symbol.orphans[0]
 
         # SecondaryBroadcast to particle size: return orphan
-        if isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
+        if isinstance(symbol, pybamm.SecondaryBroadcast) and symbol._domains[
             "secondary"
         ] in [["negative particle size"], ["positive particle size"]]:
             return symbol.orphans[0]

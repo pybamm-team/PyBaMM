@@ -1,0 +1,6 @@
+@article{${CitationKey},
+  title = {{TODO: the title of the work this model implements}},
+  author = {${Author}},
+  year = {${Year}},
+  note = {TODO: replace with the journal, volume, pages, and DOI},
+}

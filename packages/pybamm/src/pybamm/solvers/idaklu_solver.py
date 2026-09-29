@@ -8,19 +8,40 @@ from enum import IntEnum
 import casadi
 import numpy as np
 from pybammsolvers import idaklu
+from scipy.sparse import csc_matrix
 from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import flatten_inputs, stack_inputs
 
 _UNSET = object()
 
 
-def _flatten_inputs(inputs_dict):
-    """Flatten ``{name: value}`` into a 1-D float array in dict-key order."""
-    if not inputs_dict:
-        return np.zeros(0)
-    return np.concatenate([np.asarray(v).reshape(-1) for v in inputs_dict.values()])
+def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.ndarray:
+    """IDAS ``pbar``: the magnitude of each differentiated parameter.
+
+    IDAS weights the scaled sensitivity ``pbar_i * dy/dp_i`` like a state, so
+    ``pbar_i = |p_i|`` weights each column independently of the units of
+    ``p_i``.
+
+    Parameters
+    ----------
+    inputs_dict : dict
+        Input values for one input set.
+    sensitivity_names : list of str
+        Differentiated parameter names, in the solver's column order.
+
+    Returns
+    -------
+    numpy.ndarray
+        ``|p|`` for each name in ``sensitivity_names``, or 0 for a value with no
+        entries.
+    """
+    return np.array(
+        [np.max(np.abs(inputs_dict[name]), initial=0.0) for name in sensitivity_names],
+        dtype=np.float64,
+    )
 
 
 # Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
@@ -323,13 +344,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "num_steps_no_progress": 0,
             "t_no_progress": 0.0,
         }
-        if not user_options:
-            return default_options
-
-        options = default_options | user_options
-
+        options = self._overlay_options(
+            default_options, user_options, solver_name="IDAKLU"
+        )
         self._check_options(options)
-
         return options
 
     def _check_options(self, options: dict):
@@ -680,9 +698,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # stack inputs so that they are a 2D array of shape (number_of_inputs, number_of_parameters)
         if inputs_list and inputs_list[0]:
-            inputs = np.vstack([_flatten_inputs(d) for d in inputs_list])
+            inputs = np.vstack([flatten_inputs(d) for d in inputs_list])
         else:
             inputs = np.array([[]] * len(inputs_list))
+
+        sensitivity_names = self._setup["sensitivity_names"]
+        if sensitivity_names:
+            pbar = np.vstack(
+                [_sensitivity_scales(d, sensitivity_names) for d in inputs_list]
+            )
+        else:
+            pbar = np.empty((0, 0))
 
         # y0full is now a list with length = number of input sets
         y0full = np.vstack(model.y0full)
@@ -704,6 +730,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 ydot0full,
                 inputs,
                 logger=logger,
+                pbar=pbar,
             )
         except ValueError as e:
             # Return from None to replace the C++ runtime error
@@ -828,7 +855,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self._setup["rootfn_casadi"](
                     float(sol.t[-1]),
                     np.asarray(y_event).reshape(-1),
-                    _flatten_inputs(inputs_dict),
+                    flatten_inputs(inputs_dict),
                 )
             ).reshape(-1)
             newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
@@ -925,8 +952,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # set model.y0_list
         super()._set_consistent_initialization(model, time, inputs_list)
 
-        casadi_format = model.convert_to_format == "casadi"
-
         def handle_y0(y0):
             if isinstance(y0, casadi.DM):
                 y0 = y0.full()
@@ -944,7 +969,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             ydot0_list = [np.zeros_like(y0) for y0 in y0_list]
 
-        sensitivity = model.y0S_list and casadi_format
+        sensitivity = model.y0S_list and model.uses_stacked_inputs
         if sensitivity:
             y0S_list = model.y0S_list
             y0full = []
@@ -982,20 +1007,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving.
 
         """
-        casadi_format = model.convert_to_format == "casadi"
-
         inputs_dict = inputs_dict or {}
-        # stack inputs
-        if inputs_dict:
-            arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
-            inputs = np.vstack(arrays_to_stack)
+        if model.uses_stacked_inputs:
+            input_eval = stack_inputs(inputs_dict)
         else:
-            inputs = np.array([[]])
+            input_eval = inputs_dict
 
         ydot0 = np.zeros_like(y0)
-        # calculate the time derivatives of the differential equations
-        input_eval = inputs if casadi_format else inputs_dict
-
         rhs0 = model.rhs_eval(time, y0, input_eval)
         if isinstance(rhs0, casadi.DM):
             rhs0 = rhs0.full()
@@ -1193,3 +1211,84 @@ class IDAKLUSolver(pybamm.BaseSolver):
         new_sol.set_up_time = solution.set_up_time
 
         return new_sol
+
+    def get_jacobian_sparsity(self) -> csc_matrix:
+        """Get the sparsity pattern of the iteration matrix that IDA factorizes.
+
+        This is the pattern of ``J - cj * M``, where ``J`` is the Jacobian of the
+        model residuals with respect to the states, ``M`` is the mass matrix and
+        ``cj`` is IDA's step-size-dependent scalar. It is the union of the patterns
+        of ``J`` and ``M``, so every differential state has a diagonal entry even
+        where ``J`` has none.
+
+        Returns
+        -------
+        :class:`scipy.sparse.csc_matrix`
+            The sparsity pattern of ``J - cj * M``, with every stored entry set to 1.
+        """
+        setup = getattr(self, "_setup", None)
+        if setup is None:
+            raise pybamm.SolverError("Solver not set up. Call set_up() first.")
+        indptr = setup["jac_times_cjmass_colptrs"]
+        indices = setup["jac_times_cjmass_rowvals"]
+        nnz = setup["jac_times_cjmass_nnz"]
+        n = setup["number_of_states"]
+        data = np.ones(nnz)
+        return csc_matrix((data, indices, indptr), shape=(n, n))
+
+    def spy(self, ax=None, *, show_plot=None, **kwargs):
+        """Plot the sparsity pattern of the Jacobian, delineating differential
+        and algebraic states.
+
+        Requires matplotlib (imported on call).
+
+        Parameters
+        ----------
+        ax : :class:`matplotlib.axes.Axes`, optional
+            Axes to plot on. If ``None``, a new figure is created.
+        show_plot : bool, optional
+            Whether to show the plot. Default is True.
+        **kwargs
+            Forwarded to :meth:`matplotlib.axes.Axes.spy`.
+
+        Returns
+        -------
+        ax : :class:`matplotlib.axes.Axes`
+        """
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError as e:
+            raise ImportError(
+                "matplotlib is required for IDAKLUSolver.spy. "
+                "Install it with: pip install matplotlib"
+            ) from e
+
+        if show_plot is None:
+            show_plot = True
+
+        J = self.get_jacobian_sparsity()
+
+        n = J.shape[0]
+        nnz = J.nnz
+        n_rhs = int(self._setup["ids"].sum())
+        n_alg = n - n_rhs
+        sparsity = 100.0 * (1 - nnz / (n * n) if n > 0 else 0.0)
+        created_figure = ax is None
+        if created_figure:
+            fig, ax = plt.subplots(1, 1)
+
+        ax.spy(J, **kwargs)
+
+        ax.set_xlabel("State index")
+        ax.set_ylabel("Equation index")
+
+        info = f"{nnz} nnz, {sparsity:.2f}% sparse"
+        info += f"\n{n} states: {n_rhs} differential and {n_alg} algebraic"
+        ax.set_title(info, fontsize=10)
+        if created_figure:
+            fig.tight_layout()
+
+        if show_plot:
+            plt.show()
+
+        return ax

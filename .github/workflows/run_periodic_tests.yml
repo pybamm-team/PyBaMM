@@ -25,11 +25,12 @@ jobs:
   # Build the solver wheels once (like test_on_push.yml) and download them per
   # job; otherwise every nox/uv sync would compile the solver from source and fail.
   build_solver:
+    name: Solver wheels
     # Pass contents:read to the reusable workflow (top-level permissions are {},
     # so its checkout would otherwise get no token scope).
     permissions:
       contents: read
-    uses: ./.github/workflows/_build_solver_wheels.yml
+    uses: $/.github/workflows/_build_solver_wheels.yml
     with:
       cache_wheels: true
       build_sdist: false
@@ -64,7 +65,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install gfortran gcc graphviz pandoc
+          sudo apt-get install gfortran gcc graphviz pandoc libosmesa6 libegl1
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
@@ -85,12 +86,21 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: winget install --id Graphviz.Graphviz --exact --accept-source-agreements --accept-package-agreements
 
+      # VTK save_gif needs OSMesa on headless Windows runners (osmesa.dll on PATH).
+      - name: Setup headless OpenGL on Windows
+        if: matrix.os == 'windows-latest'
+        uses: pyvista/setup-headless-display-action@5bc8de3bc71fcda7a96439571287a554901541a0 # v4
+        with:
+          pyvista: "false"
+          mesa3d-release: "24.3.0"
+          install-mesa3d-offscreen: "true"
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           version: "latest"
           enable-cache: true
@@ -114,7 +124,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -123,11 +133,11 @@ jobs:
 
   run_doctests:
     needs: build_solver
+    name: Doctests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Doctests
       sessions: "doctests docs"
       # Full clone: the docs build's sphinx_last_updated_by_git needs the history.
       fetch_depth: 0
@@ -135,20 +145,20 @@ jobs:
 
   run_example_tests:
     needs: build_solver
+    name: Example notebooks
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Example notebooks
       sessions: examples
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
     needs: build_solver
+    name: Example scripts
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Example scripts
       sessions: scripts
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'

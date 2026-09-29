@@ -198,7 +198,10 @@ html_file_suffix = ".html"
 
 htmlhelp_basename = "pybamm"
 
-html_sidebars = {"**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
+html_sidebars = {
+    "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"],
+    "index": [],  # Remove the left side-bar for the home page
+}
 
 # For edit button
 html_context.update(
@@ -348,7 +351,7 @@ if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (
 
 if os.environ.get("READTHEDOCS_VERSION") == "stable":
     notebooks_version = version
-    append_to_url = f"blob/v{notebooks_version}"
+    append_to_url = f"blob/pybamm-v{notebooks_version}"
 
 if os.environ.get("READTHEDOCS_VERSION_TYPE") == "external":
     notebooks_version = os.environ.get("READTHEDOCS_GIT_COMMIT_HASH")

@@ -23,7 +23,9 @@ class TensorField(pybamm.Symbol):
         Domain of the tensor field. If not provided, inferred from components.
     """
 
-    def __init__(self, components, domain=None):
+    __slots__ = ("_rank", "_shape")
+
+    def __init__(self, components, domain=None, name="tensor_field"):
         # Determine rank and shape from components structure
         if not components:
             raise ValueError("Components cannot be empty")
@@ -38,32 +40,29 @@ class TensorField(pybamm.Symbol):
                     raise ValueError(
                         f"Row {i} has {len(row)} elements, expected {self._shape[1]}"
                     )
-            # Store as nested list
-            self._components = components
             # Flatten for children
             children = [c for row in components for c in row]
         else:
             # Rank-1 tensor
             self._rank = 1
             self._shape = (len(components),)
-            self._components = components
             children = list(components)
 
         # Infer domain from first component if not provided
         if domain is None:
             first_component = children[0] if children else None
             if first_component is not None and hasattr(first_component, "domain"):
-                domain = first_component.domain
+                domain = first_component._domains["primary"]
 
         # Validate all components have same domain
         for child in children:
-            if hasattr(child, "domain") and child.domain != domain:
+            if hasattr(child, "domain") and child._domains["primary"] != domain:
                 raise ValueError(
                     f"All components must have the same domain. "
-                    f"Expected {domain}, got {child.domain}"
+                    f"Expected {domain}, got {child._domains['primary']}"
                 )
 
-        super().__init__(name="tensor_field", children=children, domain=domain)
+        super().__init__(name=name, children=children, domain=domain)
 
     @property
     def rank(self):
@@ -78,7 +77,14 @@ class TensorField(pybamm.Symbol):
     @property
     def components(self):
         """Return the components in their nested structure."""
-        return self._components
+        children = self._children
+        if self._rank == 1:
+            return list(children)
+        n_columns = self._shape[1]
+        return [
+            list(children[row * n_columns : (row + 1) * n_columns])
+            for row in range(self._shape[0])
+        ]
 
     def __getitem__(self, idx):
         """Access components by index.
@@ -93,20 +99,20 @@ class TensorField(pybamm.Symbol):
                         f"Too many indices for rank-1 tensor: got {len(idx)}, expected 1"
                     )
                 idx = idx[0]
-            return self._components[idx]
+            return self.components[idx]
         else:  # rank == 2
             if isinstance(idx, tuple):
                 if len(idx) == 1:
-                    return self._components[idx[0]]
+                    return self.components[idx[0]]
                 elif len(idx) == 2:
-                    return self._components[idx[0]][idx[1]]
+                    return self.components[idx[0]][idx[1]]
                 else:
                     raise IndexError(
                         f"Too many indices for rank-2 tensor: got {len(idx)}, expected <= 2"
                     )
             else:
                 # Single index returns a row
-                return self._components[idx]
+                return self.components[idx]
 
     def create_copy(
         self,
@@ -118,7 +124,7 @@ class TensorField(pybamm.Symbol):
             # Copy all children
             new_children = [
                 child.create_copy(perform_simplifications=perform_simplifications)
-                for child in self.children
+                for child in self._children
             ]
 
         # Reconstruct the nested structure
@@ -135,13 +141,13 @@ class TensorField(pybamm.Symbol):
                     idx += 1
                 new_components.append(row)
 
-        return TensorField(new_components, domain=self.domain)
+        return TensorField(new_components, domain=self._domains["primary"])
 
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self.domains,
-            "children": list(self._components),
+            "domains": self._domains,
+            "children": list(self.components),
         }
 
     @classmethod
@@ -150,7 +156,7 @@ class TensorField(pybamm.Symbol):
 
     def _evaluate_for_shape(self):
         """Delegate shape evaluation to first component."""
-        return self.children[0].evaluate_for_shape()
+        return self._children[0].evaluate_for_shape()
 
     def evaluates_on_edges(self, dimension: str) -> bool:
         """Check if any component evaluates on edges.
@@ -158,7 +164,7 @@ class TensorField(pybamm.Symbol):
         Returns True if all components evaluate on edges,
         False if none do, raises error if mixed.
         """
-        edge_status = [child.evaluates_on_edges(dimension) for child in self.children]
+        edge_status = [child.evaluates_on_edges(dimension) for child in self._children]
 
         if all(edge_status):
             return True

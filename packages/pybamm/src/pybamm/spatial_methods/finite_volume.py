@@ -66,7 +66,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 entries = pybamm.kronecker_product(
                     pybamm.Matrix(np.ones(repeats)), edges
                 )
-                entries.domains = symbol.domains
+                entries = entries.with_domains(symbol)
             else:
                 entries = pybamm.Vector(
                     np.tile(symbol_mesh.edges, repeats), domains=symbol.domains
@@ -77,7 +77,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 entries = pybamm.kronecker_product(
                     pybamm.Matrix(np.ones(repeats)), nodes
                 )
-                entries.domains = symbol.domains
+                entries = entries.with_domains(symbol)
             else:
                 entries = pybamm.Vector(
                     np.tile(symbol_mesh.nodes, repeats), domains=symbol.domains
@@ -484,7 +484,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # (child evaluates on nodes)
         out = integration_matrix @ discretised_child
 
-        out.copy_domains(child)
+        out = out.with_domains(child)
 
         return out
 
@@ -717,7 +717,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Return delta function, keep domains
         delta_fn = domain_width / dx * matrix * discretised_symbol
-        delta_fn.copy_domains(symbol)
+        delta_fn = delta_fn.with_domains(symbol)
 
         return delta_fn
 
@@ -774,9 +774,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         left_mesh_x = self._get_last_node(left_symbol_disc.domain)
         dx = right_mesh_x - left_mesh_x
         dy_r = (right_matrix / dx) @ right_symbol_disc
-        dy_r.clear_domains()
+        dy_r = dy_r.without_domains()
         dy_l = (left_matrix / dx) @ left_symbol_disc
-        dy_l.clear_domains()
+        dy_l = dy_l.without_domains()
 
         return dy_r - dy_l
 
@@ -882,7 +882,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Need to match the domain. E.g. in the case of the boundary condition
         # on the particle, the gradient has domain particle but the bcs_vector
         # has domain electrode, since it is a function of the macroscopic variables
-        bcs_vector.copy_domains(discretised_symbol)
+        bcs_vector = bcs_vector.with_domains(discretised_symbol)
 
         # Make matrix to calculate ghost nodes
         # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
@@ -996,7 +996,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Need to match the domain. E.g. in the case of the boundary condition
         # on the particle, the gradient has domain particle but the bcs_vector
         # has domain electrode, since it is a function of the macroscopic variables
-        bcs_vector.copy_domains(discretised_gradient)
+        bcs_vector = bcs_vector.with_domains(discretised_gradient)
 
         # Make matrix which makes "gaps" in the the discretised gradient into
         # which the known Neumann values will be added. E.g. in 1D if the left
@@ -1350,9 +1350,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Return boundary value with domain given by symbol
         matrix = pybamm.Matrix(matrix) * multiplicative
         boundary_value = matrix @ discretised_child
-        boundary_value.copy_domains(symbol)
+        boundary_value = boundary_value.with_domains(symbol)
 
-        additive.copy_domains(symbol)
+        additive = additive.with_domains(symbol)
         boundary_value += additive * additive_multiplicative
 
         return boundary_value
@@ -1401,7 +1401,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         out = pybamm.Matrix(matrix) @ discretised_child
 
         # `EvaluateAt` removes domain
-        out.clear_domains()
+        out = out.without_domains()
 
         return out
 
@@ -1540,6 +1540,25 @@ class FiniteVolume(pybamm.SpatialMethod):
             `shift_key = "edge to node"`)
         """
 
+        def exterior_edge_rows(submesh):
+            """Linear extrapolation from the two nearest nodes onto the exterior edges.
+
+            Uses the true node positions, so the result agrees with
+            :meth:`boundary_value_or_flux`. On a uniform mesh it reduces to the
+            usual ``[1.5, -0.5]``; on a non-uniform one it must not, or a flux
+            imposed as a gradient divided by a surface value is inconsistent
+            with the flux the gradient actually produces.
+            """
+            n = submesh.npts
+            left = 0.5 * submesh.d_edges[0] / submesh.d_nodes[0]
+            right = 0.5 * submesh.d_edges[-1] / submesh.d_nodes[-1]
+            return (
+                csr_matrix(([1 + left, -left], ([0, 0], [0, 1])), shape=(1, n)),
+                csr_matrix(
+                    ([-right, 1 + right], ([0, 0], [n - 2, n - 1])), shape=(1, n)
+                ),
+            )
+
         def arithmetic_mean(array):
             """Calculate the arithmetic mean of an array using matrix multiplication"""
             # Create appropriate submesh by combining submeshes in domain
@@ -1549,15 +1568,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             n = submesh.npts
 
             if shift_key == "node to edge":
-                sub_matrix_left = csr_matrix(
-                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
-                )
+                # Interior edges sit between unevenly spaced nodes on a
+                # non-uniform mesh, so weight by the true distances.
+                d_edges = submesh.d_edges
+                weight = d_edges[:-1] / (d_edges[:-1] + d_edges[1:])
                 sub_matrix_center = diags(
-                    [0.5, 0.5], [0, 1], shape=(n - 1, n), dtype=None
+                    [1 - weight, weight], [0, 1], shape=(n - 1, n), dtype=None
                 )
-                sub_matrix_right = csr_matrix(
-                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
-                )
+                sub_matrix_left, sub_matrix_right = exterior_edge_rows(submesh)
                 sub_matrix = vstack(
                     [sub_matrix_left, sub_matrix_center, sub_matrix_right]
                 )
@@ -1617,13 +1635,10 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             if shift_key == "node to edge":
                 # Matrix to compute values at the exterior edges
-                edges_sub_matrix_left = csr_matrix(
-                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
+                edges_sub_matrix_left, edges_sub_matrix_right = exterior_edge_rows(
+                    submesh
                 )
                 edges_sub_matrix_center = csr_matrix((n - 1, n))
-                edges_sub_matrix_right = csr_matrix(
-                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
-                )
                 edges_sub_matrix = vstack(
                     [
                         edges_sub_matrix_left,

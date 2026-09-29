@@ -176,3 +176,64 @@ class TestCompareOutputsTwoPhase:
     def test_compare_DFN_silicon_graphite(self):
         model_class = pybamm.lithium_ion.DFN
         self.compare_outputs_two_phase_silicon_graphite(model_class)
+
+    def compare_heat_sources_two_phase_graphite_graphite(self, model_class):
+        """
+        Every heat source is a sum over the particle phases, so splitting one graphite
+        phase into two identical halves must reproduce the one-phase heat sources
+        """
+        options = {
+            "thermal": "isothermal",
+            "calculate heat source for isothermal models": "true",
+        }
+        t_eval = [0, 3600]
+        t_interp = np.linspace(0, 3600)
+
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sol = pybamm.Simulation(
+            model_class(options), parameter_values=parameter_values
+        ).solve(t_eval=t_eval, t_interp=t_interp)
+
+        parameter_values_two_phase = pybamm.ParameterValues("Chen2020")
+        for parameter in [
+            "Negative electrode OCP [V]",
+            "Negative electrode OCP entropic change [V.K-1]",
+            "Maximum concentration in negative electrode [mol.m-3]",
+            "Initial concentration in negative electrode [mol.m-3]",
+            "Negative particle radius [m]",
+            "Negative particle diffusivity [m2.s-1]",
+            "Negative electrode exchange-current density [A.m-2]",
+            "Negative electrode active material volume fraction",
+        ]:
+            value = parameter_values_two_phase[parameter]
+            if parameter.endswith("active material volume fraction"):
+                value = value / 2
+            parameter_values_two_phase.update(
+                {f"Primary: {parameter}": value, f"Secondary: {parameter}": value}
+            )
+            del parameter_values_two_phase[parameter]
+
+        sol_two_phase = pybamm.Simulation(
+            model_class({"particle phases": ("2", "1"), **options}),
+            parameter_values=parameter_values_two_phase,
+        ).solve(t_eval=t_eval, t_interp=t_interp)
+
+        for variable in [
+            "Volume-averaged irreversible electrochemical heating [W.m-3]",
+            "Volume-averaged reversible heating [W.m-3]",
+            "Volume-averaged hysteresis electrochemical heating [W.m-3]",
+            "Volume-averaged total heating [W.m-3]",
+            "Voltage [V]",
+        ]:
+            np.testing.assert_allclose(
+                sol[variable](t_interp),
+                sol_two_phase[variable](t_interp),
+                rtol=1e-2,
+                atol=1e-8,
+            )
+
+    def test_compare_heat_sources_SPM_graphite_graphite(self):
+        self.compare_heat_sources_two_phase_graphite_graphite(pybamm.lithium_ion.SPM)
+
+    def test_compare_heat_sources_DFN_graphite_graphite(self):
+        self.compare_heat_sources_two_phase_graphite_graphite(pybamm.lithium_ion.DFN)

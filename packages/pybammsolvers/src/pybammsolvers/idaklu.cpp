@@ -144,6 +144,8 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("yp0"),
     py::arg("inputs"),
     py::arg("logger") = py::none(),
+    py::kw_only(),
+    py::arg("pbar") = np_array(),
     py::return_value_policy::take_ownership);
 
   m.def("create_casadi_solver_group", &create_casadi_solver_group,

@@ -1,5 +1,6 @@
 #include "IDAKLUSolverGroup.hpp"
 #include <omp.h>
+#include <exception>
 #include <optional>
 
 std::vector<Solution> IDAKLUSolverGroup::solve(
@@ -8,7 +9,8 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     np_array y0_np,
     np_array yp0_np,
     np_array inputs,
-    py::object logger) {
+    py::object logger,
+    np_array pbar) {
   DEBUG("IDAKLUSolverGroup::solve");
 
   // If t_interp is empty, save all adaptive steps
@@ -98,13 +100,35 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
   const std::size_t solves_per_thread = number_of_groups / m_solvers.size();
   const std::size_t remainder_solves = number_of_groups % m_solvers.size();
 
+  // pbar is optional: an empty array leaves IDAS at its unit default.
+  const bool has_pbar = pbar.size() > 0;
+  if (has_pbar) {
+    if (pbar.ndim() != 2)
+      throw std::domain_error("pbar has wrong number of dimensions. Expected 2 but got " + std::to_string(pbar.ndim()));
+    if (pbar.shape()[0] != number_of_groups)
+      throw std::domain_error(
+        "pbar has wrong number of rows. Expected " + std::to_string(number_of_groups) +
+        " but got " + std::to_string(pbar.shape()[0]));
+    if (pbar.shape()[1] != number_of_parameters)
+      throw std::domain_error(
+        "pbar has wrong number of cols. Expected " + std::to_string(number_of_parameters) +
+        " but got " + std::to_string(pbar.shape()[1]));
+  }
+
   const sunrealtype *y0 = y0_np.data();
   const sunrealtype *yp0 = yp0_np.data();
   const sunrealtype *inputs_data = inputs.data();
+  const sunrealtype *pbar_data = has_pbar ? pbar.data() : nullptr;
 
   std::vector<SolutionData> results(number_of_groups);
 
   std::optional<std::string> exception_message;
+  // Python exceptions carry their own type, which the string path below loses
+  std::exception_ptr python_exception;
+
+  // Also records this thread as the GIL holder, so each solver knows whether it
+  // may log directly or must buffer until flush_logs().
+  set_loggers(logger);
 
   omp_set_num_threads(m_solvers.size());
   #pragma omp parallel for
@@ -115,7 +139,13 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
         const sunrealtype *y = y0 + index * y0_np.shape(1);
         const sunrealtype *yp = yp0 + index * yp0_np.shape(1);
         const sunrealtype *input = inputs_data + index * inputs.shape(1);
-        results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps, logger);
+        const sunrealtype *scales = pbar_data ? pbar_data + index * number_of_parameters : nullptr;
+        results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, scales, save_adaptive_steps, save_interp_steps);
+      }
+    } catch (py::error_already_set &) {
+      #pragma omp critical
+      {
+        python_exception = std::current_exception();
       }
     } catch (std::exception &e) {
       // If an exception is thrown, we need to catch it and rethrow it outside the parallel region
@@ -126,18 +156,29 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     }
   }
 
+  // Drain before the rethrow below, so a solve that throws still emits its log
+  flush_logs();
+
+  if (python_exception) {
+    std::rethrow_exception(python_exception);
+  }
+
   if (exception_message.has_value()) {
     py::set_error(PyExc_ValueError, exception_message->c_str());
     throw py::error_already_set();
   }
 
+  // Runs on this thread, so these solves log directly rather than buffering
   for (int i = 0; i < remainder_solves; i++) {
     const std::size_t index = number_of_groups - remainder_solves + i;
     const sunrealtype *y = y0 + index * y0_np.shape(1);
     const sunrealtype *yp = yp0 + index * yp0_np.shape(1);
     const sunrealtype *input = inputs_data + index * inputs.shape(1);
-    results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps, logger);
+    const sunrealtype *scales = pbar_data ? pbar_data + index * number_of_parameters : nullptr;
+    results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, scales, save_adaptive_steps, save_interp_steps);
   }
+
+  flush_logs();
 
   // create solutions (needs to be serial as we're using the Python GIL)
   std::vector<Solution> solutions(number_of_groups);
@@ -145,4 +186,16 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     solutions[i] = results[i].generate_solution();
   }
   return solutions;
+}
+
+void IDAKLUSolverGroup::flush_logs() {
+  for (const auto& solver : m_solvers) {
+    solver->flush_log();
+  }
+}
+
+void IDAKLUSolverGroup::set_loggers(py::object logger) {
+  for (const auto& solver : m_solvers) {
+    solver->set_logger(logger);
+  }
 }

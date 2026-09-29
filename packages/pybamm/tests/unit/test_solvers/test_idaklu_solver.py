@@ -1,5 +1,7 @@
 import io
 import itertools
+import logging
+import sys
 import warnings
 from contextlib import redirect_stdout
 
@@ -8,6 +10,7 @@ import pandas as pd
 import pytest
 from scipy.integrate import quad_vec
 from scipy.interpolate import CubicHermiteSpline
+from scipy.sparse import csc_matrix
 
 import pybamm
 from tests import get_discretisation_for_testing, no_internet_connection
@@ -72,6 +75,18 @@ def _hermite_wrms(sol_base, sol_reduced, atol, rtol) -> list[tuple[int, float]]:
         wrms_values.append((seg, wrms))
 
     return wrms_values
+
+
+@pytest.fixture
+def decay_model():
+    """Discretised ``du/dt = -a u``, with ``a`` as the only input parameter."""
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    model.rhs = {u: -pybamm.InputParameter("a") * u}
+    model.initial_conditions = {u: 1}
+    model.variables = {"u": u}
+    pybamm.Discretisation().process_model(model)
+    return model
 
 
 class TestIDAKLUSolver:
@@ -686,6 +701,116 @@ class TestIDAKLUSolver:
 
         np.testing.assert_allclose(soln.y, soln_banded.y, rtol=1e-6, atol=1e-5)
 
+    @pytest.mark.parametrize(
+        ("num_threads", "n_inputs", "all_on_calling_thread"),
+        [
+            # One solver, so every solve runs on the GIL-holding thread
+            (1, 2, True),
+            # Fewer input sets than solvers, so all of them land in the
+            # serial remainder loop, which also runs on that thread
+            (4, 2, True),
+            # Two solves per solver, so a worker thread must buffer its share
+            (2, 4, False),
+        ],
+    )
+    def test_diagnostics_emitted_once_per_input_set(
+        self, decay_model, num_threads, n_inputs, all_on_calling_thread, caplog, capsys
+    ):
+        t_eval = np.linspace(0, 1, 3)
+        inputs = [{"a": 1.0 + i} for i in range(n_inputs)]
+        solver = pybamm.IDAKLUSolver(
+            options={"print_stats": True, "num_threads": num_threads}
+        )
+
+        # Send the log to stdout too, so it can be ordered against py::print
+        handler = logging.StreamHandler(sys.stdout)
+        pybamm.logger.addHandler(handler)
+        try:
+            with caplog.at_level(logging.DEBUG, logger=pybamm.logger.name):
+                solver.solve(decay_model, t_eval, t_interp=t_eval, inputs=inputs)
+        finally:
+            pybamm.logger.removeHandler(handler)
+
+        lines = capsys.readouterr().out.splitlines()
+        starts = [i for i, line in enumerate(lines) if line.startswith("Integrating")]
+        stats = [i for i, line in enumerate(lines) if line.startswith("Solver Stats:")]
+        assert len(starts) == len(stats) == n_inputs
+        # Values are printed through py::print, so the tab prefix is preserved
+        assert "\tNumber of steps =" in "\n".join(lines)
+        if all_on_calling_thread:
+            # Buffering would emit every trace before the first statistics block
+            assert stats[0] < starts[1]
+
+    def test_debug_log_emitted_when_solve_fails(self, caplog):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a * u**2}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        # Two solves per solver, so one solver buffers on a worker thread and
+        # only the flush at the end of the parallel region can emit its trace
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 2})
+        inputs = [{"a": 1.0 + i} for i in range(4)]
+        # u' = a u^2 blows up at t = 1/a, so integrating to t = 5 fails
+        with (
+            caplog.at_level(logging.DEBUG, logger=pybamm.logger.name),
+            pytest.raises(pybamm.SolverError, match="IDA_ERR_FAIL"),
+        ):
+            solver.solve(model, np.array([0.0, 5.0]), inputs=inputs)
+
+        # A partial solution is still returned, so every solve runs and the two
+        # traces beyond the calling thread's own prove its buffer was drained
+        starts = [m for m in caplog.messages if m.startswith("Integrating from t =")]
+        assert len(starts) == len(inputs)
+        assert any(m.startswith("Step ") for m in caplog.messages)
+
+    def test_debug_log_flushed_when_solve_raises(self, caplog):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        # The residual is NaN from t = 0, so the C++ solve throws instead of
+        # returning a partial solution, taking the rethrow path out of the group
+        model.rhs = {u: a * pybamm.sqrt(-u)}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        # Two solves per solver, so one solver buffers on a worker thread
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 2})
+        inputs = [{"a": 1.0 + i} for i in range(4)]
+        with (
+            caplog.at_level(logging.DEBUG, logger=pybamm.logger.name),
+            pytest.raises(pybamm.SolverError),
+        ):
+            solver.solve(model, np.array([0.0, 5.0]), inputs=inputs)
+
+        # Each solver throws on its first solve, and the calling thread streams
+        # its own, so the second trace can only come from the pre-rethrow flush
+        starts = [m for m in caplog.messages if m.startswith("Integrating from t =")]
+        assert len(starts) == 2
+
+    def test_solve_interrupted_from_debug_logger(self, caplog, monkeypatch):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        _debug_logger = pybamm.logger.debug
+
+        # applies a ctrl-C to keyboard interrupt on the first step of the simulation
+        def logger_interrupts_on_first_step(msg, *args, **kwargs):
+            _debug_logger(msg, *args, **kwargs)
+            if isinstance(msg, str) and msg.startswith("Step "):
+                raise KeyboardInterrupt
+
+        monkeypatch.setattr(pybamm.logger, "debug", logger_interrupts_on_first_step)
+        with (
+            caplog.at_level(logging.DEBUG, logger=pybamm.logger.name),
+            pytest.raises(KeyboardInterrupt),
+        ):
+            sim.solve([0, 3600])
+
+        assert not any(m.startswith("Integration complete") for m in caplog.messages)
+
     def test_setup_options(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
@@ -768,6 +893,11 @@ class TestIDAKLUSolver:
             else:
                 with pytest.raises(ValueError):
                     _ = solver.solve(model, t_eval, t_interp=t_interp)
+
+    def test_an_unknown_option_is_rejected(self):
+        # Merging a misspelt key through leaves the caller on the default.
+        with pytest.raises(pybamm.SolverError, match=r"Unknown IDAKLU solver option"):
+            pybamm.IDAKLUSolver(options={"num_thread": 4})
 
     def test_solver_options(self):
         model = pybamm.BaseModel()
@@ -1697,6 +1827,59 @@ class TestIDAKLUSolver:
         for rte, ste in zip(reduced.all_t_evals, sol.all_t_evals, strict=True):
             np.testing.assert_array_equal(rte, ste)
 
+    def test_get_jacobian_sparsity(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+        solver.set_up(model)
+        J = solver.get_jacobian_sparsity()
+
+        assert J.shape == (2, 2)
+        assert J.nnz > 0
+        assert isinstance(J, csc_matrix)
+
+    def test_get_jacobian_sparsity_not_set_up(self):
+        solver = pybamm.IDAKLUSolver()
+        with pytest.raises(pybamm.SolverError, match="Solver not set up"):
+            solver.get_jacobian_sparsity()
+
+    def test_spy(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+        solver.set_up(model)
+
+        import matplotlib
+
+        matplotlib.use("Agg")
+        ax = solver.spy(show_plot=False)
+        assert ax is not None
+        assert "nnz" in ax.get_title()
+
+        import matplotlib.pyplot as plt
+
+        _, existing_axes = plt.subplots(1, 2)
+        ax = solver.spy(ax=existing_axes[1], show_plot=False)
+        assert ax is existing_axes[1]
+        assert "nnz" in ax.get_title()
+        plt.close("all")
+
     def test_reduce_solution_vs_online(self):
         """Compare post-hoc reduce_solution with online knot reduction on a drive cycle.
 
@@ -1810,4 +1993,149 @@ class TestIDAKLUSolver:
         assert loaded.options == sol.options
         np.testing.assert_allclose(
             loaded["2u"].entries, sol["2u"].entries, rtol=1e-12, atol=1e-12
+        )
+
+
+class TestIDAKLUSensitivityScales:
+    """IDAS ``pbar``, the scale of each differentiated parameter."""
+
+    @staticmethod
+    def _rescalable_model():
+        """``du/dt = -(a / s) u``: at ``a = s``, ``u = exp(-t)`` whatever the
+        magnitude of ``s``, and ``a du/da = -t exp(-t)``."""
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        s = pybamm.InputParameter("s")
+        model.rhs = {u: -(a / s) * u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    def test_scales_are_the_parameter_magnitudes_in_column_order(self):
+        # Dict order would have the right length too, so a mix-up would
+        # degrade the weighting silently instead of raising.
+        scales = pybamm.solvers.idaklu_solver._sensitivity_scales(
+            {"a": -3.0, "b": 4e-15, "c": 1.0}, ["b", "a"]
+        )
+        np.testing.assert_allclose(scales, [4e-15, 3.0])
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (np.array([-2.0]), 2.0),
+            (np.array([[7.0]]), 7.0),
+            # The solver owns the zero clamp, so a raw 0 reaches it.
+            (0.0, 0.0),
+            (np.array([]), 0.0),
+        ],
+    )
+    def test_scale_of_each_input_form(self, value, expected):
+        scales = pybamm.solvers.idaklu_solver._sensitivity_scales({"a": value}, ["a"])
+        np.testing.assert_allclose(scales, [expected])
+
+    def test_a_zero_parameter_still_solves(self):
+        # IDAS rejects pbar = 0, so the solver has to clamp it to the unit scale.
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -u + a}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        sol = solver.solve(
+            model,
+            np.linspace(0, 1, 10),
+            inputs={"a": 0.0},
+            calculate_sensitivities=True,
+        )
+        # du/da = 1 - exp(-t) regardless of a, so the clamp must not skew it.
+        np.testing.assert_allclose(
+            np.asarray(sol["u"].sensitivities["a"]).ravel(),
+            1.0 - np.exp(-sol.t),
+            rtol=1e-5,
+            atol=1e-7,
+        )
+
+    def test_each_input_set_hands_over_its_own_row(self):
+        model = self._rescalable_model()
+        solver = pybamm.IDAKLUSolver()
+        solve_kwargs = {
+            "inputs": [{"a": 1e-14, "s": 1e-14}, {"a": 1e3, "s": 1e3}],
+            "calculate_sensitivities": ["a"],
+        }
+        # Solve once so the second solve reuses this group rather than rebuilding
+        # it, which would discard the spy.
+        solver.solve(model, [0, 1], **solve_kwargs)
+
+        seen = {}
+        original = solver._setup["solver"].solve
+
+        def spy(*args, **kwargs):
+            seen["pbar"] = np.asarray(kwargs["pbar"])
+            return original(*args, **kwargs)
+
+        solver._setup["solver"] = type("Spy", (), {"solve": staticmethod(spy)})()
+        solver.solve(model, [0, 1], **solve_kwargs)
+        np.testing.assert_allclose(seen["pbar"], [[1e-14], [1e3]])
+
+    def test_each_input_set_is_solved_at_its_own_scale(self):
+        # a = s is one problem in different units, so pbar = |a| hands IDAS the
+        # same scaled system; powers of two make that scaling exact.
+        scales = [2.0**-47, 2.0**10]
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        solutions = solver.solve(
+            self._rescalable_model(),
+            [0, 3],
+            inputs=[{"a": scale, "s": scale} for scale in scales],
+            calculate_sensitivities=["a"],
+        )
+        tiny, large = (
+            scale * np.asarray(sol["u"].sensitivities["a"]).ravel()
+            for scale, sol in zip(scales, solutions, strict=True)
+        )
+        np.testing.assert_array_equal(solutions[0].t, solutions[1].t)
+        np.testing.assert_array_equal(tiny, large)
+        np.testing.assert_allclose(
+            tiny, -solutions[0].t * np.exp(-solutions[0].t), rtol=1e-5, atol=1e-7
+        )
+
+    def test_a_tight_dfn_diffusivity_gradient_matches_finite_differences(self):
+        # D_p is 4e-15, so dy/dD_p reaches ~1e14: at the unit scale no absolute
+        # tolerance can hold that column and the corrector fails to converge.
+        name = "Positive particle diffusivity [m2.s-1]"
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        nominal = parameter_values[name]
+        parameter_values[name] = pybamm.InputParameter("D_p")
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-10),
+        )
+        t_eval = [0, 3000]
+        t_interp = np.linspace(0, 3000, 31)
+        sol = simulation.solve(
+            t_eval,
+            inputs={"D_p": nominal},
+            calculate_sensitivities=["D_p"],
+            t_interp=t_interp,
+        )
+        gradient = np.asarray(sol["Voltage [V]"].sensitivities["D_p"]).ravel()
+
+        step = 1e-3 * nominal
+        plus, minus = (
+            simulation.solve(t_eval, inputs={"D_p": value}, t_interp=t_interp)[
+                "Voltage [V]"
+            ](sol.t)
+            for value in (nominal + step, nominal - step)
+        )
+        finite_difference = (plus - minus) / (2 * step)
+        np.testing.assert_allclose(
+            gradient,
+            finite_difference,
+            rtol=1e-4,
+            atol=1e-5 * np.abs(finite_difference).max(),
         )

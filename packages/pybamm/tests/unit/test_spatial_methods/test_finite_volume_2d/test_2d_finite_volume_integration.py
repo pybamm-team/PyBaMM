@@ -340,7 +340,9 @@ class TestFiniteVolumeIntegration:
             )
 
         child_edges = pybamm.Vector(submesh.edges_lr)
-        child_edges._evaluates_on_edges = lambda _: True
+        child_edges._saved_evaluates_on_edges = dict.fromkeys(
+            pybamm.expression_tree.symbol.DOMAIN_LEVELS, True
+        )
         with pytest.raises(NotImplementedError, match=r"not implemented"):
             disc.process_symbol(
                 pybamm.OneDimensionalIntegral(

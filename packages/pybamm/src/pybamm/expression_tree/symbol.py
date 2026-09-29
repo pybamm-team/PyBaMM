@@ -6,7 +6,6 @@ from __future__ import annotations
 import numbers
 import warnings
 from collections.abc import Sequence
-from functools import cached_property
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -15,6 +14,16 @@ import sympy
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
+from pybamm.expression_tree.legacy_mutation import (
+    MUTATION_FORBIDDEN,
+    _DomainList,
+    _DomainsDict,
+    _frozen_setattr,
+    _SymbolList,
+    _warn_mutation,
+    legacy_property,
+    upgrade_pickled_state,
+)
 from pybamm.expression_tree.printing.print_name import prettify_print_name
 from pybamm.util import import_optional_dependency
 
@@ -30,7 +39,94 @@ if TYPE_CHECKING:  # pragma: no cover
     )
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
-EMPTY_DOMAINS: dict[str, list] = {k: [] for k in DOMAIN_LEVELS}
+
+
+def _immutable(self, *args, **kwargs):
+    raise TypeError(
+        "Symbol domains are immutable; build a new symbol with `with_domains`"
+    )
+
+
+class DomainNames(list):
+    """An immutable list of domain names (compares equal to plain lists)."""
+
+    __slots__ = ()
+    __setitem__ = __delitem__ = __iadd__ = __imul__ = _immutable
+    append = extend = insert = pop = remove = clear = sort = reverse = _immutable
+
+    def copy(self) -> list[str]:
+        """A mutable plain-list copy."""
+        return list(self)
+
+    def __reduce__(self):
+        return (DomainNames, (list(self),))
+
+
+class Domains(dict):
+    """
+    The domains of a symbol: an immutable, pre-hashed mapping from domain level to
+    an immutable list of domain names. Instances are interned, so every symbol
+    with the same domains shares one object and identity hashes it in O(1).
+    """
+
+    __slots__ = ("_hash", "_interned")
+
+    def __init__(self, mapping):
+        super().__init__(
+            (level, DomainNames(names))
+            for level, names in _canonical_domain_items(mapping)
+        )
+        self._hash = hash(tuple((level, tuple(names)) for level, names in self.items()))
+        self._interned = False
+
+    def __hash__(self):
+        return self._hash
+
+    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = _immutable
+    update = __ior__ = _immutable
+
+    def copy(self) -> dict[str, DomainNames]:
+        """A mutable plain-dict copy."""
+        return dict(self)
+
+    def __reduce__(self):
+        return (_intern_domains, (dict(self),))
+
+
+_INTERNED_DOMAINS: dict[tuple, Domains] = {}
+
+
+def _canonical_domain_items(
+    domains: dict[str, Sequence[str]],
+) -> list[tuple[str, Sequence[str]]]:
+    """Return domain items in the canonical level order."""
+    order = {level: index for index, level in enumerate(DOMAIN_LEVELS)}
+    return sorted(
+        domains.items(), key=lambda item: (order.get(item[0], len(order)), str(item[0]))
+    )
+
+
+def _intern_domains(domains: dict[str, Sequence[str]]) -> Domains:
+    """Return the shared :class:`Domains` instance equal to ``domains``, which must
+    already be in canonical form (every level present, list values)."""
+    if type(domains) is Domains:
+        return domains
+    key = tuple(
+        (level, tuple(names)) for level, names in _canonical_domain_items(domains)
+    )
+    interned = _INTERNED_DOMAINS.get(key)
+    if interned is None:
+        interned = _INTERNED_DOMAINS.setdefault(
+            key, Domains({level: list(names) for level, names in key})
+        )
+        interned._interned = True
+    return interned
+
+
+EMPTY_DOMAINS: Domains = _intern_domains({k: [] for k in DOMAIN_LEVELS})
+
+# raw domains input (as given to a constructor) -> validated, interned domains
+_VALIDATED_DOMAINS: dict[tuple, Domains] = {}
 
 
 def domain_size(domain: list[str] | str):
@@ -83,7 +179,9 @@ def evaluate_for_shape_using_domain(domains: dict[str, list[str] | str], typ="ve
 
 
 def is_constant(symbol: Symbol):
-    return isinstance(symbol, numbers.Number) or symbol.is_constant()
+    if isinstance(symbol, Symbol):
+        return symbol.is_constant()
+    return isinstance(symbol, numbers.Number)
 
 
 def is_scalar_x(expr: Symbol, x: int):
@@ -169,11 +267,13 @@ def simplify_if_constant(symbol: pybamm.Symbol):
     """
     # Handle TensorField by simplifying each component
     if isinstance(symbol, pybamm.TensorField):
-        simplified_children = [simplify_if_constant(child) for child in symbol.children]
+        simplified_children = [
+            simplify_if_constant(child) for child in symbol._children
+        ]
         # Check if any simplification occurred
         if any(
             s is not c
-            for s, c in zip(simplified_children, symbol.children, strict=True)
+            for s, c in zip(simplified_children, symbol._children, strict=True)
         ):
             return symbol.create_copy(new_children=simplified_children)
         return symbol
@@ -191,12 +291,12 @@ def simplify_if_constant(symbol: pybamm.Symbol):
                 return pybamm.Scalar(new_result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(result, domains=symbol.domains)
+                    return pybamm.Vector(result, domains=symbol._domains)
                 else:
                     # Turn matrix of zeros into sparse matrix
                     if isinstance(result, np.ndarray) and np.all(result == 0):
                         result = csr_matrix(result)
-                    return pybamm.Matrix(result, domains=symbol.domains)
+                    return pybamm.Matrix(result, domains=symbol._domains)
 
     return symbol
 
@@ -230,6 +330,24 @@ class Symbol:
         deprecated.
     """
 
+    __slots__ = (
+        "_cached_is_constant",
+        "_cached_shape",
+        "_cached_size",
+        "_children",
+        "_domains",
+        "_edges_direction",
+        "_id",
+        "_mesh",
+        "_name",
+        "_print_name",
+        "_raw_print_name",
+        "_saved_evaluate_for_shape",
+        "_saved_evaluates_on_edges",
+        "_secondary_mesh",
+        "_tertiary_mesh",
+    )
+
     def __init__(
         self,
         name: str,
@@ -239,23 +357,34 @@ class Symbol:
         domains: DomainsType = None,
     ):
         super().__init__()
-        self.name = name
+        # The id is computed lazily, once, on first use
+        self._id = None
+        self._cached_shape = None
+        self._cached_size = None
+        self._saved_evaluate_for_shape = None
+        self._cached_is_constant = None
+        self._saved_evaluates_on_edges = None
+        # pinned by 2D finite volumes for single-direction edge evaluations
+        self._edges_direction = None
+        self._print_name = None
+        self._raw_print_name = None
+        # meshes are attached by the discretisation for the processed variables
+        self._mesh = None
+        self._secondary_mesh = None
+        self._tertiary_mesh = None
+
+        if not isinstance(name, str):
+            raise TypeError(f"{name} must be of type str")
+        self._name = name
 
         if children is None:
             children = []
 
         self._children = children
-        # Keep a separate "orphans" attribute for backwards compatibility
-        self._orphans = children
 
-        # Set domains (and hence id)
-        self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
-
-        # mesh required for solution and processed variables classes
-        self.mesh = None
-
-        self._saved_evaluates_on_edges: dict = {}
-        self._print_name = None
+        self._domains = self._normalise_domains(
+            self.read_domain_or_domains(domain, auxiliary_domains, domains)
+        )
 
         # Test shape on everything but nodes that contain the base Symbol class or
         # the base BinaryOperator class
@@ -281,14 +410,31 @@ class Symbol:
         )
 
     @property
-    def children(self):
+    def children(self) -> Sequence[Symbol]:
         """
         returns the cached children of this node.
 
         Note: it is assumed that children of a node are not modified after initial
         creation
         """
-        return self._children
+        return (
+            _SymbolList(self, "_children")
+            if isinstance(self._children, list)
+            else self._children
+        )
+
+    # Slots (besides ``_children``) holding symbols this node depends on: a symbol,
+    # ``None``, or a list/tuple of symbols. Subclasses extend this.
+    _leaf_fields: tuple[str, ...] = ()
+    # Static slots that are stored but do not define identity (e.g. callables,
+    # raw arrays whose string form is hashed instead). Subclasses extend this.
+    _id_excluded_fields: tuple[str, ...] = ()
+
+    @property
+    def leaves(self) -> list[Symbol]:
+        """The symbols this node directly depends on: children first, then the
+        other symbol-valued fields (e.g. a variable's scale and bounds)."""
+        return pybamm.expression_tree.tree_util.leaves_of(self)
 
     @property
     def name(self):
@@ -297,32 +443,66 @@ class Symbol:
 
     @name.setter
     def name(self, value: str):
+        _warn_mutation("name", "Construct a new symbol with the desired name.")
         if not isinstance(value, str):
             raise TypeError(f"{value} must be of type str")
-        self._name = value
+        object.__setattr__(self, "_name", value)
 
     @property
     def domains(self):
-        return self._domains
+        return _DomainsDict(self)
 
     @domains.setter
     def domains(self, domains):
-        try:
-            if (
-                self._domains == domains
-                # accounting for empty domains
-                or {k: v for k, v in self._domains.items() if v != []} == domains
-            ):
-                return  # no change
-        except AttributeError:
-            # self._domains has not been set yet
-            pass
+        _warn_mutation("domains", "Use symbol = symbol.with_domains(domains).")
+        object.__setattr__(self, "_domains", self._normalise_domains(domains))
 
+    def copy_domains(self, symbol: Symbol) -> None:
+        """Copy domains in place (deprecated)."""
+        _warn_mutation("copy_domains", "Use symbol = symbol.with_domains(other).")
+        object.__setattr__(self, "_domains", symbol._domains)
+
+    def clear_domains(self) -> None:
+        """Clear domains in place (deprecated)."""
+        _warn_mutation("clear_domains", "Use symbol = symbol.without_domains().")
+        object.__setattr__(self, "_domains", EMPTY_DOMAINS)
+
+    def set_id(self) -> None:
+        """Recompute identity after a legacy update (deprecated)."""
+        _warn_mutation(
+            "set_id", "Build a new symbol; its ID is computed automatically."
+        )
+        self._id = self._compute_id()
+
+    @staticmethod
+    def _normalise_domains(domains: dict) -> Domains:
+        """Validate a domains dict, fill in the missing levels and intern it. Each
+        distinct input is validated once."""
+        if type(domains) is Domains:
+            if domains._interned:
+                return domains
+            domains = dict(domains)
+        try:
+            raw_key = tuple(
+                (level, (names,) if isinstance(names, str) else tuple(names))
+                for level, names in domains.items()
+            )
+        except TypeError:
+            raw_key = None  # not hashable input; validate without caching
+        if raw_key is not None:
+            cached = _VALIDATED_DOMAINS.get(raw_key)
+            if cached is not None:
+                return cached
+        validated = Symbol._validate_domains(domains)
+        if raw_key is not None:
+            _VALIDATED_DOMAINS[raw_key] = validated
+        return validated
+
+    @staticmethod
+    def _validate_domains(domains: dict) -> Domains:
         # Turn dictionary into appropriate form
         if domains == {"primary": []}:
-            self._domains = EMPTY_DOMAINS
-            self.set_id()
-            return
+            return EMPTY_DOMAINS
 
         # Set default domains
         domains = {**EMPTY_DOMAINS, **domains}
@@ -347,8 +527,7 @@ class Symbol:
                 # don't test further if we have already found a missing domain
                 break
 
-        self._domains = domains
-        self.set_id()
+        return _intern_domains(domains)
 
     @property
     def domain(self):
@@ -359,7 +538,7 @@ class Symbol:
         -------
             iterable of str
         """
-        return self._domains["primary"]
+        return _DomainList(self, "primary")
 
     @domain.setter
     def domain(self, domain):
@@ -377,47 +556,138 @@ class Symbol:
     @property
     def secondary_domain(self):
         """Helper function to get the secondary domain of a symbol."""
-        return self._domains["secondary"]
+        return _DomainList(self, "secondary")
 
     @property
     def tertiary_domain(self):
         """Helper function to get the tertiary domain of a symbol."""
-        return self._domains["tertiary"]
+        return _DomainList(self, "tertiary")
 
     @property
     def quaternary_domain(self):
         """Helper function to get the quaternary domain of a symbol."""
-        return self._domains["quaternary"]
+        return _DomainList(self, "quaternary")
 
-    def copy_domains(self, symbol: Symbol):
-        """Copy the domains from a given symbol, bypassing checks."""
-        if self._domains != symbol._domains:
-            self._domains = symbol._domains
-            self.set_id()
+    mesh = legacy_property(
+        "_mesh",
+        "Use symbol = symbol.with_mesh(...).",
+        doc="Mesh of the primary domain, attached by the discretisation (else None).",
+    )
+    secondary_mesh = legacy_property(
+        "_secondary_mesh", "Use symbol = symbol.with_mesh(...)."
+    )
+    tertiary_mesh = legacy_property(
+        "_tertiary_mesh", "Use symbol = symbol.with_mesh(...)."
+    )
 
-    def clear_domains(self):
-        """Clear domains, bypassing checks."""
-        if self._domains != EMPTY_DOMAINS:
-            self._domains = EMPTY_DOMAINS
-            self.set_id()
+    def _replace(self, **changes) -> Symbol:
+        """
+        Build a new symbol of the same class from this symbol's state with some
+        fields changed, via the same state protocol pickling uses. The result has
+        no id yet; ``self`` is untouched.
+        """
+        tree_util = pybamm.expression_tree.tree_util
+        leaves, treedef = tree_util.tree_flatten(self)
+        treedef.state.update(changes)
+        return tree_util.tree_unflatten(treedef, leaves)
+
+    def with_domains(self, domains: Symbol | dict[str, list[str] | str]) -> Symbol:
+        """
+        Return a copy of this symbol carrying the validated domains.
+
+        Parameters
+        ----------
+        domains : :class:`pybamm.Symbol` or dict
+            A symbol whose domains to copy, or a full domains dictionary.
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            ``self`` if the domains already match, otherwise a shallow copy sharing
+            this symbol's children.
+        """
+        if isinstance(domains, Symbol):
+            domains = domains._domains
+        else:
+            domains = self._normalise_domains(domains)
+        if self._domains is domains:
+            return self
+        return self._replace(_domains=domains)
+
+    def without_domains(self) -> Symbol:
+        """Return a copy of this symbol with all domains cleared."""
+        return self.with_domains(EMPTY_DOMAINS)
+
+    def with_mesh(
+        self,
+        mesh: pybamm.SubMesh | None,
+        secondary_mesh: pybamm.SubMesh | None = None,
+        tertiary_mesh: pybamm.SubMesh | None = None,
+    ) -> Symbol:
+        """
+        Return a copy carrying the given submeshes, readable as ``mesh``,
+        ``secondary_mesh`` and ``tertiary_mesh``.
+        """
+        return self._replace(
+            _mesh=mesh, _secondary_mesh=secondary_mesh, _tertiary_mesh=tertiary_mesh
+        )
+
+    def with_meshes(
+        self,
+        mesh: pybamm.Mesh,
+        domains: dict[str, list[str]] | Domains | None = None,
+    ) -> Symbol:
+        """
+        Return a copy carrying the meshes of ``domains`` (default: own domains),
+        readable as ``mesh``, ``secondary_mesh`` and ``tertiary_mesh``.
+        ``self`` is returned unchanged if there is nothing to attach.
+        """
+        domains = self._domains if domains is None else domains
+        meshes = {
+            attr: mesh[domain]
+            for attr, domain in (
+                ("_mesh", domains["primary"]),
+                ("_secondary_mesh", domains["secondary"]),
+                ("_tertiary_mesh", domains["tertiary"]),
+            )
+            if domain != []
+        }
+        if not meshes:
+            return self
+        return self._replace(**meshes)
 
     def get_children_domains(self, children: Sequence[Symbol]):
         """Combine domains from children, at all levels."""
+        # fast path: every child with a domain shares the same (interned) domains
+        shared = None
+        for child in children:
+            child_domains = child._domains
+            if child_domains is EMPTY_DOMAINS:
+                continue
+            if shared is None:
+                shared = child_domains
+            elif child_domains is not shared:
+                shared = False
+                break
+        if shared is None:
+            return EMPTY_DOMAINS
+        if shared is not False:
+            return shared
         domains: dict = {}
         for child in children:
-            for level in child.domains:
-                if child.domains[level] == []:
+            for level in child._domains:
+                if child._domains[level] == []:
                     pass
                 elif (
                     level not in domains
                     or domains[level] == []
-                    or child.domains[level] == domains[level]
+                    or child._domains[level] == domains[level]
                 ):
-                    domains[level] = child.domains[level]
+                    domains[level] = child._domains[level]
                 else:
                     raise pybamm.DomainError(
                         "children must have same or empty domains, "
-                        f"not {domains[level]} and {child.domains[level]}"
+                        f"not {domains[level]} and {child._domains[level]}"
                     )
 
         return domains
@@ -429,6 +699,8 @@ class Symbol:
         domains: DomainsType,
     ):
         if domains is None:
+            if domain is None and not auxiliary_domains:
+                return EMPTY_DOMAINS
             if isinstance(domain, str):
                 domain = [domain]
             elif domain is None:
@@ -446,71 +718,84 @@ class Symbol:
         return domains
 
     @property
-    def id(self):
+    def id(self) -> int:
+        """
+        The identity of the symbol (e.g. for identifying y_slices).
+
+        Computed lazily from the class, static fields and leaves. Deprecated
+        in-place updates invalidate cached identities, including ancestor IDs.
+        """
+        symbol_id = self._id
+        if symbol_id is None:
+            symbol_id = self._id = self._compute_id()
+        return symbol_id
+
+    def _compute_id(self) -> int:
+        """The hash of :func:`pybamm.expression_tree.tree_util.identity_key`: class,
+        identity-bearing static fields and leaf ids. Not overridable."""
+        tree_util = pybamm.expression_tree.tree_util
+        leaves = tree_util.leaves_of(self)
+        stack = [(self, leaves, iter(leaves))]
+        while stack:
+            node, leaves, remaining = stack[-1]
+            for leaf in remaining:
+                if leaf._id is None:
+                    child_leaves = tree_util.leaves_of(leaf)
+                    stack.append((leaf, child_leaves, iter(child_leaves)))
+                    break
+            else:
+                node._id = hash(
+                    tree_util.identity_key(node, [leaf.id for leaf in leaves])
+                )
+                stack.pop()
         return self._id
 
-    def set_id(self):
-        """
-        Set the immutable "identity" of a variable (e.g. for identifying y_slices).
-
-        Hashing can be slow, so we set the id when we create the node, and hence only
-        need to hash once.
-        """
-        self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                *tuple([child.id for child in self.children]),
-                *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]),
-            )
-        )
-
-    @property
-    def scale(self) -> float | pybamm.Symbol:
-        return self._scale
-
-    @scale.setter
-    def scale(self, scale: float | pybamm.Symbol):
-        self._scale = pybamm.convert_to_symbol(scale)
-        self.set_id()
-
-    @property
-    def reference(self) -> float | pybamm.Symbol:
-        return self._reference
-
-    @reference.setter
-    def reference(self, reference: float | pybamm.Symbol):
-        self._reference = pybamm.convert_to_symbol(reference)
-        self.set_id()
+    scale = legacy_property(
+        "_scale",
+        "Use symbol = symbol.create_copy(scale=value).",
+        convert=lambda value: pybamm.convert_to_symbol(value),
+    )
+    reference = legacy_property(
+        "_reference",
+        "Use symbol = symbol.create_copy(reference=value).",
+        convert=lambda value: pybamm.convert_to_symbol(value),
+    )
 
     def __eq__(self, other):
-        try:
-            return self._id == other._id
-        except AttributeError:
-            if isinstance(other, numbers.Number):
-                return self._id == pybamm.Scalar(other)._id
-            else:
-                return False
+        if isinstance(other, numbers.Number):
+            return self == pybamm.Scalar(other)
+        elif isinstance(other, self.__class__):
+            return self.id == other.id
+        else:
+            return False
 
-    def __hash__(self):
-        return self._id
+    __hash__ = id.fget
+
+    def __getstate__(self):
+        leaf_fields, state_fields, _ = pybamm.expression_tree.tree_util.layout(
+            type(self)
+        )
+        state = {}
+        for slot in (*leaf_fields, *state_fields):
+            try:
+                state[slot] = getattr(self, slot)
+            except AttributeError:
+                pass
+        instance_dict = getattr(self, "__dict__", None)
+        if instance_dict:
+            state.update(instance_dict)
+        return state
 
     def __setstate__(self, state):
-        # Python's hash() of strings is randomised per process (PYTHONHASHSEED),
-        # so a Symbol's cached _id from the pickling process is invalid in the
-        # unpickling process. Refresh it here so that dicts keyed on Symbols
-        # (e.g. Discretisation.y_slices) are rebuilt with hashes consistent
-        # with this process when pickle restores them.
-        self.__dict__.update(state)
-        self.set_id()
+        if "_orphans" in state:  # pickled before symbols were slotted
+            state = upgrade_pickled_state(type(self), state)
+        # string hashes are randomised per process, so a pickled id is stale here
+        for key, value in state.items():
+            object.__setattr__(self, key, value)
+        for slot in pybamm.expression_tree.tree_util._TRANSIENT_SLOTS:
+            object.__setattr__(self, slot, None)
 
-    @property
-    def orphans(self):
-        """
-        Returning new copies of the children, with parents removed to avoid corrupting
-        the expression tree internal data
-        """
-        return self._orphans
+    orphans = children
 
     def render(self):  # pragma: no cover
         """
@@ -576,7 +861,7 @@ class Symbol:
         counter += 1
 
         new_children = []
-        for child in symbol.children:
+        for child in symbol._children:
             new_child, counter = self.relabel_tree(child, counter)
             new_children.append(new_child)
         new_node.children = new_children
@@ -598,8 +883,11 @@ class Symbol:
         a
         b
         """
-        anytree = import_optional_dependency("anytree")
-        return anytree.PreOrderIter(self)
+        stack = [self]
+        while stack:
+            node = stack.pop()
+            yield node
+            stack.extend(reversed(node._children))
 
     def post_order(self, filter=None):
         """
@@ -614,7 +902,7 @@ class Symbol:
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-        return f"{self.__class__.__name__!s}({hex(self.id)}, {self._name!s}, children={[str(child) for child in self.children]!s}, domains={ ({k: v for k, v in self.domains.items() if v != []})!s})"
+        return f"{self.__class__.__name__!s}({hex(self.id)}, {self._name!s}, children={[str(child) for child in self._children]!s}, domains={ ({k: v for k, v in self._domains.items() if v != []})!s})"
 
     def __add__(self, other: ChildSymbol) -> pybamm.Addition:
         """return an :class:`Addition` object."""
@@ -693,7 +981,7 @@ class Symbol:
             # negation flips the subtraction
             return self.right - self.left
         elif isinstance(self, pybamm.Concatenation) and all(
-            child.is_constant() for child in self.children
+            child.is_constant() for child in self._children
         ):
             return pybamm.concatenation(*[-child for child in self.orphans])
         else:
@@ -866,11 +1154,9 @@ class Symbol:
         a vector of the appropriate shape is returned instead, using the symbol's
         domain. See :meth:`pybamm.Symbol.evaluate()`
         """
-        try:
-            return self._saved_evaluate_for_shape
-        except AttributeError:
+        if self._saved_evaluate_for_shape is None:
             self._saved_evaluate_for_shape = self._evaluate_for_shape()
-            return self._saved_evaluate_for_shape
+        return self._saved_evaluate_for_shape
 
     def _evaluate_for_shape(self):
         """See :meth:`Symbol.evaluate_for_shape`"""
@@ -908,10 +1194,10 @@ class Symbol:
         except TypeError as error:
             # return None if specific TypeError is raised
             # (there is a e.g. StateVector in the tree)
-            if (
-                error.args[0] == "StateVector cannot evaluate input 'y=None'"
-                or error.args[0] == "StateVectorDot cannot evaluate input 'y_dot=None'"
-            ):
+            if error.args[0] in [
+                "StateVector cannot evaluate input 'y=None'",
+                "StateVectorDot cannot evaluate input 'y_dot=None'",
+            ]:
                 return None
             else:  # pragma: no cover
                 raise
@@ -961,12 +1247,14 @@ class Symbol:
             Whether the symbol evaluates on edges (in the finite volume discretisation
             sense)
         """
-        if dimension not in self._saved_evaluates_on_edges:
-            self._saved_evaluates_on_edges[dimension] = self._evaluates_on_edges(
-                dimension
-            )
-
-        return self._saved_evaluates_on_edges[dimension]
+        if dimension == "primary" and self._edges_direction is not None:
+            return self._edges_direction
+        memo = self._saved_evaluates_on_edges
+        if memo is None:
+            memo = self._saved_evaluates_on_edges = {}
+        if dimension not in memo:
+            memo[dimension] = self._evaluates_on_edges(dimension)
+        return memo[dimension]
 
     def _evaluates_on_edges(self, dimension):
         # Default behaviour: return False
@@ -1072,7 +1360,7 @@ class Symbol:
         """
         return [
             child._to_casadi_inner(t, y, y_dot, inputs, casadi_symbols)
-            for child in self.children
+            for child in self._children
         ]
 
     def _children_for_copying(self, children: list[Symbol] | None = None) -> Symbol:
@@ -1080,7 +1368,7 @@ class Symbol:
         Gets existing children for a symbol being copied if they aren't provided.
         """
         if children is None:
-            children = [child.create_copy() for child in self.children]
+            children = [child.create_copy() for child in self._children]
         return children
 
     def create_copy(
@@ -1103,7 +1391,7 @@ class Symbol:
         discouraged.
         """
         children = self._children_for_copying(new_children)
-        return self.__class__(self.name, children, domains=self.domains)
+        return self.__class__(self.name, children, domains=self._domains)
 
     def new_copy(
         self,
@@ -1119,18 +1407,25 @@ class Symbol:
         )
         return self.create_copy(new_children, perform_simplifications)
 
-    @cached_property
+    @property
     def size(self):
         """
         Size of an object, found by evaluating it with appropriate t and y
         """
-        return np.prod(self.shape)
+        if self._cached_size is None:
+            self._cached_size = np.prod(self.shape)
+        return self._cached_size
 
-    @cached_property
+    @property
     def shape(self):
         """
         Shape of an object, found by evaluating it with appropriate t and y.
         """
+        if self._cached_shape is None:
+            self._cached_shape = self._compute_shape()
+        return self._cached_shape
+
+    def _compute_shape(self):
         # Default behaviour is to try to evaluate the object directly
         # Try with some large y, to avoid having to unpack (slow)
         try:
@@ -1212,7 +1507,7 @@ class Symbol:
 
         json_dict = {
             "name": self.name,
-            "domains": self.domains,
+            "domains": self._domains,
         }
 
         return json_dict
@@ -1240,3 +1535,7 @@ def convert_to_symbol(value) -> Symbol:
         return value * pybamm.Scalar(1)
     except (NotImplementedError, TypeError, ValueError):
         raise ValueError("Input cannot be converted to a `pybamm.Symbol`") from None
+
+
+if MUTATION_FORBIDDEN:
+    Symbol.__setattr__ = _frozen_setattr
