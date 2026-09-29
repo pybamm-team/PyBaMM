@@ -309,14 +309,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # number of repeats
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
-        # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        stencil = pybamm.Matrix(
-            csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
-        )
+        stencil = pybamm.Matrix(self._block_diagonal(sub_matrix, second_dim_repeats))
         return self._scaled_matrix(stencil, self._repeat_vector(e, second_dim_repeats))
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
@@ -392,10 +385,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # repeat matrix for each node in secondary dimensions
         second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
-        # generate full matrix from the submatrix
-        stencil = pybamm.Matrix(
-            csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
-        )
+        stencil = pybamm.Matrix(self._block_diagonal(sub_matrix, second_dim_repeats))
         return self._scaled_matrix(stencil, self._repeat_vector(e, second_dim_repeats))
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
@@ -482,7 +472,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 weights = pybamm.Transpose(weights)
             else:
                 sub_matrix = np.ones((n, 1))
-            stencil = kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix)
+            stencil = self._block_diagonal(sub_matrix, second_dim_repeats)
         elif integration_dimension in possible_dimensions[1:]:
             this_dimension_index = possible_dimensions.index(integration_dimension)
             # get lower dimensions and the corresponding domains, i.e. if integration_dimension is "secondary",
@@ -508,18 +498,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             higher_repeats = self._get_auxiliary_domain_repeats(
                 {k: v for k, v in domains.items() if (k in higher_dimensions)}
             )
-            stencil = kron(eye(higher_repeats), int_matrix)
+            stencil = self._block_diagonal(int_matrix, higher_repeats)
             # the weight of each column is that of its point in the integration domain
             spread = kron(
-                np.ones((higher_repeats, 1)), kron(eye(n), np.ones((n_lower_pts, 1)))
+                np.ones((higher_repeats, 1)),
+                self._block_diagonal(np.ones((n_lower_pts, 1)), n),
             )
             weights = pybamm.Transpose(pybamm.Matrix(csr_matrix(spread)) @ d_edges)
-        # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        return self._scaled_matrix(pybamm.Matrix(csr_matrix(stencil)), weights)
+        return self._scaled_matrix(pybamm.Matrix(stencil), weights)
 
     def indefinite_integral(self, child, discretised_child, direction):
         """Implementation of the indefinite integral operator."""
@@ -645,13 +631,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # add a column of zeros at each end
         zero_col = csr_matrix((n, 1))
         sub_matrix = hstack([zero_col, sub_matrix, zero_col])
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        stencil = pybamm.Matrix(
-            csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
-        )
+        stencil = pybamm.Matrix(self._block_diagonal(sub_matrix, second_dim_repeats))
         # each interior edge is weighted by its width; the zero end columns take none
         pad = vstack([csr_matrix((1, n - 1)), eye(n - 1), csr_matrix((1, n - 1))])
         weights = self._repeat_vector(
@@ -694,13 +674,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif direction == "backward":
             offset = np.arange(n - 1, -1, -1, dtype=np.float64)  # from n-1 down to 0
         sub_matrix = spdiags(du_entries, offset, n + 1, n)
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        stencil = pybamm.Matrix(
-            csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
-        )
+        stencil = pybamm.Matrix(self._block_diagonal(sub_matrix, second_dim_repeats))
         weights = self._repeat_vector(d_edges, second_dim_repeats)
         return self._scaled_matrix(stencil, pybamm.Transpose(weights))
 

@@ -4,6 +4,8 @@
 
 import numpy as np
 import pytest
+from scipy.linalg import block_diag
+from scipy.sparse import coo_matrix, csr_matrix, issparse
 
 import pybamm
 from tests import (
@@ -94,6 +96,25 @@ class TestSpatialMethod:
             == mesh["negative particle size"].npts
             * (mesh["negative electrode"].npts + mesh["separator"].npts)
             * mesh["current collector"].npts
+        )
+
+    @pytest.mark.parametrize("block_format", ["dense", "csr", "coo"])
+    @pytest.mark.parametrize("repeats", [1, 3])
+    def test_block_diagonal(self, block_format, repeats):
+        dense_block = np.array([[1.0, -2.0, 0.0], [0.0, 3.0, 4.0]])
+        block = {
+            "dense": dense_block,
+            "csr": csr_matrix(dense_block),
+            "coo": coo_matrix(dense_block),
+        }[block_format]
+
+        matrix = pybamm.SpatialMethod._block_diagonal(block, repeats)
+
+        assert issparse(matrix)
+        assert matrix.format == "csr"
+        assert matrix.dtype == np.float64
+        np.testing.assert_array_equal(
+            matrix.toarray(), block_diag(*[dense_block] * repeats)
         )
 
     def test_discretise_spatial_variable(self):

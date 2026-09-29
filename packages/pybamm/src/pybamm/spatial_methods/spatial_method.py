@@ -50,6 +50,26 @@ class SpatialMethod:
                 mesh_pts *= self.mesh[dom].npts
         return mesh_pts
 
+    @staticmethod
+    def _block_diagonal(block, repeats: int) -> csr_matrix:
+        """
+        Place copies of a matrix along the diagonal.
+
+        Parameters
+        ----------
+        block : array_like or sparse matrix
+            The matrix to repeat.
+        repeats : int
+            The number of copies.
+
+        Returns
+        -------
+        :class:`scipy.sparse.csr_matrix`
+            The block-diagonal matrix, of shape ``(repeats * m, repeats * n)`` for an
+            ``(m, n)`` block. It is in CSR format so that its rows can be sliced.
+        """
+        return csr_matrix(kron(eye(repeats, dtype=np.float64), block))
+
     @property
     def mesh(self):
         return self._mesh

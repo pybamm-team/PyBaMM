@@ -4,6 +4,7 @@
 
 import numpy as np
 import pytest
+from scipy.linalg import block_diag
 from scipy.sparse import eye, kron
 
 import pybamm
@@ -366,6 +367,50 @@ class TestFiniteVolume:
         mass = kron(eye(sec_pts), mass_local)
         np.testing.assert_array_equal(
             mass.toarray(), model.mass_matrix.entries.toarray()
+        )
+
+    @pytest.mark.parametrize(
+        "operator",
+        [
+            "gradient",
+            "divergence",
+            "definite integral row",
+            "definite integral column",
+            "indefinite integral edges forward",
+            "indefinite integral edges backward",
+            "indefinite integral nodes forward",
+            "indefinite integral nodes backward",
+        ],
+    )
+    def test_operator_matrix_repeats_per_secondary_point(self, operator):
+        mesh = get_p2d_mesh_for_testing()
+        fin_vol = pybamm.FiniteVolume()
+        fin_vol.build(mesh)
+
+        def operator_matrix(domains):
+            if operator == "gradient":
+                matrix = fin_vol.gradient_matrix(domains["primary"], domains)
+            elif operator == "divergence":
+                matrix = fin_vol.divergence_matrix(domains)
+            elif operator.startswith("definite integral"):
+                child = pybamm.Variable("c", domains=domains)
+                matrix = fin_vol.definite_integral_matrix(
+                    child, vector_type=operator.split()[-1]
+                )
+            else:
+                _, _, location, direction = operator.split()
+                build = getattr(fin_vol, f"indefinite_integral_matrix_{location}")
+                matrix = build(domains, direction)
+            return matrix.evaluate().toarray()
+
+        particle = {"primary": ["negative particle"]}
+        single = operator_matrix(particle)
+        repeated = operator_matrix({**particle, "secondary": ["negative electrode"]})
+        np.testing.assert_allclose(
+            repeated,
+            block_diag(*[single] * mesh["negative electrode"].npts),
+            rtol=1e-12,
+            atol=1e-12,
         )
 
     def test_jacobian(self):
