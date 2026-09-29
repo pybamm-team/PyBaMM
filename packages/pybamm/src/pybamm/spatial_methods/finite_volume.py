@@ -704,9 +704,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 csr_matrix(([1.0], ([0], [0])), shape=(d_nodes.size, 1)).toarray()
             )
             dx = pybamm.Transpose(dx_sub_matrix) @ d_nodes
-            sub_matrix = pybamm.Matrix(
-                csr_matrix(([1.0], ([0], [0])), shape=(prim_pts, 1)).toarray()
-            )
+            sub_matrix = csr_matrix(([1.0], ([0], [0])), shape=(prim_pts, 1))
         elif symbol.side == "right":
             dx_sub_matrix = pybamm.Vector(
                 csr_matrix(
@@ -714,11 +712,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 ).toarray()
             )
             dx = pybamm.Transpose(dx_sub_matrix) @ d_nodes
-            sub_matrix = pybamm.Matrix(
-                csr_matrix(
-                    ([1.0], ([prim_pts - 1], [0])), shape=(prim_pts, 1)
-                ).toarray()
-            )
+            sub_matrix = csr_matrix(([1.0], ([prim_pts - 1], [0])), shape=(prim_pts, 1))
 
         # Calculate domain width, to make sure that the integral of the delta function
         # is the same as the integral of the child
@@ -728,14 +722,10 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
         else:
             domain_width = pybamm.Scalar(submesh.edges[-1] - submesh.edges[0])
-        # Generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        matrix = pybamm.kronecker_product(
-            pybamm.Matrix(eye(second_dim_repeats, dtype=np.float64).toarray()),
-            sub_matrix,
+        # Generate full matrix from the submatrix, dense so that its elementwise
+        # product with the child is dense
+        matrix = pybamm.Matrix(
+            self._block_diagonal(sub_matrix, second_dim_repeats).toarray()
         )
 
         # Return delta function, keep domains
@@ -780,15 +770,13 @@ class FiniteVolume(pybamm.SpatialMethod):
         left_sub_matrix = np.zeros((1, left_npts))
         left_sub_matrix[0][left_npts - 1] = 1
         left_matrix = pybamm.Matrix(
-            csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), left_sub_matrix))
+            self._block_diagonal(left_sub_matrix, second_dim_repeats)
         )
 
         right_sub_matrix = np.zeros((1, right_npts))
         right_sub_matrix[0][0] = 1
         right_matrix = pybamm.Matrix(
-            csr_matrix(
-                kron(eye(second_dim_repeats, dtype=np.float64), right_sub_matrix)
-            )
+            self._block_diagonal(right_sub_matrix, second_dim_repeats)
         )
 
         # Finite volume derivative
@@ -864,9 +852,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Calculate values for ghost nodes for any Dirichlet boundary conditions
         if lbc_type == "Dirichlet":
             lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n + n_bcs, 1))
-            lbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=np.float64), lbc_sub_matrix)
-            )
+            lbc_matrix = self._block_diagonal(lbc_sub_matrix, second_dim_repeats)
             if lbc_value.evaluates_to_number():
                 left_ghost_constant = (
                     2 * lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
@@ -885,9 +871,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             rbc_sub_matrix = coo_matrix(
                 ([1.0], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
             )
-            rbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=np.float64), rbc_sub_matrix)
-            )
+            rbc_matrix = self._block_diagonal(rbc_sub_matrix, second_dim_repeats)
             if rbc_value.evaluates_to_number():
                 right_ghost_constant = (
                     2 * rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
@@ -924,11 +908,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         )
 
         # repeat matrix for secondary dimensions
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
+        matrix = self._block_diagonal(sub_matrix, second_dim_repeats)
 
         new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
@@ -983,9 +963,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Add any values from Neumann boundary conditions to the bcs vector
         if lbc_type == "Neumann" and lbc_value != 0:
             lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n + n_bcs, 1))
-            lbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=np.float64), lbc_sub_matrix)
-            )
+            lbc_matrix = self._block_diagonal(lbc_sub_matrix, second_dim_repeats)
             if lbc_value.evaluates_to_number():
                 left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
@@ -1001,9 +979,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             rbc_sub_matrix = coo_matrix(
                 ([1.0], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
             )
-            rbc_matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=np.float64), rbc_sub_matrix)
-            )
+            rbc_matrix = self._block_diagonal(rbc_sub_matrix, second_dim_repeats)
             if rbc_value.evaluates_to_number():
                 right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
@@ -1037,11 +1013,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = vstack([left_vector, eye(n, dtype=np.float64), right_vector])
 
         # repeat matrix for secondary dimensions
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
+        matrix = self._block_diagonal(sub_matrix, second_dim_repeats)
 
         new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
 
@@ -1365,11 +1337,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     raise NotImplementedError
 
         # Generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        matrix = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
+        matrix = self._block_diagonal(sub_matrix, repeats)
 
         # Return boundary value with domain given by symbol, scaling the result as
         # ``multiplicative`` is symbolic on a symbolic mesh
@@ -1419,7 +1387,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Create a sparse matrix with a 1 at the index
         sub_matrix = csr_matrix(([1.0], ([0], [index])), shape=(1, len(nodes)))
         # repeat across auxiliary domains
-        matrix = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
+        matrix = self._block_diagonal(sub_matrix, repeats)
 
         # Index into the discretised child
         out = pybamm.Matrix(matrix) @ discretised_child
@@ -1613,13 +1581,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
 
             # Generate full matrix from the submatrix
-            # Convert to csr_matrix so that we can take the index (row-slicing), which
-            # is not supported by the default kron format
-            # Note that this makes column-slicing inefficient, but this should not be an
-            # issue
-            matrix = csr_matrix(
-                kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix)
-            )
+            matrix = self._block_diagonal(sub_matrix, second_dim_repeats)
 
             return pybamm.Matrix(matrix) @ array
 
@@ -1672,12 +1634,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
                 # Generate full matrix from the submatrix
-                # Convert to csr_matrix so that we can take the index (row-slicing),
-                # which is not supported by the default kron format
-                # Note that this makes column-slicing inefficient, but this should
-                # not be an issue
-                edges_matrix = csr_matrix(
-                    kron(eye(second_dim_repeats, dtype=np.float64), edges_sub_matrix)
+                edges_matrix = self._block_diagonal(
+                    edges_sub_matrix, second_dim_repeats
                 )
 
                 # Matrix to extract the node values running from the first node
@@ -1686,9 +1644,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 sub_matrix_D1 = hstack(
                     [eye(n - 1, dtype=np.float64), csr_matrix((n - 1, 1))]
                 )
-                matrix_D1 = csr_matrix(
-                    kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D1)
-                )
+                matrix_D1 = self._block_diagonal(sub_matrix_D1, second_dim_repeats)
                 D1 = pybamm.Matrix(matrix_D1) @ array
 
                 # Matrix to extract the node values running from the second node
@@ -1697,9 +1653,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 sub_matrix_D2 = hstack(
                     [csr_matrix((n - 1, 1)), eye(n - 1, dtype=np.float64)]
                 )
-                matrix_D2 = csr_matrix(
-                    kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D2)
-                )
+                matrix_D2 = self._block_diagonal(sub_matrix_D2, second_dim_repeats)
                 D2 = pybamm.Matrix(matrix_D2) @ array
                 # Compute weight beta
                 if hasattr(submesh, "length"):
@@ -1732,13 +1686,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
                 # Generate full matrix from the submatrix
-                # Convert to csr_matrix so that we can take the index (row-slicing),
-                # which is not supported by the default kron format
-                # Note that this makes column-slicing inefficient, but this should
-                # not be an issue
-                matrix = csr_matrix(
-                    kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix)
-                )
+                matrix = self._block_diagonal(sub_matrix, second_dim_repeats)
 
                 return (
                     pybamm.Matrix(edges_matrix) @ array + pybamm.Matrix(matrix) @ D_eff
@@ -1749,18 +1697,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # to the penultimate edge in the primary dimension (D_1 in the
                 # definiton of the harmonic mean)
                 sub_matrix_D1 = hstack([eye(n, dtype=np.float64), csr_matrix((n, 1))])
-                matrix_D1 = csr_matrix(
-                    kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D1)
-                )
+                matrix_D1 = self._block_diagonal(sub_matrix_D1, second_dim_repeats)
                 D1 = pybamm.Matrix(matrix_D1) @ array
 
                 # Matrix to extract the edge values running from the second edge
                 # to the final edge in the primary dimension  (D_2 in the
                 # definiton of the harmonic mean)
                 sub_matrix_D2 = hstack([csr_matrix((n, 1)), eye(n, dtype=np.float64)])
-                matrix_D2 = csr_matrix(
-                    kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix_D2)
-                )
+                matrix_D2 = self._block_diagonal(sub_matrix_D2, second_dim_repeats)
                 D2 = pybamm.Matrix(matrix_D2) @ array
 
                 # Compute weight beta

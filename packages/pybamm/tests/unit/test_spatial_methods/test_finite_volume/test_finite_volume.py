@@ -107,6 +107,39 @@ class TestFiniteVolume:
                 edges, 1 + 2 * submesh.edges, rtol=1e-12, atol=1e-12
             )
 
+    @pytest.mark.parametrize("method", ["arithmetic", "harmonic"])
+    @pytest.mark.parametrize("shift_key", ["node to edge", "edge to node"])
+    def test_shift_secondary_domain(self, shift_key, method):
+        mesh = get_p2d_mesh_for_testing()
+        fin_vol = pybamm.FiniteVolume()
+        fin_vol.build(mesh)
+        n_x = mesh["negative electrode"].npts
+        size = mesh["negative particle"].npts + (shift_key == "edge to node")
+        particle = {"primary": ["negative particle"]}
+        single = pybamm.StateVector(slice(0, size), domains=particle)
+        repeated = pybamm.StateVector(
+            slice(0, n_x * size),
+            domains={**particle, "secondary": ["negative electrode"]},
+        )
+        # positive, as the harmonic mean divides by the values
+        values = 1 + np.random.default_rng(0).random((n_x, size))
+
+        # each electrode point is shifted as a single particle would be
+        expected = np.concatenate(
+            [
+                fin_vol.shift(single, shift_key, method).evaluate(y=row[:, None])
+                for row in values
+            ]
+        )
+        np.testing.assert_allclose(
+            fin_vol.shift(repeated, shift_key, method).evaluate(
+                y=values.reshape(-1, 1)
+            ),
+            expected,
+            rtol=1e-12,
+            atol=1e-12,
+        )
+
     def test_node_to_edge_to_node_symbolic(self):
         # Create discretisation
         mesh = get_mesh_for_testing_symbolic()
@@ -313,6 +346,33 @@ class TestFiniteVolume:
         numeric = condition(pybamm.Scalar(2), pybamm.Scalar(4), pybamm.Uniform1DSubMesh)
         y = np.linspace(0, 1, 10)[:, np.newaxis] ** 2
         assert_symbolic_mesh_matches_numeric(symbolic, numeric, y, {"L": 2})
+
+    def test_internal_neumann_condition_secondary_domain(self):
+        mesh = get_1p1d_mesh_for_testing(zpts=4)
+        fin_vol = pybamm.FiniteVolume()
+        disc = pybamm.Discretisation(
+            mesh, {"macroscale": fin_vol, "current collector": pybamm.FiniteVolume()}
+        )
+        secondary = {"secondary": "current collector"}
+        a = pybamm.Variable("a", "negative electrode", auxiliary_domains=secondary)
+        b = pybamm.Variable("b", "separator", auxiliary_domains=secondary)
+        disc.set_variable_slices([a, b])
+        left, right = mesh["negative electrode"], mesh["separator"]
+        condition = fin_vol.internal_neumann_condition(
+            disc.process_symbol(a), disc.process_symbol(b), left, right
+        )
+
+        n_z = mesh["current collector"].npts
+        a_values = np.linspace(0, 1, n_z * left.npts).reshape(n_z, left.npts) ** 2
+        b_values = np.linspace(2, 3, n_z * right.npts).reshape(n_z, right.npts) ** 2
+        y = np.concatenate([a_values.ravel(), b_values.ravel()])[:, np.newaxis]
+        # one gradient across the interface for every current collector point
+        expected = (b_values[:, 0] - a_values[:, -1]) / (
+            right.nodes[0] - left.nodes[-1]
+        )
+        np.testing.assert_allclose(
+            condition.evaluate(y=y).ravel(), expected, rtol=1e-12, atol=1e-12
+        )
 
     def test_mass_matrix_shape(self):
         # Create model
@@ -820,6 +880,32 @@ class TestFiniteVolume:
         evaluate_at = pybamm.EvaluateAt(var, position)
         with pytest.raises(pybamm.ModelError):
             disc.process_symbol(evaluate_at)
+
+    def test_evaluate_at_secondary_domain(self):
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable(
+            "c",
+            domain="negative particle",
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        disc.set_variable_slices([var])
+
+        idx = 2
+        position = pybamm.Scalar(mesh["negative particle"].nodes[idx])
+        evaluate_at_disc = disc.process_symbol(pybamm.EvaluateAt(var, position))
+
+        n_r = mesh["negative particle"].npts
+        n_x = mesh["negative electrode"].npts
+        y = np.arange(n_r * n_x, dtype=np.float64)[:, np.newaxis]
+        # the particle value at ``position`` for every electrode point
+        np.testing.assert_array_equal(
+            evaluate_at_disc.evaluate(y=y).ravel(), y.reshape(n_x, n_r)[:, idx]
+        )
 
     def test_inner(self):
         # standard
