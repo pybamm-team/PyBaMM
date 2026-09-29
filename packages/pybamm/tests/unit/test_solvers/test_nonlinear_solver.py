@@ -31,6 +31,15 @@ class TestNonlinearSolver:
         solver.step_tol = 1e-6
         assert solver.step_tol == 1e-6
 
+    def test_an_unknown_option_is_rejected(self):
+        with pytest.raises(
+            pybamm.SolverError, match=r"Unknown Nonlinear solver option\(s\): compiel"
+        ):
+            pybamm.NonlinearSolver(options={"compiel": True})
+        assert pybamm.NonlinearSolver(options={"compile": True})._options == {
+            "compile": True
+        }
+
     def test_simple_root_find(self):
         var = pybamm.Variable("var")
         model = pybamm.BaseModel()
