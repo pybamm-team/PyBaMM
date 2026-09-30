@@ -2490,6 +2490,20 @@ class TestIDAKLUSolverStatistics:
         assert solution.solver_statistics == total
         assert solution.cycles[0].solver_statistics.number_of_steps > 0
 
+    def test_experiment_solution_counts_the_cycles_it_does_not_save(self):
+        experiment = pybamm.Experiment(
+            [("Discharge at 1C for 10 minutes", "Rest for 5 minutes")] * 4
+        )
+        every_cycle = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), experiment=experiment
+        ).solve()
+        some_cycles = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), experiment=experiment
+        ).solve(save_at_cycles=3)
+        # Cycle 2 is solved but not saved
+        assert some_cycles.cycles[1] is None
+        assert some_cycles.solver_statistics == every_cycle.solver_statistics
+
     def test_reduced_solution_keeps_statistics(self, decay_model):
         solver = pybamm.IDAKLUSolver(options={"hermite_reduction_factor": 1.0})
         solution = solver.solve(decay_model, [0, 1], inputs={"a": 10.0})
