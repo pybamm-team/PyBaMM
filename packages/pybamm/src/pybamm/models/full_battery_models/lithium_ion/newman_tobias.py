@@ -24,7 +24,7 @@ class NewmanTobias(DFN):
         # Set default option "uniform profile" for particle submodel. Other
         # default options are those given in `pybamm.BatteryModelOptions` defined in
         # `base_battery_model.py`.
-        options = options or {}
+        options = dict(options or {})
         if "particle" not in options:
             options["particle"] = "uniform profile"
         self.x_average = True
