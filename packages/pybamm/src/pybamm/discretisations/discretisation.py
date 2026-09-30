@@ -934,7 +934,7 @@ class Discretisation:
     def _discretise_node(self, symbol, new_leaves):
         """Discretise one node given its discretised children; the callback for
         :func:`pybamm.tree_map`."""
-        if symbol._domains["primary"] != [] and self.bcs:
+        if symbol._domains["primary"] and self.bcs:
             # If boundary conditions are provided, need to check for BCs on tabs
             key_id = next(iter(self.bcs.keys()))
             if LEGACY_TAB_SIDES & set(self.bcs[key_id].keys()):
@@ -951,7 +951,7 @@ class Discretisation:
     def _spatial_method_of(self, symbol):
         """The spatial method of a symbol's primary domain (None if it has none)."""
         domain = symbol._domains["primary"]
-        if domain == []:
+        if not domain:
             return None
         return self.spatial_methods[domain[0]]
 

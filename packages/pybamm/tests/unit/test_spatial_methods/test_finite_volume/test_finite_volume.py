@@ -4,10 +4,12 @@
 
 import numpy as np
 import pytest
+from scipy.linalg import block_diag
 from scipy.sparse import eye, kron
 
 import pybamm
 from tests import (
+    assert_symbolic_mesh_matches_numeric,
     get_1p1d_mesh_for_testing,
     get_mesh_for_testing,
     get_mesh_for_testing_symbolic,
@@ -104,6 +106,39 @@ class TestFiniteVolume:
             np.testing.assert_allclose(
                 edges, 1 + 2 * submesh.edges, rtol=1e-12, atol=1e-12
             )
+
+    @pytest.mark.parametrize("method", ["arithmetic", "harmonic"])
+    @pytest.mark.parametrize("shift_key", ["node to edge", "edge to node"])
+    def test_shift_secondary_domain(self, shift_key, method):
+        mesh = get_p2d_mesh_for_testing()
+        fin_vol = pybamm.FiniteVolume()
+        fin_vol.build(mesh)
+        n_x = mesh["negative electrode"].npts
+        size = mesh["negative particle"].npts + (shift_key == "edge to node")
+        particle = {"primary": ["negative particle"]}
+        single = pybamm.StateVector(slice(0, size), domains=particle)
+        repeated = pybamm.StateVector(
+            slice(0, n_x * size),
+            domains={**particle, "secondary": ["negative electrode"]},
+        )
+        # positive, as the harmonic mean divides by the values
+        values = 1 + np.random.default_rng(0).random((n_x, size))
+
+        # each electrode point is shifted as a single particle would be
+        expected = np.concatenate(
+            [
+                fin_vol.shift(single, shift_key, method).evaluate(y=row[:, None])
+                for row in values
+            ]
+        )
+        np.testing.assert_allclose(
+            fin_vol.shift(repeated, shift_key, method).evaluate(
+                y=values.reshape(-1, 1)
+            ),
+            expected,
+            rtol=1e-12,
+            atol=1e-12,
+        )
 
     def test_node_to_edge_to_node_symbolic(self):
         # Create discretisation
@@ -279,6 +314,66 @@ class TestFiniteVolume:
             mesh["domain"].edges[:, np.newaxis] * mesh["domain"].length,
         )
 
+    def test_internal_neumann_condition_symbolic_length(self):
+        x_left = pybamm.SpatialVariable("x_left", ["left"], coord_sys="cartesian")
+        x_right = pybamm.SpatialVariable("x_right", ["right"], coord_sys="cartesian")
+        a = pybamm.Variable("a", "left")
+        b = pybamm.Variable("b", "right")
+
+        def condition(middle, end, submesh):
+            geometry = {
+                "left": {x_left: {"min": pybamm.Scalar(0), "max": middle}},
+                "right": {x_right: {"min": middle, "max": end}},
+            }
+            mesh = pybamm.Mesh(
+                geometry, {"left": submesh, "right": submesh}, {x_left: 5, x_right: 5}
+            )
+            spatial_methods = {
+                "left": pybamm.FiniteVolume(),
+                "right": pybamm.FiniteVolume(),
+            }
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc.set_variable_slices([a, b])
+            return spatial_methods["left"].internal_neumann_condition(
+                disc.process_symbol(a),
+                disc.process_symbol(b),
+                mesh["left"],
+                mesh["right"],
+            )
+
+        length = pybamm.InputParameter("L")
+        symbolic = condition(length, 2 * length, pybamm.SymbolicUniform1DSubMesh)
+        numeric = condition(pybamm.Scalar(2), pybamm.Scalar(4), pybamm.Uniform1DSubMesh)
+        y = np.linspace(0, 1, 10)[:, np.newaxis] ** 2
+        assert_symbolic_mesh_matches_numeric(symbolic, numeric, y, {"L": 2})
+
+    def test_internal_neumann_condition_secondary_domain(self):
+        mesh = get_1p1d_mesh_for_testing(zpts=4)
+        fin_vol = pybamm.FiniteVolume()
+        disc = pybamm.Discretisation(
+            mesh, {"macroscale": fin_vol, "current collector": pybamm.FiniteVolume()}
+        )
+        secondary = {"secondary": "current collector"}
+        a = pybamm.Variable("a", "negative electrode", auxiliary_domains=secondary)
+        b = pybamm.Variable("b", "separator", auxiliary_domains=secondary)
+        disc.set_variable_slices([a, b])
+        left, right = mesh["negative electrode"], mesh["separator"]
+        condition = fin_vol.internal_neumann_condition(
+            disc.process_symbol(a), disc.process_symbol(b), left, right
+        )
+
+        n_z = mesh["current collector"].npts
+        a_values = np.linspace(0, 1, n_z * left.npts).reshape(n_z, left.npts) ** 2
+        b_values = np.linspace(2, 3, n_z * right.npts).reshape(n_z, right.npts) ** 2
+        y = np.concatenate([a_values.ravel(), b_values.ravel()])[:, np.newaxis]
+        # one gradient across the interface for every current collector point
+        expected = (b_values[:, 0] - a_values[:, -1]) / (
+            right.nodes[0] - left.nodes[-1]
+        )
+        np.testing.assert_allclose(
+            condition.evaluate(y=y).ravel(), expected, rtol=1e-12, atol=1e-12
+        )
+
     def test_mass_matrix_shape(self):
         # Create model
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -332,6 +427,50 @@ class TestFiniteVolume:
         mass = kron(eye(sec_pts), mass_local)
         np.testing.assert_array_equal(
             mass.toarray(), model.mass_matrix.entries.toarray()
+        )
+
+    @pytest.mark.parametrize(
+        "operator",
+        [
+            "gradient",
+            "divergence",
+            "definite integral row",
+            "definite integral column",
+            "indefinite integral edges forward",
+            "indefinite integral edges backward",
+            "indefinite integral nodes forward",
+            "indefinite integral nodes backward",
+        ],
+    )
+    def test_operator_matrix_repeats_per_secondary_point(self, operator):
+        mesh = get_p2d_mesh_for_testing()
+        fin_vol = pybamm.FiniteVolume()
+        fin_vol.build(mesh)
+
+        def operator_matrix(domains):
+            if operator == "gradient":
+                matrix = fin_vol.gradient_matrix(domains["primary"], domains)
+            elif operator == "divergence":
+                matrix = fin_vol.divergence_matrix(domains)
+            elif operator.startswith("definite integral"):
+                child = pybamm.Variable("c", domains=domains)
+                matrix = fin_vol.definite_integral_matrix(
+                    child, vector_type=operator.split()[-1]
+                )
+            else:
+                _, _, location, direction = operator.split()
+                build = getattr(fin_vol, f"indefinite_integral_matrix_{location}")
+                matrix = build(domains, direction)
+            return matrix.evaluate().toarray()
+
+        particle = {"primary": ["negative particle"]}
+        single = operator_matrix(particle)
+        repeated = operator_matrix({**particle, "secondary": ["negative electrode"]})
+        np.testing.assert_allclose(
+            repeated,
+            block_diag(*[single] * mesh["negative electrode"].npts),
+            rtol=1e-12,
+            atol=1e-12,
         )
 
     def test_jacobian(self):
@@ -741,6 +880,32 @@ class TestFiniteVolume:
         evaluate_at = pybamm.EvaluateAt(var, position)
         with pytest.raises(pybamm.ModelError):
             disc.process_symbol(evaluate_at)
+
+    def test_evaluate_at_secondary_domain(self):
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable(
+            "c",
+            domain="negative particle",
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        disc.set_variable_slices([var])
+
+        idx = 2
+        position = pybamm.Scalar(mesh["negative particle"].nodes[idx])
+        evaluate_at_disc = disc.process_symbol(pybamm.EvaluateAt(var, position))
+
+        n_r = mesh["negative particle"].npts
+        n_x = mesh["negative electrode"].npts
+        y = np.arange(n_r * n_x, dtype=np.float64)[:, np.newaxis]
+        # the particle value at ``position`` for every electrode point
+        np.testing.assert_array_equal(
+            evaluate_at_disc.evaluate(y=y).ravel(), y.reshape(n_x, n_r)[:, idx]
+        )
 
     def test_inner(self):
         # standard

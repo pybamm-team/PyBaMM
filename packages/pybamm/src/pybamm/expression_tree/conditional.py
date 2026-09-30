@@ -30,7 +30,7 @@ class Conditional(pybamm.Symbol):
         if selector.shape_for_testing != ():
             raise ValueError("Conditional selector must evaluate to a scalar")
 
-        domains = self.get_children_domains(branches)
+        domains = self._combine_children_domains(branches)
         first_shape = branches[0].shape_for_testing
         first_size = branches[0].size_for_testing
         returns_scalar = first_size == 1

@@ -10,6 +10,17 @@ import numpy as np
 import sympy
 
 import pybamm
+from pybamm.expression_tree.symbol import _ImmutableSequence
+
+
+class InputNames(_ImmutableSequence):
+    """An immutable list of a function parameter's input names."""
+
+    __slots__ = ()
+    _immutable_message = (
+        "Function parameter input names are immutable; construct a new "
+        "FunctionParameter with the desired inputs"
+    )
 
 
 class Parameter(pybamm.Symbol):
@@ -58,7 +69,7 @@ class Parameter(pybamm.Symbol):
             return sympy.Symbol(self.name)
 
     def to_json(self):
-        return {"name": self.name, "domains": self._domains}
+        return {"name": self.name, "domains": self.domains}
 
     @classmethod
     def _from_json(cls, snippet):
@@ -119,10 +130,10 @@ class FunctionParameter(pybamm.Symbol):
             if isinstance(child, float | int | np.number):
                 children_list[idx] = pybamm.Scalar(child)
 
-        domains = self.get_children_domains(children_list)
+        domains = self._combine_children_domains(children_list)
         super().__init__(name, children=children_list, domains=domains)
 
-        self._input_names = self._check_input_names(list(inputs.keys()))
+        self._input_names = InputNames(self._check_input_names(list(inputs.keys())))
 
         # Use the inspect module to find the function's "short name" from the
         # Parameters module that called it
@@ -155,21 +166,27 @@ class FunctionParameter(pybamm.Symbol):
                 print(inp)
 
     @property
-    def input_names(self) -> list[str]:
-        return (
-            pybamm.expression_tree.symbol._SymbolList(self, "_input_names")
-            if isinstance(self._input_names, list)
-            else self._input_names
-        )
+    def input_names(self) -> InputNames:
+        """The names of the function's inputs, as an immutable list."""
+        return self._input_names
 
     @input_names.setter
     def input_names(self, value: list[str]) -> None:
         pybamm.expression_tree.symbol._warn_mutation(
             "input_names", "Construct a new FunctionParameter with the desired inputs."
         )
-        if isinstance(value, pybamm.expression_tree.symbol._SymbolList):
+        if isinstance(value, InputNames):
             value = list(value)
-        object.__setattr__(self, "_input_names", self._check_input_names(value))
+        object.__setattr__(
+            self, "_input_names", InputNames(self._check_input_names(value) or [])
+        )
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        names = state.get("_input_names")
+        if names is not None and type(names) is not InputNames:
+            # pickled when input names were stored as plain lists
+            object.__setattr__(self, "_input_names", InputNames(names))
 
     @staticmethod
     def _check_input_names(inp):
@@ -247,7 +264,7 @@ class FunctionParameter(pybamm.Symbol):
             children = [*children, self.diff_variable]
         return {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "input_names": list(self.input_names),
             "print_name": self.print_name,
             "has_diff_variable": self.diff_variable is not None,

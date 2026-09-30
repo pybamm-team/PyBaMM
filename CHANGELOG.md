@@ -1,5 +1,17 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- `Symbol.children`, `Symbol.domain` (and `secondary_domain`, `tertiary_domain`, `quaternary_domain`) and `FunctionParameter.input_names` return immutable tuples that compare equal to lists, and `Symbol.domains` returns a read-only copy, as do `to_json()`, `get_children_domains()`, `read_domain_or_domains()` and `pybamm.EMPTY_DOMAINS`. Editing them raises `TypeError` instead of emitting `SymbolMutationDeprecationWarning`, and not even `list` or `dict` methods can change a symbol through them. This ends the deprecation of these edits early; before 26.9 they left the symbol's identity stale. The sequences are no longer `list` instances and slicing them gives a plain tuple; tuples are accepted wherever domains are given. Build a new symbol with `with_domains`, `create_copy(new_children=...)` or `pybamm.replace`. The deprecated setters (`name`, `domains`, `scale`, ...) are unchanged. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
+
+## Deprecated
+
+- Setting `Array.entries_string` or `Interpolant.entries_string`, and calling `StateVector.set_evaluation_array`, are in-place symbol updates and now emit `SymbolMutationDeprecationWarning`. Construct a new symbol instead. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
+
+## Optimizations
+
+- Symbol mutation is no longer guarded by intercepting every attribute write, and `children` and `domain` return the stored immutable sequences instead of building a view on each access. Writes to a symbol's slots after construction are instead rejected by a static check of PyBaMM's code, tests, examples and documentation. Under the test suite's mutation guard, constructing an expression is twice as fast and parameterising it is 25% faster, which recovers most of the `test_parameterise` benchmark regression from [#5779](https://github.com/pybamm-team/PyBaMM/pull/5779). ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
+
 # [v26.9.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.9.0.0) - 2026-09-28
 
 ## Breaking changes
@@ -30,8 +42,10 @@
 
 ## Bug fixes
 
+- `x_average`, `z_average`, `yz_average` and `r_average` no longer pull a factor out of a product when that factor depends on the averaged coordinate through an auxiliary domain (e.g. a particle concentration varying in x), and split a quotient only when its denominator is constant. This fixes nonzero `LLI [%]` and wrong total particle lithium in the DFN when the active material volume fraction varies in x. ([#5813](https://github.com/pybamm-team/PyBaMM/pull/5813))
 - Per-phase `"particle mechanics"` options, e.g. `(("swelling and cracking", "swelling only"), "none")`, now set the mechanics submodel of each phase. Before, the option was read per electrode, so a per-phase tuple built no mechanics submodel and the model failed to build. ([#5694](https://github.com/pybamm-team/PyBaMM/pull/5694))
 - `BasicDFN2D` reports the interfacial current density as `"Negative/Positive electrode interfacial current density [A.m-2]"`. It was stored under `"Negative/Positive electrode current density [A.m-2]"`, which every other model uses for the solid-phase current density. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
+- `FiniteVolume` on a mesh with a symbolic length (a `SymbolicUniform1DSubMesh`, e.g. for an `InputParameter` particle radius) no longer puts the mesh scaling inside a Kronecker product or on the left of a matrix product. Such a model could only be evaluated through CasADi: with `convert_to_format` set to `"python"` or `"jax"` the generated code was invalid, and pybamm's Jacobian raised. Gradients, divergences, spatial variables, definite and indefinite integrals, boundary values and gradients, harmonic means and internal boundary fluxes now use a constant matrix and scale its operand or its result. Values are unchanged, and an integral over a secondary dimension with a symbolic mesh, which raised a `ShapeError`, now works. ([#5781](https://github.com/pybamm-team/PyBaMM/pull/5781))
 - `FiniteVolumeUnstructured` no longer floors `cos(theta)` in the over-relaxed two-point weight. The floor of 0.05 capped the weight on sliver faces, such as the tetrahedra of a thin pouch-cell slab, and the cross term then gave the diffusion operator growing modes: a tetrahedral `BasicDFN3DUnstructured` on the default geometry blew up within seconds. Meshes whose faces never reached the floor are unchanged. ([#5774](https://github.com/pybamm-team/PyBaMM/pull/5774))
 - Simplified EIS setup using an implicit current step and the normal simulation parameter-processing path. Removed the auxiliary voltage state; impedance uses linearised voltage/current outputs and a current forcing index cached from `y_slices`. ([#5779](https://github.com/pybamm-team/PyBaMM/pull/5779))
 - Symbol replacement now combines its private rule and result memo, avoids redundant traversal and rebuild checks, and preserves lazy value conversion and shared-cache behavior. Lazy symbol identity calculation is iterative, so cold expression trees deeper than Python's recursion limit can be hashed and replaced. ([#5779](https://github.com/pybamm-team/PyBaMM/pull/5779))
