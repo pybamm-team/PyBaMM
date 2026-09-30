@@ -1928,6 +1928,15 @@ class TestSolutionSolverStatistics:
         assert solution.first_state.solver_statistics == pybamm.SolverStatistics()
         assert solution.last_state.solver_statistics == pybamm.SolverStatistics()
 
+    def test_statistics_stay_small_across_retained_states(self):
+        # An experiment keeps a first and last state for every step
+        solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        assert (
+            solution.first_state.solver_statistics
+            is solution.last_state.solver_statistics
+        )
+        assert not hasattr(solution.solver_statistics, "__dict__")
+
     def test_statistics_survive_pickling(self):
         statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
         solution = self._solution(0, statistics)

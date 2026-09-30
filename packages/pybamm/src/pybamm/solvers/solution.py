@@ -33,7 +33,7 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SolverStatistics:
     """Counts of the work an integrator did to produce a solution.
 
@@ -63,6 +63,10 @@ class SolverStatistics:
         return SolverStatistics(
             *(a + b for a, b in zip(astuple(self), astuple(other), strict=True))
         )
+
+
+# Shared by every first and last state, which do no solver work
+_NO_SOLVER_STATISTICS = SolverStatistics()
 
 
 def _sum_solver_statistics(solutions) -> SolverStatistics | None:
@@ -675,7 +679,7 @@ class Solution(SolutionBase):
 
         new_sol.solve_time = 0
         new_sol.integration_time = 0
-        new_sol.solver_statistics = SolverStatistics()
+        new_sol.solver_statistics = _NO_SOLVER_STATISTICS
         new_sol.set_up_time = 0
 
         return new_sol
@@ -719,7 +723,7 @@ class Solution(SolutionBase):
         new_sol._sub_solutions = self.sub_solutions[-1:]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
-        new_sol.solver_statistics = SolverStatistics()
+        new_sol.solver_statistics = _NO_SOLVER_STATISTICS
         new_sol.set_up_time = 0
 
         return new_sol
