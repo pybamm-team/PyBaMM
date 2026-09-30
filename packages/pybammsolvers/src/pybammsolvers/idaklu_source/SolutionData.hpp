@@ -71,6 +71,11 @@ class SolutionData
     SolutionData& operator=(SolutionData&&) noexcept = default;
 
     /**
+     * @brief The IDA return flag, negative if the integration failed.
+     */
+    int get_flag() const { return flag; }
+
+    /**
      * @brief Convert raw vectors to numpy arrays and create Solution.
      * MUST be called with GIL held (i.e., in serial section).
      */

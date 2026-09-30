@@ -1,4 +1,5 @@
 #include "IDAKLUSolverGroup.hpp"
+#include "sundials_error_handler.hpp"
 #include <omp.h>
 #include <algorithm>
 #include <atomic>
@@ -173,17 +174,26 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     std::rethrow_exception(python_exception);
   }
 
-  std::string failures;
-  for (int i = 0; i < number_of_groups; i++) {
-    if (!errors[i].has_value()) {
-      continue;
+  const bool any_thrown = std::any_of(
+    errors.begin(), errors.end(), [](const auto &error) { return error.has_value(); });
+  if (any_thrown) {
+    // No solution is returned, so also name the sets whose integration failed
+    // part-way, which would otherwise surface as partial solutions
+    std::string failures;
+    for (int i = 0; i < number_of_groups; i++) {
+      std::string error;
+      if (errors[i].has_value()) {
+        error = *errors[i];
+      } else if (results[i].get_flag() < 0) {
+        error = sundials_error_message(results[i].get_flag());
+      } else {
+        continue;
+      }
+      if (!failures.empty()) {
+        failures += "; ";
+      }
+      failures += "input set " + std::to_string(i) + ": " + error;
     }
-    if (!failures.empty()) {
-      failures += "; ";
-    }
-    failures += "input set " + std::to_string(i) + ": " + *errors[i];
-  }
-  if (!failures.empty()) {
     py::set_error(PyExc_ValueError, failures.c_str());
     throw py::error_already_set();
   }

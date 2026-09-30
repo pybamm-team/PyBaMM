@@ -785,6 +785,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
             raise pybamm.SolverError(str(e)) from None
         integration_time = timer.time()
 
+        # A set that fails part-way returns a partial solution with a negative
+        # flag instead of throwing, so its failure is reported here
+        failures = [
+            f"input set {index}: {idaklu.sundials_error_message(soln.flag)}"
+            for index, soln in enumerate(solns)
+            if soln.flag < 0
+        ]
+        if failures and self._on_failure == "error":
+            raise pybamm.SolverError("; ".join(failures))
+        if self._on_failure == "warn":
+            for failure in failures:
+                warnings.warn(failure + ", returning a partial solution.", stacklevel=2)
+
         return [
             self._post_process_solution(
                 soln, model, integration_time, inputs_dict, t_eval
@@ -850,17 +863,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             termination = "event"
         elif sol.flag >= 0:
             termination = "final time"
-        elif sol.flag < 0:
+        else:
             termination = "failure"
-            msg = idaklu.sundials_error_message(sol.flag)
-            match self._on_failure:
-                case "warn":
-                    warnings.warn(
-                        msg + ", returning a partial solution.",
-                        stacklevel=2,
-                    )
-                case "error":
-                    raise pybamm.SolverError(msg)
 
         if sol.yp.size > 0:
             yp = sol.yp.reshape((number_of_timesteps, number_of_states)).T

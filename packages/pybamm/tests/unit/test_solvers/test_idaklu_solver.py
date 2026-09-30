@@ -99,6 +99,21 @@ def decay_model():
     return model
 
 
+def _part_way_failure_model():
+    """Discretised ``du/dt = sqrt(k - t)``, with ``k`` as the only input parameter.
+
+    Its residual is NaN once ``t > k``, so a solve past ``t = k > 0`` fails
+    part-way and one with ``k < 0`` fails from the start.
+    """
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    model.rhs = {u: pybamm.sqrt(pybamm.InputParameter("k") - pybamm.t)}
+    model.initial_conditions = {u: 0}
+    model.variables = {"u": u}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
 class TestIDAKLUSolver:
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
@@ -192,6 +207,37 @@ class TestIDAKLUSolver:
         model = get_broken_input_model()
         with pytest.raises(pybamm.SolverError, match=r"^input set 0: "):
             pybamm.IDAKLUSolver().solve(model, [0, 1], inputs={"k": -1.0})
+
+    def test_every_input_set_failing_part_way_is_named(self):
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 4})
+        inputs_list = [{"k": k} for k in (2.0, 0.5, 2.0, 0.3)]
+        with pytest.raises(pybamm.SolverError) as error:
+            solver.solve(_part_way_failure_model(), [0, 1], inputs=inputs_list)
+        assert re.findall(r"input set (\d+): IDA_", str(error.value)) == ["1", "3"]
+
+    def test_each_partial_solution_warning_names_its_input_set(self):
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 4}, on_failure="warn")
+        inputs_list = [{"k": k} for k in (2.0, 0.5, 2.0, 0.3)]
+        with pytest.warns(UserWarning, match="returning a partial solution") as record:
+            solutions = solver.solve(
+                _part_way_failure_model(), [0, 1], inputs=inputs_list
+            )
+        named = [re.match(r"input set (\d+): ", str(w.message)) for w in record]
+        assert [match.group(1) for match in named] == ["1", "3"]
+        assert [solution.termination for solution in solutions] == [
+            "final time",
+            "failure",
+            "final time",
+            "failure",
+        ]
+
+    def test_a_throwing_input_set_also_names_the_part_way_failures(self):
+        solver = pybamm.IDAKLUSolver(options={"num_threads": 4})
+        # Set 2 fails from the start, sets 1 and 4 part-way
+        inputs_list = [{"k": k} for k in (2.0, 0.5, -1.0, 2.0, 0.3)]
+        with pytest.raises(pybamm.SolverError) as error:
+            solver.solve(_part_way_failure_model(), [0, 1], inputs=inputs_list)
+        assert re.findall(r"input set (\d+): ", str(error.value)) == ["1", "2", "4"]
 
     def test_every_input_set_is_solved_by_a_smaller_team(self):
         # The OpenMP runtime reads OMP_THREAD_LIMIT once, so this needs a fresh
