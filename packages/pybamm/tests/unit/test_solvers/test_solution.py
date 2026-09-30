@@ -1895,6 +1895,34 @@ class TestSolutionSolverStatistics:
         solutions[2].solver_statistics = None
         assert pybamm.Solution.from_sub_solutions(solutions).solver_statistics is None
 
+    def test_add_sums_statistics_of_a_single_sample_duplicate(self):
+        first = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        duplicate = pybamm.Solution(
+            np.array([1.0]), np.ones((2, 1)), pybamm.BaseModel(), {}
+        )
+        duplicate.solver_statistics = pybamm.SolverStatistics(10, 20, 30, 40, 50)
+        combined = first + duplicate
+        assert combined.t[-1] == pytest.approx(1.0)
+        assert combined.solver_statistics == pybamm.SolverStatistics(11, 22, 33, 44, 55)
+
+    def test_from_sub_solutions_sums_statistics_of_a_skipped_duplicate(self):
+        import functools
+        import operator
+
+        first = self._solution(0, pybamm.SolverStatistics(1, 1, 1, 1, 1))
+        duplicate = pybamm.Solution(
+            np.array([1.0]), np.ones((2, 1)), pybamm.BaseModel(), {}
+        )
+        duplicate.solver_statistics = pybamm.SolverStatistics(10, 10, 10, 10, 10)
+        second = self._solution(1, pybamm.SolverStatistics(100, 100, 100, 100, 100))
+        solutions = [first, duplicate, second]
+        combined = pybamm.Solution.from_sub_solutions(solutions)
+        folded = functools.reduce(operator.add, solutions)
+        assert combined.solver_statistics == pybamm.SolverStatistics(
+            111, 111, 111, 111, 111
+        )
+        assert folded.solver_statistics == combined.solver_statistics
+
     def test_first_and_last_state_report_no_work(self):
         solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
         assert solution.first_state.solver_statistics == pybamm.SolverStatistics()

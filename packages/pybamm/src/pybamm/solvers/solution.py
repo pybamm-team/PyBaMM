@@ -1167,6 +1167,7 @@ class Solution(SolutionBase):
             new_sol._termination = other.termination
             new_sol._t_event = other._t_event
             new_sol._y_event = other._y_event
+            new_sol.solver_statistics = _sum_solver_statistics([self, other])
             return new_sol
 
         # Append other onto self (the already-merged left side); only other's
@@ -1273,12 +1274,7 @@ class Solution(SolutionBase):
         if len(sols) == 1:
             return sols[0].copy()
 
-        # Decide once which segments contribute. __add__ short-circuits a
-        # single-sample segment whose only sample duplicates the running
-        # boundary to a copy, so it contributes nothing to the merge: skip it
-        # here and derive every quantity below from the kept segments only.
-        # `repeated` records whether a kept segment's leading sample duplicates
-        # the previous boundary (dropped once on concatenation).
+        # Skip a single-sample duplicate of the running boundary, as __add__ does
         kept = []
         prev_last_t = None
         for s in sols:
@@ -1349,7 +1345,8 @@ class Solution(SolutionBase):
             vals = [getattr(s, attr, None) for s in segments]
             if all(v is not None for v in vals):
                 setattr(new_sol, attr, sum(vals))
-        new_sol.solver_statistics = _sum_solver_statistics(segments)
+        # sols, not segments: __add__ counts a skipped duplicate's solver work
+        new_sol.solver_statistics = _sum_solver_statistics(sols)
 
         # output_variables path: reproduce __add__'s pairwise left-fold.
         if any(s.variables_returned for s in segments):
