@@ -414,6 +414,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
             raise pybamm.SolverError(
                 "Absolute tolerances must be a flat list, tuple or array"
             ) from error
+        # NumPy upcasts a bool beside numbers to 1.0 or 0.0, losing it
+        if isinstance(atol, list | tuple) and any(
+            isinstance(value, bool | np.bool_)
+            for value in np.asarray(atol, dtype=object).ravel()
+        ):
+            raise pybamm.SolverError(
+                "Absolute tolerances must be real numbers, not booleans"
+            )
         # Bool and complex arrays would otherwise cast to float silently
         if values.dtype.kind not in "iuf":
             raise pybamm.SolverError(
