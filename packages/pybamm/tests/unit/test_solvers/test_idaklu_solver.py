@@ -216,14 +216,14 @@ class TestIDAKLUSolver:
         assert re.findall(r"input set (\d+): IDA_", str(error.value)) == ["1", "3"]
 
     def test_each_partial_solution_warning_names_its_input_set(self):
+        model = _part_way_failure_model()
         solver = pybamm.IDAKLUSolver(options={"num_threads": 4}, on_failure="warn")
         inputs_list = [{"k": k} for k in (2.0, 0.5, 2.0, 0.3)]
         with pytest.warns(UserWarning, match="returning a partial solution") as record:
-            solutions = solver.solve(
-                _part_way_failure_model(), [0, 1], inputs=inputs_list
-            )
-        named = [re.match(r"input set (\d+): ", str(w.message)) for w in record]
-        assert [match.group(1) for match in named] == ["1", "3"]
+            solutions = solver.solve(model, [0, 1], inputs=inputs_list)
+        pattern = r"input set (\d+): .*, returning a partial solution\.$"
+        named = [re.match(pattern, str(w.message)) for w in record]
+        assert [match.group(1) for match in named if match] == ["1", "3"]
         assert [solution.termination for solution in solutions] == [
             "final time",
             "failure",
