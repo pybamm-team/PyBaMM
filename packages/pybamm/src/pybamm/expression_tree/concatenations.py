@@ -56,7 +56,7 @@ class Concatenation(pybamm.Symbol):
         if name is None:
             name = "concatenation"
         if check_domain:
-            domains = self.get_children_domains(children)
+            domains = self._combine_children_domains(children)
         else:
             domains = {"primary": []}
         self.concatenation_function = concat_fun
@@ -96,7 +96,7 @@ class Concatenation(pybamm.Symbol):
 
         return diff
 
-    def get_children_domains(self, children: Sequence[pybamm.Symbol]):
+    def _combine_children_domains(self, children: Sequence[pybamm.Symbol]):
         # combine domains from children
         domain: list = []
         for child in children:
@@ -495,7 +495,7 @@ class DomainConcatenation(Concatenation):
 
         json_dict = {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "slices": unpack_defaultDict(self._slices),
             "size": self._size,
             "children_slices": [

@@ -46,7 +46,7 @@ class SpatialMethod:
         """
         mesh_pts = 1
         for level, dom in domains.items():
-            if level != "primary" and dom != []:
+            if level != "primary" and dom:
                 mesh_pts *= self.mesh[dom].npts
         return mesh_pts
 

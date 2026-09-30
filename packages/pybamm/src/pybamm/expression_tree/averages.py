@@ -380,7 +380,7 @@ class SizeAverage(_BaseAverage):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "children": [self._children[0], self.f_a_dist],
         }
 

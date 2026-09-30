@@ -70,7 +70,7 @@ class StateVectorBase(pybamm.Symbol):
         self._y_slices = y_slices
         self._first_point = y_slices[0].start
         self._last_point = y_slices[-1].stop
-        self.set_evaluation_array(y_slices, evaluation_array)
+        self._evaluation_array = self._make_evaluation_array(y_slices, evaluation_array)
         super().__init__(
             name=name,
             domain=domain,
@@ -111,14 +111,27 @@ class StateVectorBase(pybamm.Symbol):
         return self.evaluation_array.count(True)
 
     def set_evaluation_array(self, y_slices, evaluation_array):
-        """Set evaluation array using slices."""
+        """Set evaluation array using slices (deprecated)."""
+        pybamm.expression_tree.symbol._warn_mutation(
+            "set_evaluation_array",
+            "Construct a new StateVector with the desired slices.",
+        )
+        object.__setattr__(
+            self,
+            "_evaluation_array",
+            self._make_evaluation_array(y_slices, evaluation_array),
+        )
+
+    @staticmethod
+    def _make_evaluation_array(y_slices, evaluation_array) -> list[bool]:
+        """The evaluation array: ``evaluation_array`` if given, else computed from
+        the slices."""
         if evaluation_array is not None and pybamm.settings.debug_mode is False:
-            self._evaluation_array = evaluation_array
-        else:
-            array = np.zeros(y_slices[-1].stop)
-            for y_slice in y_slices:
-                array[y_slice] = True
-            self._evaluation_array = [bool(x) for x in array]
+            return evaluation_array
+        array = np.zeros(y_slices[-1].stop)
+        for y_slice in y_slices:
+            array[y_slice] = True
+        return [bool(x) for x in array]
 
     def _jac_diff_vector(self, variable: pybamm.StateVectorBase):
         """
@@ -214,7 +227,7 @@ class StateVectorBase(pybamm.Symbol):
 
         json_dict = {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "y_slice": [
                 {
                     "start": y.start,

@@ -10,7 +10,7 @@ import sympy
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
-from pybamm.expression_tree.symbol import EMPTY_DOMAINS
+from pybamm.expression_tree.symbol import _EMPTY_DOMAINS
 from pybamm.type_definitions import ChildSymbol, DomainsType
 from pybamm.util import import_optional_dependency
 
@@ -57,7 +57,9 @@ class UnaryOperator(pybamm.Symbol):
         )
         children = list(self._children)
         children[0] = pybamm.convert_to_symbol(value)
-        object.__setattr__(self, "_children", children)
+        object.__setattr__(
+            self, "_children", pybamm.expression_tree.symbol.SymbolChildren(children)
+        )
 
     def to_json(self):
         """See :meth:`pybamm.Symbol.to_json()`; extra symbol fields go in children."""
@@ -424,7 +426,7 @@ class Index(UnaryOperator):
 
         # no domain for integer value key
         super().__init__(
-            name, child, domains=EMPTY_DOMAINS if isinstance(index, int) else None
+            name, child, domains=_EMPTY_DOMAINS if isinstance(index, int) else None
         )
 
     @classmethod
@@ -936,7 +938,7 @@ class DefiniteIntegralVector(SpatialOperator):
         name = "basis integral"
         self.vector_type = vector_type
         # integrating removes the domain
-        super().__init__(name, child, domains=EMPTY_DOMAINS)
+        super().__init__(name, child, domains=_EMPTY_DOMAINS)
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -1010,7 +1012,7 @@ class BoundaryIntegral(SpatialOperator):
         self.region = region
         # boundary integral removes domains
         super().__init__(
-            name if given_name is None else given_name, child, EMPTY_DOMAINS
+            name if given_name is None else given_name, child, _EMPTY_DOMAINS
         )
 
     def _unary_new_copy(self, child, perform_simplifications=True):
@@ -1046,7 +1048,7 @@ class OneDimensionalIntegral(BoundaryIntegral):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "integration_domain": self.integration_domain,
             "direction": self.direction,
             "region": self.region,
@@ -1097,7 +1099,7 @@ class DeltaFunction(SpatialOperator):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "side": self.side,
             "domain": self._domains["primary"],
         }
@@ -1460,7 +1462,7 @@ class Magnitude(UnaryOperator):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "direction": self.direction,
         }
 
@@ -1494,7 +1496,7 @@ class Component(UnaryOperator):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "index": self.index,
         }
 
