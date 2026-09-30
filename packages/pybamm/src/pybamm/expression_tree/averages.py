@@ -12,14 +12,13 @@ import pybamm
 def _is_independent_of(
     symbol: pybamm.Symbol, domain_matches: Callable[[str], bool]
 ) -> bool:
-    """True if no Variable/SpatialVariable leaf has a primary domain that
-    ``domain_matches`` matches. Broadcasts from a non-matching domain are
-    therefore treated as independent even if the broadcast itself carries a
-    matching domain.
+    """True if no leaf of ``symbol`` has any domain (primary or auxiliary) that
+    ``domain_matches`` matches. Only leaves are inspected, so a broadcast of an
+    independent child is itself independent.
     """
     for node in symbol.pre_order():
-        if isinstance(node, pybamm.Variable | pybamm.SpatialVariable) and any(
-            domain_matches(dom) for dom in node._domains["primary"]
+        if not node.children and any(
+            domain_matches(dom) for doms in node._domains.values() for dom in doms
         ):
             return False
     return True
@@ -74,8 +73,9 @@ class _BaseAverage(pybamm.Integral):
         """Rewrite ``avg(symbol)`` using linearity and constant-factor pull-out.
 
         * ``Addition`` / ``Subtraction`` always split: ``avg(a±b) = avg(a) ± avg(b)``.
-        * ``Multiplication`` / ``Division`` split when at least one operand is
-          constant under this average.
+        * ``Multiplication`` splits when at least one operand is constant under
+          this average.
+        * ``Division`` splits only when the denominator is constant.
 
         Returns ``None`` when no rule applies.
         """
@@ -85,7 +85,10 @@ class _BaseAverage(pybamm.Integral):
             return operator(average_fn(left), average_fn(right))
         if isinstance(symbol, pybamm.Multiplication | pybamm.Division):
             left, right = symbol.orphans
-            if cls.symbol_is_constant(left) or cls.symbol_is_constant(right):
+            if cls.symbol_is_constant(right) or (
+                isinstance(symbol, pybamm.Multiplication)
+                and cls.symbol_is_constant(left)
+            ):
                 return operator(average_fn(left), average_fn(right))
         return None
 
