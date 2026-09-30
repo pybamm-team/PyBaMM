@@ -6,6 +6,7 @@
 #include <cmath>
 #include <vector>
 #include <memory>  // For std::make_unique
+#include <utility>  // For std::exchange
 using std::vector;
 
 #include "Options.hpp"
@@ -267,6 +268,11 @@ public:
    * @brief Check the return flag for errors with context
    */
   void CheckErrors(int const & flag, const char* context);
+
+  /**
+   * @brief Rethrow (and clear) an exception raised by a Python callback
+   */
+  void RethrowCallbackException();
 
   /**
    * @brief Print the solver statistics, or buffer them until flush time

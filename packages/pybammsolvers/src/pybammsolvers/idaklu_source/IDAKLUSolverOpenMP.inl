@@ -246,7 +246,12 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   }
   CheckErrors(IDASetLinearSolver(ida_mem, LS, J), "IDASetLinearSolver");
 
-  if (setup_opts.preconditioner != "none") {
+  if (setup_opts.preconditioner == "user") {
+    DEBUG("\tsetting user preconditioner");
+    CheckErrors(IDASetPreconditioner(
+      ida_mem, precon_setup_user<ExprSet>, precon_solve_user<ExprSet>),
+      "IDASetPreconditioner");
+  } else if (setup_opts.preconditioner != "none") {
     DEBUG("\tsetting IDADDB preconditioner");
     // setup preconditioner
     CheckErrors(IDABBDPrecInit(
@@ -346,6 +351,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   // setup
   InitializeSolveStorage(number_of_evals, t_interp.size());
   SetupInitialState(t_eval, y0, yp0, inputs, pbar);
+  RethrowCallbackException();
 
   sunrealtype t0 = t_eval.front();
   sunrealtype tf = t_eval.back();
@@ -382,6 +388,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   // Progress one step before the loop to ensure IDAGetDky works at t0 for dky = 1
   int n_steps = 0;
   int retval = IDASolve(ida_mem, tf_perturbed, &t_val, yy, yyp, IDA_ONE_STEP);
+  RethrowCallbackException();
   GetSolutionFull(t0);
 
   log_.log_step(++n_steps, t_val);
@@ -430,6 +437,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
     t_prev = t_val;
     retval = IDASolve(ida_mem, tf_perturbed, &t_val, yy, yyp, IDA_ONE_STEP);
+    RethrowCallbackException();
     GetSolutionStates(t_val);
     if (save_hermite) {
       GetSolutionDerivatives(t_val);
@@ -442,6 +450,13 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   log_.log_integration_complete(n_steps, t_val);
 
   return BuildSolutionData(retval);
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::RethrowCallbackException() {
+  if (functions->callback_exception) {
+    std::rethrow_exception(std::exchange(functions->callback_exception, nullptr));
+  }
 }
 
 template <class ExprSet>

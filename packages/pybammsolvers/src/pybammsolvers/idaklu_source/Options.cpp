@@ -122,12 +122,35 @@ SetupOptions::SetupOptions(py::dict &py_opts)
 
     if (using_iterative_solver)
     {
-        if (preconditioner != "none" && preconditioner != "BBDP")
+        if (preconditioner != "none" && preconditioner != "BBDP" &&
+            preconditioner != "user")
         {
             throw std::domain_error(
                 "Unknown preconditioner \""s + preconditioner +
-                "\", use one of \"BBDP\" or \"none\""s
+                "\", use one of \"BBDP\", \"user\" or \"none\""s
             );
+        }
+        if (preconditioner == "user")
+        {
+            if (!py_opts.contains("precon_setup") ||
+                !py_opts.contains("precon_solve") ||
+                py_opts["precon_setup"].is_none() ||
+                py_opts["precon_solve"].is_none())
+            {
+                throw std::domain_error(
+                    "preconditioner \"user\" needs the \"precon_setup\" and "
+                    "\"precon_solve\" options (callables)"
+                );
+            }
+            if (num_solvers != 1)
+            {
+                // the callables run under the GIL on the calling thread
+                throw std::domain_error(
+                    "preconditioner \"user\" supports num_solvers = 1 only"
+                );
+            }
+            precon_setup = py_opts["precon_setup"];
+            precon_solve = py_opts["precon_solve"];
         }
     }
     else

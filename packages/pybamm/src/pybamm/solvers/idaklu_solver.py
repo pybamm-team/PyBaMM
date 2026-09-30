@@ -149,7 +149,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # "banded", "sparse", "matrix-free"
                 "jacobian": "sparse",
                 # Preconditioner for iterative solvers, can be "none", "BBDP"
+                # or "user" (Python callables, see precon_setup/precon_solve)
                 "preconditioner": "BBDP",
+                # For preconditioner "user" (num_solvers = 1 only): called by
+                # IDA's preconditioner setup with the iteration matrix
+                # dF/dy - cj M in CSC form,
+                # precon_setup(t, y, ydot, cj, data, indices, indptr) -> 0 on
+                # success (>0 recoverable, <0 unrecoverable failure)
+                "precon_setup": None,
+                # For preconditioner "user": returns z ~ (dF/dy - cj M)^-1 r,
+                # precon_solve(t, y, r, cj, delta) -> z
+                "precon_solve": None,
                 # For iterative linear solver preconditioner, bandwidth of
                 # approximate jacobian
                 "precon_half_bandwidth": 5,
@@ -311,6 +321,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "compile": False,
             "jacobian": "sparse",
             "preconditioner": "BBDP",
+            "precon_setup": None,
+            "precon_solve": None,
             "precon_half_bandwidth": 5,
             "precon_half_bandwidth_keep": 5,
             "num_threads": 1,
