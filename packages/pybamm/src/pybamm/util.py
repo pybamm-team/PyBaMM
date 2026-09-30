@@ -355,9 +355,19 @@ def has_jax():
         True if jax and jaxlib are installed with the correct versions, False if otherwise
 
     """
-    return (importlib.util.find_spec("jax") is not None) and (
-        importlib.util.find_spec("jaxlib") is not None
-    )
+    if (importlib.util.find_spec("jax") is None) or (
+        importlib.util.find_spec("jaxlib") is None
+    ):
+        return False
+    # JAX versions supported by PyBaMM, keep in sync with the `jax` extra in
+    # packages/pybamm/pyproject.toml (jax>=0.7.0, <0.9.0)
+    try:
+        major, minor, *_ = (
+            int(part) for part in importlib.metadata.version("jax").split(".")
+        )
+    except (importlib.metadata.PackageNotFoundError, ValueError):
+        return False
+    return (0, 7) <= (major, minor) < (0, 9)
 
 
 def is_macos_intel():
