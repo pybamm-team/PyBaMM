@@ -9,12 +9,13 @@ import pybamm
 class TestBatteryGeometry:
     @pytest.fixture(params=[0, 1, 2])
     def geometry(self, request):
-        geometry = pybamm.battery_geometry(
-            options={
-                "particle size": "distribution",
-                "dimensionality": request.param,
-            },
-        )
+        options = {
+            "particle size": "distribution",
+            "dimensionality": request.param,
+        }
+        if request.param in (1, 2):
+            options["cell geometry"] = "pouch"
+        geometry = pybamm.battery_geometry(options=options)
         return geometry
 
     def test_geometry_keys(self, geometry):
@@ -25,12 +26,13 @@ class TestBatteryGeometry:
     def test_geometry(self):
         geo = pybamm.geometric_parameters
         for cc_dimension in [0, 1, 2]:
-            geometry = pybamm.battery_geometry(
-                options={
-                    "particle size": "distribution",
-                    "dimensionality": cc_dimension,
-                },
-            )
+            options = {
+                "particle size": "distribution",
+                "dimensionality": cc_dimension,
+            }
+            if cc_dimension in (1, 2):
+                options["cell geometry"] = "pouch"
+            geometry = pybamm.battery_geometry(options=options)
             assert isinstance(geometry, pybamm.Geometry)
             assert "negative electrode" in geometry
             assert "negative particle" in geometry
@@ -50,12 +52,13 @@ class TestBatteryGeometry:
         assert geometry["current collector"]["r_macro"]["position"] == 1
 
         geometry = pybamm.battery_geometry(
-            form_factor="cylindrical", options={"dimensionality": 1}
+            form_factor="cylindrical",
+            options={"dimensionality": 1, "cell geometry": "pouch"},
         )
         assert geometry["current collector"]["r_macro"]["min"] == geo.r_inner
         assert geometry["current collector"]["r_macro"]["max"] == 1
 
-        options = {"particle phases": "2"}
+        options = {"particle phases": "2", "surface form": "algebraic"}
         geometry = pybamm.battery_geometry(options=options)
         geo = pybamm.GeometricParameters(options=options)
         assert geometry["negative primary particle"]["r_n_prim"]["min"] == 0
@@ -78,6 +81,7 @@ class TestBatteryGeometry:
         options = {
             "particle phases": "2",
             "particle size": "distribution",
+            "surface form": "algebraic",
         }
         geometry = pybamm.battery_geometry(options=options)
         assert "negative primary particle size" in geometry
@@ -88,7 +92,8 @@ class TestBatteryGeometry:
     def test_geometry_error(self):
         with pytest.raises(pybamm.GeometryError, match=r"Invalid current"):
             pybamm.battery_geometry(
-                form_factor="cylindrical", options={"dimensionality": 2}
+                form_factor="cylindrical",
+                options={"dimensionality": 2, "cell geometry": "pouch"},
             )
         with pytest.raises(pybamm.GeometryError, match=r"Invalid form"):
             pybamm.battery_geometry(form_factor="triangle")
@@ -111,7 +116,9 @@ class TestReadParameters:
         tab_p_z = geo.p.centre_z_tab
         L_tab_p = geo.p.L_tab
 
-        geometry = pybamm.battery_geometry(options={"dimensionality": 2})
+        geometry = pybamm.battery_geometry(
+            options={"dimensionality": 2, "cell geometry": "pouch"}
+        )
 
         assert {x.name for x in geometry.parameters} == {
             x.name

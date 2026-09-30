@@ -89,7 +89,11 @@ class LinearisedSPM(pybamm.lithium_ion.SPM):
     ) -> None:
         super().__init__(
             options=_compat.spm_default_options(
-                {"intercalation kinetics": "linear", **(options or {})}
+                {
+                    "intercalation kinetics": "linear",
+                    "surface form": "algebraic",
+                    **(options or {}),
+                }
             ),
             name=name,
             build=build,

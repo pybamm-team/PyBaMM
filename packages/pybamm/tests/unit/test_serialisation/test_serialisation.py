@@ -2583,7 +2583,9 @@ class TestSerializationEdgeCases:
         lists, so ``load_custom_model`` must convert lists back to tuples
         before assigning ``model.options``.
         """
-        model = pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}, build=False)
+        model = pybamm.lithium_ion.SPM(
+            {"particle phases": ("2", "1"), "surface form": "algebraic"}, build=False
+        )
 
         serialised = Serialise.serialise_custom_model(model)
         round_tripped = json.loads(json.dumps(serialised))

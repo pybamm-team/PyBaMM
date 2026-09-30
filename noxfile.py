@@ -14,6 +14,7 @@ homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "PYTHONIOENCODING": "utf-8",
     "MPLBACKEND": "Agg",
+    "PYBAMM_TEST_FORBID_LEGACY_OPTION_DEFAULTS": "1",
 }
 # Headless Linux renders VTK through OSMesa (the CI workflows install libosmesa6)
 if sys.platform.startswith("linux") and not (

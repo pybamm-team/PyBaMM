@@ -111,7 +111,9 @@ class TestFunctionControl:
         # use DFN since only DFN allows "explicit power"
         models = [
             pybamm.lithium_ion.DFN({"operating mode": "power"}),
-            pybamm.lithium_ion.DFN({"operating mode": "explicit power"}),
+            pybamm.lithium_ion.DFN(
+                {"operating mode": "explicit power", "voltage as a state": "true"}
+            ),
             pybamm.lithium_ion.DFN({"operating mode": constant_power}),
         ]
 
@@ -149,7 +151,9 @@ class TestFunctionControl:
         # use DFN since only DFN allows "explicit resistance"
         models = [
             pybamm.lithium_ion.DFN({"operating mode": "resistance"}),
-            pybamm.lithium_ion.DFN({"operating mode": "explicit resistance"}),
+            pybamm.lithium_ion.DFN(
+                {"operating mode": "explicit resistance", "voltage as a state": "true"}
+            ),
             pybamm.lithium_ion.DFN({"operating mode": constant_resistance}),
         ]
 

@@ -30,7 +30,11 @@ class BasicDFNUnstructured(BaseModel):
     """
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman model (unstructured)"):
-        options = {"dimensionality": 1, **(options or {})}
+        options = {
+            "dimensionality": 1,
+            "cell geometry": "pouch",
+            **(options or {}),
+        }
         super().__init__(options, name)
         if self.options["dimensionality"] not in (1, 2):
             raise pybamm.OptionError(

@@ -173,6 +173,7 @@ class TestDFNWithSizeDistribution:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "particle size": "distribution",
+            "surface form": "algebraic",
         }
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
         name = "Negative electrode active material volume fraction"
@@ -215,6 +216,7 @@ class TestDFNWithSizeDistribution:
             "particle size": "distribution",
             "current collector": "potential pair",
             "dimensionality": 1,
+            "cell geometry": "pouch",
         }
         model = pybamm.lithium_ion.DFN(options)
         modeltest = tests.StandardModelTest(

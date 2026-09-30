@@ -4,11 +4,13 @@
 
 import io
 import os
+import warnings
 from contextlib import redirect_stdout
 
 import pytest
 
 import pybamm
+from pybamm.models.full_battery_models import base_battery_model
 from pybamm.models.full_battery_models.base_battery_model import (
     BatteryModelDomainOptions,
     BatteryModelOptions,
@@ -27,6 +29,9 @@ OPTIONS_DICT = {
     "surface form": "differential",
     "loss of active material": "stress-driven",
     "thermal": "x-full",
+    "cell geometry": "pouch",
+    "particle mechanics": "swelling only",
+    "stress-induced diffusion": "true",
 }
 
 PRINT_OPTIONS_OUTPUT = """\
@@ -121,9 +126,9 @@ class TestBaseBatteryModel:
     def test_default_geometry(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         assert model.default_geometry["current collector"]["z"]["position"] == 1
-        model = pybamm.BaseBatteryModel({"dimensionality": 1})
+        model = pybamm.BaseBatteryModel({"dimensionality": 1, "cell geometry": "pouch"})
         assert model.default_geometry["current collector"]["z"]["min"] == 0
-        model = pybamm.BaseBatteryModel({"dimensionality": 2})
+        model = pybamm.BaseBatteryModel({"dimensionality": 2, "cell geometry": "pouch"})
         assert model.default_geometry["current collector"]["y"]["min"] == 0
 
     def test_default_submesh_types(self):
@@ -132,12 +137,12 @@ class TestBaseBatteryModel:
             model.default_submesh_types["current collector"],
             pybamm.SubMesh0D,
         )
-        model = pybamm.BaseBatteryModel({"dimensionality": 1})
+        model = pybamm.BaseBatteryModel({"dimensionality": 1, "cell geometry": "pouch"})
         assert issubclass(
             model.default_submesh_types["current collector"],
             pybamm.Uniform1DSubMesh,
         )
-        model = pybamm.BaseBatteryModel({"dimensionality": 2})
+        model = pybamm.BaseBatteryModel({"dimensionality": 2, "cell geometry": "pouch"})
         assert issubclass(
             model.default_submesh_types["current collector"],
             pybamm.ScikitUniform2DSubMesh,
@@ -176,7 +181,7 @@ class TestBaseBatteryModel:
         assert var_pts == model.default_var_pts
 
         var_pts.update({"x_n": 10, "x_s": 10, "x_p": 10})
-        model = pybamm.BaseBatteryModel({"dimensionality": 2})
+        model = pybamm.BaseBatteryModel({"dimensionality": 2, "cell geometry": "pouch"})
         assert var_pts == model.default_var_pts
 
     def test_default_spatial_methods(self):
@@ -185,11 +190,11 @@ class TestBaseBatteryModel:
             model.default_spatial_methods["current collector"],
             pybamm.ZeroDimensionalSpatialMethod,
         )
-        model = pybamm.BaseBatteryModel({"dimensionality": 1})
+        model = pybamm.BaseBatteryModel({"dimensionality": 1, "cell geometry": "pouch"})
         assert isinstance(
             model.default_spatial_methods["current collector"], pybamm.FiniteVolume
         )
-        model = pybamm.BaseBatteryModel({"dimensionality": 2})
+        model = pybamm.BaseBatteryModel({"dimensionality": 2, "cell geometry": "pouch"})
         assert isinstance(
             model.default_spatial_methods["current collector"],
             pybamm.ScikitFiniteElement,
@@ -204,7 +209,8 @@ class TestBaseBatteryModel:
             pybamm.ScikitFiniteElement3D,
         )
 
-    def test_options(self):
+    # exercises several legacy dependent defaults directly
+    def test_options(self, allow_legacy_defaults):
         with pytest.raises(pybamm.OptionError, match=r"Option"):
             pybamm.BaseBatteryModel({"bad option": "bad option"})
         with pytest.raises(
@@ -227,6 +233,7 @@ class TestBaseBatteryModel:
                     "current collector": "potential pair",
                     "dimensionality": 1,
                     "thermal": "x-full",
+                    "cell geometry": "pouch",
                 }
             )
         with pytest.raises(pybamm.OptionError, match=r"2D current collectors"):
@@ -235,6 +242,7 @@ class TestBaseBatteryModel:
                     "current collector": "potential pair",
                     "dimensionality": 2,
                     "thermal": "x-full",
+                    "cell geometry": "pouch",
                 }
             )
         with pytest.raises(pybamm.OptionError, match=r"surface form"):
@@ -600,9 +608,10 @@ class TestBaseBatteryModel:
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
         assert "Voltage [V]" in [v.name for v in model.algebraic]
 
-    def test_explicit_modes_default_voltage_as_state(self):
+    def test_explicit_modes_default_voltage_as_state(self, allow_legacy_defaults):
         for mode in ["explicit power", "explicit resistance"]:
-            options = pybamm.BatteryModelOptions({"operating mode": mode})
+            with pytest.warns(pybamm.OptionDefaultDeprecationWarning):
+                options = pybamm.BatteryModelOptions({"operating mode": mode})
             assert options["voltage as a state"] == "true"
 
     def test_explicit_modes_reject_voltage_as_state_false(self):
@@ -619,6 +628,7 @@ class TestBaseBatteryModel:
             model._constrain_voltage_to_expression()
 
 
+@pytest.mark.usefixtures("allow_legacy_defaults")
 class TestLegacyDependentDefaults:
     def test_shorthand_is_not_rewritten(self):
         options = BatteryModelOptions({"SEI": "constant"})
@@ -830,12 +840,19 @@ class TestElectrodeCompatibility:
 
     def test_partial_plating_with_sei_is_valid(self):
         BatteryModelOptions(
-            {"lithium plating": "partially reversible", "SEI": "constant"}
+            {
+                "lithium plating": "partially reversible",
+                "SEI": "constant",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            }
         )
         BatteryModelOptions(
             {
                 "lithium plating": ("none", "partially reversible"),
                 "SEI": ("none", "constant"),
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
             }
         )
 
@@ -848,8 +865,17 @@ class TestElectrodeCompatibility:
     @pytest.mark.parametrize(
         "options",
         [
-            {"lithium plating": "partially reversible"},
-            {"lithium plating": "partially reversible", "SEI": "constant"},
+            {
+                "lithium plating": "partially reversible",
+                "SEI": "constant",
+                "SEI film resistance": "none",
+            },
+            {
+                "lithium plating": "partially reversible",
+                "SEI": "constant",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            },
         ],
     )
     def test_partial_plating_processes_okane2022(self, options):
@@ -875,6 +901,8 @@ class TestElectrodeCompatibility:
                 "working electrode": "positive",
                 "lithium plating": "partially reversible",
                 "SEI": "constant",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
             }
         )
 
@@ -934,11 +962,16 @@ class TestElectrodeCompatibility:
             {
                 "particle phases": ("2", "1"),
                 "particle": ("Fickian diffusion", "uniform profile"),
+                "surface form": "algebraic",
             }
         )
         # particle-size distributions remain supported for composite electrodes
         BatteryModelOptions(
-            {"particle phases": ("2", "1"), "particle size": "distribution"}
+            {
+                "particle phases": ("2", "1"),
+                "particle size": "distribution",
+                "surface form": "algebraic",
+            }
         )
 
 
@@ -953,7 +986,9 @@ class TestOptions:
     def test_option_phases(self):
         options = BatteryModelOptions({})
         assert options.phases == {"negative": ["primary"], "positive": ["primary"]}
-        options = BatteryModelOptions({"particle phases": ("1", "2")})
+        options = BatteryModelOptions(
+            {"particle phases": ("1", "2"), "surface form": "algebraic"}
+        )
         assert options.phases == {
             "negative": ["primary"],
             "positive": ["primary", "secondary"],
@@ -971,7 +1006,13 @@ class TestOptions:
 
     def test_domain_phase_options(self):
         options = BatteryModelOptions(
-            {"particle mechanics": (("swelling only", "swelling and cracking"), "none")}
+            {
+                "particle mechanics": (
+                    ("swelling only", "swelling and cracking"),
+                    "none",
+                ),
+                "stress-induced diffusion": ("true", "false"),
+            }
         )
         assert options.negative["particle mechanics"] == (
             "swelling only",
@@ -1051,6 +1092,10 @@ class TestOptions:
             "SEI on cracks": "true",
             "lithium plating": "reversible",
             "open-circuit potential": ("Axen", "single"),
+            "SEI film resistance": "distributed",
+            "particle mechanics": ("swelling and cracking", "none"),
+            "stress-induced diffusion": ("true", "false"),
+            "total interfacial current density as a state": "true",
         }
         snapshot = dict(supplied)
         BatteryModelOptions(supplied)
@@ -1061,6 +1106,7 @@ class TestOptions:
             {
                 "particle phases": ("2", "1"),
                 "open-circuit potential": (("Axen", "Wycisk"), "Axen"),
+                "surface form": "algebraic",
             }
         )
         assert options.negative.primary["open-circuit potential"] == (
@@ -1168,6 +1214,11 @@ class TestVariableNames:
                     "SEI": "solvent-diffusion limited",
                     "lithium plating": "reversible",
                     "particle mechanics": "swelling and cracking",
+                    "cell geometry": "pouch",
+                    "surface form": "algebraic",
+                    "SEI film resistance": "distributed",
+                    "stress-induced diffusion": "true",
+                    "total interfacial current density as a state": "true",
                 },
             ),
             (pybamm.lead_acid.Full, {}),
@@ -1312,6 +1363,7 @@ class TestOptionHelpers:
         )
 
 
+@pytest.mark.usefixtures("allow_legacy_defaults")
 class TestModelDefaultOptions:
     @pytest.mark.parametrize(
         "model_class, supplied",
@@ -1456,3 +1508,138 @@ class TestModelDefaultOptions:
     def test_processed_options_are_checked_against_model(self, model_class, match):
         with pytest.raises(pybamm.OptionError, match=match):
             model_class(BatteryModelOptions({}))
+
+
+LEGACY_DEFAULT_CASES = [
+    (
+        {"SEI": "constant"},
+        {
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        },
+    ),
+    (
+        {"lithium plating": "partially reversible"},
+        {"SEI": "constant", "SEI film resistance": "none"},
+    ),
+    (
+        {"lithium plating": ("none", "partially reversible")},
+        {"SEI": ("none", "constant"), "SEI film resistance": "none"},
+    ),
+    (
+        {"loss of active material": "stress-driven"},
+        {"particle mechanics": "swelling only", "stress-induced diffusion": "true"},
+    ),
+    ({"particle mechanics": "swelling only"}, {"stress-induced diffusion": "true"}),
+    (
+        {"particle mechanics": ("swelling and cracking", "none")},
+        {"stress-induced diffusion": ("true", "false")},
+    ),
+    ({"particle phases": ("2", "1")}, {"surface form": "algebraic"}),
+    ({"dimensionality": 1}, {"cell geometry": "pouch"}),
+    ({"thermal": "x-full"}, {"cell geometry": "pouch"}),
+    ({"operating mode": "explicit power"}, {"voltage as a state": "true"}),
+]
+
+
+@pytest.mark.usefixtures("allow_legacy_defaults")
+class TestLegacyDefaultDeprecation:
+    @pytest.mark.parametrize("supplied, fired", LEGACY_DEFAULT_CASES)
+    def test_legacy_default_warns_once_with_explicit_options(self, supplied, fired):
+        with pytest.warns(pybamm.OptionDefaultDeprecationWarning) as record:
+            options = BatteryModelOptions(supplied)
+        assert len(record) == 1
+        assert str(record[0].message) == base_battery_model._legacy_default_message(
+            fired
+        )
+        # passing the named options reproduces the configuration without a warning
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", pybamm.OptionDefaultDeprecationWarning)
+            explicit = BatteryModelOptions({**supplied, **fired})
+        assert explicit == options
+
+    def test_message(self):
+        assert base_battery_model._legacy_default_message(
+            {"cell geometry": "pouch"}
+        ) == (
+            "Options were set from other options because they were not given: "
+            "{'cell geometry': 'pouch'}. Relying on these defaults is deprecated and "
+            "a future release will raise an OptionError instead. Pass these options "
+            "explicitly to keep the current behaviour."
+        )
+
+    def test_warning_points_at_caller(self):
+        with pytest.warns(pybamm.OptionDefaultDeprecationWarning) as record:
+            pybamm.lithium_ion.SPM({"SEI": "constant"})
+        assert record[0].filename == __file__
+
+    def test_forbidden_legacy_defaults_raise(self, monkeypatch):
+        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        with pytest.raises(pybamm.OptionError, match=r"'cell geometry': 'pouch'"):
+            BatteryModelOptions({"dimensionality": 1})
+
+    def test_invalid_values_precede_model_legacy_defaults(self, monkeypatch):
+        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"is not recognized in option 'intercalation kinetics'",
+        ):
+            pybamm.lithium_ion.SPM({"intercalation kinetics": "bad"})
+
+    def test_invalid_combinations_precede_legacy_defaults(self, monkeypatch):
+        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        with pytest.raises(pybamm.OptionError, match=r"X-full.*1D current collectors"):
+            BatteryModelOptions({"thermal": "x-full", "dimensionality": 1})
+
+    def test_forbidden_model_defaults_do_not_update_options(self, monkeypatch):
+        model = pybamm.lithium_ion.SPM()
+        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        with pytest.raises(pybamm.OptionError, match=r"SEI film resistance"):
+            model.options = {"SEI": "constant"}
+        assert model.options["SEI"] == "none"
+
+    def test_processed_options_do_not_warn_twice(self):
+        with pytest.warns(pybamm.OptionDefaultDeprecationWarning):
+            options = BatteryModelOptions({"SEI": "constant"})
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always", pybamm.OptionDefaultDeprecationWarning)
+            pybamm.lithium_ion.DFN(options)
+        assert record == []
+
+    def test_spm_surface_form_default_warns(self):
+        with pytest.warns(pybamm.OptionDefaultDeprecationWarning) as record:
+            model = pybamm.lithium_ion.SPM({"intercalation kinetics": "linear"})
+        assert [str(r.message) for r in record] == [
+            base_battery_model._legacy_default_message({"surface form": "algebraic"})
+        ]
+        assert model.options["surface form"] == "algebraic"
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", pybamm.OptionDefaultDeprecationWarning)
+            pybamm.lithium_ion.MPM({"intercalation kinetics": "linear"})
+
+    @pytest.mark.parametrize(
+        "build_model",
+        [
+            pybamm.lithium_ion.SPM,
+            pybamm.lithium_ion.SPMe,
+            pybamm.lithium_ion.DFN,
+            pybamm.lithium_ion.MPM,
+            pybamm.lithium_ion.NewmanTobias,
+            pybamm.lithium_ion.Yang2017,
+            pybamm.lithium_ion.BasicSPM,
+            pybamm.lithium_ion.BasicDFN,
+            pybamm.lithium_ion.BasicDFNHalfCell,
+            pybamm.lithium_ion.BasicDFNComposite,
+            pybamm.lithium_ion.BasicDFN2D,
+            pybamm.lithium_ion.BasicDFNUnstructured,
+            pybamm.lead_acid.LOQS,
+            pybamm.lead_acid.Full,
+            LithiumMetalDFN,
+            lambda: pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")}),
+            lambda: pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+        ],
+    )
+    def test_model_defaults_do_not_warn(self, build_model):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", pybamm.OptionDefaultDeprecationWarning)
+            build_model()

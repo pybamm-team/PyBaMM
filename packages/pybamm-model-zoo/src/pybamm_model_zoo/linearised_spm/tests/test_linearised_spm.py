@@ -18,13 +18,17 @@ PARTICLE_POINTS = 200
 #: Option sets `pybamm.lithium_ion.SPM` accepts, which a subclass must not break.
 INHERITED_OPTIONS = [
     {},
-    {"particle size": "distribution"},
+    {"particle size": "distribution", "surface form": "algebraic"},
     {"thermal": "lumped"},
-    {"thermal": "x-full"},
+    {"thermal": "x-full", "cell geometry": "pouch"},
     {"surface form": "differential"},
     {"working electrode": "positive"},
-    {"particle phases": ("2", "1")},
-    {"SEI": "reaction limited"},
+    {"particle phases": ("2", "1"), "surface form": "algebraic"},
+    {
+        "SEI": "reaction limited",
+        "SEI film resistance": "distributed",
+        "total interfacial current density as a state": "true",
+    },
 ]
 
 

@@ -9,7 +9,11 @@ class TestLeadAcidLOQS:
         [
             {"thermal": "isothermal"},
             {"convection": "uniform transverse"},
-            {"dimensionality": 1, "convection": "full transverse"},
+            {
+                "dimensionality": 1,
+                "convection": "full transverse",
+                "cell geometry": "pouch",
+            },
         ],
         ids=["isothermal", "with_convection", "with_convection_1plus1d"],
     )
@@ -51,6 +55,7 @@ class TestLeadAcidLOQS:
             "surface form": "differential",
             "current collector": "potential pair",
             "dimensionality": dimensionality,
+            "cell geometry": "pouch",
         }
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
@@ -87,6 +92,7 @@ class TestLeadAcidLOQSSurfaceForm:
                 "surface form": "differential",
                 "current collector": "potential pair",
                 "dimensionality": 1,
+                "cell geometry": "pouch",
             },
         ],
         ids=["differential", "algebraic", "1plus1_d"],
@@ -99,7 +105,13 @@ class TestLeadAcidLOQSSurfaceForm:
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.LOQS(options)
         assert "current collector" in model.default_geometry
-        options.update({"current collector": "potential pair", "dimensionality": 1})
+        options.update(
+            {
+                "current collector": "potential pair",
+                "dimensionality": 1,
+                "cell geometry": "pouch",
+            }
+        )
         model = pybamm.lead_acid.LOQS(options)
         assert "current collector" in model.default_geometry
 

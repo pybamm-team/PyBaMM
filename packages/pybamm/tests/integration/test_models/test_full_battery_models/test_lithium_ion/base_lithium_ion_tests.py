@@ -28,14 +28,22 @@ class BaseIntegrationTestLithiumIon:
         modeltest.test_sensitivities("Current function [A]", 0.15652)
 
     def test_basic_processing_1plus1D(self):
-        options = {"current collector": "potential pair", "dimensionality": 1}
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "cell geometry": "pouch",
+        }
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "y": 5, "z": 5}
         model = self.model(options)
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
 
     def test_basic_processing_2plus1D(self):
-        options = {"current collector": "potential pair", "dimensionality": 2}
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "cell geometry": "pouch",
+        }
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "y": 5, "z": 5}
         model = self.model(options)
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
@@ -82,7 +90,7 @@ class BaseIntegrationTestLithiumIon:
         assert T_initial == pytest.approx(T_init, rel=1e-5)
 
     def test_full_thermal(self):
-        options = {"thermal": "x-full"}
+        options = {"thermal": "x-full", "cell geometry": "pouch"}
         parameter_values = pybamm.ParameterValues("Marquis2019")
         T_init = 305.0
         parameter_values.update({"Initial temperature [K]": T_init})
@@ -179,36 +187,62 @@ class BaseIntegrationTestLithiumIon:
         self.run_basic_processing_test(options, parameter_values=param)
 
     def test_sei_reaction_limited(self):
-        options = {"SEI": "reaction limited"}
+        options = {
+            "SEI": "reaction limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.run_basic_processing_test(options)
 
     def test_sei_asymmetric_reaction_limited(self):
-        options = {"SEI": "reaction limited (asymmetric)"}
+        options = {
+            "SEI": "reaction limited (asymmetric)",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update({"SEI growth transfer coefficient": 0.2})
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_sei_solvent_diffusion_limited(self):
-        options = {"SEI": "solvent-diffusion limited"}
+        options = {
+            "SEI": "solvent-diffusion limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.run_basic_processing_test(options)
 
     def test_sei_electron_migration_limited(self):
-        options = {"SEI": "electron-migration limited"}
+        options = {
+            "SEI": "electron-migration limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.run_basic_processing_test(options)
 
     def test_sei_interstitial_diffusion_limited(self):
-        options = {"SEI": "interstitial-diffusion limited"}
+        options = {
+            "SEI": "interstitial-diffusion limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.run_basic_processing_test(options)
 
     def test_sei_ec_reaction_limited(self):
         options = {
             "SEI": "ec reaction limited",
             "SEI porosity change": "true",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
         }
         self.run_basic_processing_test(options)
 
     def test_sei_VonKolzenberg2020(self):
-        options = {"SEI": "VonKolzenberg2020"}
+        options = {
+            "SEI": "VonKolzenberg2020",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values.update(
             {
@@ -221,6 +255,8 @@ class BaseIntegrationTestLithiumIon:
     def test_sei_tunnelling_limited(self):
         options = {
             "SEI": "tunnelling limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
         }
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values.update({"Tunneling barrier factor [m-1]": 6.0e9})
@@ -230,23 +266,37 @@ class BaseIntegrationTestLithiumIon:
         options = {
             "SEI": "ec reaction limited (asymmetric)",
             "SEI porosity change": "true",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
         }
         parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update({"SEI growth transfer coefficient": 0.2})
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_loss_active_material_stress_positive(self):
-        options = {"loss of active material": ("none", "stress-driven")}
+        options = {
+            "loss of active material": ("none", "stress-driven"),
+            "particle mechanics": ("none", "swelling only"),
+            "stress-induced diffusion": ("false", "true"),
+        }
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_loss_active_material_stress_negative(self):
-        options = {"loss of active material": ("stress-driven", "none")}
+        options = {
+            "loss of active material": ("stress-driven", "none"),
+            "particle mechanics": ("swelling only", "none"),
+            "stress-induced diffusion": ("true", "false"),
+        }
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_loss_active_material_stress_both(self):
-        options = {"loss of active material": "stress-driven"}
+        options = {
+            "loss of active material": "stress-driven",
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+        }
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -255,7 +305,11 @@ class BaseIntegrationTestLithiumIon:
         self.run_basic_processing_test(options)
 
     def test_loss_active_material_stress_and_reaction(self):
-        options = {"loss of active material": "stress and reaction-driven"}
+        options = {
+            "loss of active material": "stress and reaction-driven",
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+        }
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -286,7 +340,10 @@ class BaseIntegrationTestLithiumIon:
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_negative_cracking(self):
-        options = {"particle mechanics": ("swelling and cracking", "none")}
+        options = {
+            "particle mechanics": ("swelling and cracking", "none"),
+            "stress-induced diffusion": ("true", "false"),
+        }
         parameter_values = pybamm.ParameterValues("Ai2020")
         var_pts = {
             "x_n": 20,  # negative electrode
@@ -300,7 +357,10 @@ class BaseIntegrationTestLithiumIon:
         )
 
     def test_positive_cracking(self):
-        options = {"particle mechanics": ("none", "swelling and cracking")}
+        options = {
+            "particle mechanics": ("none", "swelling and cracking"),
+            "stress-induced diffusion": ("false", "true"),
+        }
         parameter_values = pybamm.ParameterValues("Ai2020")
         var_pts = {
             "x_n": 20,  # negative electrode
@@ -314,7 +374,10 @@ class BaseIntegrationTestLithiumIon:
         )
 
     def test_both_cracking(self):
-        options = {"particle mechanics": "swelling and cracking"}
+        options = {
+            "particle mechanics": "swelling and cracking",
+            "stress-induced diffusion": "true",
+        }
         parameter_values = pybamm.ParameterValues("Ai2020")
         var_pts = {
             "x_n": 20,  # negative electrode
@@ -328,7 +391,10 @@ class BaseIntegrationTestLithiumIon:
         )
 
     def test_both_swelling_only(self):
-        options = {"particle mechanics": "swelling only"}
+        options = {
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+        }
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
@@ -365,6 +431,7 @@ class BaseIntegrationTestLithiumIon:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "surface form": "algebraic",
         }
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
         name = "Negative electrode active material volume fraction"
@@ -380,6 +447,9 @@ class BaseIntegrationTestLithiumIon:
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "SEI": "ec reaction limited",
             "SEI porosity change": "true",
+            "SEI film resistance": "distributed",
+            "surface form": "algebraic",
+            "total interfacial current density as a state": "true",
         }
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
         name = "Negative electrode active material volume fraction"
@@ -395,6 +465,7 @@ class BaseIntegrationTestLithiumIon:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "thermal": "lumped",
+            "surface form": "algebraic",
         }
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
         chen = pybamm.ParameterValues("Chen2020")
@@ -455,6 +526,7 @@ class BaseIntegrationTestLithiumIon:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "lithium plating": "irreversible",
+            "surface form": "algebraic",
         }
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
 
@@ -544,6 +616,9 @@ class BaseIntegrationTestLithiumIon:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "loss of active material": "stress-driven",
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+            "surface form": "algebraic",
         }
 
         # taken from Ai2020
@@ -623,6 +698,7 @@ class BaseIntegrationTestLithiumIon:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "loss of active material": "reaction-driven",
+            "surface form": "algebraic",
         }
 
         # taken from Ai2020

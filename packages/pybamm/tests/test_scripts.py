@@ -20,5 +20,7 @@ class TestExamples:
 
     @pytest.mark.parametrize("files", list_of_files())
     @pytest.mark.scripts
-    def test_example_scripts(self, files):
+    def test_example_scripts(self, files, capsys):
         runpy.run_path(str(files))
+        if files.name == "print_model_parameter_combinations.py":
+            assert "Options were set from other options" not in capsys.readouterr().out

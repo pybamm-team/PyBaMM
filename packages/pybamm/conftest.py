@@ -3,6 +3,9 @@ import os
 # Forbid symbol mutation in this process and its children; must precede pybamm.
 os.environ["PYBAMM_TEST_FORBID_SYMBOL_MUTATION"] = "1"
 
+# Forbid dependent option defaults so PyBaMM's own code and tests stay explicit.
+os.environ["PYBAMM_TEST_FORBID_LEGACY_OPTION_DEFAULTS"] = "1"
+
 import numpy as np
 import pytest
 from hypothesis import settings as hypothesis_settings
@@ -76,3 +79,11 @@ def set_debug_value():
 @pytest.fixture(autouse=True)
 def disable_telemetry():
     pybamm.telemetry.disable()
+
+
+@pytest.fixture
+def allow_legacy_defaults(monkeypatch):
+    """Let a test rely on legacy dependent option defaults."""
+    from pybamm.models.full_battery_models import base_battery_model
+
+    monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", False)
