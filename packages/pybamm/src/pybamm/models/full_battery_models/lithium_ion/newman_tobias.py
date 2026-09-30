@@ -20,13 +20,12 @@ class NewmanTobias(DFN):
 
     """
 
+    def _model_default_options(self, supplied):
+        # Other default options are those given in `pybamm.BatteryModelOptions`
+        # defined in `base_battery_model.py`.
+        return {"particle": "uniform profile"}
+
     def __init__(self, options=None, name="Newman-Tobias model", build=True):
-        # Set default option "uniform profile" for particle submodel. Other
-        # default options are those given in `pybamm.BatteryModelOptions` defined in
-        # `base_battery_model.py`.
-        options = options or {}
-        if "particle" not in options:
-            options["particle"] = "uniform profile"
         self.x_average = True
 
         super().__init__(options, name, build)

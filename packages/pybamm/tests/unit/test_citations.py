@@ -254,6 +254,22 @@ class TestCitations:
         assert "BrosaPlanella2022" in citations._citation_tags
         citations._reset()
 
+    @pytest.mark.parametrize(
+        "options, cited",
+        [
+            ({"SEI": "reaction limited"}, True),
+            ({"lithium plating": "irreversible"}, True),
+            ({"SEI": "constant"}, False),
+            ({"SEI": ("none", "constant")}, False),
+        ],
+    )
+    def test_brosaplanella_2022_per_electrode(self, options, cited):
+        citations = pybamm.citations
+        citations._reset()
+        pybamm.lithium_ion.SPM(build=False, options=options)
+        assert ("BrosaPlanella2022" in citations._papers_to_cite) == cited
+        citations._reset()
+
     def test_VonKolzenberg_2020(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations

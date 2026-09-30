@@ -75,7 +75,7 @@ class TestMPM:
             pybamm.lithium_ion.MPM(options)
 
     def test_nonspherical_particle_not_implemented(self):
-        options = {"particle shape": "user"}
+        options = {"particle shape": "no particles"}
         with pytest.raises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 

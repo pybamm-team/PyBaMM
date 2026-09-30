@@ -54,6 +54,24 @@ class TestBaseLithiumIonModel:
             model.calc_esoh = "Yes"
 
     @pytest.mark.parametrize(
+        "phases, calc_esoh", [(("2", "1"), False), (("1", "1"), True)]
+    )
+    def test_calc_esoh_per_electrode_phases(self, phases, calc_esoh):
+        model = pybamm.lithium_ion.SPM({"particle phases": phases})
+        assert model.calc_esoh is calc_esoh
+
+    @pytest.mark.parametrize(
+        "options, explicit",
+        [({}, True), ({"SEI": ("reaction limited", "none")}, False)],
+    )
+    def test_half_cell_counter_electrode_reads_its_own_sei(self, options, explicit):
+        model = pybamm.lithium_ion.DFN({"working electrode": "positive", **options})
+        submodel = model.submodels["negative electrode potential"]
+        assert (
+            isinstance(submodel, pybamm.electrode.ohm.LithiumMetalExplicit) is explicit
+        )
+
+    @pytest.mark.parametrize(
         "options",
         [
             {},
@@ -103,4 +121,24 @@ class TestBaseLithiumIonModel:
         assert isinstance(
             model.submodels["positive primaryparticle mechanics"],
             pybamm.particle_mechanics.NoMechanics,
+        )
+
+    def test_per_phase_sei_on_cracks(self):
+        model = pybamm.lithium_ion.DFN(
+            options={
+                "particle phases": ("2", "1"),
+                "particle mechanics": (
+                    ("swelling and cracking", "swelling and cracking"),
+                    "none",
+                ),
+                "SEI": (("none", "solvent-diffusion limited"), "none"),
+                "SEI on cracks": "true",
+                "SEI porosity change": "true",
+            }
+        )
+        assert isinstance(
+            model.submodels["negative primary sei on cracks"], pybamm.sei.NoSEI
+        )
+        assert isinstance(
+            model.submodels["negative secondary sei on cracks"], pybamm.sei.SEIGrowth
         )

@@ -11,10 +11,7 @@ Validated to catch the regression shape behind #5495 (bool->int coercion),
 
 from __future__ import annotations
 
-import ast
-import inspect
 import json
-import textwrap
 import warnings
 from datetime import datetime
 
@@ -29,7 +26,10 @@ from pybamm.expression_tree.operations.serialise import (
     convert_symbol_from_json,
     convert_symbol_to_json,
 )
-from pybamm.models.full_battery_models.base_battery_model import BatteryModelOptions
+from pybamm.models.full_battery_models.base_battery_model import (
+    _PER_ELECTRODE_OPTIONS,
+    BatteryModelOptions,
+)
 from tests.unit.test_serialisation._helpers import (
     _experiments_equal,
     _solver_init_args_equal,
@@ -528,8 +528,8 @@ _STRING_OPTION_KEYS = sorted(
     key for key, values in _STRING_VALUES.items() if key != "dimensionality" and values
 )
 
-# Options accepting a 2-tuple of strings; mirrors the list in BatteryModelOptions
-# (test_tuple_capable_keys_match_validation_source guards drift).
+# Options accepting a 2-tuple of strings; mirrors ``_PER_ELECTRODE_OPTIONS`` in
+# base_battery_model.py (test_tuple_capable_keys_match_validation_source guards drift).
 _TUPLE_CAPABLE_KEYS = frozenset(
     {
         "diffusivity",
@@ -619,29 +619,13 @@ def valid_option_dicts(draw):
 
 
 def test_tuple_capable_keys_match_validation_source():
-    """``_TUPLE_CAPABLE_KEYS`` must match the tuple-capable list in
-    BatteryModelOptions -- AST-extracted so it can't silently drift.
+    """``_TUPLE_CAPABLE_KEYS`` must match ``_PER_ELECTRODE_OPTIONS``, the single
+    source of truth ``BatteryModelOptions`` validates tuple shapes against.
     """
-    tree = ast.parse(textwrap.dedent(inspect.getsource(BatteryModelOptions)))
-    candidates = [
-        {
-            elt.value
-            for elt in node.elts
-            if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
-        }
-        for node in ast.walk(tree)
-        if isinstance(node, ast.List)
-    ]
-    # The tuple-capable list is the one literal containing these marker keys.
-    matches = [c for c in candidates if {"particle phases", "SEI on cracks"} <= c]
-    assert len(matches) == 1, (
-        "Could not uniquely locate the tuple-capable option list in "
-        "BatteryModelOptions source; update the extraction in this test."
-    )
-    assert matches[0] == set(_TUPLE_CAPABLE_KEYS), (
+    assert set(_TUPLE_CAPABLE_KEYS) == set(_PER_ELECTRODE_OPTIONS), (
         "Tuple-capable options in pybamm have changed. Update "
         "_TUPLE_CAPABLE_KEYS so option fuzzing keeps generating tuple values "
-        f"for every such key. Source: {sorted(matches[0])}, "
+        f"for every such key. Source: {sorted(_PER_ELECTRODE_OPTIONS)}, "
         f"test constant: {sorted(_TUPLE_CAPABLE_KEYS)}."
     )
     assert _TUPLE_CAPABLE_KEYS <= set(_POSSIBLE_OPTIONS), (

@@ -1,50 +1,31 @@
 import re
 
 import pybamm
+from pybamm.models.full_battery_models.base_battery_model import option_values_match
 
 from .dfn import DFN
 
 
 class MSMR(DFN):
-    def __init__(self, options=None, name="MSMR", build=True):
-        # Necessary/default options
-        options = options or {}
-        if "number of MSMR reactions" not in options:
+    def _model_default_options(self, supplied):
+        if "number of MSMR reactions" not in supplied:
             raise pybamm.OptionError(
                 "number of MSMR reactions must be specified for MSMR"
             )
-        if (
-            "open-circuit potential" in options
-            and options["open-circuit potential"] != "MSMR"
-        ):
-            raise pybamm.OptionError(
-                "'open-circuit potential' must be 'MSMR' for MSMR not '{}'".format(
-                    options["open-circuit potential"]
+        for option in ["open-circuit potential", "particle", "intercalation kinetics"]:
+            if option in supplied and not option_values_match(
+                option, supplied[option], "MSMR"
+            ):
+                raise pybamm.OptionError(
+                    f"'{option}' must be 'MSMR' for MSMR not '{supplied[option]}'"
                 )
-            )
-        elif "particle" in options and options["particle"] != "MSMR":
-            raise pybamm.OptionError(
-                "'particle' must be 'MSMR' for MSMR not '{}'".format(
-                    options["particle"]
-                )
-            )
-        elif (
-            "intercalation kinetics" in options
-            and options["intercalation kinetics"] != "MSMR"
-        ):
-            raise pybamm.OptionError(
-                "'intercalation kinetics' must be 'MSMR' for MSMR not '{}'".format(
-                    options["intercalation kinetics"]
-                )
-            )
-        else:
-            options.update(
-                {
-                    "open-circuit potential": "MSMR",
-                    "particle": "MSMR",
-                    "intercalation kinetics": "MSMR",
-                }
-            )
+        return {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "intercalation kinetics": "MSMR",
+        }
+
+    def __init__(self, options=None, name="MSMR", build=True):
         super().__init__(options=options, name=name)
 
     @property
