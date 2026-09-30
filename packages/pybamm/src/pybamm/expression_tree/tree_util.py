@@ -104,7 +104,7 @@ def _hashable(value: Any):
     return value
 
 
-def leaves_of(symbol: pybamm.Symbol) -> list[pybamm.Symbol]:
+def leaves_of(symbol: pybamm.Symbol) -> Sequence[pybamm.Symbol]:
     """The symbols ``symbol`` directly depends on, children first."""
     leaf_fields = layout(type(symbol))[0]
     if len(leaf_fields) == 1:

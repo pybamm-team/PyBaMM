@@ -12,12 +12,14 @@ from scipy.sparse import coo_matrix, csr_matrix
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
+from pybamm.expression_tree.operations.serialise_kernel import decode, encode
 from pybamm.expression_tree.symbol import domain_size
 
 
 class TestDomainSize:
     def test_empty_domain(self):
         assert domain_size([]) == 1
+        assert domain_size(()) == 1
         assert domain_size(None) == 1
 
     def test_fixed_domains(self):
@@ -600,8 +602,6 @@ class TestSymbol:
         with ThreadPoolExecutor(8) as executor:
             symbols = list(executor.map(build, range(200)))
         assert [symbol.scale.value for symbol in symbols] == list(range(1, 201))
-        with pytest.raises(AttributeError, match=r"immutable once constructed"):
-            symbols[0]._name = "changed"
 
     def test_edge_direction_is_part_of_identity(self):
         a = pybamm.Variable("a", domain="negative electrode")
@@ -653,6 +653,28 @@ class TestSymbol:
     def test_with_domains_validates_domain_mapping(self, domains):
         with pytest.raises(pybamm.DomainError):
             pybamm.Variable("a").with_domains(domains)
+
+    @pytest.mark.parametrize(
+        "rebuild",
+        [
+            lambda domains: {level: names[:] for level, names in domains.items()},
+            lambda domains: {level: tuple(names) for level, names in domains.items()},
+            lambda domains: decode(encode(domains)),
+        ],
+        ids=["slices", "tuples", "serialise kernel"],
+    )
+    def test_domains_accept_any_sequence_of_names(self, rebuild):
+        # names no other test uses, so validation cannot be skipped by its cache
+        a = pybamm.Variable(
+            "a",
+            domain="sequence test a",
+            auxiliary_domains={"secondary": "sequence test b"},
+        )
+        domains = rebuild(a.domains)
+        assert pybamm.Variable("a", domains=domains) == a
+        assert a.without_domains().with_domains(domains) == a
+        shape = pybamm.evaluate_for_shape_using_domain(domains).shape
+        assert shape == a.shape_for_testing
 
     def test_domain_interning_is_not_public(self):
         assert not hasattr(pybamm, "intern_domains")

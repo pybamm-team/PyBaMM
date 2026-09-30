@@ -341,7 +341,7 @@ class ParameterSubstitutor:
             if node in placeholders:
                 return new_node.with_domains(placeholders[node])
             return new_node.with_domains(
-                new_node.get_children_domains(new_node.children)
+                new_node._combine_children_domains(new_node.children)
             )
 
         expression = pybamm.tree_map(rebind_domains, expression)
