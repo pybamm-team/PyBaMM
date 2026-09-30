@@ -894,6 +894,11 @@ class TestIDAKLUSolver:
                 with pytest.raises(ValueError):
                     _ = solver.solve(model, t_eval, t_interp=t_interp)
 
+    def test_an_unknown_option_is_rejected(self):
+        # Merging a misspelt key through leaves the caller on the default.
+        with pytest.raises(pybamm.SolverError, match=r"Unknown IDAKLU solver option"):
+            pybamm.IDAKLUSolver(options={"num_thread": 4})
+
     def test_solver_options(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")

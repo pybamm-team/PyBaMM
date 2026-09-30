@@ -5,6 +5,7 @@ import importlib.metadata as importlib_metadata
 import re
 import socket
 
+import numpy as np
 from scipy.sparse import eye
 
 import pybamm
@@ -529,3 +530,81 @@ def get_cylindrical_mesh_for_testing_symbolic():
     var_pts = {cylindrical_r: 15}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
     return mesh
+
+
+def get_symbolic_length_discretisation_for_testing(
+    radius, electrode_length=None, coord_sys="spherical polar", spatial_method=None
+):
+    """
+    A "particle" domain with an "electrode" secondary domain, where a length that is
+    not a :class:`pybamm.Scalar` is meshed with a symbolic uniform submesh.
+    ``spatial_method`` discretises the particle, and defaults to finite volumes.
+    """
+    if electrode_length is None:
+        electrode_length = pybamm.Scalar(1)
+    if spatial_method is None:
+        spatial_method = pybamm.FiniteVolume()
+    r = pybamm.SpatialVariable(
+        "r",
+        ["particle"],
+        auxiliary_domains={"secondary": "electrode"},
+        coord_sys=coord_sys,
+    )
+    x = pybamm.SpatialVariable("x", ["electrode"], coord_sys="cartesian")
+    geometry = {
+        "particle": {r: {"min": pybamm.Scalar(0), "max": radius}},
+        "electrode": {x: {"min": pybamm.Scalar(0), "max": electrode_length}},
+    }
+
+    def submesh_type(length):
+        if isinstance(length, pybamm.Scalar):
+            return pybamm.Uniform1DSubMesh
+        return pybamm.SymbolicUniform1DSubMesh
+
+    submesh_types = {
+        "particle": submesh_type(radius),
+        "electrode": submesh_type(electrode_length),
+    }
+    mesh = pybamm.Mesh(geometry, submesh_types, {r: 6, x: 3})
+    spatial_methods = {"particle": spatial_method, "electrode": pybamm.FiniteVolume()}
+    return pybamm.Discretisation(mesh, spatial_methods)
+
+
+def assert_constant_matrix_factors(symbol):
+    """
+    Check that every Kronecker product, and the left side of every matrix product,
+    in ``symbol`` is constant.
+    """
+    for node in symbol.pre_order():
+        if isinstance(node, pybamm.KroneckerProduct):
+            assert node.is_constant(), node
+        if isinstance(node, pybamm.MatrixMultiplication):
+            assert node.left.is_constant(), node
+
+
+def assert_symbolic_mesh_matches_numeric(
+    symbolic, numeric, y, inputs, check_jacobian=True
+):
+    """
+    Check that ``symbolic``, discretised on a mesh with a symbolic length, keeps its
+    matrix factors constant and agrees with ``numeric``, discretised on the equivalent
+    fixed mesh, in value, through the Python evaluator and (if ``check_jacobian``) in
+    its Jacobian.
+    """
+    assert_constant_matrix_factors(symbolic)
+    expected = numeric.evaluate(0, y)
+    tolerance = {"rtol": 1e-12, "atol": 1e-12}
+    np.testing.assert_allclose(
+        symbolic.evaluate(0, y, inputs=inputs), expected, **tolerance
+    )
+    np.testing.assert_allclose(
+        pybamm.EvaluatorPython(symbolic)(0, y, inputs), expected, **tolerance
+    )
+    if not check_jacobian:
+        return
+    state = pybamm.StateVector(slice(0, y.shape[0]))
+    np.testing.assert_allclose(
+        symbolic.jac(state).evaluate(0, y, inputs=inputs).toarray(),
+        numeric.jac(state).evaluate(0, y).toarray(),
+        **tolerance,
+    )
