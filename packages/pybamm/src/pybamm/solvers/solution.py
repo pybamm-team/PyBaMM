@@ -104,6 +104,22 @@ class SolutionBase:
         self.solve_time = None
         self._data = pybamm.FuzzyDict()
 
+    def __setstate__(self, state: dict | tuple) -> None:
+        """Restore a pickled solution.
+
+        Parameters
+        ----------
+        state : dict or tuple
+            The ``(instance dict, slots)`` pair a solution pickles, or the
+            single dict of a solution pickled before solutions had slots.
+        """
+        # A plain dict would otherwise go into __dict__, where slots hide it
+        if isinstance(state, tuple):
+            instance_state, slot_state = state
+            state = {**(instance_state or {}), **(slot_state or {})}
+        for name, value in state.items():
+            setattr(self, name, value)
+
     def __getitem__(self, key):
         """Access a variable by name."""
         return self._data[key]
@@ -458,26 +474,17 @@ class Solution(SolutionBase):
         pybamm.citations.register("Andersson2019")
 
     def __setstate__(self, state: dict | tuple) -> None:
-        """Restore a pickled solution.
-
-        Parameters
-        ----------
-        state : dict or tuple
-            The ``(instance dict, slots)`` pair a solution pickles, or the
-            single dict of a solution pickled before ``Solution`` had slots.
-        """
         # An older pickle may lack attributes added since, and caches the
         # first and last states under their property names
         self.solver_statistics = None
         self._first_state = None
         self._last_state = None
-        if isinstance(state, tuple):
-            instance_state, slot_state = state
-            state = {**(instance_state or {}), **(slot_state or {})}
-        for name, value in state.items():
-            if name in ("first_state", "last_state"):
-                name = f"_{name}"
-            setattr(self, name, value)
+        if isinstance(state, dict):
+            state = {
+                f"_{name}" if name in ("first_state", "last_state") else name: value
+                for name, value in state.items()
+            }
+        super().__setstate__(state)
 
     def has_sensitivities(self) -> bool:
         return len(self._all_sensitivities) > 0
