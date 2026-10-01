@@ -7,8 +7,7 @@
 # sandboxed runner — never in the trusted context that holds the key.
 name: Benchmarks (PR)
 
-# Drafts are skipped to save Bencher's daily bandwidth quota; `ready_for_review`
-# then benchmarks a PR as soon as it leaves draft.
+# Drafts are skipped to save Bencher's bandwidth quota
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -90,8 +89,7 @@ jobs:
         with:
           cache-binary: false
 
-      # Reads main's layer cache so unchanged layers keep main's digests and
-      # benchmarks_track.yml's push skips them. Writing PR caches would evict others.
+      # Reuse, but don't write, main's layer cache so unchanged layers aren't re-pushed
       - name: Build benchmark image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -102,7 +100,7 @@ jobs:
           cache-from: type=gha,scope=benchmark-image
           outputs: type=oci,dest=benchmark-image.tar,name=pybamm-benchmarks:pr,compression=zstd,compression-level=19,force-compression=true
 
-      # The layers are already zstd, so the upload action's zip would gain nothing.
+      # Layers are already zstd-compressed
       - name: Upload benchmark image
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

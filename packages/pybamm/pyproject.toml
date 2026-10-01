@@ -94,8 +94,7 @@ docs = [
     "sphinx-gallery",
     "sphinx-docsearch",
 ]
-# Just enough to collect and run the benchmarks, so the Bencher image
-# (tests/benchmarks/Dockerfile) carries none of the other dev tooling.
+# Benchmark-only dependencies, kept out of dev so the Bencher image stays small
 bench = [
     "pytest>=9.0",
     "pytest-xdist",

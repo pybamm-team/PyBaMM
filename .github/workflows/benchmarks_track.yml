@@ -89,8 +89,7 @@ jobs:
           printf '%s' "$BENCHER_API_KEY" \
             | skopeo login "$BENCHER_REGISTRY" --username "$BENCHER_PROJECT" --password-stdin
 
-      # skopeo pushes the OCI archive's zstd blobs as built and skips any the
-      # registry already holds; `docker load` + push would re-gzip every layer.
+      # skopeo pushes the zstd layers as built; `docker load` + push would re-gzip them
       - name: Push benchmark image
         if: steps.artifact.outputs.found == 'true'
         run: |

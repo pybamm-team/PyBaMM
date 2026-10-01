@@ -5,8 +5,7 @@
 # benchmarks touch must already be in this image. Nothing here may resolve a
 # dependency, download parameter data, or phone home at run time.
 #
-# Pushes and every job's pull share a daily registry bandwidth quota: ship only
-# what the benchmarks run, with source last so cached dependency layers dedupe.
+# Kept small for Bencher's bandwidth quota, with source last to reuse cached layers.
 
 # Pinned by digest (Dependabot bumps it)
 FROM python:3.13-slim-bookworm@sha256:2325bb286ec344af3e5898cc224b5844e2707ac6e26b1632516fd3edc84a5e26 AS base
@@ -28,7 +27,7 @@ ENV VIRTUAL_ENV=/opt/venv \
     PYBAMM_DISABLE_TELEMETRY=true \
     UV_NO_CACHE=1
 
-# the final stage takes only the locked requirements and solver
+# The final stage takes only the locked requirements and solver wheel
 FROM base AS inputs
 COPY --from=ghcr.io/astral-sh/uv:0.9.7 /uv /bin/uv
 WORKDIR /src
@@ -48,8 +47,7 @@ RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     uv venv "$VIRTUAL_ENV" \
     && uv pip install --no-deps --requirement /tmp/requirements.txt
 
-# The in-repo solver wheel CI drops in solver-wheels/, as noxfile.install_locked
-# does, so the benchmarks measure the solver this commit ships.
+# Install the in-repo solver wheel staged by the inputs stage, if CI built one
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     --mount=type=bind,from=inputs,source=/inputs/wheel,target=/tmp/wheel \
     for wheel in /tmp/wheel/*.whl; do \
@@ -59,8 +57,7 @@ RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
 COPY packages/pybamm /pybamm/packages/pybamm
 WORKDIR /pybamm/packages/pybamm
 
-# Local builds without the wheel fall back to the PyPI solver (the submodules are
-# outside the build context); `uv pip check` rejects a wheel pybamm's pin excludes.
+# Local builds fall back to the PyPI solver; `uv pip check` catches a mismatched wheel
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.7,source=/uv,target=/bin/uv \
     if python -c "import importlib.metadata as m; m.version('pybammsolvers')" 2>/dev/null; then \
       uv pip install --no-deps --editable . && uv pip check; \

@@ -13,7 +13,7 @@ updates:
     cooldown:
       default-days: 7
 
-  # The benchmark image's digest-pinned base, so Bencher baselines move only here
+  # Benchmark image's digest-pinned base
   - package-ecosystem: "docker"
     directory: "/packages/pybamm/tests/benchmarks"
     schedule:

@@ -9,8 +9,7 @@
 # PR benchmarks live in benchmarks_pr.yml / benchmarks_track.yml, which are split
 # in two so that fork code never runs in a context holding the API key.
 #
-# Pushes track the core suite. The slow_bench sweeps each need a whole 5 minute
-# Bencher job and another image pull, so they run on a weekday schedule instead.
+# Pushes run the core suite; the slow_bench sweeps run on a weekday schedule.
 name: Benchmarks (main)
 
 on:
@@ -82,8 +81,7 @@ jobs:
           printf '%s' "$BENCHER_API_KEY" \
             | docker login "$BENCHER_REGISTRY" --username "$BENCHER_PROJECT" --password-stdin
 
-      # Pushes and bare metal pulls share Bencher's daily bandwidth quota. Cached
-      # layers keep their digests, so the registry skips them; zstd shrinks pulls.
+      # Cached layers keep their digests, so the push skips unchanged layers
       - name: Build and push benchmark image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -112,8 +110,7 @@ jobs:
     steps:
       - uses: bencherdev/bencher@f80847436d7157936b40525db4c2a1064124f04a # v0.6.13
 
-      # Fewer rounds keep each sweep inside the 5 minute job limit; most of its
-      # time is untimed model building, which no round setting can shorten.
+      # Fewer rounds keep each sweep inside Bencher's 5 minute job limit
       - name: Track main branch benchmarks with Bencher
         env:
           BENCHER_API_KEY: ${{ secrets.BENCHER }}
