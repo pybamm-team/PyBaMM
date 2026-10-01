@@ -3,6 +3,7 @@
 ## Breaking changes
 
 - `Symbol.children`, `Symbol.domain` (and `secondary_domain`, `tertiary_domain`, `quaternary_domain`) and `FunctionParameter.input_names` return immutable tuples that compare equal to lists, and `Symbol.domains` returns a read-only copy, as do `to_json()`, `get_children_domains()`, `read_domain_or_domains()` and `pybamm.EMPTY_DOMAINS`. Editing them raises `TypeError` instead of emitting `SymbolMutationDeprecationWarning`, and not even `list` or `dict` methods can change a symbol through them. This ends the deprecation of these edits early; before 26.9 they left the symbol's identity stale. The sequences are no longer `list` instances and slicing them gives a plain tuple; tuples are accepted wherever domains are given. Build a new symbol with `with_domains`, `create_copy(new_children=...)` or `pybamm.replace`. The deprecated setters (`name`, `domains`, `scale`, ...) are unchanged. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
+- `Solution` and `EISSolution` no longer have an instance `__dict__`, so attributes they do not define cannot be attached to them. Subclass `pybamm.Solution` to add attributes. A solution pickled with an attached attribute still loads, without that attribute and with a logged warning. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
 
 ## Deprecated
 
@@ -19,10 +20,12 @@
 - `IDAKLUSolver`'s `print_stats` with an iterative linear solver and `preconditioner="none"` no longer reports a garbage "Number of calls to residual function in preconditioner": without a BBD preconditioner, SUNDIALS read that count out of the model's own data. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - Discretising a model whose differential variables are all scalars or on zero-dimensional domains (such as a lumped current collector) no longer raises SciPy 1.18's `block_diag` `DeprecationWarning`, and its mass matrix stays a sparse matrix rather than becoming a sparse array once SciPy changes `block_diag`'s return type. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - The CI test matrix now installs every dependency from `uv.lock`, as local nox sessions do, instead of resolving the latest releases, so only the prebuilt `pybammsolvers` wheel is installed outside the lock. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
+- An editable `pybammsolvers` install, such as the one `uv sync` creates, can be imported on its own: `import pybammsolvers` no longer fails to load `libcasadi` unless `casadi` was imported first. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
 
 ## Optimizations
 
-- CI installs TeXLive only for the unit, coverage and example-notebook sessions, the ones that render `latexify` output, and skips its recommended packages, cutting the download from the Ubuntu mirror by more than half. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- CI installs TeXLive only for the unit, coverage and example-notebook sessions, the ones that render `latexify` output, and skips its recommended packages, cutting the download from the Ubuntu mirror by more than half. ([#5832](https://github.com/pybamm-team/PyBaMM/pull/5832))
+- `Solution` stores its attributes in `__slots__`, so an experiment, which keeps four solutions per step, retains about 40% less memory per step on Python 3.13. Solutions pickled by earlier versions still load. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
 - Symbol mutation is no longer guarded by intercepting every attribute write, and `children` and `domain` return the stored immutable sequences instead of building a view on each access. Writes to a symbol's slots after construction are instead rejected by a static check of PyBaMM's code, tests, examples and documentation. Under the test suite's mutation guard, constructing an expression is twice as fast and parameterising it is 25% faster, which recovers most of the `test_parameterise` benchmark regression from [#5779](https://github.com/pybamm-team/PyBaMM/pull/5779). ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
 
 # [v26.9.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.9.0.0) - 2026-09-28
