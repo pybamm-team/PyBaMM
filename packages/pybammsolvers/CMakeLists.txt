@@ -205,6 +205,11 @@ if (${USE_PYTHON_CASADI})
                 "${SuiteSparse_ROOT}/lib64"
             )
         endif()
+        # An editable install loads idaklu from the build tree, which has no
+        # ../casadi, so it also searches the environment's CasADi directory
+        if (SKBUILD_STATE STREQUAL "editable")
+            list(APPEND IDAKLU_INSTALL_RPATH "${CASADI_LIB_DIR}")
+        endif()
         set_target_properties(idaklu PROPERTIES
             INSTALL_RPATH "${IDAKLU_INSTALL_RPATH}"
             BUILD_WITH_INSTALL_RPATH TRUE
