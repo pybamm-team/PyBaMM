@@ -8,8 +8,7 @@
 # Pushes and every job's pull share a daily registry bandwidth quota: ship only
 # what the benchmarks run, with source last so cached dependency layers dedupe.
 
-# Pinned by digest (Dependabot bumps it): a retag would miss every cached layer
-# and swap the interpreter under the benchmarks.
+# Pinned by digest (Dependabot bumps it)
 FROM python:3.13-slim-bookworm@sha256:2325bb286ec344af3e5898cc224b5844e2707ac6e26b1632516fd3edc84a5e26 AS base
 
 # libgomp is the OpenMP runtime the IDAKLU solver links against; the manylinux
@@ -20,8 +19,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 gcc libc6-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# No telemetry (the runner has no network) and no baked-in bytecode, which a
-# fresh runner VM per job would never reuse.
+# No telemetry (the runner has no network) and no baked-in bytecode
 ENV VIRTUAL_ENV=/opt/venv \
     PATH=/opt/venv/bin:$PATH \
     PYTHONIOENCODING=utf-8 \
@@ -30,8 +28,7 @@ ENV VIRTUAL_ENV=/opt/venv \
     PYBAMM_DISABLE_TELEMETRY=true \
     UV_NO_CACHE=1
 
-# Never shipped: the final stage takes only the locked requirements and solver
-# wheel from here, so its layers are cached on their contents alone.
+# the final stage takes only the locked requirements and solver
 FROM base AS inputs
 COPY --from=ghcr.io/astral-sh/uv:0.9.7 /uv /bin/uv
 WORKDIR /src
