@@ -8,6 +8,18 @@
 
 - Setting `Array.entries_string` or `Interpolant.entries_string`, and calling `StateVector.set_evaluation_array`, are in-place symbol updates and now emit `SymbolMutationDeprecationWarning`. Construct a new symbol instead. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
 
+## Features
+
+- `Solution.solver_statistics` reports the integrator's step, linear-solver-setup, nonlinear-iteration, nonlinear-failure and error-test-failure counts as a `pybamm.SolverStatistics` dataclass. `IDAKLUSolver` fills it for every solution, counting across `t_eval` breakpoints and separately for each input set, and the counts are summed when solutions are combined, so a stepped or experiment solution reports its total, including the cycles that `save_at_cycles` does not keep. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
+- A multi-input `IDAKLUSolver` solve now hands each thread its next input set as soon as it is free, instead of splitting the sets into equal static blocks plus a serial remainder solved on the calling thread, so a heterogeneous sweep (for example a current sweep whose high currents stop early on a voltage cut-off) no longer waits on its slowest block. A failing set no longer hides the others: the `SolverError` names every set that failed, whether it failed from the start or part-way through, each prefixed `input set N: `, and a single-set solve's message now starts with `input set 0: `. Each `on_failure="warn"` warning names its set the same way. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
+
+## Bug fixes
+
+- A per-state `atol` given to `IDAKLUSolver` (or as `model.atol`) can now be a list, tuple or array, so it survives a `to_config`/`from_config` round trip, which returns a JSON list. One without exactly one value per state is rejected with a `SolverError` instead of reaching the integrator, as are booleans, even one among numbers such as `[True, 1e-6]`, and non-real values. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
+- `IDAKLUSolver`'s `print_stats` with an iterative linear solver and `preconditioner="none"` no longer reports a garbage "Number of calls to residual function in preconditioner": without a BBD preconditioner, SUNDIALS read that count out of the model's own data. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
+- Discretising a model whose differential variables are all scalars or on zero-dimensional domains (such as a lumped current collector) no longer raises SciPy 1.18's `block_diag` `DeprecationWarning`, and its mass matrix stays a sparse matrix rather than becoming a sparse array once SciPy changes `block_diag`'s return type. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
+- The CI test matrix now installs every dependency from `uv.lock`, as local nox sessions do, instead of resolving the latest releases, so only the prebuilt `pybammsolvers` wheel is installed outside the lock. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
+
 ## Optimizations
 
 - Symbol mutation is no longer guarded by intercepting every attribute write, and `children` and `domain` return the stored immutable sequences instead of building a view on each access. Writes to a symbol's slots after construction are instead rejected by a static check of PyBaMM's code, tests, examples and documentation. Under the test suite's mutation guard, constructing an expression is twice as fast and parameterising it is 25% faster, which recovers most of the `test_parameterise` benchmark regression from [#5779](https://github.com/pybamm-team/PyBaMM/pull/5779). ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))

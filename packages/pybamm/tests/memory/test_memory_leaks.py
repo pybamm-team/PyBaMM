@@ -1,5 +1,6 @@
 import gc
 import tracemalloc
+import weakref
 
 import pybamm
 
@@ -287,6 +288,39 @@ class TestExperimentMemory:
 
         peak_mb = peak / 1024 / 1024
         assert peak_mb < 6, f"Peak memory {peak_mb:.1f} MB for GITT is excessive."
+
+    def test_unsaved_cycles_are_freed_before_the_experiment_ends(self):
+        # Each cycle is folded from its steps by Solution.__add__, so a cycle
+        # that save_at_cycles leaves out must not keep its sum alive
+        def live_sums_at_experiment_end(number_of_cycles):
+            sums = []
+            original = pybamm.Solution.__add__
+
+            def recording(self, other):
+                result = original(self, other)
+                sums.append(weakref.ref(result))
+                return result
+
+            class CountLiveSums(pybamm.callbacks.Callback):
+                def on_experiment_end(self, logs):
+                    gc.collect()
+                    self.live = sum(ref() is not None for ref in sums)
+
+            callback = CountLiveSums()
+            experiment = pybamm.Experiment(
+                [("Discharge at 1C for 5 minutes", "Rest for 2 minutes")]
+                * number_of_cycles
+            )
+            pybamm.Solution.__add__ = recording
+            try:
+                pybamm.Simulation(
+                    pybamm.lithium_ion.SPM(), experiment=experiment
+                ).solve(save_at_cycles=[1, number_of_cycles], callbacks=callback)
+            finally:
+                pybamm.Solution.__add__ = original
+            return callback.live
+
+        assert live_sums_at_experiment_end(6) == live_sums_at_experiment_end(3)
 
     def test_processed_variable_computed_initialise_is_lazy(self):
         # initialise_* (np.concatenate / flatten / xr.DataArray build) must
