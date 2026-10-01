@@ -727,6 +727,46 @@ class TestSolution:
         np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1:])
         np.testing.assert_allclose(sol.cycles[1].y, sol.y[:, len_cycle_1:])
 
+    def test_retained_solutions_keep_their_attributes_in_slots(self):
+        # An experiment keeps several solutions per step, so none of them should
+        # need an instance __dict__
+        experiment = pybamm.Experiment(
+            [("Discharge at 1C for 5 minutes", "Rest for 5 minutes")] * 2
+        )
+        sol = pybamm.Simulation(pybamm.lithium_ion.SPM(), experiment=experiment).solve()
+        retained = [sol, *sol.cycles, *sol.sub_solutions]
+        retained += [cycle.first_state for cycle in sol.cycles]
+        retained += [cycle.last_state for cycle in sol.cycles]
+        for solution in retained:
+            assert vars(solution) == {}
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 13), reason="__static_attributes__ is new in 3.13"
+    )
+    def test_attributes_set_by_methods_are_slots(self):
+        # An attribute a method sets without a slot would give every solution
+        # a __dict__ again
+        classes = pybamm.Solution.__mro__[:-1]
+        slots = {name for cls in classes for name in cls.__slots__}
+        properties = {
+            name
+            for cls in classes
+            for name, value in vars(cls).items()
+            if isinstance(value, property)
+        }
+        for cls in classes:
+            assert set(cls.__static_attributes__) <= slots | properties
+
+    def test_pickle_keeps_slots_and_extra_attributes(self):
+        t = np.linspace(0, 1)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        first_state = solution.first_state
+        solution.label = "extra"
+        loaded = pickle.loads(pickle.dumps(solution))  # nosec B301
+        np.testing.assert_array_equal(loaded.t, t)
+        np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
+        assert loaded.label == "extra"
+
     def test_total_time(self):
         sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]), pybamm.BaseModel(), {})
         sol.set_up_time = 0.5
@@ -1942,8 +1982,26 @@ class TestSolutionSolverStatistics:
         solution = self._solution(0, statistics)
         assert pickle.loads(pickle.dumps(solution)).solver_statistics == statistics  # nosec B301
 
-    def test_solution_pickled_without_statistics_loads(self):
+    def test_solution_pickled_before_slots_loads(self):
         solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
-        # A solution pickled before the attribute existed has no such state
-        del solution.__dict__["solver_statistics"]
-        assert pickle.loads(pickle.dumps(solution)).solver_statistics is None  # nosec B301
+        first_state = solution.first_state
+        # A solution pickled before Solution had slots holds one dict, without
+        # solver_statistics and with the cached first state under its name
+        state = {
+            name: getattr(solution, name)
+            for cls in type(solution).__mro__
+            for name in getattr(cls, "__slots__", ())
+            if not name.startswith("__") and hasattr(solution, name)
+        }
+        del state["solver_statistics"], state["_first_state"], state["_last_state"]
+        state["first_state"] = first_state
+
+        class PreSlotsPickle:
+            def __reduce__(self):
+                return object.__new__, (pybamm.Solution,), state
+
+        loaded = pickle.loads(pickle.dumps(PreSlotsPickle()))  # nosec B301
+        assert loaded.solver_statistics is None
+        np.testing.assert_array_equal(loaded.t, solution.t)
+        np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
+        assert loaded.last_state.t[0] == pytest.approx(solution.t[-1])
