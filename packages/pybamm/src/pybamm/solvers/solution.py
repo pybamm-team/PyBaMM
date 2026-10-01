@@ -95,9 +95,9 @@ class SolutionBase:
     across solution types.
     """
 
-    # An experiment keeps several solutions per step; __dict__ stays so callers
-    # can still attach their own attributes
-    __slots__ = ("__dict__", "__weakref__", "_data", "set_up_time", "solve_time")
+    # An experiment keeps several solutions per step, so solutions have no
+    # __dict__; set_up_time and solve_time are set by solvers and simulations
+    __slots__ = ("__weakref__", "_data", "set_up_time", "solve_time")
 
     def __init__(self):
         self.set_up_time = None
@@ -113,12 +113,20 @@ class SolutionBase:
             The ``(instance dict, slots)`` pair a solution pickles, or the
             single dict of a solution pickled before solutions had slots.
         """
-        # A plain dict would otherwise go into __dict__, where slots hide it
         if isinstance(state, tuple):
             instance_state, slot_state = state
             state = {**(instance_state or {}), **(slot_state or {})}
+        dropped = []
         for name, value in state.items():
-            setattr(self, name, value)
+            try:
+                setattr(self, name, value)
+            except AttributeError:
+                dropped.append(name)
+        if dropped:
+            pybamm.logger.warning(
+                f"Dropped attributes {dropped} that {type(self).__name__} "
+                "does not define when loading a pickled solution"
+            )
 
     def __getitem__(self, key):
         """Access a variable by name."""
@@ -201,6 +209,8 @@ class EISSolution(SolutionBase):
     impedance : np.ndarray
         Complex impedance values at each frequency.
     """
+
+    __slots__ = ()
 
     def __init__(self, frequencies, impedance):
         super().__init__()
@@ -316,6 +326,8 @@ class Solution(SolutionBase):
 
     """
 
+    # Solvers, Simulation and make_cycle_solution set all_first_states, closest_event_idx,
+    # cycle_summary_variables, extrap_events, integration_time, solver_statistics and steps
     __slots__ = (
         "_all_inputs_casadi",
         "_all_inputs_stacked",
