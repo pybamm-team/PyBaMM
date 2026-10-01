@@ -220,12 +220,12 @@ class TestExperimentMemory:
         mem_20_cycles, _ = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
-        # Linear growth (4x) means each step rebuilds the model. On a ~1.9 MB fixed
-        # footprint, ~48 KB/cycle growth gives ~1.37x, so 1.4 bounds allocator noise.
+        # Linear growth (4x) means each step rebuilds the model. On a ~1.86 MB fixed
+        # footprint, ~33 KB/cycle growth gives ~1.25x, so 1.3 bounds allocator noise.
         ratio = mem_20_cycles / mem_5_cycles
-        assert ratio < 1.4, (
-            f"Memory grew {ratio:.1f}x for 4x more cycles. "
-            f"Expected sub-linear growth (<1.4x). "
+        assert ratio < 1.3, (
+            f"Memory grew {ratio:.2f}x for 4x more cycles. "
+            f"Expected sub-linear growth (<1.3x). "
             f"This may indicate termination hashing is broken (see #5453)."
         )
 
