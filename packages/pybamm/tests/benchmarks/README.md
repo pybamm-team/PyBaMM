@@ -47,24 +47,45 @@ Or individual tests can be marked
 
 - `@pytest.mark.memory_bench` — memory benchmarks (run via `benchmark-memory`).
 
-- `@pytest.mark.slow_bench` — timing benchmarks CI skips, selected with
-  `-m "time_bench and not slow_bench"`. **Temporary:** Bencher's free tier enforces a
-  hard 5 minute job timeout, and on an `intel-v1` runner (used by Bencher's bare-metal setup) the full time benchmark suite exceeds this limit. The marker is currently carried by `test_model_options.py`
-  and `test_setup_models_and_sims.py`, as they are the two large sweeps, ~70% of the runtime; the rest finishes in about half the budget. Drop the marker (and the `not slow_bench` selection) if PyBaMM moves to a paid tier, which lifts the timeout entirely. Local runs are unaffected: `nox -s benchmark-time` still runs every benchmark.
+- `@pytest.mark.slow_bench` — the two large sweeps, `test_model_options.py` and
+  `test_setup_models_and_sims.py`. Bencher's free tier caps each bare metal job at 5
+  minutes, and on its `intel-v1` runner each sweep takes about 3 minutes by itself (most
+  of it untimed model building), so neither fits alongside the core suite. Pushes and PRs
+  run `-m "time_bench and not slow_bench"`; the sweeps run as their own jobs on a weekday
+  schedule, with `--benchmark-max-time=0.5 --benchmark-min-rounds=3` for headroom.
+  Local runs are unaffected: `nox -s benchmark-time` still runs every benchmark.
 
 ### CI
 
 Timing benchmarks are tracked with [Bencher](https://bencher.dev) on [bare metal
 hardware](https://bencher.dev/docs/explanation/bare-metal/). CI builds self-contained image (Bencher's runners have no network access), pushes it to Bencher's registry, and `bencher run --image` executes the suite on dedicated hardware.
 
-- **`benchmarks_main.yml`** — on push to `main`. Builds, pushes, and runs the suite
-  to record the baseline every PR is compared against.
-- **`benchmarks_pr.yml`** — on PRs. Builds the image and uploads it as an artifact,
+- **`benchmarks_main.yml`** — on push to `main`, builds, pushes, and runs the core suite
+  to record the baseline every PR is compared against. On a weekday schedule (or manual
+  dispatch) it runs the two `slow_bench` sweeps instead, one Bencher job each.
+- **`benchmarks_pr.yml`** — on non-draft PRs that touch pybamm's source, the benchmarks,
+  the solver or the dependencies. Builds the image and uploads it as an artifact,
   and runs the memray memory benchmarks (which assert fixed limits, so they gain
   nothing from bare metal). Holds no secrets, because it runs fork code.
 - **`benchmarks_track.yml`** — on `benchmarks_pr.yml` completing. Pushes the
   artifact image and reports results against the PR's base branch. Split out from `benchmarks_pr.yml` so the
   Bencher API key is never exposed to a fork's code.
+
+#### Registry bandwidth
+
+Bencher's free tier allows 10 GiB of registry traffic per organization per rolling 24 hours,
+and both pushes and pulls count. Every bare metal job pulls the whole image (runners don't
+cache it), and once the quota runs out every push and pull fails with HTTP 429 until older
+traffic ages out. The image is kept small to fit:
+
+- It installs only pybamm's runtime dependencies and the `bench` dependency group, at the
+  versions in `uv.lock`, with zstd-compressed layers (about 210 MiB).
+- pybamm's source is the last layer. `benchmarks_main.yml` caches every layer below it in
+  the GitHub Actions cache, and PR builds reuse that cache, so a commit that leaves
+  `uv.lock` and the solver alone uploads about 2 MiB; the registry already has the rest.
+
+Add new benchmark-only dependencies to the `bench` group, not `dev`, or the image can't
+import them.
 
 #### Regression alerts on PRs
 
@@ -72,5 +93,6 @@ hardware](https://bencher.dev/docs/explanation/bare-metal/). CI builds self-cont
 than 10% slower than its historical mean. `benchmarks_track.yml` inherits that threshold
 from main to raise alerts on PRs, posting a GitHub Check and a PR comment.
 
-**Only the benchmarks CI runs are guarded.** Everything marked `slow_bench` is
-  skipped, so regressions in the model-option and setup sweeps will currently pass unnoticed.
+**PRs only check the core suite.** Each sweep costs another image pull from the shared
+bandwidth quota, so a regression in the model-option or setup sweeps alerts on the next
+scheduled `main` run, against the commits merged since the previous one.

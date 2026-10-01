@@ -13,6 +13,17 @@ updates:
     cooldown:
       default-days: 7
 
+  # The benchmark image's digest-pinned base, so Bencher baselines move only here
+  - package-ecosystem: "docker"
+    directory: "/packages/pybamm/tests/benchmarks"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+    cooldown:
+      default-days: 7
+
   # Maintain Python dependencies via uv lockfile
   - package-ecosystem: "uv"
     directory: "/"
