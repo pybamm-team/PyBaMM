@@ -1,4 +1,4 @@
-"""Tests for observation backends and variable observers."""
+"""Tests for solution observation and variable observers."""
 
 import pickle  # nosec B403 - used in tests with trusted input
 from itertools import pairwise
@@ -8,28 +8,13 @@ import numpy as np
 import pytest
 
 import pybamm
-from pybamm.solvers.observation import (
-    CASADI_OBSERVATION,
-    CasadiObservation,
-    join_observations,
-)
+from pybamm.solvers.observation import ObserverCache
 from pybamm.solvers.variable_observer import (
     CasadiObserver,
     SegmentSelector,
     as_observer,
     pack_sensitivity_dict,
 )
-
-
-class _RecordingObservation(CasadiObservation):
-    """A CasADi backend that records the segment slices taken of it."""
-
-    def __init__(self):
-        self.keys = []
-
-    def __getitem__(self, key):
-        self.keys.append(key)
-        return self
 
 
 @pytest.fixture(scope="module")
@@ -54,67 +39,74 @@ def _split(solution, *boundaries):
     ]
 
 
-class TestSegmentSlicing:
-    def test_the_casadi_backend_is_a_shared_stateless_value(self):
-        assert isinstance(CASADI_OBSERVATION, CasadiObservation)
-        assert CASADI_OBSERVATION[:1] is CASADI_OBSERVATION
-        assert CASADI_OBSERVATION[-1:] is CASADI_OBSERVATION
-
-    def test_casadi_backends_are_interchangeable(self):
-        # A Solution unpickled from a derived one carries its own instance.
-        restored = pickle.loads(pickle.dumps(CASADI_OBSERVATION))  # nosec B301
-        assert restored is not CASADI_OBSERVATION
-        assert restored == CASADI_OBSERVATION
-        assert hash(restored) == hash(CASADI_OBSERVATION)
+def _decay_model(factor):
+    """A discretised model whose "w" is ``factor`` times its decaying state."""
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    model.rhs = {u: -u}
+    model.initial_conditions = {u: 1}
+    model.variables = {"u": u, "w": factor * u}
+    pybamm.Discretisation().process_model(model)
+    return model
 
 
-class TestJoin:
-    def test_runs_sharing_a_backend_join_to_it(self):
-        joined = join_observations([CASADI_OBSERVATION, CASADI_OBSERVATION])
-        assert joined is CASADI_OBSERVATION
+class TestObserverCache:
+    def test_each_segment_reads_through_its_own_model(self):
+        doubled, tripled = _decay_model(2), _decay_model(3)
+        first = pybamm.IDAKLUSolver().solve(doubled, [0, 1])
+        second = pybamm.IDAKLUSolver().solve(tripled, [1, 2])
 
-    def test_equal_backends_join_to_the_first(self):
-        restored = pickle.loads(pickle.dumps(CASADI_OBSERVATION))  # nosec B301
-        assert join_observations([restored, CASADI_OBSERVATION]) is restored
+        joined = first + second
 
-    def test_different_backends_do_not_join(self):
-        with pytest.raises(pybamm.SolverError, match=r"different observation"):
-            join_observations([CASADI_OBSERVATION, _RecordingObservation()])
+        np.testing.assert_allclose(joined["w"](0.5), 2 * first["u"](0.5), rtol=1e-6)
+        np.testing.assert_allclose(joined["w"](1.5), 3 * second["u"](1.5), rtol=1e-6)
+        leaves = joined["w"]._observer.leaves
+        assert leaves[0] is first["w"]._observer.leaves[0]
+        assert leaves[1] is second["w"]._observer.leaves[0]
+        assert leaves[0] is not leaves[1]
 
+    def test_solving_a_model_again_reuses_its_leaves(self):
+        model = _decay_model(2)
+        solver = pybamm.IDAKLUSolver()
+        leaf = solver.solve(model, [0, 1])["w"]._observer.leaves[0]
 
-class TestObservationCarriedThroughDerivedSolutions:
-    @pytest.fixture
-    def recorded(self, spm_solution):
+        assert solver.solve(model, [0, 2])["w"]._observer.leaves[0] is leaf
+
+    def test_derived_solutions_reuse_the_models_leaves(self, spm_solution):
+        name = "Voltage [V]"
+        leaf = spm_solution[name]._observer.leaves[0]
         first, second = _split(spm_solution, 5)
-        backend = _RecordingObservation()
-        first._observation = backend
-        second._observation = backend
-        return first, second, backend
 
-    def test_first_and_last_state_slice_it(self, recorded):
-        first, _, backend = recorded
-        assert first.first_state._observation is backend
-        assert first.last_state._observation is backend
-        assert backend.keys == [slice(None, 1), slice(-1, None)]
+        for derived in (
+            spm_solution.first_state,
+            spm_solution.last_state,
+            spm_solution.copy(),
+            first + second,
+            pybamm.Solution.from_sub_solutions([first, second]),
+        ):
+            assert all(each is leaf for each in derived[name]._observer.leaves)
 
-    def test_addition_joins_it(self, recorded):
-        first, second, backend = recorded
-        assert (first + second)._observation is backend
+    def test_a_model_copy_starts_with_its_leaves_and_grows_apart(self):
+        model = _decay_model(2)
+        leaf = pybamm.IDAKLUSolver().solve(model, [0, 1])["w"]._observer.leaves[0]
+        model_copy = model.new_copy()
 
-    def test_from_sub_solutions_joins_it(self, recorded):
-        first, second, backend = recorded
-        joined = pybamm.Solution.from_sub_solutions([first, second])
-        assert joined._observation is backend
+        solution = pybamm.IDAKLUSolver().solve(model_copy, [0, 1])
+        assert solution["w"]._observer.leaves[0] is leaf
+        solution["u"]
+        assert "u" in ObserverCache.of(model_copy)._casadi_leaves
+        assert "u" not in ObserverCache.of(model)._casadi_leaves
 
-    def test_copy_keeps_it(self, recorded):
-        first, _, backend = recorded
-        assert first.copy()._observation is backend
+    def test_a_model_pickled_before_the_cache_existed_builds_one(self):
+        model = _decay_model(2)
+        del model._observer_cache
 
-    def test_solutions_read_differently_cannot_be_added(self, recorded):
-        first, second, _ = recorded
-        second._observation = CASADI_OBSERVATION
-        with pytest.raises(pybamm.SolverError, match=r"different observation"):
-            first + second
+        restored = pickle.loads(pickle.dumps(model))  # nosec B301
+
+        assert restored._observer_cache is None
+        solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])
+        np.testing.assert_allclose(solution["w"].entries, 2 * solution["u"].entries)
+        assert "w" in ObserverCache.of(restored)._casadi_leaves
 
 
 class TestSegmentSelector:
