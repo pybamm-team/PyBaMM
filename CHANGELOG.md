@@ -9,6 +9,7 @@
 ## Deprecated
 
 - Setting `Array.entries_string` or `Interpolant.entries_string`, and calling `StateVector.set_evaluation_array`, are in-place symbol updates and now emit `SymbolMutationDeprecationWarning`. Construct a new symbol instead. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
+- `ProcessedVariable`'s `base_variables_casadi` argument and attribute are deprecated; pass the CasADi functions positionally or as `observer=`, and call the variable to evaluate it. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
 
 ## Features
 
@@ -42,6 +43,8 @@
 - `Solution` stores its attributes in `__slots__`, so an experiment, which keeps four solutions per step, retains about 40% less memory per step on Python 3.13. Solutions pickled by earlier versions still load. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
 - Symbol mutation is no longer guarded by intercepting every attribute write, and `children` and `domain` return the stored immutable sequences instead of building a view on each access. Writes to a symbol's slots after construction are instead rejected by a static check of PyBaMM's code, tests, examples and documentation. Under the test suite's mutation guard, constructing an expression is twice as fast and parameterising it is 25% faster, which recovers most of the `test_parameterise` benchmark regression from [#5779](https://github.com/pybamm-team/PyBaMM/pull/5779). ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
 - Faster reads of `output_variables` results: an off-grid `solution["Voltage [V]"](t)` on an SPM drops from about 420 µs to 1 µs. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- Repeat evaluations of a `ProcessedVariable` are faster: a repeat `solution["Voltage [V]"](t)` on an SPMe discharge takes about 40% less time. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
+- Time integrals are converted to CasADi once per model instead of once per solution segment. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
 
 # [v26.9.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.9.0.0) - 2026-09-28
 
