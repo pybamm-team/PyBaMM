@@ -94,8 +94,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
 
         # initialise_* runs lazily on first read of `entries` / `_xr_data_array`.
         self._initialised = False
-        # Building the xr.DataArray costs more than evaluating a small
-        # variable, so `.data` reads must not pay for it.
+        # Built on first interpolation: it costs more than evaluating a small variable
         self._xr_interp_args = None
         self._xr_data_array_cache = None
         self._initialise_method, self.dimensions = self._resolve_initialise_method()
@@ -712,8 +711,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             and all(arg is None for arg in (x, r, y, z, R))
             and self._t_pts_increasing
         ):
-            # Same values as xr.interp at a fraction of the cost, and also takes an
-            # empty or tuple t; other queries, including N-D t, keep the xarray route
+            # Same values as xr.interp, far cheaper; N-D t keeps the xarray route
             values = np.interp(t, self.t_pts, self.entries, left=np.nan, right=np.nan)
             return np.asarray(values)
         kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
@@ -785,8 +783,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             time_indep=joins_time_integrals,
             time_integral=self.time_integral,
         )
-        # new_sol can run past other (from_sub_solutions passes the final solution
-        # to every join), so keep the times the data were sampled at
+        # Not new_sol.t: from_sub_solutions passes the final solution to every join
         new_var.t_pts = np.concatenate((self.t_pts, other.t_pts[n_repeated:]))
         new_var._sensitivities = sensitivities
         new_var._unjoinable = unjoinable
