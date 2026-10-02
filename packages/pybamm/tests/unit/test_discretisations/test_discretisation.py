@@ -3,10 +3,11 @@
 #
 
 import random
+import warnings
 
 import numpy as np
 import pytest
-from scipy.sparse import block_diag, issparse
+from scipy.sparse import block_diag, csr_matrix, issparse
 
 import pybamm
 from tests import (
@@ -1155,6 +1156,26 @@ class TestDiscretise:
 
         assert issparse(model.mass_matrix.entries)
         assert not model.is_standard_form_dae
+
+    @pytest.mark.parametrize("domain", [[], "current collector"])
+    def test_mass_matrix_of_dense_blocks_is_a_sparse_matrix(self, domain):
+        u = pybamm.Variable("u", domain=domain)
+        v = pybamm.Variable("v", domain=domain)
+        model = pybamm.BaseModel()
+        model.rhs = {u: -u, v: -v}
+        model.initial_conditions = {u: 1, v: 2}
+        model.variables = {"u": u, "v": v}
+        disc = get_discretisation_for_testing(
+            cc_method=pybamm.ZeroDimensionalSpatialMethod
+        )
+
+        with warnings.catch_warnings():
+            # scipy 1.18 deprecates block_diag of only dense blocks
+            warnings.simplefilter("error", DeprecationWarning)
+            disc.process_model(model)
+
+        assert isinstance(model.mass_matrix.entries, csr_matrix)
+        np.testing.assert_array_equal(model.mass_matrix.entries.toarray(), np.eye(2))
 
     def test_process_input_variable(self):
         disc = get_discretisation_for_testing()

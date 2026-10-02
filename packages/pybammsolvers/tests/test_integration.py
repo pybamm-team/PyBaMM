@@ -115,6 +115,38 @@ class TestExponentialDecaySolver:
         # IDA_SUCCESS=0, IDA_TSTOP_RETURN=1, IDA_ROOT_RETURN=2 are all success codes
         assert sol.flag in [0, 1, 2], f"Solver failed with flag {sol.flag}"
 
+    def test_solution_has_solver_statistics(self, exponential_decay_solver):
+        """
+        Verify Solution object carries the integrator's counters for its solve.
+        """
+        solver_data = exponential_decay_solver
+        solver = solver_data["solver"]
+        t_eval = solver_data["model"]["t_eval"]
+
+        solution = solver.solve(
+            t_eval, t_eval, solver_data["y0"], solver_data["yp0"], solver_data["inputs"]
+        )
+        stats = solution[0].stats
+
+        counters = [
+            "number_of_steps",
+            "number_of_residual_evaluations",
+            "number_of_linear_solver_setups",
+            "number_of_error_test_failures",
+            "number_of_nonlinear_solver_iterations",
+            "number_of_nonlinear_solver_fails",
+            "number_of_jacobian_evaluations",
+            "number_of_linear_iterations",
+            "number_of_linear_convergence_failures",
+        ]
+        for counter in counters:
+            value = getattr(stats, counter)
+            assert isinstance(value, int)
+            assert value >= 0
+        assert stats.number_of_steps > 0
+        assert stats.number_of_residual_evaluations > 0
+        assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
+
     def test_solution_accuracy_exponential_decay(self, exponential_decay_solver):
         """
         Verify Solution matches exact solution for exponential decay.

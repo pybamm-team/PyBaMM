@@ -15,11 +15,6 @@ from scipy.sparse import csr_matrix, issparse
 
 import pybamm
 from pybamm.expression_tree.legacy_mutation import (
-    MUTATION_FORBIDDEN,
-    _DomainList,
-    _DomainsDict,
-    _frozen_setattr,
-    _SymbolList,
     _warn_mutation,
     legacy_property,
     upgrade_pickled_state,
@@ -47,19 +42,78 @@ def _immutable(self, *args, **kwargs):
     )
 
 
-class DomainNames(list):
-    """An immutable list of domain names (compares equal to plain lists)."""
+class _ImmutableSequence(tuple):
+    """
+    A tuple that compares equal to, concatenates with and prints like a list.
+    Being a tuple, no method (including those of ``list``) can edit it in place;
+    the list mutators raise ``TypeError``. Subclasses set ``_immutable_message``
+    to say how to build a new value.
+    """
 
     __slots__ = ()
+    _immutable_message = "This sequence is immutable"
+
+    def _immutable(self, *args, **kwargs):
+        raise TypeError(self._immutable_message)
+
     __setitem__ = __delitem__ = __iadd__ = __imul__ = _immutable
     append = extend = insert = pop = remove = clear = sort = reverse = _immutable
 
-    def copy(self) -> list[str]:
+    def __eq__(self, other):
+        if isinstance(other, list):
+            other = tuple(other)
+        return tuple.__eq__(self, other)
+
+    def __ne__(self, other):
+        if isinstance(other, list):
+            other = tuple(other)
+        return tuple.__ne__(self, other)
+
+    __hash__ = tuple.__hash__
+
+    def __add__(self, other):
+        if isinstance(other, list | tuple):
+            return [*self, *other]
+        return NotImplemented
+
+    def __radd__(self, other):
+        if isinstance(other, list):
+            return [*other, *self]
+        return NotImplemented
+
+    def __mul__(self, count):
+        return list(self) * count
+
+    __rmul__ = __mul__
+
+    def __repr__(self):
+        return repr(list(self))
+
+    def copy(self) -> list:
         """A mutable plain-list copy."""
         return list(self)
 
     def __reduce__(self):
-        return (DomainNames, (list(self),))
+        return (type(self), (tuple(self),))
+
+
+class DomainNames(_ImmutableSequence):
+    """An immutable list of domain names (compares equal to plain lists)."""
+
+    __slots__ = ()
+    _immutable_message = (
+        "Symbol domains are immutable; build a new symbol with `with_domains`"
+    )
+
+
+class SymbolChildren(_ImmutableSequence):
+    """An immutable list of a symbol's children (compares equal to plain lists)."""
+
+    __slots__ = ()
+    _immutable_message = (
+        "Symbol children are immutable; build a new symbol with "
+        "`create_copy(new_children=...)` or `pybamm.replace`"
+    )
 
 
 class Domains(dict):
@@ -93,6 +147,25 @@ class Domains(dict):
         return (_intern_domains, (dict(self),))
 
 
+class ReadOnlyDomains(dict):
+    """
+    A read-only copy of a symbol's domains, as returned by
+    :attr:`Symbol.domains`. Editing it raises ``TypeError``; it never shares
+    storage with the symbol, so not even ``dict`` methods can change the symbol.
+    """
+
+    __slots__ = ()
+    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = _immutable
+    update = __ior__ = _immutable
+
+    def copy(self) -> dict[str, DomainNames]:
+        """A mutable plain-dict copy."""
+        return dict(self)
+
+    def __reduce__(self):
+        return (ReadOnlyDomains, (dict(self),))
+
+
 _INTERNED_DOMAINS: dict[tuple, Domains] = {}
 
 
@@ -123,10 +196,16 @@ def _intern_domains(domains: dict[str, Sequence[str]]) -> Domains:
     return interned
 
 
-EMPTY_DOMAINS: Domains = _intern_domains({k: [] for k in DOMAIN_LEVELS})
+_EMPTY_DOMAINS: Domains = _intern_domains({k: [] for k in DOMAIN_LEVELS})
+EMPTY_DOMAINS: ReadOnlyDomains = ReadOnlyDomains(_EMPTY_DOMAINS)
 
 # raw domains input (as given to a constructor) -> validated, interned domains
 _VALIDATED_DOMAINS: dict[tuple, Domains] = {}
+
+
+def _domain_list(domain: str | Sequence[str]) -> list[str]:
+    """A domain as a plain list of names, whichever sequence it was given as."""
+    return [domain] if isinstance(domain, str) else list(domain)
 
 
 def domain_size(domain: list[str] | str):
@@ -148,7 +227,7 @@ def domain_size(domain: list[str] | str):
         "negative particle size": 19,
         "positive particle size": 23,
     }
-    if domain in [[], None]:
+    if not domain:
         size = 1
     elif all(dom in fixed_domain_sizes for dom in domain):
         size = sum(fixed_domain_sizes[dom] for dom in domain)
@@ -380,10 +459,12 @@ class Symbol:
         if children is None:
             children = []
 
-        self._children = children
+        self._children = (
+            children if type(children) is SymbolChildren else SymbolChildren(children)
+        )
 
         self._domains = self._normalise_domains(
-            self.read_domain_or_domains(domain, auxiliary_domains, domains)
+            self._read_domain_or_domains(domain, auxiliary_domains, domains)
         )
 
         # Test shape on everything but nodes that contain the base Symbol class or
@@ -410,18 +491,9 @@ class Symbol:
         )
 
     @property
-    def children(self) -> Sequence[Symbol]:
-        """
-        returns the cached children of this node.
-
-        Note: it is assumed that children of a node are not modified after initial
-        creation
-        """
-        return (
-            _SymbolList(self, "_children")
-            if isinstance(self._children, list)
-            else self._children
-        )
+    def children(self) -> SymbolChildren:
+        """The children of this node, as an immutable list."""
+        return self._children
 
     # Slots (besides ``_children``) holding symbols this node depends on: a symbol,
     # ``None``, or a list/tuple of symbols. Subclasses extend this.
@@ -449,8 +521,9 @@ class Symbol:
         object.__setattr__(self, "_name", value)
 
     @property
-    def domains(self):
-        return _DomainsDict(self)
+    def domains(self) -> ReadOnlyDomains:
+        """A read-only copy of the domains of this node."""
+        return ReadOnlyDomains(self._domains)
 
     @domains.setter
     def domains(self, domains):
@@ -465,7 +538,7 @@ class Symbol:
     def clear_domains(self) -> None:
         """Clear domains in place (deprecated)."""
         _warn_mutation("clear_domains", "Use symbol = symbol.without_domains().")
-        object.__setattr__(self, "_domains", EMPTY_DOMAINS)
+        object.__setattr__(self, "_domains", _EMPTY_DOMAINS)
 
     def set_id(self) -> None:
         """Recompute identity after a legacy update (deprecated)."""
@@ -502,10 +575,10 @@ class Symbol:
     def _validate_domains(domains: dict) -> Domains:
         # Turn dictionary into appropriate form
         if domains == {"primary": []}:
-            return EMPTY_DOMAINS
+            return _EMPTY_DOMAINS
 
         # Set default domains
-        domains = {**EMPTY_DOMAINS, **domains}
+        domains = {**_EMPTY_DOMAINS, **domains}
 
         # Check domains don't clash
         for level, dom in domains.items():
@@ -513,8 +586,8 @@ class Symbol:
                 raise pybamm.DomainError(
                     f"Domain keys must be one of '{DOMAIN_LEVELS}'"
                 )
-            if isinstance(dom, str):
-                domains[level] = [dom]
+            # tuples (e.g. slices of a symbol's domain) compare unequal to lists
+            domains[level] = _domain_list(dom)
 
         values = [tuple(val) for val in domains.values() if val != []]
         if len(set(values)) != len(values):
@@ -538,7 +611,7 @@ class Symbol:
         -------
             iterable of str
         """
-        return _DomainList(self, "primary")
+        return self._domains["primary"]
 
     @domain.setter
     def domain(self, domain):
@@ -556,17 +629,17 @@ class Symbol:
     @property
     def secondary_domain(self):
         """Helper function to get the secondary domain of a symbol."""
-        return _DomainList(self, "secondary")
+        return self._domains["secondary"]
 
     @property
     def tertiary_domain(self):
         """Helper function to get the tertiary domain of a symbol."""
-        return _DomainList(self, "tertiary")
+        return self._domains["tertiary"]
 
     @property
     def quaternary_domain(self):
         """Helper function to get the quaternary domain of a symbol."""
-        return _DomainList(self, "quaternary")
+        return self._domains["quaternary"]
 
     mesh = legacy_property(
         "_mesh",
@@ -616,7 +689,7 @@ class Symbol:
 
     def without_domains(self) -> Symbol:
         """Return a copy of this symbol with all domains cleared."""
-        return self.with_domains(EMPTY_DOMAINS)
+        return self.with_domains(_EMPTY_DOMAINS)
 
     def with_mesh(
         self,
@@ -650,19 +723,24 @@ class Symbol:
                 ("_secondary_mesh", domains["secondary"]),
                 ("_tertiary_mesh", domains["tertiary"]),
             )
-            if domain != []
+            if domain
         }
         if not meshes:
             return self
         return self._replace(**meshes)
 
-    def get_children_domains(self, children: Sequence[Symbol]):
+    def get_children_domains(self, children: Sequence[Symbol]) -> dict:
         """Combine domains from children, at all levels."""
+        domains = self._combine_children_domains(children)
+        return ReadOnlyDomains(domains) if type(domains) is Domains else domains
+
+    def _combine_children_domains(self, children: Sequence[Symbol]):
+        """:meth:`get_children_domains`, returning the interned domains as-is."""
         # fast path: every child with a domain shares the same (interned) domains
         shared = None
         for child in children:
             child_domains = child._domains
-            if child_domains is EMPTY_DOMAINS:
+            if child_domains is _EMPTY_DOMAINS:
                 continue
             if shared is None:
                 shared = child_domains
@@ -670,7 +748,7 @@ class Symbol:
                 shared = False
                 break
         if shared is None:
-            return EMPTY_DOMAINS
+            return _EMPTY_DOMAINS
         if shared is not False:
             return shared
         domains: dict = {}
@@ -697,10 +775,21 @@ class Symbol:
         domain: DomainType,
         auxiliary_domains: AuxiliaryDomainType,
         domains: DomainsType,
+    ) -> dict:
+        """Combine ``domain`` and ``auxiliary_domains``, or check ``domains``."""
+        result = self._read_domain_or_domains(domain, auxiliary_domains, domains)
+        return ReadOnlyDomains(result) if type(result) is Domains else result
+
+    def _read_domain_or_domains(
+        self,
+        domain: DomainType,
+        auxiliary_domains: AuxiliaryDomainType,
+        domains: DomainsType,
     ):
+        """:meth:`read_domain_or_domains`, returning the interned domains as-is."""
         if domains is None:
             if domain is None and not auxiliary_domains:
-                return EMPTY_DOMAINS
+                return _EMPTY_DOMAINS
             if isinstance(domain, str):
                 domain = [domain]
             elif domain is None:
@@ -794,6 +883,10 @@ class Symbol:
             object.__setattr__(self, key, value)
         for slot in pybamm.expression_tree.tree_util._TRANSIENT_SLOTS:
             object.__setattr__(self, slot, None)
+        children = state.get("_children")
+        if children is not None and type(children) is not SymbolChildren:
+            # pickled when children were stored as plain lists
+            object.__setattr__(self, "_children", SymbolChildren(children))
 
     orphans = children
 
@@ -902,7 +995,7 @@ class Symbol:
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-        return f"{self.__class__.__name__!s}({hex(self.id)}, {self._name!s}, children={[str(child) for child in self._children]!s}, domains={ ({k: v for k, v in self._domains.items() if v != []})!s})"
+        return f"{self.__class__.__name__!s}({hex(self.id)}, {self._name!s}, children={[str(child) for child in self._children]!s}, domains={ ({k: v for k, v in self._domains.items() if v})!s})"
 
     def __add__(self, other: ChildSymbol) -> pybamm.Addition:
         """return an :class:`Addition` object."""
@@ -1507,7 +1600,7 @@ class Symbol:
 
         json_dict = {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
         }
 
         return json_dict
@@ -1535,7 +1628,3 @@ def convert_to_symbol(value) -> Symbol:
         return value * pybamm.Scalar(1)
     except (NotImplementedError, TypeError, ValueError):
         raise ValueError("Input cannot be converted to a `pybamm.Symbol`") from None
-
-
-if MUTATION_FORBIDDEN:
-    Symbol.__setattr__ = _frozen_setattr

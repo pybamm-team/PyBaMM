@@ -379,7 +379,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             if repeats > 1:
                 bc_shape = getattr(bc_value, "shape_for_testing", None)
                 if bc_shape == (n_bnd * repeats, 1):
-                    M = csr_matrix(kron(eye(repeats, dtype=np.float64), M))
+                    M = FiniteVolumeUnstructured._block_diagonal(M, repeats)
                 else:
                     M = csr_matrix(kron(np.ones((repeats, 1)), M))
             return pybamm.Matrix(M) @ bc_value
@@ -459,7 +459,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             if symbol.shape_for_testing == ():
                 out = symbol * pybamm.Vector(sub_vector)
             else:
-                matrix = csr_matrix(kron(eye(symbol.shape_for_testing[0]), sub_vector))
+                matrix = self._block_diagonal(sub_vector, symbol.shape_for_testing[0])
                 out = pybamm.Matrix(matrix) @ symbol
         elif broadcast_type.startswith("full"):
             out = symbol * pybamm.Vector(np.ones(full_size), domains=domains)
@@ -526,11 +526,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             for k in range(d):
                 L = L + K[k] @ G_components[k]
                 if bcs:
-                    K_full = csr_matrix(kron(eye(repeats, dtype=np.float64), K[k]))
+                    K_full = self._block_diagonal(K[k], repeats)
                     bc_rhs = bc_rhs + pybamm.Matrix(K_full) @ grad_bc_vecs[k]
             L = csr_matrix(L)
 
-        L_full = csr_matrix(kron(eye(repeats, dtype=np.float64), L))
+        L_full = self._block_diagonal(L, repeats)
         result = pybamm.Matrix(L_full) @ discretised_symbol + bc_rhs
 
         return result
@@ -839,7 +839,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         def lift(matrix):
             if repeats == 1:
                 return matrix
-            return csr_matrix(kron(eye(repeats, dtype=np.float64), matrix))
+            return self._block_diagonal(matrix, repeats)
 
         def tile(values):
             return np.tile(values, repeats) if repeats > 1 else values
@@ -969,7 +969,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             for k in range(d):
                 scale = diags(cross_diag[k])
                 L = L + scale @ G_components[k]
-                scale_full = csr_matrix(kron(eye(repeats, dtype=np.float64), scale))
+                scale_full = self._block_diagonal(scale, repeats)
                 bc_rhs = bc_rhs + pybamm.Matrix(scale_full) @ grad_bc_vecs[k]
             L = csr_matrix(L)
         return L, bc_rhs
@@ -1047,7 +1047,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         components = []
         for k in range(d):
-            Gk = csr_matrix(kron(eye(repeats, dtype=np.float64), G_components[k]))
+            Gk = self._block_diagonal(G_components[k], repeats)
             comp = pybamm.Matrix(Gk) @ discretised_symbol + bc_vecs[k]
             components.append(comp)
 
@@ -1339,7 +1339,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         result = pybamm.Vector(np.zeros(n * repeats))
         for k in range(d):
-            Dk = csr_matrix(kron(eye(repeats, dtype=np.float64), D_components[k]))
+            Dk = self._block_diagonal(D_components[k], repeats)
             result = result + pybamm.Matrix(Dk) @ comps[k]
 
         return result
@@ -1446,7 +1446,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         repeats = self._get_auxiliary_domain_repeats(child.domains)
         shape = (1, -1) if vector_type == "row" else (-1, 1)
         block = csr_matrix(submesh.cell_volumes.reshape(shape))
-        return pybamm.Matrix(csr_matrix(kron(eye(repeats, dtype=np.float64), block)))
+        return pybamm.Matrix(self._block_diagonal(block, repeats))
 
     def boundary_integral(self, child, discretised_child, region):
         """Integral of the owner-cell values of ``child`` over the boundary
@@ -1476,7 +1476,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         row = np.zeros(n)
         np.add.at(row, owners, face_areas)
         mat = csr_matrix(row.reshape(1, -1))
-        mat = csr_matrix(kron(eye(repeats, dtype=np.float64), mat))
+        mat = self._block_diagonal(mat, repeats)
 
         return pybamm.Matrix(mat) @ discretised_child
 
@@ -1519,7 +1519,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             shape=(n_bnd, n),
         )
 
-        mat = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
+        mat = self._block_diagonal(sub_matrix, repeats)
         bv_vector = pybamm.Matrix(mat)
 
         out = bv_vector @ discretised_child
@@ -1563,7 +1563,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             (np.ones(1), (np.zeros(1, dtype=int), [cell_idx])),
             shape=(1, n),
         )
-        mat = csr_matrix(kron(eye(repeats, dtype=np.float64), sub_matrix))
+        mat = self._block_diagonal(sub_matrix, repeats)
         out = pybamm.Matrix(mat) @ discretised_child
         out = out.without_domains()
         return out
@@ -1678,9 +1678,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         d = left_mesh.dimension
 
         def lift(matrix):
-            return pybamm.Matrix(
-                csr_matrix(kron(eye(repeats, dtype=np.float64), matrix))
-            )
+            return pybamm.Matrix(self._block_diagonal(matrix, repeats))
 
         def tile(values):
             return pybamm.Vector(np.tile(values, repeats))
@@ -1777,15 +1775,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         left_sub_matrix = np.zeros((1, left_npts))
         left_sub_matrix[0][left_npts - 1] = 1
-        left_matrix = pybamm.Matrix(
-            csr_matrix(kron(eye(repeats, dtype=np.float64), left_sub_matrix))
-        )
+        left_matrix = pybamm.Matrix(self._block_diagonal(left_sub_matrix, repeats))
 
         right_sub_matrix = np.zeros((1, right_npts))
         right_sub_matrix[0][0] = 1
-        right_matrix = pybamm.Matrix(
-            csr_matrix(kron(eye(repeats, dtype=np.float64), right_sub_matrix))
-        )
+        right_matrix = pybamm.Matrix(self._block_diagonal(right_sub_matrix, repeats))
 
         # structured fallback: 1D submeshes expose ``nodes``, not ``vertices``
         right_mesh_x = right_mesh.nodes[0]

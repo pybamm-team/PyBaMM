@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import numbers
 import pickle
-from functools import cached_property
+from dataclasses import astuple, dataclass
 from itertools import chain
 
 import casadi
@@ -32,6 +32,61 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
+@dataclass(frozen=True, slots=True)
+class SolverStatistics:
+    """Counts of the work an integrator did to produce a solution.
+
+    Attributes
+    ----------
+    number_of_steps : int
+        Internal time steps taken.
+    number_of_linear_solver_setups : int
+        Calls to the linear solver setup, such as Jacobian factorisations.
+    number_of_nonlinear_solver_iterations : int
+        Iterations of the nonlinear (Newton) solver.
+    number_of_nonlinear_solver_fails : int
+        Convergence failures of the nonlinear solver.
+    number_of_error_test_failures : int
+        Steps rejected by the local error test.
+    """
+
+    number_of_steps: int = 0
+    number_of_linear_solver_setups: int = 0
+    number_of_nonlinear_solver_iterations: int = 0
+    number_of_nonlinear_solver_fails: int = 0
+    number_of_error_test_failures: int = 0
+
+    def __add__(self, other: SolverStatistics) -> SolverStatistics:
+        if not isinstance(other, SolverStatistics):
+            return NotImplemented
+        return SolverStatistics(
+            *(a + b for a, b in zip(astuple(self), astuple(other), strict=True))
+        )
+
+
+# Shared by every first and last state, which do no solver work
+_NO_SOLVER_STATISTICS = SolverStatistics()
+
+
+def _sum_solver_statistics(solutions) -> SolverStatistics | None:
+    """Total the solver statistics of ``solutions``.
+
+    Parameters
+    ----------
+    solutions : list of :class:`pybamm.Solution`
+        The solutions whose statistics are summed.
+
+    Returns
+    -------
+    :class:`pybamm.SolverStatistics` or None
+        The field-wise sum, or None if any solution has no statistics.
+    """
+    statistics = [solution.solver_statistics for solution in solutions]
+    if any(stats is None for stats in statistics):
+        return None
+    return sum(statistics[1:], statistics[0])
+
+
 class SolutionBase:
     """Base class for all PyBaMM solution types (time-series and EIS).
 
@@ -40,10 +95,38 @@ class SolutionBase:
     across solution types.
     """
 
+    # An experiment keeps several solutions per step, so solutions have no
+    # __dict__; set_up_time and solve_time are set by solvers and simulations
+    __slots__ = ("__weakref__", "_data", "set_up_time", "solve_time")
+
     def __init__(self):
         self.set_up_time = None
         self.solve_time = None
         self._data = pybamm.FuzzyDict()
+
+    def __setstate__(self, state: dict | tuple) -> None:
+        """Restore a pickled solution.
+
+        Parameters
+        ----------
+        state : dict or tuple
+            The ``(instance dict, slots)`` pair a solution pickles, or the
+            single dict of a solution pickled before solutions had slots.
+        """
+        if isinstance(state, tuple):
+            instance_state, slot_state = state
+            state = {**(instance_state or {}), **(slot_state or {})}
+        dropped = []
+        for name, value in state.items():
+            try:
+                setattr(self, name, value)
+            except AttributeError:
+                dropped.append(name)
+        if dropped:
+            pybamm.logger.warning(
+                f"Dropped attributes {dropped} that {type(self).__name__} "
+                "does not define when loading a pickled solution"
+            )
 
     def __getitem__(self, key):
         """Access a variable by name."""
@@ -126,6 +209,8 @@ class EISSolution(SolutionBase):
     impedance : np.ndarray
         Complex impedance values at each frequency.
     """
+
+    __slots__ = ()
 
     def __init__(self, frequencies, impedance):
         super().__init__()
@@ -241,6 +326,48 @@ class Solution(SolutionBase):
 
     """
 
+    # Solvers, Simulation and make_cycle_solution set all_first_states, closest_event_idx,
+    # cycle_summary_variables, extrap_events, integration_time, solver_statistics and steps
+    __slots__ = (
+        "_all_inputs_casadi",
+        "_all_inputs_stacked",
+        "_all_models",
+        "_all_sensitivities",
+        "_all_t_evals",
+        "_all_ts",
+        "_all_yps",
+        "_all_ys",
+        "_all_ys_and_sens",
+        "_cycles",
+        "_first_state",
+        "_initial_start_time",
+        "_last_state",
+        "_observable",
+        "_options",
+        "_sensitivities",
+        "_sub_solutions",
+        "_summary_variables",
+        "_t",
+        "_t_eval",
+        "_t_event",
+        "_termination",
+        "_user_options",
+        "_variables",
+        "_y",
+        "_y_event",
+        "_yp",
+        "all_first_states",
+        "all_inputs",
+        "all_summary_variables",
+        "closest_event_idx",
+        "cycle_summary_variables",
+        "extrap_events",
+        "integration_time",
+        "solver_statistics",
+        "steps",
+        "variables_returned",
+    )
+
     def __init__(
         self,
         all_ts,
@@ -320,6 +447,7 @@ class Solution(SolutionBase):
 
         super().__init__()
         self.integration_time = None
+        self.solver_statistics = None
 
         self._all_inputs_stacked = None
         self._all_inputs_casadi = None
@@ -347,12 +475,28 @@ class Solution(SolutionBase):
         # Initialise initial start time
         self.initial_start_time = None
 
+        self._first_state = None
+        self._last_state = None
+
         # Check no ys are too large
         if check_solution:
             self.check_ys_are_not_too_large()
 
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
+
+    def __setstate__(self, state: dict | tuple) -> None:
+        # An older pickle may lack attributes added since, and caches the
+        # first and last states under their property names
+        self.solver_statistics = None
+        self._first_state = None
+        self._last_state = None
+        if isinstance(state, dict):
+            state = {
+                f"_{name}" if name in ("first_state", "last_state") else name: value
+                for name, value in state.items()
+            }
+        super().__setstate__(state)
 
     def has_sensitivities(self) -> bool:
         return len(self._all_sensitivities) > 0
@@ -580,13 +724,18 @@ class Solution(SolutionBase):
     def options(self) -> dict:
         return self._options
 
-    @cached_property
+    @property
     def first_state(self):
         """
         A Solution object that only contains the first state. This is faster to evaluate
         than the full solution when only the first state is needed (e.g. to initialize
         a model with the solution)
         """
+        if self._first_state is None:
+            self._first_state = self._build_first_state()
+        return self._first_state
+
+    def _build_first_state(self):
         sensitivities = {}
         n_states = self.all_models[0].len_rhs_and_alg
         for key in self._all_sensitivities:
@@ -620,17 +769,23 @@ class Solution(SolutionBase):
 
         new_sol.solve_time = 0
         new_sol.integration_time = 0
+        new_sol.solver_statistics = _NO_SOLVER_STATISTICS
         new_sol.set_up_time = 0
 
         return new_sol
 
-    @cached_property
+    @property
     def last_state(self):
         """
         A Solution object that only contains the final state. This is faster to evaluate
         than the full solution when only the final state is needed (e.g. to initialize
         a model with the solution)
         """
+        if self._last_state is None:
+            self._last_state = self._build_last_state()
+        return self._last_state
+
+    def _build_last_state(self):
         sensitivities = {}
         n_states = self.all_models[-1].len_rhs_and_alg
         for key in self._all_sensitivities:
@@ -663,6 +818,7 @@ class Solution(SolutionBase):
         new_sol._sub_solutions = self.sub_solutions[-1:]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
+        new_sol.solver_statistics = _NO_SOLVER_STATISTICS
         new_sol.set_up_time = 0
 
         return new_sol
@@ -1110,6 +1266,7 @@ class Solution(SolutionBase):
             new_sol._termination = other.termination
             new_sol._t_event = other._t_event
             new_sol._y_event = other._y_event
+            new_sol.solver_statistics = _sum_solver_statistics([self, other])
             return new_sol
 
         # Append other onto self (the already-merged left side); only other's
@@ -1177,6 +1334,7 @@ class Solution(SolutionBase):
                 and getattr(other, attr, None) is not None
             ):
                 setattr(new_sol, attr, getattr(self, attr) + getattr(other, attr))
+        new_sol.solver_statistics = _sum_solver_statistics([self, other])
 
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
@@ -1215,12 +1373,7 @@ class Solution(SolutionBase):
         if len(sols) == 1:
             return sols[0].copy()
 
-        # Decide once which segments contribute. __add__ short-circuits a
-        # single-sample segment whose only sample duplicates the running
-        # boundary to a copy, so it contributes nothing to the merge: skip it
-        # here and derive every quantity below from the kept segments only.
-        # `repeated` records whether a kept segment's leading sample duplicates
-        # the previous boundary (dropped once on concatenation).
+        # Skip a single-sample duplicate of the running boundary, as __add__ does
         kept = []
         prev_last_t = None
         for s in sols:
@@ -1291,6 +1444,8 @@ class Solution(SolutionBase):
             vals = [getattr(s, attr, None) for s in segments]
             if all(v is not None for v in vals):
                 setattr(new_sol, attr, sum(vals))
+        # sols, not segments: __add__ counts a skipped duplicate's solver work
+        new_sol.solver_statistics = _sum_solver_statistics(sols)
 
         # output_variables path: reproduce __add__'s pairwise left-fold.
         if any(s.variables_returned for s in segments):
@@ -1329,6 +1484,7 @@ class Solution(SolutionBase):
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
+        new_sol.solver_statistics = self.solver_statistics
         new_sol.set_up_time = self.set_up_time
 
         # copy over variables which were derived at the solver stage

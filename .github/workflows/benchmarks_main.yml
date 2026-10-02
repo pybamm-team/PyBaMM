@@ -8,11 +8,16 @@
 #
 # PR benchmarks live in benchmarks_pr.yml / benchmarks_track.yml, which are split
 # in two so that fork code never runs in a context holding the API key.
+#
+# Pushes run the core suite; the slow_bench sweeps run on a weekday schedule.
 name: Benchmarks (main)
 
 on:
   push:
     branches: main
+  schedule:
+    - cron: "0 3 * * 1-5"
+  workflow_dispatch:
 
 permissions: {}
 
@@ -24,13 +29,15 @@ env:
   BENCHER_REGISTRY: registry.bencher.dev
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
   # The image installs the prebuilt in-repo solver wheel, so benchmarks track
   # pybammsolvers changes too rather than the last PyPI release.
   build_solver:
+    # Reports are filed under --branch main, so never run from a fork or branch.
+    if: github.repository == 'pybamm-team/PyBaMM' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
     uses: $/.github/workflows/_build_solver_wheels.yml
@@ -40,15 +47,12 @@ jobs:
       platforms: '["linux"]'
       macos_runners: '[]'
 
-  benchmark_time:
-    name: Timing benchmarks (bare metal)
+  build_image:
+    name: Build benchmark image
     needs: build_solver
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      checks: write
-    env:
-      IMAGE_TAG: main-${{ github.sha }}
 
     steps:
       - name: Check out PyBaMM repository
@@ -62,12 +66,10 @@ jobs:
           name: wheels_manylinux
           path: solver-wheels
 
-      - name: Build benchmark image
-        run: |
-          docker build \
-            --file packages/pybamm/tests/benchmarks/Dockerfile \
-            --tag "$BENCHER_REGISTRY/$BENCHER_PROJECT:$IMAGE_TAG" \
-            .
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
+        with:
+          cache-binary: false
 
       # The registry pairs a project key with the project slug as the username
       # (a user key would pair with the owner's email instead), so BENCHER must
@@ -79,20 +81,52 @@ jobs:
           printf '%s' "$BENCHER_API_KEY" \
             | docker login "$BENCHER_REGISTRY" --username "$BENCHER_PROJECT" --password-stdin
 
-      - name: Push benchmark image
-        run: docker push "$BENCHER_REGISTRY/$BENCHER_PROJECT:$IMAGE_TAG"
+      # Cached layers keep their digests, so the push skips unchanged layers
+      - name: Build and push benchmark image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: packages/pybamm/tests/benchmarks/Dockerfile
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=benchmark-image
+          cache-to: type=gha,scope=benchmark-image
+          outputs: type=image,name=${{ env.BENCHER_REGISTRY }}/${{ env.BENCHER_PROJECT }}:main-${{ github.sha }},push=true,oci-mediatypes=true,compression=zstd,compression-level=19,force-compression=true
 
-      - uses: bencherdev/bencher@8d75325c3bc59403a2186a056b472c4f49d42838 # v0.6.12
+  benchmark_time:
+    name: Timing benchmarks (bare metal, ${{ matrix.suite }})
+    needs: build_image
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: ${{ fromJSON(github.event_name == 'push' && '["core"]' || '["model-options", "setup"]') }}
+    env:
+      IMAGE_TAG: main-${{ github.sha }}
+      SUITE: ${{ matrix.suite }}
 
+    steps:
+      - uses: bencherdev/bencher@f80847436d7157936b40525db4c2a1064124f04a # v0.6.13
+
+      # Fewer rounds keep each sweep inside Bencher's 5 minute job limit
       - name: Track main branch benchmarks with Bencher
         env:
           BENCHER_API_KEY: ${{ secrets.BENCHER }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          sweep="-m time_bench --benchmark-max-time=0.5 --benchmark-min-rounds=3"
+          case "$SUITE" in
+            core) selection="-m 'time_bench and not slow_bench'" ;;
+            model-options) selection="test_model_options.py $sweep" ;;
+            setup) selection="test_setup_models_and_sims.py $sweep" ;;
+          esac
           bencher run \
             --project "$BENCHER_PROJECT" \
             --image "$BENCHER_PROJECT:$IMAGE_TAG" \
             --branch main \
+            --hash "$GITHUB_SHA" \
             --testbed bare-metal \
             --spec intel-v1 \
             --adapter python_pytest \
@@ -104,4 +138,4 @@ jobs:
             --thresholds-reset \
             --error-on-alert \
             --github-actions "$GITHUB_TOKEN" \
-            "pytest -m 'time_bench and not slow_bench' -v -o addopts= --benchmark-group-by func --benchmark-disable-gc --benchmark-json /tmp/results.json"
+            "pytest $selection -v -o addopts= --benchmark-group-by func --benchmark-disable-gc --benchmark-json /tmp/results.json"
