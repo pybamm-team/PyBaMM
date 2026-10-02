@@ -448,7 +448,7 @@ class Solution(SolutionBase):
         self._y_event = y_event
         self._termination = termination
         self.closest_event_idx = None
-        # Initial state of a solve that returns only output variables, so no states
+        # Initial state of an output_variables solve, which stores no states
         self._y0 = None
         # Such a solve's state sensitivities at its first and last time points
         self._y0_sensitivities = None

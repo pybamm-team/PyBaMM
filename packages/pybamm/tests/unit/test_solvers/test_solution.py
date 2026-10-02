@@ -837,8 +837,7 @@ class TestSolution:
             for t0, a_value in [(0, 1.0), (1, 2.0)]
         )
 
-        # Solving the model again must leave the first solution's initial state
-        # alone, and the sensitivities must stay out of it
+        # Re-solving must not change first's initial state or put sensitivities in it
         for solution in (
             first,
             first.copy(),
@@ -1482,8 +1481,7 @@ class TestSolution:
 
         joined = (first + later)["integral"]
 
-        # A full-state join integrates a * y = 2 across any gap between the
-        # solutions; an output_variables join leaves the gap out
+        # A full-state join also integrates the gap; an output_variables join does not
         value, sensitivity = 1 + integral, integral_sensitivity
         if use_post_sum:
             value, sensitivity = value**2, 2 * value * sensitivity
