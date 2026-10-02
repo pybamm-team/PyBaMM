@@ -323,8 +323,7 @@ class TestInterpolant:
         x = np.linspace(0, 1, 200)
         y = pybamm.StateVector(slice(0, 2))
         # linear (derivative should be 2)
-        # linear interpolator cannot be differentiated
-        for interpolator in ["cubic", "pchip"]:
+        for interpolator in ["linear", "cubic", "pchip"]:
             interp_diff = pybamm.Interpolant(
                 x, 2 * x, y, interpolator=interpolator
             ).diff(y)
@@ -381,7 +380,7 @@ class TestInterpolant:
             np.concatenate([np.linspace(0, 0.5, 50), np.linspace(0.5, 1, 150)[1:]])
         )
 
-    @pytest.mark.parametrize("interpolator", ["cubic", "pchip"])
+    @pytest.mark.parametrize("interpolator", ["linear", "cubic", "pchip"])
     def test_diff_to_casadi(self, grid, interpolator, assert_casadi_matches_evaluate):
         # Regression for #5582: the CasADi conversion ignored _num_derivatives
         # and returned the original, un-differentiated function.
@@ -393,7 +392,7 @@ class TestInterpolant:
         assert_casadi_matches_evaluate(interp.diff(y), casadi_y, y_test)
         assert_casadi_matches_evaluate(interp.diff(y).diff(y), casadi_y, y_test)
 
-    @pytest.mark.parametrize("interpolator", ["cubic", "pchip"])
+    @pytest.mark.parametrize("interpolator", ["linear", "cubic", "pchip"])
     def test_diff_to_casadi_vector_valued(
         self, interpolator, assert_casadi_matches_evaluate
     ):
@@ -431,6 +430,53 @@ class TestInterpolant:
             third = third.diff(y)
         with pytest.raises(NotImplementedError, match="degree-0"):
             third.to_casadi(y=casadi_y)
+
+    @pytest.mark.parametrize("interpolator", ["linear", "cubic", "pchip"])
+    def test_diff_to_casadi_jacobian(self, grid, interpolator):
+        # Solvers take CasADi's Jacobian of a differentiated interpolant, e.g. of
+        # dU/dc in the heat of mixing, so it must match the second derivative
+        y = pybamm.StateVector(slice(0, 2))
+        casadi_y = casadi.MX.sym("y", 2)
+        y_test = np.array([0.4, 0.6])
+        first = pybamm.Interpolant(
+            grid, np.exp(-5 * grid), y, interpolator=interpolator
+        ).diff(y)
+        jacobian = casadi.Function(
+            "jacobian",
+            [casadi_y],
+            [casadi.jacobian(first.to_casadi(y=casadi_y), casadi_y)],
+        )
+        np.testing.assert_allclose(
+            np.array(jacobian(y_test)),
+            np.diag(first.diff(y).evaluate(y=y_test).flatten()),
+            rtol=1e-6,
+            atol=1e-6,
+        )
+
+    def test_linear_diff_is_interval_slope(self):
+        # points on knots take the interval to their right, as scipy does
+        x = np.array([0.0, 0.1, 0.4, 0.5, 1.0])
+        data = np.column_stack([x**2, np.exp(x)])
+        slopes = np.diff(data, axis=0) / np.diff(x)[:, np.newaxis]
+        points = np.array([-0.5, 0.0, 0.05, 0.1, 0.45, 0.5, 1.0, 1.5])
+        expected = slopes[[0, 0, 0, 1, 2, 3, 3, 3]]
+
+        child = pybamm.StateVector(slice(0, 1))
+        casadi_child = casadi.MX.sym("y", 1)
+        first = pybamm.Interpolant(x, data, child, interpolator="linear").diff(child)
+        second = first.diff(child)
+        first_casadi = casadi.Function(
+            "first", [casadi_child], [first.to_casadi(y=casadi_child)]
+        )
+        second_casadi = casadi.Function(
+            "second", [casadi_child], [second.to_casadi(y=casadi_child)]
+        )
+        for point, slope in zip(points, expected, strict=True):
+            y_test = np.array([point])
+            np.testing.assert_allclose(first.evaluate(y=y_test).flatten(), slope)
+            np.testing.assert_allclose(np.array(first_casadi(y_test)).flatten(), slope)
+            np.testing.assert_array_equal(second.evaluate(y=y_test).flatten(), 0)
+            np.testing.assert_array_equal(np.array(second_casadi(y_test)).flatten(), 0)
 
     def test_processing(self):
         x = np.linspace(0, 1, 200)
