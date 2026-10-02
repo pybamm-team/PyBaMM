@@ -630,8 +630,7 @@ class TestProcessedVariableComputed:
 
         combined = (first + later)["Integral"]
 
-        # Each segment integrates a * y = 2 over its own unit interval; [1, 2] is
-        # not integrated
+        # a * y = 2 over [0, 1] and [2, 3]; the gap [1, 2] is not integrated
         np.testing.assert_allclose(combined.entries, [4.0])
         np.testing.assert_allclose(combined.sensitivities["a"], [2.0])
 

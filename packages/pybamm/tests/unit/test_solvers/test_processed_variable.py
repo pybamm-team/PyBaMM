@@ -1578,8 +1578,6 @@ class TestProcessedVariable:
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_unsorted_t_query_returns_query_order(self, hermite_interp):
-        # Both interpolation routes must return values in the caller's order:
-        # only the hermite route consumes the internally sorted times.
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
         var = t * y
