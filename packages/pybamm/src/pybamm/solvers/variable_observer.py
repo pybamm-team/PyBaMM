@@ -1,6 +1,6 @@
 """Per-variable observation strategies for :class:`pybamm.ProcessedVariable`.
 
-A :class:`VariableObserver` owns one variable's per-sub-solution leaves and
+A :class:`VariableObserver` holds one variable's per-sub-solution leaves and
 evaluates them on the solution grid, off-grid via cubic Hermite, and through
 the forward chain rule for sensitivities.
 """
@@ -97,8 +97,7 @@ class VariableObserver(ABC):
 
         See :meth:`SegmentSelector.select`.
         """
-        # Keyed to the time arrays it was built from: an observer can be
-        # shared by variables of different solutions.
+        # An observer can be shared across solutions, so key on their time arrays
         if self._selector_ts is not variable.all_ts:
             self._selector = SegmentSelector(variable.all_ts)
             self._selector_ts = variable.all_ts
@@ -213,7 +212,6 @@ class CasadiObserver(VariableObserver):
                 *[sensitivity_inputs[name] for name in sensitivity_names]
             )
 
-            # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")
             y_casadi = casadi.MX.sym("y", ys.shape[0])
             p_casadi = {
@@ -223,8 +221,7 @@ class CasadiObserver(VariableObserver):
 
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
-            # Non-target inputs can still appear in the tree (e.g. from experiment
-            # steps), so they stay concrete while the targets go symbolic.
+            # Symbolic for the sensitivity inputs only; the others keep their values
             inputs_for_casadi = {**inputs, **p_casadi}
 
             var_casadi = base_variable.to_casadi(
@@ -233,7 +230,6 @@ class CasadiObserver(VariableObserver):
             dvar_dy = casadi.jacobian(var_casadi, y_casadi)
             dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
 
-            # Convert to functions and evaluate index-by-index
             dvar_dy_func = casadi.Function(
                 "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
             )
@@ -253,7 +249,6 @@ class CasadiObserver(VariableObserver):
                 ]
             )
 
-            # Compute sensitivity
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
 
             all_S_var.append(S_var)
@@ -380,7 +375,6 @@ def _find_ts_indices(starts, ends, t):
 
     indices = []
 
-    # Get the minimum and maximum values of the target values `t`
     t_min, t_max = t[0], t[-1]
 
     # Binary search for the range of segments where t_min and t_max could lie

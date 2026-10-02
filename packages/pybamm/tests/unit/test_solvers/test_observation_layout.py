@@ -27,8 +27,7 @@ def _dense_function(size):
 
 class TestLayoutContract:
     def test_0d_time_major(self, solution):
-        # One (n_times, output_size) array per sub-solution; for 0D
-        # output_size == 1 and data[t, 0] is the value at t.
+        # One (n_times, output_size) array per sub-solution
         base = [pybamm.StateVector(slice(0, 1))]
         n_t = len(solution.t)
         values = np.linspace(3.0, 4.2, n_t)
@@ -39,8 +38,7 @@ class TestLayoutContract:
         np.testing.assert_allclose(pvc.entries.reshape(-1), values)
 
     def test_1d_time_major_unrolls_to_space_by_time(self, solution):
-        # A 1D variable's (n_times, len_space) array unrolls to
-        # (len_space, n_times) via reshape((n_times, len_space)).transpose().
+        # A 1D variable's (n_times, len_space) rows unroll to (len_space, n_times)
         base_pv = solution["X-averaged negative particle concentration [mol.m-3]"]
         var = base_pv.base_variables[0]
         len_space = var.shape[0]
@@ -110,8 +108,7 @@ class TestOutputAssembly:
             sensitivity_names=["a", "b"],
         )
 
-        # Read the field, not the property: the property short-circuits to {} on
-        # this input-free SPM solve.
+        # The field: the property short-circuits to {} on this input-free solve
         attached = solution["Voltage [V]"]._sensitivities
         assert set(attached) == {"all", "a", "b"}
         assert attached["all"].shape == (n_t, 2)
@@ -132,8 +129,7 @@ class TestOutputAssembly:
             )
 
     def test_a_solve_without_sensitivities_leaves_an_empty_mapping(self, solution):
-        # Not None: an outputs-only solve retains no state to compute them from,
-        # so the answer is "there are none", not "ask again later".
+        # Empty, not None: an outputs-only solve keeps no state to compute them from
         assembly, data = self._assembly(solution, ["Voltage [V]"])
         assembly.attach(solution, data)
         assert solution["Voltage [V]"]._sensitivities == {}
