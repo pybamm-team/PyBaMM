@@ -1854,11 +1854,6 @@ class TestFiniteVolumeUnstructuredBehavior:
 # ======================================================================
 
 
-# ======================================================================
-# Tests: anisotropic coefficients in div(D grad u)
-# ======================================================================
-
-
 def _cell_vector(values, domain="test"):
     return pybamm.Vector(np.asarray(values, dtype=float), domain=domain)
 
@@ -1923,9 +1918,7 @@ class TestAnisotropicDivDGrad:
 
     @pytest.mark.parametrize("axis", [0, 1, 2])
     def test_diagonal_tensor_uses_each_axis_conductivity(self, axis):
-        # On an axis-aligned hex mesh a field varying only along `axis` sees
-        # only K[axis, axis]: the operator equals the scalar one with that k,
-        # in the interior and on the Dirichlet / Neumann faces.
+        # A field varying only along `axis` sees only K[axis, axis].
         mesh = _make_hex_mesh(4, 3, 5)
         method = _method_with_mesh(mesh)
         variable = pybamm.Variable("u", domain="test")
@@ -1987,9 +1980,7 @@ class TestAnisotropicDivDGrad:
         )
 
     def test_rotated_tensor_on_tet_mesh_uses_normal_conductivity(self):
-        # Off-axis faces pick up K's off-diagonal through n.K.n: a rotated
-        # tensor differs from its unrotated diagonal on a tet mesh, and the
-        # isotropic part still matches the scalar operator.
+        # Off-axis faces pick up K's off-diagonal through n.K.n.
         mesh = _make_3d_mesh()
         method = _method_with_mesh(mesh)
         variable = pybamm.Variable("u", domain="test")
@@ -2045,6 +2036,31 @@ class TestAnisotropicDivDGrad:
             bcs,
         )
         np.testing.assert_allclose(result.evaluate(), diag.evaluate(), atol=1e-12)
+
+    def test_state_dependent_component(self):
+        mesh = _make_quad_mesh(3, 3)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        k = np.linspace(1.0, 3.0, mesh.npts)
+        values = _cell_vector(mesh.cell_centroids[:, 0] ** 2)
+        bcs = _box_bcs(variable, mesh)
+        state = pybamm.StateVector(slice(0, mesh.npts), domains={"primary": ["test"]})
+        result = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.VectorField(state, _cell_vector(k)),
+            values,
+            bcs,
+        )
+        frozen = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.VectorField(_cell_vector(k), _cell_vector(k)),
+            values,
+            bcs,
+        )
+        np.testing.assert_allclose(result.evaluate(y=k), frozen.evaluate(), atol=1e-12)
 
     def test_anisotropic_with_secondary_domain(self):
         mesh = _make_quad_mesh(3, 3)

@@ -809,12 +809,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         """Discretise ``div(D * grad(u))`` as a single TPFA operation.
 
         Fully symbolic — works for both constant and state-dependent scalar
-        ``D``, and for anisotropic coefficients: a :class:`pybamm.VectorField`
-        (one value per axis, a diagonal tensor) or a rank-2
-        :class:`pybamm.TensorField` (the full tensor), each component a cell
-        field. A face then uses its normal conductivity n.K.n, exact when the
-        principal axes are aligned with the faces (the tangential part of K n
-        is not included). Internal-face fluxes use the distance-weighted harmonic mean of
+        ``D``. Internal-face fluxes use the distance-weighted harmonic mean of
         ``D`` (resistances in series, as :class:`pybamm.FiniteVolume` does for
         coefficients of a gradient, so material interfaces carry the exact
         two-cell flux) and the two-point normal derivative plus its
@@ -866,10 +861,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 return _is_zero(comp.child)
             if not comp.is_constant():
                 return False
-            try:
-                return not np.any(comp.evaluate())
-            except NotImplementedError:
-                return False
+            return not np.any(comp.evaluate())
 
         def directional(faces, cells):
             """n.K.n on ``faces`` from the coefficient of the cells in ``cells``."""
@@ -918,11 +910,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 normal_grad = normal_grad + pybamm.Matrix(lift(C[k])) @ grad_k
         is_scalar_D = not is_tensor_D and self._is_scalar_value(disc_D)
         if is_tensor_D:
-            # Anisotropic: the conductivity normal to each face, n.K.n, from the
-            # owner and neighbour cells, combined like a scalar D (distance-
-            # weighted harmonic mean, the series flux across a material jump).
-            # Exact when K's principal axes are aligned with the faces; the
-            # tangential part of K n is not included otherwise.
+            # n.K.n from each side, combined like a scalar D (harmonic mean);
+            # the tangential part of K n is dropped.
             n_int = submesh.n_internal_faces
             faces = np.arange(n_int)
             k_owner = directional(faces, submesh.face_owner[:n_int])
