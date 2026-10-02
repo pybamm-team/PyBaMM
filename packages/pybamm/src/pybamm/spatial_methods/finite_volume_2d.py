@@ -1103,20 +1103,30 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         edges_tb = submesh.edges_tb
 
         dx0_lr = nodes_lr[0] - edges_lr[0]
-        dx1_lr = submesh.d_nodes_lr[0]
-        dx2_lr = submesh.d_nodes_lr[1]
-
         dxN_lr = edges_lr[-1] - nodes_lr[-1]
-        dxNm1_lr = submesh.d_nodes_lr[-1]
-        dxNm2_lr = submesh.d_nodes_lr[-2]
-
         dx0_tb = nodes_tb[0] - edges_tb[0]
-        dx1_tb = submesh.d_nodes_tb[0]
-        dx2_tb = submesh.d_nodes_tb[1]
-
         dxN_tb = edges_tb[-1] - nodes_tb[-1]
-        dxNm1_tb = submesh.d_nodes_tb[-1]
-        dxNm2_tb = submesh.d_nodes_tb[-2]
+
+        if isinstance(symbol, pybamm.BoundaryGradient):
+            extrap_order = extrap_order_gradient
+        else:
+            extrap_order = extrap_order_value
+
+        # Node spacings are looked up lazily so that coarse meshes only fail when
+        # the requested extrapolation actually needs the missing nodes
+        def node_spacing(direction, index):
+            d_nodes = getattr(submesh, f"d_nodes_{direction}")
+            required_npts = index + 2 if index >= 0 else 1 - index
+            if len(d_nodes) + 1 < required_npts:
+                raise pybamm.DiscretisationError(
+                    f"{extrap_order.capitalize()} extrapolation for "
+                    f"'{symbol.name}' requires at least {required_npts} nodes in "
+                    f"the '{direction}' direction of domain "
+                    f"{discretised_child.domain}, but the mesh has "
+                    f"{len(d_nodes) + 1}. Refine the mesh or use a lower "
+                    "extrapolation order."
+                )
+            return d_nodes[index]
 
         child = symbol.child
 
@@ -1168,7 +1178,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
                     else:
                         dx0 = dx0_lr
-                        dx1 = dx1_lr
+                        dx1 = node_spacing("lr", 0)
                         row_indices = np.arange(0, n_tb)
                         col_indices_0 = np.arange(0, n_tb * n_lr, n_lr)
                         col_indices_1 = col_indices_0 + 1
@@ -1211,8 +1221,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
                     else:
                         dx0 = dx0_lr
-                        dx1 = dx1_lr
-                        dx2 = dx2_lr
+                        dx1 = node_spacing("lr", 0)
+                        dx2 = node_spacing("lr", 1)
                         a = (dx0 + dx1) * (dx0 + dx1 + dx2) / (dx1 * (dx1 + dx2))
                         b = -dx0 * (dx0 + dx1 + dx2) / (dx1 * dx2)
                         c = dx0 * (dx0 + dx1) / (dx2 * (dx1 + dx2))
@@ -1265,7 +1275,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         # to find value at x* use formula:
                         # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
                         dxN = dxN_lr
-                        dxNm1 = dxNm1_lr
+                        dxNm1 = node_spacing("lr", -1)
                         row_indices = np.arange(0, n_tb)
                         col_indices_Nm1 = np.arange(n_lr - 2, n_lr * n_tb, n_lr)
                         col_indices_N = col_indices_Nm1 + 1
@@ -1307,8 +1317,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         raise NotImplementedError
                     else:
                         dxN = dxN_lr
-                        dxNm1 = dxNm1_lr
-                        dxNm2 = dxNm2_lr
+                        dxNm1 = node_spacing("lr", -1)
+                        dxNm2 = node_spacing("lr", -2)
                         a = (
                             (dxN + dxNm1)
                             * (dxN + dxNm1 + dxNm2)
@@ -1373,7 +1383,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         additive = -dx0 * bcs[child][side_first][0]
                     else:
                         dx0 = dx0_tb
-                        dx1 = dx1_tb
+                        dx1 = node_spacing("tb", 0)
                         first_val = (1 + (dx0 / dx1)) * np.ones(n_lr)
                         second_val = -(dx0 / dx1) * np.ones(n_lr)
                         rows_first = np.arange(0, n_lr)
@@ -1396,8 +1406,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         raise NotImplementedError
                     else:
                         dx0 = dx0_tb
-                        dx1 = dx1_tb
-                        dx2 = dx2_tb
+                        dx1 = node_spacing("tb", 0)
+                        dx2 = node_spacing("tb", 1)
                         a = (dx0 + dx1) * (dx0 + dx1 + dx2) / (dx1 * (dx1 + dx2))
                         b = -dx0 * (dx0 + dx1 + dx2) / (dx1 * dx2)
                         c = dx0 * (dx0 + dx1) / (dx2 * (dx1 + dx2))
@@ -1438,7 +1448,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     if use_bcs and pybamm.has_bc_of_form(
                         child, side_first, bcs, "Neumann"
                     ):
-                        dxNm1 = dxNm1_tb
+                        dxNm1 = node_spacing("tb", -1)
                         dxN = dxN_tb
                         val_N = np.ones(n_lr)
                         rows = np.arange(0, n_lr)
@@ -1450,7 +1460,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         additive = dxN * bcs[child][side_first][0]
                     else:
                         dx0 = dxN_tb
-                        dx1 = dxNm1_tb
+                        dx1 = node_spacing("tb", -1)
                         first_val = -(dx0 / dx1) * np.ones(n_lr)
                         second_val = (1 + (dx0 / dx1)) * np.ones(n_lr)
                         rows_first = np.arange(0, n_lr)
@@ -1473,8 +1483,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                         raise NotImplementedError
                     else:
                         dxN = dxN_tb
-                        dxNm1 = dxNm1_tb
-                        dxNm2 = dxNm2_tb
+                        dxNm1 = node_spacing("tb", -1)
+                        dxNm2 = node_spacing("tb", -2)
                         a = (
                             (dxN + dxNm1)
                             * (dxN + dxNm1 + dxNm2)
@@ -1549,7 +1559,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
                 else:
                     dx0 = dx0_tb
-                    dx1 = dx1_tb
+                    dx1 = node_spacing("tb", 0)
                     row_indices = [0, 0]
                     col_indices = [0, 1]
                     vals = [1.0 + (dx0 / dx1), -(dx0 / dx1)]
@@ -1602,7 +1612,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
                 else:
                     dxN = dxN_tb
-                    dxNm1 = dxNm1_tb
+                    dxNm1 = node_spacing("tb", -1)
                     row_indices = [0, 0]
                     col_indices = [n_tb - 2, n_tb - 1]
                     vals = [-(dxN / dxNm1), 1.0 + (dxN / dxNm1)]
@@ -1632,7 +1642,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             elif side_first == "left":
                 if extrap_order_gradient == "linear":
                     # f'(x*) = (f_2 - f_1) / dx1
-                    dx1 = dx1_lr
+                    dx1 = node_spacing("lr", 0)
                     row_indices = np.arange(0, n_tb)
                     col_indices_0 = np.arange(0, n_tb * n_lr, n_lr)
                     col_indices_1 = col_indices_0 + 1
@@ -1652,8 +1662,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
                 elif extrap_order_gradient == "quadratic":
                     dx0 = dx0_lr
-                    dx1 = dx1_lr
-                    dx2 = dx2_lr
+                    dx1 = node_spacing("lr", 0)
+                    dx2 = node_spacing("lr", 1)
                     a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1**2 + dx1 * dx2)
                     b = (2 * dx0 + dx1 + dx2) / (dx1 * dx2)
                     c = -(2 * dx0 + dx1) / (dx1 * dx2 + dx2**2)
@@ -1685,8 +1695,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 if extrap_order_gradient == "linear":
                     # use formula:
                     # f'(x*) = (f_N - f_Nm1) / dxNm1
-                    dxN = dxNm1_lr
-                    dxNm1 = dxNm1_lr
+                    dxN = node_spacing("lr", -1)
+                    dxNm1 = node_spacing("lr", -1)
                     row_indices = np.arange(0, n_tb)
                     col_indices_Nm1 = np.arange(n_lr - 2, n_lr * n_tb, n_lr)
                     col_indices_N = col_indices_Nm1 + 1
@@ -1706,8 +1716,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
                 elif extrap_order_gradient == "quadratic":
                     dxN = dxN_lr
-                    dxNm1 = dxNm1_lr
-                    dxNm2 = dxNm2_lr
+                    dxNm1 = node_spacing("lr", -1)
+                    dxNm2 = node_spacing("lr", -2)
                     a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1**2 + dxNm1 * dxNm2)
                     b = -(2 * dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
                     c = (2 * dxN + dxNm1) / (dxNm1 * dxNm2 + dxNm2**2)
@@ -1737,7 +1747,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
             elif side_first == "bottom":
                 if extrap_order_gradient == "linear":
-                    dx1 = dx1_tb
+                    dx1 = node_spacing("tb", 0)
                     row_indices = np.arange(0, n_lr)
                     col_indices_0 = np.arange(0, n_lr)
                     col_indices_1 = np.arange(n_lr, 2 * n_lr)
@@ -1756,8 +1766,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
                 elif extrap_order_gradient == "quadratic":
                     dx0 = dx0_tb
-                    dx1 = dx1_tb
-                    dx2 = dx2_tb
+                    dx1 = node_spacing("tb", 0)
+                    dx2 = node_spacing("tb", 1)
                     a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1**2 + dx1 * dx2)
                     b = (2 * dx0 + dx1 + dx2) / (dx1 * dx2)
                     c = -(2 * dx0 + dx1) / (dx1 * dx2 + dx2**2)
@@ -1783,7 +1793,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
             elif side_first == "top":
                 if extrap_order_gradient == "linear":
-                    dxNm1 = dxNm1_tb
+                    dxNm1 = node_spacing("tb", -1)
                     row_indices = np.arange(0, n_lr)
                     col_indices_0 = np.arange((n_tb - 2) * n_lr, (n_tb - 1) * n_lr)
                     col_indices_1 = np.arange((n_tb - 1) * n_lr, n_tb * n_lr)
@@ -1802,8 +1812,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                     additive = pybamm.Scalar(0)
                 elif extrap_order_gradient == "quadratic":
                     dxN = dxN_tb
-                    dxNm1 = dxNm1_tb
-                    dxNm2 = dxNm2_tb
+                    dxNm1 = node_spacing("tb", -1)
+                    dxNm2 = node_spacing("tb", -2)
                     a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1**2 + dxNm1 * dxNm2)
                     b = -(2 * dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
                     c = (2 * dxN + dxNm1) / (dxNm1 * dxNm2 + dxNm2**2)

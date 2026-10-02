@@ -16,6 +16,7 @@
 
 ## Bug fixes
 
+- Fixed `FiniteVolume2D` boundary values, gradients and integrals raising an `IndexError` on 2D meshes with fewer than 3 nodes in either direction, even when the extrapolation only needed the other direction. Meshes too coarse for the requested extrapolation order now raise a `DiscretisationError`. ([#5839](https://github.com/pybamm-team/PyBaMM/pull/5839))
 - A per-state `atol` given to `IDAKLUSolver` (or as `model.atol`) can now be a list, tuple or array, so it survives a `to_config`/`from_config` round trip, which returns a JSON list. One without exactly one value per state is rejected with a `SolverError` instead of reaching the integrator, as are booleans, even one among numbers such as `[True, 1e-6]`, and non-real values. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - `IDAKLUSolver`'s `print_stats` with an iterative linear solver and `preconditioner="none"` no longer reports a garbage "Number of calls to residual function in preconditioner": without a BBD preconditioner, SUNDIALS read that count out of the model's own data. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - Discretising a model whose differential variables are all scalars or on zero-dimensional domains (such as a lumped current collector) no longer raises SciPy 1.18's `block_diag` `DeprecationWarning`, and its mass matrix stays a sparse matrix rather than becoming a sparse array once SciPy changes `block_diag`'s return type. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
