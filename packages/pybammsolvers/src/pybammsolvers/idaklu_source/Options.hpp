@@ -11,7 +11,13 @@ struct SetupOptions {
   bool using_banded_matrix;
   bool using_iterative_solver;
   std::string jacobian;
-  std::string preconditioner; // spbcg
+  std::string preconditioner; // "none", "BBDP" or "user"
+  // "user" preconditioner callables (iterative linear solvers only):
+  //   precon_setup(t, y, yp, cj, data, indices, indptr) -> int
+  //     receives the iteration matrix dF/dy - cj M (CSC); 0 on success
+  //   precon_solve(t, y, r, cj, delta) -> z, approximately (dF/dy - cj M)^-1 r
+  py::object precon_setup;
+  py::object precon_solve;
   int precon_half_bandwidth;
   int precon_half_bandwidth_keep;
   int num_threads;

@@ -345,3 +345,74 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
 
   return 0;
 }
+
+// "user" preconditioner: IDA's IDALsPrecSetupFn / IDALsPrecSolveFn calling
+// Python callables from SetupOptions. The setup callable receives the same
+// iteration matrix KLU would factorise, dF/dy - cj M (CSC, from
+// jac_times_cjmass), so a preconditioner can be built in Python from the true
+// Jacobian. Arrays are copies. Return values: 0 success, >0 recoverable
+// failure, <0 unrecoverable.
+template<class T>
+int precon_setup_user(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+                      sunrealtype cj, void *user_data)
+{
+  DEBUG("precon_setup_user");
+  auto *f = static_cast<T *>(user_data);
+  const int n = f->number_of_states;
+  const int nnz = f->number_of_nnz;
+
+  sunrealtype *jac_data = f->get_tmp_sparse_jacobian_data();
+  f->jac_times_cjmass->m_arg[0] = &tt;
+  f->jac_times_cjmass->m_arg[1] = NV_DATA(yy);
+  f->jac_times_cjmass->m_arg[2] = f->inputs.data();
+  f->jac_times_cjmass->m_arg[3] = &cj;
+  f->jac_times_cjmass->m_res[0] = jac_data;
+  (*f->jac_times_cjmass)();
+
+  py::gil_scoped_acquire gil;
+  try {
+    py::array_t<sunrealtype> y(n, NV_DATA(yy));
+    py::array_t<sunrealtype> ydot(n, NV_DATA(yp));
+    py::array_t<sunrealtype> data(nnz, jac_data);
+    py::array_t<int64_t> indices(
+        f->jac_times_cjmass_rowvals.size(), f->jac_times_cjmass_rowvals.data());
+    py::array_t<int64_t> indptr(
+        f->jac_times_cjmass_colptrs.size(), f->jac_times_cjmass_colptrs.data());
+    py::object ret = f->setup_opts.precon_setup(tt, y, ydot, cj, data, indices, indptr);
+    return ret.is_none() ? 0 : ret.cast<int>();
+  } catch (...) {
+    // Python errors and failed casts; rethrown by the solver once IDA returns
+    f->callback_exception = std::current_exception();
+    return -1;
+  }
+}
+
+template<class T>
+int precon_solve_user(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+                      N_Vector rvec, N_Vector zvec, sunrealtype cj,
+                      sunrealtype delta, void *user_data)
+{
+  DEBUG("precon_solve_user");
+  auto *f = static_cast<T *>(user_data);
+  const int n = f->number_of_states;
+
+  py::gil_scoped_acquire gil;
+  try {
+    py::array_t<sunrealtype> y(n, NV_DATA(yy));
+    py::array_t<sunrealtype> r(n, NV_DATA(rvec));
+    py::object ret = f->setup_opts.precon_solve(tt, y, r, cj, delta);
+    auto z = ret.cast<py::array_t<sunrealtype, py::array::c_style | py::array::forcecast>>();
+    if (z.size() != n) {
+      const std::string msg = "precon_solve returned " +
+          std::to_string(z.size()) + " values, expected " + std::to_string(n);
+      py::set_error(PyExc_ValueError, msg.c_str());
+      throw py::error_already_set();
+    }
+    std::copy(z.data(), z.data() + n, NV_DATA(zvec));
+    return 0;
+  } catch (...) {
+    // Python errors and failed casts; rethrown by the solver once IDA returns
+    f->callback_exception = std::current_exception();
+    return -1;
+  }
+}
