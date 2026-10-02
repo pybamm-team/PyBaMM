@@ -35,7 +35,8 @@ class ObserverCache:
     """
 
     def __init__(self):
-        self._casadi_leaves: dict[str, casadi.Function] = {}
+        # Key -> (leaf, the expression it evaluates, time integral or None)
+        self._casadi_leaves: dict[str, tuple] = {}
 
     @classmethod
     def of(cls, model: pybamm.BaseModel) -> ObserverCache:
@@ -81,16 +82,11 @@ class ObserverCache:
             The CasADi function, the expression it evaluates (a time integral's
             integrand) and the time integral, or None.
         """
-        leaf = self._casadi_leaves.get(key)
-        if leaf is not None:
-            return leaf, var_pybamm, None
-        leaf, var_pybamm, time_integral = solution._convert_to_casadi(
-            var_pybamm, inputs, ys_shape
-        )
-        # A hit returns no time integral, so caching one would read its integrand
-        if time_integral is None:
-            self._casadi_leaves[key] = leaf
-        return leaf, var_pybamm, time_integral
+        entry = self._casadi_leaves.get(key)
+        if entry is None:
+            entry = solution._convert_to_casadi(var_pybamm, inputs, ys_shape)
+            self._casadi_leaves[key] = entry
+        return entry
 
 
 def build_variable(solution: pybamm.Solution, name: str) -> BaseProcessedVariable:
@@ -128,10 +124,9 @@ def build_variable(solution: pybamm.Solution, name: str) -> BaseProcessedVariabl
                 for k, component in enumerate(var_pybamm.components)
             ]
         else:
-            vars_casadi[i], vars_pybamm[i], segment_time_integral = cache.casadi_leaf(
+            vars_casadi[i], vars_pybamm[i], time_integral = cache.casadi_leaf(
                 solution, name, var_pybamm, inputs, ys.shape
             )
-            time_integral = segment_time_integral or time_integral
     return pybamm.process_variable(
         name,
         vars_pybamm,
