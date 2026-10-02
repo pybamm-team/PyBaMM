@@ -862,9 +862,14 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         def _is_zero(comp):
             """A constant component that is identically zero (skipped)."""
+            if isinstance(comp, pybamm.Broadcast):
+                return _is_zero(comp.child)
             if not comp.is_constant():
                 return False
-            return not np.any(comp.evaluate())
+            try:
+                return not np.any(comp.evaluate())
+            except NotImplementedError:
+                return False
 
         def directional(faces, cells):
             """n.K.n on ``faces`` from the coefficient of the cells in ``cells``."""
