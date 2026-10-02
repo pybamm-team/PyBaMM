@@ -3235,6 +3235,14 @@ vtk = [
 ]
 
 [package.dev-dependencies]
+bench = [
+    { name = "hypothesis" },
+    { name = "pytest" },
+    { name = "pytest-benchmark" },
+    { name = "pytest-memray", marker = "sys_platform != 'win32'" },
+    { name = "pytest-mock" },
+    { name = "pytest-xdist" },
+]
 dev = [
     { name = "hypothesis" },
     { name = "nbmake" },
@@ -3310,6 +3318,14 @@ requires-dist = [
 provides-extras = ["all", "bpx", "cite", "examples", "jax", "plot", "pydiffsol", "tqdm", "vtk"]
 
 [package.metadata.requires-dev]
+bench = [
+    { name = "hypothesis" },
+    { name = "pytest", specifier = ">=9.0" },
+    { name = "pytest-benchmark", specifier = ">=5.3.0" },
+    { name = "pytest-memray", marker = "sys_platform != 'win32'", specifier = ">=1.7.0" },
+    { name = "pytest-mock" },
+    { name = "pytest-xdist" },
+]
 dev = [
     { name = "hypothesis" },
     { name = "importlib-metadata", marker = "python_full_version < '3.10'" },

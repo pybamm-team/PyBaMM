@@ -7,8 +7,10 @@
 # sandboxed runner — never in the trusted context that holds the key.
 name: Benchmarks (PR)
 
+# Drafts are skipped to save Bencher's bandwidth quota
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions: {}
 
@@ -22,6 +24,7 @@ concurrency:
 
 jobs:
   changes:
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
@@ -37,11 +40,15 @@ jobs:
         with:
           filters: |
             benchmark:
-              - 'packages/pybamm/**'
+              - 'packages/pybamm/src/**'
+              - 'packages/pybamm/tests/benchmarks/**'
+              - 'packages/pybamm/conftest.py'
+              - 'packages/pybamm/pyproject.toml'
               - 'packages/pybammsolvers/**'
               - 'pyproject.toml'
               - 'uv.lock'
               - 'noxfile.py'
+              - '.dockerignore'
               - '.github/workflows/benchmarks_pr.yml'
               - '.github/workflows/benchmarks_track.yml'
 
@@ -77,23 +84,28 @@ jobs:
           name: wheels_manylinux
           path: solver-wheels
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
+        with:
+          cache-binary: false
+
+      # Reuse, but don't write, main's layer cache so unchanged layers aren't re-pushed
       - name: Build benchmark image
-        run: |
-          docker build \
-            --file packages/pybamm/tests/benchmarks/Dockerfile \
-            --tag pybamm-benchmarks:pr \
-            .
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: packages/pybamm/tests/benchmarks/Dockerfile
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=benchmark-image
+          outputs: type=oci,dest=benchmark-image.tar,name=pybamm-benchmarks:pr,compression=zstd,compression-level=19,force-compression=true
 
-      # zstd rather than the upload action's zip: the layers are already
-      # compressed, so deflate costs minutes and saves little.
-      - name: Export benchmark image
-        run: docker save pybamm-benchmarks:pr | zstd -T0 -3 -o benchmark-image.tar.zst
-
+      # Layers are already zstd-compressed
       - name: Upload benchmark image
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: benchmark-image
-          path: benchmark-image.tar.zst
+          path: benchmark-image.tar
           compression-level: 0
           if-no-files-found: error
           retention-days: 1
