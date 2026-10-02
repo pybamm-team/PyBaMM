@@ -889,7 +889,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     )
                 for i, comp in enumerate(disc_D.components):
                     if not _is_zero(comp):
-                        terms.append(pybamm.Vector(tile(normals[:, i] ** 2)) * (E_f @ comp))
+                        terms.append(
+                            pybamm.Vector(tile(normals[:, i] ** 2)) * (E_f @ comp)
+                        )
             else:
                 rows = disc_D.components
                 if len(rows) != dim or any(len(r) != dim for r in rows):
@@ -900,7 +902,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     for j in range(dim):
                         weight = normals[:, i] * normals[:, j]
                         if np.any(weight) and not _is_zero(rows[i][j]):
-                            terms.append(pybamm.Vector(tile(weight)) * (E_f @ rows[i][j]))
+                            terms.append(
+                                pybamm.Vector(tile(weight)) * (E_f @ rows[i][j])
+                            )
             if not terms:
                 raise pybamm.DiscretisationError("anisotropic coefficient is zero")
             out = terms[0]

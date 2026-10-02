@@ -1902,7 +1902,9 @@ class TestAnisotropicDivDGrad:
         div_symbol = pybamm.Variable("div", domain="test")
         rng = np.random.default_rng(0)
         k = rng.uniform(0.5, 5.0, mesh.npts)
-        values = _cell_vector(np.sin(3 * mesh.cell_centroids[:, 0]) + mesh.cell_centroids[:, -1])
+        values = _cell_vector(
+            np.sin(3 * mesh.cell_centroids[:, 0]) + mesh.cell_centroids[:, -1]
+        )
         bcs = _box_bcs(variable, mesh)
 
         scalar = method.div_D_grad(div_symbol, variable, _cell_vector(k), values, bcs)
@@ -1931,7 +1933,9 @@ class TestAnisotropicDivDGrad:
         k_axes = (1.0, 10.0, 100.0)
         s_ = mesh.cell_centroids[:, axis]
         values = _cell_vector(s_**2)
-        lo, hi = {0: ("left", "right"), 1: ("front", "back"), 2: ("bottom", "top")}[axis]
+        lo, hi = {0: ("left", "right"), 1: ("front", "back"), 2: ("bottom", "top")}[
+            axis
+        ]
         bcs = {side: (pybamm.Scalar(0), "Neumann") for side in mesh.boundary_faces}
         bcs[lo] = (pybamm.Scalar(0.5), "Dirichlet")
         bcs[hi] = (pybamm.Scalar(2.0), "Neumann")
@@ -1947,7 +1951,9 @@ class TestAnisotropicDivDGrad:
         scalar = method.div_D_grad(
             div_symbol, variable, pybamm.Scalar(k_axes[axis]), values, bcs
         )
-        np.testing.assert_allclose(anisotropic.evaluate(), scalar.evaluate(), atol=1e-10)
+        np.testing.assert_allclose(
+            anisotropic.evaluate(), scalar.evaluate(), atol=1e-10
+        )
 
     def test_full_tensor_on_aligned_faces_uses_its_diagonal(self):
         # Documents the limitation: only n.K.n enters, so on faces normal to
@@ -1976,7 +1982,9 @@ class TestAnisotropicDivDGrad:
             values,
             bcs,
         )
-        np.testing.assert_allclose(from_full.evaluate(), from_diag.evaluate(), atol=1e-12)
+        np.testing.assert_allclose(
+            from_full.evaluate(), from_diag.evaluate(), atol=1e-12
+        )
 
     def test_rotated_tensor_on_tet_mesh_uses_normal_conductivity(self):
         # Off-axis faces pick up K's off-diagonal through n.K.n: a rotated
@@ -1990,11 +1998,18 @@ class TestAnisotropicDivDGrad:
         bcs = _box_bcs(variable, mesh)
         theta = np.pi / 5
         R = np.array(
-            [[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]]
+            [
+                [np.cos(theta), -np.sin(theta), 0],
+                [np.sin(theta), np.cos(theta), 0],
+                [0, 0, 1],
+            ]
         )
         K = R @ np.diag([1.0, 6.0, 2.0]) @ R.T
         rotated = pybamm.TensorField(
-            [[_cell_vector(np.full(mesh.npts, K[i, j])) for j in range(3)] for i in range(3)]
+            [
+                [_cell_vector(np.full(mesh.npts, K[i, j])) for j in range(3)]
+                for i in range(3)
+            ]
         )
         unrotated = pybamm.VectorField(
             *[_cell_vector(np.full(mesh.npts, d)) for d in (1.0, 6.0, 2.0)]
@@ -2179,7 +2194,9 @@ class TestDiscretisationDispatch:
         u = disc.mesh["negative electrode"].cell_centroids[:, 0] ** 2
         tensor = disc.process_symbol(pybamm.div(K * pybamm.grad(var)))
         scalar = disc.process_symbol(pybamm.div(k * pybamm.grad(var)))
-        np.testing.assert_allclose(tensor.evaluate(y=u), scalar.evaluate(y=u), atol=1e-12)
+        np.testing.assert_allclose(
+            tensor.evaluate(y=u), scalar.evaluate(y=u), atol=1e-12
+        )
 
     def test_norm_requires_vector_field(self):
         disc, var, *_ = self._disc_var_grad()
