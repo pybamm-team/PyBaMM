@@ -4,6 +4,7 @@
 
 - `Symbol.children`, `Symbol.domain` (and `secondary_domain`, `tertiary_domain`, `quaternary_domain`) and `FunctionParameter.input_names` return immutable tuples that compare equal to lists, and `Symbol.domains` returns a read-only copy, as do `to_json()`, `get_children_domains()`, `read_domain_or_domains()` and `pybamm.EMPTY_DOMAINS`. Editing them raises `TypeError` instead of emitting `SymbolMutationDeprecationWarning`, and not even `list` or `dict` methods can change a symbol through them. This ends the deprecation of these edits early; before 26.9 they left the symbol's identity stale. The sequences are no longer `list` instances and slicing them gives a plain tuple; tuples are accepted wherever domains are given. Build a new symbol with `with_domains`, `create_copy(new_children=...)` or `pybamm.replace`. The deprecated setters (`name`, `domains`, `scale`, ...) are unchanged. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
 - `Solution` and `EISSolution` no longer have an instance `__dict__`, so attributes they do not define cannot be attached to them. Subclass `pybamm.Solution` to add attributes. A solution pickled with an attached attribute still loads, without that attribute and with a logged warning. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
+- `pybamm` now requires `pybammsolvers>=0.11.0`; upgrade the two together. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782), [#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 
 ## Deprecated
 
@@ -14,6 +15,7 @@
 - `Solution.solver_statistics` reports the integrator's step, linear-solver-setup, nonlinear-iteration, nonlinear-failure and error-test-failure counts as a `pybamm.SolverStatistics` dataclass. `IDAKLUSolver` fills it for every solution, counting across `t_eval` breakpoints and separately for each input set, and the counts are summed when solutions are combined, so a stepped or experiment solution reports its total, including the cycles that `save_at_cycles` does not keep. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - A multi-input `IDAKLUSolver` solve now hands each thread its next input set as soon as it is free, instead of splitting the sets into equal static blocks plus a serial remainder solved on the calling thread, so a heterogeneous sweep (for example a current sweep whose high currents stop early on a voltage cut-off) no longer waits on its slowest block. A failing set no longer hides the others: the `SolverError` names every set that failed, whether it failed from the start or part-way through, each prefixed `input set N: `, and a single-set solve's message now starts with `input set 0: `. Each `on_failure="warn"` warning names its set the same way. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - Added `Solution.sensitivity_names`, the sensitivity inputs in the column order of `sensitivities["all"]`. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- An outputs-only `pybammsolvers` solution also returns `y_init`, `yS_init` and `yS_term`: its initial states and its states' sensitivities at both ends. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 
 ## Bug fixes
 
@@ -26,6 +28,12 @@
 - Fixed 3D variables requested through `output_variables` coming back scrambled. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 - Fixed `ProcessedVariable.as_computed()` reordering the spatial axes of 2D and 3D variables and raising on 0D time integrals; spatial time integrals raise `NotImplementedError`. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 - Fixed reading variables from joined `output_variables` solutions; a joined `DiscreteTimeSum`, or expression of a time integral, raises `NotImplementedError` when read. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- Fixed time-integral sensitivities counting the initial condition, and expressions of a time integral being differentiated at the wrong value. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed a CasADi `RuntimeError` reading the sensitivities of solutions joined at a shared time point, and summed time-integral sensitivities across the join. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed `Solution.first_state`'s sensitivities, and its states after an `output_variables` solve, which gave wrong `"Change in ..."` summary variables. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed joining `output_variables` solutions with sparse variables, such as `"Electrolyte current density [A.m-2]"`. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed `first_state`, `last_state` and `step` of an `output_variables` solve using the outputs' sensitivities instead of the states'. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed sensitivities with respect to only some of the inputs, for `output_variables` and for expressions of a time integral. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - Fixed a `ValueError` when reading variables from a solve with both scalar and vector inputs. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 
 ## Optimizations

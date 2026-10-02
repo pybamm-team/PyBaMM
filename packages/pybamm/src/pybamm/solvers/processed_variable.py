@@ -480,14 +480,19 @@ class ProcessedVariable(BaseProcessedVariable):
             # Compute sensitivity
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
 
-            if self.time_integral is not None:
-                S_var = self.time_integral.postfix_sensitivities(
-                    self._name, self.data, ts, inputs, S_var
-                )
-
             all_S_var.append(S_var)
 
         S_var = np.vstack(all_S_var)
+        if self.time_integral is not None:
+            # The value sums over every segment at once, so its sensitivity must too
+            S_var = self.time_integral.postfix_sensitivities(
+                self._name,
+                self._observe_raw(),
+                self.t_pts,
+                self.all_inputs[0],
+                self.sensitivity_names,
+                S_var,
+            )
         sensitivities = {"all": S_var}
 
         # Add the individual sensitivity
