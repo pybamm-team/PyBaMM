@@ -35,8 +35,8 @@ on:
         required: false
         type: number
       texlive:
-        description: "Install TeXLive on Linux, for sessions that render LaTeX in figures or docs."
-        default: true
+        description: "Install TeXLive on Linux, for sessions that render model equations with latexify."
+        default: false
         required: false
         type: boolean
       upload_coverage:
@@ -100,10 +100,11 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev
 
-      # Kept separate and opt-out: texlive-latex-extra is large and uncached.
+      # Opt-in and uncached, so kept minimal: sympy.preview needs the standalone class
+      # (texlive-latex-extra) and dvipng
       - name: Install TeXLive for Linux
         if: ${{ startsWith(matrix.leg.os, 'ubuntu') && inputs.texlive }}
-        run: sudo apt-get install texlive-latex-extra dvipng
+        run: sudo apt-get install --no-install-recommends texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
         if: startsWith(matrix.leg.os, 'macos')

@@ -132,4 +132,3 @@ jobs:
     with:
       sessions: benchmark-memory
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
-      texlive: false

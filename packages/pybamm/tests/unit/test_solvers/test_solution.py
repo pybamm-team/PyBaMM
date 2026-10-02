@@ -4,6 +4,7 @@
 import io
 import json
 import logging
+import pickle  # nosec B403 - used in tests with trusted input
 import subprocess  # nosec B404 - used in tests with trusted input
 import sys
 from unittest import mock
@@ -725,6 +726,41 @@ class TestSolution:
         assert isinstance(sol.cycles[1], pybamm.Solution)
         np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1:])
         np.testing.assert_allclose(sol.cycles[1].y, sol.y[:, len_cycle_1:])
+
+    def test_solutions_reject_undefined_attributes(self):
+        # An experiment keeps several solutions per step, so none carries a __dict__
+        t = np.linspace(0, 1)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        eis_solution = pybamm.EISSolution(np.array([1.0]), np.array([1 + 1j]))
+        for sol in (solution, solution.first_state, eis_solution):
+            assert not hasattr(sol, "__dict__")
+            with pytest.raises(AttributeError, match=r"label"):
+                sol.label = "extra"
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 13), reason="__static_attributes__ is new in 3.13"
+    )
+    def test_attributes_set_by_methods_are_slots(self):
+        # An attribute a method sets without a slot raises AttributeError, which
+        # a rarely run path could otherwise hide
+        classes = pybamm.Solution.__mro__[:-1]
+        slots = {name for cls in classes for name in cls.__slots__}
+        properties = {
+            name
+            for cls in classes
+            for name, value in vars(cls).items()
+            if isinstance(value, property)
+        }
+        for cls in classes:
+            assert set(cls.__static_attributes__) <= slots | properties
+
+    def test_pickle_keeps_slots(self):
+        t = np.linspace(0, 1)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        first_state = solution.first_state
+        loaded = pickle.loads(pickle.dumps(solution))  # nosec B301
+        np.testing.assert_array_equal(loaded.t, t)
+        np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
 
     def test_total_time(self):
         sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]), pybamm.BaseModel(), {})
@@ -1839,3 +1875,133 @@ class TestSolution:
         assert out.hermite_interpolation == folded.hermite_interpolation
         assert out.hermite_interpolation is True
         np.testing.assert_array_equal(out.yp, folded.yp)
+
+
+class TestSolutionSolverStatistics:
+    @staticmethod
+    def _solution(start, statistics):
+        t = np.linspace(start, start + 1, 5)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        solution.solver_statistics = statistics
+        return solution
+
+    def test_statistics_add_field_wise(self):
+        total = pybamm.SolverStatistics(1, 2, 3, 4, 5) + pybamm.SolverStatistics(
+            10, 20, 30, 40, 50
+        )
+        assert total == pybamm.SolverStatistics(11, 22, 33, 44, 55)
+        assert pybamm.SolverStatistics() == pybamm.SolverStatistics(0, 0, 0, 0, 0)
+        with pytest.raises(TypeError):
+            pybamm.SolverStatistics() + 1
+
+    def test_a_new_solution_has_no_statistics(self):
+        t = np.linspace(0, 1)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        assert solution.solver_statistics is None
+
+    def test_add_sums_statistics(self):
+        first = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        second = self._solution(1, pybamm.SolverStatistics(10, 20, 30, 40, 50))
+        assert (first + second).solver_statistics == pybamm.SolverStatistics(
+            11, 22, 33, 44, 55
+        )
+
+    def test_add_is_none_when_a_side_has_no_statistics(self):
+        statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
+        with_none_after = self._solution(0, statistics) + self._solution(1, None)
+        assert with_none_after.solver_statistics is None
+        with_none_before = self._solution(0, None) + self._solution(1, statistics)
+        assert with_none_before.solver_statistics is None
+
+    def test_copy_and_adding_nothing_keep_statistics(self):
+        statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
+        solution = self._solution(0, statistics)
+        assert solution.copy().solver_statistics == statistics
+        assert (solution + None).solver_statistics == statistics
+        assert (None + solution).solver_statistics == statistics
+        assert (pybamm.EmptySolution() + solution).solver_statistics == statistics
+
+    def test_from_sub_solutions_sums_statistics(self):
+        solutions = [
+            self._solution(i, pybamm.SolverStatistics(i, i, i, i, i)) for i in range(4)
+        ]
+        combined = pybamm.Solution.from_sub_solutions(solutions)
+        assert combined.solver_statistics == pybamm.SolverStatistics(6, 6, 6, 6, 6)
+        solutions[2].solver_statistics = None
+        assert pybamm.Solution.from_sub_solutions(solutions).solver_statistics is None
+
+    def test_add_sums_statistics_of_a_single_sample_duplicate(self):
+        first = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        duplicate = pybamm.Solution(
+            np.array([1.0]), np.ones((2, 1)), pybamm.BaseModel(), {}
+        )
+        duplicate.solver_statistics = pybamm.SolverStatistics(10, 20, 30, 40, 50)
+        combined = first + duplicate
+        assert combined.t[-1] == pytest.approx(1.0)
+        assert combined.solver_statistics == pybamm.SolverStatistics(11, 22, 33, 44, 55)
+
+    def test_from_sub_solutions_sums_statistics_of_a_skipped_duplicate(self):
+        import functools
+        import operator
+
+        first = self._solution(0, pybamm.SolverStatistics(1, 1, 1, 1, 1))
+        duplicate = pybamm.Solution(
+            np.array([1.0]), np.ones((2, 1)), pybamm.BaseModel(), {}
+        )
+        duplicate.solver_statistics = pybamm.SolverStatistics(10, 10, 10, 10, 10)
+        second = self._solution(1, pybamm.SolverStatistics(100, 100, 100, 100, 100))
+        solutions = [first, duplicate, second]
+        combined = pybamm.Solution.from_sub_solutions(solutions)
+        folded = functools.reduce(operator.add, solutions)
+        assert combined.solver_statistics == pybamm.SolverStatistics(
+            111, 111, 111, 111, 111
+        )
+        assert folded.solver_statistics == combined.solver_statistics
+
+    def test_first_and_last_state_report_no_work(self):
+        solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        assert solution.first_state.solver_statistics == pybamm.SolverStatistics()
+        assert solution.last_state.solver_statistics == pybamm.SolverStatistics()
+
+    def test_statistics_stay_small_across_retained_states(self):
+        # An experiment keeps a first and last state for every step
+        solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        assert (
+            solution.first_state.solver_statistics
+            is solution.last_state.solver_statistics
+        )
+        assert not hasattr(solution.solver_statistics, "__dict__")
+
+    def test_statistics_survive_pickling(self):
+        statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
+        solution = self._solution(0, statistics)
+        assert pickle.loads(pickle.dumps(solution)).solver_statistics == statistics  # nosec B301
+
+    def test_solution_pickled_before_slots_loads(self, caplog):
+        solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        first_state = solution.first_state
+        # A solution pickled before Solution had slots holds one dict, without
+        # solver_statistics, with the cached first state under its name
+        state = {
+            name: getattr(solution, name)
+            for cls in type(solution).__mro__
+            for name in getattr(cls, "__slots__", ())
+            if not name.startswith("__") and hasattr(solution, name)
+        }
+        del state["solver_statistics"], state["_first_state"], state["_last_state"]
+        state["first_state"] = first_state
+        # and perhaps with an attribute a caller attached
+        state["label"] = "extra"
+
+        class PreSlotsPickle:
+            def __reduce__(self):
+                return object.__new__, (pybamm.Solution,), state
+
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            loaded = pickle.loads(pickle.dumps(PreSlotsPickle()))  # nosec B301
+        assert "Dropped attributes ['label']" in caplog.text
+        assert not hasattr(loaded, "label")
+        assert loaded.solver_statistics is None
+        np.testing.assert_array_equal(loaded.t, solution.t)
+        np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
+        assert loaded.last_state.t[0] == pytest.approx(solution.t[-1])

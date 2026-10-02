@@ -1,4 +1,5 @@
 # mypy: ignore-errors
+import dataclasses
 import logging
 import math
 import numbers
@@ -88,8 +89,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
     ----------
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-4).
-    atol : float, optional
-        The absolute tolerance for the solver (default is 1e-6).
+    atol : float or array-like, optional
+        The absolute tolerance for the solver, either one value for every state
+        or a list, tuple or array with one value per state (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
         Default is None, which uses a custom Newton solver for consistent
@@ -169,7 +171,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "max_order_bdf": 5,
                 # Maximum number of steps to be taken by the solver in its attempt to
                 # reach the next output time.
-                # Note: this value differs from the IDA default of 500
+                # This value differs from the IDA default of 500
                 "max_num_steps": 100000,
                 # Initial step size. The solver default is used if this is left at 0.0
                 "dt_init": 0.0,
@@ -182,17 +184,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Maximum number of error test failures in attempting one step
                 "max_error_test_failures": 10,
                 # Maximum number of nonlinear solver iterations at one step
-                # Note: this value differs from the IDA default of 4
+                # This value differs from the IDA default of 4
                 "max_nonlinear_iterations": 40,
                 # Maximum number of nonlinear solver convergence failures at one step
-                # Note: this value differs from the IDA default of 10
+                # This value differs from the IDA default of 10
                 "max_convergence_failures": 100,
                 # Safety factor in the nonlinear convergence test
                 "nonlinear_convergence_coefficient": 0.33,
                 # Suppress algebraic variables from error test
                 "suppress_algebraic_error": False,
                 # Store Hermite interpolation data for the solution.
-                # Note: this option is always disabled if output_variables are given
+                # This option is always disabled if output_variables are given
                 # or if t_interp values are specified
                 "hermite_interpolation": True,
                 # Setting hermite_reduction_factor > 1.0 compresses the solution size
@@ -208,15 +210,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # initial condition calculation
                 "nonlinear_convergence_coefficient_ic": 0.0033,
                 # Maximum number of steps allowed when `init_all_y_ic = False`
-                # Note: this value differs from the IDA default of 5
+                # This value differs from the IDA default of 5
                 "max_num_steps_ic": 50,
                 # Maximum number of the approximate Jacobian or preconditioner evaluations
                 # allowed when the Newton iteration appears to be slowly converging
-                # Note: this value differs from the IDA default of 4
+                # This value differs from the IDA default of 4
                 "max_num_jacobians_ic": 40,
                 # Maximum number of Newton iterations allowed in any one attempt to solve
                 # the initial conditions calculation problem
-                # Note: this value differs from the IDA default of 10
+                # This value differs from the IDA default of 10
                 "max_num_iterations_ic": 100,
                 # Maximum number of linesearch backtracks allowed in any Newton iteration,
                 # when solving the initial conditions calculation problem
@@ -371,15 +373,69 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not isinstance(options["compile"], bool):
             raise pybamm.SolverError("compile must be a bool")
 
-    def _check_atol_type(self, atol, model):
-        if isinstance(atol, float):
-            return np.full(model.len_rhs_and_alg, atol)
-        elif isinstance(atol, np.ndarray):
-            return atol
-        else:
+    def _check_atol_type(
+        self, atol: float | list | tuple | np.ndarray, model: pybamm.BaseModel
+    ) -> np.ndarray:
+        """Widen an absolute tolerance to one value per state.
+
+        Parameters
+        ----------
+        atol : float, list, tuple or :class:`numpy.ndarray`
+            One tolerance for every state, or one per state with shape ``(n,)``
+            or ``(n, 1)``, where ``n`` is the number of states.
+        model : :class:`pybamm.BaseModel`
+            The discretised model.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            Float64 tolerances with shape ``(n,)``.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If ``atol`` is not a real number, or a list, tuple or array of real
+            numbers with one value per state.
+        """
+        number_of_states = model.len_rhs_and_alg
+        if isinstance(atol, bool) or not isinstance(
+            atol, numbers.Real | list | tuple | np.ndarray
+        ):
             raise pybamm.SolverError(
-                "Absolute tolerances must be a numpy array or float"
+                "Absolute tolerances must be a float, or a list, tuple or array "
+                f"of floats with one value per state, not {type(atol).__name__}"
             )
+        if isinstance(atol, numbers.Real):
+            return np.full(number_of_states, float(atol))
+
+        try:
+            values = np.asarray(atol)
+        except ValueError as error:
+            raise pybamm.SolverError(
+                "Absolute tolerances must be a flat list, tuple or array"
+            ) from error
+        # NumPy upcasts a bool beside numbers to 1.0 or 0.0, losing it
+        if isinstance(atol, list | tuple) and any(
+            isinstance(value, bool | np.bool_)
+            for value in np.asarray(atol, dtype=object).ravel()
+        ):
+            raise pybamm.SolverError(
+                "Absolute tolerances must be real numbers, not booleans"
+            )
+        # Bool and complex arrays would otherwise cast to float silently
+        if values.dtype.kind not in "iuf":
+            raise pybamm.SolverError(
+                "Absolute tolerances must be real numbers, not an array of "
+                f"dtype {values.dtype}"
+            )
+        if values.ndim == 0:
+            return np.full(number_of_states, float(values))
+        if values.shape not in ((number_of_states,), (number_of_states, 1)):
+            raise pybamm.SolverError(
+                f"Absolute tolerances have shape {values.shape} but "
+                f"({number_of_states},) was expected (one value per state)"
+            )
+        return np.ascontiguousarray(values.ravel(), dtype=np.float64)
 
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
         if model.convert_to_format != "casadi":
@@ -737,6 +793,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
             raise pybamm.SolverError(str(e)) from None
         integration_time = timer.time()
 
+        # A set that fails part-way returns a partial solution with a negative
+        # flag instead of throwing, so its failure is reported here
+        failures = [
+            f"input set {index}: {idaklu.sundials_error_message(soln.flag)}"
+            for index, soln in enumerate(solns)
+            if soln.flag < 0
+        ]
+        if failures and self._on_failure == "error":
+            raise pybamm.SolverError("; ".join(failures))
+        if self._on_failure == "warn":
+            for failure in failures:
+                warnings.warn(failure + ", returning a partial solution.", stacklevel=2)
+
         return [
             self._post_process_solution(
                 soln, model, integration_time, inputs_dict, t_eval
@@ -802,17 +871,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             termination = "event"
         elif sol.flag >= 0:
             termination = "final time"
-        elif sol.flag < 0:
+        else:
             termination = "failure"
-            msg = idaklu.sundials_error_message(sol.flag)
-            match self._on_failure:
-                case "warn":
-                    warnings.warn(
-                        msg + ", returning a partial solution.",
-                        stacklevel=2,
-                    )
-                case "error":
-                    raise pybamm.SolverError(msg)
 
         if sol.yp.size > 0:
             yp = sol.yp.reshape((number_of_timesteps, number_of_states)).T
@@ -861,6 +921,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
             newsol.closest_event_idx = int(np.nanargmin(np.abs(event_values)))
 
         newsol.integration_time = integration_time
+        newsol.solver_statistics = pybamm.SolverStatistics(
+            **{
+                field.name: getattr(sol.stats, field.name)
+                for field in dataclasses.fields(pybamm.SolverStatistics)
+            }
+        )
         if not save_outputs_only:
             return newsol
 
@@ -1208,6 +1274,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         new_sol.solve_time = solution.solve_time
         new_sol.integration_time = solution.integration_time
+        new_sol.solver_statistics = solution.solver_statistics
         new_sol.set_up_time = solution.set_up_time
 
         return new_sol
