@@ -17,39 +17,25 @@ import scipy
 from scipy.io import loadmat
 
 import pybamm
-from pybamm.solvers.observation import CASADI_OBSERVATION
 from pybamm.solvers.solution import _DEFAULT_SOLUTION_OPTIONS, make_cycle_solution
 from tests import get_discretisation_for_testing
 
 
-class _PicklerBeforeObservationBackends(pickle.Pickler):
-    """Pickles Solutions and ProcessedVariables in their earlier layout.
-
-    That layout has no ``Solution._observation``, and keeps a processed
-    variable's CasADi functions as ``base_variables_casadi``.
-    """
+class _PicklerBeforeVariableObservers(pickle.Pickler):
+    """Pickles ProcessedVariables in their earlier layout, which keeps the CasADi
+    functions as ``base_variables_casadi``."""
 
     def reducer_override(self, obj):
-        if isinstance(obj, pybamm.Solution):
-            slots = {
-                name: getattr(obj, name)
-                for cls in type(obj).__mro__
-                for name in getattr(cls, "__slots__", ())
-                if not name.startswith("__") and hasattr(obj, name)
-            }
-            slots.pop("_observation", None)
-            state = (None, slots)
-        elif isinstance(obj, pybamm.ProcessedVariable):
-            state = dict(obj.__dict__)
-            state["base_variables_casadi"] = state.pop("_observer").leaves
-        else:
+        if not isinstance(obj, pybamm.ProcessedVariable):
             return NotImplemented
+        state = dict(obj.__dict__)
+        state["base_variables_casadi"] = state.pop("_observer").leaves
         return copyreg.__newobj__, (type(obj),), state
 
 
-def _round_trip_before_observation_backends(obj):
+def _round_trip_before_variable_observers(obj):
     buffer = io.BytesIO()
-    _PicklerBeforeObservationBackends(buffer, pickle.HIGHEST_PROTOCOL).dump(obj)
+    _PicklerBeforeVariableObservers(buffer, pickle.HIGHEST_PROTOCOL).dump(obj)
     return pickle.loads(buffer.getvalue())  # nosec B301
 
 
@@ -1198,7 +1184,7 @@ class TestSolution:
         assert "DATA" in save_result.stdout
         assert save_result.stdout == load_result.stdout
 
-    def test_load_solution_pickled_before_observation_backends(self):
+    def test_load_solution_pickled_before_variable_observers(self):
         sim = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
             experiment=pybamm.Experiment(
@@ -1209,10 +1195,8 @@ class TestSolution:
         t = np.linspace(0, 120, 7)
         solution["Voltage [V]"].entries
 
-        loaded = _round_trip_before_observation_backends(solution)
+        loaded = _round_trip_before_variable_observers(solution)
 
-        # An unpickled backend is a new instance, so this one is the default
-        assert loaded._observation is CASADI_OBSERVATION
         np.testing.assert_allclose(
             loaded["Voltage [V]"](t), solution["Voltage [V]"](t), rtol=1e-12
         )
@@ -1247,7 +1231,7 @@ class TestSolution:
         voltage = solution["Voltage [V]"]
         t = np.linspace(0, 600, 7)
 
-        loaded = _round_trip_before_observation_backends(voltage)
+        loaded = _round_trip_before_variable_observers(voltage)
 
         assert "base_variables_casadi" not in loaded.__dict__
         np.testing.assert_allclose(loaded(t), voltage(t), rtol=1e-12)

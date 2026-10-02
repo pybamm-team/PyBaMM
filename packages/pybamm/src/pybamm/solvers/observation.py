@@ -1,9 +1,9 @@
-"""Observation backends: how a :class:`pybamm.Solution` reads its variables.
+"""How a :class:`pybamm.Solution` reads its variables.
 
-An :class:`ObservationBackend` turns a variable name into a processed variable
-over a run of a Solution's sub-solutions, its *segments*. A *leaf* is one
-segment's compiled form of one variable, so a variable spanning ``n``
-sub-solutions has ``n`` leaves.
+:func:`build_variable` turns a variable name into a processed variable over a
+Solution's sub-solutions, its *segments*, reading each segment through its own
+model. A *leaf* is one segment's compiled form of one variable; each model keeps
+its leaves in an :class:`ObserverCache`, so every solution of it reuses them.
 
 :class:`OutputAssembly` is the ``output_variables`` counterpart: the solver has
 already computed those variables, so it owns the payload's row layout and
@@ -12,7 +12,6 @@ populates the Solution eagerly.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from itertools import accumulate, pairwise
 
@@ -29,129 +28,117 @@ from pybamm.solvers.variable_observer import (
 )
 
 
-class ObservationBackend(ABC):
-    """How a Solution turns a variable name into something it can evaluate.
+class ObserverCache:
+    """The compiled leaves of one model's variables, keyed by variable name.
 
-    A backend covers an ordered run of a Solution's sub-solutions, one
-    *segment* each. ``backend[key]`` indexes *segments*, matching the slice the
-    Solution applies to its sub-solutions; :func:`join_observations` combines
-    the backends of consecutive Solutions.
+    A name is assumed to keep one expression for the model's lifetime.
     """
 
-    @abstractmethod
-    def __getitem__(self, key: slice) -> ObservationBackend:
-        """This backend restricted to a slice of the Solution's segments."""
+    def __init__(self):
+        self._casadi_leaves: dict[str, casadi.Function] = {}
 
-    @abstractmethod
-    def build_variable(
-        self, solution: pybamm.Solution, name: str
-    ) -> BaseProcessedVariable:
-        """The processed variable for ``name``, ready to evaluate.
+    @classmethod
+    def of(cls, model: pybamm.BaseModel) -> ObserverCache:
+        """The cache of ``model``, created on first use."""
+        if model._observer_cache is None:
+            model._observer_cache = cls()
+        return model._observer_cache
+
+    def copy(self) -> ObserverCache:
+        """A cache that starts with these leaves and grows independently."""
+        new = type(self)()
+        new._casadi_leaves = self._casadi_leaves.copy()
+        return new
+
+    def casadi_leaf(
+        self,
+        solution: pybamm.Solution,
+        key: str,
+        var_pybamm: pybamm.Symbol,
+        inputs: dict,
+        ys_shape: tuple[int, ...],
+    ) -> tuple[
+        casadi.Function, pybamm.Symbol, pybamm.ProcessedVariableTimeIntegral | None
+    ]:
+        """One segment's CasADi leaf for ``var_pybamm``, converted on first use.
 
         Parameters
         ----------
         solution : :class:`pybamm.Solution`
-            The solution being observed; supplies the trajectories, models and
-            inputs. Its segments are 1:1 with this backend's.
-        name : str
-            Variable name, as registered on the models.
+            The solution being read, whose options the conversion uses.
+        key : str
+            The cache key: the variable name, or a vector field component's.
+        var_pybamm : :class:`pybamm.Symbol`
+            The variable's discretised expression.
+        inputs : dict
+            The segment's inputs, which fix the leaf's parameter layout.
+        ys_shape : tuple of int
+            The shape of the segment's states.
 
         Returns
         -------
-        :class:`pybamm.solvers.base_processed_variable.BaseProcessedVariable`
-            Evaluable over this backend's whole run of segments.
+        tuple
+            The CasADi function, the expression it evaluates (a time integral's
+            integrand) and the time integral, or None.
         """
-
-
-class CasadiObservation(ObservationBackend):
-    """Variables converted to CasADi and evaluated by the IDAKLU kernels.
-
-    Stateless: every per-segment artifact it needs is reached through the
-    Solution it is handed, so any two instances are interchangeable and one,
-    :data:`CASADI_OBSERVATION`, covers any run of segments.
-    """
-
-    def __getitem__(self, key):
-        return self
-
-    def __eq__(self, other):
-        return type(other) is type(self)
-
-    def __hash__(self):
-        return hash(type(self))
-
-    def build_variable(self, solution, name):
-        time_integral = None
-        pybamm.logger.debug(f"Post-processing {name}")
-
-        # Iterate through all models, some may be in the list several times and
-        # therefore only get set up once
-        vars_pybamm = [
-            model.get_processed_variable_or_event(name) for model in solution.all_models
-        ]
-        vars_casadi = [None] * len(solution.all_models)
-        for i, (model, ys, inputs) in enumerate(
-            zip(solution.all_models, solution.all_ys, solution.all_inputs, strict=True)
-        ):
-            _var_pybamm = vars_pybamm[i]
-            check_variable_in_solve(solution, name, _var_pybamm)
-            if isinstance(_var_pybamm, pybamm.VectorField):
-                comp_casadi = []
-                for k, comp in enumerate(_var_pybamm.components):
-                    cc, _, _ = self._model_leaf(
-                        solution,
-                        model,
-                        comp,
-                        inputs=inputs,
-                        ys_shape=ys.shape,
-                        time_integral=None,
-                        cache_key=f"{name}[{k}]",
-                    )
-                    comp_casadi.append(cc)
-                vars_casadi[i] = comp_casadi
-            else:
-                var_casadi, var_pybamm, time_integral = self._model_leaf(
-                    solution,
-                    model,
-                    _var_pybamm,
-                    inputs=inputs,
-                    ys_shape=ys.shape,
-                    time_integral=time_integral,
-                    cache_key=name,
-                )
-                vars_pybamm[i] = var_pybamm
-                vars_casadi[i] = var_casadi
-        return pybamm.process_variable(
-            name,
-            vars_pybamm,
-            CasadiObserver(vars_casadi),
-            solution,
-            time_integral=time_integral,
-        )
-
-    @staticmethod
-    def _model_leaf(
-        solution,
-        model,
-        var_pybamm,
-        time_integral,
-        inputs,
-        ys_shape,
-        cache_key,
-    ):
-        """One model's CasADi leaf, memoised on the model unless time-integrated."""
-        _var_casadi = model._variables_casadi.get(cache_key)
-        if _var_casadi is not None:
-            return _var_casadi, var_pybamm, time_integral
-
-        var_casadi, var_pybamm, time_integral = solution._convert_to_casadi(
+        leaf = self._casadi_leaves.get(key)
+        if leaf is not None:
+            return leaf, var_pybamm, None
+        leaf, var_pybamm, time_integral = solution._convert_to_casadi(
             var_pybamm, inputs, ys_shape
         )
-
-        # Only cache if it's not a time integral
+        # A hit returns no time integral, so caching one would read its integrand
         if time_integral is None:
-            model._variables_casadi[cache_key] = var_casadi
-        return var_casadi, var_pybamm, time_integral
+            self._casadi_leaves[key] = leaf
+        return leaf, var_pybamm, time_integral
+
+
+def build_variable(solution: pybamm.Solution, name: str) -> BaseProcessedVariable:
+    """The processed variable ``name`` of ``solution``, ready to evaluate.
+
+    Parameters
+    ----------
+    solution : :class:`pybamm.Solution`
+        The solution to read; each segment is read through its own model.
+    name : str
+        Variable name, as registered on the models.
+
+    Returns
+    -------
+    :class:`pybamm.solvers.base_processed_variable.BaseProcessedVariable`
+        Evaluable over every segment of ``solution``.
+    """
+    pybamm.logger.debug(f"Post-processing {name}")
+    time_integral = None
+    vars_pybamm = [
+        model.get_processed_variable_or_event(name) for model in solution.all_models
+    ]
+    vars_casadi = [None] * len(solution.all_models)
+    for i, (model, ys, inputs) in enumerate(
+        zip(solution.all_models, solution.all_ys, solution.all_inputs, strict=True)
+    ):
+        var_pybamm = vars_pybamm[i]
+        check_variable_in_solve(solution, name, var_pybamm)
+        cache = ObserverCache.of(model)
+        if isinstance(var_pybamm, pybamm.VectorField):
+            vars_casadi[i] = [
+                cache.casadi_leaf(
+                    solution, f"{name}[{k}]", component, inputs, ys.shape
+                )[0]
+                for k, component in enumerate(var_pybamm.components)
+            ]
+        else:
+            vars_casadi[i], vars_pybamm[i], segment_time_integral = cache.casadi_leaf(
+                solution, name, var_pybamm, inputs, ys.shape
+            )
+            time_integral = segment_time_integral or time_integral
+    return pybamm.process_variable(
+        name,
+        vars_pybamm,
+        CasadiObserver(vars_casadi),
+        solution,
+        time_integral=time_integral,
+    )
 
 
 class OutputAssembly:
@@ -322,35 +309,3 @@ class OutputAssembly:
                 all_sens,
             )
         return pack_sensitivity_dict(all_sens, sensitivity_names)
-
-
-def join_observations(backends: Sequence[ObservationBackend]) -> ObservationBackend:
-    """One backend covering consecutive Solutions' segments, in order.
-
-    Parameters
-    ----------
-    backends : list of :class:`ObservationBackend`
-        The backend of each Solution being joined, in order.
-
-    Returns
-    -------
-    :class:`ObservationBackend`
-        The backend every Solution shares.
-
-    Raises
-    ------
-    :class:`pybamm.SolverError`
-        If the Solutions do not all share one backend.
-    """
-    first, *rest = backends
-    for backend in rest:
-        if backend != first:
-            raise pybamm.SolverError(
-                "Cannot join solutions read through different observation "
-                f"backends: {type(first).__name__} and {type(backend).__name__}."
-            )
-    return first
-
-
-#: The backend a Solution carries by default.
-CASADI_OBSERVATION = CasadiObservation()
