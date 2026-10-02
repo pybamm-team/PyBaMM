@@ -24,6 +24,7 @@
 
 ## Optimizations
 
+- CI installs TeXLive only for the unit, coverage and example-notebook sessions, the ones that render `latexify` output, and skips its recommended packages, cutting the download from the Ubuntu mirror by more than half. ([#5832](https://github.com/pybamm-team/PyBaMM/pull/5832))
 - `Solution` stores its attributes in `__slots__`, so an experiment, which keeps four solutions per step, retains about 40% less memory per step on Python 3.13. Solutions pickled by earlier versions still load. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
 - Symbol mutation is no longer guarded by intercepting every attribute write, and `children` and `domain` return the stored immutable sequences instead of building a view on each access. Writes to a symbol's slots after construction are instead rejected by a static check of PyBaMM's code, tests, examples and documentation. Under the test suite's mutation guard, constructing an expression is twice as fast and parameterising it is 25% faster, which recovers most of the `test_parameterise` benchmark regression from [#5779](https://github.com/pybamm-team/PyBaMM/pull/5779). ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
 

@@ -171,6 +171,7 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: unit
+      texlive: true
       legs: >-
         [{"os": "ubuntu-latest", "python": "3.10"},
          {"os": "ubuntu-latest", "python": "3.11"},
@@ -207,6 +208,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
       sessions: coverage
+      texlive: true
       upload_coverage: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
@@ -280,6 +282,7 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: examples
+      texlive: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
@@ -302,7 +305,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: memory
-      texlive: false
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   # The `core` tier: models the maintainers have adopted, so a failure blocks a
@@ -316,7 +318,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: zoo-gating
-      texlive: false
       fetch_depth: 0
       timeout_minutes: 30
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
@@ -332,7 +333,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: zoo-community
-      texlive: false
       fetch_depth: 0
       timeout_minutes: 60
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
