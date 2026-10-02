@@ -177,7 +177,7 @@ class OutputAssembly:
                 self._sparse[name] = sparsity
         offsets = list(accumulate(lens, initial=0))
         self._n_rows = offsets[-1]
-        # The layout itself: one slice of payload rows per output variable.
+        # One slice of payload rows per output variable
         self._rows = tuple(slice(start, end) for start, end in pairwise(offsets))
 
     @property
@@ -226,8 +226,7 @@ class OutputAssembly:
             entries = np.ascontiguousarray(data[:, rows])
             sparsity = self._sparse.get(name)
             if sparsity is not None:
-                # The rows hold only the structural nonzeros; scatter them into
-                # every entry at their flat (column-major) indices
+                # Scatter the returned structural nonzeros to their flat indices
                 dense = np.zeros((entries.shape[0], sparsity.numel()))
                 dense[:, sparsity.find()] = entries
                 entries = dense

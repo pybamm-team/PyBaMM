@@ -973,8 +973,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 sol.yS_term, sensitivity_names
             )
 
-        # On this path `sol.y` carries the concatenated outputs rather than the
-        # states, and `sol.yS` their sensitivities as (n_t, n_rows, n_p).
+        # sol.y holds the outputs, and sol.yS their sensitivities (n_t, n_rows, n_p)
         self._setup["output_assembly"].attach(
             newsol,
             np.asarray(sol.y).reshape(number_of_timesteps, -1),
