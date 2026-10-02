@@ -3,9 +3,11 @@
 import pickle  # nosec B403 - used in tests with trusted input
 from itertools import pairwise
 from types import SimpleNamespace
+from unittest import mock
 
 import numpy as np
 import pytest
+import scipy
 
 import pybamm
 from pybamm.solvers.observation import ObserverCache
@@ -107,6 +109,32 @@ class TestObserverCache:
         solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])
         np.testing.assert_allclose(solution["w"].entries, 2 * solution["u"].entries)
         assert "w" in ObserverCache.of(restored)._casadi_leaves
+
+    def test_a_time_integral_is_converted_once_per_model(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        model.variables = {
+            "u": u,
+            "Q": pybamm.ExplicitTimeIntegral(u, pybamm.Scalar(1)),
+            "Q squared": pybamm.ExplicitTimeIntegral(u, pybamm.Scalar(0)) ** 2,
+        }
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver()
+        convert = pybamm.Solution._convert_to_casadi
+
+        with mock.patch.object(
+            pybamm.Solution, "_convert_to_casadi", autospec=True, side_effect=convert
+        ) as spy:
+            for t_end in (1, 2):
+                solution = solver.solve(model, [0, t_end])
+                integral = scipy.integrate.trapezoid(solution["u"].entries, solution.t)
+                np.testing.assert_allclose(solution["Q"].entries, [1 + integral])
+                np.testing.assert_allclose(solution["Q squared"].entries, [integral**2])
+
+        # u, Q and Q squared, each once across both solves
+        assert spy.call_count == 3
 
 
 class TestSegmentSelector:
