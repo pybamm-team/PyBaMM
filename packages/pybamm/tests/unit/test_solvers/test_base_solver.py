@@ -631,8 +631,7 @@ class TestBaseSolver:
             pybamm.BaseSolver._check_restart_sensitivities(solution)
 
     def test_step_restarts_sensitivities_from_output_variables(self):
-        # Output and state widths match here, so seeding the state sensitivities
-        # from the output ones would give wrong values without an error.
+        # Equal output and state widths, so seeding from the outputs is silently wrong
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")

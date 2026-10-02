@@ -83,8 +83,7 @@ def process_and_check_2D_variable(
 
 
 _T_INTERP = np.linspace(0, 600, 4)
-# The full-state path evaluates (x - 1) + 1, which rounds values within about
-# 1e-16 of zero to zero
+# The full-state path's (x - 1) + 1 rounds values within about 1e-16 of zero to zero
 _TOLERANCES = {"rtol": 1e-6, "atol": 1e-12}
 
 

@@ -97,8 +97,7 @@ class SolutionData
      * MUST be called with GIL held (i.e., in serial section).
      */
     Solution generate_solution() {
-      // yS_init/yS_term hold one row of states per parameter, only when
-      // y_init does (outputs-only mode)
+      // One row of states per parameter, present only in outputs-only mode
       const ptrdiff_t n_states = static_cast<ptrdiff_t>(yinit_vec.size());
       const ptrdiff_t n_state_sens =
           n_states > 0 ? static_cast<ptrdiff_t>(yS_init_vec.size()) / n_states : 0;

@@ -1320,8 +1320,7 @@ class TestIDAKLUSolver:
                 sol, model, 1.0, inputs={"a": 2.0}, calculate_sensitivities=True
             )
 
-        # The second step starts from the first's state sensitivities; du/da is the
-        # integral of v = e^-t
+        # du/da is the integral of v = e^-t, continued from the first step
         np.testing.assert_allclose(
             sol["u"].sensitivities["a"], 1 - np.exp(-sol.t), rtol=1e-6, atol=1e-9
         )

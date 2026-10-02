@@ -2061,8 +2061,7 @@ def process(
                 f"to parameters {model.calculate_sensitivities} using "
                 "CasADi"
             )
-            # One column per sensitivity input, in the solver's order, so the
-            # solver can compute sensitivities online
+            # One column per sensitivity input, in the solver's order
             if return_jacp_stacked:
                 sensitivity_inputs_stacked = casadi.vertcat(
                     *[p_casadi[pname] for pname in model.calculate_sensitivities]

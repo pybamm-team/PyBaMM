@@ -958,8 +958,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not save_outputs_only:
             return newsol
 
-        # The states at t0 after consistent initialization, for first_state, and the
-        # states' sensitivities at both ends, for first_state and last_state
+        # Consistent initial states, and the state sensitivities at both ends
         newsol._y0 = sol.y_init
         if number_of_sensitivity_parameters != 0:
             newsol._y0_sensitivities = _state_sensitivities(
@@ -982,8 +981,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             end_idx = start_idx + var_nnz
             data = sol.y[:, start_idx:end_idx]
             if var_nnz != math.prod(var_shape):
-                # pybammsolvers returns only the structural nonzeros; scatter them
-                # into every entry at their flat (column-major) indices
+                # Scatter the returned structural nonzeros to their flat indices
                 indices = base_variables[0].sparsity_out(0).find()
                 dense = np.zeros((number_of_timesteps, math.prod(var_shape)))
                 dense[:, indices] = data

@@ -189,8 +189,7 @@ public:
   sunrealtype *yp_val_ = nullptr;
   vector<sunrealtype *> yS_val_;
   vector<sunrealtype *> ypS_val_;
-  // State at t0 after consistent initialization, kept when save_outputs_only
-  // returns outputs in place of the states
+  // State at t0 after consistent initialization, for save_outputs_only
   std::vector<sunrealtype> y_init_;
   // Its sensitivities, (number_of_parameters, number_of_states) row-major
   std::vector<sunrealtype> yS_init_;
