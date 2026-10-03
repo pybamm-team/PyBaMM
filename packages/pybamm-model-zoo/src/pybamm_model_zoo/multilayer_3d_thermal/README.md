@@ -221,8 +221,19 @@ unless stated:
   stack matches `pybamm.lithium_ion.SPM`, `SPMe`, and `DFN` to within 1 mV over a
   30 minute discharge (measured 0.013, 0.008, and 0.005 mV).
 * With a two-phase negative electrode and one-state hysteresis on its secondary
-  phase (`Chen2020_composite`), the SPMe and DFN stacks match PyBaMM's own models
-  under the same options to within 1 mV (measured 0.09 and 0.014 mV).
+  phase (`Chen2020_composite`), with Butler-Volmer or Marcus-Hush-Chidsey kinetics
+  on the negative electrode, the SPM, SPMe and DFN stacks match PyBaMM's own
+  models under the same options to within 1 mV.
+* PyBaMM's own `"heat of mixing"`, where it builds (one particle phase), reaches
+  every zone, and an insulated stack heats as a lumped cell with the same option.
+* With `"use lumped thermal capacity"`, each zone's heat capacity is `"Cell heat
+  capacity [J.K-1.m-3]"`, and an insulated stack heats as a lumped cell with it.
+* `"surface temperature": "lumped"` is kept on the stack's options, and the zones
+  stay without a casing.
+* A `zone_model` that swaps a submodel before building gives the same solution
+  when the swapped-in submodel is PyBaMM's own.
+* An experiment discharges to its own voltage cut-off, below the parameter set's,
+  in parallel and in series: the zones carry no voltage limits of their own.
 * Insulated on every face, the stack heats as PyBaMM's lumped model of one unit
   cell to `rtol=1e-3` (measured 1e-5 and better): the same heat, over the same
   volume, current collectors included, and the same heat capacity. A

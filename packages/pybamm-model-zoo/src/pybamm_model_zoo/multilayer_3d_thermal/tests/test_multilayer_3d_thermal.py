@@ -27,6 +27,14 @@ COMPOSITE = {
     "particle phases": ("2", "1"),
     "open-circuit potential": (("single", "one-state hysteresis"), "single"),
 }
+#: The same, with Marcus-Hush-Chidsey kinetics on the negative electrode.
+COMPOSITE_MHC = {
+    **COMPOSITE,
+    "intercalation kinetics": ("Marcus-Hush-Chidsey", "symmetric Butler-Volmer"),
+}
+#: Marcus-Hush-Chidsey suppresses the rate at a given j0 by tens of times at
+#: lambda = 0.3 eV, so its j0 is scaled up to keep the discharge feasible.
+MHC_J0_SCALE = 50.0
 #: PyBaMM warns on building any one-state hysteresis submodel, whatever its inputs.
 hysteresis_warning = pytest.mark.filterwarnings(
     "ignore:The definition of the hysteresis decay rate parameter:UserWarning"
@@ -54,9 +62,27 @@ def solve(model, parameter_values, t_end=None, experiment=None, **kwargs):
     return simulation.solve() if experiment else simulation.solve([0, t_end])
 
 
-def composite_parameter_values():
-    """``Chen2020_composite`` with what a lumped, hysteretic silicon phase needs."""
+def scaled(function, factor):
+    """``function`` times ``factor``, as a parameter function of the same inputs."""
+
+    def scaled_function(*args):
+        return factor * function(*args)
+
+    return scaled_function
+
+
+def composite_parameter_values(options=None):
+    """``Chen2020_composite`` with what a lumped, hysteretic silicon phase needs,
+    and, for Marcus-Hush-Chidsey kinetics, reorganization energies and a j0 on
+    that rate law's scale."""
     parameter_values = pybamm.ParameterValues("Chen2020_composite")
+    if options is not None and "intercalation kinetics" in options:
+        for phase in ("Primary", "Secondary"):
+            parameter_values[
+                f"{phase}: Negative electrode reorganization energy [eV]"
+            ] = 0.3
+            name = f"{phase}: Negative electrode exchange-current density [A.m-2]"
+            parameter_values[name] = scaled(parameter_values[name], MHC_J0_SCALE)
     lithiation = parameter_values["Secondary: Negative electrode lithiation OCP [V]"]
     delithiation = parameter_values[
         "Secondary: Negative electrode delithiation OCP [V]"
@@ -322,12 +348,16 @@ class TestPhysics:
 
     @hysteresis_warning
     @pytest.mark.parametrize(
-        "model_class", [MultiLayer3DThermalSPMe, MultiLayer3DThermalDFN]
+        "options", [COMPOSITE, COMPOSITE_MHC], ids=["hysteresis", "hysteresis-MHC"]
     )
-    def test_composite_hysteretic_zones_reduce_to_pybamm_model(self, model_class):
-        """The options reach each zone: two phases and hysteresis, as PyBaMM's own."""
-        model = model_class(num_physical_layers=2, options=COMPOSITE)
-        reference_values = composite_parameter_values()
+    @pytest.mark.parametrize("model_class", MODELS)
+    def test_composite_hysteretic_zones_reduce_to_pybamm_model(
+        self, model_class, options
+    ):
+        """The options reach each zone: two phases, hysteresis, and a rate law,
+        as PyBaMM's own model under the same options."""
+        model = model_class(num_physical_layers=2, options=options)
+        reference_values = composite_parameter_values(options)
         parameter_values = cooled(
             model,
             h=1e4,
@@ -337,7 +367,7 @@ class TestPhysics:
             2 * reference_values["Current function [A]"]
         )
         solution = solve(model, parameter_values, 1200)
-        reference = solve(model_class.ZONE_MODEL(COMPOSITE), reference_values, 1200)
+        reference = solve(model_class.ZONE_MODEL(options), reference_values, 1200)
         times = np.linspace(0, 1200, 25)
         np.testing.assert_allclose(
             solution["Voltage [V]"](times),
@@ -447,6 +477,25 @@ class TestPhysics:
             solution["Temperature spread [K]"](times), 0, atol=1e-6
         )
 
+    @pytest.mark.parametrize("connection", ["parallel", "series"])
+    def test_an_experiment_sets_the_voltage_cut_off(self, connection):
+        """An experiment discharges to its own cut-off, below the parameter set's
+        3.105 V: no zone carries a voltage limit of its own."""
+        model = MultiLayer3DThermalSPM(2, connection=connection)
+        parameter_values = model.apply_stack_scaling(cooled(model))
+        limit = 3.0 if connection == "parallel" else 6.0
+        solution = solve(
+            model,
+            parameter_values,
+            experiment=pybamm.Experiment([f"Discharge at 1C until {limit} V"]),
+        )
+        np.testing.assert_allclose(
+            solution["Voltage [V]"].entries[-1], limit, atol=1e-3
+        )
+        assert not any(
+            "Layer" in event.name and "voltage" in event.name for event in model.events
+        )
+
     def test_a_parallel_stack_starts_from_rest(self):
         """A uniform stack at rest carries no current in any zone, then shares a load."""
         model = MultiLayer3DThermalSPMe(num_physical_layers=4)
@@ -535,6 +584,117 @@ class TestPhysics:
         np.testing.assert_allclose(
             solution["Surface temperature [K]"](600), (left + right) / 2, rtol=1e-12
         )
+
+    @pytest.mark.parametrize(
+        "model_class", [MultiLayer3DThermalSPMe, MultiLayer3DThermalDFN]
+    )
+    def test_heat_of_mixing_reaches_every_zone(self, model_class):
+        """PyBaMM's own heat of mixing, on a single-phase cell where it builds:
+        insulated, the stack heats as a lumped cell with the same option, and the
+        mixing term appears in every zone's heat budget."""
+        options = {"heat of mixing": "true"}
+        model = model_class(
+            num_physical_layers=2, options=options, coating="single-sided"
+        )
+        parameter_values = cooled(model, h=0.0)
+        parameter_values["Current function [A]"] = (
+            2 * parameter_values["Current function [A]"]
+        )
+        solution = solve(model, parameter_values, 600)
+        reference_values = pybamm.ParameterValues("Marquis2019")
+        reference_values["Total heat transfer coefficient [W.m-2.K-1]"] = 0.0
+        reference = solve(
+            model_class.ZONE_MODEL(
+                {"thermal": "lumped", "cell geometry": "pouch", **options}
+            ),
+            reference_values,
+            600,
+        )
+        np.testing.assert_allclose(
+            solution["Stack-averaged temperature [K]"](600) - 298.15,
+            reference["Volume-averaged cell temperature [K]"](600) - 298.15,
+            rtol=1e-3,
+        )
+        for i in range(2):
+            assert (
+                np.abs(
+                    solution[f"Layer {i} Heat of mixing [W]"](np.linspace(60, 600, 5))
+                ).max()
+                > 0
+            )
+
+    def test_lumped_thermal_capacity_is_per_unit_cell_volume(self):
+        """With "use lumped thermal capacity", each zone carries "Cell heat capacity
+        [J.K-1.m-3]" over its unit cells' volume, as a lumped cell does over its own."""
+        options = {"use lumped thermal capacity": "true"}
+        model = MultiLayer3DThermalSPM(2, options=options, coating="single-sided")
+        parameter_values = cooled(model, h=0.0)
+        parameter_values.update(
+            {"Cell heat capacity [J.K-1.m-3]": 2.5e6}, check_already_exists=False
+        )
+        parameter_values["Current function [A]"] = (
+            2 * parameter_values["Current function [A]"]
+        )
+        solution = solve(model, parameter_values, 600)
+        np.testing.assert_allclose(
+            solution["Layer 0 heat capacity [J.K-1.m-3]"](300), 2.5e6, rtol=1e-12
+        )
+        reference_values = pybamm.ParameterValues("Marquis2019")
+        reference_values.update(
+            {
+                "Total heat transfer coefficient [W.m-2.K-1]": 0.0,
+                "Cell heat capacity [J.K-1.m-3]": 2.5e6,
+            },
+            check_already_exists=False,
+        )
+        reference = solve(
+            pybamm.lithium_ion.SPM(
+                {"thermal": "lumped", "cell geometry": "pouch", **options}
+            ),
+            reference_values,
+            600,
+        )
+        np.testing.assert_allclose(
+            solution["Stack-averaged temperature [K]"](600) - 298.15,
+            reference["Volume-averaged cell temperature [K]"](600) - 298.15,
+            rtol=1e-3,
+        )
+
+    def test_a_lumped_surface_option_is_kept_on_the_stack_only(self):
+        """ "surface temperature": "lumped" is recorded on the stack, where tools
+        that read it find it, but the zones keep no casing of their own."""
+        model = MultiLayer3DThermalSPMe(2, options={"surface temperature": "lumped"})
+        assert model.options["surface temperature"] == "lumped"
+        assert model.zone_options["surface temperature"] == "ambient"
+        solution = solve(model, cooled(model, h=50.0), 600)
+        np.testing.assert_allclose(
+            solution["Surface temperature [K]"](600),
+            (
+                solution["Left face temperature [K]"](600)
+                + solution["Right face temperature [K]"](600)
+            )
+            / 2,
+            rtol=1e-12,
+        )
+
+    def test_a_zone_model_can_replace_a_submodel(self):
+        """The hook's purpose: a zone built with build=False and a submodel swapped
+        in before it is built. Swapping in the same lumped thermal submodel leaves
+        the stack's solution unchanged."""
+
+        def zone_model(options):
+            zone = pybamm.lithium_ion.SPMe(options, build=False)
+            zone.submodels["thermal"] = pybamm.thermal.Lumped(zone.param, zone.options)
+            zone.build_model()
+            return zone
+
+        default = MultiLayer3DThermalSPMe(2)
+        swapped = MultiLayer3DThermalSPMe(2, zone_model=zone_model)
+        times = np.linspace(0, 600, 10)
+        a = solve(default, cooled(default), 600)
+        b = solve(swapped, cooled(swapped), 600)
+        for name in ("Voltage [V]", "Stack-averaged temperature [K]"):
+            np.testing.assert_allclose(b[name](times), a[name](times), rtol=1e-9)
 
     def test_cooling_one_face_draws_current_to_the_warm_side(self):
         """Cooled from the left, the stack warms to the right, and part-way through

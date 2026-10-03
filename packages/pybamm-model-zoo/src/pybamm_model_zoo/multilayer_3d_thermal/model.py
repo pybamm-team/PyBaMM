@@ -35,6 +35,13 @@ ZONE_THERMAL_OPTIONS = {
     "cell geometry": "pouch",
     "dimensionality": 0,
 }
+#: Voltage limits only the stack applies; renamed zone copies escape experiments.
+STACK_VOLTAGE_EVENTS = (
+    "Minimum voltage [V]",
+    "Maximum voltage [V]",
+    "Minimum voltage switch [V]",
+    "Maximum voltage switch [V]",
+)
 #: The zone's heat terms in watts, summed over the stack under the same names.
 HEAT_TERMS = (
     "Total heating [W]",
@@ -375,6 +382,7 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
                 prefix + event.name, substitute(event.expression), event.event_type
             )
             for event in zone.events
+            if event.name not in STACK_VOLTAGE_EVENTS
         ]
 
         variables = {}
