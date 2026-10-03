@@ -27,6 +27,7 @@
   - `step()`, and re-solving an experiment, can change `calculate_sensitivities` between calls, with `save=False` for a step that does, and setting up again no longer duplicates discontinuity events.
 - Sensitivities from `Simulation.solve(initial_soc=...)` now include how inputs such as active material volume fractions, maximum concentrations, voltage limits and OCP parameters set the initial state. Before, they could be off by 100% or have the wrong sign. ([#5948](https://github.com/pybamm-team/PyBaMM/pull/5948))
 - `from pybamm.expression_tree import *` no longer raises `AttributeError`, nor does the same import from `pybamm.parameters`, `pybamm.solvers` or `pybamm.models.submodels.interface.kinetics`; their `__all__` listed modules that were moved or removed. `CoupledVariable.create_copy` now takes the same arguments as other symbols, so `create_copy(new_children)` and `new_copy()` no longer raise `TypeError`. Evaluating a concatenation before discretisation raises `NotImplementedError`, as an undiscretised variable does, so `evaluate_ignoring_errors()` returns `None` instead of raising `TypeError`. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
+- Fixed copying a function without simplification, as `ParameterValues` does for a parameter set loaded with `Serialise.load_parameters`, returning a generic `pybamm.Function`: `pybamm.exp` and the other specific functions lost their class, and an `Arcsinh2` copy could not be evaluated. ([#5954](https://github.com/pybamm-team/PyBaMM/pull/5954))
 
 ## Optimizations
 

@@ -300,6 +300,31 @@ class TestFunction:
 
 
 class TestSpecificFunctions:
+    @pytest.mark.parametrize("perform_simplifications", [True, False])
+    def test_a_copy_keeps_the_function_s_class_and_settings(
+        self, perform_simplifications
+    ):
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
+        functions = [
+            pybamm.Exp(a),
+            pybamm.Tanh(a),
+            pybamm.Arcsinh2(a, a, eps=1e-3),
+            pybamm.RegPower(a, 0.5, delta=1e-2),
+        ]
+        for function in functions:
+            new_children = [b, *function.children[1:]]
+            new_copy = function.create_copy(new_children, perform_simplifications)
+
+            assert type(new_copy) is type(function)
+            assert new_copy.children[0] == b
+        assert new_copy.delta == functions[-1].delta
+        y = np.array([0.3, 0.6])
+        arcsinh2 = functions[2].create_copy(perform_simplifications=False)
+        np.testing.assert_allclose(
+            arcsinh2.evaluate(y=y), functions[2].evaluate(y=y), rtol=1e-15
+        )
+
     def test_to_json(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.cos(a)
