@@ -1545,6 +1545,22 @@ class TestSerialise:
         sim.solve([0, 3600])
         sim.plot(show_plot=False)
 
+    def test_loaded_parameter_functions_keep_their_classes(self, tmp_path):
+        file_path = tmp_path / "params.json"
+        Serialise.save_parameters(pybamm.ParameterValues("Marquis2019"), file_path)
+
+        parameter_values = Serialise.load_parameters(file_path)
+        model = parameter_values.process_model(pybamm.lithium_ion.SPM(), inplace=False)
+
+        functions = [
+            node
+            for equation in model.rhs.values()
+            for node in equation.pre_order()
+            if isinstance(node, pybamm.Function)
+        ]
+        assert any(isinstance(node, pybamm.Exp) for node in functions)
+        assert not any(type(node) is pybamm.Function for node in functions)
+
 
 class TestConvertFunctionToSymbolicExpression:
     def test_partial_with_bound_kwargs(self):
