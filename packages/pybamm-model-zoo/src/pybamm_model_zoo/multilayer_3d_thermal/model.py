@@ -11,6 +11,13 @@ from pybamm_model_zoo import _compat
 
 SLUG = "multilayer_3d_thermal"
 CONNECTIONS = ("parallel", "series")
+#: How the electrodes are coated on their current collector foils.
+COATINGS = ("double-sided", "single-sided")
+#: The foil thickness parameters, each a whole foil.
+FOIL_THICKNESSES = (
+    "Negative current collector thickness [m]",
+    "Positive current collector thickness [m]",
+)
 #: The stack's faces, as their heat transfer coefficient parameters name them.
 FACES = ("Left", "Right", "Front", "Back", "Bottom", "Top")
 
@@ -148,6 +155,11 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         ``zone_model(options)`` returns one zone's built model, in place of
         ``ZONE_MODEL(options=options)``. It is handed the zones' options and
         must honour them; use it to build a zone with a replaced submodel.
+    coating : str, optional
+        ``"double-sided"`` (default), each foil coated on both faces and shared
+        by the two unit cells either side of it, so a unit cell carries half of
+        each foil; or ``"single-sided"``, each unit cell with whole foils of its
+        own. The current collector thicknesses are always whole foils.
 
     Raises
     ------
@@ -187,6 +199,7 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         name: str = "Multi-Layer 3D Thermal SPM",
         *,
         zone_model: Callable[[dict], pybamm.BaseModel] | None = None,
+        coating: str = "double-sided",
     ) -> None:
         if num_subdivisions is None:
             num_subdivisions = num_physical_layers
@@ -209,6 +222,10 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
             )
         if mesh_h <= 0:
             raise pybamm.OptionError(f"mesh_h must be positive, got {mesh_h}")
+        if coating not in COATINGS:
+            raise pybamm.OptionError(
+                f"coating must be one of {list(COATINGS)}, got '{coating}'"
+            )
         options = {"cell geometry": "pouch", "thermal": "lumped", **(options or {})}
         for key in ("cell geometry", "thermal", "dimensionality"):
             required = ZONE_THERMAL_OPTIONS[key]
@@ -233,6 +250,17 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
             **ZONE_THERMAL_OPTIONS,
         }
         self._zone_model = zone_model
+        self.coating = coating
+        # A shared foil is half each unit cell's: every symbol built from a foil
+        # thickness, in the zones and the stack alike, sees its share.
+        self._foil_shares = (
+            {
+                pybamm.Parameter(name): pybamm.Parameter(name) / 2
+                for name in FOIL_THICKNESSES
+            }
+            if coating == "double-sided"
+            else {}
+        )
 
         self.thermal_variables = [
             pybamm.Variable(f"Layer {i} temperature [K]", domain=self._layer_domain(i))
@@ -316,6 +344,7 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
             {ZONE_TEMPERATURE: f"Layer {layer_id} average temperature [K]"},
         )
         mapping[zone.param.current_with_time] = current / self.layers_per_zone
+        mapping.update(self._foil_shares)
         cache: dict = {}
 
         def substitute(symbol):
@@ -398,7 +427,7 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         # The zone's heating and heat capacity are both per unit volume of its
         # unit cells, current collectors included, which is the zone's box.
         heat = _compat.source(pybamm.PrimaryBroadcast(layer["heat"], domain), T)
-        conductivity = self.param.lambda_eff(T)
+        conductivity = self.per_unit_cell(self.param.lambda_eff(T))
         self.rhs[T] = (
             conductivity * pybamm.laplacian(T)
             + pybamm.inner(pybamm.grad(conductivity), pybamm.grad(T))
@@ -423,7 +452,18 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
             + param.p.L / param.p.lambda_(temperature)
             + param.p.L_cc / param.p.lambda_cc(temperature)
         )
-        return self.layers_per_zone * unit_cell
+        return self.per_unit_cell(self.layers_per_zone * unit_cell)
+
+    def per_unit_cell(self, symbol: pybamm.Symbol) -> pybamm.Symbol:
+        """``symbol`` with each foil thickness replaced by one unit cell's share."""
+        if not self._foil_shares:
+            return symbol
+        return pybamm.replace(symbol, self._foil_shares)
+
+    @property
+    def unit_cell_thickness(self) -> pybamm.Symbol:
+        """One unit cell's thickness: its electrodes, separator, and foil shares."""
+        return self.per_unit_cell(self.param.L)
 
     def _set_thermal_boundary_conditions(self) -> None:
         """Equal and opposite Neumann fluxes between zones, since Dirichlet
@@ -470,7 +510,9 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
                     ) / (1 + coefficient * half_zone)
                 else:
                     inflow = coefficient * (T_amb - surface)
-                conductivity = pybamm.boundary_value(param.lambda_eff(T), face)
+                conductivity = pybamm.boundary_value(
+                    self.per_unit_cell(param.lambda_eff(T)), face
+                )
                 faces[face] = (inflow / conductivity, "Neumann")
             self.boundary_conditions[T] = faces
 
@@ -650,7 +692,7 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         geometry = pybamm.battery_geometry(options=self.options)
         # A zone spans its unit cells, current collectors included, so the zones
         # together span the stack and each box is the volume its heat is per.
-        thickness = self.layers_per_zone * self.param.L
+        thickness = self.layers_per_zone * self.unit_cell_thickness
         for i in range(self.num_subdivisions):
             geometry[self._layer_domain(i)] = {
                 "x": {"min": i * thickness, "max": (i + 1) * thickness},

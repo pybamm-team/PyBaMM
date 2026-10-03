@@ -91,6 +91,7 @@ class TestConstruction:
             ({"options": {"cell geometry": "cylindrical"}}, "pouch"),
             ({"options": {"thermal": "x-full"}}, "thermal"),
             ({"options": {"dimensionality": 1}}, "dimensionality"),
+            ({"coating": "triple-sided"}, "coating"),
         ],
     )
     def test_rejects_an_invalid_stack(self, kwargs, match):
@@ -110,11 +111,24 @@ class TestConstruction:
         )
         assert len(model.algebraic) == algebraic_per_zone * num_physical_layers
 
-    def test_zones_tile_the_stack_of_whole_unit_cells(self):
-        model = MultiLayer3DThermalSPM(num_physical_layers=6, num_subdivisions=3)
+    @pytest.mark.parametrize(
+        ("coating", "foil_share"), [("double-sided", 0.5), ("single-sided", 1.0)]
+    )
+    def test_zones_tile_the_stack_of_whole_unit_cells(self, coating, foil_share):
+        """A unit cell is its electrodes and separator plus its share of each foil:
+        half of each, shared with its neighbours, when coated on both sides."""
+        model = MultiLayer3DThermalSPM(
+            num_physical_layers=6, num_subdivisions=3, coating=coating
+        )
         parameter_values = model.default_parameter_values
         geometry = model.default_geometry
-        L = parameter_values.evaluate(model.param.L)
+        L = parameter_values.evaluate(model.param.L_x) + foil_share * sum(
+            parameter_values[f"{e} current collector thickness [m]"]
+            for e in ("Negative", "Positive")
+        )
+        np.testing.assert_allclose(
+            parameter_values.evaluate(model.unit_cell_thickness), L, rtol=1e-12
+        )
         bounds = [
             parameter_values.evaluate(geometry[f"cell layer {i}"]["x"][end])
             for i in range(3)
@@ -207,8 +221,13 @@ class TestParameters:
             == model.DEFAULT_FACE_HEAT_TRANSFER_COEFFICIENT
         )
 
-    def test_zones_conduct_through_the_stack_in_series(self):
-        model = MultiLayer3DThermalSPM(num_physical_layers=6, num_subdivisions=2)
+    @pytest.mark.parametrize(
+        ("coating", "foil_share"), [("double-sided", 0.5), ("single-sided", 1.0)]
+    )
+    def test_zones_conduct_through_the_stack_in_series(self, coating, foil_share):
+        model = MultiLayer3DThermalSPM(
+            num_physical_layers=6, num_subdivisions=2, coating=coating
+        )
         parameter_values = model.default_parameter_values
         T = model.param.T_init
         resistance = parameter_values.evaluate(model.zone_series_resistance(T))
@@ -224,11 +243,14 @@ class TestParameters:
         for thickness, conductivity in layers:
             k = parameter_values[f"{conductivity} thermal conductivity [W.m-1.K-1]"]
             k = k(T_init) if callable(k) else k
-            per_cell += parameter_values[f"{thickness} thickness [m]"] / k
+            share = foil_share if "collector" in thickness else 1.0
+            per_cell += share * parameter_values[f"{thickness} thickness [m]"] / k
         np.testing.assert_allclose(resistance, 3 * per_cell, rtol=1e-12)
         # Series conduction is far below the in-plane mean the field carries.
-        L = parameter_values.evaluate(model.param.L)
-        in_plane = parameter_values.evaluate(model.param.lambda_eff(T))
+        L = parameter_values.evaluate(model.unit_cell_thickness)
+        in_plane = parameter_values.evaluate(
+            model.per_unit_cell(model.param.lambda_eff(T))
+        )
         assert L / per_cell < in_plane / 10
 
     @pytest.mark.parametrize(
@@ -324,14 +346,20 @@ class TestPhysics:
             atol=1e-3,
         )
 
+    @pytest.mark.parametrize(
+        ("coating", "foil_share"), [("double-sided", 0.5), ("single-sided", 1.0)]
+    )
     @pytest.mark.parametrize("model_class", MODELS)
-    def test_an_insulated_stack_heats_as_a_lumped_cell(self, model_class):
-        """Insulated and uniform, the stack heats exactly as PyBaMM's lumped cell.
+    def test_an_insulated_stack_heats_as_a_lumped_cell(
+        self, model_class, coating, foil_share
+    ):
+        """Insulated and uniform, the stack heats exactly as PyBaMM's lumped cell
+        whose foils are one unit cell's share of them.
 
         The same source over the same volume and heat capacity: a zone that
         spanned less than its unit cells would heat faster.
         """
-        model = model_class(num_physical_layers=2)
+        model = model_class(num_physical_layers=2, coating=coating)
         parameter_values = cooled(model, h=0.0)
         parameter_values["Current function [A]"] = (
             2 * parameter_values["Current function [A]"]
@@ -339,6 +367,9 @@ class TestPhysics:
         solution = solve(model, parameter_values, 600)
         reference_values = pybamm.ParameterValues("Marquis2019")
         reference_values["Total heat transfer coefficient [W.m-2.K-1]"] = 0.0
+        for e in ("Negative", "Positive"):
+            name = f"{e} current collector thickness [m]"
+            reference_values[name] = foil_share * reference_values[name]
         reference = solve(
             model_class.ZONE_MODEL({"thermal": "lumped", "cell geometry": "pouch"}),
             reference_values,
@@ -384,7 +415,7 @@ class TestPhysics:
             solution["Total heating [W]"](times), 2 * per_zone, rtol=1e-12
         )
         V_unit = model.default_parameter_values.evaluate(
-            model.param.L * model.param.A_cc
+            model.unit_cell_thickness * model.param.A_cc
         )
         np.testing.assert_allclose(
             solution["Layer 0 Total heating [W]"](times),
@@ -563,7 +594,7 @@ class TestPhysics:
         heat = solution["Volume-averaged total heating [W.m-3]"](end)
         T = model.param.T_init
         per_cell = parameter_values.evaluate(model.zone_series_resistance(T))
-        thickness = 12 * parameter_values.evaluate(model.param.L)
+        thickness = 12 * parameter_values.evaluate(model.unit_cell_thickness)
         slab = heat * thickness * per_cell * 12 / 8
         np.testing.assert_allclose(differences[1], slab, rtol=0.05)
 

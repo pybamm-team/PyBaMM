@@ -85,6 +85,8 @@ electrochemistries.
   place of `ZONE_MODEL(options=options)`: for example a model built with
   `build=False` whose thermal submodel is replaced before it is built. It must
   honour the options it is handed and keep a lumped temperature.
+* `coating` — `"double-sided"` (default) or `"single-sided"`: whether neighbouring
+  unit cells share their current collector foils. See "Unit cells and foils".
 
 For example, a silicon-graphite negative electrode with hysteresis on the
 silicon and Marcus-Hush-Chidsey kinetics:
@@ -111,6 +113,46 @@ cell's own. Leave `"Number of electrodes connected in parallel to make a cell"`
 at 1: the stack's unit cells are this model's layers, and setting it too would
 divide the current twice.
 
+#### Unit cells and foils
+
+`"Negative current collector thickness [m]"` and `"Positive current collector
+thickness [m]"` are always the thickness of a whole foil, as in PyBaMM's own
+parameter sets, whatever the coating.
+
+With `coating="double-sided"`, the default, each foil is coated on both faces and
+serves the unit cells on either side of it, so the stack alternates direction and
+every unit cell owns half of each foil:
+
+```
+          unit cell k                unit cell k+1
+   |<------------------------->|<------------------------->|
+   ½Cu |  n  |  s  |  p  | ½Al ½Al |  p  |  s  |  n  | ½Cu ...
+```
+
+One unit cell is then `L_n + L_s + L_p + (L_cc,n + L_cc,p) / 2` thick
+(`unit_cell_thickness`), and the stack `num_physical_layers` times that. With
+`coating="single-sided"`, every unit cell has whole foils of its own, as PyBaMM's
+single-cell models assume, and is `L_n + L_s + L_p + L_cc,n + L_cc,p` thick.
+
+Double-sided is the default because it is how stacked pouch cells are built:
+every inner electrode is coated on both faces of its foil. Counting a whole foil
+per unit cell would make such a stack too thick, give it too much foil mass and
+heat capacity, and overstate its in-plane conductivity, by a share that grows
+with the foils' fraction of the unit cell (12% of the thickness for 6 µm copper
+and 15 µm aluminium foils under 80 µm of electrodes and separator). Single-sided
+is kept for cells whose electrodes are coated on one face only, and to compare
+with PyBaMM's single-cell models, which carry whole foils, under the same
+parameter set.
+
+A unit cell's foil share enters everything that depends on the foils' thickness:
+the stack's thickness, so the volume each zone's heat is spread over; the
+thickness-weighted heat capacity and in-plane thermal conductivity; and the
+series conduction through the stack. With `"use lumped thermal capacity"`,
+`"Cell heat capacity [J.K-1.m-3]"` is per volume of this unit cell. The
+electrochemistry does not depend on the foils' thickness. The two outermost foils
+serve a single unit cell, so a double-sided stack is half a foil short at each
+outer face.
+
 `default_parameter_values` and `apply_stack_scaling` add these where the
 parameter set lacks them:
 
@@ -119,15 +161,13 @@ parameter set lacks them:
   conduction through the zones themselves. Each zone's field conducts with
   `lambda_eff`, the in-plane mean, so the interface between two zones carries
   their series conduction, `zone_series_resistance(T)`: the unit cell's layers,
-  current collectors included, as thermal resistances in series, times the unit
-  cells in a zone. The two outer zones carry half a zone of it in series with
+  each foil at the unit cell's share of it, as thermal resistances in series,
+  times the unit cells in a zone. The two outer zones carry half a zone of it in series with
   the cooling of the stack's outer faces. The layers' thicknesses and
   thermal conductivities therefore set the through-stack conductivity, and the
   number of unit cells the stack's thickness: a stack of thicker electrodes, or
-  more of them, holds a larger core-to-skin difference. Metal current
-  collectors are a negligible part of it (0.06% on `Marquis2019`), so counting
-  both of a unit cell's collectors, where a real stack shares them between
-  neighbours, does not matter.
+  more of them, holds a larger core-to-skin difference. The metal foils are a
+  negligible part of it (0.06% on `Marquis2019` with whole foils).
 * `"<Face> face heat transfer coefficient [W.m-2.K-1]"` for the `Left` (`x = 0`,
   zone 0's outer face), `Right`, `Front`, `Back`, `Bottom`, and `Top` faces,
   default `10`.
@@ -185,7 +225,12 @@ unless stated:
   under the same options to within 1 mV (measured 0.09 and 0.014 mV).
 * Insulated on every face, the stack heats as PyBaMM's lumped model of one unit
   cell to `rtol=1e-3` (measured 1e-5 and better): the same heat, over the same
-  volume, current collectors included, and the same heat capacity.
+  volume, current collectors included, and the same heat capacity. A
+  double-sided stack matches a lumped cell given half of each foil; a
+  single-sided one, a lumped cell with whole foils.
+* A unit cell is its electrodes and separator plus half of each foil when
+  double-sided, or whole foils when single-sided, in the stack's geometry and in
+  its series conduction.
 * Insulated on every face, the stack stores the heat it generates to within 0.1%
   (measured 0.002%). This pins the interface coupling: heat leaves one zone
   exactly as it enters the next.

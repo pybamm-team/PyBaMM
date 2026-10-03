@@ -27,6 +27,7 @@ class MultiLayer3DThermalSPMe(MultiLayer3DThermalSPM):
         name: str = "Multi-Layer 3D Thermal SPMe",
         *,
         zone_model: Callable[[dict], pybamm.BaseModel] | None = None,
+        coating: str = "double-sided",
     ) -> None:
         super().__init__(
             num_physical_layers=num_physical_layers,
@@ -36,4 +37,5 @@ class MultiLayer3DThermalSPMe(MultiLayer3DThermalSPM):
             options=options,
             name=name,
             zone_model=zone_model,
+            coating=coating,
         )
