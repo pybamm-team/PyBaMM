@@ -6,14 +6,19 @@
 
 A pouch cell stack resolved through its thickness. The stack's
 `num_physical_layers` unit cells are lumped into `num_subdivisions` zones, and
-each zone runs its own electrochemistry for its unit cells in parallel: an SPM
-(`MultiLayer3DThermalSPM`), an SPMe (`MultiLayer3DThermalSPMe`), or a DFN
-(`MultiLayer3DThermalDFN`). Every zone also carries its own temperature field
-`T_i(x, y, z)` on a 3D finite-element mesh, whose volume average its kinetics and
-transport see. Adjacent zones exchange heat through a thermal contact
-resistance, and every exposed face is cooled convectively. The zones connect in
-parallel, sharing the terminal voltage while their current fractions are solved
-for, or in series.
+each zone is PyBaMM's own model for its unit cells in parallel:
+`pybamm.lithium_ion.SPM` (`MultiLayer3DThermalSPM`), `SPMe`
+(`MultiLayer3DThermalSPMe`), or `DFN` (`MultiLayer3DThermalDFN`), built with the
+options the stack is given. Particle phases, open-circuit potential models
+(hysteresis included), intercalation kinetics, and every other electrochemical
+option therefore behave exactly as they do in that model. Every zone also
+carries its own temperature field `T_i(x, y, z)` on a 3D finite-element mesh,
+which replaces the zone model's lumped temperature: the field's source is the
+zone's total heating, and its volume average is the temperature the zone's
+kinetics and transport see. Adjacent zones exchange heat by conduction through
+the stack plus a contact resistance, and every exposed face is cooled
+convectively. The zones connect in parallel, each with its current solved for,
+or in series.
 
 Prefer it to `pybamm.lithium_ion.Basic3DThermalSPM` when the question is about
 the stack's thickness: a cooling plate on one face, a degraded layer, anything
@@ -70,6 +75,31 @@ electrochemistries.
   always in parallel.
 * `mesh_h` — target element size of each zone's mesh, as for
   `pybamm.ScikitFemGenerator3D`.
+* `options` — model options, given to every zone. `"thermal"` must be
+  `"lumped"`, `"dimensionality"` 0, and `"cell geometry"` `"pouch"`: the stack's
+  fields are the thermal model, and each zone keeps a lumped temperature for
+  them to replace. `"surface temperature"` is recorded on the stack's `options`
+  only, since the zones have no casing; the stack reports its own face
+  temperatures either way.
+* `zone_model` — `zone_model(options)` returning one zone's built model, in
+  place of `ZONE_MODEL(options=options)`: for example a model built with
+  `build=False` whose thermal submodel is replaced before it is built. It must
+  honour the options it is handed and keep a lumped temperature.
+
+For example, a silicon-graphite negative electrode with hysteresis on the
+silicon and Marcus-Hush-Chidsey kinetics:
+
+```python
+model = MultiLayer3DThermalSPMe(
+    num_physical_layers=24,
+    num_subdivisions=4,
+    options={
+        "particle phases": ("2", "1"),
+        "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        "intercalation kinetics": ("Marcus-Hush-Chidsey", "symmetric Butler-Volmer"),
+    },
+)
+```
 
 ### Parameters
 
@@ -84,8 +114,20 @@ divide the current twice.
 `default_parameter_values` and `apply_stack_scaling` add these where the
 parameter set lacks them:
 
-* `"Inter-layer thermal contact resistance [K.m2.W-1]"`, default `1e-4`: close to
-  perfect contact, but large enough to keep the coupling well posed.
+* `"Inter-layer thermal contact resistance [K.m2.W-1]"`, default `0`: contact
+  resistance between adjacent zones, an adhesive or gas gap, on top of
+  conduction through the zones themselves. Each zone's field conducts with
+  `lambda_eff`, the in-plane mean, so the interface between two zones carries
+  their series conduction, `zone_series_resistance(T)`: the unit cell's layers,
+  current collectors included, as thermal resistances in series, times the unit
+  cells in a zone. The two outer zones carry half a zone of it in series with
+  the cooling of the stack's outer faces. The layers' thicknesses and
+  thermal conductivities therefore set the through-stack conductivity, and the
+  number of unit cells the stack's thickness: a stack of thicker electrodes, or
+  more of them, holds a larger core-to-skin difference. Metal current
+  collectors are a negligible part of it (0.06% on `Marquis2019`), so counting
+  both of a unit cell's collectors, where a real stack shares them between
+  neighbours, does not matter.
 * `"<Face> face heat transfer coefficient [W.m-2.K-1]"` for the `Left` (`x = 0`,
   zone 0's outer face), `Right`, `Front`, `Back`, `Bottom`, and `Top` faces,
   default `10`.
@@ -95,37 +137,74 @@ parameter set lacks them:
 Per zone `i`, each prefixed `"Layer i "`:
 
 * `temperature [K]` — the 3D field — and `average temperature [K]`.
-* `heat generation [W.m-3]`, per unit volume of a unit cell.
-* `voltage [V]`, `current [A]` (the zone's), `per-unit-cell current [A]`, and, in
-  parallel, `current fraction`.
-* `X-averaged negative particle concentration [mol.m-3]` and the positive, and
-  each electrode's `particle surface stoichiometry`.
-* SPM and SPMe: `surface open-circuit voltage [V]`.
-* SPMe and DFN: `electrolyte concentration [mol.m-3]`, `X-averaged electrolyte
-  concentration [mol.m-3]`, and `total lithium in electrolyte per unit cell [mol]`.
-* SPMe: `X-averaged concentration overpotential [V]`, `X-averaged electrolyte
-  ohmic losses [V]`, and `X-averaged solid phase ohmic losses [V]`.
-* DFN: the particle concentrations `c_s(r, x)`, `electrolyte potential [V]`, and
-  each electrode's `electrode potential [V]`.
+* `heat generation [W.m-3]` and `heat capacity [J.K-1.m-3]`, per unit volume of
+  a unit cell, current collectors included.
+* `voltage [V]`, `current [A]` (the zone's), `per-unit-cell current [A]`, and,
+  in parallel, `current fraction`, which is undefined at rest.
+* `Total current density [A.m-2]`, PyBaMM's per-unit-cell current density, and
+  each electrode's `X-averaged ... interfacial current density [A.m-2]`.
+* A selection of the zone model's own variables under their PyBaMM names, for
+  one unit cell: the `X-averaged ` and `Volume-averaged ` concentrations,
+  stoichiometries, open-circuit potentials, hysteresis states, overpotentials,
+  ohmic losses and heat terms; `Surface open-circuit voltage [V]`,
+  `Discharge capacity [A.h]`, `Total lithium in electrolyte [mol]`, the heat
+  terms in watts (`Total heating [W]`, `Reversible heating [W]`, ...), and, where
+  the model has them, the electrolyte concentration and potential and the
+  electrode potentials.
 
-For the stack: `Voltage [V]`, `Current [A]`, `Stack-averaged temperature [K]`
-(also as `Volume-averaged cell temperature [K]`), `Maximum layer-averaged
-temperature [K]`, `Minimum layer-averaged temperature [K]`, and `Temperature
-spread [K]`.
+For the stack: `Voltage [V]`, `Current [A]`, `Total current density [A.m-2]`
+(the mean over its unit cells), `Volume-averaged total heating [W.m-3]`, the heat
+terms in watts and `Discharge capacity [A.h]` summed over every unit cell, and
+its temperatures:
+
+* `Left face temperature [K]` and `Right face temperature [K]` — the stack's two
+  outer faces (zone 0's `x_min` and the last zone's `x_max`), each averaged over
+  the footprint and named as its heat transfer coefficient is, so that under
+  one-sided cooling it is clear which face is which.
+* `Surface temperature [K]` — the mean of the two outer faces, where a skin
+  thermocouple sits.
+* `Core temperature [K]` — the stack's mid-plane, averaged over the footprint:
+  the mean of the two faces at the middle interface for an even number of
+  zones, the middle zone's average for an odd number.
+* `Core-to-skin temperature difference [K]` — core minus surface.
+* `Stack-averaged temperature [K]` — the volume average (also as
+  `Volume-averaged cell temperature [K]` and `X-averaged cell temperature [K]`).
+* `Maximum layer-averaged temperature [K]`, `Minimum layer-averaged temperature
+  [K]`, and `Temperature spread [K]`, their difference.
 
 ## Validation
 
-All of these run in `tests/test_multilayer_3d_thermal.py`, with `Marquis2019`:
+All of these run in `tests/test_multilayer_3d_thermal.py`, with `Marquis2019`
+unless stated:
 
 * Held isothermal by cooling every face at `1e4 W.m-2.K-1`, a symmetric two-zone
   stack matches `pybamm.lithium_ion.SPM`, `SPMe`, and `DFN` to within 1 mV over a
-  30 minute discharge (measured 0.03, 0.34, and 0.15 mV).
+  30 minute discharge (measured 0.013, 0.008, and 0.005 mV).
+* With a two-phase negative electrode and one-state hysteresis on its secondary
+  phase (`Chen2020_composite`), the SPMe and DFN stacks match PyBaMM's own models
+  under the same options to within 1 mV (measured 0.09 and 0.014 mV).
+* Insulated on every face, the stack heats as PyBaMM's lumped model of one unit
+  cell to `rtol=1e-3` (measured 1e-5 and better): the same heat, over the same
+  volume, current collectors included, and the same heat capacity.
 * Insulated on every face, the stack stores the heat it generates to within 0.1%
   (measured 0.002%). This pins the interface coupling: heat leaves one zone
   exactly as it enters the next.
-* Without entropic heat, each SPM and SPMe zone dissipates exactly its current
-  times the voltage it loses below its surface open-circuit voltage.
+* The stack's heat terms in watts are its zones' times the unit cells in each.
 * The SPMe and DFN electrolytes conserve lithium to `rtol=1e-9`.
+* A uniform parallel stack starts from rest with no current in any zone, then
+  shares the load.
+* After a discharge cooled through one face, the zones balance at rest: the
+  cold zone, which carried less of the discharge, gives current to the warm one,
+  and the zone currents sum to zero.
+* PyBaMM's `"contact resistance"` option drops each unit cell's voltage by its
+  own current times `"Contact resistance [Ohm]"`.
+* Cooled through both big faces, core-to-skin is the same in 2 zones as in 12,
+  and within 5% of a uniformly heated slab conducting in series.
+* Cooled alike on both big faces, with odd and even numbers of zones, the two
+  face temperatures agree, the surface sits below the stack average and the core
+  above it. Cooled on the left face only, the left face is the colder.
+* The interface resistance is the unit cell's layers in series, far below the
+  in-plane `lambda_eff`.
 * A symmetric two-zone parallel stack splits its current evenly, with no
   temperature spread, for all three electrochemistries.
 * Cooled through one face, the zones warm monotonically away from it, and two
@@ -139,21 +218,19 @@ All of these run in `tests/test_multilayer_3d_thermal.py`, with `Marquis2019`:
 Not validated, and worth knowing before relying on it:
 
 * Nothing has been compared with an experiment or a published multilayer model.
-* The effective thermal conductivity is PyBaMM's `lambda_eff`, the
-  thickness-weighted average of the layers including the current collectors,
-  and it is applied in every direction. That is the in-plane conductivity;
-  through the stack the layers conduct in series, so this overstates conduction
-  across the zones, and the contact resistance is the only lever against it.
-* The effective heat capacity and conductivity include the current collectors,
-  but each unit cell spans only `L_x`, its electrodes and separator.
+* Inside a zone the field conducts with `lambda_eff`, the in-plane mean, in
+  every direction, so a zone is close to isothermal through its own thickness;
+  the series conduction through the stack sits on the interfaces between zone
+  centres and at the outer faces. More zones resolve the shape of the profile
+  and a non-uniform heat source, not its core-to-skin difference.
 * A zone's electrochemistry sees only its own volume-averaged temperature, so the
   field's in-plane gradients carry heat but do not feed back into the kinetics.
-* Each zone generates its heat uniformly over its volume. The SPM and SPMe
-  dissipate their transport losses as current times voltage drop, and no model
-  includes the heat of mixing.
-* Tabs, current collector resistance, and in-plane current distribution are not
-  modelled. Model options other than `"cell geometry"` are accepted but have no
-  effect, as in PyBaMM's basic models: each zone's equations are written out.
+* Each zone generates its heat uniformly over its volume.
+* `"heat of mixing": "true"` is PyBaMM's own term, which does not build on an
+  electrode with more than one particle phase; a zone model with its own thermal
+  submodel can be passed as `zone_model` until it does.
+* Tabs, current collector resistance beyond PyBaMM's `"contact resistance"`
+  option, and in-plane current distribution within a layer are not modelled.
 
 ## Citation
 

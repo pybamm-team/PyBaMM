@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+from collections.abc import Callable
 
 import pybamm
 import pybamm_model_zoo
@@ -14,75 +15,114 @@ CONNECTIONS = ("parallel", "series")
 FACES = ("Left", "Right", "Front", "Back", "Bottom", "Top")
 
 
-def electrolyte_transport(
-    param: pybamm.LithiumIonParameters,
-) -> tuple[pybamm.Symbol, pybamm.Symbol]:
-    """Porosity and electrolyte transport efficiency across one unit cell.
+#: The zone model's temperature state, heat source, and heat capacity, as
+#: PyBaMM's lumped thermal submodel names them.
+ZONE_TEMPERATURE = "Volume-averaged cell temperature [K]"
+ZONE_HEATING = "Volume-averaged total heating [W.m-3]"
+ZONE_HEAT_CAPACITY = "Volume-averaged effective heat capacity [J.K-1.m-3]"
+#: Options the stack sets on every zone: a lumped temperature for the 3D field to
+#: replace, no casing of its own, and a pouch unit cell.
+ZONE_THERMAL_OPTIONS = {
+    "thermal": "lumped",
+    "surface temperature": "ambient",
+    "cell geometry": "pouch",
+    "dimensionality": 0,
+}
+#: The zone's heat terms in watts, summed over the stack under the same names.
+HEAT_TERMS = (
+    "Total heating [W]",
+    "Ohmic heating [W]",
+    "Irreversible electrochemical heating [W]",
+    "Reversible heating [W]",
+    "Heat of mixing [W]",
+    "Hysteresis electrochemical heating [W]",
+)
+#: Zone variables kept under a ``"Layer i "`` prefix. A full model carries hundreds
+#: of variables, and every one kept is processed for every zone.
+ZONE_VARIABLES = {
+    "Total current density [A.m-2]",
+    "Battery open-circuit voltage [V]",
+    "Surface open-circuit voltage [V]",
+    "Discharge capacity [A.h]",
+    "Throughput capacity [A.h]",
+    "Total lithium in electrolyte [mol]",
+    "Total lithium in particles [mol]",
+    "Electrolyte concentration [mol.m-3]",
+    "Electrolyte potential [V]",
+    "Negative electrode potential [V]",
+    "Positive electrode potential [V]",
+    *HEAT_TERMS,
+}
+ZONE_VARIABLE_PREFIXES = ("X-averaged ", "Volume-averaged ")
+ZONE_VARIABLE_FRAGMENTS = (
+    "interfacial current density",
+    "concentration",
+    "stoichiometry",
+    "open-circuit potential",
+    "hysteresis state",
+    "overpotential",
+    "ohmic losses",
+    "surface potential difference",
+    "heating",
+    "heat of mixing",
+)
 
-    Parameters
-    ----------
-    param : pybamm.LithiumIonParameters
-        The model's parameters.
 
-    Returns
-    -------
-    tuple of pybamm.Symbol
-        The porosity and the Bruggeman transport efficiency, each concatenated
-        over the negative electrode, separator, and positive electrode.
+def _keep_zone_variable(name: str) -> bool:
+    if name in ZONE_VARIABLES:
+        return True
+    return name.startswith(ZONE_VARIABLE_PREFIXES) and any(
+        fragment in name for fragment in ZONE_VARIABLE_FRAGMENTS
+    )
+
+
+def _renamed(variable: pybamm.Variable, name: str) -> pybamm.Variable:
+    return pybamm.Variable(
+        name,
+        domains=variable.domains,
+        bounds=variable.bounds,
+        scale=variable.scale,
+        reference=variable.reference,
+    )
+
+
+def _state_renames(model: pybamm.BaseModel, prefix: str, names: dict) -> dict:
+    """``{state: renamed state}`` for every state ``model`` owns.
+
+    A state is renamed ``prefix + name`` unless ``names`` gives it a name of its
+    own. A concatenated state (the electrolyte across the three regions) appears
+    in the equations through its children, so each child is renamed and the
+    concatenation is rebuilt from them.
     """
-    regions = (
-        ("Negative electrode", "negative electrode", param.n.b_e),
-        ("Separator", "separator", param.s.b_e),
-        ("Positive electrode", "positive electrode", param.p.b_e),
-    )
-    porosities = [
-        pybamm.PrimaryBroadcast(pybamm.Parameter(f"{name} porosity"), domain)
-        for name, domain, _ in regions
-    ]
-    efficiencies = [
-        porosity**bruggeman
-        for porosity, (_, _, bruggeman) in zip(porosities, regions, strict=True)
-    ]
-    return pybamm.concatenation(*porosities), pybamm.concatenation(*efficiencies)
+    mapping: dict = {}
 
+    def rename(variable):
+        if variable not in mapping:
+            mapping[variable] = _renamed(
+                variable, names.get(variable.name, prefix + variable.name)
+            )
+        return mapping[variable]
 
-def electrolyte_lithium(
-    param: pybamm.LithiumIonParameters,
-    concentrations: tuple[pybamm.Symbol, pybamm.Symbol, pybamm.Symbol],
-) -> pybamm.Symbol:
-    """Lithium in one unit cell's electrolyte, in mol.
-
-    Summed region by region, because ``pybamm.x_average`` of the porosity times
-    the concatenated concentration treats the piecewise porosity as uniform.
-
-    Parameters
-    ----------
-    param : pybamm.LithiumIonParameters
-        The model's parameters.
-    concentrations : tuple of pybamm.Symbol
-        The electrolyte concentration in the negative electrode, separator, and
-        positive electrode.
-    """
-    regions = (
-        ("Negative electrode", param.n.L),
-        ("Separator", param.s.L),
-        ("Positive electrode", param.p.L),
-    )
-    per_area = sum(
-        pybamm.Parameter(f"{name} porosity") * thickness * pybamm.x_average(c_e)
-        for (name, thickness), c_e in zip(regions, concentrations, strict=True)
-    )
-    return per_area * param.A_cc
+    for variable in [*model.rhs, *model.algebraic]:
+        if isinstance(variable, pybamm.ConcatenationVariable):
+            mapping[variable] = pybamm.concatenation(
+                *(rename(child) for child in variable.children)
+            )
+        else:
+            rename(variable)
+    return mapping
 
 
 class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
     """SPM zones through a pouch cell stack, each with its own 3D temperature.
 
     The ``num_physical_layers`` unit cells are lumped into ``num_subdivisions``
-    zones. Each zone is one SPM for its unit cells in parallel, with a
-    temperature field ``T_i(x, y, z)`` on the domain ``"cell layer i"`` whose
-    volume average its kinetics and transport see. Adjacent zones exchange heat
-    through a contact resistance; exposed faces are cooled convectively.
+    zones. Each zone is PyBaMM's own :class:`pybamm.lithium_ion.SPM`, built with
+    the model's options, for its unit cells in parallel; its lumped temperature
+    is replaced by the volume average of a field ``T_i(x, y, z)`` on the domain
+    ``"cell layer i"``, whose source is the zone's total heating. Adjacent zones
+    exchange heat by conduction through the stack and a contact resistance;
+    exposed faces are cooled convectively.
 
     Parameters
     ----------
@@ -92,20 +132,29 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         Zones the stack is resolved into: at least 2, and a divisor of
         ``num_physical_layers``. Defaults to one zone per unit cell.
     connection : str, optional
-        How the zones are connected, ``"parallel"`` or ``"series"``. The unit
-        cells within a zone are always in parallel.
+        How the zones are connected, ``"parallel"`` or ``"series"``.
     mesh_h : float, optional
         Target element size of each zone's mesh, as for
         :class:`pybamm.ScikitFemGenerator3D`.
     options : dict, optional
-        Model options. ``"cell geometry"`` defaults to, and must be, ``"pouch"``.
+        Model options, passed to every zone. ``"cell geometry"`` defaults to,
+        and must be, ``"pouch"``; ``"thermal"`` must be ``"lumped"`` and
+        ``"dimensionality"`` 0, since the stack's fields are the thermal model.
+        ``"surface temperature"`` is recorded on the stack but not given to the
+        zones, which have no casing of their own.
     name : str, optional
         The model name.
+    zone_model : callable, optional
+        ``zone_model(options)`` returns one zone's built model, in place of
+        ``ZONE_MODEL(options=options)``. It is handed the zones' options and
+        must honour them; use it to build a zone with a replaced submodel.
 
     Raises
     ------
     pybamm.OptionError
-        If the stack, connection, mesh size, or cell geometry is invalid.
+        If the stack, connection, mesh size, or an option is invalid.
+    pybamm.ModelError
+        If a zone model lacks a lumped temperature, its heating, or its voltage.
 
     Examples
     --------
@@ -115,10 +164,14 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
     True
     """
 
-    #: The thermal contact resistance between adjacent zones.
+    #: Each zone's electrochemistry.
+    ZONE_MODEL = pybamm.lithium_ion.SPM
+    #: Thermal contact resistance between adjacent zones, on top of conduction
+    #: through the zones themselves.
     CONTACT_RESISTANCE_PARAM = "Inter-layer thermal contact resistance [K.m2.W-1]"
-    #: Close to perfect contact, but large enough to keep the coupling well posed.
-    DEFAULT_CONTACT_RESISTANCE = 1e-4
+    #: Perfect contact: the zones' own series conduction keeps the coupling well
+    #: posed without it.
+    DEFAULT_CONTACT_RESISTANCE = 0.0
     #: Supplied for any face heat transfer coefficient a parameter set lacks.
     DEFAULT_FACE_HEAT_TRANSFER_COEFFICIENT = 10.0
     #: The reference for each zone's electrochemistry.
@@ -132,6 +185,8 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         mesh_h: float = 0.1,
         options: dict | None = None,
         name: str = "Multi-Layer 3D Thermal SPM",
+        *,
+        zone_model: Callable[[dict], pybamm.BaseModel] | None = None,
     ) -> None:
         if num_subdivisions is None:
             num_subdivisions = num_physical_layers
@@ -154,12 +209,15 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
             )
         if mesh_h <= 0:
             raise pybamm.OptionError(f"mesh_h must be positive, got {mesh_h}")
-        options = {"cell geometry": "pouch", **(options or {})}
-        if options["cell geometry"] != "pouch":
-            raise pybamm.OptionError(
-                f"{type(self).__name__} stacks its layers through a pouch cell, so "
-                f"'cell geometry' must be 'pouch', got '{options['cell geometry']}'"
-            )
+        options = {"cell geometry": "pouch", "thermal": "lumped", **(options or {})}
+        for key in ("cell geometry", "thermal", "dimensionality"):
+            required = ZONE_THERMAL_OPTIONS[key]
+            if options.get(key, required) != required:
+                raise pybamm.OptionError(
+                    f"{type(self).__name__} resolves its own temperature fields "
+                    f"through a pouch cell, so '{key}' must be {required!r}, got "
+                    f"{options[key]!r}"
+                )
 
         super().__init__(options, name)
         pybamm_model_zoo.register_citation(SLUG)
@@ -170,6 +228,11 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         self.layers_per_zone = num_physical_layers // num_subdivisions
         self.connection = connection
         self.mesh_h = mesh_h
+        self.zone_options = {
+            **{k: v for k, v in options.items() if k != "surface temperature"},
+            **ZONE_THERMAL_OPTIONS,
+        }
+        self._zone_model = zone_model
 
         self.thermal_variables = [
             pybamm.Variable(f"Layer {i} temperature [K]", domain=self._layer_domain(i))
@@ -204,141 +267,105 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
 
     def _layer_current(
         self, layer_id: int
-    ) -> tuple[pybamm.Variable | None, pybamm.Symbol, pybamm.Symbol]:
-        """A zone's current fraction, its current, and one unit cell's current density.
+    ) -> tuple[pybamm.Variable | None, pybamm.Symbol]:
+        """A zone's current unknown, if it has one, and its current.
 
-        The fraction is ``None`` in series, where every zone carries the whole
-        current. A zone's unit cells split its current equally.
+        In parallel each zone's current is solved for, and so is free to differ
+        from the others' and to flow at rest; in series every zone carries the
+        stack's current. A zone's unit cells split its current equally.
         """
-        current = self.param.current_with_time
-        current_density = self.param.current_density_with_time / self.layers_per_zone
         if self.connection == "series":
-            return None, current, current_density
-        fraction = pybamm.Variable(f"Layer {layer_id} current fraction")
-        return fraction, fraction * current, fraction * current_density
+            return None, self.param.current_with_time
+        current = pybamm.Variable(f"Layer {layer_id} current [A]")
+        return current, current
 
-    def _set_particle_diffusion(
-        self,
-        concentration: pybamm.Variable,
-        flux: pybamm.Symbol,
-        temperature: pybamm.Symbol,
-        phase_param,
-        initial_concentration: pybamm.Symbol,
-    ) -> None:
-        """Fickian diffusion in a particle, driven by the interfacial current density."""
-        diffusivity = phase_param.D(concentration, temperature)
-        self.rhs[concentration] = -pybamm.div(-diffusivity * pybamm.grad(concentration))
-        self.boundary_conditions[concentration] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-flux / (self.param.F * pybamm.surf(diffusivity)), "Neumann"),
-        }
-        self.initial_conditions[concentration] = initial_concentration
-
-    def _add_stoichiometry_events(
-        self, prefix: str, sto_surf_n: pybamm.Symbol, sto_surf_p: pybamm.Symbol
-    ) -> None:
-        for electrode, sto in (("negative", sto_surf_n), ("positive", sto_surf_p)):
-            self.events += [
-                pybamm.Event(
-                    f"{prefix} minimum {electrode} particle surface stoichiometry",
-                    pybamm.min(sto) - 0.01,
-                ),
-                pybamm.Event(
-                    f"{prefix} maximum {electrode} particle surface stoichiometry",
-                    (1 - 0.01) - pybamm.max(sto),
-                ),
-            ]
-
-    def _electrolyte_and_ohmic_losses(
-        self,
-        prefix: str,
-        current_density: pybamm.Symbol,
-        temperature: pybamm.Symbol,
-        sto_surf_n: pybamm.Symbol,
-        sto_surf_p: pybamm.Symbol,
-    ) -> tuple[pybamm.Symbol, pybamm.Symbol, pybamm.Symbol, dict]:
-        """The electrolyte a zone's kinetics see, and the voltage its transport loses.
-
-        The SPM holds the electrolyte at its initial concentration and resolves
-        no ohmic drop, so this is the hook an electrolyte-resolving zone overrides.
-
-        Returns
-        -------
-        tuple
-            The x-averaged electrolyte concentration in the negative and positive
-            electrodes, the voltage lost to transport (negative on discharge), and
-            any output variables the transport adds.
-        """
-        c_e = self.param.c_e_init_av
-        return c_e, c_e, pybamm.Scalar(0), {}
+    def _build_zone(self) -> pybamm.BaseModel:
+        options = dict(self.zone_options)
+        if self._zone_model is not None:
+            zone = self._zone_model(options)
+        else:
+            zone = self.ZONE_MODEL(options=options)
+        missing = [
+            name
+            for name in ("Voltage [V]", ZONE_HEATING, ZONE_HEAT_CAPACITY)
+            if name not in zone.variables
+        ]
+        if missing or not any(var.name == ZONE_TEMPERATURE for var in zone.rhs):
+            raise pybamm.ModelError(
+                f"A zone of {type(self).__name__} must be a built model with a "
+                f"lumped temperature state '{ZONE_TEMPERATURE}'; "
+                f"{type(zone).__name__} lacks {missing or [ZONE_TEMPERATURE]}"
+            )
+        return zone
 
     def _build_electrochemistry_layer(self, layer_id: int) -> dict:
-        """One zone's SPM, and the symbols the stack couples it through."""
-        param = self.param
-        prefix = f"Layer {layer_id}"
-        c_s_n = pybamm.Variable(
-            f"{prefix} X-averaged negative particle concentration [mol.m-3]",
-            domain="negative particle",
-        )
-        c_s_p = pybamm.Variable(
-            f"{prefix} X-averaged positive particle concentration [mol.m-3]",
-            domain="positive particle",
-        )
-        # Tied to the volume average of the zone's own field in _set_layer_thermal.
-        T = pybamm.Variable(f"{prefix} average temperature [K]")
-        fraction, current, i_cell = self._layer_current(layer_id)
+        """One zone's model, renamed into the stack, and the symbols it couples by.
 
-        a_n = 3 * param.n.prim.epsilon_s_av / param.n.prim.R_typ
-        a_p = 3 * param.p.prim.epsilon_s_av / param.p.prim.R_typ
-        j_n = i_cell / (param.n.L * a_n)
-        j_p = -i_cell / (param.p.L * a_p)
-        self._set_particle_diffusion(
-            c_s_n, j_n, T, param.n.prim, pybamm.x_average(param.n.prim.c_init)
+        Every state the zone owns is renamed ``"Layer i <name>"``, its applied
+        current becomes one unit cell's share of the zone's, and its lumped
+        temperature equation is dropped: the temperature becomes the algebraic
+        volume average of the zone's field, set in ``_set_layer_thermal``.
+        """
+        zone = self._build_zone()
+        prefix = f"Layer {layer_id} "
+        unknown, current = self._layer_current(layer_id)
+        temperature = next(var for var in zone.rhs if var.name == ZONE_TEMPERATURE)
+        mapping = _state_renames(
+            zone,
+            prefix,
+            {ZONE_TEMPERATURE: f"Layer {layer_id} average temperature [K]"},
         )
-        self._set_particle_diffusion(
-            c_s_p, j_p, T, param.p.prim, pybamm.x_average(param.p.prim.c_init)
-        )
-        c_s_surf_n = pybamm.surf(c_s_n)
-        c_s_surf_p = pybamm.surf(c_s_p)
-        sto_surf_n = c_s_surf_n / param.n.prim.c_max
-        sto_surf_p = c_s_surf_p / param.p.prim.c_max
-        self._add_stoichiometry_events(prefix, sto_surf_n, sto_surf_p)
+        mapping[zone.param.current_with_time] = current / self.layers_per_zone
+        cache: dict = {}
 
-        c_e_n, c_e_p, transport_loss, transport_variables = (
-            self._electrolyte_and_ohmic_losses(
-                prefix, i_cell, T, sto_surf_n, sto_surf_p
+        def substitute(symbol):
+            return pybamm.replace(symbol, mapping, cache=cache)
+
+        rhs = dict(zone.rhs)
+        rhs.pop(temperature)
+        initial_conditions = dict(zone.initial_conditions)
+        initial_conditions.pop(temperature, None)
+        self.rhs.update({substitute(k): substitute(v) for k, v in rhs.items()})
+        self.algebraic.update(
+            {substitute(k): substitute(v) for k, v in zone.algebraic.items()}
+        )
+        self.initial_conditions.update(
+            {substitute(k): substitute(v) for k, v in initial_conditions.items()}
+        )
+        self.boundary_conditions.update(
+            {
+                substitute(var): {
+                    side: (substitute(value), kind)
+                    for side, (value, kind) in conditions.items()
+                }
+                for var, conditions in zone.boundary_conditions.items()
+            }
+        )
+        self.events += [
+            pybamm.Event(
+                prefix + event.name, substitute(event.expression), event.event_type
             )
-        )
-        RT_F = param.R * T / param.F
-        j0_n = param.n.prim.j0(c_e_n, c_s_surf_n, T)
-        j0_p = param.p.prim.j0(c_e_p, c_s_surf_p, T)
-        eta_n = (2 / param.n.prim.ne) * RT_F * pybamm.arcsinh(j_n / (2 * j0_n))
-        eta_p = (2 / param.p.prim.ne) * RT_F * pybamm.arcsinh(j_p / (2 * j0_p))
-        ocv = param.p.prim.U(sto_surf_p, T) - param.n.prim.U(sto_surf_n, T)
-        voltage = ocv + eta_p - eta_n + transport_loss
+            for event in zone.events
+        ]
 
-        # Reaction and entropic heat in each electrode, plus the transport losses,
-        # which are dissipated ohmically; all per unit volume of the unit cell.
-        heat_n = a_n * j_n * (eta_n + T * param.n.prim.dUdT(sto_surf_n))
-        heat_p = a_p * j_p * (eta_p + T * param.p.prim.dUdT(sto_surf_p))
-        heat = (
-            heat_n * param.n.L + heat_p * param.p.L - i_cell * transport_loss
-        ) / param.L_x
+        variables = {}
+        for name, symbol in zone.variables.items():
+            if not _keep_zone_variable(name):
+                continue
+            value = substitute(symbol)
+            # A renamed state is registered under its own name, or not at all.
+            if isinstance(value, pybamm.Variable) and value.name != prefix + name:
+                continue
+            variables[prefix + name] = value
 
         return {
-            "T_av": T,
-            "voltage": voltage,
+            "T_av": mapping[temperature],
+            "voltage": substitute(zone.variables["Voltage [V]"]),
             "current": current,
-            "current_fraction": fraction,
-            "heat": heat,
-            "variables": {
-                c_s_n.name: c_s_n,
-                c_s_p.name: c_s_p,
-                f"{prefix} negative particle surface stoichiometry": sto_surf_n,
-                f"{prefix} positive particle surface stoichiometry": sto_surf_p,
-                f"{prefix} surface open-circuit voltage [V]": ocv,
-                **transport_variables,
-            },
+            "current_unknown": unknown,
+            "heat": substitute(zone.variables[ZONE_HEATING]),
+            "heat_capacity": substitute(zone.variables[ZONE_HEAT_CAPACITY]),
+            "variables": variables,
         }
 
     def _connect_layers(self) -> None:
@@ -346,14 +373,15 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         if self.connection == "series":
             self._terminal_voltage = sum(voltages)
             return
-        # In parallel every zone holds the terminal voltage, and together they
-        # carry the whole current.
-        fractions = [layer["current_fraction"] for layer in self.layers]
-        for fraction, voltage in zip(fractions[1:], voltages[1:], strict=True):
-            self.algebraic[fraction] = voltage - voltages[0]
-        self.algebraic[fractions[0]] = sum(fractions) - 1
-        for fraction in fractions:
-            self.initial_conditions[fraction] = pybamm.Scalar(1 / self.num_subdivisions)
+        # Zone currents, not fractions of the stack's: a zone's voltage depends on
+        # its own current, so this stays well posed at rest.
+        stack_current = self.param.current_with_time
+        currents = [layer["current_unknown"] for layer in self.layers]
+        for current, voltage in zip(currents[1:], voltages[1:], strict=True):
+            self.algebraic[current] = voltage - voltages[0]
+        self.algebraic[currents[0]] = sum(currents) - stack_current
+        for current in currents:
+            self.initial_conditions[current] = stack_current / self.num_subdivisions
         self._terminal_voltage = voltages[0]
 
     def _set_layer_thermal(self, layer_id: int) -> None:
@@ -367,22 +395,40 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         self.algebraic[T_av] = T_av - pybamm.Integral(T, coordinates) / volume
         self.initial_conditions[T_av] = self.param.T_init
 
+        # The zone's heating and heat capacity are both per unit volume of its
+        # unit cells, current collectors included, which is the zone's box.
         heat = _compat.source(pybamm.PrimaryBroadcast(layer["heat"], domain), T)
         conductivity = self.param.lambda_eff(T)
         self.rhs[T] = (
             conductivity * pybamm.laplacian(T)
             + pybamm.inner(pybamm.grad(conductivity), pybamm.grad(T))
             + heat
-        ) / self.param.rho_c_p_eff(T)
+        ) / layer["heat_capacity"]
         self.initial_conditions[T] = pybamm.PrimaryBroadcast(self.param.T_init, domain)
 
-    def _set_thermal_boundary_conditions(self) -> None:
-        """Convective cooling on exposed faces, contact resistance between zones.
+    def zone_series_resistance(self, temperature: pybamm.Symbol) -> pybamm.Symbol:
+        """Thermal resistance through one zone's thickness, layer by layer, in K.m2/W.
 
-        Coupling two zones by Dirichlet conditions on their independent meshes
-        over-constrains the system, so the interface flux ``(T_i - T_j) / R_th``
-        enters both sides as equal and opposite Neumann conditions.
+        ``lambda_eff`` is a thickness-weighted mean of the layers' conductivities,
+        the in-plane value. Through the stack they conduct in series, which on a
+        typical cell is one to two orders of magnitude less. Each zone's field
+        carries ``lambda_eff``, so the series resistance between zone centres is
+        put on the interfaces between them.
         """
+        param = self.param
+        unit_cell = (
+            param.n.L_cc / param.n.lambda_cc(temperature)
+            + param.n.L / param.n.lambda_(temperature)
+            + param.s.L / param.s.lambda_(temperature)
+            + param.p.L / param.p.lambda_(temperature)
+            + param.p.L_cc / param.p.lambda_cc(temperature)
+        )
+        return self.layers_per_zone * unit_cell
+
+    def _set_thermal_boundary_conditions(self) -> None:
+        """Equal and opposite Neumann fluxes between zones, since Dirichlet
+        coupling of independent meshes over-constrains them; the zones' series
+        conduction sits on these couplings, half a zone of it at each outer face."""
         param = self.param
         heat_transfer = {
             "x_min": param.h_edge_x_min,
@@ -394,6 +440,7 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         }
         contact_resistance = pybamm.Parameter(self.CONTACT_RESISTANCE_PARAM)
         neighbours = {"x_min": ("x_max", -1), "x_max": ("x_min", 1)}
+        self._outer_face_temperatures = {}
         for i, T in enumerate(self.thermal_variables):
             _, y, z = self._layer_spatial_vars[i]
             T_amb = param.T_amb(y, z, pybamm.t)
@@ -402,10 +449,25 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
                 surface = pybamm.boundary_value(T, face)
                 facing, step = neighbours.get(face, (None, 0))
                 if step and 0 <= i + step < self.num_subdivisions:
-                    neighbour = self.thermal_variables[i + step]
+                    j = i + step
+                    neighbour = self.thermal_variables[j]
+                    T_mean = (self.layers[i]["T_av"] + self.layers[j]["T_av"]) / 2
+                    resistance = (
+                        self.zone_series_resistance(T_mean) + contact_resistance
+                    )
                     inflow = (
                         pybamm.boundary_value(neighbour, facing) - surface
-                    ) / contact_resistance
+                    ) / resistance
+                elif step:
+                    # An outer big face: half a zone of conduction, then the air.
+                    half_zone = self.zone_series_resistance(self.layers[i]["T_av"]) / 2
+                    inflow = (
+                        coefficient * (T_amb - surface) / (1 + coefficient * half_zone)
+                    )
+                    T_amb_centre = param.T_amb(param.L_y / 2, param.L_z / 2, pybamm.t)
+                    self._outer_face_temperatures[face] = (
+                        surface + coefficient * half_zone * T_amb_centre
+                    ) / (1 + coefficient * half_zone)
                 else:
                     inflow = coefficient * (T_amb - surface)
                 conductivity = pybamm.boundary_value(param.lambda_eff(T), face)
@@ -422,12 +484,16 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
             {
                 "Current [A]": current,
                 "Current variable [A]": current,
+                # PyBaMM's per-unit-cell definition, over every unit cell in parallel.
+                "Total current density [A.m-2]": current
+                / (self.cells_in_parallel * self.param.A_cc),
                 "Voltage [V]": voltage,
                 "Terminal voltage [V]": voltage,
                 "Battery voltage [V]": voltage * num_cells,
             }
         )
 
+        n = self.layers_per_zone
         for i, layer in enumerate(self.layers):
             self.variables.update(layer["variables"])
             self.variables.update(
@@ -435,31 +501,82 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
                     f"Layer {i} temperature [K]": self.thermal_variables[i],
                     f"Layer {i} average temperature [K]": layer["T_av"],
                     f"Layer {i} heat generation [W.m-3]": layer["heat"],
+                    f"Layer {i} heat capacity [J.K-1.m-3]": layer["heat_capacity"],
                     f"Layer {i} voltage [V]": layer["voltage"],
                     f"Layer {i} current [A]": layer["current"],
-                    f"Layer {i} per-unit-cell current [A]": layer["current"]
-                    / self.layers_per_zone,
+                    f"Layer {i} per-unit-cell current [A]": layer["current"] / n,
                 }
             )
-            if layer["current_fraction"] is not None:
-                self.variables[f"Layer {i} current fraction"] = layer[
-                    "current_fraction"
-                ]
+            if layer["current_unknown"] is not None:
+                # Undefined at rest, where the stack's current is zero.
+                self.variables[f"Layer {i} current fraction"] = (
+                    layer["current"] / self.param.current_with_time
+                )
 
         # Every zone has the same volume, so the stack average is their mean.
         averages = [layer["T_av"] for layer in self.layers]
         maximum = functools.reduce(pybamm.maximum, averages)
         minimum = functools.reduce(pybamm.minimum, averages)
         stack_average = sum(averages) / self.num_subdivisions
+        # Each outer face is named as its heat transfer coefficient is, since
+        # under one-sided cooling the two differ.
+        left = self._outer_face_temperatures["x_min"]
+        right = self._outer_face_temperatures["x_max"]
+        surface = (left + right) / 2
+        core = self._core_temperature()
         self.variables.update(
             {
                 "Stack-averaged temperature [K]": stack_average,
                 "Volume-averaged cell temperature [K]": stack_average,
+                "X-averaged cell temperature [K]": stack_average,
                 "Maximum layer-averaged temperature [K]": maximum,
                 "Minimum layer-averaged temperature [K]": minimum,
                 "Temperature spread [K]": maximum - minimum,
+                "Left face temperature [K]": left,
+                "Right face temperature [K]": right,
+                "Surface temperature [K]": surface,
+                "Core temperature [K]": core,
+                "Core-to-skin temperature difference [K]": core - surface,
+                "Volume-averaged total heating [W.m-3]": (
+                    sum(layer["heat"] for layer in self.layers) / self.num_subdivisions
+                ),
             }
         )
+
+        # A zone's watts and amp-hours are one unit cell's, and it stands for n.
+        # In series every zone passes the same charge, so the stack's is one zone's.
+        for name in (
+            *HEAT_TERMS,
+            "Discharge capacity [A.h]",
+            "Throughput capacity [A.h]",
+        ):
+            per_zone = [
+                layer["variables"].get(f"Layer {i} {name}")
+                for i, layer in enumerate(self.layers)
+            ]
+            if any(value is None for value in per_zone):
+                continue
+            if self.connection == "series" and name.endswith("[A.h]"):
+                self.variables[name] = n * per_zone[0]
+            else:
+                self.variables[name] = n * sum(per_zone)
+
+    def _core_temperature(self) -> pybamm.Symbol:
+        """The stack's mid-plane temperature, averaged over the footprint.
+
+        With an even number of zones the mid-plane is the interface between the
+        middle two, whose faces differ by the drop across it, so it is their
+        mean. With an odd number it falls inside the middle zone, which conducts
+        with the in-plane ``lambda_eff`` and so is close to uniform through its
+        thickness: its average.
+        """
+        middle = self.num_subdivisions // 2
+        if self.num_subdivisions % 2:
+            return self.layers[middle]["T_av"]
+        return (
+            pybamm.boundary_value(self.thermal_variables[middle - 1], "x_max")
+            + pybamm.boundary_value(self.thermal_variables[middle], "x_min")
+        ) / 2
 
     def _set_voltage_events(self) -> None:
         voltage = self._terminal_voltage
@@ -531,8 +648,9 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
     @property
     def default_geometry(self) -> pybamm.Geometry:
         geometry = pybamm.battery_geometry(options=self.options)
-        # A zone spans its unit cells, so the zones together span the stack.
-        thickness = self.layers_per_zone * self.param.L_x
+        # A zone spans its unit cells, current collectors included, so the zones
+        # together span the stack and each box is the volume its heat is per.
+        thickness = self.layers_per_zone * self.param.L
         for i in range(self.num_subdivisions):
             geometry[self._layer_domain(i)] = {
                 "x": {"min": i * thickness, "max": (i + 1) * thickness},
