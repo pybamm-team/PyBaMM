@@ -8,7 +8,7 @@ import numpy as np
 
 import pybamm
 
-from .step_termination import _read_termination
+from .step_termination import CustomTermination, _read_termination
 
 
 class ControlKind(str, Enum):
@@ -320,11 +320,21 @@ class BaseStep:
         """The control target as a number, or ``None`` if it is not a constant."""
         return _constant_value(parameter_values, self._control_target)
 
+    @staticmethod
+    def _unified_branch_termination_identity(term):
+        if isinstance(term, CustomTermination):
+            return repr((type(term).__name__, term.name, id(term.event_function)))
+        return repr(term)
+
     def unified_branch_repr(self):
         """Branch identity in unified mode: control kind and everything but the value."""
         parts = [self.control_kind or type(self).__name__]
         if self.termination:
-            parts.append(f"termination={self.termination}")
+            termination_identities = ", ".join(
+                self._unified_branch_termination_identity(term)
+                for term in self.termination
+            )
+            parts.append(f"termination=[{termination_identities}]")
         if self.temperature:
             parts.append(f"temperature={self.temperature}")
         if self.direction:
