@@ -146,8 +146,12 @@ class BaseThermal(pybamm.BaseSubModel):
                 f"Positive electrode {phase}volumetric interfacial current density [A.m-3]"
             ]
             eta_r_p = variables[f"Positive electrode {phase}reaction overpotential [V]"]
-            # Irreversible electrochemical heating
-            Q_rxn_p += a_j_p * eta_r_p
+            eta_sei_p = variables[
+                f"Positive electrode {phase}SEI film overpotential [V]"
+            ]
+            # Irreversible electrochemical heating, including the resistive loss
+            # across the SEI film, which eta_r excludes
+            Q_rxn_p += a_j_p * (eta_r_p - eta_sei_p)
             # Reversible electrochemical heating
             dUdT_p = variables[f"Positive electrode {phase}entropic change [V.K-1]"]
             Q_rev_p += a_j_p * T_p * dUdT_p
@@ -178,8 +182,9 @@ class BaseThermal(pybamm.BaseSubModel):
         if self.options.electrode_types["negative"] == "planar":
             i_n = variables["Lithium metal total interfacial current density [A.m-2]"]
             eta_r_n = variables["Lithium metal interface reaction overpotential [V]"]
+            eta_sei_n = variables["Negative electrode SEI film overpotential [V]"]
             Q_rxn_n = pybamm.PrimaryBroadcast(
-                i_n * eta_r_n / self.param.n.L,
+                i_n * (eta_r_n - eta_sei_n) / self.param.n.L,
                 ["negative electrode"],
                 "current collector",
             )
@@ -199,8 +204,12 @@ class BaseThermal(pybamm.BaseSubModel):
                 eta_r_n = variables[
                     f"Negative electrode {phase}reaction overpotential [V]"
                 ]
-                # Irreversible electrochemical heating
-                Q_rxn_n += a_j_n * eta_r_n
+                eta_sei_n = variables[
+                    f"Negative electrode {phase}SEI film overpotential [V]"
+                ]
+                # Irreversible electrochemical heating, including the resistive loss
+                # across the SEI film, which eta_r excludes
+                Q_rxn_n += a_j_n * (eta_r_n - eta_sei_n)
                 # Reversible electrochemical heating
                 dUdT_n = variables[f"Negative electrode {phase}entropic change [V.K-1]"]
                 Q_rev_n += a_j_n * T_n * dUdT_n
