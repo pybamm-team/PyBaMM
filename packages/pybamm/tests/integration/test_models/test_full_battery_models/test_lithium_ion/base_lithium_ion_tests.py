@@ -695,3 +695,20 @@ class BaseIntegrationTestLithiumIon:
         )
 
         self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_particle_stoichiometry_extremes_include_surface(self):
+        # During a charge pulse the extremes are at the particle surface, so the
+        # maximum (minimum) stoichiometry must not lie below (above) the surface one
+        param = pybamm.ParameterValues("Chen2020")
+        param["Current function [A]"] = -10
+        sim = pybamm.Simulation(self.model(), parameter_values=param)
+        sol = sim.solve([0, 180], initial_soc=0.5)
+        t = sol.t
+        for domain in ["negative", "positive"]:
+            for extreme, compare in [
+                ("Maximum", np.greater_equal),
+                ("Minimum", np.less_equal),
+            ]:
+                bulk = sol[f"{extreme} {domain} particle stoichiometry"](t)
+                surf = sol[f"{extreme} {domain} particle surface stoichiometry"](t)
+                assert compare(bulk, surf).all()
