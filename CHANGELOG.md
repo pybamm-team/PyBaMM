@@ -4,7 +4,6 @@
 
 - `Symbol.children`, `Symbol.domain` (and `secondary_domain`, `tertiary_domain`, `quaternary_domain`) and `FunctionParameter.input_names` return immutable tuples that compare equal to lists, and `Symbol.domains` returns a read-only copy, as do `to_json()`, `get_children_domains()`, `read_domain_or_domains()` and `pybamm.EMPTY_DOMAINS`. Editing them raises `TypeError` instead of emitting `SymbolMutationDeprecationWarning`, and not even `list` or `dict` methods can change a symbol through them. This ends the deprecation of these edits early; before 26.9 they left the symbol's identity stale. The sequences are no longer `list` instances and slicing them gives a plain tuple; tuples are accepted wherever domains are given. Build a new symbol with `with_domains`, `create_copy(new_children=...)` or `pybamm.replace`. The deprecated setters (`name`, `domains`, `scale`, ...) are unchanged. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
 - `Solution` and `EISSolution` no longer have an instance `__dict__`, so attributes they do not define cannot be attached to them. Subclass `pybamm.Solution` to add attributes. A solution pickled with an attached attribute still loads, without that attribute and with a logged warning. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
-- `pybamm` now requires `pybammsolvers>=0.11.0`; upgrade the two together. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782), [#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 
 ## Deprecated
 
