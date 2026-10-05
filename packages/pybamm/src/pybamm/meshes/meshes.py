@@ -128,7 +128,9 @@ class Mesh(dict):
                         # variable haven't been provided, unless that variable
                         # doesn't appear in the geometry or isn't used
                         if var.name not in var_name_pts:
-                            if not getattr(submesh_types[domain], "requires_npts", True):
+                            if not getattr(
+                                submesh_types[domain], "requires_npts", True
+                            ):
                                 continue
                             if var.domain[0] in geometry:
                                 raise KeyError(

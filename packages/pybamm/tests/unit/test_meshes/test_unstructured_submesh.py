@@ -875,7 +875,10 @@ class TestFileGenerators:
         self._write_two_triangle_vtu(path, tags=[1, 2])
         gen = UserSuppliedUnstructuredMesh(
             str(path),
-            subdomain_mapping={"negative current collector": 1, "negative electrode": 2},
+            subdomain_mapping={
+                "negative current collector": 1,
+                "negative electrode": 2,
+            },
         )
         x_ncc = pybamm.SpatialVariable("x_ncc", domain="negative current collector")
         x_n = pybamm.SpatialVariable("x_n", domain="negative electrode")
