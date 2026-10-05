@@ -151,6 +151,7 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: examples
+      texlive: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:

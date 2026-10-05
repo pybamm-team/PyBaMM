@@ -46,7 +46,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "time_bench: mark test as a timing benchmark")
     config.addinivalue_line("markers", "memory_bench: mark test as a memory benchmark")
     config.addinivalue_line(
-        "markers", "slow_bench: mark benchmark as too slow for Bencher's free tier"
+        "markers", "slow_bench: mark benchmark as run on a schedule, not per push"
     )
 
 

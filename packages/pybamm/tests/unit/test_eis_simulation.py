@@ -1,3 +1,5 @@
+import pickle  # nosec B403 - used in tests with trusted input
+
 import numpy as np
 import pytest
 
@@ -145,6 +147,23 @@ class TestEISSolution:
         assert filepath.exists()
         loaded = pybamm.load(str(filepath))
         np.testing.assert_array_equal(loaded.impedance, z)
+
+    def test_eis_solution_pickled_before_slots_loads(self):
+        freqs = np.array([1.0, 10.0])
+        z = np.array([1 + 0.5j, 2 + 1j])
+        data = pybamm.EISSolution(freqs, z).data
+        # A solution pickled before solutions had slots holds one dict
+        state = {"_data": data, "set_up_time": 0.5, "solve_time": 1.5}
+
+        class PreSlotsPickle:
+            def __reduce__(self):
+                return object.__new__, (pybamm.EISSolution,), state
+
+        loaded = pickle.loads(pickle.dumps(PreSlotsPickle()))  # nosec B301
+        np.testing.assert_array_equal(loaded.impedance, z)
+        np.testing.assert_array_equal(loaded.frequencies, freqs)
+        assert loaded.data.keys() == data.keys()
+        assert loaded.total_time == pytest.approx(2.0)
 
     def test_eis_solution_save_data_invalid_format(self, tmp_path):
         sol = pybamm.EISSolution(np.array([1.0]), np.array([1 + 1j]))
