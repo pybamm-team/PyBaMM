@@ -70,7 +70,7 @@ class Function(pybamm.Symbol):
                 name = f"function ({function.__name__})"
             except AttributeError:
                 name = f"function ({function.__class__})"
-        domains = self.get_children_domains(children)
+        domains = self._combine_children_domains(children)
 
         self.function = function
         self.differentiated_function = differentiated_function

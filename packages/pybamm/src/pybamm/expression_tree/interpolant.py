@@ -160,7 +160,7 @@ class Interpolant(pybamm.Function):
             name = "interpolating_function"
         self.x = x
         self.y = y
-        self.entries_string = entries_string
+        self._entries_string = self._make_entries_string(entries_string)
 
         # Differentiate the interpolating function if necessary
         self._num_derivatives = _num_derivatives
@@ -199,16 +199,21 @@ class Interpolant(pybamm.Function):
 
     @entries_string.setter
     def entries_string(self, value):
-        # We must include the entries in the hash, since different arrays can be
+        pybamm.expression_tree.symbol._warn_mutation(
+            "entries_string", "Construct a new Interpolant with the desired data."
+        )
+        object.__setattr__(self, "_entries_string", self._make_entries_string(value))
+
+    def _make_entries_string(self, value: str | None) -> str:
+        """The hashable form of the data: ``value`` if given, else computed."""
+        # We must include the data in the hash, since different interpolants can be
         # indistinguishable by class, name and domain alone
-        # Slightly different syntax for sparse and non-sparse matrices
         if value is not None:
-            self._entries_string = value
-        else:
-            self._entries_string = ""
-            for i, x in enumerate(self.x):
-                self._entries_string += "x" + str(i) + "_" + str(x.tobytes())
-            self._entries_string += "y_" + str(self.y.tobytes())
+            return value
+        entries_string = ""
+        for i, x in enumerate(self.x):
+            entries_string += "x" + str(i) + "_" + str(x.tobytes())
+        return entries_string + "y_" + str(self.y.tobytes())
 
     def create_copy(self, new_children=None, perform_simplifications=True):
         """See :meth:`pybamm.Symbol.new_copy()`."""
