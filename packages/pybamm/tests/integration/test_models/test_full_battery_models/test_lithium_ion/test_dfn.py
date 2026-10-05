@@ -35,6 +35,18 @@ class TestDFN(BaseIntegrationTestLithiumIon):
         param["Current function [A]"] = 0.5 * param["Nominal cell capacity [A.h]"]
         self.run_basic_processing_test({}, parameter_values=param)
 
+    def test_lithium_conserved_with_graded_active_material(self):
+        model = pybamm.lithium_ion.DFN()
+        param = pybamm.ParameterValues("Chen2020")
+        L_n = param["Negative electrode thickness [m]"]
+        param["Negative electrode active material volume fraction"] = lambda x, y, z: (
+            0.60 + 0.15 * x / L_n
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 3600])
+        # nothing consumes lithium, so LLI must stay at zero
+        np.testing.assert_allclose(sol["LLI [%]"](sol.t), 0, atol=1e-8)
+
     def test_cycling_extreme_conditions(self):
         # test cycling with difficult conditions: full discharge and very low
         # current cutoff. This exercises the regularised expressions (RegPower,

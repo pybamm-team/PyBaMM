@@ -3,10 +3,11 @@
 #
 
 import random
+import warnings
 
 import numpy as np
 import pytest
-from scipy.sparse import block_diag, issparse
+from scipy.sparse import block_diag, csr_matrix, issparse
 
 import pybamm
 from tests import (
@@ -1075,7 +1076,6 @@ class TestDiscretise:
 
         # Without simplification
         conc = pybamm.concatenation(2 * a, 3 * b, 4 * c)
-        conc.bounds = (-np.inf, np.inf)
         disc.set_variable_slices([a, b, c])
         expr = disc.process_symbol(conc)
         assert isinstance(expr, pybamm.DomainConcatenation)
@@ -1156,6 +1156,26 @@ class TestDiscretise:
 
         assert issparse(model.mass_matrix.entries)
         assert not model.is_standard_form_dae
+
+    @pytest.mark.parametrize("domain", [[], "current collector"])
+    def test_mass_matrix_of_dense_blocks_is_a_sparse_matrix(self, domain):
+        u = pybamm.Variable("u", domain=domain)
+        v = pybamm.Variable("v", domain=domain)
+        model = pybamm.BaseModel()
+        model.rhs = {u: -u, v: -v}
+        model.initial_conditions = {u: 1, v: 2}
+        model.variables = {"u": u, "v": v}
+        disc = get_discretisation_for_testing(
+            cc_method=pybamm.ZeroDimensionalSpatialMethod
+        )
+
+        with warnings.catch_warnings():
+            # scipy 1.18 deprecates block_diag of only dense blocks
+            warnings.simplefilter("error", DeprecationWarning)
+            disc.process_model(model)
+
+        assert isinstance(model.mass_matrix.entries, csr_matrix)
+        np.testing.assert_array_equal(model.mass_matrix.entries.toarray(), np.eye(2))
 
     def test_process_input_variable(self):
         disc = get_discretisation_for_testing()
@@ -1289,6 +1309,28 @@ class TestDiscretise:
         disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
         disc.process_model(model)
         assert len(model.rhs) == 1
+
+    def test_discretised_nodes_keep_symbol_domains(self):
+        # a boundary value discretises onto the current collector; its parents
+        # must still carry the symbol's (empty) domains
+        model = pybamm.lithium_ion.SPM({"SEI": "reaction limited"})
+        sim = pybamm.Simulation(model)
+        sim.build()
+        name = "Loss of lithium to negative SEI [mol]"
+        assert sim.built_model.get_processed_variable(name).domain == []
+
+    def test_independent_rhs_keeps_last_equation(self):
+        x, y = pybamm.Variable("x"), pybamm.Variable("y")
+        model = pybamm.BaseModel()
+        model.rhs = {x: 1, y: 2}
+        model.initial_conditions = {x: 0, y: 0}
+        model.variables = {"x": x, "y": y}
+        disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
+        disc.process_model(model)
+        assert len(model.rhs) == 1
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
+        np.testing.assert_allclose(solution["x"](1), 1, rtol=1e-6)
+        np.testing.assert_allclose(solution["y"](1), 2, rtol=1e-6)
 
     def test_independent_rhs_with_event(self):
         a = pybamm.Variable("a")

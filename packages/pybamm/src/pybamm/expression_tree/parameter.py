@@ -10,6 +10,17 @@ import numpy as np
 import sympy
 
 import pybamm
+from pybamm.expression_tree.symbol import _ImmutableSequence
+
+
+class InputNames(_ImmutableSequence):
+    """An immutable list of a function parameter's input names."""
+
+    __slots__ = ()
+    _immutable_message = (
+        "Function parameter input names are immutable; construct a new "
+        "FunctionParameter with the desired inputs"
+    )
 
 
 class Parameter(pybamm.Symbol):
@@ -24,6 +35,8 @@ class Parameter(pybamm.Symbol):
     name : str
         name of the node
     """
+
+    __slots__ = ()
 
     def __init__(self, name: str) -> None:
         super().__init__(name)
@@ -95,6 +108,10 @@ class FunctionParameter(pybamm.Symbol):
         transformations. Default is None.
     """
 
+    __slots__ = ("_input_names", "diff_variable", "post_processor")
+    _leaf_fields = ("diff_variable",)
+    _id_excluded_fields = ("post_processor",)
+
     def __init__(
         self,
         name: str,
@@ -113,10 +130,10 @@ class FunctionParameter(pybamm.Symbol):
             if isinstance(child, float | int | np.number):
                 children_list[idx] = pybamm.Scalar(child)
 
-        domains = self.get_children_domains(children_list)
+        domains = self._combine_children_domains(children_list)
         super().__init__(name, children=children_list, domains=domains)
 
-        self.input_names = list(inputs.keys())
+        self._input_names = InputNames(self._check_input_names(list(inputs.keys())))
 
         # Use the inspect module to find the function's "short name" from the
         # Parameters module that called it
@@ -149,11 +166,30 @@ class FunctionParameter(pybamm.Symbol):
                 print(inp)
 
     @property
-    def input_names(self):
+    def input_names(self) -> InputNames:
+        """The names of the function's inputs, as an immutable list."""
         return self._input_names
 
     @input_names.setter
-    def input_names(self, inp=None):
+    def input_names(self, value: list[str]) -> None:
+        pybamm.expression_tree.symbol._warn_mutation(
+            "input_names", "Construct a new FunctionParameter with the desired inputs."
+        )
+        if isinstance(value, InputNames):
+            value = list(value)
+        object.__setattr__(
+            self, "_input_names", InputNames(self._check_input_names(value) or [])
+        )
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        names = state.get("_input_names")
+        if names is not None and type(names) is not InputNames:
+            # pickled when input names were stored as plain lists
+            object.__setattr__(self, "_input_names", InputNames(names))
+
+    @staticmethod
+    def _check_input_names(inp):
         if inp:
             if inp.__class__ is list:
                 for i in inp:
@@ -170,25 +206,13 @@ class FunctionParameter(pybamm.Symbol):
                     + "{{str: :class:`pybamm.Symbol`}}"
                 )
 
-        self._input_names = inp
-
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id`"""
-        self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.diff_variable,
-                *tuple([child.id for child in self.children]),
-                *tuple(self.domain),
-            )
-        )
+        return inp
 
     def diff(self, variable: pybamm.Symbol) -> pybamm.FunctionParameter:
         """See :meth:`pybamm.Symbol.diff()`."""
         # return a new FunctionParameter, that knows it will need to be differentiated
         # when the parameters are set
-        children_list = self.orphans
+        children_list = self._children
         input_names = self._input_names
 
         input_dict = {input_names[i]: children_list[i] for i in range(len(input_names))}
@@ -204,10 +228,8 @@ class FunctionParameter(pybamm.Symbol):
     def create_copy(self, new_children=None, perform_simplifications=True):
         """See :meth:`pybamm.Symbol.new_copy()`."""
 
-        input_dict = {
-            self._input_names[i]: self.children[i]
-            for i in range(len(self._input_names))
-        }
+        children = self._children_for_copying(new_children)
+        input_dict = dict(zip(self._input_names, children, strict=True))
 
         return FunctionParameter(
             self.name,
@@ -223,7 +245,7 @@ class FunctionParameter(pybamm.Symbol):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         # add 1e-300 to avoid division by zero
-        return sum(child.evaluate_for_shape() for child in self.children) + 1e-300
+        return sum(child.evaluate_for_shape() for child in self._children) + 1e-300
 
     def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
@@ -237,7 +259,7 @@ class FunctionParameter(pybamm.Symbol):
     _serialise_derived_params = frozenset({"inputs", "diff_variable", "post_processor"})
 
     def to_json(self):
-        children = list(self.children)
+        children = list(self._children)
         if self.diff_variable is not None:
             children = [*children, self.diff_variable]
         return {

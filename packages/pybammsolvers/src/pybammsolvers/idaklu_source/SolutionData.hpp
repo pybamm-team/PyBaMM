@@ -48,7 +48,8 @@ class SolutionData
       ptrdiff_t arg_sens0,
       ptrdiff_t arg_sens1,
       ptrdiff_t arg_sens2,
-      bool save_hermite)
+      bool save_hermite,
+      const IDAKLUStats &stats)
       : flag(flag),
         t_vec(std::move(t)),
         y_vec(std::move(y)),
@@ -59,7 +60,8 @@ class SolutionData
         arg_sens0(arg_sens0),
         arg_sens1(arg_sens1),
         arg_sens2(arg_sens2),
-        save_hermite(save_hermite)
+        save_hermite(save_hermite),
+        stats(stats)
     {}
 
     ~SolutionData() = default;
@@ -67,6 +69,11 @@ class SolutionData
     SolutionData& operator=(const SolutionData&) = delete;
     SolutionData(SolutionData&&) noexcept = default;
     SolutionData& operator=(SolutionData&&) noexcept = default;
+
+    /**
+     * @brief The IDA return flag, negative if the integration failed.
+     */
+    int get_flag() const { return flag; }
 
     /**
      * @brief Convert raw vectors to numpy arrays and create Solution.
@@ -81,7 +88,8 @@ class SolutionData
         vector_to_numpy_3d(std::move(yS_vec), arg_sens0, arg_sens1, arg_sens2),
         vector_to_numpy_3d(std::move(ypS_vec),
                            save_hermite ? arg_sens0 : 0, arg_sens1, arg_sens2),
-        vector_to_numpy(std::move(yterm_vec))
+        vector_to_numpy(std::move(yterm_vec)),
+        stats
       );
     }
 
@@ -97,6 +105,7 @@ private:
     ptrdiff_t arg_sens1 = 0;
     ptrdiff_t arg_sens2 = 0;
     bool save_hermite = false;
+    IDAKLUStats stats;
 };
 
 #endif // PYBAMM_IDAKLU_SOLUTION_DATA_HPP

@@ -330,6 +330,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   const sunrealtype *y0,
   const sunrealtype *yp0,
   const sunrealtype *inputs,
+  const sunrealtype *pbar,
   bool save_adaptive_steps,
   bool save_interp_steps
 )
@@ -344,7 +345,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   // setup
   InitializeSolveStorage(number_of_evals, t_interp.size());
-  SetupInitialState(t_eval, y0, yp0, inputs);
+  SetupInitialState(t_eval, y0, yp0, inputs, pbar);
 
   sunrealtype t0 = t_eval.front();
   sunrealtype tf = t_eval.back();
@@ -515,13 +516,25 @@ void IDAKLUSolverOpenMP<ExprSet>::SetupInitialState(
   const std::vector<sunrealtype> &t_eval,
   const sunrealtype *y0,
   const sunrealtype *yp0,
-  const sunrealtype *inputs
+  const sunrealtype *inputs,
+  const sunrealtype *pbar
 ) {
   DEBUG("IDAKLUSolver::SetupInitialState");
 
   // Set inputs
   for (size_t i = 0; i < functions->inputs.size(); i++) {
     functions->inputs[i] = inputs[i];
+  }
+
+  // Sanitised once per solve, then re-applied unchanged after each reinit.
+  // IDAS rejects a zero pbar, and a zero parameter has no scale of its own.
+  sens_scales_.clear();
+  if (sensitivity && pbar != nullptr) {
+    sens_scales_.reserve(number_of_parameters);
+    for (int i = 0; i < number_of_parameters; i++) {
+      sunrealtype const scale = std::abs(pbar[i]);
+      sens_scales_.push_back((std::isfinite(scale) && scale > 0.0) ? scale : 1.0);
+    }
   }
 
   // Setup SUNDIALS vector pointers (member state)
@@ -630,10 +643,8 @@ void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   i_eval++;
   t_eval_next = t_eval[i_eval];
   CheckErrors(IDASetStopTime(ida_mem, t_eval_next), "IDASetStopTime");
-  if (solver_opts.print_stats) {
-    // Save stats before reinitializing (reinit resets IDA counters)
-    SaveStats();
-  }
+  // Save stats before reinitializing (reinit resets IDA counters)
+  SaveStats();
 
   // Reinitialize the solver to deal with the discontinuity at t = t_val
   ReinitializeIntegrator(t_val);
@@ -648,8 +659,8 @@ template <class ExprSet>
 SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
   DEBUG("IDAKLUSolver::BuildSolutionData");
 
+  SaveStats();
   if (solver_opts.print_stats) {
-    SaveStats();
     CaptureStats();
   }
 
@@ -694,7 +705,8 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     arg_sens0,
     arg_sens1,
     arg_sens2,
-    save_hermite
+    save_hermite,
+    accumulated_stats
   );
 }
 
@@ -780,7 +792,18 @@ void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const sunrealtype& t_va
   CheckErrors(IDAReInit(ida_mem, t_val, yy, yyp), "IDAReInit");
   if (sensitivity) {
     CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, yypS), "IDASensReInit");
+    ApplySensitivityScales();
   }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::ApplySensitivityScales() {
+  if (sens_scales_.empty()) {
+    return;
+  }
+  CheckErrors(
+    IDASetSensParams(ida_mem, nullptr, sens_scales_.data(), nullptr),
+    "IDASetSensParams");
 }
 
 template <class ExprSet>
@@ -1116,6 +1139,10 @@ PendingStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
   if (setup_opts.using_iterative_solver) {
     CheckErrors(IDAGetNumLinIters(ida_mem, &stats.nliters), "IDAGetNumLinIters");
     CheckErrors(IDAGetNumLinConvFails(ida_mem, &stats.nlcfails), "IDAGetNumLinConvFails");
+  }
+  // Without IDABBDPrecInit, IDA's preconditioner data is the user data, which
+  // this call would misread as the BBD preconditioner's.
+  if (setup_opts.preconditioner != "none") {
     CheckErrors(IDABBDPrecGetNumGfnEvals(ida_mem, &stats.ngevalsBBDP), "IDABBDPrecGetNumGfnEvals");
   }
 

@@ -370,8 +370,21 @@ class TestAuxiliaryDomains:
             }
         }
 
-    def test_laplacian_with_secondary_domain(self):
-        mesh = _make_quad_mesh(2, 2)
+    @staticmethod
+    def _assert_matches_per_secondary_point(single, repeated, size, n_aux):
+        # each secondary point is evaluated as the single-point expression would be
+        values = 1 + np.random.default_rng(0).random((n_aux, size))
+        expected = np.concatenate(
+            [single.evaluate(y=row[:, np.newaxis]) for row in values]
+        )
+        np.testing.assert_allclose(
+            repeated.evaluate(y=values.reshape(-1, 1)), expected, atol=1e-12
+        )
+
+    @pytest.mark.parametrize("orthogonal", [True, False])
+    def test_laplacian_with_secondary_domain(self, orthogonal):
+        # perturbed triangles also take the non-orthogonal cross terms
+        mesh = _make_quad_mesh(2, 2) if orthogonal else _make_perturbed_tri_mesh(3)
         aux = _make_quad_mesh(1, 3)
         method = _method_with_mesh(mesh, aux=aux)
         cell_values = mesh.cell_centroids[:, 0] ** 2
@@ -424,6 +437,78 @@ class TestAuxiliaryDomains:
                 np.tile(single_comp.evaluate()[:, 0], aux.npts),
                 atol=1e-12,
             )
+
+    def test_divergence_with_secondary_domain(self):
+        mesh = _make_2d_mesh(2, 2)
+        aux = _make_quad_mesh(1, 3)
+        method = _method_with_mesh(mesh, aux=aux)
+        n = mesh.npts
+
+        def divergence(domains, repeats):
+            symbol = pybamm.Variable("F", domains=domains)
+            field = pybamm.StateVector(slice(0, n * repeats), domains=domains)
+            components = [field, field**2]
+            return method.divergence(symbol, components, {})
+
+        single = divergence({"primary": ["test"]}, 1)
+        repeated = divergence({"primary": ["test"], "secondary": ["aux"]}, aux.npts)
+        self._assert_matches_per_secondary_point(single, repeated, n, aux.npts)
+
+    @pytest.mark.parametrize("side", ["left", "top-right"])
+    def test_boundary_value_with_secondary_domain(self, side):
+        mesh = _make_2d_mesh(2, 2)
+        aux = _make_quad_mesh(1, 3)
+        method = _method_with_mesh(mesh, aux=aux)
+        n = mesh.npts
+
+        def boundary_value(domains, repeats):
+            child = pybamm.StateVector(slice(0, n * repeats), domains=domains)
+            symbol = pybamm.BoundaryValue(pybamm.Variable("u", domains=domains), side)
+            return method.boundary_value_or_flux(symbol, child)
+
+        single = boundary_value({"primary": ["test"]}, 1)
+        repeated = boundary_value({"primary": ["test"], "secondary": ["aux"]}, aux.npts)
+        self._assert_matches_per_secondary_point(single, repeated, n, aux.npts)
+
+    @pytest.mark.parametrize("structured", [True, False])
+    def test_internal_neumann_with_secondary_domain(self, structured):
+        aux = _make_quad_mesh(1, 3)
+        if structured:
+            left = pybamm.SubMesh1D(np.linspace(0, 0.5, 4), "cartesian")
+            right = pybamm.SubMesh1D(np.linspace(0.5, 1, 5), "cartesian")
+        else:
+            left, right = _make_split_2d_meshes(2, 2, 2)
+        method = FiniteVolumeUnstructured()
+        method._mesh = _MeshMap({("aux",): aux})
+
+        def condition(repeats):
+            secondary = {"secondary": ["aux"]} if repeats > 1 else {}
+            n_left, n_right = left.npts * repeats, right.npts * repeats
+            left_values = pybamm.StateVector(
+                slice(0, n_left), domains={"primary": ["left"], **secondary}
+            )
+            right_values = pybamm.StateVector(
+                slice(n_left, n_left + n_right),
+                domains={"primary": ["right"], **secondary},
+            )
+            return method.internal_neumann_condition(
+                left_values, right_values, left, right
+            )
+
+        rng = np.random.default_rng(0)
+        left_values = rng.random((aux.npts, left.npts))
+        right_values = rng.random((aux.npts, right.npts))
+        single = condition(1)
+        expected = np.concatenate(
+            [
+                single.evaluate(y=np.concatenate([u_left, u_right])[:, np.newaxis])
+                for u_left, u_right in zip(left_values, right_values, strict=True)
+            ]
+        )
+        y = np.concatenate([left_values.ravel(), right_values.ravel()])
+        np.testing.assert_allclose(
+            condition(aux.npts).evaluate(y=y[:, np.newaxis]), expected, atol=1e-12
+        )
 
     def test_tertiary_broadcast_size(self):
         mesh = _make_quad_mesh(2, 2)

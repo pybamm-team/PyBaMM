@@ -15,6 +15,13 @@ PYBAMM_ENV = {
     "PYTHONIOENCODING": "utf-8",
     "MPLBACKEND": "Agg",
 }
+# Headless Linux renders VTK through OSMesa (the CI workflows install libosmesa6)
+if sys.platform.startswith("linux") and not (
+    os.getenv("DISPLAY") or os.getenv("WAYLAND_DISPLAY")
+):
+    PYBAMM_ENV["VTK_DEFAULT_OPENGL_WINDOW"] = os.getenv(
+        "VTK_DEFAULT_OPENGL_WINDOW", "vtkOSOpenGLRenderWindow"
+    )
 VENV_DIR = Path("./venv").resolve()
 
 
@@ -39,69 +46,57 @@ def is_macos_intel():
     return sys.platform == "darwin" and platform.machine() in ("x86_64", "i386")
 
 
-def install_locked(session, *, extras=None, groups=None, zoo=False, zoo_extras=None):
-    """Install pybamm and its dependencies into the session environment.
+def install_locked(session, *, extras=None, groups=None, zoo_extras=None):
+    """Install every workspace member and its ``uv.lock`` dependencies.
 
-    Two modes, selected by the ``PYBAMM_SOLVER_WHEELS`` environment variable:
-
-    * **Unset:** ``uv sync --frozen``, so ``pybammsolvers`` builds from source.
-    * **Set to a wheel directory (the CI matrix):** install this interpreter's
-      wheel by path, then pybamm with ``--no-sources``. The in-repo solver
-      version collides with the PyPI release, so nothing weaker picks the right
-      artifact, and Windows has no from-source build.
-
-    ``zoo=True`` also installs the zoo with ``zoo_extras``, which only the
-    prebuilt-wheel path needs — a workspace sync installs every member anyway.
+    ``uv sync --frozen`` installs the locked environment, building
+    ``pybammsolvers`` from source. When ``PYBAMM_SOLVER_WHEELS`` names a wheel
+    or a directory of wheels (the CI matrix), the sync skips ``pybammsolvers``
+    and this interpreter's prebuilt wheel is installed in its place, since
+    Windows has no from-source build.
     """
     env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
-
     wheels = os.getenv("PYBAMM_SOLVER_WHEELS")
-    if wheels:
-        wheels_path = Path(wheels)
-        if wheels_path.is_dir():
-            # The per-OS artifact holds wheels for every Python version; pick the
-            # one whose interpreter tag matches this cell. The trailing dash in
-            # "*-cpXY-*" avoids matching free-threaded "cpXYt-" builds.
-            tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
-            matches = sorted(wheels_path.glob(f"*-{tag}-*.whl"))
-            if not matches:
-                session.error(
-                    f"PYBAMM_SOLVER_WHEELS={wheels} contains no pybammsolvers "
-                    f"wheel for {tag}"
-                )
-            wheel = matches[0].as_posix()
-        else:
-            wheel = wheels_path.as_posix()
-        python_bin = os.path.join(
-            session.bin, "python.exe" if sys.platform == "win32" else "python"
-        )
-        extras_str = f"[{','.join(extras)}]" if extras else ""
-        zoo_extras_str = f"[{','.join(zoo_extras)}]" if zoo_extras else ""
-        cmd = [
-            "uv",
-            "pip",
-            "install",
-            "--python",
-            python_bin,
-            "--no-sources",
-            wheel,
-            "-e",
-            f"./packages/pybamm{extras_str}",
-        ]
-        if zoo:
-            cmd.extend(["-e", f"./packages/pybamm-model-zoo{zoo_extras_str}"])
-        for group in groups or []:
-            # Groups (dev, docs) are defined in the pybamm package, not the root.
-            cmd.extend(["--group", f"packages/pybamm/pyproject.toml:{group}"])
-        session.run(*cmd, env=env, external=True)
-        return
 
     cmd = ["uv", "sync", "--frozen"]
     for extra in [*(extras or []), *(zoo_extras or [])]:
         cmd.extend(["--extra", extra])
     for group in groups or []:
         cmd.extend(["--group", group])
+    if wheels:
+        cmd.extend(["--no-install-package", "pybammsolvers"])
     session.run(*cmd, env=env, external=True)
+
+    if not wheels:
+        return
+    wheels_path = Path(wheels)
+    if wheels_path.is_dir():
+        # The trailing dash keeps free-threaded "cpXYt-" wheels out of the match
+        tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
+        matches = sorted(wheels_path.glob(f"*-{tag}-*.whl"))
+        if not matches:
+            session.error(
+                f"PYBAMM_SOLVER_WHEELS={wheels} contains no pybammsolvers "
+                f"wheel for {tag}"
+            )
+        wheel = matches[0].as_posix()
+    else:
+        wheel = wheels_path.as_posix()
+    python_bin = os.path.join(
+        session.bin, "python.exe" if sys.platform == "win32" else "python"
+    )
+    # The sync already installed the solver's locked dependencies
+    session.run(
+        "uv",
+        "pip",
+        "install",
+        "--python",
+        python_bin,
+        "--no-deps",
+        wheel,
+        env=env,
+        external=True,
+    )
 
 
 @nox.session(name="coverage", default=False)
@@ -326,9 +321,7 @@ ZOO_TESTS = "packages/pybamm-model-zoo"
 def install_zoo(session):
     """Install pybamm plus the zoo and every model's declared dependencies."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    install_locked(
-        session, extras=["all"], groups=["dev"], zoo=True, zoo_extras=["zoo-all"]
-    )
+    install_locked(session, extras=["all"], groups=["dev"], zoo_extras=["zoo-all"])
 
 
 def zoo_pytest(session, marker, *args, allow_empty=False):
@@ -393,7 +386,7 @@ def run_zoo_new(session):
     """Create a new model zoo entry from the template."""
     # Only the zoo itself and pybamm's version metadata are needed, so this skips
     # the extras and the dev group that install_zoo pulls in.
-    install_locked(session, zoo=True)
+    install_locked(session)
     session.run("python", f"{ZOO_TESTS}/scripts/new_model.py", *session.posargs)
 
 

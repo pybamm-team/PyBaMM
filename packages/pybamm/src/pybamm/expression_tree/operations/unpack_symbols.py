@@ -45,7 +45,7 @@ class SymbolUnpacker:
 
         Returns
         -------
-        list of :class:`pybamm.Symbol`
+        set of :class:`pybamm.Symbol`
             Set of unpacked symbols with class in `self.classes_to_find`
         """
         all_instances = set()
@@ -67,7 +67,7 @@ class SymbolUnpacker:
 
     def unpack_symbol(
         self, symbol: Sequence[pybamm.Symbol] | pybamm.Symbol
-    ) -> list[pybamm.Symbol]:
+    ) -> set[pybamm.Symbol]:
         """
         This function recurses down the tree, unpacking the symbols and saving the ones
         that have a class in `self.classes_to_find`.
@@ -79,35 +79,23 @@ class SymbolUnpacker:
 
         Returns
         -------
-        list of :class:`pybamm.Symbol`
-            List of unpacked symbols with class in `self.classes_to_find`
+        set of :class:`pybamm.Symbol`
+            Set of unpacked symbols with class in `self.classes_to_find`
         """
 
-        try:
-            return self._unpacked_symbols[symbol]
-        except KeyError:
-            unpacked = self._unpack(symbol)
-            self._unpacked_symbols[symbol] = unpacked
-            return unpacked
+        value = self._unpacked_symbols.get(symbol)
+        if value is not None:
+            return value
 
-    def _unpack(self, symbol):
+        unpacked = self._unpack(symbol)
+        self._unpacked_symbols[symbol] = unpacked
+        return unpacked
+
+    def _unpack(self, symbol) -> set[pybamm.Symbol]:
         """See :meth:`SymbolUnpacker.unpack()`."""
         # found a symbol of the right class -> return it
         if isinstance(symbol, self.classes_to_find):
             return {symbol}
 
-        children = symbol.children
-        if isinstance(symbol, pybamm.Variable):
-            children = (*children, symbol.scale, symbol.reference, *symbol.bounds)
-
-        if len(children) == 0:
-            # not the right class and no children so the class to find doesn't appear
-            return set()
-        else:
-            # iterate over all children
-            found_vars = set()
-            for child in children:
-                # call back unpack_symbol to cache values
-                child_vars = self.unpack_symbol(child)
-                found_vars.update(child_vars)
-            return found_vars
+        # flatten the per-dependent sets into one set
+        return {found for leaf in symbol.leaves for found in self.unpack_symbol(leaf)}
