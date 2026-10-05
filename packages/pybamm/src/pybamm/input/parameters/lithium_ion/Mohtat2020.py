@@ -395,7 +395,7 @@ def get_parameter_values():
         "Negative electrode transport efficiency": 0.16,
         "Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
         "": 1.061e-06,
-        "Negative electrode charge transfer coefficient": 0.5,
+        "Negative electrode Butler-Volmer transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Negative electrode exchange-current density [A.m-2]"
         "": graphite_electrolyte_exchange_current_density_PeymanMPM,
@@ -417,7 +417,7 @@ def get_parameter_values():
         "Positive electrode transport efficiency": 0.16,
         "Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
         "": 4.824e-06,
-        "Positive electrode charge transfer coefficient": 0.5,
+        "Positive electrode Butler-Volmer transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"
         "": NMC_electrolyte_exchange_current_density_PeymanMPM,

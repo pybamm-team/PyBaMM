@@ -476,7 +476,7 @@ def get_parameter_values():
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
         "Exchange-current density for lithium metal electrode [A.m-2]"
         "": li_metal_electrolyte_exchange_current_density_Xu2019,
-        "Negative electrode charge transfer coefficient": 0.5,
+        "Negative electrode Butler-Volmer transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 14.0,
@@ -488,6 +488,7 @@ def get_parameter_values():
         "Positive particle radius [m]": 1.37e-05,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.6372789338386007,
         "Positive electrode Bruggeman coefficient (electrode)": 0.0,
+        "Positive electrode Butler-Volmer transfer coefficient": 0.5,
         "Positive electrode exchange-current density [A.m-2]"
         "": graphite_electrolyte_exchange_current_density_Ecker2015,
         "Positive electrode density [kg.m-3]": 1555.0,
