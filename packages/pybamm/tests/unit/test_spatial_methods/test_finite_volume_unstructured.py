@@ -1636,8 +1636,30 @@ class TestFiniteVolumeUnstructuredBehavior:
             expected = np.argmin((x - target_x) ** 2 + (z - target_z) ** 2)
             assert result.evaluate().item() == expected
         else:
-            owners = mesh.face_owner[mesh.boundary_faces[side]]
-            np.testing.assert_array_equal(result.evaluate()[:, 0], owners)
+            faces = mesh.boundary_faces[side]
+            areas = mesh.face_areas[faces]
+            expected = np.sum(areas * mesh.face_owner[faces]) / areas.sum()
+            np.testing.assert_allclose(result.evaluate(), [[expected]])
+
+    def test_boundary_value_is_area_weighted_average(self):
+        # Uneven faces on a tagged side: the value is the area-weighted mean,
+        # so a linear field returns its value at the side's area centroid
+        mesh = _make_3d_mesh(2, 3, 2)
+        faces = mesh.boundary_faces["top"]
+        y = mesh.face_centroids[faces, 1]
+        mesh.boundary_faces["tab"] = faces[y < 0.5]
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(mesh.cell_centroids[:, 1], domain="test")
+
+        result = method.boundary_value_or_flux(
+            pybamm.BoundaryValue(variable, "tab"), values
+        )
+        tab = mesh.boundary_faces["tab"]
+        areas = mesh.face_areas[tab]
+        expected = np.sum(areas * mesh.cell_centroids[mesh.face_owner[tab], 1])
+        assert result.shape == (1, 1)
+        np.testing.assert_allclose(result.evaluate(), [[expected / areas.sum()]])
 
     def test_boundary_gradient_raises(self):
         mesh = _make_2d_mesh(2, 2)
