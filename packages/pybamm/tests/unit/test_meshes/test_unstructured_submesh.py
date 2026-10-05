@@ -936,18 +936,28 @@ class TestFileGenerators:
         ):
             gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
 
-    def test_user_supplied_mixed_tetrahedra_hexahedra_raise(self):
-        """Mixed tet+hex files raise instead of silently dropping cells."""
+    def test_user_supplied_mixed_volume_cells_raise(self):
+        """Mixed or unsupported volume cells raise instead of being dropped."""
         import pytest
 
         meshio = pytest.importorskip("meshio")
         points, hexes = _hex_grid([0.0, 1.0], [0.0, 1.0], [0.0, 1.0])
-        gen = UserSuppliedUnstructuredMesh("unused.vtu")
-        gen._cached_mesh = meshio.Mesh(
-            points, [("tetra", np.array([[0, 1, 2, 4]])), ("hexahedron", hexes)]
-        )
-        with pytest.raises(pybamm.GeometryError, match="mixes tetrahedra and hexa"):
-            gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+        points = np.vstack([points, [[2.0, 0.0, 0.0], [2.0, 0.0, 1.0]]])
+        tet = ("tetra", np.array([[0, 1, 2, 4]]))
+        # Wedge on the hex's x+ face, as gmsh recombine can leave behind
+        wedge = ("wedge", np.array([[4, 8, 6, 5, 9, 7]]))
+        boundary = ("quad", hexes[:, [0, 1, 2, 3]])
+        cases = [
+            ([tet, ("hexahedron", hexes)], r"mixes volume cell types"),
+            ([("hexahedron", hexes), wedge], r"mixes volume cell types"),
+            # Without the check, the quad facets would load as a 2D mesh
+            ([wedge, boundary], r"Unsupported volume cell type 'wedge'"),
+        ]
+        for cells, match in cases:
+            gen = UserSuppliedUnstructuredMesh("unused.vtu")
+            gen._cached_mesh = meshio.Mesh(points, cells)
+            with pytest.raises(pybamm.GeometryError, match=match):
+                gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
 
     def test_domain_name_from_lims(self):
         """String and SpatialVariable keys map to electrode domains; 'tabs' skipped."""

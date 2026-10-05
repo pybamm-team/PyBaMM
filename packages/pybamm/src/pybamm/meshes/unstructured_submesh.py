@@ -1024,16 +1024,25 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
 
     @staticmethod
     def _extract_supported_cells(mesh):
-        volume_types = {
-            cell_type
-            for cell_type in (ElementType.TETRAHEDRON, ElementType.HEXAHEDRON)
-            if any(block.type == cell_type.meshio_name for block in mesh.cells)
-        }
+        # Any other volume cell (wedge, pyramid, higher-order) would otherwise
+        # be dropped silently, leaving holes in the mesh
+        volume_types = sorted(
+            {block.type for block in mesh.cells if _is_volume_cell_type(block.type)}
+        )
         if len(volume_types) > 1:
             raise pybamm.GeometryError(
-                "Mesh file mixes tetrahedra and hexahedra; mixed-element "
-                "meshes are not supported. Mesh every region with one element "
-                "type."
+                f"Mesh file mixes volume cell types {volume_types}; "
+                "mixed-element meshes are not supported. Mesh every region "
+                "with one element type (first-order tetra or hexahedron)."
+            )
+        if volume_types and volume_types[0] not in (
+            ElementType.TETRAHEDRON.meshio_name,
+            ElementType.HEXAHEDRON.meshio_name,
+        ):
+            raise pybamm.GeometryError(
+                f"Unsupported volume cell type {volume_types[0]!r} in mesh "
+                "file; only first-order tetra and hexahedron cells are "
+                "supported in 3D."
             )
         # Prefer 3D cells when present, otherwise fall back to 2D (in a 3D
         # file, triangles and quads are boundary facets).
@@ -1309,6 +1318,24 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
 # ======================================================================
 # Geometric tolerance
 # ======================================================================
+
+
+def _is_volume_cell_type(meshio_type):
+    """Whether a meshio cell-type name denotes a 3D (volume) cell.
+
+    Parameters
+    ----------
+    meshio_type : str
+        Cell-type name, e.g. ``"tetra"``, ``"wedge15"`` or
+        ``"VTK_LAGRANGE_HEXAHEDRON"``.
+
+    Returns
+    -------
+    bool
+        True for tetrahedra, hexahedra, wedges and pyramids of any order.
+    """
+    name = meshio_type.lower().removeprefix("vtk_lagrange_")
+    return name.startswith(("tetra", "hexahedron", "wedge", "pyramid"))
 
 
 def _quad_face_warp(face_verts):
