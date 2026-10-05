@@ -746,7 +746,7 @@ class TestFileGenerators:
         with pytest.raises(pybamm.GeometryError, match="cell data tag"):
             gen_bad({"x_n": {"min": 0.0, "max": 1.0}}, {})
 
-    def test_user_supplied_boundary_mapping_tags_faces(self):
+    def test_user_supplied_boundary_mapping_tags_faces(self, caplog):
         """boundary_mapping maps tagged facet groups to boundary face names."""
         import pytest
 
@@ -755,14 +755,18 @@ class TestFileGenerators:
         tris = np.array([[0, 1, 2], [0, 2, 3]])
         lines = np.array([[0, 1], [1, 2], [2, 3], [3, 0]])
         gen = UserSuppliedUnstructuredMesh(
-            "unused.vtu", boundary_mapping={"seal": 1, "vent": 2}
+            "unused.vtu", boundary_mapping={"seal": 1, "vent": 2, "missing": 9}
         )
         gen._cached_mesh = meshio.Mesh(
             points,
             [("triangle", tris), ("line", lines)],
             cell_data={"gmsh:physical": [np.array([0, 0]), np.array([1, 1, 2, 2])]},
         )
-        sub = gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+        with caplog.at_level("WARNING", logger="pybamm"):
+            sub = gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+        # only a tag absent from the whole file is reported
+        assert "'missing' (tag 9) matches no facets" in caplog.text
+        assert "'seal'" not in caplog.text
 
         assert set(sub.boundary_faces) == {"seal", "vent"}
         seal = sub.face_centroids[sub.boundary_faces["seal"]]

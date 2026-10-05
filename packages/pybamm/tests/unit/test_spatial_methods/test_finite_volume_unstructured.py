@@ -1172,7 +1172,7 @@ class TestFiniteVolumeUnstructuredBehavior:
 
         untagged = _make_2d_mesh(2, 2)
         untagged.boundary_faces = {}
-        tagged = _make_2d_mesh(2, 2)
+        tagged = _make_2d_mesh(2, 2, x_range=(2, 3))
         method = FiniteVolumeUnstructured()
         with caplog.at_level(logging.WARNING):
             method.build(_MeshMap({("untagged",): untagged, ("tagged",): tagged}))
@@ -1188,7 +1188,7 @@ class TestFiniteVolumeUnstructuredBehavior:
         distant = _make_2d_mesh(1, 1, x_range=(2, 3))
         assert not FiniteVolumeUnstructured._interface_face_match(other, distant)[2]
 
-    def test_build_pairs_untagged_exterior_faces(self):
+    def test_build_pairs_untagged_exterior_faces(self, caplog):
         # File meshes often tag only a few faces; the shared face must still
         # be discovered, and untagged faces stay out of every bucket
         left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
@@ -1196,10 +1196,13 @@ class TestFiniteVolumeUnstructuredBehavior:
         left.boundary_faces = {"left": left.boundary_faces["left"]}
         right.boundary_faces = {}
         method = FiniteVolumeUnstructured()
-        method.build(_MeshMap({("left",): left, ("right",): right}))
+        with caplog.at_level("WARNING", logger="pybamm"):
+            method.build(_MeshMap({("left",): left, ("right",): right}))
 
         assert set(left.boundary_faces) == {"left", "iface_right"}
         assert set(right.boundary_faces) == {"iface_left"}
+        # coupled through its interface, so the untagged mesh is not reported
+        assert "no boundary tags" not in caplog.text
         np.testing.assert_allclose(
             left.face_centroids[left.boundary_faces["iface_right"]],
             right.face_centroids[right.boundary_faces["iface_left"]],
@@ -2741,7 +2744,7 @@ class TestTaggedFileMesh:
             ),
         )
 
-    def test_solve_without_workarounds(self, tmp_path):
+    def test_solve_without_workarounds(self, tmp_path, caplog):
         # Custom domain names, no var_pts, untagged shared faces and an event
         # on a tagged side's boundary value all work straight from the file
         path = tmp_path / "two_regions.vtu"
@@ -2758,7 +2761,8 @@ class TestTaggedFileMesh:
             domains[0]: {x_ncc: {"min": 0, "max": 1}},
             domains[1]: {x_n: {"min": 1, "max": 2}},
         }
-        mesh = pybamm.Mesh(geometry, dict.fromkeys(domains, generator), {})
+        with caplog.at_level("WARNING", logger="pybamm"):
+            mesh = pybamm.Mesh(geometry, dict.fromkeys(domains, generator), {})
         assert mesh[domains[0]].npts == mesh[domains[1]].npts == 24
 
         u_cc = pybamm.Variable("u_cc", domain=domains[0])
@@ -2777,7 +2781,10 @@ class TestTaggedFileMesh:
         model.variables = {"u_cc": u_cc, "Hot end value": hot_end}
         model.events = [pybamm.Event("Hot end limit", 0.5 - hot_end)]
         spatial_methods = dict.fromkeys(domains, FiniteVolumeUnstructured())
-        pybamm.Discretisation(mesh, spatial_methods).process_model(model)
+        with caplog.at_level("WARNING", logger="pybamm"):
+            pybamm.Discretisation(mesh, spatial_methods).process_model(model)
+        # each tag sits on one region only, which is not worth a warning
+        assert caplog.text == ""
 
         solution = pybamm.IDAKLUSolver().solve(model, [0, 10])
         assert solution.termination == "event: Hot end limit"

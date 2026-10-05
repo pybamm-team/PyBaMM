@@ -97,20 +97,27 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     "discretisation remains consistent but the linear systems "
                     "become poorly conditioned; consider improving the mesh."
                 )
-            # Tags come from the generator, not the constructor: a hand-built
-            # mesh with none cannot take BCs, so surface that before it fails
-            # downstream.
-            if not sm.boundary_faces and len(sm.face_owner) > sm._boundary_face_start:
-                pybamm.logger.warning(
-                    f"Unstructured submesh for domain {name!r} has exterior "
-                    "faces but no boundary tags: boundary conditions cannot "
-                    "be applied to it. Tag it (e.g. detect_box_boundaries() "
-                    "for axis-aligned boxes) or use a mesh generator that "
-                    "supplies tags."
-                )
         # Discover interfaces between all unstructured submesh pairs so
         # internal BCs work for arbitrary topology, not just 1D stacks.
         self._auto_compute_all_interfaces(mesh)
+        # Tags come from the generator, not the constructor: a hand-built
+        # mesh with none that touches no other domain is likely a mistake
+        for dom in mesh:
+            sm = mesh[dom]
+            if (
+                isinstance(sm, UnstructuredSubMesh)
+                and not sm.boundary_faces
+                and len(sm.face_owner) > sm._boundary_face_start
+            ):
+                name = dom[0] if isinstance(dom, tuple) else dom
+                pybamm.logger.warning(
+                    f"Unstructured submesh for domain {name!r} has exterior "
+                    "faces but no boundary tags and no interfaces: boundary "
+                    "conditions cannot be applied and it is not coupled to "
+                    "other domains. Tag it (e.g. detect_box_boundaries() for "
+                    "axis-aligned boxes) or use a mesh generator that "
+                    "supplies tags."
+                )
 
     # ------------------------------------------------------------------
     # interface auto-discovery (graph topology support)

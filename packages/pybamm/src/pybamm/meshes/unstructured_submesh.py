@@ -1006,16 +1006,20 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
                 # submesh and cannot match
                 in_domain = (facets >= 0).all(axis=1)
                 for name, tag in self.boundary_mapping.items():
+                    # In a multi-region file a tag usually belongs to one
+                    # region only, so only a tag absent from the file warns
+                    tagged = facet_tags == tag
+                    if not tagged.any():
+                        pybamm.logger.warning(
+                            f"boundary_mapping entry {name!r} (tag {tag}) "
+                            f"matches no facets in {self.filepath}"
+                        )
+                        continue
                     matched = _match_facets_to_boundary_faces(
-                        facets[in_domain & (facet_tags == tag)], submesh
+                        facets[in_domain & tagged], submesh
                     )
                     if len(matched) > 0:
                         submesh.boundary_faces[name] = matched
-                    else:
-                        pybamm.logger.warning(
-                            f"boundary_mapping entry {name!r} (tag {tag}) "
-                            f"matched no boundary faces of this submesh"
-                        )
 
         return submesh
 
