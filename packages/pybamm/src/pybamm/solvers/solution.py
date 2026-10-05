@@ -1254,7 +1254,23 @@ class Solution(SolutionBase):
             acc.setdefault(key, []).extend(val)
 
     def __add__(self, other):
-        """Adds two solutions together, e.g. when stepping"""
+        """Join ``other`` onto the end of this solution, e.g. when stepping.
+
+        If ``other`` starts after this solution ends, an ``ExplicitTimeIntegral``
+        integrates across the gap, interpolating its integrand linearly there. If
+        either solution returned output variables only, the integral is instead
+        the sum of the integrals over each solution, so the gap adds nothing.
+
+        Parameters
+        ----------
+        other : :class:`pybamm.Solution` or None
+            The solution to append.
+
+        Returns
+        -------
+        :class:`pybamm.Solution`
+            The joined solution.
+        """
         if other is None or isinstance(other, EmptySolution):
             return self.copy()
         if not isinstance(other, Solution):
