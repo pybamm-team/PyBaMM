@@ -285,9 +285,9 @@ class TestThermal:
                 ),
                 parameter_values=parameter_values,
             )
-            sol = sim.solve([0, 600], t_interp=t)
-            voltage[film] = sol["Voltage [V]"].entries
-            heating[film] = sol["Total heating [W]"].entries
+            sol = sim.solve([0, 600])
+            voltage[film] = sol["Voltage [V]"](t)
+            heating[film] = sol["Total heating [W]"](t)
 
         film = options["SEI film resistance"]
         electrical_loss = np.trapezoid(current * (voltage["none"] - voltage[film]), t)
