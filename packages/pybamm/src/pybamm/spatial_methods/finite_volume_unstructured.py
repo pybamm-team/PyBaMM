@@ -41,7 +41,13 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
     :class:`pybamm.FiniteVolume`; e.g. ``u = x`` takes value ``+1`` on both
     ``"left"`` and ``"right"``.  Values on any other face tag (Gmsh region
     names, ``"iface_*"``) are outward-normal derivatives
-    :math:`\\partial u/\\partial n`.
+    :math:`\\partial u/\\partial n`.  Exterior faces without a boundary
+    condition are zero flux.
+
+    ``pybamm.boundary_value`` on a side is the area-weighted average of the
+    owner-cell values over that side's faces (one value per auxiliary-domain
+    point), e.g. the mean potential on a tab; corner sides (``"top-right"``,
+    ...) take the single closest boundary cell.
 
     Parameters
     ----------

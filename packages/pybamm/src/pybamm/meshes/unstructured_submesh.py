@@ -1129,7 +1129,9 @@ class TaggedSubMeshGenerator(MeshGenerator):
         Maps boundary name to a gmsh physical *surface* group, given as
         its ``field_data`` name or integer tag. Matching tagged surface
         triangles become the named entries in ``boundary_faces``. Without
-        it the submesh carries no boundary tags.
+        it the submesh carries no boundary tags. ``"negative tab"`` and
+        ``"positive tab"`` are reserved for the ``"current collector"``
+        domain, so tag tabs with other names.
     """
 
     # Resolution comes from the mesh file, not var_pts
