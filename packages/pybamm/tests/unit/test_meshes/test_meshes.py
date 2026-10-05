@@ -124,6 +124,28 @@ class TestMesh:
         with pytest.raises(NotImplementedError, match=r"for symbol var"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
+    def test_var_pts_optional_when_generator_ignores_them(self):
+        received = {}
+
+        class FileGenerator(pybamm.MeshGenerator):
+            requires_npts = False
+
+            def __call__(self, lims, npts):
+                received.update(npts)
+                return pybamm.SubMesh1D(np.linspace(0, 1, 3), "cartesian")
+
+        x = pybamm.SpatialVariable("x_file", domain="file domain")
+        geometry = {"file domain": {x: {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(
+            geometry, {"file domain": FileGenerator(pybamm.SubMesh1D)}, {}
+        )
+        assert mesh["file domain"].npts == 2
+        assert received == {}
+
+        # a given value is still passed through
+        pybamm.Mesh(geometry, {"file domain": FileGenerator(pybamm.SubMesh1D)}, {x: 5})
+        assert received == {"x_file": 5}
+
     def test_mesh_sizes(self, submesh_types):
         param = get_param()
 

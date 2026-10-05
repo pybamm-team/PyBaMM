@@ -914,6 +914,9 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         to disable welding.
     """
 
+    # Resolution comes from the mesh file, not var_pts
+    requires_npts = False
+
     def __init__(
         self,
         filepath,
@@ -1124,6 +1127,9 @@ class TaggedSubMeshGenerator(MeshGenerator):
         triangles become the named entries in ``boundary_faces``. Without
         it the submesh carries no boundary tags.
     """
+
+    # Resolution comes from the mesh file, not var_pts
+    requires_npts = False
 
     _mesh_cache: dict = {}
 
