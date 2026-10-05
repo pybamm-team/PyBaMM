@@ -33,9 +33,10 @@ class TestSPM(BaseIntegrationTestLithiumIon):
                 }
             )
             sim = pybamm.Simulation(model, parameter_values=param, var_pts=var_pts)
-            solutions.append(sim.solve([0, 600], t_interp=np.linspace(0, 600, 11)))
+            solutions.append(sim.solve([0, 600]))
 
+        t = np.linspace(0, 600, 11)
         for name in ["Current collector current density [A.m-2]", "Voltage [V]"]:
             np.testing.assert_allclose(
-                solutions[0][name].entries, solutions[1][name].entries, rtol=1e-3
+                solutions[0][name](t), solutions[1][name](t), rtol=1e-3
             )
