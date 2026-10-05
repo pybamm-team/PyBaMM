@@ -2712,3 +2712,75 @@ class TestOrthogonalityTolerance:
         skew = np.linalg.norm(k, axis=1)
         assert skew.max() > 0.4
         assert (skew > 0.4).sum() >= mesh.n_internal_faces // 2
+
+
+class TestTaggedFileMesh:
+    @staticmethod
+    def _write_two_region_mesh(path):
+        """Tets of [0, 2] x [0, 1] x [0, 1], region 1 at x < 1 and region 2
+        at x > 1, with only the x = 0 and x = 2 faces tagged."""
+        meshio = pytest.importorskip("meshio")
+        nodes, tets = _hex_to_tet(
+            np.linspace(0, 2, 5), np.linspace(0, 1, 2), np.linspace(0, 1, 3)
+        )
+        regions = np.where(nodes[tets].mean(axis=1)[:, 0] < 1, 1, 2)
+        whole = UnstructuredSubMesh(nodes, tets)
+        whole.detect_box_boundaries()
+        ends = [whole.faces[whole.boundary_faces[side]] for side in ("left", "right")]
+        meshio.write(
+            str(path),
+            meshio.Mesh(
+                nodes,
+                [("tetra", tets), ("triangle", np.concatenate(ends))],
+                cell_data={
+                    "tag": [
+                        regions,
+                        np.repeat([11, 12], [len(ends[0]), len(ends[1])]),
+                    ]
+                },
+            ),
+        )
+
+    def test_solve_without_workarounds(self, tmp_path):
+        # Custom domain names, no var_pts, untagged shared faces and an event
+        # on a tagged side's boundary value all work straight from the file
+        path = tmp_path / "two_regions.vtu"
+        self._write_two_region_mesh(path)
+        domains = ["negative current collector", "negative electrode"]
+        generator = pybamm.UserSuppliedUnstructuredMesh(
+            str(path),
+            subdomain_mapping=dict(zip(domains, [1, 2], strict=True)),
+            boundary_mapping={"cold end": 11, "hot end": 12},
+        )
+        x_ncc = pybamm.SpatialVariable("x_ncc", domain=domains[0])
+        x_n = pybamm.SpatialVariable("x_n", domain=domains[1])
+        geometry = {
+            domains[0]: {x_ncc: {"min": 0, "max": 1}},
+            domains[1]: {x_n: {"min": 1, "max": 2}},
+        }
+        mesh = pybamm.Mesh(geometry, dict.fromkeys(domains, generator), {})
+        assert mesh[domains[0]].npts == mesh[domains[1]].npts == 24
+
+        u_cc = pybamm.Variable("u_cc", domain=domains[0])
+        u_n = pybamm.Variable("u_n", domain=domains[1])
+        u = pybamm.concatenation(u_cc, u_n)
+        hot_end = pybamm.boundary_value(u_n, "hot end")
+        model = pybamm.BaseModel()
+        model.rhs = {u: pybamm.div(pybamm.grad(u))}
+        model.boundary_conditions = {
+            u: {
+                "cold end": (pybamm.Scalar(0), "Dirichlet"),
+                "hot end": (pybamm.Scalar(1), "Neumann"),
+            }
+        }
+        model.initial_conditions = {u: pybamm.Scalar(0)}
+        model.variables = {"u_cc": u_cc, "Hot end value": hot_end}
+        model.events = [pybamm.Event("Hot end limit", 0.5 - hot_end)]
+        spatial_methods = dict.fromkeys(domains, FiniteVolumeUnstructured())
+        pybamm.Discretisation(mesh, spatial_methods).process_model(model)
+
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 10])
+        assert solution.termination == "event: Hot end limit"
+        assert solution["Hot end value"](solution.t[-1]) == pytest.approx(0.5)
+        # heat crosses the untagged shared face into the first region
+        assert solution["u_cc"](solution.t[-1]).max() > 0
