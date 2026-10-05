@@ -892,9 +892,19 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
     filepath : str
         Path to the mesh file (GMSH ``.msh``, VTK ``.vtu``, etc.).
     subdomain_mapping : dict[str, int] or None
-        Maps PyBaMM domain name to physical group / cell-data tag.
+        Maps PyBaMM domain name to physical group / cell-data tag. The domain
+        being meshed is the domain of the geometry's spatial variables (e.g.
+        ``x_ncc`` on ``"negative current collector"``), so one generator can
+        serve every domain in the mapping. A domain missing from a non-empty
+        mapping loads every cell, with a warning.
     boundary_mapping : dict[str, int] or None
-        Maps boundary name to physical group / facet tag.
+        Maps boundary name to physical group / facet tag. The names become
+        boundary-condition sides. ``"negative tab"`` and ``"positive tab"``
+        are reserved for the ``"current collector"`` domain (boundary
+        operators on them raise a :class:`pybamm.ModelError` elsewhere), so
+        tag tabs with other names, e.g. ``"negative tab top"``. Exterior
+        faces without a tag default to zero flux and still take part in
+        interface discovery between domains.
     coord_sys : str, optional
         Coordinate system, default ``"cartesian"``.
     merge_tolerance : float or None, optional
@@ -930,17 +940,23 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         mesh = self._cached_mesh
         nodes = mesh.points
 
-        # Determine which domain is being requested from the lims keys
+        # The requested domain is the one the geometry's spatial variables live on
         domain_name = self._domain_name_from_lims(lims)
 
         # Extract supported cells (triangles/quads or tets/hexes)
         cells, cell_type = self._extract_supported_cells(mesh)
 
-        if domain_name and domain_name in self.subdomain_mapping:
+        if domain_name in self.subdomain_mapping:
             tag_value = self.subdomain_mapping[domain_name]
             cell_mask = self._get_cell_mask(mesh, cell_type, tag_value)
             elements = cells[cell_mask]
         else:
+            if self.subdomain_mapping:
+                pybamm.logger.warning(
+                    f"Domain {domain_name!r} is not in subdomain_mapping "
+                    f"(keys: {sorted(self.subdomain_mapping)}); loading every "
+                    f"cell of {self.filepath}"
+                )
             elements = cells
 
         # Weld coincident nodes across cell blocks so touching regions
@@ -1005,21 +1021,15 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
 
     @staticmethod
     def _domain_name_from_lims(lims):
+        # The geometry keys are the domain's spatial variables, so their
+        # domain names the region; string keys are standard spatial variables
         for var in lims:
             if var == "tabs":
                 continue
             if isinstance(var, str):
-                name = var
-            else:
-                name = var.name
-            for prefix in ("x_n", "x_s", "x_p"):
-                if name.startswith(prefix):
-                    domain_map = {
-                        "x_n": "negative electrode",
-                        "x_s": "separator",
-                        "x_p": "positive electrode",
-                    }
-                    return domain_map.get(prefix)
+                var = getattr(pybamm.standard_spatial_vars, var, None)
+            if var is not None and len(var.domain) == 1:
+                return var.domain[0]
         return None
 
     @staticmethod

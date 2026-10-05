@@ -845,14 +845,48 @@ class TestFileGenerators:
             gen_mixed({"x_n": {"min": 0.0, "max": 1.0}}, {})
 
     def test_domain_name_from_lims(self):
-        """String and SpatialVariable keys map to electrode domains; 'tabs' skipped."""
+        """The region is the domain of the geometry's spatial variables."""
         f = UserSuppliedUnstructuredMesh._domain_name_from_lims
         assert f({"x_n": {}}) == "negative electrode"
         assert f({"x_s": {}}) == "separator"
         assert f({"tabs": {}, "x_p": {}}) == "positive electrode"
-        assert f({"r_n": {}}) is None
+        assert f({"r_n": {}}) == "negative particle"
+        assert f({"not_a_standard_variable": {}}) is None
         x = pybamm.SpatialVariable("x_n", domain=["negative electrode"])
         assert f({x: {}}) == "negative electrode"
+        # x_ncc shares the x_n prefix but lives on its own domain
+        x_ncc = pybamm.SpatialVariable("x_ncc", domain="negative current collector")
+        assert f({x_ncc: {}}) == "negative current collector"
+        # a multi-domain variable does not name a single region
+        x_cell = pybamm.SpatialVariable(
+            "x", domain=["negative electrode", "separator", "positive electrode"]
+        )
+        assert f({x_cell: {}}) is None
+
+    def test_user_supplied_loads_any_mapped_domain(self, tmp_path, caplog):
+        """One generator loads each domain of subdomain_mapping, including
+        domains outside the electrode/separator stack."""
+        pytest.importorskip("meshio")
+        path = tmp_path / "tagged.vtu"
+        self._write_two_triangle_vtu(path, tags=[1, 2])
+        gen = UserSuppliedUnstructuredMesh(
+            str(path),
+            subdomain_mapping={"negative current collector": 1, "negative electrode": 2},
+        )
+        x_ncc = pybamm.SpatialVariable("x_ncc", domain="negative current collector")
+        x_n = pybamm.SpatialVariable("x_n", domain="negative electrode")
+        collector = gen({x_ncc: {"min": 0.0, "max": 1.0}}, {})
+        electrode = gen({x_n: {"min": 0.0, "max": 1.0}}, {})
+        # cell 0 has its centroid below the diagonal, cell 1 above it
+        assert collector.npts == 1 and electrode.npts == 1
+        assert collector.cell_centroids[0, 0] > collector.cell_centroids[0, 1]
+        assert electrode.cell_centroids[0, 0] < electrode.cell_centroids[0, 1]
+
+        x_s = pybamm.SpatialVariable("x_s", domain="separator")
+        with caplog.at_level("WARNING", logger="pybamm"):
+            whole = gen({x_s: {"min": 0.0, "max": 1.0}}, {})
+        assert whole.npts == 2
+        assert "'separator' is not in subdomain_mapping" in caplog.text
 
     @staticmethod
     def _tagged_gmsh_mesh():
