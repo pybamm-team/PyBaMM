@@ -1221,6 +1221,40 @@ class Solution(SolutionBase):
         else:
             raise ValueError(f"format '{to_format}' not recognised")
 
+    def save_vtu(self, filename, variables, t=None):
+        """
+        Save variables on an unstructured mesh as a VTK time series for ParaView.
+
+        Writes one ``.vtu`` file per output time into a directory named after
+        ``filename`` (without its extension) and a ``.pvd`` collection that
+        indexes them by time; open the ``.pvd`` in ParaView. Requires ``vtk``.
+
+        Cell-centred unstructured finite-volume variables are written as cell
+        data on the union of their meshes, with NaN on cells a variable does
+        not cover. Vector fields are written as 3-component cell data. 0D
+        variables are written as field data, alongside the output time
+        (``"TimeValue"``).
+
+        Parameters
+        ----------
+        filename : str or os.PathLike
+            Path of the ``.pvd`` file; ``.pvd`` is appended if missing.
+        variables : str or list of str
+            Names of the variables to export. At least one must live on an
+            unstructured mesh.
+        t : array-like, optional
+            Output times [s], within the solution's time range. Defaults to
+            the solution's (unique) times.
+
+        Returns
+        -------
+        str
+            Path of the written ``.pvd`` file.
+        """
+        from pybamm.solvers.vtu_export import save_vtu
+
+        return save_vtu(self, filename, variables, t=t)
+
     @property
     def sub_solutions(self):
         """List of sub solutions that have been
