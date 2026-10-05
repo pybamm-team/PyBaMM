@@ -24,11 +24,10 @@ def loaded_openmp_runtime():
     """Return the OpenMP runtime already loaded by pybammsolvers, or None."""
     if sys.platform == "darwin":
         libsystem = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
-        libsystem._dyld_get_image_name.restype = ctypes.c_char_p
-        paths = [
-            libsystem._dyld_get_image_name(i).decode()
-            for i in range(libsystem._dyld_image_count())
-        ]
+        image_name = libsystem["_dyld_get_image_name"]
+        image_name.restype = ctypes.c_char_p
+        image_count = libsystem["_dyld_image_count"]()
+        paths = [image_name(i).decode() for i in range(image_count)]
     elif sys.platform.startswith("linux"):
         maps = Path("/proc/self/maps").read_text().splitlines()
         paths = [line.split()[-1] for line in maps if "/" in line]
