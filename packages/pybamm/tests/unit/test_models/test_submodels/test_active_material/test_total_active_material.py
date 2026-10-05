@@ -6,7 +6,7 @@ import pytest
 import pybamm
 from pybamm.models.submodels.active_material.total_active_material import Total
 
- 
+
 class TestTotalActiveMaterial:
     def test_surface_area_to_volume_ratio_is_sum_of_phase_ratios(self):
         # Regression test for #5802: for spherical particles the total

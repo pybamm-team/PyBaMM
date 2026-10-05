@@ -52,7 +52,7 @@ class Total(pybamm.BaseSubModel):
             variables.update({f"{Domain} electrode capacity [A.h]": C})
 
         if self.options["particle shape"] == "spherical":
-                        # The total is the sum of the per-phase ratios (3 * eps_k / R_k each)
+            # The total is the sum of the per-phase ratios (3 * eps_k / R_k each)
             total_surface_area_to_volume_ratio = sum(
                 variables[
                     f"{Domain} electrode {phase} surface area to volume ratio [m-1]"
