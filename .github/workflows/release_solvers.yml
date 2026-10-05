@@ -29,7 +29,7 @@ jobs:
     if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybammsolvers-v') }}
     permissions:
       contents: read
-    uses: ./.github/workflows/_build_solver_wheels.yml
+    uses: $/.github/workflows/_build_solver_wheels.yml
     with:
       cache_wheels: false
       build_sdist: true

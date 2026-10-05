@@ -78,12 +78,6 @@ jobs:
             core.exportVariable("PR_BASE_SHA", event.pull_request.base.sha);
             core.exportVariable("PR_NUMBER", String(event.number));
 
-      - name: Load benchmark image
-        if: steps.artifact.outputs.found == 'true'
-        run: |
-          zstd -d -c benchmark-image.tar.zst | docker load
-          docker tag pybamm-benchmarks:pr "$BENCHER_REGISTRY/$BENCHER_PROJECT:pr-$PR_HEAD_SHA"
-
       # The registry pairs a project key with the project slug as the username
       # (a user key would pair with the owner's email instead), so BENCHER must
       # hold a `bencher_run_*` key.
@@ -93,13 +87,16 @@ jobs:
           BENCHER_API_KEY: ${{ secrets.BENCHER }}
         run: |
           printf '%s' "$BENCHER_API_KEY" \
-            | docker login "$BENCHER_REGISTRY" --username "$BENCHER_PROJECT" --password-stdin
+            | skopeo login "$BENCHER_REGISTRY" --username "$BENCHER_PROJECT" --password-stdin
 
+      # skopeo pushes the zstd layers as built; `docker load` + push would re-gzip them
       - name: Push benchmark image
         if: steps.artifact.outputs.found == 'true'
-        run: docker push "$BENCHER_REGISTRY/$BENCHER_PROJECT:pr-$PR_HEAD_SHA"
+        run: |
+          skopeo copy oci-archive:benchmark-image.tar \
+            "docker://$BENCHER_REGISTRY/$BENCHER_PROJECT:pr-$PR_HEAD_SHA"
 
-      - uses: bencherdev/bencher@4c83b25441d145ee273adaf74be30f2382e6ba85 # v0.6.11
+      - uses: bencherdev/bencher@f80847436d7157936b40525db4c2a1064124f04a # v0.6.13
         if: steps.artifact.outputs.found == 'true'
 
       # --start-point-* rebases the PR branch onto its base every run, so the

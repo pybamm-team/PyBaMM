@@ -12,6 +12,17 @@ formats:
   - epub
   - htmlzip
 
+# Read the Docs runs `uv sync` natively and owns the venv, UV_PYTHON and
+# UV_PROJECT_ENVIRONMENT; `all` here is PyBaMM's own extra, not `--all-extras`.
+python:
+  install:
+    - method: uv
+      command: sync
+      groups:
+        - docs
+      extras:
+        - all
+
 # Set the version of Python and other tools you might need
 build:
   # graphviz builds SVG files; the from-source SUNDIALS build uses
@@ -24,14 +35,6 @@ build:
   tools:
     python: "3.14"
   jobs:
-    pre_create_environment:
-      - asdf plugin add uv
-      - asdf install uv latest
-      - asdf global uv latest
-    create_environment:
-      - uv venv "${READTHEDOCS_VIRTUALENV_PATH}"
-    install:
-      - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --group docs --extra all
     pre_build:
       # linkcheck is advisory: external link flake (bot-blocks, transient 5xx) must
       # not fail the build. Broken links are swept weekly by the CI lychee job.

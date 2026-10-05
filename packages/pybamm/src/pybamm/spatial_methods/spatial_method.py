@@ -46,9 +46,29 @@ class SpatialMethod:
         """
         mesh_pts = 1
         for level, dom in domains.items():
-            if level != "primary" and dom != []:
+            if level != "primary" and dom:
                 mesh_pts *= self.mesh[dom].npts
         return mesh_pts
+
+    @staticmethod
+    def _block_diagonal(block, repeats: int) -> csr_matrix:
+        """
+        Place copies of a matrix along the diagonal.
+
+        Parameters
+        ----------
+        block : array_like or sparse matrix
+            The matrix to repeat.
+        repeats : int
+            The number of copies.
+
+        Returns
+        -------
+        :class:`scipy.sparse.csr_matrix`
+            The block-diagonal matrix, of shape ``(repeats * m, repeats * n)`` for an
+            ``(m, n)`` block. It is in CSR format so that its rows can be sliced.
+        """
+        return csr_matrix(kron(eye(repeats, dtype=np.float64), block))
 
     @property
     def mesh(self):
@@ -119,10 +139,12 @@ class SpatialMethod:
             # Make copies of the child stacked on top of each other
             sub_vector = np.ones((primary_domain_size, 1))
             if symbol.shape_for_testing == ():
-                out = symbol * pybamm.Vector(sub_vector)
+                # Carry `domains` on the broadcast vector itself so binary-op
+                # simplifications can preserve the domain across rewrites.
+                out = symbol * pybamm.Vector(sub_vector, domains=domains)
             else:
                 # Repeat for secondary points
-                matrix = csr_matrix(kron(eye(symbol.shape_for_testing[0]), sub_vector))
+                matrix = self._block_diagonal(sub_vector, symbol.shape_for_testing[0])
                 out = pybamm.Matrix(matrix) @ symbol
         elif broadcast_type.startswith("secondary"):
             # Make copies of the child stacked on top of each other
@@ -137,7 +159,7 @@ class SpatialMethod:
         elif broadcast_type.startswith("full"):
             out = symbol * pybamm.Vector(np.ones(full_domain_size), domains=domains)
 
-        out.domains = domains.copy()
+        out = out.with_domains(domains)
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
@@ -401,7 +423,7 @@ class SpatialMethod:
 
         out = bv_vector @ discretised_child
         # boundary value removes domain
-        out.clear_domains()
+        out = out.without_domains()
         return out
 
     def evaluate_at(self, symbol, discretised_child, position):
@@ -458,8 +480,8 @@ class SpatialMethod:
         # Get number of points in secondary dimension
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        # Convert to csr_matrix as required by some solvers
-        mass = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), prim_mass))
+        # CSR, as required by some solvers
+        mass = self._block_diagonal(prim_mass, second_dim_repeats)
         return pybamm.Matrix(mass)
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):

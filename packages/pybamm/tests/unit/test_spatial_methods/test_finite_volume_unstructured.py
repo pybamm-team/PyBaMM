@@ -370,8 +370,21 @@ class TestAuxiliaryDomains:
             }
         }
 
-    def test_laplacian_with_secondary_domain(self):
-        mesh = _make_quad_mesh(2, 2)
+    @staticmethod
+    def _assert_matches_per_secondary_point(single, repeated, size, n_aux):
+        # each secondary point is evaluated as the single-point expression would be
+        values = 1 + np.random.default_rng(0).random((n_aux, size))
+        expected = np.concatenate(
+            [single.evaluate(y=row[:, np.newaxis]) for row in values]
+        )
+        np.testing.assert_allclose(
+            repeated.evaluate(y=values.reshape(-1, 1)), expected, atol=1e-12
+        )
+
+    @pytest.mark.parametrize("orthogonal", [True, False])
+    def test_laplacian_with_secondary_domain(self, orthogonal):
+        # perturbed triangles also take the non-orthogonal cross terms
+        mesh = _make_quad_mesh(2, 2) if orthogonal else _make_perturbed_tri_mesh(3)
         aux = _make_quad_mesh(1, 3)
         method = _method_with_mesh(mesh, aux=aux)
         cell_values = mesh.cell_centroids[:, 0] ** 2
@@ -424,6 +437,78 @@ class TestAuxiliaryDomains:
                 np.tile(single_comp.evaluate()[:, 0], aux.npts),
                 atol=1e-12,
             )
+
+    def test_divergence_with_secondary_domain(self):
+        mesh = _make_2d_mesh(2, 2)
+        aux = _make_quad_mesh(1, 3)
+        method = _method_with_mesh(mesh, aux=aux)
+        n = mesh.npts
+
+        def divergence(domains, repeats):
+            symbol = pybamm.Variable("F", domains=domains)
+            field = pybamm.StateVector(slice(0, n * repeats), domains=domains)
+            components = [field, field**2]
+            return method.divergence(symbol, components, {})
+
+        single = divergence({"primary": ["test"]}, 1)
+        repeated = divergence({"primary": ["test"], "secondary": ["aux"]}, aux.npts)
+        self._assert_matches_per_secondary_point(single, repeated, n, aux.npts)
+
+    @pytest.mark.parametrize("side", ["left", "top-right"])
+    def test_boundary_value_with_secondary_domain(self, side):
+        mesh = _make_2d_mesh(2, 2)
+        aux = _make_quad_mesh(1, 3)
+        method = _method_with_mesh(mesh, aux=aux)
+        n = mesh.npts
+
+        def boundary_value(domains, repeats):
+            child = pybamm.StateVector(slice(0, n * repeats), domains=domains)
+            symbol = pybamm.BoundaryValue(pybamm.Variable("u", domains=domains), side)
+            return method.boundary_value_or_flux(symbol, child)
+
+        single = boundary_value({"primary": ["test"]}, 1)
+        repeated = boundary_value({"primary": ["test"], "secondary": ["aux"]}, aux.npts)
+        self._assert_matches_per_secondary_point(single, repeated, n, aux.npts)
+
+    @pytest.mark.parametrize("structured", [True, False])
+    def test_internal_neumann_with_secondary_domain(self, structured):
+        aux = _make_quad_mesh(1, 3)
+        if structured:
+            left = pybamm.SubMesh1D(np.linspace(0, 0.5, 4), "cartesian")
+            right = pybamm.SubMesh1D(np.linspace(0.5, 1, 5), "cartesian")
+        else:
+            left, right = _make_split_2d_meshes(2, 2, 2)
+        method = FiniteVolumeUnstructured()
+        method._mesh = _MeshMap({("aux",): aux})
+
+        def condition(repeats):
+            secondary = {"secondary": ["aux"]} if repeats > 1 else {}
+            n_left, n_right = left.npts * repeats, right.npts * repeats
+            left_values = pybamm.StateVector(
+                slice(0, n_left), domains={"primary": ["left"], **secondary}
+            )
+            right_values = pybamm.StateVector(
+                slice(n_left, n_left + n_right),
+                domains={"primary": ["right"], **secondary},
+            )
+            return method.internal_neumann_condition(
+                left_values, right_values, left, right
+            )
+
+        rng = np.random.default_rng(0)
+        left_values = rng.random((aux.npts, left.npts))
+        right_values = rng.random((aux.npts, right.npts))
+        single = condition(1)
+        expected = np.concatenate(
+            [
+                single.evaluate(y=np.concatenate([u_left, u_right])[:, np.newaxis])
+                for u_left, u_right in zip(left_values, right_values, strict=True)
+            ]
+        )
+        y = np.concatenate([left_values.ravel(), right_values.ravel()])
+        np.testing.assert_allclose(
+            condition(aux.npts).evaluate(y=y[:, np.newaxis]), expected, atol=1e-12
+        )
 
     def test_tertiary_broadcast_size(self):
         mesh = _make_quad_mesh(2, 2)
@@ -1199,18 +1284,25 @@ class TestFiniteVolumeUnstructuredBehavior:
         assert secondary.domain == primary["primary"]
         assert secondary.domains["secondary"] == primary["secondary"]
 
-    def test_broadcast_does_not_mutate_simplified_child(self):
+    @pytest.mark.parametrize(
+        ("child_class", "expected"),
+        [(pybamm.StateVector, 7), (pybamm.StateVectorDot, 3)],
+    )
+    def test_broadcast_does_not_mutate_simplified_child(self, child_class, expected):
         mesh = pybamm.SubMesh1D(np.array([0, 1]), "cartesian")
         method = _method_with_mesh(mesh)
-        child = pybamm.StateVector(slice(0, 1))
+        child = child_class(slice(0, 1))
         domains = {"primary": ["test"], "secondary": []}
 
         result = method.broadcast(child, domains, "full to nodes")
 
         assert result is not child
+        assert type(result) is child_class
         assert child.domain == []
         assert result.domains["primary"] == ["test"]
-        np.testing.assert_array_equal(result.evaluate(y=np.array([7])), [[7]])
+        np.testing.assert_array_equal(
+            result.evaluate(y=np.array([7]), y_dot=np.array([3])), [[expected]]
+        )
 
     def test_laplacian_and_boundary_conditions(self):
         mesh = _make_2d_mesh(2, 2)
@@ -2286,6 +2378,56 @@ class TestNonOrthogonalCorrection:
         with caplog.at_level(logging.WARNING):
             method.build(_MeshMap({("tri",): _make_2d_mesh(3, 3)}))
         assert "non-orthogonality" not in caplog.text
+
+
+class TestSliverStability:
+    """Kuhn tetrahedra of a pouch-cell slab (100 um thick, 20 cm by 14 cm)
+    have faces about 89.9 degrees from their centroid line. Flooring
+    cos(theta) there under-weights the two-point part, and the explicit
+    cross term then gives the diffusion operator growing modes."""
+
+    @staticmethod
+    def _pouch_slab():
+        return _make_3d_mesh(
+            10, 3, 3, x_range=(0, 1e-4), y_range=(0, 0.207), z_range=(0, 0.137)
+        )
+
+    @staticmethod
+    def _assert_no_growing_modes(L):
+        eigenvalues = np.linalg.eigvals(L.toarray())
+        spectral_radius = np.abs(eigenvalues).max()
+        assert eigenvalues.real.max() < 1e-10 * spectral_radius
+
+    def test_mesh_has_severe_slivers(self):
+        mesh = self._pouch_slab()
+        cos_theta = FiniteVolumeUnstructured()._face_geometry(mesh)["cos_theta"]
+        assert cos_theta.min() < 1e-2
+
+    def test_over_relaxed_weight_is_not_floored(self):
+        mesh = self._pouch_slab()
+        method = FiniteVolumeUnstructured()
+        cos_theta = method._face_geometry(mesh)["cos_theta"]
+        np.testing.assert_allclose(method._decomposition(mesh)[0], 1 / cos_theta)
+
+    def test_laplacian_has_no_growing_modes(self):
+        mesh = self._pouch_slab()
+        bcs = {side: (pybamm.Scalar(0), "Neumann") for side in mesh.boundary_faces}
+        L, _ = _laplacian_system(_method_with_mesh(mesh), mesh, bcs)
+        self._assert_no_growing_modes(L)
+
+    def test_div_D_grad_with_material_jump_has_no_growing_modes(self):
+        mesh = self._pouch_slab()
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        y = pybamm.StateVector(slice(0, mesh.npts), domains={"primary": ["test"]})
+        D = np.where(mesh.cell_centroids[:, 0] < 6e-5, 1.0, 0.16)
+        bcs = {side: (pybamm.Scalar(0), "Neumann") for side in mesh.boundary_faces}
+        result = method.div_D_grad(
+            div_symbol, variable, pybamm.Vector(D, domain="test"), y, {variable: bcs}
+        )
+        L = sp_csr(result.jac(y).evaluate(y=np.zeros(mesh.npts)))
+        self._assert_no_growing_modes(L)
 
 
 # ======================================================================

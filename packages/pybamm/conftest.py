@@ -1,5 +1,8 @@
 import os
 
+# Forbid symbol mutation in this process and its children; must precede pybamm.
+os.environ["PYBAMM_TEST_FORBID_SYMBOL_MUTATION"] = "1"
+
 import numpy as np
 import pytest
 from hypothesis import settings as hypothesis_settings
@@ -43,7 +46,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "time_bench: mark test as a timing benchmark")
     config.addinivalue_line("markers", "memory_bench: mark test as a memory benchmark")
     config.addinivalue_line(
-        "markers", "slow_bench: mark benchmark as too slow for Bencher's free tier"
+        "markers", "slow_bench: mark benchmark as run on a schedule, not per push"
     )
 
 

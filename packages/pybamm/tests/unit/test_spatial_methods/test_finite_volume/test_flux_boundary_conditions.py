@@ -56,8 +56,8 @@ class TestFluxBoundaryConditions:
             gradient_symbol.evaluate(y=y_test), evaluated_flux_bc[1:-1], atol=1e-12
         )
 
-    @pytest.mark.parametrize("simplify", [True, False])
-    def test_process_model_with_flux_bc(self, simplify):
+    @pytest.mark.parametrize("no_simplification", [True, False])
+    def test_process_model_with_flux_bc(self, no_simplification):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u", domain="domain")
         D = pybamm.Parameter("D")
@@ -67,7 +67,7 @@ class TestFluxBoundaryConditions:
 
         # governing equations
         N = -D * pybamm.grad(u)  # flux
-        dudt = -pybamm.div(N, simplify=simplify)
+        dudt = -pybamm.div(N, no_simplification=no_simplification)
         model.rhs = {u: dudt}
 
         # initial conditions
@@ -84,15 +84,17 @@ class TestFluxBoundaryConditions:
         params.process_model(model)
         processed_u = next(iter(model.rhs))
         divergence = (
-            model.rhs[processed_u] if simplify else model.rhs[processed_u].child
+            model.rhs[processed_u].child
+            if no_simplification
+            else model.rhs[processed_u]
         )
         assert isinstance(divergence, pybamm.Divergence)
         processed_flux = divergence.child
 
         for side in ("left", "right"):
             assert (
-                model.boundary_conditions[processed_u][side][1][1] is not processed_flux
-                if simplify
+                model.boundary_conditions[processed_u][side][1][1] is processed_flux
+                if no_simplification
                 else model.boundary_conditions[processed_u][side][1][1]
-                is processed_flux
+                is not processed_flux
             )

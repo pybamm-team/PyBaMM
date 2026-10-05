@@ -1,0 +1,31 @@
+[model]
+slug = "${slug}"
+name = "${ModelName}"
+title = "TODO: one line naming the physics this model adds"
+summary = "TODO: one sentence on what it does and when to prefer it."
+class = "pybamm_model_zoo.${slug}:${ModelName}"
+tier = "${tier}"
+pybamm_requires = "${pybamm_requires}"
+added = "${added}"
+license = "${license}"
+
+[[model.maintainers]]
+name = "${Author}"
+github = "${github}"
+
+[model.citation]
+key = "${CitationKey}"
+
+# Third-party dependencies go in a `${extra}` extra in the zoo's
+# pyproject.toml, listed in `zoo-all`, never in its base dependencies.
+# Uncomment and fill in if your model needs any.
+# [model.dependencies]
+# extra = "${extra}"
+# packages = ["scikit-fem>=12.0.2"]
+
+[model.tests]
+# Omit parameter_set to use the model's own default_parameter_values, which is
+# where a model with extra parameters should supply their defaults.
+solve_time = 3600
+key_variables = ["Voltage [V]"]
+skip_contract = []

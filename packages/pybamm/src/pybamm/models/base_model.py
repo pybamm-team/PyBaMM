@@ -84,23 +84,15 @@ class BaseModel:
         A dictionary of submodels that the model is composed of.
     use_jacobian: bool
         Whether to use the Jacobian when solving the model (default is True).
-    convert_to_format: str
-        Specifies the format to convert the expression trees representing the RHS,
-        algebraic equations, Jacobian, and events.
-        Options are:
-
-            - None: retain PyBaMM expression tree structure.
-            - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
-            - "casadi": convert to CasADi expression tree for Jacobian calculation.
-            - "jax": convert to JAX expression tree.
-
-        Default is "casadi".
     is_discretised: bool
         Indicates whether the model has been discretised (default is False).
     y_slices: None or list
         Slices of the concatenated state vector after discretisation, used to track
         different submodels in the full concatenated solution vector.
     """
+
+    _DEFAULT_CONVERT_TO_FORMAT = "casadi"
+    _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax")
 
     def __init__(self, name="Unnamed model"):
         self.name = name
@@ -141,7 +133,7 @@ class BaseModel:
 
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
-        self.convert_to_format = "casadi"
+        self.convert_to_format = self._DEFAULT_CONVERT_TO_FORMAT
 
         # Model is not initially discretised or parameterised
         self.is_discretised = False
@@ -177,6 +169,9 @@ class BaseModel:
     @classmethod
     def generic_deserialise(cls, instance, properties):
         # Initialise model with stored variables that have already been discretised
+        instance.convert_to_format = properties.get(
+            "convert_to_format", instance.convert_to_format
+        )
         instance._concatenated_rhs = properties["concatenated_rhs"]
         instance._concatenated_algebraic = properties["concatenated_algebraic"]
         instance._concatenated_initial_conditions = properties[
@@ -192,31 +187,19 @@ class BaseModel:
 
         def assign_meshes_to_variables(variables_dict, mesh):
             if not mesh:
-                return
-            for var in variables_dict.values():
-                if var.domain != []:
-                    var.mesh = mesh[var.domain]
-
-                if var.domains["secondary"] != []:
-                    var.secondary_mesh = mesh[var.domains["secondary"]]
-                else:
-                    var.secondary_mesh = None
-
-                if var.domains["tertiary"] != []:
-                    var.tertiary_mesh = mesh[var.domains["tertiary"]]
-                else:
-                    var.tertiary_mesh = None
+                return variables_dict
+            return {name: var.with_meshes(mesh) for name, var in variables_dict.items()}
 
         # add optional properties not required for model to solve
         _variables = properties.get("variables") or {}
-        instance._variables = pybamm.FuzzyDict(_variables)
-        assign_meshes_to_variables(instance._variables, properties.get("mesh"))
-
+        instance._variables = pybamm.FuzzyDict(
+            assign_meshes_to_variables(_variables, properties.get("mesh"))
+        )
         if properties["geometry"]:
             instance._geometry = pybamm.Geometry(properties["geometry"])
 
         # Also assign meshes to _variables_processed
-        assign_meshes_to_variables(
+        instance._variables_processed = assign_meshes_to_variables(
             instance._variables_processed, properties.get("mesh")
         )
         # Model has already been discretised and parameterised
@@ -236,6 +219,52 @@ class BaseModel:
     @name.setter
     def name(self, value):
         self._name = value
+
+    def __setstate__(self, state: dict) -> None:
+        # Pickles from before convert_to_format was a property hold it under the
+        # public name, which the property shadows; copy rather than mutate state.
+        if "convert_to_format" in state:
+            state = dict(state)
+            state["_convert_to_format"] = state.pop("convert_to_format")
+        self.__dict__.update(state)
+
+    @property
+    def convert_to_format(self) -> str | None:
+        """
+        The format the solver converts the RHS, algebraic equations, Jacobian and
+        events to. Options are:
+
+            - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
+            - "casadi": convert to CasADi expression tree for Jacobian calculation.
+            - "jax": convert to JAX expression tree.
+
+        Default is "casadi". ``None`` is deprecated: it evaluates as "python" and
+        raises a ``DeprecationWarning`` when set.
+        """
+        return self._convert_to_format
+
+    @convert_to_format.setter
+    def convert_to_format(self, value: str | None) -> None:
+        if value is None:
+            warnings.warn(
+                "convert_to_format=None is deprecated and will be removed in a "
+                "future release. It evaluates as 'python'; set "
+                "convert_to_format='python' or leave the default instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        elif value not in self._VALID_CONVERT_TO_FORMATS:
+            valid = ", ".join(repr(v) for v in self._VALID_CONVERT_TO_FORMATS)
+            raise pybamm.OptionError(
+                f"convert_to_format must be one of {valid}, got {value!r}"
+            )
+        self._convert_to_format = value
+
+    @property
+    def uses_stacked_inputs(self) -> bool:
+        """Whether the converted evaluators take the inputs stacked into one
+        column vector rather than as a dict."""
+        return self._convert_to_format == "casadi"
 
     @property
     def rhs(self):
@@ -425,23 +454,17 @@ class BaseModel:
 
     def _resolve_coupled_variables(self, symbol: pybamm.Symbol) -> pybamm.Symbol:
         """Resolve CoupledVariables by looking up their targets in self._variables."""
-        if isinstance(symbol, pybamm.CoupledVariable):
-            if symbol.name not in self._variables:
+
+        def resolve(node, new_leaves):
+            if not isinstance(node, pybamm.CoupledVariable):
+                return pybamm.rebuild(node, new_leaves)
+            if node.name not in self._variables:
                 raise ValueError(
-                    f"CoupledVariable '{symbol.name}' not found in model.variables"
+                    f"CoupledVariable '{node.name}' not found in model.variables"
                 )
-            return self._resolve_coupled_variables(self._variables[symbol.name])
-        elif hasattr(symbol, "children") and symbol.children:
-            new_children = []
-            changed = False
-            for child in symbol.children:
-                new_child = self._resolve_coupled_variables(child)
-                new_children.append(new_child)
-                if new_child is not child:
-                    changed = True
-            if changed:
-                return symbol.create_copy(new_children=new_children)
-        return symbol
+            return self._resolve_coupled_variables(self._variables[node.name])
+
+        return pybamm.tree_map(resolve, symbol)
 
     def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
         """
@@ -1116,18 +1139,20 @@ class BaseModel:
         """Find all the instances of `typ` in the model"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.fixed_input_parameters
-        unpacker = pybamm.SymbolUnpacker(typ)
         all_items = chain(
+            self.rhs.keys(),
             self.rhs.values(),
+            self.algebraic.keys(),
             self.algebraic.values(),
+            self.initial_conditions.keys(),
             self.initial_conditions.values(),
+            self.boundary_conditions.keys(),
             (x[side][0] for x in self.boundary_conditions.values() for side in x),
             self.variables.values(),
             fixed_input_parameters,
             (event.expression for event in self.events),
         )
-        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
-        return list(all_input_parameters)
+        return list(pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items))
 
     def _find_symbols_by_submodel(
         self, typ, submodel, fixed_input_parameters=None
@@ -1135,11 +1160,14 @@ class BaseModel:
         """Find all the instances of `typ` in the submodel"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.submodels[submodel].fixed_input_parameters
-        unpacker = pybamm.SymbolUnpacker(typ)
         all_items = chain(
+            self.submodels[submodel].rhs.keys(),
             self.submodels[submodel].rhs.values(),
+            self.submodels[submodel].algebraic.keys(),
             self.submodels[submodel].algebraic.values(),
+            self.submodels[submodel].initial_conditions.keys(),
             self.submodels[submodel].initial_conditions.values(),
+            self.submodels[submodel].boundary_conditions.keys(),
             (
                 x[side][0]
                 for x in self.submodels[submodel].boundary_conditions.values()
@@ -1149,8 +1177,7 @@ class BaseModel:
             fixed_input_parameters,
             (event.expression for event in self.submodels[submodel].events),
         )
-        all_input_parameters = unpacker.unpack_list_of_symbols(list(all_items))
-        return list(all_input_parameters)
+        return list(pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items))
 
     def new_copy(self):
         """
@@ -1547,15 +1574,6 @@ class BaseModel:
                 "Both models must define y_slices to build an initial state mapper."
             )
 
-        from_vars_by_id = {var.id: var for var in from_model.y_slices}
-        from_vars_by_name = {var.name: var for var in from_model.y_slices}
-
-        def _resolve_from_var(target_var):
-            from_var = from_vars_by_id.get(target_var.id)
-            if from_var is None:
-                from_var = from_vars_by_name.get(target_var.name)
-            return from_var
-
         entries = []
         for var in self.initial_conditions:
             if var in self.y_slices:
@@ -1571,7 +1589,7 @@ class BaseModel:
                     "Could not find a y-slice for an initial condition variable."
                 )
 
-            from_var = _resolve_from_var(var)
+            from_var = var if var in from_model.y_slices else None
             from_slice = None
             if from_var is not None:
                 from_slice = from_model.y_slices[from_var][0]
@@ -1770,29 +1788,42 @@ class BaseModel:
                     f"no initial condition given for variable '{var}'"
                 )
 
+    def variables_matching_keys(self) -> dict[str, pybamm.Symbol]:
+        """
+        Variable expressions at the same processing stage as the equation keys.
+
+        Before parameters are set this is ``variables``. Afterwards the rhs and
+        algebraic keys are processed symbols, so only the processed variables are
+        comparable to them by identity; variables not yet processed (delayed
+        processing) are omitted.
+        """
+        if self.is_parameterised or self._variables_processed:
+            return dict(self._variables_processed)
+        return dict(self._variables)
+
     def check_variables(self):
         # Create list of all Variable nodes that appear in the model's list of variables
         unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
-        all_vars = unpacker.unpack_list_of_symbols(self.variables.values())
+        all_vars = unpacker.unpack_list_of_symbols(
+            self.variables_matching_keys().values()
+        )
 
-        # Build a set of names for keys to allow matching by name
-        # instead of by object identity (handles cases where Variables may have different
-        # _id values due to scale/reference processing)
-        var_names_in_keys = set()
-
-        model_keys = list(self.rhs.keys()) + list(self.algebraic.keys())
-
-        for var in model_keys:
+        # Every Variable appearing in the variables must be a key (or a child of a
+        # concatenation key) of rhs or algebraic, compared by symbol identity
+        keyed_vars = set()
+        for var in chain(self.rhs, self.algebraic):
             if isinstance(var, pybamm.Variable):
-                var_names_in_keys.add(var.name)
+                keyed_vars.add(var)
             # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
-                for child in var.children:
-                    if isinstance(child, pybamm.Variable):
-                        var_names_in_keys.add(child.name)
+                keyed_vars.update(
+                    child
+                    for child in var.children
+                    if isinstance(child, pybamm.Variable)
+                )
 
         for var in all_vars:
-            if var.name not in var_names_in_keys:
+            if var not in keyed_vars:
                 raise pybamm.ModelError(
                     f"No key set for variable '{var}'. Make sure it is included in either "
                     "model.rhs or model.algebraic, in an unmodified form "

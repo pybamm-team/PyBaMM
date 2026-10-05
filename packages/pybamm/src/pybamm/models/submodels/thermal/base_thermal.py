@@ -136,7 +136,8 @@ class BaseThermal(pybamm.BaseSubModel):
             phase_names = ["primary ", "secondary "]
         ocp_options = self.options.positive["open-circuit potential"]
         if isinstance(ocp_options, str):
-            ocp_options = [ocp_options]
+            # a single option applies to every phase
+            ocp_options = (ocp_options,) * len(phase_names)
 
         Q_rxn_p, Q_rev_p, Q_hys_p = 0, 0, 0
         T_p = variables["Positive electrode temperature [K]"]
@@ -171,7 +172,8 @@ class BaseThermal(pybamm.BaseSubModel):
             phase_names = ["primary ", "secondary "]
         ocp_options = self.options.negative["open-circuit potential"]
         if isinstance(ocp_options, str):
-            ocp_options = [ocp_options]
+            # a single option applies to every phase
+            ocp_options = (ocp_options,) * len(phase_names)
 
         if self.options.electrode_types["negative"] == "planar":
             i_n = variables["Lithium metal total interfacial current density [A.m-2]"]

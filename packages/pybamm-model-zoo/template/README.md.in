@@ -1,0 +1,35 @@
+# ${ModelName}
+
+![status](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pybamm-team/PyBaMM/main/packages/pybamm-model-zoo/badges/${slug}.json)
+
+## Summary
+
+TODO: one paragraph. What physics does this add, and when should someone prefer
+it over the closest model already in PyBaMM?
+
+## Usage
+
+```python
+import pybamm
+import pybamm_model_zoo as zoo
+
+model = zoo.load("${ModelName}")()
+simulation = pybamm.Simulation(model)
+solution = simulation.solve([0, 3600])
+print(solution["Voltage [V]"](1800))
+```
+
+## Validation
+
+TODO: what has been checked, against what, and to what tolerance — and state
+plainly what has *not* been validated. A model with an honest list of limits is
+more useful than one that implies it has none.
+
+## Citation
+
+See `CITATION.bib`. Please cite ${CitationKey} when using this model; it is
+registered automatically, so `pybamm.print_citations()` credits it after use.
+
+## Maintainer
+
+${Author} (@${github}) — tier: ${tier}
