@@ -98,16 +98,15 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     "become poorly conditioned; consider improving the mesh."
                 )
             # Tags come from the generator, not the constructor: a hand-built
-            # mesh with none gets no BCs and is invisible to interface
-            # discovery, so surface that before it fails downstream.
+            # mesh with none cannot take BCs, so surface that before it fails
+            # downstream.
             if not sm.boundary_faces and len(sm.face_owner) > sm._boundary_face_start:
                 pybamm.logger.warning(
                     f"Unstructured submesh for domain {name!r} has exterior "
                     "faces but no boundary tags: boundary conditions cannot "
-                    "be applied and interface auto-discovery will not pair "
-                    "it with neighboring domains. Tag it (e.g. "
-                    "detect_box_boundaries() for axis-aligned boxes) or use "
-                    "a mesh generator that supplies tags."
+                    "be applied to it. Tag it (e.g. detect_box_boundaries() "
+                    "for axis-aligned boxes) or use a mesh generator that "
+                    "supplies tags."
                 )
         # Discover interfaces between all unstructured submesh pairs so
         # internal BCs work for arbitrary topology, not just 1D stacks.
@@ -119,24 +118,16 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     @staticmethod
     def _interface_face_match(a_mesh, b_mesh, tol_factor=1e-3):
-        """Return matched boundary-face index pairs between two submeshes.
+        """Return matched exterior-face index pairs between two submeshes.
 
-        Boundary faces whose centroids coincide within
+        Exterior faces, tagged or not, whose centroids coincide within
         :func:`pybamm.meshes.unstructured_submesh._geometric_tolerance`
         (``tol_factor`` of the smallest element edge) are paired.  Returns
         ``(a_idx, b_idx, matched)`` where ``matched`` is True iff at least
         one pair was found.
         """
-        a_idx = (
-            np.concatenate(list(a_mesh.boundary_faces.values()))
-            if a_mesh.boundary_faces
-            else np.array([], dtype=int)
-        )
-        b_idx = (
-            np.concatenate(list(b_mesh.boundary_faces.values()))
-            if b_mesh.boundary_faces
-            else np.array([], dtype=int)
-        )
+        a_idx = np.arange(a_mesh._boundary_face_start, len(a_mesh.face_owner))
+        b_idx = np.arange(b_mesh._boundary_face_start, len(b_mesh.face_owner))
         if (
             len(a_idx) == 0
             or len(b_idx) == 0

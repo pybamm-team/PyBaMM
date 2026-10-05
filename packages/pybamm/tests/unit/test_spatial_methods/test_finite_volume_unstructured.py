@@ -1181,20 +1181,32 @@ class TestFiniteVolumeUnstructuredBehavior:
         assert "'tagged'" not in caplog.text
 
     def test_interface_matching_edge_cases(self):
-        empty = _make_2d_mesh(1, 1)
-        empty.boundary_faces = {}
         other = _make_2d_mesh(1, 1)
-        a_idx, b_idx, matched = FiniteVolumeUnstructured._interface_face_match(
-            empty, other
-        )
-        assert not matched
-        assert a_idx.size == b_idx.size == 0
-
         mesh_3d = _make_3d_mesh(1, 1, 1)
         assert not FiniteVolumeUnstructured._interface_face_match(other, mesh_3d)[2]
 
         distant = _make_2d_mesh(1, 1, x_range=(2, 3))
         assert not FiniteVolumeUnstructured._interface_face_match(other, distant)[2]
+
+    def test_build_pairs_untagged_exterior_faces(self):
+        # File meshes often tag only a few faces; the shared face must still
+        # be discovered, and untagged faces stay out of every bucket
+        left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
+        right = _make_2d_mesh(2, 2, x_range=(0.5, 1))
+        left.boundary_faces = {"left": left.boundary_faces["left"]}
+        right.boundary_faces = {}
+        method = FiniteVolumeUnstructured()
+        method.build(_MeshMap({("left",): left, ("right",): right}))
+
+        assert set(left.boundary_faces) == {"left", "iface_right"}
+        assert set(right.boundary_faces) == {"iface_left"}
+        np.testing.assert_allclose(
+            left.face_centroids[left.boundary_faces["iface_right"]],
+            right.face_centroids[right.boundary_faces["iface_left"]],
+        )
+        np.testing.assert_allclose(
+            left.face_centroids[left.boundary_faces["iface_right"], 0], 0.5
+        )
 
     def test_compute_pair_interface_success_and_noops(self):
         left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
