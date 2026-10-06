@@ -220,7 +220,8 @@ def save_vtu(
         # the .pvd stores paths relative to itself, so the output can be moved
         relative_path = f"{stem}/{stem}_{i:0{width}d}.vtu"
         writer.SetFileName(os.path.join(directory, relative_path))
-        if writer.Write() != 1:
+        # some VTK versions return 1 on failure and only set the error code
+        if writer.Write() != 1 or writer.GetErrorCode() != 0:
             raise OSError(f"VTK failed to write {writer.GetFileName()!r}")
         entries.append((float(time), relative_path))
 
