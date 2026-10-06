@@ -626,12 +626,13 @@ class BaseSolver:
                 # so don't need to process them
                 discontinuity_events.append(event)
                 continue
-            # Each event is one root function; a vector-valued expression
-            # would crash compiled solvers instead of raising
-            if event.expression.size != 1:
+            # A vector event would crash compiled solvers. `.shape` would
+            # evaluate StateVectors anew for every experiment-step model
+            shape = event.expression.shape_for_testing
+            if np.prod(shape) != 1:
                 raise pybamm.SolverError(
                     f"Event '{event.name}' must evaluate to a scalar, but its "
-                    f"expression has shape {event.expression.shape}. Reduce it "
+                    f"expression has shape {shape}. Reduce it "
                     "to one value, e.g. with pybamm.min, pybamm.max or an "
                     "average."
                 )
