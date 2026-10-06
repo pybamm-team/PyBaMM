@@ -37,7 +37,6 @@ class TestFluxBoundaryConditions:
             }
         }
 
-        # Test
         sp_meth = pybamm.FiniteVolume()
         sp_meth.build(mesh)
         gradient_symbol = sp_meth.gradient(var, discretised_symbol, {})
@@ -70,10 +69,8 @@ class TestFluxBoundaryConditions:
         dudt = -pybamm.div(N, no_simplification=no_simplification)
         model.rhs = {u: dudt}
 
-        # initial conditions
         model.initial_conditions = {u: u0}
 
-        # boundary conditions
         model.boundary_conditions = {
             u: {
                 "left": (pybamm.Scalar(0), ("Flux", N)),
@@ -91,6 +88,8 @@ class TestFluxBoundaryConditions:
         assert isinstance(divergence, pybamm.Divergence)
         processed_flux = divergence.child
 
+        # Check that the flux in the divergence is the same as the flux in the boundary conditions
+        # if and only if no_simplification is True.
         for side in ("left", "right"):
             assert (
                 model.boundary_conditions[processed_u][side][1][1] is processed_flux

@@ -494,8 +494,8 @@ class TestFluxBoundaryConditions:
             }
         )
 
-        # model
         model = pybamm.BaseModel()
+
         # model variables
         x = pybamm.SpatialVariable("x", domain=["domain"], coord_sys="cartesian")
         u = pybamm.Variable("u", domain="domain")
@@ -516,7 +516,6 @@ class TestFluxBoundaryConditions:
         dudt = -pybamm.div(N, no_simplification=True)
         model.rhs = {u: dudt}
 
-        # initial conditions
         model.initial_conditions = {u: u0}
 
         d_surf = pybamm.surf(d)
@@ -566,8 +565,8 @@ class TestFluxBoundaryConditions:
                 ),
             }
         )
-        # model
         model = pybamm.BaseModel()
+
         # model variables
         x = pybamm.SpatialVariable("x", domain=["domain"], coord_sys="cartesian")
         u = pybamm.Variable("u", domain="domain")
@@ -604,7 +603,6 @@ class TestFluxBoundaryConditions:
         )
         model.rhs = {u: dudt, v: dvdt}
 
-        # initial conditions
         model.initial_conditions = {u: u0, v: v0}
 
         d_surf1 = pybamm.surf(d1)
@@ -652,14 +650,14 @@ class TestFluxBoundaryConditions:
         # and check that the solutions are the same
         from copy import deepcopy
 
-        # simple model
+        # Apply both neumann and flux boundary conditions to the simple model
         model, neumann_bc, flux_bc, param = simple_model
         models = [model, deepcopy(model)]
         models[0].boundary_conditions = neumann_bc
         models[1].boundary_conditions = flux_bc
         params = [param, param]
 
-        # coupled model
+        # Apply both neumann and flux boundary conditions to the coupled model
         model, neumann_bc, flux_bc, param = coupled_model
         models += [model, deepcopy(model)]
         models[2].boundary_conditions = neumann_bc
@@ -681,7 +679,6 @@ class TestFluxBoundaryConditions:
             disc = pybamm.Discretisation(mesh, spatial_methods)
             disc.process_model(model)
 
-            # solve
             solver = pybamm.ScipySolver()
             t = np.linspace(0, 3600, 600)
             solution = solver.solve(model, t)

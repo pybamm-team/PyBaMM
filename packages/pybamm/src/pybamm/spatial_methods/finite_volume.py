@@ -172,17 +172,15 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Discretise symbol
         domain = symbol.domain
 
-        # Get boundary conditions, if any
-        bcs = boundary_conditions.get(symbol, {})
-
         # Add Dirichlet boundary conditions, if defined
-        dirichlet = [side for side, bc in bcs.items() if bc[1] == "Dirichlet"]
+        bcs = boundary_conditions.get(symbol, {})
+        dirichlet_type_bc = [side for side, bc in bcs.items() if bc[1] == "Dirichlet"]
         neumann_type_bc = [
             side
             for side, bc in bcs.items()
             if bc[1] == "Neumann" or pybamm.is_flux_boundary_condition(bc[1])
         ]
-        if dirichlet:
+        if dirichlet_type_bc:
             # add ghost nodes and update domain
             discretised_symbol, domain = self.add_ghost_nodes(
                 symbol, discretised_symbol, bcs
@@ -1040,6 +1038,7 @@ class FiniteVolume(pybamm.SpatialMethod):
     ):
         """
         Extrapolate the discretised gradient to the boundary edges.
+        This is mainly for plotting before flux or neumann boundary conditions are applied.
 
         Parameters
         ----------
@@ -1067,9 +1066,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Make matrix which appends extrapolated values of the discretised gradient.
-        # E.g. in 1D if the left boundary condition is Dirichlet and the right a flux
-        # boundary condition, this matrix will act to append an extra value to the end
-        # of the discretised gradient (mainly for plotting, the flux is applied later).
         if "left" in neumann_type_bc:
             # Linear extrapolation of discretised gradient to boundary edge
             dx0_dx1 = submesh.d_edges[0] / submesh.d_edges[1]
@@ -1091,11 +1087,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = vstack([left_vector, eye(n, dtype=np.float64), right_vector])
 
         # repeat matrix for secondary dimensions
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        matrix = csr_matrix(kron(eye(second_dim_repeats, dtype=np.float64), sub_matrix))
+        matrix = self._block_diagonal(sub_matrix, second_dim_repeats)
 
         return pybamm.Matrix(matrix) @ discretised_gradient
 
@@ -1171,9 +1163,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         bcs_vector = lbc_vector + rbc_vector
 
-        # Need to match the domain. E.g. in the case of the boundary condition
-        # on the particle, the gradient has domain particle but the bcs_vector
-        # has domain electrode, since it is a function of the macroscopic variables
+        # As for neumann boundary conditions, need to match the domain.
         bcs_vector.with_domains(processed_symbol)
 
         # Make matrix which makes "gaps" in the discretised symbol into which
