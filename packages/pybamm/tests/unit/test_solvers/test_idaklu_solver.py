@@ -2238,11 +2238,15 @@ class TestIDAKLUUserPreconditioner:
             precon.setup(*args)
             return -1  # unrecoverable
 
-        solver = pybamm.IDAKLUSolver(options=precon.options(_preconditioner_setup=setup))
+        solver = pybamm.IDAKLUSolver(
+            options=precon.options(_preconditioner_setup=setup)
+        )
         with pytest.raises(pybamm.SolverError):
             solver.solve(_linear_dae(), [0, 1])
 
-    @pytest.mark.parametrize("missing", ["_preconditioner_setup", "_preconditioner_solve"])
+    @pytest.mark.parametrize(
+        "missing", ["_preconditioner_setup", "_preconditioner_solve"]
+    )
     def test_missing_callable_raises(self, missing):
         options = _ExactPreconditioner().options(**{missing: None})
         solver = pybamm.IDAKLUSolver(options=options)
@@ -2274,7 +2278,9 @@ class TestIDAKLUUserPreconditioner:
             precon.solve(*args)
             return -1  # unrecoverable
 
-        solver = pybamm.IDAKLUSolver(options=precon.options(_preconditioner_solve=solve))
+        solver = pybamm.IDAKLUSolver(
+            options=precon.options(_preconditioner_solve=solve)
+        )
         with pytest.raises(pybamm.SolverError):
             solver.solve(_linear_dae(), [0, 1])
 
@@ -2301,7 +2307,9 @@ class TestIDAKLUUserPreconditioner:
             assert not z.flags.owndata
             precon.solve(t, y, r, z, cj, delta)
 
-        options = precon.options(_preconditioner_setup=setup, _preconditioner_solve=solve)
+        options = precon.options(
+            _preconditioner_setup=setup, _preconditioner_solve=solve
+        )
         sol = pybamm.IDAKLUSolver(options=options).solve(_linear_dae(), [0, 1])
         assert precon.n_solve > 0
         np.testing.assert_allclose(sol["u"].entries[-1], np.exp(-0.1), rtol=1e-4)
@@ -2325,14 +2333,15 @@ class TestIDAKLUUserPreconditioner:
             return precon.solve(*args)
 
         model = _linear_dae()
-        solver = pybamm.IDAKLUSolver(options=precon.options(_preconditioner_solve=solve))
+        solver = pybamm.IDAKLUSolver(
+            options=precon.options(_preconditioner_solve=solve)
+        )
         with pytest.raises(RuntimeError, match="callback failed"):
             solver.solve(model, [0, 1])
 
         fail[0] = False
         sol = solver.solve(model, [0, 1])
         np.testing.assert_allclose(sol["u"].entries[-1], np.exp(-0.1), rtol=1e-4)
-
 
     def test_simulation_raises(self):
         options = _ExactPreconditioner().options()
