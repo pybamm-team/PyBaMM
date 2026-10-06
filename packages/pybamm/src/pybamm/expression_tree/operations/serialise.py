@@ -2112,6 +2112,9 @@ class Serialise:
                 config[param_name] = Serialise.serialise_solver(value)
                 continue
 
+            if param_name == "options" and isinstance(value, dict):
+                value = Serialise._public_solver_options(solver, value)
+
             value = Serialise._to_json_safe(value)
             try:
                 json.dumps(value)
@@ -2129,6 +2132,32 @@ class Serialise:
             config[param_name] = value
 
         return config
+
+    @staticmethod
+    def _public_solver_options(solver, options: dict) -> dict:
+        """Drop a solver's private (``_``-prefixed) options from its config.
+
+        Private options are experimental and hold Python objects such as
+        callables, so they are left out of the config while unset, and a solver
+        that sets one cannot be serialised.
+        """
+        from pybamm.expression_tree.operations.serialise_kernel import (
+            SerialisationError,
+        )
+
+        private_set = sorted(
+            key
+            for key, value in options.items()
+            if key.startswith("_") and value is not None
+        )
+        if private_set:
+            raise SerialisationError(
+                f"Cannot serialise {solver.__class__.__name__} with the private "
+                f"option(s) {', '.join(repr(k) for k in private_set)} set. Private "
+                "solver options are experimental and are not supported by "
+                "serialisation."
+            )
+        return {key: value for key, value in options.items() if not key.startswith("_")}
 
     @staticmethod
     def deserialise_solver(data: dict):

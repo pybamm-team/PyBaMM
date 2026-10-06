@@ -4,6 +4,7 @@ import itertools
 import json
 import logging
 import os
+import pickle
 import re
 import subprocess  # nosec B404 - runs this interpreter on a fixed script
 import sys
@@ -2347,6 +2348,20 @@ class TestIDAKLUUserPreconditioner:
             sim.solve([0, 600], solver=solver)
         with pytest.raises(NotImplementedError, match=match):
             sim.step(60, solver=solver)
+
+    def test_pickle_round_trip(self):
+        precon = _ExactPreconditioner()
+        solver = pybamm.IDAKLUSolver(options=precon.options())
+        restored = pickle.loads(pickle.dumps(solver))
+
+        restored_precon = restored.options["_preconditioner_setup"].__self__
+        assert restored_precon is not precon
+        assert restored.options["_preconditioner_solve"].__self__ is restored_precon
+
+        sol = restored.solve(_linear_dae(), [0, 1])
+        assert restored_precon.n_solve > 0
+        assert precon.n_solve == 0
+        np.testing.assert_allclose(sol["u"].entries[-1], np.exp(-0.1), rtol=1e-4)
 
     def test_uses_user_preconditioner(self):
         assert not pybamm.IDAKLUSolver()._uses_user_preconditioner

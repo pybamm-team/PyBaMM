@@ -3210,3 +3210,33 @@ class TestSolverSerialization:
             config = Serialise.serialise_solver(solver)  # must NOT raise
             restored = Serialise.deserialise_solver(config)
             assert type(restored) is type(solver)
+
+    def test_serialise_idaklu_solver_omits_private_options(self):
+        solver = pybamm.IDAKLUSolver()
+        assert solver.options["_preconditioner_setup"] is None
+
+        config = json.loads(json.dumps(Serialise.serialise_solver(solver)))
+        assert not any(key.startswith("_") for key in config["options"])
+
+        restored = Serialise.deserialise_solver(config)
+        assert restored.options == solver.options
+
+    @pytest.mark.parametrize(
+        "option", ["_preconditioner_setup", "_preconditioner_solve"]
+    )
+    def test_serialise_idaklu_solver_raises_on_user_preconditioner(self, option):
+        def callback(*args):
+            return 0  # pragma: no cover
+
+        solver = pybamm.IDAKLUSolver(
+            options={
+                "linear_solver": "SUNLinSol_SPGMR",
+                "jacobian": "matrix-free",
+                "preconditioner": "user",
+                option: callback,
+            }
+        )
+        with pytest.raises(sk.SerialisationError, match=f"private option.*'{option}'"):
+            Serialise.serialise_solver(solver)
+        with pytest.raises(sk.SerialisationError, match="private option"):
+            solver.to_config()
