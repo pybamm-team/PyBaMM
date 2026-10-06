@@ -317,6 +317,45 @@ class TestExponentialDecaySolver:
         assert levels
         assert set(levels) == {0}
 
+    def test_multiple_solvers_still_run_in_an_openmp_region(
+        self, idaklu_module, exponential_decay_model, exponential_decay_solver_factory
+    ):
+        """
+        Verify the multi-solver path still solves inside an OpenMP parallel region.
+
+        The calling thread streams its own set's diagnostics mid-solve, so its
+        logger sees level 1. This also shows the probe in the single-solve test
+        can see a nonzero level.
+        """
+        runtime = loaded_openmp_runtime()
+        if runtime is None:
+            pytest.skip("Could not locate the loaded OpenMP runtime")
+
+        decay_constants = np.array([0.5, 1.0], dtype=np.float64)
+        solver_data = exponential_decay_solver_factory(
+            idaklu_module,
+            exponential_decay_model,
+            num_threads=2,
+            num_solvers=2,
+            decay_constants=decay_constants,
+        )
+        t_eval = solver_data["model"]["t_eval"]
+        levels = []
+        solutions = solver_data["solver"].solve(
+            t_eval,
+            t_eval,
+            solver_data["y0"],
+            solver_data["yp0"],
+            solver_data["inputs"],
+            logger=lambda _: levels.append(runtime.omp_get_level()),
+        )
+
+        assert 1 in levels
+        model_y0 = solver_data["model"]["y0"]
+        for idx, sol in enumerate(solutions):
+            expected = model_y0 * np.exp(-decay_constants[idx] * sol.t)
+            np.testing.assert_allclose(sol.y, expected, rtol=1e-5, atol=1e-8)
+
 
 class TestSensitivityScales:
     """The optional ``pbar`` argument carrying IDAS's sensitivity scales."""
