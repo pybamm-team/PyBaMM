@@ -144,7 +144,11 @@ SetupOptions::SetupOptions(py::dict &py_opts)
             }
             if (num_solvers != 1)
             {
-                // the callables run under the GIL on the calling thread
+                // The callables run Python without acquiring the GIL: they
+                // rely on the calling thread (OpenMP thread 0) holding it for
+                // the whole solve. Worker threads of a solver group never
+                // hold it, and cannot acquire it while thread 0 waits at the
+                // end of the parallel region, so they would deadlock.
                 throw std::domain_error(
                     "preconditioner \"user\" supports num_solvers = 1 only"
                 );

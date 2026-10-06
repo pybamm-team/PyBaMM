@@ -350,7 +350,8 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
 // Python callables from SetupOptions. The setup callable receives the same
 // iteration matrix KLU would factorise, dF/dy - cj M (CSC, from
 // jac_times_cjmass), so a preconditioner can be built in Python from the true
-// Jacobian. Arrays are copies. Return values: 0 success, >0 recoverable
+// Jacobian. These run on the thread that called solve, which already holds the
+// GIL (num_solvers = 1 is enforced in SetupOptions). Arrays are copies. Return values: 0 success, >0 recoverable
 // failure, <0 unrecoverable.
 template<class T>
 int precon_setup_user(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
@@ -369,7 +370,6 @@ int precon_setup_user(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   f->jac_times_cjmass->m_res[0] = jac_data;
   (*f->jac_times_cjmass)();
 
-  py::gil_scoped_acquire gil;
   try {
     py::array_t<sunrealtype> y(n, NV_DATA(yy));
     py::array_t<sunrealtype> ydot(n, NV_DATA(yp));
@@ -396,7 +396,6 @@ int precon_solve_user(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   auto *f = static_cast<T *>(user_data);
   const int n = f->number_of_states;
 
-  py::gil_scoped_acquire gil;
   try {
     py::array_t<sunrealtype> y(n, NV_DATA(yy));
     py::array_t<sunrealtype> r(n, NV_DATA(rvec));
