@@ -1,4 +1,5 @@
 import os
+import types
 import xml.etree.ElementTree as ET
 
 import numpy as np
@@ -6,8 +7,8 @@ import pytest
 
 import pybamm
 
-pytest.importorskip("vtk")
-meshio = pytest.importorskip("meshio")
+vtk = pytest.importorskip("vtk")
+from vtk.util.numpy_support import vtk_to_numpy
 
 
 def _strip_mesh(x_min, x_max, n_cells, dimension):
@@ -23,8 +24,10 @@ def _strip_mesh(x_min, x_max, n_cells, dimension):
         )
         n = n_cells + 1
         elements = [
-            [i, i + 1, n + i + 1, n + i, 2 * n + i, 2 * n + i + 1, 3 * n + i + 1]
-            + [3 * n + i]
+            [
+                *(i, i + 1, n + i + 1, n + i),
+                *(2 * n + i, 2 * n + i + 1, 3 * n + i + 1, 3 * n + i),
+            ]
             for i in range(n_cells)
         ]
     return pybamm.UnstructuredSubMesh(vertices, np.array(elements))
@@ -71,17 +74,51 @@ def _two_region_solution(dimension):
     t = np.array([0.0, 1.0, 2.0])
     y0 = np.arange(1.0, 8.0)
     y = np.asfortranarray(np.outer(y0, [1.0, 1.5, 2.0]))
-    return pybamm.Solution(t, y, model, {}), mesh_ab, mesh_a
+    return pybamm.Solution(t, y, model, {}), mesh_ab
+
+
+_VTK_CELL_TYPES = {
+    vtk.VTK_TRIANGLE: "triangle",
+    vtk.VTK_QUAD: "quad",
+    vtk.VTK_TETRA: "tetra",
+    vtk.VTK_HEXAHEDRON: "hexahedron",
+}
 
 
 def _read(directory, name):
-    return meshio.read(os.path.join(directory, name))
+    """Read a ``.vtu`` with VTK into a meshio-like namespace.
+
+    meshio's reader cannot decode VTK's appended base64 data on Python 3.14.
+    """
+    reader = vtk.vtkXMLUnstructuredGridReader()
+    reader.SetFileName(os.path.join(directory, name))
+    reader.Update()
+    grid = reader.GetOutput()
+
+    cells_dict = {}
+    for i in range(grid.GetNumberOfCells()):
+        cell = grid.GetCell(i)
+        ids = [cell.GetPointId(j) for j in range(cell.GetNumberOfPoints())]
+        cells_dict.setdefault(_VTK_CELL_TYPES[cell.GetCellType()], []).append(ids)
+
+    def arrays(data):
+        return {
+            data.GetArrayName(i): vtk_to_numpy(data.GetAbstractArray(i))
+            for i in range(data.GetNumberOfArrays())
+        }
+
+    return types.SimpleNamespace(
+        points=vtk_to_numpy(grid.GetPoints().GetData()),
+        cells_dict={k: np.array(v) for k, v in cells_dict.items()},
+        cell_data={k: [v] for k, v in arrays(grid.GetCellData()).items()},
+        field_data=arrays(grid.GetFieldData()),
+    )
 
 
 class TestSaveVtu:
     @pytest.mark.parametrize("dimension", [2, 3])
     def test_round_trip_multi_region_and_partial_variables(self, tmp_path, dimension):
-        solution, mesh_ab, mesh_a = _two_region_solution(dimension)
+        solution, mesh_ab = _two_region_solution(dimension)
         variables = list(solution.all_models[0].variables)
         pvd = solution.save_vtu(tmp_path / "out.pvd", variables)
 
@@ -126,7 +163,7 @@ class TestSaveVtu:
             np.testing.assert_allclose(vtu.field_data["Voltage [V]"], [4 - t])
 
     def test_single_region_variables_share_cells(self, tmp_path):
-        solution, mesh_ab, _ = _two_region_solution(2)
+        solution, _ = _two_region_solution(2)
         solution.save_vtu(tmp_path / "a", "Region a only [V]", t=0.0)
 
         vtu = _read(tmp_path, "a/a_0000.vtu")
@@ -166,7 +203,7 @@ class TestSaveVtu:
         np.testing.assert_allclose(vtu.cell_data["shifted"][0], [np.nan, 20.0])
 
     def test_pvd_indexes_vtu_files_by_time(self, tmp_path):
-        solution, _, _ = _two_region_solution(2)
+        solution, _ = _two_region_solution(2)
         pvd = solution.save_vtu(str(tmp_path / "series"), ["Both regions [K]"])
 
         assert pvd == str(tmp_path / "series.pvd")
@@ -182,7 +219,7 @@ class TestSaveVtu:
             np.testing.assert_allclose(vtu.field_data["TimeValue"], [solution.t[i]])
 
     def test_output_times_are_interpolated(self, tmp_path):
-        solution, _, _ = _two_region_solution(2)
+        solution, _ = _two_region_solution(2)
         solution.save_vtu(
             tmp_path / "out", ["Both regions [K]", "Voltage [V]"], t=[0.5]
         )
@@ -197,7 +234,7 @@ class TestSaveVtu:
         np.testing.assert_allclose(vtu.field_data["Voltage [V]"], [3.5])
 
     def test_invalid_inputs(self, tmp_path):
-        solution, _, _ = _two_region_solution(2)
+        solution, _ = _two_region_solution(2)
         path = tmp_path / "out"
         with pytest.raises(pybamm.OptionError, match=r"at least one variable"):
             solution.save_vtu(path, [])
@@ -257,7 +294,7 @@ class TestSaveVtu:
             solution.save_vtu(tmp_path / "out", ["quad", "triangle"])
 
     def test_write_failure_raises(self, tmp_path):
-        solution, _, _ = _two_region_solution(2)
+        solution, _ = _two_region_solution(2)
         # a directory where the .vtu should go makes VTK's writer fail
         (tmp_path / "out" / "out_0000.vtu").mkdir(parents=True)
         with pytest.raises(OSError, match=r"VTK failed to write"):
