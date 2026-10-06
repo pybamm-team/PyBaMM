@@ -1024,8 +1024,8 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
 
     @staticmethod
     def _extract_supported_cells(mesh):
-        # Any other volume cell (wedge, pyramid, higher-order) would otherwise
-        # be dropped silently, leaving holes in the mesh
+        # Any other volume cell (wedge, pyramid, polyhedron, higher-order)
+        # would otherwise be dropped silently, leaving holes in the mesh
         volume_types = sorted(
             {block.type for block in mesh.cells if _is_volume_cell_type(block.type)}
         )
@@ -1332,10 +1332,11 @@ def _is_volume_cell_type(meshio_type):
     Returns
     -------
     bool
-        True for tetrahedra, hexahedra, wedges and pyramids of any order.
+        True for tetrahedra, hexahedra, wedges and pyramids of any order,
+        and for VTU polyhedra (``"polyhedron8"`` etc.).
     """
     name = meshio_type.lower().removeprefix("vtk_lagrange_")
-    return name.startswith(("tetra", "hexahedron", "wedge", "pyramid"))
+    return name.startswith(("tetra", "hexahedron", "wedge", "pyramid", "polyhedron"))
 
 
 def _quad_face_warp(face_verts):

@@ -947,11 +947,17 @@ class TestFileGenerators:
         # Wedge on the hex's x+ face, as gmsh recombine can leave behind
         wedge = ("wedge", np.array([[4, 8, 6, 5, 9, 7]]))
         boundary = ("quad", hexes[:, [0, 1, 2, 3]])
+        # VTU polyhedron: a list of faces per cell, not a node array
+        polyhedron = (
+            "polyhedron8",
+            [[hexes[0, list(face)] for face in UnstructuredSubMesh._HEX_FACES]],
+        )
         cases = [
             ([tet, ("hexahedron", hexes)], r"mixes volume cell types"),
             ([("hexahedron", hexes), wedge], r"mixes volume cell types"),
             # Without the check, the quad facets would load as a 2D mesh
             ([wedge, boundary], r"Unsupported volume cell type 'wedge'"),
+            ([("hexahedron", hexes), polyhedron], r"mixes volume cell types"),
         ]
         for cells, match in cases:
             gen = UserSuppliedUnstructuredMesh("unused.vtu")
