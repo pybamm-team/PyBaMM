@@ -157,8 +157,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # precon_setup(t, y, ydot, cj, data, indices, indptr) -> 0 on
                 # success (>0 recoverable, <0 unrecoverable failure)
                 "precon_setup": None,
-                # For preconditioner "user": returns z ~ (dF/dy - cj M)^-1 r,
-                # precon_solve(t, y, r, cj, delta) -> z
+                # For preconditioner "user": writes z ~ (dF/dy - cj M)^-1 r in
+                # place, precon_solve(t, y, r, z, cj, delta) -> 0 on success.
+                # Arrays are views, valid only during the call
                 "precon_solve": None,
                 # For iterative linear solver preconditioner, bandwidth of
                 # approximate jacobian

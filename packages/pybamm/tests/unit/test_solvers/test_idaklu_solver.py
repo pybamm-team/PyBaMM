@@ -2187,9 +2187,9 @@ class _ExactPreconditioner:
         self.matrices.append((cj, A.toarray()))
         self.lu = splu(A)
 
-    def solve(self, t, y, r, cj, delta):
+    def solve(self, t, y, r, z, cj, delta):
         self.n_solve += 1
-        return self.lu.solve(np.asarray(r))
+        z[:] = self.lu.solve(r)
 
     def options(self, **extra):
         return {
@@ -2264,12 +2264,52 @@ class TestIDAKLUUserPreconditioner:
         with pytest.raises(RuntimeError, match="callback failed"):
             solver.solve(_linear_dae(), [0, 1])
 
-    def test_wrong_length_raises(self):
-        options = _ExactPreconditioner().options(
-            precon_solve=lambda t, y, r, cj, delta: np.zeros(len(r) + 1)
-        )
+    def test_rejects_nonzero_solve_return(self):
+        precon = _ExactPreconditioner()
+
+        def solve(*args):
+            precon.solve(*args)
+            return -1  # unrecoverable
+
+        solver = pybamm.IDAKLUSolver(options=precon.options(precon_solve=solve))
+        with pytest.raises(pybamm.SolverError):
+            solver.solve(_linear_dae(), [0, 1])
+
+    def test_arrays_are_views(self):
+        """Inputs are read-only views; ``z`` is written in place."""
+        precon = _ExactPreconditioner()
+        seen = {}
+
+        def setup(t, y, ydot, cj, data, indices, indptr):
+            seen.setdefault("indices", indices)
+            seen.setdefault("indptr", indptr)
+            # the sparsity pattern views are built once and reused
+            assert indices is seen["indices"]
+            assert indptr is seen["indptr"]
+            for array in (y, ydot, data, indices, indptr):
+                assert not array.flags.writeable
+                assert not array.flags.owndata
+            precon.setup(t, y, ydot, cj, data, indices, indptr)
+
+        def solve(t, y, r, z, cj, delta):
+            assert not y.flags.writeable
+            assert not r.flags.writeable
+            assert z.flags.writeable
+            assert not z.flags.owndata
+            precon.solve(t, y, r, z, cj, delta)
+
+        options = precon.options(precon_setup=setup, precon_solve=solve)
+        sol = pybamm.IDAKLUSolver(options=options).solve(_linear_dae(), [0, 1])
+        assert precon.n_solve > 0
+        np.testing.assert_allclose(sol["u"].entries[-1], np.exp(-0.1), rtol=1e-4)
+
+    def test_writing_read_only_input_raises(self):
+        def solve(t, y, r, z, cj, delta):
+            r[:] = 0
+
+        options = _ExactPreconditioner().options(precon_solve=solve)
         solver = pybamm.IDAKLUSolver(options=options)
-        with pytest.raises(pybamm.SolverError, match="returned 3 values, expected 2"):
+        with pytest.raises(pybamm.SolverError, match="read-only"):
             solver.solve(_linear_dae(), [0, 1])
 
     def test_solver_recovers_after_callback_exception(self):

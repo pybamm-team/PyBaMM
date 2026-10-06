@@ -13,9 +13,12 @@ struct SetupOptions {
   std::string jacobian;
   std::string preconditioner; // "none", "BBDP" or "user"
   // "user" preconditioner callables (iterative linear solvers only):
-  //   precon_setup(t, y, yp, cj, data, indices, indptr) -> int
-  //     receives the iteration matrix dF/dy - cj M (CSC); 0 on success
-  //   precon_solve(t, y, r, cj, delta) -> z, approximately (dF/dy - cj M)^-1 r
+  //   precon_setup(t, y, yp, cj, data, indices, indptr) -> int | None
+  //     receives the iteration matrix dF/dy - cj M (CSC); 0/None on success
+  //   precon_solve(t, y, r, z, cj, delta) -> int | None
+  //     writes z ~ (dF/dy - cj M)^-1 r in place
+  // All arrays are zero-copy views, valid only during the call; only z is
+  // writeable.
   py::object precon_setup;
   py::object precon_solve;
   int precon_half_bandwidth;

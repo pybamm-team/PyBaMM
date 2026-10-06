@@ -351,8 +351,32 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
 // iteration matrix KLU would factorise, dF/dy - cj M (CSC, from
 // jac_times_cjmass), so a preconditioner can be built in Python from the true
 // Jacobian. These run on the thread that called solve, which already holds the
-// GIL (num_solvers = 1 is enforced in SetupOptions). Arrays are copies. Return values: 0 success, >0 recoverable
-// failure, <0 unrecoverable.
+// GIL (num_solvers = 1 is enforced in SetupOptions).
+//
+// Arrays are zero-copy views of the solver's memory, valid only for the
+// duration of the call: the solve callable writes its result into z in place,
+// every other array is read-only. Return values: None or 0 success, >0
+// recoverable failure, <0 unrecoverable.
+
+// A 1-D NumPy view of n values at ptr, without copying or taking ownership
+template<class S>
+py::array_t<S> precon_view(S *ptr, py::ssize_t n, bool writeable)
+{
+  // Any base object stops pybind11 copying the data; this one frees nothing
+  py::array_t<S> view(n, ptr, py::capsule(ptr, +[](void *) {}));
+  if (!writeable) {
+    py::detail::array_proxy(view.ptr())->flags &=
+        ~py::detail::npy_api::NPY_ARRAY_WRITEABLE_;
+  }
+  return view;
+}
+
+// Return value of a callable: None counts as success
+inline int precon_return_flag(const py::object &ret)
+{
+  return ret.is_none() ? 0 : ret.cast<int>();
+}
+
 template<class T>
 int precon_setup_user(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
                       sunrealtype cj, void *user_data)
@@ -371,15 +395,23 @@ int precon_setup_user(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   (*f->jac_times_cjmass)();
 
   try {
-    py::array_t<sunrealtype> y(n, NV_DATA(yy));
-    py::array_t<sunrealtype> ydot(n, NV_DATA(yp));
-    py::array_t<sunrealtype> data(nnz, jac_data);
-    py::array_t<int64_t> indices(
-        f->jac_times_cjmass_rowvals.size(), f->jac_times_cjmass_rowvals.data());
-    py::array_t<int64_t> indptr(
-        f->jac_times_cjmass_colptrs.size(), f->jac_times_cjmass_colptrs.data());
-    py::object ret = f->setup_opts.precon_setup(tt, y, ydot, cj, data, indices, indptr);
-    return ret.is_none() ? 0 : ret.cast<int>();
+    // The sparsity pattern is fixed, so its views are built once
+    if (!f->precon_indices) {
+      f->precon_indices = precon_view(
+          f->jac_times_cjmass_rowvals.data(),
+          static_cast<py::ssize_t>(f->jac_times_cjmass_rowvals.size()), false);
+      f->precon_indptr = precon_view(
+          f->jac_times_cjmass_colptrs.data(),
+          static_cast<py::ssize_t>(f->jac_times_cjmass_colptrs.size()), false);
+    }
+    return precon_return_flag(f->setup_opts.precon_setup(
+        tt,
+        precon_view(NV_DATA(yy), n, false),
+        precon_view(NV_DATA(yp), n, false),
+        cj,
+        precon_view(jac_data, nnz, false),
+        f->precon_indices,
+        f->precon_indptr));
   } catch (...) {
     // Python errors and failed casts; rethrown by the solver once IDA returns
     f->callback_exception = std::current_exception();
@@ -397,18 +429,13 @@ int precon_solve_user(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   const int n = f->number_of_states;
 
   try {
-    py::array_t<sunrealtype> y(n, NV_DATA(yy));
-    py::array_t<sunrealtype> r(n, NV_DATA(rvec));
-    py::object ret = f->setup_opts.precon_solve(tt, y, r, cj, delta);
-    auto z = ret.cast<py::array_t<sunrealtype, py::array::c_style | py::array::forcecast>>();
-    if (z.size() != n) {
-      const std::string msg = "precon_solve returned " +
-          std::to_string(z.size()) + " values, expected " + std::to_string(n);
-      py::set_error(PyExc_ValueError, msg.c_str());
-      throw py::error_already_set();
-    }
-    std::copy(z.data(), z.data() + n, NV_DATA(zvec));
-    return 0;
+    return precon_return_flag(f->setup_opts.precon_solve(
+        tt,
+        precon_view(NV_DATA(yy), n, false),
+        precon_view(NV_DATA(rvec), n, false),
+        precon_view(NV_DATA(zvec), n, true),
+        cj,
+        delta));
   } catch (...) {
     // Python errors and failed casts; rethrown by the solver once IDA returns
     f->callback_exception = std::current_exception();
