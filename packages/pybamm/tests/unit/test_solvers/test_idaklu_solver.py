@@ -2361,7 +2361,7 @@ class TestIDAKLUUserPreconditioner:
     def test_pickle_round_trip(self):
         precon = _ExactPreconditioner()
         solver = pybamm.IDAKLUSolver(options=precon.options())
-        restored = pickle.loads(pickle.dumps(solver))
+        restored = pickle.loads(pickle.dumps(solver))  # nosec B301 - own data
 
         restored_precon = restored.options["_preconditioner_setup"].__self__
         assert restored_precon is not precon
