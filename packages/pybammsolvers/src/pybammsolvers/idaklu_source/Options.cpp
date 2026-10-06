@@ -132,14 +132,14 @@ SetupOptions::SetupOptions(py::dict &py_opts)
         }
         if (preconditioner == "user")
         {
-            if (!py_opts.contains("precon_setup") ||
-                !py_opts.contains("precon_solve") ||
-                py_opts["precon_setup"].is_none() ||
-                py_opts["precon_solve"].is_none())
+            if (!py_opts.contains("_preconditioner_setup") ||
+                !py_opts.contains("_preconditioner_solve") ||
+                py_opts["_preconditioner_setup"].is_none() ||
+                py_opts["_preconditioner_solve"].is_none())
             {
                 throw std::domain_error(
-                    "preconditioner \"user\" needs the \"precon_setup\" and "
-                    "\"precon_solve\" options (callables)"
+                    "preconditioner \"user\" needs the \"_preconditioner_setup\" "
+                    "and \"_preconditioner_solve\" options (callables)"
                 );
             }
             if (num_solvers != 1)
@@ -153,8 +153,8 @@ SetupOptions::SetupOptions(py::dict &py_opts)
                     "preconditioner \"user\" supports num_solvers = 1 only"
                 );
             }
-            precon_setup = py_opts["precon_setup"];
-            precon_solve = py_opts["precon_solve"];
+            precon_setup = py_opts["_preconditioner_setup"];
+            precon_solve = py_opts["_preconditioner_solve"];
         }
     }
     else

@@ -12,7 +12,8 @@ struct SetupOptions {
   bool using_iterative_solver;
   std::string jacobian;
   std::string preconditioner; // "none", "BBDP" or "user"
-  // "user" preconditioner callables (iterative linear solvers only):
+  // "user" preconditioner callables, from the private "_preconditioner_setup"
+  // and "_preconditioner_solve" options (iterative linear solvers only):
   //   precon_setup(t, y, yp, cj, data, indices, indptr) -> int | None
   //     receives the iteration matrix dF/dy - cj M (CSC); 0/None on success
   //   precon_solve(t, y, r, z, cj, delta) -> int | None

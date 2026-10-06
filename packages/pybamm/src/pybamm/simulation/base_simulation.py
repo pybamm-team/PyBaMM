@@ -101,6 +101,7 @@ class BaseSimulation:
         self._var_pts = var_pts or self._model.default_var_pts
         self._spatial_methods = spatial_methods or self._model.default_spatial_methods
         self._solver = solver or self._model.default_solver
+        self._check_solver_supported(self._solver)
         self._output_variables = output_variables
         self._discretisation_kwargs = discretisation_kwargs or {}
 
@@ -313,6 +314,18 @@ class BaseSimulation:
             initial_soc=initial_soc, direction=direction, inputs=inputs
         )
 
+    @staticmethod
+    def _check_solver_supported(solver):
+        """Reject solver features that only work with a direct ``solver.solve``."""
+        if getattr(solver, "_uses_user_preconditioner", False):
+            raise NotImplementedError(
+                "The IDAKLUSolver options '_preconditioner_setup' and "
+                "'_preconditioner_solve' are private and experimental, and are not "
+                "supported by pybamm.Simulation. Build the model (e.g. "
+                "sim.build()) and call solver.solve(sim.built_model, t_eval) "
+                "directly instead."
+            )
+
     def _prepare_solve(
         self, t_eval, solver, calc_esoh, callbacks, inputs, warn_stacklevel=3
     ):
@@ -321,6 +334,7 @@ class BaseSimulation:
         t_eval = copy(t_eval)
         if solver is None:
             solver = self._solver
+        self._check_solver_supported(solver)
         if calc_esoh is None:
             calc_esoh = self._model.calc_esoh
         else:
@@ -575,6 +589,7 @@ class BaseSimulation:
 
         if solver is None:
             solver = self._solver
+        self._check_solver_supported(solver)
 
         if starting_solution is None:
             starting_solution = self._solution
