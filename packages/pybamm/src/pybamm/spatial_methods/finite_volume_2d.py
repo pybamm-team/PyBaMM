@@ -42,6 +42,24 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         for dom in mesh:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
 
+        # Node-to-edge shifts and boundary extrapolation use two nodes per direction;
+        # ghost cells are one node thick by construction
+        for dom, submesh in mesh.items():
+            if not isinstance(submesh, pybamm.SubMesh2D) or any(
+                "ghost cell" in d for d in dom
+            ):
+                continue
+            for direction in ["lr", "tb"]:
+                npts = getattr(submesh, f"npts_{direction}")
+                if npts < 2:
+                    raise pybamm.DiscretisationError(
+                        "FiniteVolume2D requires at least 2 nodes in the "
+                        f"'{direction}' direction of domain {list(dom)}, but the mesh "
+                        f"has {npts}. Increase the number of mesh points, or use "
+                        "a one-dimensional model if the problem does not vary in "
+                        "this direction."
+                    )
+
     def spatial_variable(self, symbol):
         """
         Creates a discretised spatial variable compatible with
