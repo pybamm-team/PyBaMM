@@ -80,7 +80,6 @@ _REBUILDABLE_STATE_KEYS = (
     "_time_integral_vars",
 )
 
-# Private, experimental options holding the "user" preconditioner callables
 _USER_PRECONDITIONER_OPTIONS = ("_preconditioner_setup", "_preconditioner_solve")
 
 
@@ -314,17 +313,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "compile": False,
             "jacobian": "sparse",
             "preconditioner": "BBDP",
-            # Private and experimental: Python callables used as IDA's
-            # preconditioner when "preconditioner" is "user" (iterative linear
-            # solvers, num_solvers = 1, direct ``solver.solve`` only; not
-            # supported by ``pybamm.Simulation`` or serialisation).
-            #   _preconditioner_setup(t, y, ydot, cj, data, indices, indptr)
-            #     gets the iteration matrix dF/dy - cj M in CSC form
-            #   _preconditioner_solve(t, y, r, z, cj, delta)
-            #     writes z ~ (dF/dy - cj M)^-1 r in place
-            # Both return None or 0 on success, >0 for a recoverable and <0 for
-            # an unrecoverable failure. Arrays are zero-copy views valid only
-            # during the call; only z is writeable.
+            # Experimental, for "preconditioner": "user"; signatures in Options.hpp
             "_preconditioner_setup": None,
             "_preconditioner_solve": None,
             "precon_half_bandwidth": 5,
