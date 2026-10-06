@@ -5,7 +5,7 @@ Export of unstructured-mesh solutions to VTK files (``.vtu`` + ``.pvd``).
 from __future__ import annotations
 
 import os
-from xml.sax.saxutils import quoteattr
+from xml.sax.saxutils import quoteattr  # nosec B406 - escaping only, no parsing
 
 import numpy as np
 import numpy.typing as npt

@@ -1,6 +1,6 @@
 import os
 import types
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET  # nosec B405 - parses files the test wrote
 
 import numpy as np
 import pytest
@@ -207,7 +207,7 @@ class TestSaveVtu:
         pvd = solution.save_vtu(str(tmp_path / "series"), ["Both regions [K]"])
 
         assert pvd == str(tmp_path / "series.pvd")
-        root = ET.parse(pvd).getroot()
+        root = ET.parse(pvd).getroot()  # nosec B314
         assert root.get("type") == "Collection"
         datasets = root.find("Collection").findall("DataSet")
         np.testing.assert_allclose(
@@ -224,7 +224,7 @@ class TestSaveVtu:
             tmp_path / "out", ["Both regions [K]", "Voltage [V]"], t=[0.5]
         )
 
-        root = ET.parse(tmp_path / "out.pvd").getroot()
+        root = ET.parse(tmp_path / "out.pvd").getroot()  # nosec B314
         datasets = root.find("Collection").findall("DataSet")
         assert [float(d.get("timestep")) for d in datasets] == [0.5]
         vtu = _read(tmp_path, "out/out_0000.vtu")
