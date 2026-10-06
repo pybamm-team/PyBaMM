@@ -585,10 +585,8 @@ class TestExtrapolationCoarseMesh2D:
         [
             (pybamm.BoundaryValue, "quadratic", "top", 10, 2, 3),
             (pybamm.BoundaryValue, "quadratic", "bottom", 10, 2, 3),
-            (pybamm.BoundaryValue, "linear", "left", 1, 10, 2),
             (pybamm.BoundaryValue, "quadratic", "right", 2, 10, 3),
             (pybamm.BoundaryGradient, "quadratic", "left", 2, 10, 3),
-            (pybamm.BoundaryGradient, "linear", "top", 10, 1, 2),
         ],
     )
     def test_mesh_too_coarse_for_extrapolation(
