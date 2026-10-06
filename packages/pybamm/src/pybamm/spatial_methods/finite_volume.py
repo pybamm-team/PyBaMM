@@ -1440,27 +1440,85 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif left_evaluates_on_edges == right_evaluates_on_edges:
             pass
         # If only left child evaluates on edges, map right child onto edges
-        # using the harmonic mean if the left child is a gradient (i.e. this
-        # binary operator represents a flux)
+        # using the harmonic mean if the left child is a flux built from gradients
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
-            if isinstance(left, pybamm.Gradient):
-                method = "harmonic"
-            else:
-                method = "arithmetic"
+            method = self._face_coefficient_method(bin_op, left)
             disc_right = self.node_to_edge(disc_right, method=method)
         # If only right child evaluates on edges, map left child onto edges
-        # using the harmonic mean if the right child is a gradient (i.e. this
-        # binary operator represents a flux)
+        # using the harmonic mean if the right child is a flux built from gradients
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
-            if isinstance(right, pybamm.Gradient):
-                method = "harmonic"
-            else:
-                method = "arithmetic"
+            method = self._face_coefficient_method(bin_op, right)
             disc_left = self.node_to_edge(disc_left, method=method)
         # Return new binary operator with appropriate class
         out = pybamm.simplify_if_constant(bin_op.create_copy([disc_left, disc_right]))
 
         return out
+
+    @staticmethod
+    def _face_coefficient_method(bin_op, edge_child):
+        """
+        Choose how to average a node-valued factor onto the edges it shares with
+        ``edge_child``. A coefficient multiplying a flux, such as ``K * grad(u)``
+        or ``K * (grad(u) - a * grad(v))``, is a conductance in series between
+        two control volumes, so it takes the harmonic mean; anything else takes
+        the arithmetic mean.
+
+        Parameters
+        ----------
+        bin_op : :class:`pybamm.BinaryOperator`
+            Binary operator combining the node-valued factor and ``edge_child``
+        edge_child : :class:`pybamm.Symbol`
+            The child of ``bin_op`` that evaluates on edges
+
+        Returns
+        -------
+        str
+            ``"harmonic"`` or ``"arithmetic"``
+        """
+        if isinstance(edge_child, pybamm.Gradient) or (
+            isinstance(bin_op, pybamm.Multiplication)
+            and FiniteVolume._is_gradient_combination(edge_child)
+        ):
+            return "harmonic"
+        return "arithmetic"
+
+    @staticmethod
+    def _is_gradient_combination(symbol):
+        """
+        Whether ``symbol`` is built only from gradients, by negation, sums, and
+        products with (or division by) factors that evaluate on nodes.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            Symbol to check
+
+        Returns
+        -------
+        bool
+        """
+        if isinstance(symbol, pybamm.Gradient):
+            return True
+        if isinstance(symbol, pybamm.Negate):
+            return FiniteVolume._is_gradient_combination(symbol.child)
+        if isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
+            return all(
+                FiniteVolume._is_gradient_combination(child)
+                for child in symbol.children
+            )
+        if isinstance(symbol, pybamm.Multiplication):
+            left, right = symbol.children
+            if not left.evaluates_on_edges("primary"):
+                return FiniteVolume._is_gradient_combination(right)
+            if not right.evaluates_on_edges("primary"):
+                return FiniteVolume._is_gradient_combination(left)
+            return False
+        if isinstance(symbol, pybamm.Division):
+            numerator, denominator = symbol.children
+            return not denominator.evaluates_on_edges(
+                "primary"
+            ) and FiniteVolume._is_gradient_combination(numerator)
+        return False
 
     def concatenation(self, disc_children):
         """Discrete concatenation, taking `edge_to_node` for children that evaluate on

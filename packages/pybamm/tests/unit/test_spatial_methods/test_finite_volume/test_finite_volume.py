@@ -951,3 +951,83 @@ class TestFiniteVolume:
 
         m = mesh["negative electrode"].npts
         np.testing.assert_array_equal(inner_disc.evaluate(y=y), np.zeros((n * m, 1)))
+
+
+class TestFaceCoefficientAveraging:
+    @staticmethod
+    def _two_material_slab(flux):
+        """Residual of div(flux(D, u, v)) at the exact steady profile of a slab
+        whose diffusivity jumps on the electrode/separator face."""
+        mesh = get_mesh_for_testing(xpts=7)
+        disc = pybamm.Discretisation(mesh, {"macroscale": pybamm.FiniteVolume()})
+        domain = ["negative electrode", "separator"]
+        u = pybamm.Variable("u", domain=domain)
+        v = pybamm.Variable("v", domain=domain)
+        disc.set_variable_slices([u, v])
+        bcs = {"left": (pybamm.Scalar(0), "Dirichlet")}
+        disc.bcs = {
+            u: {**bcs, "right": (pybamm.Scalar(1), "Dirichlet")},
+            v: {**bcs, "right": (pybamm.Scalar(0), "Dirichlet")},
+        }
+        D1, D2 = 1.0, 25.0
+        D = pybamm.concatenation(
+            pybamm.PrimaryBroadcast(pybamm.Scalar(D1), "negative electrode"),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(D2), "separator"),
+        )
+
+        # piecewise linear, with the series-resistance flux through the face
+        x = mesh[domain].nodes
+        interface, length = mesh["negative electrode"].edges[-1], mesh[domain].edges[-1]
+        q = 1 / (interface / D1 + (length - interface) / D2)
+        u_exact = np.where(x < interface, q * x / D1, 1 - q * (length - x) / D2)
+        y = np.concatenate([u_exact, np.zeros_like(x)])[:, np.newaxis]
+        return disc.process_symbol(pybamm.div(flux(D, u, v))).evaluate(y=y)
+
+    @pytest.mark.parametrize(
+        "flux",
+        [
+            lambda D, u, v: D * pybamm.grad(u),
+            lambda D, u, v: D * (pybamm.grad(u) - pybamm.grad(v)),
+            lambda D, u, v: (2 * pybamm.grad(v) - pybamm.grad(u)) * (-D),
+            lambda D, u, v: D * (pybamm.grad(u) + 3 * pybamm.grad(v) / 2),
+            lambda D, u, v: D * -(pybamm.grad(v) - pybamm.grad(u)),
+        ],
+    )
+    def test_two_material_slab_is_exact(self, flux):
+        np.testing.assert_allclose(
+            self._two_material_slab(flux), 0, rtol=1e-10, atol=1e-10
+        )
+
+    def test_two_material_slab_arithmetic_mean_is_not_exact(self):
+        # a node-valued term (zero here) makes D an arithmetic-mean factor
+        residual = self._two_material_slab(
+            lambda D, u, v: D * (pybamm.grad(u) - pybamm.grad(v) + v)
+        )
+        assert np.abs(residual).max() > 1
+
+    def test_face_coefficient_method(self):
+        domain = ["negative electrode"]
+        u = pybamm.Variable("u", domain=domain)
+        w = pybamm.Variable("w", domain=domain)
+        grad_u, grad_w = pybamm.grad(u), pybamm.grad(w)
+        harmonic = [
+            (w * grad_u, grad_u),
+            (pybamm.Addition(w, grad_u), grad_u),
+            (w * (grad_u - grad_w), grad_u - grad_w),
+            (w * -(w * grad_u + grad_w / w), -(w * grad_u + grad_w / w)),
+            (w * (grad_u * w), grad_u * w),
+        ]
+        arithmetic = [
+            (w * (grad_u + w), grad_u + w),
+            (w * (grad_u * grad_w), grad_u * grad_w),
+            (w * (grad_u / grad_w), grad_u / grad_w),
+            (w * (w / grad_u), w / grad_u),
+            (pybamm.Addition(w, grad_u - grad_w), grad_u - grad_w),
+            (w * pybamm.upwind(u), pybamm.upwind(u)),
+        ]
+        for expected, cases in [("harmonic", harmonic), ("arithmetic", arithmetic)]:
+            for bin_op, edge_child in cases:
+                assert (
+                    pybamm.FiniteVolume._face_coefficient_method(bin_op, edge_child)
+                    == expected
+                ), str(bin_op)
