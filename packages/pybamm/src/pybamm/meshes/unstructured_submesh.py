@@ -874,18 +874,14 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
     """
     Load an unstructured mesh from an external file via *meshio*.
 
-    Supported cell types are tetrahedra (3D) and triangles or quadrilaterals
-    (2D). Hexahedral file meshes are rejected: file meshes commonly contain
-    warped (non-planar-faced) hexes, whose volumes and face fluxes are
-    ill-defined. Convert such meshes to tetrahedra before loading.
+    Supports tetrahedra (3D) and triangles or quadrilaterals (2D). Hexahedra
+    are rejected, as file meshes often hold warped hexes with ill-defined
+    volumes and face fluxes; convert them to tetrahedra first.
 
-    The interface between adjacent domains must be **conforming**: the two
-    sides must share the same interface nodes, so that welding in
-    :meth:`UnstructuredSubMesh.combine` turns the interface into internal
-    faces. In gmsh, build the regions from one geometry or fragment the parts
-    (``BooleanFragments`` / ``Coherence``) so the shared surface is meshed
-    once. A non-conforming interface raises a :class:`pybamm.GeometryError`
-    when the domains are combined.
+    Adjacent domains must share their interface nodes (**conforming**), so
+    :meth:`UnstructuredSubMesh.combine` welds the interface into internal
+    faces; otherwise combining raises a :class:`pybamm.GeometryError`. In
+    gmsh, fragment the parts (``BooleanFragments`` / ``Coherence``).
 
     Parameters
     ----------
@@ -1101,18 +1097,14 @@ class TaggedSubMeshGenerator(MeshGenerator):
     Build an :class:`UnstructuredSubMesh` from cells of a single Gmsh
     physical group in a ``.msh`` file.
 
-    Use one instance per region in a multi-domain pybamm model — the
-    region name doubles as the pybamm domain name. Compare to
-    :class:`UserSuppliedUnstructuredMesh`, which routes multiple regions
-    through one generator by introspecting ``lims``; ``TaggedSubMeshGenerator``
-    is simpler when the model already supplies one mesh generator per
-    domain.
+    Use one instance per region; the region name is the pybamm domain name.
+    :class:`UserSuppliedUnstructuredMesh` instead serves several regions from
+    one generator.
 
-    Regions that share an interface must be conforming across it (the shared
-    surface meshed once, so both regions reference the same interface nodes),
-    or combining the domains raises a :class:`pybamm.GeometryError`. Fragment
-    the geometry in gmsh (``BooleanFragments`` / ``Coherence``) to guarantee
-    this.
+    Regions sharing an interface must be conforming (the shared surface
+    meshed once), or combining the domains raises a
+    :class:`pybamm.GeometryError`; fragment the geometry in gmsh
+    (``BooleanFragments`` / ``Coherence``).
 
     Parameters
     ----------

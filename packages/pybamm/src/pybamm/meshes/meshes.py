@@ -124,9 +124,8 @@ class Mesh(dict):
                     if var != "tabs":
                         if isinstance(var, str):
                             var = getattr(pybamm.standard_spatial_vars, var)
-                        # Raise error if the number of points for a particular
-                        # variable haven't been provided, unless that variable
-                        # doesn't appear in the geometry or isn't used
+                        # Missing points are an error only for generators that
+                        # use them, on variables present in the geometry
                         if var.name not in var_name_pts:
                             if not getattr(
                                 submesh_types[domain], "requires_npts", True
