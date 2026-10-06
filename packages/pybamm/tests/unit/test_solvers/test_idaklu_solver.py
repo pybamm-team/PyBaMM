@@ -4,6 +4,7 @@ import itertools
 import json
 import logging
 import os
+import pickle
 import re
 import subprocess  # nosec B404 - runs this interpreter on a fixed script
 import sys
@@ -17,6 +18,7 @@ import pytest
 from scipy.integrate import quad_vec
 from scipy.interpolate import CubicHermiteSpline
 from scipy.sparse import csc_matrix
+from scipy.sparse.linalg import splu
 
 import pybamm
 from tests import (
@@ -2143,6 +2145,237 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(
             loaded["2u"].entries, sol["2u"].entries, rtol=1e-12, atol=1e-12
         )
+
+
+def _linear_dae():
+    """u' = -0.1 u, 0 = v - u: iteration matrix [[-0.1 - cj, 0], [-1, 1]]."""
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    v = pybamm.Variable("v")
+    model.rhs = {u: -0.1 * u}
+    model.algebraic = {v: v - u}
+    model.initial_conditions = {u: 1, v: 1}
+    model.variables = {"u": u, "v": v}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+def _diffusion_model(n=40):
+    """1D diffusion with a source, on a finite-volume mesh with n cells."""
+    model = pybamm.BaseModel()
+    c = pybamm.Variable("c", domain="rod")
+    model.rhs = {c: pybamm.div(pybamm.grad(c)) + 1}
+    model.boundary_conditions = {c: {"left": (0, "Dirichlet"), "right": (0, "Neumann")}}
+    model.initial_conditions = {c: 0}
+    model.variables = {"c": c}
+    x = pybamm.SpatialVariable("x", domain="rod")
+    geometry = {"rod": {x: {"min": 0, "max": 1}}}
+    mesh = pybamm.Mesh(geometry, {"rod": pybamm.Uniform1DSubMesh}, {x: n})
+    pybamm.Discretisation(mesh, {"rod": pybamm.FiniteVolume()}).process_model(model)
+    return model
+
+
+class _ExactPreconditioner:
+    """Factorises the iteration matrix, so GMRES converges in one iteration."""
+
+    def __init__(self):
+        self.matrices = []
+        self.n_solve = 0
+        self.lu = None
+
+    def setup(self, t, y, ydot, cj, data, indices, indptr):
+        A = csc_matrix((data, indices, indptr), shape=(len(y), len(y)))
+        self.matrices.append((cj, A.toarray()))
+        self.lu = splu(A)
+
+    def solve(self, t, y, r, z, cj, delta):
+        self.n_solve += 1
+        z[:] = self.lu.solve(r)
+
+    def options(self, **extra):
+        return {
+            "linear_solver": "SUNLinSol_SPGMR",
+            "jacobian": "matrix-free",
+            "preconditioner": "user",
+            "_preconditioner_setup": self.setup,
+            "_preconditioner_solve": self.solve,
+            **extra,
+        }
+
+
+class TestIDAKLUUserPreconditioner:
+    """``preconditioner="user"``: Python callables as IDA's preconditioner."""
+
+    def test_setup_receives_iteration_matrix(self):
+        precon = _ExactPreconditioner()
+        solver = pybamm.IDAKLUSolver(options=precon.options())
+        solver.solve(_linear_dae(), [0, 1])
+
+        assert precon.matrices
+        assert precon.n_solve > 0
+        for cj, A in precon.matrices:
+            np.testing.assert_allclose(A, [[-0.1 - cj, 0], [-1, 1]], rtol=1e-12)
+
+    def test_matches_direct_solver(self):
+        model = _diffusion_model()
+        t_eval = [0, 0.5]
+        t_interp = np.linspace(*t_eval, 11)
+        tols = {"rtol": 1e-8, "atol": 1e-10}
+        reference = pybamm.IDAKLUSolver(**tols).solve(model, t_eval, t_interp=t_interp)
+
+        precon = _ExactPreconditioner()
+        solver = pybamm.IDAKLUSolver(**tols, options=precon.options())
+        sol = solver.solve(model, t_eval, t_interp=t_interp)
+
+        np.testing.assert_allclose(sol.y, reference.y, rtol=1e-6, atol=1e-8)
+        n = model.concatenated_rhs.shape[0]
+        assert all(A.shape == (n, n) for _, A in precon.matrices)
+
+    def test_rejects_nonzero_setup_return(self):
+        precon = _ExactPreconditioner()
+
+        def setup(*args):
+            precon.setup(*args)
+            return -1  # unrecoverable
+
+        solver = pybamm.IDAKLUSolver(
+            options=precon.options(_preconditioner_setup=setup)
+        )
+        with pytest.raises(pybamm.SolverError):
+            solver.solve(_linear_dae(), [0, 1])
+
+    @pytest.mark.parametrize(
+        "missing", ["_preconditioner_setup", "_preconditioner_solve"]
+    )
+    def test_missing_callable_raises(self, missing):
+        options = _ExactPreconditioner().options(**{missing: None})
+        solver = pybamm.IDAKLUSolver(options=options)
+        with pytest.raises(ValueError, match="needs the"):
+            solver.solve(_linear_dae(), [0, 1])
+
+    def test_multiple_solvers_raise(self):
+        options = _ExactPreconditioner().options(num_threads=2, num_solvers=2)
+        solver = pybamm.IDAKLUSolver(options=options)
+        with pytest.raises(ValueError, match="num_solvers = 1 only"):
+            solver.solve(_linear_dae(), [0, 1])
+
+    @pytest.mark.parametrize(
+        "callback", ["_preconditioner_setup", "_preconditioner_solve"]
+    )
+    def test_callback_exception_propagates(self, callback):
+        def fail(*args):
+            raise RuntimeError("callback failed")
+
+        options = _ExactPreconditioner().options(**{callback: fail})
+        solver = pybamm.IDAKLUSolver(options=options)
+        with pytest.raises(RuntimeError, match="callback failed"):
+            solver.solve(_linear_dae(), [0, 1])
+
+    def test_rejects_nonzero_solve_return(self):
+        precon = _ExactPreconditioner()
+
+        def solve(*args):
+            precon.solve(*args)
+            return -1  # unrecoverable
+
+        solver = pybamm.IDAKLUSolver(
+            options=precon.options(_preconditioner_solve=solve)
+        )
+        with pytest.raises(pybamm.SolverError):
+            solver.solve(_linear_dae(), [0, 1])
+
+    def test_arrays_are_views(self):
+        """Inputs are read-only views; ``z`` is written in place."""
+        precon = _ExactPreconditioner()
+        seen = {}
+
+        def setup(t, y, ydot, cj, data, indices, indptr):
+            seen.setdefault("indices", indices)
+            seen.setdefault("indptr", indptr)
+            # the sparsity pattern views are built once and reused
+            assert indices is seen["indices"]
+            assert indptr is seen["indptr"]
+            for array in (y, ydot, data, indices, indptr):
+                assert not array.flags.writeable
+                assert not array.flags.owndata
+            precon.setup(t, y, ydot, cj, data, indices, indptr)
+
+        def solve(t, y, r, z, cj, delta):
+            assert not y.flags.writeable
+            assert not r.flags.writeable
+            assert z.flags.writeable
+            assert not z.flags.owndata
+            precon.solve(t, y, r, z, cj, delta)
+
+        options = precon.options(
+            _preconditioner_setup=setup, _preconditioner_solve=solve
+        )
+        sol = pybamm.IDAKLUSolver(options=options).solve(_linear_dae(), [0, 1])
+        assert precon.n_solve > 0
+        np.testing.assert_allclose(sol["u"].entries[-1], np.exp(-0.1), rtol=1e-4)
+
+    def test_writing_read_only_input_raises(self):
+        def solve(t, y, r, z, cj, delta):
+            r[:] = 0
+
+        options = _ExactPreconditioner().options(_preconditioner_solve=solve)
+        solver = pybamm.IDAKLUSolver(options=options)
+        with pytest.raises(pybamm.SolverError, match="read-only"):
+            solver.solve(_linear_dae(), [0, 1])
+
+    def test_solver_recovers_after_callback_exception(self):
+        precon = _ExactPreconditioner()
+        fail = [True]
+
+        def solve(*args):
+            if fail[0]:
+                raise RuntimeError("callback failed")
+            return precon.solve(*args)
+
+        model = _linear_dae()
+        solver = pybamm.IDAKLUSolver(
+            options=precon.options(_preconditioner_solve=solve)
+        )
+        with pytest.raises(RuntimeError, match="callback failed"):
+            solver.solve(model, [0, 1])
+
+        fail[0] = False
+        sol = solver.solve(model, [0, 1])
+        np.testing.assert_allclose(sol["u"].entries[-1], np.exp(-0.1), rtol=1e-4)
+
+    def test_simulation_raises(self):
+        options = _ExactPreconditioner().options()
+        model = pybamm.lithium_ion.SPM()
+        match = "not supported by pybamm.Simulation"
+        with pytest.raises(NotImplementedError, match=match):
+            pybamm.Simulation(model, solver=pybamm.IDAKLUSolver(options=options))
+
+        # also when the solver is only passed to solve or step
+        sim = pybamm.Simulation(model)
+        solver = pybamm.IDAKLUSolver(options=options)
+        with pytest.raises(NotImplementedError, match=match):
+            sim.solve([0, 600], solver=solver)
+        with pytest.raises(NotImplementedError, match=match):
+            sim.step(60, solver=solver)
+
+    def test_pickle_round_trip(self):
+        precon = _ExactPreconditioner()
+        solver = pybamm.IDAKLUSolver(options=precon.options())
+        restored = pickle.loads(pickle.dumps(solver))  # nosec B301 - own data
+
+        restored_precon = restored.options["_preconditioner_setup"].__self__
+        assert restored_precon is not precon
+        assert restored.options["_preconditioner_solve"].__self__ is restored_precon
+
+        sol = restored.solve(_linear_dae(), [0, 1])
+        assert restored_precon.n_solve > 0
+        assert precon.n_solve == 0
+        np.testing.assert_allclose(sol["u"].entries[-1], np.exp(-0.1), rtol=1e-4)
+
+    def test_uses_user_preconditioner(self):
+        assert not pybamm.IDAKLUSolver()._uses_user_preconditioner
+        options = _ExactPreconditioner().options()
+        assert pybamm.IDAKLUSolver(options=options)._uses_user_preconditioner
 
 
 class TestIDAKLUSensitivityScales:

@@ -35,6 +35,13 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
 int residual_eval_approx(sunindextype Nlocal, sunrealtype tt, N_Vector yy,
                            N_Vector yp, N_Vector gval, void *user_data);
 
+int precon_setup_user(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+                      sunrealtype cj, void *user_data);
+
+int precon_solve_user(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+                      N_Vector rvec, N_Vector zvec, sunrealtype cj,
+                      sunrealtype delta, void *user_data);
+
 #include "sundials_functions.inl"
 
 #endif // PYBAMM_SUNDIALS_FUNCTIONS_HPP

@@ -122,12 +122,39 @@ SetupOptions::SetupOptions(py::dict &py_opts)
 
     if (using_iterative_solver)
     {
-        if (preconditioner != "none" && preconditioner != "BBDP")
+        if (preconditioner != "none" && preconditioner != "BBDP" &&
+            preconditioner != "user")
         {
             throw std::domain_error(
                 "Unknown preconditioner \""s + preconditioner +
-                "\", use one of \"BBDP\" or \"none\""s
+                "\", use one of \"BBDP\", \"user\" or \"none\""s
             );
+        }
+        if (preconditioner == "user")
+        {
+            if (!py_opts.contains("_preconditioner_setup") ||
+                !py_opts.contains("_preconditioner_solve") ||
+                py_opts["_preconditioner_setup"].is_none() ||
+                py_opts["_preconditioner_solve"].is_none())
+            {
+                throw std::domain_error(
+                    "preconditioner \"user\" needs the \"_preconditioner_setup\" "
+                    "and \"_preconditioner_solve\" options (callables)"
+                );
+            }
+            if (num_solvers != 1)
+            {
+                // The callables run Python without acquiring the GIL: they
+                // rely on the calling thread (OpenMP thread 0) holding it for
+                // the whole solve. Worker threads of a solver group never
+                // hold it, and cannot acquire it while thread 0 waits at the
+                // end of the parallel region, so they would deadlock.
+                throw std::domain_error(
+                    "preconditioner \"user\" supports num_solvers = 1 only"
+                );
+            }
+            precon_setup = py_opts["_preconditioner_setup"];
+            precon_solve = py_opts["_preconditioner_solve"];
         }
     }
     else

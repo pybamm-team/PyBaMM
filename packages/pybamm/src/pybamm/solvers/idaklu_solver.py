@@ -80,6 +80,8 @@ _REBUILDABLE_STATE_KEYS = (
     "_time_integral_vars",
 )
 
+_USER_PRECONDITIONER_OPTIONS = ("_preconditioner_setup", "_preconditioner_solve")
+
 
 class IDAKLUSolver(pybamm.BaseSolver):
     """
@@ -311,6 +313,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "compile": False,
             "jacobian": "sparse",
             "preconditioner": "BBDP",
+            # Experimental, for "preconditioner": "user"; signatures in Options.hpp
+            "_preconditioner_setup": None,
+            "_preconditioner_solve": None,
             "precon_half_bandwidth": 5,
             "precon_half_bandwidth_keep": 5,
             "num_threads": 1,
@@ -735,6 +740,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
     @property
     def options(self):
         return self._options
+
+    @property
+    def _uses_user_preconditioner(self) -> bool:
+        """Whether the private ``_preconditioner_*`` callables are set."""
+        return any(
+            self._options.get(key) is not None for key in _USER_PRECONDITIONER_OPTIONS
+        )
 
     def _integrate(
         self,
