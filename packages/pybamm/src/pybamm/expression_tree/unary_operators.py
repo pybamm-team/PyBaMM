@@ -596,7 +596,7 @@ class Divergence(SpatialOperator):
     _json_extra_fields = ("no_simplification",)
 
     def __init__(self, child, no_simplification=False):
-        if child.domain == []:
+        if child._domains["primary"] == []:
             raise pybamm.DomainError(
                 f"Cannot take divergence of '{child}' since its domain is empty. "
                 + "Try broadcasting the object first, e.g.\n\n"
