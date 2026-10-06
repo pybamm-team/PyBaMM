@@ -1398,10 +1398,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         return out
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
-        """Discretise binary operators in model equations.  Performs appropriate
-        averaging of diffusivities if one of the children is a gradient operator, so
-        that discretised sizes match up. For this averaging we use the harmonic
-        mean [1].
+        """Discretise binary operators in model equations.  Averages a child that
+        evaluates on nodes onto the edges when the other child evaluates on edges, so
+        that discretised sizes match up. A coefficient of a gradient, or of a sum of
+        gradient terms, takes the harmonic mean [1]; anything else takes the
+        arithmetic mean.
 
         [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
         the diffusion equation." (2012).
@@ -1475,6 +1476,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         str
             ``"harmonic"`` or ``"arithmetic"``
         """
+        # a bare gradient takes the harmonic mean under any operator, as it
+        # always has; changing that would move existing models' results
         if isinstance(edge_child, pybamm.Gradient) or (
             isinstance(bin_op, pybamm.Multiplication)
             and FiniteVolume._is_gradient_combination(edge_child)
@@ -1485,8 +1488,10 @@ class FiniteVolume(pybamm.SpatialMethod):
     @staticmethod
     def _is_gradient_combination(symbol):
         """
-        Whether ``symbol`` is built only from gradients, by negation, sums, and
-        products with (or division by) factors that evaluate on nodes.
+        Whether ``symbol`` is a signed sum of terms ``grad(u)`` or
+        ``a * grad(u)``, with ``a`` evaluating on nodes. A factor applied to a
+        whole sum, as in ``t * (K * (grad(u) - grad(v)))``, scales a flux that is
+        already formed, so it does not qualify.
 
         Parameters
         ----------
@@ -1497,8 +1502,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         -------
         bool
         """
-        if isinstance(symbol, pybamm.Gradient):
-            return True
         if isinstance(symbol, pybamm.Negate):
             return FiniteVolume._is_gradient_combination(symbol.child)
         if isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
@@ -1508,17 +1511,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
         if isinstance(symbol, pybamm.Multiplication):
             left, right = symbol.children
-            if not left.evaluates_on_edges("primary"):
-                return FiniteVolume._is_gradient_combination(right)
-            if not right.evaluates_on_edges("primary"):
-                return FiniteVolume._is_gradient_combination(left)
-            return False
-        if isinstance(symbol, pybamm.Division):
-            numerator, denominator = symbol.children
-            return not denominator.evaluates_on_edges(
-                "primary"
-            ) and FiniteVolume._is_gradient_combination(numerator)
-        return False
+            return (
+                isinstance(right, pybamm.Gradient)
+                and not left.evaluates_on_edges("primary")
+            ) or (
+                isinstance(left, pybamm.Gradient)
+                and not right.evaluates_on_edges("primary")
+            )
+        return isinstance(symbol, pybamm.Gradient)
 
     def concatenation(self, disc_children):
         """Discrete concatenation, taking `edge_to_node` for children that evaluate on
