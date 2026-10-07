@@ -267,9 +267,11 @@ PYBIND11_MODULE(idaklu, m)
          py::arg("eps_newt"), py::arg("use_sparse"))
     .def("solve", &StandaloneNewtonSolver::solve,
          py::arg("t"), py::arg("y0"), py::arg("inputs"),
+         py::arg("logger") = py::none(),
          py::return_value_policy::move)
     .def("solve_batch", &StandaloneNewtonSolver::solve_batch,
          py::arg("t_eval"), py::arg("y0_alg"), py::arg("inputs"),
+         py::arg("logger") = py::none(),
          py::return_value_policy::move);
 
   py::class_<casadi::Function>(m, "Function");
