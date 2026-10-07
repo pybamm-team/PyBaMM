@@ -265,6 +265,26 @@ class TestSaveVtu:
         )
         np.testing.assert_allclose(vtu.field_data["Voltage [V]"], [3.5])
 
+    @pytest.mark.parametrize("t", [1.0, [1.0]])
+    def test_vector_field_at_a_single_time(self, tmp_path, t):
+        solution, _ = _two_region_solution(2)
+        solution.save_vtu(tmp_path / "out", "Flux [A.m-2]", t=t)
+
+        flux = _read(tmp_path, "out/out_0000.vtu").cell_data["Flux [A.m-2]"][0]
+        expected = 1.5 * np.arange(1.0, 6.0)
+        np.testing.assert_allclose(
+            flux, np.column_stack([expected, 2 * expected, np.zeros(5)])
+        )
+
+    def test_filename_is_escaped_in_the_pvd(self, tmp_path):
+        solution, _ = _two_region_solution(2)
+        name = 'run 1 & "<a>"'
+        pvd = solution.save_vtu(tmp_path / name, ["Both regions [K]"], t=[0.0])
+
+        dataset = ET.parse(pvd).getroot().find("Collection").find("DataSet")
+        assert dataset.get("file") == f"{name}/{name}_0000.vtu"
+        assert (tmp_path / dataset.get("file")).is_file()
+
     def test_times_at_the_ends_tolerate_rounding(self, tmp_path):
         solution, _ = _two_region_solution(2)
         solution.save_vtu(
