@@ -298,6 +298,30 @@ class TestSaveVtu:
         assert dataset.get("file") == f"{name}/{name}_0000.vtu"
         assert (tmp_path / dataset.get("file")).is_file()
 
+    def test_variable_names_with_xml_characters_read_back(self, tmp_path):
+        mesh = _strip_mesh(0.0, 1.0, 2, 2)
+        model = pybamm.BaseModel()
+        model._geometry = _geometry(["a"], 2)
+        field_name = 'T & "q" <x> [K]'
+        scalar_name = "V & <I> [V]"
+        model.variables = {
+            field_name: pybamm.StateVector(slice(0, 2), domain="a").with_mesh(mesh),
+            scalar_name: 4 - pybamm.t,
+        }
+        model.update_processed_variables(model.variables)
+        solution = pybamm.Solution(
+            np.array([0.0, 1.0]),
+            np.asfortranarray([[1.0, 1.0], [2.0, 2.0]]),
+            model,
+            {},
+        )
+
+        solution.save_vtu(tmp_path / "out", [field_name, scalar_name], t=[1.0])
+
+        vtu = _read(tmp_path, "out/out_0000.vtu")
+        np.testing.assert_allclose(vtu.cell_data[field_name][0], [1.0, 2.0])
+        np.testing.assert_allclose(vtu.field_data[scalar_name], [3.0])
+
     def test_times_at_the_ends_tolerate_rounding(self, tmp_path):
         solution, _ = _two_region_solution(2)
         solution.save_vtu(

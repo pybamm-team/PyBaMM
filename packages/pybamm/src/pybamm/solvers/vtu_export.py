@@ -5,7 +5,7 @@ Export of unstructured-mesh solutions to VTK files (``.vtu`` + ``.pvd``).
 from __future__ import annotations
 
 import os
-from xml.sax.saxutils import quoteattr  # nosec B406 - escaping only, no parsing
+from xml.sax.saxutils import escape, quoteattr  # nosec B406 - escaping only
 
 import numpy as np
 import numpy.typing as npt
@@ -97,6 +97,11 @@ class _UnionMesh:
         out = np.full((self.npts, *values.shape[1:]), np.nan)
         out[self._cell_maps[id(mesh)]] = values
         return out
+
+
+def _vtk_array_name(name):
+    """Escape a variable name for VTK, whose XML writer writes array names raw."""
+    return escape(name, {'"': "&quot;"})
 
 
 def _set_field_data(grid, name, values):
@@ -215,9 +220,11 @@ def save_vtu(
         processed_variable = solution[name]
         kind = _classify(name, processed_variable)
         if kind == "scalar":
-            scalars.append((name, np.ravel(processed_variable(t=times))))
+            scalars.append(
+                (_vtk_array_name(name), np.ravel(processed_variable(t=times)))
+            )
         else:
-            spatial.append((name, kind, processed_variable))
+            spatial.append((_vtk_array_name(name), kind, processed_variable))
     if not spatial:
         raise pybamm.OptionError(
             "save_vtu needs at least one variable on an unstructured mesh; 0D "
