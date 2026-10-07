@@ -17,6 +17,7 @@
 
 ## Bug fixes
 
+- `FiniteVolumeUnstructured` gradients, divergences, squared gradients and componentwise vector-field operations keep the symbol's domains when a component constant-folds, such as the zero z-gradient of a constant field; previously `VectorField` raised a `ValueError` or the result silently lost its domains. ([#5867](https://github.com/pybamm-team/PyBaMM/pull/5867))
 - `NonlinearSolver` now logs its Newton iterations when `pybamm.logger` is at `DEBUG` level; previously they were silently dropped. ([#5849](https://github.com/pybamm-team/PyBaMM/pull/5849))
 - Fixed `FiniteVolume2D` boundary values, gradients and integrals raising an `IndexError` on 2D meshes with fewer than 3 nodes in either direction, even when the extrapolation only needed the other direction. Meshes too coarse for the requested extrapolation order now raise a `DiscretisationError`. ([#5839](https://github.com/pybamm-team/PyBaMM/pull/5839))
 - A per-state `atol` given to `IDAKLUSolver` (or as `model.atol`) can now be a list, tuple or array, so it survives a `to_config`/`from_config` round trip, which returns a JSON list. One without exactly one value per state is rejected with a `SolverError` instead of reaching the integrator, as are booleans, even one among numbers such as `[True, 1e-6]`, and non-real values. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
