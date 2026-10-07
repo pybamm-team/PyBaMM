@@ -357,12 +357,23 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         return shape is not None and int(np.prod(shape)) == 1
 
     @staticmethod
+    def _is_per_point_value(bc_value, n_bnd, repeats):
+        """Whether ``bc_value`` has one entry per auxiliary-domain point, the
+        shape of e.g. a boundary value; it wins over a per-face value of the
+        same length."""
+        return repeats > 1 and getattr(bc_value, "shape_for_testing", None) == (
+            repeats,
+            1,
+        )
+
+    @staticmethod
     def _bc_contribution(n, n_bnd, owners, coeffs, bc_value, repeats=1):
         """Build a symbolic BC contribution vector of size ``n * repeats``.
 
         For scalar ``bc_value``: returns ``Vector(accumulated_coeffs) * bc_value``.
         For vector ``bc_value``: returns ``Matrix @ bc_value``, where the value
-        has one entry per boundary face (shared across auxiliary-domain
+        has one entry per auxiliary-domain point (shared across that point's
+        faces), one entry per boundary face (shared across auxiliary-domain
         repeats) or ``n_bnd * repeats`` entries (one per face per repeat).
         """
         is_scalar = FiniteVolumeUnstructured._is_scalar_value(bc_value)
@@ -372,22 +383,27 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             if repeats > 1:
                 row = np.tile(row, repeats)
             return pybamm.Vector(row) * bc_value
-        else:
-            M = csr_matrix((coeffs, (owners, np.arange(n_bnd))), shape=(n, n_bnd))
-            if repeats > 1:
-                bc_shape = getattr(bc_value, "shape_for_testing", None)
-                if bc_shape == (n_bnd * repeats, 1):
-                    M = FiniteVolumeUnstructured._block_diagonal(M, repeats)
-                else:
-                    M = csr_matrix(kron(np.ones((repeats, 1)), M))
+        if FiniteVolumeUnstructured._is_per_point_value(bc_value, n_bnd, repeats):
+            column = np.zeros((n, 1))
+            np.add.at(column[:, 0], owners, coeffs)
+            M = csr_matrix(kron(eye(repeats), column))
             return pybamm.Matrix(M) @ bc_value
+        M = csr_matrix((coeffs, (owners, np.arange(n_bnd))), shape=(n, n_bnd))
+        if repeats > 1:
+            bc_shape = getattr(bc_value, "shape_for_testing", None)
+            if bc_shape == (n_bnd * repeats, 1):
+                M = FiniteVolumeUnstructured._block_diagonal(M, repeats)
+            else:
+                M = csr_matrix(kron(np.ones((repeats, 1)), M))
+        return pybamm.Matrix(M) @ bc_value
 
     @staticmethod
     def _tile_bc_value(bc_value, n_bnd, repeats):
         """Lift a BC value to ``n_bnd * repeats`` entries.
 
         Scalars and already-full values (``n_bnd * repeats`` entries) pass
-        through; a per-face value (``n_bnd`` entries, shared across
+        through; a per-point value (``repeats`` entries) is repeated over each
+        point's faces and a per-face value (``n_bnd`` entries, shared across
         auxiliary-domain repeats) is tiled, matching :meth:`_bc_contribution`.
         """
         if repeats == 1:
@@ -398,6 +414,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             1,
         ):
             return bc_value
+        if FiniteVolumeUnstructured._is_per_point_value(bc_value, n_bnd, repeats):
+            spread = csr_matrix(kron(eye(repeats), np.ones((n_bnd, 1))))
+            return pybamm.Matrix(spread) @ bc_value
         tile = csr_matrix(kron(np.ones((repeats, 1)), eye(n_bnd, dtype=np.float64)))
         return pybamm.Matrix(tile) @ bc_value
 

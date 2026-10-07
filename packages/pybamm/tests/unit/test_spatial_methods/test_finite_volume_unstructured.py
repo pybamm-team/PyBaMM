@@ -409,6 +409,61 @@ class TestAuxiliaryDomains:
             atol=1e-12,
         )
 
+    @pytest.mark.parametrize("orthogonal", [True, False])
+    # 2 auxiliary points equal the 2 "right" faces: the per-point reading wins
+    @pytest.mark.parametrize("n_aux", [2, 3])
+    def test_per_point_bc_value(self, orthogonal, n_aux):
+        # A BC value with one entry per auxiliary point, such as a boundary
+        # value, applies to every face of the side at that point
+        mesh = _make_quad_mesh(2, 2) if orthogonal else _make_perturbed_tri_mesh(3)
+        aux = _make_quad_mesh(1, n_aux)
+        method = _method_with_mesh(mesh, aux=aux)
+        cell_values = mesh.cell_centroids[:, 0] ** 2
+        right = np.arange(1.0, n_aux + 1)
+
+        def bcs(variable, right_value):
+            return {
+                variable: {
+                    "left": (pybamm.Scalar(1), "Dirichlet"),
+                    "right": (right_value, "Neumann"),
+                    "top": (pybamm.Scalar(0), "Neumann"),
+                    "bottom": (pybamm.Scalar(3), "Dirichlet"),
+                }
+            }
+
+        def operators(variable, cells, bc_value, coefficient):
+            boundary_conditions = bcs(variable, bc_value)
+            div_symbol = pybamm.Variable("div", domains=variable.domains)
+            return (
+                method.laplacian(variable, cells, boundary_conditions),
+                method.div_D_grad(
+                    div_symbol, variable, coefficient, cells, boundary_conditions
+                ),
+                *method.gradient(variable, cells, boundary_conditions).components,
+            )
+
+        variable = pybamm.Variable("u", domain="test")
+        cells = pybamm.Vector(cell_values, domain="test")
+        coefficient = pybamm.Vector(np.full(mesh.npts, 2.0), domain="test")
+        single = [
+            operators(variable, cells, pybamm.Scalar(v), coefficient) for v in right
+        ]
+
+        domains = {"primary": ["test"], "secondary": ["aux"]}
+        repeated_var = pybamm.Variable("u rep", domains=domains)
+        repeated = operators(
+            repeated_var,
+            pybamm.Vector(np.tile(cell_values, n_aux), domains=domains),
+            pybamm.Vector(right),
+            pybamm.Vector(np.full(mesh.npts * n_aux, 2.0), domains=domains),
+        )
+        for k, result in enumerate(repeated):
+            np.testing.assert_allclose(
+                result.evaluate()[:, 0],
+                np.concatenate([ops[k].evaluate()[:, 0] for ops in single]),
+                atol=1e-12,
+            )
+
     def test_gradient_with_secondary_domain(self):
         mesh = _make_quad_mesh(2, 2)
         aux = _make_quad_mesh(1, 3)
