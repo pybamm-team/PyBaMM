@@ -293,10 +293,14 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             bcs = self._external_bcs(mesh, outer_bcs)
             for other in mesh.interface_data:
                 tag = f"iface_{other}"
-                if other != neighbor and other in name_to_child:
-                    if tag in mesh.boundary_faces:
-                        bcs[tag] = (pybamm.Scalar(0), "Neumann")
+                if (
+                    other != neighbor
+                    and other in name_to_child
+                    and tag in mesh.boundary_faces
+                ):
+                    bcs[tag] = (pybamm.Scalar(0), "Neumann")
             return bcs
+
         for child in children:
             primary = child.domain[0]
             child_mesh = self.mesh[primary]

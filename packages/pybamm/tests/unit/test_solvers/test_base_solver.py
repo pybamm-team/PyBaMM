@@ -602,13 +602,17 @@ class TestBaseSolver:
             {"negative electrode": pybamm.Uniform1DSubMesh},
             {x_n: 5},
         )
-        disc = pybamm.Discretisation(mesh, {"negative electrode": pybamm.FiniteVolume()})
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
         disc.process_model(model)
 
         with pytest.raises(pybamm.SolverError, match=r"shape \(5, 1\)"):
             pybamm.IDAKLUSolver().solve(model, [0, 1])
         # the reduction an event needs is accepted and fires at c = 0.5
-        model.events[0] = pybamm.Event("Field event", disc.process_symbol(pybamm.min(c) - 0.5))
+        model.events[0] = pybamm.Event(
+            "Field event", disc.process_symbol(pybamm.min(c) - 0.5)
+        )
         solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
         assert solution.termination == "event: Field event"
         assert solution.t[-1] == pytest.approx(np.log(2), rel=1e-3)

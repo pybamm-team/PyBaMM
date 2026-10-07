@@ -477,7 +477,9 @@ class TestAuxiliaryDomains:
                 repeated_var, field, bcs(repeated_var, boundary_value)
             ).evaluate(),
             method.laplacian(
-                repeated_var, field, bcs(repeated_var, pybamm.Vector(right, domain="aux"))
+                repeated_var,
+                field,
+                bcs(repeated_var, pybamm.Vector(right, domain="aux")),
             ).evaluate(),
             atol=1e-12,
         )
@@ -1294,9 +1296,15 @@ class TestFiniteVolumeUnstructuredBehavior:
             x_p = pybamm.SpatialVariable("x_p", "positive electrode")
             z = pybamm.SpatialVariable("z", "current collector")
             geometry = {
-                "negative electrode": {x_n: {"min": 0, "max": 1}, z: {"min": 0, "max": 1}},
+                "negative electrode": {
+                    x_n: {"min": 0, "max": 1},
+                    z: {"min": 0, "max": 1},
+                },
                 "separator": {x_s: {"min": 1, "max": 2}, z: {"min": 0, "max": 1}},
-                "positive electrode": {x_p: {"min": 2, "max": 3}, z: {"min": 0, "max": 1}},
+                "positive electrode": {
+                    x_p: {"min": 2, "max": 3},
+                    z: {"min": 0, "max": 1},
+                },
             }
             generator = pybamm.UnstructuredMeshGenerator(element_type="quad")
             submesh_types = dict.fromkeys(geometry, generator)
