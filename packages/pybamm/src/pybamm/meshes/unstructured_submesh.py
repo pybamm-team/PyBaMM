@@ -940,7 +940,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         nodes = mesh.points
 
         # The requested domain is the one the geometry's spatial variables live on
-        domain_name = self._domain_name_from_lims(lims)
+        domain_name = self._domain_name_from_lims(lims, self.subdomain_mapping)
 
         # Extract supported cells (triangles/quads or tets/hexes)
         cells, cell_type = self._extract_supported_cells(mesh)
@@ -1023,16 +1023,26 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         return f"UserSuppliedUnstructuredMesh({self.filepath})"
 
     @staticmethod
-    def _domain_name_from_lims(lims):
-        # The geometry keys are the domain's spatial variables, so their
-        # domain names the region; string keys are standard spatial variables
+    def _domain_name_from_lims(lims, subdomain_mapping=()):
+        """The domain of the geometry's spatial variables, preferring one in
+        ``subdomain_mapping``; string keys are standard spatial variables."""
+        candidates = []
         for var in lims:
             if var == "tabs":
                 continue
             if isinstance(var, str):
                 var = getattr(pybamm.standard_spatial_vars, var, None)
             if var is not None and len(var.domain) == 1:
-                return var.domain[0]
+                candidates.append(var.domain[0])
+        # Standard y and z live on the current collector whichever domain
+        # they mesh, so they only name it when nothing else does
+        for pool in (
+            [c for c in candidates if c in subdomain_mapping],
+            [c for c in candidates if c != "current collector"],
+            candidates,
+        ):
+            if pool:
+                return pool[0]
         return None
 
     @staticmethod

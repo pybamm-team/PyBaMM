@@ -861,6 +861,15 @@ class TestFileGenerators:
         # x_ncc shares the x_n prefix but lives on its own domain
         x_ncc = pybamm.SpatialVariable("x_ncc", domain="negative current collector")
         assert f({x_ncc: {}}) == "negative current collector"
+        # the standard y and z live on the current collector: key order and
+        # their position must not pick it over the electrode
+        assert f({"z": {}, "x_n": {}}) == "negative electrode"
+        assert f({"y": {}, "z": {}, "x_p": {}}) == "positive electrode"
+        assert f({"z": {}}) == "current collector"
+        # a domain in the mapping wins over any other
+        assert f({x: {}, x_ncc: {}}, {"negative current collector": 1}) == (
+            "negative current collector"
+        )
         # a multi-domain variable does not name a single region
         x_cell = pybamm.SpatialVariable(
             "x", domain=["negative electrode", "separator", "positive electrode"]
