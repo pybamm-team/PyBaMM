@@ -47,7 +47,7 @@ one whose job never reported, not a pass.
 
 | Model | Results | Last passing |
 | --- | --- | --- |
-| linearised_spm | `26.7.1.0`: pass, `26.8.0.0`: pass, `main`: pass | 26.8.0.0 |
+| linearised_spm | `26.8.0.0`: pass, `26.9.0.0`: pass, `main`: pass | 26.9.0.0 |
 | multilayer_3d_thermal | not yet run | — |
 
 ```{toctree}
