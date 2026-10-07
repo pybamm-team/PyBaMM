@@ -56,8 +56,8 @@ def _preprocess_binary(
 
     # Do some broadcasting in special cases, to avoid having to do this manually
     if (
-        left._domains["primary"] != []
-        and right._domains["primary"] != []
+        left._domains["primary"]
+        and right._domains["primary"]
         and left._domains["primary"] != right._domains["primary"]
     ):
         if left._domains["primary"] == right._domains["secondary"]:
@@ -92,7 +92,7 @@ class BinaryOperator(pybamm.Symbol):
     ) -> None:
         left, right = _preprocess_binary(left_child, right_child)
 
-        domains = self.get_children_domains([left, right])
+        domains = self._combine_children_domains([left, right])
         super().__init__(name, children=[left, right], domains=domains)
 
     @property
@@ -106,7 +106,9 @@ class BinaryOperator(pybamm.Symbol):
         )
         children = list(self._children)
         children[0] = pybamm.convert_to_symbol(value)
-        object.__setattr__(self, "_children", children)
+        object.__setattr__(
+            self, "_children", pybamm.expression_tree.symbol.SymbolChildren(children)
+        )
 
     @property
     def right(self) -> pybamm.Symbol:
@@ -119,7 +121,9 @@ class BinaryOperator(pybamm.Symbol):
         )
         children = list(self._children)
         children[1] = pybamm.convert_to_symbol(value)
-        object.__setattr__(self, "_children", children)
+        object.__setattr__(
+            self, "_children", pybamm.expression_tree.symbol.SymbolChildren(children)
+        )
 
     @classmethod
     def _from_json(cls, snippet: dict):
@@ -264,7 +268,7 @@ class BinaryOperator(pybamm.Symbol):
         Method to serialise a BinaryOperator object into JSON.
         """
 
-        json_dict = {"name": self.name, "domains": self._domains}
+        json_dict = {"name": self.name, "domains": self.domains}
 
         return json_dict
 
@@ -1147,10 +1151,9 @@ def _simplify_elementwise_binary_broadcasts(
                     return out
         return symbol
 
-    # No need to broadcast if the other symbol already has the shape that is being
-    # broadcasted to
-    # Do this recursively
-    if left._domains == right._domains:
+    # a broadcast to the other side's shape is redundant; interned domains are equal
+    # only if identical
+    if left._domains is right._domains:
         if isinstance(left, pybamm.Broadcast) and left.broadcasts_to_nodes:
             left = unpack_broadcast_recursive(left)
         elif isinstance(right, pybamm.Broadcast) and right.broadcasts_to_nodes:

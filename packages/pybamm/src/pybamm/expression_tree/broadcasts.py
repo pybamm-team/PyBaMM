@@ -9,6 +9,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 import pybamm
+from pybamm.expression_tree.symbol import _domain_list
 from pybamm.type_definitions import (
     AuxiliaryDomainType,
     DomainsType,
@@ -117,8 +118,7 @@ class PrimaryBroadcast(Broadcast):
         child = cast(pybamm.Symbol, child)
 
         # Convert domain to list if it's a string
-        if isinstance(broadcast_domain, str):
-            broadcast_domain = [broadcast_domain]
+        broadcast_domain = _domain_list(broadcast_domain)
         # perform some basic checks and set attributes
         domains = self.check_and_set_domains(child, broadcast_domain)
         self.broadcast_domain = broadcast_domain
@@ -192,7 +192,7 @@ class PrimaryBroadcast(Broadcast):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "broadcast_domain": self.broadcast_domain,
         }
 
@@ -260,8 +260,7 @@ class SecondaryBroadcast(Broadcast):
         name: str | None = None,
     ):
         # Convert domain to list if it's a string
-        if isinstance(broadcast_domain, str):
-            broadcast_domain = [broadcast_domain]
+        broadcast_domain = _domain_list(broadcast_domain)
         # perform some basic checks and set attributes
         domains = self.check_and_set_domains(child, broadcast_domain)
         self.broadcast_domain = broadcast_domain
@@ -342,7 +341,7 @@ class SecondaryBroadcast(Broadcast):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "broadcast_domain": self.broadcast_domain,
         }
 
@@ -410,8 +409,7 @@ class TertiaryBroadcast(Broadcast):
         name: str | None = None,
     ):
         # Convert domain to list if it's a string
-        if isinstance(broadcast_domain, str):
-            broadcast_domain = [broadcast_domain]
+        broadcast_domain = _domain_list(broadcast_domain)
         # perform some basic checks and set attributes
         domains = self.check_and_set_domains(child, broadcast_domain)
         self.broadcast_domain = broadcast_domain
@@ -479,7 +477,7 @@ class TertiaryBroadcast(Broadcast):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "broadcast_domain": self.broadcast_domain,
         }
 
@@ -541,9 +539,12 @@ class FullBroadcast(Broadcast):
 
         if isinstance(auxiliary_domains, str):
             auxiliary_domains = {"secondary": auxiliary_domains}
-        broadcast_domains = self.read_domain_or_domains(
-            broadcast_domain, auxiliary_domains, broadcast_domains
-        )
+        broadcast_domains = {
+            level: _domain_list(names)
+            for level, names in self._read_domain_or_domains(
+                broadcast_domain, auxiliary_domains, broadcast_domains
+            ).items()
+        }
         # perform some basic checks and set attributes
         domains = self.check_and_set_domains(child, broadcast_domains)
         self.broadcast_domain = broadcast_domains["primary"]
@@ -569,7 +570,7 @@ class FullBroadcast(Broadcast):
         return self.__class__(child, broadcast_domains=self._domains)
 
     def to_json(self):
-        return {"name": self.name, "domains": self._domains}
+        return {"name": self.name, "domains": self.domains}
 
     @classmethod
     def _from_json(cls, snippet):

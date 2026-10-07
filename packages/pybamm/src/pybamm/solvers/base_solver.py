@@ -8,6 +8,7 @@ import warnings
 
 import casadi
 import numpy as np
+import numpy.typing as npt
 
 import pybamm
 from pybamm import ParameterValues
@@ -181,8 +182,9 @@ class BaseSolver:
     @root_method.setter
     def root_method(self, method):
         if method == "nonlinear_solver":
-            # use the tighter of the two tolerances
-            atol = min(self.root_tol, self.atol)
+            # use the tighter of the two tolerances; a per-state atol contributes
+            # its tightest entry, since the root solver takes a single tolerance
+            atol = min(self.root_tol, float(np.min(self.atol)))
             method = pybamm.NonlinearSolver(
                 atol=atol, rtol=self.rtol, on_failure=self.on_failure
             )
@@ -401,13 +403,12 @@ class BaseSolver:
         len_tot = model.len_rhs_and_alg
         y_zero = np.zeros((len_tot, 1))
 
-        casadi_format = model.convert_to_format == "casadi"
+        stacked = model.uses_stacked_inputs
         model.y0_list = []
         model.y0S_list = [] if model.jacp_initial_conditions_eval is not None else None
         for ipts in inputs:
-            if casadi_format:
-                # stack inputs
-                inputs_y0_ics = casadi.vertcat(*[x for x in ipts.values()])
+            if stacked:
+                inputs_y0_ics = stack_inputs(ipts)
             else:
                 inputs_y0_ics = ipts
 
@@ -416,7 +417,7 @@ class BaseSolver:
             )
 
             if model.jacp_initial_conditions_eval is not None:
-                if casadi_format:
+                if stacked:
                     inputs_jacp_ics = inputs_y0_ics
                 else:
                     # we are calculating the derivative wrt the inputs
@@ -805,15 +806,17 @@ class BaseSolver:
 
         inputs_list = inputs_list or [{}]
 
-        ninputs = len(inputs_list)
-        if ninputs == 1:
-            new_solution = self._integrate_single(
-                model,
-                t_eval,
-                inputs_list[0],
-                model.y0_list[0],
-            )
-            new_solutions = [new_solution]
+        if len(inputs_list) == 1:
+            new_solutions = [
+                self._integrate_single(model, t_eval, inputs_list[0], model.y0_list[0])
+            ]
+        elif nproc == 1:
+            # A one-process pool runs the same solves in the same order as this
+            # loop, plus a spawn and a pickle of the model per input set.
+            new_solutions = [
+                self._integrate_single(model, t_eval, inputs, y0)
+                for inputs, y0 in zip(inputs_list, model.y0_list, strict=True)
+            ]
         else:
             with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
                 model_list = [model] * len(inputs_list)
@@ -1217,17 +1220,18 @@ class BaseSolver:
         if num_terminate_events == 0:
             return
 
-        if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        inputs = inputs_dict
+        if model.uses_stacked_inputs:
+            inputs = stack_inputs(inputs_dict)
 
         events_eval = np.empty(num_terminate_events)
         for idx, event in enumerate(model.terminate_events_eval):
-            if model.convert_to_format == "casadi":
+            if model.uses_stacked_inputs:
                 event_eval = event(t_eval[0], y0, inputs)
-            elif model.convert_to_format in ["python", "jax"]:
+            else:
                 event_eval = event(t=t_eval[0], y=y0, inputs=inputs_dict)
-                if not isinstance(event_eval, float):
-                    event_eval = event_eval.item()
+            if not isinstance(event_eval, float):
+                event_eval = np.asarray(event_eval).item()
             events_eval[idx] = event_eval
 
         if events_eval.min() <= 0:
@@ -1239,6 +1243,68 @@ class BaseSolver:
             event_names = [termination_events[idx].name for idx in idxs]
             raise pybamm.SolverError(
                 f"Events {event_names} are non-positive at initial conditions with inputs {inputs_dict}"
+            )
+
+    @staticmethod
+    def _overlay_options(
+        defaults: dict, user_options: dict | None, *, solver_name: str
+    ) -> dict:
+        """Overlay ``user_options`` on ``defaults``, rejecting unknown keys.
+
+        Parameters
+        ----------
+        defaults : dict
+            One entry per known option.
+        user_options : dict or None
+            Caller overrides.
+        solver_name : str
+            Solver named in the error message.
+
+        Returns
+        -------
+        dict
+            ``defaults`` with ``user_options`` applied.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If ``user_options`` has a key that ``defaults`` does not.
+        """
+        user_options = user_options or {}
+        unknown = sorted(set(user_options) - set(defaults))
+        if unknown:
+            raise pybamm.SolverError(
+                f"Unknown {solver_name} solver option(s): {', '.join(unknown)}. "
+                f"Known options are: {', '.join(sorted(defaults))}."
+            )
+        return defaults | user_options
+
+    @staticmethod
+    def _check_restart_sensitivities(old_solution: pybamm.Solution) -> None:
+        """Reject a sensitivity restart from a solution that carries none.
+
+        Parameters
+        ----------
+        old_solution : :class:`pybamm.Solution`
+            The solution the next step would restart from.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If ``old_solution`` returned output variables only and so holds no
+            state sensitivities to seed ``dy0/dp`` from.
+        """
+        if isinstance(old_solution, pybamm.EmptySolution):
+            return
+        # Not gated on _all_sensitivities: IDAKLU populates it at output width,
+        # which cannot seed a state-width dy0/dp.
+        if old_solution.variables_returned:
+            raise pybamm.SolverError(
+                "Cannot continue a sensitivity solve from a solution that "
+                "returned output variables only: the step boundary has no "
+                "state sensitivities to seed dy0/dp from. Drop "
+                "'output_variables' or 'calculate_sensitivities' for "
+                "multi-step solves."
             )
 
     def _set_sens_initial_conditions_from(
@@ -1489,6 +1555,8 @@ class BaseSolver:
             pybamm.logger.verbose(f"Start stepping {model.name} with {self.name}")
 
         using_sensitivities = len(model.calculate_sensitivities) > 0
+        if using_sensitivities:
+            self._check_restart_sensitivities(old_solution)
 
         if isinstance(old_solution, pybamm.EmptySolution):
             if not first_step_this_model:
@@ -1825,6 +1893,48 @@ class BaseSolver:
         ordered_inputs = {name: inputs_in_model[name] for name in ordered_inputs_names}
 
         return ordered_inputs
+
+
+def flatten_inputs(inputs_dict: dict) -> npt.NDArray[np.float64]:
+    """Flatten ``{name: value}`` into one 1D array.
+
+    Values are concatenated in dict-key order, and a vector-valued input
+    contributes its whole block.
+
+    Parameters
+    ----------
+    inputs_dict : dict
+        Input values for one input set.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        Flat ``float64`` vector, empty for an empty dict.
+    """
+    if not inputs_dict:
+        return np.zeros(0, dtype=np.float64)
+    return np.concatenate(
+        [
+            np.atleast_1d(np.asarray(v, dtype=np.float64)).ravel()
+            for v in inputs_dict.values()
+        ]
+    )
+
+
+def stack_inputs(inputs_dict: dict) -> casadi.DM:
+    """Stack ``{name: value}`` into one column vector, in dict-key order.
+
+    Parameters
+    ----------
+    inputs_dict : dict
+        Input values for one input set.
+
+    Returns
+    -------
+    :class:`casadi.DM`
+        Column vector of the input values, with zero rows for an empty dict.
+    """
+    return casadi.vertcat(*inputs_dict.values())
 
 
 def process(
