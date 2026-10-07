@@ -961,9 +961,12 @@ def _face_method_cases():
     harmonic = {
         "w * grad(u)": grad_u,
         "w * (grad(u) - grad(w))": pybamm.Subtraction(grad_u, grad_w),
-        "w * (grad(u) / w)": pybamm.Division(grad_u, w),
-        "w * (w * (w * grad(u)))": pybamm.Multiplication(
-            w, pybamm.Multiplication(w, grad_u)
+        "w * (2 * grad(u))": pybamm.Multiplication(pybamm.Scalar(2), grad_u),
+        "w * (2 * (grad(u) - grad(w)))": pybamm.Multiplication(
+            pybamm.Scalar(2), pybamm.Subtraction(grad_u, grad_w)
+        ),
+        "w * ((grad(u) - grad(w)) / 2)": pybamm.Division(
+            pybamm.Subtraction(grad_u, grad_w), pybamm.Scalar(2)
         ),
         "w * ((w * grad(u)) / w - grad(w))": pybamm.Subtraction(
             pybamm.Division(pybamm.Multiplication(w, grad_u), w), grad_w
@@ -984,6 +987,11 @@ def _face_method_cases():
             pybamm.Subtraction(grad_u, grad_w), w
         ),
         # a factor of an already formed flux, such as t_plus * i_e
+        "w * (w * grad(u))": pybamm.Multiplication(w, grad_u),
+        "w * (grad(u) / w)": pybamm.Division(grad_u, w),
+        "w * (w * (w * grad(u)))": pybamm.Multiplication(
+            w, pybamm.Multiplication(w, grad_u)
+        ),
         "w * (w * (grad(u) - grad(w)))": pybamm.Multiplication(
             w, pybamm.Subtraction(grad_u, grad_w)
         ),
@@ -1069,6 +1077,14 @@ class TestFaceCoefficientAveraging:
                 lambda D, t, u, v: D * (t**2 * pybamm.grad(u) / t**4 - pybamm.grad(v)),
                 id="D * (t**2 * grad(u) / t**4 - grad(v))",
             ),
+            pytest.param(
+                lambda D, t, u, v: D * (2 * (pybamm.grad(u) - pybamm.grad(v))),
+                id="D * (2 (grad(u) - grad(v)))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * ((pybamm.grad(u) - pybamm.grad(v)) / 2),
+                id="D * ((grad(u) - grad(v)) / 2)",
+            ),
         ],
     )
     def test_two_material_slab_is_exact(self, flux):
@@ -1083,12 +1099,22 @@ class TestFaceCoefficientAveraging:
         )
         assert np.abs(residual).max() > 1
 
-    def test_sign_changing_factor_of_a_flux_is_finite(self):
+    @pytest.mark.parametrize(
+        "flux",
+        [
+            pytest.param(
+                lambda D, t, u, v: t * (D * (pybamm.grad(u) - pybamm.grad(v))),
+                id="t * (D * (grad(u) - grad(v)))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: t * (D * pybamm.grad(u)), id="t * (D * grad(u))"
+            ),
+        ],
+    )
+    def test_sign_changing_factor_of_a_flux_is_finite(self, flux):
         # the harmonic mean of t = 1, -1 divides by zero where the cells on
         # both sides of a face are equal, as they are within each domain here
-        residual = self._two_material_slab(
-            lambda D, t, u, v: t * (D * (pybamm.grad(u) - pybamm.grad(v)))
-        )
+        residual = self._two_material_slab(flux)
         assert np.all(np.isfinite(residual))
 
     @pytest.mark.parametrize(("bin_op", "edge_child", "expected"), _face_method_cases())

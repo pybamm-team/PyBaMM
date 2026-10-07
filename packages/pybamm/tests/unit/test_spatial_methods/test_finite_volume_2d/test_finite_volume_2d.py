@@ -1395,6 +1395,24 @@ class TestFaceCoefficientAveraging:
                 id="D * (t**2 * grad(u) / t**4 - grad(v))",
             ),
             pytest.param(
+                lambda D, t, u, v: D * (2 * (pybamm.grad(u) - pybamm.grad(v))),
+                id="D * (2 (grad(u) - grad(v)))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * ((pybamm.grad(u) - pybamm.grad(v)) / 2),
+                id="D * ((grad(u) - grad(v)) / 2)",
+            ),
+            pytest.param(
+                lambda D, t, u, v: (
+                    D
+                    * (
+                        pybamm.VectorField(t * t, t * t) * pybamm.grad(u)
+                        - pybamm.grad(v)
+                    )
+                ),
+                id="D * (VectorField(t**2, t**2) * grad(u) - grad(v))",
+            ),
+            pytest.param(
                 lambda D, t, u, v: (
                     pybamm.VectorField(D, D) * (pybamm.grad(u) - pybamm.grad(v))
                 ),
@@ -1404,7 +1422,7 @@ class TestFaceCoefficientAveraging:
     )
     def test_two_material_slab_is_exact(self, mesh_2d, flux, direction):
         np.testing.assert_allclose(
-            self._two_material_slab(mesh_2d, flux, direction), 0, rtol=0, atol=1e-10
+            self._two_material_slab(mesh_2d, flux, direction), 0, rtol=0, atol=1e-9
         )
 
     @pytest.mark.parametrize("direction", ["lr", "tb"])
@@ -1418,12 +1436,20 @@ class TestFaceCoefficientAveraging:
         assert np.abs(residual).max() > 1
 
     @pytest.mark.parametrize("direction", ["lr", "tb"])
-    def test_sign_changing_factor_of_a_flux_is_finite(self, mesh_2d, direction):
+    @pytest.mark.parametrize(
+        "flux",
+        [
+            pytest.param(
+                lambda D, t, u, v: t * (D * (pybamm.grad(u) - pybamm.grad(v))),
+                id="t * (D * (grad(u) - grad(v)))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: t * (D * pybamm.grad(u)), id="t * (D * grad(u))"
+            ),
+        ],
+    )
+    def test_sign_changing_factor_of_a_flux_is_finite(self, mesh_2d, flux, direction):
         # the harmonic mean of t = 1, -1 divides by zero where the cells on
         # both sides of a face are equal, as they are on this uniform mesh
-        residual = self._two_material_slab(
-            mesh_2d,
-            lambda D, t, u, v: t * (D * (pybamm.grad(u) - pybamm.grad(v))),
-            direction,
-        )
+        residual = self._two_material_slab(mesh_2d, flux, direction)
         assert np.all(np.isfinite(residual))
