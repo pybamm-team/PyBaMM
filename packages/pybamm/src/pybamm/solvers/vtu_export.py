@@ -14,6 +14,9 @@ import pybamm
 from pybamm.meshes.unstructured_submesh import _geometric_tolerance
 from pybamm.plotting.plot_vtk import _build_vtk_grid, _set_cell_scalars
 
+# output times evaluated together; bounds memory to cells x chunk per variable
+_TIME_CHUNK_SIZE = 64
+
 
 def _classify(name, processed_variable):
     """Return ``"cell"``, ``"vector"`` or ``"scalar"`` for an exportable variable."""
@@ -97,6 +100,17 @@ class _UnionMesh:
         out = np.full((self.npts, *values.shape[1:]), np.nan)
         out[self._cell_maps[id(mesh)]] = values
         return out
+
+
+def _evaluate(union, kind, processed_variable, times):
+    """Values of a variable on the union cells: ``(cells, [3,] times)``."""
+    data = processed_variable(t=times)
+    if kind == "vector":
+        data = np.stack(data, axis=1)
+        # VTK vectors have 3 components; the third is zero for 2D meshes
+        padding = np.zeros((data.shape[0], 3 - data.shape[1], data.shape[2]))
+        data = np.concatenate([data, padding], axis=1)
+    return union.scatter(processed_variable.mesh, data)
 
 
 def _vtk_array_name(name):
@@ -240,17 +254,6 @@ def save_vtu(
         )
     union = _UnionMesh(meshes.values())
 
-    # evaluate each variable once for all output times: (cells, [components,] times)
-    cell_values = {}
-    for name, kind, processed_variable in spatial:
-        data = processed_variable(t=times)
-        if kind == "vector":
-            data = np.stack(data, axis=1)
-            # VTK vectors have 3 components; the third is zero for 2D meshes
-            padding = np.zeros((data.shape[0], 3 - data.shape[1], data.shape[2]))
-            data = np.concatenate([data, padding], axis=1)
-        cell_values[name] = (kind, union.scatter(processed_variable.mesh, data))
-
     os.makedirs(os.path.join(directory, stem), exist_ok=True)
 
     grid = _build_vtk_grid(union)
@@ -258,24 +261,31 @@ def save_vtu(
     writer.SetInputData(grid)
     width = max(4, len(str(len(times) - 1)))
     entries = []
-    for i, time in enumerate(times):
-        for name, (kind, values) in cell_values.items():
-            if kind == "vector":
-                _set_cell_vectors(grid, name, values[..., i])
-            else:
-                _set_cell_scalars(grid, name, values[:, i])
-        # ParaView reads the "TimeValue" field as the dataset's time
-        _set_field_data(grid, "TimeValue", time)
-        for name, values in scalars:
-            _set_field_data(grid, name, values[i])
+    for start in range(0, len(times), _TIME_CHUNK_SIZE):
+        chunk = times[start : start + _TIME_CHUNK_SIZE]
+        cell_values = [
+            (name, kind, _evaluate(union, kind, processed_variable, chunk))
+            for name, kind, processed_variable in spatial
+        ]
+        for j, time in enumerate(chunk):
+            i = start + j
+            for name, kind, values in cell_values:
+                if kind == "vector":
+                    _set_cell_vectors(grid, name, values[..., j])
+                else:
+                    _set_cell_scalars(grid, name, values[:, j])
+            # ParaView reads the "TimeValue" field as the dataset's time
+            _set_field_data(grid, "TimeValue", time)
+            for name, values in scalars:
+                _set_field_data(grid, name, values[i])
 
-        # the .pvd stores paths relative to itself, so the output can be moved
-        relative_path = f"{stem}/{stem}_{i:0{width}d}.vtu"
-        writer.SetFileName(os.path.join(directory, relative_path))
-        # some VTK versions return 1 on failure and only set the error code
-        if writer.Write() != 1 or writer.GetErrorCode() != 0:
-            raise OSError(f"VTK failed to write {writer.GetFileName()!r}")
-        entries.append((float(time), relative_path))
+            # the .pvd stores paths relative to itself, so the output can be moved
+            relative_path = f"{stem}/{stem}_{i:0{width}d}.vtu"
+            writer.SetFileName(os.path.join(directory, relative_path))
+            # some VTK versions return 1 on failure and only set the error code
+            if writer.Write() != 1 or writer.GetErrorCode() != 0:
+                raise OSError(f"VTK failed to write {writer.GetFileName()!r}")
+            entries.append((float(time), relative_path))
 
     _write_pvd(filename, entries)
     return filename

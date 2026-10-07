@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 import pybamm
+from pybamm.solvers import vtu_export
 
 vtk = pytest.importorskip("vtk")
 from vtk.util.numpy_support import vtk_to_numpy
@@ -159,6 +160,27 @@ class TestSaveVtu:
             np.testing.assert_allclose(flux, expected)
 
             # 0D variables and the time are stored as field data
+            np.testing.assert_allclose(vtu.field_data["TimeValue"], [t])
+            np.testing.assert_allclose(vtu.field_data["Voltage [V]"], [4 - t])
+
+    def test_times_are_written_in_chunks(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(vtu_export, "_TIME_CHUNK_SIZE", 2)
+        solution, _ = _two_region_solution(2)
+        times = [0.0, 0.5, 1.0, 1.5, 2.0]
+        solution.save_vtu(
+            tmp_path / "out",
+            ["Both regions [K]", "Flux [A.m-2]", "Voltage [V]"],
+            t=times,
+        )
+
+        for i, t in enumerate(times):
+            vtu = _read(tmp_path, f"out/out_{i:04d}.vtu")
+            expected = (1 + 0.5 * t) * np.arange(1.0, 6.0)
+            np.testing.assert_allclose(vtu.cell_data["Both regions [K]"][0], expected)
+            np.testing.assert_allclose(
+                vtu.cell_data["Flux [A.m-2]"][0],
+                np.column_stack([expected, 2 * expected, np.zeros(5)]),
+            )
             np.testing.assert_allclose(vtu.field_data["TimeValue"], [t])
             np.testing.assert_allclose(vtu.field_data["Voltage [V]"], [4 - t])
 
