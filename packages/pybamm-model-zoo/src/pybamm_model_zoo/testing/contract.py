@@ -62,6 +62,8 @@ MODEL_KEYS = frozenset(
         "tests",
     }
 )
+#: The one license an in-tree model may carry, matching the zoo package's own.
+ZOO_LICENSE = "BSD-3-Clause"
 #: README headings the docs pages and the contributor guide both rely on.
 REQUIRED_README_SECTIONS = ("Summary", "Usage", "Validation", "Citation")
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -326,7 +328,15 @@ def check_solve(entry: ModelEntry) -> pybamm.Solution:
 
 @_register("packaging", scope=PACKAGING)
 def check_packaging(entry: ModelEntry) -> None:
-    """An in-tree model is importable as part of the zoo, with its extra declared."""
+    """An in-tree model is importable as part of the zoo, with its extra declared.
+
+    It must also be BSD-3-Clause, since the zoo ships as one package under that
+    license.
+    """
+    assert entry.license == ZOO_LICENSE, (
+        f"{entry.manifest_path}: in-tree models must be licensed '{ZOO_LICENSE}', "
+        f"got '{entry.license}'; host other licenses as an external collection"
+    )
     assert (entry.path / "__init__.py").is_file(), (
         f"{entry.path / '__init__.py'}: missing, so the folder is not importable"
     )

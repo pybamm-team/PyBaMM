@@ -123,7 +123,7 @@ hold an in-tree model and a third-party collection to the right rules.
 | `well_posed` | model | `model.check_well_posedness()` passes. |
 | `build` | model | `pybamm.Simulation(model).build()` succeeds. |
 | `solve` | model | The model solves for the manifest's `solve_time`, and every `key_variables` entry is finite read through the interpolating call interface. |
-| `packaging` | packaging | An in-tree model is importable as `pybamm_model_zoo.<slug>`, and any extra it declares exists and is aggregated into `zoo-all`. |
+| `packaging` | packaging | An in-tree model is licensed BSD-3-Clause and importable as `pybamm_model_zoo.<slug>`, and any extra it declares exists and is aggregated into `zoo-all`. |
 | `docs` | repo | The generated docs page is present *and current*, so docs cannot drift from code. |
 | `codeowners` | repo | `.github/CODEOWNERS` names an owner for your folder, so ownership cannot be dropped silently. |
 
@@ -169,7 +169,7 @@ collision, so a third-party package cannot shadow one.
 
 Short by design — the contract suite does the rest.
 
-- [ ] License is OSI-approved and compatible with BSD-3-Clause.
+- [ ] License is BSD-3-Clause.
 - [ ] No edits to `packages/pybamm/src/` in the same pull request; core changes
       are split out.
 - [ ] Third-party dependencies declared as a `zoo-<slug>` extra.
