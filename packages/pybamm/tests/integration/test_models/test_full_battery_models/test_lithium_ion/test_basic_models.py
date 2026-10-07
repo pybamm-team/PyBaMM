@@ -299,6 +299,26 @@ class TestBasicDFN2DVoltage:
     voltage must be a face average rather than the value at one corner, which
     depends on the z mesh."""
 
+    def test_voltage_matches_corner_with_uniform_properties(self):
+        # phi_s_p is uniform along the face, so the average equals the corner value
+        model = pybamm.lithium_ion.BasicDFN2D()
+        phi_s_p = model.variables["Positive electrode potential [V]"]
+        model.variables["Corner voltage [V]"] = pybamm.boundary_value(
+            phi_s_p, "top-right"
+        )
+        var_pts = {
+            var: COARSE_UNSTRUCTURED_VAR_PTS.get(var, 3)
+            for var in model.default_var_pts
+        }
+        t_eval = np.linspace(0, 3000, 11)
+        solution = pybamm.Simulation(model, var_pts=var_pts).solve([0, 3000])
+        np.testing.assert_allclose(
+            solution["Voltage [V]"](t=t_eval),
+            solution["Corner voltage [V]"](t=t_eval),
+            rtol=0,
+            atol=1e-9,
+        )
+
     def test_voltage_independent_of_z_mesh(self):
         parameter_values = pybamm.ParameterValues("Marquis2019")
         L_z = parameter_values["Electrode height [m]"]
