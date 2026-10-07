@@ -2966,3 +2966,108 @@ class TestOrthogonalityTolerance:
         skew = np.linalg.norm(k, axis=1)
         assert skew.max() > 0.4
         assert (skew > 0.4).sum() >= mesh.n_internal_faces // 2
+
+
+class TestInterfacePlaneMatching:
+    @staticmethod
+    def _generate(first_var, first_range, element_type="quad"):
+        """2D quad mesh spanning ``first_range`` along ``first_var`` and [0, 1] in z."""
+        z = pybamm.standard_spatial_vars.z
+        lims = {
+            first_var: {"min": first_range[0], "max": first_range[1]},
+            z: {"min": 0.0, "max": 1.0},
+        }
+        npts = {first_var.name: 2, z.name: 3}
+        return pybamm.UnstructuredMeshGenerator(element_type=element_type)(lims, npts)
+
+    def test_generator_records_coordinate_axes(self):
+        x_n = pybamm.standard_spatial_vars.x_n
+        y = pybamm.standard_spatial_vars.y
+        assert self._generate(x_n, (0, 1)).coordinate_axes == ("x", "z")
+        assert self._generate(y, (0, 1)).coordinate_axes == ("y", "z")
+
+        # direction takes precedence over the name token
+        through = pybamm.SpatialVariable(
+            "w", "current collector", coord_sys="cartesian", direction="fb"
+        )
+        assert self._generate(through, (0, 1)).coordinate_axes == ("y", "z")
+
+        unnamed = pybamm.SpatialVariable("w", "current collector")
+        assert self._generate(unnamed, (0, 1)).coordinate_axes is None
+
+    def test_coincident_meshes_in_different_planes_are_not_paired(self):
+        # The x-z electrode's x=1 edge and the y-z collector's y=1 edge have
+        # identical 2-column face centroids but are different places.
+        electrode = self._generate(pybamm.standard_spatial_vars.x_n, (0, 1))
+        collector = self._generate(pybamm.standard_spatial_vars.y, (1, 2))
+        np.testing.assert_allclose(
+            electrode.face_centroids[electrode.boundary_faces["right"]],
+            collector.face_centroids[collector.boundary_faces["left"]],
+        )
+
+        a_idx, b_idx, matched = FiniteVolumeUnstructured._interface_face_match(
+            electrode, collector
+        )
+        assert not matched
+        assert a_idx.size == b_idx.size == 0
+
+        FiniteVolumeUnstructured().build(
+            _MeshMap({("electrode",): electrode, ("collector",): collector})
+        )
+        assert electrode.interface_data == {}
+        assert collector.interface_data == {}
+
+    def test_same_plane_neighbours_are_paired(self):
+        negative = self._generate(pybamm.standard_spatial_vars.x_n, (0, 1))
+        separator = self._generate(pybamm.standard_spatial_vars.x_s, (1, 2))
+
+        a_idx, b_idx, matched = FiniteVolumeUnstructured._interface_face_match(
+            negative, separator
+        )
+        assert matched
+        np.testing.assert_array_equal(
+            np.sort(a_idx), np.sort(negative.boundary_faces["right"])
+        )
+        np.testing.assert_allclose(
+            negative.face_centroids[a_idx], separator.face_centroids[b_idx]
+        )
+
+        FiniteVolumeUnstructured().build(
+            _MeshMap({("negative",): negative, ("separator",): separator})
+        )
+        assert negative.interface_data["separator"]["other_mesh"] is separator
+
+    def test_meshes_with_unknown_axes_are_still_paired(self):
+        left = _make_2d_mesh(2, 3, x_range=(0, 0.5))
+        right = self._generate(
+            pybamm.standard_spatial_vars.x_s, (0.5, 1), element_type="triangle"
+        )
+        assert left.coordinate_axes is None
+        assert FiniteVolumeUnstructured._interface_face_match(left, right)[2]
+
+    def test_mesh_skips_stack_pairing_across_planes(self):
+        x_n = pybamm.standard_spatial_vars.x_n
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
+        geometry = {
+            "negative electrode": {x_n: {"min": 0, "max": 1}, z: {"min": 0, "max": 1}},
+            "current collector": {y: {"min": 1, "max": 2}, z: {"min": 0, "max": 1}},
+        }
+        generator = pybamm.UnstructuredMeshGenerator(element_type="quad")
+        mesh = pybamm.Mesh(
+            geometry,
+            {"negative electrode": generator, "current collector": generator},
+            {x_n.name: 2, y.name: 2, z.name: 3},
+        )
+        assert mesh["negative electrode"].interface_data == {}
+        assert mesh["current collector"].interface_data == {}
+
+    def test_combine_keeps_shared_axes(self):
+        negative = self._generate(pybamm.standard_spatial_vars.x_n, (0, 1))
+        separator = self._generate(pybamm.standard_spatial_vars.x_s, (1, 2))
+        combined = UnstructuredSubMesh.combine([negative, separator])
+        assert combined.coordinate_axes == ("x", "z")
+
+        collector = self._generate(pybamm.standard_spatial_vars.y, (1, 2))
+        with pytest.raises(pybamm.GeometryError, match=r"different coordinate"):
+            UnstructuredSubMesh.combine([negative, collector])
