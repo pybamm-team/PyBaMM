@@ -17,6 +17,7 @@
 
 ## Bug fixes
 
+- `BasicDFNUnstructured` now reports `"Voltage [V]"` as the area-weighted mean of the positive electrode potential over the positive face, rather than the value of the single cell nearest the top-right corner. The old value depended on the in-plane mesh and, in 3D, on cell ordering whenever properties vary over the face. ([#5822](https://github.com/pybamm-team/PyBaMM/pull/5822))
 - `NonlinearSolver` now logs its Newton iterations when `pybamm.logger` is at `DEBUG` level; previously they were silently dropped. ([#5849](https://github.com/pybamm-team/PyBaMM/pull/5849))
 - Fixed `FiniteVolume2D` boundary values, gradients and integrals raising an `IndexError` on 2D meshes with fewer than 3 nodes in either direction, even when the extrapolation only needed the other direction. Meshes too coarse for the requested extrapolation order now raise a `DiscretisationError`. ([#5839](https://github.com/pybamm-team/PyBaMM/pull/5839))
 - A per-state `atol` given to `IDAKLUSolver` (or as `model.atol`) can now be a list, tuple or array, so it survives a `to_config`/`from_config` round trip, which returns a JSON list. One without exactly one value per state is rejected with a `SolverError` instead of reaching the integrator, as are booleans, even one among numbers such as `[True, 1e-6]`, and non-real values. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))

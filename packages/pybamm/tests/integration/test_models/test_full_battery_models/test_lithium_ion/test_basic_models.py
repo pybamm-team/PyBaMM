@@ -292,3 +292,43 @@ class TestBasicDFNUnstructured3D(BaseBasicModelTest):
 
         N_e = sol_3d["Electrolyte flux [mol.m-2.s-1]"]
         assert len(N_e.entries) == 3
+
+
+class TestBasicDFNUnstructuredVoltage:
+    """With in-plane property variation phi_s_p varies over the positive face, so
+    the voltage must be a face average rather than the value of one boundary cell,
+    whose position depends on the in-plane mesh."""
+
+    @pytest.mark.parametrize(
+        "dimensionality", [1, 2], ids=["2d_unstructured", "3d_unstructured"]
+    )
+    def test_voltage_independent_of_in_plane_mesh(self, dimensionality):
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        L_y = parameter_values["Electrode width [m]"]
+        L_z = parameter_values["Electrode height [m]"]
+        porosity = parameter_values["Positive electrode porosity"]
+
+        # +/-20% porosity variation over the electrode face
+        def varying_porosity(x, *transverse):
+            *y, z = transverse
+            variation = pybamm.cos(np.pi * z / L_z)
+            if y:
+                variation *= pybamm.cos(np.pi * y[0] / L_y)
+            return porosity * (1 + 0.2 * variation)
+
+        parameter_values["Positive electrode porosity"] = varying_porosity
+
+        t_eval = np.linspace(0, 3000, 11)
+        voltages = []
+        for y_pts, z_pts in [(3, 2), (6, 4)]:
+            model = pybamm.lithium_ion.BasicDFNUnstructured(
+                {"dimensionality": dimensionality}
+            )
+            var_pts = {**COARSE_UNSTRUCTURED_VAR_PTS, "y": y_pts, "z": z_pts}
+            sim = pybamm.Simulation(
+                model, parameter_values=parameter_values, var_pts=var_pts
+            )
+            voltages.append(sim.solve([0, 3000])["Voltage [V]"](t=t_eval))
+
+        # A single corner cell gives mV-level differences between these meshes
+        np.testing.assert_allclose(voltages[1], voltages[0], rtol=0, atol=1e-4)
