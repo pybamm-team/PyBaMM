@@ -247,6 +247,10 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         domains = []
         for raw in mesh:
+            # combined meshes (e.g. made by an earlier Discretisation) are
+            # unions of their parts, so pairing them would mis-tag faces
+            if isinstance(raw, tuple) and len(raw) != 1:
+                continue
             name = raw[0] if isinstance(raw, tuple) else raw
             sm = mesh[raw]
             if isinstance(sm, UnstructuredSubMesh):
