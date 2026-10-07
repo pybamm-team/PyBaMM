@@ -164,6 +164,10 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         """Populate ``interface_data`` and ``iface_<other>`` face buckets for
         a pair of submeshes that share a non-empty conformal interface.
 
+        Interface faces stay in any user tag that holds them: whether a BC on
+        that tag reaches them depends on the variable (see
+        :meth:`_bc_side_faces`), not on the mesh.
+
         If either mesh already has an interface entry for the other (e.g. set
         up by 1D-stack auto-pairing in :class:`pybamm.Mesh` or by a manual
         ``compute_interface_data`` call), this method is a no-op so existing
@@ -209,32 +213,6 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         a_mesh.boundary_faces[a_iface_tag] = a_match
         b_mesh.boundary_faces[b_iface_tag] = b_match
 
-        # Remove interface faces from the axis-aligned buckets so external
-        # BCs don't double-count them.
-        a_match_set = {int(i) for i in a_match}
-        b_match_set = {int(i) for i in b_match}
-        for tag in list(a_mesh.boundary_faces.keys()):
-            if tag.startswith("iface_"):
-                continue
-            keep = np.array(
-                [int(i) not in a_match_set for i in a_mesh.boundary_faces[tag]],
-                dtype=bool,
-            )
-            if keep.any():
-                a_mesh.boundary_faces[tag] = a_mesh.boundary_faces[tag][keep]
-            else:
-                del a_mesh.boundary_faces[tag]
-        for tag in list(b_mesh.boundary_faces.keys()):
-            if tag.startswith("iface_"):
-                continue
-            keep = np.array(
-                [int(i) not in b_match_set for i in b_mesh.boundary_faces[tag]],
-                dtype=bool,
-            )
-            if keep.any():
-                b_mesh.boundary_faces[tag] = b_mesh.boundary_faces[tag][keep]
-            else:
-                del b_mesh.boundary_faces[tag]
         return True
 
     def _auto_compute_all_interfaces(self, mesh):
@@ -297,6 +275,28 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         bcs_out = {}
         name_to_child = {c.domain[0]: c for c in children}
+        # Pairs made by pybamm.Mesh's 1D-stack pairing have interface data but
+        # no face bucket; give them one so this route couples them too
+        for name in name_to_child:
+            mesh = self.mesh[name]
+            if not isinstance(mesh, UnstructuredSubMesh):
+                continue
+            for neighbor_name, data in mesh.interface_data.items():
+                if neighbor_name in name_to_child:
+                    mesh.boundary_faces.setdefault(
+                        f"iface_{neighbor_name}", data["left_faces"]
+                    )
+
+        def side_bcs(mesh, neighbor):
+            # The other coupled interfaces are interior to the variable; as
+            # zero-gradient rows they fit the face gradient as untagged faces
+            bcs = self._external_bcs(mesh, outer_bcs)
+            for other in mesh.interface_data:
+                tag = f"iface_{other}"
+                if other != neighbor and other in name_to_child:
+                    if tag in mesh.boundary_faces:
+                        bcs[tag] = (pybamm.Scalar(0), "Neumann")
+            return bcs
         for child in children:
             primary = child.domain[0]
             child_mesh = self.mesh[primary]
@@ -310,14 +310,6 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 neighbor_child = name_to_child.get(neighbor_name)
                 if neighbor_child is None:
                     continue
-                if f"iface_{neighbor_name}" not in child_mesh.boundary_faces:
-                    pybamm.logger.warning(
-                        f"Domain {primary!r} has interface data for "
-                        f"{neighbor_name!r} but no 'iface_{neighbor_name}' "
-                        "face bucket; skipping the internal BC, so these "
-                        "domains will not be coupled."
-                    )
-                    continue
                 left_disc = disc.process_symbol(child)
                 right_disc = disc.process_symbol(neighbor_child)
                 neighbor_mesh = self.mesh[neighbor_name]
@@ -328,8 +320,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     right_disc,
                     child_mesh,
                     neighbor_mesh,
-                    left_bcs=self._external_bcs(child_mesh, outer_bcs),
-                    right_bcs=self._external_bcs(neighbor_mesh, outer_bcs),
+                    left_bcs=side_bcs(child_mesh, neighbor_name),
+                    right_bcs=side_bcs(neighbor_mesh, primary),
                 )
                 bcs[f"iface_{neighbor_name}"] = (grad, "Neumann")
             bcs_out[child] = bcs
@@ -956,8 +948,10 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         if bcs:
             for side, (bc_value, bc_type) in bcs.items():
                 self._check_bc_type(bc_type)
-                fi_arr = self._boundary_faces_for_side(submesh, side)
+                fi_arr = self._bc_side_faces(submesh, side, bcs)
                 n_bnd = len(fi_arr)
+                if n_bnd == 0:
+                    continue
                 bnd_own = submesh.face_owner[fi_arr]
 
                 E = csr_matrix(
@@ -1021,8 +1015,10 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         for side, (bc_value, bc_type) in bcs.items():
             self._check_bc_type(bc_type)
-            face_indices = self._boundary_faces_for_side(submesh, side)
+            face_indices = self._bc_side_faces(submesh, side, bcs)
             n_bnd = len(face_indices)
+            if n_bnd == 0:
+                continue
             owners = submesh.face_owner[face_indices]
             a_over_v = submesh.face_areas[face_indices] / submesh.cell_volumes[owners]
 
@@ -1055,6 +1051,29 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             L = csr_matrix(L)
         return L, bc_rhs
 
+    @classmethod
+    def _bc_side_faces(cls, submesh, side, bcs, exclude=None):
+        """Faces a BC on ``side`` applies to, given the other BCs in ``bcs``.
+
+        Faces of an ``iface_*`` side that also has a condition in ``bcs``
+        (a neighbour coupled through a concatenation) and the ``exclude``
+        faces are interior to the variable, so they are removed from every
+        other side; a variable on one domain keeps its tags whole.
+        """
+        faces = cls._boundary_faces_for_side(submesh, side)
+        if side.startswith("iface_"):
+            return faces
+        interior = [
+            submesh.boundary_faces[tag]
+            for tag in bcs
+            if tag.startswith("iface_") and tag in submesh.boundary_faces
+        ]
+        if exclude is not None:
+            interior.append(np.asarray(exclude))
+        if not interior:
+            return faces
+        return faces[~np.isin(faces, np.concatenate(interior))]
+
     @staticmethod
     def _boundary_faces_for_side(submesh, side):
         """Boundary-face indices for a BC side, raising when the tag is unknown.
@@ -1067,8 +1086,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             raise pybamm.DiscretisationError(
                 f"No boundary faces tagged {side!r} on this mesh (available "
                 f"tags: {sorted(submesh.boundary_faces)}). The side may be "
-                "misspelled, or its faces were absorbed into an internal "
-                "interface by interface discovery."
+                "misspelled."
             )
         return submesh.boundary_faces[side]
 
@@ -1143,7 +1161,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         kinds[: submesh.n_internal_faces] = self._ROW_INTERNAL
         for side, (_, bc_type) in bcs.items():
             self._check_bc_type(bc_type)
-            faces = self._boundary_faces_for_side(submesh, side)
+            faces = self._bc_side_faces(submesh, side, bcs, interface_faces)
             kinds[faces] = (
                 self._ROW_DIRICHLET if bc_type == "Dirichlet" else self._ROW_NEUMANN
             )
@@ -1286,8 +1304,11 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             submesh, bcs, interface
         )
         bc_vecs = [pybamm.Vector(np.zeros(n * repeats)) for _ in range(d)]
+        interface_faces = None if interface is None else interface["faces"]
         for side, (bc_value, bc_type) in bcs.items():
-            faces = self._boundary_faces_for_side(submesh, side)
+            faces = self._bc_side_faces(submesh, side, bcs, interface_faces)
+            if len(faces) == 0:
+                continue
             owners = submesh.face_owner[faces]
             for k in range(d):
                 coeffs = coeff[owners, k, slot[faces]]

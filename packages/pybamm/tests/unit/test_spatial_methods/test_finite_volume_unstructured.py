@@ -680,11 +680,11 @@ class TestBCValidation:
         # perimeter of [0, 0.5] x [0, 1] minus the shared edge (length 1)
         np.testing.assert_allclose(result.evaluate().sum(), 2.0, atol=1e-12)
 
-    def test_deleted_bucket_message_mentions_interface(self):
+    def test_unknown_side_message_lists_tags(self):
         mesh, method, variable, values = self._setup()
         mesh.boundary_faces["iface_other"] = mesh.boundary_faces.pop("right")
         bcs = {variable: {"right": (pybamm.Scalar(0), "Dirichlet")}}
-        with pytest.raises(pybamm.DiscretisationError, match="interface"):
+        with pytest.raises(pybamm.DiscretisationError, match="'iface_other'"):
             method.laplacian(variable, values, bcs)
 
 
@@ -1283,6 +1283,68 @@ class TestFiniteVolumeUnstructuredBehavior:
         np.testing.assert_allclose(
             left.face_centroids[left.boundary_faces["iface_right"], 0], 0.5
         )
+
+    def test_untagged_neighbour_outside_concatenation_keeps_bcs(self, caplog):
+        # An untagged box on top of the negative electrode is discovered as
+        # its neighbour, but it is not part of c: c's equations, including
+        # the "top" condition under the box, must not change
+        def discretised_rhs(with_tab):
+            x_n = pybamm.SpatialVariable("x_n", "negative electrode")
+            x_s = pybamm.SpatialVariable("x_s", "separator")
+            x_p = pybamm.SpatialVariable("x_p", "positive electrode")
+            z = pybamm.SpatialVariable("z", "current collector")
+            geometry = {
+                "negative electrode": {x_n: {"min": 0, "max": 1}, z: {"min": 0, "max": 1}},
+                "separator": {x_s: {"min": 1, "max": 2}, z: {"min": 0, "max": 1}},
+                "positive electrode": {x_p: {"min": 2, "max": 3}, z: {"min": 0, "max": 1}},
+            }
+            generator = pybamm.UnstructuredMeshGenerator(element_type="quad")
+            submesh_types = dict.fromkeys(geometry, generator)
+            var_pts = {x_n: 3, x_s: 3, x_p: 3, z: 3}
+            if with_tab:
+                x_t = pybamm.SpatialVariable("x_t", "tab region")
+                z_t = pybamm.SpatialVariable("z_t", "tab region")
+                geometry["tab region"] = {
+                    x_t: {"min": 0, "max": 1},
+                    z_t: {"min": 1, "max": 1.5},
+                }
+                submesh_types["tab region"] = generator
+                var_pts.update({x_t: 3, z_t: 2})
+            mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+            if with_tab:
+                mesh["tab region"].boundary_faces = {}
+
+            children = [
+                pybamm.Variable(f"c_{name[0]}", name)
+                for name in ("negative electrode", "separator", "positive electrode")
+            ]
+            c = pybamm.concatenation(*children)
+            model = pybamm.BaseModel()
+            model.rhs = {c: pybamm.div(pybamm.grad(c))}
+            model.boundary_conditions = {
+                c: {
+                    "left": (pybamm.Scalar(1), "Neumann"),
+                    "right": (pybamm.Scalar(0), "Neumann"),
+                    "top": (pybamm.Scalar(1), "Dirichlet"),
+                    "bottom": (pybamm.Scalar(0), "Neumann"),
+                }
+            }
+            model.initial_conditions = {c: pybamm.Scalar(0)}
+            methods = dict.fromkeys(geometry, FiniteVolumeUnstructured())
+            disc = pybamm.Discretisation(mesh, methods)
+            disc.process_model(model)
+            y = np.linspace(0.1, 1, model.concatenated_rhs.shape[0])[:, np.newaxis]
+            return model.concatenated_rhs.evaluate(y=y), disc.bcs[children[0]]
+
+        rhs, _ = discretised_rhs(with_tab=False)
+        with caplog.at_level("WARNING", logger="pybamm"):
+            rhs_tab, negative_bcs = discretised_rhs(with_tab=True)
+        np.testing.assert_allclose(rhs_tab, rhs, atol=1e-12)
+        # the electrode's own conditions: coupled to the separator, not the box
+        assert "top" in negative_bcs
+        assert "iface_separator" in negative_bcs
+        assert "iface_tab region" not in negative_bcs
+        assert "coupled" not in caplog.text
 
     def test_compute_pair_interface_success_and_noops(self):
         left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
