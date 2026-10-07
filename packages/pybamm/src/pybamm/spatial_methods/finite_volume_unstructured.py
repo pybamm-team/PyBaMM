@@ -358,13 +358,15 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     @staticmethod
     def _is_per_point_value(bc_value, n_bnd, repeats):
-        """Whether ``bc_value`` has one entry per auxiliary-domain point, the
-        shape of e.g. a boundary value; it wins over a per-face value of the
-        same length."""
-        return repeats > 1 and getattr(bc_value, "shape_for_testing", None) == (
+        """Whether ``bc_value`` has one entry per auxiliary-domain point, as a
+        boundary value does. When that length equals the face count, only a
+        value carrying a domain (the auxiliary one) counts as per-point."""
+        if repeats == 1 or getattr(bc_value, "shape_for_testing", None) != (
             repeats,
             1,
-        )
+        ):
+            return False
+        return n_bnd != repeats or bool(bc_value.domain)
 
     @staticmethod
     def _bc_contribution(n, n_bnd, owners, coeffs, bc_value, repeats=1):
@@ -387,7 +389,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             column = np.zeros((n, 1))
             np.add.at(column[:, 0], owners, coeffs)
             M = csr_matrix(kron(eye(repeats), column))
-            return pybamm.Matrix(M) @ bc_value
+            return pybamm.Matrix(M) @ bc_value.without_domains()
         M = csr_matrix((coeffs, (owners, np.arange(n_bnd))), shape=(n, n_bnd))
         if repeats > 1:
             bc_shape = getattr(bc_value, "shape_for_testing", None)
@@ -416,7 +418,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             return bc_value
         if FiniteVolumeUnstructured._is_per_point_value(bc_value, n_bnd, repeats):
             spread = csr_matrix(kron(eye(repeats), np.ones((n_bnd, 1))))
-            return pybamm.Matrix(spread) @ bc_value
+            return pybamm.Matrix(spread) @ bc_value.without_domains()
         tile = csr_matrix(kron(np.ones((repeats, 1)), eye(n_bnd, dtype=np.float64)))
         return pybamm.Matrix(tile) @ bc_value
 
@@ -1588,7 +1590,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         if side in self._CORNER_SIDES:
             return self._corner_boundary_value(
                 submesh, n, repeats, side, discretised_child
-            )
+            ).with_domains(symbol.domains)
 
         face_indices = self._boundary_faces_for_side(submesh, side)
         owners = submesh.face_owner[face_indices]
@@ -1603,9 +1605,9 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         mat = self._block_diagonal(sub_matrix, repeats)
         bv_vector = pybamm.Matrix(mat)
 
-        out = bv_vector @ discretised_child
-        out = out.without_domains()
-        return out
+        # Keep the auxiliary domain: it marks the value as per-point when it
+        # is used as a boundary condition
+        return (bv_vector @ discretised_child).with_domains(symbol.domains)
 
     def _corner_boundary_value(self, submesh, n, repeats, side, discretised_child):
         """Extract the value from the boundary cell closest to a corner of

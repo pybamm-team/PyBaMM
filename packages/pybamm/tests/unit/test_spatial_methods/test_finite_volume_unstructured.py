@@ -410,7 +410,8 @@ class TestAuxiliaryDomains:
         )
 
     @pytest.mark.parametrize("orthogonal", [True, False])
-    # 2 auxiliary points equal the 2 "right" faces: the per-point reading wins
+    # 2 auxiliary points equal the 2 "right" faces: the auxiliary domain of the
+    # value selects the per-point reading
     @pytest.mark.parametrize("n_aux", [2, 3])
     def test_per_point_bc_value(self, orthogonal, n_aux):
         # A BC value with one entry per auxiliary point, such as a boundary
@@ -454,7 +455,7 @@ class TestAuxiliaryDomains:
         repeated = operators(
             repeated_var,
             pybamm.Vector(np.tile(cell_values, n_aux), domains=domains),
-            pybamm.Vector(right),
+            pybamm.Vector(right, domain="aux"),
             pybamm.Vector(np.full(mesh.npts * n_aux, 2.0), domains=domains),
         )
         for k, result in enumerate(repeated):
@@ -463,6 +464,23 @@ class TestAuxiliaryDomains:
                 np.concatenate([ops[k].evaluate()[:, 0] for ops in single]),
                 atol=1e-12,
             )
+
+        # a discretised boundary value carries the auxiliary domain itself
+        field = pybamm.Vector(np.repeat(right, mesh.npts), domains=domains)
+        boundary_value = method.boundary_value_or_flux(
+            pybamm.BoundaryValue(repeated_var, "right"), field
+        )
+        assert boundary_value.domain == ["aux"]
+        np.testing.assert_allclose(boundary_value.evaluate()[:, 0], right)
+        np.testing.assert_allclose(
+            method.laplacian(
+                repeated_var, field, bcs(repeated_var, boundary_value)
+            ).evaluate(),
+            method.laplacian(
+                repeated_var, field, bcs(repeated_var, pybamm.Vector(right, domain="aux"))
+            ).evaluate(),
+            atol=1e-12,
+        )
 
     def test_gradient_with_secondary_domain(self):
         mesh = _make_quad_mesh(2, 2)
