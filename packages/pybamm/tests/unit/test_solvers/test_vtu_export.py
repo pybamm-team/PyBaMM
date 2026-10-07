@@ -315,7 +315,8 @@ class TestSaveVtu:
 
     def test_filename_is_escaped_in_the_pvd(self, tmp_path):
         solution, _ = _two_region_solution(2)
-        name = 'run 1 & "<a>"'
+        # needs escaping in XML yet is a legal file name on Windows (no " or <>)
+        name = "run 1 & 'a'"
         pvd = solution.save_vtu(tmp_path / name, ["Both regions [K]"], t=[0.0])
 
         dataset = ET.parse(pvd).getroot().find("Collection").find("DataSet")  # nosec B314
