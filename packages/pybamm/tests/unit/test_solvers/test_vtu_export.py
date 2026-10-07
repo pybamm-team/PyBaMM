@@ -298,6 +298,16 @@ class TestSaveVtu:
         assert dataset.get("file") == f"{name}/{name}_0000.vtu"
         assert (tmp_path / dataset.get("file")).is_file()
 
+    def test_pvd_is_utf8_whatever_the_locale(self, tmp_path):
+        solution, _ = _two_region_solution(2)
+        name = "Zelle_é_温度"
+        pvd = solution.save_vtu(tmp_path / name, ["Both regions [K]"], t=[0.0])
+
+        with open(pvd, "rb") as f:
+            content = f.read()
+        assert content.startswith(b'<?xml version="1.0" encoding="UTF-8"?>')
+        assert f"{name}/{name}_0000.vtu".encode() in content
+
     def test_variable_names_with_xml_characters_read_back(self, tmp_path):
         mesh = _strip_mesh(0.0, 1.0, 2, 2)
         model = pybamm.BaseModel()

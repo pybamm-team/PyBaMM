@@ -132,7 +132,7 @@ def _set_cell_vectors(grid, name, values):
 def _write_pvd(filename, entries):
     """Write a ParaView collection file indexing ``(time, path)`` entries."""
     lines = [
-        '<?xml version="1.0"?>',
+        '<?xml version="1.0" encoding="UTF-8"?>',
         '<VTKFile type="Collection" version="0.1">',
         "  <Collection>",
     ]
@@ -141,7 +141,7 @@ def _write_pvd(filename, entries):
         for time, path in entries
     ]
     lines += ["  </Collection>", "</VTKFile>", ""]
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
 
