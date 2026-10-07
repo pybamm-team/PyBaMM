@@ -1391,6 +1391,10 @@ class TestFaceCoefficientAveraging:
                 id="D * (grad(u) / t**2 - grad(v))",
             ),
             pytest.param(
+                lambda D, t, u, v: D * (t**2 * pybamm.grad(u) / t**4 - pybamm.grad(v)),
+                id="D * (t**2 * grad(u) / t**4 - grad(v))",
+            ),
+            pytest.param(
                 lambda D, t, u, v: (
                     pybamm.VectorField(D, D) * (pybamm.grad(u) - pybamm.grad(v))
                 ),
