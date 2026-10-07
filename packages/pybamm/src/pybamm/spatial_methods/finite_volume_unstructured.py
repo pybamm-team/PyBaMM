@@ -820,11 +820,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         :meth:`gradient`/:meth:`divergence` operators, which cannot apply
         boundary conditions conservatively and raise instead.
         """
-        if isinstance(disc_D, pybamm.VectorField):
-            raise pybamm.DiscretisationError(
-                "Anisotropic (vector-valued) diffusion coefficients are not "
-                "supported by the TPFA discretisation of div(D * grad(u))."
-            )
+        is_tensor_D = isinstance(disc_D, pybamm.TensorField)
         domain = div_symbol.domain
         submesh = self.mesh[domain]
         n = submesh.npts
@@ -857,12 +853,73 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                 )
             return gradient_cache[0]
 
+        def _is_zero(comp):
+            """A constant component that is identically zero (skipped)."""
+            if isinstance(comp, pybamm.Broadcast):
+                return _is_zero(comp.child)
+            if not comp.is_constant():
+                return False
+            return not np.any(comp.evaluate())
+
+        def directional(faces, cells):
+            """n.K.n on ``faces`` from the coefficient of the cells in ``cells``."""
+            normals = submesh.face_normals[faces]
+            E = csr_matrix(
+                (np.ones(len(faces)), (np.arange(len(faces)), cells)),
+                shape=(len(faces), n),
+            )
+            E_f = pybamm.Matrix(lift(E))
+            dim = submesh.dimension
+            terms = []
+            if disc_D.rank == 1:
+                if len(disc_D.components) != dim:
+                    raise pybamm.DiscretisationError(
+                        f"A VectorField coefficient needs {dim} components "
+                        f"(one per axis), got {len(disc_D.components)}"
+                    )
+                for i, comp in enumerate(disc_D.components):
+                    if not _is_zero(comp):
+                        terms.append(
+                            pybamm.Vector(tile(normals[:, i] ** 2)) * (E_f @ comp)
+                        )
+            else:
+                rows = disc_D.components
+                if len(rows) != dim or any(len(r) != dim for r in rows):
+                    raise pybamm.DiscretisationError(
+                        f"A TensorField coefficient must be {dim}x{dim}"
+                    )
+                for i in range(dim):
+                    for j in range(dim):
+                        weight = normals[:, i] * normals[:, j]
+                        if np.any(weight) and not _is_zero(rows[i][j]):
+                            terms.append(
+                                pybamm.Vector(tile(weight)) * (E_f @ rows[i][j])
+                            )
+            if not terms:
+                raise pybamm.DiscretisationError("anisotropic coefficient is zero")
+            out = terms[0]
+            for term in terms[1:]:
+                out = out + term
+            return out
+
         normal_grad = pybamm.Matrix(lift(G)) @ disc_u * pybamm.Vector(tile(geo))
         if C is not None:
             for k, grad_k in enumerate(gradient()):
                 normal_grad = normal_grad + pybamm.Matrix(lift(C[k])) @ grad_k
-        is_scalar_D = self._is_scalar_value(disc_D)
-        if is_scalar_D:
+        is_scalar_D = not is_tensor_D and self._is_scalar_value(disc_D)
+        if is_tensor_D:
+            # n.K.n from each side, combined like a scalar D (harmonic mean);
+            # the tangential part of K n is dropped.
+            n_int = submesh.n_internal_faces
+            faces = np.arange(n_int)
+            k_owner = directional(faces, submesh.face_owner[:n_int])
+            k_neigh = directional(faces, submesh.face_neighbor)
+            w_owner = self._face_geometry(submesh)["w_owner"]
+            D_face = 1 / (
+                pybamm.Vector(tile(1.0 - w_owner)) / k_owner
+                + pybamm.Vector(tile(w_owner)) / k_neigh
+            )
+        elif is_scalar_D:
             D_face = disc_D
         else:
             if isinstance(disc_D, pybamm.Vector) and np.any(disc_D.entries <= 0):
@@ -891,7 +948,12 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
                     shape=(n, n_bnd),
                 )
                 E_f, P_f = lift(E), lift(P)
-                D_bnd = disc_D if is_scalar_D else pybamm.Matrix(E_f) @ disc_D
+                if is_tensor_D:
+                    D_bnd = directional(fi_arr, bnd_own)
+                elif is_scalar_D:
+                    D_bnd = disc_D
+                else:
+                    D_bnd = pybamm.Matrix(E_f) @ disc_D
                 bc_value = self._tile_bc_value(bc_value, n_bnd, repeats)
                 a_over_v = submesh.face_areas[fi_arr] / vol[bnd_own]
 
