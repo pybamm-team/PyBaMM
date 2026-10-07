@@ -1387,6 +1387,10 @@ class TestFaceCoefficientAveraging:
                 lambda D, t, u, v: D * (pybamm.grad(u) + 3 * pybamm.grad(v) / 2),
                 id="D * (grad(u) + 3 grad(v) / 2)",
             ),
+            pytest.param(
+                lambda D, t, u, v: D * (pybamm.grad(u) / (t * t) - pybamm.grad(v)),
+                id="D * (grad(u) / t**2 - grad(v))",
+            ),
         ],
     )
     def test_two_material_slab_is_exact(self, mesh_2d, flux, direction):
@@ -1406,7 +1410,8 @@ class TestFaceCoefficientAveraging:
 
     @pytest.mark.parametrize("direction", ["lr", "tb"])
     def test_sign_changing_factor_of_a_flux_is_finite(self, mesh_2d, direction):
-        # the harmonic mean of t = 1, -1 on a uniform mesh divides by zero
+        # the harmonic mean of t = 1, -1 divides by zero where the cells on
+        # both sides of a face are equal, as they are on this uniform mesh
         residual = self._two_material_slab(
             mesh_2d,
             lambda D, t, u, v: t * (D * (pybamm.grad(u) - pybamm.grad(v))),

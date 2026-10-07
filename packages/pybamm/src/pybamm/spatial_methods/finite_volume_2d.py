@@ -1957,9 +1957,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
         """Discretise binary operators in model equations.  Averages a child that
         evaluates on nodes onto the lr and tb edges when the other child evaluates on
-        edges, so that discretised sizes match up. A coefficient of a gradient, or of
-        a sum of gradient terms, takes the harmonic mean [1]; anything else takes the
-        arithmetic mean.
+        edges, so that discretised sizes match up. A factor of a bare gradient, or a
+        coefficient multiplying a signed sum of gradient terms, takes the harmonic
+        mean [1]; anything else takes the arithmetic mean.
 
         [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
         the diffusion equation." (2012).
