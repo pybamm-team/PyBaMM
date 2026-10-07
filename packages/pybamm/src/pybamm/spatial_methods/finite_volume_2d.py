@@ -2010,16 +2010,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 bin_op.create_copy([disc_left.tb_field, disc_right.tb_field])
             )
             return pybamm.VectorField(lr_field, tb_field)
-        else:
-            pass
 
         # If neither child evaluates on edges, or both children have gradients,
         # no need to do any averaging
         if left_evaluates_on_edges == right_evaluates_on_edges:
             pass
-        # If only left child evaluates on edges, map right child onto edges
-        # using the harmonic mean if the left child is a gradient (i.e. this
-        # binary operator represents a flux)
+        # If only left child evaluates on edges, map right child onto its edges;
+        # a gradient is always a VectorField here, so this is never a flux
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
             method = "arithmetic"
             direction = left.direction
@@ -2027,9 +2024,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 disc_right, method=method, direction=direction
             )
 
-        # If only right child evaluates on edges, map left child onto edges
-        # using the harmonic mean if the right child is a gradient (i.e. this
-        # binary operator represents a flux)
+        # If only right child evaluates on edges, map left child onto its edges
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
             method = "arithmetic"
             direction = right.direction

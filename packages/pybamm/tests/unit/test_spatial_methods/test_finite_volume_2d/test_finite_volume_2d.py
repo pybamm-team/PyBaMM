@@ -1331,7 +1331,8 @@ class TestFaceCoefficientAveraging:
     def _two_material_slab(mesh_2d, flux, direction):
         """Residual of div(flux(D, t, u, v)) at the exact steady profile of a slab
         whose diffusivity D jumps on a face normal to ``direction``. ``t`` is a
-        node-valued factor that alternates between 1 and -1, and v = 0."""
+        node-valued factor that alternates between 1 and -1, and v = 0. D is a
+        state, so unlike a constant it cannot be distributed over a sum."""
         disc = pybamm.Discretisation(mesh_2d, {"macroscale": pybamm.FiniteVolume2D()})
         domain = ["negative electrode", "separator", "positive electrode"]
         u, v, t, D = (pybamm.Variable(name, domain=domain) for name in "uvtD")
@@ -1350,8 +1351,6 @@ class TestFaceCoefficientAveraging:
             }
             for var, end_value in [(u, 1), (v, 0)]
         }
-        # an input scale keeps simplification from distributing D over a sum
-        scaled_D = pybamm.InputParameter("scale") * D
 
         # piecewise linear, with the series-resistance flux through the face
         submesh = mesh_2d[domain]
@@ -1366,8 +1365,8 @@ class TestFaceCoefficientAveraging:
         i_lr, i_tb = np.meshgrid(np.arange(submesh.npts_lr), np.arange(submesh.npts_tb))
         t_values = (-1.0) ** (i_lr + i_tb).flatten()
         y = np.concatenate([u_exact, np.zeros_like(s), t_values, D_exact])
-        return disc.process_symbol(pybamm.div(flux(scaled_D, t, u, v))).evaluate(
-            y=y[:, np.newaxis], inputs={"scale": 1}
+        return disc.process_symbol(pybamm.div(flux(D, t, u, v))).evaluate(
+            y=y[:, np.newaxis]
         )
 
     @pytest.mark.parametrize("direction", ["lr", "tb"])
