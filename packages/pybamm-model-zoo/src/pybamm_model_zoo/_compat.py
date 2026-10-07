@@ -22,6 +22,20 @@ def spm_default_options(options: dict[str, Any] | None) -> dict[str, Any]:
     return {"x-average side reactions": "true", **(options or {})}
 
 
+def source(left: Any, right: Any) -> Any:
+    """A bulk source term ``left`` for ``right``'s equation, on any domain.
+
+    ``pybamm.source`` refuses every domain but ``"cell"`` and ``"current
+    collector"``, although the mass matrix it assembles does not depend on the
+    domain, so a model with 3D finite-element domains of its own cannot use it.
+    Retire this once ``pybamm.source`` accepts any domain whose spatial method
+    provides a mass matrix.
+    """
+    import pybamm
+
+    return pybamm.Mass(right) @ left
+
+
 def cited_keys() -> set[str]:
     """The citation keys PyBaMM would credit if asked to print right now.
 
