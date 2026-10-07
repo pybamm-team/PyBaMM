@@ -50,11 +50,15 @@ def _match(existing, points, tolerance):
 class _UnionMesh:
     """Union of the cells of several unstructured meshes.
 
-    Meshes of different variables overlap: a variable over three regions lives
-    on the welded mesh of those regions, which repeats the cells of a
-    single-region variable. Cells are matched across meshes by centroid, so
-    every cell is written once and each variable maps onto the cells it covers.
-    Provides the ``vertices``/``elements``/``element_type`` of a mesh.
+    Cells are matched across meshes by centroid, so a cell shared by a
+    multi-region mesh and a single-region mesh is written once. Assumes any
+    two meshes either share a cell exactly or do not overlap there. Provides
+    the ``vertices``/``elements``/``element_type`` of a mesh.
+
+    Parameters
+    ----------
+    meshes : iterable of :class:`pybamm.UnstructuredSubMesh`
+        The meshes of the exported variables.
     """
 
     def __init__(self, meshes):
@@ -144,7 +148,23 @@ def save_vtu(
 ) -> str:
     """Write unstructured-mesh variables to one ``.vtu`` per time plus a ``.pvd``.
 
-    See :meth:`pybamm.Solution.save_vtu`.
+    See :meth:`pybamm.Solution.save_vtu` for the output layout.
+
+    Parameters
+    ----------
+    solution : :class:`pybamm.Solution`
+        The solution to export.
+    filename : str or os.PathLike
+        Path of the ``.pvd`` file; ``.pvd`` is appended if missing.
+    variables : str or list of str
+        Names of the variables to export.
+    t : array-like, optional
+        Strictly increasing output times [s]. Defaults to the solution's times.
+
+    Returns
+    -------
+    str
+        Path of the written ``.pvd`` file.
     """
     vtk = pybamm.import_optional_dependency("vtk")
 
@@ -214,7 +234,7 @@ def save_vtu(
         data = processed_variable(t=times)
         if kind == "vector":
             data = np.stack(data, axis=1)
-            # VTK vectors have 3 components; 2D (x, z) vectors lie in the z = 0 plane
+            # VTK vectors have 3 components; the third is zero for 2D meshes
             padding = np.zeros((data.shape[0], 3 - data.shape[1], data.shape[2]))
             data = np.concatenate([data, padding], axis=1)
         cell_values[name] = (kind, union.scatter(processed_variable.mesh, data))

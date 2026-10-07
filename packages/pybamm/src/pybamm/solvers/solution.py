@@ -5,12 +5,14 @@ from __future__ import annotations
 #
 import json
 import numbers
+import os
 import pickle
 from dataclasses import astuple, dataclass
 from itertools import chain
 
 import casadi
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from scipy.io import savemat
 
@@ -1221,19 +1223,20 @@ class Solution(SolutionBase):
         else:
             raise ValueError(f"format '{to_format}' not recognised")
 
-    def save_vtu(self, filename, variables, t=None):
+    def save_vtu(
+        self,
+        filename: str | os.PathLike,
+        variables: str | list[str],
+        t: npt.ArrayLike | None = None,
+    ) -> str:
         """
         Save variables on an unstructured mesh as a VTK time series for ParaView.
 
-        Writes one ``.vtu`` file per output time into a directory named after
-        ``filename`` (without its extension) and a ``.pvd`` collection that
-        indexes them by time; open the ``.pvd`` in ParaView. Requires ``vtk``.
-
-        Cell-centred unstructured finite-volume variables are written as cell
-        data on the union of their meshes, with NaN on cells a variable does
-        not cover. Vector fields are written as 3-component cell data. 0D
-        variables are written as field data, alongside the output time
-        (``"TimeValue"``).
+        Writes ``<stem>/<stem>_NNNN.vtu`` per output time and a ``<stem>.pvd``
+        collection indexing them; requires ``vtk``. Variables are cell data on
+        the union of their meshes (NaN where undefined), vector fields have 3
+        components and 0D variables are field data beside ``"TimeValue"``.
+        Re-exporting fewer times leaves older ``.vtu`` files in place.
 
         Parameters
         ----------
@@ -1243,8 +1246,8 @@ class Solution(SolutionBase):
             Names of the variables to export. At least one must live on an
             unstructured mesh.
         t : array-like, optional
-            Output times [s], within the solution's time range. Defaults to
-            the solution's (unique) times.
+            Strictly increasing output times [s], within the solution's time
+            range. Defaults to the solution's (unique) times.
 
         Returns
         -------
