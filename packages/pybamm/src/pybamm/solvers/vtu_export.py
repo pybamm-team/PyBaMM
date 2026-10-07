@@ -148,6 +148,17 @@ def save_vtu(
     """
     vtk = pybamm.import_optional_dependency("vtk")
 
+    filename = os.fspath(filename)
+    if not filename.endswith(".pvd"):
+        filename += ".pvd"
+    directory, basename = os.path.split(filename)
+    stem = basename[: -len(".pvd")]
+    if not stem:
+        raise pybamm.OptionError(
+            f"filename {filename!r} has no file name to name the output after; "
+            "pass a path such as 'output/solution.pvd'."
+        )
+
     if isinstance(variables, str):
         variables = [variables]
     if len(variables) == 0:
@@ -201,11 +212,6 @@ def save_vtu(
             data = np.concatenate([data, padding], axis=1)
         cell_values[name] = (kind, union.scatter(processed_variable.mesh, data))
 
-    filename = os.fspath(filename)
-    if not filename.endswith(".pvd"):
-        filename += ".pvd"
-    directory, basename = os.path.split(filename)
-    stem = basename[: -len(".pvd")]
     os.makedirs(os.path.join(directory, stem), exist_ok=True)
 
     grid = _build_vtk_grid(union)

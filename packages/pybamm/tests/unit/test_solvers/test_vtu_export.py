@@ -278,6 +278,11 @@ class TestSaveVtu:
             solution.save_vtu(path, ["Both regions [K]"], t=[[0.0, 1.0]])
         with pytest.raises(pybamm.OptionError, match=r"1D array"):
             solution.save_vtu(path, ["Both regions [K]"], t=[])
+        for bad_name in ["dir/", ".pvd"]:
+            with pytest.raises(pybamm.OptionError, match=r"no file name"):
+                solution.save_vtu(
+                    os.path.join(tmp_path, bad_name), ["Both regions [K]"]
+                )
         assert not path.exists()
 
     def test_rejects_structured_variables(self, tmp_path):
