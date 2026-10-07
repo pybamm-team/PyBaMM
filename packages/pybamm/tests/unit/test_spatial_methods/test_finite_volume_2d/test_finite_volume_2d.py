@@ -1390,6 +1390,12 @@ class TestFaceCoefficientAveraging:
                 lambda D, t, u, v: D * (pybamm.grad(u) / (t * t) - pybamm.grad(v)),
                 id="D * (grad(u) / t**2 - grad(v))",
             ),
+            pytest.param(
+                lambda D, t, u, v: (
+                    pybamm.VectorField(D, D) * (pybamm.grad(u) - pybamm.grad(v))
+                ),
+                id="VectorField(D, D) * (grad(u) - grad(v))",
+            ),
         ],
     )
     def test_two_material_slab_is_exact(self, mesh_2d, flux, direction):
