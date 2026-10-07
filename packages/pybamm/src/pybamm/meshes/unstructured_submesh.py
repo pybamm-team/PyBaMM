@@ -1,4 +1,5 @@
 import hashlib
+import itertools
 from enum import Enum
 
 import numpy as np
@@ -15,6 +16,9 @@ _CONTAINS_POINTS_CHUNK_PAIRS = 200_000
 _CONTAINS_POINTS_INFLATION = 1e-9
 # containment masks remembered per mesh, keyed by the query-point array
 _CONTAINS_POINTS_CACHE_SIZE = 8
+# hex faces whose diagonals miss each other by more than this fraction of the
+# face size are warped; loose enough for welding/round-off on thin cells
+_HEX_FACE_PLANARITY_TOLERANCE = 1e-6
 
 
 class ElementType(str, Enum):
@@ -291,21 +295,19 @@ class UnstructuredSubMesh(SubMesh):
             # Quad areas, normals, and the 5-tet cell volumes are only
             # well-defined when all four vertices of a face are coplanar,
             # so warped (non-planar) faces are rejected outright.
-            plane_normal = np.cross(v1 - v0, v2 - v0)
-            plane_norm = np.linalg.norm(plane_normal, axis=1)
-            safe_norm = np.where(plane_norm < 1e-30, 1.0, plane_norm)
-            offset = np.abs(
-                np.einsum("ij,ij->i", v3 - v0, plane_normal / safe_norm[:, None])
-            )
-            diag_len = np.linalg.norm(v2 - v0, axis=1)
-            warped = offset > 1e-8 * np.maximum(diag_len, 1e-30)
+            warp = _quad_face_warp(face_verts)
+            warped = warp > _HEX_FACE_PLANARITY_TOLERANCE
             if warped.any():
                 raise pybamm.GeometryError(
                     f"{int(warped.sum())} hexahedral face(s) are non-planar "
-                    "(warped): the fourth vertex does not lie in the plane of "
-                    "the other three. Volumes and face fluxes are ill-defined "
-                    "on warped hexahedra. Fix the mesh, or use tetrahedra."
+                    f"(warped; worst relative deviation {warp.max():.3g}, "
+                    f"tolerance {_HEX_FACE_PLANARITY_TOLERANCE:.0e}). Volumes "
+                    "and face fluxes are ill-defined on warped hexahedra. Fix "
+                    "the mesh, or use tetrahedra."
                 )
+            plane_normal = np.cross(v1 - v0, v2 - v0)
+            plane_norm = np.linalg.norm(plane_normal, axis=1)
+            safe_norm = np.where(plane_norm < 1e-30, 1.0, plane_norm)
 
             diag1 = v2 - v0
             diag2 = v3 - v1
@@ -874,18 +876,11 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
     """
     Load an unstructured mesh from an external file via *meshio*.
 
-    Supported cell types are tetrahedra (3D) and triangles or quadrilaterals
-    (2D). Hexahedral file meshes are rejected: file meshes commonly contain
-    warped (non-planar-faced) hexes, whose volumes and face fluxes are
-    ill-defined. Convert such meshes to tetrahedra before loading.
-
-    The interface between adjacent domains must be **conforming**: the two
-    sides must share the same interface nodes, so that welding in
-    :meth:`UnstructuredSubMesh.combine` turns the interface into internal
-    faces. In gmsh, build the regions from one geometry or fragment the parts
-    (``BooleanFragments`` / ``Coherence``) so the shared surface is meshed
-    once. A non-conforming interface raises a :class:`pybamm.GeometryError`
-    when the domains are combined.
+    Supported cells are tetrahedra or hexahedra (3D, not mixed) and
+    triangles or quadrilaterals (2D); hexahedra must have planar faces.
+    Adjacent domains must share their interface nodes (in gmsh, fragment the
+    parts with ``BooleanFragments``), or combining them raises a
+    :class:`pybamm.GeometryError`; warped hexahedra raise it on loading.
 
     Parameters
     ----------
@@ -894,7 +889,9 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
     subdomain_mapping : dict[str, int] or None
         Maps PyBaMM domain name to physical group / cell-data tag.
     boundary_mapping : dict[str, int] or None
-        Maps boundary name to physical group / facet tag.
+        Maps boundary name to physical group / facet tag. Facets are triangles
+        for tetrahedral meshes, quadrilaterals for hexahedral meshes and lines
+        in 2D.
     coord_sys : str, optional
         Coordinate system, default ``"cartesian"``.
     merge_tolerance : float or None, optional
@@ -972,7 +969,10 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         )
 
         if self.boundary_mapping:
-            facet_type = "triangle" if cell_type == ElementType.TETRAHEDRON else "line"
+            facet_type = {
+                ElementType.TETRAHEDRON: "triangle",
+                ElementType.HEXAHEDRON: "quad",
+            }.get(cell_type, "line")
             facets, facet_tags = _extract_tagged_facets(mesh, facet_type)
             if facets is None:
                 pybamm.logger.warning(
@@ -1024,23 +1024,31 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
 
     @staticmethod
     def _extract_supported_cells(mesh):
-        # Hexahedra from files are rejected outright rather than silently
-        # dropped: file meshes commonly contain warped (non-planar-faced)
-        # hexes, for which cell volumes and face fluxes are ill-defined.
-        if any(
-            block.type == ElementType.HEXAHEDRON.meshio_name for block in mesh.cells
+        # Any other volume cell (wedge, pyramid, polyhedron, higher-order)
+        # would otherwise be dropped silently, leaving holes in the mesh
+        volume_types = sorted(
+            {block.type for block in mesh.cells if _is_volume_cell_type(block.type)}
+        )
+        if len(volume_types) > 1:
+            raise pybamm.GeometryError(
+                f"Mesh file mixes volume cell types {volume_types}; "
+                "mixed-element meshes are not supported. Mesh every region "
+                "with one element type (first-order tetra or hexahedron)."
+            )
+        if volume_types and volume_types[0] not in (
+            ElementType.TETRAHEDRON.meshio_name,
+            ElementType.HEXAHEDRON.meshio_name,
         ):
             raise pybamm.GeometryError(
-                "Hexahedral cells in mesh files are not supported: warped "
-                "(non-planar-faced) hexahedra have ill-defined volumes and "
-                "face fluxes. Convert the mesh to tetrahedra (e.g. with "
-                "gmsh or meshio) and reload. Hexahedral meshes are still "
-                "available through pybamm.UnstructuredMeshGenerator, whose "
-                "axis-aligned cells are always well-defined."
+                f"Unsupported volume cell type {volume_types[0]!r} in mesh "
+                "file; only first-order tetra and hexahedron cells are "
+                "supported in 3D."
             )
-        # Prefer 3D cells when present, otherwise fall back to 2D.
+        # Prefer 3D cells when present, otherwise fall back to 2D (in a 3D
+        # file, triangles and quads are boundary facets).
         for cell_type in (
             ElementType.TETRAHEDRON,
+            ElementType.HEXAHEDRON,
             ElementType.TRIANGLE,
             ElementType.QUAD,
         ):
@@ -1050,11 +1058,13 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
                 if block.type == cell_type.meshio_name
             ]
             if blocks:
-                if len(blocks) == 1:
-                    return blocks[0], cell_type
-                return np.concatenate(blocks, axis=0), cell_type
+                cells = np.concatenate(blocks, axis=0)
+                if cell_type == ElementType.HEXAHEDRON:
+                    _check_hexahedra_planar(mesh.points, cells)
+                return cells, cell_type
         raise pybamm.GeometryError(
-            "No supported cells found in mesh file (expected tetra/triangle/quad)"
+            "No supported cells found in mesh file (expected "
+            "tetra/hexahedron/triangle/quad)"
         )
 
     @staticmethod
@@ -1310,23 +1320,105 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
 # ======================================================================
 
 
+def _is_volume_cell_type(meshio_type):
+    """Whether a meshio cell-type name denotes a 3D (volume) cell.
+
+    Parameters
+    ----------
+    meshio_type : str
+        Cell-type name, e.g. ``"tetra"``, ``"wedge15"`` or
+        ``"VTK_LAGRANGE_HEXAHEDRON"``.
+
+    Returns
+    -------
+    bool
+        True for tetrahedra, hexahedra, wedges and pyramids of any order,
+        and for VTU polyhedra (``"polyhedron8"`` etc.).
+    """
+    name = meshio_type.lower().removeprefix("vtk_lagrange_")
+    return name.startswith(("tetra", "hexahedron", "wedge", "pyramid", "polyhedron"))
+
+
+def _quad_face_warp(face_verts):
+    """Relative non-planarity of quadrilateral faces.
+
+    Parameters
+    ----------
+    face_verts : numpy.ndarray
+        Face vertex coordinates, shape ``(n_faces, 4, 3)``, ordered around
+        each face.
+
+    Returns
+    -------
+    numpy.ndarray
+        Distance between the lines through the two face diagonals, divided
+        by the longer diagonal: zero for a planar face.
+    """
+    v0, v1, v2, v3 = (face_verts[:, i] for i in range(4))
+    diag1 = v2 - v0
+    diag2 = v3 - v1
+    normal = np.cross(diag1, diag2)
+    normal_norm = np.linalg.norm(normal, axis=1)
+    size = np.maximum(np.linalg.norm(diag1, axis=1), np.linalg.norm(diag2, axis=1))
+    # Parallel diagonals only occur on degenerate faces, which other checks
+    # reject; report them as planar here
+    safe_norm = np.where(normal_norm < 1e-300, 1.0, normal_norm)
+    offset = np.abs(np.einsum("ij,ij->i", v1 - v0, normal)) / safe_norm
+    return np.where(normal_norm < 1e-300, 0.0, offset / np.maximum(size, 1e-300))
+
+
+def _check_hexahedra_planar(points, hexahedra):
+    """Raise if any hexahedron has a face warped beyond the planarity tolerance.
+
+    Parameters
+    ----------
+    points : numpy.ndarray
+        Mesh node coordinates, shape ``(n_nodes, 3)``.
+    hexahedra : numpy.ndarray
+        Hexahedron node indices in VTK/gmsh ordering, shape ``(n_cells, 8)``.
+
+    Raises
+    ------
+    pybamm.GeometryError
+        If any face of any hexahedron is non-planar.
+    """
+    faces = hexahedra[:, UnstructuredSubMesh._HEX_FACES]  # (n_cells, 6, 4)
+    warp = _quad_face_warp(points[faces.reshape(-1, 4)]).reshape(-1, 6).max(axis=1)
+    warped = warp > _HEX_FACE_PLANARITY_TOLERANCE
+    if warped.any():
+        raise pybamm.GeometryError(
+            f"{int(warped.sum())} of {len(hexahedra)} hexahedral cells in the "
+            f"mesh file have non-planar (warped) faces; worst relative "
+            f"deviation {warp.max():.3g} (tolerance "
+            f"{_HEX_FACE_PLANARITY_TOLERANCE:.0e}, the distance between face "
+            "diagonals over the face size). Volumes and face fluxes are "
+            "ill-defined on warped hexahedra: mesh with planar faces (e.g. "
+            "gmsh transfinite + recombine on flat-sided volumes) or convert "
+            "to tetrahedra."
+        )
+
+
 def _geometric_tolerance(submeshes, rel=1e-3):
     """Distance below which two points of these meshes are the same point.
 
-    Scaled to the smallest sampled element edge: distinct nodes (and face
+    Scaled to the shortest element edge: distinct nodes (and face
     centroids) are at least one edge length apart, so a small fraction of
     it can never merge genuinely distinct entities, while absorbing the
     interface jitter that reduced-precision mesh files and unit
     conversions produce. An absolute tolerance cannot do both across mesh
     scales — battery meshes in SI units are ~1e-4 m across.
     """
+    # Every vertex pair, not one sampled edge: on thin hexahedra one edge can
+    # be orders of magnitude longer than the shortest
     min_edge = min(
         float(
             np.linalg.norm(
-                sm.vertices[sm.elements[:, 1]] - sm.vertices[sm.elements[:, 0]], axis=1
+                sm.vertices[sm.elements[:, j]] - sm.vertices[sm.elements[:, i]],
+                axis=-1,
             ).min()
         )
         for sm in submeshes
+        for i, j in itertools.combinations(range(sm.elements.shape[1]), 2)
     )
     return rel * min_edge
 

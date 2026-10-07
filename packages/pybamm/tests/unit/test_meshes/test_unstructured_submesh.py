@@ -353,7 +353,7 @@ class TestUnstructuredSubMesh:
         with pytest.raises(pybamm.GeometryError, match=r"non-planar"):
             UnstructuredSubMesh(nodes, elements)
 
-        # Sub-tolerance jitter (well below 1e-8 relative) must still pass
+        # Sub-tolerance jitter (well below 1e-6 relative) must still pass
         nodes_jitter = nodes.copy()
         nodes_jitter[6] = [1, 1, 1 + 1e-12]
         mesh = UnstructuredSubMesh(nodes_jitter, elements)
@@ -812,37 +812,158 @@ class TestFileGenerators:
         with pytest.raises(pybamm.GeometryError, match="No supported cells"):
             gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
 
-    def test_user_supplied_hexahedron_cells_raise(self):
-        """Hexahedral file meshes are rejected, even alongside tets."""
+    @staticmethod
+    def _write_two_region_hex_msh(path, warp_corner=False):
+        """Two stacked thin hex regions (tags 1, 2) in a sheared, rotated box.
+
+        The affine map keeps every face planar while making no face
+        axis-aligned. Bottom (z=0) and top quad facets carry tags 10 and 11.
+        """
+        import meshio
+
+        x_edges = np.linspace(0.0, 0.2, 4)
+        y_edges = np.linspace(0.0, 0.1, 3)
+        z_edges = np.array([0.0, 12.5e-6, 25e-6, 37e-6])
+        nodes, hexes = _hex_grid(x_edges, y_edges, z_edges)
+        cell_z = nodes[hexes].mean(axis=1)[:, 2]
+        regions = np.where(cell_z < 25e-6, 1, 2)
+        bottom = hexes[np.isclose(nodes[hexes[:, 0], 2], 0.0)][:, [0, 1, 2, 3]]
+        top = hexes[np.isclose(nodes[hexes[:, 4], 2], 37e-6)][:, [4, 5, 6, 7]]
+
+        angle = 0.3
+        rotation = np.array(
+            [
+                [np.cos(angle), -np.sin(angle), 0.0],
+                [np.sin(angle), np.cos(angle), 0.0],
+                [0.0, 0.0, 1.0],
+            ]
+        )
+        shear = np.array([[1.0, 0.4, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+        points = nodes @ (rotation @ shear).T
+        if warp_corner:
+            # Lift one box corner out of the plane of its three cell faces
+            corner = np.flatnonzero(np.all(nodes == 0.0, axis=1))[0]
+            points[corner, 2] += 5e-6
+
+        facet_and_region_tags = [
+            regions,
+            np.full(len(bottom), 10),
+            np.full(len(top), 11),
+        ]
+        meshio.write(
+            str(path),
+            meshio.Mesh(
+                points,
+                [("hexahedron", hexes), ("quad", bottom), ("quad", top)],
+                cell_data={
+                    "gmsh:physical": facet_and_region_tags,
+                    "gmsh:geometrical": facet_and_region_tags,
+                },
+            ),
+            file_format="gmsh22",
+            binary=False,
+        )
+        return regions
+
+    def test_user_supplied_planar_hexahedra_load(self, tmp_path):
+        """Planar-faced hex file meshes load with region and quad facet tags."""
+        import pytest
+
+        pytest.importorskip("meshio")
+        path = tmp_path / "hex.msh"
+        regions = self._write_two_region_hex_msh(path)
+        gen = UserSuppliedUnstructuredMesh(
+            str(path),
+            subdomain_mapping={"negative electrode": 1, "separator": 2},
+            boundary_mapping={"bottom": 10, "top": 11},
+        )
+        negative = gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+        separator = gen({"x_s": {"min": 0.0, "max": 1.0}}, {})
+
+        assert negative.element_type == "hexahedron"
+        assert negative.npts == np.sum(regions == 1) == 12
+        assert separator.npts == np.sum(regions == 2) == 6
+        # Rotation and shear both have unit determinant: volume is preserved
+        box_volume = 0.2 * 0.1 * 37e-6
+        np.testing.assert_allclose(
+            negative.cell_volumes.sum() + separator.cell_volumes.sum(),
+            box_volume,
+            rtol=1e-10,
+        )
+
+        # Bottom facets lie only in the negative region, top only in the
+        # separator; a missing tag in a submesh is logged, not raised
+        assert set(negative.boundary_faces) == {"bottom"}
+        assert set(separator.boundary_faces) == {"top"}
+        assert len(negative.boundary_faces["bottom"]) == 6
+        assert len(separator.boundary_faces["top"]) == 6
+        np.testing.assert_allclose(
+            negative.face_centroids[negative.boundary_faces["bottom"], 2],
+            0.0,
+            atol=1e-15,
+        )
+        np.testing.assert_allclose(
+            separator.face_centroids[separator.boundary_faces["top"], 2],
+            37e-6,
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            np.abs(negative.face_normals[negative.boundary_faces["bottom"], 2]),
+            1.0,
+        )
+
+        # Welding the regions turns the shared quad interface into internal
+        # faces and keeps both facet tags on the combined boundary
+        combined = UnstructuredSubMesh.combine([negative, separator])
+        assert combined.npts == 18
+        assert combined._n_boundary_faces == (
+            negative._n_boundary_faces + separator._n_boundary_faces - 2 * 6
+        )
+        assert len(combined.boundary_faces["bottom"]) == 6
+        assert len(combined.boundary_faces["top"]) == 6
+
+    def test_user_supplied_warped_hexahedra_raise(self, tmp_path):
+        """A hex file mesh with a warped cell is rejected, naming the count."""
+        import pytest
+
+        pytest.importorskip("meshio")
+        path = tmp_path / "warped.msh"
+        self._write_two_region_hex_msh(path, warp_corner=True)
+        gen = UserSuppliedUnstructuredMesh(str(path))
+        with pytest.raises(
+            pybamm.GeometryError,
+            match=r"1 of 18 hexahedral cells .* non-planar .* worst relative deviation",
+        ):
+            gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+
+    def test_user_supplied_mixed_volume_cells_raise(self):
+        """Mixed or unsupported volume cells raise instead of being dropped."""
         import pytest
 
         meshio = pytest.importorskip("meshio")
-        points = np.array(
-            [
-                [0, 0, 0],
-                [1, 0, 0],
-                [1, 1, 0],
-                [0, 1, 0],
-                [0, 0, 1],
-                [1, 0, 1],
-                [1, 1, 1],
-                [0, 1, 1],
-            ],
-            dtype=float,
+        points, hexes = _hex_grid([0.0, 1.0], [0.0, 1.0], [0.0, 1.0])
+        points = np.vstack([points, [[2.0, 0.0, 0.0], [2.0, 0.0, 1.0]]])
+        tet = ("tetra", np.array([[0, 1, 2, 4]]))
+        # Wedge on the hex's x+ face, as gmsh recombine can leave behind
+        wedge = ("wedge", np.array([[4, 8, 6, 5, 9, 7]]))
+        boundary = ("quad", hexes[:, [0, 1, 2, 3]])
+        # VTU polyhedron: a list of faces per cell, not a node array
+        polyhedron = (
+            "polyhedron8",
+            [[hexes[0, list(face)] for face in UnstructuredSubMesh._HEX_FACES]],
         )
-        hex_cells = ("hexahedron", np.array([[0, 1, 2, 3, 4, 5, 6, 7]]))
-        tet_cells = ("tetra", np.array([[0, 1, 2, 4]]))
-
-        gen = UserSuppliedUnstructuredMesh("unused.vtu")
-        gen._cached_mesh = meshio.Mesh(points, [hex_cells])
-        with pytest.raises(pybamm.GeometryError, match="Hexahedral cells"):
-            gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
-
-        # Mixed tet+hex must also raise, not silently drop the hex cells
-        gen_mixed = UserSuppliedUnstructuredMesh("unused.vtu")
-        gen_mixed._cached_mesh = meshio.Mesh(points, [tet_cells, hex_cells])
-        with pytest.raises(pybamm.GeometryError, match="Hexahedral cells"):
-            gen_mixed({"x_n": {"min": 0.0, "max": 1.0}}, {})
+        cases = [
+            ([tet, ("hexahedron", hexes)], r"mixes volume cell types"),
+            ([("hexahedron", hexes), wedge], r"mixes volume cell types"),
+            # Without the check, the quad facets would load as a 2D mesh
+            ([wedge, boundary], r"Unsupported volume cell type 'wedge'"),
+            ([("hexahedron", hexes), polyhedron], r"mixes volume cell types"),
+        ]
+        for cells, match in cases:
+            gen = UserSuppliedUnstructuredMesh("unused.vtu")
+            gen._cached_mesh = meshio.Mesh(points, cells)
+            with pytest.raises(pybamm.GeometryError, match=match):
+                gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
 
     def test_domain_name_from_lims(self):
         """String and SpatialVariable keys map to electrode domains; 'tabs' skipped."""
