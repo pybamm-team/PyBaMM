@@ -962,6 +962,12 @@ def _face_method_cases():
         "w * grad(u)": grad_u,
         "w * (grad(u) - grad(w))": pybamm.Subtraction(grad_u, grad_w),
         "w * (grad(u) / w)": pybamm.Division(grad_u, w),
+        "w * (w * (w * grad(u)))": pybamm.Multiplication(
+            w, pybamm.Multiplication(w, grad_u)
+        ),
+        "w * ((w * grad(u)) / w - grad(w))": pybamm.Subtraction(
+            pybamm.Division(pybamm.Multiplication(w, grad_u), w), grad_w
+        ),
         "w * (grad(u) / w - grad(w))": pybamm.Subtraction(
             pybamm.Division(grad_u, w), grad_w
         ),
@@ -1058,6 +1064,10 @@ class TestFaceCoefficientAveraging:
             pytest.param(
                 lambda D, t, u, v: D * (pybamm.grad(u) / (t * t) - pybamm.grad(v)),
                 id="D * (grad(u) / t**2 - grad(v))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * (t**2 * pybamm.grad(u) / t**4 - pybamm.grad(v)),
+                id="D * (t**2 * grad(u) / t**4 - grad(v))",
             ),
         ],
     )
