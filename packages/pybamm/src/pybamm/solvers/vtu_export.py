@@ -14,7 +14,8 @@ import pybamm
 from pybamm.meshes.unstructured_submesh import _geometric_tolerance
 from pybamm.plotting.plot_vtk import _build_vtk_grid, _set_cell_scalars
 
-# output times evaluated together; bounds memory to cells x chunk per variable
+# output times evaluated together; bounds the export's own arrays, not the
+# solution's cached values at its time points
 _TIME_CHUNK_SIZE = 64
 
 
@@ -235,6 +236,11 @@ def save_vtu(
         processed_variable = solution[name]
         kind = _classify(name, processed_variable)
         if kind == "scalar":
+            if name == "TimeValue":
+                raise pybamm.OptionError(
+                    "Cannot export a 0D variable named 'TimeValue': save_vtu "
+                    "writes the output time under that field data name."
+                )
             scalars.append(
                 (_vtk_array_name(name), np.ravel(processed_variable(t=times)))
             )

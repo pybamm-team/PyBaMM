@@ -400,6 +400,15 @@ class TestSaveVtu:
                 )
         assert not path.exists()
 
+    def test_rejects_0d_variable_named_time_value(self, tmp_path):
+        solution, _ = _two_region_solution(2)
+        model = solution.all_models[0]
+        model.variables["TimeValue"] = 100 + pybamm.t
+        model.update_processed_variables({"TimeValue": model.variables["TimeValue"]})
+        with pytest.raises(pybamm.OptionError, match=r"named 'TimeValue'"):
+            solution.save_vtu(tmp_path / "out", ["Both regions [K]", "TimeValue"])
+        assert not (tmp_path / "out").exists()
+
     def test_rejects_structured_variables(self, tmp_path):
         model = pybamm.BaseModel()
         x = pybamm.SpatialVariable("x", domain="line")
