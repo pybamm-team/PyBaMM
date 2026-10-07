@@ -1400,9 +1400,9 @@ class FiniteVolume(pybamm.SpatialMethod):
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
         """Discretise binary operators in model equations.  Averages a child that
         evaluates on nodes onto the edges when the other child evaluates on edges, so
-        that discretised sizes match up. A coefficient of a gradient, or of a sum of
-        gradient terms, takes the harmonic mean [1]; anything else takes the
-        arithmetic mean.
+        that discretised sizes match up. A factor of a bare gradient, or a coefficient
+        multiplying a signed sum of gradient terms, takes the harmonic mean [1];
+        anything else takes the arithmetic mean.
 
         [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
         the diffusion equation." (2012).
@@ -1441,12 +1441,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif left_evaluates_on_edges == right_evaluates_on_edges:
             pass
         # If only left child evaluates on edges, map right child onto edges
-        # using the harmonic mean if the left child is a flux built from gradients
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
             method = self._face_coefficient_method(bin_op, left)
             disc_right = self.node_to_edge(disc_right, method=method)
         # If only right child evaluates on edges, map left child onto edges
-        # using the harmonic mean if the right child is a flux built from gradients
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
             method = self._face_coefficient_method(bin_op, right)
             disc_left = self.node_to_edge(disc_left, method=method)
@@ -1461,8 +1459,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         Choose how to average a node-valued factor onto the edges it shares with
         ``edge_child``. A coefficient multiplying a flux, such as ``K * grad(u)``
         or ``K * (grad(u) - a * grad(v))``, is a conductance in series between
-        two control volumes, so it takes the harmonic mean; anything else takes
-        the arithmetic mean.
+        two control volumes, so it takes the harmonic mean, as does any factor
+        of a bare gradient; anything else takes the arithmetic mean.
 
         Parameters
         ----------
@@ -1477,7 +1475,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             ``"harmonic"`` or ``"arithmetic"``
         """
         # a bare gradient takes the harmonic mean under any operator, as it
-        # always has; changing that would move existing models' results
+        # always has; changing that could move user models' results
         if isinstance(edge_child, pybamm.Gradient) or (
             isinstance(bin_op, pybamm.Multiplication)
             and FiniteVolume._is_gradient_combination(edge_child)
@@ -1488,8 +1486,8 @@ class FiniteVolume(pybamm.SpatialMethod):
     @staticmethod
     def _is_gradient_combination(symbol):
         """
-        Whether ``symbol`` is a signed sum of terms ``grad(u)`` or
-        ``a * grad(u)``, with ``a`` evaluating on nodes. A factor applied to a
+        Whether ``symbol`` is a signed sum of terms ``grad(u)``, ``a * grad(u)``
+        or ``grad(u) / a``, with ``a`` evaluating on nodes. A factor applied to a
         whole sum, as in ``t * (K * (grad(u) - grad(v)))``, scales a flux that is
         already formed, so it does not qualify.
 
@@ -1517,6 +1515,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             ) or (
                 isinstance(left, pybamm.Gradient)
                 and not right.evaluates_on_edges("primary")
+            )
+        if isinstance(symbol, pybamm.Division):
+            numerator, denominator = symbol.children
+            return isinstance(numerator, pybamm.Gradient) and not (
+                denominator.evaluates_on_edges("primary")
             )
         return isinstance(symbol, pybamm.Gradient)
 

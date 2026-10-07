@@ -961,6 +961,10 @@ def _face_method_cases():
     harmonic = {
         "w * grad(u)": grad_u,
         "w * (grad(u) - grad(w))": pybamm.Subtraction(grad_u, grad_w),
+        "w * (grad(u) / w)": pybamm.Division(grad_u, w),
+        "w * (grad(u) / w - grad(w))": pybamm.Subtraction(
+            pybamm.Division(grad_u, w), grad_w
+        ),
         "w * -(w * grad(u) + grad(w) * w)": pybamm.Negate(
             pybamm.Addition(
                 pybamm.Multiplication(w, grad_u), pybamm.Multiplication(grad_w, w)
@@ -970,7 +974,6 @@ def _face_method_cases():
     arithmetic = {
         "w * (grad(u) + w)": pybamm.Addition(grad_u, w),
         "w * (grad(u) * grad(w))": pybamm.Multiplication(grad_u, grad_w),
-        "w * (grad(u) / w)": pybamm.Division(grad_u, w),
         "w * ((grad(u) - grad(w)) / w)": pybamm.Division(
             pybamm.Subtraction(grad_u, grad_w), w
         ),
@@ -1052,6 +1055,10 @@ class TestFaceCoefficientAveraging:
                 lambda D, t, u, v: D * (pybamm.grad(u) + 3 * pybamm.grad(v) / 2),
                 id="D * (grad(u) + 3 grad(v) / 2)",
             ),
+            pytest.param(
+                lambda D, t, u, v: D * (pybamm.grad(u) / (t * t) - pybamm.grad(v)),
+                id="D * (grad(u) / t**2 - grad(v))",
+            ),
         ],
     )
     def test_two_material_slab_is_exact(self, flux):
@@ -1067,7 +1074,8 @@ class TestFaceCoefficientAveraging:
         assert np.abs(residual).max() > 1
 
     def test_sign_changing_factor_of_a_flux_is_finite(self):
-        # the harmonic mean of t = 1, -1 on a uniform mesh divides by zero
+        # the harmonic mean of t = 1, -1 divides by zero where the cells on
+        # both sides of a face are equal, as they are within each domain here
         residual = self._two_material_slab(
             lambda D, t, u, v: t * (D * (pybamm.grad(u) - pybamm.grad(v)))
         )
