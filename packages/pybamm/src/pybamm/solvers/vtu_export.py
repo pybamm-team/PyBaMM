@@ -204,6 +204,11 @@ def save_vtu(
                 f"[{t_min}, {t_max}] s."
             )
         times = np.clip(times, t_min, t_max)
+        if np.any(np.diff(times) <= 0):
+            raise pybamm.OptionError(
+                "t has several times within rounding of the same end of the "
+                f"solution's time range [{t_min}, {t_max}] s."
+            )
 
     spatial, scalars = [], []
     for name in variables:

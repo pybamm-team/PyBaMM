@@ -317,6 +317,9 @@ class TestSaveVtu:
         for t in ([1.0, 0.5], [0.5, 0.5]):
             with pytest.raises(pybamm.OptionError, match=r"strictly increasing"):
                 solution.save_vtu(path, ["Both regions [K]"], t=t)
+        for t in ([2.0, 2.0 + 1e-13], [-1e-13, 0.0]):
+            with pytest.raises(pybamm.OptionError, match=r"same end"):
+                solution.save_vtu(path, ["Both regions [K]"], t=t)
         for bad_name in ["dir/", ".pvd"]:
             with pytest.raises(pybamm.OptionError, match=r"no file name"):
                 solution.save_vtu(
