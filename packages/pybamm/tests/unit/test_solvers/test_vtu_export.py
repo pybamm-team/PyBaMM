@@ -265,6 +265,20 @@ class TestSaveVtu:
         )
         np.testing.assert_allclose(vtu.field_data["Voltage [V]"], [3.5])
 
+    def test_times_at_the_ends_tolerate_rounding(self, tmp_path):
+        solution, _ = _two_region_solution(2)
+        solution.save_vtu(
+            tmp_path / "out", ["Both regions [K]"], t=[-1e-13, 2.0 + 1e-13]
+        )
+
+        root = ET.parse(tmp_path / "out.pvd").getroot()
+        datasets = root.find("Collection").findall("DataSet")
+        assert [float(d.get("timestep")) for d in datasets] == [0.0, 2.0]
+        vtu = _read(tmp_path, "out/out_0001.vtu")
+        np.testing.assert_allclose(
+            vtu.cell_data["Both regions [K]"][0], 2.0 * np.arange(1.0, 6.0)
+        )
+
     def test_invalid_inputs(self, tmp_path):
         solution, _ = _two_region_solution(2)
         path = tmp_path / "out"
@@ -278,6 +292,11 @@ class TestSaveVtu:
             solution.save_vtu(path, ["Both regions [K]"], t=[[0.0, 1.0]])
         with pytest.raises(pybamm.OptionError, match=r"1D array"):
             solution.save_vtu(path, ["Both regions [K]"], t=[])
+        with pytest.raises(pybamm.OptionError, match=r"finite"):
+            solution.save_vtu(path, ["Both regions [K]"], t=[np.nan])
+        for t in ([1.0, 0.5], [0.5, 0.5]):
+            with pytest.raises(pybamm.OptionError, match=r"strictly increasing"):
+                solution.save_vtu(path, ["Both regions [K]"], t=t)
         for bad_name in ["dir/", ".pvd"]:
             with pytest.raises(pybamm.OptionError, match=r"no file name"):
                 solution.save_vtu(

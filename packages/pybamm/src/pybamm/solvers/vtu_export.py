@@ -171,12 +171,19 @@ def save_vtu(
         if times.ndim > 1 or times.size == 0:
             raise pybamm.OptionError("t must be a scalar or a non-empty 1D array.")
         times = np.atleast_1d(times)
+        if not np.all(np.isfinite(times)):
+            raise pybamm.OptionError("t must contain only finite times.")
+        if np.any(np.diff(times) <= 0):
+            raise pybamm.OptionError("t must be strictly increasing.")
         t_min, t_max = solution.t[0], solution.t[-1]
-        if np.any((times < t_min) | (times > t_max)):
+        # absorb rounding in user-built times, e.g. hours * 3600
+        tolerance = 1e-10 * max(abs(t_min), abs(t_max), 1.0)
+        if np.any((times < t_min - tolerance) | (times > t_max + tolerance)):
             raise pybamm.OptionError(
                 "Output times must lie within the solution's time range "
                 f"[{t_min}, {t_max}] s."
             )
+        times = np.clip(times, t_min, t_max)
 
     spatial, scalars = [], []
     for name in variables:
