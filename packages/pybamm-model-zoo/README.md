@@ -123,7 +123,8 @@ hold an in-tree model and a third-party collection to the right rules.
 | `well_posed` | model | `model.check_well_posedness()` passes. |
 | `build` | model | `pybamm.Simulation(model).build()` succeeds. |
 | `solve` | model | The model solves for the manifest's `solve_time`, and every `key_variables` entry is finite read through the interpolating call interface. |
-| `packaging` | packaging | An in-tree model is licensed BSD-3-Clause and importable as `pybamm_model_zoo.<slug>`, and any extra it declares exists and is aggregated into `zoo-all`. |
+| `packaging` | packaging | An in-tree model is importable as `pybamm_model_zoo.<slug>`, and any extra it declares exists and is aggregated into `zoo-all`. |
+| `license` | packaging | An in-tree model's manifest says `BSD-3-Clause`, the zoo package's license. Cannot be waived. |
 | `docs` | repo | The generated docs page is present *and current*, so docs cannot drift from code. |
 | `codeowners` | repo | `.github/CODEOWNERS` names an owner for your folder, so ownership cannot be dropped silently. |
 
@@ -132,7 +133,7 @@ this package and does not live in this repository.
 
 `skip_contract` waives an individual check for a genuinely unusual model — one
 with no meaningful standalone solve, say. It is per-check, reviewed, and visible
-in the manifest diff. The `manifest` check itself cannot be waived.
+in the manifest diff. The `manifest` and `license` checks cannot be waived.
 
 ```bash
 nox -s zoo                          # the whole zoo, both tiers, plus examples

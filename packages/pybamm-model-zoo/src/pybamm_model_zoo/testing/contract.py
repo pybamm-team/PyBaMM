@@ -328,15 +328,7 @@ def check_solve(entry: ModelEntry) -> pybamm.Solution:
 
 @_register("packaging", scope=PACKAGING)
 def check_packaging(entry: ModelEntry) -> None:
-    """An in-tree model is importable as part of the zoo, with its extra declared.
-
-    It must also be BSD-3-Clause, since the zoo ships as one package under that
-    license.
-    """
-    assert entry.license == ZOO_LICENSE, (
-        f"{entry.manifest_path}: in-tree models must be licensed '{ZOO_LICENSE}', "
-        f"got '{entry.license}'; host other licenses as an external collection"
-    )
+    """An in-tree model is importable as part of the zoo, with its extra declared."""
     assert (entry.path / "__init__.py").is_file(), (
         f"{entry.path / '__init__.py'}: missing, so the folder is not importable"
     )
@@ -349,6 +341,15 @@ def check_packaging(entry: ModelEntry) -> None:
         f"got '{module_path}'"
     )
     _check_extra_is_declared(entry)
+
+
+@_register("license", scope=PACKAGING, waivable=False)
+def check_license(entry: ModelEntry) -> None:
+    """An in-tree model is BSD-3-Clause, the license the zoo package ships under."""
+    assert entry.license == ZOO_LICENSE, (
+        f"{entry.manifest_path}: in-tree models must be licensed '{ZOO_LICENSE}', "
+        f"got '{entry.license}'; host other licenses as an external collection"
+    )
 
 
 def _check_extra_is_declared(entry: ModelEntry) -> None:

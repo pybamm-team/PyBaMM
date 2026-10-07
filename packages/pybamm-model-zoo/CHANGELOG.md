@@ -13,5 +13,5 @@ PyBaMM's.
 
 ### Changed
 
-- In-tree models must be licensed BSD-3-Clause, enforced by the `packaging`
-  contract check; the generator's `--license` option is removed ([#5862](https://github.com/pybamm-team/PyBaMM/pull/5862))
+- In-tree models must be licensed BSD-3-Clause, enforced by a new unwaivable
+  `license` contract check; the generator's `--license` option is removed ([#5862](https://github.com/pybamm-team/PyBaMM/pull/5862))

@@ -202,7 +202,10 @@ class TestInTreeLicense:
             raw={"model": {"license": "MIT"}},
         )
         with pytest.raises(AssertionError, match=r"must be licensed 'BSD-3-Clause'"):
-            contract.check_packaging(entry)
+            contract.check_license(entry)
+
+    def test_it_cannot_be_waived(self):
+        assert not contract.CHECKS["license"].waivable
 
 
 class TestMissingDependencies:
