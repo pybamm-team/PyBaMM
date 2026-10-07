@@ -170,6 +170,38 @@ class TestSaveVtu:
         assert len(vtu.cells_dict["quad"]) == 2
         np.testing.assert_allclose(vtu.cell_data["Region a only [V]"][0], [6.0, 7.0])
 
+    @pytest.mark.parametrize("dimension", [2, 3])
+    def test_adjacent_region_meshes_share_interface_vertices(self, tmp_path, dimension):
+        mesh_a = _strip_mesh(0.0, 1.0, 2, dimension)
+        mesh_b = _strip_mesh(1.0, 2.0, 3, dimension)
+        model = pybamm.BaseModel()
+        model._geometry = _geometry(["a", "b"], dimension)
+        model.variables = {
+            "a": pybamm.StateVector(slice(0, 2), domain="a").with_mesh(mesh_a),
+            "b": pybamm.StateVector(slice(2, 5), domain="b").with_mesh(mesh_b),
+        }
+        model.update_processed_variables(model.variables)
+        solution = pybamm.Solution(
+            np.array([0.0, 1.0]),
+            np.asfortranarray(np.outer(np.arange(1.0, 6.0), [1.0, 1.0])),
+            model,
+            {},
+        )
+
+        solution.save_vtu(tmp_path / "ab", ["a", "b"], t=[0.0])
+
+        vtu = _read(tmp_path, "ab/ab_0000.vtu")
+        # 6 x-positions of the 5-cell strip, times 2 (2D) or 4 (3D) cross-section
+        assert len(vtu.points) == 6 * 2 ** (dimension - 1)
+        assert len(np.unique(vtu.points, axis=0)) == len(vtu.points)
+        # the larger mesh (region b) is written first
+        np.testing.assert_allclose(
+            vtu.cell_data["a"][0], [np.nan, np.nan, np.nan, 1.0, 2.0]
+        )
+        np.testing.assert_allclose(
+            vtu.cell_data["b"][0], [3.0, 4.0, 5.0, np.nan, np.nan]
+        )
+
     def test_disjoint_meshes_are_merged(self, tmp_path):
         nodes = np.array(
             [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]

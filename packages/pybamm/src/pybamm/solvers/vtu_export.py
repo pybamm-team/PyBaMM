@@ -32,6 +32,21 @@ def _classify(name, processed_variable):
     )
 
 
+def _match(existing, points, tolerance):
+    """Map ``points`` onto ``existing`` points within ``tolerance``, appending the rest.
+
+    Returns the index of each point in the extended array and a mask of the
+    points that were appended.
+    """
+    from scipy.spatial import cKDTree
+
+    if len(existing) == 0:
+        return np.arange(len(points)), np.ones(len(points), dtype=bool)
+    distance, nearest = cKDTree(existing).query(points)
+    is_new = distance >= tolerance
+    return np.where(is_new, len(existing) + np.cumsum(is_new) - 1, nearest), is_new
+
+
 class _UnionMesh:
     """Union of the cells of several unstructured meshes.
 
@@ -53,33 +68,25 @@ class _UnionMesh:
         self.element_type = meshes[0].element_type
         tolerance = _geometric_tolerance(meshes)
 
-        vertices, elements, centroids = [], [], []
-        self.npts = 0
-        n_vertices = 0
+        vertices = np.empty((0, meshes[0].dimension))
+        centroids = np.empty((0, meshes[0].dimension))
+        elements = []
         self._cell_maps = {}
         for mesh in meshes:
-            if self.npts == 0:
-                is_new = np.ones(mesh.npts, dtype=bool)
-                cell_map = np.arange(mesh.npts)
-            else:
-                from scipy.spatial import cKDTree
-
-                tree = cKDTree(np.vstack(centroids))
-                distance, nearest = tree.query(mesh.cell_centroids)
-                is_new = distance >= tolerance
-                cell_map = np.where(is_new, self.npts + np.cumsum(is_new) - 1, nearest)
+            cell_map, is_new = _match(centroids, mesh.cell_centroids, tolerance)
             self._cell_maps[id(mesh)] = cell_map
             if not is_new.any():
                 continue
+            centroids = np.vstack([centroids, mesh.cell_centroids[is_new]])
             new_elements = mesh.elements[is_new]
             used, connectivity = np.unique(new_elements, return_inverse=True)
-            vertices.append(mesh.vertices[used])
-            elements.append(connectivity.reshape(new_elements.shape) + n_vertices)
-            centroids.append(mesh.cell_centroids[is_new])
-            n_vertices += len(used)
-            self.npts += int(is_new.sum())
-        self.vertices = np.vstack(vertices)
+            # weld vertices shared with earlier meshes, so interfaces stay connected
+            vertex_map, vertex_is_new = _match(vertices, mesh.vertices[used], tolerance)
+            vertices = np.vstack([vertices, mesh.vertices[used][vertex_is_new]])
+            elements.append(vertex_map[connectivity].reshape(new_elements.shape))
+        self.vertices = vertices
         self.elements = np.vstack(elements)
+        self.npts = len(centroids)
 
     def scatter(self, mesh, values):
         """Place per-cell ``values`` of ``mesh`` on the union cells, NaN elsewhere."""
