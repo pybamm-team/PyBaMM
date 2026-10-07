@@ -629,16 +629,17 @@ class MultiLayer3DThermalSPM(pybamm.lithium_ion.BaseModel):
         ) / 2
 
     def _set_voltage_events(self) -> None:
-        voltage = self._terminal_voltage
-        # Zones in series each have to stay within the unit cell's limits.
-        scale = self.num_subdivisions if self.connection == "series" else 1
+        # In series each zone has its own voltage, and the first to reach a limit
+        # stops the stack; in parallel they all share the terminal voltage.
+        if self.connection == "series":
+            voltages = [layer["voltage"] for layer in self.layers]
+        else:
+            voltages = [self._terminal_voltage]
+        lowest = functools.reduce(pybamm.minimum, voltages)
+        highest = functools.reduce(pybamm.maximum, voltages)
         self.events += [
-            pybamm.Event(
-                "Minimum voltage [V]", voltage - scale * self.param.voltage_low_cut
-            ),
-            pybamm.Event(
-                "Maximum voltage [V]", scale * self.param.voltage_high_cut - voltage
-            ),
+            pybamm.Event("Minimum voltage [V]", lowest - self.param.voltage_low_cut),
+            pybamm.Event("Maximum voltage [V]", self.param.voltage_high_cut - highest),
         ]
 
     def _with_model_defaults(

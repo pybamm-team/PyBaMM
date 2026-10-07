@@ -496,6 +496,37 @@ class TestPhysics:
             "Layer" in event.name and "voltage" in event.name for event in model.events
         )
 
+    @pytest.mark.parametrize(
+        ("sign", "event", "cut_off"),
+        [
+            (1, "Minimum voltage [V]", "Lower voltage cut-off [V]"),
+            (-1, "Maximum voltage [V]", "Upper voltage cut-off [V]"),
+        ],
+    )
+    def test_the_first_zone_in_series_to_reach_a_cut_off_stops_the_stack(
+        self, sign, event, cut_off
+    ):
+        """Cooled from one face, the cold zone in series reaches a cut-off before the
+        warm one, and stops the stack there, not once their sum reaches twice it."""
+        model = MultiLayer3DThermalSPM(2, connection="series")
+        parameter_values = model.apply_stack_scaling(cooled(model, h=0.0, Left=500.0))
+        parameter_values.update(
+            {
+                "Ambient temperature [K]": 263.15,
+                "Initial temperature [K]": 263.15,
+                "Current function [A]": sign
+                * parameter_values["Nominal cell capacity [A.h]"],
+                model.CONTACT_RESISTANCE_PARAM: 0.1,
+            }
+        )
+        solution = solve(model, parameter_values, 20000)
+        assert solution.termination == f"event: {event}"
+        end = solution.t[-1]
+        cold, warm = (solution[f"Layer {i} voltage [V]"](end) for i in range(2))
+        limit = parameter_values[cut_off]
+        np.testing.assert_allclose(cold, limit, atol=1e-6)
+        assert sign * (warm - limit) > 1e-3, warm
+
     def test_a_parallel_stack_starts_from_rest(self):
         """A uniform stack at rest carries no current in any zone, then shares a load."""
         model = MultiLayer3DThermalSPMe(num_physical_layers=4)

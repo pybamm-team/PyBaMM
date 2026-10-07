@@ -72,7 +72,8 @@ electrochemistries.
   defaults to one zone per unit cell. Fewer zones are cheaper, and under uniform
   cooling give the same answer.
 * `connection` — `"parallel"` or `"series"`. The unit cells within a zone are
-  always in parallel.
+  always in parallel. In series, the stack stops when any one zone reaches the
+  parameter set's voltage cut-offs.
 * `mesh_h` — target element size of each zone's mesh, as for
   `pybamm.ScikitFemGenerator3D`.
 * `options` — model options, given to every zone. `"thermal"` must be
@@ -233,7 +234,10 @@ unless stated:
 * A `zone_model` that swaps a submodel before building gives the same solution
   when the swapped-in submodel is PyBaMM's own.
 * An experiment discharges to its own voltage cut-off, below the parameter set's,
-  in parallel and in series: the zones carry no voltage limits of their own.
+  in parallel and in series: no zone keeps a voltage limit the experiment does
+  not relax.
+* In series, cooled through one face, the cold zone reaching the lower or upper
+  cut-off stops the stack, with the warm zone still inside its limits.
 * Insulated on every face, the stack heats as PyBaMM's lumped model of one unit
   cell to `rtol=1e-3` (measured 1e-5 and better): the same heat, over the same
   volume, current collectors included, and the same heat capacity. A
