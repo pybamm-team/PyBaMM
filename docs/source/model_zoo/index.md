@@ -35,6 +35,7 @@ See [contributing a model](contributing.md) to add your own.
 | Model | Tier | Maintainer | PyBaMM | Added |
 | --- | --- | --- | --- | --- |
 | [Single Particle Model with a linearised open-circuit potential](models/linearised_spm.md) | core | @pybamm-team/maintainers | `>=26.0` | 2026-08-20 |
+| [Multilayer pouch cell stack with a 3D temperature field in every zone](models/multilayer_3d_thermal.md) | community | [@mleot](https://github.com/mleot) | `>=26.8` | 2026-09-28 |
 
 ## Compatibility
 
@@ -47,6 +48,7 @@ one whose job never reported, not a pass.
 | Model | Results | Last passing |
 | --- | --- | --- |
 | linearised_spm | `26.8.0.0`: pass, `26.9.0.0`: pass, `main`: pass | 26.9.0.0 |
+| multilayer_3d_thermal | not yet run | — |
 
 ```{toctree}
 :hidden:
@@ -54,4 +56,5 @@ one whose job never reported, not a pass.
 
 Contributing a model <contributing>
 models/linearised_spm
+models/multilayer_3d_thermal
 ```

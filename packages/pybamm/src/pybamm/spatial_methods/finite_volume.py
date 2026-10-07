@@ -1457,10 +1457,10 @@ class FiniteVolume(pybamm.SpatialMethod):
     def _face_coefficient_method(bin_op, edge_child):
         """
         Choose how to average a node-valued factor onto the edges it shares with
-        ``edge_child``. A coefficient multiplying a flux, such as ``K * grad(u)``
-        or ``K * (grad(u) - a * grad(v))``, is a conductance in series between
-        two control volumes, so it takes the harmonic mean, as does any factor
-        of a bare gradient; anything else takes the arithmetic mean.
+        ``edge_child``. Any factor of a bare gradient, and a coefficient
+        multiplying a signed sum of gradient terms, such as ``K`` in
+        ``K * (grad(u) - a * grad(v))``, take the harmonic mean; anything else
+        takes the arithmetic mean.
 
         Parameters
         ----------
@@ -1474,8 +1474,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         str
             ``"harmonic"`` or ``"arithmetic"``
         """
-        # a bare gradient takes the harmonic mean under any operator, as it
-        # always has; changing that could move user models' results
+        # a coefficient of a flux is a conductance in series between two cells;
+        # a bare gradient keeps the harmonic mean under any operator, as before
         if isinstance(edge_child, pybamm.Gradient) or (
             isinstance(bin_op, pybamm.Multiplication)
             and FiniteVolume._is_gradient_combination(edge_child)
@@ -1486,10 +1486,10 @@ class FiniteVolume(pybamm.SpatialMethod):
     @staticmethod
     def _is_gradient_combination(symbol):
         """
-        Whether ``symbol`` is a signed sum of terms ``grad(u)``, ``a * grad(u)``
-        or ``grad(u) / a``, with ``a`` evaluating on nodes. A factor applied to a
-        whole sum, as in ``t * (K * (grad(u) - grad(v)))``, scales a flux that is
-        already formed, so it does not qualify.
+        Whether ``symbol`` is a signed sum of gradient terms (see
+        :meth:`_is_gradient_term`). A factor applied to a whole sum, as in
+        ``t * (K * (grad(u) - grad(v)))``, scales a flux that is already formed,
+        so it does not qualify.
 
         Parameters
         ----------
@@ -1507,21 +1507,41 @@ class FiniteVolume(pybamm.SpatialMethod):
                 FiniteVolume._is_gradient_combination(child)
                 for child in symbol.children
             )
+        return FiniteVolume._is_gradient_term(symbol)
+
+    @staticmethod
+    def _is_gradient_term(symbol):
+        """
+        Whether ``symbol`` is a gradient, times or divided by any number of
+        factors that evaluate on nodes, such as ``a * (b * grad(u))`` or
+        ``(a * grad(u)) / b``.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            Symbol to check
+
+        Returns
+        -------
+        bool
+        """
+        if isinstance(symbol, pybamm.Gradient):
+            return True
         if isinstance(symbol, pybamm.Multiplication):
             left, right = symbol.children
             return (
-                isinstance(right, pybamm.Gradient)
-                and not left.evaluates_on_edges("primary")
-            ) or (
-                isinstance(left, pybamm.Gradient)
+                FiniteVolume._is_gradient_term(left)
                 and not right.evaluates_on_edges("primary")
+            ) or (
+                FiniteVolume._is_gradient_term(right)
+                and not left.evaluates_on_edges("primary")
             )
         if isinstance(symbol, pybamm.Division):
             numerator, denominator = symbol.children
-            return isinstance(numerator, pybamm.Gradient) and not (
+            return FiniteVolume._is_gradient_term(numerator) and not (
                 denominator.evaluates_on_edges("primary")
             )
-        return isinstance(symbol, pybamm.Gradient)
+        return False
 
     def concatenation(self, disc_children):
         """Discrete concatenation, taking `edge_to_node` for children that evaluate on
