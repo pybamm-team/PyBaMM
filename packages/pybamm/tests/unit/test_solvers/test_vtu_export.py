@@ -194,7 +194,20 @@ class TestSaveVtu:
         # 6 x-positions of the 5-cell strip, times 2 (2D) or 4 (3D) cross-section
         assert len(vtu.points) == 6 * 2 ** (dimension - 1)
         assert len(np.unique(vtu.points, axis=0)) == len(vtu.points)
-        # the larger mesh (region b) is written first
+        # the larger mesh (region b) is written first; corners keep _strip_mesh's order
+        x_ranges = [(1.0, 4 / 3), (4 / 3, 5 / 3), (5 / 3, 2.0), (0.0, 0.5), (0.5, 1.0)]
+        face = [(0, 0.0), (1, 0.0), (1, 1.0), (0, 1.0)]
+        expected = []
+        for x_range in x_ranges:
+            if dimension == 2:
+                corners = [[x_range[i], z, 0.0] for i, z in face]
+            else:
+                corners = [[x_range[i], y, z] for z in (0.0, 1.0) for i, y in face]
+            expected.append(corners)
+        cell_type = "quad" if dimension == 2 else "hexahedron"
+        np.testing.assert_allclose(
+            vtu.points[vtu.cells_dict[cell_type]], expected, atol=1e-12
+        )
         np.testing.assert_allclose(
             vtu.cell_data["a"][0], [np.nan, np.nan, np.nan, 1.0, 2.0]
         )
@@ -281,7 +294,7 @@ class TestSaveVtu:
         name = 'run 1 & "<a>"'
         pvd = solution.save_vtu(tmp_path / name, ["Both regions [K]"], t=[0.0])
 
-        dataset = ET.parse(pvd).getroot().find("Collection").find("DataSet")
+        dataset = ET.parse(pvd).getroot().find("Collection").find("DataSet")  # nosec B314
         assert dataset.get("file") == f"{name}/{name}_0000.vtu"
         assert (tmp_path / dataset.get("file")).is_file()
 
@@ -291,7 +304,7 @@ class TestSaveVtu:
             tmp_path / "out", ["Both regions [K]"], t=[-1e-13, 2.0 + 1e-13]
         )
 
-        root = ET.parse(tmp_path / "out.pvd").getroot()
+        root = ET.parse(tmp_path / "out.pvd").getroot()  # nosec B314
         datasets = root.find("Collection").findall("DataSet")
         assert [float(d.get("timestep")) for d in datasets] == [0.0, 2.0]
         vtu = _read(tmp_path, "out/out_0001.vtu")
@@ -343,6 +356,7 @@ class TestSaveVtu:
         )
         with pytest.raises(pybamm.OptionError, match=r"Cannot export 'line'"):
             solution.save_vtu(tmp_path / "out", ["line"])
+        assert not (tmp_path / "out").exists()
 
     def test_rejects_incompatible_meshes(self, tmp_path):
         quad = _strip_mesh(0.0, 1.0, 1, 2)
@@ -371,6 +385,7 @@ class TestSaveVtu:
             solution.save_vtu(tmp_path / "out", ["quad", "hexahedron"])
         with pytest.raises(pybamm.GeometryError, match=r"different element types"):
             solution.save_vtu(tmp_path / "out", ["quad", "triangle"])
+        assert not (tmp_path / "out").exists()
 
     def test_write_failure_raises(self, tmp_path):
         solution, _ = _two_region_solution(2)
