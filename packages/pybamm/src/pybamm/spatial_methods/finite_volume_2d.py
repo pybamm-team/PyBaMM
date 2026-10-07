@@ -530,13 +530,16 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         return dy_r - dy_l
 
-    def add_ghost_nodes(self, symbol, discretised_symbol, bcs):
+    def add_ghost_nodes(
+        self, symbol, discretised_symbol, bcs, *, use_boundary_value=False
+    ):
         """
         Add ghost nodes to a symbol.
 
         For Dirichlet bcs, for a boundary condition "y = a at the left-hand boundary",
         we concatenate a ghost node to the start of the vector y with value "2*a - y1"
-        where y1 is the value of the first node.
+        where y1 is the value of the first node, or with value "a" if
+        `use_boundary_value` is True.
         Similarly for the right-hand boundary condition and top and bottom boundaries.
 
         For Neumann bcs no ghost nodes are added. Instead, the exact value provided
@@ -553,6 +556,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             Dictionary (with keys "left", "right", "top", "bottom") of boundary conditions. Each
             boundary condition consists of a value and a flag indicating its type
             (e.g. "Dirichlet")
+        use_boundary_value : bool, optional
+            If True, Dirichlet ghost nodes take the boundary value "a" instead of
+            "2*a - y1". Default is False.
 
         Returns
         -------
@@ -609,6 +615,12 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             domain = [*domain, domain[-1] + "_right ghost cell"]
             n_bcs += 1
 
+        # Ghost node value is bc_factor * a + node_coefficient * y1
+        if use_boundary_value:
+            bc_factor, node_coefficient = 1, 0.0
+        else:
+            bc_factor, node_coefficient = 2, -1.0
+
         # Calculate values for ghost nodes for any Dirichlet boundary conditions
         if lbc_type == "Dirichlet":
             # Create matrix to extract the leftmost column of values
@@ -622,11 +634,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             )
             if lbc_value.evaluates_to_number():
                 left_ghost_constant = (
-                    2 * lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                    bc_factor * lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
                 )
                 lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
             else:
-                left_ghost_constant = 2 * lbc_value
+                left_ghost_constant = bc_factor * lbc_value
                 row_indices = np.arange(0, (n_lr + n_bcs) * n_tb, n_lr + n_bcs)
                 col_indices = np.arange(0, n_tb)
                 new_lbc_sub_matrix = coo_matrix(
@@ -665,11 +677,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             )
             if rbc_value.evaluates_to_number():
                 right_ghost_constant = (
-                    2 * rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                    bc_factor * rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
                 )
                 rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
             else:
-                right_ghost_constant = 2 * rbc_value
+                right_ghost_constant = bc_factor * rbc_value
                 row_indices = np.arange(
                     n_lr + n_bcs - 1, (n_lr + n_bcs) * n_tb, n_lr + n_bcs
                 )
@@ -708,11 +720,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
             if bbc_value.evaluates_to_number():
                 bottom_ghost_constant = (
-                    2 * bbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                    bc_factor * bbc_value * pybamm.Vector(np.ones(second_dim_repeats))
                 )
                 bbc_vector = pybamm.Matrix(bbc_matrix) @ bottom_ghost_constant
             else:
-                bottom_ghost_constant = 2 * bbc_value
+                bottom_ghost_constant = bc_factor * bbc_value
                 new_col_indices = np.arange(0, n_lr)
                 new_bbc_sub_matrix = coo_matrix(
                     (np.ones(n_lr), (row_indices, new_col_indices)),
@@ -750,11 +762,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
             if tbc_value.evaluates_to_number():
                 top_ghost_constant = (
-                    2 * tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                    bc_factor * tbc_value * pybamm.Vector(np.ones(second_dim_repeats))
                 )
                 tbc_vector = pybamm.Matrix(tbc_matrix) @ top_ghost_constant
             else:
-                top_ghost_constant = 2 * tbc_value
+                top_ghost_constant = bc_factor * tbc_value
                 new_col_indices = np.arange(0, n_lr)
                 new_tbc_sub_matrix = coo_matrix(
                     (np.ones(n_lr), (row_indices, new_col_indices)),
@@ -786,12 +798,14 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
         # (row[i], col[i]) for each index of data.
         if lbc_type == "Dirichlet":
-            left_ghost_vector = coo_matrix(([-1.0], ([0], [0])), shape=(1, n_lr))
+            left_ghost_vector = coo_matrix(
+                ([node_coefficient], ([0], [0])), shape=(1, n_lr)
+            )
         else:
             left_ghost_vector = None
         if rbc_type == "Dirichlet":
             right_ghost_vector = coo_matrix(
-                ([-1.0], ([0], [n_lr - 1])), shape=(1, n_lr)
+                ([node_coefficient], ([0], [n_lr - 1])), shape=(1, n_lr)
             )
         else:
             right_ghost_vector = None
@@ -800,7 +814,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             row_indices = np.arange(0, n_lr)
             col_indices = np.arange(0, n_lr)
             bottom_ghost_vector = coo_matrix(
-                (-np.ones(n_lr), (row_indices, col_indices)), shape=(n_lr, n)
+                (node_coefficient * np.ones(n_lr), (row_indices, col_indices)),
+                shape=(n_lr, n),
             )
         else:
             bottom_ghost_vector = None
@@ -808,7 +823,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
             row_indices = np.arange(0, n_lr)
             col_indices = np.arange(n - n_lr, n)
             top_ghost_vector = coo_matrix(
-                (-np.ones(n_lr), (row_indices, col_indices)), shape=(n_lr, n)
+                (node_coefficient * np.ones(n_lr), (row_indices, col_indices)),
+                shape=(n_lr, n),
             )
         else:
             top_ghost_vector = None
@@ -831,6 +847,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
 
         # repeat matrix for secondary dimensions
         matrix = self._block_diagonal(sub_matrix, second_dim_repeats)
+        matrix.eliminate_zeros()
 
         new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
@@ -2564,8 +2581,8 @@ class FiniteVolume2D(pybamm.SpatialMethod):
     ):
         """
         Implement an upwinding operator. Currently, this requires the symbol to have
-        a Dirichlet boundary condition on the left side or top side (for upwinding) or right side
-        or bottom side (for downwinding).
+        a Dirichlet boundary condition on the left side or bottom side (for upwinding) or
+        right side or top side (for downwinding).
 
         Parameters
         ----------
@@ -2617,10 +2634,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         elif lr_bc_side is None:
             symbol_out_lr = self.node_to_edge(discretised_symbol, direction="lr")
         else:
-            # Extract only the relevant boundary condition as the model might have both
+            # Extract only the relevant boundary condition as the model might have
+            # both. The inflow face takes the boundary value, not the averaging ghost
             bc_subset = {lr_bc_side: bcs[symbol][lr_bc_side]}
             symbol_out_lr, _ = self.add_ghost_nodes(
-                symbol, discretised_symbol, bc_subset
+                symbol, discretised_symbol, bc_subset, use_boundary_value=True
             )
 
         if (
@@ -2635,10 +2653,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         elif tb_bc_side is None:
             symbol_out_tb = self.node_to_edge(discretised_symbol, direction="tb")
         else:
-            # Extract only the relevant boundary condition as the model might have both
+            # Extract only the relevant boundary condition as the model might have
+            # both. The inflow face takes the boundary value, not the averaging ghost
             bc_subset = {tb_bc_side: bcs[symbol][tb_bc_side]}
             symbol_out_tb, _ = self.add_ghost_nodes(
-                symbol, discretised_symbol, bc_subset
+                symbol, discretised_symbol, bc_subset, use_boundary_value=True
             )
 
         return pybamm.VectorField(symbol_out_lr, symbol_out_tb)

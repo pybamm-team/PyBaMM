@@ -348,7 +348,9 @@ class TestFiniteVolumeLaplacian:
         )
 
 
-def solve_advection_equation(direction="upwind", source=1, bc=0):
+def solve_advection_equation(
+    direction="upwind", source=1, bc=0, n_points=1000, t_end=1
+):
     model = pybamm.BaseModel()
     x = pybamm.SpatialVariable("x", domain="domain", coord_sys="cartesian")
     u = pybamm.Variable("u", domain="domain")
@@ -374,13 +376,13 @@ def solve_advection_equation(direction="upwind", source=1, bc=0):
     model.variables = {"u": u, "x": x, "analytical": u_an}
     geometry = {"domain": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
     submesh_types = {"domain": pybamm.Uniform1DSubMesh}
-    var_pts = {x: 1000}
+    var_pts = {x: n_points}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
     spatial_methods = {"domain": pybamm.FiniteVolume()}
     disc = pybamm.Discretisation(mesh, spatial_methods)
     disc.process_model(model)
     solver = pybamm.IDAKLUSolver()
-    t_eval = [0, 1]
+    t_eval = [0, t_end]
     t_interp = t_eval
     return solver.solve(model, t_eval, t_interp=t_interp)
 
@@ -402,6 +404,23 @@ class TestUpwindDownwind:
             solution["analytical"].entries,
             rtol=1e-3,
             atol=1e-1,
+        )
+
+    @pytest.mark.parametrize("direction", ["upwind", "downwind"])
+    def test_steady_state_is_exact(self, direction):
+        # With the inflow face at the Dirichlet value, each steady cell value equals
+        # the exact solution at that cell's downstream face, on any mesh
+        n_points, source, bc = 10, 1, 2
+        solution = solve_advection_equation(
+            direction, source=source, bc=bc, n_points=n_points, t_end=50
+        )
+        nodes = (np.arange(n_points) + 0.5) / n_points
+        if direction == "upwind":
+            faces = nodes + 0.5 / n_points
+        else:
+            faces = 1 - nodes + 0.5 / n_points
+        np.testing.assert_allclose(
+            solution["u"](t=50, x=nodes), bc + source * faces, rtol=1e-6, atol=1e-6
         )
 
 
