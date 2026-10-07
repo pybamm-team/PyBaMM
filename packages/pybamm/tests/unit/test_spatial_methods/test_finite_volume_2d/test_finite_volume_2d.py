@@ -1324,3 +1324,132 @@ class TestFiniteVolume2DSecondaryDomain:
         self._assert_matches_per_secondary_point(
             method, concatenation, ["negative electrode", "separator"], sizes
         )
+
+
+class TestFaceCoefficientAveraging:
+    @staticmethod
+    def _two_material_slab(mesh_2d, flux, direction):
+        """Residual of div(flux(D, t, u, v)) at the exact steady profile of a slab
+        whose diffusivity D jumps on a face normal to ``direction``. ``t`` is a
+        node-valued factor that alternates between 1 and -1, and v = 0. D is a
+        state, so unlike a constant it cannot be distributed over a sum."""
+        disc = pybamm.Discretisation(mesh_2d, {"macroscale": pybamm.FiniteVolume2D()})
+        domain = ["negative electrode", "separator", "positive electrode"]
+        u, v, t, D = (pybamm.Variable(name, domain=domain) for name in "uvtD")
+        disc.set_variable_slices([u, v, t, D])
+        if direction == "lr":
+            ends, sides = ("left", "right"), ("top", "bottom")
+        else:
+            ends, sides = ("bottom", "top"), ("left", "right")
+        no_flux = (pybamm.Scalar(0), "Neumann")
+        disc.bcs = {
+            var: {
+                ends[0]: (pybamm.Scalar(0), "Dirichlet"),
+                ends[1]: (pybamm.Scalar(end_value), "Dirichlet"),
+                sides[0]: no_flux,
+                sides[1]: no_flux,
+            }
+            for var, end_value in [(u, 1), (v, 0)]
+        }
+
+        # piecewise linear, with the series-resistance flux through the face
+        submesh = mesh_2d[domain]
+        lr, tb = np.meshgrid(submesh.nodes_lr, submesh.nodes_tb)
+        s = (lr if direction == "lr" else tb).flatten()
+        edges = submesh.edges_lr if direction == "lr" else submesh.edges_tb
+        interface, length = edges[len(edges) // 2], edges[-1]
+        D1, D2 = 1.0, 25.0
+        q = 1 / (interface / D1 + (length - interface) / D2)
+        u_exact = np.where(s < interface, q * s / D1, 1 - q * (length - s) / D2)
+        D_exact = np.where(s < interface, D1, D2)
+        i_lr, i_tb = np.meshgrid(np.arange(submesh.npts_lr), np.arange(submesh.npts_tb))
+        t_values = (-1.0) ** (i_lr + i_tb).flatten()
+        y = np.concatenate([u_exact, np.zeros_like(s), t_values, D_exact])
+        return disc.process_symbol(pybamm.div(flux(D, t, u, v))).evaluate(
+            y=y[:, np.newaxis]
+        )
+
+    @pytest.mark.parametrize("direction", ["lr", "tb"])
+    @pytest.mark.parametrize(
+        "flux",
+        [
+            pytest.param(lambda D, t, u, v: D * pybamm.grad(u), id="D * grad(u)"),
+            pytest.param(
+                lambda D, t, u, v: D * (pybamm.grad(u) - pybamm.grad(v)),
+                id="D * (grad(u) - grad(v))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: (2 * pybamm.grad(v) - pybamm.grad(u)) * (-D),
+                id="(2 grad(v) - grad(u)) * (-D)",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * (pybamm.grad(u) + 3 * pybamm.grad(v) / 2),
+                id="D * (grad(u) + 3 grad(v) / 2)",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * (pybamm.grad(u) / (t * t) - pybamm.grad(v)),
+                id="D * (grad(u) / t**2 - grad(v))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * (t**2 * pybamm.grad(u) / t**4 - pybamm.grad(v)),
+                id="D * (t**2 * grad(u) / t**4 - grad(v))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * (2 * (pybamm.grad(u) - pybamm.grad(v))),
+                id="D * (2 (grad(u) - grad(v)))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: D * ((pybamm.grad(u) - pybamm.grad(v)) / 2),
+                id="D * ((grad(u) - grad(v)) / 2)",
+            ),
+            pytest.param(
+                lambda D, t, u, v: (
+                    D
+                    * (
+                        pybamm.VectorField(t * t, t * t) * pybamm.grad(u)
+                        - pybamm.grad(v)
+                    )
+                ),
+                id="D * (VectorField(t**2, t**2) * grad(u) - grad(v))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: (
+                    pybamm.VectorField(D, D) * (pybamm.grad(u) - pybamm.grad(v))
+                ),
+                id="VectorField(D, D) * (grad(u) - grad(v))",
+            ),
+        ],
+    )
+    def test_two_material_slab_is_exact(self, mesh_2d, flux, direction):
+        np.testing.assert_allclose(
+            self._two_material_slab(mesh_2d, flux, direction), 0, rtol=0, atol=1e-9
+        )
+
+    @pytest.mark.parametrize("direction", ["lr", "tb"])
+    def test_two_material_slab_arithmetic_mean_is_not_exact(self, mesh_2d, direction):
+        # a node-valued term (zero here) makes D an arithmetic-mean factor
+        residual = self._two_material_slab(
+            mesh_2d,
+            lambda D, t, u, v: D * (pybamm.grad(u) - pybamm.grad(v) + v),
+            direction,
+        )
+        assert np.abs(residual).max() > 1
+
+    @pytest.mark.parametrize("direction", ["lr", "tb"])
+    @pytest.mark.parametrize(
+        "flux",
+        [
+            pytest.param(
+                lambda D, t, u, v: t * (D * (pybamm.grad(u) - pybamm.grad(v))),
+                id="t * (D * (grad(u) - grad(v)))",
+            ),
+            pytest.param(
+                lambda D, t, u, v: t * (D * pybamm.grad(u)), id="t * (D * grad(u))"
+            ),
+        ],
+    )
+    def test_sign_changing_factor_of_a_flux_is_finite(self, mesh_2d, flux, direction):
+        # the harmonic mean of t = 1, -1 divides by zero where the cells on
+        # both sides of a face are equal, as they are on this uniform mesh
+        residual = self._two_material_slab(mesh_2d, flux, direction)
+        assert np.all(np.isfinite(residual))

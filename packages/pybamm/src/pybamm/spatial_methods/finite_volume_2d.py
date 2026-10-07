@@ -1955,36 +1955,11 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         return TensorField([[t00, t01], [t10, t11]], domain=disc_left.domain)
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
-        """Discretise binary operators in model equations.  Performs appropriate
-        averaging of diffusivities if one of the children is a gradient operator, so
-        that discretised sizes match up. For this averaging we use the harmonic
-        mean [1].
-
-        [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
-        the diffusion equation." (2012).
-
-        Parameters
-        ----------
-        bin_op : :class:`pybamm.BinaryOperator`
-            Binary operator to discretise
-        left : :class:`pybamm.Symbol`
-            The left child of `bin_op`
-        right : :class:`pybamm.Symbol`
-            The right child of `bin_op`
-        disc_left : :class:`pybamm.Symbol`
-            The discretised left child of `bin_op`
-        disc_right : :class:`pybamm.Symbol`
-            The discretised right child of `bin_op`
-        Returns
-        -------
-        :class:`pybamm.BinaryOperator`
-            Discretised binary operator
-
-        """
-        """Discretise binary operators in model equations.  Performs appropriate
-        averaging of diffusivities if one of the children is a gradient operator, so
-        that discretised sizes match up. For this averaging we use the harmonic
-        mean [1].
+        """Discretise binary operators in model equations.  Averages a child that
+        evaluates on nodes onto the lr and tb edges when the other child evaluates on
+        edges, so that discretised sizes match up. A factor of a bare gradient, or a
+        coefficient multiplying a signed sum of gradient terms, takes the harmonic
+        mean [1]; anything else takes the arithmetic mean.
 
         [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
         the diffusion equation." (2012).
@@ -2019,75 +1994,15 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         if isinstance(bin_op, pybamm.TensorProduct):
             return self._tensor_product(left, right, disc_left, disc_right)
 
-        # This could be cleaned up a bit, but it works for now.
-        if hasattr(disc_left, "lr_field") and hasattr(disc_right, "lr_field"):
-            if right_evaluates_on_edges and not left_evaluates_on_edges:
-                if isinstance(right, pybamm.Gradient):
-                    method = "harmonic"
-                    disc_left_lr = self.node_to_edge(
-                        disc_left.lr_field, method=method, direction="lr"
-                    )
-                    disc_left_tb = self.node_to_edge(
-                        disc_left.tb_field, method=method, direction="tb"
-                    )
-                    disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
-                else:
-                    method = "arithmetic"
-                    disc_left_lr = self.node_to_edge(
-                        disc_left.lr_field, method=method, direction="lr"
-                    )
-                    disc_left_tb = self.node_to_edge(
-                        disc_left.tb_field, method=method, direction="tb"
-                    )
-                    disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
-            elif left_evaluates_on_edges and not right_evaluates_on_edges:
-                if isinstance(left, pybamm.Gradient):
-                    method = "harmonic"
-                    disc_right_lr = self.node_to_edge(
-                        disc_right.lr_field, method=method, direction="lr"
-                    )
-                    disc_right_tb = self.node_to_edge(
-                        disc_right.tb_field, method=method, direction="tb"
-                    )
-                    disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
-                else:
-                    method = "arithmetic"
-                    disc_right_lr = self.node_to_edge(
-                        disc_right.lr_field, method=method, direction="lr"
-                    )
-                    disc_right_tb = self.node_to_edge(
-                        disc_right.tb_field, method=method, direction="tb"
-                    )
-                    disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
-            # both are vector fields, so we need make a new vector field.
-            lr_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
-            )
-            tb_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.tb_field, disc_right.tb_field])
-            )
-            return pybamm.VectorField(lr_field, tb_field)
-        elif hasattr(disc_left, "lr_field") and not hasattr(disc_right, "lr_field"):
-            # one is a vector field, so we need to make a new vector field.
+        if hasattr(disc_left, "lr_field") or hasattr(disc_right, "lr_field"):
+            # Map the node-valued child onto lr and tb edges, using the harmonic
+            # mean if it is a coefficient of gradient terms
             if left_evaluates_on_edges and not right_evaluates_on_edges:
-                if isinstance(left, pybamm.Gradient):
-                    method = "harmonic"
-                    disc_right_lr = self.node_to_edge(
-                        disc_right, method=method, direction="lr"
-                    )
-                    disc_right_tb = self.node_to_edge(
-                        disc_right, method=method, direction="tb"
-                    )
-                    disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
-                else:
-                    method = "arithmetic"
-                    disc_right_lr = self.node_to_edge(
-                        disc_right, method=method, direction="lr"
-                    )
-                    disc_right_tb = self.node_to_edge(
-                        disc_right, method=method, direction="tb"
-                    )
-                    disc_right = pybamm.VectorField(disc_right_lr, disc_right_tb)
+                method = pybamm.FiniteVolume._face_coefficient_method(bin_op, left)
+                disc_right = self._node_to_edge_vector_field(disc_right, method)
+            elif right_evaluates_on_edges and not left_evaluates_on_edges:
+                method = pybamm.FiniteVolume._face_coefficient_method(bin_op, right)
+                disc_left = self._node_to_edge_vector_field(disc_left, method)
             lr_field = pybamm.simplify_if_constant(
                 bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
             )
@@ -2095,44 +2010,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 bin_op.create_copy([disc_left.tb_field, disc_right.tb_field])
             )
             return pybamm.VectorField(lr_field, tb_field)
-        elif not hasattr(disc_left, "lr_field") and hasattr(disc_right, "lr_field"):
-            # one is a vector field, so we need to make a new vector field.
-            if right_evaluates_on_edges and not left_evaluates_on_edges:
-                if isinstance(right, pybamm.Gradient):
-                    method = "harmonic"
-                    disc_left_lr = self.node_to_edge(
-                        disc_left, method=method, direction="lr"
-                    )
-                    disc_left_tb = self.node_to_edge(
-                        disc_left, method=method, direction="tb"
-                    )
-                    disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
-                else:
-                    method = "arithmetic"
-                    disc_left_lr = self.node_to_edge(
-                        disc_left, method=method, direction="lr"
-                    )
-                    disc_left_tb = self.node_to_edge(
-                        disc_left, method=method, direction="tb"
-                    )
-                    disc_left = pybamm.VectorField(disc_left_lr, disc_left_tb)
-            lr_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.lr_field, disc_right.lr_field])
-            )
-            tb_field = pybamm.simplify_if_constant(
-                bin_op.create_copy([disc_left.tb_field, disc_right.tb_field])
-            )
-            return pybamm.VectorField(lr_field, tb_field)
-        else:
-            pass
 
         # If neither child evaluates on edges, or both children have gradients,
         # no need to do any averaging
         if left_evaluates_on_edges == right_evaluates_on_edges:
             pass
-        # If only left child evaluates on edges, map right child onto edges
-        # using the harmonic mean if the left child is a gradient (i.e. this
-        # binary operator represents a flux)
+        # If only left child evaluates on edges, map right child onto its edges;
+        # a gradient is always a VectorField here, so this is never a flux
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
             method = "arithmetic"
             direction = left.direction
@@ -2140,9 +2024,7 @@ class FiniteVolume2D(pybamm.SpatialMethod):
                 disc_right, method=method, direction=direction
             )
 
-        # If only right child evaluates on edges, map left child onto edges
-        # using the harmonic mean if the right child is a gradient (i.e. this
-        # binary operator represents a flux)
+        # If only right child evaluates on edges, map left child onto its edges
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
             method = "arithmetic"
             direction = right.direction
@@ -2152,6 +2034,33 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         out = pybamm.simplify_if_constant(bin_op.create_copy([disc_left, disc_right]))
 
         return out
+
+    def _node_to_edge_vector_field(self, discretised_symbol, method):
+        """
+        Map a node-valued symbol onto the lr and tb edges.
+
+        Parameters
+        ----------
+        discretised_symbol : :class:`pybamm.Symbol`
+            Discretised node-valued symbol, either a scalar field or a
+            :class:`pybamm.VectorField` whose components are mapped separately
+        method : str
+            Whether to use the "arithmetic" or "harmonic" mean
+
+        Returns
+        -------
+        :class:`pybamm.VectorField`
+            The symbol on the lr and tb edges
+        """
+        if hasattr(discretised_symbol, "lr_field"):
+            lr_field = discretised_symbol.lr_field
+            tb_field = discretised_symbol.tb_field
+        else:
+            lr_field = tb_field = discretised_symbol
+        return pybamm.VectorField(
+            self.node_to_edge(lr_field, method=method, direction="lr"),
+            self.node_to_edge(tb_field, method=method, direction="tb"),
+        )
 
     def concatenation(self, disc_children):
         """Discrete concatenation, taking `edge_to_node` for children that evaluate on
