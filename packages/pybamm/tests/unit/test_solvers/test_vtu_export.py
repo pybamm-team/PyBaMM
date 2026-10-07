@@ -293,7 +293,9 @@ class TestSaveVtu:
 
         root = ET.parse(tmp_path / "out.pvd").getroot()  # nosec B314
         datasets = root.find("Collection").findall("DataSet")
-        assert [float(d.get("timestep")) for d in datasets] == [0.5]
+        np.testing.assert_array_equal(
+            [float(d.get("timestep")) for d in datasets], [0.5]
+        )
         vtu = _read(tmp_path, "out/out_0000.vtu")
         np.testing.assert_allclose(
             vtu.cell_data["Both regions [K]"][0], 1.25 * np.arange(1.0, 6.0)
@@ -362,7 +364,9 @@ class TestSaveVtu:
 
         root = ET.parse(tmp_path / "out.pvd").getroot()  # nosec B314
         datasets = root.find("Collection").findall("DataSet")
-        assert [float(d.get("timestep")) for d in datasets] == [0.0, 2.0]
+        np.testing.assert_array_equal(
+            [float(d.get("timestep")) for d in datasets], [0.0, 2.0]
+        )
         vtu = _read(tmp_path, "out/out_0001.vtu")
         np.testing.assert_allclose(
             vtu.cell_data["Both regions [K]"][0], 2.0 * np.arange(1.0, 6.0)

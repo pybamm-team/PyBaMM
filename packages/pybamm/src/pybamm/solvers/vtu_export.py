@@ -161,7 +161,7 @@ def _write_pvd(filename, entries):
 
 def save_vtu(
     solution: pybamm.Solution,
-    filename: str | os.PathLike,
+    filename: str | os.PathLike[str],
     variables: str | list[str],
     t: npt.ArrayLike | None = None,
 ) -> str:
@@ -178,7 +178,8 @@ def save_vtu(
     variables : str or list of str
         Names of the variables to export.
     t : array-like, optional
-        Strictly increasing output times [s]. Defaults to the solution's times.
+        Strictly increasing output times [s], within the solution's time
+        range. Defaults to the solution's (unique) times.
 
     Returns
     -------

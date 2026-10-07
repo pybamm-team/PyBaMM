@@ -1225,7 +1225,7 @@ class Solution(SolutionBase):
 
     def save_vtu(
         self,
-        filename: str | os.PathLike,
+        filename: str | os.PathLike[str],
         variables: str | list[str],
         t: npt.ArrayLike | None = None,
     ) -> str:
