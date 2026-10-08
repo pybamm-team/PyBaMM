@@ -76,7 +76,7 @@ class StandardModelTest:
         if isinstance(
             self.model, pybamm.lithium_ion.BaseModel | pybamm.lead_acid.BaseModel
         ):
-            self.solver.rtol = 1e-8
+            self.solver.rtol = 1e-6
             self.solver.atol = 1e-8
 
         Crate = abs(
