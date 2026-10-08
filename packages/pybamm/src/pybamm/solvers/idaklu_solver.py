@@ -19,6 +19,30 @@ from pybamm.solvers.base_solver import flatten_inputs, stack_inputs
 _UNSET = object()
 
 
+def _state_sensitivities(yS: np.ndarray, sensitivity_names: list[str]) -> dict:
+    """Sensitivities of one state vector, keyed as in ``Solution``.
+
+    Parameters
+    ----------
+    yS : numpy.ndarray
+        Sensitivities of the states, one row per name in ``sensitivity_names``.
+    sensitivity_names : list of str
+        Differentiated parameter names, in the solver's column order.
+
+    Returns
+    -------
+    dict
+        An ``(n_states, 1)`` column per name, and all of them under ``"all"``.
+    """
+    all_sensitivities = yS.T
+    sensitivities = {
+        name: all_sensitivities[:, i : i + 1]
+        for i, name in enumerate(sensitivity_names)
+    }
+    sensitivities["all"] = all_sensitivities
+    return sensitivities
+
+
 def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.ndarray:
     """IDAS ``pbar``: the magnitude of each differentiated parameter.
 
@@ -854,15 +878,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # (#timesteps * #states (where t is changing the quickest),)
         # to match format used by Solution
         # note that yS is (n_p, n_t, n_y)
-        if number_of_sensitivity_parameters != 0:
+        if number_of_sensitivity_parameters == 0:
+            yS_out = {}
+        elif save_outputs_only:
+            # yS holds the outputs' sensitivities; the states have none, like y_out
+            yS_out = {name: np.zeros((0, 1)) for name in sensitivity_names}
+            yS_out["all"] = np.zeros((0, number_of_sensitivity_parameters))
+        else:
             yS_out = {
                 name: sol.yS[i].reshape(-1, 1)
                 for i, name in enumerate(sensitivity_names)
             }
             # add "all" stacked sensitivities ((#timesteps * #states,#sens_params))
             yS_out["all"] = np.hstack([yS_out[name] for name in sensitivity_names])
-        else:
-            yS_out = {}
 
         # IDA_SUCCESS (0) = solved for all t_eval
         # IDA_ROOT_RETURN (2) = found root(s)
@@ -930,6 +958,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not save_outputs_only:
             return newsol
 
+        # Consistent initial states, and the state sensitivities at both ends
+        newsol._y0 = sol.y_init
+        if number_of_sensitivity_parameters != 0:
+            newsol._y0_sensitivities = _state_sensitivities(
+                sol.yS_init, sensitivity_names
+            )
+            newsol._y_event_sensitivities = _state_sensitivities(
+                sol.yS_term, sensitivity_names
+            )
+
         # Populate variables and sensitivities dictionaries directly
         number_of_samples = sol.y.shape[0] // number_of_timesteps
         sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
@@ -942,21 +980,26 @@ class IDAKLUSolver(pybamm.BaseSolver):
             var_nnz, var_shape, base_variables = self._get_variable_info(model, var)
             end_idx = start_idx + var_nnz
             data = sol.y[:, start_idx:end_idx]
-            time_indep = False
+            if var_nnz != math.prod(var_shape):
+                # Scatter the returned structural nonzeros to their flat indices
+                indices = base_variables[0].sparsity_out(0).find()
+                dense = np.zeros((number_of_timesteps, math.prod(var_shape)))
+                dense[:, indices] = data
+                data = dense
+            time_integral = self._time_integral_vars.get(var)
+            values = data
 
             # handle any time integral variables
-            if var in self._time_integral_vars:
+            if time_integral is not None:
                 # time integral variables should all be 1D
-                tiv = self._time_integral_vars[var]
-                data = tiv.postfix(data.reshape(-1), sol.t, inputs_dict)
-                time_indep = True
+                values = time_integral.postfix(data.reshape(-1), sol.t, inputs_dict)
 
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
                 [model.get_processed_variable_or_event(var)],
                 base_variables,
-                [data],
+                [values],
                 newsol,
-                time_indep=time_indep,
+                time_integral=time_integral,
             )
 
             # Add sensitivities
@@ -971,15 +1014,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     number_of_timesteps * (end_idx - start_idx),
                     number_of_sensitivity_parameters,
                 )
-                if var in self._time_integral_vars:
-                    tiv = self._time_integral_vars[var]
-                    sens_data = tiv.postfix_sensitivities(
-                        var, data, sol.t, inputs_dict, sens_data
+                if time_integral is not None:
+                    sens_data = time_integral.postfix_sensitivities(
+                        var,
+                        data.reshape(-1),
+                        sol.t,
+                        inputs_dict,
+                        sensitivity_names,
+                        sens_data,
                     )
                 newsol[var]._sensitivities["all"] = sens_data
 
                 # Add the individual sensitivity
-                for i, name in enumerate(inputs_dict.keys()):
+                for i, name in enumerate(sensitivity_names):
                     sens = newsol[var]._sensitivities["all"][:, i : i + 1].reshape(-1)
                     newsol[var]._sensitivities[name] = sens
 
@@ -990,9 +1037,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """Get variable length and base variables based on model format."""
         if model.convert_to_format == "casadi":
             base_var = self._setup["var_fcns"][var]
-            var_eval = base_var(0.0, 0.0, 0.0)
-            var_nnz = var_eval.sparsity().nnz()
-            var_shape = var_eval.shape
+            sparsity = base_var.sparsity_out(0)
+            var_nnz = sparsity.nnz()
+            var_shape = sparsity.shape
             return var_nnz, var_shape, [base_var]
         else:  # pragma: no cover
             raise pybamm.SolverError(
@@ -1271,6 +1318,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         new_sol._all_inputs_stacked = solution.all_inputs_stacked
         new_sol._all_inputs_casadi = solution.all_inputs_casadi
         new_sol.closest_event_idx = solution.closest_event_idx
+        new_sol._y0 = solution._y0
+        new_sol._y0_sensitivities = solution._y0_sensitivities
+        new_sol._y_event_sensitivities = solution._y_event_sensitivities
 
         new_sol.solve_time = solution.solve_time
         new_sol.integration_time = solution.integration_time
