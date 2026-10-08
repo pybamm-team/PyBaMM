@@ -26,6 +26,7 @@
 - The CI test matrix now installs every dependency from `uv.lock`, as local nox sessions do, instead of resolving the latest releases, so only the prebuilt `pybammsolvers` wheel is installed outside the lock. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - An editable `pybammsolvers` install, such as the one `uv sync` creates, can be imported on its own: `import pybammsolvers` no longer fails to load `libcasadi` unless `casadi` was imported first. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
 - `FiniteVolume2D` now raises a `DiscretisationError` when a 2D mesh has fewer than 2 nodes in either direction (for example `BasicDFN2D` with 1 point in `z_2d`), instead of an opaque scipy `ValueError` from the harmonic mean. Use a one-dimensional model for problems that do not vary in that direction. ([#5838](https://github.com/pybamm-team/PyBaMM/pull/5838))
+- `"intercalation kinetics": "Marcus"` now gives a positive current for a positive overpotential, as the other kinetics do, and converts the reorganization energy from eV with F/RT, as Marcus-Hush-Chidsey does. Previously the oxidation and reduction terms were swapped and the energy was used in mixed units, so models with Marcus kinetics failed to solve. ([#5872](https://github.com/pybamm-team/PyBaMM/pull/5872))
 
 ## Optimizations
 
