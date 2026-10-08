@@ -1486,10 +1486,11 @@ class FiniteVolume(pybamm.SpatialMethod):
     @staticmethod
     def _is_gradient_combination(symbol):
         """
-        Whether ``symbol`` is a signed sum of gradient terms (see
-        :meth:`_is_gradient_term`). A factor applied to a whole sum, as in
-        ``t * (K * (grad(u) - grad(v)))``, scales a flux that is already formed,
-        so it does not qualify.
+        Whether ``symbol`` is a gradient or a signed sum of gradient terms (see
+        :meth:`_is_gradient_term`), up to factors and divisors without a domain.
+        A node-valued factor applied to a single term or to a whole sum, as in
+        ``t * (K * grad(u))`` or ``t * (K * (grad(u) - grad(v)))``, scales a
+        flux that is already formed, so it does not qualify.
 
         Parameters
         ----------
@@ -1500,14 +1501,28 @@ class FiniteVolume(pybamm.SpatialMethod):
         -------
         bool
         """
+        if isinstance(symbol, pybamm.Gradient):
+            return True
         if isinstance(symbol, pybamm.Negate):
             return FiniteVolume._is_gradient_combination(symbol.child)
+        # a factor without a domain is the same in every cell
+        if isinstance(symbol, pybamm.Multiplication):
+            left, right = symbol.children
+            return (
+                left.domain == [] and FiniteVolume._is_gradient_combination(right)
+            ) or (right.domain == [] and FiniteVolume._is_gradient_combination(left))
+        if isinstance(symbol, pybamm.Division):
+            numerator, denominator = symbol.children
+            return denominator.domain == [] and (
+                FiniteVolume._is_gradient_combination(numerator)
+            )
         if isinstance(symbol, pybamm.Addition | pybamm.Subtraction):
             return all(
                 FiniteVolume._is_gradient_combination(child)
+                or FiniteVolume._is_gradient_term(child)
                 for child in symbol.children
             )
-        return FiniteVolume._is_gradient_term(symbol)
+        return False
 
     @staticmethod
     def _is_gradient_term(symbol):
