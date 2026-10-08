@@ -152,6 +152,7 @@ class BaseThermal(pybamm.BaseSubModel):
             # Irreversible electrochemical heating, including the resistive loss
             # across the SEI film, which eta_r excludes
             Q_rxn_p += a_j_p * (eta_r_p - eta_sei_p)
+            Q_rxn_p += self._side_reaction_heating(variables, "positive", phase)
             # Reversible electrochemical heating
             dUdT_p = variables[f"Positive electrode {phase}entropic change [V.K-1]"]
             Q_rev_p += a_j_p * T_p * dUdT_p
@@ -210,6 +211,7 @@ class BaseThermal(pybamm.BaseSubModel):
                 # Irreversible electrochemical heating, including the resistive loss
                 # across the SEI film, which eta_r excludes
                 Q_rxn_n += a_j_n * (eta_r_n - eta_sei_n)
+                Q_rxn_n += self._side_reaction_heating(variables, "negative", phase)
                 # Reversible electrochemical heating
                 dUdT_n = variables[f"Negative electrode {phase}entropic change [V.K-1]"]
                 Q_rev_n += a_j_n * T_n * dUdT_n
@@ -391,6 +393,35 @@ class BaseThermal(pybamm.BaseSubModel):
                 Q_s_cn = self.param.n.sigma_cc * pybamm.grad_squared(phi_s_cn)
                 Q_s_cp = self.param.p.sigma_cc * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
+
+    def _side_reaction_heating(self, variables, domain, phase_name):
+        """
+        Irreversible heating from SEI growth and lithium plating in a porous
+        electrode, as each side-reaction current times ``delta_phi - U`` for that
+        reaction, which includes any SEI film drop.
+        """
+        Domain = domain.capitalize()
+        phase = phase_name.strip() or "primary"
+        domain_options = getattr(self.options, domain)
+        phase_options = getattr(domain_options, phase)
+        delta_phi = variables[f"{Domain} electrode surface potential difference [V]"]
+        prefix = f"{Domain} electrode {phase_name}"
+        suffix = "volumetric interfacial current density [A.m-3]"
+
+        Q = 0
+        if phase_options["SEI"] not in ["none", "constant"]:
+            U_sei = self.param.domain_params[domain].phase_params[phase].U_sei
+            reactions = ["SEI"]
+            if domain_options["SEI on cracks"] == "true":
+                reactions.append("SEI on cracks")
+            for reaction in reactions:
+                a_j_sei = variables[f"{prefix}{reaction} {suffix}"]
+                Q += a_j_sei * (delta_phi - U_sei)
+        if phase_options["lithium plating"] != "none":
+            # Lithium plating has zero open-circuit potential
+            a_j_pl = variables[f"{prefix}lithium plating {suffix}"]
+            Q += a_j_pl * delta_phi
+        return Q
 
     def _heat_of_mixing(self, variables):
         """Compute heat of mixing source terms."""
