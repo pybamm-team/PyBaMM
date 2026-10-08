@@ -1249,6 +1249,24 @@ class TestIDAKLUSolver:
         ):
             sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
 
+    @pytest.mark.parametrize("output_variables", [["zero"], ["zero", "u"]])
+    def test_output_variable_with_no_structural_nonzeros(self, output_variables):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        # The solver returns no rows for a variable with no structural nonzeros
+        model.variables = {"u": u, "zero": pybamm.Matrix(csc_matrix((1, 1)))}
+        t_interp = np.linspace(0, 1, 5)
+
+        sol = pybamm.IDAKLUSolver(output_variables=output_variables).solve(
+            model, [0, 1], t_interp=t_interp
+        )
+
+        np.testing.assert_array_equal(sol["zero"](t_interp), np.zeros(5))
+        if "u" in output_variables:
+            np.testing.assert_allclose(sol["u"](t_interp), np.exp(-t_interp), rtol=1e-3)
+
     def test_output_variables_sensitivities_to_some_inputs(self):
         model = pybamm.BaseModel()
         c = pybamm.Variable("c")
