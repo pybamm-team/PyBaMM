@@ -31,7 +31,9 @@ from pybamm.solvers.variable_observer import (
 class ObserverCache:
     """The compiled leaves of one model's variables, keyed by variable name.
 
-    A name is assumed to keep one expression for the model's lifetime.
+    A name is assumed to keep one expression for the model's lifetime. Each leaf
+    is built for the input layout and solution options (such as ``compile`` and
+    ``cse``) of the first solve that reads it, and later solves reuse it as is.
     """
 
     def __init__(self):
