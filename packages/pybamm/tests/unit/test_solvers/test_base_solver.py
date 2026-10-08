@@ -630,9 +630,8 @@ class TestBaseSolver:
         ):
             pybamm.BaseSolver._check_restart_sensitivities(solution)
 
-    def test_step_rejects_a_sensitivity_restart_from_output_variables(self):
-        # Output and state widths match here, so the restart would otherwise
-        # seed the state sensitivities from the output ones without an error.
+    def test_step_restarts_sensitivities_from_output_variables(self):
+        # Equal output and state widths, so seeding from the outputs is silently wrong
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -640,18 +639,25 @@ class TestBaseSolver:
         model.initial_conditions = {u: 1.0, v: 0.5}
         model.variables = {"2u": 2 * u, "v": v}
         pybamm.Discretisation().process_model(model)
-        solver = pybamm.IDAKLUSolver(output_variables=["2u", "v"])
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["2u", "v"], rtol=1e-8, atol=1e-10
+        )
 
         solution = solver.step(
             None, model, 1.0, inputs={"k": 1.3}, calculate_sensitivities=True
         )
-        with pytest.raises(
-            pybamm.SolverError,
-            match=r"returned output variables only",
-        ):
-            solver.step(
-                solution, model, 1.0, inputs={"k": 1.3}, calculate_sensitivities=True
-            )
+        solution = solver.step(
+            solution, model, 1.0, inputs={"k": 1.3}, calculate_sensitivities=True
+        )
+
+        # u = exp(-k t), so d(2u)/dk = -2 t exp(-k t) across both steps
+        t = solution.t
+        np.testing.assert_allclose(
+            solution["2u"].sensitivities["k"].ravel(),
+            -2 * t * np.exp(-1.3 * t),
+            rtol=1e-5,
+            atol=1e-9,
+        )
 
     def test_check_restart_sensitivities_allows_full_state(self):
         solution = pybamm.Solution(
