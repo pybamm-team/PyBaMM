@@ -100,7 +100,8 @@ public:
   std::pair<bool, np_array> solve(
     sunrealtype t,
     const np_array& y0_np,
-    const np_array& inputs_np);
+    const np_array& inputs_np,
+    py::object logger = py::none());
 
   /**
    * @brief Batch solve over multiple time points in a single C++ call.
@@ -113,9 +114,11 @@ public:
   std::pair<bool, py::array_t<sunrealtype, py::array::f_style>> solve_batch(
     const np_array& t_eval_np,
     const np_array& y0_alg_np,
-    const np_array& inputs_np);
+    const np_array& inputs_np,
+    py::object logger = py::none());
 
 private:
+  SolverLog log_;
   StandaloneAlgebraicSystem system_;
   NonlinearSolver solver_;
   int n_vars_;
