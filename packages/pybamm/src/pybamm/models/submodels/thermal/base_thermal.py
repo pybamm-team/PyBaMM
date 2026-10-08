@@ -149,8 +149,8 @@ class BaseThermal(pybamm.BaseSubModel):
             eta_sei_p = variables[
                 f"Positive electrode {phase}SEI film overpotential [V]"
             ]
-            # Irreversible electrochemical heating, including the resistive loss
-            # across the SEI film, which eta_r excludes
+            # Irreversible heating. eta_r is the kinetic overpotential net of the
+            # film drop, so eta_r - eta_sei adds the resistive loss in the SEI film
             Q_rxn_p += a_j_p * (eta_r_p - eta_sei_p)
             # Reversible electrochemical heating
             dUdT_p = variables[f"Positive electrode {phase}entropic change [V.K-1]"]
@@ -207,8 +207,8 @@ class BaseThermal(pybamm.BaseSubModel):
                 eta_sei_n = variables[
                     f"Negative electrode {phase}SEI film overpotential [V]"
                 ]
-                # Irreversible electrochemical heating, including the resistive loss
-                # across the SEI film, which eta_r excludes
+                # Irreversible heating. eta_r is the kinetic overpotential net of the
+                # film drop, so eta_r - eta_sei adds the resistive loss in the SEI film
                 Q_rxn_n += a_j_n * (eta_r_n - eta_sei_n)
                 # Reversible electrochemical heating
                 dUdT_n = variables[f"Negative electrode {phase}entropic change [V.K-1]"]

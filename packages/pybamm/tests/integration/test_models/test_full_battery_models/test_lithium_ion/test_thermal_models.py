@@ -245,6 +245,12 @@ class TestThermal:
                 5,
             ),
             (
+                pybamm.lithium_ion.MPM,
+                {"SEI film resistance": "distributed"},
+                "OKane2022",
+                5,
+            ),
+            (
                 pybamm.lithium_ion.SPMe,
                 {"working electrode": "positive", "SEI film resistance": "distributed"},
                 "Xu2019",
@@ -263,6 +269,8 @@ class TestThermal:
             {k: chen2020[k] for k in chen2020 if k not in parameter_values},
             check_already_exists=False,
         )
+        if model is pybamm.lithium_ion.MPM:
+            parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
         parameter_values.update(
             {
                 "Current function [A]": current,
