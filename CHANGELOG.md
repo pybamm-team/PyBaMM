@@ -30,7 +30,7 @@
 - Fixed `ProcessedVariable` permuting the values of unsorted time queries when interpolating without Hermite data. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 - Fixed 3D variables requested through `output_variables` coming back scrambled. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 - Fixed `ProcessedVariable.as_computed()` reordering the spatial axes of 2D and 3D variables and raising on 0D time integrals; spatial time integrals raise `NotImplementedError`. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
-- Fixed reading variables from joined `output_variables` solutions; a joined `DiscreteTimeSum`, or expression of a time integral, raises `NotImplementedError` when read. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- Fixed reading variables from joined `output_variables` solutions, other than sparse ones; a joined `DiscreteTimeSum`, or expression of a time integral, raises `NotImplementedError` when read. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 - Fixed a `ValueError` when reading variables from a solve with both scalar and vector inputs. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 
 ## Optimizations
