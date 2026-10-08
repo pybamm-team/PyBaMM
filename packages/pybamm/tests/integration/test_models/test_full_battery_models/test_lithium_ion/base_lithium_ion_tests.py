@@ -170,6 +170,18 @@ class BaseIntegrationTestLithiumIon:
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
+    def test_kinetics_marcus(self):
+        options = {"intercalation kinetics": "Marcus"}
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        parameter_values.update(
+            {
+                "Negative electrode reorganization energy [eV]": 0.35,
+                "Positive electrode reorganization energy [eV]": 0.35,
+                "Positive electrode exchange-current density [A.m-2]": 5,
+            }
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
     def test_irreversible_plating_with_porosity(self):
         options = {
             "lithium plating": "irreversible",
