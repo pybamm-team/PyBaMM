@@ -176,7 +176,15 @@ class CRate(BaseStepExplicit):
 
     def _default_timespan(self, value):
         # "value" is C-rate, so duration is "1 / value" hours in seconds
-        # with a 2x safety factor
+        # with a 2x safety factor. For a callable ``value`` we cannot
+        # invert "1 / C-rate" at construction time without evaluating
+        # the function (whose C-rate varies in time and may change
+        # sign), so we fall back to the base 24-hour default — matching
+        # how ``Current``/``Voltage``/``Power``/``Resistance`` handle
+        # callables. Users wanting a tighter bound can still pass
+        # ``duration=...`` explicitly. See issue #4926.
+        if callable(value):
+            return super()._default_timespan(value)
         return 1 / abs(value) * 3600 * 2
 
 
