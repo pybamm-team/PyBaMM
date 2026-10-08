@@ -385,11 +385,16 @@ class Mesh(dict):
                 right_mesh = self[right_name]
                 if "left" not in right_mesh.boundary_faces:
                     continue
+                from pybamm.meshes.unstructured_submesh import (
+                    _geometric_tolerance,
+                    _share_coordinate_frame,
+                )
+
+                if not _share_coordinate_frame(left_mesh, right_mesh):
+                    continue
                 left_x = right_mesh.face_centroids[
                     right_mesh.boundary_faces["left"], 0
                 ].mean()
-                from pybamm.meshes.unstructured_submesh import _geometric_tolerance
-
                 if abs(right_x - left_x) > _geometric_tolerance(
                     [left_mesh, right_mesh]
                 ):

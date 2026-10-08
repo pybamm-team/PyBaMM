@@ -26,6 +26,7 @@
 - The CI test matrix now installs every dependency from `uv.lock`, as local nox sessions do, instead of resolving the latest releases, so only the prebuilt `pybammsolvers` wheel is installed outside the lock. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - An editable `pybammsolvers` install, such as the one `uv sync` creates, can be imported on its own: `import pybammsolvers` no longer fails to load `libcasadi` unless `casadi` was imported first. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
 - `FiniteVolume2D` now raises a `DiscretisationError` when a 2D mesh has fewer than 2 nodes in either direction (for example `BasicDFN2D` with 1 point in `z_2d`), instead of an opaque scipy `ValueError` from the harmonic mean. Use a one-dimensional model for problems that do not vary in that direction. ([#5838](https://github.com/pybamm-team/PyBaMM/pull/5838))
+- `FiniteVolumeUnstructured` interface discovery, `pybamm.Mesh`'s adjacent-domain pairing and `UnstructuredSubMesh.combine` no longer join 2D unstructured meshes that lie in different coordinate planes (for example x-z electrodes and a y-z current collector) just because their 2-column face centroids coincide. Submeshes now record their axes in `coordinate_axes`, set by the mesh generators from the geometry's spatial variables, and `combine` raises a `GeometryError` for meshes in different planes. ([#5868](https://github.com/pybamm-team/PyBaMM/pull/5868))
 
 ## Optimizations
 
