@@ -146,7 +146,7 @@ class TensorField(pybamm.Symbol):
     def to_json(self):
         return {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "children": list(self.components),
         }
 

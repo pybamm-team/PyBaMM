@@ -370,8 +370,21 @@ class TestAuxiliaryDomains:
             }
         }
 
-    def test_laplacian_with_secondary_domain(self):
-        mesh = _make_quad_mesh(2, 2)
+    @staticmethod
+    def _assert_matches_per_secondary_point(single, repeated, size, n_aux):
+        # each secondary point is evaluated as the single-point expression would be
+        values = 1 + np.random.default_rng(0).random((n_aux, size))
+        expected = np.concatenate(
+            [single.evaluate(y=row[:, np.newaxis]) for row in values]
+        )
+        np.testing.assert_allclose(
+            repeated.evaluate(y=values.reshape(-1, 1)), expected, atol=1e-12
+        )
+
+    @pytest.mark.parametrize("orthogonal", [True, False])
+    def test_laplacian_with_secondary_domain(self, orthogonal):
+        # perturbed triangles also take the non-orthogonal cross terms
+        mesh = _make_quad_mesh(2, 2) if orthogonal else _make_perturbed_tri_mesh(3)
         aux = _make_quad_mesh(1, 3)
         method = _method_with_mesh(mesh, aux=aux)
         cell_values = mesh.cell_centroids[:, 0] ** 2
@@ -424,6 +437,78 @@ class TestAuxiliaryDomains:
                 np.tile(single_comp.evaluate()[:, 0], aux.npts),
                 atol=1e-12,
             )
+
+    def test_divergence_with_secondary_domain(self):
+        mesh = _make_2d_mesh(2, 2)
+        aux = _make_quad_mesh(1, 3)
+        method = _method_with_mesh(mesh, aux=aux)
+        n = mesh.npts
+
+        def divergence(domains, repeats):
+            symbol = pybamm.Variable("F", domains=domains)
+            field = pybamm.StateVector(slice(0, n * repeats), domains=domains)
+            components = [field, field**2]
+            return method.divergence(symbol, components, {})
+
+        single = divergence({"primary": ["test"]}, 1)
+        repeated = divergence({"primary": ["test"], "secondary": ["aux"]}, aux.npts)
+        self._assert_matches_per_secondary_point(single, repeated, n, aux.npts)
+
+    @pytest.mark.parametrize("side", ["left", "top-right"])
+    def test_boundary_value_with_secondary_domain(self, side):
+        mesh = _make_2d_mesh(2, 2)
+        aux = _make_quad_mesh(1, 3)
+        method = _method_with_mesh(mesh, aux=aux)
+        n = mesh.npts
+
+        def boundary_value(domains, repeats):
+            child = pybamm.StateVector(slice(0, n * repeats), domains=domains)
+            symbol = pybamm.BoundaryValue(pybamm.Variable("u", domains=domains), side)
+            return method.boundary_value_or_flux(symbol, child)
+
+        single = boundary_value({"primary": ["test"]}, 1)
+        repeated = boundary_value({"primary": ["test"], "secondary": ["aux"]}, aux.npts)
+        self._assert_matches_per_secondary_point(single, repeated, n, aux.npts)
+
+    @pytest.mark.parametrize("structured", [True, False])
+    def test_internal_neumann_with_secondary_domain(self, structured):
+        aux = _make_quad_mesh(1, 3)
+        if structured:
+            left = pybamm.SubMesh1D(np.linspace(0, 0.5, 4), "cartesian")
+            right = pybamm.SubMesh1D(np.linspace(0.5, 1, 5), "cartesian")
+        else:
+            left, right = _make_split_2d_meshes(2, 2, 2)
+        method = FiniteVolumeUnstructured()
+        method._mesh = _MeshMap({("aux",): aux})
+
+        def condition(repeats):
+            secondary = {"secondary": ["aux"]} if repeats > 1 else {}
+            n_left, n_right = left.npts * repeats, right.npts * repeats
+            left_values = pybamm.StateVector(
+                slice(0, n_left), domains={"primary": ["left"], **secondary}
+            )
+            right_values = pybamm.StateVector(
+                slice(n_left, n_left + n_right),
+                domains={"primary": ["right"], **secondary},
+            )
+            return method.internal_neumann_condition(
+                left_values, right_values, left, right
+            )
+
+        rng = np.random.default_rng(0)
+        left_values = rng.random((aux.npts, left.npts))
+        right_values = rng.random((aux.npts, right.npts))
+        single = condition(1)
+        expected = np.concatenate(
+            [
+                single.evaluate(y=np.concatenate([u_left, u_right])[:, np.newaxis])
+                for u_left, u_right in zip(left_values, right_values, strict=True)
+            ]
+        )
+        y = np.concatenate([left_values.ravel(), right_values.ravel()])
+        np.testing.assert_allclose(
+            condition(aux.npts).evaluate(y=y[:, np.newaxis]), expected, atol=1e-12
+        )
 
     def test_tertiary_broadcast_size(self):
         mesh = _make_quad_mesh(2, 2)
@@ -1487,16 +1572,6 @@ class TestFiniteVolumeUnstructuredBehavior:
             atol=1e-12,
         )
 
-    def test_div_D_grad_anisotropic_coefficient_raises(self):
-        mesh = _make_2d_mesh(2, 2)
-        method = _method_with_mesh(mesh)
-        variable = pybamm.Variable("u", domain="test")
-        div_symbol = pybamm.Variable("div", domain="test")
-        values = pybamm.Vector(np.arange(mesh.npts), domain="test")
-        anisotropic = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
-        with pytest.raises(pybamm.DiscretisationError, match="Anisotropic"):
-            method.div_D_grad(div_symbol, variable, anisotropic, values, {})
-
     def test_integral_and_boundary_integral(self):
         mesh = _make_2d_mesh(2, 2)
         aux = _make_2d_mesh(1, 1)
@@ -1779,6 +1854,281 @@ class TestFiniteVolumeUnstructuredBehavior:
 # ======================================================================
 
 
+def _cell_vector(values, domain="test"):
+    return pybamm.Vector(np.asarray(values, dtype=float), domain=domain)
+
+
+def _isotropic_tensor(k, dim, domain="test"):
+    """k I as a rank-2 TensorField with explicit zero off-diagonals."""
+    zero = _cell_vector(np.zeros_like(k), domain)
+    return pybamm.TensorField(
+        [
+            [_cell_vector(k, domain) if i == j else zero for j in range(dim)]
+            for i in range(dim)
+        ]
+    )
+
+
+def _box_bcs(variable, mesh, left_value=0.0, right_value=1.5):
+    """Dirichlet on "left", Neumann on "right", zero flux elsewhere."""
+    bcs = {side: (pybamm.Scalar(0), "Neumann") for side in mesh.boundary_faces}
+    bcs["left"] = (pybamm.Scalar(left_value), "Dirichlet")
+    bcs["right"] = (pybamm.Scalar(right_value), "Neumann")
+    return {variable: bcs}
+
+
+class TestAnisotropicDivDGrad:
+    """div(K grad u) with a VectorField (diagonal) or TensorField (full) K.
+
+    Each face uses its normal conductivity n.K.n, combined across the face
+    like a scalar D. With K = k I this is the scalar operator exactly.
+    """
+
+    @pytest.mark.parametrize(
+        "make_mesh",
+        [_make_2d_mesh, _make_quad_mesh, _make_3d_mesh, _make_hex_mesh],
+        ids=["tri", "quad", "tet", "hex"],
+    )
+    def test_isotropic_tensor_matches_scalar(self, make_mesh):
+        mesh = make_mesh()
+        dim = mesh.dimension
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        rng = np.random.default_rng(0)
+        k = rng.uniform(0.5, 5.0, mesh.npts)
+        values = _cell_vector(
+            np.sin(3 * mesh.cell_centroids[:, 0]) + mesh.cell_centroids[:, -1]
+        )
+        bcs = _box_bcs(variable, mesh)
+
+        scalar = method.div_D_grad(div_symbol, variable, _cell_vector(k), values, bcs)
+        diagonal = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.VectorField(*[_cell_vector(k) for _ in range(dim)]),
+            values,
+            bcs,
+        )
+        tensor = method.div_D_grad(
+            div_symbol, variable, _isotropic_tensor(k, dim), values, bcs
+        )
+        np.testing.assert_allclose(diagonal.evaluate(), scalar.evaluate(), atol=1e-12)
+        np.testing.assert_allclose(tensor.evaluate(), scalar.evaluate(), atol=1e-12)
+
+    @pytest.mark.parametrize("axis", [0, 1, 2])
+    def test_diagonal_tensor_uses_each_axis_conductivity(self, axis):
+        # A field varying only along `axis` sees only K[axis, axis].
+        mesh = _make_hex_mesh(4, 3, 5)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        k_axes = (1.0, 10.0, 100.0)
+        s_ = mesh.cell_centroids[:, axis]
+        values = _cell_vector(s_**2)
+        lo, hi = {0: ("left", "right"), 1: ("front", "back"), 2: ("bottom", "top")}[
+            axis
+        ]
+        bcs = {side: (pybamm.Scalar(0), "Neumann") for side in mesh.boundary_faces}
+        bcs[lo] = (pybamm.Scalar(0.5), "Dirichlet")
+        bcs[hi] = (pybamm.Scalar(2.0), "Neumann")
+        bcs = {variable: bcs}
+
+        anisotropic = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.VectorField(*[_cell_vector(np.full(mesh.npts, k)) for k in k_axes]),
+            values,
+            bcs,
+        )
+        scalar = method.div_D_grad(
+            div_symbol, variable, pybamm.Scalar(k_axes[axis]), values, bcs
+        )
+        np.testing.assert_allclose(
+            anisotropic.evaluate(), scalar.evaluate(), atol=1e-10
+        )
+
+    def test_full_tensor_on_aligned_faces_uses_its_diagonal(self):
+        # Documents the limitation: only n.K.n enters, so on faces normal to
+        # the axes the off-diagonal (tangential) part of K does not.
+        mesh = _make_hex_mesh()
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        c = mesh.cell_centroids
+        values = _cell_vector(c[:, 0] * c[:, 1] + c[:, 2] ** 2)
+        bcs = _box_bcs(variable, mesh)
+        diag = [np.full(mesh.npts, d) for d in (2.0, 3.0, 4.0)]
+        off = _cell_vector(np.full(mesh.npts, 0.5))
+        full = pybamm.TensorField(
+            [
+                [_cell_vector(diag[0]), off, off],
+                [off, _cell_vector(diag[1]), off],
+                [off, off, _cell_vector(diag[2])],
+            ]
+        )
+        from_full = method.div_D_grad(div_symbol, variable, full, values, bcs)
+        from_diag = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.VectorField(*[_cell_vector(d) for d in diag]),
+            values,
+            bcs,
+        )
+        np.testing.assert_allclose(
+            from_full.evaluate(), from_diag.evaluate(), atol=1e-12
+        )
+
+    def test_rotated_tensor_on_tet_mesh_uses_normal_conductivity(self):
+        # Off-axis faces pick up K's off-diagonal through n.K.n.
+        mesh = _make_3d_mesh()
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        values = _cell_vector(mesh.cell_centroids[:, 0] ** 2)
+        bcs = _box_bcs(variable, mesh)
+        theta = np.pi / 5
+        R = np.array(
+            [
+                [np.cos(theta), -np.sin(theta), 0],
+                [np.sin(theta), np.cos(theta), 0],
+                [0, 0, 1],
+            ]
+        )
+        K = R @ np.diag([1.0, 6.0, 2.0]) @ R.T
+        rotated = pybamm.TensorField(
+            [
+                [_cell_vector(np.full(mesh.npts, K[i, j])) for j in range(3)]
+                for i in range(3)
+            ]
+        )
+        unrotated = pybamm.VectorField(
+            *[_cell_vector(np.full(mesh.npts, d)) for d in (1.0, 6.0, 2.0)]
+        )
+        a = method.div_D_grad(div_symbol, variable, rotated, values, bcs).evaluate()
+        b = method.div_D_grad(div_symbol, variable, unrotated, values, bcs).evaluate()
+        assert np.abs(a - b).max() > 1e-6
+
+    def test_zero_components_are_skipped(self):
+        # Triangles have faces off the axes, so the off-diagonal weights are
+        # non-zero and only the zero check keeps the zero components out.
+        mesh = _make_2d_mesh()
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        values = _cell_vector(mesh.cell_centroids[:, 0] ** 2)
+        bcs = _box_bcs(variable, mesh)
+        kx, kz = np.full(mesh.npts, 3.0), np.full(mesh.npts, 7.0)
+        zero_vector = _cell_vector(np.zeros(mesh.npts))
+        zero_broadcast = pybamm.PrimaryBroadcast(0, "test")
+        tensor = pybamm.TensorField(
+            [[_cell_vector(kx), zero_vector], [zero_broadcast, _cell_vector(kz)]]
+        )
+        result = method.div_D_grad(div_symbol, variable, tensor, values, bcs)
+        nodes = list(result.pre_order())
+        assert not any(node is zero_vector for node in nodes)
+        assert not any(isinstance(node, pybamm.Broadcast) for node in nodes)
+        diag = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.VectorField(_cell_vector(kx), _cell_vector(kz)),
+            values,
+            bcs,
+        )
+        np.testing.assert_allclose(result.evaluate(), diag.evaluate(), atol=1e-12)
+
+    def test_state_dependent_component(self):
+        mesh = _make_quad_mesh(3, 3)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        k = np.linspace(1.0, 3.0, mesh.npts)
+        values = _cell_vector(mesh.cell_centroids[:, 0] ** 2)
+        bcs = _box_bcs(variable, mesh)
+        state = pybamm.StateVector(slice(0, mesh.npts), domains={"primary": ["test"]})
+        result = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.VectorField(state, _cell_vector(k)),
+            values,
+            bcs,
+        )
+        frozen = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.VectorField(_cell_vector(k), _cell_vector(k)),
+            values,
+            bcs,
+        )
+        np.testing.assert_allclose(result.evaluate(y=k), frozen.evaluate(), atol=1e-12)
+
+    def test_anisotropic_with_secondary_domain(self):
+        mesh = _make_quad_mesh(3, 3)
+        aux = _make_2d_mesh(1, 1)
+        method = _method_with_mesh(mesh, aux=aux)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        cell_values = mesh.cell_centroids[:, 0] ** 2 + mesh.cell_centroids[:, 1]
+        kx, kz = np.full(mesh.npts, 2.0), np.full(mesh.npts, 9.0)
+        bcs = _box_bcs(variable, mesh)
+        single = method.div_D_grad(
+            div_symbol,
+            variable,
+            pybamm.VectorField(_cell_vector(kx), _cell_vector(kz)),
+            _cell_vector(cell_values),
+            bcs,
+        )
+
+        domains = {"primary": ["test"], "secondary": ["aux"]}
+        repeated_div = pybamm.Variable("repeated div", domains=domains)
+        repeated_u = pybamm.Variable("repeated u", domains=domains)
+
+        def tiled(values):
+            return pybamm.Vector(np.tile(values, aux.npts), domains=domains)
+
+        repeated = method.div_D_grad(
+            repeated_div,
+            repeated_u,
+            pybamm.VectorField(tiled(kx), tiled(kz)),
+            tiled(cell_values),
+            {repeated_u: bcs[variable]},
+        )
+        np.testing.assert_allclose(
+            repeated.evaluate()[:, 0],
+            np.tile(single.evaluate()[:, 0], aux.npts),
+            atol=1e-12,
+        )
+
+    def test_wrong_shape_raises(self):
+        mesh = _make_2d_mesh(2, 2)
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        values = _cell_vector(np.arange(mesh.npts))
+        one = _cell_vector(np.ones(mesh.npts))
+        with pytest.raises(pybamm.DiscretisationError, match="needs 2 components"):
+            method.div_D_grad(
+                div_symbol, variable, pybamm.VectorField(one, one, one), values, {}
+            )
+        with pytest.raises(pybamm.DiscretisationError, match="must be 2x2"):
+            method.div_D_grad(
+                div_symbol,
+                variable,
+                pybamm.TensorField([[one, one, one], [one, one, one], [one, one, one]]),
+                values,
+                {},
+            )
+        zero = pybamm.PrimaryBroadcast(0, "test")
+        with pytest.raises(pybamm.DiscretisationError, match="coefficient is zero"):
+            method.div_D_grad(
+                div_symbol,
+                variable,
+                pybamm.TensorField([[zero, zero], [zero, zero]]),
+                values,
+                {},
+            )
+
+
 def _get_unstructured_disc(nx=4, nz=4):
     """Single-domain 2D unstructured discretisation on [0,1]^2."""
     x = pybamm.SpatialVariable(
@@ -1839,6 +2189,29 @@ class TestDiscretisationDispatch:
         gz = disc_grad.components[1].evaluate(y=u)
         np.testing.assert_allclose(
             norm.evaluate(y=u), np.sqrt(gx**2 + gz**2), rtol=1e-12
+        )
+
+    def test_div_tensor_grad_dispatches_to_div_D_grad(self):
+        # pybamm.div(K * pybamm.grad(u)) with a TensorField K discretises through
+        # the TPFA div_D_grad path and matches the scalar operator for K = k I.
+        disc = _get_unstructured_disc()
+        domain = ["negative electrode"]
+        var = pybamm.Variable("u", domain=domain)
+        disc.set_variable_slices([var])
+        disc.bcs = {
+            var: {
+                side: (pybamm.Scalar(0), "Neumann")
+                for side in disc.mesh["negative electrode"].boundary_faces
+            }
+        }
+        k = pybamm.PrimaryBroadcast(2.5, domain)
+        zero = pybamm.PrimaryBroadcast(0, domain)
+        K = pybamm.TensorField([[k, zero], [zero, k]])
+        u = disc.mesh["negative electrode"].cell_centroids[:, 0] ** 2
+        tensor = disc.process_symbol(pybamm.div(K * pybamm.grad(var)))
+        scalar = disc.process_symbol(pybamm.div(k * pybamm.grad(var)))
+        np.testing.assert_allclose(
+            tensor.evaluate(y=u), scalar.evaluate(y=u), atol=1e-12
         )
 
     def test_norm_requires_vector_field(self):

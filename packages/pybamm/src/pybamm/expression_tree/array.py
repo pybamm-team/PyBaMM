@@ -64,7 +64,7 @@ class Array(pybamm.Symbol):
             name = f"Array of shape {entries.shape!s}"
         self._entries = entries.astype(float)
         # Use known entries string to avoid re-hashing, where possible
-        self.entries_string = entries_string
+        self._entries_string = self._make_entries_string(entries_string)
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
@@ -109,22 +109,26 @@ class Array(pybamm.Symbol):
 
     @entries_string.setter
     def entries_string(self, value: tuple | None):
+        pybamm.expression_tree.symbol._warn_mutation(
+            "entries_string", "Construct a new Array with the desired entries."
+        )
+        object.__setattr__(self, "_entries_string", self._make_entries_string(value))
+
+    def _make_entries_string(self, value: tuple | None) -> tuple:
+        """The hashable form of the entries: ``value`` if given, else computed."""
         # We must include the entries in the hash, since different arrays can be
         # indistinguishable by class, name and domain alone
-        # Slightly different syntax for sparse and non-sparse matrices
         if value is not None:
-            self._entries_string = value
-        else:
-            entries = self._entries
-            if issparse(entries):
-                dct = entries.__dict__
-                entries_string = ["shape", str(dct["_shape"])]
-                for key in ["data", "indices", "indptr"]:
-                    entries_string += [key, dct[key].tobytes()]
-                self._entries_string = tuple(entries_string)
-                # self._entries_string = str(entries.__dict__)
-            else:
-                self._entries_string = (entries.tobytes(),)
+            return value
+        entries = self._entries
+        # Slightly different syntax for sparse and non-sparse matrices
+        if issparse(entries):
+            dct = entries.__dict__
+            entries_string = ["shape", str(dct["_shape"])]
+            for key in ["data", "indices", "indptr"]:
+                entries_string += [key, dct[key].tobytes()]
+            return tuple(entries_string)
+        return (entries.tobytes(),)
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
@@ -185,7 +189,7 @@ class Array(pybamm.Symbol):
 
         json_dict = {
             "name": self.name,
-            "domains": self._domains,
+            "domains": self.domains,
             "entries": matrix,
         }
 

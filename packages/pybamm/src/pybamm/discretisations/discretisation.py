@@ -769,7 +769,10 @@ class Discretisation:
         N_alg = len(model.algebraic)
 
         if N_rhs > 0 or N_alg > 0:
-            mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
+            # If every block were dense, block_diag would return a sparse array,
+            # not a matrix, and a 0D domain's mass matrix is dense
+            blocks = [csr_matrix(mass) for mass in mass_list]
+            mass_matrix = pybamm.Matrix(block_diag(blocks, format="csr"))
         else:
             mass_matrix = None
 
@@ -934,7 +937,7 @@ class Discretisation:
     def _discretise_node(self, symbol, new_leaves):
         """Discretise one node given its discretised children; the callback for
         :func:`pybamm.tree_map`."""
-        if symbol._domains["primary"] != [] and self.bcs:
+        if symbol._domains["primary"] and self.bcs:
             # If boundary conditions are provided, need to check for BCs on tabs
             key_id = next(iter(self.bcs.keys()))
             if LEGACY_TAB_SIDES & set(self.bcs[key_id].keys()):
@@ -951,7 +954,7 @@ class Discretisation:
     def _spatial_method_of(self, symbol):
         """The spatial method of a symbol's primary domain (None if it has none)."""
         domain = symbol._domains["primary"]
-        if domain == []:
+        if not domain:
             return None
         return self.spatial_methods[domain[0]]
 
