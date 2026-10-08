@@ -85,6 +85,9 @@ class EntryPoint(Mapping):
             pass
         return entry_point
 
+    def __contains__(self, key) -> bool:
+        return key in self._all_entries
+
     def __iter__(self):
         return self._all_entries.__iter__()
 
