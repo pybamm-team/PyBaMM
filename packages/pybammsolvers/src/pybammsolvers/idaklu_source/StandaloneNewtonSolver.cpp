@@ -198,13 +198,17 @@ StandaloneNewtonSolver::StandaloneNewtonSolver(
             max_iter, max_backtracks, epsNewt),
     n_vars_(system_.n_vars()),
     y_work_(n_vars_)
-{}
+{
+  solver_.set_log(&log_);
+}
 
 std::pair<bool, np_array> StandaloneNewtonSolver::solve(
   sunrealtype t,
   const np_array& y0_np,
-  const np_array& inputs_np)
+  const np_array& inputs_np,
+  py::object logger)
 {
+  log_.set_logger(std::move(logger));
   auto y0 = y0_np.unchecked<1>();
   auto inp = inputs_np.unchecked<1>();
   system_.set_inputs(inp.data(0), static_cast<int>(inp.size()));
@@ -222,8 +226,10 @@ std::pair<bool, py::array_t<sunrealtype, py::array::f_style>>
 StandaloneNewtonSolver::solve_batch(
   const np_array& t_eval_np,
   const np_array& y0_alg_np,
-  const np_array& inputs_np)
+  const np_array& inputs_np,
+  py::object logger)
 {
+  log_.set_logger(std::move(logger));
   auto t_eval = t_eval_np.unchecked<1>();
   auto y0 = y0_alg_np.unchecked<1>();
   auto inp = inputs_np.unchecked<1>();

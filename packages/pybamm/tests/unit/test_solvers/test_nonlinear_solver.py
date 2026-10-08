@@ -1,5 +1,6 @@
 """Tests for pybamm.NonlinearSolver (C++ Newton algebraic solver wrapper)."""
 
+import logging
 import pickle
 
 import numpy as np
@@ -244,3 +245,21 @@ class TestNonlinearSolver:
         solver = pybamm.NonlinearSolver(max_iter=50)
         with pytest.raises(pybamm.SolverError, match="Could not find acceptable"):
             solver.solve(model, [0])
+
+    def test_debug_log_reports_newton_iterations(self, caplog):
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var**3 - 2}
+        model.initial_conditions = {var: 1}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.NonlinearSolver()
+        with caplog.at_level(logging.DEBUG, logger=pybamm.logger.name):
+            solver.solve(model, [0])
+
+        messages = [m.strip() for m in caplog.messages]
+        assert any(m.startswith("Newton solve at t =") for m in messages)
+        assert any(m.startswith("Newton iter") for m in messages)
+        assert any(m.startswith("Newton converged") for m in messages)
