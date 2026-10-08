@@ -2177,6 +2177,34 @@ class TestSolution:
         assert out.hermite_interpolation is True
         np.testing.assert_array_equal(out.yp, folded.yp)
 
+    def test_join_trailing_last_state_keeps_event_sensitivities(self):
+        # Simulation carries last_state over a cycle whose steps are all infeasible;
+        # it holds no event sensitivities, so the join keeps the solve's own
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u, v: 2 * a + 0 * v}
+        model.initial_conditions = {u: a, v: 3 * a}
+        model.variables = {"u": u}
+        solution = pybamm.IDAKLUSolver(output_variables=["u"]).solve(
+            model,
+            [0, 1],
+            t_interp=np.array([0, 0.5, 1]),
+            inputs={"a": 1.0},
+            calculate_sensitivities=True,
+        )
+        carried_over = solution.last_state
+
+        for joined in (
+            solution + carried_over,
+            pybamm.Solution.from_sub_solutions([solution, carried_over]),
+        ):
+            # u = a (1 + t) and v = a (3 + 2 t)
+            np.testing.assert_allclose(
+                joined.last_state.sensitivities["a"], [[2], [5]], rtol=1e-6
+            )
+
 
 class TestSolutionSolverStatistics:
     @staticmethod

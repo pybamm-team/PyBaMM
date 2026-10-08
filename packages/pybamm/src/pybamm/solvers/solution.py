@@ -1480,13 +1480,12 @@ class Solution(SolutionBase):
             _validate_time_structure=True,
         )
 
-        # last kept segment, not sols[-1]: __add__'s single-sample short-circuit
-        # keeps the running closest_event_idx, so a trailing duplicate must not
-        # overwrite it.
+        # last kept segment, not sols[-1]: __add__'s short-circuit keeps these from
+        # self, and a trailing last_state duplicate has no event sensitivities.
         new_sol.closest_event_idx = segments[-1].closest_event_idx
+        new_sol._y_event_sensitivities = segments[-1]._y_event_sensitivities
         new_sol._y0 = segments[0]._y0
         new_sol._y0_sensitivities = segments[0]._y0_sensitivities
-        new_sol._y_event_sensitivities = segments[-1]._y_event_sensitivities
         # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
         new_sol._sub_solutions = sub_sols
 
