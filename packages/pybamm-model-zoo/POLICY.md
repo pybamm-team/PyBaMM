@@ -6,7 +6,7 @@ In this policy:
 
 - the **PyBaMM team** means the core members of the PyBaMM project;
 - a **contributor** is anyone who submits a model to the zoo;
-- a model's **maintainers** are the people listed under `maintainers` in its `model.toml` manifest and named for its folder in `.github/CODEOWNERS`.
+- a model's **maintainers** are the people listed under `maintainers` in its `model.toml` manifest (who should also be named for its folder in `.github/CODEOWNERS`).
 
 ## 1. Model tiers
 
