@@ -12,6 +12,7 @@ import pybamm
 from pybamm.models.full_battery_models.base_battery_model import (
     BatteryModelDomainOptions,
     BatteryModelOptions,
+    LegacyOptions,
     active_electrodes,
     dependency_error,
     iter_option_leaves,
@@ -19,6 +20,7 @@ from pybamm.models.full_battery_models.base_battery_model import (
     option_values_match,
     replace_option_leaf,
     resolve_option,
+    restore_saved_options,
     validate_option_value,
 )
 from pybamm.models.full_battery_models.lithium_metal.dfn import DFN as LithiumMetalDFN
@@ -1072,13 +1074,22 @@ class TestOptions:
         assert options.positive["open-circuit potential"] == "one-state hysteresis"
 
     def test_rejects_phase_kinetics(self):
-        with pytest.raises(pybamm.OptionError, match=r"Per-phase values"):
+        with pytest.raises(pybamm.OptionError, match=r"cannot vary by particle phase"):
             BatteryModelOptions(
                 {
                     "intercalation kinetics": (
                         ("symmetric Butler-Volmer", "asymmetric Butler-Volmer"),
                         "symmetric Butler-Volmer",
                     )
+                }
+            )
+
+    def test_rejects_phase_tuple_for_electrode_only_option(self):
+        with pytest.raises(pybamm.OptionError, match=r"cannot vary by particle phase"):
+            BatteryModelOptions(
+                {
+                    "particle phases": ("1", "2"),
+                    "loss of active material": ("none", ("reaction-driven", "none")),
                 }
             )
 
@@ -1456,3 +1467,39 @@ class TestModelDefaultOptions:
     def test_processed_options_are_checked_against_model(self, model_class, match):
         with pytest.raises(pybamm.OptionError, match=match):
             model_class(BatteryModelOptions({}))
+
+
+class TestSavedOptions:
+    # 26.9 stored this default for one-electrode mechanics
+    LEGACY = {
+        "particle mechanics": ("swelling only", "none"),
+        "stress-induced diffusion": "true",
+    }
+
+    @pytest.mark.parametrize(
+        "version", [None, "23.9", "26.9.0.0", "26.9.0.1.dev3", "0.0.0", "unknown"]
+    )
+    def test_restore_marks_options_saved_before_per_electrode_checks(self, version):
+        restored = restore_saved_options(self.LEGACY, version)
+        assert type(restored) is LegacyOptions
+        assert restored == self.LEGACY
+
+    @pytest.mark.parametrize("version", ["26.10.0.0", "26.11.0.0.dev1", "27.1"])
+    def test_restore_keeps_options_saved_with_per_electrode_checks(self, version):
+        assert restore_saved_options(self.LEGACY, version) is self.LEGACY
+
+    def test_legacy_options_skip_per_electrode_checks(self):
+        with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
+            BatteryModelOptions(self.LEGACY)
+        options = BatteryModelOptions(self.LEGACY, legacy=True)
+        assert options["particle mechanics"] == ("swelling only", "none")
+        assert options.positive["stress-induced diffusion"] == "true"
+
+    def test_legacy_options_still_validate_values(self):
+        with pytest.raises(pybamm.OptionError, match="not recognized"):
+            BatteryModelOptions({"SEI": "bad"}, legacy=True)
+
+    def test_model_accepts_legacy_options_with_model_defaults(self):
+        model = pybamm.lithium_ion.MPM(LegacyOptions(self.LEGACY), build=False)
+        assert model.options.positive["stress-induced diffusion"] == "true"
+        assert model.options["particle size"] == "distribution"

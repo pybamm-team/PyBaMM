@@ -115,9 +115,14 @@ def iter_option_leaves(option, value):
         if not isinstance(electrode_value, (tuple, list)):
             leaves.append(((domain,), electrode_value))
             continue
+        if option not in _PER_PHASE_OPTIONS:
+            raise pybamm.OptionError(
+                f"\n'{electrode_value}' at {domain} is not recognized in option "
+                f"'{option}'. This option cannot vary by particle phase, so each "
+                "electrode takes a single string"
+            )
         if (
             isinstance(electrode_value, list)
-            or option not in _PER_PHASE_OPTIONS
             or len(electrode_value) != 2
             or any(isinstance(leaf, (tuple, list)) for leaf in electrode_value)
         ):
@@ -405,42 +410,6 @@ def _apply_legacy_defaults(options, supplied):
             "'true' when an electrode has multiple particle phases",
         )
 
-    # Stress-driven LAM needs a mechanical model on the same electrode/phase to
-    # supply the particle stress it acts on.
-    for domain in active_electrodes(working_electrode):
-        num_phases = int(
-            resolve_option(
-                "particle phases",
-                options["particle phases"],
-                domain,
-                working_electrode=working_electrode,
-            )
-        )
-        for phase in _PHASES[:num_phases]:
-            lam_leaf = resolve_option(
-                "loss of active material",
-                options["loss of active material"],
-                domain,
-                phase,
-                working_electrode=working_electrode,
-            )
-            mechanics_leaf = resolve_option(
-                "particle mechanics",
-                options["particle mechanics"],
-                domain,
-                phase,
-                working_electrode=working_electrode,
-            )
-            if "stress" in lam_leaf and mechanics_leaf == "none":
-                path = (domain,) if num_phases == 1 else (domain, phase)
-                raise dependency_error(
-                    "loss of active material",
-                    lam_leaf,
-                    "particle mechanics",
-                    "a model other than 'none'",
-                    path,
-                )
-
 
 def _check_electrode_compatibility(options):
     """Check options that depend on each other within one electrode or phase.
@@ -493,6 +462,16 @@ def _check_electrode_compatibility(options):
                     "a model other than 'none' (e.g. 'constant')",
                     path,
                 )
+            # stress-driven LAM acts on the particle stress from a mechanics model
+            lam = value("loss of active material")
+            if "stress" in lam and value("particle mechanics") == "none":
+                raise dependency_error(
+                    "loss of active material",
+                    lam,
+                    "particle mechanics",
+                    "a model other than 'none'",
+                    path,
+                )
             if value("SEI on cracks") == "true" and (
                 value("particle mechanics") != "swelling and cracking"
             ):
@@ -536,6 +515,45 @@ def _rename_option(options_dict, option_name, old_name, new_name):
             f"The '{old_name}' {option_name} model has been renamed to '{new_name}'"
         )
         options_dict[option_name] = renamed
+
+
+# Options saved before this release skipped the per-electrode checks; bump it
+# if the release that ships them is not 26.10.
+_PER_ELECTRODE_OPTIONS_RELEASE = (26, 10)
+
+
+class LegacyOptions(dict):
+    """Options saved by a PyBaMM version that validated them as whole values.
+
+    Battery models process these like a plain dict but skip the per-electrode
+    and per-phase compatibility checks, so a saved model loads with the options
+    it was built with.
+    """
+
+
+def restore_saved_options(options, version):
+    """Mark options loaded from a file with the rules they were saved under.
+
+    Parameters
+    ----------
+    options : dict
+        The saved options.
+    version : str or None
+        The PyBaMM version that saved them, or None if it was not recorded.
+
+    Returns
+    -------
+    dict
+        ``options`` as a :class:`LegacyOptions` if ``version`` is unknown or
+        predates per-electrode option checks, otherwise ``options`` unchanged.
+    """
+    try:
+        release = tuple(int(part) for part in str(version).split(".")[:2])
+    except ValueError:
+        release = ()
+    if release < _PER_ELECTRODE_OPTIONS_RELEASE:
+        return LegacyOptions(options or {})
+    return options
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):
@@ -784,9 +802,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Whether to use a lumped capacity model for the thermal model. Can be
                 "false" (default) or "true". This is only available for the lumped
                 thermal model.
+
+    legacy : bool, optional
+        Whether the options were saved by a PyBaMM version that validated them as
+        whole values. If True, the per-electrode and per-phase compatibility
+        checks are skipped. Default is False.
     """
 
-    def __init__(self, extra_options):
+    def __init__(self, extra_options, legacy=False):
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
             "calculate heat source for isothermal models": ["false", "true"],
@@ -991,7 +1014,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 validate_option_value(option, leaf, self.possible_options[option], path)
 
         _apply_legacy_defaults(options, set(extra_options))
-        _check_electrode_compatibility(options)
+        if not legacy:
+            _check_electrode_compatibility(options)
 
         # All-or-nothing on full cells: if any of OCP/particle/intercalation
         # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.
@@ -1284,7 +1308,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # append the model name with _saved to differentiate
         instance = cls(
-            options=properties["options"], name=properties["name"] + "_saved"
+            options=restore_saved_options(
+                properties["options"], properties.get("pybamm_version")
+            ),
+            name=properties["name"] + "_saved",
         )
 
         return cls.generic_deserialise(instance, properties)
@@ -1425,10 +1452,11 @@ class BaseBatteryModel(pybamm.BaseModel):
         # if extra_options is a dict then process it into a BatteryModelOptions
         # this does not catch cases that subclass the dict type
         # so other submodels can pass in their own options class if needed
-        if extra_options is None or type(extra_options) == dict:
+        if extra_options is None or type(extra_options) in (dict, LegacyOptions):
             supplied = dict(extra_options or {})
             options = BatteryModelOptions(
-                {**self._model_default_options(supplied), **supplied}
+                {**self._model_default_options(supplied), **supplied},
+                legacy=isinstance(extra_options, LegacyOptions),
             )
         else:
             options = extra_options

@@ -861,6 +861,32 @@ class TestSerialise:
 
         assert type(loaded) is pybamm.BaseModel
 
+    @pytest.mark.parametrize(
+        ("version", "loads"), [("26.9.0.0", True), (None, True), ("26.10.0.0", False)]
+    )
+    def test_load_model_options_saved_before_per_electrode_checks(
+        self, tmp_path, version, loads
+    ):
+        model = pybamm.lithium_ion.SPM(
+            {"particle mechanics": ("swelling only", "none")}
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=pybamm.ParameterValues("Ai2020")
+        )
+        sim.build()
+        sim.built_model.save_model(str(tmp_path / "model"))
+        data = json.loads((tmp_path / "model.json").read_text())
+        # 26.9 stored this default for one-electrode mechanics
+        data["options"]["stress-induced diffusion"] = "true"
+        data["pybamm_version"] = version
+        if loads:
+            loaded = Serialise().load_model(data)
+            assert loaded.options.positive["stress-induced diffusion"] == "true"
+            assert loaded.options["particle mechanics"] == ("swelling only", "none")
+        else:
+            with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
+                Serialise().load_model(data)
+
     def test_load_legacy_payload_without_base_class_mro(self, tmp_path):
         model = pybamm.BaseModel(name="DummyModel")
         a = pybamm.Variable("a")
