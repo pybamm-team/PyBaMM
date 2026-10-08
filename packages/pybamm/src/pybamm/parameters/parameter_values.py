@@ -781,7 +781,11 @@ class ParameterValues:
                 # backward compatibility (custom models may still reference it)
                 values.setdefault(new_param, values[param])
             new_param = _renamed_transfer_coefficient(param)
-            if new_param is not None:
+            # A copy of an already migrated set holds one value under both names
+            already_migrated = (
+                new_param in values and values[new_param] is values[param]
+            )
+            if new_param is not None and not already_migrated:
                 warn(
                     f"The parameter '{param}' has been renamed to '{new_param}'",
                     DeprecationWarning,

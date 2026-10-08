@@ -314,6 +314,12 @@ class TestParameterValues:
             == 0.3
         )
 
+        # copying the migrated set, as Simulation does, does not warn again
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            param_copy = param.copy()
+        assert param_copy[new] == 0.6
+
         # a set stored under the current name can still be used with the old name
         param = pybamm.ParameterValues("Chen2020")
         with pytest.warns(DeprecationWarning, match=r"renamed"):
