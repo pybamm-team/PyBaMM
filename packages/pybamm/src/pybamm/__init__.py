@@ -20,6 +20,14 @@ from .citations import Citations, citations, print_citations
 from . import config
 
 # Classes for the Expression Tree
+from .expression_tree.tree_util import (
+    TreeDef,
+    rebuild,
+    replace,
+    tree_flatten,
+    tree_map,
+    tree_unflatten,
+)
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.tracing import is_tracing, tracing
@@ -196,6 +204,7 @@ from .spatial_methods.finite_volume_unstructured import FiniteVolumeUnstructured
 
 # Solver classes
 from .solvers.solution import (
+    SolverStatistics,
     SolutionBase,
     Solution,
     EISSolution,

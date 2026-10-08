@@ -21,6 +21,8 @@ class CoupledVariable(pybamm.Symbol):
 
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         name: str,
@@ -33,8 +35,8 @@ class CoupledVariable(pybamm.Symbol):
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return pybamm.evaluate_for_shape_using_domain(self.domains)
+        return pybamm.evaluate_for_shape_using_domain(self._domains)
 
     def create_copy(self):
         """Creates a new copy of the coupled variable."""
-        return CoupledVariable(self.name, self.domain)
+        return CoupledVariable(self.name, self._domains["primary"])

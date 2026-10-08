@@ -18,6 +18,8 @@ class Matrix(pybamm.Array):
     Node in the expression tree that holds a matrix type (e.g. :class:`numpy.array`)
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         entries: npt.NDArray[Any] | list[float] | csr_matrix,

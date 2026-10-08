@@ -4,6 +4,7 @@
 import io
 import json
 import logging
+import pickle  # nosec B403 - used in tests with trusted input
 import subprocess  # nosec B404 - used in tests with trusted input
 import sys
 from unittest import mock
@@ -392,6 +393,42 @@ class TestSolution:
         assert len(a._all_sensitivities["p"]) == before  # a unchanged
         assert len(b._all_sensitivities["p"]) == 1  # b unchanged
 
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    def test_join_sensitivities_at_shared_boundary(self, join):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u}
+        model.initial_conditions = {u: 0}
+        model.variables = {"2u": 2 * u}
+        solver = pybamm.IDAKLUSolver()
+        # The second segment starts at the time the first ends, from u = 0
+        first, later = (
+            solver.solve(
+                model,
+                [t0, t0 + 1],
+                t_interp=np.array([t0, t0 + 0.5, t0 + 1]),
+                inputs={"a": 1.0},
+                calculate_sensitivities=True,
+            )
+            for t0 in (0, 1)
+        )
+
+        if join == "add":
+            joined = first + later
+        else:
+            joined = pybamm.Solution.from_sub_solutions([first, later])
+
+        # The join keeps the first segment's sample at t = 1
+        expected = np.array([0, 0.5, 1, 0.5, 1])
+        np.testing.assert_allclose(joined.sensitivities["a"][:, 0], expected, atol=1e-6)
+        np.testing.assert_allclose(
+            joined.sensitivities["all"][:, 0], expected, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            joined["2u"].sensitivities["a"], 2 * expected, atol=1e-6
+        )
+
     def test_add_validates_only_boundary(self):
         # __add__ must validate only the joined region, not re-scan the whole
         # accumulation (that re-scan was the O(N^2) source).
@@ -586,6 +623,33 @@ class TestSolution:
         # check solution still tagged as 'variables_returned'
         assert sol_sum.variables_returned is True
 
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    def test_join_computed_variables_at_shared_boundaries(self, join):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: pybamm.Scalar(1)}
+        model.initial_conditions = {u: 0}
+        model.variables = {"2u": 2 * u}
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver(output_variables=["2u"])
+        # Each segment starts at the time the previous one ends, from u = 0
+        segments = [
+            solver.solve(model, [t0, t0 + 1], t_interp=np.array([t0, t0 + 0.5, t0 + 1]))
+            for t0 in range(3)
+        ]
+
+        if join == "add":
+            joined = segments[0] + segments[1] + segments[2]
+        else:
+            joined = pybamm.Solution.from_sub_solutions(segments)
+
+        t = np.linspace(0, 3, 7)
+        # The join keeps the earlier segment's sample at each shared time
+        expected = 2 * (t - np.array([0, 0, 0, 1, 1, 2, 2]))
+        np.testing.assert_array_equal(joined.t, t)
+        np.testing.assert_allclose(joined["2u"].entries, expected, atol=1e-6)
+        np.testing.assert_allclose(joined["2u"](t), expected, atol=1e-6)
+
     def test_copy(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
@@ -653,6 +717,56 @@ class TestSolution:
         for c, s in zip(casadi_inputs, stacked, strict=True):
             np.testing.assert_array_equal(np.array(c).flatten(), s)
 
+    def test_all_inputs_stacked_mixed_scalar_and_vector(self):
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (5, 1))
+        inputs = {"a": 1.0, "b": np.array([2.0, 3.0]), "c": np.array([[4.0]])}
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), inputs)
+
+        (stacked,) = sol.all_inputs_stacked
+        np.testing.assert_array_equal(stacked, [1.0, 2.0, 3.0, 4.0])
+        np.testing.assert_array_equal(
+            np.array(sol.all_inputs_casadi[0]).flatten(), stacked
+        )
+
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        (stacked,) = sol.all_inputs_stacked
+        assert stacked.shape == (0,)
+
+        # Reading a variable stacks the inputs
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", expected_size=2)
+        model.rhs = {u: a * pybamm.Index(b, 1)}
+        model.initial_conditions = {u: 0}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+        sol = pybamm.IDAKLUSolver().solve(
+            model, [0, 1], inputs={"a": 2.0, "b": np.array([3.0, 4.0])}
+        )
+        np.testing.assert_allclose(sol["u"](t=1.0), 8.0, rtol=1e-6)
+
+    def test_sensitivity_names(self):
+        t = np.linspace(0, 1, 10)
+        y = np.tile(t, (2, 1))
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
+        assert sol.sensitivity_names == []
+
+        sensitivities = {
+            "b": np.ones((20, 1)),
+            "a": np.ones((20, 2)),
+            "all": np.ones((20, 3)),
+        }
+        sol = pybamm.Solution(
+            t,
+            y,
+            pybamm.BaseModel(),
+            {"a": np.array([1.0, 2.0]), "b": 3.0},
+            all_sensitivities=sensitivities,
+        )
+        assert sol.sensitivity_names == ["b", "a"]
+
     def test_last_state(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
@@ -674,6 +788,91 @@ class TestSolution:
         assert sol_last_state.set_up_time == 0
         assert sol_last_state.solve_time == 0
         assert sol_last_state.integration_time == 0
+
+    @pytest.mark.parametrize("output_variables", [None, ["u"]])
+    def test_first_and_last_state_sensitivities(self, output_variables):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u, v: 2 * a + 0 * v}
+        model.initial_conditions = {u: a, v: 3 * a}
+        model.variables = {"u": u}
+        solution = pybamm.IDAKLUSolver(output_variables=output_variables).solve(
+            model,
+            [0, 1],
+            t_interp=np.array([0, 0.5, 1]),
+            inputs={"a": 1.0},
+            calculate_sensitivities=True,
+        )
+
+        # u = a (1 + t) and v = a (3 + 2 t), both states even when only u is output
+        for state, expected in [
+            (solution.first_state, [1, 3]),
+            (solution.last_state, [2, 5]),
+        ]:
+            np.testing.assert_allclose(
+                state.sensitivities["a"][:, 0], expected, atol=1e-6
+            )
+            np.testing.assert_allclose(
+                state.sensitivities["all"][:, 0], expected, atol=1e-6
+            )
+
+    def test_first_and_last_state_of_output_variables_solve(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u, v: 2 * a + 0 * v}
+        model.initial_conditions = {u: a, v: 3 * a}
+        model.variables = {"u": u}
+        solver = pybamm.IDAKLUSolver(output_variables=["u"])
+        first, later = (
+            solver.solve(
+                model,
+                [t0, t0 + 1],
+                inputs={"a": a_value},
+                calculate_sensitivities=True,
+            )
+            for t0, a_value in [(0, 1.0), (1, 2.0)]
+        )
+
+        # Re-solving must not change first's initial state or put sensitivities in it
+        for solution in (
+            first,
+            first.copy(),
+            first + later,
+            pybamm.Solution.from_sub_solutions([first, later]),
+        ):
+            np.testing.assert_allclose(
+                solution.first_state.all_ys[0], [[1], [3]], rtol=1e-12
+            )
+            # u = a (1 + t - t0) and v = a (3 + 2 (t - t0)) in each solve
+            np.testing.assert_allclose(
+                solution.first_state.sensitivities["a"], [[1], [3]], rtol=1e-6
+            )
+            np.testing.assert_allclose(
+                solution.last_state.sensitivities["a"], [[2], [5]], rtol=1e-6
+            )
+
+    def test_first_state_of_output_variables_solve_is_consistent(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -u}
+        model.algebraic = {v: v - 2 * u}
+        # Consistent initialization corrects this guess for v to 2 u
+        model.initial_conditions = {u: 1, v: 0}
+        model.variables = {"u": u}
+        full_solution, solution = (
+            pybamm.IDAKLUSolver(output_variables=output_variables).solve(model, [0, 1])
+            for output_variables in (None, ["u"])
+        )
+
+        np.testing.assert_allclose(solution.first_state.y, [[1], [2]], rtol=1e-6)
+        np.testing.assert_allclose(
+            solution.first_state.y, full_solution.first_state.y, rtol=1e-6
+        )
 
     def test_first_last_state_empty_y(self):
         # check that first and last state work when y is empty
@@ -725,6 +924,41 @@ class TestSolution:
         assert isinstance(sol.cycles[1], pybamm.Solution)
         np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1:])
         np.testing.assert_allclose(sol.cycles[1].y, sol.y[:, len_cycle_1:])
+
+    def test_solutions_reject_undefined_attributes(self):
+        # An experiment keeps several solutions per step, so none carries a __dict__
+        t = np.linspace(0, 1)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        eis_solution = pybamm.EISSolution(np.array([1.0]), np.array([1 + 1j]))
+        for sol in (solution, solution.first_state, eis_solution):
+            assert not hasattr(sol, "__dict__")
+            with pytest.raises(AttributeError, match=r"label"):
+                sol.label = "extra"
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 13), reason="__static_attributes__ is new in 3.13"
+    )
+    def test_attributes_set_by_methods_are_slots(self):
+        # An attribute a method sets without a slot raises AttributeError, which
+        # a rarely run path could otherwise hide
+        classes = pybamm.Solution.__mro__[:-1]
+        slots = {name for cls in classes for name in cls.__slots__}
+        properties = {
+            name
+            for cls in classes
+            for name, value in vars(cls).items()
+            if isinstance(value, property)
+        }
+        for cls in classes:
+            assert set(cls.__static_attributes__) <= slots | properties
+
+    def test_pickle_keeps_slots(self):
+        t = np.linspace(0, 1)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        first_state = solution.first_state
+        loaded = pickle.loads(pickle.dumps(solution))  # nosec B301
+        np.testing.assert_array_equal(loaded.t, t)
+        np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
 
     def test_total_time(self):
         sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]), pybamm.BaseModel(), {})
@@ -1061,10 +1295,9 @@ class TestSolution:
                 y_sol = np.exp(b * -a * data_times)
                 dy_sol_da = -data_times * y_sol
                 if use_post_sum:
-                    expected_sens = (
-                        0.5
-                        * (expected ** (-0.5))
-                        * np.sum(2 * (y_sol - data_values) * dy_sol_da)
+                    # expected is the square root of the sum
+                    expected_sens = np.sum(2 * (y_sol - data_values) * dy_sol_da) / (
+                        2 * expected
                     )
                 else:
                     expected_sens = np.sum(2 * (y_sol - data_values) * dy_sol_da)
@@ -1087,12 +1320,15 @@ class TestSolution:
                     rtol=1e-3,
                     atol=1e-2,
                 )
-                np.testing.assert_allclose(
-                    sol["data_comparison"].sensitivities["a"],
-                    expected_sens,
-                    rtol=1e-3,
-                    atol=1e-2,
-                )
+                # At a = 2 the model reproduces the data, and the square root of a
+                # zero sum has no derivative
+                if not (use_post_sum and a == 2.0):
+                    np.testing.assert_allclose(
+                        sol["data_comparison"].sensitivities["a"],
+                        expected_sens,
+                        rtol=1e-3,
+                        atol=1e-2,
+                    )
                 assert isinstance(sol["data_comparison"].sensitivities["a"], np.ndarray)
                 assert sol["data_comparison"].sensitivities["a"].shape == (1,)
 
@@ -1147,11 +1383,10 @@ class TestSolution:
                 model, t_eval=t_eval, t_interp=t_interp, inputs={"a": a, "b": b}
             )
             y_sol = np.exp(b * -a * times)
-            expected = -(1.0 / b / a) * (
+            integral = -(1.0 / b / a) * (
                 np.exp(b * -a * times[-1]) - np.exp(b * -a * times[0])
             )
-            if use_post_sum:
-                expected = expected**2
+            expected = integral**2 if use_post_sum else integral
             np.testing.assert_allclose(
                 sol["integral"](), expected, rtol=1e-3, atol=1e-2
             )
@@ -1170,7 +1405,7 @@ class TestSolution:
                 dy_sol_da = -b * times * y_sol
                 expected_sens = scipy.integrate.trapezoid(dy_sol_da, times)
                 if use_post_sum:
-                    expected_sens = 2 * expected * expected_sens
+                    expected_sens = 2 * integral * expected_sens
 
                 np.testing.assert_allclose(
                     sol["c"].data,
@@ -1191,6 +1426,108 @@ class TestSolution:
                     atol=1e-2,
                 )
                 assert isinstance(sol["integral"].sensitivities["a"], np.ndarray)
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_explicit_time_integral_initial_condition_sensitivity(self, use_output_var):
+        times = np.linspace(0, 1, 10)
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        a = pybamm.InputParameter("a")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables["integral"] = pybamm.ExplicitTimeIntegral(c, pybamm.Scalar(5))
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["integral"] if use_output_var else None
+        )
+
+        sol = solver.solve(
+            model,
+            [0, 1],
+            t_interp=times,
+            inputs={"a": 1.0},
+            calculate_sensitivities=True,
+        )
+
+        # The initial condition does not depend on a, so only the integral does
+        expected = scipy.integrate.trapezoid(-times * np.exp(-times), times)
+        np.testing.assert_allclose(sol["integral"](), [5 + 1 - np.exp(-1)], rtol=1e-3)
+        np.testing.assert_allclose(
+            sol["integral"].sensitivities["a"], [expected], rtol=1e-3
+        )
+
+    @pytest.mark.parametrize("use_post_sum", [False, True])
+    @pytest.mark.parametrize(
+        ("t_later", "integral", "integral_sensitivity"),
+        [([1, 3], 6.0, 3.0), ([2, 4], 8.0, 4.0)],
+        ids=["shared-boundary", "gap"],
+    )
+    def test_explicit_time_integral_sensitivity_over_joined_solutions(
+        self, t_later, integral, integral_sensitivity, use_post_sum
+    ):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        a = pybamm.InputParameter("a")
+        model.rhs = {y: 0 * y}
+        model.initial_conditions = {y: 1}
+        time_integral = pybamm.ExplicitTimeIntegral(a * y, pybamm.Scalar(1))
+        model.variables["integral"] = (
+            time_integral**2 if use_post_sum else time_integral
+        )
+        solver = pybamm.IDAKLUSolver()
+        first, later = (
+            solver.solve(model, t_eval, inputs={"a": 2.0}, calculate_sensitivities=True)
+            for t_eval in ([0, 1], t_later)
+        )
+
+        joined = (first + later)["integral"]
+
+        # A full-state join also integrates the gap; an output_variables join does not
+        value, sensitivity = 1 + integral, integral_sensitivity
+        if use_post_sum:
+            value, sensitivity = value**2, 2 * value * sensitivity
+        np.testing.assert_allclose(joined.entries, [value], rtol=1e-6)
+        np.testing.assert_allclose(joined.sensitivities["a"], [sensitivity], rtol=1e-6)
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    @pytest.mark.parametrize("sensitivity_name", ["a", "b"])
+    def test_explicit_time_integral_post_sum_sensitivity_to_one_input(
+        self, sensitivity_name, use_output_var
+    ):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables["value"] = pybamm.ExplicitTimeIntegral(c, 0) ** 2 * b
+        solver = pybamm.IDAKLUSolver(
+            output_variables=["value"] if use_output_var else None,
+            rtol=1e-8,
+            atol=1e-10,
+        )
+        times = np.linspace(0, 1, 11)
+
+        sol = solver.solve(
+            model,
+            [0, 1],
+            t_interp=times,
+            inputs={"a": 1.0, "b": 2.0},
+            calculate_sensitivities=[sensitivity_name],
+        )
+
+        # value = I^2 b, with I and dI/da the trapezoid rule over the solution times
+        integral = scipy.integrate.trapezoid(np.exp(-times), times)
+        dintegral_da = scipy.integrate.trapezoid(-times * np.exp(-times), times)
+        expected = {
+            "a": 2 * integral * 2.0 * dintegral_da,
+            "b": integral**2,
+        }[sensitivity_name]
+        sensitivities = sol["value"].sensitivities
+        assert sorted(sensitivities) == sorted(["all", sensitivity_name])
+        np.testing.assert_allclose(sensitivities["all"], [[expected]], rtol=1e-6)
+        np.testing.assert_allclose(
+            sensitivities[sensitivity_name], [expected], rtol=1e-6
+        )
 
     def test_observe(self):
         """Test the observe method with pybamm symbols, comparing with model variables."""
@@ -1839,3 +2176,161 @@ class TestSolution:
         assert out.hermite_interpolation == folded.hermite_interpolation
         assert out.hermite_interpolation is True
         np.testing.assert_array_equal(out.yp, folded.yp)
+
+    def test_join_trailing_last_state_keeps_event_sensitivities(self):
+        # Simulation carries last_state over a cycle whose steps are all infeasible;
+        # it holds no event sensitivities, so the join keeps the solve's own
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a + 0 * u, v: 2 * a + 0 * v}
+        model.initial_conditions = {u: a, v: 3 * a}
+        model.variables = {"u": u}
+        solution = pybamm.IDAKLUSolver(output_variables=["u"]).solve(
+            model,
+            [0, 1],
+            t_interp=np.array([0, 0.5, 1]),
+            inputs={"a": 1.0},
+            calculate_sensitivities=True,
+        )
+        carried_over = solution.last_state
+
+        for joined in (
+            solution + carried_over,
+            pybamm.Solution.from_sub_solutions([solution, carried_over]),
+        ):
+            # u = a (1 + t) and v = a (3 + 2 t)
+            np.testing.assert_allclose(
+                joined.last_state.sensitivities["a"], [[2], [5]], rtol=1e-6
+            )
+
+
+class TestSolutionSolverStatistics:
+    @staticmethod
+    def _solution(start, statistics):
+        t = np.linspace(start, start + 1, 5)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        solution.solver_statistics = statistics
+        return solution
+
+    def test_statistics_add_field_wise(self):
+        total = pybamm.SolverStatistics(1, 2, 3, 4, 5) + pybamm.SolverStatistics(
+            10, 20, 30, 40, 50
+        )
+        assert total == pybamm.SolverStatistics(11, 22, 33, 44, 55)
+        assert pybamm.SolverStatistics() == pybamm.SolverStatistics(0, 0, 0, 0, 0)
+        with pytest.raises(TypeError):
+            pybamm.SolverStatistics() + 1
+
+    def test_a_new_solution_has_no_statistics(self):
+        t = np.linspace(0, 1)
+        solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
+        assert solution.solver_statistics is None
+
+    def test_add_sums_statistics(self):
+        first = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        second = self._solution(1, pybamm.SolverStatistics(10, 20, 30, 40, 50))
+        assert (first + second).solver_statistics == pybamm.SolverStatistics(
+            11, 22, 33, 44, 55
+        )
+
+    def test_add_is_none_when_a_side_has_no_statistics(self):
+        statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
+        with_none_after = self._solution(0, statistics) + self._solution(1, None)
+        assert with_none_after.solver_statistics is None
+        with_none_before = self._solution(0, None) + self._solution(1, statistics)
+        assert with_none_before.solver_statistics is None
+
+    def test_copy_and_adding_nothing_keep_statistics(self):
+        statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
+        solution = self._solution(0, statistics)
+        assert solution.copy().solver_statistics == statistics
+        assert (solution + None).solver_statistics == statistics
+        assert (None + solution).solver_statistics == statistics
+        assert (pybamm.EmptySolution() + solution).solver_statistics == statistics
+
+    def test_from_sub_solutions_sums_statistics(self):
+        solutions = [
+            self._solution(i, pybamm.SolverStatistics(i, i, i, i, i)) for i in range(4)
+        ]
+        combined = pybamm.Solution.from_sub_solutions(solutions)
+        assert combined.solver_statistics == pybamm.SolverStatistics(6, 6, 6, 6, 6)
+        solutions[2].solver_statistics = None
+        assert pybamm.Solution.from_sub_solutions(solutions).solver_statistics is None
+
+    def test_add_sums_statistics_of_a_single_sample_duplicate(self):
+        first = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        duplicate = pybamm.Solution(
+            np.array([1.0]), np.ones((2, 1)), pybamm.BaseModel(), {}
+        )
+        duplicate.solver_statistics = pybamm.SolverStatistics(10, 20, 30, 40, 50)
+        combined = first + duplicate
+        assert combined.t[-1] == pytest.approx(1.0)
+        assert combined.solver_statistics == pybamm.SolverStatistics(11, 22, 33, 44, 55)
+
+    def test_from_sub_solutions_sums_statistics_of_a_skipped_duplicate(self):
+        import functools
+        import operator
+
+        first = self._solution(0, pybamm.SolverStatistics(1, 1, 1, 1, 1))
+        duplicate = pybamm.Solution(
+            np.array([1.0]), np.ones((2, 1)), pybamm.BaseModel(), {}
+        )
+        duplicate.solver_statistics = pybamm.SolverStatistics(10, 10, 10, 10, 10)
+        second = self._solution(1, pybamm.SolverStatistics(100, 100, 100, 100, 100))
+        solutions = [first, duplicate, second]
+        combined = pybamm.Solution.from_sub_solutions(solutions)
+        folded = functools.reduce(operator.add, solutions)
+        assert combined.solver_statistics == pybamm.SolverStatistics(
+            111, 111, 111, 111, 111
+        )
+        assert folded.solver_statistics == combined.solver_statistics
+
+    def test_first_and_last_state_report_no_work(self):
+        solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        assert solution.first_state.solver_statistics == pybamm.SolverStatistics()
+        assert solution.last_state.solver_statistics == pybamm.SolverStatistics()
+
+    def test_statistics_stay_small_across_retained_states(self):
+        # An experiment keeps a first and last state for every step
+        solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        assert (
+            solution.first_state.solver_statistics
+            is solution.last_state.solver_statistics
+        )
+        assert not hasattr(solution.solver_statistics, "__dict__")
+
+    def test_statistics_survive_pickling(self):
+        statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
+        solution = self._solution(0, statistics)
+        assert pickle.loads(pickle.dumps(solution)).solver_statistics == statistics  # nosec B301
+
+    def test_solution_pickled_before_slots_loads(self, caplog):
+        solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
+        first_state = solution.first_state
+        # A solution pickled before Solution had slots holds one dict, without
+        # solver_statistics, with the cached first state under its name
+        state = {
+            name: getattr(solution, name)
+            for cls in type(solution).__mro__
+            for name in getattr(cls, "__slots__", ())
+            if not name.startswith("__") and hasattr(solution, name)
+        }
+        del state["solver_statistics"], state["_first_state"], state["_last_state"]
+        state["first_state"] = first_state
+        # and perhaps with an attribute a caller attached
+        state["label"] = "extra"
+
+        class PreSlotsPickle:
+            def __reduce__(self):
+                return object.__new__, (pybamm.Solution,), state
+
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            loaded = pickle.loads(pickle.dumps(PreSlotsPickle()))  # nosec B301
+        assert "Dropped attributes ['label']" in caplog.text
+        assert not hasattr(loaded, "label")
+        assert loaded.solver_statistics is None
+        np.testing.assert_array_equal(loaded.t, solution.t)
+        np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
+        assert loaded.last_state.t[0] == pytest.approx(solution.t[-1])

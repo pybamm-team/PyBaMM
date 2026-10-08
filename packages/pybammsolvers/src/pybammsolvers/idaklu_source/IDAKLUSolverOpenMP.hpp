@@ -3,6 +3,7 @@
 
 #include "IDAKLUSolver.hpp"
 #include "common.hpp"
+#include <cmath>
 #include <vector>
 #include <memory>  // For std::make_unique
 using std::vector;
@@ -188,6 +189,13 @@ public:
   sunrealtype *yp_val_ = nullptr;
   vector<sunrealtype *> yS_val_;
   vector<sunrealtype *> ypS_val_;
+  // State at t0 after consistent initialization, for save_outputs_only
+  std::vector<sunrealtype> y_init_;
+  // Its sensitivities, (number_of_parameters, number_of_states) row-major
+  std::vector<sunrealtype> yS_init_;
+  // |p| per sensitivity parameter, so IDAS weights the scaled sensitivity
+  // pbar*yS like a state. Empty leaves IDAS at its pbar = 1 default.
+  std::vector<sunrealtype> sens_scales_;
 
   SUNContext sunctx;
 
@@ -223,6 +231,7 @@ public:
     const sunrealtype *y0,
     const sunrealtype *yp0,
     const sunrealtype *inputs,
+    const sunrealtype *pbar,
     bool save_adaptive_steps,
     bool save_interp_steps
   ) override;
@@ -297,6 +306,14 @@ public:
   void ReinitializeIntegrator(const sunrealtype& t_val);
 
   /**
+   * @brief Hand IDAS the per-parameter scales held in sens_scales_.
+   *
+   * Must run after every IDASensInit/IDASensReInit, both of which reset pbar
+   * to 1.0.
+   */
+  void ApplySensitivityScales();
+
+  /**
    * @brief Set a consistent initialization for the system of equations.
    */
   void ConsistentInitialization(
@@ -365,7 +382,8 @@ public:
     const std::vector<sunrealtype> &t_eval,
     const sunrealtype *y0,
     const sunrealtype *yp0,
-    const sunrealtype *inputs
+    const sunrealtype *inputs,
+    const sunrealtype *pbar
   );
 
   /**
@@ -390,6 +408,13 @@ public:
    * @brief Store the initial point (t0) after consistent initialization
    */
   void StoreInitialPoint(sunrealtype t0);
+
+  /**
+   * @brief Copy the current state sensitivities into out, one row per parameter
+   * @param out Replaced by the (number_of_parameters, number_of_states) values,
+   * or emptied without sensitivities
+   */
+  void CopyStateSensitivities(std::vector<sunrealtype> &out) const;
 
   /**
    * @brief Save a solution point (delegates to Hermite knot reduction or direct save path)

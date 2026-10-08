@@ -133,6 +133,7 @@ class TestBasicModels:
             submesh_types[domain] = pybamm.UnstructuredMeshGenerator(
                 element_type=element_type
             )
+        # Tetrahedra only solve on coarse meshes, which 3 points keeps them on
         sim = pybamm.Simulation(
             model,
             submesh_types=submesh_types,

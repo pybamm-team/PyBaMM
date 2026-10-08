@@ -4,6 +4,7 @@ Expression Tree
 .. toctree::
 
   symbol
+  tree_util
   parameter
   variable
   independent_variable
