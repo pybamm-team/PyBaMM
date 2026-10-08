@@ -17,6 +17,7 @@
 
 ## Bug fixes
 
+- A single `IDAKLUSolver` solve no longer runs inside a one-thread OpenMP parallel region. OpenMP code the model calls during the solve, such as a CasADi external function, now runs at the top level instead of nested, so it takes the top-level thread count rather than the nested-level one (for example 8, not 1, under `OMP_NUM_THREADS=8,1`). ([#5837](https://github.com/pybamm-team/PyBaMM/pull/5837))
 - `NonlinearSolver` now logs its Newton iterations when `pybamm.logger` is at `DEBUG` level; previously they were silently dropped. ([#5849](https://github.com/pybamm-team/PyBaMM/pull/5849))
 - Fixed `FiniteVolume2D` boundary values, gradients and integrals raising an `IndexError` on 2D meshes with fewer than 3 nodes in either direction, even when the extrapolation only needed the other direction. Meshes too coarse for the requested extrapolation order now raise a `DiscretisationError`. ([#5839](https://github.com/pybamm-team/PyBaMM/pull/5839))
 - A per-state `atol` given to `IDAKLUSolver` (or as `model.atol`) can now be a list, tuple or array, so it survives a `to_config`/`from_config` round trip, which returns a JSON list. One without exactly one value per state is rejected with a `SolverError` instead of reaching the integrator, as are booleans, even one among numbers such as `[True, 1e-6]`, and non-real values. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
@@ -63,6 +64,7 @@
 
 ## Bug fixes
 
+- Repeated identical experiment steps now keep their own `start_time` schedule. Before, every repeat took the `next_start_time` and `end_time` of its first occurrence, so padding rests were skipped or steps were cut off at an end time already in the past. ([#5817](https://github.com/pybamm-team/PyBaMM/pull/5817))
 - `x_average`, `z_average`, `yz_average` and `r_average` no longer pull a factor out of a product when that factor depends on the averaged coordinate through an auxiliary domain (e.g. a particle concentration varying in x), and split a quotient only when its denominator is constant. This fixes nonzero `LLI [%]` and wrong total particle lithium in the DFN when the active material volume fraction varies in x. ([#5813](https://github.com/pybamm-team/PyBaMM/pull/5813))
 - Per-phase `"particle mechanics"` options, e.g. `(("swelling and cracking", "swelling only"), "none")`, now set the mechanics submodel of each phase. Before, the option was read per electrode, so a per-phase tuple built no mechanics submodel and the model failed to build. ([#5694](https://github.com/pybamm-team/PyBaMM/pull/5694))
 - `BasicDFN2D` reports the interfacial current density as `"Negative/Positive electrode interfacial current density [A.m-2]"`. It was stored under `"Negative/Positive electrode current density [A.m-2]"`, which every other model uses for the solid-phase current density. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))

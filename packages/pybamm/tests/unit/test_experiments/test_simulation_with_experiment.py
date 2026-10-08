@@ -2345,9 +2345,11 @@ class TestSimulationExperiment:
                 solver=pybamm.IDAKLUSolver(),
                 experiment_model_mode=experiment_model_mode,
             )
-            sim.solve(calc_esoh=False)
+            solution = sim.solve(calc_esoh=False)
 
             assert len(sim.experiment.unique_steps) == 2
+            assert len(solution.cycles) == 4
+            assert solution.t[-1] == pytest.approx(140 * 60)
 
             if experiment_model_mode == "legacy":
                 assert len(sim.steps_to_built_models) == 3
