@@ -181,11 +181,21 @@ class BaseThermal(pybamm.BaseSubModel):
             ocp_options = (ocp_options,) * len(phase_names)
 
         if self.options.electrode_types["negative"] == "planar":
-            i_n = variables["Lithium metal total interfacial current density [A.m-2]"]
+            # The total current splits between lithium plating and SEI growth
+            j_pl = variables["Lithium metal plating current density [A.m-2]"]
             eta_r_n = variables["Lithium metal interface reaction overpotential [V]"]
             eta_sei_n = variables["Negative electrode SEI film overpotential [V]"]
+            Q_rxn_n = j_pl * (eta_r_n - eta_sei_n)
+            if self.options.negative["SEI"] not in ["none", "constant"]:
+                j_sei = variables[
+                    "Negative electrode SEI interfacial current density [A.m-2]"
+                ]
+                delta_phi_n = variables[
+                    "Lithium metal interface surface potential difference [V]"
+                ]
+                Q_rxn_n += j_sei * (delta_phi_n - self.param.n.prim.U_sei)
             Q_rxn_n = pybamm.PrimaryBroadcast(
-                i_n * (eta_r_n - eta_sei_n) / self.param.n.L,
+                Q_rxn_n / self.param.n.L,
                 ["negative electrode"],
                 "current collector",
             )
