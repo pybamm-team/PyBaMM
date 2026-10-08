@@ -52,6 +52,11 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         the variable time-independent.
     """
 
+    # Defaults for a variable pickled before __init__ set these
+    time_integral = None
+    _unjoinable = False
+    _xr_interp_args = None
+
     def __init__(
         self,
         base_variables,

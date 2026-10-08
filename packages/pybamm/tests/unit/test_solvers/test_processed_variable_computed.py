@@ -6,6 +6,7 @@
 #  values itself since it does not have access to the full state vector
 #
 
+import pickle  # nosec B403 - used in tests with trusted input
 import typing
 from functools import cache
 
@@ -972,4 +973,28 @@ class TestProcessedVariableComputed:
         assert set(methods) <= covered_methods, (
             "Add a time-integral case to _OUTPUT_VARIABLE_CASES for: "
             + ", ".join(sorted(set(methods) - covered_methods))
+        )
+
+    @pytest.mark.parametrize("read_before_pickling", [False, True])
+    def test_variable_pickled_by_v26_9_reads_and_joins(self, read_before_pickling):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            solver=pybamm.IDAKLUSolver(output_variables=["Voltage [V]"]),
+        )
+        first = sim.solve([0, 600])
+        later = sim.solve([600, 1200])
+        variable = first["Voltage [V]"]
+        if read_before_pickling:
+            # v26.9 built the DataArray on the first read
+            variable._xr_data_array
+        loaded = pickle.loads(pickle.dumps(variable))  # nosec B301
+        # v26.9 pickled the variable without these attributes
+        for name in ("time_integral", "_unjoinable", "_xr_interp_args"):
+            delattr(loaded, name)
+        np.testing.assert_array_equal(loaded.entries, variable.entries)
+        np.testing.assert_array_equal(loaded(t=300.0), variable(t=300.0))
+        joined = first + later
+        np.testing.assert_array_equal(
+            loaded.update(later["Voltage [V]"], joined).entries,
+            joined["Voltage [V]"].entries,
         )
