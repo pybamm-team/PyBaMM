@@ -16,6 +16,7 @@ from scipy.io import savemat
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import flatten_inputs
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -501,6 +502,14 @@ class Solution(SolutionBase):
     def has_sensitivities(self) -> bool:
         return len(self._all_sensitivities) > 0
 
+    @property
+    def sensitivity_names(self) -> list[str]:
+        """
+        Names of the inputs this solution has sensitivities for, in the column
+        order of ``sensitivities["all"]``.
+        """
+        return [key for key in self._all_sensitivities if key != "all"]
+
     @staticmethod
     def _ensure_t_evals(all_ts, all_t_evals):
         # all_ts is already checked upstream
@@ -653,9 +662,7 @@ class Solution(SolutionBase):
     @property
     def all_inputs_stacked(self) -> list[np.ndarray]:
         if self._all_inputs_stacked is None:
-            self._all_inputs_stacked = [
-                np.asarray(list(inp.values())).reshape(-1) for inp in self.all_inputs
-            ]
+            self._all_inputs_stacked = [flatten_inputs(inp) for inp in self.all_inputs]
         return self._all_inputs_stacked
 
     @property
@@ -1247,7 +1254,23 @@ class Solution(SolutionBase):
             acc.setdefault(key, []).extend(val)
 
     def __add__(self, other):
-        """Adds two solutions together, e.g. when stepping"""
+        """Join ``other`` onto the end of this solution, e.g. when stepping.
+
+        If ``other`` starts after this solution ends, an ``ExplicitTimeIntegral``
+        integrates across the gap, interpolating its integrand linearly there. If
+        either solution returned output variables only, the integral is instead
+        the sum of the integrals over each solution, so the gap adds nothing.
+
+        Parameters
+        ----------
+        other : :class:`pybamm.Solution` or None
+            The solution to append.
+
+        Returns
+        -------
+        :class:`pybamm.Solution`
+            The joined solution.
+        """
         if other is None or isinstance(other, EmptySolution):
             return self.copy()
         if not isinstance(other, Solution):
