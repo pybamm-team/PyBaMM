@@ -43,6 +43,7 @@
 
 ## Optimizations
 
+- Removed O(n²) mass-matrix check from `IDAKLUSolver` set-up. ([#5880](https://github.com/pybamm-team/PyBaMM/pull/5880))
 - Faster `IDAKLUSolver` solves for models with lumped thermal. ([#5864](https://github.com/pybamm-team/PyBaMM/pull/5864))
 - CI installs TeXLive only for the unit, coverage and example-notebook sessions, the ones that render `latexify` output, and skips its recommended packages, cutting the download from the Ubuntu mirror by more than half. ([#5832](https://github.com/pybamm-team/PyBaMM/pull/5832))
 - `Solution` stores its attributes in `__slots__`, so an experiment, which keeps four solutions per step, retains about 40% less memory per step on Python 3.13. Solutions pickled by earlier versions still load. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
