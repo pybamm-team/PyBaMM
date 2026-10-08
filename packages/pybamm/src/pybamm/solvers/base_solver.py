@@ -625,7 +625,18 @@ class BaseSolver:
                 # discontinuity events are evaluated before the solver is called,
                 # so don't need to process them
                 discontinuity_events.append(event)
-            elif event.event_type == pybamm.EventType.SWITCH and (
+                continue
+            # A vector event would crash compiled solvers. `.shape` would
+            # evaluate StateVectors anew for every experiment-step model
+            shape = event.expression.shape_for_testing
+            if np.prod(shape) != 1:
+                raise pybamm.SolverError(
+                    f"Event '{event.name}' must evaluate to a scalar, but its "
+                    f"expression has shape {shape}. Reduce it "
+                    "to one value, e.g. with pybamm.min, pybamm.max or an "
+                    "average."
+                )
+            if event.event_type == pybamm.EventType.SWITCH and (
                 isinstance(self, pybamm.CasadiSolver)
                 and self.mode == "fast with events"
                 and model.algebraic != {}

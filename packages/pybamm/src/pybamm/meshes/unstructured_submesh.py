@@ -874,27 +874,33 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
     """
     Load an unstructured mesh from an external file via *meshio*.
 
-    Supported cell types are tetrahedra (3D) and triangles or quadrilaterals
-    (2D). Hexahedral file meshes are rejected: file meshes commonly contain
-    warped (non-planar-faced) hexes, whose volumes and face fluxes are
-    ill-defined. Convert such meshes to tetrahedra before loading.
+    Supports tetrahedra (3D) and triangles or quadrilaterals (2D). Hexahedra
+    are rejected, as file meshes often hold warped hexes with ill-defined
+    volumes and face fluxes; convert them to tetrahedra first.
 
-    The interface between adjacent domains must be **conforming**: the two
-    sides must share the same interface nodes, so that welding in
-    :meth:`UnstructuredSubMesh.combine` turns the interface into internal
-    faces. In gmsh, build the regions from one geometry or fragment the parts
-    (``BooleanFragments`` / ``Coherence``) so the shared surface is meshed
-    once. A non-conforming interface raises a :class:`pybamm.GeometryError`
-    when the domains are combined.
+    Adjacent domains must share their interface nodes (**conforming**), so
+    :meth:`UnstructuredSubMesh.combine` welds the interface into internal
+    faces; otherwise combining raises a :class:`pybamm.GeometryError`. In
+    gmsh, fragment the parts (``BooleanFragments`` / ``Coherence``).
 
     Parameters
     ----------
     filepath : str
         Path to the mesh file (GMSH ``.msh``, VTK ``.vtu``, etc.).
     subdomain_mapping : dict[str, int] or None
-        Maps PyBaMM domain name to physical group / cell-data tag.
+        Maps PyBaMM domain name to physical group / cell-data tag. The domain
+        being meshed is the domain of the geometry's spatial variables (e.g.
+        ``x_ncc`` on ``"negative current collector"``), so one generator can
+        serve every domain in the mapping. A domain missing from a non-empty
+        mapping loads every cell, with a warning.
     boundary_mapping : dict[str, int] or None
-        Maps boundary name to physical group / facet tag.
+        Maps boundary name to physical group / facet tag. The names become
+        boundary-condition sides. ``"negative tab"`` and ``"positive tab"``
+        are reserved for the ``"current collector"`` domain (boundary
+        operators on them raise a :class:`pybamm.ModelError` elsewhere), so
+        tag tabs with other names, e.g. ``"negative tab top"``. Exterior
+        faces without a tag default to zero flux and still take part in
+        interface discovery between domains.
     coord_sys : str, optional
         Coordinate system, default ``"cartesian"``.
     merge_tolerance : float or None, optional
@@ -903,6 +909,9 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         a grid of this spacing. Default ``1e-12``; pass ``None`` or ``0``
         to disable welding.
     """
+
+    # Resolution comes from the mesh file, not var_pts
+    requires_npts = False
 
     def __init__(
         self,
@@ -930,17 +939,23 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         mesh = self._cached_mesh
         nodes = mesh.points
 
-        # Determine which domain is being requested from the lims keys
-        domain_name = self._domain_name_from_lims(lims)
+        # The requested domain is the one the geometry's spatial variables live on
+        domain_name = self._domain_name_from_lims(lims, self.subdomain_mapping)
 
         # Extract supported cells (triangles/quads or tets/hexes)
         cells, cell_type = self._extract_supported_cells(mesh)
 
-        if domain_name and domain_name in self.subdomain_mapping:
+        if domain_name in self.subdomain_mapping:
             tag_value = self.subdomain_mapping[domain_name]
             cell_mask = self._get_cell_mask(mesh, cell_type, tag_value)
             elements = cells[cell_mask]
         else:
+            if self.subdomain_mapping:
+                pybamm.logger.warning(
+                    f"Domain {domain_name!r} is not in subdomain_mapping "
+                    f"(keys: {sorted(self.subdomain_mapping)}); loading every "
+                    f"cell of {self.filepath}"
+                )
             elements = cells
 
         # Weld coincident nodes across cell blocks so touching regions
@@ -987,16 +1002,20 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
                 # submesh and cannot match
                 in_domain = (facets >= 0).all(axis=1)
                 for name, tag in self.boundary_mapping.items():
+                    # In a multi-region file a tag usually belongs to one
+                    # region only, so only a tag absent from the file warns
+                    tagged = facet_tags == tag
+                    if not tagged.any():
+                        pybamm.logger.warning(
+                            f"boundary_mapping entry {name!r} (tag {tag}) "
+                            f"matches no facets in {self.filepath}"
+                        )
+                        continue
                     matched = _match_facets_to_boundary_faces(
-                        facets[in_domain & (facet_tags == tag)], submesh
+                        facets[in_domain & tagged], submesh
                     )
                     if len(matched) > 0:
                         submesh.boundary_faces[name] = matched
-                    else:
-                        pybamm.logger.warning(
-                            f"boundary_mapping entry {name!r} (tag {tag}) "
-                            f"matched no boundary faces of this submesh"
-                        )
 
         return submesh
 
@@ -1004,22 +1023,26 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         return f"UserSuppliedUnstructuredMesh({self.filepath})"
 
     @staticmethod
-    def _domain_name_from_lims(lims):
+    def _domain_name_from_lims(lims, subdomain_mapping=()):
+        """The domain of the geometry's spatial variables, preferring one in
+        ``subdomain_mapping``; string keys are standard spatial variables."""
+        candidates = []
         for var in lims:
             if var == "tabs":
                 continue
             if isinstance(var, str):
-                name = var
-            else:
-                name = var.name
-            for prefix in ("x_n", "x_s", "x_p"):
-                if name.startswith(prefix):
-                    domain_map = {
-                        "x_n": "negative electrode",
-                        "x_s": "separator",
-                        "x_p": "positive electrode",
-                    }
-                    return domain_map.get(prefix)
+                var = getattr(pybamm.standard_spatial_vars, var, None)
+            if var is not None and len(var.domain) == 1:
+                candidates.append(var.domain[0])
+        # Standard y and z live on the current collector whichever domain
+        # they mesh, so they only name it when nothing else does
+        for pool in (
+            [c for c in candidates if c in subdomain_mapping],
+            [c for c in candidates if c != "current collector"],
+            candidates,
+        ):
+            if pool:
+                return pool[0]
         return None
 
     @staticmethod
@@ -1084,18 +1107,14 @@ class TaggedSubMeshGenerator(MeshGenerator):
     Build an :class:`UnstructuredSubMesh` from cells of a single Gmsh
     physical group in a ``.msh`` file.
 
-    Use one instance per region in a multi-domain pybamm model — the
-    region name doubles as the pybamm domain name. Compare to
-    :class:`UserSuppliedUnstructuredMesh`, which routes multiple regions
-    through one generator by introspecting ``lims``; ``TaggedSubMeshGenerator``
-    is simpler when the model already supplies one mesh generator per
-    domain.
+    Use one instance per region; the region name is the pybamm domain name.
+    :class:`UserSuppliedUnstructuredMesh` instead serves several regions from
+    one generator.
 
-    Regions that share an interface must be conforming across it (the shared
-    surface meshed once, so both regions reference the same interface nodes),
-    or combining the domains raises a :class:`pybamm.GeometryError`. Fragment
-    the geometry in gmsh (``BooleanFragments`` / ``Coherence``) to guarantee
-    this.
+    Regions sharing an interface must be conforming (the shared surface
+    meshed once), or combining the domains raises a
+    :class:`pybamm.GeometryError`; fragment the geometry in gmsh
+    (``BooleanFragments`` / ``Coherence``).
 
     Parameters
     ----------
@@ -1112,8 +1131,13 @@ class TaggedSubMeshGenerator(MeshGenerator):
         Maps boundary name to a gmsh physical *surface* group, given as
         its ``field_data`` name or integer tag. Matching tagged surface
         triangles become the named entries in ``boundary_faces``. Without
-        it the submesh carries no boundary tags.
+        it the submesh carries no boundary tags. ``"negative tab"`` and
+        ``"positive tab"`` are reserved for the ``"current collector"``
+        domain, so tag tabs with other names.
     """
+
+    # Resolution comes from the mesh file, not var_pts
+    requires_npts = False
 
     _mesh_cache: dict = {}
 
