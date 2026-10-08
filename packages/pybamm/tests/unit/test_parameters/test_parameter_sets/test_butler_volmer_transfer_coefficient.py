@@ -1,29 +1,17 @@
 #
-# Tests that lithium-ion parameter sets provide the Butler-Volmer transfer coefficient
-# read by asymmetric Butler-Volmer kinetics
+# Tests that parameter sets provide the Butler-Volmer transfer coefficient read by
+# asymmetric Butler-Volmer kinetics
 #
+import numpy as np
 import pytest
 
 import pybamm
 
-HALF_CELL_SETS = [
-    "Ecker2015_graphite_halfcell",
-    "OKane2022_graphite_SiOx_halfcell",
-    "Xu2019",
-]
-COMPOSITE_SETS = ["Bonkile2024", "Chen2020_composite"]
 PARAMETER_SETS = [
-    "Ai2020",
-    "Chen2020",
-    "Marquis2019",
-    "Mohtat2020",
-    "NCA_Kim2011",
-    "OKane2022",
-    "ORegan2022",
-    "Prada2013",
-    "Ramadass2004",
-    *HALF_CELL_SETS,
-    *COMPOSITE_SETS,
+    name
+    for name in sorted(pybamm.parameter_sets)
+    if pybamm.parameter_sets[name]["chemistry"] in ("lithium_ion", "sodium_ion")
+    and not name.startswith("MSMR")
 ]
 
 
@@ -37,8 +25,27 @@ class TestButlerVolmerTransferCoefficient:
             )
 
         options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
-        if parameter_set in HALF_CELL_SETS:
+        # Half-cell sets have no porous negative electrode
+        if "Negative electrode porosity" not in parameter_values:
             options["working electrode"] = "positive"
-        if parameter_set in COMPOSITE_SETS:
-            options["particle phases"] = ("2", "1")
+        phases = tuple(
+            "2"
+            if f"Primary: {domain} electrode Butler-Volmer transfer coefficient"
+            in parameter_values
+            else "1"
+            for domain in ["Negative", "Positive"]
+        )
+        if phases != ("1", "1"):
+            options["particle phases"] = phases
         parameter_values.process_model(pybamm.lithium_ion.SPM(options))
+
+    def test_half_transfer_coefficient_matches_symmetric_kinetics(self):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        t = np.linspace(0, 600, 31)
+        voltages = []
+        for kinetics in ["symmetric Butler-Volmer", "asymmetric Butler-Volmer"]:
+            model = pybamm.lithium_ion.SPM({"intercalation kinetics": kinetics})
+            sim = pybamm.Simulation(model, parameter_values=parameter_values)
+            solution = sim.solve([0, 600])
+            voltages.append(solution["Voltage [V]"](t))
+        np.testing.assert_allclose(voltages[1], voltages[0], rtol=1e-10)

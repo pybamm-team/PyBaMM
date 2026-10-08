@@ -8,6 +8,7 @@
 ## Deprecated
 
 - Setting `Array.entries_string` or `Interpolant.entries_string`, and calling `StateVector.set_evaluation_array`, are in-place symbol updates and now emit `SymbolMutationDeprecationWarning`. Construct a new symbol instead. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
+- `"{Negative/Positive} electrode charge transfer coefficient"` is deprecated in favour of `"{Negative/Positive} electrode Butler-Volmer transfer coefficient"`. `ParameterValues` maps the old name to the new one with a `DeprecationWarning` when it is loaded, updated, set or read, so existing code and custom parameter sets keep working; rename the key to silence the warning. ([#5843](https://github.com/pybamm-team/PyBaMM/pull/5843))
 
 ## Features
 
@@ -39,7 +40,7 @@
 - Fixed `first_state`, `last_state` and `step` of an `output_variables` solve using the outputs' sensitivities instead of the states'. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - Fixed sensitivities with respect to only some of the inputs, for `output_variables` and for expressions of a time integral. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - Fixed a `ValueError` when reading variables from a solve with both scalar and vector inputs. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
-- Parameter sets now store the transfer coefficient as `"{Negative/Positive} electrode Butler-Volmer transfer coefficient"`, the name asymmetric Butler-Volmer kinetics read, instead of the unused `"... electrode charge transfer coefficient"`. `{"intercalation kinetics": "asymmetric Butler-Volmer"}` now works with the shipped lithium-ion parameter sets. ([#5843](https://github.com/pybamm-team/PyBaMM/pull/5843))
+- Parameter sets now store the transfer coefficient as `"{Negative/Positive} electrode Butler-Volmer transfer coefficient"`, the name asymmetric Butler-Volmer kinetics read, instead of the unused `"... electrode charge transfer coefficient"`. `Ecker2015`, which had no transfer coefficient, now has 0.5 for both electrodes, so `{"intercalation kinetics": "asymmetric Butler-Volmer"}` works with every shipped lithium-ion and sodium-ion parameter set. ([#5843](https://github.com/pybamm-team/PyBaMM/pull/5843))
 
 ## Optimizations
 

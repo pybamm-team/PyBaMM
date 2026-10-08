@@ -35,6 +35,15 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
+def _renamed_transfer_coefficient(key: str) -> str | None:
+    """Current name of a deprecated "... electrode charge transfer coefficient" key."""
+    if key.endswith("electrode charge transfer coefficient"):
+        return key.replace(
+            "charge transfer coefficient", "Butler-Volmer transfer coefficient"
+        )
+    return None
+
+
 class ParameterValues:
     """
     The parameter values for a simulation.
@@ -419,7 +428,25 @@ class ParameterValues:
                     "electrode. To avoid this error, change your parameter file to use "
                     "the new name."
                 ) from err
+            new_key = self._renamed_key(key)
+            if new_key is not None:
+                return self._store[new_key]
             raise
+
+    def _renamed_key(self, key: str) -> str | None:
+        """
+        Return the current name of ``key``, with a ``DeprecationWarning``, if ``key``
+        is a renamed parameter stored only under its current name.
+        """
+        new_key = _renamed_transfer_coefficient(key)
+        if new_key is None or key in self._store or new_key not in self._store:
+            return None
+        warn(
+            f"The parameter '{key}' has been renamed to '{new_key}'",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        return new_key
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -452,6 +479,9 @@ class ParameterValues:
                 DeprecationWarning,
                 stacklevel=2,
             )
+        new_key = self._renamed_key(key)
+        if new_key is not None:
+            return self._store[new_key]
         return self._store.get(key, default)
 
     def __setitem__(self, key: str, value: Any) -> None:
@@ -476,6 +506,14 @@ class ParameterValues:
                     value = float(value)
                 except ValueError:
                     pass  # Keep as string if not convertible
+        new_key = _renamed_transfer_coefficient(key)
+        if new_key is not None:
+            warn(
+                f"The parameter '{key}' has been renamed to '{new_key}'",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self._store[new_key] = value
         self._store[key] = value
         self._processor.clear_cache()
 
@@ -741,6 +779,20 @@ class ParameterValues:
                 # current name takes precedence so the deprecated alias can no
                 # longer silently overwrite it; the deprecated key is kept for
                 # backward compatibility (custom models may still reference it)
+                values.setdefault(new_param, values[param])
+            new_param = _renamed_transfer_coefficient(param)
+            if new_param is not None:
+                warn(
+                    f"The parameter '{param}' has been renamed to '{new_param}'",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                if new_param in values:
+                    warn(
+                        f"Both the deprecated '{param}' and its current name "
+                        f"'{new_param}' are set; using '{new_param}'.",
+                        stacklevel=2,
+                    )
                 values.setdefault(new_param, values[param])
             if is_deprecated_msmr_name(param):
                 new_param = replace_deprecated_msmr_name(param)
