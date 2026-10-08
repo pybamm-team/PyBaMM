@@ -1,5 +1,6 @@
 import gc
 import tracemalloc
+import weakref
 
 import pybamm
 
@@ -219,12 +220,12 @@ class TestExperimentMemory:
         mem_20_cycles, _ = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
-        # Linear growth (4x) means each step rebuilds the model. On a ~1.9 MB fixed
-        # footprint, ~48 KB/cycle growth gives ~1.37x, so 1.4 bounds allocator noise.
+        # Linear growth (4x) means each step rebuilds the model. On a ~1.86 MB fixed
+        # footprint, ~33 KB/cycle growth gives ~1.25x, so 1.3 bounds allocator noise.
         ratio = mem_20_cycles / mem_5_cycles
-        assert ratio < 1.4, (
-            f"Memory grew {ratio:.1f}x for 4x more cycles. "
-            f"Expected sub-linear growth (<1.4x). "
+        assert ratio < 1.3, (
+            f"Memory grew {ratio:.2f}x for 4x more cycles. "
+            f"Expected sub-linear growth (<1.3x). "
             f"This may indicate termination hashing is broken (see #5453)."
         )
 
@@ -287,6 +288,39 @@ class TestExperimentMemory:
 
         peak_mb = peak / 1024 / 1024
         assert peak_mb < 6, f"Peak memory {peak_mb:.1f} MB for GITT is excessive."
+
+    def test_unsaved_cycles_are_freed_before_the_experiment_ends(self):
+        # Each cycle is folded from its steps by Solution.__add__, so a cycle
+        # that save_at_cycles leaves out must not keep its sum alive
+        def live_sums_at_experiment_end(number_of_cycles):
+            sums = []
+            original = pybamm.Solution.__add__
+
+            def recording(self, other):
+                result = original(self, other)
+                sums.append(weakref.ref(result))
+                return result
+
+            class CountLiveSums(pybamm.callbacks.Callback):
+                def on_experiment_end(self, logs):
+                    gc.collect()
+                    self.live = sum(ref() is not None for ref in sums)
+
+            callback = CountLiveSums()
+            experiment = pybamm.Experiment(
+                [("Discharge at 1C for 5 minutes", "Rest for 2 minutes")]
+                * number_of_cycles
+            )
+            pybamm.Solution.__add__ = recording
+            try:
+                pybamm.Simulation(
+                    pybamm.lithium_ion.SPM(), experiment=experiment
+                ).solve(save_at_cycles=[1, number_of_cycles], callbacks=callback)
+            finally:
+                pybamm.Solution.__add__ = original
+            return callback.live
+
+        assert live_sums_at_experiment_end(6) == live_sums_at_experiment_end(3)
 
     def test_processed_variable_computed_initialise_is_lazy(self):
         # initialise_* (np.concatenate / flatten / xr.DataArray build) must

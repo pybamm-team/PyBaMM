@@ -987,6 +987,9 @@ class Simulation(BaseSimulation):
         # Track running termination (real cycles + skipped steps), applied to the
         # folded solution below to match the old left-fold's final termination.
         last_termination = None
+        # Solver work of the cycles left out of the fold, totalled so their
+        # solutions can be freed; None once one of them has no statistics
+        discarded_cycle_statistics = pybamm.SolverStatistics()
 
         for cycle_num, cycle_length in enumerate(
             cycle_lengths,
@@ -1172,6 +1175,16 @@ class Simulation(BaseSimulation):
                 cross_cycle_segments.append(cycle_solution)
                 if not isinstance(cycle_solution, pybamm.EmptySolution):
                     last_termination = cycle_solution.termination
+            elif (
+                isinstance(cycle_solution, pybamm.Solution)
+                and discarded_cycle_statistics is not None
+            ):
+                statistics = cycle_solution.solver_statistics
+                discarded_cycle_statistics = (
+                    None
+                    if statistics is None
+                    else discarded_cycle_statistics + statistics
+                )
 
             if steps:
                 if all(
@@ -1242,6 +1255,13 @@ class Simulation(BaseSimulation):
             self._solution = pybamm.Solution.from_sub_solutions(cross_cycle_segments)
             if last_termination is not None:
                 self._solution.termination = last_termination
+            if isinstance(self._solution, pybamm.Solution):
+                statistics = self._solution.solver_statistics
+                self._solution.solver_statistics = (
+                    None
+                    if statistics is None or discarded_cycle_statistics is None
+                    else statistics + discarded_cycle_statistics
+                )
 
         if self._solution is not None and len(all_cycle_solutions) > 0:
             self._solution.cycles = all_cycle_solutions

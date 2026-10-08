@@ -27,7 +27,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers>=0.10.0,<0.11.0",
+    "pybammsolvers>=0.11.0,<0.12.0",
     "black",
     "numpy>=2.0.0",
     "scipy>=1.11.4,!=1.18.0", # 1.18.0 breaks pickling/deepcopy of interpolators, fixed in 1.18.1 (scipy#25489)
@@ -94,6 +94,16 @@ docs = [
     "sphinx-gallery",
     "sphinx-docsearch",
 ]
+# Benchmark-only dependencies, kept out of dev so the Bencher image stays small
+bench = [
+    "pytest>=9.0",
+    "pytest-xdist",
+    "pytest-mock",
+    "hypothesis",
+    "pytest-benchmark>=5.3.0",
+    # For memory benchmarking (Linux/macOS only)
+    "pytest-memray>=1.7.0; sys_platform != 'win32'",
+]
 dev = [
     # For working with pre-commit hooks
     "pre-commit",
@@ -105,20 +115,12 @@ dev = [
     "pytest-cov",
     # For doctest
     "pytest-doctestplus",
-    # pytest and its plugins
-    "pytest>=9.0",
-    "pytest-xdist",
-    "pytest-mock",
     "pytest-snapshot",
     # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
-    # For property based testing
-    "hypothesis",
-    "pytest-benchmark>=5.3.0",
-    # For memory benchmarking (Linux/macOS only)
-    "pytest-memray>=1.7.0; sys_platform != 'win32'",
+    { include-group = "bench" },
 ]
 
 [project.entry-points."pybamm_parameter_sets"]

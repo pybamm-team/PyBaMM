@@ -125,7 +125,7 @@ jobs:
         with:
           python-version: 3.12
 
-      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "latest"
           enable-cache: true
@@ -171,6 +171,7 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: unit
+      texlive: true
       legs: >-
         [{"os": "ubuntu-latest", "python": "3.10"},
          {"os": "ubuntu-latest", "python": "3.11"},
@@ -207,6 +208,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
       sessions: coverage
+      texlive: true
       upload_coverage: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
@@ -248,7 +250,7 @@ jobs:
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "latest"
           enable-cache: true
@@ -280,6 +282,7 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: examples
+      texlive: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
@@ -302,7 +305,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: memory
-      texlive: false
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   # The `core` tier: models the maintainers have adopted, so a failure blocks a
@@ -316,7 +318,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: zoo-gating
-      texlive: false
       fetch_depth: 0
       timeout_minutes: 30
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
@@ -332,7 +333,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: zoo-community
-      texlive: false
       fetch_depth: 0
       timeout_minutes: 60
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'

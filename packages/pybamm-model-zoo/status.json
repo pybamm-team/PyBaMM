@@ -1,0 +1,13 @@
+{
+  "generated": "2026-10-05T11:03:18Z",
+  "models": {
+    "linearised_spm": {
+      "results": {
+        "26.8.0.0": "pass",
+        "26.9.0.0": "pass",
+        "main": "pass"
+      },
+      "last_pass": "26.9.0.0"
+    }
+  }
+}

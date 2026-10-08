@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
   "label": "model zoo",
-  "message": "untested",
-  "color": "lightgrey"
+  "message": "passing (26.9.0.0)",
+  "color": "brightgreen"
 }

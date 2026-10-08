@@ -30,8 +30,12 @@ Model parameter processing remains available through
 Migrating in-place updates
 --------------------------
 
-Public symbol setters and domain/list edits remain available but emit
-``SymbolMutationDeprecationWarning``. Prefer constructing replacements::
+Public symbol setters remain available but emit
+``SymbolMutationDeprecationWarning``. ``children``, ``domain`` and
+``input_names`` return immutable tuples that compare equal to lists, and
+``domains`` returns a read-only copy: editing them raises ``TypeError``, and not
+even ``list`` or ``dict`` methods can change the symbol through them. Prefer
+constructing replacements::
 
     updated = variable.create_copy(scale=2, reference=0, bounds=(0, 1))
     expression = pybamm.replace(expression, {variable: updated})
@@ -44,8 +48,7 @@ appropriate class. IDs update automatically; callers need not call ``set_id``.
 
 Deprecated updates invalidate cached IDs and derived values across live symbols.
 This deliberately slow compatibility path adds no per-symbol tracking to normal
-replacement. Public domain and child-list views support deprecated edits while
-internal storage remains shared. Mutating symbols already used as dictionary keys
+replacement. Mutating symbols already used as dictionary keys
 cannot repair those dictionaries: use a fresh replacement memo and rebuild any
 parameter-processed or discretised model after legacy edits. Changes to a child's
 domains do not propagate into constructor-derived parent domains; reconstruct
@@ -54,4 +57,9 @@ active because frozen ancestors cannot be discovered for cache invalidation;
 use out-of-place replacement or unfreeze the collector first.
 
 The test suite forbids deprecated mutation even with warnings ignored. Only isolated compatibility subprocesses exercise the legacy path;
-notebook kernels inherit the same guard as other tests.
+notebook kernels inherit the same guard as other tests. The guard
+(``PYBAMM_TEST_FORBID_SYMBOL_MUTATION=1``) makes every deprecated public update
+raise. A symbol's private slots, such as ``symbol._name``, are not part of the
+API and writing them is unsupported: rather than intercept every attribute write
+at runtime, the test suite checks PyBaMM's own code, tests, examples and
+documentation for such writes statically.

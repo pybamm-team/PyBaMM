@@ -2,7 +2,7 @@
 Benchmarks for different model option combinations.
 
 The full option sweep is large, so every test here is also marked `slow_bench`
-and is skipped in CI. See tests/benchmarks/README.md.
+and runs on a schedule rather than per push. See tests/benchmarks/README.md.
 """
 
 import numpy as np
