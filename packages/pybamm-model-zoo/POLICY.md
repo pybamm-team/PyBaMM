@@ -4,7 +4,7 @@ This policy sets out the terms on which models are contributed to, kept in, and 
 
 In this policy:
 
-- the **PyBaMM team** means the core members of the PyBaMM project including, but not limited to, the maintainers and steering council members;
+- the **PyBaMM team** means the core members of the PyBaMM project;
 - a **contributor** is anyone who submits a model to the zoo;
 - a model's **maintainers** are the people listed under `maintainers` in its `model.toml` manifest and named for its folder in `.github/CODEOWNERS`.
 
@@ -31,7 +31,7 @@ Every model in the zoo belongs to one of two tiers, recorded in its manifest:
 ## 4. License
 
 1. All models in the zoo are distributed under PyBaMM's [BSD 3-Clause license](https://github.com/pybamm-team/PyBaMM/blob/main/LICENSE.txt). By contributing a model, you agree to license it on those terms.
-2. Contributors who want a model released under any other license must host it in their own repository. Such a repository can still be discovered by the zoo registry as an external model collection (see the [README](README.md#external-model-collections)), and is then governed by its own license rather than by this policy.
+2. Contributors who want a model released under any other license must host it in their own repository. Such a repository can still be discovered by the zoo registry as an external model collection (see the [README](https://github.com/pybamm-team/PyBaMM/tree/main/packages/pybamm-model-zoo#external-model-collections)), and is then governed by its own license rather than by this policy.
 3. Third-party packages that a model depends on keep their own licenses, which must be compatible with the BSD 3-Clause license.
 
 ## 5. Contributors' responsibilities

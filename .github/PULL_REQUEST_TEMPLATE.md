@@ -16,3 +16,4 @@ Please confirm the following before marking the PR as ready for review:
 - The documentation builds: `nox -s doctests`
 - Code is commented for hard-to-understand areas
 - Tests added that prove fix is effective or that feature works
+- If you are adding a new model to the zoo, you have read the [policy](https://github.com/pybamm-team/PyBaMM/blob/main/packages/pybamm-model-zoo/POLICY.md).
