@@ -8,12 +8,15 @@
 ## Deprecated
 
 - Setting `Array.entries_string` or `Interpolant.entries_string`, and calling `StateVector.set_evaluation_array`, are in-place symbol updates and now emit `SymbolMutationDeprecationWarning`. Construct a new symbol instead. ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
+- `ProcessedVariable`'s `base_variables_casadi` argument and attribute are deprecated; pass the CasADi functions positionally or as `observer=`, and call the variable to evaluate it. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
 
 ## Features
 
 - `FiniteVolumeUnstructured` accepts anisotropic coefficients in `div(K * grad(u))`: a `VectorField` with one value per axis (a diagonal tensor, as `FiniteVolume2D` takes) or a rank-2 `TensorField` (the full tensor), each component a cell field. Each face uses its normal conductivity n·K·n from the cells on either side, combined by the same distance-weighted harmonic mean as a scalar coefficient, which is exact when the principal axes of K are aligned with the faces; the tangential part of K n is not included. Previously a `VectorField` coefficient raised `DiscretisationError`. ([#5835](https://github.com/pybamm-team/PyBaMM/pull/5835))
 - `Solution.solver_statistics` reports the integrator's step, linear-solver-setup, nonlinear-iteration, nonlinear-failure and error-test-failure counts as a `pybamm.SolverStatistics` dataclass. `IDAKLUSolver` fills it for every solution, counting across `t_eval` breakpoints and separately for each input set, and the counts are summed when solutions are combined, so a stepped or experiment solution reports its total, including the cycles that `save_at_cycles` does not keep. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - A multi-input `IDAKLUSolver` solve now hands each thread its next input set as soon as it is free, instead of splitting the sets into equal static blocks plus a serial remainder solved on the calling thread, so a heterogeneous sweep (for example a current sweep whose high currents stop early on a voltage cut-off) no longer waits on its slowest block. A failing set no longer hides the others: the `SolverError` names every set that failed, whether it failed from the start or part-way through, each prefixed `input set N: `, and a single-set solve's message now starts with `input set 0: `. Each `on_failure="warn"` warning names its set the same way. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
+- Added `Solution.sensitivity_names`, the sensitivity inputs in the column order of `sensitivities["all"]`. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- An outputs-only `pybammsolvers` solution also returns `y_init`, `yS_init` and `yS_term`: its initial states and its states' sensitivities at both ends. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 
 ## Bug fixes
 
@@ -26,12 +29,26 @@
 - The CI test matrix now installs every dependency from `uv.lock`, as local nox sessions do, instead of resolving the latest releases, so only the prebuilt `pybammsolvers` wheel is installed outside the lock. ([#5782](https://github.com/pybamm-team/PyBaMM/pull/5782))
 - An editable `pybammsolvers` install, such as the one `uv sync` creates, can be imported on its own: `import pybammsolvers` no longer fails to load `libcasadi` unless `casadi` was imported first. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
 - `FiniteVolume2D` now raises a `DiscretisationError` when a 2D mesh has fewer than 2 nodes in either direction (for example `BasicDFN2D` with 1 point in `z_2d`), instead of an opaque scipy `ValueError` from the harmonic mean. Use a one-dimensional model for problems that do not vary in that direction. ([#5838](https://github.com/pybamm-team/PyBaMM/pull/5838))
+- Fixed `ProcessedVariable` permuting the values of unsorted time queries when interpolating without Hermite data. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- Fixed 3D variables requested through `output_variables` coming back scrambled. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- Fixed `ProcessedVariable.as_computed()` reordering the spatial axes of 2D and 3D variables and raising on 0D time integrals; spatial time integrals raise `NotImplementedError`. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- Fixed reading variables from joined `output_variables` solutions, other than sparse ones; a joined `DiscreteTimeSum`, or expression of a time integral, raises `NotImplementedError` when read. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- Fixed time-integral sensitivities counting the initial condition, and expressions of a time integral being differentiated at the wrong value. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed a CasADi `RuntimeError` reading the sensitivities of solutions joined at a shared time point, and summed time-integral sensitivities across the join. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed `Solution.first_state`'s sensitivities, and its states after an `output_variables` solve, which gave wrong `"Change in ..."` summary variables. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed joining `output_variables` solutions with sparse variables, such as `"Electrolyte current density [A.m-2]"`. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed `first_state`, `last_state` and `step` of an `output_variables` solve using the outputs' sensitivities instead of the states'. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed sensitivities with respect to only some of the inputs, for `output_variables` and for expressions of a time integral. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
+- Fixed a `ValueError` when reading variables from a solve with both scalar and vector inputs. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
 
 ## Optimizations
 
 - CI installs TeXLive only for the unit, coverage and example-notebook sessions, the ones that render `latexify` output, and skips its recommended packages, cutting the download from the Ubuntu mirror by more than half. ([#5832](https://github.com/pybamm-team/PyBaMM/pull/5832))
 - `Solution` stores its attributes in `__slots__`, so an experiment, which keeps four solutions per step, retains about 40% less memory per step on Python 3.13. Solutions pickled by earlier versions still load. ([#5827](https://github.com/pybamm-team/PyBaMM/pull/5827))
 - Symbol mutation is no longer guarded by intercepting every attribute write, and `children` and `domain` return the stored immutable sequences instead of building a view on each access. Writes to a symbol's slots after construction are instead rejected by a static check of PyBaMM's code, tests, examples and documentation. Under the test suite's mutation guard, constructing an expression is twice as fast and parameterising it is 25% faster, which recovers most of the `test_parameterise` benchmark regression from [#5779](https://github.com/pybamm-team/PyBaMM/pull/5779). ([#5825](https://github.com/pybamm-team/PyBaMM/pull/5825))
+- Faster reads of `output_variables` results: an off-grid `solution["Voltage [V]"](t)` on an SPM drops from about 420 µs to 1 µs. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- Repeat evaluations of a `ProcessedVariable` are faster: a repeat `solution["Voltage [V]"](t)` on an SPMe discharge takes about 40% less time. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
+- Time integrals are converted to CasADi once per model instead of once per solution segment. ([#5786](https://github.com/pybamm-team/PyBaMM/pull/5786))
 
 # [v26.9.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.9.0.0) - 2026-09-28
 
@@ -63,6 +80,7 @@
 
 ## Bug fixes
 
+- Repeated identical experiment steps now keep their own `start_time` schedule. Before, every repeat took the `next_start_time` and `end_time` of its first occurrence, so padding rests were skipped or steps were cut off at an end time already in the past. ([#5817](https://github.com/pybamm-team/PyBaMM/pull/5817))
 - `x_average`, `z_average`, `yz_average` and `r_average` no longer pull a factor out of a product when that factor depends on the averaged coordinate through an auxiliary domain (e.g. a particle concentration varying in x), and split a quotient only when its denominator is constant. This fixes nonzero `LLI [%]` and wrong total particle lithium in the DFN when the active material volume fraction varies in x. ([#5813](https://github.com/pybamm-team/PyBaMM/pull/5813))
 - Per-phase `"particle mechanics"` options, e.g. `(("swelling and cracking", "swelling only"), "none")`, now set the mechanics submodel of each phase. Before, the option was read per electrode, so a per-phase tuple built no mechanics submodel and the model failed to build. ([#5694](https://github.com/pybamm-team/PyBaMM/pull/5694))
 - `BasicDFN2D` reports the interfacial current density as `"Negative/Positive electrode interfacial current density [A.m-2]"`. It was stored under `"Negative/Positive electrode current density [A.m-2]"`, which every other model uses for the solid-phase current density. ([#5690](https://github.com/pybamm-team/PyBaMM/pull/5690))
