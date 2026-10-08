@@ -282,6 +282,8 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
       for (int i = 0; i <= len_alg_; i++) jp[i] = sb.colptrs[i];
       for (int i = 0; i < sb.nnz; i++) jr[i] = sb.rowvals[i];
       sb.LS = SUNLinSol_KLU(sb.delta_nvec, sb.J, sb.sunctx);
+      // AMD (0) instead of the SUNDIALS default COLAMD (1)
+      SUNLinSol_KLUSetOrdering(sb.LS, 0);
     } else {
       sb.J = SUNDenseMatrix(len_alg_, len_alg_, sb.sunctx);
       sb.LS = SUNLinSol_Dense(sb.delta_nvec, sb.J, sb.sunctx);
