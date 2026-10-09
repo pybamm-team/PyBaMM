@@ -31,6 +31,8 @@ else:
 
 MANIFEST_NAME = "model.toml"
 ENTRY_POINT_GROUP = "pybamm_zoo_models"
+#: The distribution that ships the in-tree models, and declares their extras.
+DISTRIBUTION = "pybamm-model-zoo"
 TIERS = ("community", "core")
 DEFAULT_SOLVE_TIME = 3600.0
 DEFAULT_KEY_VARIABLES = ("Voltage [V]",)
@@ -47,6 +49,11 @@ def usable_identifier(value: str, pattern: re.Pattern[str]) -> bool:
     so ``class`` would pass the shape check and render a syntax error.
     """
     return bool(pattern.match(value)) and not keyword.iskeyword(value)
+
+
+def extra_name(slug: str) -> str:
+    """The extra that declares a model's dependencies, e.g. ``zoo-my-model``."""
+    return f"zoo-{slug.replace('_', '-')}"
 
 
 def split_class_path(class_path: str) -> tuple[str, str]:
@@ -68,14 +75,6 @@ class Maintainer:
 
 
 @dataclass(frozen=True)
-class Dependencies:
-    """A model's third-party dependencies, declared as a zoo extra."""
-
-    extra: str | None = None
-    packages: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
 class TestSpec:
     """How the contract suite should exercise a model."""
 
@@ -94,6 +93,9 @@ class ModelEntry:
 
     Attributes
     ----------
+    distribution : str or None
+        The installed distribution that ships the model and declares its extra,
+        if known.
     error : str or None
         Why the manifest could not be parsed, if it could not be. Such an entry
         is keyed on its folder name and carries no trustworthy metadata; it
@@ -105,6 +107,7 @@ class ModelEntry:
     path: Path
     raw: dict[str, Any] = field(repr=False, default_factory=dict)
     external: bool = False
+    distribution: str | None = None
     error: str | None = None
 
     @property
@@ -145,10 +148,6 @@ class ModelEntry:
         return self.tier == tier or self.tier not in TIERS
 
     @property
-    def pybamm_requires(self) -> str:
-        return self._model.get("pybamm_requires", "")
-
-    @property
     def added(self) -> str:
         return self._model.get("added", "")
 
@@ -169,12 +168,9 @@ class ModelEntry:
         return self._model.get("citation", {}).get("key", "")
 
     @property
-    def dependencies(self) -> Dependencies:
-        block = self._model.get("dependencies", {})
-        return Dependencies(
-            extra=block.get("extra") or None,
-            packages=tuple(block.get("packages", [])),
-        )
+    def extra(self) -> str:
+        """The extra of :attr:`distribution` that declares the model's dependencies."""
+        return extra_name(self.slug)
 
     @property
     def tests(self) -> TestSpec:
@@ -195,29 +191,31 @@ class ModelEntry:
     def attribute(self) -> str:
         return split_class_path(self.class_path)[1]
 
-    def admits(self, version: str) -> bool:
-        """Whether ``version`` satisfies the manifest's ``pybamm_requires``.
+    def missing_dependencies(self) -> list[str]:
+        """Requirements of the model's extra that are not installed.
+
+        Read from the installed metadata of :attr:`distribution`, so an entry
+        with no known distribution reports none.
+        """
+        if self.distribution is None:
+            return []
+        from pybamm_model_zoo._dependencies import unsatisfied
+
+        return unsatisfied(self.distribution, [self.extra])
+
+    def require(self) -> None:
+        """Check that the model's extra is installed.
 
         Raises
         ------
-        ManifestError
-            If ``pybamm_requires`` is not a valid version specifier.
+        ModelUnavailableError
+            If any requirement of the model's extra is not installed.
         """
-        # Imported here so the manifest-only paths (the docs generator, the CI
-        # matrix) keep working in an environment with nothing but the stdlib.
-        from packaging.specifiers import InvalidSpecifier, SpecifierSet
-        from packaging.version import Version
-
-        try:
-            specifier = SpecifierSet(self.pybamm_requires)
-        except InvalidSpecifier as error:
-            raise ManifestError(
-                f"{self.manifest_path}: pybamm_requires "
-                f"'{self.pybamm_requires}' is not a valid specifier ({error})"
-            ) from error
-        # A development checkout reports a .devN version, which a bare specifier
-        # excludes; the question here is only whether the range is satisfied.
-        return specifier.contains(Version(version), prereleases=True)
+        if missing := self.missing_dependencies():
+            raise ModelUnavailableError(
+                f"'{self.name}' is missing {', '.join(missing)}. Install its extra "
+                f'with `pip install "{self.distribution}[{self.extra}]"`.'
+            )
 
     def load(self) -> type:
         """Import and return the model class.
@@ -227,30 +225,20 @@ class ModelEntry:
         ManifestError
             If the manifest does not declare a parseable ``class``.
         ModelUnavailableError
-            If the module cannot be imported or lacks the named attribute.
+            If the model's extra is not installed, or the module cannot be
+            imported or lacks the named attribute.
         """
         if not self.module_path or not self.attribute:
             raise ManifestError(
                 f"{self.manifest_path}: 'class' must be 'module.path:AttributeName', "
                 f"got {self.class_path!r}"
             )
+        self.require()
         try:
             module = importlib.import_module(self.module_path)
         except ImportError as error:
-            extra = self.dependencies.extra
-            if not extra:
-                hint = ""
-            elif self.external:
-                # An external collection's extra belongs to a distribution whose
-                # name the manifest does not record.
-                hint = f" It declares the extra '{extra}'."
-            else:
-                hint = (
-                    f" It declares the extra '{extra}'; install it with "
-                    f'`pip install "pybamm-model-zoo[{extra}]"`.'
-                )
             raise ModelUnavailableError(
-                f"'{self.name}' could not be imported.{hint}"
+                f"'{self.name}' could not be imported: {error}"
             ) from error
         try:
             return getattr(module, self.attribute)
@@ -278,13 +266,16 @@ def read_manifest(path: Path) -> dict[str, Any]:
         raise ManifestError(f"{path}: invalid TOML ({error})") from error
 
 
-def _entry_from_manifest(path: Path, *, external: bool) -> ModelEntry:
+def _entry_from_manifest(
+    path: Path, *, external: bool, distribution: str | None
+) -> ModelEntry:
     """Read one manifest into an entry, recording a parse failure rather than raising.
 
     Raising here would take the whole registry down -- every other model with it
     -- for one bad file, so a manifest too broken to key still yields an entry
     and ``check_manifest`` is what reports it.
     """
+    origin = {"path": path.parent, "external": external, "distribution": distribution}
     raw: dict[str, Any] = {}
     try:
         raw = read_manifest(path)
@@ -303,14 +294,11 @@ def _entry_from_manifest(path: Path, *, external: bool) -> ModelEntry:
         return ModelEntry(
             slug=path.parent.name,
             name=path.parent.name,
-            path=path.parent,
             raw=raw,
-            external=external,
             error=str(error),
+            **origin,
         )
-    return ModelEntry(
-        slug=slug, name=name, path=path.parent, raw=raw, external=external
-    )
+    return ModelEntry(slug=slug, name=name, raw=raw, **origin)
 
 
 class Registry(Mapping[str, ModelEntry]):
@@ -325,11 +313,14 @@ class Registry(Mapping[str, ModelEntry]):
         self._entries: dict[str, ModelEntry] = {}
         self._by_slug: dict[str, ModelEntry] = {}
         for root in [builtin_root()] if paths is None else paths:
-            self._discover(root, external=False)
-        for root in (
-            external_model_paths() if external_paths is None else external_paths
-        ):
-            self._discover(root, external=True)
+            self._discover(root, external=False, distribution=DISTRIBUTION)
+        collections = (
+            external_collections()
+            if external_paths is None
+            else [(root, None) for root in external_paths]
+        )
+        for root, distribution in collections:
+            self._discover(root, external=True, distribution=distribution)
 
     def _shadowed(self, entry: ModelEntry) -> tuple[str, ModelEntry] | None:
         """The registered entry ``entry`` would displace, and how it clashes.
@@ -346,9 +337,13 @@ class Registry(Mapping[str, ModelEntry]):
                 return label, registered
         return None
 
-    def _discover(self, root: Path, *, external: bool) -> None:
+    def _discover(
+        self, root: Path, *, external: bool, distribution: str | None
+    ) -> None:
         for manifest in sorted(Path(root).glob(f"*/{MANIFEST_NAME}")):
-            entry = _entry_from_manifest(manifest, external=external)
+            entry = _entry_from_manifest(
+                manifest, external=external, distribution=distribution
+            )
             clash = self._shadowed(entry)
             if clash is None:
                 self._entries[entry.name] = entry
@@ -399,9 +394,9 @@ def builtin_root() -> Path:
     return PACKAGE_ROOT
 
 
-def external_model_paths() -> list[Path]:
-    """Model directories advertised by third-party packages via the entry point."""
-    paths: list[Path] = []
+def external_collections() -> list[tuple[Path, str | None]]:
+    """Model directories the entry point advertises, with the distribution of each."""
+    collections: list[tuple[Path, str | None]] = []
     for entry_point in _iter_entry_points():
         try:
             module = importlib.import_module(entry_point.value)
@@ -412,9 +407,10 @@ def external_model_paths() -> list[Path]:
                 stacklevel=2,
             )
             continue
+        distribution = entry_point.dist.name if entry_point.dist else None
         for location in module.__path__:
-            paths.append(Path(location))
-    return paths
+            collections.append((Path(location), distribution))
+    return collections
 
 
 def _iter_entry_points():

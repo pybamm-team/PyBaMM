@@ -1,12 +1,11 @@
-"""Check that an installed pybamm-model-zoo ships every committed package file.
+"""Check that an installed pybamm-model-zoo ships, and runs, every model.
 
-Run it with the interpreter of an environment the built wheel was installed into,
-from the checkout it was built from:
+Run it with the interpreter of a ``zoo-all`` install of the wheel, from its checkout:
 
     python packages/pybamm-model-zoo/scripts/check_wheel.py --tag pybamm-model-zoo-v0.1.0
 
-A model folder is data as much as code (its manifest, README, citation, examples,
-and tests), so a wheel that drops one of those files still imports cleanly.
+A wheel can drop a model's data files, miss a dependency, or admit a PyBaMM too old
+for a model, and still import cleanly, so every model is also built and solved.
 """
 
 from __future__ import annotations
@@ -32,6 +31,37 @@ def tracked_files(root: Path) -> list[str]:
     return sorted(name for name in listing.split("\0") if name)
 
 
+def model_errors() -> list[str]:
+    """The first failing portable contract check of every installed model.
+
+    The packaging and repository checks read the checkout rather than the wheel, so
+    only the model scope runs. A missing dependency is an error rather than a skip,
+    since ``zoo-all`` was meant to install it.
+    """
+    import pybamm
+    import pybamm_model_zoo as zoo
+    from pybamm_model_zoo.testing import contract
+
+    errors = []
+    for entry in zoo.all_entries():
+        if missing := entry.missing_dependencies():
+            errors.append(f"{entry.slug}: zoo-all did not install {missing}")
+            continue
+        for check in contract.checks_in_scope(contract.MODEL):
+            if check.waivable and check.name in entry.tests.skip_contract:
+                continue
+            try:
+                check.run(entry)
+            except Exception as error:  # noqa: BLE001 - report every failing model
+                errors.append(
+                    f"{entry.slug}: the '{check.name}' check fails against PyBaMM "
+                    f"{pybamm.__version__}: {type(error).__name__}: {error}"
+                )
+                # Later checks rebuild the same model, so they only repeat this.
+                break
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -40,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    import pybamm
     import pybamm_model_zoo as zoo
     from pybamm_model_zoo._registry import Registry, read_manifest
 
@@ -68,13 +99,15 @@ def main(argv: list[str] | None = None) -> int:
         errors.append(
             f"installed registry lists {zoo.list_models()}, the checkout {source_models}"
         )
+    errors.extend(model_errors())
 
     for error in errors:
         print(f"error: {error}")
     if not errors:
         print(
-            f"pybamm-model-zoo {zoo.__version__} from {installed}: "
-            f"{len(source_models)} models, {', '.join(source_models)}"
+            f"pybamm-model-zoo {zoo.__version__} from {installed}, with PyBaMM "
+            f"{pybamm.__version__}: {len(source_models)} models pass the model contract, "
+            f"{', '.join(source_models)}"
         )
     return 1 if errors else 0
 

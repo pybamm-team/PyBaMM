@@ -28,9 +28,8 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    # The oldest release the weekly compatibility matrix has run the zoo against.
-    # Each model's manifest narrows this further with its own `pybamm_requires`.
-    "pybamm>=26.8",
+    # Every model's floor: a model that needs a newer PyBaMM raises it.
+    "pybamm>=26.10",
     "packaging>=23.0",
     "tomli>=2.0.1; python_version < '3.11'",
 ]
@@ -47,7 +46,8 @@ Issues = "https://github.com/pybamm-team/PyBaMM/issues"
 [project.optional-dependencies]
 # The aggregate is deliberately not named `all`: `uv sync --extra all` applies it
 # to every member, dragging every model's heavy dependencies into the dev env.
-zoo-all = []
+zoo-all = ["pybamm-model-zoo[zoo-multilayer-3d-thermal]"]
+zoo-multilayer-3d-thermal = ["pybamm[fem]"]
 
 # The repository's .gitignore excludes data files (*.csv, *.txt, *.mat, ...) that a
 # model folder may track, and hatchling would silently drop them from both targets.

@@ -1,5 +1,5 @@
 # Releases are routed by tag namespace (`pybamm-model-zoo-v*`). Pull requests run
-# only the build and wheel check, so a model file that would not ship fails early.
+# only the build and wheel checks, so a model that would not ship or work fails early.
 name: Model zoo release
 
 on:
@@ -41,13 +41,18 @@ jobs:
       - name: Check the package metadata
         run: uvx twine check --strict dist/*
 
-      # A fresh environment resolving `pybamm` from PyPI, as `pip install` would.
-      - name: Install the wheel
+      # Fresh environments resolving from PyPI, as `pip install` would. Naming `pybamm`
+      # makes it a direct requirement, so `lowest-direct` holds it to the wheel's floor.
+      - name: Install the wheel with the newest and the oldest PyBaMM it admits
         run: |
-          uv venv --python 3.13 "$RUNNER_TEMP/zoo"
-          uv pip install --no-sources --python "$RUNNER_TEMP/zoo/bin/python" dist/*.whl
+          wheel=$(echo dist/*.whl)
+          uv venv --python 3.13 "$RUNNER_TEMP/newest"
+          uv pip install --no-sources --python "$RUNNER_TEMP/newest/bin/python" "${wheel}[zoo-all]"
+          uv venv --python 3.13 "$RUNNER_TEMP/oldest"
+          uv pip install --no-sources --resolution lowest-direct \
+            --python "$RUNNER_TEMP/oldest/bin/python" "${wheel}[zoo-all]" pybamm
 
-      - name: Check the wheel ships every model file and the release version
+      - name: Check the wheel's files and version, and every model, with the newest PyBaMM
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
@@ -55,7 +60,11 @@ jobs:
           if [ -n "$TAG" ]; then
             args=(--tag "$TAG")
           fi
-          "$RUNNER_TEMP/zoo/bin/python" packages/pybamm-model-zoo/scripts/check_wheel.py "${args[@]}"
+          "$RUNNER_TEMP/newest/bin/python" packages/pybamm-model-zoo/scripts/check_wheel.py "${args[@]}"
+
+      - name: Check every model with the oldest PyBaMM the wheel admits
+        run: |
+          "$RUNNER_TEMP/oldest/bin/python" packages/pybamm-model-zoo/scripts/check_wheel.py
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

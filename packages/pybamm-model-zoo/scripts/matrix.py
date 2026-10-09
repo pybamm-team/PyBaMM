@@ -1,9 +1,8 @@
 """Emit the model zoo compatibility matrix for the weekly status workflow.
 
 Prints a GitHub Actions ``include`` list: one ``{model, version}`` cell per pair.
-Each model is paired with the newest releases its own ``pybamm_requires`` admits,
-so a model with an upper bound still gets tested against the releases it does
-support, and a badge never reports "failing" on a release it never claimed.
+Every model is paired with the oldest release the zoo's ``pybamm`` dependency
+admits, the newest releases, and ``main``.
 
     uv run --with packaging python packages/pybamm-model-zoo/scripts/matrix.py
 """
@@ -19,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
 from pybamm_model_zoo._registry import Registry
-from pybamm_model_zoo._versions import MAIN, sorted_releases, window_for
+from pybamm_model_zoo._versions import MAIN, pybamm_specifier, sorted_releases, window
 
 PYPI_URL = "https://pypi.org/pypi/pybamm/json"
 
@@ -32,12 +31,13 @@ def released_versions() -> list[str]:
 
 
 def matrix(releases: list[str], count: int) -> list[dict[str, str]]:
-    """One cell per model per release in that model's own window, plus ``main``."""
-    cells = []
-    for entry in sorted(Registry().values(), key=lambda entry: entry.slug):
-        for version in [*window_for(entry, releases, count), MAIN]:
-            cells.append({"model": entry.slug, "version": version})
-    return cells
+    """One cell per model per release in the zoo's window, plus ``main``."""
+    versions = [*window(releases, pybamm_specifier(), count), MAIN]
+    return [
+        {"model": entry.slug, "version": version}
+        for entry in sorted(Registry().values(), key=lambda entry: entry.slug)
+        for version in versions
+    ]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -46,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
         "--releases",
         type=int,
         default=2,
-        help="how many of the most recent releases each model is tested against",
+        help="how many of the newest releases to test, besides the oldest supported",
     )
     parser.add_argument(
         "--github-output",

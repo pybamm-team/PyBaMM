@@ -401,6 +401,20 @@ Dependency                                                  Minimum Version    p
 `tqdm <https://tqdm.github.io/>`__                          \-                 tqdm               For logging loops.
 =========================================================== ================== ================== ==================
 
+.. _install.fem_dependencies:
+
+FEM dependencies
+^^^^^^^^^^^^^^^^
+
+Installable with ``pip install "pybamm[fem]"``
+
+=========================================================== ================== ================== =========================================
+Dependency                                                  Minimum Version    pip extra          Notes
+=========================================================== ================== ================== =========================================
+`scikit-fem <https://scikit-fem.readthedocs.io/>`__         12.0.2             fem                To build 2D and 3D finite-element meshes.
+`meshio <https://github.com/nschloe/meshio>`__              5.3.0              fem                To read meshes from files.
+=========================================================== ================== ================== =========================================
+
 .. _install.jax_dependencies:
 
 Jax dependencies

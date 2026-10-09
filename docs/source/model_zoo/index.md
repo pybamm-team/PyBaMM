@@ -39,18 +39,19 @@ the **community** tier are tested on every pull request too, but their
 results are advisory: a red community model never blocks a PyBaMM merge.
 See [contributing a model](contributing.md) to add your own.
 
-| Model | Tier | Maintainer | PyBaMM | Added |
-| --- | --- | --- | --- | --- |
-| [Single Particle Model with a linearised open-circuit potential](models/linearised_spm.md) | core | @pybamm-team/maintainers | `>=26.0` | 2026-08-20 |
-| [Multilayer pouch cell stack with a 3D temperature field in every zone](models/multilayer_3d_thermal.md) | community | [@mleot](https://github.com/mleot) | `>=26.8` | 2026-09-28 |
+| Model | Tier | Maintainer | Added |
+| --- | --- | --- | --- |
+| [Single Particle Model with a linearised open-circuit potential](models/linearised_spm.md) | core | @pybamm-team/maintainers | 2026-08-20 |
+| [Multilayer pouch cell stack with a 3D temperature field in every zone](models/multilayer_3d_thermal.md) | community | [@mleot](https://github.com/mleot) | 2026-09-28 |
 
 ## Compatibility
 
-Refreshed weekly by the `model_zoo_status` workflow. Each model is run against
-`main` and against the most recent PyBaMM releases its `pybamm_requires`
-admits; `scripts/matrix.py --releases` sets how far back that window reaches,
-and the columns below are the window as it stands. A cell reading `missing` is
-one whose job never reported, not a pass.
+Every model shares one PyBaMM floor: the zoo's own `pybamm` requirement, which
+`pip` enforces when it installs the zoo. The `model_zoo_status` workflow
+refreshes the table below weekly, running every model against `main`, the
+oldest PyBaMM release the zoo supports, and the most recent releases
+(`scripts/matrix.py --releases` sets how many). A cell reading `missing` is one
+whose job never reported, not a pass.
 
 | Model | Results | Last passing |
 | --- | --- | --- |

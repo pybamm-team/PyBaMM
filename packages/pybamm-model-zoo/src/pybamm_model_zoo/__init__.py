@@ -49,6 +49,7 @@ __all__ = [
     "refresh",
     "register_citation",
     "registry",
+    "require",
 ]
 
 try:
@@ -112,9 +113,28 @@ def load(name: str) -> type:
     KeyError
         If ``name`` is not registered.
     ModelUnavailableError
-        If the model's code or its declared extra is unavailable.
+        If the model's extra or its code is unavailable.
     """
     return registry()[name].load()
+
+
+def require(slug: str) -> None:
+    """Check that a zoo model's ``zoo-<slug>`` extra is installed.
+
+    Call this first in a model's ``__init__``, so that a model imported directly
+    rather than through :func:`load` fails before any work, naming its extra.
+
+    Parameters
+    ----------
+    slug : str
+        The model's folder name.
+
+    Raises
+    ------
+    ModelUnavailableError
+        If any requirement of the model's extra is not installed.
+    """
+    registry().by_slug(slug).require()
 
 
 def register_citation(slug: str, *keys: str) -> None:
