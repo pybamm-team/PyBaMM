@@ -1,16 +1,15 @@
 """Unit tests for manifest parsing and the registry itself."""
 
 import re
-import textwrap
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-import pybamm
 import pybamm_model_zoo as zoo
-from pybamm_model_zoo import _paths
+from pybamm_model_zoo import _dependencies, _paths, _registry
 from pybamm_model_zoo._citations import parse_bibtex
-from pybamm_model_zoo._registry import Registry, read_manifest
+from pybamm_model_zoo._registry import ModelEntry, Registry, read_manifest
 from pybamm_model_zoo.testing import contract
 
 MANIFEST = """
@@ -21,7 +20,6 @@ title = "A title"
 summary = "A summary."
 class = "pybamm_model_zoo.{slug}:{name}"
 tier = "community"
-pybamm_requires = ">=26.0"
 added = "2026-01-01"
 license = "BSD-3-Clause"
 
@@ -32,6 +30,18 @@ github = "ahandle"
 [model.citation]
 key = "Author2026"
 """
+
+
+def declare_extra(monkeypatch, distribution: str, extra: str) -> None:
+    """Make ``distribution`` declare ``extra`` as a package that is not installed."""
+    real_requires = _dependencies.requires
+
+    def requires(name):
+        if name != distribution:
+            return real_requires(name)
+        return [f'not-a-real-package>=1.0; extra == "{extra}"']
+
+    monkeypatch.setattr(_dependencies, "requires", requires)
 
 
 def write_model(root: Path, slug: str, name: str, body: str | None = None) -> Path:
@@ -63,7 +73,8 @@ class TestRegistry:
         assert entry.tier == "community"
         assert entry.tests.solve_time == 3600
         assert entry.tests.key_variables == ("Voltage [V]",)
-        assert entry.dependencies.extra is None
+        assert entry.extra == "zoo-minimal-model"
+        assert entry.distribution == "pybamm-model-zoo"
         assert not entry.external
 
     @pytest.mark.parametrize(
@@ -162,7 +173,25 @@ class TestRegistry:
 
     def test_external_entries_are_flagged(self, tmp_path):
         write_model(tmp_path, "minimal_model", "MinimalModel")
-        assert Registry([], external_paths=[tmp_path])["MinimalModel"].external
+        entry = Registry([], external_paths=[tmp_path])["MinimalModel"]
+        assert entry.external
+        assert entry.distribution is None
+
+    def test_an_external_collection_records_its_distribution(
+        self, tmp_path, monkeypatch
+    ):
+        """It is what declares the collection's extras, so `load` can name it."""
+        package = tmp_path / "lab_models"
+        write_model(package, "minimal_model", "MinimalModel")
+        (package / "__init__.py").write_text("")
+        monkeypatch.syspath_prepend(str(tmp_path))
+        entry_point = SimpleNamespace(
+            name="lab", value="lab_models", dist=SimpleNamespace(name="lab-models")
+        )
+        monkeypatch.setattr(_registry, "_iter_entry_points", lambda: [entry_point])
+        entry = Registry([])["MinimalModel"]
+        assert entry.external
+        assert entry.distribution == "lab-models"
 
 
 class TestLoad:
@@ -178,74 +207,43 @@ class TestLoad:
         with pytest.raises(zoo.ManifestError, match=r"module.path:AttributeName"):
             Registry([tmp_path])["MinimalModel"].load()
 
-    def test_missing_module_names_the_extra(self, tmp_path):
-        body = MANIFEST.format(
-            slug="minimal_model", name="MinimalModel"
-        ) + textwrap.dedent(
-            """
-            [model.dependencies]
-            extra = "zoo-minimal-model"
-            packages = ["not-a-real-package>=1.0"]
-            """
-        )
-        write_model(tmp_path, "minimal_model", "MinimalModel", body=body)
-        entry = Registry([tmp_path])["MinimalModel"]
+    def test_a_module_that_does_not_import_is_reported(self, tmp_path):
+        write_model(tmp_path, "minimal_model", "MinimalModel")
+        with pytest.raises(zoo.ModelUnavailableError, match=r"could not be imported"):
+            Registry([tmp_path])["MinimalModel"].load()
+
+    def test_a_missing_extra_fails_before_the_import(self, tmp_path, monkeypatch):
+        """The import would succeed: PyBaMM imports scikit-fem only once meshing."""
+        declare_extra(monkeypatch, "pybamm-model-zoo", "zoo-minimal-model")
+        write_model(tmp_path, "minimal_model", "MinimalModel")
         with pytest.raises(
             zoo.ModelUnavailableError,
-            match=re.escape('pip install "pybamm-model-zoo[zoo-minimal-model]"'),
+            match=re.escape(
+                "'MinimalModel' is missing not-a-real-package>=1.0. Install its "
+                'extra with `pip install "pybamm-model-zoo[zoo-minimal-model]"`.'
+            ),
         ):
-            entry.load()
-        assert contract.missing_dependencies(entry) == ["not-a-real-package>=1.0"]
+            Registry([tmp_path])["MinimalModel"].load()
 
-    def test_missing_external_module_does_not_name_the_zoo(self, tmp_path):
-        body = MANIFEST.format(
-            slug="minimal_model", name="MinimalModel"
-        ) + textwrap.dedent(
-            """
-            [model.dependencies]
-            extra = "lab-extra"
-            packages = ["not-a-real-package>=1.0"]
-            """
+    def test_an_external_model_names_its_own_distribution(self, tmp_path, monkeypatch):
+        declare_extra(monkeypatch, "lab-models", "zoo-minimal-model")
+        entry = ModelEntry(
+            slug="minimal_model",
+            name="MinimalModel",
+            path=tmp_path,
+            external=True,
+            distribution="lab-models",
         )
-        write_model(tmp_path, "minimal_model", "MinimalModel", body=body)
-        entry = Registry([], external_paths=[tmp_path])["MinimalModel"]
-        with pytest.raises(zoo.ModelUnavailableError, match=r"'lab-extra'\.") as info:
-            entry.load()
-        assert "pybamm-model-zoo" not in str(info.value)
+        with pytest.raises(zoo.ModelUnavailableError) as info:
+            entry.require()
+        assert 'pip install "lab-models[zoo-minimal-model]"' in str(info.value)
 
-
-class TestPybammRequires:
-    """The declared range, against installs that can and cannot name a release."""
-
-    def entry(self, tmp_path, requires):
-        body = MANIFEST.format(slug="minimal_model", name="MinimalModel").replace(
-            'pybamm_requires = ">=26.0"', f'pybamm_requires = "{requires}"'
-        )
-        write_model(tmp_path, "minimal_model", "MinimalModel", body=body)
-        return Registry([tmp_path])["MinimalModel"]
-
-    def test_unsatisfied_range_fails_on_a_real_release(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(pybamm, "__version__", "26.8.0.0")
-        with pytest.raises(AssertionError, match=r"is not satisfied by"):
-            contract.check_pybamm_requires(self.entry(tmp_path, ">=99.0"))
-
-    # setuptools_scm's guess with no tag in reach, and hatch-vcs's own fallback.
-    @pytest.mark.parametrize("version", ["0.0.1.dev1+gabc1234", "0.0.0"])
-    def test_range_is_not_held_to_an_install_that_names_no_release(
-        self, tmp_path, monkeypatch, version
-    ):
-        assert not contract.names_a_release(version)
-        monkeypatch.setattr(pybamm, "__version__", version)
-        contract.check_pybamm_requires(self.entry(tmp_path, ">=99.0"))
-
-    def test_invalid_specifier_fails_wherever_it_runs(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(pybamm, "__version__", "0.0.1.dev1+gabc1234")
-        with pytest.raises(AssertionError, match=r"not a valid specifier"):
-            contract.check_pybamm_requires(self.entry(tmp_path, "=>26.0"))
-
-    @pytest.mark.parametrize("version", ["0.1.0", "25.1.0", "26.8.0.1.dev4+gabc1234"])
-    def test_a_dev_build_off_a_real_tag_still_names_a_release(self, version):
-        assert contract.names_a_release(version)
+    def test_a_directly_imported_model_fails_before_building(self, monkeypatch):
+        """`require` in `__init__` covers the import path that bypasses `load`."""
+        model_class = zoo.load("LinearisedSPM")
+        declare_extra(monkeypatch, "pybamm-model-zoo", "zoo-linearised-spm")
+        with pytest.raises(zoo.ModelUnavailableError, match=r"zoo-linearised-spm"):
+            model_class()
 
 
 class TestCitationParsing:
