@@ -8,7 +8,7 @@ It can be installed using ``uv``, ``pip``, or ``conda``, or from source.
 Prerequisites
 -------------
 
-To use PyBaMM, you must have Python 3.10 - 3.14 installed.
+To use PyBaMM, you must have Python 3.10 - 3.15 installed.
 
 .. tab:: Debian-based distributions (Debian, Ubuntu)
 

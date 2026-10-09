@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added support for Python 3.15 to `pybamm` and `pybammsolvers`. On 3.15, the `jax` and `vtk` extras install nothing until cp315 wheels are available for them. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
+
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
 ## Breaking changes
