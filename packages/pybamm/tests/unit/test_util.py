@@ -1,7 +1,10 @@
 import importlib
+import importlib.metadata
+import importlib.util
 import os
 import sys
 from io import StringIO
+from unittest import mock
 
 import pytest
 
@@ -39,6 +42,25 @@ class TestUtil:
         assert not pybamm.is_constant_and_can_evaluate(symbol)
         symbol = pybamm.Scalar(0)
         assert pybamm.is_constant_and_can_evaluate(symbol)
+
+    def test_has_jax(self):
+        # jax and jaxlib are not installed
+        with mock.patch.object(importlib.util, "find_spec", return_value=None):
+            assert not pybamm.has_jax()
+
+        # jax and jaxlib are installed with a supported version
+        with (
+            mock.patch.object(importlib.util, "find_spec", return_value=mock.Mock()),
+            mock.patch.object(importlib.metadata, "version", return_value="0.8.1"),
+        ):
+            assert pybamm.has_jax()
+
+        # jax and jaxlib are installed with an unsupported version
+        with (
+            mock.patch.object(importlib.util, "find_spec", return_value=mock.Mock()),
+            mock.patch.object(importlib.metadata, "version", return_value="0.9.0"),
+        ):
+            assert not pybamm.has_jax()
 
     def test_fuzzy_dict(self):
         d = pybamm.FuzzyDict(
