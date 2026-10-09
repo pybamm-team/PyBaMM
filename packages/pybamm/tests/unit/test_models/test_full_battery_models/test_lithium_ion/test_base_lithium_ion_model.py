@@ -39,7 +39,7 @@ class TestBaseLithiumIonModel:
         assert "Positive electrode 3E potential [V]" in model.variables
         assert "Reference electrode potential [V]" in model.variables
 
-        model = pybamm.lithium_ion.SPM({"dimensionality": 2})
+        model = pybamm.lithium_ion.SPM({"dimensionality": 2, "cell geometry": "pouch"})
         with pytest.raises(
             NotImplementedError, match=r"Reference electrode can only be"
         ):
@@ -57,12 +57,25 @@ class TestBaseLithiumIonModel:
         "phases, calc_esoh", [(("2", "1"), False), (("1", "1"), True)]
     )
     def test_calc_esoh_per_electrode_phases(self, phases, calc_esoh):
-        model = pybamm.lithium_ion.SPM({"particle phases": phases})
+        options = {"particle phases": phases}
+        if phases != ("1", "1"):
+            options["surface form"] = "algebraic"
+        model = pybamm.lithium_ion.SPM(options)
         assert model.calc_esoh is calc_esoh
 
     @pytest.mark.parametrize(
         "options, explicit",
-        [({}, True), ({"SEI": ("reaction limited", "none")}, False)],
+        [
+            ({}, True),
+            (
+                {
+                    "SEI": ("reaction limited", "none"),
+                    "SEI film resistance": "distributed",
+                    "total interfacial current density as a state": "true",
+                },
+                False,
+            ),
+        ],
     )
     def test_half_cell_counter_electrode_reads_its_own_sei(self, options, explicit):
         model = pybamm.lithium_ion.DFN({"working electrode": "positive", **options})
@@ -75,9 +88,9 @@ class TestBaseLithiumIonModel:
         "options",
         [
             {},
-            {"particle phases": ("2", "1")},
-            {"particle phases": ("1", "2")},
-            {"particle phases": ("2", "2")},
+            {"particle phases": ("2", "1"), "surface form": "algebraic"},
+            {"particle phases": ("1", "2"), "surface form": "algebraic"},
+            {"particle phases": ("2", "2"), "surface form": "algebraic"},
             {"working electrode": "positive"},
         ],
     )
@@ -87,7 +100,9 @@ class TestBaseLithiumIonModel:
             assert v in model.variables, f"{v} not in model.variables"
 
     def test_composite_per_phase_summary_variables(self):
-        model = pybamm.lithium_ion.DFN(options={"particle phases": ("2", "1")})
+        model = pybamm.lithium_ion.DFN(
+            options={"particle phases": ("2", "1"), "surface form": "algebraic"}
+        )
         assert (
             "Loss of active material in primary phase in negative electrode [%]"
             in model.summary_variables
@@ -108,6 +123,8 @@ class TestBaseLithiumIonModel:
                     ("swelling and cracking", "swelling only"),
                     "none",
                 ),
+                "stress-induced diffusion": ("true", "false"),
+                "surface form": "algebraic",
             }
         )
         assert isinstance(
@@ -134,6 +151,10 @@ class TestBaseLithiumIonModel:
                 "SEI": (("none", "solvent-diffusion limited"), "none"),
                 "SEI on cracks": "true",
                 "SEI porosity change": "true",
+                "SEI film resistance": "distributed",
+                "stress-induced diffusion": ("true", "false"),
+                "surface form": "algebraic",
+                "total interfacial current density as a state": "true",
             }
         )
         assert isinstance(

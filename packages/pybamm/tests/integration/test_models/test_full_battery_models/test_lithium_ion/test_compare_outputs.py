@@ -55,7 +55,10 @@ class TestCompareOutputs:
     def test_compare_outputs_thermal(self):
         # load models - for the default params we expect x-full and lumped to
         # agree as the temperature is practically independent of x
-        options = [{"thermal": opt} for opt in ["lumped", "x-full"]]
+        options = [
+            {"thermal": "lumped"},
+            {"thermal": "x-full", "cell geometry": "pouch"},
+        ]
         options.append({"thermal": "lumped", "cell geometry": "pouch"})
 
         model_combos = [

@@ -47,7 +47,7 @@ class TestDFN(BaseUnitTestLithiumIon):
 
     def test_stoichiometry_dependent_conductivity_composite(self):
         # primary-phase surface stoichiometry should feed sigma in a two-phase electrode
-        options = {"particle phases": ("2", "1")}
+        options = {"particle phases": ("2", "1"), "surface form": "algebraic"}
         values = pybamm.ParameterValues("Chen2020_composite")
         values.update(
             {
@@ -75,7 +75,11 @@ class TestDFN(BaseUnitTestLithiumIon):
         self.check_well_posedness(options)
 
     def test_well_posed_size_distribution_composite(self):
-        options = {"particle size": "distribution", "particle phases": "2"}
+        options = {
+            "particle size": "distribution",
+            "particle phases": "2",
+            "surface form": "algebraic",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_current_sigmoid_ocp_with_psd(self):
@@ -101,6 +105,7 @@ class TestDFN(BaseUnitTestLithiumIon):
                 "single",
             ),
             "particle phases": ("2", "1"),
+            "surface form": "algebraic",
         }
         self.check_well_posedness(options)
 
@@ -122,6 +127,7 @@ class TestDFN(BaseUnitTestLithiumIon):
         options = {
             "open-circuit potential": (("one-state hysteresis", "single"), "single"),
             "particle phases": ("2", "1"),
+            "surface form": "algebraic",
         }
         self.check_well_posedness(options)
 
@@ -133,11 +139,17 @@ class TestDFN(BaseUnitTestLithiumIon):
         self.check_well_posedness(options)
 
     def test_well_posed_external_circuit_explicit_power(self):
-        options = {"operating mode": "explicit power"}
+        options = {
+            "operating mode": "explicit power",
+            "voltage as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_external_circuit_explicit_resistance(self):
-        options = {"operating mode": "explicit resistance"}
+        options = {
+            "operating mode": "explicit resistance",
+            "voltage as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_msmr_with_psd(self):

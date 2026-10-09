@@ -56,7 +56,9 @@ class TestSizeDistributionParameters:
             composite="negative",
         )
         assert "Primary: Negative maximum particle radius [m]" in values_composite
-        param = pybamm.LithiumIonParameters({"particle phases": ("2", "1")})
+        param = pybamm.LithiumIonParameters(
+            {"particle phases": ("2", "1"), "surface form": "algebraic"}
+        )
         R_test_n_prim = pybamm.Scalar(1e-6).with_domains(
             {"primary": ["negative primary particle size"]}
         )
@@ -78,7 +80,9 @@ class TestSizeDistributionParameters:
             composite="positive",
         )
         assert "Primary: Positive maximum particle radius [m]" in values_composite
-        param = pybamm.LithiumIonParameters({"particle phases": ("1", "2")})
+        param = pybamm.LithiumIonParameters(
+            {"particle phases": ("1", "2"), "surface form": "algebraic"}
+        )
         R_test_p_prim = pybamm.Scalar(1e-6).with_domains(
             {"primary": ["positive primary particle size"]}
         )

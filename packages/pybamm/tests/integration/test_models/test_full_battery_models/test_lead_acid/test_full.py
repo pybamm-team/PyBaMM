@@ -41,11 +41,16 @@ class TestLeadAcidFull:
     @pytest.mark.parametrize(
         "options",
         [
-            {"current collector": "potential pair", "dimensionality": 1},
+            {
+                "current collector": "potential pair",
+                "dimensionality": 1,
+                "cell geometry": "pouch",
+            },
             {
                 "current collector": "potential pair",
                 "dimensionality": 1,
                 "convection": "full transverse",
+                "cell geometry": "pouch",
             },
         ],
         ids=["basic_1plus1D", "1plus1D_with_convection"],
@@ -80,7 +85,7 @@ class TestLeadAcidFullSurfaceForm:
         "options, param_update",
         [
             ({"thermal": "lumped"}, {"Current function [A]": 1.7}),
-            ({"thermal": "x-full"}, None),
+            ({"thermal": "x-full", "cell geometry": "pouch"}, None),
         ],
         ids=["lumped_with_current_function", "x_full"],
     )

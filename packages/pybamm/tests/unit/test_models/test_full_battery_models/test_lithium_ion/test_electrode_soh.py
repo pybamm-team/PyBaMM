@@ -361,7 +361,7 @@ class TestElectrodeSOHComposite:
             )
         if composite_electrode == "both":
             phases = ("2", "2")
-        options = {"particle phases": phases}
+        options = {"particle phases": phases, "surface form": "algebraic"}
         return params, options
 
     @pytest.mark.parametrize("initial_value", ["2.7V", "4.0 V", 0.1, 0.5, 0.9])
@@ -404,7 +404,7 @@ class TestElectrodeSOHComposite:
     @pytest.mark.parametrize("initial_value", ["2.7V", "4.0 V", 0.1, 0.5, 0.9])
     def test_chen2020_composite_defaults(self, initial_value):
         pvals = pybamm.ParameterValues("Chen2020_composite")
-        options = {"particle phases": ("2", "1")}
+        options = {"particle phases": ("2", "1"), "surface form": "algebraic"}
         param = pybamm.LithiumIonParameters(options=options)
         # Solving ESOH with the original Chen2020_composite parameters gives a 0% SOC
         # voltage of 2.53V not 2.5V. We fix this by reducing the secondary initial
@@ -433,7 +433,7 @@ class TestElectrodeSOHComposite:
 
     def test_chen2020_composite_default_solve(self):
         pvals = pybamm.ParameterValues("Chen2020_composite")
-        options = {"particle phases": ("2", "1")}
+        options = {"particle phases": ("2", "1"), "surface form": "algebraic"}
         param = pybamm.LithiumIonParameters(options=options)
         pvals.update(
             {
@@ -489,6 +489,7 @@ class TestElectrodeSOHComposite:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "surface form": "algebraic",
         }
         param = pybamm.LithiumIonParameters(options=options)
         tol = 1e-12
@@ -531,6 +532,7 @@ class TestElectrodeSOHComposite:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "surface form": "algebraic",
         }
         param = pybamm.LithiumIonParameters(options=options)
 
@@ -721,6 +723,7 @@ class TestElectrodeSOHHalfCell:
             "working electrode": "positive",
             "particle phases": ("1", "2"),  # (negative phases, positive phases)
             "open-circuit potential": "single",  # Required for ElectrodeSOHSolver
+            "surface form": "algebraic",
         }
 
         return params, options
@@ -1009,7 +1012,7 @@ class TestGetInitialSOC:
             {"working electrode": "positive"}
         ).default_parameter_values
         parameter_values_composite = pybamm.ParameterValues("Chen2020_composite")
-        options_composite = {"particle phases": ("2", "1")}
+        options_composite = {"particle phases": ("2", "1"), "surface form": "algebraic"}
 
         with pytest.warns(UserWarning, match=r"is greater than 1"):
             pybamm.lithium_ion.get_initial_stoichiometries(

@@ -799,7 +799,11 @@ class TestSimulationExperiment:
         for experiment_model_mode in ["legacy"]:
             sim = pybamm.Simulation(
                 pybamm.lithium_ion.DFN(
-                    {"current collector": "potential pair", "dimensionality": 2}
+                    {
+                        "current collector": "potential pair",
+                        "dimensionality": 2,
+                        "cell geometry": "pouch",
+                    }
                 ),
                 experiment=experiment,
                 var_pts=var_pts,
@@ -1748,7 +1752,13 @@ class TestSimulationExperiment:
             * 10,
             termination="99% capacity",
         )
-        model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
+        model = pybamm.lithium_ion.SPM(
+            {
+                "SEI": "ec reaction limited",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            }
+        )
         param = pybamm.ParameterValues("Chen2020")
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
@@ -1771,7 +1781,13 @@ class TestSimulationExperiment:
             * 10,
             termination="5.04Ah capacity",
         )
-        model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
+        model = pybamm.lithium_ion.SPM(
+            {
+                "SEI": "ec reaction limited",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            }
+        )
         param = pybamm.ParameterValues("Chen2020")
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
@@ -2062,7 +2078,13 @@ class TestSimulationExperiment:
         )
         for experiment_model_mode in ["legacy", "unified"]:
             sim = pybamm.Simulation(
-                pybamm.lithium_ion.SPM({"SEI": "solvent-diffusion limited"}),
+                pybamm.lithium_ion.SPM(
+                    {
+                        "SEI": "solvent-diffusion limited",
+                        "SEI film resistance": "distributed",
+                        "total interfacial current density as a state": "true",
+                    }
+                ),
                 experiment=experiment,
                 solver=pybamm.IDAKLUSolver(),
                 experiment_model_mode=experiment_model_mode,

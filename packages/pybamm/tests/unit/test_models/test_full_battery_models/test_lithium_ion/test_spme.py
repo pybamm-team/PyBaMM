@@ -20,6 +20,30 @@ class TestSPMe(BaseUnitTestLithiumIon):
         options = {"electrolyte conductivity": "integrated"}
         self.check_well_posedness(options)
 
+    def test_well_posed_kinetics_asymmetric_butler_volmer(self):
+        # SPM's own model-specific default sets "surface form" to "algebraic"
+        # whenever "intercalation kinetics" is supplied.
+        options = {
+            "intercalation kinetics": "asymmetric Butler-Volmer",
+            "surface form": "algebraic",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_linear(self):
+        options = {"intercalation kinetics": "linear", "surface form": "algebraic"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_marcus(self):
+        options = {"intercalation kinetics": "Marcus", "surface form": "algebraic"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_mhc(self):
+        options = {
+            "intercalation kinetics": "Marcus-Hush-Chidsey",
+            "surface form": "algebraic",
+        }
+        self.check_well_posedness(options)
+
     def test_surface_form_c_e_av_is_variable(self):
         for surf in ["algebraic", "differential"]:
             model = pybamm.lithium_ion.SPMe(
@@ -79,7 +103,9 @@ class TestSPMe(BaseUnitTestLithiumIon):
         assert sub._use_surface_form_sparsity_fixes is True
 
     def test_surface_form_jacobian_sparsity(self):
-        model = pybamm.lithium_ion.SPMe({"particle phases": ("2", "1")})
+        model = pybamm.lithium_ion.SPMe(
+            {"particle phases": ("2", "1"), "surface form": "algebraic"}
+        )
         sim = pybamm.Simulation(
             model,
             parameter_values=pybamm.ParameterValues("Chen2020_composite"),

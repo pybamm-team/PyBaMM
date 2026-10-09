@@ -3,7 +3,11 @@ import numpy as np
 import pybamm
 
 model = pybamm.lithium_ion.DFN(
-    {"current collector": "potential pair", "dimensionality": 2}
+    {
+        "current collector": "potential pair",
+        "dimensionality": 2,
+        "cell geometry": "pouch",
+    }
 )
 param = pybamm.ParameterValues("Ecker2015")
 Ly = param["Electrode width [m]"]

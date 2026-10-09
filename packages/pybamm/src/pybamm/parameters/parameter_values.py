@@ -296,9 +296,12 @@ class ParameterValues:
                         "BPX 'Initial state-of-charge' must be between 0 and 1, "
                         f"got {initial_soc}."
                     )
-                options = pybamm.BatteryModelOptions(
-                    {"particle phases": _get_particle_phases_option(bpx)}
-                )
+                particle_phases = _get_particle_phases_option(bpx)
+                option_dict = {"particle phases": particle_phases}
+                if any(phases != "1" for phases in particle_phases):
+                    # keep the multi-phase legacy default explicit
+                    option_dict["surface form"] = "algebraic"
+                options = pybamm.BatteryModelOptions(option_dict)
                 param.set_initial_state(float(initial_soc), options=options)
             return param
         else:

@@ -23,14 +23,31 @@ class SPM(BaseModel):
     def _model_default_options(self, supplied):
         defaults = {}
         # the explicit-current closure needs invertible kinetics and a single size
-        if "surface form" not in supplied and (
-            "intercalation kinetics" in supplied
-            or "distribution" in supplied.get("particle size", "")
+        # MPM's own identity default already sets "surface form", so skip here
+        if (
+            not isinstance(self, pybamm.lithium_ion.MPM)
+            and "surface form" not in supplied
+            and (
+                "intercalation kinetics" in supplied
+                or "distribution" in supplied.get("particle size", "")
+            )
         ):
             defaults["surface form"] = "algebraic"
         if type(self) in (pybamm.lithium_ion.SPM, pybamm.lithium_ion.MPM):
             defaults["x-average side reactions"] = "true"
         return defaults
+
+    def _model_legacy_defaults(self, supplied):
+        if (
+            not isinstance(self, pybamm.lithium_ion.MPM)
+            and "surface form" not in supplied
+            and (
+                "intercalation kinetics" in supplied
+                or "distribution" in supplied.get("particle size", "")
+            )
+        ):
+            return {"surface form": "algebraic"}
+        return {}
 
     def __init__(self, options=None, name="Single Particle Model", build=True):
         # For degradation models we use the "x-average", note that for side reactions

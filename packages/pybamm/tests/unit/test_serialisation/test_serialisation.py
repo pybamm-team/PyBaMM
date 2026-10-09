@@ -868,7 +868,10 @@ class TestSerialise:
         self, tmp_path, version, loads
     ):
         model = pybamm.lithium_ion.SPM(
-            {"particle mechanics": ("swelling only", "none")}
+            {
+                "particle mechanics": ("swelling only", "none"),
+                "stress-induced diffusion": ("true", "false"),
+            }
         )
         sim = pybamm.Simulation(
             model, parameter_values=pybamm.ParameterValues("Ai2020")
@@ -876,7 +879,7 @@ class TestSerialise:
         sim.build()
         sim.built_model.save_model(str(tmp_path / "model"))
         data = json.loads((tmp_path / "model.json").read_text())
-        # 26.9 stored this default for one-electrode mechanics
+        # 26.9 stored this default for one-electrode mechanics.
         data["options"]["stress-induced diffusion"] = "true"
         data["pybamm_version"] = version
         if loads:
@@ -2609,7 +2612,9 @@ class TestSerializationEdgeCases:
         lists, so ``load_custom_model`` must convert lists back to tuples
         before assigning ``model.options``.
         """
-        model = pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}, build=False)
+        model = pybamm.lithium_ion.SPM(
+            {"particle phases": ("2", "1"), "surface form": "algebraic"}, build=False
+        )
 
         serialised = Serialise.serialise_custom_model(model)
         round_tripped = json.loads(json.dumps(serialised))
@@ -2618,6 +2623,48 @@ class TestSerializationEdgeCases:
 
         assert loaded.options["particle phases"] == ("2", "1")
         assert isinstance(loaded.options["particle phases"], tuple)
+
+    @pytest.mark.parametrize(
+        ("version", "loads"), [("26.9.0.0", True), (None, True), ("26.10.0.0", False)]
+    )
+    def test_custom_model_uses_saved_option_rules(self, version, loads):
+        """Custom models retain the option rules from their saved version."""
+        model = pybamm.lithium_ion.SPM(
+            {
+                "particle mechanics": ("swelling only", "none"),
+                "stress-induced diffusion": ("true", "false"),
+            },
+            build=False,
+        )
+        data = Serialise.serialise_custom_model(model)
+        data["model"]["options"]["stress-induced diffusion"] = "true"
+        data["pybamm_version"] = version
+
+        if loads:
+            loaded = Serialise.load_custom_model(data)
+            assert loaded.options.positive["stress-induced diffusion"] == "true"
+        else:
+            with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
+                Serialise.load_custom_model(data)
+
+    def test_versionless_partial_custom_model_options_are_validated(self):
+        """Partial custom-model options without a version use current validation."""
+        model = pybamm.lithium_ion.SPM(
+            {
+                "particle mechanics": ("swelling only", "none"),
+                "stress-induced diffusion": ("true", "false"),
+            },
+            build=False,
+        )
+        data = Serialise.serialise_custom_model(model)
+        data.pop("pybamm_version")
+        data["model"]["options"] = {
+            "particle mechanics": ["swelling only", "none"],
+            "stress-induced diffusion": "true",
+        }
+
+        with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
+            Serialise.load_custom_model(data)
 
     def test_expression_function_parameter_evaluate(self):
         """Test _unary_evaluate method of ExpressionFunctionParameter."""

@@ -2,10 +2,58 @@
 # Base battery model class
 #
 
+import os
 from functools import cached_property
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+
+# set by PyBaMM's test suites; read at import so every process agrees
+_FORBID_LEGACY_OPTION_DEFAULTS = (
+    os.environ.get("PYBAMM_TEST_FORBID_LEGACY_OPTION_DEFAULTS") == "1"
+)
+
+
+def _legacy_default_message(fired):
+    """Describe options that were set from other options.
+
+    Parameters
+    ----------
+    fired : dict
+        Option names and the values they were given.
+
+    Returns
+    -------
+    str
+        The deprecation message.
+    """
+    return (
+        f"Options were set from other options because they were not given: "
+        f"{fired!r}. Relying on these defaults is deprecated and a future release "
+        "will raise an OptionError instead. Pass these options explicitly to keep "
+        "the current behaviour."
+    )
+
+
+def _warn_legacy_defaults(fired):
+    """Warn that options were set from other options.
+
+    Parameters
+    ----------
+    fired : dict
+        Option names and the values they were given; nothing happens if empty.
+
+    Raises
+    ------
+    pybamm.OptionError
+        If legacy defaults are forbidden (in PyBaMM's own tests).
+    """
+    if not fired:
+        return
+    message = _legacy_default_message(fired)
+    if _FORBID_LEGACY_OPTION_DEFAULTS:
+        raise pybamm.OptionError(message)
+    pybamm.util.warn_outside_pybamm(message, pybamm.OptionDefaultDeprecationWarning)
 
 
 def represents_positive_integer(s):
@@ -331,8 +379,15 @@ def _apply_legacy_defaults(options, supplied):
         The merged options, updated in place.
     supplied : set of str
         Option names given by the caller; these are never changed.
+
+    Returns
+    -------
+    dict
+        Option names and the values they were given, for options that were
+        not supplied and whose default differed from the value already set.
     """
     working_electrode = options["working electrode"]
+    fired = {}
 
     def electrode_leaves(option):
         # per-phase entries are flattened, so a check matches if any phase does
@@ -346,6 +401,8 @@ def _apply_legacy_defaults(options, supplied):
 
     def set_default(option, value):
         if option not in supplied:
+            if value != options[option]:
+                fired[option] = value
             options[option] = value
 
     def set_per_electrode_default(option, values):
@@ -367,6 +424,9 @@ def _apply_legacy_defaults(options, supplied):
             for leaves in electrode_leaves("lithium plating")
         ],
     )
+    if "SEI" in fired and "SEI film resistance" not in supplied:
+        # pin it explicitly so migrating "SEI" alone can't let this fire later
+        fired["SEI film resistance"] = options["SEI film resistance"]
     mechanics = []
     for cracks, lam in zip(
         electrode_leaves("SEI on cracks"),
@@ -409,6 +469,8 @@ def _apply_legacy_defaults(options, supplied):
             "total interfacial current density as a state",
             "'true' when an electrode has multiple particle phases",
         )
+
+    return fired
 
 
 def _check_electrode_compatibility(options):
@@ -575,6 +637,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         2-tuple inside the entry for that electrode. A scalar value applies to
         everywhere below it (both electrodes, or both phases of an electrode).
 
+        Some options below "should be given" when another option is set. If
+        they are not, they still take a legacy default derived from the other
+        option, with a :class:`pybamm.OptionDefaultDeprecationWarning` naming the
+        options to pass; a future release will raise an ``OptionError`` instead.
+
             * "calculate discharge energy": str
                 Whether to calculate the discharge energy, throughput energy and
                 throughput capacity in addition to discharge capacity. Must be one of
@@ -585,7 +652,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "pouch". The arbitrary geometry option solves a 1D electrochemical
                 model with prescribed cell volume and cross-sectional area, and
                 (if thermal effects are included) solves a lumped thermal model
-                with prescribed surface area for cooling.
+                with prescribed surface area for cooling. Should be given as
+                "pouch" when "dimensionality" is 1 or 2, or "thermal" is
+                "x-full" (legacy default: "pouch").
             * "calculate heat source for isothermal models" : str
                 Whether to calculate the heat source terms during isothermal operation.
                 Can be "true" or "false". If "false", the heat source terms are set
@@ -685,10 +754,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Sets the model to account for mechanical effects such as particle
                 swelling and cracking. Can be "none", "swelling only",
                 or "swelling and cracking". A 2-tuple can be provided for different
-                behaviour in negative and positive electrodes. The default is
-                derived per electrode: "swelling and cracking" if "SEI on cracks"
-                is "true" there, else "swelling only" if "loss of active material"
-                is stress-driven there, else "none".
+                behaviour in negative and positive electrodes. Should be given
+                explicitly on an electrode where "SEI on cracks" is "true"
+                (then "swelling and cracking" is intended) or "loss of active
+                material" is stress-driven (then "swelling only"); the legacy
+                default is set per electrode in the same way, else "none".
             * "particle phases": str
                 Number of phases present in the electrode. A 2-tuple can be provided for
                 different behaviour in negative and positive electrodes.
@@ -715,15 +785,18 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
                 In a full cell, a scalar (non-default) value applies to the negative
                 electrode only; use a 2-tuple to also set the positive electrode.
-                ``options["SEI"]`` stores the value as given. The default is
-                "constant" on an electrode where "lithium plating" is "partially
-                reversible" there and "SEI" was not supplied.
+                ``options["SEI"]`` stores the value as given. Should be given
+                explicitly as "constant" on an electrode where "lithium plating"
+                is "partially reversible" (legacy default: "constant" there,
+                which leaves the "SEI film resistance" default at "none").
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
-                The default value is "none" if the "SEI" option is "none", and
-                "distributed" otherwise. This is because the "distributed" model is more
-                complex than the model with no additional resistance, which adds
-                unnecessary complexity if there is no SEI in the first place
+                Should be given explicitly as "distributed" on any electrode where
+                the "SEI" option is not "none" (legacy default: "distributed"
+                then, else "none"). This is because
+                the "distributed" model is more complex than the model with no
+                additional resistance, which adds unnecessary complexity if
+                there is no SEI in the first place
 
                 - "none": no additional resistance\
 
@@ -754,13 +827,20 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 (default) or "true".
             * "stress-induced diffusion" : str
                 Whether to include stress-induced diffusion, can be "false" or "true".
-                The default is derived per electrode (and phase): "false" if
-                "particle mechanics" is "none" there and "true" otherwise. A 2-tuple
+                Should be given explicitly on an electrode (and phase) where
+                "particle mechanics" is not "none" (legacy default, per
+                electrode and phase: "true" there, else "false"). A 2-tuple
                 can be provided for different behaviour in negative and positive
                 electrodes.
             * "surface form" : str
                 Whether to use the surface formulation of the problem. Can be "false"
-                (default), "differential" or "algebraic".
+                (default), "differential" or "algebraic". Should be given
+                explicitly as "algebraic" when an electrode has multiple
+                particle phases, or (for SPM and SPMe, but not MPM) when
+                "intercalation kinetics" is given or a "distribution"
+                "particle size" is set (legacy default: "algebraic"). MPM always
+                defaults "surface form" to "algebraic" as part of its own
+                model identity, which is not deprecated.
             * "surface temperature" : str
                 Sets the surface temperature model to use. Can be "ambient" (default),
                 which sets the surface temperature equal to the ambient temperature, or
@@ -774,14 +854,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 'lumped' option.
             * "total interfacial current density as a state" : str
                 Whether to make a state for the total interfacial current density and
-                solve an algebraic equation for it. Default is "false", unless "SEI film
-                resistance" is distributed in which case it is automatically set to
-                "true".
+                solve an algebraic equation for it. Should be given explicitly as
+                "true" when "SEI film resistance" is "distributed", or when it
+                is not "none" and an electrode has multiple particle phases;
+                (legacy default: "true" then, else "false").
             * "voltage as a state" : str
                 Whether to promote voltage to an algebraic state variable.
-                Can be "false" (default) or "true", unless the operating mode
-                is "explicit power" or "explicit resistance", in which case it
-                is automatically set to "true". When "true", the model is a DAE
+                Can be "false" (default) or "true". Should be given explicitly
+                as "true" when "operating mode" is "explicit power" or
+                "explicit resistance" (legacy default: "true").
+                When "true", the model is a DAE
                 and requires a DAE-capable solver (e.g. the default
                 IDAKLUSolver). When "false", voltage is computed as an
                 expression. Note that setting this to "false" only removes the
@@ -809,7 +891,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         checks are skipped. Default is False.
     """
 
-    def __init__(self, extra_options, legacy=False):
+    def __init__(self, extra_options, legacy=False, warn_legacy_defaults=True):
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
             "calculate heat source for isothermal models": ["false", "true"],
@@ -1013,7 +1095,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             for path, leaf in iter_option_leaves(option, value):
                 validate_option_value(option, leaf, self.possible_options[option], path)
 
-        _apply_legacy_defaults(options, set(extra_options))
+        fired = _apply_legacy_defaults(options, set(extra_options))
         if not legacy:
             _check_electrode_compatibility(options)
 
@@ -1178,6 +1260,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "or lumped thermal model"
             )
         super().__init__(options.items())
+        self._legacy_defaults = fired
+        if warn_legacy_defaults:
+            _warn_legacy_defaults(fired)
 
     @property
     def phases(self):
@@ -1443,6 +1528,10 @@ class BaseBatteryModel(pybamm.BaseModel):
         """
         return {}
 
+    def _model_legacy_defaults(self, supplied):
+        """Return legacy defaults introduced by this model."""
+        return {}
+
     @property
     def options(self):
         return self._options
@@ -1457,9 +1546,14 @@ class BaseBatteryModel(pybamm.BaseModel):
             options = BatteryModelOptions(
                 {**self._model_default_options(supplied), **supplied},
                 legacy=isinstance(extra_options, LegacyOptions),
+                warn_legacy_defaults=False,
             )
+            legacy_defaults = options._legacy_defaults
+            model_legacy_defaults = self._model_legacy_defaults(supplied)
         else:
             options = extra_options
+            legacy_defaults = {}
+            model_legacy_defaults = {}
             # processed options carry every key, so only the model checks matter
             self._model_default_options(dict(options))
 
@@ -1522,6 +1616,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 f"must use surface formulation to solve {self!s} with hydrolysis"
             )
+        _warn_legacy_defaults(legacy_defaults)
+        _warn_legacy_defaults(model_legacy_defaults)
         self._options = options
         # rebuild whenever options are (re)assigned.
         # No-op unless the subclass overrides ``_rebuild_param``.
