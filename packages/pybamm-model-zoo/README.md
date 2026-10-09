@@ -34,6 +34,9 @@ pip install "pybamm-model-zoo @ git+https://github.com/pybamm-team/PyBaMM.git#su
 
 ## Adding a model
 
+> [!IMPORTANT]
+> Before adding a model, please read the [model zoo policy](https://github.com/pybamm-team/PyBaMM/blob/main/packages/pybamm-model-zoo/POLICY.md). By opening a pull request that adds or changes a model in the zoo, you agree to the policy.
+
 ```bash
 nox -s zoo-new -- --slug my_model --name MyModel --author "A. Author" --github ahandle
 ```
@@ -169,6 +172,7 @@ collision, so a third-party package cannot shadow one.
 
 Short by design — the contract suite does the rest.
 
+- [ ] You have read the [model zoo policy](https://github.com/pybamm-team/PyBaMM/blob/main/packages/pybamm-model-zoo/POLICY.md).
 - [ ] License is OSI-approved and compatible with BSD-3-Clause.
 - [ ] No edits to `packages/pybamm/src/` in the same pull request; core changes
       are split out.
