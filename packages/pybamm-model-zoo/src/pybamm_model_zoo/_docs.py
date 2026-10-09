@@ -46,12 +46,19 @@ Community- and partner-contributed PyBaMM models. Each entry is one
 self-contained folder with its own maintainer, tests, examples, and
 citation; the table below is generated from those folders' manifests.
 
-The zoo is a separate distribution that is **not yet published to PyPI**, so
-`pip install pybamm` does not provide it. Until it is released, install it
-from the repository:
+The zoo is a separate distribution, released independently of PyBaMM, so
+`pip install pybamm` does not provide it. Install it from
+[PyPI](https://pypi.org/project/pybamm-model-zoo/):
 
 ```bash
-pip install "pybamm-model-zoo @ git+https://github.com/pybamm-team/PyBaMM.git#subdirectory=packages/pybamm-model-zoo"
+pip install pybamm-model-zoo
+```
+
+A model with third-party dependencies of its own declares them as an extra
+named `zoo-<slug>`, and the `zoo-all` extra installs every model's:
+
+```bash
+pip install "pybamm-model-zoo[zoo-all]"
 ```
 
 Zoo models are then reached through the zoo's registry, not the `pybamm`

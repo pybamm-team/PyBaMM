@@ -6,19 +6,31 @@ build-backend = "hatchling.build"
 name = "pybamm-model-zoo"
 version = "0.1.0"
 license = "BSD-3-Clause"
-description = "Community- and partner-contributed models for PyBaMM"
+license-files = ["LICENSE.txt"]
+description = "Community- and partner-contributed battery models for PyBaMM"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 requires-python = ">=3.10, <3.15"
 readme = { file = "README.md", content-type = "text/markdown" }
+keywords = ["battery", "electrochemistry", "lithium-ion", "modelling", "pybamm", "simulation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybamm",
+    # The oldest release the weekly compatibility matrix has run the zoo against.
+    # Each model's manifest narrows this further with its own `pybamm_requires`.
+    "pybamm>=26.8",
     "packaging>=23.0",
     "tomli>=2.0.1; python_version < '3.11'",
 ]
@@ -26,7 +38,9 @@ dependencies = [
 [project.urls]
 Homepage = "https://pybamm.org"
 Documentation = "https://docs.pybamm.org/en/latest/source/model_zoo/index.html"
-Repository = "https://github.com/pybamm-team/PyBaMM"
+Repository = "https://github.com/pybamm-team/PyBaMM/tree/main/packages/pybamm-model-zoo"
+Changelog = "https://github.com/pybamm-team/PyBaMM/blob/main/packages/pybamm-model-zoo/CHANGELOG.md"
+Issues = "https://github.com/pybamm-team/PyBaMM/issues"
 
 # A model's dependencies belong in a per-model `zoo-<slug>` extra, never in the
 # base dependencies above: workspace members share one lockfile and one dev venv.
@@ -34,6 +48,12 @@ Repository = "https://github.com/pybamm-team/PyBaMM"
 # The aggregate is deliberately not named `all`: `uv sync --extra all` applies it
 # to every member, dragging every model's heavy dependencies into the dev env.
 zoo-all = []
+
+# The repository's .gitignore excludes data files (*.csv, *.txt, *.mat, ...) that a
+# model folder may track, and hatchling would silently drop them from both targets.
+[tool.hatch.build]
+artifacts = ["/src/pybamm_model_zoo/**"]
+exclude = ["__pycache__", "*.py[cod]"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pybamm_model_zoo"]

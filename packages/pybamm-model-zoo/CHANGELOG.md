@@ -14,6 +14,10 @@ PyBaMM's.
   zones that are each PyBaMM's own SPM, SPMe, or DFN under the stack's options,
   each with its own 3D temperature field, connected in parallel or series
   ([#5815](https://github.com/pybamm-team/PyBaMM/pull/5815))
+- Published to PyPI as `pybamm-model-zoo`, requiring `pybamm>=26.8`, with
+  `pybamm_model_zoo.__version__`. A model whose extra is missing now names the
+  `pip install "pybamm-model-zoo[<extra>]"` that provides it
+  ([#5881](https://github.com/pybamm-team/PyBaMM/pull/5881))
 
 ### Changed
 

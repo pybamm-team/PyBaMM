@@ -16,6 +16,7 @@ True
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from pybamm_model_zoo._citations import read_citations
@@ -39,6 +40,7 @@ __all__ = [
     "ModelUnavailableError",
     "Registry",
     "ZooError",
+    "__version__",
     "all_entries",
     "info",
     "list_models",
@@ -48,6 +50,12 @@ __all__ = [
     "register_citation",
     "registry",
 ]
+
+try:
+    __version__ = version("pybamm-model-zoo")
+except PackageNotFoundError:
+    # The zoo's scripts and pre-commit hook import it from an uninstalled tree.
+    __version__ = "unknown"
 
 # Not `_registry`: that name is the submodule imported above, and rebinding it
 # here would leave `pybamm_model_zoo._registry` pointing at this cache.
