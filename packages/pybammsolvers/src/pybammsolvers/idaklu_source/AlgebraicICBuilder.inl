@@ -148,29 +148,6 @@ private:
   IDAKLUSolverOpenMP<ExprSet>& solver_;
 };
 
-// ────────────────────── Mass-matrix alignment check ──────────────────────
-
-template <class ExprSet>
-bool IDAKLUSolverOpenMP<ExprSet>::CheckMassMatrixAlignment(const sunrealtype* id_val) {
-  std::vector<sunrealtype> e_in(number_of_states, 0.0);
-  std::vector<sunrealtype> m_out(number_of_states, 0.0);
-
-  for (int j = 0; j < number_of_states; j++) {
-    e_in[j] = 1.0;
-    functions->mass_action->m_arg[0] = e_in.data();
-    functions->mass_action->m_res[0] = m_out.data();
-    (*functions->mass_action)();
-    e_in[j] = 0.0;
-
-    for (int i = 0; i < number_of_states; i++) {
-      if (is_algebraic(id_val[i]) && m_out[i] != 0.0) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
 // ────────────────────── Sub-block sparsity pre-computation ──────────────────────
 
 template <class ExprSet>
@@ -229,9 +206,8 @@ template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val) {
   DEBUG("IDAKLUSolverOpenMP::BuildAlgebraicSolver");
 
-  // Newton IC only works when M has all zeros in the algebraic rows.
-  // If not, skip entirely and let IDACalcIC handle it.
-  if (!CheckMassMatrixAlignment(id_val)) return;
+  // Discretisation makes M zero in the algebraic rows (id 0); the sub-block
+  // functions are only passed for standard-form DAEs
 
   alg_state_ = std::make_unique<AlgSolverState>();
   auto& as = *alg_state_;
@@ -282,6 +258,8 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
       for (int i = 0; i <= len_alg_; i++) jp[i] = sb.colptrs[i];
       for (int i = 0; i < sb.nnz; i++) jr[i] = sb.rowvals[i];
       sb.LS = SUNLinSol_KLU(sb.delta_nvec, sb.J, sb.sunctx);
+      // AMD (0) instead of the SUNDIALS default COLAMD (1)
+      SUNLinSol_KLUSetOrdering(sb.LS, 0);
     } else {
       sb.J = SUNDenseMatrix(len_alg_, len_alg_, sb.sunctx);
       sb.LS = SUNLinSol_Dense(sb.delta_nvec, sb.J, sb.sunctx);
