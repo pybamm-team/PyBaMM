@@ -602,6 +602,31 @@ class TestOptions:
 
         assert output == PRINT_OPTIONS_OUTPUT
 
+    @pytest.mark.parametrize(
+        ("model_class", "options"),
+        [
+            (pybamm.lithium_ion.SPM, {"thermal": "isothermal"}),
+            (pybamm.lithium_ion.SPM, {"intercalation kinetics": "Marcus"}),
+            (pybamm.lithium_ion.MPM, {"thermal": "isothermal"}),
+            (pybamm.lithium_ion.NewmanTobias, {"thermal": "isothermal"}),
+            (pybamm.lead_acid.LOQS, {"thermal": "isothermal"}),
+            (
+                pybamm.lithium_ion.DFN,
+                {
+                    "SEI": "solvent-diffusion limited",
+                    "SEI on cracks": "true",
+                    "lithium plating": "reversible",
+                    "particle mechanics": "swelling and cracking",
+                },
+            ),
+        ],
+    )
+    def test_options_not_mutated(self, model_class, options):
+        # a dict reused for another model must not carry this one's defaults
+        options_before = dict(options)
+        model_class(options)
+        assert options == options_before
+
     def test_option_phases(self):
         options = BatteryModelOptions({})
         assert options.phases == {"negative": ["primary"], "positive": ["primary"]}

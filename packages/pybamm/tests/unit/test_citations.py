@@ -124,6 +124,10 @@ class TestCitations:
         pybamm.lithium_ion.SPMe(build=False)
         assert "Marquis2019" in citations._papers_to_cite
 
+        citations._reset()
+        pybamm.lithium_ion.MPM(build=False)
+        assert "Marquis2019" not in citations._papers_to_cite
+
     def test_doyle_1993(self):
         citations = pybamm.citations
         citations._reset()
