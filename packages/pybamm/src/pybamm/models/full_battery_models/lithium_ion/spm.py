@@ -20,28 +20,22 @@ class SPM(BaseModel):
 
     """
 
+    def _model_default_options(self, supplied):
+        defaults = {}
+        # the explicit-current closure needs invertible kinetics and a single size
+        if "surface form" not in supplied and (
+            "intercalation kinetics" in supplied
+            or "distribution" in supplied.get("particle size", "")
+        ):
+            defaults["surface form"] = "algebraic"
+        if type(self) in (pybamm.lithium_ion.SPM, pybamm.lithium_ion.MPM):
+            defaults["x-average side reactions"] = "true"
+        return defaults
+
     def __init__(self, options=None, name="Single Particle Model", build=True):
         # For degradation models we use the "x-average", note that for side reactions
         # this is set by "x-average side reactions"
         self.x_average = True
-
-        # Use 'algebraic' surface form when the explicit-current closure is
-        # unavailable: non-default kinetics have no inverse form, and
-        # particle-size distributions require a surface formulation.
-        options = options or {}
-        if options.get("surface form") is None and (
-            options.get("intercalation kinetics") is not None
-            or "distribution" in options.get("particle size", "")
-        ):
-            options["surface form"] = "algebraic"
-
-        # Set "x-average side reactions" to "true" if the model is SPM
-        x_average_side_reactions = options.get("x-average side reactions")
-        if x_average_side_reactions is None and self.__class__ in [
-            pybamm.lithium_ion.SPM,
-            pybamm.lithium_ion.MPM,
-        ]:
-            options["x-average side reactions"] = "true"
 
         super().__init__(options, name)
 
@@ -50,9 +44,13 @@ class SPM(BaseModel):
         if self.__class__ != "MPM":
             pybamm.citations.register("Marquis2019")
 
-        if (
-            self.options["SEI"] not in ["none", "constant", ("constant", "none")]
-            or self.options["lithium plating"] != "none"
+        if any(
+            self.options.negative[option] not in values
+            or self.options.positive[option] not in values
+            for option, values in [
+                ("SEI", ("none", "constant")),
+                ("lithium plating", ("none",)),
+            ]
         ):
             pybamm.citations.register("BrosaPlanella2022")
 

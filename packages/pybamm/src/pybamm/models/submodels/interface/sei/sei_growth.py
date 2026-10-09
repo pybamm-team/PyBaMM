@@ -38,7 +38,7 @@ class SEIGrowth(BaseModel):
             self.reaction_loc = "x-average"
         else:
             self.reaction_loc = "full electrode"
-        SEI_option = getattr(self.options, domain)["SEI"]
+        SEI_option = getattr(getattr(self.options, domain), phase)["SEI"]
         if SEI_option == "ec reaction limited":
             pybamm.citations.register("Yang2017")
         elif SEI_option == "VonKolzenberg2020":
@@ -268,9 +268,13 @@ class SEIGrowth(BaseModel):
         # This is done here by replacing a with a_cr using a *= roughness - 1
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
-                roughness = variables[f"X-averaged {domain} electrode roughness ratio"]
+                roughness = variables[
+                    f"X-averaged {domain} {self.phase_name}electrode roughness ratio"
+                ]
             else:
-                roughness = variables[f"{Domain} electrode roughness ratio"]
+                roughness = variables[
+                    f"{Domain} {self.phase_name}electrode roughness ratio"
+                ]
             a *= roughness - 1  # Replace surface area with crack area
 
         # a * j_sei / F is the rate of consumption of Li moles by SEI reaction

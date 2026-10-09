@@ -2300,6 +2300,7 @@ class BaseModel:
             model_config: dict = {
                 "type": type(self).__name__,
                 "module": mod_name,
+                "pybamm_version": pybamm.__version__,
             }
             if hasattr(self, "options"):
                 model_config["options"] = dict(self.options)
@@ -2437,13 +2438,20 @@ class BaseModel:
             model_cls = getattr(mod, type_name, None)
             if model_cls is None:
                 raise ValueError(f"Model '{type_name}' not found in pybamm.{mod_name}")
-            options = data.get("options", {})
-            # JSON has no tuples; convert lists back to tuples
-            if options:
-                options = {
-                    k: tuple(v) if isinstance(v, list) else v
-                    for k, v in options.items()
-                }
+            # JSON has no tuples; convert (nested) lists back to tuples
+            options = Serialise._convert_options(data.get("options", {}))
+            if options and issubclass(model_cls, pybamm.BaseBatteryModel):
+                from pybamm.models.full_battery_models.base_battery_model import (
+                    restore_saved_options,
+                )
+
+                version = data.get("pybamm_version")
+                # without a version, only a full to_config dump is a saved config;
+                # a partial one is hand-written and checked as given
+                if version is not None or set(pybamm.BatteryModelOptions({})) <= set(
+                    options
+                ):
+                    options = restore_saved_options(options, version)
             model = model_cls(options=options) if options else model_cls()
             BaseModel.apply_builtin_overrides(model, data)
             return model

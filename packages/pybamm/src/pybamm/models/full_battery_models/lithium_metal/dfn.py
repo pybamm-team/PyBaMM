@@ -25,11 +25,16 @@ class DFN(LithiumIonDFN):
         built).
     """
 
+    def _model_default_options(self, supplied):
+        if supplied.get("working electrode", "positive") != "positive":
+            raise pybamm.OptionError(
+                "The lithium metal DFN requires 'working electrode' to be 'positive'."
+            )
+        return {"working electrode": "positive"}
+
     def __init__(
         self, options=None, name="Doyle-Fuller-Newman lithium metal model", build=True
     ):
-        options = options or {}
-        options["working electrode"] = "positive"
         super().__init__(options, name, build=False)
 
         if build:
