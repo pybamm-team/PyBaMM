@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- `ParameterValues.update` takes `strict=True`, which raises a `KeyError` naming the closest existing parameters when a key does not exist, and then updates nothing. The default (`strict=False`) still adds new parameters. ([#5874](https://github.com/pybamm-team/PyBaMM/issues/5874), [#5886](https://github.com/pybamm-team/PyBaMM/pull/5886))
+
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
 ## Breaking changes
