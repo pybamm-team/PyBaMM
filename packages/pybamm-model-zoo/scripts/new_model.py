@@ -28,7 +28,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--author", required=True, help="maintainer's name")
     parser.add_argument("--github", required=True, help="maintainer's GitHub handle")
     parser.add_argument("--tier", default="community", choices=TIERS)
-    parser.add_argument("--license", default="BSD-3-Clause", help="SPDX identifier")
     parser.add_argument(
         "--pybamm-requires",
         default=None,
@@ -64,7 +63,6 @@ def main(argv: list[str] | None = None) -> int:
         author=args.author,
         github=args.github,
         tier=args.tier,
-        license=args.license,
         pybamm_requires=args.pybamm_requires,
     )
     destination = PACKAGE_ROOT / args.slug

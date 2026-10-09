@@ -62,6 +62,8 @@ MODEL_KEYS = frozenset(
         "tests",
     }
 )
+#: The one license an in-tree model may carry, matching the zoo package's own.
+ZOO_LICENSE = "BSD-3-Clause"
 #: README headings the docs pages and the contributor guide both rely on.
 REQUIRED_README_SECTIONS = ("Summary", "Usage", "Validation", "Citation")
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -339,6 +341,15 @@ def check_packaging(entry: ModelEntry) -> None:
         f"got '{module_path}'"
     )
     _check_extra_is_declared(entry)
+
+
+@_register("license", scope=PACKAGING, waivable=False)
+def check_license(entry: ModelEntry) -> None:
+    """An in-tree model is BSD-3-Clause, the license the zoo package ships under."""
+    assert entry.license == ZOO_LICENSE, (
+        f"{entry.manifest_path}: in-tree models must be licensed '{ZOO_LICENSE}', "
+        f"got '{entry.license}'; host other licenses as an external collection"
+    )
 
 
 def _check_extra_is_declared(entry: ModelEntry) -> None:
