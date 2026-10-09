@@ -308,6 +308,35 @@ class TestBaseModelToConfig:
         assert type(loaded) is type(model)
         assert dict(loaded.options) == dict(model.options)
 
+    def test_to_config_builtin_includes_pybamm_version(self):
+        """Built-in config records the version that validated its options."""
+        config = pybamm.lithium_ion.SPM().to_config()
+        assert config["pybamm_version"] == pybamm.__version__
+
+    @pytest.mark.parametrize(
+        ("version", "loads"), [("26.9.0.0", True), (None, True), ("26.10.0.0", False)]
+    )
+    def test_from_config_uses_saved_option_rules(self, version, loads):
+        """Full saved configs retain the option rules from their version."""
+        config = pybamm.lithium_ion.SPM(
+            {
+                "particle mechanics": ("swelling only", "none"),
+                "stress-induced diffusion": ("true", "false"),
+            }
+        ).to_config()
+        config["options"]["stress-induced diffusion"] = "true"
+        if version is None:
+            config.pop("pybamm_version", None)
+        else:
+            config["pybamm_version"] = version
+
+        if loads:
+            loaded = pybamm.BaseModel.from_config(config)
+            assert loaded.options.positive["stress-induced diffusion"] == "true"
+        else:
+            with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
+                pybamm.BaseModel.from_config(config)
+
     def test_from_config_builtin_with_tuple_options_round_trip(self):
         """Options containing tuples survive JSON round-trip."""
         model = pybamm.lithium_ion.SPM(
