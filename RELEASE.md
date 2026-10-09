@@ -31,14 +31,15 @@ PyBaMM versions take the form `YY.MM.N.P`:
 
 ## Monorepo: independent package releases
 
-PyBaMM and `pybammsolvers` live in one repository (a UV workspace under
-`packages/`) but release **independently to PyPI**, discriminated by tag
-namespace. See `docs/superpowers/specs/2026-06-11-pybamm-monorepo-design.md` for
-the full design.
+PyBaMM, `pybammsolvers`, and `pybamm-model-zoo` live in one repository (a UV
+workspace under `packages/`) but release **independently to PyPI**,
+discriminated by tag namespace. See
+`docs/superpowers/specs/2026-06-11-pybamm-monorepo-design.md` for the full design.
 
 - Each package's publish workflow fires only for its own tag namespace (the
   pre-monorepo `github.repository` guard no longer distinguishes them).
 - `pybammsolvers` releases use the `pybammsolvers-v*` namespace.
+- `pybamm-model-zoo` releases use the `pybamm-model-zoo-v*` namespace.
 - **Legacy solver tags** (`v0.8.0`, `v0.8.1`, `v0.8.2`) carried over from the
   standalone `pybammsolvers` repo are **not** part of PyBaMM's release history and
   must not drive PyBaMM's computed version. They are either dropped or re-tagged
@@ -169,6 +170,18 @@ A patch release is `YY.MM.N.P` where `P >= 1`. Patches are cut from the previous
 1. Bump `__version__` in `packages/pybammsolvers/src/pybammsolvers/version.py` (the pre-commit hook mirrors it into `pyproject.toml` and `vcpkg.json`) and record the change in `CHANGELOG.md`. Open a PR to `main`, ensure CI passes, then merge.
 2. From `main` at the merge commit, create a GitHub _release_ with the tag `pybammsolvers-vX.Y.Z`, where `X.Y.Z` **exactly matches** the new `version.py` value. This triggers `release_solvers.yml`, which builds wheels + sdist and publishes to PyPI. The `check_version` job in that workflow fails the release if the tag, `version.py`, or the `pyproject.toml`/`vcpkg.json` mirrors disagree; PyPI separately rejects a re-upload of an already-published version.
 3. Verify the release installs cleanly: `pip install pybammsolvers==X.Y.Z`.
+
+### Cutting a `pybamm-model-zoo` release
+
+`pybamm-model-zoo` releases independently of PyBaMM and is versioned `X.Y.Z`. **`version` in `packages/pybamm-model-zoo/pyproject.toml` is the single source of truth for its published version**; the `pybamm-model-zoo-v*` tag only routes the workflow. It is a static string for the same reason as `pybammsolvers`'s. The zoo keeps its own changelog, `packages/pybamm-model-zoo/CHANGELOG.md`.
+
+1. In `packages/pybamm-model-zoo/`, bump `version` in `pyproject.toml` and move the `## [Unreleased]` entries of `CHANGELOG.md` under a new `## [X.Y.Z] - YYYY-MM-DD` heading. If the zoo now relies on a newer PyBaMM, raise its `pybamm>=` floor in the same `pyproject.toml`. Open a PR to `main`, ensure CI passes, then merge.
+2. From `main` at the merge commit, create a GitHub _release_ with the tag `pybamm-model-zoo-vX.Y.Z`, where `X.Y.Z` **exactly matches** the new `version`. This triggers `release_model_zoo.yml`, which builds the sdist and wheel, installs the wheel into a fresh environment, and fails the release if the tag does not match `version` or the wheel is missing any committed file under `src/pybamm_model_zoo/`. Publishing then waits for a maintainer to approve the `pypi` environment.
+3. Verify the release installs cleanly: `pip install pybamm-model-zoo==X.Y.Z`.
+
+To rehearse a release without publishing, run `release_model_zoo.yml` from the Actions tab: a manual run builds and checks the distributions but never uploads them.
+
+**First release only.** PyPI has no `pybamm-model-zoo` project until the first upload, so before step 2 a PyPI account that will own the project must add a [pending trusted publisher](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/) with owner `pybamm-team`, repository `PyBaMM`, workflow `release_model_zoo.yml`, and environment `pypi`. The first publish creates the project; add the other maintainers as PyPI owners afterwards.
 
 ### Conda-forge
 

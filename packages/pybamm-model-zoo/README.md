@@ -9,6 +9,28 @@ it. Manifests are parsed, never imported, so a model whose dependencies are
 missing still appears in the registry and the docs and reports a clean failure
 rather than taking the zoo down.
 
+## Installation
+
+The zoo is released to PyPI independently of PyBaMM, so `pip install pybamm`
+does not provide it:
+
+```bash
+pip install pybamm-model-zoo
+```
+
+A model with third-party dependencies of its own declares them as an extra named
+`zoo-<slug>`, and the `zoo-all` extra installs every model's:
+
+```bash
+pip install "pybamm-model-zoo[zoo-all]"
+```
+
+In a PyBaMM checkout the zoo is a `uv` workspace member, so
+`uv sync --extra all --group dev` from the repository root installs it editable
+alongside `pybamm`.
+
+## Usage
+
 ```python
 import pybamm
 import pybamm_model_zoo as zoo
@@ -22,15 +44,8 @@ solution = pybamm.Simulation(model).solve([0, 300])
 print(solution["Voltage [V]"](150))
 ```
 
-The zoo is a `uv` workspace member, so `uv sync --extra all --group dev` from the
-repository root installs it editable alongside `pybamm`.
-
-It is not published to PyPI yet, so `pip install pybamm` does not provide it.
-Until it is released, users install it from the repository:
-
-```bash
-pip install "pybamm-model-zoo @ git+https://github.com/pybamm-team/PyBaMM.git#subdirectory=packages/pybamm-model-zoo"
-```
+Using a model registers its citation, so `pybamm.print_citations()` credits its
+authors.
 
 ## Adding a model
 

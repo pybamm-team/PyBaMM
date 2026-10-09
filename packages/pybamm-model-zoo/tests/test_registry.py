@@ -8,8 +8,9 @@ import pytest
 
 import pybamm
 import pybamm_model_zoo as zoo
+from pybamm_model_zoo import _paths
 from pybamm_model_zoo._citations import parse_bibtex
-from pybamm_model_zoo._registry import Registry
+from pybamm_model_zoo._registry import Registry, read_manifest
 from pybamm_model_zoo.testing import contract
 
 MANIFEST = """
@@ -40,6 +41,12 @@ def write_model(root: Path, slug: str, name: str, body: str | None = None) -> Pa
         body if body is not None else MANIFEST.format(slug=slug, name=name)
     )
     return folder
+
+
+class TestPackage:
+    def test_version_is_the_pyproject_version(self):
+        project = read_manifest(_paths.ZOO_PYPROJECT)["project"]
+        assert zoo.__version__ == project["version"]
 
 
 class TestRegistry:
@@ -183,9 +190,28 @@ class TestLoad:
         )
         write_model(tmp_path, "minimal_model", "MinimalModel", body=body)
         entry = Registry([tmp_path])["MinimalModel"]
-        with pytest.raises(zoo.ModelUnavailableError, match=r"zoo-minimal-model"):
+        with pytest.raises(
+            zoo.ModelUnavailableError,
+            match=re.escape('pip install "pybamm-model-zoo[zoo-minimal-model]"'),
+        ):
             entry.load()
         assert contract.missing_dependencies(entry) == ["not-a-real-package>=1.0"]
+
+    def test_missing_external_module_does_not_name_the_zoo(self, tmp_path):
+        body = MANIFEST.format(
+            slug="minimal_model", name="MinimalModel"
+        ) + textwrap.dedent(
+            """
+            [model.dependencies]
+            extra = "lab-extra"
+            packages = ["not-a-real-package>=1.0"]
+            """
+        )
+        write_model(tmp_path, "minimal_model", "MinimalModel", body=body)
+        entry = Registry([], external_paths=[tmp_path])["MinimalModel"]
+        with pytest.raises(zoo.ModelUnavailableError, match=r"'lab-extra'\.") as info:
+            entry.load()
+        assert "pybamm-model-zoo" not in str(info.value)
 
 
 class TestPybammRequires:

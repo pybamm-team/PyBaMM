@@ -238,12 +238,17 @@ class ModelEntry:
             module = importlib.import_module(self.module_path)
         except ImportError as error:
             extra = self.dependencies.extra
-            hint = (
-                f" It declares the extra '{extra}'; install it with "
-                f"`uv sync --extra {extra}`."
-                if extra
-                else ""
-            )
+            if not extra:
+                hint = ""
+            elif self.external:
+                # An external collection's extra belongs to a distribution whose
+                # name the manifest does not record.
+                hint = f" It declares the extra '{extra}'."
+            else:
+                hint = (
+                    f" It declares the extra '{extra}'; install it with "
+                    f'`pip install "pybamm-model-zoo[{extra}]"`.'
+                )
             raise ModelUnavailableError(
                 f"'{self.name}' could not be imported.{hint}"
             ) from error
