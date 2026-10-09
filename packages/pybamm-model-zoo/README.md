@@ -127,6 +127,7 @@ hold an in-tree model and a third-party collection to the right rules.
 | `build` | model | `pybamm.Simulation(model).build()` succeeds. |
 | `solve` | model | The model solves for the manifest's `solve_time`, and every `key_variables` entry is finite read through the interpolating call interface. |
 | `packaging` | packaging | An in-tree model is importable as `pybamm_model_zoo.<slug>`, and any extra it declares exists and is aggregated into `zoo-all`. |
+| `license` | packaging | An in-tree model's manifest says `BSD-3-Clause`, the zoo package's license. Cannot be waived. |
 | `docs` | repo | The generated docs page is present *and current*, so docs cannot drift from code. |
 | `codeowners` | repo | `.github/CODEOWNERS` names an owner for your folder, so ownership cannot be dropped silently. |
 
@@ -135,7 +136,7 @@ this package and does not live in this repository.
 
 `skip_contract` waives an individual check for a genuinely unusual model — one
 with no meaningful standalone solve, say. It is per-check, reviewed, and visible
-in the manifest diff. The `manifest` check itself cannot be waived.
+in the manifest diff. The `manifest` and `license` checks cannot be waived.
 
 ```bash
 nox -s zoo                          # the whole zoo, both tiers, plus examples
@@ -173,7 +174,7 @@ collision, so a third-party package cannot shadow one.
 Short by design — the contract suite does the rest.
 
 - [ ] You have read the [model zoo policy](https://github.com/pybamm-team/PyBaMM/blob/main/packages/pybamm-model-zoo/POLICY.md).
-- [ ] License is OSI-approved and compatible with BSD-3-Clause.
+- [ ] License is BSD-3-Clause.
 - [ ] No edits to `packages/pybamm/src/` in the same pull request; core changes
       are split out.
 - [ ] Third-party dependencies declared as a `zoo-<slug>` extra.
