@@ -40,6 +40,7 @@
 - Fixed `first_state`, `last_state` and `step` of an `output_variables` solve using the outputs' sensitivities instead of the states'. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - Fixed sensitivities with respect to only some of the inputs, for `output_variables` and for expressions of a time integral. ([#5794](https://github.com/pybamm-team/PyBaMM/pull/5794))
 - Fixed a `ValueError` when reading variables from a solve with both scalar and vector inputs. ([#5785](https://github.com/pybamm-team/PyBaMM/pull/5785))
+- The equivalent circuit model's diffusion element now lowers the voltage on discharge and raises it on charge, instead of the reverse, so a closed cycle no longer delivers net energy. Its heat, `-I * eta_diffusion`, is now included in `"Irreversible heat generation [W]"`. ([#5869](https://github.com/pybamm-team/PyBaMM/pull/5869))
 
 ## Optimizations
 
