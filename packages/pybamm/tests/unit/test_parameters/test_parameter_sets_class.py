@@ -36,6 +36,18 @@ class TestParameterSets:
         for k in pybamm.parameter_sets:
             assert isinstance(k, str)
 
+    def test_contains_does_not_load(self, mocker):
+        """Test that membership checks do not build the parameter set"""
+
+        def get_parameter_values():
+            raise ModuleNotFoundError("missing optional dependency")
+
+        mocker.patch.dict(
+            pybamm.parameter_sets._all_entries, {"Unloadable": get_parameter_values}
+        )
+        assert "Unloadable" in pybamm.parameter_sets
+        assert "not_a_real_parameter_set" not in pybamm.parameter_sets
+
 
 class TestModelEntryPoints:
     def test_all_registered(self):

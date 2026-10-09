@@ -20,6 +20,7 @@
 
 ## Bug fixes
 
+- Checking whether a name is in `pybamm.parameter_sets` or `pybamm.dispatch.models` no longer builds the parameter set or model, so `ParameterValues("Chen2020")` builds the set once instead of twice, and the check no longer raises when building the set fails (for example, a set that needs a missing optional dependency). ([#5871](https://github.com/pybamm-team/PyBaMM/pull/5871))
 - A single `IDAKLUSolver` solve no longer runs inside a one-thread OpenMP parallel region. OpenMP code the model calls during the solve, such as a CasADi external function, now runs at the top level instead of nested, so it takes the top-level thread count rather than the nested-level one (for example 8, not 1, under `OMP_NUM_THREADS=8,1`). ([#5837](https://github.com/pybamm-team/PyBaMM/pull/5837))
 - `NonlinearSolver` now logs its Newton iterations when `pybamm.logger` is at `DEBUG` level; previously they were silently dropped. ([#5849](https://github.com/pybamm-team/PyBaMM/pull/5849))
 - Fixed `FiniteVolume2D` boundary values, gradients and integrals raising an `IndexError` on 2D meshes with fewer than 3 nodes in either direction, even when the extrapolation only needed the other direction. Meshes too coarse for the requested extrapolation order now raise a `DiscretisationError`. ([#5839](https://github.com/pybamm-team/PyBaMM/pull/5839))
