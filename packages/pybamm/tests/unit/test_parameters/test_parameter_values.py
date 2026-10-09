@@ -113,6 +113,36 @@ class TestParameterValues:
         del param["a"]
         assert "a" not in param
 
+    def test_update_strict(self):
+        param = pybamm.ParameterValues("Chen2020")
+        current = param["Current function [A]"]
+        param.update({"Negative particle radius [m]": 1e-5}, strict=True)
+        assert param["Negative particle radius [m]"] == pytest.approx(1e-5)
+
+        with pytest.raises(
+            KeyError,
+            match=r"'Negative particle radiuss \[m\]' \(best matches: "
+            r"\['Negative particle radius \[m\]'",
+        ):
+            param.update(
+                {
+                    "Current function [A]": 2.0,
+                    "Negative particle radiuss [m]": 2e-5,
+                },
+                strict=True,
+            )
+        # a failed strict update writes nothing, not even the valid key before the typo
+        assert "Negative particle radiuss [m]" not in param
+        assert param["Current function [A]"] == pytest.approx(current)
+        assert param["Negative particle radius [m]"] == pytest.approx(1e-5)
+
+        # strict accepts a ParameterValues whose keys all exist
+        param.update(pybamm.ParameterValues(param), strict=True)
+
+        # the default still adds new parameters
+        param.update({"Negative particle radiuss [m]": 2e-5})
+        assert param["Negative particle radiuss [m]"] == pytest.approx(2e-5)
+
     def test_deprecated_parameter_raises_error(self):
         # Guard: deprecated parameter detection must work (388d1366f)
         param = pybamm.ParameterValues("Chen2020")

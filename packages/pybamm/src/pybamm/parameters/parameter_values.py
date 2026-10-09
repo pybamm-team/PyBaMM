@@ -604,6 +604,7 @@ class ParameterValues:
         self,
         values: Mapping[str, Any],
         *,
+        strict: bool = False,
         check_conflict: bool = False,
         check_already_exists: bool = False,
         path: str = "",
@@ -615,6 +616,9 @@ class ParameterValues:
         ----------
         values : dict
             Dictionary of parameter values to update.
+        strict : bool, optional
+            If True, every key in ``values`` must already exist. Default is False,
+            which also adds new parameters.
         check_conflict : bool, optional
             Deprecated.
         check_already_exists : bool, optional
@@ -627,6 +631,13 @@ class ParameterValues:
         >>> params = pybamm.ParameterValues("Chen2020")
         >>> params.update({"Current function [A]": 2.0})  # Update existing
         >>> params.update({'a': 1.0})  # Create new
+        >>> params.update({"Current function [A]": 3.0}, strict=True)  # Existing only
+
+        Raises
+        ------
+        KeyError
+            If ``strict`` is True and a key does not exist. The message lists the
+            closest existing names, and nothing is updated.
 
         Notes
         -----
@@ -652,6 +663,18 @@ class ParameterValues:
         # Convert ParameterValues to dict
         if isinstance(values, ParameterValues):
             values = dict(values._store._data)
+
+        if strict:
+            unknown = [name for name in values if name not in self._store]
+            if unknown:
+                best_matches = self._store._data.get_best_matches
+                hints = "; ".join(
+                    f"'{name}' (best matches: {best_matches(name)})" for name in unknown
+                )
+                raise KeyError(
+                    f"Unknown parameter(s) with strict=True, nothing was updated: "
+                    f"{hints}. Use strict=False to add new parameters."
+                )
 
         # Check and transform parameter values
         values = self.check_parameter_values(dict(values))
