@@ -472,6 +472,7 @@ def _apply_legacy_defaults(options, supplied):
 
     return fired
 
+
 def _check_electrode_compatibility(options):
     """Check options that depend on each other within one electrode or phase.
 
