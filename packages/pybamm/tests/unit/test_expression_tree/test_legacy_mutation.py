@@ -43,7 +43,6 @@ def run_compatibility_script(source):
 
 # writes to attributes named like symbol slots whose receiver is not a symbol
 _NON_SYMBOL_WRITES = {
-    ("pybamm/solvers/idaklu_solver.py", "sol.y"),
     ("pybamm/spatial_methods/scikit_finite_element_3d.py", "M._shape"),
     (
         (
