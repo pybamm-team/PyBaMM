@@ -1,12 +1,57 @@
+import pickle  # nosec B403 - used in tests with trusted input
+
 import numpy as np
 import pytest
 
 import pybamm
-from pybamm.simulation.eis_utils import SymbolReplacer
 
 
 class TestEISSimulationClassHierarchy:
     """Tests for EISSimulation class hierarchy and instantiation."""
+
+    @pytest.mark.parametrize(
+        "model_class", [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN]
+    )
+    def test_setup_preserves_initial_values_and_current_scaling(self, model_class):
+        model = model_class(options={"surface form": "differential"})
+        original_current = model.variables["Current [A]"]
+        original_variables = dict(model.variables)
+        original_algebraic = dict(model.algebraic)
+        original_initial_conditions = dict(model.initial_conditions)
+
+        simulation = pybamm.EISSimulation(model)
+        simulation.set_parameters()
+        result = simulation.model_with_set_params
+
+        parameters = simulation.parameter_values
+        current = parameters.process_symbol(result.variables["Current variable [A]"])
+        assert current.scale == parameters.evaluate(model.param.Q)
+        assert parameters.process_symbol(result.variables["Current [A]"]) == current
+        assert parameters.process_symbol(
+            result.variables["Total current density [A.m-2]"]
+        ) == current / parameters.evaluate(model.param.A_cc)
+        assert parameters.process_symbol(
+            result.variables["C-rate"]
+        ) == current / parameters.evaluate(model.param.Q)
+        assert result.algebraic[current] == current
+        assert result.initial_conditions[current] == pybamm.Scalar(0)
+        assert "Voltage variable [V]" not in result.variables
+        assert original_current == model.variables["Current [A]"]
+        assert model.variables == original_variables
+        assert model.algebraic == original_algebraic
+        assert model.initial_conditions == original_initial_conditions
+
+    def test_setup_copies_model_when_current_is_already_a_state(self):
+        model = pybamm.lithium_ion.SPM(
+            options={"surface form": "differential", "operating mode": "voltage"}
+        )
+        original_algebraic = dict(model.algebraic)
+        simulation = pybamm.EISSimulation(model)
+        simulation.set_parameters()
+        result = simulation.model_with_set_params
+        assert result is not model
+        assert model.algebraic == original_algebraic
+        assert "Voltage variable [V]" not in model.variables
 
     def test_eis_instantiation(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
@@ -28,12 +73,6 @@ class TestEISSimulationClassHierarchy:
         pybamm.EISSimulation._validate_model_for_eis(
             model, skip_surface_form_check=True
         )
-
-    def test_three_electrode_inserts_reference_electrode(self):
-        model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
-        pybamm.EISSimulation(model, three_electrodes=True)
-        assert "Positive electrode 3E potential [V]" in model.variables
-        assert "Negative electrode 3E potential [V]" in model.variables
 
 
 class TestEISSolution:
@@ -109,6 +148,23 @@ class TestEISSolution:
         loaded = pybamm.load(str(filepath))
         np.testing.assert_array_equal(loaded.impedance, z)
 
+    def test_eis_solution_pickled_before_slots_loads(self):
+        freqs = np.array([1.0, 10.0])
+        z = np.array([1 + 0.5j, 2 + 1j])
+        data = pybamm.EISSolution(freqs, z).data
+        # A solution pickled before solutions had slots holds one dict
+        state = {"_data": data, "set_up_time": 0.5, "solve_time": 1.5}
+
+        class PreSlotsPickle:
+            def __reduce__(self):
+                return object.__new__, (pybamm.EISSolution,), state
+
+        loaded = pickle.loads(pickle.dumps(PreSlotsPickle()))  # nosec B301
+        np.testing.assert_array_equal(loaded.impedance, z)
+        np.testing.assert_array_equal(loaded.frequencies, freqs)
+        assert loaded.data.keys() == data.keys()
+        assert loaded.total_time == pytest.approx(2.0)
+
     def test_eis_solution_save_data_invalid_format(self, tmp_path):
         sol = pybamm.EISSolution(np.array([1.0]), np.array([1 + 1j]))
         with pytest.raises(ValueError, match="Unrecognised format"):
@@ -137,6 +193,21 @@ class TestEISSolution:
 
 class TestEISSimulationSolve:
     """Tests for EIS frequency-domain solving."""
+
+    def test_impedance_is_independent_of_algebraic_state_order(self):
+        model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
+        frequencies = np.logspace(-2, 4, 12)
+        reference = pybamm.EISSimulation(model).solve(frequencies).impedance
+        simulation = pybamm.EISSimulation(model)
+        simulation.set_parameters()
+        simulation._model.algebraic = dict(
+            reversed(list(simulation._model.algebraic.items()))
+        )
+        extra = pybamm.Variable("unrelated algebraic state")
+        simulation._model.algebraic[extra] = extra
+        simulation._model.initial_conditions[extra] = 0
+        result = simulation.solve(frequencies)
+        np.testing.assert_allclose(result.impedance, reference, rtol=1e-10, atol=1e-12)
 
     def test_solve_direct(self):
         model = pybamm.lithium_ion.SPM(
@@ -257,23 +328,6 @@ class TestEISSimulationSolve:
         assert high_freq_z.real == pytest.approx(1.0, abs=1e-3)
         assert abs(high_freq_z.imag) < 1e-3
 
-    @pytest.mark.parametrize(
-        "model_class",
-        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
-    )
-    def test_three_electrode_impedances_sum_to_cell_impedance(self, model_class):
-        model = model_class(options={"surface form": "differential"})
-        eis_sim = pybamm.EISSimulation(model, three_electrodes=True)
-        frequencies = np.logspace(-2, 2, 5)
-
-        result = eis_sim.solve(frequencies)
-        z_cell = result["Cell impedance [Ohm]"]
-        z_pos = result["Positive electrode impedance [Ohm]"]
-        z_neg = result["Negative electrode impedance [Ohm]"]
-
-        np.testing.assert_allclose(z_pos + z_neg, z_cell, rtol=1e-5, atol=1e-5)
-        np.testing.assert_allclose(result.impedance, z_cell)
-
 
 class TestNyquistPlot:
     """Tests for Nyquist plotting."""
@@ -313,26 +367,6 @@ class TestNyquistPlot:
         assert fig is not None
         assert ax is not None
 
-    def test_eis_nyquist_plot_components(self):
-        import matplotlib
-
-        matplotlib.use("Agg")
-
-        impedance = np.array([1 + 0.5j, 2 + 1j, 3 + 1.5j])
-        solution = pybamm.EISSolution(np.array([1.0, 10.0, 100.0]), impedance)
-        solution._data["Cell impedance [Ohm]"] = impedance
-        solution._data["Positive electrode impedance [Ohm]"] = 0.4 * impedance
-        solution._data["Negative electrode impedance [Ohm]"] = 0.6 * impedance
-
-        fig, ax = solution.nyquist_plot(show_plot=False)
-
-        assert fig is not None
-        assert [line.get_label() for line in ax.get_lines()] == [
-            "Cell",
-            "Positive electrode",
-            "Negative electrode",
-        ]
-
     def test_nyquist_plot_before_solve_raises(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
         eis_sim = pybamm.EISSimulation(model)
@@ -340,15 +374,15 @@ class TestNyquistPlot:
             eis_sim.nyquist_plot()
 
 
-class TestSymbolReplacer:
-    """Tests for the SymbolReplacer utility."""
+class TestReplaceOnModels:
+    """Symbol replacement through :func:`pybamm.replace`."""
 
     def test_symbol_replacements(self):
         a = pybamm.Parameter("a")
         b = pybamm.Parameter("b")
         c = pybamm.Parameter("c")
         d = pybamm.Parameter("d")
-        replacer = SymbolReplacer({a: b, c: d})
+        mapping = {a: b, c: d}
 
         for symbol_in, symbol_out in [
             (a, b),
@@ -357,7 +391,7 @@ class TestSymbolReplacer:
             (3 * b, 3 * b),
             (a + c, b + d),
         ]:
-            assert replacer.process_symbol(symbol_in) == symbol_out
+            assert pybamm.replace(symbol_in, mapping) == symbol_out
 
     def test_concatenation_replacement(self):
         var1 = pybamm.Variable("var 1", domain="dom 1")
@@ -365,8 +399,7 @@ class TestSymbolReplacer:
         var3 = pybamm.Variable("var 3", domain="dom 1")
         conc = pybamm.concatenation(var1, var2)
 
-        replacer = SymbolReplacer({var1: var3})
-        result = replacer.process_symbol(conc)
+        result = pybamm.replace(conc, {var1: var3})
         assert result == pybamm.concatenation(var3, var2)
 
     def test_process_model(self):
@@ -390,15 +423,9 @@ class TestSymbolReplacer:
             "d_var1": d * var1,
         }
 
-        replacer = SymbolReplacer(
-            {
-                pybamm.Parameter("a"): pybamm.Scalar(4),
-                pybamm.Parameter("b"): pybamm.Scalar(2),
-                pybamm.Parameter("c"): pybamm.Scalar(3),
-                pybamm.Parameter("d"): pybamm.Scalar(42),
-            }
+        model = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3, "d": 42}).process_model(
+            model, inplace=False
         )
-        replacer.process_model(model)
 
         var1 = model.variables["var1"]
         assert isinstance(model.rhs[var1], pybamm.Multiplication)

@@ -4,6 +4,7 @@ Expression Tree
 .. toctree::
 
   symbol
+  tree_util
   parameter
   variable
   independent_variable
@@ -12,6 +13,7 @@ Expression Tree
   matrix
   vector
   state_vector
+  vector_field
   binary_operator
   unary_operator
   concatenations

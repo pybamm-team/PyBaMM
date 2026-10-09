@@ -81,3 +81,26 @@ class TestBaseLithiumIonModel:
         assert (
             "Negative electrode primary phase capacity [A.h]" in model.summary_variables
         )
+
+    def test_per_phase_particle_mechanics(self):
+        model = pybamm.lithium_ion.DFN(
+            options={
+                "particle phases": ("2", "1"),
+                "particle mechanics": (
+                    ("swelling and cracking", "swelling only"),
+                    "none",
+                ),
+            }
+        )
+        assert isinstance(
+            model.submodels["negative primaryparticle mechanics"],
+            pybamm.particle_mechanics.CrackPropagation,
+        )
+        assert isinstance(
+            model.submodels["negative secondaryparticle mechanics"],
+            pybamm.particle_mechanics.SwellingOnly,
+        )
+        assert isinstance(
+            model.submodels["positive primaryparticle mechanics"],
+            pybamm.particle_mechanics.NoMechanics,
+        )

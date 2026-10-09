@@ -1,0 +1,134 @@
+# PR half of the bare metal benchmark pipeline: build the benchmark image and hand
+# it off as an artifact. Nothing here needs (or is given) the Bencher API key.
+#
+# `pull_request` runs fork code, so it gets no secrets. benchmarks_track.yml picks
+# the artifact up on `workflow_run` and does the pushing and reporting. The fork's
+# code is only ever executed here (building the image) and inside Bencher's
+# sandboxed runner — never in the trusted context that holds the key.
+name: Benchmarks (PR)
+
+# Drafts are skipped to save Bencher's bandwidth quota
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions: {}
+
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+  FORCE_COLOR: 3
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+    outputs:
+      benchmark: ${{ steps.filter.outputs.benchmark }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            benchmark:
+              - 'packages/pybamm/src/**'
+              - 'packages/pybamm/tests/benchmarks/**'
+              - 'packages/pybamm/conftest.py'
+              - 'packages/pybamm/pyproject.toml'
+              - 'packages/pybammsolvers/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - 'noxfile.py'
+              - '.dockerignore'
+              - '.github/workflows/benchmarks_pr.yml'
+              - '.github/workflows/benchmarks_track.yml'
+
+  build_solver:
+    needs: changes
+    if: needs.changes.outputs.benchmark == 'true'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: true
+      build_sdist: false
+      platforms: '["linux"]'
+      macos_runners: '[]'
+
+  build_image:
+    name: Build benchmark image
+    needs: [changes, build_solver]
+    if: needs.changes.outputs.benchmark == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download in-repo solver wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: wheels_manylinux
+          path: solver-wheels
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
+        with:
+          cache-binary: false
+
+      # Reuse, but don't write, main's layer cache so unchanged layers aren't re-pushed
+      - name: Build benchmark image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: packages/pybamm/tests/benchmarks/Dockerfile
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=benchmark-image
+          outputs: type=oci,dest=benchmark-image.tar,name=pybamm-benchmarks:pr,compression=zstd,compression-level=19,force-compression=true
+
+      # Layers are already zstd-compressed
+      - name: Upload benchmark image
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmark-image
+          path: benchmark-image.tar
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
+      # benchmarks_track.yml runs on `workflow_run`, whose payload describes this
+      # workflow rather than the pull request; it reads the PR refs back from here.
+      - name: Upload pull request event
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-event
+          path: ${{ github.event_path }}
+          if-no-files-found: error
+          retention-days: 1
+
+  # Memory benchmarks assert against fixed memray limits rather than tracking a
+  # series, so they stay on the GitHub runner — bare metal buys them nothing.
+  benchmark_memory:
+    name: Memory benchmarks
+    needs: [changes, build_solver]
+    if: needs.changes.outputs.benchmark == 'true'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: benchmark-memory
+      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'

@@ -36,9 +36,13 @@ jobs:
       solver: ${{ steps.filter.outputs.solver }}
       pybamm: ${{ steps.filter.outputs.pybamm }}
       docs: ${{ steps.filter.outputs.docs }}
+      model_zoo: ${{ steps.filter.outputs.model_zoo }}
       # Routing decisions, resolved once here rather than repeated in every job's `if`.
       run_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
       run_docs_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
+      # A core change runs the zoo too, so an upstream regression shows up here
+      # rather than in a contributor's next pull request.
+      run_zoo_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.model_zoo == 'true' }}
       # Solver-wheel platforms each scenario's downstream jobs actually consume.
       platforms: ${{ steps.route.outputs.platforms }}
       macos_runners: ${{ steps.route.outputs.macos_runners }}
@@ -46,7 +50,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
           filters: |
@@ -65,6 +69,16 @@ jobs:
               - '.github/workflows/_nox.yml'
             docs:
               - 'docs/**'
+            model_zoo:
+              - 'packages/pybamm-model-zoo/**'
+              - '.github/workflows/test_on_push.yml'
+              # Ownership is a contract check, so dropping an owner line has to
+              # run the check that would have caught it.
+              - '.github/CODEOWNERS'
+              # The weekly job consumes the matrix and the docs generator, and
+              # nothing else validates it on a pull request.
+              - '.github/workflows/model_zoo_status.yml'
+              - 'docs/source/model_zoo/**'
 
       # Map "what changed" to the solver wheels to build: solver PRs validate every
       # platform; pybamm/push need the sparse matrix's runners; docs-only needs Linux.
@@ -97,12 +111,21 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # comment-slop compares against the PR base, which the
+      # shallow checkout lacks, and it fails rather than scanning nothing.
+      - name: Fetch the pull request base branch
+        if: github.base_ref != ''
+        run: |
+          git fetch --depth=1 origin \
+            "+refs/heads/$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
+
       - name: Setup Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: 3.12
 
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "latest"
           enable-cache: true
@@ -121,13 +144,14 @@ jobs:
   # old standalone unit/integration workflows.
   build_solver:
     needs: changes
-    if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
+    if: ${{ needs.changes.outputs.run_docs_tests == 'true' || needs.changes.outputs.run_zoo_tests == 'true' }}
+    name: Solver wheels
     # Pass contents:read down to the called workflow (this workflow's top-level
     # permissions are {}, so the reusable workflow's checkout would otherwise
     # get no token scope).
     permissions:
       contents: read
-    uses: ./.github/workflows/_build_solver_wheels.yml
+    uses: $/.github/workflows/_build_solver_wheels.yml
     with:
       cache_wheels: true
       build_sdist: false
@@ -141,12 +165,13 @@ jobs:
   run_unit_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Tests
       sessions: unit
+      texlive: true
       legs: >-
         [{"os": "ubuntu-latest", "python": "3.10"},
          {"os": "ubuntu-latest", "python": "3.11"},
@@ -162,11 +187,11 @@ jobs:
   run_unit_tests_advisory:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Tests
       sessions: unit
       legs: >-
         [{"os": "windows-latest", "python": "3.10"},
@@ -175,25 +200,26 @@ jobs:
   run_coverage:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Coverage
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
-      job_name: Coverage
       sessions: coverage
+      texlive: true
       upload_coverage: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_integration_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Integration tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Integration tests
       sessions: integration
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
@@ -224,7 +250,7 @@ jobs:
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "latest"
           enable-cache: true
@@ -237,11 +263,11 @@ jobs:
   run_doctests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
+    name: Doctests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Doctests
       sessions: "doctests docs"
       # Full clone: the docs build's sphinx_last_updated_by_git needs the history.
       fetch_depth: 0
@@ -250,35 +276,65 @@ jobs:
   run_example_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
+    name: Example notebooks
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Example notebooks
       sessions: examples
+      texlive: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Example scripts
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Example scripts
       sessions: scripts
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_memory_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Memory tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Memory tests
       sessions: memory
-      texlive: false
+      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+
+  # The `core` tier: models the maintainers have adopted, so a failure blocks a
+  # merge exactly as a core test failure would.
+  run_zoo_gating:
+    needs: [changes, build_solver]
+    if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
+    name: Model zoo (core tier)
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: zoo-gating
+      fetch_depth: 0
+      timeout_minutes: 30
+      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+
+  # Advisory like run_unit_tests_advisory above: `community` reports red without
+  # blocking. The gate above covers `core`, so this runs only what it does not.
+  run_zoo_tests_advisory:
+    needs: [changes, build_solver]
+    if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
+    name: Model zoo
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: zoo-community
+      fetch_depth: 0
+      timeout_minutes: 60
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   # Single required check for branch protection. Green when every gated job either
@@ -297,6 +353,7 @@ jobs:
       - run_example_tests
       - run_scripts_tests
       - run_memory_tests
+      - run_zoo_gating
     runs-on: ubuntu-latest
     permissions: {}
     name: CI gate

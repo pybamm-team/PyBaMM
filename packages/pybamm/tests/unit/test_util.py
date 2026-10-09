@@ -13,6 +13,20 @@ from tests import (
 )
 
 
+@pytest.fixture
+def restore_sys_modules():
+    """
+    Put ``sys.modules`` back exactly as it was, so a test that hides or reloads
+    modules cannot leak a stale entry or a second copy of pybamm into later tests.
+    """
+    saved = sys.modules.copy()
+    try:
+        yield
+    finally:
+        sys.modules.clear()
+        sys.modules.update(saved)
+
+
 class TestUtil:
     """
     Test the functionality in util.py
@@ -90,16 +104,15 @@ class TestUtil:
             os.path.join(pybamm.root_dir(), "src", "pybamm", temppath)
         )
 
+    @pytest.mark.usefixtures("restore_sys_modules")
     def test_import_optional_dependency(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
         present_optional_import_deps = get_present_optional_import_deps(
             "pybamm", optional_distribution_deps=optional_distribution_deps
         )
 
-        # Save optional dependencies, then make them not importable
-        modules = {}
+        # Make the optional dependencies not importable
         for import_pkg in present_optional_import_deps:
-            modules[import_pkg] = sys.modules.get(import_pkg)
             sys.modules[import_pkg] = None
 
         # Test import optional dependency
@@ -110,29 +123,22 @@ class TestUtil:
             ):
                 pybamm.util.import_optional_dependency(import_pkg)
 
-        # Restore optional dependencies
-        for import_pkg in present_optional_import_deps:
-            sys.modules[import_pkg] = modules[import_pkg]
-
+    @pytest.mark.usefixtures("restore_sys_modules")
     def test_pybamm_import(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
         present_optional_import_deps = get_present_optional_import_deps(
             "pybamm", optional_distribution_deps=optional_distribution_deps
         )
 
-        # Save optional dependencies and their sub-modules, then make them not importable
-        modules = {}
-        for module_name, module in sys.modules.items():
-            base_module_name = module_name.split(".")[0]
-            if base_module_name in present_optional_import_deps:
-                modules[module_name] = module
+        # Make the optional dependencies and their sub-modules not importable
+        for module_name in list(sys.modules):
+            if module_name.split(".")[0] in present_optional_import_deps:
                 sys.modules[module_name] = None
 
         # Unload pybamm and its sub-modules
-        for module_name in list(sys.modules.keys()):
-            base_module_name = module_name.split(".")[0]
-            if base_module_name == "pybamm":
-                sys.modules.pop(module_name)
+        for module_name in list(sys.modules):
+            if module_name.split(".")[0] == "pybamm":
+                del sys.modules[module_name]
 
         # Test pybamm is still importable
         try:
@@ -141,10 +147,6 @@ class TestUtil:
             pytest.fail(
                 f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
             )
-        finally:
-            # Restore optional dependencies and their sub-modules
-            for module_name, module in modules.items():
-                sys.modules[module_name] = module
 
     def test_optional_dependencies(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")

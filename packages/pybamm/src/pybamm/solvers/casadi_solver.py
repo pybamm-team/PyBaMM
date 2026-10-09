@@ -316,7 +316,7 @@ class CasadiSolver(pybamm.BaseSolver):
                                     message
                                     + " Set `return_solution_if_failed_early=True` to "
                                     "return the solution object up to the point where "
-                                    "failure occured."
+                                    "failure occurred."
                                 ) from error
                 if termination_due_to_small_dt:
                     break

@@ -1,0 +1,22 @@
+# Keep the benchmark image's build context small; solver-wheels/ is deliberately
+# not ignored, the benchmark build installs the prebuilt wheel from there.
+.git
+.github
+.venv
+venv
+.nox
+.tox
+env
+docs
+**/__pycache__
+**/*.pyc
+.benchmarks
+.pytest_cache
+.ruff_cache
+.mypy_cache
+packages/pybammsolvers/SuiteSparse
+packages/pybammsolvers/sundials
+packages/pybammsolvers/wheelhouse
+packages/pybammsolvers/build
+*.json.gz
+results.json

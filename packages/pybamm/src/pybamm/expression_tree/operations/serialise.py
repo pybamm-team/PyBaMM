@@ -44,6 +44,8 @@ def _experiment_step_factories() -> dict:
 
 
 class ExpressionFunctionParameter(pybamm.UnaryOperator):
+    __slots__ = ("func_args", "func_name")
+
     def __init__(self, name, child, func_name, func_args):
         super().__init__(name, child)
         self.func_name = func_name
@@ -116,7 +118,8 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
             elif (
                 isinstance(child, pybamm.Parameter) and child.name not in self.func_args
             ):
-                child.name = f'Parameter("{child.name}")'
+                # set _print_name directly, as for Interpolant above
+                child._print_name = f'Parameter("{child.name}")'
 
         src += f"    return {expression.to_equation()}"
 
@@ -185,6 +188,7 @@ class Serialise:
             "pybamm_version": pybamm.__version__,
             "name": model.name,
             "options": model.options,
+            "convert_to_format": model.convert_to_format,
             "bounds": [bound.tolist() for bound in model.bounds],  # type: ignore[attr-defined]
             "concatenated_rhs": encode(model._concatenated_rhs),
             "concatenated_algebraic": encode(model._concatenated_algebraic),
@@ -268,16 +272,11 @@ class Serialise:
         self, filename: str | dict, battery_model: pybamm.BaseModel | None = None
     ) -> pybamm.BaseModel:
         """
-        Loads a discretised, ready to solve model into PyBaMM.
+        Load a discretised, ready to solve model written out by `save_model()`.
 
-        A new pybamm battery model instance will be created, which can be solved
-        and the results plotted as usual.
-
-        Currently only available for pybamm models which have previously been written
-        out using the `save_model()` option.
-
-        Warning: This only loads in discretised models. If you wish to make edits to the
-        model or initial conditions, a new model will need to be constructed seperately.
+        The model is already discretised, so it can be solved and plotted as usual
+        but not edited; changing the model or its initial conditions means
+        constructing a new model separately.
 
         Parameters
         ----------
@@ -338,6 +337,8 @@ class Serialise:
         recon_model_dict["_solution_observable"] = model_data.get(
             "_solution_observable", False
         )
+        if "convert_to_format" in model_data:
+            recon_model_dict["convert_to_format"] = model_data["convert_to_format"]
 
         if battery_model:
             return battery_model.deserialise(recon_model_dict)
@@ -480,6 +481,7 @@ class Serialise:
             "base_class": base_cls_str,
             "base_class_mro": base_class_mro,
             "options": getattr(model, "options", {}),
+            "convert_to_format": getattr(model, "convert_to_format", "casadi"),
             "rhs": [
                 (
                     convert_symbol_to_json(variable),
@@ -1560,6 +1562,10 @@ class Serialise:
                     f"Failed to convert variable '{variable_name}': {e!s}"
                 ) from e
 
+        model.convert_to_format = model_data.get(
+            "convert_to_format", model.convert_to_format
+        )
+
         # Restore observable state
         model._solution_observable = False
 
@@ -1631,13 +1637,15 @@ class Serialise:
 
     def _deconstruct_pybamm_dicts(self, dct: dict):
         """
-        Converts dictionaries which contain pybamm classes as keys
-        into a json serialisable format.
+        Convert dictionaries which contain pybamm classes as keys into a json
+        serialisable format.
 
-        Dictionary keys present as pybamm objects are given a seperate key
-        as "symbol_<symbol name>" to store the dictionary required to reconstruct
-        a symbol, and their seperate key is used in the original dictionary. E.G:
+        A symbol key gains a separate "symbol_<symbol name>" entry holding the
+        dictionary needed to reconstruct it, and the symbol's name replaces it as
+        the key. Dictionaries which don't contain pybamm symbols are unchanged.
 
+        Examples
+        --------
         {'rod':
             {SpatialVariable(name='spat_var'): {"min":0.0, "max":2.0} }
             }
@@ -1648,8 +1656,6 @@ class Serialise:
         'spat_var':
             {"py/object":pybamm....}
         }
-
-        Dictionaries which don't contain pybamm symbols are returned unchanged.
         """
         from pybamm.expression_tree.operations.serialise_kernel import encode
 

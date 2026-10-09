@@ -16,6 +16,7 @@ PyBaMM documentation
    User Guide <source/user_guide/index>
    source/api/index
    source/examples/index
+   Model Zoo <source/model_zoo/index>
    Contributing <source/user_guide/contributing>
 
 **Version**: |version|

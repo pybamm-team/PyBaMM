@@ -37,6 +37,10 @@ class StateVectorBase(pybamm.Symbol):
         evaluation_array is computed from y_slices.
     """
 
+    __slots__ = ("_evaluation_array", "_first_point", "_last_point", "_y_slices")
+    # the evaluation array determines the slices and end points
+    _id_excluded_fields = ("_y_slices", "_first_point", "_last_point")
+
     def __init__(
         self,
         *y_slices: slice,
@@ -66,7 +70,7 @@ class StateVectorBase(pybamm.Symbol):
         self._y_slices = y_slices
         self._first_point = y_slices[0].start
         self._last_point = y_slices[-1].stop
-        self.set_evaluation_array(y_slices, evaluation_array)
+        self._evaluation_array = self._make_evaluation_array(y_slices, evaluation_array)
         super().__init__(
             name=name,
             domain=domain,
@@ -107,25 +111,27 @@ class StateVectorBase(pybamm.Symbol):
         return self.evaluation_array.count(True)
 
     def set_evaluation_array(self, y_slices, evaluation_array):
-        """Set evaluation array using slices."""
-        if evaluation_array is not None and pybamm.settings.debug_mode is False:
-            self._evaluation_array = evaluation_array
-        else:
-            array = np.zeros(y_slices[-1].stop)
-            for y_slice in y_slices:
-                array[y_slice] = True
-            self._evaluation_array = [bool(x) for x in array]
-
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`"""
-        self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                tuple(self.evaluation_array),
-                *tuple(self.domain),
-            )
+        """Set evaluation array using slices (deprecated)."""
+        pybamm.expression_tree.symbol._warn_mutation(
+            "set_evaluation_array",
+            "Construct a new StateVector with the desired slices.",
         )
+        object.__setattr__(
+            self,
+            "_evaluation_array",
+            self._make_evaluation_array(y_slices, evaluation_array),
+        )
+
+    @staticmethod
+    def _make_evaluation_array(y_slices, evaluation_array) -> list[bool]:
+        """The evaluation array: ``evaluation_array`` if given, else computed from
+        the slices."""
+        if evaluation_array is not None and pybamm.settings.debug_mode is False:
+            return evaluation_array
+        array = np.zeros(y_slices[-1].stop)
+        for y_slice in y_slices:
+            array[y_slice] = True
+        return [bool(x) for x in array]
 
     def _jac_diff_vector(self, variable: pybamm.StateVectorBase):
         """
@@ -199,10 +205,10 @@ class StateVectorBase(pybamm.Symbol):
         perform_simplifications=True,
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return StateVector(
+        return self.__class__(
             *self.y_slices,
             name=self.name,
-            domains=self.domains,
+            domains=self._domains,
             evaluation_array=self.evaluation_array,
         )
 
@@ -261,6 +267,8 @@ class StateVector(StateVectorBase):
         evaluation_array is computed from y_slices.
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         *y_slices: slice,
@@ -307,7 +315,7 @@ class StateVector(StateVectorBase):
             return StateVectorDot(
                 *self._y_slices,
                 name=self.name + "'",
-                domains=self.domains,
+                domains=self._domains,
                 evaluation_array=self.evaluation_array,
             )
         else:
@@ -350,6 +358,8 @@ class StateVectorDot(StateVectorBase):
         List of boolean arrays representing slices. Default is None, in which case the
         evaluation_array is computed from y_slices.
     """
+
+    __slots__ = ()
 
     def __init__(
         self,

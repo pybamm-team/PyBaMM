@@ -1,13 +1,37 @@
-import bisect
+import functools
+import warnings
 
-import casadi
 import numpy as np
 import xarray as xr
-from pybammsolvers import idaklu
 
 import pybamm
+from pybamm.solvers.variable_observer import as_observer
 
 from .base_processed_variable import BaseProcessedVariable
+
+
+def _deprecated_leaves_keyword(init):
+    """Accept the deprecated ``base_variables_casadi`` keyword as ``observer``."""
+
+    @functools.wraps(init)
+    def wrapper(self, *args, **kwargs):
+        if "base_variables_casadi" in kwargs:
+            if "observer" in kwargs or len(args) > 2:
+                raise TypeError(
+                    "Pass the CasADi functions once, as `observer` (not also as "
+                    "`base_variables_casadi`)."
+                )
+            warnings.warn(
+                "The `base_variables_casadi` argument is deprecated and will be "
+                "removed in a future release; pass the CasADi functions as "
+                "`observer` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            kwargs["observer"] = kwargs.pop("base_variables_casadi")
+        return init(self, *args, **kwargs)
+
+    return wrapper
 
 
 class ProcessedVariable(BaseProcessedVariable):
@@ -27,35 +51,36 @@ class ProcessedVariable(BaseProcessedVariable):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variables_casadi : list of :class:`casadi.Function`
-        A list of casadi functions. When evaluated, returns the same thing as
-        `base_Variable.evaluate` (but more efficiently).
+    observer : :class:`pybamm.solvers.variable_observer.VariableObserver`
+        Evaluates the variable's per-sub-solution leaves. A bare list of
+        :class:`casadi.Function` is accepted and wrapped in a
+        :class:`CasadiObserver`, one function per sub-solution. Passing it as
+        ``base_variables_casadi`` is deprecated.
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
     time_integral : :class:`pybamm.ProcessedVariableTimeIntegral`, optional
         Not none if the variable is to be time-integrated (default is None)
     """
 
+    @_deprecated_leaves_keyword
     def __init__(
         self,
         name: str,
         base_variables,
-        base_variables_casadi,
+        observer,
         solution,
         time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
         self._name = name
         self.base_variables = base_variables
-        self.base_variables_casadi = base_variables_casadi
+        self._observer = as_observer(observer)
 
         self.all_ts = solution.all_ts
         self.all_ys = solution.all_ys
         self.all_yps = solution.all_yps
         self.all_inputs = solution.all_inputs
         self.all_inputs_stacked = solution.all_inputs_stacked
-        self.sensitivity_names = [
-            name for name in solution._all_sensitivities if name != "all"
-        ]
+        self.sensitivity_names = solution.sensitivity_names
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
@@ -86,6 +111,25 @@ class ProcessedVariable(BaseProcessedVariable):
         self._entries_raw = None
         self._entries_for_interp_raw = None
         self._coords_raw = None
+
+    def __setstate__(self, state):
+        state = dict(state)
+        # Pickled before observers existed: the leaves are a bare attribute.
+        leaves = state.pop("base_variables_casadi", None)
+        if "_observer" not in state:
+            state["_observer"] = as_observer(leaves)
+        self.__dict__.update(state)
+
+    @property
+    def base_variables_casadi(self):
+        """The per-sub-solution CasADi functions (deprecated)."""
+        warnings.warn(
+            "`ProcessedVariable.base_variables_casadi` is deprecated and will be "
+            "removed in a future release; evaluate the variable by calling it.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._observer.leaves
 
     def initialise(self):
         if self.entries_raw_initialized:
@@ -124,67 +168,11 @@ class ProcessedVariable(BaseProcessedVariable):
         t = self.t_pts
         return self._observe_postfix(self._observe_raw(), t)
 
-    def _setup_inputs(self, t, full_range):
-        pybamm.logger.debug("Setting up C++ interpolation inputs")
-
-        ts = self.all_ts
-        ys = self.all_ys
-        yps = self.all_yps
-        inputs = self.all_inputs_stacked
-
-        # Remove all empty ts
-        idxs = np.where([ti.size > 0 for ti in ts])[0]
-
-        # Find the indices of the time points to observe
-        if not full_range:
-            ts_nonempty = [ts[idx] for idx in idxs]
-            idxs_subset = _find_ts_indices(ts_nonempty, t)
-            idxs = idxs[idxs_subset]
-
-        # Extract the time points and inputs
-        ts = [ts[idx] for idx in idxs]
-        ys = [ys[idx] for idx in idxs]
-        if self.hermite_interpolation:
-            yps = [yps[idx] for idx in idxs]
-        inputs = [inputs[idx] for idx in idxs]
-
-        is_f_contiguous = _is_f_contiguous(ys)
-
-        ts = idaklu.VectorRealtypeNdArray(ts)
-        ys = idaklu.VectorRealtypeNdArray(ys)
-        if self.hermite_interpolation:
-            yps = idaklu.VectorRealtypeNdArray(yps)
-        else:
-            yps = None
-        inputs = idaklu.VectorRealtypeNdArray(inputs)
-
-        # Generate the serialized C++ functions only once
-        funcs_unique = {}
-        funcs = [None] * len(idxs)
-        for i in range(len(idxs)):
-            vars = self.base_variables_casadi[idxs[i]]
-            if vars not in funcs_unique:
-                funcs_unique[vars] = vars.serialize()
-            funcs[i] = funcs_unique[vars]
-
-        return ts, ys, yps, funcs, inputs, is_f_contiguous
+    def _observe_raw(self):
+        return self._observer.observe_raw(self)
 
     def _observe_hermite(self, t):
-        pybamm.logger.debug("Observing and Hermite interpolating the variable")
-
-        ts, ys, yps, funcs, inputs, _ = self._setup_inputs(t, full_range=False)
-        shapes = self._shape(t)
-        return idaklu.observe_hermite_interp(t, ts, ys, yps, inputs, funcs, shapes)
-
-    def _observe_raw(self):
-        pybamm.logger.debug("Observing the variable raw data")
-        t = self.t_pts
-        ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_inputs(
-            t, full_range=True
-        )
-        shapes = self._shape(self.t_pts)
-
-        return idaklu.observe(ts, ys, inputs, funcs, is_f_contiguous, shapes)
+        return self._observer.observe_hermite(self, t)
 
     def _observe_postfix(self, entries, t):
         return entries
@@ -284,7 +272,8 @@ class ProcessedVariable(BaseProcessedVariable):
         else:
             processed_entries = entries
 
-        if not is_sorted:
+        # Only the Hermite route sorts t; the xarray route keeps the caller's order
+        if not is_sorted and hermite_time_interp:
             idxs_unsort = np.empty_like(idxs_sort)
             idxs_unsort[idxs_sort] = np.arange(len(t_observe))
 
@@ -420,83 +409,7 @@ class ProcessedVariable(BaseProcessedVariable):
 
     def initialise_sensitivity_explicit_forward(self):
         "Set up the sensitivity dictionary"
-
-        all_S_var = []
-        for ts, ys, inputs, base_variable, dy_dp in zip(
-            self.all_ts,
-            self.all_ys,
-            self.all_inputs,
-            self.base_variables,
-            self.all_solution_sensitivities["all"],
-            strict=True,
-        ):
-            sensitivity_inputs = {
-                name: inputs[name] for name in self.sensitivity_names if name in inputs
-            }
-            sensitivity_inputs_stacked = casadi.vertcat(
-                *[sensitivity_inputs[name] for name in self.sensitivity_names]
-            )
-
-            # Set up symbolic variables
-            t_casadi = casadi.MX.sym("t")
-            y_casadi = casadi.MX.sym("y", ys.shape[0])
-            p_casadi = {
-                name: casadi.MX.sym(name, value.shape[0])
-                for name, value in sensitivity_inputs.items()
-            }
-
-            p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
-
-            # Symbolic for sensitivity targets, concrete for the rest. Non-target
-            # inputs may still appear in the expression tree (e.g. from
-            # experiment steps) so they must be present for casadi conversion.
-            inputs_for_casadi = {**inputs, **p_casadi}
-
-            var_casadi = base_variable.to_casadi(
-                t_casadi, y_casadi, inputs=inputs_for_casadi
-            )
-            dvar_dy = casadi.jacobian(var_casadi, y_casadi)
-            dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
-
-            # Convert to functions and evaluate index-by-index
-            dvar_dy_func = casadi.Function(
-                "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
-            )
-            dvar_dp_func = casadi.Function(
-                "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
-            )
-            dvar_dy_eval = casadi.diagcat(
-                *[
-                    dvar_dy_func(t, ys[:, idx], sensitivity_inputs_stacked)
-                    for idx, t in enumerate(ts)
-                ]
-            )
-            dvar_dp_eval = casadi.vertcat(
-                *[
-                    dvar_dp_func(t, ys[:, idx], sensitivity_inputs_stacked)
-                    for idx, t in enumerate(ts)
-                ]
-            )
-
-            # Compute sensitivity
-            S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
-
-            if self.time_integral is not None:
-                S_var = self.time_integral.postfix_sensitivities(
-                    self._name, self.data, ts, inputs, S_var
-                )
-
-            all_S_var.append(S_var)
-
-        S_var = np.vstack(all_S_var)
-        sensitivities = {"all": S_var}
-
-        # Add the individual sensitivity
-        for i, name in enumerate(self.sensitivity_names):
-            sensitivities[name] = S_var[:, i : i + 1].reshape(-1)
-
-        # Save attribute
-        self._sensitivities = sensitivities
+        self._sensitivities = self._observer.sensitivities(self)
 
     def _is_discrete_time_method(self):
         """Check if using discrete time integral method"""
@@ -545,17 +458,25 @@ class ProcessedVariable(BaseProcessedVariable):
                 self.t_pts,
             )
 
-        entries = self.entries  # shape: (..., n_t)
-
-        # Move time to axis 0, then flatten spatial dims per timestep
-        reshaped = np.moveaxis(entries, -1, 0)  # shape: (n_t, ...)
-        base_data = [reshaped.reshape(reshaped.shape[0], -1)]  # (n_t, n_vars)
+        if self.time_integral is None:
+            # Rows as an output_variables solve returns them: before per-class reordering
+            observed = self._observe_raw()
+            base_data = [observed.reshape(-1, len(self.t_pts), order="F").T]
+        elif isinstance(self, ProcessedVariable0D):
+            # output_variables stores a time integral as its single summed value
+            base_data = [self.entries]
+        else:
+            raise NotImplementedError(
+                f"Variable {self._name!r}: as_computed() does not support time "
+                "integrals of spatially varying variables."
+            )
 
         cpv = pybamm.ProcessedVariableComputed(
             self.base_variables,
-            self.base_variables_casadi,
+            self._observer.leaves,
             base_data,
             _stub_solution(self),
+            time_integral=self.time_integral,
         )
 
         # add sensitivities if they exist
@@ -566,11 +487,12 @@ class ProcessedVariable(BaseProcessedVariable):
 
 
 class ProcessedVariable0D(ProcessedVariable):
+    @_deprecated_leaves_keyword
     def __init__(
         self,
         name: str,
         base_variables,
-        base_variables_casadi,
+        observer,
         solution,
         time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
@@ -578,7 +500,7 @@ class ProcessedVariable0D(ProcessedVariable):
         super().__init__(
             name,
             base_variables,
-            base_variables_casadi,
+            observer,
             solution,
             time_integral=time_integral,
         )
@@ -618,18 +540,19 @@ class ProcessedVariable1D(ProcessedVariable):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variables_casadi : list of :class:`casadi.Function`
-        A list of casadi functions. When evaluated, returns the same thing as
-        `base_Variable.evaluate` (but more efficiently).
+    observer : :class:`pybamm.solvers.variable_observer.VariableObserver`
+        Evaluates the variable's per-sub-solution leaves; a list of
+        :class:`casadi.Function` is also accepted.
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
     """
 
+    @_deprecated_leaves_keyword
     def __init__(
         self,
         name: str,
         base_variables,
-        base_variables_casadi,
+        observer,
         solution,
         time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
@@ -637,7 +560,7 @@ class ProcessedVariable1D(ProcessedVariable):
         super().__init__(
             name,
             base_variables,
-            base_variables_casadi,
+            observer,
             solution,
             time_integral=time_integral,
         )
@@ -703,18 +626,19 @@ class ProcessedVariable2D(ProcessedVariable):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variables_casadi : list of :class:`casadi.Function`
-        A list of casadi functions. When evaluated, returns the same thing as
-        `base_Variable.evaluate` (but more efficiently).
+    observer : :class:`pybamm.solvers.variable_observer.VariableObserver`
+        Evaluates the variable's per-sub-solution leaves; a list of
+        :class:`casadi.Function` is also accepted.
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
     """
 
+    @_deprecated_leaves_keyword
     def __init__(
         self,
         name: str,
         base_variables,
-        base_variables_casadi,
+        observer,
         solution,
         time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
@@ -722,7 +646,7 @@ class ProcessedVariable2D(ProcessedVariable):
         super().__init__(
             name,
             base_variables,
-            base_variables_casadi,
+            observer,
             solution,
             time_integral=time_integral,
         )
@@ -849,18 +773,19 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variables_casadi : list of :class:`casadi.Function`
-        A list of casadi functions. When evaluated, returns the same thing as
-        `base_Variable.evaluate` (but more efficiently).
+    observer : :class:`pybamm.solvers.variable_observer.VariableObserver`
+        Evaluates the variable's per-sub-solution leaves; a list of
+        :class:`casadi.Function` is also accepted.
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
     """
 
+    @_deprecated_leaves_keyword
     def __init__(
         self,
         name: str,
         base_variables,
-        base_variables_casadi,
+        observer,
         solution,
         time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
@@ -868,7 +793,7 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         super(ProcessedVariable2D, self).__init__(
             name,
             base_variables,
-            base_variables_casadi,
+            observer,
             solution,
             time_integral=time_integral,
         )
@@ -902,11 +827,12 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
 
 
 class ProcessedVariable2DFVM(ProcessedVariable):
+    @_deprecated_leaves_keyword
     def __init__(
         self,
         name: str,
         base_variables,
-        base_variables_casadi,
+        observer,
         solution,
         time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
@@ -914,7 +840,7 @@ class ProcessedVariable2DFVM(ProcessedVariable):
         super().__init__(
             name,
             base_variables,
-            base_variables_casadi,
+            observer,
             solution,
             time_integral=time_integral,
         )
@@ -966,6 +892,268 @@ class ProcessedVariable2DFVM(ProcessedVariable):
         return [self.first_dim_size, self.second_dim_size, len(t)]
 
 
+class ProcessedVariableUnstructuredFVM(ProcessedVariable):
+    """
+    Processed variable for cell-centered data on an unstructured mesh
+    (triangles, quads in 2D; tetrahedra in 3D).
+
+    Spatial interpolation uses ``scipy.interpolate.LinearNDInterpolator``
+    on cell centroids; query it at arbitrary points with ``pv(t, x=, y=, z=)``.
+    """
+
+    @_deprecated_leaves_keyword
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        observer,
+        solution,
+        time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
+    ):
+        mesh = base_variables[0].mesh
+        if base_variables[0].size != mesh.npts:
+            raise NotImplementedError(
+                "Post-processing of unstructured-mesh variables with "
+                f"auxiliary domains is not yet supported: variable {name!r} "
+                f"has {base_variables[0].size} entries but the mesh has "
+                f"{mesh.npts} cells."
+            )
+        if time_integral is not None:
+            # silently returning the integrand would be wrong; the postfix
+            # sum assumes time on axis 0, which only holds for 0D variables
+            raise NotImplementedError(
+                "Time integrals of unstructured-mesh variables are not yet supported."
+            )
+        self.dimensions = 3 if mesh.dimension == 3 else 2
+        super().__init__(
+            name,
+            base_variables,
+            observer,
+            solution,
+            time_integral=time_integral,
+        )
+        self._time_interpolator = None
+        self.internal_boundaries = []
+
+    def _shape(self, t):
+        return [self.mesh.npts, len(t)]
+
+    def initialise(self):
+        if self.entries_raw_initialized:
+            return
+        self._entries_raw = self.observe_raw()
+
+        from scipy.interpolate import interp1d
+
+        self._time_interpolator = interp1d(
+            self.t_pts,
+            self._entries_raw,
+            kind="linear",
+            axis=1,
+            bounds_error=False,
+            fill_value="extrapolate",
+        )
+
+    def _augmented_points(self):
+        """Return the interpolation point cloud (cell centroids + boundary
+        face centroids) and the index array for mapping cell values to
+        boundary face values.  Cached after first call."""
+        if not hasattr(self, "_aug_pts"):
+            mesh = self.mesh
+            bnd_start = mesh._boundary_face_start
+            bnd_centroids = mesh.face_centroids[bnd_start:]
+            self._aug_pts = np.concatenate([mesh.cell_centroids, bnd_centroids], axis=0)
+            self._aug_bnd_owners = mesh.face_owner[bnd_start:]
+        return self._aug_pts, self._aug_bnd_owners
+
+    def _get_triangulation(self):
+        """Return a cached Delaunay triangulation of the augmented point cloud."""
+        if not hasattr(self, "_cached_tri"):
+            from scipy.spatial import Delaunay
+
+            pts, _ = self._augmented_points()
+            self._cached_tri = Delaunay(pts)
+        return self._cached_tri
+
+    def _get_boundary_mask(self, query_pts):
+        """Boolean mask of query points outside the domain, or ``None`` when
+        the mesh cannot decide (2D mesh without boundary edges)."""
+        inside = self.mesh.contains_points(query_pts)
+        return None if inside is None else ~inside
+
+    def _interpolate_spatial(self, values, query_pts, fill_value=np.nan):
+        """Interpolate cell-centered data to query points.
+
+        ``values`` has one entry per cell and, optionally, one column per
+        time step; all columns are interpolated in a single pass, so the
+        nearest-neighbour tree and boundary mask are built once rather
+        than per time step.  Points outside the domain are set to
+        ``fill_value``.  NaNs in ``values`` propagate to the output.
+        """
+        from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+
+        pts, bnd_owners = self._augmented_points()
+        vals = np.concatenate([values, values[bnd_owners]])
+
+        tri = self._get_triangulation()
+        linear = LinearNDInterpolator(tri, vals)
+        result = linear(query_pts)
+
+        # A query point outside the convex hull is NaN in every column
+        # (it is a location property), so whole rows are nearest-filled;
+        # requiring all columns avoids clobbering valid columns when the
+        # input itself contains NaNs. Points outside the domain get
+        # fill_value instead, so they are excluded before the (costly)
+        # nearest-neighbour fill rather than filled and then overwritten.
+        outside = self._get_boundary_mask(query_pts)
+        mask = np.isnan(result)
+        if result.ndim == 2:
+            mask = mask.all(axis=1)
+        if outside is not None:
+            mask &= ~outside
+        if np.any(mask):
+            nearest = NearestNDInterpolator(pts, vals)
+            result[mask] = nearest(query_pts[mask])
+        if outside is not None:
+            result[outside] = fill_value
+
+        return result
+
+    def _data_at_time(self, t):
+        """Return cell-centered data at time t."""
+        self.initialise()
+        t_observe, observe_raw = self._check_observe_raw(t)
+        if observe_raw:
+            return self._entries_raw
+        return self._time_interpolator(t_observe)
+
+    def __call__(
+        self, t=None, x=None, r=None, y=None, z=None, R=None, fill_value=np.nan
+    ):
+        if r is not None or R is not None:
+            raise ValueError(
+                f"Variable {self._name!r} is on an unstructured mesh, which "
+                "has no r or R coordinates."
+            )
+        if y is not None and self.mesh.dimension == 2:
+            raise ValueError(
+                f"Variable {self._name!r} is on a 2D unstructured mesh, which "
+                "has no y coordinate; its in-plane coordinates are x and z."
+            )
+        data_at_t = self._data_at_time(t)
+        scalar_t = t is not None and np.ndim(t) == 0
+
+        spatial_provided = any(c is not None for c in [x, y, z])
+        if not spatial_provided:
+            return data_at_t
+
+        nodes = self.mesh.vertices
+
+        def coord(values, axis):
+            if values is not None:
+                return np.asarray(values).ravel()
+            # a missing coordinate defaults to the domain midplane
+            return np.array([0.5 * (nodes[:, axis].min() + nodes[:, axis].max())])
+
+        if self.mesh.dimension == 2:
+            axes = [coord(x, 0), coord(z, 1)]
+        else:
+            axes = [coord(x, 0), coord(y, 1), coord(z, 2)]
+        grid = np.meshgrid(*axes, indexing="ij")
+        query = np.column_stack([g.ravel() for g in grid])
+        out_shape = grid[0].shape
+
+        if data_at_t.ndim == 1:
+            data_at_t = data_at_t[:, np.newaxis]
+        n_t = data_at_t.shape[1]
+        result = self._interpolate_spatial(
+            data_at_t, query, fill_value=fill_value
+        ).reshape(*out_shape, n_t)
+
+        # scalar t drops the time axis; array-valued t (any length) keeps it
+        if scalar_t:
+            result = result[..., 0]
+
+        return result
+
+
+class ProcessedVariableVectorFieldUnstructuredFVM:
+    """
+    Processed variable for a VectorField on an unstructured mesh.
+
+    Wraps N scalar ``ProcessedVariableUnstructuredFVM`` instances (one per
+    component) and provides a unified interface for querying vector-valued
+    data.
+    """
+
+    @_deprecated_leaves_keyword
+    def __init__(
+        self,
+        name: str,
+        base_variables,
+        observer,
+        solution,
+        time_integral=None,
+    ):
+        vf = base_variables[0]
+
+        self.name = name
+        self.mesh = vf.mesh
+        self.domain = vf.domain
+        self.is_vector_field = True
+        self.n_components = vf.n_components
+        self.internal_boundaries = []
+
+        self._component_vars = []
+        leaves = as_observer(observer).leaves
+        for k in range(vf.n_components):
+            comp_base_k = [bv.components[k] for bv in base_variables]
+            comp_casadi_k = []
+            for bvc in leaves:
+                if isinstance(bvc, list):
+                    comp_casadi_k.append(bvc[k])
+                elif isinstance(bvc, pybamm.VectorField):
+                    comp_casadi_k.append(bvc.components[k])
+                else:
+                    comp_casadi_k.append(bvc)
+            pv = ProcessedVariableUnstructuredFVM(
+                f"{name}[{k}]",
+                comp_base_k,
+                comp_casadi_k,
+                solution,
+                time_integral=time_integral,
+            )
+            self._component_vars.append(pv)
+
+        self.dimensions = self._component_vars[0].dimensions
+
+    @property
+    def entries(self):
+        """Tuple of per-component entry arrays."""
+        return tuple(pv.entries for pv in self._component_vars)
+
+    @property
+    def data(self):
+        """Tuple of per-component data arrays."""
+        return tuple(pv.data for pv in self._component_vars)
+
+    def update(self, other, new_sol):
+        raise NotImplementedError(
+            f"Variable {self.name!r}: vector-valued output_variables cannot "
+            "yet be merged across solution segments (multi-step experiments "
+            "or solution addition). Post-process the components separately."
+        )
+
+    def __call__(
+        self, t=None, x=None, r=None, y=None, z=None, R=None, fill_value=np.nan
+    ):
+        """Return a tuple of arrays, one per component."""
+        return tuple(
+            pv(t=t, x=x, r=r, y=y, z=z, R=R, fill_value=fill_value)
+            for pv in self._component_vars
+        )
+
+
 class ProcessedVariableRawFVM(ProcessedVariable):
     def _shape(self, t):
         return [self.base_variables[0].size, len(t)]
@@ -994,18 +1182,19 @@ class ProcessedVariable3D(ProcessedVariable):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variables_casadi : list of :class:`casadi.Function`
-        A list of casadi functions. When evaluated, returns the same thing as
-        `base_Variable.evaluate` (but more efficiently).
+    observer : :class:`pybamm.solvers.variable_observer.VariableObserver`
+        Evaluates the variable's per-sub-solution leaves; a list of
+        :class:`casadi.Function` is also accepted.
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
     """
 
+    @_deprecated_leaves_keyword
     def __init__(
         self,
         name: str,
         base_variables,
-        base_variables_casadi,
+        observer,
         solution,
         time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
@@ -1013,7 +1202,7 @@ class ProcessedVariable3D(ProcessedVariable):
         super().__init__(
             name,
             base_variables,
-            base_variables_casadi,
+            observer,
             solution,
             time_integral=time_integral,
         )
@@ -1189,18 +1378,19 @@ class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variables_casadi : list of :class:`casadi.Function`
-        A list of casadi functions. When evaluated, returns the same thing as
-        `base_Variable.evaluate` (but more efficiently).
+    observer : :class:`pybamm.solvers.variable_observer.VariableObserver`
+        Evaluates the variable's per-sub-solution leaves; a list of
+        :class:`casadi.Function` is also accepted.
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
     """
 
+    @_deprecated_leaves_keyword
     def __init__(
         self,
         name: str,
         base_variables,
-        base_variables_casadi,
+        observer,
         solution,
         time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
@@ -1208,7 +1398,7 @@ class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
         super(ProcessedVariable3D, self).__init__(
             name,
             base_variables,
-            base_variables_casadi,
+            observer,
             solution,
             time_integral=time_integral,
         )
@@ -1280,9 +1470,9 @@ class ProcessedVariableUnstructured(ProcessedVariable):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variables_casadi : list of :class:`casadi.Function`
-        A list of casadi functions. When evaluated, returns the same thing as
-        `base_Variable.evaluate` (but more efficiently).
+    observer : :class:`pybamm.solvers.variable_observer.VariableObserver`
+        Evaluates the variable's per-sub-solution leaves; a list of
+        :class:`casadi.Function` is also accepted.
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
     time_integral : pybamm.ProcessedVariableTimeIntegral, optional
@@ -1290,11 +1480,12 @@ class ProcessedVariableUnstructured(ProcessedVariable):
         If provided, the processed variable will handle time integration using this object.
     """
 
+    @_deprecated_leaves_keyword
     def __init__(
         self,
         name: str,
         base_variables,
-        base_variables_casadi,
+        observer,
         solution,
         time_integral: pybamm.ProcessedVariableTimeIntegral | None = None,
     ):
@@ -1302,7 +1493,7 @@ class ProcessedVariableUnstructured(ProcessedVariable):
         super().__init__(
             name,
             base_variables,
-            base_variables_casadi,
+            observer,
             solution,
             time_integral=time_integral,
         )
@@ -1395,6 +1586,20 @@ def process_variable(name: str, base_variables, *args, **kwargs):
             )
         return ProcessedVariable2DFVM(name, base_variables, *args, **kwargs)
 
+    if isinstance(mesh, pybamm.UnstructuredSubMesh):
+        if isinstance(base_variables[0], pybamm.VectorField):
+            return ProcessedVariableVectorFieldUnstructuredFVM(
+                name, base_variables, *args, **kwargs
+            )
+        # Scalar reductions (e.g. Max/Min) keep the spatial domain but
+        # evaluate to a single value, so they are 0D in space. A one-cell
+        # mesh is also size 1, hence the cell-count check takes precedence.
+        if base_eval_size != mesh.npts and (
+            len(base_eval_shape) == 0 or base_eval_shape[0] == 1
+        ):
+            return ProcessedVariable0D(name, base_variables, *args, **kwargs)
+        return ProcessedVariableUnstructuredFVM(name, base_variables, *args, **kwargs)
+
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
         return ProcessedVariable0D(name, base_variables, *args, **kwargs)
@@ -1434,20 +1639,6 @@ def process_variable(name: str, base_variables, *args, **kwargs):
     raise NotImplementedError(f"Shape not recognized for {base_variables[0]}")
 
 
-def _is_f_contiguous(all_ys):
-    """
-    Check if all the ys are f-contiguous in memory
-
-    Args:
-        all_ys (list of np.ndarray): list of all ys
-
-    Returns:
-        bool: True if all ys are f-contiguous
-    """
-
-    return all(isinstance(y, np.ndarray) and y.data.f_contiguous for y in all_ys)
-
-
 def _is_sorted(t):
     """
     Check if an array is sorted
@@ -1459,39 +1650,3 @@ def _is_sorted(t):
         bool: True if array is sorted
     """
     return np.all(t[:-1] <= t[1:])
-
-
-def _find_ts_indices(ts, t):
-    """
-    Parameters:
-    - ts: A list of numpy arrays (each sorted) whose values are successively increasing.
-    - t: A sorted list or array of values to find within ts.
-
-    Returns:
-    - indices: A list of indices from `ts` such that at least one value of `t` falls within ts[idx].
-    """
-
-    indices = []
-
-    # Get the minimum and maximum values of the target values `t`
-    t_min, t_max = t[0], t[-1]
-
-    # Step 1: Use binary search to find the range of `ts` arrays where t_min and t_max could lie
-    low_idx = bisect.bisect_left([ts_arr[-1] for ts_arr in ts], t_min)
-    high_idx = bisect.bisect_right([ts_arr[0] for ts_arr in ts], t_max)
-
-    # Step 2: Iterate over the identified range
-    for idx in range(low_idx, high_idx):
-        ts_min, ts_max = ts[idx][0], ts[idx][-1]
-
-        # Binary search within `t` to check if any value falls within [ts_min, ts_max]
-        i = bisect.bisect_left(t, ts_min)
-        if i < len(t) and t[i] <= ts_max:
-            # At least one value of t is within ts[idx]
-            indices.append(idx)
-
-    # extrapolating
-    if (t[-1] > ts[-1][-1]) and (len(indices) == 0 or indices[-1] != len(ts) - 1):
-        indices.append(len(ts) - 1)
-
-    return indices

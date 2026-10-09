@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import numbers
 import pickle
-from functools import cached_property
+from dataclasses import astuple, dataclass
 from itertools import chain
 
 import casadi
@@ -16,6 +16,8 @@ from scipy.io import savemat
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import flatten_inputs
+from pybamm.solvers.observation import build_variable
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -32,6 +34,61 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
+@dataclass(frozen=True, slots=True)
+class SolverStatistics:
+    """Counts of the work an integrator did to produce a solution.
+
+    Attributes
+    ----------
+    number_of_steps : int
+        Internal time steps taken.
+    number_of_linear_solver_setups : int
+        Calls to the linear solver setup, such as Jacobian factorisations.
+    number_of_nonlinear_solver_iterations : int
+        Iterations of the nonlinear (Newton) solver.
+    number_of_nonlinear_solver_fails : int
+        Convergence failures of the nonlinear solver.
+    number_of_error_test_failures : int
+        Steps rejected by the local error test.
+    """
+
+    number_of_steps: int = 0
+    number_of_linear_solver_setups: int = 0
+    number_of_nonlinear_solver_iterations: int = 0
+    number_of_nonlinear_solver_fails: int = 0
+    number_of_error_test_failures: int = 0
+
+    def __add__(self, other: SolverStatistics) -> SolverStatistics:
+        if not isinstance(other, SolverStatistics):
+            return NotImplemented
+        return SolverStatistics(
+            *(a + b for a, b in zip(astuple(self), astuple(other), strict=True))
+        )
+
+
+# Shared by every first and last state, which do no solver work
+_NO_SOLVER_STATISTICS = SolverStatistics()
+
+
+def _sum_solver_statistics(solutions) -> SolverStatistics | None:
+    """Total the solver statistics of ``solutions``.
+
+    Parameters
+    ----------
+    solutions : list of :class:`pybamm.Solution`
+        The solutions whose statistics are summed.
+
+    Returns
+    -------
+    :class:`pybamm.SolverStatistics` or None
+        The field-wise sum, or None if any solution has no statistics.
+    """
+    statistics = [solution.solver_statistics for solution in solutions]
+    if any(stats is None for stats in statistics):
+        return None
+    return sum(statistics[1:], statistics[0])
+
+
 class SolutionBase:
     """Base class for all PyBaMM solution types (time-series and EIS).
 
@@ -40,10 +97,38 @@ class SolutionBase:
     across solution types.
     """
 
+    # An experiment keeps several solutions per step, so solutions have no
+    # __dict__; set_up_time and solve_time are set by solvers and simulations
+    __slots__ = ("__weakref__", "_data", "set_up_time", "solve_time")
+
     def __init__(self):
         self.set_up_time = None
         self.solve_time = None
         self._data = pybamm.FuzzyDict()
+
+    def __setstate__(self, state: dict | tuple) -> None:
+        """Restore a pickled solution.
+
+        Parameters
+        ----------
+        state : dict or tuple
+            The ``(instance dict, slots)`` pair a solution pickles, or the
+            single dict of a solution pickled before solutions had slots.
+        """
+        if isinstance(state, tuple):
+            instance_state, slot_state = state
+            state = {**(instance_state or {}), **(slot_state or {})}
+        dropped = []
+        for name, value in state.items():
+            try:
+                setattr(self, name, value)
+            except AttributeError:
+                dropped.append(name)
+        if dropped:
+            pybamm.logger.warning(
+                f"Dropped attributes {dropped} that {type(self).__name__} "
+                "does not define when loading a pickled solution"
+            )
 
     def __getitem__(self, key):
         """Access a variable by name."""
@@ -127,6 +212,8 @@ class EISSolution(SolutionBase):
         Complex impedance values at each frequency.
     """
 
+    __slots__ = ()
+
     def __init__(self, frequencies, impedance):
         super().__init__()
         impedance = np.asarray(impedance, dtype=complex)
@@ -173,35 +260,7 @@ class EISSolution(SolutionBase):
         """
         from pybamm.plotting.nyquist_plot import nyquist_plot
 
-        component_keys = {
-            "Cell": "Cell impedance [Ohm]",
-            "Positive electrode": "Positive electrode impedance [Ohm]",
-            "Negative electrode": "Negative electrode impedance [Ohm]",
-        }
-        if not all(key in self._data for key in component_keys.values()):
-            return nyquist_plot(self.impedance, **kwargs)
-
-        plot_kwargs = dict(kwargs)
-        ax = plot_kwargs.pop("ax", None)
-        show_plot = plot_kwargs.pop("show_plot", True)
-        plot_kwargs.pop("label", None)
-        fig = None
-        for label, key in component_keys.items():
-            fig_i, ax = nyquist_plot(
-                self._data[key],
-                ax=ax,
-                show_plot=False,
-                label=label,
-                **plot_kwargs,
-            )
-            fig = fig or fig_i
-        ax.legend()
-
-        if show_plot:  # pragma: no cover
-            plt = pybamm.import_optional_dependency("matplotlib.pyplot")
-            plt.show()
-
-        return fig, ax
+        return nyquist_plot(self.impedance, **kwargs)
 
 
 _DEFAULT_SOLUTION_OPTIONS = {
@@ -268,6 +327,51 @@ class Solution(SolutionBase):
         the same backend as the integration.
 
     """
+
+    # Solvers, Simulation and make_cycle_solution set all_first_states, closest_event_idx,
+    # cycle_summary_variables, extrap_events, integration_time, solver_statistics and steps
+    __slots__ = (
+        "_all_inputs_casadi",
+        "_all_inputs_stacked",
+        "_all_models",
+        "_all_sensitivities",
+        "_all_t_evals",
+        "_all_ts",
+        "_all_yps",
+        "_all_ys",
+        "_all_ys_and_sens",
+        "_cycles",
+        "_first_state",
+        "_initial_start_time",
+        "_last_state",
+        "_observable",
+        "_options",
+        "_sensitivities",
+        "_sub_solutions",
+        "_summary_variables",
+        "_t",
+        "_t_eval",
+        "_t_event",
+        "_termination",
+        "_user_options",
+        "_variables",
+        "_y",
+        "_y0",
+        "_y0_sensitivities",
+        "_y_event",
+        "_y_event_sensitivities",
+        "_yp",
+        "all_first_states",
+        "all_inputs",
+        "all_summary_variables",
+        "closest_event_idx",
+        "cycle_summary_variables",
+        "extrap_events",
+        "integration_time",
+        "solver_statistics",
+        "steps",
+        "variables_returned",
+    )
 
     def __init__(
         self,
@@ -345,9 +449,15 @@ class Solution(SolutionBase):
         self._y_event = y_event
         self._termination = termination
         self.closest_event_idx = None
+        # Initial state of an output_variables solve, which stores no states
+        self._y0 = None
+        # Such a solve's state sensitivities at its first and last time points
+        self._y0_sensitivities = None
+        self._y_event_sensitivities = None
 
         super().__init__()
         self.integration_time = None
+        self.solver_statistics = None
 
         self._all_inputs_stacked = None
         self._all_inputs_casadi = None
@@ -375,6 +485,9 @@ class Solution(SolutionBase):
         # Initialise initial start time
         self.initial_start_time = None
 
+        self._first_state = None
+        self._last_state = None
+
         # Check no ys are too large
         if check_solution:
             self.check_ys_are_not_too_large()
@@ -382,8 +495,32 @@ class Solution(SolutionBase):
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
+    def __setstate__(self, state: dict | tuple) -> None:
+        # An older pickle may lack attributes added since, and caches the
+        # first and last states under their property names
+        self.solver_statistics = None
+        self._first_state = None
+        self._last_state = None
+        self._y0 = None
+        self._y0_sensitivities = None
+        self._y_event_sensitivities = None
+        if isinstance(state, dict):
+            state = {
+                f"_{name}" if name in ("first_state", "last_state") else name: value
+                for name, value in state.items()
+            }
+        super().__setstate__(state)
+
     def has_sensitivities(self) -> bool:
         return len(self._all_sensitivities) > 0
+
+    @property
+    def sensitivity_names(self) -> list[str]:
+        """
+        Names of the inputs this solution has sensitivities for, in the column
+        order of ``sensitivities["all"]``.
+        """
+        return [key for key in self._all_sensitivities if key != "all"]
 
     @staticmethod
     def _ensure_t_evals(all_ts, all_t_evals):
@@ -537,9 +674,7 @@ class Solution(SolutionBase):
     @property
     def all_inputs_stacked(self) -> list[np.ndarray]:
         if self._all_inputs_stacked is None:
-            self._all_inputs_stacked = [
-                np.asarray(list(inp.values())).reshape(-1) for inp in self.all_inputs
-            ]
+            self._all_inputs_stacked = [flatten_inputs(inp) for inp in self.all_inputs]
         return self._all_inputs_stacked
 
     @property
@@ -608,28 +743,36 @@ class Solution(SolutionBase):
     def options(self) -> dict:
         return self._options
 
-    @cached_property
+    @property
     def first_state(self):
         """
         A Solution object that only contains the first state. This is faster to evaluate
         than the full solution when only the first state is needed (e.g. to initialize
         a model with the solution)
         """
-        sensitivities = {}
+        if self._first_state is None:
+            self._first_state = self._build_first_state()
+        return self._first_state
+
+    def _build_first_state(self):
         n_states = self.all_models[0].len_rhs_and_alg
-        for key in self._all_sensitivities:
-            sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
+        if self._y0_sensitivities is None:
+            sensitivities = {
+                key: value[0][:n_states, :]
+                for key, value in self._all_sensitivities.items()
+            }
+        else:
+            sensitivities = self._y0_sensitivities
 
         if self.all_yps is None:
             all_yps = None
         else:
             all_yps = self.all_yps[0][:, :1]
 
-        if not self.variables_returned:
+        if self._y0 is None:
             all_ys = self.all_ys[0][:, :1]
         else:
-            # Get first state from initial conditions as all_ys is empty
-            all_ys = self.all_models[0].y0full[0].reshape(-1, 1)
+            all_ys = self._y0.reshape(-1, 1)
 
         new_sol = Solution(
             self.all_ts[0][:1],
@@ -648,21 +791,31 @@ class Solution(SolutionBase):
 
         new_sol.solve_time = 0
         new_sol.integration_time = 0
+        new_sol.solver_statistics = _NO_SOLVER_STATISTICS
         new_sol.set_up_time = 0
 
         return new_sol
 
-    @cached_property
+    @property
     def last_state(self):
         """
         A Solution object that only contains the final state. This is faster to evaluate
         than the full solution when only the final state is needed (e.g. to initialize
         a model with the solution)
         """
-        sensitivities = {}
+        if self._last_state is None:
+            self._last_state = self._build_last_state()
+        return self._last_state
+
+    def _build_last_state(self):
         n_states = self.all_models[-1].len_rhs_and_alg
-        for key in self._all_sensitivities:
-            sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
+        if self._y_event_sensitivities is None:
+            sensitivities = {
+                key: value[-1][-n_states:, :]
+                for key, value in self._all_sensitivities.items()
+            }
+        else:
+            sensitivities = self._y_event_sensitivities
 
         if self.all_yps is None:
             all_yps = None
@@ -691,6 +844,7 @@ class Solution(SolutionBase):
         new_sol._sub_solutions = self.sub_solutions[-1:]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
+        new_sol.solver_statistics = _NO_SOLVER_STATISTICS
         new_sol.set_up_time = 0
 
         return new_sol
@@ -732,79 +886,8 @@ class Solution(SolutionBase):
         for variable in variables:
             self._update_variable(variable)
 
-    def _update_model_variable(
-        self,
-        model: pybamm.BaseModel,
-        var_pybamm: pybamm.Symbol,
-        time_integral: pybamm.ProcessedVariableTimeIntegral | None,
-        inputs: dict,
-        ys_shape: tuple,
-        cache_key,
-    ):
-        _var_casadi = model._variables_casadi.get(cache_key)
-        if _var_casadi is not None:
-            return _var_casadi, var_pybamm, time_integral
-
-        var_casadi, var_pybamm, time_integral = self._convert_to_casadi(
-            var_pybamm, inputs, ys_shape
-        )
-
-        # Only cache if it's not a time integral
-        if time_integral is None:
-            model._variables_casadi[cache_key] = var_casadi
-        return var_casadi, var_pybamm, time_integral
-
     def _update_variable(self, name: str):
-        time_integral = None
-        pybamm.logger.debug(f"Post-processing {name}")
-
-        # Iterate through all models, some may be in the list several times and
-        # therefore only get set up once
-        vars_pybamm = [
-            model.get_processed_variable_or_event(name) for model in self.all_models
-        ]
-        vars_casadi = [None] * len(self.all_models)
-        for i, (model, ys, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, strict=True)
-        ):
-            _var_pybamm = vars_pybamm[i]
-            if self.variables_returned and _var_pybamm.has_symbol_of_classes(
-                pybamm.expression_tree.state_vector.StateVector
-            ):
-                raise KeyError(
-                    f"Cannot process variable '{name}' as it was not part of the "
-                    "solve. Please re-run the solve with `output_variables` set to "
-                    "include this variable."
-                )
-            if isinstance(_var_pybamm, pybamm.VectorField):
-                comp_casadi = []
-                for k, comp in enumerate(_var_pybamm.components):
-                    cc, _, _ = self._update_model_variable(
-                        model,
-                        comp,
-                        inputs=inputs,
-                        ys_shape=ys.shape,
-                        time_integral=None,
-                        cache_key=f"{name}[{k}]",
-                    )
-                    comp_casadi.append(cc)
-                vars_casadi[i] = comp_casadi
-            else:
-                var_casadi, var_pybamm, time_integral = self._update_model_variable(
-                    model,
-                    _var_pybamm,
-                    inputs=inputs,
-                    ys_shape=ys.shape,
-                    time_integral=time_integral,
-                    cache_key=name,
-                )
-                vars_pybamm[i] = var_pybamm
-                vars_casadi[i] = var_casadi
-        var = pybamm.process_variable(
-            name, vars_pybamm, vars_casadi, self, time_integral=time_integral
-        )
-
-        self._variables[name] = var
+        self._variables[name] = build_variable(self, name)
 
     def observe(self, symbol: pybamm.Symbol) -> pybamm.ProcessedVariable:
         """
@@ -1113,13 +1196,32 @@ class Solution(SolutionBase):
         return ts, ys, yps, tev
 
     @staticmethod
-    def _merge_sensitivities(acc, s):
-        """Fold one segment's sensitivities into the running dict ``acc``."""
-        for key, val in s._all_sensitivities.items():
-            acc.setdefault(key, []).extend(val)
+    def _merge_sensitivities(acc, s, repeated):
+        """Fold one segment's sensitivities into the running dict ``acc``,
+        dropping the leading time point's rows when ``repeated``."""
+        for key, (first, *rest) in s._all_sensitivities.items():
+            # Rows are time-major, one block per time point, as in _segment_series
+            rows_repeated = len(first) // len(s.all_ts[0]) if repeated else 0
+            acc.setdefault(key, []).extend([first[rows_repeated:], *rest])
 
     def __add__(self, other):
-        """Adds two solutions together, e.g. when stepping"""
+        """Join ``other`` onto the end of this solution, e.g. when stepping.
+
+        If ``other`` starts after this solution ends, an ``ExplicitTimeIntegral``
+        integrates across the gap, interpolating its integrand linearly there. If
+        either solution returned output variables only, the integral is instead
+        the sum of the integrals over each solution, so the gap adds nothing.
+
+        Parameters
+        ----------
+        other : :class:`pybamm.Solution` or None
+            The solution to append.
+
+        Returns
+        -------
+        :class:`pybamm.Solution`
+            The joined solution.
+        """
         if other is None or isinstance(other, EmptySolution):
             return self.copy()
         if not isinstance(other, Solution):
@@ -1138,6 +1240,7 @@ class Solution(SolutionBase):
             new_sol._termination = other.termination
             new_sol._t_event = other._t_event
             new_sol._y_event = other._y_event
+            new_sol.solver_statistics = _sum_solver_statistics([self, other])
             return new_sol
 
         # Append other onto self (the already-merged left side); only other's
@@ -1174,7 +1277,7 @@ class Solution(SolutionBase):
         all_sensitivities = {
             key: list(value) for key, value in self._all_sensitivities.items()
         }
-        self._merge_sensitivities(all_sensitivities, other)
+        self._merge_sensitivities(all_sensitivities, other, repeated)
 
         options = self.user_options | other.user_options
 
@@ -1195,6 +1298,9 @@ class Solution(SolutionBase):
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
+        new_sol._y0 = self._y0
+        new_sol._y0_sensitivities = self._y0_sensitivities
+        new_sol._y_event_sensitivities = other._y_event_sensitivities
         new_sol._all_inputs_stacked = self.all_inputs_stacked + other.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
@@ -1205,6 +1311,7 @@ class Solution(SolutionBase):
                 and getattr(other, attr, None) is not None
             ):
                 setattr(new_sol, attr, getattr(self, attr) + getattr(other, attr))
+        new_sol.solver_statistics = _sum_solver_statistics([self, other])
 
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
@@ -1243,12 +1350,7 @@ class Solution(SolutionBase):
         if len(sols) == 1:
             return sols[0].copy()
 
-        # Decide once which segments contribute. __add__ short-circuits a
-        # single-sample segment whose only sample duplicates the running
-        # boundary to a copy, so it contributes nothing to the merge: skip it
-        # here and derive every quantity below from the kept segments only.
-        # `repeated` records whether a kept segment's leading sample duplicates
-        # the previous boundary (dropped once on concatenation).
+        # Skip a single-sample duplicate of the running boundary, as __add__ does
         kept = []
         prev_last_t = None
         for s in sols:
@@ -1281,8 +1383,8 @@ class Solution(SolutionBase):
 
         # sensitivities: fresh dict, no aliasing of any input solution's dict
         all_sensitivities = {}
-        for s in segments:
-            cls._merge_sensitivities(all_sensitivities, s)
+        for s, repeated in kept:
+            cls._merge_sensitivities(all_sensitivities, s, repeated)
 
         options = {}
         for s in segments:
@@ -1308,10 +1410,12 @@ class Solution(SolutionBase):
             _validate_time_structure=True,
         )
 
-        # last kept segment, not sols[-1]: __add__'s single-sample short-circuit
-        # keeps the running closest_event_idx, so a trailing duplicate must not
-        # overwrite it.
+        # last kept segment, not sols[-1]: __add__'s short-circuit keeps these from
+        # self, and a trailing last_state duplicate has no event sensitivities.
         new_sol.closest_event_idx = segments[-1].closest_event_idx
+        new_sol._y_event_sensitivities = segments[-1]._y_event_sensitivities
+        new_sol._y0 = segments[0]._y0
+        new_sol._y0_sensitivities = segments[0]._y0_sensitivities
         # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
         new_sol._sub_solutions = sub_sols
 
@@ -1319,6 +1423,8 @@ class Solution(SolutionBase):
             vals = [getattr(s, attr, None) for s in segments]
             if all(v is not None for v in vals):
                 setattr(new_sol, attr, sum(vals))
+        # sols, not segments: __add__ counts a skipped duplicate's solver work
+        new_sol.solver_statistics = _sum_solver_statistics(sols)
 
         # output_variables path: reproduce __add__'s pairwise left-fold.
         if any(s.variables_returned for s in segments):
@@ -1354,9 +1460,13 @@ class Solution(SolutionBase):
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
         new_sol.closest_event_idx = self.closest_event_idx
+        new_sol._y0 = self._y0
+        new_sol._y0_sensitivities = self._y0_sensitivities
+        new_sol._y_event_sensitivities = self._y_event_sensitivities
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
+        new_sol.solver_statistics = self.solver_statistics
         new_sol.set_up_time = self.set_up_time
 
         # copy over variables which were derived at the solver stage
