@@ -716,6 +716,31 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current density as a state' must be 'true'"
                 )
 
+        # Partially reversible plating requires an SEI model: the dead lithium
+        # decay rate scales as 1 / L_sei, which is zero when "SEI" is "none".
+        # Either option may be a per-electrode tuple, so compare them electrode
+        # by electrode.
+        plating_option = options["lithium plating"]
+        SEI_option = options["SEI"]
+        if not isinstance(plating_option, tuple):
+            plating_option = (plating_option,) * len(
+                SEI_option if isinstance(SEI_option, tuple) else (SEI_option,)
+            )
+        if not isinstance(SEI_option, tuple):
+            SEI_option = (SEI_option,) * len(plating_option)
+        if any(
+            plating == "partially reversible" and SEI == "none"
+            for plating, SEI in zip(plating_option, SEI_option, strict=False)
+        ):
+            raise pybamm.OptionError(
+                "'lithium plating' cannot be 'partially reversible' when 'SEI' "
+                "is 'none', since the dead lithium decay rate is inversely "
+                "proportional to the SEI thickness. To use partially reversible "
+                "plating without the SEI affecting the voltage, set 'SEI' to "
+                "'constant' and 'SEI film resistance' to 'none', which gives an "
+                "SEI of finite thickness but no resistance."
+            )
+
         # Options not yet compatible with contact resistance
         if options["contact resistance"] == "true":
             if options["operating mode"] == "explicit power":
