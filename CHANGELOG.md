@@ -20,6 +20,7 @@
 
 ## Bug fixes
 
+- The total surface area to volume ratio of an electrode with several particle phases is now the sum of the phases' ratios. It was computed as `sum(eps_k * R_k**2) / (3 * sum(R_k**3))`, which weights each phase by its volume fraction instead of its particle number density and puts the factor of 3 in the denominator, so it came out 18 times too small for two identical phases. It sets the double-layer charging of a composite electrode under `"surface form": "differential"`. ([#5802](https://github.com/pybamm-team/PyBaMM/issues/5802), [#5805](https://github.com/pybamm-team/PyBaMM/pull/5805))
 - `BasicDFN2D` now reports `"Voltage [V]"` as the z-average of the positive electrode potential over the positive face, rather than its value at the top-right corner. The old value depended on the z mesh whenever properties vary with z. ([#5865](https://github.com/pybamm-team/PyBaMM/pull/5865))
 - A single `IDAKLUSolver` solve no longer runs inside a one-thread OpenMP parallel region. OpenMP code the model calls during the solve, such as a CasADi external function, now runs at the top level instead of nested, so it takes the top-level thread count rather than the nested-level one (for example 8, not 1, under `OMP_NUM_THREADS=8,1`). ([#5837](https://github.com/pybamm-team/PyBaMM/pull/5837))
 - `NonlinearSolver` now logs its Newton iterations when `pybamm.logger` is at `DEBUG` level; previously they were silently dropped. ([#5849](https://github.com/pybamm-team/PyBaMM/pull/5849))
