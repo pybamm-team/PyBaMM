@@ -221,3 +221,34 @@ R_p_edge = pybamm.SpatialVariableEdge(
     },
     coord_sys="cartesian",
 )
+
+# Spatial variables for positive electrode degradation submodel
+eta = pybamm.SpatialVariable(
+    "eta",
+    domains={
+        "primary": "positive core",
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar",
+)
+
+chi = pybamm.SpatialVariable(
+    "chi",
+    domains={
+        "primary": "positive shell",
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="cartesian",
+)
+
+psi = pybamm.SpatialVariable(
+    "psi",
+    domains={
+        "primary": "positive shell oxygen",
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="cartesian",
+)

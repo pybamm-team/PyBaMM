@@ -78,6 +78,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/MPM.ipynb
     notebooks/models/MSMR.ipynb
     notebooks/models/pouch-cell-model.ipynb
+    notebooks/models/positive-electrode-degradation.ipynb
     notebooks/models/rate-capability.ipynb
     notebooks/models/saving_models.ipynb
     notebooks/models/SEI-on-cracks.ipynb

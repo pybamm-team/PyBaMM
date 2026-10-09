@@ -185,6 +185,26 @@ class TestUnaryOperators:
         assert pybamm.x_average(a + b) == pybamm.x_average(a) + pybamm.x_average(b)
         assert pybamm.x_average(a - b) == pybamm.x_average(a) - pybamm.x_average(b)
 
+    @pytest.mark.parametrize(
+        "domain", ["positive core", "positive shell", "positive shell oxygen"]
+    )
+    def test_x_average_positive_electrode_degradation_domains(self, domain):
+        a = pybamm.Variable(
+            "a",
+            domain=domain,
+            auxiliary_domains={
+                "secondary": "positive electrode",
+                "tertiary": "current collector",
+            },
+        )
+        average_a = pybamm.x_average(a)
+        assert isinstance(average_a, pybamm.XAverage)
+        assert average_a.integration_variable[0] == pybamm.standard_spatial_vars.x_p
+        assert_domain_equal(
+            average_a.domains,
+            {"primary": [domain], "secondary": ["current collector"]},
+        )
+
     def test_x_average_factors_out_x_constant_multiplications(self):
         f = pybamm.Variable("f", domain="negative electrode")
 

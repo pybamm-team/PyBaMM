@@ -57,6 +57,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
 'use lumped thermal capacity': 'false' (possible: ['false', 'true'])
+'positive electrode degradation': 'false' (possible: ['false', 'true'])
 """
 
 
@@ -696,6 +697,28 @@ class TestOptions:
         options = pybamm.BatteryModelOptions({})
         for key in options.possible_options:
             assert key in options, f"Missing default for option '{key}'"
+
+    def test_positive_electrode_degradation_options(self):
+        options = BatteryModelOptions({"positive electrode degradation": "true"})
+        assert options["total interfacial current density as a state"] == "true"
+
+        with pytest.raises(
+            pybamm.OptionError, match=r"'total interfacial current density as a state'"
+        ):
+            BatteryModelOptions(
+                {
+                    "positive electrode degradation": "true",
+                    "total interfacial current density as a state": "false",
+                }
+            )
+
+        with pytest.raises(pybamm.OptionError, match=r"'working electrode'"):
+            BatteryModelOptions(
+                {
+                    "positive electrode degradation": "true",
+                    "working electrode": "positive",
+                }
+            )
 
 
 class TestVaasNormalization:

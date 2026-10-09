@@ -51,6 +51,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_open_circuit_potential_submodel()
         self.set_intercalation_kinetics_submodel()
         self.set_particle_submodel()
+        self.set_positive_electrode_degradation_submodel()
         self.set_solid_submodel()
         self.set_electrolyte_concentration_submodel()
         self.set_electrolyte_potential_submodel()
@@ -66,8 +67,56 @@ class BaseModel(pybamm.BaseBatteryModel):
         if build:
             self.build_model()
 
+    def set_positive_electrode_degradation_submodel(self):
+        """
+        Prevent errors from models that positive electrode degradation is not implemented for
+        """
+        if self.options["positive electrode degradation"] == "true":
+            raise pybamm.OptionError(
+                "'positive electrode degradation' is not implemented for "
+                f"{self.__class__.__name__}; it is currently available for SPM "
+                "(x-averaged, single particle) and DFN (x-resolved, many "
+                "particle)."
+            )
+
+    def _check_positive_electrode_degradation_options(self):
+        """
+        Rejects options that the model can not handle such as
+        multiple or a combination of phases
+
+        Raises
+        ------
+        :class:`pybamm.OptionError`
+            If an unsupported option is combined with 'positive electrode
+            degradation'.
+        """
+        if self.options.negative["particle phases"] != "1":
+            raise pybamm.OptionError(
+                "'positive electrode degradation' requires the negative electrode "
+                "'particle phases' option to be '1'"
+            )
+        supported = {
+            "particle phases": "1",
+            "particle size": "single",
+            "particle mechanics": "none",
+            "open-circuit potential": "single",
+        }
+        for option, value in supported.items():
+            if self.options.positive[option] != value:
+                raise pybamm.OptionError(
+                    f"'positive electrode degradation' requires the positive "
+                    f"electrode '{option}' option to be '{value}'"
+                )
+
     @property
     def default_parameter_values(self):
+
+        # Positive electrode degradation parameter imports
+        if self.options["positive electrode degradation"] == "true":
+            from pybamm.input.parameters.lithium_ion import Zhuo2023
+
+            return pybamm.ParameterValues(Zhuo2023.get_parameter_values())
+
         if self.options.whole_cell_domains == [
             "negative electrode",
             "separator",
@@ -193,6 +242,26 @@ class BaseModel(pybamm.BaseBatteryModel):
                 - n_Li_e,
             }
         )
+
+        # LLI of cyclable lithium
+        if self.options["positive electrode degradation"] == "true":
+            n_Li_p_cyc = self.variables[
+                "Total cyclable lithium in positive electrode [mol]"
+            ]
+            n_Li_n_cyc = self.variables[
+                "Total cyclable lithium in negative electrode [mol]"
+            ]
+            n_Li_particles_cyc = n_Li_n_cyc + n_Li_p_cyc
+            LLI_cyc = 1 - n_Li_particles_cyc / self.param.n_Li_particles_init_cyc
+
+            self.variables.update(
+                {
+                    "Loss of cyclable lithium inventory": LLI_cyc,
+                    # Total lithium
+                    "Total cyclable lithium [mol]": n_Li_particles_cyc + n_Li_e,
+                    "Total cyclable lithium in particles [mol]": n_Li_particles_cyc,
+                }
+            )
 
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value

@@ -21,9 +21,9 @@
 !requirements*
 !LICENSE.txt
 !CMakeLists.txt
-!src/pybamm/CITATIONS.bib
-!src/pybamm/input/**/*.csv
-!tests/unit/test_parameters/*.csv
+!packages/pybamm/src/pybamm/CITATIONS.bib
+!packages/pybamm/src/pybamm/input/**/*.csv
+!packages/pybamm/tests/unit/test_parameters/*.csv
 
 # running files
 *.pyc
