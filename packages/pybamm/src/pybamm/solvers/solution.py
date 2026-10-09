@@ -5,12 +5,14 @@ from __future__ import annotations
 #
 import json
 import numbers
+import os
 import pickle
 from dataclasses import astuple, dataclass
 from itertools import chain
 
 import casadi
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from scipy.io import savemat
 
@@ -1175,6 +1177,41 @@ class Solution(SolutionBase):
                     json.dump(data, outfile, cls=NumpyEncoder)
         else:
             raise ValueError(f"format '{to_format}' not recognised")
+
+    def save_vtu(
+        self,
+        filename: str | os.PathLike[str],
+        variables: str | list[str],
+        t: npt.ArrayLike | None = None,
+    ) -> str:
+        """
+        Save variables on an unstructured mesh as a VTK time series for ParaView.
+
+        Writes ``<stem>/<stem>_NNNN.vtu`` per output time and a ``<stem>.pvd``
+        collection indexing them; requires ``vtk``. Variables are cell data on
+        the union of their meshes (NaN where undefined), vector fields have 3
+        components and 0D variables are field data beside ``"TimeValue"``.
+        Re-exporting fewer times leaves older ``.vtu`` files in place.
+
+        Parameters
+        ----------
+        filename : str or os.PathLike
+            Path of the ``.pvd`` file; ``.pvd`` is appended if missing.
+        variables : str or list of str
+            Names of the variables to export. At least one must live on an
+            unstructured mesh.
+        t : array-like, optional
+            Strictly increasing output times [s], within the solution's time
+            range. Defaults to the solution's (unique) times.
+
+        Returns
+        -------
+        str
+            Path of the written ``.pvd`` file.
+        """
+        from pybamm.solvers.vtu_export import save_vtu
+
+        return save_vtu(self, filename, variables, t=t)
 
     @property
     def sub_solutions(self):
