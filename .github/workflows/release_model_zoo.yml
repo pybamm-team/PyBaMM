@@ -41,16 +41,44 @@ jobs:
       - name: Check the package metadata
         run: uvx twine check --strict dist/*
 
-      # Fresh environments resolving from PyPI, as `pip install` would. Naming `pybamm`
-      # makes it a direct requirement, so `lowest-direct` holds it to the wheel's floor.
-      - name: Install the wheel with the newest and the oldest PyBaMM it admits
+      # A pull request may raise the floor to the release this checkout becomes, so
+      # its PyBaMM stands in. An override replaces extras too, hence restating them.
+      - name: Use PyBaMM from this checkout
+        if: github.event_name == 'pull_request'
         run: |
-          wheel=$(echo dist/*.whl)
+          uv build --package pybamm --wheel --out-dir "$RUNNER_TEMP/pybamm"
+          extras=$(unzip -p dist/*.whl '*.dist-info/METADATA' \
+            | sed -n 's/^Requires-Dist: pybamm\[\([^]]*\)\].*/\1/p' \
+            | tr , '\n' | sort -u | paste -sd , -)
+          echo "pybamm${extras:+[$extras]} @ file://$(echo "$RUNNER_TEMP"/pybamm/*.whl)" \
+            > "$RUNNER_TEMP/overrides.txt"
+
+      # A fresh environment resolving from PyPI, as `pip install` would, bar the override.
+      - name: Install the wheel with the newest PyBaMM
+        run: |
+          overrides=()
+          if [ -f "$RUNNER_TEMP/overrides.txt" ]; then
+            overrides=(--override "$RUNNER_TEMP/overrides.txt")
+          fi
           uv venv --python 3.13 "$RUNNER_TEMP/newest"
-          uv pip install --no-sources --python "$RUNNER_TEMP/newest/bin/python" "${wheel}[zoo-all]"
+          uv pip install --no-sources "${overrides[@]}" \
+            --python "$RUNNER_TEMP/newest/bin/python" "$(echo dist/*.whl)[zoo-all]"
+
+      # The floor release the weekly matrix tests, absent until it is published.
+      - name: Install the wheel with the oldest PyBaMM release it admits
+        id: oldest
+        run: |
+          version=$(uv run --no-project --with packaging --python 3.13 \
+            packages/pybamm-model-zoo/scripts/matrix.py --releases 0 \
+            | jq -r '[.[].version | select(. != "main")][0] // empty')
+          if [ -z "$version" ]; then
+            echo "::notice::No PyBaMM release meets the zoo's floor yet."
+            exit 0
+          fi
           uv venv --python 3.13 "$RUNNER_TEMP/oldest"
-          uv pip install --no-sources --resolution lowest-direct \
-            --python "$RUNNER_TEMP/oldest/bin/python" "${wheel}[zoo-all]" pybamm
+          uv pip install --no-sources --python "$RUNNER_TEMP/oldest/bin/python" \
+            "$(echo dist/*.whl)[zoo-all]" "pybamm==$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Check the wheel's files and version, and every model, with the newest PyBaMM
         env:
@@ -62,7 +90,8 @@ jobs:
           fi
           "$RUNNER_TEMP/newest/bin/python" packages/pybamm-model-zoo/scripts/check_wheel.py "${args[@]}"
 
-      - name: Check every model with the oldest PyBaMM the wheel admits
+      - name: Check every model with the oldest PyBaMM release it admits
+        if: steps.oldest.outputs.version != ''
         run: |
           "$RUNNER_TEMP/oldest/bin/python" packages/pybamm-model-zoo/scripts/check_wheel.py
 
