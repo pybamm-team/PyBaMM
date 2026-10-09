@@ -143,6 +143,14 @@ The following solvers are optionally available:
 
 - [jax](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)-based solver, see [the documentation](https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-jaxsolver).
 
+### Model zoo
+
+Community- and partner-contributed models are distributed separately, in the [model zoo](https://docs.pybamm.org/en/latest/source/model_zoo/index.html):
+
+```bash
+pip install pybamm-model-zoo
+```
+
 ## 📖 Citing PyBaMM
 
 If you use PyBaMM in your work, please cite our paper

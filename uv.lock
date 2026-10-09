@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10, <3.15"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -3216,6 +3216,10 @@ cite = [
 examples = [
     { name = "jupyter" },
 ]
+fem = [
+    { name = "meshio" },
+    { name = "scikit-fem" },
+]
 jax = [
     { name = "jax", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
 ]
@@ -3293,6 +3297,7 @@ requires-dist = [
     { name = "matplotlib", marker = "extra == 'all'", specifier = ">=3.6.0" },
     { name = "matplotlib", marker = "extra == 'plot'", specifier = ">=3.6.0" },
     { name = "meshio", marker = "extra == 'all'", specifier = ">=5.3.0" },
+    { name = "meshio", marker = "extra == 'fem'", specifier = ">=5.3.0" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "pandas", specifier = ">=1.5.0" },
     { name = "pillow", marker = "extra == 'all'" },
@@ -3306,6 +3311,7 @@ requires-dist = [
     { name = "pydiffsol", marker = "extra == 'pydiffsol'", specifier = ">=0.6.2" },
     { name = "pyyaml" },
     { name = "scikit-fem", marker = "extra == 'all'", specifier = ">=12.0.2" },
+    { name = "scikit-fem", marker = "extra == 'fem'", specifier = ">=12.0.2" },
     { name = "scipy", specifier = ">=1.11.4,!=1.18.0" },
     { name = "sympy", specifier = ">=1.12" },
     { name = "tqdm", marker = "extra == 'all'" },
@@ -3315,7 +3321,7 @@ requires-dist = [
     { name = "vtk", marker = "extra == 'vtk'", specifier = ">=9.3.1" },
     { name = "xarray", specifier = ">=2022.6.0" },
 ]
-provides-extras = ["all", "bpx", "cite", "examples", "jax", "plot", "pydiffsol", "tqdm", "vtk"]
+provides-extras = ["all", "bpx", "cite", "examples", "fem", "jax", "plot", "pydiffsol", "tqdm", "vtk"]
 
 [package.metadata.requires-dev]
 bench = [
@@ -3370,13 +3376,23 @@ dependencies = [
     { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 
+[package.optional-dependencies]
+zoo-all = [
+    { name = "pybamm", extra = ["fem"] },
+]
+zoo-multilayer-3d-thermal = [
+    { name = "pybamm", extra = ["fem"] },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "packaging", specifier = ">=23.0" },
     { name = "pybamm", editable = "packages/pybamm" },
+    { name = "pybamm", extras = ["fem"], marker = "extra == 'zoo-multilayer-3d-thermal'", editable = "packages/pybamm" },
+    { name = "pybamm-model-zoo", extras = ["zoo-multilayer-3d-thermal"], marker = "extra == 'zoo-all'" },
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0.1" },
 ]
-provides-extras = ["zoo-all"]
+provides-extras = ["zoo-all", "zoo-multilayer-3d-thermal"]
 
 [[package]]
 name = "pybammsolvers"

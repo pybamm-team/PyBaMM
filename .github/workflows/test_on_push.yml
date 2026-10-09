@@ -318,7 +318,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: zoo-gating
-      fetch_depth: 0
       timeout_minutes: 30
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
@@ -333,7 +332,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: zoo-community
-      fetch_depth: 0
       timeout_minutes: 60
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 

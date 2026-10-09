@@ -87,6 +87,7 @@ class LinearisedSPM(pybamm.lithium_ion.SPM):
         name: str = "Linearised Single Particle Model",
         build: bool = True,
     ) -> None:
+        pybamm_model_zoo.require(SLUG)
         super().__init__(
             options=_compat.spm_default_options(
                 {"intercalation kinetics": "linear", **(options or {})}

@@ -185,6 +185,30 @@ Users can install ``pybamm`` with ``jax`` and ``jaxlib`` to use the Jax solver.
 
       conda install -c conda-forge "jax>=0.7.0,<0.9.0"
 
+.. _install-model-zoo:
+
+Optional - Model zoo
+--------------------
+
+Community- and partner-contributed models are distributed separately, as the
+``pybamm-model-zoo`` package, which installs ``pybamm`` too. See the
+:ref:`model zoo <model_zoo>` for the models it provides.
+
+.. tab:: uv
+
+   .. code:: bash
+
+      uv pip install pybamm-model-zoo
+
+.. tab:: pip
+
+   .. code:: bash
+
+      pip install pybamm-model-zoo
+
+The model zoo is not available on conda-forge; in a conda environment, install it
+with ``pip``.
+
 Uninstall PyBaMM
 ----------------
 
@@ -376,6 +400,20 @@ Dependency                                                  Minimum Version    p
 =========================================================== ================== ================== ==================
 `tqdm <https://tqdm.github.io/>`__                          \-                 tqdm               For logging loops.
 =========================================================== ================== ================== ==================
+
+.. _install.fem_dependencies:
+
+FEM dependencies
+^^^^^^^^^^^^^^^^
+
+Installable with ``pip install "pybamm[fem]"``
+
+=========================================================== ================== ================== =========================================
+Dependency                                                  Minimum Version    pip extra          Notes
+=========================================================== ================== ================== =========================================
+`scikit-fem <https://scikit-fem.readthedocs.io/>`__         12.0.2             fem                To build 2D and 3D finite-element meshes.
+`meshio <https://github.com/nschloe/meshio>`__              5.3.0              fem                To read meshes from files.
+=========================================================== ================== ================== =========================================
 
 .. _install.jax_dependencies:
 
