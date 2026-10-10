@@ -391,6 +391,10 @@ class BaseInterface(pybamm.BaseSubModel):
             }
             return variables
 
+        # Size average, as for eta_r in "_get_standard_overpotential_variables"
+        if eta_sei.domain and eta_sei.domain[0].endswith("particle size"):
+            eta_sei = pybamm.size_average(eta_sei)
+
         # Average, and broadcast if necessary
         eta_sei_av = pybamm.x_average(eta_sei)
         if eta_sei.domain == []:
