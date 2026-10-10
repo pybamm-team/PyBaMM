@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added three-electrode EIS support to `pybamm.EISSimulation`: when the model has a reference electrode inserted via `insert_reference_electrode`, the solution also carries named positive/negative electrode impedances and the Nyquist plot shows each component. ([#5648](https://github.com/pybamm-team/PyBaMM/pull/5648))
+
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
 ## Breaking changes
