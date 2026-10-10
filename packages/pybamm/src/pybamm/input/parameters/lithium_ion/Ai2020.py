@@ -445,10 +445,10 @@ def electrolyte_diffusivity_Ai2020(c_e, T):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Solid diffusivity
+        Dimensional electrolyte diffusivity [m2.s-1]
     """
-
-    D_c_e = 10 ** (-4.43 - 54 / (T - 229 - 5e-3 * c_e) - 0.22e-3 * c_e)
+    # The Valoen and Reimers (2005) fit gives cm2/s; convert to m2/s
+    D_c_e = 1e-4 * 10 ** (-4.43 - 54 / (T - 229 - 5e-3 * c_e) - 0.22e-3 * c_e)
 
     return D_c_e
 
