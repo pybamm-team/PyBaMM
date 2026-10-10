@@ -166,7 +166,7 @@ class ProcessedVariableTimeIntegral:
         if sum_node == var:
             post_sum_node = None
         else:
-            sum_y_len = sum_node.evaluate_for_shape().shape[0]
+            sum_y_len = np.size(sum_node.evaluate_for_shape())
             post_sum_node = ProcessedVariableTimeIntegral.to_post_sum_expr(
                 var, sum_node, sum_y_len
             )
