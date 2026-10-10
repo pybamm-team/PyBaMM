@@ -296,6 +296,56 @@ class TestParameterValues:
             )
         assert param["Negative particle diffusivity [m2.s-1]"] == 1e-17
 
+    def test_deprecated_charge_transfer_coefficient_migration(self):
+        old = "Positive electrode charge transfer coefficient"
+        new = "Positive electrode Butler-Volmer transfer coefficient"
+
+        # a custom set with the old name also sets the name the kinetics read
+        with pytest.warns(DeprecationWarning, match=r"renamed"):
+            param = pybamm.ParameterValues(
+                {
+                    old: 0.6,
+                    "Primary: Negative electrode charge transfer coefficient": 0.3,
+                }
+            )
+        assert param[new] == 0.6
+        assert (
+            param["Primary: Negative electrode Butler-Volmer transfer coefficient"]
+            == 0.3
+        )
+
+        # copying the migrated set, as Simulation does, does not warn again
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            param_copy = param.copy()
+        assert param_copy[new] == 0.6
+
+        # a set stored under the current name can still be used with the old name
+        param = pybamm.ParameterValues("Chen2020")
+        with pytest.warns(DeprecationWarning, match=r"renamed"):
+            assert param[old] == 0.5
+        with pytest.warns(DeprecationWarning, match=r"renamed"):
+            assert param.get(old) == 0.5
+        with pytest.warns(DeprecationWarning, match=r"renamed"):
+            param[old] = 0.6
+        assert param[new] == 0.6
+        with pytest.warns(DeprecationWarning, match=r"renamed"):
+            param.update({old: 0.7})
+        assert param[new] == 0.7
+
+        # MSMR host site coefficients keep their name
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            param = pybamm.ParameterValues(
+                {"Negative electrode host site charge transfer coefficient (0)": 0.5}
+            )
+        assert len(param) == 1
+
+        # when both names are given the current name wins
+        with pytest.warns(UserWarning, match=r"Both the deprecated"):
+            param = pybamm.ParameterValues({old: 0.6, new: 0.4})
+        assert param[new] == 0.4
+
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3})
         # process parameter
