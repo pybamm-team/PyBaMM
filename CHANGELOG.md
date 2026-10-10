@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- `"intercalation kinetics": "Marcus"` now gives a positive current for a positive overpotential, as the other kinetics do, and converts the reorganization energy from eV with F/RT, as Marcus-Hush-Chidsey does. Previously the oxidation and reduction terms were swapped and the energy was used in mixed units, so models with Marcus kinetics failed to solve. ([#5872](https://github.com/pybamm-team/PyBaMM/pull/5872))
+
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
 ## Breaking changes
