@@ -25,7 +25,7 @@ class TestChayambuka2022:
                 0.0202,
             ),
             # Positive electrode
-            "Positive particle diffusivity [m2.s-1]": ([sto, T], 1.8700e-15),
+            "Positive particle diffusivity [m2.s-1]": ([sto, T], 8.3317e-17),
             "Positive electrode OCP [V]": ([sto], 4.1482),
             "Positive electrode exchange-current density [A.m-2]": (
                 [c_e, sto * c_p_max, c_p_max, T],
@@ -40,3 +40,12 @@ class TestChayambuka2022:
             assert param.evaluate(param[name](*value[0])) == pytest.approx(
                 value[1], abs=0.0001
             )
+
+    def test_positive_particle_diffusivity(self):
+        # The NVPF data are tabulated against the solid concentration, so the
+        # lookup must scale the stoichiometry by the positive maximum concentration
+        param = pybamm.ParameterValues("Chayambuka2022")
+        T = pybamm.Scalar(298.15)
+        for sto, expected in [(0.3, 5.6673e-17), (0.5, 8.3317e-17), (0.9, 3.5627e-17)]:
+            D_p = param["Positive particle diffusivity [m2.s-1]"](pybamm.Scalar(sto), T)
+            assert param.evaluate(D_p) == pytest.approx(expected, rel=1e-4, abs=0)
