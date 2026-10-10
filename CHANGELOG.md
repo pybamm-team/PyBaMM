@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- `Chayambuka2022`'s NVPF (positive electrode) diffusivity is now looked up at the solid concentration, `sto * c_max`, instead of `sto` times the initial electrolyte concentration, which made it 20 to 50 times too large. ([#5889](https://github.com/pybamm-team/PyBaMM/pull/5889))
+
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
 ## Breaking changes
