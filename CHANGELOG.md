@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- `EffectiveResistance` and `AlternativeEffectiveResistance2D` `post_process` no longer return NaN for the voltage and positive current collector potential at times after the current collector problem was solved. ([#5858](https://github.com/pybamm-team/PyBaMM/pull/5858))
+
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
 ## Breaking changes
