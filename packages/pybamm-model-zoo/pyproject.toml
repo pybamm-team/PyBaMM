@@ -29,7 +29,7 @@ classifiers = [
 ]
 dependencies = [
     # Every model's floor: a model that needs a newer PyBaMM raises it.
-    "pybamm>=26.10",
+    "pybamm>=26.10.1",
     "packaging>=23.0",
     "tomli>=2.0.1; python_version < '3.11'",
 ]

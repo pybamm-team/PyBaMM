@@ -14,7 +14,7 @@ PyBaMM's.
   zones that are each PyBaMM's own SPM, SPMe, or DFN under the stack's options,
   each with its own 3D temperature field, connected in parallel or series
   ([#5815](https://github.com/pybamm-team/PyBaMM/pull/5815))
-- Published to PyPI as `pybamm-model-zoo`, requiring `pybamm>=26.10`, with
+- Published to PyPI as `pybamm-model-zoo`, requiring `pybamm>=26.10.1`, with
   `pybamm_model_zoo.__version__`. `multilayer_3d_thermal` gets PyBaMM's
   finite-element meshing from a new `zoo-multilayer-3d-thermal` extra, which
   `zoo-all` includes ([#5881](https://github.com/pybamm-team/PyBaMM/pull/5881))
