@@ -665,12 +665,20 @@ class ParameterValues:
             values = dict(values._store._data)
 
         # Check and transform parameter values
-        values = self.check_parameter_values(dict(values))
+        raw_values = dict(values)
+        values = self.check_parameter_values(dict(raw_values))
 
         # Runs after list values are expanded into indexed keys, so a list
         # parameter that already exists passes, and before any write
         if strict:
             unknown = [name for name in values if name not in self._store]
+            # An empty list expands to no keys, so check its own name
+            for name, value in raw_values.items():
+                if isinstance(value, list) and not value:
+                    base, units = ParameterNameParser.split(name)
+                    first = ParameterNameParser.combine(base, 0, units)
+                    if name not in self._store and first not in self._store:
+                        unknown.append(name)
             if unknown:
                 hints = []
                 for name in unknown:

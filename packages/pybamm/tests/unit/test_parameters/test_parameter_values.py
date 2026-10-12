@@ -149,6 +149,23 @@ class TestParameterValues:
         assert param["Foo (0) [V]"] == 3
         assert param["Foo (1) [V]"] == 4
 
+        # an unknown name with an empty list expands to no keys but still raises
+        current = param["Current function [A]"]
+        with pytest.raises(KeyError, match=r"'Negative particle radiusss \[m\]'"):
+            param.update(
+                {
+                    "Current function [A]": 2.0,
+                    "Negative particle radiusss [m]": [],
+                },
+                strict=True,
+            )
+        assert param["Current function [A]"] == pytest.approx(current)
+        assert "Negative particle radiusss [m]" not in param
+
+        # an empty list for an existing list parameter changes nothing
+        param.update({"Foo [V]": []}, strict=True)
+        assert param["Foo (0) [V]"] == 3
+
         # a name with no close match is reported without an empty match list
         with pytest.raises(KeyError) as excinfo:
             param.update({"zzzz": 1.0}, strict=True)
