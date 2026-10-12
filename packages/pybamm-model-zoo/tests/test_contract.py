@@ -191,6 +191,23 @@ class TestDependencyAgreement:
         self.check(tmp_path, ["Scikit_FEM>=12.0.2"], ["scikit-fem>=12.0.2"])
 
 
+class TestInTreeLicense:
+    """In-tree models share the zoo's BSD-3-Clause license; collections do not."""
+
+    def test_another_license_is_rejected_in_tree(self, tmp_path):
+        entry = ModelEntry(
+            slug="a_model",
+            name="AModel",
+            path=tmp_path,
+            raw={"model": {"license": "MIT"}},
+        )
+        with pytest.raises(AssertionError, match=r"must be licensed 'BSD-3-Clause'"):
+            contract.check_license(entry)
+
+    def test_it_cannot_be_waived(self):
+        assert not contract.CHECKS["license"].waivable
+
+
 class TestMissingDependencies:
     """What counts as "not installed", which gates the import/build/solve checks."""
 

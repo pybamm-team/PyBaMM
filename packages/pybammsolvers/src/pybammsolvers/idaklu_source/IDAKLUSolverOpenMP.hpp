@@ -351,7 +351,6 @@ public:
    */
   void BuildAlgebraicSolver(const sunrealtype* id_val);
 
-  bool CheckMassMatrixAlignment(const sunrealtype* id_val);
   void PrecomputeSubBlockSparsity();
 
   /**

@@ -14,3 +14,8 @@ PyBaMM's.
   zones that are each PyBaMM's own SPM, SPMe, or DFN under the stack's options,
   each with its own 3D temperature field, connected in parallel or series
   ([#5815](https://github.com/pybamm-team/PyBaMM/pull/5815))
+
+### Changed
+
+- In-tree models must be licensed BSD-3-Clause, enforced by a new unwaivable
+  `license` contract check; the generator's `--license` option is removed ([#5862](https://github.com/pybamm-team/PyBaMM/pull/5862))

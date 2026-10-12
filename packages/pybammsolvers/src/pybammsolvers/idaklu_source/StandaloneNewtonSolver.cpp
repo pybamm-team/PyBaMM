@@ -141,6 +141,8 @@ void StandaloneAlgebraicSystem::BuildSparseResources(int jac_nnz) {
   for (int i = 0; i < nnz_; i++) jr[i] = rowvals_[i];
 
   LS_ = SUNLinSol_KLU(delta_nvec_, J_, sunctx_);
+  // AMD (0) instead of the SUNDIALS default COLAMD (1)
+  SUNLinSol_KLUSetOrdering(LS_, 0);
 }
 
 void StandaloneAlgebraicSystem::BuildDenseResources() {

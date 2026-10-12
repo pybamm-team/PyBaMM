@@ -604,11 +604,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, model)
 
-        # Build algebraic-only residual and Jacobian for Newton sub-block mode.
-        # When newton_mode="full", skip these so the C++ solver uses the
-        # full-system IDA linear solve (DECOUPLED_FULL or COUPLED_FULL),
-        # which supports any linear solver including iterative ones.
-        if self._options.get("newton_mode", "auto") == "auto":
+        # The sub-block Newton IC needs a standard-form DAE; else full system
+        if (
+            self._options.get("newton_mode", "auto") == "auto"
+            and model.is_standard_form_dae
+        ):
             alg_res_fn = model.algebraic_eval
             jac_alg_fn = model.jac_algebraic_eval
         else:
