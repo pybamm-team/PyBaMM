@@ -288,6 +288,9 @@ class TestThermal:
                         **options,
                         "SEI": "constant",
                         "SEI film resistance": film,
+                        "total interfacial current density as a state": (
+                            "true" if film == "distributed" else "false"
+                        ),
                         "thermal": "lumped",
                     }
                 ),
