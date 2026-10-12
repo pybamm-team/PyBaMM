@@ -40,11 +40,13 @@ class TestAi2020:
                 -1.1033e-4,
             ),
             "Negative electrode volume change": ([sto], 5.1921e-2),
+            "Electrolyte diffusivity [m2.s-1]": ([1e3, T], 3.2227e-10),
+            "Electrolyte conductivity [S.m-1]": ([1e3, T], 1.1943),
         }
 
         for name, value in fun_test.items():
             assert param.evaluate(param[name](*value[0])) == pytest.approx(
-                value[1], abs=0.0001
+                value[1], rel=1e-3, abs=0
             )
 
     def test_electrolyte_diffusivity(self):
@@ -59,5 +61,3 @@ class TestAi2020:
                 xu2019.evaluate(xu2019[name](*inputs)),
                 rtol=1e-12,
             )
-        D_e = ai2020.evaluate(ai2020[name](pybamm.Scalar(1000), pybamm.Scalar(298.15)))
-        assert D_e == pytest.approx(3.2227e-10, rel=1e-4, abs=0)

@@ -433,6 +433,9 @@ def electrolyte_diffusivity_Ai2020(c_e, T):
     Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity
     in Lithium-Ion Pouch Cells. Journal of The Electrochemical Society,
     167(1), 013512. DOI: 10.1149/2.0122001JES.
+    .. [2] Valoen, L. O., & Reimers, J. N. (2005). Transport properties of
+    LiPF6-based Li-ion battery electrolytes. Journal of The Electrochemical
+    Society, 152(5), A882 (eqn 14). DOI: 10.1149/1.1872737.
 
     Parameters
     ----------
@@ -471,14 +474,14 @@ def electrolyte_conductivity_Ai2020(c_e, T):
     Parameters
     ----------
     c_e: :class:`pybamm.Symbol`
-        Dimensional electrolyte concentration
+        Dimensional electrolyte concentration, mol/m^3
     T: :class:`pybamm.Symbol`
-        Dimensional temperature
+        Dimensional temperature, K
 
     Returns
     -------
     :class:`pybamm.Symbol`
-        Solid diffusivity
+        Dimensional electrolyte conductivity [S.m-1]
     """
 
     sigma_e = (
