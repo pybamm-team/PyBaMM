@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numbers
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 import numpy as np
 
@@ -11,7 +11,7 @@ import pybamm
 from .step_termination import _read_termination
 
 
-class ControlKind(str, Enum):
+class ControlKind(StrEnum):
     """The control-law shape of a step (the quantity its residual fixes)."""
 
     CURRENT = "current"

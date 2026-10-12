@@ -6,7 +6,7 @@ import numbers
 import warnings
 from collections import OrderedDict
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 from itertools import chain
 from pathlib import Path
 from typing import Any, TypeVar, cast
@@ -32,7 +32,7 @@ def _prefer_restored(override: property, attribute: str) -> property:
     return property(getter, override.fset, override.fdel, override.__doc__)
 
 
-class ModelSolutionObservability(str, Enum):
+class ModelSolutionObservability(StrEnum):
     """
     Enum to specify the observability states for a PyBaMM model's solution.
 
