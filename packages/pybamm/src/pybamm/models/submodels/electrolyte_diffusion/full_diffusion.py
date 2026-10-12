@@ -159,13 +159,20 @@ class Full(BaseElectrolyteDiffusion):
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
 
         def flux_bc(side):
-            # returns the flux at a separator/electrode interface
-            # assuming v_box = 0 for now
+            # Match the linear coefficient extrapolation used at flux edges.
+            # The metal/separator interface has no convective flux.
             return (
-                pybamm.boundary_value(
-                    -(1 - self.param.t_plus(c_e, T))
-                    / (tor * self.param.D_e(c_e, T) * self.param.F),
-                    side,
+                -(
+                    1
+                    - pybamm.boundary_value(
+                        self.param.t_plus(c_e, T), side, order="linear"
+                    )
+                )
+                / (
+                    pybamm.boundary_value(
+                        tor * self.param.D_e(c_e, T), side, order="linear"
+                    )
+                    * self.param.F
                 )
                 * i_boundary_cc
             )
