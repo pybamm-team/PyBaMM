@@ -177,9 +177,8 @@ class TestSerialise:
 
         assert Serialise()._convert_options(options_dict) == options_result
 
-    def test_save_load_model(self, mocker, tmp_path, request):
-        os.chdir(tmp_path)
-        request.addfinalizer(lambda: os.chdir(os.getcwd()))
+    def test_save_load_model(self, mocker, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
 
         model = pybamm.lithium_ion.SPM(name="test_spm")
         geometry = model.default_geometry

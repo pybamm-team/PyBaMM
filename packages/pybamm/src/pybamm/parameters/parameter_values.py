@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Iterator, Mapping
 from pathlib import Path
 from pprint import pformat
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 from warnings import warn
 
 import numpy as np
@@ -122,7 +122,7 @@ class ParameterValues:
     @classmethod
     def create_from_bpx(
         cls, filename: str | Path, target_soc: float | None = None
-    ) -> ParameterValues:
+    ) -> Self:
         """
         Create ParameterValues from a BPX file.
 
@@ -168,7 +168,7 @@ class ParameterValues:
     @classmethod
     def create_from_bpx_obj(
         cls, bpx_obj: dict, target_soc: float | None = None
-    ) -> ParameterValues:
+    ) -> Self:
         """
         Create ParameterValues from a BPX dictionary object.
 
@@ -222,7 +222,7 @@ class ParameterValues:
         )
 
     @classmethod
-    def _create_from_bpx(cls, bpx, target_soc: float | None) -> ParameterValues:
+    def _create_from_bpx(cls, bpx, target_soc: float | None) -> Self:
         """Internal method to create ParameterValues from a parsed BPX object."""
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM

@@ -86,5 +86,14 @@ class TestCompositeSolver:
         solver2 = FailingSolver("Solver2")
         composite = pybamm.CompositeSolver([solver1, solver2])
 
-        with pytest.raises(pybamm.SolverError, match="All sub_solvers failed"):
+        with pytest.raises(
+            pybamm.SolverError, match="All sub_solvers failed"
+        ) as exc_info:
             composite.solve(model)
+
+        cause = exc_info.value.__cause__
+        assert isinstance(cause, ExceptionGroup)
+        assert [str(error) for error in cause.exceptions] == [
+            "Solver1 failed",
+            "Solver2 failed",
+        ]

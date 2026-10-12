@@ -2166,9 +2166,8 @@ class BaseModel:
             with open(filename, "w") as f:
                 json.dump(data, f, indent=2, default=Serialise._json_encoder)
         except OSError as file_err:
-            raise OSError(
-                f"Failed to write {label} to file '{filename}': {file_err}"
-            ) from file_err
+            file_err.add_note(f"Failed to write {label} to file '{filename}'")
+            raise
 
     @staticmethod
     def _find_builtin_module(model_class):
