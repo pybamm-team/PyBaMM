@@ -132,6 +132,10 @@ class BaseKinetics(BaseInterface):
             R_sei = self.phase_param.R_sei
             L_sei_av = variables[f"X-averaged {domain} {phase_name}SEI thickness [m]"]
             eta_sei = -j_tot_av * L_sei_av * R_sei
+            # With a size distribution resolved through the electrode, eta_r has the
+            # electrode as its secondary domain, which a current collector term skips
+            if eta_r.domains["secondary"] == [f"{domain} electrode"]:
+                eta_sei = pybamm.PrimaryBroadcast(eta_sei, f"{domain} electrode")
         elif self.options["SEI film resistance"] == "distributed":
             R_sei = self.phase_param.R_sei
             L_sei = variables[f"{Domain} {phase_name}SEI thickness [m]"]

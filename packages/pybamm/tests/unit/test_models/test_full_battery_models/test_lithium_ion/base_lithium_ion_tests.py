@@ -589,6 +589,16 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_psd_sei_film_resistance(self):
+        for film in ["average", "distributed"]:
+            options = {
+                "particle size": "distribution",
+                "surface form": "algebraic",
+                "SEI": "constant",
+                "SEI film resistance": film,
+            }
+            self.check_well_posedness(options)
+
     def test_well_posed_psd_hysteresis_thermal(self):
         # Regression test: hysteresis OCP + particle size distribution + a
         # non-isothermal thermal submodel previously raised a DomainError in
