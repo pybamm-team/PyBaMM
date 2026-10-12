@@ -144,7 +144,7 @@ cells is 160 states, against 400 for a DFN with 20 radial points.
 The weights are normalised by their sum, so the closure variable always
 starts at 0 and tends to `s0`, and DC1t reduces to DC1 when all time
 constants are short. For an isolated sphere the exact closure variable is a
-sum of exponentials (Part III, Paten et al., 2026c), and DC1t with enough modes
+sum of exponentials (Paten et al., 2026c), and DC1t with enough modes
 reproduces the Fickian DFN.
 
 How the modes are given depends on `"closure variable"`:
@@ -345,8 +345,8 @@ supported.
 
 See `CITATION.bib`. Please cite Paten2026 when using this model, and
 Paten2026b (Part II) when using DC1t; they are registered automatically, so
-`pybamm.print_citations()` credits them after use. Part III (Paten2026c)
-shows the formal equivalence between DC1t and the DFN for isolated spheres.
+`pybamm.print_citations()` credits them after use. Paten2026c shows the formal
+equivalence between DC1t and the DFN for isolated spheres.
 
 ## Maintainer
 

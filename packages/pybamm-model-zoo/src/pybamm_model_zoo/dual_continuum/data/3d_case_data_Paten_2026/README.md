@@ -2,7 +2,7 @@
 
 Data for an NMC cathode half cell reconstructed from a tomographic image,
 without carbon-binder domain, used for the direct numerical simulation (DNS)
-comparisons of Paten et al. (2026, Parts I-III). The cell parameters are
+comparisons of Paten et al. (2026). The cell parameters are
 `parameter_sets.paten2026_3d_case()`, and `parameter_sets.load_3d_case_data()`
 reads these files.
 

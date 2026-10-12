@@ -55,7 +55,7 @@ def isolated_sphere_closure(
 ) -> npt.NDArray[np.float64]:
     """Surface-averaged transient closure variable of an isolated sphere.
 
-    The solution of the closure problem of Paten et al. (2026, Part III, Eq. 13),
+    The solution of the closure problem of Paten et al. (2026c, Eq. 13),
 
     .. math::
         \\langle s^t \\rangle_A(t) = -\\frac{R}{DF}\\left(\\frac{1}{5}
