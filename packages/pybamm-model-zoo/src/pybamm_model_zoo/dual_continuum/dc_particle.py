@@ -3,30 +3,21 @@
 from __future__ import annotations
 
 import pybamm
+from pybamm_model_zoo.dual_continuum.transient_closure import (
+    isolated_sphere_modes,
+    time_constant_name,
+)
 
 
 class DCParticle(pybamm.particle.BaseParticle):
     """Homogenised active-material mass balance of the dual-continuum model.
 
-    The volume-averaged concentration obeys (Paten et al., Eq. 46)
-
-    .. math::
-        \\frac{\\partial c_{vol}}{\\partial t} = -\\frac{a}{\\varepsilon_s F} j,
-
-    and the surface-averaged concentration used in the kinetics is
-    (Paten et al., Table I)
-
-    * DC0: :math:`c_{surf} = c_{vol}`;
-    * DC1: :math:`c_{surf} = c_{vol} + \\langle s \\rangle_A j`, where the closure
-      variable :math:`\\langle s \\rangle_A` [mol.m-1.A-1] is obtained from a
-      closure problem on the electrode microstructure. With "calculate surface
-      concentration a priori", ``j`` is replaced by its electrode average;
-    * Yang: :math:`c_{surf} = c_{vol} + \\gamma j`, with
-      :math:`\\gamma = (l_d^2/(6 l_k^2) - l_d/(2 l_k)) l_k/(D F)` and a
-      boundary-layer thickness :math:`l_d` growing as :math:`a_d\\sqrt{D t}`.
-
-    There is no radial profile in the DC model: radial output variables are
-    the volume average broadcast in r, with zero radial flux.
+    The volume-averaged concentration obeys
+    :math:`\\partial_t c_{vol} = -a j / (\\varepsilon_s F)`, and the surface
+    concentration is :math:`c_{vol}` (DC0), :math:`c_{vol} + \\langle s \\rangle_A j`
+    (DC1) or :math:`c_{vol} + \\gamma j` (Yang), with ``j`` replaced by its
+    electrode average when computed a priori. There is no radial profile:
+    radial outputs are the volume average broadcast in r.
 
     Parameters
     ----------
@@ -93,7 +84,7 @@ class DCParticle(pybamm.particle.BaseParticle):
                 c_surf = c_vol
             else:
                 j_av = self._electrode_averaged_current_density(variables)
-                c_surf = c_vol + self._closure_variable(variables) * j_av
+                c_surf = c_vol + self._surface_correction(variables, j_av)
             variables.update(self._get_concentration_variables(c_vol, c_surf))
 
         c_s = variables[f"{Domain} {phase_name}particle concentration [mol.m-3]"]
@@ -120,7 +111,7 @@ class DCParticle(pybamm.particle.BaseParticle):
         variables[f"{Domain} electrode {phase_name}DC correction term [mol.m-3]"] = (
             c_surf - c_vol
         )
-        if self.dc_options["model type"] == "DC1":
+        if self.dc_options["model type"] in ("DC1", "DC1t"):
             variables[
                 f"{Domain} electrode {phase_name}closure variable [mol.m-1.A-1]"
             ] = self._closure_variable(variables)
@@ -161,11 +152,7 @@ class DCParticle(pybamm.particle.BaseParticle):
             f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
         ]
 
-        if self.dc_options["model type"] == "DC1":
-            correction = self._closure_variable(variables) * j
-        else:
-            correction = self._yang_coefficient(variables) * j
-
+        correction = self._surface_correction(variables, j)
         self.algebraic = {
             c_surf: (c_surf - c_vol - correction) / self.phase_param.c_max
         }
@@ -195,6 +182,12 @@ class DCParticle(pybamm.particle.BaseParticle):
         return self._get_standard_concentration_variables(
             c_s, c_s_rav=c_vol, c_s_surf=c_surf
         )
+
+    def _surface_correction(self, variables, j):
+        """c_surf - c_vol for the reaction rate ``j`` [mol.m-3]."""
+        if self.dc_options["model type"] == "Yang":
+            return self._yang_coefficient(variables) * j
+        return self._closure_variable(variables) * j
 
     def _electrode_averaged_current_density(self, variables):
         """Average interfacial current density imposed by the applied current."""
@@ -249,3 +242,110 @@ class DCParticle(pybamm.particle.BaseParticle):
         l_d = l_d_growing * growing + l_k * (1 - growing)
 
         return (l_d**2 / (6 * l_k**2) - l_d / (2 * l_k)) * l_k / (D * self.param.F)
+
+
+class TransientDCParticle(DCParticle):
+    """Dual-continuum particle with the transient closure (DC1t).
+
+    With :math:`\\langle s^t \\rangle_A = s_0 \\sum_m w_m (1 - e^{-t/\\theta_m})`,
+    the convolution :math:`\\langle s^t \\rangle_A \\star \\partial_t j` is
+    :math:`s_0 \\sum_m w_m y_m` with :math:`dy_m/dt = (j - y_m)/\\theta_m` and
+    :math:`y_m(0) = 0`, for any history of ``j``. The weights are normalised
+    by their sum, so the long-time limit is DC1.
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel.
+    domain : str
+        Either "negative" or "positive".
+    options : dict
+        PyBaMM model options.
+    dc_options : :class:`DCModelOptions`
+        Dual-continuum options.
+    phase : str, optional
+        Phase of the particle (default is "primary").
+    """
+
+    @property
+    def n_modes(self) -> int:
+        """Number of exponential modes."""
+        return self.dc_options["transient closure modes"]
+
+    def _mode_name(self, m):
+        Domain = self.domain.capitalize()
+        return f"{Domain} electrode {self.phase_name}transient closure mode {m} [A.m-2]"
+
+    def get_fundamental_variables(self):
+        variables = super().get_fundamental_variables()
+        for m in range(1, self.n_modes + 1):
+            mode = pybamm.Variable(
+                self._mode_name(m),
+                domain=f"{self.domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            mode.print_name = f"y_{self.domain[0]}{m}"
+            variables[self._mode_name(m)] = mode
+        return variables
+
+    def set_rhs(self, variables):
+        super().set_rhs(variables)
+        j = self._mode_driver(variables)
+        for (_, theta), m in zip(
+            self._modes(variables), range(1, self.n_modes + 1), strict=True
+        ):
+            mode = variables[self._mode_name(m)]
+            self.rhs[mode] = (j - mode) / theta
+
+    def set_initial_conditions(self, variables):
+        super().set_initial_conditions(variables)
+        for m in range(1, self.n_modes + 1):
+            self.initial_conditions[variables[self._mode_name(m)]] = pybamm.Scalar(0)
+
+    def _surface_correction(self, variables, j):
+        """s0 sum_m w_m y_m, with normalised weights [mol.m-3]."""
+        modes = self._modes(variables)
+        total = sum(weight for weight, _ in modes)
+        correction = sum(
+            weight * variables[self._mode_name(m)]
+            for (weight, _), m in zip(modes, range(1, self.n_modes + 1), strict=True)
+        )
+        return self._closure_variable(variables) * correction / total
+
+    def _mode_driver(self, variables):
+        """Reaction rate that drives the modes [A.m-2]."""
+        if self.dc_options["calculate surface concentration a priori"] == "true":
+            return self._electrode_averaged_current_density(variables)
+        Domain = self.domain.capitalize()
+        return variables[
+            f"{Domain} electrode {self.phase_name}interfacial current density [A.m-2]"
+        ]
+
+    def _modes(self, variables):
+        """Weight and time constant [s] of each mode."""
+        Domain = self.domain.capitalize()
+        prefix = f"{Domain} electrode"
+        closure = self.dc_options["closure variable"]
+        if closure == "isolated sphere":
+            radius = variables[
+                f"{prefix} {self.phase_name}effective particle radius [m]"
+            ]
+            scale = radius**2 / self._diffusivity(variables)
+            weights, thetas = isolated_sphere_modes(self.n_modes)
+            return [
+                (pybamm.Scalar(w), theta * scale)
+                for w, theta in zip(weights, thetas, strict=True)
+            ]
+        dimensionless = closure == "dimensionless"
+        scale = (
+            self.domain_param.L**2 / self._diffusivity(variables)
+            if dimensionless
+            else 1
+        )
+        return [
+            (
+                pybamm.Parameter(f"{prefix} transient closure weight {m}"),
+                pybamm.Parameter(time_constant_name(prefix, m, dimensionless)) * scale,
+            )
+            for m in range(1, self.n_modes + 1)
+        ]

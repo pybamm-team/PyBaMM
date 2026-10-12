@@ -1,11 +1,12 @@
 """Physics tests for the DFN-based dual-continuum model.
 
 The closures are pinned against exact limits: DC0 is PyBaMM's uniform-profile
-particle, and DC1 with the isolated-sphere closure variable -R/(5 D F) (the
+particle, DC1 with the isolated-sphere closure variable -R/(5 D F) (the
 analytical solution of the closure problem for a sphere) is PyBaMM's
-quadratic-profile particle. The image-based surface area and the lithium-foil
-option are pinned against reference voltages from the standalone
-implementation (tests/data/standalone_reference.csv).
+quadratic-profile particle, and DC1t with the isolated sphere's transient
+closure variable is PyBaMM's Fickian particle. The image-based surface area and
+the lithium-foil option are pinned against reference voltages from the
+standalone implementation (tests/data/standalone_reference.csv).
 """
 
 from pathlib import Path
@@ -15,7 +16,7 @@ import pytest
 
 import pybamm
 import pybamm_model_zoo as zoo
-from pybamm_model_zoo.dual_continuum import parameter_sets
+from pybamm_model_zoo.dual_continuum import fit_transient_closure, parameter_sets
 
 SOLVE_TIME = 3000
 TIMES = np.linspace(0, SOLVE_TIME, 100)
@@ -237,10 +238,7 @@ class TestDualContinuum:
         parameter_values = model.default_parameter_values
         parameter_values.update(REFERENCE_CHANGES)
         reference = read_reference()
-        # Tight tolerances so that solver error does not mask model differences
-        new = voltage(
-            model, parameter_values, pybamm.IDAKLUSolver(rtol=1e-7, atol=1e-8)
-        )
+        new = voltage(model, parameter_values, tight_solver())
         np.testing.assert_allclose(TIMES, reference["Time [s]"])
         np.testing.assert_allclose(new, reference[f"{label} voltage [V]"], atol=1e-5)
 
@@ -267,6 +265,181 @@ class TestDualContinuum:
             dual_continuum(dc_options={"lithium foil surface porosity": "true"})
         with pytest.raises(pybamm.OptionError, match="single particle phase"):
             dual_continuum({"particle phases": ("2", "1")})
+        with pytest.raises(pybamm.OptionError, match="only applies to model type"):
+            dual_continuum(dc_options={"transient closure modes": 4})
+        for value in ["four", 0, True, 2.5]:
+            with pytest.raises(pybamm.OptionError, match="transient closure modes"):
+                dual_continuum(
+                    dc_options={"model type": "DC1t", "transient closure modes": value}
+                )
+        assert (
+            dual_continuum(
+                dc_options={"model type": "DC1t", "transient closure modes": "3"}
+            ).dc_options["transient closure modes"]
+            == 3
+        )
+
+
+DC1T = {"model type": "DC1t"}
+#: Fine radial mesh, so that the Fickian DFN is a near-exact reference.
+FINE_DFN_MESH = {"x_n": 20, "x_s": 20, "x_p": 20, "r_n": 160, "r_p": 160}
+CC_CV_REST = pybamm.Experiment(
+    [
+        "Discharge at 2C for 15 minutes",
+        "Hold at 3.75 V for 20 minutes",
+        "Rest for 20 minutes",
+    ]
+)
+
+
+class TestTransientDualContinuum:
+    @pytest.mark.parametrize("options", CELLS)
+    def test_defaults_match_fickian_dfn(self, options):
+        # Default DC1t modes are fitted to the isolated sphere's s(t)
+        dfn = pybamm.lithium_ion.DFN(options)
+        reference = pybamm.Simulation(dfn, var_pts=FINE_DFN_MESH).solve(
+            [0, SOLVE_TIME], t_interp=TIMES
+        )
+        np.testing.assert_allclose(
+            voltage(dual_continuum(options, DC1T)),
+            reference["Voltage [V]"](TIMES),
+            atol=5e-4,
+        )
+
+    def test_constant_voltage_hold_matches_fickian_dfn(self):
+        # The modes need no assumption on the current history
+        model = dual_continuum(HALF_CELL, {**DC1T, **DFN_LIKE})
+        solutions = [
+            pybamm.Simulation(
+                m,
+                parameter_values=model.default_parameter_values,
+                experiment=CC_CV_REST,
+                var_pts=pts,
+            ).solve()
+            for m, pts in [
+                (model, None),
+                (pybamm.lithium_ion.DFN(HALF_CELL), FINE_DFN_MESH),
+            ]
+        ]
+        times = np.linspace(0, solutions[1].t[-1], 400)
+        for name, atol in [("Voltage [V]", 1e-3), ("Current [A]", 1e-4)]:
+            np.testing.assert_allclose(
+                solutions[0][name](times), solutions[1][name](times), atol=atol
+            )
+
+    @pytest.mark.parametrize("options", CELLS)
+    def test_closure_variable_options_agree(self, options):
+        # Defaults are the isolated sphere, in dimensional and dimensionless form
+        expected = voltage(dual_continuum(options, DC1T))
+        for closure in ["dimensionless", "isolated sphere"]:
+            np.testing.assert_allclose(
+                voltage(dual_continuum(options, {**DC1T, "closure variable": closure})),
+                expected,
+                rtol=1e-7,
+            )
+
+    def test_fast_modes_give_dc1(self):
+        model = dual_continuum(HALF_CELL, {**DC1T, "transient closure modes": 4})
+        parameter_values = model.default_parameter_values
+        for m in range(1, 5):
+            name = f"Positive electrode transient closure time constant {m} [s]"
+            parameter_values[name] *= 1e-5
+        # s(0) = 0, so the two differ only in the first ~1e-3 s
+        np.testing.assert_allclose(
+            voltage(model, parameter_values, tight_solver())[1:],
+            voltage(dual_continuum(HALF_CELL), solver=tight_solver())[1:],
+            rtol=1e-7,
+        )
+
+    def test_a_priori_is_the_galvanostatic_convolution(self):
+        # Constant current: c_surf = c_vol + s(t) jbar, with s(t) the modes' sum
+        model = dual_continuum(
+            HALF_CELL,
+            {
+                **DC1T,
+                "transient closure modes": 4,
+                "calculate surface concentration a priori": "true",
+            },
+        )
+        parameter_values = model.default_parameter_values
+        prefix = "Positive electrode transient closure"
+        s0 = parameter_values["Positive electrode s0 surface average"]
+        s_of_t = s0 * sum(
+            parameter_values[f"{prefix} weight {m}"]
+            * (
+                1
+                - pybamm.exp(
+                    -pybamm.t / parameter_values[f"{prefix} time constant {m} [s]"]
+                )
+            )
+            for m in range(1, 5)
+        )
+        reference_values = parameter_values.copy()
+        reference_values["Positive electrode s0 surface average"] = s_of_t
+        reference = dual_continuum(
+            HALF_CELL, {"calculate surface concentration a priori": "true"}
+        )
+        np.testing.assert_allclose(
+            voltage(model, parameter_values, tight_solver()),
+            voltage(reference, reference_values, tight_solver()),
+            rtol=1e-7,
+        )
+
+    def test_lithium_conservation(self):
+        solution = solve(dual_continuum(dc_options=DC1T))
+        lithium = solution["Total lithium in particles [mol]"](TIMES)
+        np.testing.assert_allclose(lithium, lithium[0], rtol=1e-10)
+
+    def test_3d_case_against_dns(self):
+        # Paten et al. (2026): closure data and DNS on a tomographic NMC electrode
+        parameter_values = parameter_sets.paten2026_3d_case()
+        data = parameter_sets.load_3d_case_data()
+        closure, dns = data["closure"], data["dns"]
+        fit = fit_transient_closure(
+            closure["Time [s]"],
+            closure["Closure variable [mol.m-1.A-1]"],
+            diffusivity=4e-14,
+        )
+        parameter_values.update(fit.parameter_values(), check_already_exists=False)
+        current = parameter_values["Current function [A]"]
+        experiment = pybamm.Experiment(
+            [f"Discharge at {current} A until 3.0 V", "Rest for 900 seconds"]
+        )
+        voltages = {}
+        for label, dc_options in [
+            ("DC1", {}),
+            ("DC1t", {**DC1T, "transient closure modes": fit.n_modes}),
+        ]:
+            solution = pybamm.Simulation(
+                dual_continuum(HALF_CELL, dc_options),
+                parameter_values=parameter_values,
+                experiment=experiment,
+            ).solve()
+            end = solution.cycles[0].steps[0].t[-1]
+            discharge = dns["Time [s]"] < 1600
+            voltages[label] = {
+                "discharge": solution["Voltage [V]"](dns["Time [s]"][discharge])
+                - dns["Voltage [V]"][discharge],
+                "rest": solution["Voltage [V]"](end + np.array([10.0, 100.0, 900.0])),
+                "end": end,
+            }
+        dns_end = 1741.9888
+        dns_rest = np.interp(
+            dns_end + np.array([10.0, 100.0, 900.0]),
+            dns["Time [s]"],
+            dns["Voltage [V]"],
+        )
+        dc1t = voltages["DC1t"]
+        assert abs(dc1t["end"] - dns_end) < 5
+        assert np.sqrt(np.mean(dc1t["discharge"] ** 2)) < 3e-3
+        assert np.all(np.abs(dc1t["rest"] - dns_rest) < [0.08, 0.025, 0.005])
+        # The steady closure misses the relaxation that the transient one captures
+        assert abs(voltages["DC1"]["rest"][0] - dns_rest[0]) > 0.15
+
+
+def tight_solver():
+    """Tight tolerances, so that solver error does not mask model differences."""
+    return pybamm.IDAKLUSolver(rtol=1e-7, atol=1e-8)
 
 
 def read_reference():

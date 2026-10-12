@@ -9,7 +9,14 @@ from pybamm_model_zoo.dual_continuum.dc_active_material import (
     ConstantSpherical,
 )
 from pybamm_model_zoo.dual_continuum.dc_options import DCModelOptions
-from pybamm_model_zoo.dual_continuum.dc_particle import DCParticle
+from pybamm_model_zoo.dual_continuum.dc_particle import (
+    DCParticle,
+    TransientDCParticle,
+)
+from pybamm_model_zoo.dual_continuum.transient_closure import (
+    isolated_sphere_modes,
+    time_constant_name,
+)
 
 SLUG = "dual_continuum"
 
@@ -17,17 +24,11 @@ SLUG = "dual_continuum"
 class DualContinuum(pybamm.lithium_ion.DFN):
     """Dual-continuum model of a lithium-ion cell (Paten et al., 2026).
 
-    Electrolyte, solid-phase conduction, kinetics, thermal and counter-electrode
-    physics are those of :class:`pybamm.lithium_ion.DFN`. The pseudo-2D particle
-    problem is replaced by a homogenised mass balance for the volume-averaged
-    active-material concentration, with the surface concentration given by the
-    DC0, DC1 or Yang definition (see :class:`DCParticle`).
-
-    With the default DC options the model reads the closure variable and the
-    image-based specific surface areas from the parameter set. To run it on a
-    parameter set written for the DFN, use
-    ``dc_options={"closure variable": "isolated sphere", "surface area":
-    "spherical"}``.
+    The DFN with its particle problem replaced by a homogenised mass balance
+    for the volume-averaged active-material concentration, and a DC0, DC1,
+    DC1t or Yang surface concentration. For a parameter set written for the
+    DFN, use ``dc_options={"closure variable": "isolated sphere", "surface
+    area": "spherical"}``.
 
     Parameters
     ----------
@@ -57,6 +58,8 @@ class DualContinuum(pybamm.lithium_ion.DFN):
         self.dc_options = DCModelOptions(dc_options)
         super().__init__(options=options, name=name, build=build)
         pybamm_model_zoo.register_citation(SLUG, "PyBaMMModelZoo2026", "Paten2026")
+        if self.dc_options["model type"] == "DC1t":
+            pybamm_model_zoo.register_citation(SLUG, "Paten2026b")
 
     def set_particle_submodel(self):
         if (
@@ -76,8 +79,13 @@ class DualContinuum(pybamm.lithium_ion.DFN):
                 raise pybamm.OptionError(
                     "The dual-continuum model supports a single particle phase"
                 )
+            particle = (
+                TransientDCParticle
+                if self.dc_options["model type"] == "DC1t"
+                else DCParticle
+            )
             for phase in phases:
-                self.submodels[f"{domain} {phase} particle"] = DCParticle(
+                self.submodels[f"{domain} {phase} particle"] = particle(
                     self.param, domain, self.options, self.dc_options, phase
                 )
                 self.submodels[f"{domain} {phase} total particle concentration"] = (
@@ -122,7 +130,9 @@ class DualContinuum(pybamm.lithium_ion.DFN):
         Image-based surface areas default to the DFN geometry (3 eps_s / R,
         no AM-CBD or AM-separator contact), and the closure variable to the
         isolated-sphere value -R / (5 D F) at the reference state, so the
-        defaults describe the same cell as the DFN defaults.
+        defaults describe the same cell as the DFN defaults. For DC1t, the
+        modes are those fitted to the isolated sphere's transient closure
+        variable, with time constants scaled by R^2 / D at the reference state.
         """
         values = super().default_parameter_values
         param = pybamm.LithiumIonParameters()
@@ -157,7 +167,34 @@ class DualContinuum(pybamm.lithium_ion.DFN):
                 },
                 check_already_exists=False,
             )
+            if self.dc_options["model type"] == "DC1t":
+                values.update(
+                    self._isolated_sphere_mode_values(
+                        values, Domain, domain_param, D_ref
+                    ),
+                    check_already_exists=False,
+                )
         return values
+
+    def _isolated_sphere_mode_values(self, values, Domain, domain_param, D_ref):
+        """Isolated-sphere modes as DC1t parameters, dimensional and dimensionless."""
+        R = domain_param.prim.R_typ
+        diffusion_time = float(values.evaluate(R**2 / D_ref))
+        thickness_time = float(values.evaluate(domain_param.L**2 / D_ref))
+        prefix = f"{Domain} electrode"
+        weights, time_constants = isolated_sphere_modes(
+            self.dc_options["transient closure modes"]
+        )
+        mode_values = {}
+        for m, (weight, theta) in enumerate(
+            zip(weights, time_constants, strict=True), start=1
+        ):
+            mode_values[f"{prefix} transient closure weight {m}"] = weight
+            mode_values[time_constant_name(prefix, m, False)] = theta * diffusion_time
+            mode_values[time_constant_name(prefix, m, True)] = (
+                theta * diffusion_time / thickness_time
+            )
+        return mode_values
 
 
 class LithiumIonParametersWithFoilPorosity(pybamm.LithiumIonParameters):

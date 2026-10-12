@@ -37,6 +37,8 @@ zoo-all = []
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pybamm_model_zoo"]
+# Model data is gitignored repo-wide (*.csv), which hatch would otherwise follow
+artifacts = ["src/pybamm_model_zoo/**/data/**/*.csv"]
 
 # pytest treats a pyproject.toml as the inifile only when it carries this table,
 # and the workspace root has none, so `--strict-markers` would reject the markers.

@@ -8,30 +8,17 @@ import pybamm
 class DCModelOptions(pybamm.FuzzyDict):
     """Dual-continuum options; the first value of each list is the default.
 
-    * "model type" : the surface-concentration definition
-        - "DC1": :math:`c_{surf} = c_{vol} + \\langle s \\rangle_A j`
-        - "DC0": :math:`c_{surf} = c_{vol}`
-        - "Yang": boundary-layer closure of Yang and Tartakovsky
-    * "calculate surface concentration a priori" : DC1 only. "false" uses the
-      local reaction rate ``j`` (an algebraic equation for c_surf); "true" uses
-      the electrode-averaged rate imposed by the applied current (explicit),
-      which requires galvanostatic operation ("operating mode": "current").
-    * "closure variable" : DC1 only. How :math:`\\langle s \\rangle_A` is obtained:
-        - "dimensional": read from the parameter set [mol.m-1.A-1]
-        - "dimensionless": :math:`s^*` read from the parameter set, with
-          :math:`\\langle s \\rangle_A = s^* L/(D F)`
-        - "isolated sphere": the analytical closure solution for an isolated
-          sphere, :math:`-R_{eff}/(5 D F)`
-    * "surface area" : "from image" builds the specific surface area from the
-      AM-electrolyte, AM-CBD and AM-separator areas and surface porosities;
-      "spherical" uses :math:`3 \\varepsilon_s / R` as in the DFN.
-    * "lithium foil surface porosity" : half cells only. "true" multiplies the
-      lithium-foil exchange-current density by the separator surface porosity,
-      as some DNS codes do; useful when comparing with such DNS.
+    The options are "model type" ("DC1", "DC1t", "DC0", "Yang"), "transient
+    closure modes" (number of DC1t modes, default 8), "calculate surface
+    concentration a priori" (galvanostatic only), "closure variable"
+    ("dimensional", "dimensionless", "isolated sphere"), "surface area" ("from
+    image", "spherical") and "lithium foil surface porosity" (half cells). The
+    model's README describes each one.
     """
 
     possible_options = {
-        "model type": ["DC1", "DC0", "Yang"],
+        "model type": ["DC1", "DC1t", "DC0", "Yang"],
+        "transient closure modes": [8],
         "calculate surface concentration a priori": ["false", "true"],
         "closure variable": ["dimensional", "dimensionless", "isolated sphere"],
         "surface area": ["from image", "spherical"],
@@ -48,6 +35,9 @@ class DCModelOptions(pybamm.FuzzyDict):
                     f"DC option '{key}' not recognised. Possible options are "
                     f"{list(self.possible_options)}"
                 )
+            if key == "transient closure modes":
+                options[key] = self._number_of_modes(value)
+                continue
             if isinstance(value, bool):
                 value = "true" if value else "false"
             if value not in self.possible_options[key]:
@@ -65,7 +55,30 @@ class DCModelOptions(pybamm.FuzzyDict):
                 "Cannot calculate the surface concentration a priori for Yang's model"
             )
 
+        if (
+            "transient closure modes" in extra_options
+            and options["model type"] != "DC1t"
+        ):
+            raise pybamm.OptionError(
+                "'transient closure modes' only applies to model type 'DC1t'"
+            )
+
         super().__init__(options)
+
+    @staticmethod
+    def _number_of_modes(value):
+        """Validate the number of transient closure modes."""
+        if isinstance(value, bool) or not str(value).strip().isdigit():
+            raise pybamm.OptionError(
+                f"Invalid value '{value}' for DC option 'transient closure modes'. "
+                "It must be a positive integer"
+            )
+        number = int(str(value).strip())
+        if number < 1:
+            raise pybamm.OptionError(
+                "DC option 'transient closure modes' must be at least 1"
+            )
+        return number
 
     @property
     def implicit_surface_concentration(self):

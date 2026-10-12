@@ -1,17 +1,23 @@
-"""Parameter sets of Paten et al. (2026), Table IV, for an LG M50 cell.
+"""Parameter sets and data of Paten et al. (2026).
 
-Both sets start from :footcite:t:`Chen2020` ("Chen2020"), which provides every
-value not listed in Table IV. The electrolyte tortuosities of Table IV are
-given as "tortuosity factor (electrolyte)" parameters and, equivalently, as
-Bruggeman coefficients, so the sets give the same result with PyBaMM's default
-"transport efficiency": "Bruggeman" option and with "tortuosity factor".
+:func:`paten2026_dc1` and :func:`paten2026_dfn` are Table IV (LG M50 cell) on
+top of :footcite:t:`Chen2020`, with tortuosities given both as tortuosity
+factors and as Bruggeman coefficients. :func:`paten2026_3d_case` and
+:func:`load_3d_case_data` are the tomographic NMC half cell, with its
+transient closure variable and a DNS of a discharge and rest.
 """
 
 from __future__ import annotations
 
 import math
+from pathlib import Path
+
+import numpy as np
 
 import pybamm
+
+#: Folder of the 3D case data.
+DATA_3D_CASE = Path(__file__).parent / "data" / "3d_case_data_Paten_2026"
 
 #: Table IV, DFN column.
 TABLE_IV_DFN = {
@@ -161,3 +167,123 @@ def _exchange_current_density(rate_constant, activation_energy):
         )
 
     return exchange_current_density
+
+
+def paten2026_3d_case() -> pybamm.ParameterValues:
+    """NMC half cell reconstructed from a tomographic image, without CBD.
+
+    The DNS comparison of Paten et al. (2026), on top of "Xu2019" for values
+    the models do not use. "Current function [A]" is the DNS current (also
+    1C). Fit the transient closure modes to :func:`load_3d_case_data` with
+    :func:`~pybamm_model_zoo.dual_continuum.fit_transient_closure`.
+
+    Returns
+    -------
+    pybamm.ParameterValues
+        Parameters for the DFN and the dual-continuum model, for
+        ``{"working electrode": "positive"}``.
+    """
+    eps_s, eps_e = 0.492777, 0.505414
+    area = 75.62e-6 * 75.62e-6
+    current = 50.3357753 * area
+    values = pybamm.ParameterValues("Xu2019")
+    values.update(
+        {
+            "Electrode height [m]": 75.62e-6,
+            "Electrode width [m]": 75.62e-6,
+            "Positive electrode thickness [m]": 75.62e-6,
+            "Separator thickness [m]": 20e-6,
+            "Positive electrode active material volume fraction": eps_s,
+            "Positive electrode porosity": eps_e,
+            "Separator porosity": 0.4,
+            # eps**b = eps / tau, with the tortuosities from the image
+            "Positive electrode Bruggeman coefficient (electrode)": 1
+            - math.log(3.285) / math.log(eps_s),
+            "Positive electrode Bruggeman coefficient (electrolyte)": 1
+            - math.log(1.739) / math.log(eps_e),
+            "Separator Bruggeman coefficient (electrolyte)": 1.9,
+            "Positive electrode conductivity [S.m-1]": 2.8,
+            "Positive particle diffusivity [m2.s-1]": 4e-14,
+            "Positive particle radius [m]": 3.4054911011155747e-06,
+            "Maximum concentration in positive electrode [mol.m-3]": 50400.0,
+            "Initial concentration in positive electrode [mol.m-3]": 25000.0,
+            "Positive electrode OCP [V]": _nmc_ocp,
+            "Positive electrode exchange-current density [A.m-2]": (
+                _nmc_exchange_current_density
+            ),
+            "Positive electrode OCP entropic change [V.K-1]": 0.0,
+            "Exchange-current density for lithium metal electrode [A.m-2]": 10.0,
+            "Initial concentration in electrolyte [mol.m-3]": 1000.0,
+            "Electrolyte diffusivity [m2.s-1]": 1e-10,
+            "Electrolyte conductivity [S.m-1]": 1.0,
+            "Cation transference number": 0.4,
+            "Thermodynamic factor": 1.0,
+            "Reference temperature [K]": 298.15,
+            "Ambient temperature [K]": 298.15,
+            "Initial temperature [K]": 298.15,
+            "Current function [A]": current,
+            "Nominal cell capacity [A.h]": current,
+            "Number of electrodes connected in parallel to make a cell": 1.0,
+            "Lower voltage cut-off [V]": 3.0,
+            "Upper voltage cut-off [V]": 4.5,
+        },
+        check_already_exists=False,
+    )
+    values.update(
+        {
+            "Positive electrode specific surface area from image "
+            "(AM-electrolyte) [m-1]": 391289.8,
+            "Positive electrode specific surface area from image "
+            "(AM-separator) [m-1]": 5735.779,
+            "Positive electrode specific surface area from image (AM-CBD) [m-1]": 0.0,
+            "Separator surface porosity": 1.0,
+            # No CBD in this electrode, so this value is not used
+            "CBD surface porosity": 0.5,
+            "Positive electrode s0 surface average": -416.7084594772896,
+            "Positive electrode Yang fitting parameter": 1.0,
+        },
+        check_already_exists=False,
+    )
+    return values
+
+
+def load_3d_case_data() -> dict[str, dict[str, np.ndarray]]:
+    """Closure and DNS data of the 3D NMC half cell of :func:`paten2026_3d_case`.
+
+    Returns
+    -------
+    dict
+        ``"closure"``: ``"Time [s]"`` and ``"Closure variable [mol.m-1.A-1]"``,
+        the surface-averaged transient closure variable solved on the
+        microstructure. ``"dns"``: ``"Time [s]"``, ``"Voltage [V]"`` and
+        ``"Current density [A.m-2]"`` (negative for discharge) of the DNS.
+    """
+    return {
+        "closure": _read_csv(DATA_3D_CASE / "closure_transient.csv"),
+        "dns": _read_csv(DATA_3D_CASE / "dns_discharge_relaxation.csv"),
+    }
+
+
+def _read_csv(path):
+    """Columns of a CSV file whose last comment line holds the column names."""
+    with open(path, encoding="utf-8") as file:
+        names = [line for line in file if line.startswith("#")][-1]
+    names = names.lstrip("# ").strip().split(",")
+    columns = np.loadtxt(path, delimiter=",", ndmin=2).T
+    return dict(zip(names, columns, strict=True))
+
+
+def _nmc_ocp(sto):
+    """NMC open-circuit potential [V] of the 3D case (Kremer et al., 2020)."""
+    return (
+        13.49050
+        - 10.96038 * sto
+        + 8.203617 * sto**1.358699
+        - 3.10758e-6 * pybamm.exp(127.1216 * sto - 114.2593)
+        - 7.033556 * sto ** (-3.362749e-2)
+    )
+
+
+def _nmc_exchange_current_density(c_e, c_s_surf, c_s_max, T):
+    """NMC exchange-current density [A.m-2] of the 3D case, k F = 4.824e-6."""
+    return 4.824e-6 * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
