@@ -8,6 +8,7 @@
 
 ## Bug fixes
 
+- `Solution.get_data_dict` and `save_data` now label sparse cycle histories without dereferencing discarded cycles. Terminal-only retained samples use their original cycle number and Step=-1 when step history is unavailable; skipped EmptySolution placeholders do not claim returned samples. ([#5899](https://github.com/pybamm-team/PyBaMM/pull/5899))
 - `"intercalation kinetics": "Marcus"` now gives a positive current for a positive overpotential, as the other kinetics do, and converts the reorganization energy from eV with F/RT, as Marcus-Hush-Chidsey does. Previously the oxidation and reduction terms were swapped and the energy was used in mixed units, so models with Marcus kinetics failed to solve. ([#5872](https://github.com/pybamm-team/PyBaMM/pull/5872))
 - Evaluating a processed variable at a 0-d array time, e.g. `solution["Voltage [V]"](np.array(10.0))`, now returns the same value as passing the float rather than raising an `IndexError`. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 
