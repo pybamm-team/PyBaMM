@@ -590,12 +590,13 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_psd_sei_film_resistance(self):
-        for film in ["average", "distributed"]:
+        for film, j_tot_state in [("average", "false"), ("distributed", "true")]:
             options = {
                 "particle size": "distribution",
                 "surface form": "algebraic",
                 "SEI": "constant",
                 "SEI film resistance": film,
+                "total interfacial current density as a state": j_tot_state,
             }
             self.check_well_posedness(options)
 
