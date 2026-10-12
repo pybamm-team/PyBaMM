@@ -244,7 +244,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q = Q_ohm + Q_rxn + Q_rev + Q_mix + Q_hys
 
         # Compute the X-average over the entire cell, including current collectors
-                # Contact resistance heating (I^2*R), added here so every thermal
+        # Contact resistance heating (I^2*R), added here so every thermal
         # model includes it in the total heating variables
         if self.options["contact resistance"] == "true":
             I = variables["Current [A]"]
