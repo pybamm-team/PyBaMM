@@ -244,6 +244,20 @@ class BaseThermal(pybamm.BaseSubModel):
         Q = Q_ohm + Q_rxn + Q_rev + Q_mix + Q_hys
 
         # Compute the X-average over the entire cell, including current collectors
+                # Contact resistance heating (I^2*R), added here so every thermal
+        # model includes it in the total heating variables
+        if self.options["contact resistance"] == "true":
+            I = variables["Current [A]"]
+            T_vol_av = variables["Volume-averaged cell temperature [K]"]
+            Q_cr_W = I**2 * self.param.R_contact(T_vol_av)
+            Q_cr_vol_av = Q_cr_W / self.param.V_cell
+            Q_cr = pybamm.FullBroadcast(
+                Q_cr_vol_av,
+                ["negative electrode", "separator", "positive electrode"],
+                "current collector",
+            )
+            Q = Q + Q_cr
+
         # Note: this can still be a function of y and z for higher-dimensional pouch
         # cell models
         Q_ohm_av = self._x_average(Q_ohm, Q_ohm_s_cn, Q_ohm_s_cp)
