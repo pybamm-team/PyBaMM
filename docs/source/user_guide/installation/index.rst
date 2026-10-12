@@ -183,7 +183,7 @@ Users can install ``pybamm`` with ``jax`` and ``jaxlib`` to use the Jax solver.
 
    .. code:: bash
 
-      conda install -c conda-forge "jax>=0.7.0,<0.9.0"
+      conda install -c conda-forge "jax>=0.7.0,<0.12.0"
 
 .. _install-model-zoo:
 
@@ -420,7 +420,7 @@ Dependency                                                  Minimum Version    p
 Jax dependencies
 ^^^^^^^^^^^^^^^^
 
-Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.11-3.14.
+Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.11-3.15.
 
 ========================================================================= ================== ================== =======================
 Dependency                                                                Minimum Version    pip extra          Notes

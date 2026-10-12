@@ -66,10 +66,9 @@ pydiffsol = ["pydiffsol>=0.6.2"]
 bpx = ["bpx>=1.1.1,<1.2.0"]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
-# jax<0.9.0 and vtk have no cp315 wheels yet, so both extras skip Python 3.15
-jax = ["jax>=0.7.0, <0.9.0; python_version >= '3.11' and python_version < '3.15' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
-# VTK-based interactive visualization for unstructured meshes (pillow writes GIFs);
-# 9.3.1 is the first VTK whose numpy_support works with NumPy 2
+jax = ["jax>=0.7.0, <0.12.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+# Unstructured-mesh visualization (pillow writes GIFs). 9.3.1 is the first VTK whose
+# numpy_support works with NumPy 2; no VTK has cp315 wheels yet, so 3.15 skips it
 vtk = ["vtk>=9.3.1; python_version < '3.15'", "pillow"]
 # Finite-element meshes: scikit-fem builds 2D and 3D meshes, meshio reads mesh files
 fem = ["scikit-fem>=12.0.2", "meshio>=5.3.0"]
