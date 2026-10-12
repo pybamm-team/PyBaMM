@@ -664,20 +664,26 @@ class ParameterValues:
         if isinstance(values, ParameterValues):
             values = dict(values._store._data)
 
+        # Check and transform parameter values
+        values = self.check_parameter_values(dict(values))
+
+        # Runs after list values are expanded into indexed keys, so a list
+        # parameter that already exists passes, and before any write
         if strict:
             unknown = [name for name in values if name not in self._store]
             if unknown:
-                best_matches = self._store._data.get_best_matches
-                hints = "; ".join(
-                    f"'{name}' (best matches: {best_matches(name)})" for name in unknown
-                )
+                hints = []
+                for name in unknown:
+                    matches = self._store._data.get_best_matches(name)
+                    hints.append(
+                        f"'{name}' (best matches: {matches})"
+                        if matches
+                        else f"'{name}'"
+                    )
                 raise KeyError(
                     f"Unknown parameter(s) with strict=True, nothing was updated: "
-                    f"{hints}. Use strict=False to add new parameters."
+                    f"{'; '.join(hints)}. Use strict=False to add new parameters."
                 )
-
-        # Check and transform parameter values
-        values = self.check_parameter_values(dict(values))
 
         for name, value in values.items():
             # Process value

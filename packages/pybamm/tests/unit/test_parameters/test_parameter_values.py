@@ -143,6 +143,18 @@ class TestParameterValues:
         param.update({"Negative particle radiuss [m]": 2e-5})
         assert param["Negative particle radiuss [m]"] == pytest.approx(2e-5)
 
+        # an existing list parameter is stored as indexed keys and passes
+        param.update({"Foo [V]": [1, 2]})
+        param.update({"Foo [V]": [3, 4]}, strict=True)
+        assert param["Foo (0) [V]"] == 3
+        assert param["Foo (1) [V]"] == 4
+
+        # a name with no close match is reported without an empty match list
+        with pytest.raises(KeyError) as excinfo:
+            param.update({"zzzz": 1.0}, strict=True)
+        assert "'zzzz'" in str(excinfo.value)
+        assert "best matches" not in str(excinfo.value)
+
     def test_deprecated_parameter_raises_error(self):
         # Guard: deprecated parameter detection must work (388d1366f)
         param = pybamm.ParameterValues("Chen2020")
