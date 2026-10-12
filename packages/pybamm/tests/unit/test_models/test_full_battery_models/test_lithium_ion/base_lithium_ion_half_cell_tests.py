@@ -58,6 +58,15 @@ class BaseUnitTestLithiumIonHalfCell:
         options = {"SEI": "reaction limited"}
         self.check_well_posedness(options)
 
+    def test_well_posed_reaction_limited_sei_lumped_thermal(self):
+        options = {
+            "SEI": "reaction limited",
+            "thermal": "lumped",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_asymmetric_reaction_limited_sei(self):
         options = {"SEI": "reaction limited (asymmetric)"}
         self.check_well_posedness(options)

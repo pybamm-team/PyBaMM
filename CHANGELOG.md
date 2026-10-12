@@ -1,5 +1,10 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- Irreversible heating now includes the resistive loss across the SEI film when `"SEI film resistance"` is `"distributed"` or `"average"`. Before, that loss lowered the voltage but never appeared in `"Total heating [W]"` or the cell temperature. ([#5841](https://github.com/pybamm-team/PyBaMM/pull/5841))
+- Irreversible heating now includes the heat released by the SEI growth, SEI on cracks and lithium plating side reactions, including SEI growth on a lithium metal electrode, each as its current times the departure of the surface potential difference from that reaction's open-circuit potential. Before, the electrical energy lost to these reactions never appeared in `"Total heating [W]"` or the cell temperature. ([#5875](https://github.com/pybamm-team/PyBaMM/pull/5875))
+
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
 ## Breaking changes
