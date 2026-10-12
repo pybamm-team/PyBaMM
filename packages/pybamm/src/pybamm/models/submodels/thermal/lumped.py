@@ -50,8 +50,11 @@ class Lumped(BaseThermal):
         # Newton cooling, accounting for surface area to volume ratio
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
         T_surf = variables["Surface temperature [K]"]
+        # The surface temperature can vary over the current collector(s) for
+        # higher-dimensional current collectors; average it for the lumped model
+        T_surf_av = self._yz_average(T_surf)
         V = variables["Cell thermal volume [m3]"]
-        Q_cool_W = -self.param.h_total * (T_vol_av - T_surf) * self.param.A_cooling
+        Q_cool_W = -self.param.h_total * (T_vol_av - T_surf_av) * self.param.A_cooling
         Q_cool_vol_av = Q_cool_W / V
 
         # Contact resistance heating Q_cr
