@@ -8,6 +8,7 @@
 
 ## Bug fixes
 
+- Preserve the latest completed experiment state and avoid a duplicate cycle callback when a solver fails before the first step of an unsaved cycle. ([#5898](https://github.com/pybamm-team/PyBaMM/pull/5898))
 - `"intercalation kinetics": "Marcus"` now gives a positive current for a positive overpotential, as the other kinetics do, and converts the reorganization energy from eV with F/RT, as Marcus-Hush-Chidsey does. Previously the oxidation and reduction terms were swapped and the energy was used in mixed units, so models with Marcus kinetics failed to solve. ([#5872](https://github.com/pybamm-team/PyBaMM/pull/5872))
 - Evaluating a processed variable at a 0-d array time, e.g. `solution["Voltage [V]"](np.array(10.0))`, now returns the same value as passing the float rather than raising an `IndexError`. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 
