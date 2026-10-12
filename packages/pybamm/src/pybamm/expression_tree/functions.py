@@ -4,13 +4,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from typing import TypeVar
 
 import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
 from scipy import special
-from typing_extensions import TypeVar
 
 import pybamm
 

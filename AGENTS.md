@@ -137,7 +137,7 @@ gets wrong:
 - Naming is descriptive: prefer full words over abbreviations (`mean`, not `mu`); avoid
   abbreviating class/argument names.
 - Imports are absolute (relative imports are linted out), ruff-sorted (don't reorder by hand), and
-  use Python 3.10+ syntax (`X | Y`, `dict[...]`). No bare `assert` in `packages/pybamm/src/`; validate and raise.
+  use Python 3.11+ syntax and stdlib (`X | Y`, `dict[...]`, `typing.Self`, `tomllib`). No bare `assert` in `packages/pybamm/src/`; validate and raise.
 - Type-hint public functions; start new modules with `from __future__ import annotations`, type
   arrays as `npt.NDArray[np.float64]`, and reuse the aliases in `type_definitions.py`.
 - **Raise PyBaMM's own exceptions for framework errors** — `OptionError`, `ModelError`,

@@ -5,7 +5,7 @@ import json
 import numbers
 import warnings
 from collections import OrderedDict
-from enum import Enum
+from enum import StrEnum
 from itertools import chain
 from pathlib import Path
 
@@ -19,7 +19,7 @@ from pybamm.models.event import EventType
 from pybamm.models.symbol_processor import SymbolProcessor
 
 
-class ModelSolutionObservability(str, Enum):
+class ModelSolutionObservability(StrEnum):
     """
     Enum to specify the observability states for a PyBaMM model's solution.
 

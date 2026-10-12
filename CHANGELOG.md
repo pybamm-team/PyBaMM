@@ -1,5 +1,10 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- Dropped support for Python 3.10, which reaches end of life in October 2026. `pybamm` and `pybammsolvers` now require Python 3.11 or newer, and `pybamm` no longer depends on `typing-extensions`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `pybamm.ModelSolutionObservability` is now an `enum.StrEnum`, so `str()` and f-strings of a member give its reason message instead of `ModelSolutionObservability.<NAME>`. Comparisons with strings are unchanged. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+
 ## Bug fixes
 
 - `"intercalation kinetics": "Marcus"` now gives a positive current for a positive overpotential, as the other kinetics do, and converts the reorganization energy from eV with F/RT, as Marcus-Hush-Chidsey does. Previously the oxidation and reduction terms were swapped and the energy was used in mixed units, so models with Marcus kinetics failed to solve. ([#5872](https://github.com/pybamm-team/PyBaMM/pull/5872))
