@@ -7,7 +7,7 @@ class = "pybamm_model_zoo.${slug}:${ModelName}"
 tier = "${tier}"
 pybamm_requires = "${pybamm_requires}"
 added = "${added}"
-license = "${license}"
+license = "BSD-3-Clause"
 
 [[model.maintainers]]
 name = "${Author}"

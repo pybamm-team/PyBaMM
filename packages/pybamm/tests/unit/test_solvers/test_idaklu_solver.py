@@ -1249,6 +1249,100 @@ class TestIDAKLUSolver:
         ):
             sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
 
+    @pytest.mark.parametrize("output_variables", [["zero"], ["zero", "u"]])
+    def test_output_variable_with_no_structural_nonzeros(self, output_variables):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        # The solver returns no rows for a variable with no structural nonzeros
+        model.variables = {"u": u, "zero": pybamm.Matrix(csc_matrix((1, 1)))}
+        t_interp = np.linspace(0, 1, 5)
+
+        sol = pybamm.IDAKLUSolver(output_variables=output_variables).solve(
+            model, [0, 1], t_interp=t_interp
+        )
+
+        np.testing.assert_array_equal(sol["zero"](t_interp), np.zeros(5))
+        if "u" in output_variables:
+            np.testing.assert_allclose(sol["u"](t_interp), np.exp(-t_interp), rtol=1e-3)
+
+    def test_output_variables_sensitivities_to_some_inputs(self):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables = {"w": b * c}
+        t_interp = np.linspace(0, 1, 11)
+
+        solver = pybamm.IDAKLUSolver(output_variables=["w"], rtol=1e-8, atol=1e-10)
+        sol = solver.solve(
+            model,
+            [0, 1],
+            t_interp=t_interp,
+            inputs={"a": 1.0, "b": 2.0},
+            calculate_sensitivities=["b"],
+        )
+
+        # dw/db = c = e^-t; a is not a sensitivity input, so it has no entry
+        sensitivities = sol["w"].sensitivities
+        assert sorted(sensitivities) == ["all", "b"]
+        np.testing.assert_allclose(
+            sensitivities["all"], np.exp(-t_interp)[:, np.newaxis], rtol=1e-6
+        )
+        np.testing.assert_allclose(sensitivities["b"], np.exp(-t_interp), rtol=1e-6)
+
+    def test_output_variables_sensitivities_to_more_inputs_than_times(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a, b, c = (pybamm.InputParameter(name) for name in "abc")
+        model.rhs = {u: a + 2 * b + 3 * c}
+        model.initial_conditions = {u: 0}
+        model.variables = {"u": u}
+
+        sol = pybamm.IDAKLUSolver(output_variables=["u"]).solve(
+            model,
+            [0, 1],
+            t_interp=np.array([0.0, 1.0]),
+            inputs={"a": 1.0, "b": 1.0, "c": 1.0},
+            calculate_sensitivities=True,
+        )
+
+        # u = (a + 2 b + 3 c) t
+        for name, factor in zip("abc", [1, 2, 3], strict=True):
+            np.testing.assert_allclose(
+                sol["u"].sensitivities[name], [0, factor], atol=1e-10
+            )
+            np.testing.assert_allclose(
+                sol.last_state.sensitivities[name], [[factor]], rtol=1e-10
+            )
+
+    @pytest.mark.parametrize("output_variables", [None, ["u"], ["u", "v"]])
+    def test_step_with_output_variables_and_sensitivities(self, output_variables):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a * v, v: -v}
+        model.initial_conditions = {u: 0, v: 1}
+        model.variables = {"u": u, "v": v}
+        solver = pybamm.IDAKLUSolver(
+            output_variables=output_variables, rtol=1e-8, atol=1e-10
+        )
+
+        sol = None
+        for _ in range(2):
+            sol = solver.step(
+                sol, model, 1.0, inputs={"a": 2.0}, calculate_sensitivities=True
+            )
+
+        # du/da is the integral of v = e^-t, continued from the first step
+        np.testing.assert_allclose(
+            sol["u"].sensitivities["a"], 1 - np.exp(-sol.t), rtol=1e-6, atol=1e-9
+        )
+
     def test_with_output_variables_and_sensitivities(self):
         # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming
@@ -1344,6 +1438,43 @@ class TestIDAKLUSolver:
                     atol=tol,
                     err_msg=f"Failed for '{varname}', sensitivity '{key}'",
                 )
+
+    def test_output_variables_sensitivities_are_keyed_by_sensitivity_parameters(
+        self,
+    ):
+        # An input that no sensitivity was requested for takes no key or column.
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        inputs = {
+            "Current function [A]": 0.68,
+            "Electrode height [m]": parameter_values["Electrode height [m]"],
+        }
+        parameter_values.update({key: "[input]" for key in inputs})
+        name = "Voltage [V]"
+        t_interp = np.linspace(0, 600, 11)
+
+        def voltage_sensitivities(output_variables):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                solver=pybamm.IDAKLUSolver(output_variables=output_variables),
+            )
+            solution = sim.solve(
+                [0, 600],
+                t_interp=t_interp,
+                inputs=inputs,
+                calculate_sensitivities=["Current function [A]"],
+            )
+            return solution[name].sensitivities
+
+        full = voltage_sensitivities(None)
+        outputs_only = voltage_sensitivities([name])
+        assert set(outputs_only) == {"all", "Current function [A]"}
+        np.testing.assert_allclose(
+            outputs_only["Current function [A]"],
+            full["Current function [A]"],
+            rtol=1e-6,
+            atol=1e-10,
+        )
 
     def test_with_output_variables_and_event_termination(self):
         model = pybamm.lithium_ion.DFN()

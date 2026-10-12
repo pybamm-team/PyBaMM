@@ -77,7 +77,6 @@ def tokens(
     year: int | None = None,
     added: str | None = None,
     pybamm_requires: str | None = None,
-    license: str = "BSD-3-Clause",
 ) -> dict[str, str]:
     """Build the substitution map, validating the contributor's inputs."""
     if not usable_identifier(slug, SLUG_PATTERN):
@@ -103,7 +102,6 @@ def tokens(
         "tier": tier,
         "added": added or today.isoformat(),
         "pybamm_requires": pybamm_requires or default_pybamm_requires(),
-        "license": license,
     }
 
 
