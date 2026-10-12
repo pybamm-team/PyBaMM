@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- The lumped thermal model now discretises with 1+1D (and 2+1D) current collectors: the surface temperature used in the cooling term is averaged over the current collector(s) instead of varying over it. ([#5891](https://github.com/pybamm-team/PyBaMM/pull/5891))
+
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
 ## Breaking changes
