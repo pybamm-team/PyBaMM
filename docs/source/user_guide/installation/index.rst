@@ -8,7 +8,7 @@ It can be installed using ``uv``, ``pip``, or ``conda``, or from source.
 Prerequisites
 -------------
 
-To use PyBaMM, you must have Python 3.10 - 3.14 installed.
+To use PyBaMM, you must have Python 3.10 - 3.15 installed.
 
 .. tab:: Debian-based distributions (Debian, Ubuntu)
 
@@ -183,7 +183,7 @@ Users can install ``pybamm`` with ``jax`` and ``jaxlib`` to use the Jax solver.
 
    .. code:: bash
 
-      conda install -c conda-forge "jax>=0.7.0,<0.9.0"
+      conda install -c conda-forge "jax>=0.7.0,<0.12.0"
 
 .. _install-model-zoo:
 
@@ -420,7 +420,7 @@ Dependency                                                  Minimum Version    p
 Jax dependencies
 ^^^^^^^^^^^^^^^^
 
-Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.11-3.14.
+Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.11-3.15.
 
 ========================================================================= ================== ================== =======================
 Dependency                                                                Minimum Version    pip extra          Notes
