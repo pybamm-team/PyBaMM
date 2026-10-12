@@ -72,7 +72,6 @@ repos:
         name: Regenerate model zoo docs pages and badges from the manifests
         entry: python packages/pybamm-model-zoo/scripts/generate.py
         language: python
-        additional_dependencies: ["tomli; python_version < '3.11'"]
         files: ^(packages/pybamm-model-zoo/(src/pybamm_model_zoo/.*|scripts/generate\.py|status\.json|badges/.*)|docs/source/model_zoo/.*)$
         pass_filenames: false
 

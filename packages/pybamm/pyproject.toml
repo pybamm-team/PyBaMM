@@ -9,7 +9,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
-requires-python = ">=3.10, <3.15"
+requires-python = ">=3.11, <3.15"
 readme = { file = "README.md", content-type = "text/markdown" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -19,7 +19,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -34,7 +33,6 @@ dependencies = [
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
     "sympy>=1.12",
-    "typing-extensions>=4.16.0",
     "pandas>=1.5.0",
     "pooch>=1.8.1",
     "posthog",
@@ -65,7 +63,7 @@ pydiffsol = ["pydiffsol>=0.6.2"]
 bpx = ["bpx>=1.1.1,<1.2.0"]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
-jax = ["jax>=0.7.0, <0.9.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+jax = ["jax>=0.7.0, <0.9.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 # VTK-based interactive visualization for unstructured meshes (pillow writes GIFs);
 # 9.3.1 is the first VTK whose numpy_support works with NumPy 2
 vtk = ["vtk>=9.3.1", "pillow"]
@@ -118,8 +116,6 @@ dev = [
     "pytest-snapshot",
     # For testing Jupyter notebooks
     "nbmake",
-    # To access the metadata for python packages
-    "importlib-metadata; python_version < '3.10'",
     { include-group = "bench" },
 ]
 

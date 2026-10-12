@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TypeVar
+from typing import Self
 
 import numpy as np
 import numpy.typing as npt
-from typing_extensions import Self
 
 
 class EventType(Enum):
@@ -29,9 +28,6 @@ class EventType(Enum):
     DISCONTINUITY = 1
     INTERPOLANT_EXTRAPOLATION = 2
     SWITCH = 3
-
-
-E = TypeVar("E", bound="Event")
 
 
 class Event:

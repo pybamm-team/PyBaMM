@@ -1831,3 +1831,15 @@ class TestBaseModel:
         assert "convert_to_format" not in vars(restored)
         solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])
         np.testing.assert_allclose(solution["u"](1.0), np.exp(-1.0), rtol=1e-3)
+
+
+class TestModelSolutionObservability:
+    def test_members_format_as_their_reason(self):
+        reason = pybamm.ModelSolutionObservability.DISABLED
+        assert str(reason) == reason.value
+        assert f"{reason}" == reason.value
+        assert reason == reason.value
+
+    def test_only_enabled_is_truthy(self):
+        for reason in pybamm.ModelSolutionObservability:
+            assert bool(reason) is (reason is pybamm.ModelSolutionObservability.ENABLED)
