@@ -13,6 +13,7 @@ class TestEnergyBalance:
                     "SEI": "solvent-diffusion limited",
                     "SEI on cracks": "true",
                     "particle mechanics": "swelling and cracking",
+                    "stress-induced diffusion": "true",
                     "lithium plating": "partially reversible",
                 },
                 "OKane2022",
@@ -25,6 +26,7 @@ class TestEnergyBalance:
                     "open-circuit potential": (("single", "current sigmoid"), "single"),
                     "SEI": "solvent-diffusion limited",
                     "lithium plating": "partially reversible",
+                    "surface form": "algebraic",
                 },
                 "Bonkile2024",
                 -10.0,
@@ -44,7 +46,12 @@ class TestEnergyBalance:
         # Ohmic plus irreversible heat must equal the power drawn by all reactions
         # at their open-circuit potentials minus the terminal power
         model = pybamm.lithium_ion.DFN(
-            {"calculate heat source for isothermal models": "true", **options}
+            {
+                "calculate heat source for isothermal models": "true",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+                **options,
+            }
         )
         param = pybamm.ParameterValues(parameter_set)
         # Xu2019 has no SEI growth, current collector or thermal parameters

@@ -372,6 +372,19 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_side_reactions_lumped_thermal(self):
+        options = {
+            "SEI": "reaction limited",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+            "lithium plating": "reversible",
+            "thermal": "lumped",
+            "SEI film resistance": "distributed",
+            "stress-induced diffusion": "true",
+            "total interfacial current density as a state": "true",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_sei_solvent_diffusion_limited_on_cracks(self):
         options = {
             "SEI": "solvent-diffusion limited",
