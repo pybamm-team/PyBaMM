@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- `"SEI film resistance": "average"` now works with `"particle size": "distribution"` in SPMe, DFN and Newman-Tobias, which raised a `DomainError` when building the model. ([#5892](https://github.com/pybamm-team/PyBaMM/pull/5892))
+
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
 ## Breaking changes
