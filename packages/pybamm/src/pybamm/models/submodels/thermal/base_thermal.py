@@ -390,6 +390,25 @@ class BaseThermal(pybamm.BaseSubModel):
             F = pybamm.constants.F.value
             pi = np.pi
 
+            def radial_gradient_squared(concentration):
+                # Polynomial profiles already define concentration as a function of
+                # radius; use its analytic derivative instead of a finite-volume one.
+                radial_variable = next(
+                    (
+                        symbol
+                        for symbol in concentration.pre_order()
+                        if isinstance(symbol, pybamm.SpatialVariable)
+                        and symbol.coord_sys == "spherical polar"
+                    ),
+                    None,
+                )
+                if radial_variable is not None:
+                    derivative = concentration.diff(radial_variable)
+                    return derivative**2
+
+                gradient = pybamm.grad(concentration)
+                return pybamm.inner(gradient, gradient)
+
             # Compute heat of mixing in negative electrode
             if self.options.electrode_types["negative"] == "planar":
                 Q_mix_s_n = pybamm.FullBroadcast(
@@ -408,7 +427,7 @@ class BaseThermal(pybamm.BaseSubModel):
                     c_n = variables["Negative particle concentration [mol.m-3]"]
                     T_n = variables["Negative electrode temperature [K]"]
                 T_n_part = pybamm.PrimaryBroadcast(T_n, ["negative particle"])
-                dc_n_dr2 = pybamm.inner(pybamm.grad(c_n), pybamm.grad(c_n))
+                dc_n_dr2 = radial_gradient_squared(c_n)
                 D_n = self.param.n.prim.D(c_n, T_n_part)
                 dUeq_n = self.param.n.prim.U(
                     c_n / self.param.n.prim.c_max, T_n_part
@@ -431,7 +450,7 @@ class BaseThermal(pybamm.BaseSubModel):
                 c_p = variables["Positive particle concentration [mol.m-3]"]
                 T_p = variables["Positive electrode temperature [K]"]
             T_p_part = pybamm.PrimaryBroadcast(T_p, ["positive particle"])
-            dc_p_dr2 = pybamm.inner(pybamm.grad(c_p), pybamm.grad(c_p))
+            dc_p_dr2 = radial_gradient_squared(c_p)
             D_p = self.param.p.prim.D(c_p, T_p_part)
             dUeq_p = self.param.p.prim.U(c_p / self.param.p.prim.c_max, T_p_part).diff(
                 c_p

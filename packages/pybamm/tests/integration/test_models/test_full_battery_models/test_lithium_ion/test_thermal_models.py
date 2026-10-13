@@ -222,3 +222,25 @@ class TestThermal:
             # cell heats up above the reference, so R (and hence the contact
             # overpotential magnitude) is larger than the constant case
             np.testing.assert_array_less(np.abs(dphi_const[1:]), np.abs(dphi_fn[1:]))
+
+    @pytest.mark.parametrize(
+        ("model_class", "particle_profile"),
+        [
+            (pybamm.lithium_ion.SPM, "Fickian diffusion"),
+            (pybamm.lithium_ion.SPM, "quadratic profile"),
+            (pybamm.lithium_ion.SPM, "quartic profile"),
+            (pybamm.lithium_ion.DFN, "Fickian diffusion"),
+            (pybamm.lithium_ion.DFN, "quadratic profile"),
+            (pybamm.lithium_ion.DFN, "quartic profile"),
+        ],
+    )
+    def test_heat_of_mixing_with_particle_profile(self, model_class, particle_profile):
+        model = model_class(
+            {
+                "particle": particle_profile,
+                "thermal": "lumped",
+                "heat of mixing": "true",
+            }
+        )
+
+        pybamm.Simulation(model).build()
