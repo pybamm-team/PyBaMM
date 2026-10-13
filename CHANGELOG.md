@@ -6,6 +6,7 @@
 - The `jax` extra now accepts JAX up to 0.11 (previously below 0.9), which brings `JaxSolver` and the IDAKLU-JAX interface to Python 3.15. JAX 0.11 needs Python 3.12 or newer, so Python 3.11 gets JAX 0.10 at most. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - A `fem` extra installs the finite-element meshing dependencies, scikit-fem and meshio, so `pip install "pybamm[fem]"` is enough for 2D and 3D finite-element meshes. `pybamm[all]` includes it. ([#5881](https://github.com/pybamm-team/PyBaMM/pull/5881))
 - `ParameterValues.update` takes `strict=True`, which raises a `KeyError` naming the closest existing parameters when a key does not exist, and then updates nothing. The default (`strict=False`) still adds new parameters. ([#5874](https://github.com/pybamm-team/PyBaMM/issues/5874), [#5886](https://github.com/pybamm-team/PyBaMM/pull/5886))
+- Benchmarks now time import, solver set-up and the first variable read, track how cost scales with problem size, and fail if a run stops early. ([#5903](https://github.com/pybamm-team/PyBaMM/pull/5903))
 
 ## Bug fixes
 
