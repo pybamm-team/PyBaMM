@@ -15,6 +15,13 @@ PYBAMM_ENV = {
     "PYTHONIOENCODING": "utf-8",
     "MPLBACKEND": "Agg",
 }
+# Headless Linux renders VTK through OSMesa (the CI workflows install libosmesa6)
+if sys.platform.startswith("linux") and not (
+    os.getenv("DISPLAY") or os.getenv("WAYLAND_DISPLAY")
+):
+    PYBAMM_ENV["VTK_DEFAULT_OPENGL_WINDOW"] = os.getenv(
+        "VTK_DEFAULT_OPENGL_WINDOW", "vtkOSOpenGLRenderWindow"
+    )
 VENV_DIR = Path("./venv").resolve()
 
 
@@ -39,72 +46,57 @@ def is_macos_intel():
     return sys.platform == "darwin" and platform.machine() in ("x86_64", "i386")
 
 
-def install_locked(session, *, extras=None, groups=None):
-    """Install pybamm and its dependencies into the session environment.
+def install_locked(session, *, extras=None, groups=None, zoo_extras=None):
+    """Install every workspace member and its ``uv.lock`` dependencies.
 
-    Two modes, selected by the ``PYBAMM_SOLVER_WHEELS`` environment variable:
-
-    * **Unset (local dev, solver CI):** ``uv sync --frozen`` over the workspace.
-      ``pybammsolvers`` is built from the in-repo source via the shared lockfile.
-
-    * **Set to a directory of prebuilt solver wheels (the PyBaMM CI matrix):**
-      install the wheel matching this interpreter by explicit path, then install
-      pybamm with ``--no-sources`` so the workspace source routing is ignored.
-      This tests PyBaMM against the *prebuilt in-repo* ``pybammsolvers`` without
-      recompiling it in every matrix cell (and without needing a from-source
-      build on Windows, which only exists via cibuildwheel/vcpkg).
-
-      ``--no-sources`` plus an explicit wheel path is required because the in-repo
-      solver version collides with the PyPI release, so neither ``--find-links``
-      resolution nor the workspace source can be relied on to select the in-repo
-      artifact over the identically-versioned PyPI wheel.
+    ``uv sync --frozen`` installs the locked environment, building
+    ``pybammsolvers`` from source. When ``PYBAMM_SOLVER_WHEELS`` names a wheel
+    or a directory of wheels (the CI matrix), the sync skips ``pybammsolvers``
+    and this interpreter's prebuilt wheel is installed in its place, since
+    Windows has no from-source build.
     """
     env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
-
     wheels = os.getenv("PYBAMM_SOLVER_WHEELS")
-    if wheels:
-        wheels_path = Path(wheels)
-        if wheels_path.is_dir():
-            # The per-OS artifact holds wheels for every Python version; pick the
-            # one whose interpreter tag matches this cell. The trailing dash in
-            # "*-cpXY-*" avoids matching free-threaded "cpXYt-" builds.
-            tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
-            matches = sorted(wheels_path.glob(f"*-{tag}-*.whl"))
-            if not matches:
-                session.error(
-                    f"PYBAMM_SOLVER_WHEELS={wheels} contains no pybammsolvers "
-                    f"wheel for {tag}"
-                )
-            wheel = matches[0].as_posix()
-        else:
-            wheel = wheels_path.as_posix()
-        python_bin = os.path.join(
-            session.bin, "python.exe" if sys.platform == "win32" else "python"
-        )
-        extras_str = f"[{','.join(extras)}]" if extras else ""
-        cmd = [
-            "uv",
-            "pip",
-            "install",
-            "--python",
-            python_bin,
-            "--no-sources",
-            wheel,
-            "-e",
-            f"./packages/pybamm{extras_str}",
-        ]
-        for group in groups or []:
-            # Groups (dev, docs) are defined in the pybamm package, not the root.
-            cmd.extend(["--group", f"packages/pybamm/pyproject.toml:{group}"])
-        session.run(*cmd, env=env, external=True)
-        return
 
     cmd = ["uv", "sync", "--frozen"]
-    for extra in extras or []:
+    for extra in [*(extras or []), *(zoo_extras or [])]:
         cmd.extend(["--extra", extra])
     for group in groups or []:
         cmd.extend(["--group", group])
+    if wheels:
+        cmd.extend(["--no-install-package", "pybammsolvers"])
     session.run(*cmd, env=env, external=True)
+
+    if not wheels:
+        return
+    wheels_path = Path(wheels)
+    if wheels_path.is_dir():
+        # The trailing dash keeps free-threaded "cpXYt-" wheels out of the match
+        tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
+        matches = sorted(wheels_path.glob(f"*-{tag}-*.whl"))
+        if not matches:
+            session.error(
+                f"PYBAMM_SOLVER_WHEELS={wheels} contains no pybammsolvers "
+                f"wheel for {tag}"
+            )
+        wheel = matches[0].as_posix()
+    else:
+        wheel = wheels_path.as_posix()
+    python_bin = os.path.join(
+        session.bin, "python.exe" if sys.platform == "win32" else "python"
+    )
+    # The sync already installed the solver's locked dependencies
+    session.run(
+        "uv",
+        "pip",
+        "install",
+        "--python",
+        python_bin,
+        "--no-deps",
+        wheel,
+        env=env,
+        external=True,
+    )
 
 
 @nox.session(name="coverage", default=False)
@@ -225,6 +217,9 @@ def run_benchmark_memory(session):
         "-o",
         "addopts=",
         "--memray",
+        # Without this memray sees pymalloc only as whole 1 MiB arenas, so
+        # results jump by 1 MiB depending on heap state left by earlier tests.
+        "--trace-python-allocators",
         "--benchmark-disable",
     )
 
@@ -318,6 +313,81 @@ def build_docs(session):
             ".",
             f"{envbindir}/../tmp/html",
         )
+
+
+ZOO_TESTS = "packages/pybamm-model-zoo"
+
+
+def install_zoo(session):
+    """Install pybamm plus the zoo and every model's declared dependencies."""
+    set_environment_variables(PYBAMM_ENV, session=session)
+    install_locked(session, extras=["all"], groups=["dev"], zoo_extras=["zoo-all"])
+
+
+def zoo_pytest(session, marker, *args, allow_empty=False):
+    """Run the zoo suite, selecting by marker."""
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "-m",
+        marker,
+        *args,
+        ZOO_TESTS,
+        *session.posargs,
+        # 5 is "collected nothing", which is the honest state of the community
+        # tier until someone contributes to it, not a failure.
+        success_codes=[0, 5] if allow_empty else [0],
+    )
+
+
+@nox.session(name="zoo", default=False)
+def run_zoo(session):
+    """Run the whole model zoo suite: contract, model tests, and examples."""
+    install_zoo(session)
+    zoo_pytest(session, "zoo")
+
+
+@nox.session(name="zoo-gating", default=False)
+def run_zoo_gating(session):
+    """Run what is in PyBaMM's merge gate: `core`-tier models and the zoo itself.
+
+    `--zoo-tier` keeps every other tier out of collection entirely, so a model
+    the gate does not cover cannot break the gate by failing to import.
+    """
+    install_zoo(session)
+    zoo_pytest(session, "zoo and gating", "--zoo-tier=core")
+
+
+@nox.session(name="zoo-community", default=False)
+def run_zoo_community(session):
+    """Run the advisory half: everything the merge gate does not already cover."""
+    install_zoo(session)
+    zoo_pytest(session, "zoo and not gating", allow_empty=True)
+
+
+@nox.session(name="zoo-examples", default=False)
+def run_zoo_examples(session):
+    """Run every model zoo example script."""
+    install_zoo(session)
+    zoo_pytest(session, "zoo_examples")
+
+
+# No install: the generator reads manifests with tomllib and never imports pybamm,
+# so building an environment for it would cost minutes to do milliseconds of work.
+@nox.session(name="zoo-docs", default=False, venv_backend="none")
+def run_zoo_docs(session):
+    """Regenerate the model zoo docs pages and badges from the manifests."""
+    session.run("python", f"{ZOO_TESTS}/scripts/generate.py", *session.posargs)
+
+
+@nox.session(name="zoo-new", default=False)
+def run_zoo_new(session):
+    """Create a new model zoo entry from the template."""
+    # Only the zoo itself and pybamm's version metadata are needed, so this skips
+    # the extras and the dev group that install_zoo pulls in.
+    install_locked(session)
+    session.run("python", f"{ZOO_TESTS}/scripts/new_model.py", *session.posargs)
 
 
 @nox.session(name="pre-commit", default=True)

@@ -634,3 +634,63 @@ class TestDiffSLExport:
         pos0 = export.index(s0)
         pos1 = export.index(s1)
         assert pos0 < pos1
+
+    def _interpolant_ode(self, x_data, f_data, name):
+        # Minimal ODE whose RHS is an Interpolant of the state variable:
+        #   dy/dt = -interp(y),  y(0) = 0.5
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        interp = pybamm.Interpolant(x_data, f_data, y, name=name)
+        model.rhs = {y: -interp}
+        model.initial_conditions = {y: pybamm.Scalar(0.5)}
+        model.variables = {"y": y, name: interp}
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    def test_interpolant_1d_exports_interp1d(self):
+        # A 1D Interpolant becomes a DiffSL interp1d call over declared table
+        # tensors, with no raw Interpolant node left in the source.
+        x = np.linspace(0.0, 1.0, 12)
+        model = self._interpolant_ode(x, 2.0 * x + 1.0, "ramp")
+        export = pybamm.DiffSLExport(model).to_diffeq(outputs=["y"])
+        assert "interpolant" not in export.lower()
+        assert "interp1d(" in export
+
+    def test_interpolant_2d_exports_interp1d(self):
+        # 2D Interpolant exports via successive 1D interpolation (interp1d along
+        # the inner axis, linear blend along the outer).
+        x1 = np.linspace(0.0, 1.0, 5)
+        x2 = np.linspace(0.0, 1.0, 5)
+        f = np.add.outer(x1, 2.0 * x2)  # shape (5, 5)
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        interp = pybamm.Interpolant([x1, x2], f, (a, b), name="grid")
+        model.rhs = {a: -interp, b: pybamm.Scalar(0.0)}
+        model.initial_conditions = {a: pybamm.Scalar(0.5), b: pybamm.Scalar(0.5)}
+        model.variables = {"a": a, "b": b}
+        pybamm.Discretisation().process_model(model)
+        export = pybamm.DiffSLExport(model).to_diffeq(outputs=["a"])
+
+        assert "interpolant" not in export.lower()
+        assert "interp1d(" in export
+
+    def test_interpolant_3d_not_supported(self):
+        # 3D+ Interpolants have no interp2d/interp3d yet, so export raises.
+        x = [np.linspace(0.0, 1.0, 3)] * 3
+        f = np.zeros((3, 3, 3))
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        interp = pybamm.Interpolant(x, f, (a, b, c), name="grid3d")
+        model.rhs = {a: -interp, b: pybamm.Scalar(0.0), c: pybamm.Scalar(0.0)}
+        model.initial_conditions = {
+            a: pybamm.Scalar(0.5),
+            b: pybamm.Scalar(0.5),
+            c: pybamm.Scalar(0.5),
+        }
+        model.variables = {"a": a}
+        pybamm.Discretisation().process_model(model)
+        with pytest.raises(NotImplementedError, match="3D Interpolant"):
+            pybamm.DiffSLExport(model).to_diffeq(outputs=["a"])

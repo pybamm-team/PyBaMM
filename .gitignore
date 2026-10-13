@@ -9,7 +9,11 @@
 *.csv
 *.hidden
 *.pkl
-.claude
+# The shared agent config and its hooks are tracked; everything else under
+# .claude/ (settings.local.json, worktrees/) is per-developer state.
+.claude/*
+!.claude/hooks/
+!.claude/settings.json
 .local
 .benchmarks
 

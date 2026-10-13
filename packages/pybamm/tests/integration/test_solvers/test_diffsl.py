@@ -296,3 +296,43 @@ class TestDiffSLExport:
         # unsure why the discrepancy occurs, maybe interpolation near events.
         # Error away from events is below solver tolerances.
         np.testing.assert_allclose(voltage_pybamm, voltage_diffsol, rtol=2e-3)
+
+    @pytest.mark.skipif(not has_pydiffsol, reason="pydiffsol is not installed")
+    def test_interpolant_solve_matches_pybamm(self):
+        import pydiffsol as ds
+
+        x_data = np.linspace(0.0, 1.0, 60)
+        f_data = np.sin(3.0 * x_data) + 2.0
+
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        interp = pybamm.Interpolant(x_data, f_data, y, name="table")
+        # Drift slowly downward through the table so we sample many segments.
+        model.rhs = {y: -0.05 * interp}
+        model.initial_conditions = {y: pybamm.Scalar(0.9)}
+        model.variables = {"y": y}
+        pybamm.Discretisation().process_model(model)
+
+        diffsl_code = pybamm.DiffSLExport(model).to_diffeq(outputs=["y"])
+        ode = ds.Ode(
+            diffsl_code,
+            matrix_type=ds.faer_sparse,
+            scalar_type=ds.f64,
+            linear_solver=ds.lu,
+            ode_solver=ds.bdf,
+        )
+        ode.rtol = 1e-8
+        ode.atol = 1e-10
+        t_interp = np.linspace(0.0, 5.0, 50)
+        y_diffsol = ode.solve_dense(
+            np.array([], dtype=np.float64), t_interp
+        ).ys.flatten()
+
+        assert np.all(np.isfinite(y_diffsol))
+        # RHS is strictly negative over the table range -> monotone decrease.
+        assert y_diffsol[-1] < y_diffsol[0]
+
+        y_pybamm = (
+            pybamm.CasadiSolver(rtol=1e-8, atol=1e-10).solve(model, t_interp)["y"].data
+        )
+        np.testing.assert_allclose(y_diffsol, y_pybamm, rtol=1e-5, atol=1e-5)

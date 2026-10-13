@@ -89,11 +89,7 @@ def get_interp_fun(variable_name, domain):
     variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
 
     fun = pybamm.Interpolant(comsol_t, variable.T, pybamm.t)
-
-    fun.domains = {"primary": domain}
-    fun.mesh = mesh[domain]
-    fun.secondary_mesh = None
-    return fun
+    return fun.with_domains({"primary": domain}).with_mesh(mesh[domain])
 
 
 comsol_c_n_surf = get_interp_fun("c_n_surf", ["negative electrode"])

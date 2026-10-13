@@ -1,0 +1,32 @@
+"""Physics tests for ${ModelName}.
+
+The contract suite already checks that this model imports, is well posed,
+builds, and solves. These tests are for pinning *physical* results: a known
+limit, an analytic solution, a conservation law, or a published figure.
+
+The test below holds while the model is still plain SPM, and will fail the
+moment you change the physics — that failure is your prompt to replace it with
+a test that pins whatever your model is supposed to get right.
+"""
+
+import numpy as np
+
+import pybamm
+import pybamm_model_zoo as zoo
+
+SOLVE_TIME = 1800
+
+
+class Test${ModelName}:
+    def test_reduces_to_spm(self):
+        # TODO: replace with a test of your own physics.
+        solution = pybamm.Simulation(zoo.load("${ModelName}")()).solve(
+            [0, SOLVE_TIME]
+        )
+        reference = pybamm.Simulation(pybamm.lithium_ion.SPM()).solve([0, SOLVE_TIME])
+        times = np.linspace(0, SOLVE_TIME, 50)
+        np.testing.assert_allclose(
+            solution["Voltage [V]"](times),
+            reference["Voltage [V]"](times),
+            rtol=1e-6,
+        )

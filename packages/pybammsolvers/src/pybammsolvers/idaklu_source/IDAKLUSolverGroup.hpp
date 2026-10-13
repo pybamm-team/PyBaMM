@@ -37,7 +37,8 @@ public:
     np_array y0_np,
     np_array yp0_np,
     np_array inputs,
-    py::object logger = py::none());
+    py::object logger = py::none(),
+    np_array pbar = np_array());
 
 
   private:

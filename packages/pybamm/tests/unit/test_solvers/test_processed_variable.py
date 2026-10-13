@@ -5,6 +5,7 @@ from scipy.interpolate import CubicHermiteSpline
 
 import pybamm
 import tests
+from pybamm.solvers.processed_variable import ProcessedVariable0D
 
 _hermite_args = [True, False]
 
@@ -292,7 +293,7 @@ class TestProcessedVariable:
 
         # On edges
         x_s_edge = pybamm.Matrix(disc.mesh["separator"].edges, domain="separator")
-        x_s_edge.mesh = disc.mesh["separator"]
+        x_s_edge = x_s_edge.with_mesh(disc.mesh["separator"])
         x_s_casadi = to_casadi(x_s_edge, y_sol)
         processed_x_s_edge = pybamm.process_variable(
             "test",
@@ -350,7 +351,7 @@ class TestProcessedVariable:
         )
 
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
-        c.mesh = mesh["SEI layer"]
+        c = c.with_mesh(mesh["SEI layer"])
         c_casadi = to_casadi(c, y_sol)
         pybamm.process_variable("test", [c], [c_casadi], solution)
 
@@ -559,8 +560,9 @@ class TestProcessedVariable:
             domain="separator",
             auxiliary_domains={"secondary": "current collector"},
         )
-        x_s_edge.mesh = disc.mesh["separator"]
-        x_s_edge.secondary_mesh = disc.mesh["current collector"]
+        x_s_edge = x_s_edge.with_mesh(
+            disc.mesh["separator"], secondary_mesh=disc.mesh["current collector"]
+        )
         x_s_casadi = to_casadi(x_s_edge, y_sol)
         processed_x_s_edge = pybamm.process_variable(
             "test",
@@ -618,7 +620,7 @@ class TestProcessedVariable:
         y = disc.mesh["current collector"].edges["y"]
         z = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
+        var_sol = var_sol.with_mesh(disc.mesh["current collector"])
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
         yp_sol = self._get_yps(u_sol, hermite_interp)
@@ -643,7 +645,7 @@ class TestProcessedVariable:
         y = disc.mesh["current collector"].edges["y"]
         z = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
+        var_sol = var_sol.with_mesh(disc.mesh["current collector"])
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
         yp_sol = self._get_yps(u_sol, hermite_interp)
@@ -685,6 +687,11 @@ class TestProcessedVariable:
         # scalar
         np.testing.assert_allclose(processed_var(0.5), 2.5, rtol=1e-7, atol=1e-6)
         np.testing.assert_allclose(processed_var(0.7), 3.5, rtol=1e-7, atol=1e-6)
+        # JAX hands the IDAKLU-JAX primitives a scalar time as a 0-d array
+        assert processed_var(np.array(0.5)).shape == ()
+        np.testing.assert_allclose(
+            processed_var(np.array(0.5)), 2.5, rtol=1e-7, atol=1e-6
+        )
 
         eqn_casadi = to_casadi(eqn, y_sol)
         processed_eqn = pybamm.process_variable(
@@ -802,7 +809,7 @@ class TestProcessedVariable:
         r_n = pybamm.Matrix(
             disc.mesh["negative particle"].nodes, domain="negative particle"
         )
-        r_n.mesh = disc.mesh["negative particle"]
+        r_n = r_n.with_mesh(disc.mesh["negative particle"])
         r_n_casadi = to_casadi(r_n, y_sol)
         processed_r_n = pybamm.process_variable(
             "test",
@@ -820,7 +827,7 @@ class TestProcessedVariable:
         R_n = pybamm.Matrix(
             disc.mesh["negative particle size"].nodes, domain="negative particle size"
         )
-        R_n.mesh = disc.mesh["negative particle size"]
+        R_n = R_n.with_mesh(disc.mesh["negative particle size"])
         R_n_casadi = to_casadi(R_n, y_sol)
         model = tests.get_base_model_with_battery_geometry(
             options={"particle size": "distribution"}
@@ -1123,7 +1130,7 @@ class TestProcessedVariable:
         y_sol = disc.mesh["current collector"].edges["y"]
         z_sol = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
+        var_sol = var_sol.with_mesh(disc.mesh["current collector"])
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
         yp_sol = self._get_yps(u_sol, hermite_interp)
@@ -1171,7 +1178,7 @@ class TestProcessedVariable:
         y_sol = disc.mesh["current collector"].edges["y"]
         z_sol = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
+        var_sol = var_sol.with_mesh(disc.mesh["current collector"])
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
         yp_sol = self._get_yps(u_sol, hermite_interp)
@@ -1575,6 +1582,29 @@ class TestProcessedVariable:
         # Check that the unsorted and sorted arrays are the same
         assert np.all(y_unsorted == y_sorted[idxs_unsort])
 
+    @pytest.mark.parametrize("hermite_interp", _hermite_args)
+    def test_unsorted_t_query_returns_query_order(self, hermite_interp):
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        var = t * y
+        model = pybamm.BaseModel()
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        yp_sol = self._get_yps(y_sol, hermite_interp, values=5)
+        var_casadi = to_casadi(var, y_sol)
+        processed_var = pybamm.process_variable(
+            "test",
+            [var],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+
+        t_unsorted = np.array([0.9, 0.3, 0.6])
+        # var = t * y = 5 t^2; atol covers linear-interp error on the xr route
+        np.testing.assert_allclose(
+            processed_var(t_unsorted), 5 * t_unsorted**2, atol=2e-3
+        )
+
     def test_as_computed_0D(self):
         # 0D
         t = pybamm.t
@@ -1681,7 +1711,8 @@ class TestProcessedVariable:
         r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
+        # Varies in space, so a round trip that transposes r and x cannot pass
+        y_sol = np.linspace(1, 2, len(x_sol) * len(r_sol))[:, np.newaxis] * t_sol
         yp_sol = self._get_yps(y_sol, False)
 
         var_casadi = to_casadi(var_sol, y_sol)
@@ -1693,13 +1724,14 @@ class TestProcessedVariable:
         )
 
         computed_var = processed_var.as_computed()
+        np.testing.assert_array_equal(computed_var.entries, processed_var.entries)
         # 3 vectors
         np.testing.assert_array_equal(
             computed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
         )
         np.testing.assert_allclose(
             computed_var(t_sol, x_sol, r_sol),
-            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
+            processed_var(t=t_sol, x=x_sol, r=r_sol),
             rtol=1e-7,
             atol=1e-6,
         )
@@ -1732,7 +1764,9 @@ class TestProcessedVariable:
         r_sol = disc.mesh["negative particle"].nodes
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(R_sol) * len(r_sol))[:, np.newaxis] * t_sol
+        # Varies in space, so a round trip that reorders r, R and x cannot pass
+        n_space = len(x_sol) * len(R_sol) * len(r_sol)
+        y_sol = np.linspace(1, 2, n_space)[:, np.newaxis] * t_sol
         yp_sol = self._get_yps(y_sol, False)
 
         var_casadi = to_casadi(var_sol, y_sol)
@@ -1745,11 +1779,23 @@ class TestProcessedVariable:
             self._sol_default(t_sol, y_sol, yp_sol, model),
         )
         computed_var = processed_var.as_computed()
+        np.testing.assert_array_equal(computed_var.entries, processed_var.entries)
 
         # 4 vectors
         np.testing.assert_array_equal(
             computed_var(t=t_sol, x=x_sol, R=R_sol, r=r_sol).shape, (6, 7, Nx, 50)
         )
+
+    def test_as_computed_spatial_time_integral(self):
+        model = pybamm.lithium_ion.SPM()
+        name = "Time-integrated electrolyte concentration [mol.m-3.s]"
+        model.variables[name] = pybamm.ExplicitTimeIntegral(
+            model.variables["Electrolyte concentration [mol.m-3]"], pybamm.Scalar(0)
+        )
+        solution = pybamm.Simulation(model).solve([0, 600])
+
+        with pytest.raises(NotImplementedError, match=r"spatially varying"):
+            solution[name].as_computed()
 
     def test_processed_variable_unstructured_3d_pouch(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
@@ -2125,6 +2171,46 @@ class TestProcessedVariable:
 
         assert isinstance(processed_var, pybamm.ProcessedVariableUnstructured)
 
+    @staticmethod
+    def _scalar_variable():
+        """A scalar variable, its CasADi function and a solution to read it from."""
+        var = pybamm.t * pybamm.StateVector(slice(0, 1))
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        solution = pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {})
+        return var, to_casadi(var, y_sol), solution
+
+    @pytest.mark.parametrize(
+        "constructor",
+        [pybamm.ProcessedVariable, ProcessedVariable0D, pybamm.process_variable],
+    )
+    def test_base_variables_casadi_keyword_is_deprecated(self, constructor):
+        var, var_casadi, solution = self._scalar_variable()
+        with pytest.warns(DeprecationWarning, match=r"base_variables_casadi"):
+            processed_var = constructor(
+                "test", [var], base_variables_casadi=[var_casadi], solution=solution
+            )
+        assert processed_var._observer.leaves == [var_casadi]
+
+    def test_base_variables_casadi_keyword_cannot_repeat_the_observer(self):
+        var, var_casadi, solution = self._scalar_variable()
+        with pytest.raises(TypeError, match=r"once"):
+            pybamm.ProcessedVariable(
+                "test",
+                [var],
+                [var_casadi],
+                base_variables_casadi=[var_casadi],
+                solution=solution,
+            )
+
+    def test_base_variables_casadi_attribute_is_deprecated(self):
+        var, var_casadi, solution = self._scalar_variable()
+        processed_var = pybamm.process_variable("test", [var], [var_casadi], solution)
+        with pytest.warns(DeprecationWarning, match=r"base_variables_casadi"):
+            assert processed_var.base_variables_casadi == [var_casadi]
+        with pytest.raises(AttributeError):
+            processed_var.base_variables_casadi = [var_casadi]
+
 
 class TestProcessedVariableUnstructuredFVM:
     @staticmethod
@@ -2280,9 +2366,7 @@ class TestProcessedVariableUnstructuredFVM:
         var = pybamm.Variable("u", domain=["negative electrode"])
         disc.set_variable_slices([var])
         grad_disc = disc.process_symbol(pybamm.grad(var))
-        grad_disc.mesh = submesh
-        for comp in grad_disc.components:
-            comp.mesh = submesh
+        grad_disc = grad_disc.with_mesh(submesh)
 
         t_sol = np.array([0.0, 1.0])
         y_sol = np.ones((submesh.npts, 2))
@@ -2306,7 +2390,7 @@ class TestProcessedVariableUnstructuredFVM:
         # unstructured mesh) but evaluate to one value: 0D in space
         geometry, submesh, _, _, var_disc = self._make_setup(dim=2, n=3)
         max_disc = pybamm.Max(var_disc)
-        max_disc.mesh = submesh
+        max_disc = max_disc.with_mesh(submesh)
         t_sol = np.array([0.0, 1.0])
         y_sol = np.arange(submesh.npts)[:, np.newaxis] * (1 + t_sol)[np.newaxis, :]
         var_casadi = to_casadi(max_disc, y_sol)
@@ -2334,7 +2418,7 @@ class TestProcessedVariableUnstructuredFVM:
         )
         submesh.detect_box_boundaries()
         var_disc = pybamm.StateVector(slice(0, 1))
-        var_disc.mesh = submesh
+        var_disc = var_disc.with_mesh(submesh)
         t_sol = np.array([0.0, 1.0])
         y_sol = np.array([[1.0, 2.0]])
         var_casadi = to_casadi(var_disc, y_sol)
@@ -2359,7 +2443,7 @@ class TestProcessedVariableUnstructuredFVM:
         submesh.detect_box_boundaries()
 
         var_disc = pybamm.StateVector(slice(0, submesh.npts))
-        var_disc.mesh = submesh
+        var_disc = var_disc.with_mesh(submesh)
         t_sol = np.array([0.0, 1.0])
         y_sol = np.ones((submesh.npts, 2))
         geometry = {"domain": {}}
@@ -2376,7 +2460,7 @@ class TestProcessedVariableUnstructuredFVM:
         # variable's discretisation would produce
         repeats = 4
         var_disc = pybamm.StateVector(slice(0, submesh.npts * repeats))
-        var_disc.mesh = submesh
+        var_disc = var_disc.with_mesh(submesh)
         t_sol = np.array([0.0, 1.0])
         y_sol = np.ones((submesh.npts * repeats, 2))
         with pytest.raises(NotImplementedError, match="auxiliary domains"):
@@ -2453,9 +2537,10 @@ class TestProcessedVariableUnstructuredFVM:
         np.testing.assert_allclose(comps[0], 2.0, rtol=1e-12)
         np.testing.assert_allclose(comps[1], -3.0, rtol=1e-12)
 
-        # QuickPlot has no unstructured support in this PR and must say so
-        with pytest.raises(NotImplementedError, match="unstructured meshes"):
-            pybamm.QuickPlot(solution, ["u"])
+        # QuickPlot samples unstructured variables through the plotting helpers
+        quick_plot = pybamm.QuickPlot(solution, ["u"])
+        assert list(quick_plot._unstructured_grids[("u",)]) == ["x", "z"]
+        pybamm.close_plots()
 
     def test_vector_field_3d(self):
         geometry, submesh, disc, _, _ = self._make_setup(dim=3, n=3)

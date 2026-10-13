@@ -2,11 +2,45 @@ name: Build and publish package to PyPI
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: PyBaMM release tag to publish as stable documentation
+        required: true
+        type: string
 
 
 permissions: {}
 
 jobs:
+  update_stable_docs:
+    if: >-
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybamm-v')) ||
+      (github.event_name == 'workflow_dispatch' && startsWith(inputs.tag, 'pybamm-v'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Update stable documentation ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          git show-ref --verify --quiet "refs/tags/$TAG"
+          commit=$(git rev-parse "refs/tags/$TAG^{commit}")
+          ref="repos/$GITHUB_REPOSITORY/git/refs/heads/stable"
+          if gh api "$ref" >/dev/null 2>&1; then
+            gh api --method PATCH "$ref" -f sha="$commit" -F force=true
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref=refs/heads/stable -f sha="$commit"
+          fi
+
   build:
     # Monorepo: this workflow publishes ONLY pybamm. Releases are discriminated
     # by tag namespace now that pybamm and pybammsolvers share a repository

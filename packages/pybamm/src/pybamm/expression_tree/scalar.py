@@ -28,13 +28,19 @@ class Scalar(pybamm.Symbol):
 
     """
 
+    __slots__ = ("_value",)
+    # scalars with equal values are the same symbol whatever they are called
+    _id_excluded_fields = ("_name",)
+
     def __init__(
         self,
         value: Numeric,
         name: str | None = None,
     ) -> None:
         # set default name if not provided
-        self.value = value
+        self._value = np.float64(
+            value.item() if isinstance(value, np.ndarray) else value
+        )
         if name is None:
             name = str(self.value)
 
@@ -56,17 +62,18 @@ class Scalar(pybamm.Symbol):
     # address numpy 1.25 deprecation warning: array should have ndim=0 before conversion
     @value.setter
     def value(self, value):
-        self._value = (
-            np.float64(value.item())
-            if isinstance(value, np.ndarray)
-            else np.float64(value)
+        pybamm.expression_tree.symbol._warn_mutation(
+            "value", "Construct a new Scalar(value)."
         )
-
-    def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id()`."""
-        # We must include the value in the hash, since different scalars can be
-        # indistinguishable by class and name alone
-        self._id = hash((self.__class__, str(self.value)))
+        object.__setattr__(
+            self,
+            "_value",
+            (
+                np.float64(value.item())
+                if isinstance(value, np.ndarray)
+                else np.float64(value)
+            ),
+        )
 
     def _base_evaluate(
         self,
@@ -145,6 +152,8 @@ class Constant(Scalar):
     name : str
         the name of the node
     """
+
+    __slots__ = ()
 
     def __init__(self, value: Numeric, name: str):
         super().__init__(value, name)

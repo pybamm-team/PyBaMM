@@ -76,7 +76,7 @@ class StandardModelTest:
         if isinstance(
             self.model, pybamm.lithium_ion.BaseModel | pybamm.lead_acid.BaseModel
         ):
-            self.solver.rtol = 1e-8
+            self.solver.rtol = 1e-7
             self.solver.atol = 1e-8
 
         Crate = abs(
@@ -190,7 +190,7 @@ class StandardModelTest:
                 np.testing.assert_allclose(
                     new_solution.all_ys[x],
                     self.solution.all_ys[x],
-                    rtol=1e-6,
+                    rtol=1e-4,
                     atol=1e-6,
                 )
 

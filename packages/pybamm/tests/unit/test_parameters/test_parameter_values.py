@@ -113,6 +113,65 @@ class TestParameterValues:
         del param["a"]
         assert "a" not in param
 
+    def test_update_strict(self):
+        param = pybamm.ParameterValues("Chen2020")
+        current = param["Current function [A]"]
+        param.update({"Negative particle radius [m]": 1e-5}, strict=True)
+        assert param["Negative particle radius [m]"] == pytest.approx(1e-5)
+
+        with pytest.raises(
+            KeyError,
+            match=r"'Negative particle radiuss \[m\]' \(best matches: "
+            r"\['Negative particle radius \[m\]'",
+        ):
+            param.update(
+                {
+                    "Current function [A]": 2.0,
+                    "Negative particle radiuss [m]": 2e-5,
+                },
+                strict=True,
+            )
+        # a failed strict update writes nothing, not even the valid key before the typo
+        assert "Negative particle radiuss [m]" not in param
+        assert param["Current function [A]"] == pytest.approx(current)
+        assert param["Negative particle radius [m]"] == pytest.approx(1e-5)
+
+        # strict accepts a ParameterValues whose keys all exist
+        param.update(pybamm.ParameterValues(param), strict=True)
+
+        # the default still adds new parameters
+        param.update({"Negative particle radiuss [m]": 2e-5})
+        assert param["Negative particle radiuss [m]"] == pytest.approx(2e-5)
+
+        # an existing list parameter is stored as indexed keys and passes
+        param.update({"Foo [V]": [1, 2]})
+        param.update({"Foo [V]": [3, 4]}, strict=True)
+        assert param["Foo (0) [V]"] == 3
+        assert param["Foo (1) [V]"] == 4
+
+        # an unknown name with an empty list expands to no keys but still raises
+        current = param["Current function [A]"]
+        with pytest.raises(KeyError, match=r"'Negative particle radiusss \[m\]'"):
+            param.update(
+                {
+                    "Current function [A]": 2.0,
+                    "Negative particle radiusss [m]": [],
+                },
+                strict=True,
+            )
+        assert param["Current function [A]"] == pytest.approx(current)
+        assert "Negative particle radiusss [m]" not in param
+
+        # an empty list for an existing list parameter changes nothing
+        param.update({"Foo [V]": []}, strict=True)
+        assert param["Foo (0) [V]"] == 3
+
+        # a name with no close match is reported without an empty match list
+        with pytest.raises(KeyError) as excinfo:
+            param.update({"zzzz": 1.0}, strict=True)
+        assert "'zzzz'" in str(excinfo.value)
+        assert "best matches" not in str(excinfo.value)
+
     def test_deprecated_parameter_raises_error(self):
         # Guard: deprecated parameter detection must work (388d1366f)
         param = pybamm.ParameterValues("Chen2020")
@@ -980,7 +1039,10 @@ class TestParameterValues:
         var_av_proc = param.process_symbol(var_av)
 
         assert isinstance(var_av_proc, pybamm.SizeAverage)
-        R = pybamm.SpatialVariable("R_n", "negative particle size")
+        # the same spatial variable the size average was built with
+        R = pybamm.SpatialVariable(
+            "R_n", domain="negative particle size", coord_sys="cartesian"
+        )
         assert var_av_proc.f_a_dist == R**2
 
     def test_process_not_constant(self):
@@ -1184,6 +1246,23 @@ class TestParameterValues:
 
         # Verify result is a symbol
         assert isinstance(result, pybamm.Symbol)
+
+    def test_expression_function_parameter_rebinds_metadata_leaf_domains(self):
+        from pybamm.expression_tree.operations.serialise import (
+            ExpressionFunctionParameter,
+        )
+
+        x = pybamm.SpatialVariable("x", domain="negative electrode")
+        template = pybamm.Variable("v", scale=pybamm.Parameter("x"))
+        expression = ExpressionFunctionParameter("f", template, "f", ["x"])
+        parameter_values = pybamm.ParameterValues({"f": expression})
+
+        result = parameter_values.process_symbol(
+            pybamm.FunctionParameter("f", {"x": x})
+        )
+
+        (variable,) = pybamm.SymbolUnpacker(pybamm.Variable).unpack_symbol(result)
+        assert variable.scale.domains == x.domains
 
     def test_process_function_parameter_with_nested_function_parameters(self):
         """Test _process_function_parameter with FunctionParameter children."""

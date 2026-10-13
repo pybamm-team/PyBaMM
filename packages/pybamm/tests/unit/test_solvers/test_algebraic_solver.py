@@ -4,6 +4,7 @@
 
 import numpy as np
 import pytest
+from scipy import optimize
 
 import pybamm
 from tests import get_discretisation_for_testing
@@ -251,6 +252,33 @@ class TestAlgebraicSolver:
             rtol=1e-7,
             atol=1e-6,
         )
+
+    @pytest.mark.parametrize("convert_to_format", ["python", "casadi"])
+    def test_minimize_gradient_matches_finite_differences(
+        self, convert_to_format, monkeypatch
+    ):
+        model = pybamm.BaseModel()
+        model.convert_to_format = convert_to_format
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.algebraic = {var1: var1 + 2 * var2 - 3, var2: 3 * var1 - 4 * var2 + 1}
+        model.initial_conditions = {var1: pybamm.Scalar(5), var2: pybamm.Scalar(-2)}
+        pybamm.Discretisation().process_model(model)
+
+        gradients = []
+        minimize = optimize.minimize
+
+        def recording_minimize(fun, x0, jac=None, **kwargs):
+            gradients.append((jac(x0), optimize.approx_fprime(x0, fun, 1e-7)))
+            return minimize(fun, x0, jac=jac, **kwargs)
+
+        monkeypatch.setattr(optimize, "minimize", recording_minimize)
+        pybamm.AlgebraicSolver("minimize", tol=1e-8).solve(model)
+
+        # 2 J^T f at the initial guess, where f = (-2, 24)
+        gradient, finite_difference = gradients[0]
+        np.testing.assert_allclose(gradient, [140, -200])
+        np.testing.assert_allclose(gradient, finite_difference, rtol=1e-5)
 
     def test_model_solver_least_squares_with_bounds(self):
         # Note: we need a better test case to test this functionality properly

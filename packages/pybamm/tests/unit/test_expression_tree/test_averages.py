@@ -190,7 +190,8 @@ class TestUnaryOperators:
 
         assert pybamm.x_average(2 * f) == 2 * pybamm.XAverage(f)
         assert pybamm.x_average(f * 2) == pybamm.XAverage(f) * 2
-        assert pybamm.x_average(2 / f) == 2 / pybamm.XAverage(f)
+        # avg(c / f) != c / avg(f): only a constant denominator splits
+        assert pybamm.x_average(2 / f) == pybamm.XAverage(2 / f)
         assert pybamm.x_average(f / 2) == pybamm.XAverage(f) / 2
 
         assert pybamm.x_average(pybamm.t * f) == pybamm.t * pybamm.XAverage(f)
@@ -204,9 +205,26 @@ class TestUnaryOperators:
         assert out == g * pybamm.XAverage(f)
         assert out.domain == ["current collector"]
 
-        out_div = pybamm.x_average(broad_g / f)
-        assert out_div == g / pybamm.XAverage(f)
+        out_div = pybamm.x_average(f / broad_g)
+        assert out_div == pybamm.XAverage(f) / g
         assert out_div.domain == ["current collector"]
+        assert isinstance(pybamm.x_average(broad_g / f), pybamm.XAverage)
+
+    def test_x_average_does_not_split_on_auxiliary_x_dependence(self):
+        eps = pybamm.Variable("eps", domain="negative electrode")
+        c_s = pybamm.Variable(
+            "c_s",
+            domain="negative particle",
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        c_s_rav = pybamm.r_average(c_s)
+        assert not XAverage.symbol_is_constant(c_s_rav)
+        out = pybamm.x_average(eps * c_s_rav)
+        assert out == pybamm.XAverage(eps * c_s_rav)
+
+        # non-Variable leaves carrying an x domain are x-dependent too
+        coupled = pybamm.CoupledVariable("c", domain="negative electrode")
+        assert isinstance(pybamm.x_average(coupled * eps), pybamm.XAverage)
 
     def test_x_average_does_not_split_when_both_sides_x_dependent(self):
         f1 = pybamm.Variable("f1", domain="negative electrode")
@@ -447,7 +465,7 @@ class TestUnaryOperators:
         assert pybamm.z_average(2 * v_cc) == 2 * pybamm.ZAverage(v_cc)
         assert pybamm.z_average(v_cc * 2) == pybamm.ZAverage(v_cc) * 2
         assert pybamm.z_average(v_cc / 2) == pybamm.ZAverage(v_cc) / 2
-        assert pybamm.z_average(2 / v_cc) == 2 / pybamm.ZAverage(v_cc)
+        assert pybamm.z_average(2 / v_cc) == pybamm.ZAverage(2 / v_cc)
 
         # time factor
         assert pybamm.z_average(pybamm.t * v_cc) == pybamm.t * pybamm.ZAverage(v_cc)
@@ -455,6 +473,20 @@ class TestUnaryOperators:
         # two cc-dependent factors: NO split
         v2 = pybamm.Variable("v2", domain="current collector")
         out = pybamm.z_average(v_cc * v2)
+        assert isinstance(out, pybamm.ZAverage)
+
+        # cc dependence carried only by an auxiliary domain: NO split
+        a = pybamm.Variable(
+            "a",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        b = pybamm.Variable(
+            "b",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        out = pybamm.z_average(pybamm.x_average(a) * pybamm.x_average(b))
         assert isinstance(out, pybamm.ZAverage)
 
     def test_yz_average_factors_out_cc_constant(self):
