@@ -1,15 +1,4 @@
-"""
-Bencher Metric Format (BMF) output for the timing benchmarks.
-
-pytest-benchmark records each benchmark's latency. Tests attach hardware-independent
-measures through ``benchmark.extra_info``:
-
-- ``extra_info["measures"]`` maps a measure name to a value, e.g. a module count.
-- ``extra_info["scaling"]`` (set by the ``record_scaling`` fixture) marks one size of a
-  scaling series. Each series is reported as its growth exponent.
-
-``--bencher-json PATH`` writes all of them as BMF for ``bencher run --adapter json``.
-"""
+"""Write benchmark results in Bencher Metric Format with ``--bencher-json``."""
 
 from __future__ import annotations
 
@@ -40,12 +29,7 @@ def pytest_benchmark_update_json(config, benchmarks, output_json):
 
 @pytest.fixture
 def record_scaling(benchmark, request):
-    """
-    Mark this benchmark as one size of a scaling series.
-
-    The series is named after the test function, plus ``label`` when one test function
-    holds several series.
-    """
+    """Mark this benchmark as one size of a scaling series."""
 
     def record(size: float, label: str | None = None) -> None:
         series = request.node.nodeid.split("[")[0]
@@ -57,21 +41,7 @@ def record_scaling(benchmark, request):
 
 
 def to_bencher_metric_format(benchmarks: list[dict]) -> dict[str, dict]:
-    """
-    Convert pytest-benchmark's JSON benchmarks to Bencher Metric Format.
-
-    Parameters
-    ----------
-    benchmarks : list of dict
-        The ``benchmarks`` entry of pytest-benchmark's JSON output.
-
-    Returns
-    -------
-    dict
-        BMF results keyed by benchmark name, then by measure. Latency matches
-        Bencher's ``python_pytest`` adapter: the mean in nanoseconds, with one standard
-        deviation either side.
-    """
+    """Convert pytest-benchmark results to BMF, with latency as ``python_pytest``."""
     metrics = {}
     series_points: dict[str, list[tuple[float, float]]] = {}
     for benchmark in benchmarks:
@@ -105,18 +75,6 @@ def to_bencher_metric_format(benchmarks: list[dict]) -> dict[str, dict]:
 
 
 def growth_exponent(small: tuple[float, float], large: tuple[float, float]) -> float:
-    """
-    The exponent ``p`` in ``time ~ size**p`` between two (size, time) points.
-
-    Parameters
-    ----------
-    small, large : tuple of float
-        The (size, time) of the smaller and the larger run.
-
-    Returns
-    -------
-    float
-        About 1 for linear growth and 2 for quadratic growth.
-    """
+    """The ``p`` in ``time ~ size**p`` between two (size, time) points."""
     (small_size, small_time), (large_size, large_time) = small, large
     return math.log(large_time / small_time) / math.log(large_size / small_size)

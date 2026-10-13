@@ -110,8 +110,7 @@ jobs:
     steps:
       - uses: bencherdev/bencher@f80847436d7157936b40525db4c2a1064124f04a # v0.6.13
 
-      # Fewer rounds keep each sweep inside Bencher's 5 minute job limit.
-      # Thresholds, in order: latency, scaling exponents, imported module count.
+      # Fewer rounds keep each sweep inside Bencher's 5 minute job limit
       - name: Track main branch benchmarks with Bencher
         env:
           BENCHER_API_KEY: ${{ secrets.BENCHER }}

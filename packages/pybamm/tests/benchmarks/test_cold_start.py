@@ -1,11 +1,3 @@
-"""
-Benchmarks for the first-call costs a user pays before any result: importing pybamm,
-setting up the solver for a new model and reading the first variable.
-
-The rest of the suite times warm, repeated calls, so every round here starts from a
-freshly built model.
-"""
-
 import os
 import subprocess
 import sys
@@ -34,10 +26,8 @@ def _built_simulation(model_class):
 
 
 def test_import(benchmark):
-    # A new interpreter each round; also counts modules, so a stray top-level
-    # import of an optional dependency fails its threshold on any hardware
     command = [sys.executable, "-c", "import sys, pybamm; print(len(sys.modules))"]
-    # The image skips bytecode; let the warm-up round cache it, as an install would
+    # The image disables bytecode; let the warm-up round write it
     env = {k: v for k, v in os.environ.items() if k != "PYTHONDONTWRITEBYTECODE"}
 
     def run():
@@ -63,7 +53,6 @@ def test_cold_solve(benchmark, model_class):
 
 @pytest.mark.parametrize("model_class", _MODELS)
 def test_first_variable_read(benchmark, model_class):
-    # Each round reads from a new model, whose observers start empty
     def setup():
         return (_built_simulation(model_class).solve([0, _T_END]),), {}
 

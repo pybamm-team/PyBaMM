@@ -35,7 +35,6 @@ def _build_sim(experiment, parameters, model_class):
 
 
 def _assert_completed(solution, experiment):
-    # An infeasible step ends the experiment early, which would time as a speed-up
     assert len(solution.cycles) == len(_EXPERIMENT_DESCRIPTIONS[experiment])
 
 
@@ -50,7 +49,6 @@ def test_simulation_build(benchmark, experiment, parameters, model_class):
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("experiment", ["CCCV", "GITT"])
 def test_simulation_first_solve(benchmark, experiment, model_class):
-    # A freshly built simulation each round, so the solver set-up is timed
     def setup():
         return (_build_sim(experiment, "Chen2020", model_class),), {}
 

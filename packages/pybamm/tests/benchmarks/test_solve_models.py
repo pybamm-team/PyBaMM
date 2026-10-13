@@ -7,8 +7,6 @@ import pybamm
 
 pytestmark = pytest.mark.time_bench
 
-# Per push: Marquis2019, Chen2020 and the stiffest set, ORegan2022. The rest
-# run on the scheduled sweep.
 _PARAMS = [
     "Marquis2019",
     "Chen2020",
@@ -56,13 +54,12 @@ def _build_and_discretise(model_class, parameters):
 
 
 def _assert_discharged(solution):
-    # A solve that stops early would otherwise time as a speed-up
     assert solution.termination in ("final time", "event: Minimum voltage [V]")
     assert solution.t[-1] > 0.5 * _T_MAX
 
 
 def _assert_compiled(caplog):
-    # Without a C compiler the solver silently falls back to the uncompiled path
+    # Compile silently falls back without a C compiler
     failures = [r for r in caplog.records if "Failed to compile" in r.getMessage()]
     assert not failures, failures[0].getMessage()
 
@@ -71,7 +68,6 @@ def _benchmark_warm_solve(benchmark, model_class, parameters):
     solver = pybamm.IDAKLUSolver()
     model = _build_and_discretise(model_class, parameters)
     t_eval = np.array([0.0, _T_MAX])
-    # Set up outside the timing; test_cold_start.py times the set-up
     solver.solve(model, t_eval=t_eval)
     solution = benchmark(solver.solve, model, t_eval=t_eval)
     _assert_discharged(solution)

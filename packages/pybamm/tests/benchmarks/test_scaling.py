@@ -1,11 +1,4 @@
-"""
-Benchmarks that time one workload at a small and a large size.
-
-A cost that grows faster than the problem, such as an O(N^2) step loop or a set-up
-pass quadratic in the number of states, barely shows at the sizes the rest of the
-suite uses. Each pair is also reported as a growth exponent, which unlike the
-latencies does not depend on the hardware.
-"""
+"""Workloads at a small and a large size, to catch super-linear growth."""
 
 import numpy as np
 import pytest
@@ -17,7 +10,7 @@ pytestmark = pytest.mark.time_bench
 
 @pytest.fixture(scope="module")
 def half_charged_parameters():
-    # Balanced cycles from half charge never reach a voltage limit
+    # Keeps the balanced cycles clear of the voltage limits
     parameter_values = pybamm.ParameterValues("Chen2020")
     parameter_values.set_initial_state(0.5)
     return parameter_values
