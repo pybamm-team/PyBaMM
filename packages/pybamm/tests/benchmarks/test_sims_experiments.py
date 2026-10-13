@@ -24,18 +24,40 @@ _MODELS = [
 def _setup_sim(experiment, parameters, model_class):
     param = pybamm.ParameterValues(parameters)
     model = model_class()
-    solver = pybamm.IDAKLUSolver()
     exp = pybamm.Experiment(_EXPERIMENT_DESCRIPTIONS[experiment])
-    return pybamm.Simulation(
-        model, parameter_values=param, experiment=exp, solver=solver
-    )
+    return pybamm.Simulation(model, parameter_values=param, experiment=exp)
+
+
+def _build_sim(experiment, parameters, model_class):
+    sim = _setup_sim(experiment, parameters, model_class)
+    sim.build_for_experiment()
+    return sim
+
+
+def _assert_completed(solution, experiment):
+    cycle_lengths = pybamm.Experiment(
+        _EXPERIMENT_DESCRIPTIONS[experiment]
+    ).cycle_lengths
+    assert [len(cycle.steps) for cycle in solution.cycles] == cycle_lengths
+    assert solution.termination == "final time"
 
 
 @pytest.mark.parametrize("model_class", _MODELS)
 @pytest.mark.parametrize("parameters", ["Marquis2019", "Chen2020"])
 @pytest.mark.parametrize("experiment", ["CCCV", "GITT"])
-def test_simulation_setup(benchmark, experiment, parameters, model_class):
-    benchmark(_setup_sim, experiment, parameters, model_class)
+def test_simulation_build(benchmark, experiment, parameters, model_class):
+    sim = benchmark(_build_sim, experiment, parameters, model_class)
+    assert sim.steps_to_built_models
+
+
+@pytest.mark.parametrize("model_class", _MODELS)
+@pytest.mark.parametrize("experiment", ["CCCV", "GITT"])
+def test_simulation_first_solve(benchmark, experiment, model_class):
+    def setup():
+        return (_build_sim(experiment, "Chen2020", model_class),), {}
+
+    solution = benchmark.pedantic(lambda sim: sim.solve(), setup=setup, rounds=5)
+    _assert_completed(solution, experiment)
 
 
 @pytest.mark.parametrize("model_class", _MODELS)
@@ -43,4 +65,5 @@ def test_simulation_setup(benchmark, experiment, parameters, model_class):
 @pytest.mark.parametrize("experiment", ["CCCV", "GITT"])
 def test_simulation_solve(benchmark, experiment, parameters, model_class):
     sim = _setup_sim(experiment, parameters, model_class)
-    benchmark(sim.solve)
+    solution = benchmark(sim.solve)
+    _assert_completed(solution, experiment)
