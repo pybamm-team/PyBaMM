@@ -1,3 +1,4 @@
+import logging
 import warnings
 
 import casadi
@@ -208,8 +209,14 @@ class NonlinearSolver(pybamm.BaseSolver):
         )
         t_eval_np = np.ascontiguousarray(t_eval, dtype=np.float64)
 
+        logger = (
+            pybamm.logger.debug if pybamm.logger.isEnabledFor(logging.DEBUG) else None
+        )
+
         timer = pybamm.Timer()
-        success, y_alg_mat = root_solver.solve_batch(t_eval_np, y0_alg, p_vec)
+        success, y_alg_mat = root_solver.solve_batch(
+            t_eval_np, y0_alg, p_vec, logger=logger
+        )
         integration_time = timer.time()
 
         self._check_success(success, y_alg_mat)

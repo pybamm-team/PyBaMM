@@ -1135,6 +1135,28 @@ class TestFiniteVolume2D:
         with pytest.raises(NotImplementedError):
             disc.process_symbol(delta_function)
 
+    @pytest.mark.parametrize(("npts_lr", "npts_tb"), [(5, 1), (1, 5)])
+    def test_single_node_direction_raises(self, npts_lr, npts_tb):
+        x = pybamm.SpatialVariable("x", ["negative electrode"], direction="lr")
+        z = pybamm.SpatialVariable("z", ["negative electrode"], direction="tb")
+        geometry = {
+            "negative electrode": {
+                x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+                z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            }
+        }
+        mesh = pybamm.Mesh(
+            geometry,
+            {"negative electrode": pybamm.Uniform2DSubMesh},
+            {x: npts_lr, z: npts_tb},
+        )
+        direction = "lr" if npts_lr == 1 else "tb"
+        with pytest.raises(
+            pybamm.DiscretisationError,
+            match=rf"at least 2 nodes in the '{direction}' direction",
+        ):
+            pybamm.Discretisation(mesh, {"negative electrode": pybamm.FiniteVolume2D()})
+
 
 def _mesh_with_current_collector():
     x = pybamm.SpatialVariable("x", ["negative electrode", "separator"], direction="lr")
