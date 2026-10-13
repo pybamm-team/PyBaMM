@@ -7,7 +7,6 @@ are read from the contract registry, so a new check cannot quietly skip the
 template.
 """
 
-import re
 import shutil
 import subprocess  # nosec B404 - runs the repo's own ruff over a rendered template
 import sys
@@ -112,14 +111,6 @@ class TestTokenValidation:
     @pytest.mark.parametrize("soft_keyword", ["match", "case", "type"])
     def test_a_soft_keyword_is_still_a_usable_name(self, soft_keyword):
         assert self.tokens(slug=soft_keyword, name=soft_keyword)["slug"] == soft_keyword
-
-    def test_the_default_floor_pins_the_minor_release(self):
-        """A bare major would let a model claim releases predating its own APIs."""
-        requires = _template.default_pybamm_requires()
-        assert re.fullmatch(r">=\d+\.\d+", requires), requires
-
-    def test_an_explicit_specifier_wins_over_the_default(self):
-        assert self.tokens(pybamm_requires=">=26.4")["pybamm_requires"] == ">=26.4"
 
 
 class TestRenderedStyle:

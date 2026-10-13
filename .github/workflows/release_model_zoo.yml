@@ -1,0 +1,123 @@
+# Releases are routed by tag namespace (`pybamm-model-zoo-v*`). Pull requests run
+# only the build and wheel checks, so a model that would not ship or work fails early.
+name: Model zoo release
+
+on:
+  release:
+    types: [published]
+  pull_request:
+    paths:
+      - "packages/pybamm-model-zoo/**"
+      - ".github/workflows/release_model_zoo.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+  FORCE_COLOR: 3
+
+jobs:
+  build:
+    name: Build and check the distributions
+    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybamm-model-zoo-v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # No cache: these distributions are what gets published.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "latest"
+          enable-cache: false
+
+      - name: Build the sdist and wheel
+        run: uv build --package pybamm-model-zoo --no-sources --out-dir dist
+
+      - name: Check the package metadata
+        run: uvx twine check --strict dist/*
+
+      # A pull request may raise the floor to the release this checkout becomes, so
+      # its PyBaMM stands in. An override replaces extras too, hence restating them.
+      - name: Use PyBaMM from this checkout
+        if: github.event_name == 'pull_request'
+        run: |
+          uv build --package pybamm --wheel --out-dir "$RUNNER_TEMP/pybamm"
+          extras=$(unzip -p dist/*.whl '*.dist-info/METADATA' \
+            | sed -n 's/^Requires-Dist: pybamm\[\([^]]*\)\].*/\1/p' \
+            | tr , '\n' | sort -u | paste -sd , -)
+          echo "pybamm${extras:+[$extras]} @ file://$(echo "$RUNNER_TEMP"/pybamm/*.whl)" \
+            > "$RUNNER_TEMP/overrides.txt"
+
+      # A fresh environment resolving from PyPI, as `pip install` would, bar the override.
+      - name: Install the wheel with the newest PyBaMM
+        run: |
+          overrides=()
+          if [ -f "$RUNNER_TEMP/overrides.txt" ]; then
+            overrides=(--override "$RUNNER_TEMP/overrides.txt")
+          fi
+          uv venv --python 3.13 "$RUNNER_TEMP/newest"
+          uv pip install --no-sources "${overrides[@]}" \
+            --python "$RUNNER_TEMP/newest/bin/python" "$(echo dist/*.whl)[zoo-all]"
+
+      # The floor release the weekly matrix tests, absent until it is published.
+      - name: Install the wheel with the oldest PyBaMM release it admits
+        id: oldest
+        run: |
+          version=$(uv run --no-project --with packaging --python 3.13 \
+            packages/pybamm-model-zoo/scripts/matrix.py --releases 0 \
+            | jq -r '[.[].version | select(. != "main")][0] // empty')
+          if [ -z "$version" ]; then
+            echo "::notice::No PyBaMM release meets the zoo's floor yet."
+            exit 0
+          fi
+          uv venv --python 3.13 "$RUNNER_TEMP/oldest"
+          uv pip install --no-sources --python "$RUNNER_TEMP/oldest/bin/python" \
+            "$(echo dist/*.whl)[zoo-all]" "pybamm==$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check the wheel's files and version, and every model, with the newest PyBaMM
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          args=()
+          if [ -n "$TAG" ]; then
+            args=(--tag "$TAG")
+          fi
+          "$RUNNER_TEMP/newest/bin/python" packages/pybamm-model-zoo/scripts/check_wheel.py "${args[@]}"
+
+      - name: Check every model with the oldest PyBaMM release it admits
+        if: steps.oldest.outputs.version != ''
+        run: |
+          "$RUNNER_TEMP/oldest/bin/python" packages/pybamm-model-zoo/scripts/check_wheel.py
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pybamm-model-zoo-dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybamm-model-zoo-v') }}
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pybamm-model-zoo
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pybamm-model-zoo-dist
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: dist/
