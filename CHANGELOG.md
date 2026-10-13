@@ -14,6 +14,7 @@
 - Fixed the particle concentration of the `"quartic profile"` particle model in models that resolve the electrode (e.g. DFN), which was missing a factor of the particle radius on the concentration gradient term and diverged to unphysical values. ([#5893](https://github.com/pybamm-team/PyBaMM/pull/5893))
 - `EffectiveResistance` and `AlternativeEffectiveResistance2D` `post_process` no longer return NaN for the voltage and positive current collector potential at times after the current collector problem was solved. ([#5858](https://github.com/pybamm-team/PyBaMM/pull/5858))
 - `"Maximum/Minimum {domain} particle stoichiometry"` and the matching concentration variables now include the particle surface value. Before, they only used cell-centre values, so the maximum could be lower than the maximum surface stoichiometry during charge. ([#5842](https://github.com/pybamm-team/PyBaMM/pull/5842))
+- `Ai2020`'s electrolyte diffusivity now converts the Valoen and Reimers (2005) fit from cm2/s to m2/s. It was 1e4 times too large, so DFN simulations with Ai2020 had almost no electrolyte concentration gradient. ([#5887](https://github.com/pybamm-team/PyBaMM/issues/5887), [#5888](https://github.com/pybamm-team/PyBaMM/pull/5888))
 
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
