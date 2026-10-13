@@ -229,7 +229,7 @@ class DCParticle(pybamm.particle.BaseParticle):
         return pybamm.Parameter(f"{Domain} electrode s0 surface average")
 
     def _yang_coefficient(self, variables):
-        """Yang and Tartakovsky's gamma [mol.m-1.A-1] (Paten et al., Eqs. 48-50)."""
+        """Yang and Tartakovsky's (2025) gamma [mol.m-1.A-1] (Paten et al., Eqs. 48-50)."""
         Domain = self.domain.capitalize()
         D = self._diffusivity(variables)
         l_k = self.phase_param.R

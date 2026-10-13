@@ -17,6 +17,7 @@ import pytest
 
 import pybamm
 import pybamm_model_zoo as zoo
+from pybamm_model_zoo import _compat
 from pybamm_model_zoo.dual_continuum import fit_transient_closure, parameter_sets
 
 SOLVE_TIME = 3000
@@ -243,6 +244,16 @@ class TestDualContinuum:
         new = voltage(model, parameter_values, tight_solver())
         np.testing.assert_allclose(TIMES, reference["Time [s]"])
         np.testing.assert_allclose(new, reference[f"{label} voltage [V]"], atol=1e-5)
+
+    @pytest.mark.parametrize(
+        ("model_type", "cited"),
+        [("DC1", set()), ("DC1t", {"Paten2026b"}), ("Yang", {"Yang2025"})],
+    )
+    def test_citations(self, model_type, cited):
+        _compat.reset_citations()
+        dual_continuum(dc_options={"model type": model_type})
+        keys = _compat.cited_keys() & {"Paten2026", "Paten2026b", "Yang2025"}
+        assert keys == {"Paten2026"} | cited
 
     def test_options(self):
         with pytest.raises(pybamm.OptionError, match="not recognised"):

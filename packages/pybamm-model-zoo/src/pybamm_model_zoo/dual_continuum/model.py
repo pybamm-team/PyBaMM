@@ -60,6 +60,8 @@ class DualContinuum(pybamm.lithium_ion.DFN):
         pybamm_model_zoo.register_citation(SLUG, "PyBaMMModelZoo2026", "Paten2026")
         if self.dc_options["model type"] == "DC1t":
             pybamm_model_zoo.register_citation(SLUG, "Paten2026b")
+        elif self.dc_options["model type"] == "Yang":
+            pybamm_model_zoo.register_citation(SLUG, "Yang2025")
 
     def set_particle_submodel(self):
         if (

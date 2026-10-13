@@ -36,7 +36,7 @@ its electrode average, which removes one algebraic equation per mesh cell. This
 is only appropriate for galvanostatic (constant-current) operation; see the DC
 options below.
 
-Yang and Tartakovsky's model uses a boundary layer of thickness
+Yang and Tartakovsky's model (Yang2025) uses a boundary layer of thickness
 `l_d = a_d sqrt(D t)` (up to `l_k`) inside particles of length scale `l_k`,
 taken from the particle radius parameter, with a fitting parameter `a_d`.
 
@@ -343,9 +343,9 @@ supported.
 
 ## Citation
 
-See `CITATION.bib`. Please cite Paten2026 when using this model, and
-Paten2026b (Part II) when using DC1t; they are registered automatically, so
-`pybamm.print_citations()` credits them after use. Paten2026c shows the formal
+See `CITATION.bib`. Please cite Paten2026 when using this model, Paten2026b
+(Part II) when using DC1t, and Yang2025 when using the Yang model; they are
+registered automatically, so `pybamm.print_citations()` credits them after use. Paten2026c shows the formal
 equivalence between DC1t and the DFN for isolated spheres.
 
 ## Maintainer
