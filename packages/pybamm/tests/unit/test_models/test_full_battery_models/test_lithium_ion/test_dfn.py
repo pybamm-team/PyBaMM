@@ -160,3 +160,33 @@ class TestDFN(BaseUnitTestLithiumIon):
             model = pybamm.lithium_ion.DFN(options)
             c_e_av = model.variables["X-averaged electrolyte concentration [mol.m-3]"]
             assert not isinstance(c_e_av, pybamm.Variable)
+
+    def test_well_posed_positive_electrode_degradation(self):
+        options = {"positive electrode degradation": "true"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_positive_electrode_degradation_with_side_reactions(self):
+        options = {
+            "positive electrode degradation": "true",
+            "SEI": "reaction limited",
+            "lithium plating": "irreversible",
+            "thermal": "x-full",
+        }
+        self.check_well_posedness(options)
+
+    @pytest.mark.parametrize(
+        ("options", "match"),
+        [
+            ({"particle phases": ("1", "2")}, r"positive electrode 'particle phases'"),
+            ({"particle phases": ("2", "1")}, r"negative electrode 'particle phases'"),
+            ({"particle size": "distribution"}, r"'particle size'"),
+            ({"particle mechanics": "swelling only"}, r"'particle mechanics'"),
+            (
+                {"open-circuit potential": "one-state hysteresis"},
+                r"'open-circuit potential'",
+            ),
+        ],
+    )
+    def test_positive_electrode_degradation_incompatible_options(self, options, match):
+        with pytest.raises(pybamm.OptionError, match=match):
+            self.model({"positive electrode degradation": "true", **options})

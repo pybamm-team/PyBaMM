@@ -140,6 +140,46 @@ class LithiumIonParameters(BaseParameters):
         self.Q_Li_particles_init = self.n_Li_particles_init * self.F / 3600
         self.Q_Li_init = self.n_Li_init * self.F / 3600
 
+        # Positive electrode degradation parameters
+        if (self.options or {}).get("positive electrode degradation") == "true":
+            x_n = pybamm.standard_spatial_vars.x_n
+            x_p = pybamm.standard_spatial_vars.x_p
+
+            # initial cyclable lithium in positive electrode
+            s_init_dim = pybamm.FunctionParameter(
+                "Initial phase boundary location [m]",
+                {"Through-cell distance (x) [m]": x_p},
+            )
+            lam_pe = pybamm.Scalar(1) - (s_init_dim / self.p.prim.R_typ) ** 3
+            lam_pe_av = pybamm.xyz_average(lam_pe)
+
+            c_c_bott = pybamm.Parameter(
+                "Minimum concentration in positive core when fully charged [mol.m-3]"
+            )
+            c_c_init = pybamm.FunctionParameter(
+                "Initial concentration in positive core [mol.m-3]",
+                {"Through-cell distance (x) [m]": x_p},
+            )
+            c_p_av_cyc = pybamm.xyz_average(
+                self.p.prim.epsilon_s * (c_c_init - c_c_bott)
+            )
+            n_Li_p_init_cyc = c_p_av_cyc * self.p.L * self.A_cc * (1 - lam_pe_av)
+
+            # initial cyclable lithium in negative electrode
+            c_n_bott = pybamm.Parameter(
+                "Minimum concentration in negative particle when fully discharged [mol.m-3]"
+            )
+            c_n_init = pybamm.FunctionParameter(
+                "Initial concentration in negative electrode [mol.m-3]",
+                {"Through-cell distance (x) [m]": x_n},
+            )
+            c_n_av_cyc = pybamm.xyz_average(
+                self.n.prim.epsilon_s * (c_n_init - c_n_bott)
+            )
+            n_Li_n_init_cyc = c_n_av_cyc * self.n.L * self.A_cc
+
+            self.n_Li_particles_init_cyc = n_Li_n_init_cyc + n_Li_p_init_cyc
+
         # Reference OCP based on initial concentration
         self.ocv_init = self.p.prim.U_init - self.n.prim.U_init
 
@@ -389,6 +429,16 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
 
         self.R_sei = pybamm.Parameter(f"{pref}SEI resistivity [Ohm.m]")
+
+        # Positive electrode degradation shell-layer resistivity
+        if (
+            domain == "positive"
+            and (main.options or {}).get("positive electrode degradation") == "true"
+        ):
+            self.R_shell = pybamm.Parameter(
+                "Positive electrode shell resistivity [Ohm.m]"
+            )
+
         self.D_sol = pybamm.Parameter(f"{pref}SEI solvent diffusivity [m2.s-1]")
         self.c_sol = pybamm.Parameter(f"{pref}Bulk solvent concentration [mol.m-3]")
         self.U_sei = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
@@ -497,8 +547,15 @@ class ParticleLithiumIonParameters(BaseParameters):
             )
             self.c_init = self.x(self.U_init, main.T_init) * self.c_max
         else:
+            # Positive electrode core intial concentration
+            c_init_name = f"{pref}Initial concentration in {domain} electrode [mol.m-3]"
+            if (
+                domain == "positive"
+                and (main.options or {}).get("positive electrode degradation") == "true"
+            ):
+                c_init_name = f"{pref}Initial concentration in {domain} core [mol.m-3]"
             self.c_init = pybamm.FunctionParameter(
-                f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
+                c_init_name,
                 {
                     "Radial distance (r) [m]": r,
                     "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
@@ -511,6 +568,27 @@ class ParticleLithiumIonParameters(BaseParameters):
         eps_c_init_av = pybamm.xyz_average(
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
+        if (
+            domain == "positive"
+            and (main.options or {}).get("positive electrode degradation") == "true"
+        ):
+            s_init_p = (
+                pybamm.FunctionParameter(
+                    "Initial phase boundary location [m]",
+                    {"Through-cell distance (x) [m]": x},
+                )
+                / self.R_typ
+            )
+            c_s_trap_p = pybamm.Parameter(
+                "Trapped lithium concentration in shell [mol.m-3]"
+            )
+            eps_c_init_av = pybamm.xyz_average(
+                self.epsilon_s
+                * (
+                    pybamm.r_average(self.c_init) * s_init_p**3
+                    + c_s_trap_p * (1 - s_init_p**3)
+                )
+            )
         # if self.options['open-circuit potential'] == 'Plett':
         self.hysteresis_switch = pybamm.Parameter(
             f"{pref}{Domain} particle hysteresis switching factor"

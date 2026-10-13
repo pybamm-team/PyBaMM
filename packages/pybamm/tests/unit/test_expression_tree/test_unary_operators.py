@@ -594,6 +594,29 @@ class TestUnaryOperators:
         assert boundary_a.side == "right"
         assert boundary_a.child == a
 
+    def test_boundary_cell_operators(self):
+        a = pybamm.Symbol(
+            "a",
+            domain=["positive core"],
+            auxiliary_domains={
+                "secondary": "positive electrode",
+                "tertiary": "current collector",
+            },
+        )
+        for function, cls in [
+            (pybamm.boundary_cell_value, pybamm.BoundaryCellValue),
+            (pybamm.boundary_cell_length, pybamm.BoundaryCellLength),
+        ]:
+            boundary_a = function(a, "right")
+            assert isinstance(boundary_a, cls)
+            assert boundary_a.side == "right"
+            assert boundary_a.child == a
+            assert_domain_equal(
+                boundary_a.domains,
+                {"primary": ["positive electrode"], "secondary": ["current collector"]},
+            )
+            assert boundary_a.create_copy() == boundary_a
+
     def test_evaluates_on_edges(self):
         a = pybamm.StateVector(slice(0, 10), domain="test")
         assert not pybamm.Index(a, slice(1)).evaluates_on_edges("primary")

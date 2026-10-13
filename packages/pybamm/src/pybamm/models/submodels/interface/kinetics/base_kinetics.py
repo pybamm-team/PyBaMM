@@ -152,6 +152,25 @@ class BaseKinetics(BaseInterface):
             eta_sei = pybamm.Scalar(0)
         eta_r += eta_sei
 
+        # Factoring shell-layer resistance in the positive electrode: The growing passivation shell adds an
+        # ohmic-like overpotential
+
+        if (
+            domain == "positive"
+            and self.options["positive electrode degradation"] == "true"
+        ):
+            rho_shell = self.phase_param.R_shell
+            s = variables["Moving phase boundary location [m]"]
+            R = variables["Positive particle radius [m]"]
+            j_tot = variables[
+                f"Total {domain} electrode {phase_name}"
+                "interfacial current density variable [A.m-2]"
+            ]
+            eta_shell = -j_tot * (R - s) * rho_shell
+        else:
+            eta_shell = pybamm.Scalar(0)
+        eta_r += eta_shell
+
         # Broadcast j0 to match eta_r's domain, if necessary
         if j0.secondary_domain == ["current collector"] and eta_r.secondary_domain == [
             f"{domain} electrode"
@@ -231,6 +250,11 @@ class BaseKinetics(BaseInterface):
         ]:
             variables.update(
                 self._get_standard_sei_film_overpotential_variables(eta_sei)
+            )
+
+        if domain == "positive" and self.reaction == "lithium-ion main":
+            variables.update(
+                self._get_standard_pe_shell_overpotential_variables(eta_shell)
             )
 
         return variables
