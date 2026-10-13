@@ -6,7 +6,8 @@ analytical solution of the closure problem for a sphere) is PyBaMM's
 quadratic-profile particle, and DC1t with the isolated sphere's transient
 closure variable is PyBaMM's Fickian particle. The image-based surface area and
 the lithium-foil option are pinned against reference voltages from the
-standalone implementation (tests/data/standalone_reference.csv).
+standalone implementation, which has been previously validated against DNS
+(tests/data/standalone_reference.csv).
 """
 
 from pathlib import Path
@@ -27,6 +28,7 @@ DFN_LIKE = {"surface area": "spherical", "closure variable": "isolated sphere"}
 AREA = "Positive electrode specific surface area from image"
 REFERENCE = Path(__file__).parent / "data" / "standalone_reference.csv"
 #: Changes to the half-cell defaults used for the reference voltages.
+# these are arbitrary values made to test each option
 REFERENCE_CHANGES = {
     f"{AREA} (AM-CBD) [m-1]": 5.0e4,
     f"{AREA} (AM-separator) [m-1]": 2.0e4,
