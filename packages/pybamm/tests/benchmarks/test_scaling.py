@@ -66,7 +66,8 @@ def test_experiment_cycles(
         return solution
 
     solution = benchmark(run)
-    assert len(solution.cycles) == cycles
+    assert [len(cycle.steps) for cycle in solution.cycles] == experiment.cycle_lengths
+    assert solution.termination == "final time"
     record_scaling(size=2 * cycles, label=mode)
 
 

@@ -35,7 +35,11 @@ def _build_sim(experiment, parameters, model_class):
 
 
 def _assert_completed(solution, experiment):
-    assert len(solution.cycles) == len(_EXPERIMENT_DESCRIPTIONS[experiment])
+    cycle_lengths = pybamm.Experiment(
+        _EXPERIMENT_DESCRIPTIONS[experiment]
+    ).cycle_lengths
+    assert [len(cycle.steps) for cycle in solution.cycles] == cycle_lengths
+    assert solution.termination == "final time"
 
 
 @pytest.mark.parametrize("model_class", _MODELS)
