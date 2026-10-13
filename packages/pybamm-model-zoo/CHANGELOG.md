@@ -5,6 +5,8 @@ PyBaMM's.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-13
+
 ### Added
 
 - The model zoo: per-model manifests, a registry, a ten-check contract suite, a
