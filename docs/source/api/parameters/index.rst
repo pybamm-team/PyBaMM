@@ -13,3 +13,4 @@ Parameters
   lead_acid_parameters
   parameter_sets
   process_parameter_data
+  symbol_reference
