@@ -47,15 +47,54 @@ Or individual tests can be marked
 
 - `@pytest.mark.memory_bench` — memory benchmarks (run via `benchmark-memory`).
 
-- `@pytest.mark.slow_bench` — the two large sweeps, `test_model_options.py` and
-  `test_setup_models_and_sims.py`. Each takes about 3 minutes on Bencher's `intel-v1`
+- `@pytest.mark.slow_bench` — the large sweeps: `test_model_options.py`,
+  `test_setup_models_and_sims.py` and the less common parameter sets in
+  `test_solve_models.py`. They take about 3 minutes per job on Bencher's `intel-v1`
   runner, too long to share a 5 minute job with the core suite, so CI runs them as
   separate jobs on a weekday schedule. `nox -s benchmark-time` still runs every benchmark.
+
+### What the core suite covers
+
+- **Warm solves** (`test_solve_models.py`, `test_sims_experiments.py`) — repeated solves
+  of a model whose solver is already set up.
+- **Cold paths** (`test_cold_start.py`, `test_simulation_build`,
+  `test_simulation_first_solve`) — importing pybamm, building a simulation, the first
+  solve's solver set-up and the first variable read. These use `benchmark.pedantic`
+  with a `setup` that builds a fresh model each round, because pytest-benchmark's
+  calibration pass would otherwise run (and discard) the only cold call.
+- **Scaling** (`test_scaling.py`) — the same workload at a small and a large size:
+  mesh points, experiment cycles and output points. A cost that grows faster than the
+  problem barely shows at the small sizes used elsewhere.
+
+Benchmarks assert that they did the work, e.g. that a solve reached its final time or
+voltage cut-off and that an experiment ran every cycle, so a change that cuts a run
+short fails instead of timing as a speed-up.
+
+### Measures other than latency
+
+`conftest.py` adds `--bencher-json PATH`, which writes every result in [Bencher Metric
+Format](https://bencher.dev/docs/reference/bencher-metric-format/) (it needs
+`--benchmark-json` too). Besides `latency`, it reports measures that do not depend on the
+hardware:
+
+- **`scaling-exponent`** — for each series tagged with the `record_scaling` fixture, the
+  `p` in `time ~ size**p` between its smallest and largest size: about 1 for linear
+  growth and 2 for quadratic. Reported as its own benchmark, named after the test.
+- **`import-modules`** — the number of modules `import pybamm` loads, from
+  `test_import`. A top-level import of an optional dependency raises it by 4–6%.
+
+To add a measure, set `benchmark.extra_info["measures"] = {"name": value}` and give it a
+threshold in `benchmarks_main.yml`.
 
 ### CI
 
 Timing benchmarks are tracked with [Bencher](https://bencher.dev) on [bare metal
 hardware](https://bencher.dev/docs/explanation/bare-metal/). CI builds self-contained image (Bencher's runners have no network access), pushes it to Bencher's registry, and `bencher run --image` executes the suite on dedicated hardware.
+
+PyBaMM uses Bencher's free plan: each job must finish within **5 minutes**, and only one
+job runs at a time. The core suite takes about 3 minutes, so check the job time in the
+Bencher report before adding benchmarks to it, and move a sweep to `slow_bench` rather
+than growing the core suite past about 4 minutes.
 
 - **`benchmarks_main.yml`** — on push to `main`, builds, pushes, and runs the core suite
   to record the baseline every PR is compared against. On a weekday schedule it runs the
@@ -82,9 +121,11 @@ import them.
 
 #### Regression alerts on PRs
 
-`benchmarks_main.yml` sets an upper threshold of `0.1`, so a benchmark alerts once it is more
-than 10% slower than its historical mean. `benchmarks_track.yml` inherits that threshold
-from main to raise alerts on PRs, posting a GitHub Check and a PR comment.
+`benchmarks_main.yml` sets percentage thresholds against each benchmark's historical
+mean: latency alerts when it is more than 10% higher, a scaling exponent when it is more
+than 25% higher, and the imported module count when it is more than 2% higher.
+`benchmarks_track.yml` inherits those thresholds from main to raise alerts on PRs,
+posting a GitHub Check and a PR comment.
 
 **PRs only check the core suite.** Regressions in the `slow_bench` sweeps alert on the
 next scheduled `main` run.
