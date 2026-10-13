@@ -66,7 +66,7 @@ Format](https://bencher.dev/docs/reference/bencher-metric-format/). Besides `lat
 Timing benchmarks are tracked with [Bencher](https://bencher.dev) on [bare metal
 hardware](https://bencher.dev/docs/explanation/bare-metal/). CI builds self-contained image (Bencher's runners have no network access), pushes it to Bencher's registry, and `bencher run --image` executes the suite on dedicated hardware.
 
-Bencher's free plan caps each job at 5 minutes; the core suite takes about 3.
+Bencher's free plan caps each job at 5 minutes; the core suite takes about 3.5.
 
 - **`benchmarks_main.yml`** — on push to `main`, builds, pushes, and runs the core suite
   to record the baseline every PR is compared against. On a weekday schedule it runs the
