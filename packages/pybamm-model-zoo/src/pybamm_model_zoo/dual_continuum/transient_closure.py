@@ -163,13 +163,18 @@ class TransientClosureFit:
         decay = np.exp(-np.outer(t, 1 / self.time_constants))
         return self.steady_value * ((1 - decay) @ self.weights)
 
-    def parameter_values(self, domain: str = "Positive") -> dict[str, float]:
+    def parameter_values(
+        self, domain: str = "Positive", phase: str | None = None
+    ) -> dict[str, float]:
         """Parameters of the DC1t model, ready for ``ParameterValues.update``.
 
         Parameters
         ----------
         domain : str, optional
             "Positive" or "Negative".
+        phase : str, optional
+            "primary" or "secondary", only for an electrode with several
+            particle phases.
 
         Returns
         -------
@@ -177,19 +182,17 @@ class TransientClosureFit:
             The steady closure variable, and the weight and time constant of
             each mode, dimensional or dimensionless as fitted.
         """
-        Domain = domain.capitalize()
-        if Domain not in ("Positive", "Negative"):
-            raise ValueError(f"domain must be 'Positive' or 'Negative', not {domain}")
-        prefix = f"{Domain} electrode"
-        if self.dimensionless:
-            values = {f"{prefix} s0 surface average dimensionless": self.steady_value}
-        else:
-            values = {f"{prefix} s0 surface average": self.steady_value}
+        s0 = "s0 surface average" + (" dimensionless" if self.dimensionless else "")
+        values = {parameter_name(domain, s0, phase): self.steady_value}
         for m, (weight, theta) in enumerate(
             zip(self.weights, self.time_constants, strict=True), start=1
         ):
-            values[f"{prefix} transient closure weight {m}"] = float(weight)
-            values[time_constant_name(prefix, m, self.dimensionless)] = float(theta)
+            values[parameter_name(domain, f"transient closure weight {m}", phase)] = (
+                float(weight)
+            )
+            values[
+                parameter_name(domain, time_constant_name(m, self.dimensionless), phase)
+            ] = float(theta)
         return values
 
     def plot(self, show_plot: bool = True):
@@ -282,13 +285,39 @@ class TransientClosureFit:
         return "\n".join(lines)
 
 
-def time_constant_name(prefix: str, m: int, dimensionless: bool) -> str:
-    """Parameter name of the time constant of mode ``m``.
+def parameter_name(domain: str, name: str, phase: str | None = None) -> str:
+    """Full name of a dual-continuum parameter.
 
     Parameters
     ----------
-    prefix : str
-        "Positive electrode" or "Negative electrode".
+    domain : str
+        "Positive" or "Negative".
+    name : str
+        The parameter, e.g. "s0 surface average".
+    phase : str, optional
+        "primary" or "secondary", only for an electrode with several particle
+        phases.
+
+    Returns
+    -------
+    str
+        "{Domain} electrode {name}", prefixed with "Primary: " or "Secondary: "
+        when ``phase`` is given, as for PyBaMM's own particle parameters.
+    """
+    Domain = domain.capitalize()
+    if Domain not in ("Positive", "Negative"):
+        raise ValueError(f"domain must be 'Positive' or 'Negative', not {domain}")
+    if phase not in (None, "primary", "secondary"):
+        raise ValueError(f"phase must be 'primary', 'secondary' or None, not {phase}")
+    prefix = f"{phase.capitalize()}: " if phase else ""
+    return f"{prefix}{Domain} electrode {name}"
+
+
+def time_constant_name(m: int, dimensionless: bool) -> str:
+    """Name of the time constant of mode ``m``, without electrode and phase.
+
+    Parameters
+    ----------
     m : int
         Mode number, from 1.
     dimensionless : bool
@@ -297,11 +326,10 @@ def time_constant_name(prefix: str, m: int, dimensionless: bool) -> str:
     Returns
     -------
     str
-        The parameter name.
+        The name to pass to :func:`parameter_name`.
     """
-    if dimensionless:
-        return f"{prefix} transient closure time constant {m} dimensionless"
-    return f"{prefix} transient closure time constant {m} [s]"
+    unit = "dimensionless" if dimensionless else "[s]"
+    return f"transient closure time constant {m} {unit}"
 
 
 def short_time_limit(t, steady_value, diffusivity=None, dimensionless=False):

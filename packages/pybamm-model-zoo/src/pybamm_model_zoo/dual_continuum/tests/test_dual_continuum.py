@@ -277,7 +277,9 @@ class TestDualContinuum:
         with pytest.raises(pybamm.OptionError, match="only applies to half cells"):
             dual_continuum(dc_options={"lithium foil surface porosity": "true"})
         with pytest.raises(pybamm.OptionError, match="single particle phase"):
-            dual_continuum({"particle phases": ("2", "1")})
+            dual_continuum(
+                COMPOSITE, {"calculate surface concentration a priori": "true"}
+            )
         with pytest.raises(pybamm.OptionError, match="only applies to model type"):
             dual_continuum(dc_options={"transient closure modes": 4})
         for value in ["four", 0, True, 2.5]:
@@ -448,6 +450,92 @@ class TestTransientDualContinuum:
         assert np.all(np.abs(dc1t["rest"] - dns_rest) < [0.08, 0.025, 0.005])
         # The steady closure misses the relaxation that the transient one captures
         assert abs(voltages["DC1"]["rest"][0] - dns_rest[0]) > 0.15
+
+
+#: Graphite-silicon negative electrode; PyBaMM requires a surface form for it.
+COMPOSITE = {"particle phases": ("2", "1"), "surface form": "algebraic"}
+SINGLE_PHASE = {"surface form": "algebraic"}
+EPS_N = "Negative electrode active material volume fraction"
+
+
+def identical_phases():
+    """Chen2020_composite's graphite as one phase, and as two identical halves."""
+    base = pybamm.ParameterValues("Chen2020_composite")
+    single, split = {}, {}
+    for key, value in base.items():
+        if not key.startswith(("Primary: ", "Secondary: ")):
+            single[key] = split[key] = value
+    # Phase-prefixed entries override the unprefixed leftovers of Chen2020
+    for key, value in base.items():
+        if key.startswith("Primary: "):
+            name = key.removeprefix("Primary: ")
+            single[name] = split[key] = split[f"Secondary: {name}"] = value
+    eps = base[f"Primary: {EPS_N}"] + base[f"Secondary: {EPS_N}"]
+    single[EPS_N] = eps
+    split[f"Primary: {EPS_N}"] = split[f"Secondary: {EPS_N}"] = eps / 2
+    return pybamm.ParameterValues(single), pybamm.ParameterValues(split)
+
+
+class TestCompositeElectrode:
+    @pytest.mark.parametrize("model_type", ["DC1", "DC1t", "Yang"])
+    def test_identical_phases_give_one_phase(self, model_type):
+        single, split = identical_phases()
+        one, two = (
+            dual_continuum(options, {"model type": model_type})
+            for options in (SINGLE_PHASE, COMPOSITE)
+        )
+        np.testing.assert_allclose(
+            voltage(two, two.add_dc_parameters(split), tight_solver()),
+            voltage(one, one.add_dc_parameters(single), tight_solver()),
+            rtol=1e-7,
+        )
+
+    def test_graphite_silicon_matches_fickian_dfn(self):
+        # Each phase gets the isolated-sphere modes of its own R and D
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        model = dual_continuum(COMPOSITE, DC1T)
+        dfn = pybamm.lithium_ion.DFN(COMPOSITE)
+        var_pts = {
+            name: 80 if name.startswith("r_") else points
+            for name, points in dfn.default_var_pts.items()
+        }
+        reference = pybamm.Simulation(
+            dfn, parameter_values=parameter_values, var_pts=var_pts
+        ).solve([0, SOLVE_TIME], t_interp=TIMES)
+        np.testing.assert_allclose(
+            voltage(model, model.add_dc_parameters(parameter_values)),
+            reference["Voltage [V]"](TIMES),
+            atol=1e-3,
+        )
+
+    def test_parameter_names(self):
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        parameter_values.update(
+            {"Positive electrode s0 surface average": -123.0},
+            check_already_exists=False,
+        )
+        model = dual_continuum(COMPOSITE, DC1T)
+        values = model.add_dc_parameters(parameter_values)
+        # Prefixed only in the composite electrode; existing values are kept
+        assert values["Positive electrode s0 surface average"] == -123.0
+        assert "Negative electrode s0 surface average" not in values
+        # Graphite (primary) and silicon (secondary): -R / (5 D F) for each
+        for phase, radius, diffusivity in [
+            ("Primary", 5.86e-6, 5.5e-14),
+            ("Secondary", 1.52e-6, 1.67e-14),
+        ]:
+            np.testing.assert_allclose(
+                values[f"{phase}: Negative electrode s0 surface average"],
+                -radius / (5 * diffusivity * 96485.33212),
+                rtol=1e-6,
+            )
+            assert (
+                f"{phase}: Negative electrode transient closure time constant 8 [s]"
+                in values
+            )
+        # PyBaMM's default set has no composite parameters: nothing is added
+        defaults = model.default_parameter_values
+        assert "Primary: Negative electrode s0 surface average" not in defaults
 
 
 def tight_solver():

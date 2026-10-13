@@ -129,6 +129,17 @@ class TestFitTransientClosure:
         )
         with pytest.raises(ValueError, match="Positive"):
             fit.parameter_values("separator")
+        # Electrodes with several particle phases use PyBaMM's phase prefixes
+        secondary = fit.parameter_values("Negative", phase="secondary")
+        assert secondary["Secondary: Negative electrode s0 surface average"] == (
+            fit.steady_value
+        )
+        assert (
+            "Secondary: Negative electrode transient closure time constant 1 [s]"
+            in secondary
+        )
+        with pytest.raises(ValueError, match="phase"):
+            fit.parameter_values("Negative", phase="tertiary")
 
     def test_report(self):
         text = str(

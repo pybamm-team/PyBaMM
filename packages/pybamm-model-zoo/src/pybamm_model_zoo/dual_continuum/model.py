@@ -15,6 +15,7 @@ from pybamm_model_zoo.dual_continuum.dc_particle import (
 )
 from pybamm_model_zoo.dual_continuum.transient_closure import (
     isolated_sphere_modes,
+    parameter_name,
     time_constant_name,
 )
 
@@ -77,9 +78,15 @@ class DualContinuum(pybamm.lithium_ion.DFN):
             if self.options.electrode_types[domain] == "planar":
                 continue
             phases = self.options.phases[domain]
-            if len(phases) > 1:
+            if (
+                len(phases) > 1
+                and self.dc_options["calculate surface concentration a priori"]
+                == "true"
+            ):
                 raise pybamm.OptionError(
-                    "The dual-continuum model supports a single particle phase"
+                    "'calculate surface concentration a priori' requires a single "
+                    "particle phase: how the current splits between phases is not "
+                    "known a priori"
                 )
             particle = (
                 TransientDCParticle
@@ -129,74 +136,101 @@ class DualContinuum(pybamm.lithium_ion.DFN):
     def default_parameter_values(self) -> pybamm.ParameterValues:
         """The DFN's default parameter set plus the DC parameters.
 
-        Image-based surface areas default to the DFN geometry (3 eps_s / R,
-        no AM-CBD or AM-separator contact), and the closure variable to the
-        isolated-sphere value -R / (5 D F) at the reference state, so the
-        defaults describe the same cell as the DFN defaults. For DC1t, the
-        modes are those fitted to the isolated sphere's transient closure
-        variable, with time constants scaled by R^2 / D at the reference state.
+        See :meth:`add_dc_parameters`. PyBaMM's default set has no parameters
+        for several particle phases, so for a composite electrode the DC
+        parameters are left to :meth:`add_dc_parameters` with a suitable set.
         """
         values = super().default_parameter_values
-        param = pybamm.LithiumIonParameters()
-        values.update(
-            {
-                "CBD surface porosity": 0.5,
-                "Separator surface porosity": values["Separator porosity"],
-            },
-            check_already_exists=False,
-        )
+        try:
+            return self.add_dc_parameters(values)
+        except KeyError:
+            if not any(len(phases) > 1 for phases in self.options.phases.values()):
+                raise
+            return values
+
+    def add_dc_parameters(
+        self, parameter_values: pybamm.ParameterValues
+    ) -> pybamm.ParameterValues:
+        """A copy of ``parameter_values`` with the DC parameters it lacks.
+
+        The added values describe the same cell as the DFN: image-based surface
+        areas equal to 3 eps_s / R (no AM-CBD or AM-separator contact), the
+        isolated-sphere closure variable -R / (5 D F) at the reference state
+        and, for DC1t, the isolated sphere's modes with time constants scaled
+        by R^2 / D. Each particle phase gets its own values.
+
+        Parameters
+        ----------
+        parameter_values : :class:`pybamm.ParameterValues`
+            A parameter set for the DFN with the same options.
+
+        Returns
+        -------
+        :class:`pybamm.ParameterValues`
+            The parameter set with the DC parameters added.
+        """
+        values = parameter_values.copy()
+        param = self.param
+        defaults = {
+            "CBD surface porosity": 0.5,
+            "Separator surface porosity": values["Separator porosity"],
+        }
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "planar":
                 continue
-            Domain = domain.capitalize()
             domain_param = param.domain_params[domain]
-            phase_param = domain_param.prim
-            D_ref = phase_param.D(0.5 * phase_param.c_max, param.T_ref)
-            s_sphere = values.evaluate(-phase_param.R_typ / (5 * D_ref * param.F))
-            area = f"{Domain} electrode specific surface area from image"
-            values.update(
-                {
-                    f"{Domain} electrode s0 surface average": float(s_sphere),
-                    f"{Domain} electrode s0 surface average dimensionless": float(
-                        s_sphere * values.evaluate(D_ref * param.F / domain_param.L)
-                    ),
-                    f"{area} (AM-electrolyte) [m-1]": float(
-                        values.evaluate(phase_param.a_typ)
-                    ),
-                    f"{area} (AM-CBD) [m-1]": 0.0,
-                    f"{area} (AM-separator) [m-1]": 0.0,
-                    f"{Domain} electrode Yang fitting parameter": 1.0,
-                },
-                check_already_exists=False,
-            )
-            if self.dc_options["model type"] == "DC1t":
-                values.update(
-                    self._isolated_sphere_mode_values(
-                        values, Domain, domain_param, D_ref
-                    ),
-                    check_already_exists=False,
+            phases = self.options.phases[domain]
+            for phase in phases:
+                phase_param = domain_param.phase_params[phase]
+                defaults.update(
+                    self._phase_defaults(
+                        values, domain, phase if len(phases) > 1 else None, phase_param
+                    )
                 )
+        values.update(
+            {k: v for k, v in defaults.items() if k not in values},
+            check_already_exists=False,
+        )
         return values
 
-    def _isolated_sphere_mode_values(self, values, Domain, domain_param, D_ref):
-        """Isolated-sphere modes as DC1t parameters, dimensional and dimensionless."""
-        R = domain_param.prim.R_typ
+    def _phase_defaults(self, values, domain, phase, phase_param):
+        """DFN-equivalent DC parameters of one electrode and particle phase."""
+        param = self.param
+        L = param.domain_params[domain].L
+        D_ref = phase_param.D(0.5 * phase_param.c_max, param.T_ref)
+        R = phase_param.R_typ
+        s_sphere = float(values.evaluate(-R / (5 * D_ref * param.F)))
         diffusion_time = float(values.evaluate(R**2 / D_ref))
-        thickness_time = float(values.evaluate(domain_param.L**2 / D_ref))
-        prefix = f"{Domain} electrode"
-        weights, time_constants = isolated_sphere_modes(
-            self.dc_options["transient closure modes"]
-        )
-        mode_values = {}
-        for m, (weight, theta) in enumerate(
-            zip(weights, time_constants, strict=True), start=1
-        ):
-            mode_values[f"{prefix} transient closure weight {m}"] = weight
-            mode_values[time_constant_name(prefix, m, False)] = theta * diffusion_time
-            mode_values[time_constant_name(prefix, m, True)] = (
-                theta * diffusion_time / thickness_time
+        thickness_time = float(values.evaluate(L**2 / D_ref))
+
+        def name(parameter):
+            return parameter_name(domain, parameter, phase)
+
+        area = "specific surface area from image"
+        defaults = {
+            name("s0 surface average"): s_sphere,
+            name("s0 surface average dimensionless"): s_sphere
+            * float(values.evaluate(D_ref * param.F / L)),
+            name(f"{area} (AM-electrolyte) [m-1]"): float(
+                values.evaluate(phase_param.a_typ)
+            ),
+            name(f"{area} (AM-CBD) [m-1]"): 0.0,
+            name(f"{area} (AM-separator) [m-1]"): 0.0,
+            name("Yang fitting parameter"): 1.0,
+        }
+        if self.dc_options["model type"] == "DC1t":
+            weights, time_constants = isolated_sphere_modes(
+                self.dc_options["transient closure modes"]
             )
-        return mode_values
+            for m, (weight, theta) in enumerate(
+                zip(weights, time_constants, strict=True), start=1
+            ):
+                defaults[name(f"transient closure weight {m}")] = weight
+                defaults[name(time_constant_name(m, False))] = theta * diffusion_time
+                defaults[name(time_constant_name(m, True))] = (
+                    theta * diffusion_time / thickness_time
+                )
+        return defaults
 
 
 class LithiumIonParametersWithFoilPorosity(pybamm.LithiumIonParameters):

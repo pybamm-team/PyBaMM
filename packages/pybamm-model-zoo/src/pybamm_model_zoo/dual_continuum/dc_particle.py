@@ -5,6 +5,7 @@ from __future__ import annotations
 import pybamm
 from pybamm_model_zoo.dual_continuum.transient_closure import (
     isolated_sphere_modes,
+    parameter_name,
     time_constant_name,
 )
 
@@ -211,6 +212,12 @@ class DCParticle(pybamm.particle.BaseParticle):
         T = variables[f"{Domain} electrode temperature [K]"]
         return self.phase_param.D(c_vol, T)
 
+    def _parameter(self, name):
+        """DC parameter of this electrode and phase (see ``parameter_name``)."""
+        # PyBaMM prefixes the phase only when the electrode has several phases
+        phase = self.phase if self.phase_param.phase_prefactor else None
+        return pybamm.Parameter(parameter_name(self.domain, name, phase))
+
     def _closure_variable(self, variables):
         """DC1 closure variable <s>_A [mol.m-1.A-1]."""
         Domain = self.domain.capitalize()
@@ -222,18 +229,15 @@ class DCParticle(pybamm.particle.BaseParticle):
             ]
             return -R_eff / (5 * self._diffusivity(variables) * F)
         if self.dc_options["closure variable"] == "dimensionless":
-            s_star = pybamm.Parameter(
-                f"{Domain} electrode s0 surface average dimensionless"
-            )
+            s_star = self._parameter("s0 surface average dimensionless")
             return s_star * self.domain_param.L / (self._diffusivity(variables) * F)
-        return pybamm.Parameter(f"{Domain} electrode s0 surface average")
+        return self._parameter("s0 surface average")
 
     def _yang_coefficient(self, variables):
         """Yang and Tartakovsky's (2025) gamma [mol.m-1.A-1] (Paten et al., Eqs. 48-50)."""
-        Domain = self.domain.capitalize()
         D = self._diffusivity(variables)
         l_k = self.phase_param.R
-        a_d = pybamm.Parameter(f"{Domain} electrode Yang fitting parameter")
+        a_d = self._parameter("Yang fitting parameter")
 
         t_d = l_k**2 / D
         # Offset avoids the sqrt singularity at t = 0
@@ -324,11 +328,10 @@ class TransientDCParticle(DCParticle):
     def _modes(self, variables):
         """Weight and time constant [s] of each mode."""
         Domain = self.domain.capitalize()
-        prefix = f"{Domain} electrode"
         closure = self.dc_options["closure variable"]
         if closure == "isolated sphere":
             radius = variables[
-                f"{prefix} {self.phase_name}effective particle radius [m]"
+                f"{Domain} electrode {self.phase_name}effective particle radius [m]"
             ]
             scale = radius**2 / self._diffusivity(variables)
             weights, thetas = isolated_sphere_modes(self.n_modes)
@@ -344,8 +347,8 @@ class TransientDCParticle(DCParticle):
         )
         return [
             (
-                pybamm.Parameter(f"{prefix} transient closure weight {m}"),
-                pybamm.Parameter(time_constant_name(prefix, m, dimensionless)) * scale,
+                self._parameter(f"transient closure weight {m}"),
+                self._parameter(time_constant_name(m, dimensionless)) * scale,
             )
             for m in range(1, self.n_modes + 1)
         ]

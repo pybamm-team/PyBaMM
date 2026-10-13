@@ -262,6 +262,32 @@ their parameters. With `"surface area": "from image"`, the SEI
 grows on the same total specific surface area `a` as the main reaction,
 including the AM-CBD and AM-separator contributions.
 
+### Composite electrodes (several particle phases)
+
+An electrode with several active materials, e.g. graphite and silicon, uses
+PyBaMM's `"particle phases"` option, which also requires a `"surface form"`:
+
+```python
+options = {"particle phases": ("2", "1"), "surface form": "algebraic"}
+model = DualContinuum(options, {"model type": "DC1t"})
+parameter_values = model.add_dc_parameters(pybamm.ParameterValues("Chen2020_composite"))
+```
+
+Each phase has its own volume-averaged concentration, closure variable and
+modes, coupled to the other phases only through the electrolyte and the solid
+potential, as in the DFN. As for PyBaMM's particle parameters, the DC
+parameters of a composite electrode are prefixed by phase, e.g.
+`"Primary: Negative electrode s0 surface average"` and `"Secondary: ..."`;
+those of an electrode with a single phase are not. `fit.parameter_values(
+"Negative", phase="secondary")` writes the prefixed names.
+
+`add_dc_parameters` adds the DC parameters a set lacks, for every phase, with
+the DFN-equivalent values listed below; it never overwrites a value already in
+the set. PyBaMM's default set has no composite parameters, so for a composite
+model `default_parameter_values` is the DFN's default set alone.
+`"calculate surface concentration a priori"` needs a single phase, since how
+the current splits between phases is not known a priori.
+
 ### Parameters
 
 | Parameter | Used when |
@@ -278,7 +304,7 @@ including the AM-CBD and AM-separator contributions.
 | `"{Domain} electrode transient closure time constant m dimensionless"` `θ*_m`, with `θ = θ* L²/D` | DC1t, `"dimensionless"` |
 
 `default_parameter_values` is the DFN's default set (Marquis2019 for a full
-cell, Xu2019 for a half cell) plus:
+cell, Xu2019 for a half cell) passed through `add_dc_parameters`, which adds:
 
 - AM-electrolyte areas equal to the DFN's `3 eps_s / R`, no AM-CBD or
   AM-separator contact, separator surface porosity equal to the separator
@@ -324,6 +350,10 @@ cathode half cell (Xu2019):
   with a fine radial mesh, within 0.5 mV for a constant-current discharge
   (full and half cell) and within 1 mV and 0.1 mA through a constant-current,
   constant-voltage and rest experiment.
+- Composite electrodes: splitting the graphite of Chen2020_composite into two
+  identical phases reproduces the single-phase model (rtol 1e-7) for DC1,
+  DC1t and Yang; for graphite and silicon, DC1t with the isolated-sphere modes
+  of each phase reproduces PyBaMM's two-phase Fickian DFN within 1 mV.
 - DC1t's dimensional, dimensionless and isolated-sphere inputs agree; DC1t
   tends to DC1 as the time constants go to zero; with the electrode-averaged
   reaction rate it equals the galvanostatic convolution `c_vol + <s^t>_A(t) j`.
@@ -338,8 +368,7 @@ radius is checked), and the experimental comparison of the paper. Not yet
 ported from the standalone implementation: minimum plating overpotential
 outputs. DC1t with a concentration-dependent diffusivity scales the time
 constants with `D(c_vol)`, an approximation. Particle-size
-distributions, multiple particle phases and loss of active material are not
-supported.
+distributions and loss of active material are not supported.
 
 ## Citation
 
