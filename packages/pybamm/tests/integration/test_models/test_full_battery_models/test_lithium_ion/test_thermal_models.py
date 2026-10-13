@@ -27,7 +27,25 @@ class TestThermal:
             "dimensionality": 2,
         }
         spme_2p1D = pybamm.lithium_ion.SPMe(options=options)
-        models = {"SPMe 1D": spme_1D, "SPMe 1+1D": spme_1p1D, "SPMe 2+1D": spme_2p1D}
+        options = {
+            "thermal": "lumped",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
+        spme_1p1D_lumped = pybamm.lithium_ion.SPMe(options=options)
+        options = {
+            "thermal": "lumped",
+            "current collector": "potential pair",
+            "dimensionality": 2,
+        }
+        spme_2p1D_lumped = pybamm.lithium_ion.SPMe(options=options)
+        models = {
+            "SPMe 1D": spme_1D,
+            "SPMe 1+1D": spme_1p1D,
+            "SPMe 2+1D": spme_2p1D,
+            "SPMe 1+1D lumped": spme_1p1D_lumped,
+            "SPMe 2+1D lumped": spme_2p1D_lumped,
+        }
 
         # Set up parameter values
         parameter_values = pybamm.ParameterValues("NCA_Kim2011")
@@ -103,6 +121,8 @@ class TestThermal:
             return np.max(np.abs(a - b)) / np.max(np.abs(a))
 
         assert 1e-5 > err(solutions["SPMe 1+1D"], solutions["SPMe 2+1D"])
+        assert 1e-5 > err(solutions["SPMe 1+1D"], solutions["SPMe 1+1D lumped"])
+        assert 1e-5 > err(solutions["SPMe 2+1D"], solutions["SPMe 2+1D lumped"])
 
     def test_surface_temperature_models(self):
         models = {
