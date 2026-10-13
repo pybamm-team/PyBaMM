@@ -107,6 +107,12 @@ std::vector<sunrealtype> makeSortedUnique(const T input_begin, const T input_end
 std::vector<sunrealtype> makeSortedUnique(const np_array& input_np);
 
 /**
+ * @brief Set up a KLU linear solver: AMD fill-reducing ordering and a
+ * threshold partial pivoting tolerance of 0.1
+ */
+void configure_klu(SUNLinearSolver LS);
+
+/**
  * @brief Apply a small perturbation to a time value to avoid roundoff errors
  */
 inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
