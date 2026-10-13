@@ -149,3 +149,14 @@ class TestDFN(BaseUnitTestLithiumIon):
             "intercalation kinetics": "MSMR",
         }
         self.check_well_posedness(options)
+
+    def test_surface_form_c_e_av_is_expression(self):
+        # The full conductivity submodel never reads the x-averaged concentration,
+        # so making it a state would only add an algebraic equation.
+        for options in [
+            {"surface form": "algebraic"},
+            {"surface form": "algebraic", "particle phases": ("2", "1")},
+        ]:
+            model = pybamm.lithium_ion.DFN(options)
+            c_e_av = model.variables["X-averaged electrolyte concentration [mol.m-3]"]
+            assert not isinstance(c_e_av, pybamm.Variable)

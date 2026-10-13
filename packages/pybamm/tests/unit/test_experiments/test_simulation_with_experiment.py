@@ -1281,6 +1281,83 @@ class TestSimulationExperiment:
             sol1["Voltage [V]"].data, sol2["Voltage [V]"].data
         )
 
+    def test_run_experiment_output_variable_time_integrals(self):
+        def model_with_time_integrals():
+            model = pybamm.lithium_ion.SPM()
+            model.variables["Charge throughput [A.s]"] = pybamm.ExplicitTimeIntegral(
+                model.variables["Current [A]"], pybamm.Scalar(0)
+            )
+            data = pybamm.DiscreteTimeData(
+                np.array([0.0, 1800.0]), np.array([3.7, 3.7]), "Voltage data"
+            )
+            model.variables["Voltage sum of squares [V2]"] = pybamm.DiscreteTimeSum(
+                (model.variables["Voltage [V]"] - data) ** 2
+            )
+            return model
+
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at 1C for 5 minutes",
+                "Rest for 5 minutes",
+                "Discharge at 0.5C for 5 minutes",
+            ]
+        )
+        solver = pybamm.IDAKLUSolver(
+            output_variables=[
+                "Voltage [V]",
+                "Charge throughput [A.s]",
+                "Voltage sum of squares [V2]",
+            ]
+        )
+        solution = pybamm.Simulation(
+            model_with_time_integrals(), experiment=experiment, solver=solver
+        ).solve()
+        full_solution = pybamm.Simulation(
+            model_with_time_integrals(), experiment=experiment
+        ).solve()
+
+        np.testing.assert_allclose(
+            solution["Charge throughput [A.s]"](),
+            full_solution["Charge throughput [A.s]"](),
+            rtol=1e-6,
+        )
+        assert solution["Voltage [V]"](solution.t).shape == solution.t.shape
+
+        # The steps' sums cannot be joined, so only reading the variable raises
+        sum_of_squares = solution["Voltage sum of squares [V2]"]
+        match = r"ExplicitTimeIntegral"
+        with pytest.raises(NotImplementedError, match=match):
+            sum_of_squares.entries
+        with pytest.raises(NotImplementedError, match=match):
+            sum_of_squares()
+        with pytest.raises(NotImplementedError, match=match):
+            sum_of_squares.sensitivities
+
+    def test_run_experiment_output_variables_repeated_step(self):
+        # Repeated steps share one built model, which the second step solves again
+        experiment = pybamm.Experiment([("Discharge at 1C for 10 minutes",) * 2])
+        solutions = [
+            pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(output_variables=output_variables),
+            ).solve()
+            for output_variables in (None, ["Voltage [V]"])
+        ]
+        full_solution, solution = solutions
+
+        np.testing.assert_allclose(
+            solution.cycles[0].first_state.y,
+            full_solution.cycles[0].first_state.y,
+            rtol=1e-6,
+        )
+        change = "Change in throughput capacity [A.h]"
+        np.testing.assert_allclose(
+            solution.summary_variables[change],
+            full_solution.summary_variables[change],
+            rtol=1e-6,
+        )
+
     def test_run_experiment_cccv_solvers(self):
         experiment_2step = pybamm.Experiment(
             [
@@ -2345,9 +2422,11 @@ class TestSimulationExperiment:
                 solver=pybamm.IDAKLUSolver(),
                 experiment_model_mode=experiment_model_mode,
             )
-            sim.solve(calc_esoh=False)
+            solution = sim.solve(calc_esoh=False)
 
             assert len(sim.experiment.unique_steps) == 2
+            assert len(solution.cycles) == 4
+            assert solution.t[-1] == pytest.approx(140 * 60)
 
             if experiment_model_mode == "legacy":
                 assert len(sim.steps_to_built_models) == 3

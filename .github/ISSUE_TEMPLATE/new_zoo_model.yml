@@ -1,0 +1,62 @@
+name: New Model Zoo Entry
+description: Propose a contributed model for the PyBaMM model zoo
+labels: ["model zoo"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The [model zoo](https://docs.pybamm.org/en/latest/source/model_zoo/index.html)
+        is where community- and partner-contributed models live: one self-contained
+        folder per model, with its own maintainer, tests, examples, and citation.
+        See [contributing a model](https://docs.pybamm.org/en/latest/source/model_zoo/contributing.html)
+        for the workflow — `nox -s zoo-new` generates a skeleton that passes the
+        contract suite as rendered.
+  - type: input
+    id: model-name
+    attributes:
+      label: What is the model?
+      description: A one-line description of the physics it adds
+      placeholder: Stacked pouch cell with through-stack thermal transport
+    validations:
+      required: true
+  - type: input
+    id: code-location
+    attributes:
+      label: Where is the code?
+      description: A GitHub URL, pull request, or PyPI package name
+      placeholder: https://github.com/AwesomeOrg/AwesomeModel
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: What licence is it under?
+      description: See the [OSI's list of approved licences](https://opensource.org/licenses)
+      placeholder: BSD-3-Clause
+    validations:
+      required: true
+  - type: input
+    id: citation
+    attributes:
+      label: Is the model published?
+      description: A DOI or preprint link, if there is one. Leave blank if not.
+  - type: input
+    id: maintainer
+    attributes:
+      label: Who will maintain it?
+      description: The GitHub handle to add to CODEOWNERS for the model's folder
+      placeholder: "@ahandle"
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Does it need any third-party packages?
+      description: These become a `zoo-<slug>` optional extra, never a base dependency
+  - type: textarea
+    id: validation
+    attributes:
+      label: What has been validated, and against what?
+      description: |
+        A known limit, an analytic solution, a conservation law, or a published
+        figure. Please also say what has *not* been validated.

@@ -57,8 +57,8 @@ defaults:
 
 env:
   CIBW_BUILD_VERBOSITY: 2
-  # Skip PyPy, MUSL, and free-threaded Python builds (CasADi lacks cp314t wheels)
-  CIBW_SKIP: "pp* *musllinux* cp314t*"
+  # Skip PyPy, MUSL, and free-threaded Python builds (CasADi lacks cp31Xt wheels)
+  CIBW_SKIP: "pp* *musllinux* cp314t* cp315t*"
   FORCE_COLOR: 3
 
 jobs:

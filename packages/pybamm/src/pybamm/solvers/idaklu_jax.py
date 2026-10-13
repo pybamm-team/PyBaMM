@@ -16,7 +16,6 @@ logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 
 if pybamm.has_jax():
     import jax
-    from jax import lax
 
     try:
         from jax import ffi
@@ -762,7 +761,7 @@ class IDAKLUJax:
 
             # Deal with Zero tangents
             def make_zero(prim, tan):
-                return lax.zeros_like_array(prim) if type(tan) is ad.Zero else tan
+                return jnp.zeros_like(prim) if type(tan) is ad.Zero else tan
 
             zero_mapped_tangents = tuple(
                 make_zero(pt[0], pt[1]) for pt in zip(primals, tangents, strict=False)

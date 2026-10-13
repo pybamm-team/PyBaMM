@@ -2,7 +2,7 @@
 # PostToolUse wrapper for comment-slop, reporting on the lines just written.
 set -u
 
-PIN="comment-slop==0.1.0"
+PIN="comment-slop==0.2.0"
 # Read once and replayed, since uv consumes stdin before any fallback runs.
 payload=$(cat)
 out=""

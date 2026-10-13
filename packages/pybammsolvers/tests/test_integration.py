@@ -6,6 +6,10 @@ with realistic data and parameter configurations.
 
 from __future__ import annotations
 
+import ctypes
+import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -14,6 +18,26 @@ import pybammsolvers
 
 def is_monotonic_increasing(arr):
     return np.all(np.diff(arr) >= 0)
+
+
+def loaded_openmp_runtime():
+    """Return the OpenMP runtime already loaded by pybammsolvers, or None."""
+    if sys.platform == "darwin":
+        libsystem = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
+        image_name = libsystem["_dyld_get_image_name"]
+        image_name.restype = ctypes.c_char_p
+        image_count = libsystem["_dyld_image_count"]()
+        paths = [image_name(i).decode() for i in range(image_count)]
+    elif sys.platform.startswith("linux"):
+        maps = Path("/proc/self/maps").read_text().splitlines()
+        paths = [line.split()[-1] for line in maps if "/" in line]
+    else:
+        return None
+    for path in paths:
+        name = Path(path).name
+        if name.startswith(("libomp", "libgomp", "libiomp")):
+            return ctypes.CDLL(path)
+    return None
 
 
 class TestExponentialDecaySolver:
@@ -115,6 +139,38 @@ class TestExponentialDecaySolver:
         # IDA_SUCCESS=0, IDA_TSTOP_RETURN=1, IDA_ROOT_RETURN=2 are all success codes
         assert sol.flag in [0, 1, 2], f"Solver failed with flag {sol.flag}"
 
+    def test_solution_has_solver_statistics(self, exponential_decay_solver):
+        """
+        Verify Solution object carries the integrator's counters for its solve.
+        """
+        solver_data = exponential_decay_solver
+        solver = solver_data["solver"]
+        t_eval = solver_data["model"]["t_eval"]
+
+        solution = solver.solve(
+            t_eval, t_eval, solver_data["y0"], solver_data["yp0"], solver_data["inputs"]
+        )
+        stats = solution[0].stats
+
+        counters = [
+            "number_of_steps",
+            "number_of_residual_evaluations",
+            "number_of_linear_solver_setups",
+            "number_of_error_test_failures",
+            "number_of_nonlinear_solver_iterations",
+            "number_of_nonlinear_solver_fails",
+            "number_of_jacobian_evaluations",
+            "number_of_linear_iterations",
+            "number_of_linear_convergence_failures",
+        ]
+        for counter in counters:
+            value = getattr(stats, counter)
+            assert isinstance(value, int)
+            assert value >= 0
+        assert stats.number_of_steps > 0
+        assert stats.number_of_residual_evaluations > 0
+        assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
+
     def test_solution_accuracy_exponential_decay(self, exponential_decay_solver):
         """
         Verify Solution matches exact solution for exponential decay.
@@ -179,6 +235,29 @@ class TestExponentialDecaySolver:
         # For our model, the output variable is simply the final state slice
         np.testing.assert_allclose(sol.y_term, y_exact[-1], rtol=1e-5)
 
+    def test_solution_initial_state(self, exponential_decay_solver):
+        """
+        Verify Solution returns the initial state alongside the outputs.
+
+        Tests that y_init holds the state at t0, which the outputs do not.
+        """
+        solver_data = exponential_decay_solver
+        solver = solver_data["solver"]
+        y0 = solver_data["y0"]
+        yp0 = solver_data["yp0"]
+        inputs = solver_data["inputs"]
+        t_eval = solver_data["model"]["t_eval"]
+        model_y0 = solver_data["model"]["y0"]
+
+        solution = solver.solve(t_eval, t_eval, y0, yp0, inputs)
+        sol = solution[0]
+
+        np.testing.assert_allclose(sol.y_init, model_y0, rtol=1e-10)
+        assert sol.y_init.shape == sol.y_term.shape
+        # One row per sensitivity parameter, and this solve has none
+        assert sol.yS_init.shape == (0, sol.y_init.size)
+        assert sol.yS_term.shape == sol.yS_init.shape
+
     def test_solution_dimensions_consistency(self, exponential_decay_solver):
         """
         Verify Solution arrays have consistent dimensions.
@@ -232,3 +311,120 @@ class TestExponentialDecaySolver:
             for idx, sol in enumerate(solutions):
                 expected = model_y0 * np.exp(-decay_constants[idx] * sol.t)
                 np.testing.assert_allclose(sol.y, expected, rtol=1e-5, atol=1e-8)
+
+    def test_a_single_solve_runs_outside_any_openmp_region(
+        self, exponential_decay_solver
+    ):
+        """
+        Verify OpenMP code called during a single solve is not nested.
+
+        The logger runs on the calling thread mid-solve, so it sees the OpenMP
+        level that any OpenMP code the model calls would run at.
+        """
+        runtime = loaded_openmp_runtime()
+        if runtime is None:
+            pytest.skip("Could not locate the loaded OpenMP runtime")
+
+        solver_data = exponential_decay_solver
+        t_eval = solver_data["model"]["t_eval"]
+        levels = []
+        solver_data["solver"].solve(
+            t_eval,
+            t_eval,
+            solver_data["y0"],
+            solver_data["yp0"],
+            solver_data["inputs"],
+            logger=lambda _: levels.append(runtime.omp_get_level()),
+        )
+
+        assert levels
+        assert set(levels) == {0}
+
+    def test_multiple_solvers_still_run_in_an_openmp_region(
+        self, idaklu_module, exponential_decay_model, exponential_decay_solver_factory
+    ):
+        """
+        Verify the multi-solver path still solves inside an OpenMP parallel region.
+
+        The calling thread streams its own set's diagnostics mid-solve, so its
+        logger sees level 1. This also shows the probe in the single-solve test
+        can see a nonzero level.
+        """
+        runtime = loaded_openmp_runtime()
+        if runtime is None:
+            pytest.skip("Could not locate the loaded OpenMP runtime")
+
+        decay_constants = np.array([0.5, 1.0], dtype=np.float64)
+        solver_data = exponential_decay_solver_factory(
+            idaklu_module,
+            exponential_decay_model,
+            num_threads=2,
+            num_solvers=2,
+            decay_constants=decay_constants,
+        )
+        t_eval = solver_data["model"]["t_eval"]
+        levels = []
+        solutions = solver_data["solver"].solve(
+            t_eval,
+            t_eval,
+            solver_data["y0"],
+            solver_data["yp0"],
+            solver_data["inputs"],
+            logger=lambda _: levels.append(runtime.omp_get_level()),
+        )
+
+        assert 1 in levels
+        model_y0 = solver_data["model"]["y0"]
+        for idx, sol in enumerate(solutions):
+            expected = model_y0 * np.exp(-decay_constants[idx] * sol.t)
+            np.testing.assert_allclose(sol.y, expected, rtol=1e-5, atol=1e-8)
+
+
+class TestSensitivityScales:
+    """The optional ``pbar`` argument carrying IDAS's sensitivity scales."""
+
+    pytestmark = pytest.mark.integration
+
+    @staticmethod
+    def _args(solver_data):
+        t_eval = solver_data["model"]["t_eval"]
+        return (
+            t_eval,
+            t_eval,
+            solver_data["y0"],
+            solver_data["yp0"],
+            solver_data["inputs"],
+        )
+
+    def test_an_empty_pbar_matches_omitting_it(self, exponential_decay_solver):
+        solver = exponential_decay_solver["solver"]
+        args = self._args(exponential_decay_solver)
+
+        without = solver.solve(*args)[0]
+        with_empty = solver.solve(*args, pbar=np.empty((0, 0)))[0]
+
+        np.testing.assert_array_equal(without.t, with_empty.t)
+        np.testing.assert_array_equal(without.y, with_empty.y)
+
+    def test_logger_stays_the_sixth_positional_argument(self, exponential_decay_solver):
+        messages = []
+        exponential_decay_solver["solver"].solve(
+            *self._args(exponential_decay_solver), messages.append
+        )
+        assert messages
+
+    @pytest.mark.parametrize(
+        ("pbar", "match"),
+        [
+            (np.ones(3), "pbar has wrong number of dimensions"),
+            (np.ones((1, 1, 1)), "pbar has wrong number of dimensions"),
+            (np.ones((2, 1)), "pbar has wrong number of rows"),
+            # This fixture has no sensitivity parameters, so any column is extra.
+            (np.ones((1, 3)), "pbar has wrong number of cols"),
+        ],
+    )
+    def test_a_misshapen_pbar_is_rejected(self, exponential_decay_solver, pbar, match):
+        # A silently ignored pbar would leave the scales at 1 with no warning.
+        solver = exponential_decay_solver["solver"]
+        with pytest.raises(ValueError, match=match):
+            solver.solve(*self._args(exponential_decay_solver), pbar=pbar)

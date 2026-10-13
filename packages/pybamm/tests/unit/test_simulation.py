@@ -743,11 +743,7 @@ class TestSimulation:
         sim_load = pybamm.load_sim(test_name)
         assert sim.model.name == sim_load.model.name
 
-        # with python formats
-        model.convert_to_format = None
-        sim = pybamm.Simulation(model)
-        sim.solve([0, 600])
-        sim.save(test_name)
+        # with python format
         model.convert_to_format = "python"
         sim = pybamm.Simulation(model)
         sim.solve([0, 600])
@@ -784,12 +780,6 @@ class TestSimulation:
         sim.save(test_name)
         sim_load = pybamm.load_sim(test_name)
         assert sim.model.name == sim_load.model.name
-
-        # with python format
-        model.convert_to_format = None
-        sim = pybamm.Simulation(model)
-        sim.solve([0, 600])
-        sim.save(test_name)
 
         # with Casadi format & experiment
         model.convert_to_format = "casadi"

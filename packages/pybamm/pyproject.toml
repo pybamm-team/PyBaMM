@@ -9,7 +9,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
-requires-python = ">=3.10, <3.15"
+requires-python = ">=3.10, <3.16"
 readme = { file = "README.md", content-type = "text/markdown" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -24,10 +24,11 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers>=0.9.0,<0.10.0",
+    "pybammsolvers>=0.11.0,<0.12.0",
     "black",
     "numpy>=2.0.0",
     "scipy>=1.11.4,!=1.18.0", # 1.18.0 breaks pickling/deepcopy of interpolators, fixed in 1.18.1 (scipy#25489)
@@ -65,13 +66,14 @@ pydiffsol = ["pydiffsol>=0.6.2"]
 bpx = ["bpx>=1.1.1,<1.2.0"]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
-jax = ["jax>=0.7.0, <0.9.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+jax = ["jax>=0.7.0, <0.12.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+# Unstructured-mesh visualization (pillow writes GIFs). 9.3.1 is the first VTK whose
+# numpy_support works with NumPy 2; no VTK has cp315 wheels yet, so 3.15 skips it
+vtk = ["vtk>=9.3.1; python_version < '3.15'", "pillow"]
+# Finite-element meshes: scikit-fem builds 2D and 3D meshes, meshio reads mesh files
+fem = ["scikit-fem>=12.0.2", "meshio>=5.3.0"]
 # Contains all optional dependencies, except for jax, and dev dependencies
-all = [
-    "scikit-fem>=12.0.2",
-    "meshio>=5.3.0",
-    "pybamm[examples,plot,cite,bpx,tqdm]",
-]
+all = ["pybamm[examples,plot,cite,bpx,tqdm,vtk,fem]"]
 
 [dependency-groups]
 docs = [
@@ -91,6 +93,16 @@ docs = [
     "sphinx-gallery",
     "sphinx-docsearch",
 ]
+# Benchmark-only dependencies, kept out of dev so the Bencher image stays small
+bench = [
+    "pytest>=9.0",
+    "pytest-xdist",
+    "pytest-mock",
+    "hypothesis",
+    "pytest-benchmark>=5.3.0",
+    # For memory benchmarking (Linux/macOS only)
+    "pytest-memray>=1.7.0; sys_platform != 'win32'",
+]
 dev = [
     # For working with pre-commit hooks
     "pre-commit",
@@ -102,20 +114,12 @@ dev = [
     "pytest-cov",
     # For doctest
     "pytest-doctestplus",
-    # pytest and its plugins
-    "pytest>=9.0",
-    "pytest-xdist",
-    "pytest-mock",
     "pytest-snapshot",
     # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
-    # For property based testing
-    "hypothesis",
-    "pytest-benchmark>=5.3.0",
-    # For memory benchmarking (Linux/macOS only)
-    "pytest-memray>=1.7.0; sys_platform != 'win32'",
+    { include-group = "bench" },
 ]
 
 [project.entry-points."pybamm_parameter_sets"]
@@ -123,6 +127,7 @@ Sulzer2019 = "pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values"
 Ai2020 = "pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values"
 Chen2020 = "pybamm.input.parameters.lithium_ion.Chen2020:get_parameter_values"
 Chen2020_composite = "pybamm.input.parameters.lithium_ion.Chen2020_composite:get_parameter_values"
+Bonkile2024 = "pybamm.input.parameters.lithium_ion.Bonkile2024:get_parameter_values"
 Ecker2015 = "pybamm.input.parameters.lithium_ion.Ecker2015:get_parameter_values"
 Ecker2015_graphite_halfcell = "pybamm.input.parameters.lithium_ion.Ecker2015_graphite_halfcell:get_parameter_values"
 Marquis2019 = "pybamm.input.parameters.lithium_ion.Marquis2019:get_parameter_values"
