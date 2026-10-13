@@ -18,10 +18,8 @@ std::vector<sunrealtype> makeSortedUnique(const np_array& input_np) {
     return makeSortedUnique(input_vec.begin(), input_vec.end());
 }
 
-void configure_klu(SUNLinearSolver LS) {
+void configure_klu(SUNLinearSolver LS, sunrealtype pivot_tolerance) {
   // AMD (0) instead of the SUNDIALS default COLAMD (1)
   SUNLinSol_KLUSetOrdering(LS, 0);
-  // KLU's default tolerance of 0.001 accepts pivots weak enough under AMD to
-  // stall the Newton corrector; 0.1 rejects them
-  SUNLinSol_KLUGetCommon(LS)->tol = 0.1;
+  SUNLinSol_KLUGetCommon(LS)->tol = pivot_tolerance;
 }
