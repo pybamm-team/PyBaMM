@@ -13,6 +13,7 @@
 - Evaluating a processed variable at a 0-d array time, e.g. `solution["Voltage [V]"](np.array(10.0))`, now returns the same value as passing the float rather than raising an `IndexError`. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - Fixed the particle concentration of the `"quartic profile"` particle model in models that resolve the electrode (e.g. DFN), which was missing a factor of the particle radius on the concentration gradient term and diverged to unphysical values. ([#5893](https://github.com/pybamm-team/PyBaMM/pull/5893))
 - `EffectiveResistance` and `AlternativeEffectiveResistance2D` `post_process` no longer return NaN for the voltage and positive current collector potential at times after the current collector problem was solved. ([#5858](https://github.com/pybamm-team/PyBaMM/pull/5858))
+- `"Maximum/Minimum {domain} particle stoichiometry"` and the matching concentration variables now include the particle surface value. Before, they only used cell-centre values, so the maximum could be lower than the maximum surface stoichiometry during charge. ([#5842](https://github.com/pybamm-team/PyBaMM/pull/5842))
 
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
