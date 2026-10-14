@@ -3931,7 +3931,7 @@ provides-extras = ["zoo-all", "zoo-multilayer-3d-thermal"]
 
 [[package]]
 name = "pybammsolvers"
-version = "0.11.0"
+version = "0.11.1"
 source = { editable = "packages/pybammsolvers" }
 dependencies = [
     { name = "casadi" },
