@@ -3,6 +3,9 @@
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
+- A `DiscreteTimeSum` now sums only at its own discrete times. Before, its `.entries`, and every read from an `output_variables` solve, summed over all the solution's time points when `t_interp` was not the discrete times, giving a wrong value. The solution's times may now be any superset of the discrete times, with sensitivities. A full-state solve without them interpolates the value, but its sensitivities raise `SolverError`. An `output_variables` solve without them raises `SolverError` before integrating. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `ExplicitTimeIntegral` of a variable that varies in one spatial dimension now gives the integral at each point, with sensitivities and spatial interpolation, in both full-state and `output_variables` solves. Before, a full-state read returned the integrand's trajectory and sensitivities and `output_variables` solves crashed. Integrands varying in more dimensions, and expressions that change the integral's shape, raise `NotImplementedError` when set up. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- An `ExplicitTimeIntegral` initial condition that depends on an input parameter, as `remove_independent_variables_from_rhs=True` creates, no longer raises a `KeyError`. It is evaluated with each solve's inputs and contributes its derivative to the sensitivities. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
 # [v26.10.1.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.0) - 2026-10-13
 
