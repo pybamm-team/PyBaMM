@@ -38,7 +38,7 @@ its electrode average, which removes one algebraic equation per mesh cell. This
 is only appropriate for galvanostatic (constant-current) operation; see the DC
 options below.
 
-Yang and Tartakovsky's model (Yang2025) uses a boundary layer of thickness
+Yang and Tartakovsky's model (Yang and Tartakovsky, 2025) uses a boundary layer of thickness
 $l_d = a_d \sqrt{D t}$ (up to $l_k$) inside particles of length scale $l_k$,
 taken from the particle radius parameter, with a fitting parameter $a_d$.
 
@@ -105,7 +105,10 @@ solution = pybamm.Simulation(
   operation. The model raises an error with any `"operating mode"` other than
   `"current"`. It cannot detect voltage, power or CV steps inside a
   `pybamm.Experiment`, so do not combine the option with such steps.
-- `"surface area": "spherical"` uses $a = 3 \varepsilon_s / R$, as in the DFN.
+- `"surface area"`: with `"from image"` (the default), the specific surface area
+  is built from areas measured on images of the microstructure; see
+  *Specific surface area from images* below. `"spherical"` uses
+  $a = 3 \varepsilon_s / R$, as in the DFN.
 - `"lithium foil surface porosity": "true"` multiplies the exchange-current
   density of the lithium foil by `"Separator surface porosity"`. Some DNS
   codes include the separator surface porosity in the kinetics at the foil,
@@ -173,8 +176,10 @@ as the Fickian DFN.
 
 #### Choosing the modes: `fit_transient_closure`
 
-The helper fits the modes to your closure variable, given as arrays (for
-example from a closure solve on an image) or as a function of time:
+The helper fits the modes to your closure variable. Give it the times `t` as a
+NumPy array, and the closure variable `s` either as an array of its values at
+those times (for example read from the output of a closure solve on an image)
+or as a Python function of time, which is then evaluated at `t`:
 
 ```python
 import pybamm
@@ -199,7 +204,11 @@ factors of ten. By default they run from a tenth of the first data time to a
 third of the time at which $s$ reaches 99% of $s_0$, and the number of modes is
 increased until the largest error is below `tolerance` (default 0.5% of
 $s_0$). The weights come from a non-negative least-squares fit with
-$\sum_m w_m = 1$. Two to three modes per factor of ten in time are typical. Use
+$\sum_m w_m = 1$. As a rule of thumb, about two modes are needed for each
+factor of ten between the shortest and the longest time constant: at the
+default tolerance, the isolated sphere needs 8 modes when its time constants
+span about four factors of ten (for example from 0.01 s to 100 s). Smoother
+closure data can need fewer. Use
 `n_modes`, `tolerance` or `time_constant_range` to change the choice, and
 `dimensionless=True` for data scaled as $t D / L^2$ and $s D F / L$.
 
@@ -290,8 +299,8 @@ modes, coupled to the other phases only through the electrolyte and the solid
 potential, as in the DFN. As for PyBaMM's particle parameters, the DC
 parameters of a composite electrode are prefixed by phase, e.g.
 `"Primary: Negative electrode s0 surface average"` and `"Secondary: ..."`;
-those of an electrode with a single phase are not. `fit.parameter_values(
-"Negative", phase="secondary")` writes the prefixed names.
+those of an electrode with a single phase are not.
+`fit.parameter_values("Negative", phase="secondary")` writes the prefixed names.
 
 `add_dc_parameters` adds the DC parameters a set lacks, for every phase, with
 the DFN-equivalent values listed below; it never overwrites a value already in
@@ -319,12 +328,12 @@ the current splits between phases is not known a priori.
 cell, Xu2019 for a half cell) passed through `add_dc_parameters`, which adds:
 
 - AM-electrolyte areas equal to the DFN's $3 \varepsilon_s / R$, no AM-CBD or
-  AM-separator contact, separator surface porosity equal to the separator
-  porosity, and a CBD surface porosity of 0.5;
-- the closure variable set to the isolated-sphere value $-R/(5 D F)$ at the
-  reference state, so the defaults describe the same cell as the DFN's;
-- a Yang fitting parameter of 1;
-- for DC1t, the isolated-sphere modes (weights, and time constants scaled by
+  AM-separator contact, a separator surface porosity equal to the separator
+  porosity, and a CBD surface porosity of 0.5.
+- The closure variable set to the isolated-sphere value $-R/(5 D F)$ at the
+  reference state, so the defaults describe the same cell as the DFN's.
+- A Yang fitting parameter of 1.
+- For DC1t, the isolated-sphere modes (weights, and time constants scaled by
   $R^2 / D$ at the reference state).
 
 `parameter_sets.paten2026_dc1()` and `parameter_sets.paten2026_dfn()` return the
