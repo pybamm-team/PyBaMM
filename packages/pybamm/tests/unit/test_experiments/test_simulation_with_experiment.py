@@ -1565,6 +1565,39 @@ class TestSimulationExperiment:
         assert np.all(np.isfinite(sens))
         assert np.any(sens != 0)
 
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_resolve_with_changed_sensitivities(self, experiment_model_mode):
+        # The usual finite-difference check pattern: solve with, then without
+        name = "Negative particle diffusivity [m2.s-1]"
+        param = pybamm.ParameterValues("Chen2020")
+        param.update({name: "[input]"})
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=param,
+            experiment=pybamm.Experiment(
+                ["Discharge at 1C for 1 minute", "Rest for 1 minute"],
+                period="20 seconds",
+            ),
+            experiment_model_mode=experiment_model_mode,
+        )
+        inputs = {name: 3.3e-14}
+
+        first = sim.solve(inputs=inputs, calculate_sensitivities=True)
+        without = sim.solve(inputs=inputs, calculate_sensitivities=False)
+        again = sim.solve(inputs=inputs, calculate_sensitivities=[name])
+
+        # Error control differs with sensitivities, so only to the solver tolerance
+        t = first.t
+        np.testing.assert_allclose(
+            without["Voltage [V]"](t), first["Voltage [V]"](t), rtol=1e-4
+        )
+        assert not without.has_sensitivities()
+        np.testing.assert_allclose(
+            again["Voltage [V]"].sensitivities[name],
+            first["Voltage [V]"].sensitivities[name],
+            rtol=1e-8,
+        )
+
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
         experiment = pybamm.Experiment(

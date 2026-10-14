@@ -673,3 +673,313 @@ class TestBaseSolver:
 
     def test_check_restart_sensitivities_allows_empty_solution(self):
         pybamm.BaseSolver._check_restart_sensitivities(pybamm.EmptySolution())
+
+
+def _independent_decays():
+    """u' = -a u and v' = -b v, with u(0) = v(0) = 1."""
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    v = pybamm.Variable("v")
+    model.rhs = {
+        u: -pybamm.InputParameter("a") * u,
+        v: -pybamm.InputParameter("b") * v,
+    }
+    model.initial_conditions = {u: 1.0, v: 1.0}
+    model.variables = {"u": u, "v": v}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+def _scaled_decay(rate_factor, reference, scale):
+    """u' = -rate_factor * k * u, u(0) = 1, with u stored as (u - reference) / scale."""
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u", reference=reference, scale=scale)
+    model.rhs = {u: -rate_factor * pybamm.InputParameter("k") * u}
+    model.initial_conditions = {u: 1.0}
+    model.variables = {"u": u}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+class TestBaseSolverSensitivityRestarts:
+    @staticmethod
+    def _solver():
+        return pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+
+    @pytest.mark.parametrize("output_variables", [False, True])
+    @pytest.mark.parametrize("algebraic", [False, True])
+    @pytest.mark.parametrize(
+        "t_eval", [[0, 3], np.linspace(0, 3, 31)], ids=["integer_list", "array"]
+    )
+    def test_input_dependent_discontinuity_restarts_each_input_set(
+        self, algebraic, t_eval, output_variables
+    ):
+        # y' = -k y + 2 H(t - t_switch): each segment must restart from the end of
+        # the previous one, for the states and their sensitivities
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        k = pybamm.InputParameter("k")
+        model.rhs = {y: -k * y + 2.0 * (pybamm.t > pybamm.InputParameter("t_switch"))}
+        model.initial_conditions = {y: 1.0}
+        model.variables = {"y": y}
+        if algebraic:
+            z = pybamm.Variable("z")
+            model.algebraic = {z: z - 2 * y}
+            model.initial_conditions[z] = 2.0
+            model.variables["z"] = z
+        inputs = [{"k": 0.5, "t_switch": 1.0}, {"k": 0.8, "t_switch": 1.0}]
+        t_eval_before = np.array(t_eval)
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10,
+            atol=1e-12,
+            output_variables=list(model.variables) if output_variables else None,
+        )
+
+        solutions = solver.solve(
+            model, t_eval, inputs=inputs, calculate_sensitivities=["k"]
+        )
+
+        np.testing.assert_array_equal(t_eval, t_eval_before)
+        for solution, solution_inputs in zip(solutions, inputs, strict=True):
+            assert len(solution.sub_solutions) == 2
+            k = solution_inputs["k"]
+            t = solution.t
+            after = t > 1.0
+            decay = np.exp(-k * (t - 1.0))
+            exact = np.exp(-k * t) + after * (2 / k) * (1 - decay)
+            dexact_dk = -t * np.exp(-k * t) + after * (
+                -(2 / k**2) * (1 - decay) + (2 / k) * (t - 1.0) * decay
+            )
+            np.testing.assert_allclose(solution["y"](t), exact, rtol=1e-7, atol=1e-9)
+            np.testing.assert_allclose(
+                solution["y"].sensitivities["k"].ravel(),
+                dexact_dk,
+                rtol=1e-6,
+                atol=1e-8,
+            )
+            if algebraic:
+                np.testing.assert_allclose(
+                    solution["z"].sensitivities["k"].ravel(),
+                    2 * dexact_dk,
+                    rtol=1e-6,
+                    atol=1e-8,
+                )
+
+    def test_modulo_with_input_period(self):
+        # y' = a (t mod P), y(0) = 0, so y = a (n P^2 + r^2) / 2 with t = n P + r
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        model.rhs = {
+            y: pybamm.InputParameter("a")
+            * pybamm.Modulo(pybamm.t, pybamm.InputParameter("P"))
+        }
+        model.initial_conditions = {y: 0.0}
+        model.variables = {"y": y}
+        solver = self._solver()
+
+        # A re-solve with a shorter period has more discontinuities in t_eval
+        for period, number_of_segments in [(1.0, 3), (0.4, 8)]:
+            solution = solver.solve(
+                model,
+                [0, 3],
+                inputs={"a": 2.0, "P": period},
+                calculate_sensitivities=["a"],
+            )
+            assert len(solution.sub_solutions) == number_of_segments
+            t = solution.t
+            n = np.floor(t / period)
+            dexact_da = (n * period**2 + (t - n * period) ** 2) / 2
+            np.testing.assert_allclose(
+                solution["y"](t), 2.0 * dexact_da, rtol=1e-7, atol=1e-9
+            )
+            np.testing.assert_allclose(
+                solution["y"].sensitivities["a"].ravel(),
+                dexact_da,
+                rtol=1e-7,
+                atol=1e-9,
+            )
+
+        with pytest.raises(pybamm.SolverError, match=r"must be positive"):
+            solver.solve(model, [0, 3], inputs={"a": 2.0, "P": 0.0})
+
+    @pytest.mark.parametrize("use_state_mapper", [False, True])
+    @pytest.mark.parametrize(
+        "reference, scale",
+        [(0.5, 2.0), (pybamm.InputParameter("r"), pybamm.InputParameter("s"))],
+        ids=["constant", "input"],
+    )
+    def test_step_to_new_model_maps_sensitivities(
+        self, use_state_mapper, reference, scale
+    ):
+        # u = exp(-k t) then exp(-k) exp(-2 k (t - 1)) after the switch at t = 1,
+        # independent of how u is stored, so du/dr = du/ds = 0
+        inputs = {"k": 0.7}
+        if isinstance(reference, pybamm.InputParameter):
+            inputs.update({"r": 0.5, "s": 2.0})
+        first = _scaled_decay(1.0, reference, scale)
+        second = _scaled_decay(2.0, reference, scale)
+
+        solution = self._solver().step(
+            None, first, 1.0, inputs=inputs, calculate_sensitivities=True
+        )
+        state_mapper = None
+        if use_state_mapper:
+            vars_for_processing = pybamm.BaseSolver._get_vars_for_processing(
+                first, dict(sorted(inputs.items()))
+            )
+            state_mapper = pybamm.solvers.base_solver.process(
+                second.build_initial_state_mapper(first),
+                "mapper",
+                vars_for_processing,
+            )[:3]
+        solution = self._solver().step(
+            solution,
+            second,
+            1.0,
+            inputs=inputs,
+            calculate_sensitivities=True,
+            state_mapper=state_mapper,
+            save=False,
+        )
+
+        t = solution.t
+        k = inputs["k"]
+        exact = np.exp(-k * (2 * t - 1))
+        np.testing.assert_allclose(solution["u"](t), exact, rtol=1e-7)
+        sensitivities = solution["u"].sensitivities
+        np.testing.assert_allclose(
+            sensitivities["k"].ravel(), -(2 * t - 1) * exact, rtol=1e-6, atol=1e-9
+        )
+        for name in set(inputs) - {"k"}:
+            np.testing.assert_allclose(sensitivities[name].ravel(), 0, atol=1e-9)
+
+    def test_step_seeds_sensitivities_by_name(self):
+        model = _independent_decays()
+        inputs = {"a": 0.3, "b": 0.6}
+        solution = self._solver().step(
+            None, model, 1.0, inputs=inputs, calculate_sensitivities=["a", "b"]
+        )
+
+        solution = self._solver().step(
+            solution,
+            model,
+            1.0,
+            inputs=inputs,
+            calculate_sensitivities=["b"],
+            save=False,
+        )
+
+        t = solution.t
+        np.testing.assert_allclose(
+            solution["v"].sensitivities["b"].ravel(),
+            -t * np.exp(-0.6 * t),
+            rtol=1e-6,
+            atol=1e-9,
+        )
+        np.testing.assert_allclose(
+            solution["u"].sensitivities["b"].ravel(), 0, atol=1e-9
+        )
+
+    @pytest.mark.parametrize("same_solver", [True, False])
+    def test_step_rejects_restart_without_requested_sensitivities(self, same_solver):
+        model = _independent_decays()
+        inputs = {"a": 0.3, "b": 0.6}
+        solver = self._solver()
+        solution = solver.step(
+            None, model, 1.0, inputs=inputs, calculate_sensitivities=["a"]
+        )
+        next_solver = solver if same_solver else self._solver()
+
+        # dv/db at the end of the first step is unknown, not dv/da
+        with pytest.raises(pybamm.SolverError, match=r"no sensitivities for \['b'\]"):
+            next_solver.step(
+                solution, model, 1.0, inputs=inputs, calculate_sensitivities=["b"]
+            )
+
+        assert model.calculate_sensitivities == ["a"]
+        solution = solver.step(
+            solution,
+            model,
+            1.0,
+            inputs=inputs,
+            calculate_sensitivities=["a"],
+            save=False,
+        )
+        t = solution.t
+        np.testing.assert_allclose(
+            solution["u"].sensitivities["a"].ravel(),
+            -t * np.exp(-0.3 * t),
+            rtol=1e-6,
+            atol=1e-9,
+        )
+
+    @pytest.mark.parametrize(
+        "first_sensitivities", [False, ["a"]], ids=["none", "fewer"]
+    )
+    def test_step_to_new_model_rejects_missing_sensitivities(self, first_sensitivities):
+        inputs = {"a": 0.3, "b": 0.6}
+        solution = self._solver().step(
+            None,
+            _independent_decays(),
+            1.0,
+            inputs=inputs,
+            calculate_sensitivities=first_sensitivities,
+        )
+
+        with pytest.raises(pybamm.SolverError, match=r"no sensitivities for \[.*'b'\]"):
+            self._solver().step(
+                solution,
+                _independent_decays(),
+                1.0,
+                inputs=inputs,
+                calculate_sensitivities=True,
+            )
+
+    def test_step_after_changing_sensitivities(self):
+        model = _independent_decays()
+        inputs = {"a": 0.3, "b": 0.6}
+        solver = self._solver()
+        solver.solve(model, [0, 1], inputs=inputs, calculate_sensitivities=True)
+
+        solution = solver.step(None, model, 1.0, inputs=inputs)
+        assert not solution.has_sensitivities()
+
+        solution = solver.step(
+            None, model, 1.0, inputs=inputs, calculate_sensitivities=["b"]
+        )
+        solution = solver.step(
+            solution, model, 1.0, inputs=inputs, calculate_sensitivities=["b"]
+        )
+        t = solution.t
+        np.testing.assert_allclose(
+            solution["v"].sensitivities["b"].ravel(),
+            -t * np.exp(-0.6 * t),
+            rtol=1e-6,
+            atol=1e-9,
+        )
+
+    @pytest.mark.parametrize("method", ["solve", "step"])
+    def test_second_model_error_keeps_sensitivity_setting(self, method):
+        inputs = {"a": 0.3, "b": 0.6}
+        solver = self._solver()
+        solver.step(
+            None,
+            _independent_decays(),
+            1.0,
+            inputs=inputs,
+            calculate_sensitivities=["a"],
+        )
+        model = _independent_decays()
+        self._solver().solve(
+            model, [0, 1], inputs=inputs, calculate_sensitivities=["b"]
+        )
+
+        with pytest.raises(RuntimeError, match=r"already been initialised"):
+            if method == "solve":
+                solver.solve(model, [0, 1], inputs=inputs, calculate_sensitivities=True)
+            else:
+                solver.step(
+                    None, model, 1.0, inputs=inputs, calculate_sensitivities=True
+                )
+
+        assert model.calculate_sensitivities == ["b"]
