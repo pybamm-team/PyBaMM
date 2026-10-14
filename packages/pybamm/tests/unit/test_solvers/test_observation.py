@@ -10,6 +10,7 @@ import pytest
 import scipy
 
 import pybamm
+from pybamm.solvers import variable_observer
 from pybamm.solvers.observation import ObserverCache
 from pybamm.solvers.variable_observer import (
     CasadiObserver,
@@ -158,6 +159,25 @@ class TestSegmentSelector:
             selector.select(np.array([4.0]), full_range=False), [1]
         )
 
+    def test_a_time_in_a_roundoff_gap_moves_to_the_earlier_segment_end(self):
+        eps = np.finfo(float).eps
+        end, start = 1 - eps, 1 + eps
+        selector = SegmentSelector([np.array([0.0, end]), np.array([start, 2.0])])
+
+        t, in_gap = selector.resolve_gaps(np.array([0.5, 1.0, start, 1.5]))
+
+        np.testing.assert_array_equal(t, [0.5, end, start, 1.5])
+        assert in_gap is None
+
+    def test_a_time_in_a_longer_gap_is_flagged(self):
+        selector = SegmentSelector([np.array([0.0, 1.0]), np.array([2.0, 3.0])])
+
+        t, in_gap = selector.resolve_gaps(np.array([2.5, 1.5, 0.5, 4.0]))
+
+        np.testing.assert_array_equal(t, [2.5, 1.5, 0.5, 4.0])
+        np.testing.assert_array_equal(in_gap, [False, True, False, False])
+        assert selector.resolve_gaps(1.5)[1].ndim == 0
+
 
 class TestObserverSegments:
     def test_selection_follows_the_variable_asked_about(self):
@@ -235,6 +255,45 @@ class TestCasadiObserverCaches:
             assert cache in observer.__dict__
         variable._observer = restored
         np.testing.assert_allclose(variable(t), expected)
+
+
+class TestCasadiObserverSensitivities:
+    @pytest.mark.parametrize("block_size", [3, 256])
+    def test_sensitivities_over_blocks_of_times_and_segments(self, block_size):
+        # du/dt = -a u, solved twice from u = 1 and joined
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -a * u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u, "a u": a * u}
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        t_interp = np.linspace(0, 1, 11)
+        solution = solver.solve(
+            model,
+            [0, 1],
+            t_interp=t_interp,
+            inputs={"a": 0.5},
+            calculate_sensitivities=True,
+        )
+        joined = solution + solver.solve(
+            model,
+            [1, 2],
+            t_interp=t_interp + 1,
+            inputs={"a": 0.5},
+            calculate_sensitivities=True,
+        )
+
+        with mock.patch.object(variable_observer._ChainRule, "block_size", block_size):
+            sensitivities = joined["a u"].sensitivities["a"]
+
+        # Each segment restarts from u = 1, so d(a u)/da = u - a tau u
+        tau = np.concatenate([t_interp, t_interp[1:]])
+        u_exact = np.exp(-0.5 * tau)
+        np.testing.assert_allclose(
+            sensitivities, u_exact - 0.5 * tau * u_exact, rtol=1e-6, atol=1e-12
+        )
 
 
 class TestPackSensitivityDict:

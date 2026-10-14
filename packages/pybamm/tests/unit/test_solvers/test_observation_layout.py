@@ -146,10 +146,18 @@ class TestOutputAssembly:
         assert assembly.n_rows == 2
 
         n_t = len(solution.t)
-        with pytest.raises(pybamm.SolverError, match=r"sparse variable"):
-            assembly.attach(
-                solution,
-                np.zeros((n_t, 2)),
-                sensitivities=np.zeros((n_t, 2, 1)),
-                sensitivity_names=["a"],
-            )
+        sensitivities = np.arange(n_t * 2, dtype=float).reshape(n_t, 2, 1)
+        assembly.attach(
+            solution,
+            np.zeros((n_t, 2)),
+            sensitivities=sensitivities,
+            sensitivity_names=["a"],
+        )
+
+        # The structural zero's sensitivity is zero; the nonzero keeps its row
+        attached = solution["Voltage [V]"]._sensitivities["a"].reshape(n_t, 2)
+        np.testing.assert_array_equal(attached[:, 0], sensitivities[:, 0, 0])
+        np.testing.assert_array_equal(attached[:, 1], 0.0)
+        np.testing.assert_array_equal(
+            solution["Current [A]"]._sensitivities["a"], sensitivities[:, 1, 0]
+        )
