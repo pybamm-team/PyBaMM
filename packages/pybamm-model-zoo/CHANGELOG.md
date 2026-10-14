@@ -5,6 +5,11 @@ PyBaMM's.
 
 ## [Unreleased]
 
+### Fixed
+
+- Require `pybamm[cite]` so `pybamm.print_citations()` credits a zoo model's
+  authors in a clean install ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+
 ## [0.1.0] - 2026-10-14
 
 ### Added
