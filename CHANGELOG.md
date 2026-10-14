@@ -2,6 +2,15 @@
 
 ## Bug fixes
 
+- `IDAKLUSolver.jaxify` now returns correct derivatives. Negative JVP tangents and scalar-time VJP cotangents were dropped. With the default `t_interp=None`, sensitivities were read from the wrong solver steps. At times off the `t_eval` grid they were taken at the nearest grid point. Values and sensitivities are now both computed exactly at the requested times. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- Further fixes to the IDAKLU-JAX interface ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX)):
+  - Non-jitted calls with an unsorted inputs dict no longer swap the inputs.
+  - Non-jitted calls now accept JAX-array input values.
+  - `get_var` and `get_vars` now use the function they are given.
+  - `vmap` over tangent directions now returns one result per direction.
+  - `vmap` over time shares a single solve.
+  - Derivatives with respect to time are now NaN rather than zero.
+  - Times outside the solution are now NaN rather than an error or the nearest derivative.
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
 
 # [v26.10.1.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.0) - 2026-10-13
