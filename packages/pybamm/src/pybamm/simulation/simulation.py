@@ -607,6 +607,43 @@ class Simulation(BaseSimulation):
             )
             self.experiment_unique_steps_to_model[self._PADDING_REST_KEY] = new_model
 
+    def _experiment_sensitivity_inputs(self, inputs: dict | None) -> list[str]:
+        """
+        Return the user inputs that every built experiment model has as inputs.
+
+        These are the inputs ``calculate_sensitivities=True`` differentiates with
+        respect to; the others are logged as having no sensitivity.
+
+        Parameters
+        ----------
+        inputs : dict or None
+            The user-supplied inputs.
+
+        Returns
+        -------
+        list of str
+            The input names, in the order they were supplied.
+        """
+        if self._built_experiment_model is not None:
+            models = [self._built_experiment_model]
+        else:
+            models = list(self.steps_to_built_models.values())
+        shared_inputs = set.intersection(
+            *({ip.name for ip in model.input_parameters} for model in models)
+        )
+        names = [
+            name
+            for name in (inputs or {})
+            if name not in self._INTERNAL_EXPERIMENT_INPUTS
+        ]
+        dropped = [name for name in names if name not in shared_inputs]
+        if dropped:
+            pybamm.logger.warning(
+                f"Inputs {dropped} are not input parameters of every experiment "
+                "step model, so no sensitivities are calculated for them."
+            )
+        return [name for name in names if name in shared_inputs]
+
     def _get_built_models(self):
         """Return list of built models that need IC recomputation."""
         models = super()._get_built_models()
@@ -836,16 +873,13 @@ class Simulation(BaseSimulation):
 
         # Take sensitivities only w.r.t. user inputs, not the control inputs the
         # experiment injects per step.
-        if "calculate_sensitivities" in kwargs:
-            requested = kwargs["calculate_sensitivities"]
-            if requested is True:
-                kwargs["calculate_sensitivities"] = list((inputs or {}).keys())
-            elif isinstance(requested, list):
-                kwargs["calculate_sensitivities"] = [
-                    name
-                    for name in requested
-                    if name not in self._INTERNAL_EXPERIMENT_INPUTS
-                ]
+        requested_sensitivities = kwargs.get("calculate_sensitivities")
+        if isinstance(requested_sensitivities, list):
+            kwargs["calculate_sensitivities"] = [
+                name
+                for name in requested_sensitivities
+                if name not in self._INTERNAL_EXPERIMENT_INPUTS
+            ]
 
         # Drop the prior solution before build/integration.
         self._solution = starting_solution
@@ -856,6 +890,10 @@ class Simulation(BaseSimulation):
             inputs=inputs,
             solve_kwargs=kwargs,
         )
+        if requested_sensitivities is True:
+            kwargs["calculate_sensitivities"] = self._experiment_sensitivity_inputs(
+                inputs
+            )
         if t_eval is not None:
             pybamm.logger.warning(
                 "Ignoring t_eval as solution times are specified by the experiment"

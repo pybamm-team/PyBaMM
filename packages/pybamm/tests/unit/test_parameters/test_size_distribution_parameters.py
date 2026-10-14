@@ -114,3 +114,47 @@ class TestSizeDistributionParameters:
         )
         assert "Primary: Negative maximum particle radius [m]" not in values_composite
         assert "Primary: Positive maximum particle radius [m]" not in values_composite
+
+    @pytest.mark.parametrize("composite", ["neither", "negative"])
+    def test_distribution_follows_mean_radius_parameter(self, composite):
+        if composite == "neither":
+            values = pybamm.lithium_ion.BaseModel().default_parameter_values
+            prefix = ""
+        else:
+            values = pybamm.ParameterValues("Chen2020_composite")
+            values.update(
+                {
+                    "Primary: Positive particle radius [m]": 1e-6,
+                    "Secondary: Positive particle radius [m]": 1e-6,
+                    "Negative particle radius [m]": 1e-6,
+                }
+            )
+            prefix = "Primary: "
+        values = pybamm.get_size_distribution_parameters(values, composite=composite)
+        radius = f"{prefix}Negative particle radius [m]"
+        r_max = pybamm.Parameter(f"{prefix}Negative maximum particle radius [m]")
+
+        # The support is truncated at 2.5 means, so the mean is ~0.1% low
+        def distribution_mean(values):
+            radii = np.linspace(1e-12, values.evaluate(r_max), 20001)
+            f_a_dist = values.evaluate(
+                pybamm.FunctionParameter(
+                    f"{prefix}Negative area-weighted particle-size distribution [m-1]",
+                    {"R": pybamm.Vector(radii)},
+                )
+            ).ravel()
+            return np.trapezoid(radii * f_a_dist, radii) / np.trapezoid(f_a_dist, radii)
+
+        r_mean = values.evaluate(pybamm.Parameter(radius))
+        assert values.evaluate(r_max) == pytest.approx(2.5 * r_mean)
+        assert distribution_mean(values) == pytest.approx(r_mean, rel=2e-3)
+
+        # Changing the radius after building the distribution moves it too
+        values.update({radius: 3 * r_mean})
+        assert values.evaluate(r_max) == pytest.approx(7.5 * r_mean)
+        assert distribution_mean(values) == pytest.approx(3 * r_mean, rel=2e-3)
+
+        # An input radius stays symbolic in the processed parameters
+        values.update({radius: "[input]"})
+        processed = values.process_symbol(r_max)
+        assert processed.evaluate(inputs={radius: 2e-6}) == pytest.approx(5e-6)

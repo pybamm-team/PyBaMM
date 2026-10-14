@@ -5,6 +5,7 @@ import itertools
 import multiprocessing as mp
 import numbers
 import platform
+import re
 import sys
 import warnings
 
@@ -17,6 +18,9 @@ from pybamm import ParameterValues
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from pybamm.models.base_model import ModelSolutionObservability
+
+# CasADi function names allow only letters, digits and single underscores
+_NOT_IDENTIFIER_CHARS = re.compile(r"[^a-z0-9]+")
 
 
 class BaseSolver:
@@ -368,6 +372,7 @@ class BaseSolver:
         self.computed_dvar_dy_fcns = {}
         self.computed_dvar_dp_fcns = {}
         self._time_integral_vars = {}
+        function_names = BaseSolver._wrangle_names(self.output_variables)
         for key in self.output_variables:
             # Check for any ExplicitTimeIntegral or DiscreteTimeSum variables
             processed_time_integral = (
@@ -392,7 +397,7 @@ class BaseSolver:
                 _,
             ) = process(
                 var,
-                BaseSolver._wrangle_name(key),
+                function_names[key],
                 vars_for_processing,
                 use_jacobian=True,
                 return_jacp_stacked=True,
@@ -438,24 +443,55 @@ class BaseSolver:
     @classmethod
     def _wrangle_name(cls, name: str) -> str:
         """
-        Wrangle a function name to replace special characters
+        Convert a variable name into a valid CasADi function name.
+
+        Parameters
+        ----------
+        name : str
+            The variable name.
+
+        Returns
+        -------
+        str
+            ``"v_"`` followed by the lower-cased name, with "%" spelled "prc" and
+            each run of other characters outside ``[a-z0-9]`` replaced by one "_".
         """
-        replacements = [
-            (" ", "_"),
-            ("[", ""),
-            ("]", ""),
-            (".", "_"),
-            ("-", "_"),
-            ("(", ""),
-            (")", ""),
-            ("%", "prc"),
-            (",", ""),
-            (".", ""),
-        ]
-        name = "v_" + name.casefold()
-        for string, replacement in replacements:
-            name = name.replace(string, replacement)
-        return name
+        body = _NOT_IDENTIFIER_CHARS.sub("_", name.casefold().replace("%", "prc"))
+        body = body.strip("_")
+        return f"v_{body}" if body else "v"
+
+    @classmethod
+    def _wrangle_names(cls, names: list[str]) -> dict[str, str]:
+        """
+        Map variable names to distinct, valid CasADi function names.
+
+        Parameters
+        ----------
+        names : list of str
+            The variable names.
+
+        Returns
+        -------
+        dict
+            The function name for each variable name. Names that would collide,
+            including with the ``_jac``, ``_jac_action`` and ``d..._dp``
+            functions derived from them, get a numbered suffix.
+        """
+
+        def derived(base):
+            return {base, f"{base}_jac", f"{base}_jac_action", f"d{base}_dp"}
+
+        used = set()
+        wrangled = {}
+        for name in names:
+            base = candidate = cls._wrangle_name(name)
+            suffix = 0
+            while derived(candidate) & used:
+                suffix += 1
+                candidate = f"{base}_{suffix}"
+            used |= derived(candidate)
+            wrangled[name] = candidate
+        return wrangled
 
     def _check_and_prepare_model_inplace(self, model):
         """
@@ -750,9 +786,43 @@ class BaseSolver:
             y0s.append(s.all_ys[0])
         return y0s
 
+    @staticmethod
     def _solve_process_calculate_sensitivities_arg(
-        inputs: dict, model: pybamm.BaseModel, calculate_sensitivities: list[str] | bool
-    ):
+        inputs: dict,
+        model: pybamm.BaseModel,
+        calculate_sensitivities: list[str] | bool,
+        supplied_inputs: dict | None = None,
+    ) -> tuple[list[str], bool]:
+        """
+        Resolve ``calculate_sensitivities`` into the sorted input names to
+        differentiate with respect to, and store them on the model.
+
+        Parameters
+        ----------
+        inputs : dict
+            The model's input values, with one entry per input parameter of the model.
+        model : :class:`pybamm.BaseModel`
+            The model being solved. Its ``calculate_sensitivities`` attribute is set.
+        calculate_sensitivities : list of str or bool
+            ``True`` for every input of the model, ``False`` for none, or a list of
+            input names.
+        supplied_inputs : dict, optional
+            The inputs as given by the caller. With ``True``, any of these that are
+            not inputs of the model are logged as having no sensitivity.
+
+        Returns
+        -------
+        list of str
+            The sorted names of the inputs to differentiate with respect to.
+        bool
+            Whether these names differ from the model's previous ones.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If a requested name is not an input parameter of the model, or an input
+            to differentiate with respect to is vector-valued.
+        """
         excluded_sensitivity_inputs = {pybamm.Simulation._STEP_INDEX_INPUT}
 
         # get a list-only version of calculate_sensitivities
@@ -763,12 +833,36 @@ class BaseSolver:
                 ]
             else:
                 calculate_sensitivities_list = []
+            supplied = set() if supplied_inputs is None else set(supplied_inputs.keys())
+            unused_inputs = sorted(supplied - set(inputs) - excluded_sensitivity_inputs)
         else:
             calculate_sensitivities_list = [
                 p
                 for p in calculate_sensitivities
                 if p not in excluded_sensitivity_inputs
             ]
+            unknown_inputs = [
+                p for p in calculate_sensitivities_list if p not in inputs
+            ]
+            if unknown_inputs:
+                model_inputs = sorted(set(inputs) - excluded_sensitivity_inputs)
+                raise pybamm.SolverError(
+                    f"Cannot calculate sensitivities with respect to {unknown_inputs}: "
+                    f"not input parameters of model '{model.name}'. Its input "
+                    f"parameters are {model_inputs}."
+                )
+            unused_inputs = []
+
+        vector_inputs = [
+            p for p in calculate_sensitivities_list if np.size(inputs[p]) > 1
+        ]
+        if vector_inputs:
+            raise pybamm.SolverError(
+                f"Cannot calculate sensitivities with respect to the vector-valued "
+                f"input(s) {vector_inputs}: sensitivities are only supported for "
+                "scalar inputs. Pass `calculate_sensitivities` a list of the scalar "
+                "inputs instead."
+            )
 
         calculate_sensitivities_list.sort()
         if not hasattr(model, "calculate_sensitivities"):
@@ -778,6 +872,14 @@ class BaseSolver:
         sensitivities_have_changed = (
             calculate_sensitivities_list != model.calculate_sensitivities
         )
+        # Log once per set-up, not on every repeated solve
+        if unused_inputs and (
+            sensitivities_have_changed or not calculate_sensitivities_list
+        ):
+            pybamm.logger.warning(
+                f"Inputs {unused_inputs} are not input parameters of model "
+                f"'{model.name}', so no sensitivities are calculated for them."
+            )
 
         # save sensitivity parameters so we can identify them later on
         # (FYI: this is used in the Solution class)
@@ -884,13 +986,21 @@ class BaseSolver:
             Number of processes to use when solving for more than one set of input
             parameters. Defaults to value returned by "os.cpu_count()".
         calculate_sensitivities : list of str or bool, optional
-            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
-            If only a subset of sensitivities are required, can also pass a
-            list of input parameter names.  **Limitations**: sensitivities are not calculated up to numerical tolerances
-            so are not guarenteed to be within the tolerances set by the solver, please raise an issue if you
-            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
-            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
-            if the timings of your experimental protocol change rapidly with respect to your input parameters.
+            Whether the solver calculates sensitivities with respect to input parameters.
+            Defaults to False. If True, sensitivities are calculated for every input
+            parameter of the model; supplied inputs that the model does not use are
+            logged and have no sensitivity. If a list of input parameter names, each name
+            must be an input parameter of the model, otherwise a
+            :class:`pybamm.SolverError` is raised. Only scalar inputs are supported.
+            Sensitivities are stored in sorted name order, so the columns of
+            ``sensitivities["all"]`` follow ``Solution.sensitivity_names`` rather than
+            the order of this list. **Limitations**: sensitivities are not calculated up
+            to numerical tolerances so are not guaranteed to be within the tolerances set
+            by the solver, please raise an issue if you require this functionality. Also,
+            when using this feature with `pybamm.Experiment`, the sensitivities do not
+            take into account the movement of step-transitions wrt input parameters, so
+            do not use this feature if the timings of your experimental protocol change
+            rapidly with respect to your input parameters.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -957,7 +1067,10 @@ class BaseSolver:
 
         _, sensitivities_have_changed = (
             BaseSolver._solve_process_calculate_sensitivities_arg(
-                model_inputs_list[0], model, calculate_sensitivities
+                model_inputs_list[0],
+                model,
+                calculate_sensitivities,
+                supplied_inputs=inputs_list[0],
             )
         )
 
@@ -1439,13 +1552,21 @@ class BaseSolver:
         save : bool, optional
             Save solution with all previous timesteps. Defaults to True.
         calculate_sensitivities : list of str or bool, optional
-            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
-            If only a subset of sensitivities are required, can also pass a
-            list of input parameter names. **Limitations**: sensitivities are not calculated up to numerical tolerances
-            so are not guaranteed to be within the tolerances set by the solver, please raise an issue if you
-            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
-            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
-            if the timings of your experimental protocol change rapidly with respect to your input parameters.
+            Whether the solver calculates sensitivities with respect to input parameters.
+            Defaults to False. If True, sensitivities are calculated for every input
+            parameter of the model; supplied inputs that the model does not use are
+            logged and have no sensitivity. If a list of input parameter names, each name
+            must be an input parameter of the model, otherwise a
+            :class:`pybamm.SolverError` is raised. Only scalar inputs are supported.
+            Sensitivities are stored in sorted name order, so the columns of
+            ``sensitivities["all"]`` follow ``Solution.sensitivity_names`` rather than
+            the order of this list. **Limitations**: sensitivities are not calculated up
+            to numerical tolerances so are not guaranteed to be within the tolerances set
+            by the solver, please raise an issue if you require this functionality. Also,
+            when using this feature with `pybamm.Experiment`, the sensitivities do not
+            take into account the movement of step-transitions wrt input parameters, so
+            do not use this feature if the timings of your experimental protocol change
+            rapidly with respect to your input parameters.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -1535,7 +1656,7 @@ class BaseSolver:
         # process calculate_sensitivities argument
         _, sensitivities_have_changed = (
             BaseSolver._solve_process_calculate_sensitivities_arg(
-                model_inputs, model, calculate_sensitivities
+                model_inputs, model, calculate_sensitivities, supplied_inputs=inputs
             )
         )
 
