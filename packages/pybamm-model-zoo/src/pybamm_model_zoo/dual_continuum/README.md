@@ -172,7 +172,9 @@ How the modes are given depends on `"closure variable"`:
 
 $N$ is the `"transient closure modes"` option. The default parameter values
 contain the isolated-sphere modes, so the default DC1t describes the same cell
-as the Fickian DFN.
+as the Fickian DFN. With a concentration-dependent diffusivity, the
+dimensionless and isolated-sphere time constants are scaled with
+$D(c_\mathrm{vol})$, an approximation.
 
 #### Choosing the modes: `fit_transient_closure`
 
@@ -216,19 +218,12 @@ The helper checks the data and reports problems in `fit.warnings` (also
 logged):
 
 - **Unresolved early times.** At short times every geometry responds like a
-  flat wall, $s \approx -2 \sqrt{t/D} / (\sqrt{\pi} F)$. Closure solves on voxel meshes often
-  report a surface value offset by about $-h/(2 D F)$ (extrapolation from cell
-  centres to the surface, cell size $h$), so the early data lies far beyond
-  this limit; the helper reports the implied $h$. The fit then puts the
-  offset in a fast mode, and the voltage jumps further than in the continuum
-  solution when the current changes. Surface values extrapolated to the faces
-  and cell-centre values differ by $h/(2 D F)$ at all times, so when comparing
-  with a DNS on the same voxel mesh, use the closure variable with the DNS's
-  surface convention. A constant offset changes the voltage only while current
-  flows, not the shape of a relaxation. Prefer a finer mesh near the surface.
-  As a workaround, `fix_early_times=True`
-  drops the data before `resolved_after` (default $10 h^2/D$), adds points of
-  the short-time limit where it is valid, and fits across the gap.
+  flat wall, $s \approx -2 \sqrt{t/D} / (\sqrt{\pi} F)$. Closure solves on
+  voxel meshes that report cell-centre values give early data far beyond this
+  limit (offset by about $-h/(2 D F)$, cell size $h$); the helper reports the
+  implied $h$. Prefer a finer mesh near the surface, or use
+  `fix_early_times=True`, which replaces the data before `resolved_after`
+  (default $10 h^2/D$) by the short-time limit.
 - **Overshoot.** The modes cannot represent $s(t)$ overshooting its final
   value, which usually means the closure solve is not converged.
 
@@ -256,8 +251,8 @@ captures most of the relaxation that the steady closure misses. Each model
 stops at its own 3.0 V cut-off, and DC1t stops 1.1 s before the DNS; stopped at
 the DNS's end time instead, it agrees within 0.1 mV after 900 s. The remaining
 difference early in the rest (about 60 mV at +10 s at equal charge) is not
-explained by the closure data, and may come from the nonlinear kinetics and
-open-circuit potential near full lithiation.
+explained by the offset of the closure data, and may come from the nonlinear
+kinetics and open-circuit potential near full lithiation.
 
 ### Specific surface area from images
 
@@ -288,7 +283,8 @@ The DC model accepts PyBaMM's `"SEI"` options (e.g.
 `DualContinuum({"SEI": "reaction limited"})`) and the DFN's other options, with
 their parameters. With `"surface area": "from image"`, the SEI
 grows on the same total specific surface area $a$ as the main reaction,
-including the AM-CBD and AM-separator contributions.
+including the AM-CBD and AM-separator contributions. Particle-size
+distributions and loss of active material are not supported.
 
 ### Composite electrodes (several particle phases)
 
@@ -390,13 +386,6 @@ cathode half cell (Xu2019):
   at 10, 100 and 900 s into the rest.
 - `fit_transient_closure` recovers known modes, meets its tolerance, and
   flags unresolved early times and overshoot.
-
-Not yet validated here: the Yang closure (only its dependence on the particle
-radius is checked), and the experimental comparison of the paper. Not yet
-ported from the standalone implementation: minimum plating overpotential
-outputs. DC1t with a concentration-dependent diffusivity scales the time
-constants with $D(c_\mathrm{vol})$, an approximation. Particle-size
-distributions and loss of active material are not supported.
 
 ## Citation
 
