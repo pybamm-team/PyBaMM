@@ -346,7 +346,7 @@ class ProcessedVariable(BaseProcessedVariable):
 
         if observe_raw:
             t_observe = self.t_pts
-        elif not isinstance(t, np.ndarray):
+        elif not isinstance(t, np.ndarray) or t.ndim == 0:
             if not isinstance(t, list):
                 t = [t]
             t_observe = np.array(t)

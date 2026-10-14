@@ -14,20 +14,16 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from importlib.metadata import PackageNotFoundError, version
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
-from packaging.version import Version
 
 import pybamm
 from pybamm_model_zoo import _compat, _paths
 from pybamm_model_zoo._citations import CITATION_FILE, read_citations
-from pybamm_model_zoo._exceptions import ManifestError
 from pybamm_model_zoo._registry import (
+    DISTRIBUTION,
     NAME_PATTERN,
     SLUG_PATTERN,
     TIERS,
@@ -53,12 +49,10 @@ MODEL_KEYS = frozenset(
         "summary",
         "class",
         "tier",
-        "pybamm_requires",
         "added",
         "license",
         "maintainers",
         "citation",
-        "dependencies",
         "tests",
     }
 )
@@ -83,7 +77,7 @@ class Check:
         ``MODEL``, ``PACKAGING``, or ``REPO`` — see the module docstring.
     needs_model : bool
         Whether it imports the model, so it must be skipped when the model's
-        declared extra is not installed.
+        extra is not installed.
     waivable : bool
         Whether a manifest's ``skip_contract`` may waive it.
     """
@@ -159,47 +153,7 @@ def check_manifest(entry: ModelEntry) -> None:
 
     assert entry.citation_key.strip(), f"{where}: [model.citation] key is required"
 
-    check_pybamm_requires(entry)
     _check_tests_block(entry)
-    _check_dependency_declaration(entry)
-
-
-def names_a_release(version: str) -> bool:
-    """Whether an installed PyBaMM version names a release it can be held to.
-
-    With no ``pybamm-v*`` tag in reach — a shallow CI clone, an sdist, a fork —
-    hatch-vcs has nothing to describe and guesses a ``0.0.x``, a series PyBaMM
-    has never published. Such an install cannot say which release it is, so a
-    declared range has nothing to be checked against.
-    """
-    return Version(version).release[:2] != (0, 0)
-
-
-def check_pybamm_requires(entry: ModelEntry) -> None:
-    """The declared PyBaMM range is a valid specifier, satisfied by this install.
-
-    Applicability is a *selection* decision elsewhere — the weekly compatibility
-    matrix only pairs a model with versions its range admits — so reaching this
-    check with an unsatisfied range means the manifest claims a PyBaMM the tests
-    are not running against, which is a manifest error worth failing loudly.
-
-    The specifier is validated wherever this runs; the range itself is only held
-    to an install that names a release. See :func:`names_a_release`.
-    """
-    where = entry.manifest_path
-    assert entry.pybamm_requires.strip(), (
-        f"{where}: pybamm_requires is required, e.g. '>=26.8'"
-    )
-    try:
-        satisfied = entry.admits(pybamm.__version__)
-    except ManifestError as error:
-        raise AssertionError(str(error)) from error
-    if not names_a_release(pybamm.__version__):
-        return
-    assert satisfied, (
-        f"{where}: pybamm_requires '{entry.pybamm_requires}' is not satisfied by "
-        f"the installed PyBaMM {pybamm.__version__}"
-    )
 
 
 def _check_tests_block(entry: ModelEntry) -> None:
@@ -223,30 +177,6 @@ def _check_tests_block(entry: ModelEntry) -> None:
             f"{where}: parameter_set '{tests.parameter_set}' is not a registered "
             f"PyBaMM parameter set"
         )
-
-
-def _check_dependency_declaration(entry: ModelEntry) -> None:
-    """The manifest's own dependency block is coherent."""
-    where = entry.manifest_path
-    dependencies = entry.dependencies
-    if dependencies.packages:
-        assert dependencies.extra, (
-            f"{where}: [model.dependencies] declares packages but no extra; "
-            f"third-party dependencies must be installable as a zoo extra"
-        )
-    if not dependencies.extra:
-        return
-    assert dependencies.extra == expected_extra(entry.slug), (
-        f"{where}: extra must be named '{expected_extra(entry.slug)}', "
-        f"got '{dependencies.extra}'"
-    )
-    for requirement in dependencies.packages:
-        Requirement(requirement)  # raises InvalidRequirement on a malformed pin
-
-
-def expected_extra(slug: str) -> str:
-    """The name of the zoo extra a model's dependencies must be installable by."""
-    return f"zoo-{slug.replace('_', '-')}"
 
 
 @_register("layout")
@@ -328,7 +258,7 @@ def check_solve(entry: ModelEntry) -> pybamm.Solution:
 
 @_register("packaging", scope=PACKAGING)
 def check_packaging(entry: ModelEntry) -> None:
-    """An in-tree model is importable as part of the zoo, with its extra declared."""
+    """An in-tree model is importable from the zoo, and ``zoo-all`` has its extra."""
     assert (entry.path / "__init__.py").is_file(), (
         f"{entry.path / '__init__.py'}: missing, so the folder is not importable"
     )
@@ -340,7 +270,7 @@ def check_packaging(entry: ModelEntry) -> None:
         f"{entry.manifest_path}: class must live under '{expected_module}', "
         f"got '{module_path}'"
     )
-    _check_extra_is_declared(entry)
+    _check_extra_is_aggregated(entry)
 
 
 @_register("license", scope=PACKAGING, waivable=False)
@@ -352,80 +282,31 @@ def check_license(entry: ModelEntry) -> None:
     )
 
 
-def _check_extra_is_declared(entry: ModelEntry) -> None:
-    """The zoo's pyproject offers the extra the manifest declares, via ``zoo-all``."""
-    extra = entry.dependencies.extra
-    if not extra:
-        return
-    pyproject = _paths.ZOO_PYPROJECT
-    extras = (
-        read_manifest(pyproject).get("project", {}).get("optional-dependencies", {})
-    )
-    assert extra in extras, (
-        f"{pyproject}: no '{extra}' extra, but {entry.manifest_path} declares one"
-    )
-    _check_requirements_agree(entry, pyproject, extras[extra])
+def zoo_extras() -> dict[str, list[str]]:
+    """The extras the zoo's pyproject declares, each with its requirements."""
+    project = read_manifest(_paths.ZOO_PYPROJECT).get("project", {})
+    return project.get("optional-dependencies", {})
+
+
+def aggregated_extras(extras: dict[str, list[str]]) -> set[str]:
+    """The zoo extras that ``zoo-all`` installs."""
     aggregated: set[str] = set()
     for item in extras.get("zoo-all", []):
         requirement = Requirement(item)
-        if requirement.name == "pybamm-model-zoo":
+        if requirement.name == DISTRIBUTION:
             aggregated |= requirement.extras
-    assert extra in aggregated, (
-        f"{pyproject}: the 'zoo-all' extra must include 'pybamm-model-zoo[{extra}]', "
-        f"or `uv sync --extra zoo-all` will not install {entry.slug}"
-    )
+    return aggregated
 
 
-def _check_requirements_agree(
-    entry: ModelEntry, pyproject: Path, extra_items: list[str]
-) -> None:
-    """A manifest and the extra behind it declare the same requirements.
-
-    Compared in both directions, and on the specifier rather than the name
-    alone. CI installs every model's extra at once, so a one-way name-only
-    comparison lets a model lean on a package it never declared, or claim a
-    stronger bound than the extra actually installs, and still pass.
-    """
-    declared = _requirements(entry.dependencies.packages)
-    provided = _requirements(extra_items)
-    extra = entry.dependencies.extra
-    missing = sorted(set(declared) - set(provided))
-    assert not missing, (
-        f"{pyproject}: extra '{extra}' is missing {missing}, declared by "
-        f"{entry.manifest_path}"
-    )
-    undeclared = sorted(set(provided) - set(declared))
-    assert not undeclared, (
-        f"{entry.manifest_path}: [model.dependencies].packages does not declare "
-        f"{undeclared}, which extra '{extra}' installs"
-    )
-    disagreeing = sorted(
-        name
-        for name, requirement in declared.items()
-        if _shape(requirement) != _shape(provided[name])
-    )
-    assert not disagreeing, (
-        f"{entry.manifest_path}: {disagreeing} declared differently here than in "
-        f"extra '{extra}' of {pyproject}; the manifest is what the compatibility "
-        f"table reports, so the two have to say the same thing"
-    )
-
-
-def _requirements(items: tuple[str, ...] | list[str]) -> dict[str, Requirement]:
-    """Requirement specifications, keyed by canonical distribution name."""
-    parsed = {}
-    for item in items:
-        requirement = Requirement(item)
-        parsed[canonicalize_name(requirement.name)] = requirement
-    return parsed
-
-
-def _shape(requirement: Requirement) -> tuple:
-    """What a requirement asks for, with the name left out: it is the key."""
-    return (
-        requirement.specifier,
-        frozenset(requirement.extras),
-        str(requirement.marker or ""),
+def _check_extra_is_aggregated(entry: ModelEntry) -> None:
+    """A model's extra, if the zoo declares one, is installed by ``zoo-all``."""
+    extras = zoo_extras()
+    if entry.extra not in extras:
+        return
+    assert entry.extra in aggregated_extras(extras), (
+        f"{_paths.ZOO_PYPROJECT}: the 'zoo-all' extra must include "
+        f"'{DISTRIBUTION}[{entry.extra}]', or `uv sync --extra zoo-all` will not "
+        f"install {entry.slug}"
     )
 
 
@@ -491,22 +372,3 @@ def _simulation_for(entry: ModelEntry) -> pybamm.Simulation:
     """
     model = instantiate(entry)
     return pybamm.Simulation(model, parameter_values=parameter_values_for(entry, model))
-
-
-def missing_dependencies(entry: ModelEntry) -> list[str]:
-    """Requirements from the model's extra that are not installed."""
-    missing = []
-    for item in entry.dependencies.packages:
-        requirement = Requirement(item)
-        # A false marker means the package is not expected here, so counting it
-        # missing would skip the model's checks on every other platform.
-        if requirement.marker and not requirement.marker.evaluate():
-            continue
-        try:
-            installed = Version(version(requirement.name))
-        except PackageNotFoundError:
-            missing.append(item)
-            continue
-        if not requirement.specifier.contains(installed, prereleases=True):
-            missing.append(item)
-    return missing
