@@ -49,9 +49,8 @@ class SubBlockSystem : public NonlinearSystem {
 public:
   SubBlockSystem(
     ExprSet* funcs, N_Vector yy,
-    IDAKLUSolverOpenMP<ExprSet>& solver,
-    bool use_sparse)
-    : funcs_(funcs), yy_(yy), solver_(solver), use_sparse_(use_sparse) {}
+    IDAKLUSolverOpenMP<ExprSet>& solver)
+    : funcs_(funcs), yy_(yy), solver_(solver) {}
 
   void eval_residual(sunrealtype t, const sunrealtype* x_alg, sunrealtype* res_out) override {
     sunrealtype* yy_data = NV_DATA(yy_);
@@ -66,53 +65,128 @@ public:
 
   int solve_linear(sunrealtype t, const sunrealtype* x_alg,
                    sunrealtype* res, sunrealtype* delta) override {
-    auto& sb = *solver_.alg_state_->sub;
     sunrealtype* yy_data = NV_DATA(yy_);
     std::memcpy(yy_data + solver_.len_rhs_, x_alg,
                 solver_.len_alg_ * sizeof(sunrealtype));
 
-    funcs_->alg_jac->m_arg[0] = &t;
-    funcs_->alg_jac->m_arg[1] = yy_data;
-    funcs_->alg_jac->m_arg[2] = funcs_->inputs.data();
-    funcs_->alg_jac->m_res[0] = sb.full_jac_buf.data();
-    (*funcs_->alg_jac)();
-
-    if (use_sparse_) {
-      sunrealtype* sub_data = SUNSparseMatrix_Data(sb.J);
-      for (int i = 0; i < sb.nnz; i++)
-        sub_data[i] = sb.full_jac_buf[sb.data_indices[i]];
-    } else {
-      sunrealtype* dense = SUNDenseMatrix_Data(sb.J);
-      int len_alg = solver_.len_alg_;
-      std::memset(dense, 0, len_alg * len_alg * sizeof(sunrealtype));
-      for (int col = 0; col < len_alg; col++) {
-        for (auto k = sb.colptrs[col]; k < sb.colptrs[col + 1]; k++) {
-          int row = sb.rowvals[k];
-          dense[col * len_alg + row] = sb.full_jac_buf[sb.data_indices[k]];
-        }
-      }
-    }
-
-    int flag = SUNLinSolSetup(sb.LS, sb.J);
-    if (flag != 0) return 1;
-
-    sunrealtype* res_data = N_VGetArrayPointer(sb.res_nvec);
-    sunrealtype* delta_data = N_VGetArrayPointer(sb.delta_nvec);
-    std::memcpy(res_data, res, solver_.len_alg_ * sizeof(sunrealtype));
-
-    flag = SUNLinSolSolve(sb.LS, sb.J, sb.delta_nvec,
-                          sb.res_nvec, SUN_RCONST(0.0));
-
-    std::memcpy(delta, delta_data, solver_.len_alg_ * sizeof(sunrealtype));
-    return flag;
+    if (solver_.SetupAlgebraicJacobian(t) != 0) return 1;
+    return solver_.SolveAlgebraicJacobian(res, delta);
   }
 
 private:
   ExprSet* funcs_;
   N_Vector yy_;
   IDAKLUSolverOpenMP<ExprSet>& solver_;
-  bool use_sparse_;
 };
+
+// ────────────────────── Algebraic sub-block linear solves ──────────────────────
+
+template <class ExprSet>
+int IDAKLUSolverOpenMP<ExprSet>::SetupAlgebraicJacobian(sunrealtype t) {
+  auto& sb = *alg_state_->sub;
+  Expression* alg_jac = functions->alg_jac;
+  alg_jac->m_arg[0] = &t;
+  alg_jac->m_arg[1] = N_VGetArrayPointer(yy);
+  alg_jac->m_arg[2] = functions->inputs.data();
+  alg_jac->m_res[0] = sb.full_jac_buf.data();
+  (*alg_jac)();
+
+  if (sb.use_sparse) {
+    sunrealtype* sub_data = SUNSparseMatrix_Data(sb.J);
+    for (int i = 0; i < sb.nnz; i++)
+      sub_data[i] = sb.full_jac_buf[sb.data_indices[i]];
+  } else {
+    sunrealtype* dense = SUNDenseMatrix_Data(sb.J);
+    std::memset(dense, 0, len_alg_ * len_alg_ * sizeof(sunrealtype));
+    for (int col = 0; col < len_alg_; col++) {
+      for (auto k = sb.colptrs[col]; k < sb.colptrs[col + 1]; k++) {
+        int row = sb.rowvals[k];
+        dense[col * len_alg_ + row] = sb.full_jac_buf[sb.data_indices[k]];
+      }
+    }
+  }
+
+  return SUNLinSolSetup(sb.LS, sb.J);
+}
+
+template <class ExprSet>
+int IDAKLUSolverOpenMP<ExprSet>::SolveAlgebraicJacobian(
+    const sunrealtype* rhs, sunrealtype* solution) {
+  auto& sb = *alg_state_->sub;
+  std::memcpy(N_VGetArrayPointer(sb.res_nvec), rhs, len_alg_ * sizeof(sunrealtype));
+  int const flag = SUNLinSolSolve(sb.LS, sb.J, sb.delta_nvec, sb.res_nvec, SUN_RCONST(0.0));
+  std::memcpy(solution, N_VGetArrayPointer(sb.delta_nvec), len_alg_ * sizeof(sunrealtype));
+  return flag;
+}
+
+// ────────────────────── Full initial-condition matrix ──────────────────────
+
+template <class ExprSet>
+int IDAKLUSolverOpenMP<ExprSet>::SetupInitialConditionMatrix(sunrealtype t) {
+  const auto& colptrs = functions->jac_times_cjmass_colptrs;
+  const auto& rowvals = functions->jac_times_cjmass_rowvals;
+  if (!ic_matrix_) {
+    ic_matrix_ = std::make_unique<InitialConditionMatrix>();
+    auto& m = *ic_matrix_;
+    m.A = SUNSparseMatrix(number_of_states, number_of_states,
+                          jac_times_cjmass_nnz, CSC_MAT, sunctx);
+    m.rhs = N_VNew_Serial(number_of_states, sunctx);
+    m.solution = N_VNew_Serial(number_of_states, sunctx);
+    m.LS = SUNLinSol_KLU(m.solution, m.A, sunctx);
+    configure_klu(m.LS, setup_opts.klu_pivot_tolerance);
+    m.jac_at_cj0.resize(jac_times_cjmass_nnz);
+    m.jac_at_cj1.resize(jac_times_cjmass_nnz);
+  }
+  auto& m = *ic_matrix_;
+
+  sunindextype* indexptrs = SUNSparseMatrix_IndexPointers(m.A);
+  sunindextype* indexvals = SUNSparseMatrix_IndexValues(m.A);
+  for (size_t i = 0; i < colptrs.size(); i++) indexptrs[i] = colptrs[i];
+  for (size_t i = 0; i < rowvals.size(); i++) indexvals[i] = rowvals[i];
+
+  // jac_times_cjmass is F_y - cj M, so the difference across cj isolates -M
+  Expression* jac = functions->jac_times_cjmass;
+  for (int cj_int = 0; cj_int < 2; cj_int++) {
+    sunrealtype cj = cj_int;
+    jac->m_arg[0] = &t;
+    jac->m_arg[1] = N_VGetArrayPointer(yy);
+    jac->m_arg[2] = functions->inputs.data();
+    jac->m_arg[3] = &cj;
+    jac->m_res[0] = (cj_int == 0) ? m.jac_at_cj0.data() : m.jac_at_cj1.data();
+    (*jac)();
+  }
+
+  sunrealtype* data = SUNSparseMatrix_Data(m.A);
+  const sunrealtype* id_val = N_VGetArrayPointer(id);
+  for (int col = 0; col < number_of_states; col++) {
+    const bool differential = is_differential(id_val[col]);
+    for (auto k = colptrs[col]; k < colptrs[col + 1]; k++) {
+      data[k] = differential ? m.jac_at_cj1[k] - m.jac_at_cj0[k] : m.jac_at_cj0[k];
+    }
+  }
+
+  int flag = SUNLinSolSetup(m.LS, m.A);
+  if (flag != 0) {
+    // A refactorisation reuses the previous pivots, which may now be zero
+    CheckErrors(SUNLinSol_KLUReInit(m.LS, m.A, jac_times_cjmass_nnz,
+                                    SUNKLU_REINIT_PARTIAL),
+                "SUNLinSol_KLUReInit");
+    flag = SUNLinSolSetup(m.LS, m.A);
+  }
+  return flag;
+}
+
+template <class ExprSet>
+int IDAKLUSolverOpenMP<ExprSet>::SolveInitialConditionMatrix(sunrealtype* rhs_solution) {
+  auto& m = *ic_matrix_;
+  std::memcpy(N_VGetArrayPointer(m.rhs), rhs_solution, number_of_states * sizeof(sunrealtype));
+  int const flag = SUNLinSolSolve(m.LS, m.A, m.solution, m.rhs, SUN_RCONST(0.0));
+  if (flag != 0) {
+    return flag;
+  }
+  std::memcpy(rhs_solution, N_VGetArrayPointer(m.solution), number_of_states * sizeof(sunrealtype));
+  return 0;
+}
 
 template <class ExprSet>
 class FullSystem : public NonlinearSystem {
@@ -242,6 +316,7 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
 
     as.sub = std::make_unique<SubBlockResources>();
     auto& sb = *as.sub;
+    sb.use_sparse = use_sparse;
 
     SUNContext_Create(SUN_COMM_NULL, &sb.sunctx);
     PrecomputeSubBlockSparsity();
@@ -266,8 +341,7 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
       sb.LS = SUNLinSol_Dense(sb.delta_nvec, sb.J, sb.sunctx);
     }
 
-    as.system = std::make_unique<SubBlockSystem<ExprSet>>(
-      funcs, yy_ptr, *this, use_sparse);
+    as.system = std::make_unique<SubBlockSystem<ExprSet>>(funcs, yy_ptr, *this);
 
   } else {
     // ── FULL: full-system via IDA's linear solve interface ──

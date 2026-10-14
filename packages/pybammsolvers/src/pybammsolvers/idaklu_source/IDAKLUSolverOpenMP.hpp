@@ -130,6 +130,7 @@ public:
     SUNMatrix J = nullptr;
     N_Vector res_nvec = nullptr;
     N_Vector delta_nvec = nullptr;
+    bool use_sparse = false;
     int nnz = 0;
     std::vector<sunindextype> colptrs;
     std::vector<sunindextype> rowvals;
@@ -172,6 +173,37 @@ public:
     std::unique_ptr<FullSystemResources> full;
   };
   std::unique_ptr<AlgSolverState> alg_state_;
+
+  /**
+   * @brief Sparse matrix [-M_diff | dF/dy_alg] and its KLU solver.
+   *
+   * Its columns are the derivatives of the residual with respect to the
+   * unknowns of the initial-condition problem, (y'_diff, y_alg). Built on
+   * first use, for models without an algebraic sub-block or with M != I.
+   */
+  struct InitialConditionMatrix {
+    SUNMatrix A = nullptr;
+    SUNLinearSolver LS = nullptr;
+    N_Vector rhs = nullptr;
+    N_Vector solution = nullptr;
+    std::vector<sunrealtype> jac_at_cj0;
+    std::vector<sunrealtype> jac_at_cj1;
+
+    ~InitialConditionMatrix() {
+      if (LS) SUNLinSolFree(LS);
+      if (A) SUNMatDestroy(A);
+      if (rhs) N_VDestroy(rhs);
+      if (solution) N_VDestroy(solution);
+    }
+  };
+  std::unique_ptr<InitialConditionMatrix> ic_matrix_;
+
+  // Sensitivity residuals F_y s + F_p - M s', one vector per parameter
+  N_Vector *sens_res_ = nullptr;
+  // Scratch of length number_of_states for the initial-condition linear solves
+  std::vector<sunrealtype> ic_scratch_;
+  // Whether M is the identity on the differential rows and zero elsewhere
+  bool mass_is_identity_ = true;
 
   int len_rhs_;
   int len_alg_;
@@ -326,12 +358,15 @@ public:
   void ApplySensitivityScales();
 
   /**
-   * @brief Set a consistent initialization for the system of equations.
+   * @brief Make the states and sensitivities consistent at t_val, then hand
+   * them to IDAS.
+   * @param calc_states If false, only the sensitivities are made consistent
    */
   void ConsistentInitialization(
     const sunrealtype& t_val,
     const sunrealtype& t_next,
-    const int& icopt);
+    const int& icopt,
+    bool calc_states = true);
 
   /**
    * @brief Set a consistent initialization for DAEs.
@@ -353,9 +388,71 @@ public:
 
   /**
    * @brief Recover yp after a successful Newton IC solve.
-   * Calls ConsistentInitializationODE then zeros algebraic yp components.
+   * Sets yp_diff = M^-1 f(t, y) and zeros algebraic yp components.
    */
   void RecoverYp(const sunrealtype& t_val);
+
+  /**
+   * @brief Run IDACalcIC from the current yy/yyp and copy its result back.
+   * @param with_sensitivities Whether IDACalcIC also solves for yyS/yypS
+   * @return The IDACalcIC flag
+   */
+  int CalcICWithIDAS(
+    const sunrealtype& t_val,
+    const sunrealtype& t_next,
+    int icopt,
+    bool with_sensitivities);
+
+  /**
+   * @brief Make the sensitivities consistent with the current states.
+   *
+   * Keeps the differential sensitivities and solves the linear sensitivity
+   * residual for the algebraic sensitivities and all of yypS.
+   * @return False if the linear solve failed
+   */
+  bool SensitivityConsistentInitialization(const sunrealtype& t_val);
+
+  /**
+   * @brief Set yypS to the derivative of yp = M^-1 f(y) at the current guess
+   *
+   * IDA_Y_INIT holds yp fixed, so this is the s' its sensitivities hold fixed.
+   */
+  void SensitivityDerivativesAtGuess(const sunrealtype& t_val);
+
+  /**
+   * @brief Evaluate F_y s + F_p - M s' at the current state into sens_res_
+   */
+  void EvaluateSensitivityResiduals(const sunrealtype& t_val);
+
+  /**
+   * @brief Whether the mass matrix is the identity on the differential rows
+   * and zero on the algebraic rows
+   */
+  bool MassMatrixIsIdentity();
+
+  /**
+   * @brief Evaluate and factorise the algebraic sub-block Jacobian at (t, yy)
+   * @return Zero on success
+   */
+  int SetupAlgebraicJacobian(sunrealtype t);
+
+  /**
+   * @brief Solve with the factorised algebraic sub-block Jacobian
+   * @return Zero on success
+   */
+  int SolveAlgebraicJacobian(const sunrealtype* rhs, sunrealtype* solution);
+
+  /**
+   * @brief Build and factorise ic_matrix_ at (t, yy)
+   * @return Zero on success
+   */
+  int SetupInitialConditionMatrix(sunrealtype t);
+
+  /**
+   * @brief Solve with the factorised ic_matrix_, in place
+   * @return Zero on success
+   */
+  int SolveInitialConditionMatrix(sunrealtype* rhs_solution);
 
   /**
    * @brief Build the algebraic Newton solver for consistent initial conditions.
@@ -433,6 +530,14 @@ public:
    * @brief Save a solution point (delegates to Hermite knot reduction or direct save path)
    */
   void SavePoint(sunrealtype t_val, bool extend_arrays, bool is_breakpoint);
+
+  /**
+   * @brief Save the point a restart began from, once IDAS has stepped from it
+   *
+   * Like t0, the point is stored after the first step so that IDAGetDky can
+   * supply its derivative.
+   */
+  void SaveRestartPoint(sunrealtype t_restart);
 
   /**
    * @brief Handle a breakpoint at t_eval: finalize interval, reinitialize

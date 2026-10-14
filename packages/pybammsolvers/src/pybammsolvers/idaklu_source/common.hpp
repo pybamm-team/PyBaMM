@@ -123,6 +123,16 @@ inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
   return (SUN_RCONST(1.0) + delta) * t + delta * sign;
 }
 
+/**
+ * @brief Whether two times are too close for IDAS to step from one to the other
+ *
+ * Matches the 100 * uround tolerance IDAS uses to decide a stop time is reached.
+ */
+inline bool within_roundoff(const sunrealtype t_a, const sunrealtype t_b) {
+  const sunrealtype tol = SUN_RCONST(100.0) * std::numeric_limits<sunrealtype>::epsilon();
+  return SUNRabs(t_b - t_a) <= tol * (SUNRabs(t_a) + SUNRabs(t_b));
+}
+
 // IDA uses id values of 1.0 for differential and 0.0 for algebraic,
 // but numerical errors can make these not exactly 0 or 1
 inline bool is_differential(sunrealtype id) { return id > 0.5; }
