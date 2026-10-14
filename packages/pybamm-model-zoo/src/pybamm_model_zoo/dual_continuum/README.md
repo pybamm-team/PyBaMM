@@ -220,9 +220,13 @@ logged):
   report a surface value offset by about $-h/(2 D F)$ (extrapolation from cell
   centres to the surface, cell size $h$), so the early data lies far beyond
   this limit; the helper reports the implied $h$. The fit then puts the
-  offset in a fast mode, and the voltage jumps too far when the current
-  changes. Prefer recomputing the surface average without the offset or on a
-  finer mesh near the surface. As a workaround, `fix_early_times=True`
+  offset in a fast mode, and the voltage jumps further than in the continuum
+  solution when the current changes. Surface values extrapolated to the faces
+  and cell-centre values differ by $h/(2 D F)$ at all times, so when comparing
+  with a DNS on the same voxel mesh, use the closure variable with the DNS's
+  surface convention. A constant offset changes the voltage only while current
+  flows, not the shape of a relaxation. Prefer a finer mesh near the surface.
+  As a workaround, `fix_early_times=True`
   drops the data before `resolved_after` (default $10 h^2/D$), adds points of
   the short-time limit where it is valid, and fits across the gap.
 - **Overshoot.** The modes cannot represent $s(t)$ overshooting its final
@@ -248,9 +252,12 @@ transient closure variable and a DNS of a discharge to 3.0 V followed by a
 | DC1t (5 fitted modes) | 3.323 | 3.477 | 3.587 | 3.603 |
 
 During the discharge DC1t is within 3 mV RMS of the DNS. The transient closure
-captures most of the relaxation that the steady closure misses. The remaining
-early difference comes partly from the unresolved early times of this closure
-data (the helper warns about them).
+captures most of the relaxation that the steady closure misses. Each model
+stops at its own 3.0 V cut-off, and DC1t stops 1.1 s before the DNS; stopped at
+the DNS's end time instead, it agrees within 0.1 mV after 900 s. The remaining
+difference early in the rest (about 60 mV at +10 s at equal charge) is not
+explained by the closure data, and may come from the nonlinear kinetics and
+open-circuit potential near full lithiation.
 
 ### Specific surface area from images
 
