@@ -3903,11 +3903,11 @@ docs = [
 
 [[package]]
 name = "pybamm-model-zoo"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "packages/pybamm-model-zoo" }
 dependencies = [
     { name = "packaging" },
-    { name = "pybamm" },
+    { name = "pybamm", extra = ["cite"] },
     { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 
@@ -3922,7 +3922,7 @@ zoo-multilayer-3d-thermal = [
 [package.metadata]
 requires-dist = [
     { name = "packaging", specifier = ">=23.0" },
-    { name = "pybamm", editable = "packages/pybamm" },
+    { name = "pybamm", extras = ["cite"], editable = "packages/pybamm" },
     { name = "pybamm", extras = ["fem"], marker = "extra == 'zoo-multilayer-3d-thermal'", editable = "packages/pybamm" },
     { name = "pybamm-model-zoo", extras = ["zoo-multilayer-3d-thermal"], marker = "extra == 'zoo-all'" },
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0.1" },
