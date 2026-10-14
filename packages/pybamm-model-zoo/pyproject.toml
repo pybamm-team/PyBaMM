@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pybamm-model-zoo"
-version = "0.1.0"
+version = "0.1.1"
 license = "BSD-3-Clause"
 license-files = ["LICENSE.txt"]
 description = "Community- and partner-contributed battery models for PyBaMM"

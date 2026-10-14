@@ -5,6 +5,8 @@ PyBaMM's.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-14
+
 ### Fixed
 
 - Require `pybamm[cite]` so `pybamm.print_citations()` credits a zoo model's
