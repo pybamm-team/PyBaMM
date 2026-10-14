@@ -878,7 +878,9 @@ class BaseModel:
     def input_parameters(self):
         """Returns a list of all input parameter symbols used in the model."""
         if self._input_parameters is None:
-            self._input_parameters = self._find_symbols(pybamm.InputParameter)
+            self._input_parameters = self._find_symbols(
+                pybamm.InputParameter, processed_variables=True
+            )
         return self._input_parameters
 
     @property
@@ -1255,9 +1257,10 @@ class BaseModel:
         typ: type[_SymbolT] | tuple[type[_SymbolT], ...],
         fixed_input_parameters=None,
         include_geometry=False,
+        processed_variables=False,
     ) -> list[_SymbolT]:
         """Find all the instances of `typ` in the model (and, optionally, in its
-        default geometry)"""
+        default geometry or its processed variables)"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.fixed_input_parameters
         all_items = chain(
@@ -1270,6 +1273,8 @@ class BaseModel:
             self.boundary_conditions.keys(),
             (x[side][0] for x in self.boundary_conditions.values() for side in x),
             self.variables.values(),
+            # They keep the initial condition of a variable taken out of rhs as an input
+            self._variables_processed.values() if processed_variables else (),
             fixed_input_parameters,
             (event.expression for event in self.events),
         )
