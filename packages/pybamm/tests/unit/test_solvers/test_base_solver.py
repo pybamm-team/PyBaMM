@@ -2,6 +2,7 @@
 # Tests for the Base Solver class
 #
 
+import logging
 import multiprocessing as mp
 import re
 
@@ -453,6 +454,158 @@ class TestBaseSolver:
             np.testing.assert_allclose(
                 sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
             )
+
+    @staticmethod
+    def _decay_model():
+        # dy/dt = -k y, y(0) = y0, so dy/dk = -t y and dy/dy0 = exp(-k t)
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        model.rhs = {y: -pybamm.InputParameter("k") * y}
+        model.initial_conditions = {y: pybamm.InputParameter("y0")}
+        model.variables = {"y": y}
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    @pytest.mark.parametrize("names", [["k", "zzz"], ["unused"]])
+    def test_calculate_sensitivities_names_must_be_model_inputs(self, names):
+        inputs = {"k": 0.3, "y0": 2.0, "unused": 1.0}
+        bad = [name for name in names if name != "k"]
+        match = re.escape(
+            f"Cannot calculate sensitivities with respect to {bad}: not input "
+            "parameters of model 'Unnamed model'. Its input parameters are "
+            "['k', 'y0']"
+        )
+        with pytest.raises(pybamm.SolverError, match=match):
+            pybamm.IDAKLUSolver().solve(
+                self._decay_model(),
+                [0, 1],
+                inputs=inputs,
+                calculate_sensitivities=names,
+            )
+        with pytest.raises(pybamm.SolverError, match=match):
+            pybamm.IDAKLUSolver().step(
+                None,
+                self._decay_model(),
+                1,
+                inputs=inputs,
+                calculate_sensitivities=names,
+            )
+
+    def test_calculate_sensitivities_true_logs_unused_inputs(self, caplog):
+        model = self._decay_model()
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        inputs = {"k": 0.3, "y0": 2.0, "unused": 1.0}
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            solution = solver.solve(
+                model, [0, 1], inputs=inputs, calculate_sensitivities=True
+            )
+        assert (
+            "Inputs ['unused'] are not input parameters of model 'Unnamed model', "
+            "so no sensitivities are calculated for them."
+        ) in caplog.text
+        assert solution.sensitivity_names == ["k", "y0"]
+        sensitivities = solution["y"].sensitivities
+        assert "unused" not in sensitivities
+        t = solution.t
+        np.testing.assert_allclose(
+            sensitivities["k"].ravel(), -t * 2.0 * np.exp(-0.3 * t), rtol=1e-6
+        )
+
+        # Logged once per set-up, not on every repeated solve
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            solver.solve(model, [0, 1], inputs=inputs, calculate_sensitivities=True)
+        assert "unused" not in caplog.text
+
+    def test_calculate_sensitivities_true_without_inputs(self):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        model.rhs = {y: -0.3 * y}
+        model.initial_conditions = {y: 2.0}
+        model.variables = {"y": y}
+        solution = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12).solve(
+            model, [0, 1], calculate_sensitivities=True
+        )
+        assert solution.sensitivity_names == []
+        assert solution["y"].sensitivities == {}
+        np.testing.assert_allclose(
+            solution["y"](solution.t), 2.0 * np.exp(-0.3 * solution.t), rtol=1e-6
+        )
+
+    def test_calculate_sensitivities_list_is_sorted(self):
+        model = self._decay_model()
+        solution = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12).solve(
+            model,
+            [0, 1],
+            inputs={"y0": 2.0, "k": 0.3},
+            calculate_sensitivities=["y0", "k"],
+        )
+        # The "all" columns follow sensitivity_names, not the requested order
+        assert solution.sensitivity_names == ["k", "y0"]
+        sensitivities = solution["y"].sensitivities
+        np.testing.assert_array_equal(sensitivities["all"][:, 0], sensitivities["k"])
+        np.testing.assert_array_equal(sensitivities["all"][:, 1], sensitivities["y0"])
+        t = solution.t
+        np.testing.assert_allclose(
+            sensitivities["y0"].ravel(), np.exp(-0.3 * t), rtol=1e-6
+        )
+
+    @pytest.mark.parametrize("calculate_sensitivities", [True, ["a"], ["a", "c"]])
+    def test_calculate_sensitivities_rejects_vector_inputs(
+        self, calculate_sensitivities
+    ):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        model.rhs = {
+            y: -pybamm.Index(pybamm.InputParameter("a", expected_size=2), 0)
+            * pybamm.InputParameter("c")
+            * y
+        }
+        model.initial_conditions = {y: 1.0}
+        pybamm.Discretisation().process_model(model)
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"vector-valued input\(s\) \['a'\]: sensitivities are only "
+            r"supported for scalar inputs",
+        ):
+            pybamm.IDAKLUSolver().solve(
+                model,
+                [0, 1],
+                inputs={"a": np.array([[1.0], [2.0]]), "c": 0.5},
+                calculate_sensitivities=calculate_sensitivities,
+            )
+
+    def test_wrangle_name(self):
+        assert pybamm.BaseSolver._wrangle_name("Voltage [V]") == "v_voltage_v"
+        assert pybamm.BaseSolver._wrangle_name("SoC [%]") == "v_soc_prc"
+        assert (
+            pybamm.BaseSolver._wrangle_name("Entropic change [V/K]")
+            == "v_entropic_change_v_k"
+        )
+        assert pybamm.BaseSolver._wrangle_name("a + b * c - (d)") == "v_a_b_c_d"
+        assert pybamm.BaseSolver._wrangle_name("Temp. [°C]") == "v_temp_c"
+        assert pybamm.BaseSolver._wrangle_name("[]") == "v"
+
+    def test_wrangle_names_are_distinct_valid_casadi_names(self):
+        names = ["a/b", "a_b", "A-B", "x", "x jac", "x/jac", "", "%", "jac"]
+        wrangled = pybamm.BaseSolver._wrangle_names(names)
+        assert wrangled["a/b"] == "v_a_b"
+        assert wrangled["a_b"] == "v_a_b_1"
+        assert wrangled["A-B"] == "v_a_b_2"
+        # "x" derives "v_x_jac" for its Jacobian
+        assert wrangled["x jac"] == "v_x_jac_1"
+        functions = set()
+        for base in wrangled.values():
+            for function_name in (
+                base,
+                f"{base}_jac",
+                f"{base}_jac_action",
+                f"d{base}_dp",
+            ):
+                assert function_name not in functions
+                functions.add(function_name)
+                # CasADi rejects invalid function names
+                casadi.Function(function_name, [], [])
 
     def test_on_extrapolation_and_on_failure_settings(self):
         # Test setting different on_extrapolation and on_failure values on BaseSolver

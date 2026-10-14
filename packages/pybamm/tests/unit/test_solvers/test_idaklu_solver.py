@@ -436,6 +436,106 @@ class TestIDAKLUSolver:
             atol=1e-6,
         )
 
+    @pytest.mark.parametrize("output_variables", [None, ["y", "2y", "y sum"]])
+    def test_sensitivities_with_vector_input_not_differentiated(self, output_variables):
+        # dy_i/dt = -a_i c y_i, y_i(0) = d, with a vector-valued input a
+        model = pybamm.BaseModel()
+        x = pybamm.SpatialVariable("x_n", ["negative electrode"])
+        y = pybamm.Variable("y", domain="negative electrode")
+        a = pybamm.InputParameter("a", domain="negative electrode")
+        c = pybamm.InputParameter("c")
+        d = pybamm.InputParameter("d")
+        model.rhs = {y: -a * c * y}
+        model.initial_conditions = {y: d}
+        model.variables = {"y": y, "2y": 2 * y, "y sum": pybamm.Integral(y, x)}
+        mesh = pybamm.Mesh(
+            {"negative electrode": {x: {"min": 0, "max": 1}}},
+            {"negative electrode": pybamm.Uniform1DSubMesh},
+            {"x_n": 3},
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        disc.process_model(model)
+
+        kwargs = (
+            {} if output_variables is None else {"output_variables": output_variables}
+        )
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, **kwargs)
+        a_value = np.array([[1.0], [2.0], [3.0]])
+        c_value, d_value = 0.7, 1.3
+        t = np.linspace(0, 1, 11)
+        sol = solver.solve(
+            model,
+            [0, 1],
+            inputs={"a": a_value, "c": c_value, "d": d_value},
+            calculate_sensitivities=["c", "d"],
+            t_interp=t,
+        )
+        assert sol.sensitivity_names == ["c", "d"]
+
+        nodes = mesh["negative electrode"].nodes
+        y_exact = d_value * np.exp(-a_value * c_value * t)
+        dy_dc = -a_value * t * y_exact
+        dy_dd = y_exact / d_value
+        np.testing.assert_allclose(sol["y"](t=t, x=nodes), y_exact, rtol=1e-6)
+        np.testing.assert_allclose(sol["2y"](t=t, x=nodes), 2 * y_exact, rtol=1e-6)
+
+        # Sensitivity rows run over the states at each time in turn
+        def by_state(sensitivity):
+            return sensitivity.reshape(len(t), -1).T
+
+        sens = sol["y"].sensitivities
+        np.testing.assert_allclose(by_state(sens["c"]), dy_dc, rtol=1e-5, atol=1e-9)
+        np.testing.assert_allclose(by_state(sens["d"]), dy_dd, rtol=1e-5, atol=1e-9)
+        np.testing.assert_allclose(
+            by_state(sol["2y"].sensitivities["c"]), 2 * dy_dc, rtol=1e-5, atol=1e-9
+        )
+        np.testing.assert_allclose(
+            sol["y sum"].sensitivities["c"].ravel(),
+            dy_dc.mean(axis=0),
+            rtol=1e-5,
+            atol=1e-9,
+        )
+
+    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
+    def test_output_variables_with_special_characters(self, calculate_sensitivities):
+        # These names wrangle to CasADi names that are invalid or that collide
+        names = [
+            "Entropic change [V/K]",
+            "a+b*c",
+            "a/b",
+            "a_b",
+            "x",
+            "x jac",
+        ]
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        k = pybamm.InputParameter("k")
+        model.rhs = {y: -k * y}
+        model.initial_conditions = {y: 1.0}
+        model.variables = {name: (i + 2) * y for i, name in enumerate(names)}
+        pybamm.Discretisation().process_model(model)
+
+        t = np.linspace(0, 1, 6)
+        sol = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, output_variables=names).solve(
+            model,
+            [0, 1],
+            inputs={"k": 0.4},
+            calculate_sensitivities=calculate_sensitivities,
+            t_interp=t,
+        )
+        y_exact = np.exp(-0.4 * t)
+        for i, name in enumerate(names):
+            np.testing.assert_allclose(sol[name](t), (i + 2) * y_exact, rtol=1e-6)
+            if calculate_sensitivities:
+                np.testing.assert_allclose(
+                    sol[name].sensitivities["k"].ravel(),
+                    -(i + 2) * t * y_exact,
+                    rtol=1e-5,
+                    atol=1e-10,
+                )
+
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
