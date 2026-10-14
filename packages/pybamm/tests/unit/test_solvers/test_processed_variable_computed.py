@@ -627,6 +627,44 @@ class TestProcessedVariableComputed:
         np.testing.assert_allclose(combined.sensitivities["a"], [3.0])
         np.testing.assert_allclose(combined.sensitivities["all"], [[3.0]])
 
+    @pytest.mark.parametrize("n_points", [1, 3])
+    def test_time_integral_update_with_input_initial_condition(self, n_points):
+        model = pybamm.BaseModel()
+        domain = [] if n_points == 1 else ["line"]
+        y = pybamm.Variable("y", domain=domain)
+        a = pybamm.InputParameter("a")
+        model.rhs = {y: 0 * y}
+        model.initial_conditions = {y: 1}
+        model.variables = {
+            "Integral": pybamm.ExplicitTimeIntegral(a * y, pybamm.InputParameter("b"))
+        }
+        if domain:
+            x = pybamm.SpatialVariable("x", domain)
+            mesh = pybamm.Mesh(
+                {"line": {x: {"min": 0, "max": 1}}},
+                {"line": pybamm.Uniform1DSubMesh},
+                {"x": n_points},
+            )
+            disc = pybamm.Discretisation(mesh, {"line": pybamm.FiniteVolume()})
+            disc.process_model(model)
+        solver = pybamm.IDAKLUSolver(output_variables=["Integral"])
+        first, later = (
+            solver.solve(
+                model,
+                t_eval,
+                inputs={"a": 2.0, "b": 1.0},
+                calculate_sensitivities=True,
+            )
+            for t_eval in ([0, 1], [1, 3])
+        )
+
+        combined = (first + later)["Integral"]
+
+        # b once, plus a * y = 2 integrated over [0, 3]
+        np.testing.assert_allclose(combined.entries.reshape(-1), np.full(n_points, 7))
+        np.testing.assert_allclose(combined.sensitivities["a"], np.full(n_points, 3))
+        np.testing.assert_allclose(combined.sensitivities["b"], np.ones(n_points))
+
     @pytest.mark.parametrize("first_output_variables", [False, True])
     def test_time_integral_update_leaves_out_a_gap(self, first_output_variables):
         def solve(t_eval, output_variables):

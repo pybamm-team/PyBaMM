@@ -770,7 +770,9 @@ class BaseModel:
     def input_parameters(self):
         """Returns a list of all input parameter symbols used in the model."""
         if self._input_parameters is None:
-            self._input_parameters = self._find_symbols(pybamm.InputParameter)
+            self._input_parameters = self._find_symbols(
+                pybamm.InputParameter, processed_variables=True
+            )
         return self._input_parameters
 
     @property
@@ -1138,7 +1140,9 @@ class BaseModel:
             table.encode("utf-8")
             print(table)
 
-    def _find_symbols(self, typ, fixed_input_parameters=None) -> list[pybamm.Symbol]:
+    def _find_symbols(
+        self, typ, fixed_input_parameters=None, processed_variables=False
+    ) -> list[pybamm.Symbol]:
         """Find all the instances of `typ` in the model"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.fixed_input_parameters
@@ -1152,6 +1156,8 @@ class BaseModel:
             self.boundary_conditions.keys(),
             (x[side][0] for x in self.boundary_conditions.values() for side in x),
             self.variables.values(),
+            # They keep the initial condition of a variable taken out of rhs as an input
+            self._variables_processed.values() if processed_variables else (),
             fixed_input_parameters,
             (event.expression for event in self.events),
         )

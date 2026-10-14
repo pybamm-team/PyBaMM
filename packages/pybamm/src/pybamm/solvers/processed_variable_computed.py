@@ -10,6 +10,7 @@ import xarray as xr
 from scipy.integrate import cumulative_trapezoid
 
 import pybamm
+from pybamm.solvers.variable_observer import pack_sensitivity_dict
 
 from .base_processed_variable import BaseProcessedVariable
 
@@ -172,6 +173,11 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             self._xr_interp_args = None
         return self._xr_data_array_cache
 
+    @property
+    def _time_points(self):
+        """The times the data holds: only the final one for a time integral."""
+        return self.t_pts[-1:] if self.time_indep else self.t_pts
+
     @cached_property
     def _t_pts_increasing(self) -> bool:
         # np.interp needs strictly increasing sample times; xarray rejects repeats
@@ -197,7 +203,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         len_space = self.base_eval_shape[0]
         return (
             self._concatenate(realdata)
-            .reshape((len(self.t_pts), len_space))
+            .reshape((len(self._time_points), len_space))
             .transpose()
         )
 
@@ -324,7 +330,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         # set up interpolation
         self._xr_interp_args = (
             entries_for_interp,
-            [(self.first_dimension, pts_for_interp), ("t", self.t_pts)],
+            [(self.first_dimension, pts_for_interp), ("t", self._time_points)],
         )
 
     def initialise_2D(self):
@@ -683,7 +689,13 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         using interpolation
         """
         if self.time_indep:
-            return self.entries
+            spatial = {"x": x, "r": r, "y": y, "z": z, "R": R}
+            spatial = {
+                key: value for key, value in spatial.items() if value is not None
+            }
+            if not spatial:
+                return self.entries
+            return self._xr_data_array.interp(**spatial).values
         if (
             self.dimensions == 0
             and t is not None
@@ -794,14 +806,20 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         Return the data and sensitivities of the time integral over this
         variable's segments plus the one over other's.
         """
-        other_sensitivities = other.sensitivities or {}
-        sensitivities = {
-            k: value + other_sensitivities[k]
-            for k, value in (self.sensitivities or {}).items()
-        }
         # other's integral starts again from its initial condition
-        initial_condition = float(other.time_integral.initial_condition)
-        return [self.entries + other.entries - initial_condition], sensitivities
+        time_integral, inputs = other.time_integral, other.all_inputs[0]
+        initial_condition = time_integral.initial_condition_value(inputs)
+        data = self.entries.reshape(-1) + other.entries.reshape(-1) - initial_condition
+        self_sensitivities = self.sensitivities or {}
+        if not self_sensitivities:
+            return [data], {}
+        names = [name for name in self_sensitivities if name != "all"]
+        all_sensitivities = (
+            self_sensitivities["all"]
+            + other.sensitivities["all"]
+            - time_integral.initial_condition_sensitivities(inputs, names)
+        )
+        return [data], pack_sensitivity_dict(all_sensitivities, names)
 
     def _time_integrals_joinable(self, other):
         """Return whether this variable and other are joinable time integrals."""
