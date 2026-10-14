@@ -35,6 +35,12 @@ int residual_eval(sunrealtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void 
   DEBUG_VECTORn(rr, 100);
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
+
+  // A recoverable failure makes IDAS cut the step; with sensitivities its
+  // corrector norm drops NaN, so a NaN iterate would otherwise be accepted
+  if (p_python_functions->reject_nonfinite && !all_finite(ns, NV_DATA(rr))) {
+    return 1;
+  }
   return 0;
 }
 
@@ -319,6 +325,8 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
   // resvalsS now has (∂F/∂p i )
   (*p_python_functions->sens)();
 
+  const int ns = p_python_functions->number_of_states;
+  bool finite = true;
   for (int i = 0; i < np; i++)
   {
     // put (∂F/∂y)s i (t) in tmp
@@ -330,7 +338,6 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
     p_python_functions->jac_action->m_res[0] = tmp;
     (*p_python_functions->jac_action)();
 
-    const int ns = p_python_functions->number_of_states;
     axpy(ns, 1., tmp, NV_DATA(resvalS[i]));
 
     // put -(∂F/∂ ẏ) ṡ i (t) in tmp2
@@ -341,7 +348,12 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
     // (∂F/∂y)s i (t)+(∂F/∂ ẏ) ṡ i (t)+(∂F/∂p i )
     // AXPY: y <- a*x + y
     axpy(ns, -1., tmp, NV_DATA(resvalS[i]));
+
+    if (p_python_functions->reject_nonfinite) {
+      finite &= all_finite(ns, NV_DATA(resvalS[i]));
+    }
   }
 
-  return 0;
+  // Recoverable, as in residual_eval: IDAS cuts the step
+  return finite ? 0 : 1;
 }

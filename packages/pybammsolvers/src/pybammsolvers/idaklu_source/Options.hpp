@@ -41,6 +41,8 @@ struct SolverOptions {
   double nonlinear_convergence_coefficient;
   double nonlinear_convergence_coefficient_ic;
   sunbooleantype suppress_algebraic_error;
+  // Include the forward sensitivities in IDAS's local error test
+  bool sensitivity_error_control;
   bool hermite_interpolation;
   // IDA initial conditions calculation
   bool calc_ic;

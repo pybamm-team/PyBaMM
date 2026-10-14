@@ -70,3 +70,28 @@ class TestPackageStructure:
         assert callable(idaklu_module.create_casadi_solver_group)
         assert callable(idaklu_module.generate_function)
         assert callable(idaklu_module.create_idaklu_jax)
+
+    def test_solution_holds_no_sensitivity_derivatives(self, idaklu_module):
+        """
+        Verify the solution does not carry the time derivatives of the
+        sensitivities, which no consumer reads and which would cost
+        n_params * n_steps * n_states values per solve.
+        """
+        assert hasattr(idaklu_module.solution, "yS")
+        assert not hasattr(idaklu_module.solution, "ypS")
+
+    @pytest.mark.parametrize(
+        ("flag", "name"),
+        [
+            (-9, "IDA_REP_RES_ERR"),
+            (-41, "IDA_SRES_FAIL"),
+            (-42, "IDA_REP_SRES_ERR"),
+        ],
+    )
+    def test_residual_failure_messages(self, idaklu_module, flag, name):
+        """
+        Verify the residual failures the solver can raise have named messages,
+        as non-finite residuals fail recoverably until IDAS gives up.
+        """
+        message = idaklu_module.sundials_error_message(flag)
+        assert message.startswith(f"{name}: ")
