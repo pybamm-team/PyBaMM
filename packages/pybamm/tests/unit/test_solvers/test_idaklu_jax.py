@@ -98,6 +98,62 @@ if pybamm.has_jax():
         return outvars, idaklu_jax_solver, f, wrapper
 
 
+# Toy DAE dy/dt = -a y, 0 = z - b y with y(0) = 1, so y = exp(-a t) and z = b y
+analytic_t_eval = np.linspace(0, 1, 11)
+analytic_inputs = {"a": 2.0, "b": 3.0}
+analytic_t_off_grid = np.array([0.05, 0.55, 0.95])
+analytic_t_unsorted = np.array([0.95, 0.05, 0.55, 0.05])
+
+
+def analytic_model():
+    model = pybamm.BaseModel()
+    y = pybamm.Variable("y")
+    z = pybamm.Variable("z")
+    a = pybamm.InputParameter("a")
+    b = pybamm.InputParameter("b")
+    model.rhs = {y: -a * y}
+    model.algebraic = {z: z - b * y}
+    model.initial_conditions = {y: 1.0, z: 1.0}
+    model.variables = {"y": y, "z": z}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+def analytic_solution(t):
+    """Exact [y, z] and their sensitivities to each input, shaped (*t.shape, 2)"""
+    t = np.asarray(t, dtype=float)
+    a, b = analytic_inputs["a"], analytic_inputs["b"]
+    e = np.exp(-a * t)
+    value = np.stack([e, b * e], axis=-1)
+    sensitivities = {
+        "a": np.stack([-t * e, -b * t * e], axis=-1),
+        "b": np.stack([np.zeros_like(t), e], axis=-1),
+    }
+    return value, sensitivities
+
+
+def assert_analytic(actual, expected):
+    np.testing.assert_allclose(np.asarray(actual), expected, rtol=1e-6, atol=1e-7)
+
+
+@pytest.fixture(params=["t_interp", "no-t_interp"])
+def analytic_case(request):
+    t_interp = analytic_t_eval if request.param == "t_interp" else None
+    idaklu_jax_solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12).jaxify(
+        analytic_model(),
+        analytic_t_eval,
+        output_variables=["y", "z"],
+        calculate_sensitivities=True,
+        t_interp=t_interp,
+    )
+    return idaklu_jax_solver, idaklu_jax_solver.get_jaxpr()
+
+
+@pytest.fixture(params=["no-jit", "jit"])
+def wrapper(request):
+    return jax.jit if request.param == "jit" else no_jit
+
+
 # Check the interface throws an appropriate error if either IDAKLU or JAX not available
 @pytest.mark.skipif(
     pybamm.has_jax(),
@@ -876,3 +932,261 @@ class TestIDAKLUJax:
             np.testing.assert_allclose(flat_sse_grad, flat_check_grad, 1e3),
             f"Got: {sse_grad}\nExpected: {sse_grad}",
         )
+
+
+@pytest.mark.skipif(
+    not pybamm.has_jax(),
+    reason="JAX is not available",
+)
+@pytest.mark.skipif(
+    sys.platform.lower().startswith("win"),
+    reason="IDAKLU-Jax is experimental on Windows",
+)
+class TestIDAKLUJaxAnalytic:
+    # Values and derivatives are exact at the requested times, on or off t_eval
+
+    @pytest.mark.parametrize(
+        "t",
+        [analytic_t_eval, analytic_t_off_grid, analytic_t_unsorted, 0.55],
+        ids=["on-grid", "off-grid", "unsorted", "scalar"],
+    )
+    def test_values(self, analytic_case, wrapper, t):
+        _, f = analytic_case
+        expected, _ = analytic_solution(t)
+        assert_analytic(wrapper(f)(t, analytic_inputs), expected)
+
+    @pytest.mark.parametrize(
+        "t",
+        [analytic_t_eval, analytic_t_off_grid, analytic_t_unsorted, 0.55],
+        ids=["on-grid", "off-grid", "unsorted", "scalar"],
+    )
+    @pytest.mark.parametrize("jac", ["jacfwd", "jacrev"])
+    def test_jacobian(self, analytic_case, wrapper, t, jac):
+        _, f = analytic_case
+        out = wrapper(getattr(jax, jac)(f, argnums=1))(t, analytic_inputs)
+        _, expected = analytic_solution(t)
+        for name in analytic_inputs:
+            assert_analytic(out[name], expected[name])
+
+    @pytest.mark.parametrize(
+        "tangent",
+        [{"a": -1.0, "b": 0.0}, {"a": 0.0, "b": -2.0}, {"a": 0.5, "b": -0.5}],
+    )
+    @pytest.mark.parametrize("t", [analytic_t_off_grid, 0.55], ids=["vector", "scalar"])
+    def test_jvp_signed_tangents(self, analytic_case, wrapper, tangent, t):
+        _, f = analytic_case
+
+        def jvp(inputs, tangents):
+            return jax.jvp(lambda q: f(t, q), (inputs,), (tangents,))[1]
+
+        y_dot = wrapper(jvp)(analytic_inputs, tangent)
+        _, sensitivities = analytic_solution(t)
+        expected = sum(tangent[name] * sensitivities[name] for name in tangent)
+        assert_analytic(y_dot, expected)
+
+    @pytest.mark.parametrize("t", [analytic_t_off_grid, 0.55], ids=["vector", "scalar"])
+    def test_vjp_signed_cotangents(self, analytic_case, wrapper, t):
+        _, f = analytic_case
+        _, sensitivities = analytic_solution(t)
+        y_bar = np.random.default_rng(0).normal(size=sensitivities["a"].shape)
+
+        def vjp(inputs, cotangent):
+            _, vjp_fn = jax.vjp(lambda q: f(t, q), inputs)
+            return vjp_fn(cotangent)[0]
+
+        out = wrapper(vjp)(analytic_inputs, jnp.asarray(y_bar))
+        for name in analytic_inputs:
+            assert_analytic(out[name], np.sum(y_bar * sensitivities[name]))
+
+    @pytest.mark.parametrize("t", [analytic_t_off_grid, 0.55], ids=["vector", "scalar"])
+    def test_grad_least_squares(self, analytic_case, wrapper, t):
+        idaklu_jax_solver, _ = analytic_case
+        value, sensitivities = analytic_solution(t)
+        # Data above the prediction gives negative residuals
+        data = value[..., 1] + 0.1
+
+        def loss(inputs):
+            z = idaklu_jax_solver.get_var("z")(t, inputs)
+            return jnp.sum((z - data) ** 2)
+
+        out = wrapper(jax.grad(loss))(analytic_inputs)
+        residual = value[..., 1] - data
+        for name in analytic_inputs:
+            expected = 2 * np.sum(residual * sensitivities[name][..., 1])
+            assert_analytic(out[name], expected)
+
+    def test_grad_negated_output(self, analytic_case, wrapper):
+        idaklu_jax_solver, _ = analytic_case
+        z = idaklu_jax_solver.get_var("z")
+        out = wrapper(jax.grad(lambda q: -z(0.5, q)))(analytic_inputs)
+        _, sensitivities = analytic_solution(0.5)
+        for name in analytic_inputs:
+            assert_analytic(out[name], -sensitivities[name][1])
+
+    def test_vmap_over_time(self, analytic_case, wrapper):
+        idaklu_jax_solver, f = analytic_case
+        t = analytic_t_off_grid
+        value, sensitivities = analytic_solution(t)
+        out = wrapper(jax.vmap(f, in_axes=(0, None)))(t, analytic_inputs)
+        assert_analytic(out, value)
+        out = wrapper(jax.vmap(jax.jacfwd(f, argnums=1), in_axes=(0, None)))(
+            t, analytic_inputs
+        )
+        for name in analytic_inputs:
+            assert_analytic(out[name], sensitivities[name])
+        z = idaklu_jax_solver.get_var("z")
+        out = wrapper(jax.vmap(jax.grad(z, argnums=1), in_axes=(0, None)))(
+            t, analytic_inputs
+        )
+        for name in analytic_inputs:
+            assert_analytic(out[name], sensitivities[name][:, 1])
+
+    def test_vmap_over_time_shares_one_solve(self, analytic_case, wrapper):
+        idaklu_jax_solver, _ = analytic_case
+        z = idaklu_jax_solver.get_var("z")
+        wrapper(jax.vmap(jax.value_and_grad(z, argnums=1), in_axes=(0, None)))(
+            analytic_t_off_grid, analytic_inputs
+        )
+        assert pybamm.IDAKLUJax._cached_solve.cache_info().misses == 1
+
+    def test_vmap_over_time_axis(self, analytic_case, wrapper):
+        _, f = analytic_case
+        t = np.stack([analytic_t_off_grid, analytic_t_off_grid[::-1]])
+        out = wrapper(jax.vmap(f, in_axes=(1, None)))(t, analytic_inputs)
+        expected, _ = analytic_solution(t.T)
+        assert_analytic(out, expected)
+
+    def test_vmap_over_tangent_directions(self, analytic_case, wrapper):
+        _, f = analytic_case
+        t = analytic_t_off_grid
+        tangents = {"a": jnp.array([1.0, 0.0, 1.0]), "b": jnp.array([0.0, 1.0, -1.0])}
+
+        def jvp(tangent):
+            return jax.jvp(lambda q: f(t, q), (analytic_inputs,), (tangent,))[1]
+
+        out = wrapper(jax.vmap(jvp))(tangents)
+        _, sensitivities = analytic_solution(t)
+        for i in range(3):
+            expected = sum(
+                float(tangents[name][i]) * sensitivities[name] for name in tangents
+            )
+            assert_analytic(out[i], expected)
+
+        # Each batch item pairs one time with one tangent direction
+        def jvp_at(time, tangent):
+            return jax.jvp(lambda q: f(time, q), (analytic_inputs,), (tangent,))[1]
+
+        out = wrapper(jax.vmap(jvp_at))(t, tangents)
+        expected = sum(
+            np.asarray(tangents[name])[:, None] * sensitivities[name]
+            for name in tangents
+        )
+        assert_analytic(out, expected)
+
+    def test_jacfwd_through_shared_scalar(self, analytic_case, wrapper):
+        _, f = analytic_case
+        t = analytic_t_off_grid
+        out = wrapper(jax.jacfwd(lambda s: f(t, {"a": s, "b": 1.5 * s})))(
+            analytic_inputs["a"]
+        )
+        _, sensitivities = analytic_solution(t)
+        assert_analytic(out, sensitivities["a"] + 1.5 * sensitivities["b"])
+
+    # Inputs and outputs
+
+    def test_unsorted_inputs(self, analytic_case, wrapper):
+        _, f = analytic_case
+        t = analytic_t_off_grid
+        unsorted = {"b": analytic_inputs["b"], "a": analytic_inputs["a"]}
+        value, sensitivities = analytic_solution(t)
+        assert_analytic(wrapper(f)(t, unsorted), value)
+        out = wrapper(jax.jacfwd(f, argnums=1))(t, unsorted)
+        for name in analytic_inputs:
+            assert_analytic(out[name], sensitivities[name])
+
+    def test_array_input_values(self, analytic_case):
+        _, f = analytic_case
+        inputs = {name: jnp.asarray(value) for name, value in analytic_inputs.items()}
+        value, _ = analytic_solution(analytic_t_off_grid)
+        assert_analytic(f(analytic_t_off_grid, inputs), value)
+
+    def test_non_scalar_input_values(self, analytic_case):
+        _, f = analytic_case
+        inputs = {"a": np.array([2.0, 3.0]), "b": 3.0}
+        with pytest.raises(pybamm.SolverError, match=r"only supports scalar inputs"):
+            f(analytic_t_off_grid, inputs)
+
+    def test_get_vars_order(self, analytic_case, wrapper):
+        idaklu_jax_solver, _ = analytic_case
+        t = analytic_t_off_grid
+        value, sensitivities = analytic_solution(t)
+        zy = idaklu_jax_solver.get_vars(["z", "y"])
+        assert_analytic(wrapper(zy)(t, analytic_inputs), value[:, ::-1])
+        out = wrapper(jax.jacrev(zy, argnums=1))(t, analytic_inputs)
+        for name in analytic_inputs:
+            assert_analytic(out[name], sensitivities[name][:, ::-1])
+
+    def test_get_var_custom_function(self, analytic_case, wrapper):
+        idaklu_jax_solver, f = analytic_case
+
+        def g(t, inputs):
+            return 2.0 * f(t, inputs)
+
+        value, _ = analytic_solution(0.55)
+        z = idaklu_jax_solver.get_var(g, "z")
+        assert_analytic(wrapper(z)(0.55, analytic_inputs), 2.0 * value[1])
+        zy = idaklu_jax_solver.get_vars(g, ["z", "y"])
+        assert_analytic(wrapper(zy)(0.55, analytic_inputs), 2.0 * value[::-1])
+
+    # Zero tangents, unavailable times and time derivatives
+
+    def test_jvp_zero_tangents(self, analytic_case, wrapper):
+        _, f = analytic_case
+
+        def jvp(inputs, tangents):
+            return jax.jvp(lambda q: f(0.55, q), (inputs,), (tangents,))[1]
+
+        y_dot = wrapper(jvp)(analytic_inputs, {"a": 0.0, "b": 0.0})
+        np.testing.assert_array_equal(y_dot, np.zeros(2))
+
+    def test_times_outside_solution_are_nan(self, analytic_case, wrapper):
+        _, f = analytic_case
+        t = np.array([-0.1, 0.55, 1.5])
+        value, sensitivities = analytic_solution(t[1])
+        out = np.asarray(wrapper(f)(t, analytic_inputs))
+        assert np.isnan(out[[0, 2]]).all()
+        assert_analytic(out[1], value)
+        jac = wrapper(jax.jacfwd(f, argnums=1))(t, analytic_inputs)
+        for name in analytic_inputs:
+            assert np.isnan(np.asarray(jac[name])[[0, 2]]).all()
+            assert_analytic(jac[name][1], sensitivities[name])
+
+        # Zero cotangents mask the unavailable times
+        def vjp(inputs):
+            _, vjp_fn = jax.vjp(lambda q: f(t, q), inputs)
+            return vjp_fn(jnp.array([[0.0, 0.0], [0.0, 1.0], [0.0, 0.0]]))[0]
+
+        out = wrapper(vjp)(analytic_inputs)
+        for name in analytic_inputs:
+            assert_analytic(out[name], sensitivities[name][1])
+
+    def test_time_derivative_is_nan(self, analytic_case, wrapper):
+        _, f = analytic_case
+
+        def jvp(t):
+            return jax.jvp(lambda s: f(s, analytic_inputs), (t,), (1.0,))[1]
+
+        assert np.isnan(wrapper(jvp)(0.55)).all()
+        out = wrapper(jax.grad(lambda t: f(t, analytic_inputs)[1]))(0.55)
+        assert np.isnan(out)
+
+        # The inputs' cotangents are unaffected
+        def vjp(t, inputs):
+            _, vjp_fn = jax.vjp(f, t, inputs)
+            return vjp_fn(jnp.array([0.0, 1.0]))
+
+        t_bar, inputs_bar = wrapper(vjp)(0.55, analytic_inputs)
+        assert np.isnan(t_bar)
+        _, sensitivities = analytic_solution(0.55)
+        for name in analytic_inputs:
+            assert_analytic(inputs_bar[name], sensitivities[name][1])

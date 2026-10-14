@@ -1153,8 +1153,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
         t_interp : None, list or ndarray, optional
-            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
-            which returns the adaptive time-stepping times.
+            Additional times (in seconds) at which to store the solution. The
+            requested times are always stored, so this only lets calls at different
+            times share one cached solve. Defaults to `None`.
         """
         obj = pybamm.IDAKLUJax(
             self,  # IDAKLU solver instance
