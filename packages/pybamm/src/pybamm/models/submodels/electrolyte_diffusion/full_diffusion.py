@@ -104,7 +104,12 @@ class Full(BaseElectrolyteDiffusion):
         T = variables["Cell temperature [K]"]
 
         N_e_diffusion = -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
-        N_e_migration = self.param.t_plus(c_e, T) * i_e / self.param.F
+        # Form migration flux on edges so zero current remains zero there.
+        edge_ones = pybamm.FullBroadcastToEdges(
+            1, self.options.whole_cell_domains, "current collector"
+        )
+        i_e_edges = i_e * edge_ones
+        N_e_migration = self.param.t_plus(c_e, T) * i_e_edges / self.param.F
         N_e_convection = c_e * v_box
 
         N_e = N_e_diffusion + N_e_migration + N_e_convection
