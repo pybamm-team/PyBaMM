@@ -56,6 +56,7 @@ class DualContinuum(pybamm.lithium_ion.DFN):
         name: str = "Dual-continuum model",
         build: bool = True,
     ) -> None:
+        pybamm_model_zoo.require(SLUG)
         self.dc_options = DCModelOptions(dc_options)
         super().__init__(options=options, name=name, build=build)
         pybamm_model_zoo.register_citation(SLUG, "PyBaMMModelZoo2026", "Paten2026")

@@ -5,7 +5,6 @@ title = "Dual Continuum Model"
 summary = "Dual Continuum Model: upscaled description of both electrolyte and active material phases"
 class = "pybamm_model_zoo.dual_continuum:DualContinuum"
 tier = "community"
-pybamm_requires = ">=26.0"
 added = "2026-10-06"
 license = "BSD-3-Clause"
 
