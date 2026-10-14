@@ -2428,6 +2428,81 @@ class TestIDAKLUSensitivityScales:
         )
 
 
+class TestIDAKLUClosedFormSensitivities:
+    """Sensitivities of ``du/dt = -a u``, ``u(0) = b``, ``v = k u`` and ``w = d v``.
+
+    ``v`` is either an algebraic state or an output of the ODE, so ``b`` enters only
+    an initial condition, ``k`` only the algebraic equation or an output, and ``d``
+    only an output.
+    """
+
+    inputs = {"a": 0.7, "b": 2.0, "k": 1.5, "d": 3.0}
+
+    @staticmethod
+    def _model(algebraic):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a, b, k, d = (pybamm.InputParameter(name) for name in "abkd")
+        model.rhs = {u: -a * u}
+        if algebraic:
+            v = pybamm.Variable("v")
+            model.algebraic = {v: v - k * u}
+            # An inconsistent guess, so the solver finds v(0) and its gradient
+            model.initial_conditions = {u: b, v: 0}
+        else:
+            v = k * u
+            model.initial_conditions = {u: b}
+        model.variables = {"u": u, "v": v, "w": d * v}
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    def _closed_form(self, t):
+        a, b, k, d = (self.inputs[name] for name in "abkd")
+        u = b * np.exp(-a * t)
+        zero = np.zeros_like(t)
+        du = {"a": -t * u, "b": u / b, "k": zero, "d": zero}
+        dv = {name: k * gradient for name, gradient in du.items()} | {"k": u}
+        dw = {name: d * gradient for name, gradient in dv.items()} | {"d": k * u}
+        return {"u": du, "v": dv, "w": dw}
+
+    @pytest.mark.parametrize("algebraic", [False, True], ids=["ODE", "DAE"])
+    @pytest.mark.parametrize(
+        "output_variables", [None, ["u", "v", "w"]], ids=["full state", "outputs"]
+    )
+    @pytest.mark.parametrize(
+        "t_interp", [None, np.linspace(0, 2, 9)], ids=["adaptive", "t_interp"]
+    )
+    @pytest.mark.parametrize("hermite", [True, False], ids=["hermite", "no hermite"])
+    def test_sensitivities_match_closed_form(
+        self, algebraic, output_variables, t_interp, hermite
+    ):
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10,
+            atol=1e-12,
+            output_variables=output_variables,
+            options={"hermite_interpolation": hermite},
+        )
+        solution = solver.solve(
+            self._model(algebraic),
+            [0, 2],
+            inputs=self.inputs,
+            calculate_sensitivities=True,
+            t_interp=t_interp,
+        )
+        if t_interp is not None:
+            np.testing.assert_array_equal(solution.t, t_interp)
+        # The gradients are of order one and the global error about 20 * rtol
+        for output, gradients in self._closed_form(solution.t).items():
+            for name, gradient in gradients.items():
+                np.testing.assert_allclose(
+                    np.ravel(solution[output].sensitivities[name]),
+                    gradient,
+                    rtol=1e-7,
+                    atol=1e-7,
+                    err_msg=f"d{output}/d{name}",
+                )
+
+
 class TestIDAKLUAtol:
     def _two_state_model(self, atol=None):
         model = pybamm.BaseModel()

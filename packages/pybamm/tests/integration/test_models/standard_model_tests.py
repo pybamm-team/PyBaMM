@@ -120,9 +120,10 @@ class StandardModelTest:
         self.test_processing_parameters()
         self.test_processing_disc()
 
-        # Use tighter default tolerances for testing
-        self.solver.rtol = 1e-8
-        self.solver.atol = 1e-8
+        # At these tolerances, central differences with a 1e-4 relative step agree
+        # with the sensitivities to under 1e-5 of their largest value
+        self.solver.rtol = 1e-9
+        self.solver.atol = 1e-9
 
         self.solution = self.solver.solve(
             self.model,
@@ -131,27 +132,23 @@ class StandardModelTest:
             calculate_sensitivities=True,
             t_interp=t_interp,
         )
-        output_sens = self.solution[output_name].sensitivities[param_name]
+        assert self.solution.termination == "final time"
+        output_sens = np.ravel(self.solution[output_name].sensitivities[param_name])
 
-        # check via finite differencing
-        h = 1e-2 * param_value
-        inputs_plus = {param_name: (param_value + 0.5 * h)}
-        inputs_neg = {param_name: (param_value - 0.5 * h)}
-        sol_plus = self.solver.solve(
-            self.model, t_eval, inputs=inputs_plus, t_interp=t_interp
+        # check via central finite differences
+        h = 1e-4 * abs(param_value)
+        output_plus, output_minus = (
+            self.solver.solve(
+                self.model,
+                t_eval,
+                inputs={param_name: param_value + sign * h},
+                t_interp=t_interp,
+            )[output_name](self.solution.t)
+            for sign in (1, -1)
         )
-        output_plus = sol_plus[output_name].data
-        sol_neg = self.solver.solve(
-            self.model, t_eval, inputs=inputs_neg, t_interp=t_interp
-        )
-        output_neg = sol_neg[output_name].data
-        fd = (np.array(output_plus) - np.array(output_neg)) / h
-        fd = fd.transpose().reshape(-1)
+        fd = (output_plus - output_minus) / (2 * h)
         np.testing.assert_allclose(
-            output_sens,
-            fd,
-            rtol=1e-2,
-            atol=1e-6,
+            output_sens, fd, rtol=0, atol=1e-4 * np.abs(fd).max()
         )
 
     def test_serialisation(self, solver=None, t_eval=None):

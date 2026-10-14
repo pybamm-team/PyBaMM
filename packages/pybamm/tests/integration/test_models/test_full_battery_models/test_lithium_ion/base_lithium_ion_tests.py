@@ -16,16 +16,21 @@ class BaseIntegrationTestLithiumIon:
         options = {}
         self.run_basic_processing_test(options)
 
-    def test_sensitivities(self):
+    @pytest.mark.parametrize(
+        ("name", "value"),
+        [
+            ("Current function [A]", 0.15652),
+            # Enters the model only through an initial condition
+            ("Initial concentration in negative electrode [mol.m-3]", 26120.05),
+        ],
+    )
+    def test_sensitivities(self, name, value):
         model = self.model()
         param = pybamm.ParameterValues("Ecker2015")
-        rtol = 1e-6
-        atol = 1e-6
-        solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
         modeltest = tests.StandardModelTest(
-            model, parameter_values=param, solver=solver
+            model, parameter_values=param, solver=pybamm.IDAKLUSolver()
         )
-        modeltest.test_sensitivities("Current function [A]", 0.15652)
+        modeltest.test_sensitivities(name, value)
 
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
