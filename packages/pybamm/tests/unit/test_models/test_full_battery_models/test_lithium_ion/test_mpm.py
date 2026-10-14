@@ -2,6 +2,7 @@
 # Tests for the lithium-ion MPM model
 #
 
+import numpy as np
 import pytest
 
 import pybamm
@@ -25,6 +26,42 @@ class TestMPM:
             model.default_parameter_values["Negative minimum particle radius [m]"]
             == 0.0
         )
+
+    def test_mean_particle_radius_input_sensitivity(self):
+        # The size distribution must follow an input mean radius, not its default
+        name = "Negative particle radius [m]"
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 6, "r_p": 6, "R_n": 6, "R_p": 6}
+        t_interp = np.linspace(0, 1200, 7)
+
+        def solve(radius, calculate_sensitivities):
+            model = pybamm.lithium_ion.MPM()
+            parameter_values = model.default_parameter_values
+            parameter_values.update({name: "[input]"})
+            submesh_types = model.default_submesh_types
+            for domain in ["negative particle", "negative particle size"]:
+                submesh_types[domain] = pybamm.SymbolicUniform1DSubMesh
+            sim = pybamm.Simulation(
+                model,
+                parameter_values=parameter_values,
+                submesh_types=submesh_types,
+                var_pts=var_pts,
+                solver=pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12),
+            )
+            return sim.solve(
+                [0, 1200],
+                inputs={name: radius},
+                calculate_sensitivities=calculate_sensitivities,
+                t_interp=t_interp,
+            )
+
+        radius = pybamm.lithium_ion.MPM().default_parameter_values[name]
+        sensitivity = solve(radius, True)["Voltage [V]"].sensitivities[name].ravel()
+        h = 1e-4 * radius
+        voltage_plus = solve(radius + h, False)["Voltage [V]"](t_interp)
+        voltage_minus = solve(radius - h, False)["Voltage [V]"](t_interp)
+        finite_difference = (voltage_plus - voltage_minus) / (2 * h)
+        assert np.max(np.abs(finite_difference)) > 1e2
+        np.testing.assert_allclose(sensitivity, finite_difference, rtol=1e-4, atol=1e-1)
 
     def test_lumped_thermal_model_1D(self):
         options = {"thermal": "lumped"}
