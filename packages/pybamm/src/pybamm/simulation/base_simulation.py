@@ -116,6 +116,7 @@ class BaseSimulation:
         self._built_nominal_capacity = None
         self._cache_esoh = cache_esoh
         self._esoh_fingerprint = None
+        self._initial_state_input_names = None
         self._initial_soc_solver = None
         self._mesh = None
         self._disc = None
@@ -191,12 +192,15 @@ class BaseSimulation:
                 items.append((k, id(v)))
         return tuple(items)
 
-    def _compute_esoh_fingerprint(self, initial_soc, direction, inputs):
+    def _compute_esoh_fingerprint(
+        self, initial_soc, direction, inputs, differentiable=False
+    ):
         """Compute a fingerprint of all eSOH-relevant state to detect changes.
 
         Delegates to the model-specific fingerprint function in
         ``pybamm.lithium_ion.compute_esoh_fingerprint``, which evaluates the
-        exact quantities that determine the eSOH result for this model type.
+        exact quantities that determine the eSOH result for this model type,
+        and adds the values of every input the initial state depends on.
         Falls back to raw inputs if the model-specific evaluation fails.
         """
         pv = self._unprocessed_parameter_values
@@ -213,7 +217,86 @@ class BaseSimulation:
         except (KeyError, AttributeError, TypeError, ValueError, pybamm.ModelError):
             evals = self._normalize_inputs(inputs) if inputs else ()
 
-        return (initial_soc, direction, pv_fp, evals)
+        names = self._get_initial_state_input_names(initial_soc, direction, pv_fp)
+        dependencies = (self._initial_state_input_values(names, inputs), differentiable)
+        return (initial_soc, direction, pv_fp, (evals, dependencies))
+
+    def _get_initial_state_input_names(self, initial_soc, direction, pv_fp=None):
+        """Names of the inputs the initial state depends on, or None if unknown."""
+        pv = self._unprocessed_parameter_values
+        if pv_fp is None:
+            pv_fp = self._pv_fingerprint(pv)
+        is_voltage = isinstance(initial_soc, str)
+        key = (pv_fp, is_voltage, direction)
+        cached = getattr(self, "_initial_state_input_names", None)
+        if cached is None or cached[0] != key:
+            param = self._model.param
+            try:
+                if isinstance(param, pybamm.LithiumIonParameters):
+                    names = pybamm.lithium_ion.get_initial_state_input_names(
+                        initial_soc,
+                        pv,
+                        param,
+                        self._model.options,
+                        direction=direction,
+                    )
+                elif isinstance(param, pybamm.EcmParameters):
+                    # The initial SoC only depends on inputs through the OCV
+                    names = set()
+                    if is_voltage:
+                        soc = pybamm.InputParameter("Initial SoC")
+                        ocv = pv.process_symbol(param.ocv(soc))
+                        names = {
+                            node.name
+                            for node in ocv.pre_order()
+                            if isinstance(node, pybamm.InputParameter)
+                        } - {soc.name}
+                else:
+                    names = None
+            except (
+                KeyError,
+                AttributeError,
+                TypeError,
+                ValueError,
+                pybamm.ModelError,
+                pybamm.OptionError,
+            ):
+                names = None
+            self._initial_state_input_names = (key, names)
+        return self._initial_state_input_names[1]
+
+    def _initial_state_input_values(self, names, inputs):
+        """Hashable values of the inputs the initial state depends on."""
+        inputs = inputs or {}
+        if names is not None:
+            inputs = {name: value for name, value in inputs.items() if name in names}
+        return self._normalize_inputs(inputs)
+
+    def _is_initial_state_differentiable(self, names, inputs, calculate_sensitivities):
+        """
+        Whether sensitivities are requested for an input the initial state uses.
+
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If they are, but the initial state of this model cannot carry its
+            derivatives with respect to inputs.
+        """
+        if calculate_sensitivities is True:
+            requested = set(inputs or {})
+        elif calculate_sensitivities:
+            requested = set(calculate_sensitivities)
+        else:
+            return False
+        overlap = requested if names is None else requested & names
+        if overlap and not isinstance(self._model.param, pybamm.LithiumIonParameters):
+            raise pybamm.ModelError(
+                "Sensitivities cannot include the dependence of the initial state "
+                f"set by initial_soc on the inputs {sorted(overlap)} for "
+                f"'{self._model.name}'. Set the initial state in the parameter "
+                "values instead."
+            )
+        return bool(overlap)
 
     def _create_esoh_solver(self, direction, initial_soc):
         """Create the appropriate eSOH solver/sim for this model type."""
@@ -259,16 +342,56 @@ class BaseSimulation:
                 solver=get_esoh_default_solver(),
             )
 
-    def set_initial_state(self, initial_soc, direction=None, inputs=None):
+    def _shares_initial_state(self, initial_soc, direction, inputs_list):
+        """Whether all input sets give the same initial state."""
+        names = self._get_initial_state_input_names(initial_soc, direction)
+        values = {
+            self._initial_state_input_values(names, inputs) for inputs in inputs_list
+        }
+        return len(values) <= 1
+
+    def set_initial_state(
+        self, initial_soc, direction=None, inputs=None, calculate_sensitivities=False
+    ):
+        """
+        Set the initial state of the model from an initial SOC or voltage.
+
+        Parameters
+        ----------
+        initial_soc : float or str
+            Initial SOC, or voltage as a string ending in "V".
+        direction : str, optional
+            The OCV branch to use. Can be "charge" or "discharge".
+        inputs : dict or list of dict, optional
+            Input parameters. A list is accepted if every set gives the same
+            initial state.
+        calculate_sensitivities : bool or list of str, optional
+            The inputs that sensitivities will be calculated for. The initial state
+            is then expressed in terms of these inputs, so that its derivatives are
+            included. Default is False.
+        """
+        if isinstance(inputs, list):
+            if not self._shares_initial_state(initial_soc, direction, inputs):
+                raise pybamm.SolverError(
+                    "The input sets give different initial states for "
+                    f"initial_soc={initial_soc!r}; set the initial state for each "
+                    "input set separately."
+                )
+            inputs = inputs[0] if inputs else {}
+
+        names = self._get_initial_state_input_names(initial_soc, direction)
+        differentiable = self._is_initial_state_differentiable(
+            names, inputs, calculate_sensitivities
+        )
         if self._cache_esoh:
-            fingerprint = self._compute_esoh_fingerprint(initial_soc, direction, inputs)
-            if fingerprint == self._esoh_fingerprint:
-                return
+            fingerprint = self._compute_esoh_fingerprint(
+                initial_soc, direction, inputs, differentiable
+            )
         else:
             normalized = self._normalize_inputs(inputs) if inputs else ()
-            fingerprint = (initial_soc, direction, normalized)
-            if fingerprint == self._esoh_fingerprint:
-                return
+            fingerprint = (initial_soc, direction, normalized, differentiable)
+        if fingerprint == self._esoh_fingerprint:
+            return
 
         self._needs_ic_rebuild = True
 
@@ -289,6 +412,7 @@ class BaseSimulation:
                 options=options,
                 inputs=inputs,
                 esoh_solver=self._initial_soc_solver,
+                differentiable=differentiable,
             )
         else:
             self._parameter_values = (
@@ -299,6 +423,7 @@ class BaseSimulation:
                     inplace=False,
                     options=options,
                     inputs=inputs,
+                    differentiable=differentiable,
                 )
             )
 
@@ -374,7 +499,13 @@ class BaseSimulation:
 
         self._needs_ic_rebuild = False
 
-    def build(self, initial_soc=None, direction=None, inputs=None):
+    def build(
+        self,
+        initial_soc=None,
+        direction=None,
+        inputs=None,
+        calculate_sensitivities=False,
+    ):
         """
         A method to build the model into a system of matrices and vectors suitable for
         performing numerical computations. If the model has already been built or
@@ -390,9 +521,18 @@ class BaseSimulation:
             set.
         inputs : dict, optional
             A dictionary of input parameters to pass to the model when solving.
+        calculate_sensitivities : bool or list of str, optional
+            The inputs that sensitivities will be calculated for, so that the
+            initial state set from ``initial_soc`` carries its derivatives with
+            respect to them. Default is False.
         """
         if initial_soc is not None:
-            self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
+            self.set_initial_state(
+                initial_soc,
+                direction=direction,
+                inputs=inputs,
+                calculate_sensitivities=calculate_sensitivities,
+            )
 
         if self._built_model:
             if self._needs_ic_rebuild:
@@ -463,6 +603,9 @@ class BaseSimulation:
         callbacks : list of callbacks, optional
             A list of callbacks to be called at each time step. Each callback must
             implement all the methods defined in :class:`pybamm.callbacks.BaseCallback`.
+        inputs : dict or list of dict, optional
+            Input parameters. With ``initial_soc``, input sets that give different
+            initial states are solved one after another.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -470,11 +613,40 @@ class BaseSimulation:
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
         """
+        if (
+            initial_soc is not None
+            and isinstance(inputs, list)
+            and not self._shares_initial_state(initial_soc, direction, inputs)
+        ):
+            # Each input set needs its own initial state, so is solved separately
+            solutions = [
+                BaseSimulation.solve(
+                    self,
+                    t_eval=t_eval,
+                    solver=solver,
+                    calc_esoh=calc_esoh,
+                    initial_soc=initial_soc,
+                    direction=direction,
+                    callbacks=callbacks,
+                    inputs=set_inputs,
+                    t_interp=t_interp,
+                    **kwargs,
+                )
+                for set_inputs in inputs
+            ]
+            self._solution = solutions
+            return solutions
+
         t_eval, solver, calc_esoh, callbacks, inputs = self._prepare_solve(
             t_eval, solver, calc_esoh, callbacks, inputs
         )
 
-        self.build(initial_soc=initial_soc, direction=direction, inputs=inputs)
+        self.build(
+            initial_soc=initial_soc,
+            direction=direction,
+            inputs=inputs,
+            calculate_sensitivities=kwargs.get("calculate_sensitivities", False),
+        )
 
         if (
             self.operating_mode == self.MODE_WITHOUT_EXPERIMENT

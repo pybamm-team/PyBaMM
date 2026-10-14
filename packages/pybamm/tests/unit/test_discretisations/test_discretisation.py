@@ -854,6 +854,14 @@ class TestDiscretise:
         ):
             disc.process_model(model)
 
+    def test_initial_condition_bounds_with_inputs(self):
+        # bounds that depend on inputs cannot be checked before solving
+        c = pybamm.Variable("c", bounds=(0, pybamm.InputParameter("c_max")))
+        model = pybamm.BaseModel()
+        model.rhs = {c: 1}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+        pybamm.Discretisation().process_model(model)
+
     def test_process_empty_model(self):
         model = pybamm.BaseModel()
         disc = pybamm.Discretisation()

@@ -1381,10 +1381,13 @@ class Discretisation:
                     f"they are {type(ic_eval)} for variable '{var}'."
                 )
 
-            # Check that the initial condition is within the bounds
-            # Skip this check if there are input parameters in the initial conditions
+            # Bounds can only be checked when neither side depends on inputs
             bounds = var.bounds
-            if not eqn.has_symbol_of_classes(pybamm.InputParameter) and not (
+            has_inputs = any(
+                symbol.has_symbol_of_classes(pybamm.InputParameter)
+                for symbol in [eqn, *bounds]
+            )
+            if not has_inputs and not (
                 all(bounds[0].value <= ic_eval) and all(ic_eval <= bounds[1].value)
             ):
                 raise pybamm.ModelError(

@@ -1,5 +1,6 @@
 import pybamm
 
+from .initial_state_linearisation import get_linearised_initial_state
 from .util import _has_hysteresis, _initial_hysteresis_state, check_if_composite
 
 
@@ -50,6 +51,7 @@ def set_initial_state(
     inputs=None,
     tol=1e-6,
     esoh_solver=None,
+    differentiable=False,
 ):
     """
     Set the values of the parameters representing the initial model states.
@@ -85,8 +87,16 @@ def set_initial_state(
         The tolerance for the solver used to compute the initial stoichiometries.
         A lower value results in higher precision but may increase computation time.
         Default is 1e-6.
+    esoh_solver : optional
+        A pre-built electrode SOH solver or simulation to reuse.
+    differentiable : bool, optional
+        If True, set the initial states as expressions in the input parameters that
+        match the solution, and its first derivative with respect to the inputs, at
+        ``inputs``. Required for forward sensitivities with respect to inputs that
+        the initial state depends on. Default is False.
     """
     options = options or {}
+    original_parameter_values = parameter_values
     parameter_values = parameter_values if inplace else parameter_values.copy()
     param = param or pybamm.LithiumIonParameters(options)
 
@@ -103,21 +113,51 @@ def set_initial_state(
                     parameter_values, electrode, direction, options
                 )
 
-    if options is not None and options.get("open-circuit potential", None) == "MSMR":
-        """
-        Set the initial OCP of each electrode, based on the initial SOC or voltage.
-        """
-        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+    if differentiable:
+        # The eSOH ignores the hysteresis states set above, and the original values
+        # keep their processing cache across calls
+        initial_state = get_linearised_initial_state(
             initial_value,
-            parameter_values,
+            original_parameter_values,
+            param,
+            options,
             direction=direction,
-            param=param,
             known_value=known_value,
-            options=options,
             tol=tol,
             inputs=inputs,
             esoh_solver=esoh_solver,
         )
+
+    def set_concentration(electrode, phase, stoich):
+        _set_concentration_from_stoich(
+            parameter_values,
+            param,
+            electrode,
+            phase,
+            stoich,
+            inputs,
+            options,
+            differentiable=differentiable,
+        )
+
+    if options is not None and options.get("open-circuit potential", None) == "MSMR":
+        """
+        Set the initial OCP of each electrode, based on the initial SOC or voltage.
+        """
+        if differentiable:
+            Un, Up = initial_state["Un"], initial_state["Up"]
+        else:
+            Un, Up = pybamm.lithium_ion.get_initial_ocps(
+                initial_value,
+                parameter_values,
+                direction=direction,
+                param=param,
+                known_value=known_value,
+                options=options,
+                tol=tol,
+                inputs=inputs,
+                esoh_solver=esoh_solver,
+            )
         parameter_values.update(
             {
                 "Initial voltage in negative electrode [V]": Un,
@@ -129,35 +169,22 @@ def set_initial_state(
         Set the initial stoichiometry of the working electrode, based on the initial
         SOC or voltage.
         """
-        results = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
-            initial_value,
-            parameter_values,
-            param=param,
-            options=options,
-            tol=tol,
-            inputs=inputs,
-            direction=direction,
-            esoh_sim=esoh_solver,
-        )
-        _set_concentration_from_stoich(
-            parameter_values,
-            param,
-            "positive",
-            "primary",
-            results["x"],
-            inputs,
-            options,
-        )
-        if check_if_composite(options, "positive"):
-            _set_concentration_from_stoich(
+        if differentiable:
+            results = initial_state
+        else:
+            results = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                initial_value,
                 parameter_values,
-                param,
-                "positive",
-                "secondary",
-                results["x_2"],
-                inputs,
-                options,
+                param=param,
+                options=options,
+                tol=tol,
+                inputs=inputs,
+                direction=direction,
+                esoh_sim=esoh_solver,
             )
+        set_concentration("positive", "primary", results["x"])
+        if check_if_composite(options, "positive"):
+            set_concentration("positive", "secondary", results["x_2"])
     elif options is not None and (
         check_if_composite(options, "positive")
         or check_if_composite(options, "negative")
@@ -166,83 +193,60 @@ def set_initial_state(
         Set the initial stoichiometry of each electrode, based on the initial SOC or
         voltage.
         """
-        initial_stoichs = pybamm.lithium_ion.get_initial_stoichiometries_composite(
-            initial_value,
-            parameter_values,
-            direction=direction,
-            param=param,
-            options=options,
-            tol=tol,
-            inputs=inputs,
-            known_value=known_value,
-            esoh_sim=esoh_solver,
-        )
-        _set_concentration_from_stoich(
-            parameter_values,
-            param,
-            "positive",
-            "primary",
-            initial_stoichs["y_init_1"],
-            inputs,
-            options,
-        )
-        _set_concentration_from_stoich(
-            parameter_values,
-            param,
-            "negative",
-            "primary",
-            initial_stoichs["x_init_1"],
-            inputs,
-            options,
-        )
+        if differentiable:
+            initial_stoichs = initial_state
+        else:
+            initial_stoichs = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+                initial_value,
+                parameter_values,
+                direction=direction,
+                param=param,
+                options=options,
+                tol=tol,
+                inputs=inputs,
+                known_value=known_value,
+                esoh_sim=esoh_solver,
+            )
+        set_concentration("positive", "primary", initial_stoichs["y_init_1"])
+        set_concentration("negative", "primary", initial_stoichs["x_init_1"])
         if check_if_composite(options, "positive"):
-            _set_concentration_from_stoich(
-                parameter_values,
-                param,
-                "positive",
-                "secondary",
-                initial_stoichs["y_init_2"],
-                inputs,
-                options,
-            )
+            set_concentration("positive", "secondary", initial_stoichs["y_init_2"])
         if check_if_composite(options, "negative"):
-            _set_concentration_from_stoich(
-                parameter_values,
-                param,
-                "negative",
-                "secondary",
-                initial_stoichs["x_init_2"],
-                inputs,
-                options,
-            )
+            set_concentration("negative", "secondary", initial_stoichs["x_init_2"])
     else:
         """
         Set the initial stoichiometry of each electrode, based on the initial SOC or
         voltage.
         """
-        x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            initial_value,
-            parameter_values,
-            direction=direction,
-            param=param,
-            known_value=known_value,
-            options=options,
-            tol=tol,
-            inputs=inputs,
-            esoh_solver=esoh_solver,
-        )
-        _set_concentration_from_stoich(
-            parameter_values, param, "negative", "primary", x, inputs, options
-        )
-        _set_concentration_from_stoich(
-            parameter_values, param, "positive", "primary", y, inputs, options
-        )
+        if differentiable:
+            x, y = initial_state["x"], initial_state["y"]
+        else:
+            x, y = pybamm.lithium_ion.get_initial_stoichiometries(
+                initial_value,
+                parameter_values,
+                direction=direction,
+                param=param,
+                known_value=known_value,
+                options=options,
+                tol=tol,
+                inputs=inputs,
+                esoh_solver=esoh_solver,
+            )
+        set_concentration("negative", "primary", x)
+        set_concentration("positive", "primary", y)
 
     return parameter_values
 
 
 def _set_concentration_from_stoich(
-    parameter_values, param, electrode, phase, stoich, inputs, options
+    parameter_values,
+    param,
+    electrode,
+    phase,
+    stoich,
+    inputs,
+    options,
+    differentiable=False,
 ):
     if electrode == "positive":
         electrode_param = param.p
@@ -258,10 +262,17 @@ def _set_concentration_from_stoich(
         phase_prefactor = phase.capitalize() + ": "
     else:
         phase_prefactor = ""
+    if differentiable:
+        concentration = stoich * parameter_values.process_symbol(phase_param.c_max)
+        if not concentration.has_symbol_of_classes(pybamm.InputParameter):
+            concentration = float(concentration.evaluate())
+    else:
+        concentration = stoich * parameter_values.evaluate(
+            phase_param.c_max, inputs=inputs
+        )
     parameter_values.update(
         {
-            f"{phase_prefactor}Initial concentration in {electrode} electrode [mol.m-3]": stoich
-            * parameter_values.evaluate(phase_param.c_max, inputs=inputs)
+            f"{phase_prefactor}Initial concentration in {electrode} electrode [mol.m-3]": concentration
         }
     )
 

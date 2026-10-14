@@ -141,6 +141,54 @@ def get_initial_stoichiometry_half_cell(
     x
         The initial stoichiometry that give the desired initial state of charge
     """
+    details = _solve_initial_stoichiometry_half_cell(
+        initial_value,
+        parameter_values,
+        options=options,
+        tol=tol,
+        inputs=inputs,
+        direction=direction,
+        esoh_sim=esoh_sim,
+    )
+    return {key: details[key] for key in ["x", "x_2"] if key in details}
+
+
+def _solve_initial_stoichiometry_half_cell(
+    initial_value,
+    parameter_values,
+    options=None,
+    tol=1e-6,
+    inputs=None,
+    direction=None,
+    esoh_sim=None,
+):
+    """
+    Solve for the initial stoichiometry of a half-cell, keeping the intermediate
+    values.
+
+    Parameters
+    ----------
+    initial_value : float or str
+        Target initial SOC, or voltage as a string ending in "V".
+    parameter_values : pybamm.ParameterValues
+        The parameter values to use in the calculation.
+    options : dict, optional
+        A dictionary of options to be passed to the parameters.
+    tol : float, optional
+        The tolerance for the solvers. Default is 1e-6.
+    inputs : dict, optional
+        A dictionary of input parameters passed to the model.
+    direction : str, optional
+        The OCV branch to use. Can be "charge" or "discharge".
+    esoh_sim : :class:`pybamm.Simulation`, optional
+        A pre-built simulation wrapping an :class:`ElectrodeSOHHalfCell` model.
+
+    Returns
+    -------
+    dict
+        The stoichiometry limits ("x_0", "x_100", ...) and the initial
+        stoichiometries ("x", and "x_2" for a composite electrode).
+    """
     param = pybamm.LithiumIonParameters(options)
     x_dict = get_min_max_stoichiometries(
         parameter_values,
@@ -258,7 +306,7 @@ def get_initial_stoichiometry_half_cell(
             "1.0 for 100%) or a string ending in 'V' (for voltage), got "
             f"{initial_value!r} of type {type(initial_value).__name__}"
         )
-    ret_dict = {"x": x}
+    ret_dict = {**x_dict, "x": x}
     if is_composite:
         ret_dict["x_2"] = x_2
     return ret_dict
