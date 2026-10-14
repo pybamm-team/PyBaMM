@@ -1045,7 +1045,8 @@ class Solution(SolutionBase):
         short_names : dict, optional
             Dictionary of shortened names to use when saving.
         cycles_and_steps : bool, optional
-            Whether to include the cycle numbers and step numbers in the dictionary
+            Whether to include the zero-based cycle and step numbers. A retained
+            endpoint without step history has step number -1.
 
         Returns
         -------
@@ -1079,7 +1080,11 @@ class Solution(SolutionBase):
             data_short_names[name] = var
 
         # Save cycle number and step number if the solution has them
-        if cycles_and_steps and len(self.cycles) > 0:
+        if cycles_and_steps and any(cycle is None for cycle in self.cycles):
+            cycle_numbers, step_numbers = self._get_sparse_cycle_and_step_labels()
+            data_short_names["Cycle"] = cycle_numbers
+            data_short_names["Step"] = step_numbers
+        elif cycles_and_steps and len(self.cycles) > 0:
             data_short_names["Cycle"] = np.array([])
             data_short_names["Step"] = np.array([])
             for i, cycle in enumerate(self.cycles):
@@ -1092,6 +1097,45 @@ class Solution(SolutionBase):
                     )
 
         return data_short_names
+
+    def _get_sparse_cycle_and_step_labels(self):
+        """Label returned samples using retained trajectories and cycle summaries."""
+        time = self.t
+        cycle_numbers = np.full_like(time, -1)
+        step_numbers = np.full_like(time, -1)
+
+        def assign(times, labels, number):
+            indices = np.searchsorted(time, times)
+            inside = indices < time.size
+            indices = indices[inside]
+            indices = indices[time[indices] == times[inside]]
+            indices = indices[labels[indices] == -1]
+            labels[indices] = number
+
+        for cycle_number, cycle in enumerate(self.cycles):
+            if cycle is None:
+                continue
+            assign(cycle.t, cycle_numbers, cycle_number)
+            for step_number, step in enumerate(cycle.steps):
+                if not isinstance(step, pybamm.EmptySolution):
+                    assign(step.t, step_numbers, step_number)
+
+        missing = cycle_numbers == -1
+        if np.any(missing):
+            endpoints = np.array(
+                [summary.last_state.t[-1] for summary in self.all_summary_variables]
+            )
+            indices = np.searchsorted(endpoints, time[missing])
+            if np.any(indices >= endpoints.size):
+                raise pybamm.ModelError("Returned samples have no cycle provenance")
+            if np.any(endpoints[indices] != time[missing]) or np.any(
+                np.searchsorted(endpoints, time[missing], side="right") != indices + 1
+            ):
+                raise pybamm.ModelError(
+                    "Returned samples have ambiguous cycle provenance"
+                )
+            cycle_numbers[missing] = indices
+        return cycle_numbers, step_numbers
 
     def save_data(
         self, filename=None, variables=None, to_format="pickle", short_names=None
