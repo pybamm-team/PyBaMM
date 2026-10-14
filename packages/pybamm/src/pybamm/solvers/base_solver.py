@@ -1077,12 +1077,17 @@ class BaseSolver:
             the model does not use. Only scalar inputs are supported, and the columns
             of ``sensitivities["all"]`` follow the sorted ``Solution.sensitivity_names``.
             If only a subset of sensitivities are required, can also pass a
-            list of input parameter names.  **Limitations**: sensitivities are not calculated up to numerical tolerances
-            so are not guaranteed to be within the tolerances set by the solver, please raise an issue if you
-            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
-            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
-            if the timings of your experimental protocol change rapidly with respect to your input parameters.
-            Likewise, they do not include the movement of a discontinuity whose time depends on an input.
+            list of input parameter names. Sensitivities at each solution time are
+            partial derivatives at that fixed time. With :class:`pybamm.IDAKLUSolver`,
+            a solve terminated by an event also reports how the event time moves,
+            :attr:`pybamm.Solution.t_event_sensitivities`, and its last state
+            (:attr:`pybamm.Solution.last_state`) holds the total derivative of the
+            final state, including the moving event time. **Limitations**: sensitivities
+            are not calculated up to numerical tolerances so are not guaranteed to be
+            within the tolerances set by the solver, please raise an issue if you
+            require this functionality.
+            They do not include the movement of a discontinuity whose time depends
+            on an input.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -1311,6 +1316,7 @@ class BaseSolver:
         t_interp: npt.NDArray[np.float64],
         timer: pybamm.Timer,
         nproc: int | None = None,
+        start_shift=None,
     ) -> list[pybamm.Solution]:
         """Integrate over each segment of ``t_eval`` between discontinuities.
 
@@ -1334,6 +1340,9 @@ class BaseSolver:
             The timer that gives each segment its solve time.
         nproc : int, optional
             Number of processes to use for more than one input set.
+        start_shift : optional
+            How the start time of a step moves with the inputs, from
+            ``_prepare_start_time_shift``, or None if it does not move.
 
         Returns
         -------
@@ -1351,17 +1360,19 @@ class BaseSolver:
             pybamm.logger.verbose(
                 f"Calling solver for {segment_t_eval[0]} < t < {segment_t_eval[-1]}"
             )
+            first, last = start_index == 0, end_index == len(t_eval)
+            segment_kwargs = {}
+            if start_shift is not None:
+                segment_kwargs["start_shift"] = start_shift.for_segment(first, last)
             new_solutions = self._integrate(
                 model,
                 segment_t_eval,
                 [inputs_list[i] for i in running],
                 self._segment_t_interp(
-                    t_interp,
-                    segment_t_eval,
-                    first=start_index == 0,
-                    last=end_index == len(t_eval),
+                    t_interp, segment_t_eval, first=first, last=last
                 ),
                 nproc=nproc,
+                **segment_kwargs,
             )
             # pybamm.Solution.__add__ assumes attribute solve_time
             solve_time = timer.time()
@@ -1635,6 +1646,42 @@ class BaseSolver:
                 "Solve it with 'calculate_sensitivities' including these inputs."
             )
 
+    def _prepare_start_time_shift(
+        self,
+        old_solution: pybamm.Solution | pybamm.EmptySolution,
+        model: pybamm.BaseModel,
+        time: float,
+        inputs: dict,
+        end_time_fixed: bool,
+        segmented: bool,
+    ):
+        """Account for a step start time that moves with the inputs.
+
+        Solvers that track event time sensitivities override this; the base
+        solver treats every start time as fixed.
+
+        Parameters
+        ----------
+        old_solution : :class:`pybamm.Solution` or :class:`pybamm.EmptySolution`
+            The solution the step continues.
+        model : :class:`pybamm.BaseModel`
+            The step's model, with its initial states and sensitivities set.
+        time : float
+            The start time of the step.
+        inputs : dict
+            The step's inputs.
+        end_time_fixed : bool
+            Whether the step ends at a fixed time.
+        segmented : bool
+            Whether discontinuities split the step into more than one integration.
+
+        Returns
+        -------
+        None
+            A solver-specific description of the shift, passed to ``_integrate``
+            as ``start_shift``, or None if there is none.
+        """
+
     @staticmethod
     def _check_saved_sensitivities(
         old_solution: pybamm.Solution, sensitivity_names: list[str]
@@ -1833,6 +1880,7 @@ class BaseSolver:
         calculate_sensitivities=False,
         t_interp=None,
         state_mapper=None,
+        end_time_fixed=False,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -1865,12 +1913,20 @@ class BaseSolver:
             the model does not use. Only scalar inputs are supported, and the columns
             of ``sensitivities["all"]`` follow the sorted ``Solution.sensitivity_names``.
             If only a subset of sensitivities are required, can also pass a
-            list of input parameter names. **Limitations**: sensitivities are not calculated up to numerical tolerances
-            so are not guaranteed to be within the tolerances set by the solver, please raise an issue if you
-            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
-            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
-            if the timings of your experimental protocol change rapidly with respect to your input parameters.
-            Likewise, they do not include the movement of a discontinuity whose time depends on an input.
+            list of input parameter names. Sensitivities at each solution time are
+            partial derivatives at that fixed time. With :class:`pybamm.IDAKLUSolver`,
+            a step that starts where an event-terminated step ended accounts for its
+            start time moving with the inputs, and an event-terminated step reports
+            :attr:`pybamm.Solution.t_event_sensitivities` and the total derivative of
+            its last state. **Limitations**: sensitivities are not calculated up to
+            numerical tolerances so are not guaranteed to be within the tolerances set
+            by the solver, please raise an issue if you require this functionality.
+            They do not include the movement of a discontinuity whose time depends
+            on an input.
+            With ``output_variables``, or when a discontinuity splits it, a step
+            whose equations depend on its start time (e.g. a drive cycle) and that
+            starts at a moving time only accounts for the moving initial state, and a
+            warning is raised.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -1880,6 +1936,10 @@ class BaseSolver:
             are mapped by forward-mode differentiation of it; otherwise they are matched by variable name.
             If not provided, then `BaseModel.set_initial_conditions_from` maps the state, and sensitivities are
             matched by variable name.
+        end_time_fixed : bool, optional
+            Whether the step ends at a fixed time, rather than ``dt`` after a start
+            time that may move with the inputs. Only changes the sensitivities of
+            the step's end time and last state. Defaults to False.
 
         Raises
         ------
@@ -2091,6 +2151,17 @@ class BaseSolver:
         if t_eval[0] != t_start_shifted:
             t_interp = np.where(t_interp == t_start_shifted, t_eval[0], t_interp)
 
+        start_shift = None
+        if using_sensitivities:
+            start_shift = self._prepare_start_time_shift(
+                old_solution,
+                model,
+                t_eval[0],
+                model_inputs,
+                end_time_fixed,
+                segmented=len(start_indices) > 1,
+            )
+
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initialization
@@ -2106,7 +2177,14 @@ class BaseSolver:
         timer.reset()
 
         solution = self._integrate_segments(
-            model, t_eval, start_indices, end_indices, [model_inputs], t_interp, timer
+            model,
+            t_eval,
+            start_indices,
+            end_indices,
+            [model_inputs],
+            t_interp,
+            timer,
+            start_shift=start_shift,
         )[0]
         solution.solve_time = timer.time()
 
