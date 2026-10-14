@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- `IDAKLUSolver` has a `"sensitivity_error_control"` option, off by default, that puts the forward sensitivities in the local error test through IDAS's staggered corrector. Without it only the states set the step size, so sensitivities can be far less accurate than `rtol`: a DFN's voltage sensitivity to the negative particle diffusivity is 3e-3 relative at `rtol=1e-4`, and 1.5e-4 with the option on, for 1.5 to 2 times the solve time. Needs the `pybammsolvers` release that adds it. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+
 ## Bug fixes
 
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
@@ -15,10 +19,14 @@
   - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.
   - Sensitivities are correct after a change of model between experiment steps, or from a `starting_solution`, for states with a nonzero reference or an input-dependent scale. `step()` seeds them by input name, and raises a `SolverError` if the solution it continues has none for a requested input.
   - `step()`, and re-solving an experiment, can change `calculate_sensitivities` between calls, with `save=False` for a step that does, and setting up again no longer duplicates discontinuity events.
+- `IDAKLUSolver` with sensitivities no longer accepts a NaN Newton iterate and returns a NaN solution that reports reaching the final time. In `pybammsolvers`, a NaN or inf residual or sensitivity residual now fails the step recoverably, so IDAS cuts the step as it already did without sensitivities, and raises `IDA_REP_RES_ERR` (or `IDA_REP_SRES_ERR`) if cutting it cannot help. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- A failing first step of `IDAKLUSolver` now raises its own IDAS error, such as `IDASolve at t0: IDA_CONV_FAIL`, instead of `IDAGetDky: IDA_BAD_K` from reading back the step it never took (`pybammsolvers`). ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `IDAKLUSolver` with `"newton_mode": "full"` and an iterative linear solver no longer segfaults: `pybammsolvers` leaves those initial conditions to IDAS's `IDACalcIC`, rather than driving the iterative solver before IDAS has set it up. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
 ## Optimizations
 
 - Experiments with a different model per step no longer compile Jacobians of the state mappers between models, which were unused. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
+- `pybammsolvers` no longer stores and returns the time derivatives of the sensitivities, which nothing read, so its `solution` has no `ypS` attribute. With Hermite interpolation, a DFN solve with 3 sensitivities over 3200 steps peaks 237 MB lower, 294 MB above its starting memory instead of 531 MB. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
 
