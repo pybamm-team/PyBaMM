@@ -1107,7 +1107,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
     def _sensitivity_consistent_initialization(self, y0, ydot0, y0S, time, inputs_dict):
         """
-        Extend the consistent initialization to include the sensitivty equations
+        Stack the states and their sensitivities into the solver's initial values.
+
+        The solver makes the sensitivities consistent from the differential
+        entries of ``y0S``, so the zero time derivatives returned here are only a
+        starting guess.
 
         Parameters
         ----------
@@ -1122,6 +1126,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_dict : dict
             Any input parameters to pass to the model when solving.
 
+        Returns
+        -------
+        tuple of :class:`numpy.array`
+            The stacked initial values and their time derivatives.
         """
 
         if isinstance(y0S, casadi.DM):
