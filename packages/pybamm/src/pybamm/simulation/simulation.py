@@ -1169,6 +1169,20 @@ class Simulation(BaseSimulation):
                 else:
                     idx += 1
 
+            if not feasible and not steps:
+                # A failed first step may leave the latest valid state unretained.
+                if isinstance(current_solution, pybamm.Solution) and (
+                    not cross_cycle_segments
+                    or current_solution.t[-1] > cross_cycle_segments[-1].t[-1]
+                ):
+                    last_state = current_solution.last_state
+                    # Work from discarded cycles has already been accumulated.
+                    last_state.solver_statistics = pybamm.SolverStatistics()
+                    cross_cycle_segments.append(last_state)
+                    last_termination = current_solution.termination
+                # No cycle completed, so do not emit its predecessor's summary.
+                break
+
             if cycle_solution is not None and (
                 save_this_cycle or feasible is False or stop_experiment
             ):
