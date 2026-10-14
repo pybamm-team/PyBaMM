@@ -244,3 +244,60 @@ class TestObserveHermiteInterpSparsity:
         )
 
         np.testing.assert_array_equal(result_sparse, result_dense)
+
+
+def _sine_segment(t_start, t_end, n):
+    """A segment whose first state is sin(t), with its exact derivative."""
+    ts = np.linspace(t_start, t_end, n, dtype=np.float64)
+    ys = np.zeros((NY, n), dtype=np.float64, order="F")
+    yps = np.zeros((NY, n), dtype=np.float64, order="F")
+    ys[0, :] = np.sin(ts)
+    yps[0, :] = np.cos(ts)
+    return ts, ys, yps
+
+
+def _observe_segments(t_interp, segments):
+    t, y, p = _casadi_symbols()
+    function = casadi.Function("f", [t, y, p], [y[0]]).serialize()
+    inputs = np.array([1.0, 0.0], dtype=np.float64)
+    return idaklu.observe_hermite_interp(
+        np.asarray(t_interp, dtype=np.float64),
+        idaklu.VectorRealtypeNdArray([ts for ts, _, _ in segments]),
+        idaklu.VectorRealtypeNdArray([ys for _, ys, _ in segments]),
+        idaklu.VectorRealtypeNdArray([yps for _, _, yps in segments]),
+        idaklu.VectorRealtypeNdArray([inputs] * len(segments)),
+        [function] * len(segments),
+        [1, len(t_interp)],
+    ).reshape(-1)
+
+
+class TestObserveSegments:
+    pytestmark = pytest.mark.unit
+
+    def test_a_time_between_segments_is_nan_and_later_times_are_unaffected(self):
+        segments = [_sine_segment(0, 1, 21), _sine_segment(2, 3, 21)]
+
+        with_gap = _observe_segments([1.5, 2.25, 2.5], segments)
+        without_gap = _observe_segments([2.25, 2.5], segments)
+
+        assert np.isnan(with_gap[0])
+        np.testing.assert_array_equal(with_gap[1:], without_gap)
+        np.testing.assert_allclose(without_gap, np.sin([2.25, 2.5]), atol=1e-6)
+
+    def test_a_single_point_segment(self):
+        segments = [_sine_segment(0, 1, 21), _sine_segment(1.5, 1.5, 1)]
+
+        result = _observe_segments([0.5, 1.5, 1.6], segments)
+
+        np.testing.assert_allclose(result[:2], np.sin([0.5, 1.5]), atol=1e-6)
+        # Past its only point, extrapolate linearly from it
+        np.testing.assert_allclose(result[2], np.sin(1.5) + 0.1 * np.cos(1.5))
+
+    def test_unsorted_times_are_rejected(self):
+        with pytest.raises(ValueError, match=r"sorted in non-decreasing order"):
+            _observe_segments([0.5, 0.25], [_sine_segment(0, 1, 21)])
+
+    def test_no_segment_with_data_is_rejected(self):
+        empty = _sine_segment(0, 1, 0)
+        with pytest.raises(ValueError, match=r"no time points"):
+            _observe_segments([0.5], [empty])
