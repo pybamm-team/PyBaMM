@@ -1042,6 +1042,48 @@ class TestSimulation:
         sim = pybamm.Simulation(model=model, parameter_values=parameter_values)
         sim.solve(t_eval=t_eval, inputs=inputs)
 
+    def test_geometry_input_sensitivities_need_symbolic_submesh(self):
+        name = "Negative electrode thickness [m]"
+        value = pybamm.ParameterValues("Chen2020")[name]
+        t_interp = np.linspace(0, 600, 11)
+
+        def solve(submesh_types, thickness, calculate_sensitivities):
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            parameter_values.update({name: "[input]"})
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                submesh_types=submesh_types,
+                solver=pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12),
+            )
+            return sim.solve(
+                [0, 600],
+                inputs={name: thickness},
+                calculate_sensitivities=calculate_sensitivities,
+                t_interp=t_interp,
+            )
+
+        submesh_types = pybamm.lithium_ion.SPM().default_submesh_types
+        with pytest.raises(
+            pybamm.GeometryError,
+            match=r"'negative electrode' \(Uniform1DSubMesh\) depends on "
+            r"\['Negative electrode thickness \[m\]'\].*SymbolicUniform1DSubMesh",
+        ):
+            solve(submesh_types, value, True)
+
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            submesh_types[domain] = pybamm.SymbolicUniform1DSubMesh
+        sensitivity = solve(submesh_types, value, True)["Voltage [V]"].sensitivities
+        h = 1e-4 * value
+        voltage_plus = solve(submesh_types, value + h, False)["Voltage [V]"]
+        voltage_minus = solve(submesh_types, value - h, False)["Voltage [V]"]
+        np.testing.assert_allclose(
+            sensitivity[name].ravel(),
+            (voltage_plus(t_interp) - voltage_minus(t_interp)) / (2 * h),
+            rtol=1e-5,
+            atol=1e-3,
+        )
+
     def test_simulation_cannot_force_calc_esoh(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
