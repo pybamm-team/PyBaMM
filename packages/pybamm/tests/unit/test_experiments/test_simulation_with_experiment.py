@@ -1724,6 +1724,78 @@ class TestSimulationExperiment:
         assert sensitivity_keys == {input_param_name}
         assert not (sensitivity_keys & internal_inputs)
 
+    @staticmethod
+    def _diffusivity_simulation(experiment, **kwargs):
+        name = "Negative particle diffusivity [m2.s-1]"
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update({name: "[input]"})
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=parameter_values,
+            experiment=experiment,
+            **kwargs,
+        )
+        return simulation, {name: 3.3e-14}
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_step_after_event_starts_at_a_moving_time(self, experiment_model_mode):
+        simulation, inputs = self._diffusivity_simulation(
+            ["Discharge at 1C until 3.6 V", "Rest for 5 minutes"],
+            experiment_model_mode=experiment_model_mode,
+        )
+        sol = simulation.solve(
+            inputs=inputs, calculate_sensitivities=True, calc_esoh=False
+        )
+        discharge, rest = (cycle.steps[0] for cycle in sol.cycles)
+        dt_event = discharge.t_event_sensitivities
+        assert dt_event["all"].shape == (1, 1)
+        assert dt_event["all"][0, 0] > 0
+        # The rest lasts 5 minutes, so it ends as late as it starts
+        name = next(iter(inputs))
+        np.testing.assert_allclose(
+            rest._t_end_sensitivities[name], dt_event[name][0], rtol=1e-12
+        )
+        assert rest.t_event_sensitivities is None
+
+    @pytest.mark.parametrize("rest", ["Rest for 1 hour", "Rest for 1 minute"])
+    def test_steps_that_end_at_a_scheduled_time_do_not_move(self, rest):
+        # The rest is either cut short by the next step's start time or padded up to it
+        simulation, inputs = self._diffusivity_simulation(
+            [
+                pybamm.step.string(
+                    "Discharge at 1C until 3.6 V",
+                    start_time=datetime(2023, 1, 1, 8, 0, 0),
+                ),
+                rest,
+                pybamm.step.string(
+                    "Charge at 1C for 1 minute",
+                    start_time=datetime(2023, 1, 1, 9, 0, 0),
+                ),
+            ]
+        )
+        sol = simulation.solve(
+            inputs=inputs, calculate_sensitivities=True, calc_esoh=False
+        )
+        discharge, rest_step, charge = (cycle.steps[0] for cycle in sol.cycles)
+        assert discharge.t_event_sensitivities is not None
+        assert rest_step._t_end_sensitivities is None
+        assert charge._all_time_sensitivities is None
+
+    def test_start_time_steps_with_output_variables_warn_on_sensitivities(self, caplog):
+        time = np.arange(0, 61, 10.0)
+        simulation, _ = self._diffusivity_simulation(
+            [
+                "Discharge at 1C until 3.6 V",
+                pybamm.step.current(np.column_stack([time, np.ones_like(time)])),
+            ],
+            solver=pybamm.IDAKLUSolver(output_variables=["Voltage [V]"]),
+        )
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            simulation.build_for_experiment(
+                solve_kwargs={"calculate_sensitivities": True}
+            )
+        assert "depends on its start time" in caplog.text
+
     def test_unified_ambient_temperature_scalar_value(self):
         # Unified mode reads ambient temperature as a solver input; a pybamm.Scalar
         # value (vs a float) must be coerced or it breaks the casadi call.

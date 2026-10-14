@@ -337,6 +337,7 @@ class Solution(SolutionBase):
         "_all_models",
         "_all_sensitivities",
         "_all_t_evals",
+        "_all_time_sensitivities",
         "_all_ts",
         "_all_yps",
         "_all_ys",
@@ -347,13 +348,16 @@ class Solution(SolutionBase):
         "_last_state",
         "_observable",
         "_options",
+        "_point_time_sensitivities",
         "_sensitivities",
         "_sensitivity_mismatch",
         "_sub_solutions",
         "_summary_variables",
         "_t",
+        "_t_end_sensitivities",
         "_t_eval",
         "_t_event",
+        "_t_event_sensitivities",
         "_termination",
         "_user_options",
         "_variables",
@@ -458,6 +462,12 @@ class Solution(SolutionBase):
         # Such a solve's state sensitivities at its first and last time points
         self._y0_sensitivities = None
         self._y_event_sensitivities = None
+        # How the event, end and per-segment bounding times move with the inputs
+        self._t_event_sensitivities = None
+        self._t_end_sensitivities = None
+        self._all_time_sensitivities = None
+        # For a first or last state: how its time moves, so its rows are totals
+        self._point_time_sensitivities = None
 
         super().__init__()
         self.integration_time = None
@@ -509,6 +519,10 @@ class Solution(SolutionBase):
         self._y0_sensitivities = None
         self._y_event_sensitivities = None
         self._sensitivity_mismatch = None
+        self._t_event_sensitivities = None
+        self._t_end_sensitivities = None
+        self._all_time_sensitivities = None
+        self._point_time_sensitivities = None
         if isinstance(state, dict):
             state = {
                 f"_{name}" if name in ("first_state", "last_state") else name: value
@@ -775,6 +789,66 @@ class Solution(SolutionBase):
         return self._y_event
 
     @property
+    def t_event_sensitivities(self) -> dict | None:
+        """Sensitivities of the event time to the inputs.
+
+        For a solve terminated by an event ``g(t, y, p) = 0``, the derivative
+        ``dt_event/dp = -(g_y S + g_p) / (g_y y' + g_t)``, where ``S`` holds the
+        state sensitivities and ``y'`` the state time derivatives at the event.
+        A dict with a ``(1,)`` array per input and a ``(1, n_p)`` row under
+        ``"all"``, or None if the solve did not end on an event or computed no
+        sensitivities. Like :attr:`sensitivities`, a join keeps only the inputs
+        every segment shares.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If the solution joins segments with sensitivities to different
+            parameters, none of which all of them share.
+        """
+        if self._sensitivity_mismatch is not None:
+            raise pybamm.SolverError(self._sensitivity_mismatch)
+        sensitivities = self._t_event_sensitivities
+        names = self.sensitivity_names
+        if sensitivities is None or not names:
+            return None
+        if [name for name in sensitivities if name != "all"] == names:
+            return sensitivities
+        # The event's segment may have more inputs than the join keeps
+        shared = {name: sensitivities[name] for name in names}
+        shared["all"] = np.column_stack(list(shared.values()))
+        return shared
+
+    def _segment_time_sensitivities(self) -> list[dict | None]:
+        """How the first and last time of each segment move with the inputs.
+
+        Returns
+        -------
+        list
+            One entry per segment of ``all_ts``: a dict of ``[dt_first/dp,
+            dt_last/dp, dt_start/dp]`` per input, where ``t_start`` is the start
+            time of the step the segment belongs to, or None if no time moves.
+        """
+        segments = self._all_time_sensitivities
+        if segments is None or len(segments) != len(self.all_ts):
+            return [None] * len(self.all_ts)
+        return segments
+
+    @staticmethod
+    def _join_time_sensitivities(solutions) -> list[dict | None] | None:
+        """Concatenate the per-segment time sensitivities of ``solutions``."""
+        if all(s._all_time_sensitivities is None for s in solutions):
+            return None
+        return [
+            segment for s in solutions for segment in s._segment_time_sensitivities()
+        ]
+
+    def _copy_time_sensitivities(self, other: Solution) -> None:
+        """Take the event and end time sensitivities of ``other``."""
+        self._t_event_sensitivities = other._t_event_sensitivities
+        self._t_end_sensitivities = other._t_end_sensitivities
+
+    @property
     def termination(self):
         """Reason for termination"""
         return self._termination
@@ -823,7 +897,9 @@ class Solution(SolutionBase):
         """
         A Solution object that only contains the first state. This is faster to evaluate
         than the full solution when only the first state is needed (e.g. to initialize
-        a model with the solution)
+        a model with the solution). When the first time moves with the inputs (a
+        step that starts at an event), its sensitivities are total derivatives
+        along that moving time.
         """
         if self._first_state is None:
             self._first_state = self._build_first_state()
@@ -888,6 +964,16 @@ class Solution(SolutionBase):
         )
         # stacked/casadi stay lazy; built from all_inputs[:1] on first access
         new_sol._sub_solutions = self.sub_solutions[:1]
+        first_segment = self._segment_time_sensitivities()[0]
+        if first_segment is not None:
+            # The first state is at the first time, so its time moves as that does
+            new_sol._t_end_sensitivities = {
+                name: bounds[0] for name, bounds in first_segment.items()
+            }
+            new_sol._point_time_sensitivities = new_sol._t_end_sensitivities
+            new_sol._all_time_sensitivities = [
+                {name: bounds[[0, 0, 2]] for name, bounds in first_segment.items()}
+            ]
 
         new_sol.solve_time = 0
         new_sol.integration_time = 0
@@ -901,7 +987,10 @@ class Solution(SolutionBase):
         """
         A Solution object that only contains the final state. This is faster to evaluate
         than the full solution when only the final state is needed (e.g. to initialize
-        a model with the solution)
+        a model with the solution). When the final time moves with the inputs (an
+        event, see :attr:`t_event_sensitivities`), its sensitivities are total
+        derivatives along that moving time, unlike the rows of the full solution,
+        which are partial derivatives at fixed time.
         """
         if self._last_state is None:
             self._last_state = self._build_last_state()
@@ -942,6 +1031,13 @@ class Solution(SolutionBase):
         )
         # stacked/casadi stay lazy; built from all_inputs[-1:] on first access
         new_sol._sub_solutions = self.sub_solutions[-1:]
+        new_sol._copy_time_sensitivities(self)
+        new_sol._point_time_sensitivities = self._t_end_sensitivities
+        last_segment = self._segment_time_sensitivities()[-1]
+        if last_segment is not None:
+            new_sol._all_time_sensitivities = [
+                {name: bounds[[1, 1, 2]] for name, bounds in last_segment.items()}
+            ]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
         new_sol.solver_statistics = _NO_SOLVER_STATISTICS
@@ -1463,6 +1559,8 @@ class Solution(SolutionBase):
         new_sol._y0 = self._y0
         new_sol._y0_sensitivities = self._y0_sensitivities
         new_sol._y_event_sensitivities = other._y_event_sensitivities
+        new_sol._copy_time_sensitivities(other)
+        new_sol._all_time_sensitivities = self._join_time_sensitivities([self, other])
         new_sol._all_inputs_stacked = self.all_inputs_stacked + other.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
@@ -1579,6 +1677,8 @@ class Solution(SolutionBase):
         new_sol.closest_event_idx = segments[-1].closest_event_idx
         new_sol._sensitivity_mismatch = mismatch
         new_sol._y_event_sensitivities = segments[-1]._y_event_sensitivities
+        new_sol._copy_time_sensitivities(segments[-1])
+        new_sol._all_time_sensitivities = cls._join_time_sensitivities(segments)
         new_sol._y0 = segments[0]._y0
         new_sol._y0_sensitivities = segments[0]._y0_sensitivities
         # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
@@ -1629,6 +1729,9 @@ class Solution(SolutionBase):
         new_sol._y0 = self._y0
         new_sol._y0_sensitivities = self._y0_sensitivities
         new_sol._y_event_sensitivities = self._y_event_sensitivities
+        new_sol._copy_time_sensitivities(self)
+        new_sol._all_time_sensitivities = self._all_time_sensitivities
+        new_sol._point_time_sensitivities = self._point_time_sensitivities
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time

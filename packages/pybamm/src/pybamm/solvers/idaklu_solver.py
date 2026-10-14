@@ -1,4 +1,6 @@
 # mypy: ignore-errors
+from __future__ import annotations
+
 import dataclasses
 import logging
 import numbers
@@ -8,7 +10,7 @@ from enum import IntEnum
 import casadi
 import numpy as np
 from pybammsolvers import idaklu
-from scipy.sparse import csc_matrix
+from scipy.sparse import csc_matrix, vstack
 from scipy.sparse.linalg import spsolve
 
 import pybamm
@@ -132,6 +134,30 @@ def _sensitivities_at_knots(
     return reduced
 
 
+def _time_sensitivities(dt_dp: np.ndarray, sensitivity_names: list[str]) -> dict:
+    """Sensitivities of one time, keyed as in ``Solution``.
+
+    Parameters
+    ----------
+    dt_dp : numpy.ndarray
+        The time's sensitivity to each name in ``sensitivity_names``.
+    sensitivity_names : list of str
+        Differentiated parameter names, in the solver's column order.
+
+    Returns
+    -------
+    dict
+        A ``(1,)`` array per name, and all of them as a ``(1, n_p)`` row under
+        ``"all"``.
+    """
+    sensitivities = {
+        name: np.array([value])
+        for name, value in zip(sensitivity_names, dt_dp, strict=True)
+    }
+    sensitivities["all"] = np.asarray(dt_dp, dtype=np.float64).reshape(1, -1)
+    return sensitivities
+
+
 def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.ndarray:
     """IDAS ``pbar``: the magnitude of each differentiated parameter.
 
@@ -157,6 +183,124 @@ def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.n
         dtype=np.float64,
     )
 
+
+@dataclasses.dataclass(frozen=True)
+class _StartTimeShift:
+    """How the start time of a step moves with the differentiated inputs.
+
+    Attributes
+    ----------
+    sensitivities : numpy.ndarray
+        ``dt_start/dp``, one entry per sensitivity name in solver column order.
+    end_time_fixed : bool
+        Whether the step ends at a fixed time, rather than a fixed duration after
+        its start.
+    shift_rows : bool
+        Whether the solver's rows still need ``-y'(t) dt_start/dp`` to become
+        sensitivities at fixed time, because the step's equations read its start
+        time and so its initial sensitivities were left unshifted.
+    first_segment : bool
+        Whether the integration starts at the step's start time, rather than at a
+        discontinuity within the step.
+    last_segment : bool
+        Whether the integration ends at the step's end time, rather than at a
+        discontinuity within the step.
+    """
+
+    sensitivities: np.ndarray
+    end_time_fixed: bool
+    shift_rows: bool
+    first_segment: bool = True
+    last_segment: bool = True
+
+    def for_segment(self, first: bool, last: bool) -> _StartTimeShift:
+        """The shift for one integration of a step split at discontinuities.
+
+        Parameters
+        ----------
+        first : bool
+            Whether the integration starts at the step's start time.
+        last : bool
+            Whether the integration ends at the step's end time.
+
+        Returns
+        -------
+        :class:`_StartTimeShift`
+            This shift, for that integration.
+        """
+        return dataclasses.replace(self, first_segment=first, last_segment=last)
+
+
+def _time_sensitivity_functions(
+    model: pybamm.BaseModel,
+    t_casadi: casadi.MX,
+    y_casadi: casadi.MX,
+    p_casadi: dict,
+    p_casadi_stacked: casadi.MX,
+    sensitivity_names: list[str],
+) -> dict:
+    """CasADi functions for the sensitivities of event and step start times.
+
+    Parameters
+    ----------
+    model : :class:`pybamm.BaseModel`
+        The model, with its residual and termination events processed.
+    t_casadi, y_casadi : casadi.MX
+        Time and state symbols.
+    p_casadi : dict
+        Symbol of each input, by name.
+    p_casadi_stacked : casadi.MX
+        The input symbols, stacked.
+    sensitivity_names : list of str
+        Differentiated inputs, in solver column order.
+
+    Returns
+    -------
+    dict
+        ``"rhs_algebraic_dt"``, the residual's time derivative; ``"events"``, the
+        termination events' derivatives with respect to time, the states and the
+        differentiated inputs (only with events); and ``"rhs_algebraic_dstart"``,
+        the residual's derivative with respect to the experiment step start time
+        (only when the model reads it).
+    """
+    arguments = [t_casadi, y_casadi, p_casadi_stacked]
+    rhs_algebraic = model.rhs_algebraic_eval(*arguments)
+    functions = {
+        "rhs_algebraic_dt": casadi.Function(
+            "rhs_algebraic_dt",
+            arguments,
+            [casadi.jacobian(rhs_algebraic, t_casadi)],
+        )
+    }
+    if model.terminate_events_eval:
+        events = casadi.vertcat(
+            *[event(*arguments) for event in model.terminate_events_eval]
+        )
+        sensitivity_inputs = casadi.vertcat(
+            *[p_casadi[name] for name in sensitivity_names]
+        )
+        functions["events"] = casadi.Function(
+            "event_derivatives",
+            arguments,
+            [
+                casadi.densify(casadi.jacobian(events, t_casadi)),
+                casadi.densify(casadi.jacobian(events, y_casadi)),
+                casadi.densify(casadi.jacobian(events, sensitivity_inputs)),
+            ],
+        )
+    start_time = p_casadi.get(pybamm.Simulation._START_TIME_INPUT)
+    if start_time is not None:
+        functions["rhs_algebraic_dstart"] = casadi.Function(
+            "rhs_algebraic_dstart",
+            arguments,
+            [casadi.jacobian(rhs_algebraic, start_time)],
+        )
+    return functions
+
+
+# Newton iterations allowed to make a step's initial algebraic states consistent
+# before shifting its sensitivities by a moving start time
+_CONSISTENT_STATE_MAX_ITERATIONS = 20
 
 # Mirrors SUNDIALS ``IDA_ROOT_RETURN`` in ``sundials/include/ida/ida.h``.
 # Returned by ``IDASolve`` (and surfaced via ``Solution.flag``) when the
@@ -802,6 +946,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # The idaklu-bound Function isn't callable from Python; keep the
         # original for the closest_event_idx lookup in _post_process_solution.
         self._setup["rootfn_casadi"] = fns["rootfn"]
+        self._setup["time_sensitivity_fcns"] = (
+            _time_sensitivity_functions(
+                model,
+                t_casadi,
+                y_casadi,
+                p_casadi,
+                p_casadi_stacked,
+                sensitivity_names,
+            )
+            if number_of_sensitivity_parameters > 0
+            else None
+        )
 
         for key in self.output_variables:
             self._setup["var_idaklu_fcns"].append(to_idaklu(fns[f"var:{key}"]))
@@ -882,9 +1038,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_list: list[dict] | None = None,
         t_interp=None,
         nproc=None,
+        start_shift: _StartTimeShift | None = None,
     ):
         """
-        Overloads the _integrate method from BaseSolver to use the IDAKLU solver
+        Overloads the _integrate method from BaseSolver to use the IDAKLU solver.
+        ``start_shift`` describes how the start time of a step moves with the
+        differentiated inputs; None means a start time that does not move.
         """
         if model.convert_to_format != "casadi":  # pragma: no cover
             raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
@@ -951,7 +1110,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return [
             self._post_process_solution(
-                soln, model, integration_time, inputs_dict, t_eval
+                soln, model, integration_time, inputs_dict, t_eval, start_shift
             )
             for soln, inputs_dict in zip(solns, inputs_list, strict=False)
         ]
@@ -970,7 +1129,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             return
         return self._check_event_violation(*args, **kwargs)
 
-    def _post_process_solution(self, sol, model, integration_time, inputs_dict, t_eval):
+    def _post_process_solution(
+        self, sol, model, integration_time, inputs_dict, t_eval, start_shift=None
+    ):
         number_of_sensitivity_parameters = self._setup[
             "number_of_sensitivity_parameters"
         ]
@@ -1029,6 +1190,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             yp = None
 
+        if (
+            start_shift is not None
+            and start_shift.shift_rows
+            and number_of_sensitivity_parameters
+            and not save_outputs_only
+        ):
+            yS_out = self._shift_rows_to_fixed_time(
+                yS_out, sol.t, y_out, model, inputs_dict, start_shift
+            )
+
         t = sol.t
         t_eval = np.array(t_eval)
         if t[-1] != t_eval[-1]:
@@ -1077,18 +1248,34 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 for field in dataclasses.fields(pybamm.SolverStatistics)
             }
         )
+        if save_outputs_only:
+            # Consistent initial states, and the state sensitivities at both ends
+            newsol._y0 = sol.y_init
+            if number_of_sensitivity_parameters != 0:
+                newsol._y0_sensitivities = _state_sensitivities(
+                    sol.yS_init, sensitivity_names
+                )
+                newsol._y_event_sensitivities = _state_sensitivities(
+                    sol.yS_term, sensitivity_names
+                )
+                ends = (
+                    (sol.y_init, np.asarray(sol.yS_init).T),
+                    (y_event, np.asarray(sol.yS_term).T),
+                )
+        elif number_of_sensitivity_parameters != 0:
+            ends = (
+                (y_out[0], yS_out["all"][:number_of_states, :]),
+                (y_event, yS_out["all"][-number_of_states:, :]),
+            )
+
+        time_sensitivities = None
+        if number_of_sensitivity_parameters != 0:
+            time_sensitivities = self._set_time_sensitivities(
+                newsol, model, inputs_dict, ends, start_shift
+            )
+
         if not save_outputs_only:
             return newsol
-
-        # Consistent initial states, and the state sensitivities at both ends
-        newsol._y0 = sol.y_init
-        if number_of_sensitivity_parameters != 0:
-            newsol._y0_sensitivities = _state_sensitivities(
-                sol.yS_init, sensitivity_names
-            )
-            newsol._y_event_sensitivities = _state_sensitivities(
-                sol.yS_term, sensitivity_names
-            )
 
         # sol.y holds the outputs, and sol.yS their sensitivities (n_t, n_rows, n_p)
         self._setup["output_assembly"].attach(
@@ -1098,8 +1285,359 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 np.asarray(sol.yS) if number_of_sensitivity_parameters else None
             ),
             sensitivity_names=sensitivity_names,
+            time_sensitivities=time_sensitivities,
         )
         return newsol
+
+    def _state_time_derivative(
+        self,
+        model: pybamm.BaseModel,
+        time: float,
+        y: np.ndarray,
+        inputs: np.ndarray,
+    ) -> np.ndarray:
+        """Time derivative of the states at a consistent point of the model.
+
+        Differential states solve ``M y' = f``; algebraic states solve the time
+        derivative of their equations, ``g_y y' = -g_t``.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model, set up by this solver.
+        time : float
+            The time.
+        y : numpy.ndarray
+            Consistent states at ``time``.
+        inputs : numpy.ndarray
+            The stacked inputs.
+
+        Returns
+        -------
+        numpy.ndarray
+            ``y'``, with one entry per state.
+        """
+        n_rhs = model.len_rhs
+        residual = np.asarray(model.rhs_algebraic_eval(time, y, inputs)).reshape(-1)
+        mass = csc_matrix(model.mass_matrix.entries)
+        if model.len_alg == 0:
+            matrix = mass
+            right_hand_side = residual
+        else:
+            jacobian = model.jac_rhs_algebraic_eval(time, y, inputs).sparse()
+            residual_dt = np.asarray(
+                self._setup["time_sensitivity_fcns"]["rhs_algebraic_dt"](
+                    time, y, inputs
+                )
+            ).reshape(-1)
+            matrix = vstack([mass[:n_rhs, :], jacobian[n_rhs:, :]], format="csc")
+            right_hand_side = np.concatenate([residual[:n_rhs], -residual_dt[n_rhs:]])
+        return np.atleast_1d(spsolve(matrix, right_hand_side))
+
+    def _consistent_algebraic_states(
+        self,
+        model: pybamm.BaseModel,
+        time: float,
+        y: np.ndarray,
+        inputs: np.ndarray,
+    ) -> np.ndarray:
+        """States whose algebraic part satisfies the model's algebraic equations.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model, set up by this solver.
+        time : float
+            The time.
+        y : numpy.ndarray
+            States, whose algebraic part is the initial guess.
+        inputs : numpy.ndarray
+            The stacked inputs.
+
+        Returns
+        -------
+        numpy.ndarray
+            ``y`` with its algebraic part found by Newton's method.
+        """
+        n_rhs = model.len_rhs
+        y = np.array(y, dtype=np.float64)
+        if model.len_alg == 0:
+            return y
+        atol = self._check_atol_type(getattr(model, "atol", self.atol), model)[n_rhs:]
+        previous_error = np.inf
+        for _ in range(_CONSISTENT_STATE_MAX_ITERATIONS):
+            residual = np.asarray(model.rhs_algebraic_eval(time, y, inputs)).reshape(
+                -1
+            )[n_rhs:]
+            jacobian = model.jac_rhs_algebraic_eval(time, y, inputs).sparse()
+            step = np.atleast_1d(spsolve(jacobian[n_rhs:, n_rhs:].tocsc(), residual))
+            y[n_rhs:] -= step
+            error = np.max(np.abs(step) / (atol + self.rtol * np.abs(y[n_rhs:])))
+            # Stop well within tolerance, or within it once roundoff stalls Newton
+            if error <= 1e-3 or previous_error <= error <= 1:
+                return y
+            previous_error = error
+        warnings.warn(
+            "Could not find consistent algebraic states at the start of the step "
+            "to shift its sensitivities by the moving start time; the "
+            "sensitivities may be inaccurate.",
+            pybamm.SolverWarning,
+            stacklevel=2,
+        )
+        return y
+
+    def _prepare_start_time_shift(
+        self, old_solution, model, time, inputs_dict, end_time_fixed, segmented
+    ):
+        """Account for a step start time that moves with the differentiated inputs.
+
+        A step that starts where an event-terminated step ended starts at a time
+        that depends on the inputs. Sensitivities at fixed time then start from
+        ``dy0/dp - y'(t_start) dt_start/dp``, so the initial sensitivities in
+        ``model.y0S_list`` are shifted by that. When the step's equations read
+        its start time, they are left unshifted and the rows are shifted after
+        the solve instead, unless the step returns output variables or is split
+        at a discontinuity.
+
+        Parameters
+        ----------
+        old_solution : :class:`pybamm.Solution` or :class:`pybamm.EmptySolution`
+            The solution the step continues.
+        model : :class:`pybamm.BaseModel`
+            The step's model, with ``y0_list`` and ``y0S_list`` set.
+        time : float
+            The start time of the step.
+        inputs_dict : dict
+            The step's inputs.
+        end_time_fixed : bool
+            Whether the step ends at a fixed time.
+        segmented : bool
+            Whether discontinuities split the step into more than one integration.
+
+        Returns
+        -------
+        :class:`_StartTimeShift` or None
+            None if the start time does not move.
+        """
+        if isinstance(old_solution, pybamm.EmptySolution):
+            return None
+        # As the restart's state sensitivities, which a join may keep more of
+        moving_start = old_solution.last_state._t_end_sensitivities
+        names = model.calculate_sensitivities
+        if moving_start is None or not names or getattr(self, "_setup", None) is None:
+            return None
+        dt_start = np.array(
+            [float(np.squeeze(moving_start.get(name, 0.0))) for name in names]
+        )
+        functions = self._setup.get("time_sensitivity_fcns")
+        if not np.any(dt_start) or functions is None:
+            return None
+
+        inputs = flatten_inputs(inputs_dict)
+        y0 = np.asarray(
+            model.y0_list[0].full()
+            if isinstance(model.y0_list[0], casadi.DM)
+            else model.y0_list[0],
+            dtype=np.float64,
+        ).reshape(-1)
+        y0 = self._consistent_algebraic_states(model, time, y0, inputs)
+        reads_start_time = "rhs_algebraic_dstart" in functions and np.any(
+            np.asarray(functions["rhs_algebraic_dstart"](time, y0, inputs))
+        )
+        # A restart mid-step would need the unshifted rows the shift replaces
+        shift_rows = reads_start_time and not self.output_variables and not segmented
+        if reads_start_time and not shift_rows:
+            if self.output_variables:
+                reason = "with output_variables"
+                remedy = " Drop output_variables for exact sensitivities."
+            else:
+                reason = "as a discontinuity splits the step,"
+                remedy = ""
+            warnings.warn(
+                "This step's equations depend on its start time, which moves with "
+                f"the inputs; {reason} its sensitivities only account for the "
+                f"moving initial state, not the shifted time dependence.{remedy}",
+                pybamm.SolverWarning,
+                stacklevel=3,
+            )
+        if not shift_rows:
+            ydot = self._state_time_derivative(model, time, y0, inputs)
+            initial_sensitivities = model.y0S_list[0]
+            if isinstance(initial_sensitivities, casadi.DM):
+                initial_sensitivities = (initial_sensitivities,)
+            model.y0S_list[0] = tuple(
+                np.asarray(
+                    column.full() if isinstance(column, casadi.DM) else column,
+                    dtype=np.float64,
+                ).reshape(-1)
+                - ydot * dt
+                for column, dt in zip(initial_sensitivities, dt_start, strict=True)
+            )
+        return _StartTimeShift(dt_start, end_time_fixed, shift_rows)
+
+    def _shift_rows_to_fixed_time(
+        self, yS_out, t, y_out, model, inputs_dict, start_shift
+    ):
+        """State sensitivity rows at fixed time from rows at fixed time since start.
+
+        Parameters
+        ----------
+        yS_out : dict
+            Time-major state sensitivity rows, per name and under ``"all"``.
+        t : numpy.ndarray
+            The solution times.
+        y_out : numpy.ndarray
+            States, one row per time.
+        model : :class:`pybamm.BaseModel`
+            The model.
+        inputs_dict : dict
+            The inputs.
+        start_shift : :class:`_StartTimeShift`
+            How the start time moves.
+
+        Returns
+        -------
+        dict
+            ``yS_out`` less ``y'(t) dt_start/dp``.
+        """
+        # The model's own y' rather than the stored one, which is only as accurate
+        # as the integrator's low-order interpolant early in a solve
+        inputs = flatten_inputs(inputs_dict)
+        ydot = np.vstack(
+            [
+                self._state_time_derivative(model, time, y, inputs)
+                for time, y in zip(t, y_out, strict=True)
+            ]
+        )
+        shift = ydot.reshape(-1, 1) * start_shift.sensitivities[np.newaxis, :]
+        names = self._setup["sensitivity_names"]
+        shifted = {"all": yS_out["all"] - shift}
+        for i, name in enumerate(names):
+            shifted[name] = shifted["all"][:, i : i + 1]
+        return shifted
+
+    def _set_time_sensitivities(self, solution, model, inputs_dict, ends, start_shift):
+        """Set the sensitivities of a solution's start, end and event times.
+
+        At an event ``g(t, y, p) = 0``, ``dt_e/dp = -(g_y S + g_p) / (g_y y' + g_t)``.
+        The total sensitivities of the first and last states, ``S + y' dt/dp`` at
+        the moving first and last times, become those of the first and last
+        state solutions.
+
+        Parameters
+        ----------
+        solution : :class:`pybamm.Solution`
+            The solution, with its raw termination.
+        model : :class:`pybamm.BaseModel`
+            The model.
+        inputs_dict : dict
+            The inputs.
+        ends : tuple
+            ``(states, sensitivities)`` at the first and at the last time, with
+            sensitivities at fixed time of shape ``(n_states, n_p)``.
+        start_shift : :class:`_StartTimeShift` or None
+            How the start time moves, or None if it does not.
+
+        Returns
+        -------
+        numpy.ndarray or None
+            ``[dt_first/dp, dt_end/dp]``, ``(2, n_p)``, or None if neither the step's
+            start nor the end moves.
+        """
+        names = self._setup["sensitivity_names"]
+        inputs = flatten_inputs(inputs_dict)
+        (y_start, start_sensitivities), (y_end, end_sensitivities) = (
+            (np.asarray(y, dtype=np.float64).reshape(-1), sensitivities)
+            for y, sensitivities in ends
+        )
+        t_start, t_end = float(solution.t[0]), float(solution.t[-1])
+        dt_start = dt_first = np.zeros(len(names))
+        if start_shift is not None:
+            dt_start = start_shift.sensitivities
+            # Later integrations of a split step start at a discontinuity
+            if start_shift.first_segment:
+                dt_first = dt_start
+        ydot_end = None
+        if solution.termination == "event" and solution.closest_event_idx is not None:
+            ydot_end = self._state_time_derivative(model, t_end, y_end, inputs)
+            dt_end = self._event_time_sensitivities(
+                t_end,
+                y_end,
+                ydot_end,
+                end_sensitivities,
+                inputs,
+                solution.closest_event_idx,
+            )
+            solution._t_event_sensitivities = _time_sensitivities(dt_end, names)
+        elif solution.termination == "final time" and not (
+            start_shift is None
+            or start_shift.end_time_fixed
+            or not start_shift.last_segment
+        ):
+            dt_end = dt_start
+        else:
+            dt_end = np.zeros(len(names))
+
+        if np.any(dt_end):
+            if ydot_end is None:
+                ydot_end = self._state_time_derivative(model, t_end, y_end, inputs)
+            total = end_sensitivities + np.outer(ydot_end, dt_end)
+            solution._y_event_sensitivities = _state_sensitivities(total.T, names)
+            solution._t_end_sensitivities = dict(zip(names, dt_end, strict=True))
+        if np.any(dt_first):
+            ydot_start = self._state_time_derivative(model, t_start, y_start, inputs)
+            total = start_sensitivities + np.outer(ydot_start, dt_first)
+            solution._y0_sensitivities = _state_sensitivities(total.T, names)
+
+        if not (np.any(dt_start) or np.any(dt_end)):
+            return None
+        # The step's start time is also its "start time" input
+        bounds = np.vstack([dt_first, dt_end, dt_start])
+        solution._all_time_sensitivities = [
+            {name: bounds[:, i] for i, name in enumerate(names)}
+        ]
+        return bounds[:2]
+
+    def _event_time_sensitivities(
+        self, time, y, ydot, state_sensitivities, inputs, event_index
+    ):
+        """``dt_e/dp`` of the event that terminated a solve.
+
+        Parameters
+        ----------
+        time : float
+            The event time.
+        y, ydot : numpy.ndarray
+            The states and their time derivatives at the event.
+        state_sensitivities : numpy.ndarray
+            The states' sensitivities at the event, ``(n_states, n_p)``.
+        inputs : numpy.ndarray
+            The stacked inputs.
+        event_index : int
+            Which termination event fired.
+
+        Returns
+        -------
+        numpy.ndarray
+            ``dt_e/dp``, one entry per sensitivity name; NaN if the event is
+            tangent to the trajectory.
+        """
+        dg_dt, dg_dy, dg_dp = (
+            np.asarray(value)
+            for value in self._setup["time_sensitivity_fcns"]["events"](time, y, inputs)
+        )
+        dg_dy = dg_dy[event_index]
+        rate = float(dg_dy @ ydot + dg_dt[event_index, 0])
+        scale = float(np.abs(dg_dy) @ np.abs(ydot) + abs(dg_dt[event_index, 0]))
+        if not np.isfinite(rate) or abs(rate) <= np.sqrt(np.finfo(float).eps) * scale:
+            warnings.warn(
+                "The terminating event is tangent to the trajectory, so the "
+                "sensitivity of its time is undefined and set to NaN.",
+                pybamm.SolverWarning,
+                stacklevel=2,
+            )
+            return np.full(state_sensitivities.shape[1], np.nan)
+        return -(dg_dy @ state_sensitivities + dg_dp[event_index]) / rate
 
     def _set_consistent_initialization(self, model, time, inputs_list):
         """
@@ -1386,6 +1924,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         new_sol._y0 = solution._y0
         new_sol._y0_sensitivities = solution._y0_sensitivities
         new_sol._y_event_sensitivities = solution._y_event_sensitivities
+        new_sol._t_event_sensitivities = solution._t_event_sensitivities
+        new_sol._t_end_sensitivities = solution._t_end_sensitivities
+        new_sol._all_time_sensitivities = solution._all_time_sensitivities
 
         new_sol.solve_time = solution.solve_time
         new_sol.integration_time = solution.integration_time

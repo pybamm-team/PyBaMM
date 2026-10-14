@@ -5,6 +5,10 @@
 - Reading a variable's sensitivities after a solve that calculated none raises a `SolverError` naming the variable and saying to pass `calculate_sensitivities`. A full-state variable raised a `ValueError`, which `SolverError` does not subclass, and an `output_variables` one returned `{}` or `None`. `ProcessedVariableComputed.solution_sensitivities` is removed. ([#5972](https://github.com/pybamm-team/PyBaMM/pull/5972))
 - The arrays in `Solution.sensitivities` are read-only, so writing to them can no longer change the solution's variables or the state a restart starts from. Copy an array to change it. ([#5972](https://github.com/pybamm-team/PyBaMM/pull/5972))
 
+## Features
+
+- `Solution.t_event_sensitivities` gives how the time of the event that ended an `IDAKLUSolver` solve moves with the inputs, `dt_e/dp = -(g_y S + g_p) / (g_y y' + g_t)`, and `BaseSolver.step` takes `end_time_fixed=True` for a step that ends at a fixed time rather than a fixed duration after its start. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+
 ## Bug fixes
 
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
@@ -31,6 +35,7 @@
   - `IDAKLUSolver` with `output_variables` returns the sensitivities of outputs with structural zeros, such as particle fluxes and potential gradients, instead of raising a `SolverError`.
   - `Solution.observe` on a model not processed by both `ParameterValues.process_model()` and `Discretisation.process_model()` says so, instead of "Solution is not observable: solution is observable".
   - `observe_hermite_interp` returns NaN for a time before a segment's start, handles single-point segments, and raises a `ValueError` for unsorted times or no data instead of crashing. This fix ships in `pybammsolvers` 0.12.0.
+- `IDAKLUSolver` sensitivities now account for event times that move with the inputs. Sensitivities at each solution time stay partial derivatives at that fixed time, while `last_state` (and a step's `first_state`) hold total derivatives, e.g. `solution.last_state["Discharge capacity [A.h]"].sensitivities` is the sensitivity of the capacity at a voltage cut-off. A step that starts after an event-terminated step, as in an experiment with an "until" step, starts from that total derivative and corrects for its moving start time, so its sensitivities match finite differences at fixed times instead of being off by up to 100%. Time integrals include their moving end points. With `output_variables`, or when a discontinuity whose time depends on an input splits it, a step whose equations read its start time (a drive cycle or a function of time) only accounts for the moving initial state, and warns. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
 ## Optimizations
 

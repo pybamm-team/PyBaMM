@@ -148,7 +148,8 @@ class VariableObserver(ABC):
     them: ``all_ts``, ``all_ys``, ``all_yps``, ``all_inputs``,
     ``all_inputs_stacked``, ``t_pts``, ``hermite_interpolation``,
     ``time_integral``, ``base_variables``, ``sensitivity_names``,
-    ``all_solution_sensitivities``, ``_name`` and ``_shape``.
+    ``all_solution_sensitivities``, ``all_time_sensitivities``,
+    ``point_time_sensitivities``, ``_name`` and ``_shape``.
     """
 
     #: Caches, built on demand or shared with a model, never pickled (see
@@ -309,14 +310,23 @@ class CasadiObserver(VariableObserver):
         stores = self._chain_rules
         if stores is None or len(stores) != len(variable.all_ts):
             stores = [{}] * len(variable.all_ts)
+        # A first or last state moves in time, so its total sensitivity includes the
+        # variable's explicit time derivative
+        point_dt_dp = _by_name(
+            getattr(variable, "point_time_sensitivities", None), sensitivity_names
+        )
+        segments = getattr(variable, "all_time_sensitivities", None) or [None] * len(
+            variable.all_ts
+        )
         all_S_var = []
-        for ts, ys, inputs, base_variable, dy_dp, store in zip(
+        for ts, ys, inputs, base_variable, dy_dp, store, segment in zip(
             variable.all_ts,
             variable.all_ys,
             variable.all_inputs,
             variable.base_variables,
             all_dy_dp,
             stores,
+            segments,
             strict=True,
         ):
             missing = [name for name in sensitivity_names if name not in inputs]
@@ -368,13 +378,23 @@ class CasadiObserver(VariableObserver):
                 )
                 store[key] = entry
             function = entry[1]
+            S_var = function.evaluate(
+                ts,
+                ys,
+                np.concatenate([np.zeros(0), *sensitivity_values]),
+                np.concatenate([np.zeros(0), *other_values]),
+                dy_dp,
+            )
             all_S_var.append(
-                function.evaluate(
+                S_var
+                + _explicit_time_shift(
+                    base_variable,
                     ts,
                     ys,
-                    np.concatenate([np.zeros(0), *sensitivity_values]),
-                    np.concatenate([np.zeros(0), *other_values]),
-                    dy_dp,
+                    inputs,
+                    sensitivity_inputs,
+                    point_dt_dp,
+                    _by_name(segment, sensitivity_names, index=2),
                 )
             )
 
@@ -394,14 +414,17 @@ class CasadiObserver(VariableObserver):
             n_params = S_var.shape[1]
             # Rows are time-major: one block of the variable's entries per time
             S_var = S_var.reshape(len(t_pts), -1, n_params)[indices]
-            integrand = np.moveaxis(self.observe_raw(variable), -1, 0)[indices]
+            integrand = np.moveaxis(self.observe_raw(variable), -1, 0)
             S_var = time_integral.postfix_sensitivities(
                 variable._name,
-                integrand,
+                integrand[indices],
                 t_pts[indices],
                 variable.all_inputs[0],
                 sensitivity_names,
                 S_var.reshape(-1, n_params),
+                boundary_sensitivities=time_integral_boundary_sensitivities(
+                    variable, integrand, sensitivity_names
+                ),
             )
         return pack_sensitivity_dict(S_var, sensitivity_names)
 
@@ -600,6 +623,160 @@ def check_variable_in_solve(
             "solve. Please re-run the solve with `output_variables` set to "
             "include this variable."
         )
+
+
+def _by_name(
+    values: dict | None, names: Sequence[str], index: int | None = None
+) -> npt.NDArray[np.float64] | None:
+    """One entry per name from ``{name: value}``, or None if all are zero.
+
+    Parameters
+    ----------
+    values : dict or None
+        A scalar, or an array to take ``index`` from, per name.
+    names : list of str
+        Parameter names, in column order; a missing name gives zero.
+    index : int, optional
+        The entry of each value to take.
+
+    Returns
+    -------
+    numpy.ndarray or None
+    """
+    if values is None:
+        return None
+    column = np.array(
+        [
+            float(np.ravel(values[name])[index or 0]) if name in values else 0.0
+            for name in names
+        ]
+    )
+    return column if np.any(column) else None
+
+
+def _explicit_time_shift(
+    base_variable: pybamm.Symbol,
+    ts: npt.NDArray[np.float64],
+    ys: npt.NDArray[np.float64],
+    inputs: dict,
+    sensitivity_inputs: dict[str, npt.NDArray[np.float64]],
+    point_dt_dp: npt.NDArray[np.float64] | None,
+    start_dt_dp: npt.NDArray[np.float64] | None,
+) -> npt.NDArray[np.float64] | float:
+    """Sensitivity a variable gains from its explicit dependence on moving times.
+
+    A first or last state sits at a time that moves by ``point_dt_dp``, adding
+    ``v_t dt/dp``; a step whose start time moves by ``start_dt_dp`` reads it as its
+    "start time" input, adding ``v_start dt_start/dp``.
+
+    Parameters
+    ----------
+    base_variable : :class:`pybamm.Symbol`
+        The variable's expression for one segment.
+    ts, ys : numpy.ndarray
+        The segment's times and states.
+    inputs : dict
+        The segment's inputs.
+    sensitivity_inputs : dict
+        Value of each sensitivity input, flattened, by name in column order.
+    point_dt_dp, start_dt_dp : numpy.ndarray or None
+        How the point's time and the step's start time move, one entry per
+        sensitivity input.
+
+    Returns
+    -------
+    numpy.ndarray or float
+        ``(len(ts) * variable size, n_p)``, or 0.0 if nothing moves.
+    """
+    start_name = pybamm.Simulation._START_TIME_INPUT
+    if point_dt_dp is not None or start_dt_dp is not None:
+        symbols = list(base_variable.pre_order())
+        if not any(isinstance(symbol, pybamm.Time) for symbol in symbols):
+            point_dt_dp = None
+        if start_name in sensitivity_inputs or not any(
+            isinstance(symbol, pybamm.InputParameter) and symbol.name == start_name
+            for symbol in symbols
+        ):
+            start_dt_dp = None
+    shifts = [shift for shift in (point_dt_dp, start_dt_dp) if shift is not None]
+    if not shifts:
+        return 0.0
+    t_casadi = casadi.MX.sym("t")
+    y_casadi = casadi.MX.sym("y", ys.shape[0])
+    start = casadi.MX.sym(start_name)
+    p_casadi = {
+        name: casadi.MX.sym(name, value.size)
+        for name, value in sensitivity_inputs.items()
+    }
+    p_stacked = casadi.vertcat(*p_casadi.values())
+    symbolic_inputs = {**inputs, **p_casadi}
+    if start_dt_dp is not None:
+        symbolic_inputs[start_name] = start
+    var_casadi = base_variable.to_casadi(t_casadi, y_casadi, inputs=symbolic_inputs)
+    derivatives = []
+    if point_dt_dp is not None:
+        derivatives.append(casadi.jacobian(var_casadi, t_casadi))
+    if start_dt_dp is not None:
+        derivatives.append(casadi.jacobian(var_casadi, start))
+    function = casadi.Function(
+        "time_shift",
+        [t_casadi, y_casadi, p_stacked, start],
+        [casadi.horzcat(*derivatives)],
+    )
+    start_value = float(np.ravel(inputs.get(start_name, 0.0))[0])
+    p_values = np.concatenate([np.zeros(0), *sensitivity_inputs.values()])
+    rates = np.vstack(
+        [
+            function(t, ys[:, idx], p_values, start_value).full()
+            for idx, t in enumerate(ts)
+        ]
+    )
+    return rates @ np.vstack(shifts)
+
+
+def time_integral_boundary_sensitivities(
+    variable: pybamm.ProcessedVariable,
+    integrand: npt.NDArray[np.float64],
+    sensitivity_names: Sequence[str],
+) -> npt.NDArray[np.float64] | None:
+    """Sensitivity of a time integral to its segments' moving first and last times.
+
+    A segment from ``t_a(p)`` to ``t_b(p)`` contributes
+    ``f(t_b) dt_b/dp - f(t_a) dt_a/dp``, which adds up to the integrand's jumps at
+    the moving transitions between segments and its values at the moving ends.
+
+    Parameters
+    ----------
+    variable : :class:`pybamm.ProcessedVariable`
+        The time integral, with ``all_ts`` and ``all_time_sensitivities``.
+    integrand : numpy.ndarray
+        The integrand at every solution time, time-major: ``(n_t, ...)``.
+    sensitivity_names : list of str
+        Parameter names, in column order.
+
+    Returns
+    -------
+    numpy.ndarray or None
+        ``(integrand size, n_p)``, or None if no segment time moves.
+    """
+    segments = getattr(variable, "all_time_sensitivities", None)
+    if segments is None or all(segment is None for segment in segments):
+        return None
+    integrand = np.asarray(integrand)
+    total = 0.0
+    first_index = 0
+    for ts, segment in zip(variable.all_ts, segments, strict=True):
+        last_index = first_index + len(ts) - 1
+        if len(ts) > 0 and segment is not None:
+            bounds = np.array(
+                [segment.get(name, np.zeros(3)) for name in sensitivity_names]
+            ).T
+            total = total + (
+                np.outer(integrand[last_index].reshape(-1), bounds[1])
+                - np.outer(integrand[first_index].reshape(-1), bounds[0])
+            )
+        first_index = last_index + 1
+    return total
 
 
 def pack_sensitivity_dict(

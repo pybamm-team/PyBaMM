@@ -100,6 +100,10 @@ class ProcessedVariable(BaseProcessedVariable):
         self._sensitivities = None
         self.all_solution_sensitivities = solution._all_sensitivities
         self._sensitivity_mismatch = getattr(solution, "_sensitivity_mismatch", None)
+        # How each segment's first and last time move with the inputs, and, for a
+        # first or last state, how its time moves
+        self.all_time_sensitivities = solution._segment_time_sensitivities()
+        self.point_time_sensitivities = solution._point_time_sensitivities
 
         # Store time
         self.t_pts = solution.t
