@@ -16,6 +16,7 @@ from scipy.io import savemat
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_processed_variable import sensitivity_mismatch_message
 from pybamm.solvers.base_solver import flatten_inputs
 from pybamm.solvers.observation import build_variable
 
@@ -347,6 +348,7 @@ class Solution(SolutionBase):
         "_observable",
         "_options",
         "_sensitivities",
+        "_sensitivity_mismatch",
         "_sub_solutions",
         "_summary_variables",
         "_t",
@@ -443,6 +445,8 @@ class Solution(SolutionBase):
                 self._all_sensitivities[key] = value
             else:
                 self._all_sensitivities[key] = [value]
+        # Why a join of segments solved for different parameters has none
+        self._sensitivity_mismatch = None
 
         # Events
         self._t_event = t_event
@@ -504,6 +508,7 @@ class Solution(SolutionBase):
         self._y0 = None
         self._y0_sensitivities = None
         self._y_event_sensitivities = None
+        self._sensitivity_mismatch = None
         if isinstance(state, dict):
             state = {
                 f"_{name}" if name in ("first_state", "last_state") else name: value
@@ -617,19 +622,85 @@ class Solution(SolutionBase):
 
     @property
     def sensitivities(self):
-        """Values of the sensitivities. Returns a dict of param_name: np_array"""
+        """Values of the sensitivities. Returns a dict of param_name: np_array
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If the solution joins segments with sensitivities to different
+            parameters, none of which all of them share.
+        """
+        if self._sensitivity_mismatch is not None:
+            raise pybamm.SolverError(self._sensitivity_mismatch)
         if self._sensitivities is None:
             self.set_sensitivities()
         return self._sensitivities
 
     def set_sensitivities(self):
+        """Stack the per-segment sensitivities into one array per parameter.
+
+        A single segment's arrays are used as they are; with several, the
+        stacked ``"all"`` array is the only copy and each parameter's entry
+        is a view of its columns.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If the solution joins segments with sensitivities to different
+            parameters, none of which all of them share.
+        """
+        if self._sensitivity_mismatch is not None:
+            raise pybamm.SolverError(self._sensitivity_mismatch)
+        self._sensitivities = {}
         if not self.has_sensitivities():
-            self._sensitivities = {}
             return
 
-        self._sensitivities = {}
-        for key, sens in self._all_sensitivities.items():
-            self._sensitivities[key] = np.vstack(sens)
+        def stack(segments):
+            return segments[0] if len(segments) == 1 else np.vstack(segments)
+
+        names = self.sensitivity_names
+        all_segments = self._all_sensitivities.get("all")
+        if all_segments is None:
+            columns = None
+        else:
+            stacked = stack(all_segments)
+            self._sensitivities["all"] = stacked
+            columns = self._name_columns(names, stacked)
+        for name in names:
+            if columns is None:
+                self._sensitivities[name] = stack(self._all_sensitivities[name])
+            else:
+                self._sensitivities[name] = stacked[:, columns[name]]
+
+    def _name_columns(self, names, stacked):
+        """Each parameter's columns of ``stacked``, or None if they do not tile it.
+
+        Parameters
+        ----------
+        names : list of str
+            The parameters, in column order.
+        stacked : numpy.ndarray
+            The stacked ``"all"`` sensitivities.
+
+        Returns
+        -------
+        dict or None
+            Map of name to the slice of its columns.
+        """
+        widths = []
+        for name in names:
+            first = self._all_sensitivities[name][0]
+            if np.ndim(first) != 2:
+                return None
+            widths.append(first.shape[1])
+        if np.ndim(stacked) != 2 or sum(widths) != stacked.shape[1]:
+            return None
+        columns = {}
+        start = 0
+        for name, width in zip(names, widths, strict=True):
+            columns[name] = slice(start, start + width)
+            start += width
+        return columns
 
     def check_ys_are_not_too_large(self):
         # Only check last one so that it doesn't take too long
@@ -726,11 +797,21 @@ class Solution(SolutionBase):
             return
 
         # Collect unique reasons from all models
-        unique_reasons = {
-            model.solution_observable_status
-            for model in self.all_models
-            if not model.solution_observable
-        }
+        unique_reasons = set()
+        for model in self.all_models:
+            if model.solution_observable:
+                continue
+            status = model.solution_observable_status
+            if status:
+                # Observability is enabled, but nothing can process new symbols
+                unique_reasons.add(
+                    "the model was not processed by both "
+                    "`ParameterValues.process_model()` and "
+                    "`Discretisation.process_model()`, so it cannot process new "
+                    "symbols"
+                )
+            else:
+                unique_reasons.add(status.value)
         if unique_reasons:
             reasons_str = ", ".join(sorted(unique_reasons))
             raise ValueError(f"Solution is not observable: {reasons_str}")
@@ -754,12 +835,37 @@ class Solution(SolutionBase):
             self._first_state = self._build_first_state()
         return self._first_state
 
+    def _end_segment_sensitivities(self, end: int) -> dict:
+        """The per-segment sensitivities that hold the first or last state's.
+
+        A join of segments solved for different parameters keeps only the shared
+        ones (or none), whereas its end state needs every parameter its own
+        segment was solved for, as a restart from it seeds them all.
+
+        Parameters
+        ----------
+        end : int
+            0 for the first segment, -1 for the last.
+
+        Returns
+        -------
+        dict
+            Map of parameter (and ``"all"``) to a list of per-segment arrays.
+        """
+        sub_solution = self.sub_solutions[end]
+        if (
+            sub_solution is not self
+            and sub_solution.sensitivity_names != self.sensitivity_names
+        ):
+            return sub_solution._all_sensitivities
+        return self._all_sensitivities
+
     def _build_first_state(self):
         n_states = self.all_models[0].len_rhs_and_alg
         if self._y0_sensitivities is None:
             sensitivities = {
                 key: value[0][:n_states, :]
-                for key, value in self._all_sensitivities.items()
+                for key, value in self._end_segment_sensitivities(0).items()
             }
         else:
             sensitivities = self._y0_sensitivities
@@ -812,7 +918,7 @@ class Solution(SolutionBase):
         if self._y_event_sensitivities is None:
             sensitivities = {
                 key: value[-1][-n_states:, :]
-                for key, value in self._all_sensitivities.items()
+                for key, value in self._end_segment_sensitivities(-1).items()
             }
         else:
             sensitivities = self._y_event_sensitivities
@@ -1197,10 +1303,54 @@ class Solution(SolutionBase):
         return ts, ys, yps, tev
 
     @staticmethod
-    def _merge_sensitivities(acc, s, repeated):
+    def _join_sensitivity_names(solutions):
+        """The parameters a join of ``solutions`` keeps sensitivities for.
+
+        Parameters
+        ----------
+        solutions : list of :class:`pybamm.Solution`
+            The solutions joined, in order.
+
+        Returns
+        -------
+        names : list of str or None
+            None if every solution has the same parameters in the same order,
+            else those all of them share, in the first solution's order.
+        mismatch : str or None
+            If some solutions have sensitivities but none are shared by all,
+            why the join has none; else None.
+        """
+        for solution in solutions:
+            if solution._sensitivity_mismatch is not None:
+                return [], solution._sensitivity_mismatch
+        first_names = solutions[0].sensitivity_names
+        if all(s.sensitivity_names == first_names for s in solutions[1:]):
+            return None, None
+        names = [
+            name
+            for name in first_names
+            if all(name in s.sensitivity_names for s in solutions[1:])
+        ]
+        if names or not any(s.has_sensitivities() for s in solutions):
+            return names, None
+        return [], sensitivity_mismatch_message(
+            [s.sensitivity_names for s in solutions]
+        )
+
+    @staticmethod
+    def _merge_sensitivities(acc, s, repeated, names=None):
         """Fold one segment's sensitivities into the running dict ``acc``,
-        dropping the leading time point's rows when ``repeated``."""
-        for key, (first, *rest) in s._all_sensitivities.items():
+        dropping the leading time point's rows when ``repeated``. With
+        ``names``, keep only those parameters, in that column order."""
+        sensitivities = s._all_sensitivities
+        if names is not None:
+            sensitivities = {name: sensitivities[name] for name in names}
+            if names and "all" in s._all_sensitivities:
+                sensitivities["all"] = [
+                    np.column_stack(columns)
+                    for columns in zip(*sensitivities.values(), strict=True)
+                ]
+        for key, (first, *rest) in sensitivities.items():
             # Rows are time-major, one block per time point, as in _segment_series
             rows_repeated = len(first) // len(s.all_ts[0]) if repeated else 0
             acc.setdefault(key, []).extend([first[rows_repeated:], *rest])
@@ -1273,12 +1423,13 @@ class Solution(SolutionBase):
                 all_t_evals=[self._all_t_evals[-1], *all_t_evals[n:]],
             )
 
-        # sensitivities are a dict of {parameter: [sensitivities]}; start from a
-        # fresh copy of self's lists so the in-place merge never aliases them
-        all_sensitivities = {
-            key: list(value) for key, value in self._all_sensitivities.items()
-        }
-        self._merge_sensitivities(all_sensitivities, other, repeated)
+        # sensitivities are a dict of {parameter: [sensitivities]}, merged into
+        # fresh lists so the in-place merge never aliases either operand's
+        names, mismatch = self._join_sensitivity_names([self, other])
+        all_sensitivities = {}
+        if mismatch is None:
+            self._merge_sensitivities(all_sensitivities, self, False, names)
+            self._merge_sensitivities(all_sensitivities, other, repeated, names)
 
         options = self.user_options | other.user_options
 
@@ -1299,6 +1450,7 @@ class Solution(SolutionBase):
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
+        new_sol._sensitivity_mismatch = mismatch
         new_sol._y0 = self._y0
         new_sol._y0_sensitivities = self._y0_sensitivities
         new_sol._y_event_sensitivities = other._y_event_sensitivities
@@ -1383,9 +1535,11 @@ class Solution(SolutionBase):
             sub_sols.extend(s.sub_solutions)
 
         # sensitivities: fresh dict, no aliasing of any input solution's dict
+        names, mismatch = cls._join_sensitivity_names(segments)
         all_sensitivities = {}
-        for s, repeated in kept:
-            cls._merge_sensitivities(all_sensitivities, s, repeated)
+        if mismatch is None:
+            for s, repeated in kept:
+                cls._merge_sensitivities(all_sensitivities, s, repeated, names)
 
         options = {}
         for s in segments:
@@ -1414,6 +1568,7 @@ class Solution(SolutionBase):
         # last kept segment, not sols[-1]: __add__'s short-circuit keeps these from
         # self, and a trailing last_state duplicate has no event sensitivities.
         new_sol.closest_event_idx = segments[-1].closest_event_idx
+        new_sol._sensitivity_mismatch = mismatch
         new_sol._y_event_sensitivities = segments[-1]._y_event_sensitivities
         new_sol._y0 = segments[0]._y0
         new_sol._y0_sensitivities = segments[0]._y0_sensitivities
@@ -1461,6 +1616,7 @@ class Solution(SolutionBase):
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
         new_sol.closest_event_idx = self.closest_event_idx
+        new_sol._sensitivity_mismatch = self._sensitivity_mismatch
         new_sol._y0 = self._y0
         new_sol._y0_sensitivities = self._y0_sensitivities
         new_sol._y_event_sensitivities = self._y_event_sensitivities

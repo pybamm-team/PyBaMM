@@ -43,6 +43,103 @@ def _state_sensitivities(yS: np.ndarray, sensitivity_names: list[str]) -> dict:
     return sensitivities
 
 
+def _jacobian_at_output_nonzeros(
+    jacobian: casadi.Function, output: casadi.Function
+) -> casadi.Function:
+    """``jacobian`` of ``output``, with one row per structural nonzero of it.
+
+    The solver returns one row per nonzero of a sparse output and pairs it with
+    the same row of the output's Jacobians, whose rows otherwise index every
+    entry of the output.
+
+    Parameters
+    ----------
+    jacobian : :class:`casadi.Function`
+        A Jacobian of ``output``, one row per entry of ``output``.
+    output : :class:`casadi.Function`
+        The output variable's function.
+
+    Returns
+    -------
+    :class:`casadi.Function`
+        ``jacobian`` itself if ``output`` is dense, else its nonzero rows.
+    """
+    sparsity = output.sparsity_out(0)
+    if sparsity.nnz() == sparsity.numel():
+        return jacobian
+    arguments = jacobian.mx_in()
+    rows = jacobian(*arguments)[sparsity.find(), :]
+    return casadi.Function(jacobian.name(), arguments, [rows])
+
+
+def _sensitivities_at_knots(
+    all_sensitivities: dict[str, list[np.ndarray]],
+    all_ts: list[np.ndarray],
+    knots: list[np.ndarray],
+) -> dict[str, list[np.ndarray]]:
+    """Per-segment sensitivities at a subset of each segment's time points.
+
+    Parameters
+    ----------
+    all_sensitivities : dict
+        Map of parameter (and ``"all"``) to per-segment arrays holding one block
+        of rows per time point, time outer.
+    all_ts : list of numpy.ndarray
+        Each segment's time points.
+    knots : list of numpy.ndarray
+        The time points kept from each segment, a subset of its own.
+
+    Returns
+    -------
+    dict
+        The sensitivities at the kept time points. Each parameter's entries are
+        views of the columns of ``"all"`` when the originals tile it.
+
+    Raises
+    ------
+    :class:`pybamm.SolverError`
+        If a kept time is not one of its segment's time points.
+    """
+    indices = []
+    for ts, kept in zip(all_ts, knots, strict=True):
+        index = np.searchsorted(ts, kept)
+        if np.any(index >= len(ts)) or not np.array_equal(ts[index], kept):
+            raise pybamm.SolverError(
+                "Cannot reduce the sensitivities: a kept knot is not one of the "
+                "solution's time points."
+            )
+        indices.append(index)
+
+    def select(segments):
+        selected = []
+        for array, ts, index in zip(segments, all_ts, indices, strict=True):
+            n_columns = array.shape[1]
+            # An outputs-only solve stores no state rows to select from
+            rows = array.reshape(len(ts), -1, n_columns) if array.size else None
+            selected.append(
+                array if rows is None else rows[index].reshape(-1, n_columns)
+            )
+        return selected
+
+    names = [key for key in all_sensitivities if key != "all"]
+    widths = [all_sensitivities[name][0].shape[1] for name in names]
+    all_segments = all_sensitivities.get("all")
+    reduced = {}
+    if all_segments is not None:
+        reduced_all = select(all_segments)
+        tiles = sum(widths) == all_segments[0].shape[1]
+    start = 0
+    for name, width in zip(names, widths, strict=True):
+        if all_segments is not None and tiles:
+            reduced[name] = [array[:, start : start + width] for array in reduced_all]
+        else:
+            reduced[name] = select(all_sensitivities[name])
+        start += width
+    if all_segments is not None:
+        reduced["all"] = reduced_all
+    return reduced
+
+
 def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.ndarray:
     """IDAS ``pbar``: the magnitude of each differentiated parameter.
 
@@ -663,10 +760,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
         )
         for key in self.output_variables:
-            fns[f"var:{key}"] = self.computed_var_fcns[key]
+            var_fcn = self.computed_var_fcns[key]
+            fns[f"var:{key}"] = var_fcn
             if has_sens:
-                fns[f"dvar_dy:{key}"] = self.computed_dvar_dy_fcns[key]
-                fns[f"dvar_dp:{key}"] = self.computed_dvar_dp_fcns[key]
+                for prefix, fcns in (
+                    ("dvar_dy", self.computed_dvar_dy_fcns),
+                    ("dvar_dp", self.computed_dvar_dp_fcns),
+                ):
+                    fns[f"{prefix}:{key}"] = _jacobian_at_output_nonzeros(
+                        fcns[key], var_fcn
+                    )
 
         if self._options["compile"]:
             compiled = aot_compile(list(fns.values()))
@@ -898,23 +1001,26 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if number_of_timesteps == 1 and sol.flag == _IDA_ROOT_RETURN:
             self._check_event_violation_post_solve(t_eval, model, y_event, inputs_dict)
 
-        # return sensitivity solution, we need to flatten yS to
-        # (#timesteps * #states (where t is changing the quickest),)
-        # to match format used by Solution
-        # note that yS is (n_p, n_t, n_y)
+        # Solution takes the sensitivities as one (n_t * n_y, n_p) array, time
+        # outer, under "all", with each name's entry a view of its column
         if number_of_sensitivity_parameters == 0:
             yS_out = {}
-        elif save_outputs_only:
-            # yS holds the outputs' sensitivities; the states have none, like y_out
-            yS_out = {name: np.zeros((0, 1)) for name in sensitivity_names}
-            yS_out["all"] = np.zeros((0, number_of_sensitivity_parameters))
         else:
+            if save_outputs_only:
+                # yS holds the outputs' sensitivities; the states have none
+                all_sensitivities = np.zeros((0, len(sensitivity_names)))
+            else:
+                # yS is (n_p, n_t, n_y), so this transpose is a view, not a copy
+                all_sensitivities = (
+                    sol.yS[: len(sensitivity_names)]
+                    .reshape(len(sensitivity_names), -1)
+                    .T
+                )
             yS_out = {
-                name: sol.yS[i].reshape(-1, 1)
+                name: all_sensitivities[:, i : i + 1]
                 for i, name in enumerate(sensitivity_names)
             }
-            # add "all" stacked sensitivities ((#timesteps * #states,#sens_params))
-            yS_out["all"] = np.hstack([yS_out[name] for name in sensitivity_names])
+            yS_out["all"] = all_sensitivities
 
         # IDA_SUCCESS (0) = solved for all t_eval
         # IDA_ROOT_RETURN (2) = found root(s)
@@ -1196,7 +1302,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
         Returns
         -------
         :class:`pybamm.Solution`
-            The modified solution.
+            The modified solution. The kept knots are a subset of the original
+            time points, so its sensitivities are the original ones at those
+            points.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If ``solution`` has no Hermite interpolation data, or the solver's
+            own ``hermite_reduction_factor`` is not 1.
         """
         if not solution.hermite_interpolation:
             raise pybamm.SolverError(
@@ -1264,7 +1378,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             t_event=solution.t_event,
             y_event=solution.y_event,
             termination=solution.termination,
-            all_sensitivities=solution._all_sensitivities,
+            all_sensitivities=_sensitivities_at_knots(
+                solution._all_sensitivities, all_ts, new_ts
+            ),
             all_t_evals=solution.all_t_evals,
             variables_returned=solution.variables_returned,
             options=solution.user_options,
@@ -1274,6 +1390,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         new_sol._all_inputs_stacked = solution.all_inputs_stacked
         new_sol._all_inputs_casadi = solution.all_inputs_casadi
         new_sol.closest_event_idx = solution.closest_event_idx
+        new_sol._sensitivity_mismatch = solution._sensitivity_mismatch
         new_sol._y0 = solution._y0
         new_sol._y0_sensitivities = solution._y0_sensitivities
         new_sol._y_event_sensitivities = solution._y_event_sensitivities

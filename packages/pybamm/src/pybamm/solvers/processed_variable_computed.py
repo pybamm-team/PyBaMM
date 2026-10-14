@@ -10,9 +10,16 @@ import xarray as xr
 from scipy.integrate import cumulative_trapezoid
 
 import pybamm
-from pybamm.solvers.variable_observer import pack_sensitivity_dict
+from pybamm.solvers.variable_observer import (
+    SegmentSelector,
+    fill_gaps,
+    pack_sensitivity_dict,
+)
 
-from .base_processed_variable import BaseProcessedVariable
+from .base_processed_variable import (
+    BaseProcessedVariable,
+    sensitivity_mismatch_message,
+)
 
 
 class ProcessedVariableComputed(BaseProcessedVariable):
@@ -83,9 +90,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.time_integral = time_integral
         self.time_indep = time_indep or time_integral is not None
 
-        # Sensitivity starts off uninitialized, only set when called
+        # Set by the solver or a join; there is no state to compute them from
         self._sensitivities = None
-        self.solution_sensitivities = solution.sensitivities
         # Set by a join that has no value; reading the variable then raises
         self._unjoinable = False
 
@@ -686,13 +692,29 @@ class ProcessedVariableComputed(BaseProcessedVariable):
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None):
         """
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
-        using interpolation
+        using interpolation. A time in a round-off gap between sub-solutions, as
+        left around a discontinuity, takes the value at the end of the earlier
+        one (the left limit); a time in a longer gap, as left by
+        ``save_at_cycles``, gives NaN.
         """
         if self.time_indep:
             # A time integral has one value for the whole solution, whatever t is
             if all(arg is None for arg in (x, r, y, z, R)):
                 return self.entries
-            t = None
+            return self._interpolate(None, x, r, y, z, R)
+        in_gap = None
+        if t is not None and np.ndim(t) <= 1 and not isinstance(t, xr.DataArray):
+            t, in_gap = self._segment_selector.resolve_gaps(t)
+            if np.ndim(t) == 0:
+                t = float(t)
+        return fill_gaps(self._interpolate(t, x, r, y, z, R), in_gap, np.nan)
+
+    @cached_property
+    def _segment_selector(self) -> SegmentSelector:
+        return SegmentSelector(self.all_ts)
+
+    def _interpolate(self, t, x, r, y, z, R):
+        """Interpolate the variable at the given coordinates."""
         if (
             self.dimensions == 0
             and t is not None
@@ -721,11 +743,18 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         The keys are the input parameters, and the value is a matrix of size
         (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
         points, and n_p is the size of the input parameter
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If the solve calculated no sensitivities, or the variable joins
+            segments solved for parameters none of which they share.
         """
         self._raise_if_unjoinable()
-        # No sensitivities if there are no inputs
-        if len(self.all_inputs[0]) == 0:
+        if self._sensitivity_mismatch is None and len(self.all_inputs[0]) == 0:
+            # No inputs, so nothing to be sensitive to
             return {}
+        self._check_sensitivities_available(bool(self._sensitivities))
         return self._sensitivities
 
     def _concat(
@@ -755,14 +784,19 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             or (joins_time_integrals and not self._time_integrals_joinable(other))
         )
 
+        mismatch = None
         if unjoinable:
             # Raise on read rather than here, so the rest of the solution still joins
             base_variables_data = self.base_variables_data + other.base_variables_data
             sensitivities = None
         elif joins_time_integrals:
-            base_variables_data, sensitivities = self._join_time_integral(other)
+            base_variables_data, (sensitivities, mismatch) = self._join_time_integral(
+                other
+            )
         else:
-            base_variables_data, sensitivities = self._join_samples(other, n_repeated)
+            base_variables_data, (sensitivities, mismatch) = self._join_samples(
+                other, n_repeated
+            )
 
         new_var = self.__class__(
             self.base_variables + other.base_variables,
@@ -775,13 +809,15 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         # Not new_sol.t: from_sub_solutions passes the final solution to every join
         new_var.t_pts = np.concatenate((self.t_pts, other.t_pts[n_repeated:]))
         new_var._sensitivities = sensitivities
+        new_var._sensitivity_mismatch = mismatch
         new_var._unjoinable = unjoinable
         return new_var
 
     def _join_samples(self, other, n_repeated):
         """
-        Return the data and sensitivities of this variable's time points followed
-        by other's, leaving out other's first ``n_repeated`` time points.
+        Return the data of this variable's time points followed by other's,
+        leaving out other's first ``n_repeated`` time points, and the joined
+        sensitivities (see :meth:`_join_sensitivities`).
         """
         # Data and sensitivities are time-major, so the repeat is their first rows
         first_data, *later_data = other.base_variables_data
@@ -790,33 +826,65 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             first_data[n_repeated:],
             *later_data,
         ]
-        other_sensitivities = other.sensitivities or {}
-        sensitivities = {}
-        for k, value in (self.sensitivities or {}).items():
-            later = other_sensitivities[k]
+
+        def join(value, later):
             rows_repeated = n_repeated * len(later) // len(other.t_pts)
-            sensitivities[k] = np.concatenate((value, later[rows_repeated:]))
-        return base_variables_data, sensitivities
+            return np.concatenate((value, later[rows_repeated:]))
+
+        return base_variables_data, self._join_sensitivities(other, join)
 
     def _join_time_integral(self, other):
         """
-        Return the data and sensitivities of the time integral over this
-        variable's segments plus the one over other's.
+        Return the data of the time integral over this variable's segments plus
+        the one over other's, and the joined sensitivities (see
+        :meth:`_join_sensitivities`).
         """
         # other's integral starts again from its initial condition
         time_integral, inputs = other.time_integral, other.all_inputs[0]
         initial_condition = time_integral.initial_condition_value(inputs)
         data = self.entries.reshape(-1) + other.entries.reshape(-1) - initial_condition
-        self_sensitivities = self.sensitivities or {}
-        if not self_sensitivities:
-            return [data], {}
-        names = [name for name in self_sensitivities if name != "all"]
-        all_sensitivities = (
-            self_sensitivities["all"]
-            + other.sensitivities["all"]
-            - time_integral.initial_condition_sensitivities(inputs, names)
-        )
-        return [data], pack_sensitivity_dict(all_sensitivities, names)
+        sensitivities, mismatch = self._join_sensitivities(other, np.add)
+        if sensitivities:
+            names = [name for name in sensitivities if name != "all"]
+            sensitivities = pack_sensitivity_dict(
+                sensitivities["all"]
+                - time_integral.initial_condition_sensitivities(inputs, names),
+                names,
+            )
+        return [data], (sensitivities, mismatch)
+
+    def _join_sensitivities(self, other, join):
+        """Join this variable's sensitivities to other's, for the parameters both have.
+
+        Parameters
+        ----------
+        other : :class:`pybamm.ProcessedVariableComputed`
+            The variable joined after this one.
+        join : callable
+            Joins this variable's array for one parameter to other's.
+
+        Returns
+        -------
+        sensitivities : dict
+            The joined ``"all"`` matrix and per-parameter vectors.
+        mismatch : str or None
+            If either variable has sensitivities but they share no parameter,
+            why the join has none; else None.
+        """
+        for variable in (self, other):
+            if variable._sensitivity_mismatch is not None:
+                return {}, variable._sensitivity_mismatch
+        mine, theirs = self._sensitivities or {}, other._sensitivities or {}
+        my_names = [key for key in mine if key != "all"]
+        their_names = [key for key in theirs if key != "all"]
+        if my_names == their_names:
+            return {key: join(value, theirs[key]) for key, value in mine.items()}, None
+        shared = [name for name in my_names if name in their_names]
+        if not shared:
+            return {}, sensitivity_mismatch_message([my_names, their_names])
+        sensitivities = {name: join(mine[name], theirs[name]) for name in shared}
+        sensitivities["all"] = np.column_stack([sensitivities[name] for name in shared])
+        return sensitivities, None
 
     def _time_integrals_joinable(self, other):
         """Return whether this variable and other are joinable time integrals."""

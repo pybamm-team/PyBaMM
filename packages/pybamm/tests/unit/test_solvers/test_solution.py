@@ -2,9 +2,11 @@
 # Tests for the Solution class
 #
 import copyreg
+import functools
 import io
 import json
 import logging
+import operator
 import pickle  # nosec B403 - used in tests with trusted input
 import subprocess  # nosec B404 - used in tests with trusted input
 import sys
@@ -2060,6 +2062,22 @@ class TestSolution:
         with pytest.raises(ValueError, match=r"re-parameterised"):
             sol.observe(model.variables["Current [A]"])
 
+    def test_observe_a_model_without_parameter_values(self):
+        # Discretised but never parameterised, so it cannot process new symbols
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        pybamm.Discretisation().process_model(model)
+        sol = pybamm.IDAKLUSolver().solve(model, [0, 1])
+
+        with pytest.raises(
+            ValueError,
+            match=r"not observable: the model was not processed by both "
+            r"`ParameterValues.process_model\(\)` and",
+        ):
+            sol.observe(2 * u)
+
     def _make_trivial_solution(self, options=None):
         t = [np.linspace(0, 1), np.linspace(1, 2, 5)]
         t[1][0] = np.nextafter(t[1][0], np.inf)
@@ -2711,3 +2729,135 @@ class TestSolutionSolverStatistics:
         np.testing.assert_array_equal(loaded.t, solution.t)
         np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
         assert loaded.last_state.t[0] == pytest.approx(solution.t[-1])
+
+
+def _join(join, solutions):
+    if join == "add":
+        return functools.reduce(operator.add, solutions)
+    return pybamm.Solution.from_sub_solutions(solutions)
+
+
+class TestJoinedSensitivities:
+    """Joins of segments solved for sensitivities to different parameters.
+
+    In each segment, solved from ``t0``, ``y = y0 exp(-k (t - t0))``.
+    """
+
+    _INPUTS = {"k": 0.3, "y0": 2.0}
+
+    @staticmethod
+    def _solve(t0, calculate_sensitivities, output_variables=None):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        model.rhs = {y: -pybamm.InputParameter("k") * y}
+        model.initial_conditions = {y: pybamm.InputParameter("y0")}
+        model.variables = {"y": y}
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10, atol=1e-12, output_variables=output_variables
+        )
+        return solver.solve(
+            model,
+            [t0, t0 + 1],
+            t_interp=np.linspace(t0, t0 + 1, 6),
+            inputs=TestJoinedSensitivities._INPUTS,
+            calculate_sensitivities=calculate_sensitivities,
+        )
+
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    def test_a_join_keeps_the_parameters_every_segment_shares(self, join):
+        first = self._solve(0, ["k"])
+        later = self._solve(1, True)
+        assert later.sensitivity_names == ["k", "y0"]
+
+        joined = _join(join, [first, later])
+
+        assert joined.sensitivity_names == ["k"]
+        assert set(joined.sensitivities) == {"k", "all"}
+        # The shared time t = 1 keeps the first segment's sample
+        t0 = np.where(np.arange(len(joined.t)) < 6, 0.0, 1.0)
+        tau = joined.t - t0
+        k, y0 = self._INPUTS["k"], self._INPUTS["y0"]
+        y_sensitivities = joined["y"].sensitivities
+        assert set(y_sensitivities) == {"k", "all"}
+        np.testing.assert_allclose(
+            y_sensitivities["k"], -tau * y0 * np.exp(-k * tau), rtol=1e-6
+        )
+        # A state at either end keeps its own segment's parameters
+        assert joined.first_state.sensitivity_names == ["k"]
+        assert joined.last_state.sensitivity_names == ["k", "y0"]
+        np.testing.assert_allclose(
+            joined.last_state.sensitivities["y0"], [[np.exp(-k)]], rtol=1e-6
+        )
+
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    @pytest.mark.parametrize("output_variables", [None, ["y"]])
+    @pytest.mark.parametrize("first_has_sensitivities", [True, False])
+    def test_a_join_with_no_shared_parameter_has_no_sensitivities(
+        self, join, output_variables, first_has_sensitivities
+    ):
+        first = self._solve(0, first_has_sensitivities, output_variables)
+        later = self._solve(1, not first_has_sensitivities, output_variables)
+
+        joined = _join(join, [first, later])
+
+        match = r"no parameter is common to all of them"
+        for solution in (joined, joined.copy(), joined + self._solve(2, True)):
+            assert solution.sensitivity_names == []
+            with pytest.raises(pybamm.SolverError, match=match):
+                _ = solution.sensitivities
+            with pytest.raises(pybamm.SolverError, match=match):
+                _ = solution["y"].sensitivities
+        # The values still join
+        k, y0 = self._INPUTS["k"], self._INPUTS["y0"]
+        np.testing.assert_allclose(
+            joined["y"](np.array([0.4, 1.4])), y0 * np.exp(-k * 0.4), rtol=1e-6
+        )
+
+    def test_missing_input_values_are_rejected(self):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        model.rhs = {y: -pybamm.InputParameter("k") * y}
+        model.initial_conditions = {y: 1}
+        model.variables = {"ky": y * pybamm.InputParameter("k")}
+        pybamm.Discretisation().process_model(model)
+        t = np.linspace(0, 1, 5)
+        # Sensitivities to "p", which none of the segment's inputs provide
+        solution = pybamm.Solution(
+            t,
+            np.exp(-t)[np.newaxis, :],
+            model,
+            {"k": 1.0},
+            all_sensitivities={"p": np.zeros((5, 1)), "all": np.zeros((5, 1))},
+        )
+        with pytest.raises(pybamm.SolverError, match=r"no input values for \['p'\]"):
+            _ = solution["ky"].sensitivities
+
+    def test_state_sensitivities_of_the_wrong_shape_are_rejected(self):
+        solution = self._solve(0, True)
+        solution._all_sensitivities = {
+            key: [value[0][:, :1]] for key, value in solution._all_sensitivities.items()
+        }
+        with pytest.raises(
+            pybamm.SolverError, match=r"state sensitivities have shape \(6, 1\)"
+        ):
+            _ = solution["y"].sensitivities
+
+    def test_stacked_sensitivities_share_one_buffer(self):
+        single = self._solve(0, True)
+        joined = single + self._solve(1, True)
+        for solution in (single, joined):
+            sensitivities = solution.sensitivities
+            for name in ["k", "y0"]:
+                assert np.shares_memory(sensitivities[name], sensitivities["all"])
+        # A single segment's sensitivities are not copied
+        assert np.shares_memory(
+            single.sensitivities["all"], single._all_sensitivities["all"][0]
+        )
+
+    @pytest.mark.parametrize("output_variables", [None, ["y"]])
+    def test_variable_sensitivities_of_a_solve_without_them(self, output_variables):
+        solution = self._solve(0, False, output_variables)
+        with pytest.raises(
+            pybamm.SolverError, match=r"its solve did not calculate any"
+        ):
+            _ = solution["y"].sensitivities

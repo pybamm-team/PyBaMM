@@ -214,8 +214,7 @@ class OutputAssembly:
         Raises
         ------
         :class:`pybamm.SolverError`
-            If the payload does not match this layout, or if sensitivities were
-            requested for a variable whose CasADi rows are sparse.
+            If the payload does not match this layout.
         """
         data = self._checked_rows(data)
         if sensitivities is not None:
@@ -300,11 +299,10 @@ class OutputAssembly:
         """
         sparsity = self._sparse.get(name)
         if sparsity is not None:
-            raise pybamm.SolverError(
-                f"Sensitivity of sparse variables not supported. {name} is a sparse "
-                f"variable with number of non-zeros {sparsity.nnz()} and shape "
-                f"{sparsity.shape}"
-            )
+            # Scatter the nonzeros' rows like the values; the rest are always zero
+            dense = np.zeros((block.shape[0], sparsity.numel(), block.shape[2]))
+            dense[:, sparsity.find(), :] = block
+            block = dense
         n_timesteps, var_len, n_params = block.shape
         all_sens = block.reshape(n_timesteps * var_len, n_params)
         time_integral = self._time_integrals.get(name)
