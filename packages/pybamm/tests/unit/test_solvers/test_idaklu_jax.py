@@ -103,6 +103,14 @@ analytic_t_eval = np.linspace(0, 1, 11)
 analytic_inputs = {"a": 2.0, "b": 3.0}
 analytic_t_off_grid = np.array([0.05, 0.55, 0.95])
 analytic_t_unsorted = np.array([0.95, 0.05, 0.55, 0.05])
+all_times = pytest.mark.parametrize(
+    "t",
+    [analytic_t_eval, analytic_t_off_grid, analytic_t_unsorted, 0.55],
+    ids=["on-grid", "off-grid", "unsorted", "scalar"],
+)
+vector_and_scalar_time = pytest.mark.parametrize(
+    "t", [analytic_t_off_grid, 0.55], ids=["vector", "scalar"]
+)
 
 
 def analytic_model():
@@ -945,21 +953,13 @@ class TestIDAKLUJax:
 class TestIDAKLUJaxAnalytic:
     # Values and derivatives are exact at the requested times, on or off t_eval
 
-    @pytest.mark.parametrize(
-        "t",
-        [analytic_t_eval, analytic_t_off_grid, analytic_t_unsorted, 0.55],
-        ids=["on-grid", "off-grid", "unsorted", "scalar"],
-    )
+    @all_times
     def test_values(self, analytic_case, wrapper, t):
         _, f = analytic_case
         expected, _ = analytic_solution(t)
         assert_analytic(wrapper(f)(t, analytic_inputs), expected)
 
-    @pytest.mark.parametrize(
-        "t",
-        [analytic_t_eval, analytic_t_off_grid, analytic_t_unsorted, 0.55],
-        ids=["on-grid", "off-grid", "unsorted", "scalar"],
-    )
+    @all_times
     @pytest.mark.parametrize("jac", ["jacfwd", "jacrev"])
     def test_jacobian(self, analytic_case, wrapper, t, jac):
         _, f = analytic_case
@@ -972,7 +972,7 @@ class TestIDAKLUJaxAnalytic:
         "tangent",
         [{"a": -1.0, "b": 0.0}, {"a": 0.0, "b": -2.0}, {"a": 0.5, "b": -0.5}],
     )
-    @pytest.mark.parametrize("t", [analytic_t_off_grid, 0.55], ids=["vector", "scalar"])
+    @vector_and_scalar_time
     def test_jvp_signed_tangents(self, analytic_case, wrapper, tangent, t):
         _, f = analytic_case
 
@@ -984,7 +984,7 @@ class TestIDAKLUJaxAnalytic:
         expected = sum(tangent[name] * sensitivities[name] for name in tangent)
         assert_analytic(y_dot, expected)
 
-    @pytest.mark.parametrize("t", [analytic_t_off_grid, 0.55], ids=["vector", "scalar"])
+    @vector_and_scalar_time
     def test_vjp_signed_cotangents(self, analytic_case, wrapper, t):
         _, f = analytic_case
         _, sensitivities = analytic_solution(t)
@@ -998,7 +998,7 @@ class TestIDAKLUJaxAnalytic:
         for name in analytic_inputs:
             assert_analytic(out[name], np.sum(y_bar * sensitivities[name]))
 
-    @pytest.mark.parametrize("t", [analytic_t_off_grid, 0.55], ids=["vector", "scalar"])
+    @vector_and_scalar_time
     def test_grad_least_squares(self, analytic_case, wrapper, t):
         idaklu_jax_solver, _ = analytic_case
         value, sensitivities = analytic_solution(t)
@@ -1014,14 +1014,6 @@ class TestIDAKLUJaxAnalytic:
         for name in analytic_inputs:
             expected = 2 * np.sum(residual * sensitivities[name][..., 1])
             assert_analytic(out[name], expected)
-
-    def test_grad_negated_output(self, analytic_case, wrapper):
-        idaklu_jax_solver, _ = analytic_case
-        z = idaklu_jax_solver.get_var("z")
-        out = wrapper(jax.grad(lambda q: -z(0.5, q)))(analytic_inputs)
-        _, sensitivities = analytic_solution(0.5)
-        for name in analytic_inputs:
-            assert_analytic(out[name], -sensitivities[name][1])
 
     def test_vmap_over_time(self, analytic_case, wrapper):
         idaklu_jax_solver, f = analytic_case
@@ -1104,17 +1096,21 @@ class TestIDAKLUJaxAnalytic:
         for name in analytic_inputs:
             assert_analytic(out[name], sensitivities[name])
 
-    def test_array_input_values(self, analytic_case):
+    def test_array_input_values(self, analytic_case, wrapper):
         _, f = analytic_case
-        inputs = {name: jnp.asarray(value) for name, value in analytic_inputs.items()}
+        # Mixed shapes check that each input gets its own layout under jit
+        inputs = {
+            "a": jnp.asarray(analytic_inputs["a"]),
+            "b": jnp.array([analytic_inputs["b"]]),
+        }
         value, _ = analytic_solution(analytic_t_off_grid)
-        assert_analytic(f(analytic_t_off_grid, inputs), value)
+        assert_analytic(wrapper(f)(analytic_t_off_grid, inputs), value)
 
-    def test_non_scalar_input_values(self, analytic_case):
+    def test_non_scalar_input_values(self, analytic_case, wrapper):
         _, f = analytic_case
         inputs = {"a": np.array([2.0, 3.0]), "b": 3.0}
         with pytest.raises(pybamm.SolverError, match=r"only supports scalar inputs"):
-            f(analytic_t_off_grid, inputs)
+            wrapper(f)(analytic_t_off_grid, inputs)
 
     def test_get_vars_order(self, analytic_case, wrapper):
         idaklu_jax_solver, _ = analytic_case

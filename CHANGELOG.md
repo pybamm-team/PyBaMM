@@ -3,15 +3,12 @@
 ## Bug fixes
 
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
-- `IDAKLUSolver.jaxify` now returns correct derivatives. Negative JVP tangents and scalar-time VJP cotangents were dropped. With the default `t_interp=None`, sensitivities were read from the wrong solver steps. At times off the `t_eval` grid they were taken at the nearest grid point. Values and sensitivities are now both computed exactly at the requested times. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-- Further fixes to the IDAKLU-JAX interface ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX)):
-  - Non-jitted calls with an unsorted inputs dict no longer swap the inputs.
-  - Non-jitted calls now accept JAX-array input values.
+- `IDAKLUSolver.jaxify` now returns correct derivatives at any requested time. Before, it dropped negative tangents and scalar-time cotangents, and read sensitivities from the wrong solver step, or from the nearest `t_eval` point at off-grid times. ([#5916](https://github.com/pybamm-team/PyBaMM/pull/5916))
+  - An inputs dict not in sorted key order no longer swaps its values outside `jax.jit`.
+  - Input values may be JAX or size-1 arrays; larger arrays raise a `SolverError`.
   - `get_var` and `get_vars` now use the function they are given.
-  - `vmap` over tangent directions now returns one result per direction.
-  - `vmap` over time shares a single solve.
-  - Derivatives with respect to time are now NaN rather than zero.
-  - Times outside the solution are now NaN rather than an error or the nearest derivative.
+  - `jax.vmap` over tangent directions returns one result per direction, and over time shares one solve.
+  - Times outside the solution, and derivatives with respect to time, give NaN rather than an error or a wrong value.
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
