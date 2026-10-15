@@ -104,53 +104,6 @@ class StandardModelTest:
         )
         std_out_test.test_all()
 
-    def test_sensitivities(self, param_name, param_value, output_name="Voltage [V]"):
-        self.parameter_values.update({param_name: param_value})
-        Crate = abs(
-            self.parameter_values["Current function [A]"]
-            / self.parameter_values["Nominal cell capacity [A.h]"]
-        )
-        t_interp = np.linspace(0, 3600 / Crate, 100)
-        t_eval = np.array([t_interp[0], t_interp[-1]])
-
-        # make param_name an input
-        self.parameter_values.update({param_name: "[input]"})
-        inputs = {param_name: param_value}
-
-        self.test_processing_parameters()
-        self.test_processing_disc()
-
-        # At these tolerances, central differences with a 1e-4 relative step agree
-        # with the sensitivities to under 1e-5 of their largest value
-        self.solver.rtol = 1e-9
-        self.solver.atol = 1e-9
-
-        self.solution = self.solver.solve(
-            self.model,
-            t_eval,
-            inputs=inputs,
-            calculate_sensitivities=True,
-            t_interp=t_interp,
-        )
-        assert self.solution.termination == "final time"
-        output_sens = np.ravel(self.solution[output_name].sensitivities[param_name])
-
-        # check via central finite differences
-        h = 1e-4 * abs(param_value)
-        output_plus, output_minus = (
-            self.solver.solve(
-                self.model,
-                t_eval,
-                inputs={param_name: param_value + sign * h},
-                t_interp=t_interp,
-            )[output_name](self.solution.t)
-            for sign in (1, -1)
-        )
-        fd = (output_plus - output_minus) / (2 * h)
-        np.testing.assert_allclose(
-            output_sens, fd, rtol=0, atol=1e-4 * np.abs(fd).max()
-        )
-
     def test_serialisation(self, solver=None, t_eval=None):
         with tempfile.TemporaryDirectory() as tmpdir:
             file_name = os.path.join(tmpdir, "test_model")

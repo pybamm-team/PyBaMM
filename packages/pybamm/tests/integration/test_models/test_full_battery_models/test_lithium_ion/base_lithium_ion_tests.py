@@ -16,20 +16,6 @@ class BaseIntegrationTestLithiumIon:
         options = {}
         self.run_basic_processing_test(options)
 
-    @pytest.mark.parametrize(
-        ("name", "value"),
-        [
-            ("Current function [A]", 0.15652),
-            # Enters the model only through an initial condition
-            ("Initial concentration in negative electrode [mol.m-3]", 26120.05),
-        ],
-    )
-    def test_sensitivities(self, name, value):
-        model = self.model()
-        param = pybamm.ParameterValues("Ecker2015")
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_sensitivities(name, value)
-
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "y": 5, "z": 5}

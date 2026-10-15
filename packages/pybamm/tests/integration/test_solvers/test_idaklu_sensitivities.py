@@ -161,6 +161,11 @@ CASES = {
         },
         outputs=("Voltage [V]", "C-rate"),
     ),
+    "SPMe": SensitivityCase(
+        lithium_ion.SPMe,
+        _parameter_values("Ecker2015"),
+        {"Current function [A]": 0.15652, NEGATIVE_INITIAL_CONCENTRATION: 26120.05},
+    ),
     "SPMe lumped thermal": SensitivityCase(
         lambda: lithium_ion.SPMe({"thermal": "lumped"}),
         CHEN2020,

@@ -436,42 +436,6 @@ class TestIDAKLUSolver:
             atol=1e-6,
         )
 
-    def test_sensitivities_initial_condition(self):
-        for output_variables in [[], ["2v"]]:
-            model = pybamm.BaseModel()
-            u = pybamm.Variable("u")
-            v = pybamm.Variable("v")
-            a = pybamm.InputParameter("a")
-            model.rhs = {u: -u}
-            model.algebraic = {v: a * u - v}
-            model.initial_conditions = {u: 1, v: 1}
-            model.variables = {"2v": 2 * v}
-
-            disc = pybamm.Discretisation()
-            disc.process_model(model)
-            solver = pybamm.IDAKLUSolver(
-                rtol=1e-6,
-                atol=1e-6,
-                output_variables=output_variables,
-            )
-
-            t_eval = [0, 3]
-            a_value = 0.1
-
-            sol = solver.solve(
-                model,
-                t_eval,
-                inputs={"a": a_value},
-                calculate_sensitivities=True,
-            )
-
-            np.testing.assert_allclose(
-                sol["2v"].sensitivities["a"].flatten(),
-                np.exp(-sol.t) * 2,
-                rtol=1e-5,
-                atol=1e-4,
-            )
-
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
