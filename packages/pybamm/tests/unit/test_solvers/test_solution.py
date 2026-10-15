@@ -1116,14 +1116,14 @@ class TestSolution:
         np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
         np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
 
-    def test_get_data_cycles_steps(self, tmp_path):
+    def test_get_data_cycles_steps(self):
         model = pybamm.BaseModel()
         c = pybamm.Variable("c")
         model.rhs = {c: -c}
         model.initial_conditions = {c: 1}
         model.variables["c"] = c
 
-        solver = pybamm.ScipySolver()
+        solver = pybamm.IDAKLUSolver()
         sol1 = solver.solve(model, np.linspace(0, 1))
         sol2 = solver.solve(model, np.linspace(1, 2))
         sol3 = solver.solve(model, np.linspace(2, 3))
@@ -1146,15 +1146,33 @@ class TestSolution:
         np.testing.assert_array_equal(
             data["Cycle"],
             np.concatenate(
-                [np.zeros(50), np.zeros(49), np.ones(49), np.ones(50), 2 * np.ones(50)]
+                [
+                    np.zeros(len(sola.t)),
+                    np.ones(len(solb.t) - 1),  # duplicate time point at 2
+                    2 * np.ones(len(sol5.t)),
+                ]
             ),
         )
         np.testing.assert_array_equal(
             data["Step"],
             np.concatenate(
-                [np.zeros(50), np.ones(49), np.zeros(49), np.ones(50), np.zeros(50)]
+                [
+                    np.zeros(len(sol1.t)),
+                    np.ones(len(sol2.t) - 1),  # duplicate time point at 1
+                    np.zeros(len(sol3.t) - 1),  # duplicate time point at 2
+                    np.ones(len(sol4.t)),
+                    np.zeros(len(sol5.t)),
+                ]
             ),
         )
+
+        # test that the data can be saved to csv and read back in correctly
+        csv_str = sol.save_data(variables=["c"], to_format="csv")
+        df = pd.read_csv(io.StringIO(csv_str))
+        # check that the cycle and step numbers are correct in the csv
+        np.testing.assert_array_equal(df["Cycle"], data["Cycle"])
+        np.testing.assert_array_equal(df["Step"], data["Step"])
+        np.testing.assert_allclose(df["c"], data["c"], rtol=1e-7, atol=1e-6)
 
     def test_pickle_first_states_across_processes(self, tmp_path):
         # Regression test for #5444: a Solution pickled in one process and
