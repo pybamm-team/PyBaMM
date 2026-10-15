@@ -33,18 +33,7 @@ if pybamm.has_jax():
 
 
 def _row_major_layout(aval) -> tuple[int, ...]:
-    """Return the row-major (C-order) layout of an abstract array
-
-    Parameters
-    ----------
-    aval : jax.core.ShapedArray
-        Abstract array
-
-    Returns
-    -------
-    tuple of int
-        Dimensions from major to minor
-    """
+    """Return the row-major (C-order) layout of an abstract array"""
     return tuple(range(len(aval.shape) - 1, -1, -1))
 
 
@@ -368,56 +357,6 @@ class IDAKLUJax:
         with solver._idaklu_jax_lock:
             return solver.solve(model, t_hashable, *args, **kwargs)
 
-    @staticmethod
-    def _input_names(inputs) -> list:
-        """Return the input names in the order that JAX flattens ``inputs``
-
-        Parameters
-        ----------
-        inputs : dict | None
-            Dictionary of input values
-
-        Returns
-        -------
-        list
-            The input names, ordered as the flattened input values
-        """
-        if inputs is None:
-            return []
-        leaves, _ = jax.tree_util.tree_flatten_with_path(inputs)
-        return [
-            path[0].key
-            if len(path) == 1 and isinstance(path[0], jax.tree_util.DictKey)
-            else jax.tree_util.keystr(path)
-            for path, _ in leaves
-        ]
-
-    @staticmethod
-    def _as_scalar(value) -> float:
-        """Convert a scalar input value to a float
-
-        Parameters
-        ----------
-        value : float | np.ndarray | jax.Array
-            Input value holding a single element
-
-        Returns
-        -------
-        float
-            The input value
-
-        Raises
-        ------
-        pybamm.SolverError
-            If the input value does not hold exactly one element
-        """
-        value = np.asarray(value, dtype=np.float64)
-        if value.size != 1:
-            raise pybamm.SolverError(
-                f"IDAKLUJax only supports scalar inputs, got shape {value.shape}"
-            )
-        return value.item()
-
     def _jaxify_solve(self, t, invar, *inputs_values):
         """Solve the model and evaluate the outputs or their sensitivities at ``t``
 
@@ -445,7 +384,7 @@ class IDAKLUJax:
         inputs = self._hashabledict(
             zip(
                 self.jax_input_names,
-                (self._as_scalar(value) for value in inputs_values),
+                (np.asarray(value, dtype=np.float64).item() for value in inputs_values),
                 strict=True,
             )
         )
@@ -623,8 +562,7 @@ class IDAKLUJax:
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
         t_interp : None, list or ndarray, optional
-            Additional times (in seconds) at which to store the solution. The
-            requested times are always stored, so this only lets calls at different
+            Extra times (in seconds) to store in every solve, so that calls at those
             times share one cached solve. Defaults to None.
         """
         if self.jaxpr is not None:
@@ -693,13 +631,11 @@ class IDAKLUJax:
             """
             logger.info("f")
             flatargs, _treedef = tree_flatten((t, inputs))
-            # Name the inputs in flattened order, which need not match the dict order
-            self.jax_input_names = self._input_names(inputs)
-            self.jax_inputs = (
-                None
-                if inputs is None
-                else dict(zip(self.jax_input_names, flatargs[1:], strict=True))
-            )
+            if any(np.size(value) != 1 for value in flatargs[1:]):
+                raise pybamm.SolverError("IDAKLUJax only supports scalar inputs")
+            # JAX flattens dicts in sorted key order, not insertion order
+            self.jax_input_names = sorted(inputs) if isinstance(inputs, dict) else []
+            self.jax_inputs = inputs
             out = f_p.bind(*flatargs)
             return out
 
@@ -917,7 +853,7 @@ class IDAKLUJax:
             if ad.is_undefined_primal(t_dot):
                 # Time derivatives are unavailable, so flag them rather than return zero
                 t_bar = jnp.where(jnp.any(y_bar != 0, axis=-1), jnp.nan, 0.0)
-            # Tangents operands are ordered as self.jax_input_names
+            # Tangent operands are ordered as self.jax_input_names
             inputs_bar = [
                 f_vjp(y_bar, index, *primals) if ad.is_undefined_primal(x_dot) else None
                 for index, x_dot in enumerate(inputs_dot)
@@ -1016,8 +952,6 @@ class IDAKLUJax:
             """Main wrapper for the VJP function"""
             logger.info("f_vjp")
             logger.debug(f"  y_bar: {y_bar}, {type(y_bar)}, {y_bar.shape}")
-            if isinstance(invar, str):
-                invar = self.jax_input_names.index(invar)
             return f_vjp_p.bind(y_bar, invar, *primals)
 
         @f_vjp_p.def_impl
