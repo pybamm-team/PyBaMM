@@ -14,6 +14,13 @@ PyBaMM's.
   `fit_transient_closure` helper, and the 3D electrode data and DNS of the
   paper ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
+## [0.1.1] - 2026-10-14
+
+### Fixed
+
+- Require `pybamm[cite]` so `pybamm.print_citations()` credits a zoo model's
+  authors in a clean install ([#5910](https://github.com/pybamm-team/PyBaMM/pull/5910))
+
 ## [0.1.0] - 2026-10-14
 
 ### Added

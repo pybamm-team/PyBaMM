@@ -16,6 +16,7 @@
 
 ## Bug fixes
 
+- `IDAKLUSolver` no longer fails to converge when the AMD-ordered KLU factorisation picks a weak pivot. KLU now rejects pivots smaller than 0.1 of the largest entry in their column, instead of 0.001. The new `klu_pivot_tolerance` option of `IDAKLUSolver` and `NonlinearSolver` sets this tolerance, from just above 0 up to 1 (full partial pivoting). ([#5904](https://github.com/pybamm-team/PyBaMM/pull/5904))
 - `"intercalation kinetics": "Marcus"` now gives a positive current for a positive overpotential, as the other kinetics do, and converts the reorganization energy from eV with F/RT, as Marcus-Hush-Chidsey does. Previously the oxidation and reduction terms were swapped and the energy was used in mixed units, so models with Marcus kinetics failed to solve. ([#5872](https://github.com/pybamm-team/PyBaMM/pull/5872))
 - Evaluating a processed variable at a 0-d array time, e.g. `solution["Voltage [V]"](np.array(10.0))`, now returns the same value as passing the float rather than raising an `IndexError`. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - Fixed the particle concentration of the `"quartic profile"` particle model in models that resolve the electrode (e.g. DFN), which was missing a factor of the particle radius on the concentration gradient term and diverged to unphysical values. ([#5893](https://github.com/pybamm-team/PyBaMM/pull/5893))
