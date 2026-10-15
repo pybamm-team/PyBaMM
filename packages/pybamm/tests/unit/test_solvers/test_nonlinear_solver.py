@@ -38,7 +38,8 @@ class TestNonlinearSolver:
         ):
             pybamm.NonlinearSolver(options={"compiel": True})
         assert pybamm.NonlinearSolver(options={"compile": True})._options == {
-            "compile": True
+            "compile": True,
+            "klu_pivot_tolerance": 0.1,
         }
 
     def test_simple_root_find(self):
@@ -181,6 +182,26 @@ class TestNonlinearSolver:
         sol_d = pybamm.NonlinearSolver(use_sparse=False).solve(model_dense, t_eval)
 
         np.testing.assert_allclose(sol_s.y, sol_d.y, atol=1e-10)
+
+    def test_klu_pivot_tolerance(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.algebraic = {var: var**3 - 8}
+        model.initial_conditions = {var: 1}
+        pybamm.Discretisation().process_model(model)
+
+        t_eval = np.linspace(0, 1, 5)
+        solutions = [
+            pybamm.NonlinearSolver(options={"klu_pivot_tolerance": value}).solve(
+                model, t_eval
+            )
+            for value in [0.001, 1.0]
+        ]
+        np.testing.assert_allclose(solutions[0].y, 2, rtol=1e-6)
+        np.testing.assert_allclose(solutions[1].y, solutions[0].y, rtol=1e-10)
+
+        with pytest.raises(pybamm.SolverError, match="klu_pivot_tolerance"):
+            pybamm.NonlinearSolver(options={"klu_pivot_tolerance": 2.0})
 
     def test_matches_casadi_algebraic_solver(self):
         from pybamm.models.full_battery_models.lithium_ion.electrode_soh import (

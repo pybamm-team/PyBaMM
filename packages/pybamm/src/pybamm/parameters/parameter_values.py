@@ -642,6 +642,7 @@ class ParameterValues:
         self,
         values: Mapping[str, Any],
         *,
+        strict: bool = False,
         check_conflict: bool = False,
         check_already_exists: bool = False,
         path: str = "",
@@ -653,6 +654,9 @@ class ParameterValues:
         ----------
         values : dict
             Dictionary of parameter values to update.
+        strict : bool, optional
+            If True, every key in ``values`` must already exist. Default is False,
+            which also adds new parameters.
         check_conflict : bool, optional
             Deprecated.
         check_already_exists : bool, optional
@@ -665,6 +669,13 @@ class ParameterValues:
         >>> params = pybamm.ParameterValues("Chen2020")
         >>> params.update({"Current function [A]": 2.0})  # Update existing
         >>> params.update({'a': 1.0})  # Create new
+        >>> params.update({"Current function [A]": 3.0}, strict=True)  # Existing only
+
+        Raises
+        ------
+        KeyError
+            If ``strict`` is True and a key does not exist. The message lists the
+            closest existing names, and nothing is updated.
 
         Notes
         -----
@@ -692,7 +703,33 @@ class ParameterValues:
             values = dict(values._store._data)
 
         # Check and transform parameter values
-        values = self.check_parameter_values(dict(values))
+        raw_values = dict(values)
+        values = self.check_parameter_values(dict(raw_values))
+
+        # Runs after list values are expanded into indexed keys, so a list
+        # parameter that already exists passes, and before any write
+        if strict:
+            unknown = [name for name in values if name not in self._store]
+            # An empty list expands to no keys, so check its own name
+            for name, value in raw_values.items():
+                if isinstance(value, list) and not value:
+                    base, units = ParameterNameParser.split(name)
+                    first = ParameterNameParser.combine(base, 0, units)
+                    if name not in self._store and first not in self._store:
+                        unknown.append(name)
+            if unknown:
+                hints = []
+                for name in unknown:
+                    matches = self._store._data.get_best_matches(name)
+                    hints.append(
+                        f"'{name}' (best matches: {matches})"
+                        if matches
+                        else f"'{name}'"
+                    )
+                raise KeyError(
+                    f"Unknown parameter(s) with strict=True, nothing was updated: "
+                    f"{'; '.join(hints)}. Use strict=False to add new parameters."
+                )
 
         for name, value in values.items():
             # Process value

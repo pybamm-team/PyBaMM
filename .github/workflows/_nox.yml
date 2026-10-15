@@ -28,9 +28,8 @@ on:
         type: string
       fetch_depth:
         description: >-
-          Checkout depth. Sessions needing git history pass 0: the docs build,
-          and the zoo, which holds a manifest's `pybamm_requires` to the PyBaMM
-          version hatch-vcs derives from the release tags.
+          Checkout depth. Sessions needing git history pass 0, such as the docs
+          build.
         default: 1
         required: false
         type: number

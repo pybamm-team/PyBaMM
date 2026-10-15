@@ -1,13 +1,21 @@
 {
-  "generated": "2026-10-05T11:03:18Z",
+  "generated": "2026-10-12T11:32:28Z",
   "models": {
     "linearised_spm": {
       "results": {
-        "26.8.0.0": "pass",
         "26.9.0.0": "pass",
+        "26.10.0.0": "pass",
         "main": "pass"
       },
-      "last_pass": "26.9.0.0"
+      "last_pass": "26.10.0.0"
+    },
+    "multilayer_3d_thermal": {
+      "results": {
+        "26.9.0.0": "pass",
+        "26.10.0.0": "pass",
+        "main": "pass"
+      },
+      "last_pass": "26.10.0.0"
     }
   }
 }
