@@ -47,6 +47,21 @@ class TestDFN(BaseIntegrationTestLithiumIon):
         # nothing consumes lithium, so LLI must stay at zero
         np.testing.assert_allclose(sol["LLI [%]"](sol.t), 0, atol=1e-8)
 
+    def test_quartic_profile_particle_stoichiometry_bounded(self):
+        model = pybamm.lithium_ion.DFN({"particle": "quartic profile"})
+        param = pybamm.ParameterValues("Chen2020")
+        param["Current function [A]"] = -1
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 60], initial_soc=0.5)
+        t = np.linspace(0, 60, 7)
+        for domain in ["negative", "positive"]:
+            stoichiometry = sol[f"{domain.capitalize()} particle stoichiometry"](
+                t=t,
+                x=sim.mesh[f"{domain} electrode"].nodes,
+                r=sim.mesh[f"{domain} particle"].nodes,
+            )
+            assert np.all((stoichiometry >= 0) & (stoichiometry <= 1))
+
     def test_cycling_extreme_conditions(self):
         # test cycling with difficult conditions: full discharge and very low
         # current cutoff. This exercises the regularised expressions (RegPower,

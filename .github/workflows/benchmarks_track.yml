@@ -118,9 +118,9 @@ jobs:
             --start-point-reset \
             --testbed bare-metal \
             --spec intel-v1 \
-            --adapter python_pytest \
-            --file /tmp/results.json \
+            --adapter json \
+            --file /tmp/bencher.json \
             --error-on-alert \
             --github-actions "$GITHUB_TOKEN" \
             --ci-number "$PR_NUMBER" \
-            "pytest -m 'time_bench and not slow_bench' -v -o addopts= --benchmark-group-by func --benchmark-disable-gc --benchmark-json /tmp/results.json"
+            "pytest -m 'time_bench and not slow_bench' -v -o addopts= --benchmark-group-by func --benchmark-disable-gc --benchmark-json /tmp/results.json --bencher-json /tmp/bencher.json"
