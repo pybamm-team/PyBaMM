@@ -796,10 +796,10 @@ class TestStressRoundtripAllParameterSets:
                 continue
 
             sig = inspect.signature(orig)
-            nargs = len([p for p in sig.parameters.values() if p.default == p.empty])
+            nargs = len([p for p in sig.parameters.values() if p.default is p.empty])
 
             svs = [_sv(i * n, n) for i in range(nargs)]
-            names = [p.name for p in sig.parameters.values() if p.default == p.empty]
+            names = [p.name for p in sig.parameters.values() if p.default is p.empty]
             inputs = dict(zip(names, svs, strict=False))
 
             y_parts = []
