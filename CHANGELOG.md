@@ -2,16 +2,16 @@
 
 ## Breaking changes
 
-- `get_size_distribution_parameters`, which sets the `MPM` default parameters, now sets the size distribution and minimum and maximum radii as expressions of the particle radius parameter, not numbers. Before, the radius was read once, so setting it to `"[input]"` left the distribution unchanged and its sensitivity zero. Pass `R_n_av` and `R_p_av` to keep numeric values. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `get_size_distribution_parameters`, which sets the `MPM` default parameters, now sets the size distribution and minimum and maximum radii as expressions of the particle radius parameter, not numbers. Before, the radius was read once, so setting it to `"[input]"` left the distribution unchanged and its sensitivity zero. Pass `R_n_av` and `R_p_av` to keep numeric values. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
-- `calculate_sensitivities` with a name that is not an input parameter of the model raises a `SolverError` listing the model's inputs, instead of a bare `KeyError`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-- `calculate_sensitivities=True` logs supplied inputs that the model does not use, instead of silently ignoring them. With an `Experiment`, it skips inputs that some step models lack, where it used to raise a `KeyError`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-- Sensitivities with respect to a vector-valued input raise a `SolverError` naming the input, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols". ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-- Setting a geometry parameter, such as an electrode thickness, to an input with the default `Uniform1DSubMesh` raises a `GeometryError` that points to `pybamm.SymbolicUniform1DSubMesh`, instead of an `IndexError`. Input-dependent tab positions raise a `GeometryError` instead of a `KeyError`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-- `output_variables` whose names contain characters such as `/` (e.g. `"Entropic change [V/K]"`) no longer fail with CasADi's "Function name is not valid", and names that differ only in punctuation no longer break the `compile` option. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `calculate_sensitivities` with a name that is not an input parameter of the model raises a `SolverError` listing the model's inputs, instead of a bare `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `calculate_sensitivities=True` logs supplied inputs that the model does not use, instead of silently ignoring them. With an `Experiment`, it skips inputs that some step models lack, where it used to raise a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Sensitivities with respect to a vector-valued input raise a `SolverError` naming the input, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols". ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Setting a geometry parameter, such as an electrode thickness, to an input with the default `Uniform1DSubMesh` raises a `GeometryError` that points to `pybamm.SymbolicUniform1DSubMesh`, instead of an `IndexError`. Input-dependent tab positions raise a `GeometryError` instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `output_variables` whose names contain characters such as `/` (e.g. `"Entropic change [V/K]"`) no longer fail with CasADi's "Function name is not valid", and names that differ only in punctuation no longer break the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 # [v26.10.1.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.0) - 2026-10-13
 
