@@ -60,8 +60,11 @@ class TestDualContinuum:
     def test_dc0_is_uniform_profile(self, options):
         dfn = pybamm.lithium_ion.DFN({**options, "particle": "uniform profile"})
         np.testing.assert_allclose(
-            voltage(dual_continuum(options, {**DFN_LIKE, "model type": "DC0"})),
-            voltage(dfn),
+            voltage(
+                dual_continuum(options, {**DFN_LIKE, "model type": "DC0"}),
+                solver=tight_solver(),
+            ),
+            voltage(dfn, solver=tight_solver()),
             rtol=1e-7,
         )
 
@@ -69,7 +72,9 @@ class TestDualContinuum:
     def test_isolated_sphere_closure_is_quadratic_profile(self, options):
         dfn = pybamm.lithium_ion.DFN({**options, "particle": "quadratic profile"})
         np.testing.assert_allclose(
-            voltage(dual_continuum(options, DFN_LIKE)), voltage(dfn), rtol=1e-7
+            voltage(dual_continuum(options, DFN_LIKE), solver=tight_solver()),
+            voltage(dfn, solver=tight_solver()),
+            rtol=1e-7,
         )
 
     @pytest.mark.parametrize("sei", ["reaction limited", "ec reaction limited"])
@@ -77,9 +82,13 @@ class TestDualContinuum:
         # PyBaMM's SEI options apply unchanged to the DC model
         dfn = pybamm.lithium_ion.DFN({"SEI": sei, "particle": "quadratic profile"})
         parameter_values = dfn.default_parameter_values
-        solution = solve(dual_continuum({"SEI": sei}, DFN_LIKE), parameter_values)
+        solution = solve(
+            dual_continuum({"SEI": sei}, DFN_LIKE), parameter_values, tight_solver()
+        )
         np.testing.assert_allclose(
-            solution["Voltage [V]"](TIMES), voltage(dfn, parameter_values), rtol=1e-7
+            solution["Voltage [V]"](TIMES),
+            voltage(dfn, parameter_values, tight_solver()),
+            rtol=1e-7,
         )
         thickness = solution["X-averaged negative SEI thickness [m]"](TIMES)
         assert thickness[-1] > thickness[0]
@@ -91,8 +100,8 @@ class TestDualContinuum:
         dfn = pybamm.lithium_ion.DFN({**options, "particle": "quadratic profile"})
         for dc_options in [{}, {"closure variable": "dimensionless"}]:
             np.testing.assert_allclose(
-                voltage(dual_continuum(options, dc_options)),
-                voltage(dfn),
+                voltage(dual_continuum(options, dc_options), solver=tight_solver()),
+                voltage(dfn, solver=tight_solver()),
                 rtol=1e-7,
             )
 
