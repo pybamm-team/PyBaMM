@@ -20,10 +20,8 @@ class ProcessedVariableTimeIntegral:
     """
     How a variable holding a time integral or discrete time sum is evaluated.
 
-    A continuous integral integrates its integrand over the solution times with
-    the trapezoidal rule and adds the initial condition. A discrete sum adds up
-    its summand at the discrete times within the solution's time span. Both act
-    on each entry of a 0D or 1D integrand separately.
+    A continuous integral applies the trapezoidal rule over the solution times; a
+    discrete sum adds its summand at its discrete times within the solution's span.
 
     Parameters
     ----------
@@ -147,10 +145,7 @@ class ProcessedVariableTimeIntegral:
         t_interp: npt.NDArray[np.float64],
     ) -> None:
         """
-        Check a solve outputs at every discrete time within its span.
-
-        A solve outputs at least at ``t_eval`` and ``t_interp``, so a discrete
-        sum it computes as an output variable needs its discrete times in those.
+        Check an ``output_variables`` solve outputs at every discrete time in its span.
 
         Parameters
         ----------

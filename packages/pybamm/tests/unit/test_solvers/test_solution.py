@@ -1765,8 +1765,10 @@ class TestSolution:
         model = pybamm.BaseModel()
         x = pybamm.SpatialVariable("x", "line")
         y = pybamm.Variable("y", domain="line")
-        model.rhs = {y: -pybamm.InputParameter("k") * (1 + x) * y}
-        model.initial_conditions = {y: 1}
+        # A second state, so the model has more states than the integral has entries
+        w = pybamm.Variable("w")
+        model.rhs = {y: -pybamm.InputParameter("k") * (1 + x) * y, w: -w}
+        model.initial_conditions = {y: 1, w: 1}
         integral = pybamm.ExplicitTimeIntegral(y, pybamm.InputParameter("q0"))
         model.variables = {
             "integral": integral,

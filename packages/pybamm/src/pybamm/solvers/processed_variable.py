@@ -172,20 +172,7 @@ class ProcessedVariable(BaseProcessedVariable):
         return self._observe_postfix(self._observe_raw(), t)
 
     def _observe_time_integral(self):
-        """
-        Evaluate the time integral from its integrand at the sample times.
-
-        Returns
-        -------
-        numpy.ndarray
-            The value, shaped like the variable at a single time point.
-
-        Raises
-        ------
-        :class:`pybamm.SolverError`
-            If a discrete sum's times are not solution times and the solution
-            has no Hermite data to interpolate the summand to them.
-        """
+        """The time integral's value, shaped like the variable at one time."""
         time_integral = self.time_integral
         indices = time_integral.sample_indices(self.t_pts)
         if indices is not None:
@@ -259,8 +246,22 @@ class ProcessedVariable(BaseProcessedVariable):
         fill_value=np.nan,
     ):
         if self.time_integral is not None:
-            # A time integral's value covers the whole solution, whatever t is
-            return self._call_time_integral(fill_value, x=x, r=r, y=y, z=z, R=R)
+            # A time integral has one value for the whole solution, whatever t is
+            self.initialise()
+            if all(arg is None for arg in (x, r, y, z, R)):
+                return self._entries_raw
+            return self._xr_interpolate(
+                self._entries_for_interp_raw,
+                self._coords_raw,
+                True,
+                None,
+                x,
+                r,
+                y,
+                z,
+                R,
+                fill_value,
+            )
 
         # Check to see if we are interpolating exactly onto the raw solution time points
         t_observe, observe_raw = self._check_observe_raw(t)
@@ -321,34 +322,6 @@ class ProcessedVariable(BaseProcessedVariable):
             processed_entries = np.squeeze(processed_entries, axis=-1)
 
         return processed_entries
-
-    def _call_time_integral(self, fill_value, **spatial):
-        """
-        The time integral's value, optionally interpolated in space.
-
-        Parameters
-        ----------
-        fill_value : float
-            The value outside the spatial domain.
-        **spatial
-            Spatial points to interpolate at, by coordinate name; None to skip.
-
-        Returns
-        -------
-        numpy.ndarray
-            The value with a trailing time axis of length one.
-        """
-        self.initialise()
-        spatial = {key: value for key, value in spatial.items() if value is not None}
-        if not spatial:
-            return self._entries_raw
-        return self._xr_interpolate(
-            self._entries_for_interp_raw,
-            self._coords_raw,
-            True,
-            fill_value=fill_value,
-            **spatial,
-        )
 
     def _xr_interpolate(
         self,

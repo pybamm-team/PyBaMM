@@ -1156,7 +1156,7 @@ class BaseModel:
             self.boundary_conditions.keys(),
             (x[side][0] for x in self.boundary_conditions.values() for side in x),
             self.variables.values(),
-            # They keep the initial condition of a variable taken out of rhs as an input
+            # A variable removed from rhs keeps its initial condition's inputs here
             self._variables_processed.values() if processed_variables else (),
             fixed_input_parameters,
             (event.expression for event in self.events),
