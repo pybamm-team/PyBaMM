@@ -22,12 +22,14 @@ public:
    * @param jac_fn   Jacobian function J(t, y, inputs) -> data (COO)
    * @param n_vars   Number of algebraic variables (residual output length)
    * @param use_sparse Whether to use a sparse (KLU) linear solver
+   * @param klu_pivot_tolerance KLU threshold partial pivoting tolerance
    */
   StandaloneAlgebraicSystem(
     std::unique_ptr<Expression> res_fn,
     std::unique_ptr<Expression> jac_fn,
     int n_vars,
-    bool use_sparse);
+    bool use_sparse,
+    sunrealtype klu_pivot_tolerance);
 
   /**
    * @brief Casadi convenience constructor; delegates to the Expression ctor.
@@ -35,7 +37,8 @@ public:
   StandaloneAlgebraicSystem(
     casadi::Function res_fn,
     casadi::Function jac_fn,
-    bool use_sparse);
+    bool use_sparse,
+    sunrealtype klu_pivot_tolerance);
 
   ~StandaloneAlgebraicSystem();
 
@@ -59,6 +62,7 @@ private:
   std::unique_ptr<Expression> jac_;  // cppcheck-suppress unusedStructMember
   int n_vars_;
   bool use_sparse_;
+  sunrealtype klu_pivot_tolerance_;
 
   SUNContext sunctx_;
   SUNMatrix J_;
@@ -91,7 +95,8 @@ public:
     int max_iter,
     int max_backtracks,
     sunrealtype epsNewt,
-    bool use_sparse);
+    bool use_sparse,
+    sunrealtype klu_pivot_tolerance);
 
   /**
    * @brief Solve F(t, y, inputs) = 0 starting from y0.
@@ -100,7 +105,8 @@ public:
   std::pair<bool, np_array> solve(
     sunrealtype t,
     const np_array& y0_np,
-    const np_array& inputs_np);
+    const np_array& inputs_np,
+    py::object logger = py::none());
 
   /**
    * @brief Batch solve over multiple time points in a single C++ call.
@@ -113,9 +119,11 @@ public:
   std::pair<bool, py::array_t<sunrealtype, py::array::f_style>> solve_batch(
     const np_array& t_eval_np,
     const np_array& y0_alg_np,
-    const np_array& inputs_np);
+    const np_array& inputs_np,
+    py::object logger = py::none());
 
 private:
+  SolverLog log_;
   StandaloneAlgebraicSystem system_;
   NonlinearSolver solver_;
   int n_vars_;

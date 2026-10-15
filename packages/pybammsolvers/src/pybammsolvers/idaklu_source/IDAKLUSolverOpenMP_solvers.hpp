@@ -29,6 +29,7 @@ public:
   IDAKLUSolverOpenMP_KLU(Args&& ... args) : Base(std::forward<Args>(args) ...)
   {
     Base::LS = SUNLinSol_KLU(Base::yy, Base::J, Base::sunctx);
+    configure_klu(Base::LS, Base::setup_opts.klu_pivot_tolerance);
     Base::Initialize();
   }
 };
