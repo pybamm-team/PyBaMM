@@ -160,10 +160,9 @@ class Mesh(dict):
                             except KeyError:
                                 # Input-dependent limits stay symbolic
                                 sym_eval = sym
-                                input_dependent_domains.setdefault(domain, set())
-                                input_dependent_domains[domain].update(
-                                    self._input_names(sym)
-                                )
+                                input_dependent_domains.setdefault(
+                                    domain, set()
+                                ).update(self._input_names(sym))
                             except NotImplementedError as error:
                                 if sym.has_symbol_of_classes(pybamm.Parameter):
                                     raise pybamm.DiscretisationError(
@@ -194,58 +193,29 @@ class Mesh(dict):
 
     @staticmethod
     def _input_names(symbol: pybamm.Symbol) -> list[str]:
-        """
-        Return the sorted names of the input parameters in a symbol.
-
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            The expression to search.
-
-        Returns
-        -------
-        list of str
-            The input parameter names.
-        """
+        """Return the sorted names of the input parameters in ``symbol``."""
         return sorted(
             {s.name for s in symbol.pre_order() if isinstance(s, pybamm.InputParameter)}
         )
 
     @staticmethod
-    def _check_symbolic_limits_supported(input_dependent_domains, submesh_types):
-        """
-        Check that submeshes can be built on limits that depend on input parameters.
-
-        Parameters
-        ----------
-        input_dependent_domains : dict
-            The input parameter names that each domain's limits depend on.
-        submesh_types : dict
-            The submesh generator for each domain.
-
-        Raises
-        ------
-        :class:`pybamm.GeometryError`
-            If any of these domains has a submesh type that needs numerical limits.
-        """
-        unsupported = {}
+    def _check_symbolic_limits_supported(
+        input_dependent_domains: dict[str, set[str]], submesh_types: dict
+    ) -> None:
+        """Raise a GeometryError if a submesh needs numerical limits but has inputs."""
+        unsupported = []
         for domain, input_names in input_dependent_domains.items():
-            generator = submesh_types[domain]
-            submesh_type = getattr(generator, "submesh_type", None)
-            if not getattr(submesh_type, "supports_symbolic_limits", False):
-                type_name = getattr(submesh_type, "__name__", type(generator).__name__)
-                unsupported[domain] = (sorted(input_names), type_name)
+            submesh_type = submesh_types[domain].submesh_type
+            if not submesh_type.supports_symbolic_limits:
+                unsupported.append(
+                    f"'{domain}' ({submesh_type.__name__}) depends on "
+                    f"{sorted(input_names)}"
+                )
         if unsupported:
-            details = "; ".join(
-                f"'{domain}' ({type_name}) depends on {names}"
-                for domain, (names, type_name) in unsupported.items()
-            )
             raise pybamm.GeometryError(
-                f"Geometry limits depend on input parameters, but the submesh types "
-                f"need numerical limits: {details}. Use pybamm.SymbolicUniform1DSubMesh "
-                f"for these domains (e.g. `submesh_types['{next(iter(unsupported))}'] "
-                "= pybamm.SymbolicUniform1DSubMesh`), or give these parameters "
-                "numerical values."
+                "Geometry limits depend on input parameters, but the submesh types "
+                f"need numerical limits: {'; '.join(unsupported)}. Use "
+                "pybamm.SymbolicUniform1DSubMesh for these domains."
             )
 
     def __getitem__(self, domains):
@@ -565,10 +535,8 @@ class SubMesh:
     """
     Base submesh class.
     Contains the position of the nodes, the number of mesh points, and
-    (optionally) information about the tab locations.
-
-    Subclasses that can be built on limits that depend on input parameters set the
-    class attribute ``supports_symbolic_limits`` to True.
+    (optionally) information about the tab locations. Subclasses that accept limits
+    depending on input parameters set ``supports_symbolic_limits = True``.
     """
 
     supports_symbolic_limits = False

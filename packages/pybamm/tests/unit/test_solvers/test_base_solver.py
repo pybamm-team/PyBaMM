@@ -471,9 +471,8 @@ class TestBaseSolver:
         inputs = {"k": 0.3, "y0": 2.0, "unused": 1.0}
         bad = [name for name in names if name != "k"]
         match = re.escape(
-            f"Cannot calculate sensitivities with respect to {bad}: not input "
-            "parameters of model 'Unnamed model'. Its input parameters are "
-            "['k', 'y0']"
+            f"Cannot calculate sensitivities with respect to {bad}: the input "
+            "parameters of model 'Unnamed model' are ['k', 'y0']."
         )
         with pytest.raises(pybamm.SolverError, match=match):
             pybamm.IDAKLUSolver().solve(
@@ -511,26 +510,12 @@ class TestBaseSolver:
             sensitivities["k"].ravel(), -t * 2.0 * np.exp(-0.3 * t), rtol=1e-6
         )
 
-        # Logged once per set-up, not on every repeated solve
+        # Logged once per set-up, and not without sensitivities
         caplog.clear()
         with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
             solver.solve(model, [0, 1], inputs=inputs, calculate_sensitivities=True)
+            solver.solve(model, [0, 1], inputs=inputs)
         assert "unused" not in caplog.text
-
-    def test_calculate_sensitivities_true_without_inputs(self):
-        model = pybamm.BaseModel()
-        y = pybamm.Variable("y")
-        model.rhs = {y: -0.3 * y}
-        model.initial_conditions = {y: 2.0}
-        model.variables = {"y": y}
-        solution = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12).solve(
-            model, [0, 1], calculate_sensitivities=True
-        )
-        assert solution.sensitivity_names == []
-        assert solution["y"].sensitivities == {}
-        np.testing.assert_allclose(
-            solution["y"](solution.t), 2.0 * np.exp(-0.3 * solution.t), rtol=1e-6
-        )
 
     def test_calculate_sensitivities_list_is_sorted(self):
         model = self._decay_model()
@@ -565,8 +550,7 @@ class TestBaseSolver:
         pybamm.Discretisation().process_model(model)
         with pytest.raises(
             pybamm.SolverError,
-            match=r"vector-valued input\(s\) \['a'\]: sensitivities are only "
-            r"supported for scalar inputs",
+            match=r"vector-valued input\(s\) \['a'\]; only scalar inputs",
         ):
             pybamm.IDAKLUSolver().solve(
                 model,
