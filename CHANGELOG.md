@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- The composite electrode-SOH model's phase-capacity inputs are renamed `Q_n_1` -> `Primary: Negative electrode capacity [A.h]`, `Q_n_2` -> `Secondary: Negative electrode capacity [A.h]`, `Q_p_1` -> `Primary: Positive electrode capacity [A.h]`, and `Q_p_2` -> `Secondary: Positive electrode capacity [A.h]`. The numbered names matched the deprecated-MSMR pattern, so every composite solve emitted a `DeprecationWarning` for an internal input. Code solving a standalone `ElectrodeSOHComposite` simulation must use the new names. ([#5738](https://github.com/pybamm-team/PyBaMM/pull/5738))
+
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
