@@ -134,6 +134,7 @@ class Mesh(dict):
         self.submesh_pts = submesh_pts
 
         # evaluate any expressions in geometry
+        input_dependent_domains = {}
         for domain in geometry:
             for spatial_variable, spatial_limits in geometry[domain].items():
                 # process tab information if using 1 or 2D current collectors
@@ -141,7 +142,15 @@ class Mesh(dict):
                     for tab, position_info in spatial_limits.items():
                         for position_size, sym in position_info.items():
                             if isinstance(sym, pybamm.Symbol):
-                                sym_eval = sym.evaluate()
+                                try:
+                                    sym_eval = sym.evaluate()
+                                except KeyError as error:
+                                    raise pybamm.GeometryError(
+                                        f"Tab {position_size} for '{tab}' in domain "
+                                        f"'{domain}' depends on input parameter(s) "
+                                        f"{self._input_names(sym)}, which is not "
+                                        "supported."
+                                    ) from error
                                 geometry[domain]["tabs"][tab][position_size] = sym_eval
                 else:
                     for lim, sym in spatial_limits.items():
@@ -149,7 +158,11 @@ class Mesh(dict):
                             try:
                                 sym_eval = sym.evaluate()
                             except KeyError:
+                                # Input-dependent limits stay symbolic
                                 sym_eval = sym
+                                input_dependent_domains.setdefault(
+                                    domain, set()
+                                ).update(self._input_names(sym))
                             except NotImplementedError as error:
                                 if sym.has_symbol_of_classes(pybamm.Parameter):
                                     raise pybamm.DiscretisationError(
@@ -164,6 +177,8 @@ class Mesh(dict):
                             sym_eval = sym
                         geometry[domain][spatial_variable][lim] = sym_eval
 
+        self._check_symbolic_limits_supported(input_dependent_domains, submesh_types)
+
         # Create submeshes
         self.base_domains = []
         for domain in geometry:
@@ -175,6 +190,33 @@ class Mesh(dict):
 
         # add ghost meshes
         self.add_ghost_meshes()
+
+    @staticmethod
+    def _input_names(symbol: pybamm.Symbol) -> list[str]:
+        """Return the sorted names of the input parameters in ``symbol``."""
+        return sorted(
+            {s.name for s in symbol.pre_order() if isinstance(s, pybamm.InputParameter)}
+        )
+
+    @staticmethod
+    def _check_symbolic_limits_supported(
+        input_dependent_domains: dict[str, set[str]], submesh_types: dict
+    ) -> None:
+        """Raise a GeometryError if a submesh needs numerical limits but has inputs."""
+        unsupported = []
+        for domain, input_names in input_dependent_domains.items():
+            submesh_type = submesh_types[domain].submesh_type
+            if not submesh_type.supports_symbolic_limits:
+                unsupported.append(
+                    f"'{domain}' ({submesh_type.__name__}) depends on "
+                    f"{sorted(input_names)}"
+                )
+        if unsupported:
+            raise pybamm.GeometryError(
+                "Geometry limits depend on input parameters, but the submesh types "
+                f"need numerical limits: {'; '.join(unsupported)}. Use "
+                "pybamm.SymbolicUniform1DSubMesh for these domains."
+            )
 
     def __getitem__(self, domains):
         if isinstance(domains, str):
@@ -493,8 +535,11 @@ class SubMesh:
     """
     Base submesh class.
     Contains the position of the nodes, the number of mesh points, and
-    (optionally) information about the tab locations.
+    (optionally) information about the tab locations. Subclasses that accept limits
+    depending on input parameters set ``supports_symbolic_limits = True``.
     """
+
+    supports_symbolic_limits = False
 
     # Construction inputs re-derived from edges/coord_sys on decode, so the coverage
     # guard waives them. Inherited by all SubMesh subclasses. `tabs` is excluded: it

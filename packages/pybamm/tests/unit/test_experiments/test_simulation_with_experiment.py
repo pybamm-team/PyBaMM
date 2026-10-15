@@ -1565,6 +1565,48 @@ class TestSimulationExperiment:
         assert np.all(np.isfinite(sens))
         assert np.any(sens != 0)
 
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_solve_with_sensitivities_true_skips_inputs_steps_lack(
+        self, caplog, experiment_model_mode
+    ):
+        # "unused" is in no model; "current" is only in the current step's legacy model
+        diffusivity_name = "Positive particle diffusivity [m2.s-1]"
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({diffusivity_name: "[input]"})
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.Current(pybamm.InputParameter("current"), duration=10),
+                pybamm.step.Rest(duration=10),
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+            experiment_model_mode=experiment_model_mode,
+        )
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            sol = sim.solve(
+                inputs={"current": 0.1, diffusivity_name: 1e-14, "unused": 1.0},
+                calculate_sensitivities=True,
+                calc_esoh=False,
+            )
+
+        skipped = (
+            ["unused"] if experiment_model_mode == "unified" else ["current", "unused"]
+        )
+        assert (
+            f"Inputs {skipped} are not input parameters of every experiment step "
+            "model, so no sensitivities are calculated for them."
+        ) in caplog.text
+        expected = {diffusivity_name} | (
+            {"current"} if experiment_model_mode == "unified" else set()
+        )
+        sensitivities = sol["Voltage [V]"].sensitivities
+        assert set(sensitivities) - {"all"} == expected
+        assert np.any(np.asarray(sensitivities[diffusivity_name]) != 0)
+
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
         experiment = pybamm.Experiment(
