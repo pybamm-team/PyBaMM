@@ -1,9 +1,5 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Breaking changes
-
-- An `IDAKLUSolver` with a `DiscreteTimeSum` in `output_variables` now raises a `SolverError` before solving if the sum's discrete times are not all in `t_eval` or `t_interp`, instead of returning a sum over the wrong times. Add the discrete times to `t_interp`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-
 ## Bug fixes
 
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
@@ -19,7 +15,7 @@
   - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.
   - Sensitivities are correct after a change of model between experiment steps, or from a `starting_solution`, for states with a nonzero reference or an input-dependent scale. `step()` seeds them by input name, and raises a `SolverError` if the solution it continues has none for a requested input.
   - `step()`, and re-solving an experiment, can change `calculate_sensitivities` between calls, with `save=False` for a step that does, and setting up again no longer duplicates discontinuity events.
-- A `DiscreteTimeSum` now sums its summand only at its own discrete times. Before, `.entries` and `output_variables` solves summed over every solution time unless `t_interp` was exactly the discrete times. Its sensitivities now also work when the solution's times include the discrete times among others. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- A `DiscreteTimeSum` now sums its summand only at its own discrete times. Before, `.entries` and `output_variables` solves summed over every solution time unless `t_interp` was exactly the discrete times. Its sensitivities now also work when the solution's times include the discrete times among others, and an `output_variables` solve whose times miss them raises a `SolverError` before solving. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - `ExplicitTimeIntegral` of a variable that varies in one spatial dimension now returns one value per point, with sensitivities. Before, a full-state solve returned the integrand and an `output_variables` solve raised. Integrands that vary in more dimensions now raise `NotImplementedError` instead of returning the integrand. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - An `ExplicitTimeIntegral` whose initial condition depends on an input parameter, as `remove_independent_variables_from_rhs=True` creates, no longer raises a `KeyError`, and its sensitivities now include the initial condition's derivative. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
