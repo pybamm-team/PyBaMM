@@ -160,7 +160,6 @@ CASES = {
             "Nominal cell capacity [A.h]": 5.0,
         },
         outputs=("Voltage [V]", "C-rate"),
-        steps={NEGATIVE_DIFFUSIVITY: WEAK_STEP},
     ),
     "SPMe lumped thermal": SensitivityCase(
         lambda: lithium_ion.SPMe({"thermal": "lumped"}),
@@ -173,7 +172,6 @@ CASES = {
             "Initial temperature [K]": 298.15,
         },
         outputs=("Voltage [V]", "X-averaged cell temperature [K]"),
-        steps={NEGATIVE_DIFFUSIVITY: WEAK_STEP},
     ),
     "DFN": SensitivityCase(
         lithium_ion.DFN,
@@ -456,8 +454,7 @@ class TestIDAKLUSensitivities:
                 scale = max(np.abs(fine[output]).max(), floor)
                 convergence = np.abs(fine[output] - coarse[output]).max() / scale
                 assert convergence <= RELATIVE_TOLERANCE, (
-                    f"{label}: finite differences changed by {convergence:.1e} when "
-                    "the step doubled, so they cannot check the sensitivity"
+                    f"{label}: finite differences not converged ({convergence:.1e})"
                 )
                 np.testing.assert_allclose(
                     sensitivity,
