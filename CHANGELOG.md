@@ -1,13 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Breaking changes
-
-- An `IDAKLUSolver` with a `DiscreteTimeSum` in `output_variables` now raises a `SolverError` before solving if the sum's discrete times are not all in `t_eval` or `t_interp`, instead of returning a sum over the wrong times. Add the discrete times to `t_interp`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
-- A `DiscreteTimeSum` now sums its summand only at its own discrete times. Before, `.entries` and `output_variables` solves summed over every solution time unless `t_interp` was exactly the discrete times. Its sensitivities now also work when the solution's times include the discrete times among others. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- A `DiscreteTimeSum` now sums its summand only at its own discrete times. Before, `.entries` and `output_variables` solves summed over every solution time unless `t_interp` was exactly the discrete times. Its sensitivities now also work when the solution's times include the discrete times among others, and an `output_variables` solve whose times miss them raises a `SolverError` before solving. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - `ExplicitTimeIntegral` of a variable that varies in one spatial dimension now returns one value per point, with sensitivities. Before, a full-state solve returned the integrand and an `output_variables` solve raised. Integrands that vary in more dimensions now raise `NotImplementedError` instead of returning the integrand. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 - An `ExplicitTimeIntegral` whose initial condition depends on an input parameter, as `remove_independent_variables_from_rhs=True` creates, no longer raises a `KeyError`, and its sensitivities now include the initial condition's derivative. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
 
