@@ -628,7 +628,7 @@ class TestBaseSolver:
             match=r"Cannot continue a sensitivity solve from a solution that "
             r"returned output variables only",
         ):
-            pybamm.BaseSolver._check_restart_sensitivities(solution)
+            pybamm.BaseSolver._check_restart_sensitivities(solution, ["p"])
 
     def test_step_restarts_sensitivities_from_output_variables(self):
         # Equal output and state widths, so seeding from the outputs is silently wrong
@@ -669,10 +669,10 @@ class TestBaseSolver:
         )
         solution._all_sensitivities = {"p": np.zeros((6, 1))}
 
-        pybamm.BaseSolver._check_restart_sensitivities(solution)
+        pybamm.BaseSolver._check_restart_sensitivities(solution, ["p"])
 
     def test_check_restart_sensitivities_allows_empty_solution(self):
-        pybamm.BaseSolver._check_restart_sensitivities(pybamm.EmptySolution())
+        pybamm.BaseSolver._check_restart_sensitivities(pybamm.EmptySolution(), ["p"])
 
 
 def _independent_decays():
