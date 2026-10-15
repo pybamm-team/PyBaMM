@@ -2,7 +2,7 @@
 
 ## Breaking changes
 
-- `get_size_distribution_parameters`, which sets the `MPM` default parameters, now sets the size distribution and minimum and maximum radii as expressions of the particle radius parameter, not numbers. Before, the radius was read once, so setting it to `"[input]"` left the distribution unchanged and its sensitivity zero. Pass `R_n_av` and `R_p_av` to keep numeric values. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `get_size_distribution_parameters`, which sets the `MPM` default parameters, now sets the size distribution and minimum and maximum radii as expressions of the particle radius parameter, not numbers. Before, the radius was read once, so setting it to `"[input]"` left the distribution unchanged and its sensitivity zero. Pass `R_n_av` and `R_p_av` to keep numeric values. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Bug fixes
 
@@ -19,11 +19,11 @@
   - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.
   - Sensitivities are correct after a change of model between experiment steps, or from a `starting_solution`, for states with a nonzero reference or an input-dependent scale. `step()` seeds them by input name, and raises a `SolverError` if the solution it continues has none for a requested input.
   - `step()`, and re-solving an experiment, can change `calculate_sensitivities` between calls, with `save=False` for a step that does, and setting up again no longer duplicates discontinuity events.
-- `calculate_sensitivities=True` logs supplied inputs that the model does not use, instead of silently ignoring them. With an `Experiment`, it skips inputs that some step models lack, where it used to raise a `KeyError`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-- Sensitivities with respect to a vector-valued input raise a `SolverError` naming the input, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols". ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-- Setting a geometry parameter, such as an electrode thickness, to an input with the default `Uniform1DSubMesh` raises a `GeometryError` that points to `pybamm.SymbolicUniform1DSubMesh`, instead of an `IndexError`. Input-dependent tab positions raise a `GeometryError` instead of a `KeyError`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-- `output_variables` whose names contain characters such as `/` (e.g. `"Entropic change [V/K]"`) no longer fail with CasADi's "Function name is not valid", and names that differ only in punctuation no longer break the `compile` option. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-- `calculate_sensitivities` with a name that is not an input parameter of the model raises a `SolverError` listing the model's inputs, instead of a bare `KeyError`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `calculate_sensitivities` with a name that is not an input parameter of the model raises a `SolverError` listing the model's inputs, instead of a bare `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `calculate_sensitivities=True` logs supplied inputs that the model does not use, instead of silently ignoring them. With an `Experiment`, it skips inputs that some step models lack, where it used to raise a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Sensitivities with respect to a vector-valued input raise a `SolverError` naming the input, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols". ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Setting a geometry parameter, such as an electrode thickness, to an input with the default `Uniform1DSubMesh` raises a `GeometryError` that points to `pybamm.SymbolicUniform1DSubMesh`, instead of an `IndexError`. Input-dependent tab positions raise a `GeometryError` instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `output_variables` whose names contain characters such as `/` (e.g. `"Entropic change [V/K]"`) no longer fail with CasADi's "Function name is not valid", and names that differ only in punctuation no longer break the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Optimizations
 
