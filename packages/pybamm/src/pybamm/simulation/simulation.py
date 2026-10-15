@@ -609,10 +609,7 @@ class Simulation(BaseSimulation):
 
     def _experiment_sensitivity_inputs(self, inputs: dict | None) -> list[str]:
         """
-        Return the user inputs that every built experiment model has as inputs.
-
-        These are the inputs ``calculate_sensitivities=True`` differentiates with
-        respect to; the others are logged as having no sensitivity.
+        Return the user inputs that every experiment model has, logging the others.
 
         Parameters
         ----------
