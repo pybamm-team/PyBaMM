@@ -689,13 +689,10 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         using interpolation
         """
         if self.time_indep:
-            spatial = {"x": x, "r": r, "y": y, "z": z, "R": R}
-            spatial = {
-                key: value for key, value in spatial.items() if value is not None
-            }
-            if not spatial:
+            # A time integral has one value for the whole solution, whatever t is
+            if all(arg is None for arg in (x, r, y, z, R)):
                 return self.entries
-            return self._xr_data_array.interp(**spatial).values
+            t = None
         if (
             self.dimensions == 0
             and t is not None

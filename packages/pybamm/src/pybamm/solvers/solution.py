@@ -922,10 +922,11 @@ class Solution(SolutionBase):
         if time_integral is not None:
             var_pybamm = time_integral.sum_node.child
             if time_integral.post_sum_node is not None:
+                # The post-sum expression reads the integral, not the states, as y
                 time_integral.post_sum = self.process_casadi_var(
                     time_integral.post_sum_node,
                     inputs,
-                    ys_shape,
+                    (time_integral.sum_node.size,),
                 )
         var_casadi = self.process_casadi_var(
             var_pybamm,

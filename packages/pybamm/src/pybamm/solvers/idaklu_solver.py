@@ -795,9 +795,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
 
         # Fail before integrating if a discrete-sum output will miss its times
-        t_interp_checked = np.empty(0) if t_interp is None else t_interp
         for name, time_integral in self._time_integral_vars.items():
-            time_integral.check_output_times(name, t_eval, t_interp_checked)
+            time_integral.check_output_times(name, t_eval, t_interp)
 
         inputs_list = inputs_list or [{}]
 
