@@ -8,25 +8,8 @@ import pybamm
 
 
 def _mean_radius(param, name):
-    """
-    Return a symbolic reference to a particle radius parameter in a parameter set.
-
-    Referencing the parameter, rather than reading its value, keeps the distribution
-    in step with later changes to it, including setting it to ``"[input]"``.
-
-    Parameters
-    ----------
-    param : :class:`pybamm.ParameterValues`
-        The parameter set, which must contain ``name``.
-    name : str
-        The particle radius parameter name.
-
-    Returns
-    -------
-    :class:`pybamm.Parameter`
-        The parameter called ``name``.
-    """
-    # Fail early, as reading the value used to, if the radius is missing
+    """Return the radius parameter ``name``, so the distribution follows its value."""
+    # Raise a KeyError now if the parameter set lacks the radius
     param[name]
     return pybamm.Parameter(name)
 
@@ -67,9 +50,8 @@ def get_size_distribution_parameters(
     set (default) or a custom value. The standard deviations and min/max radii
     are specified relative (i.e. scaled by) the mean radius for convenience.
     Only the dimensional values are output from this method. By default the
-    distribution and min/max radii refer to the particle radius parameter
-    symbolically, so they follow later changes to it, including setting it to
-    ``"[input]"``.
+    distribution and min/max radii are expressions of the particle radius
+    parameter, so they follow later changes to it.
 
     Parameters
     ----------
