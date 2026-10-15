@@ -330,6 +330,26 @@ class TestBaseBatteryModel:
         # plating model
         with pytest.raises(pybamm.OptionError, match=r"lithium plating"):
             pybamm.BaseBatteryModel({"lithium plating": "bad plating"})
+        with pytest.raises(pybamm.OptionError, match=r"partially reversible"):
+            pybamm.BaseBatteryModel(
+                {"SEI": "none", "lithium plating": "partially reversible"}
+            )
+        with pytest.raises(pybamm.OptionError, match=r"partially reversible"):
+            pybamm.BaseBatteryModel(
+                {
+                    "working electrode": "positive",
+                    "SEI": "none",
+                    "lithium plating": "partially reversible",
+                }
+            )
+        # the workaround named in the error message above must stay valid
+        pybamm.BaseBatteryModel(
+            {
+                "SEI": "constant",
+                "SEI film resistance": "none",
+                "lithium plating": "partially reversible",
+            }
+        )
         with pytest.raises(
             pybamm.OptionError, match=r"lithium plating porosity change"
         ):
