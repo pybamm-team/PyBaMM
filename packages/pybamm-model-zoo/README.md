@@ -9,28 +9,46 @@ it. Manifests are parsed, never imported, so a model whose dependencies are
 missing still appears in the registry and the docs and reports a clean failure
 rather than taking the zoo down.
 
+## Installation
+
+The zoo is released to PyPI independently of PyBaMM, so `pip install pybamm`
+does not provide it:
+
+```bash
+pip install pybamm-model-zoo
+```
+
+A model with third-party dependencies of its own declares them as an extra named
+`zoo-<slug>`, and the `zoo-all` extra installs every model's:
+
+```bash
+pip install "pybamm-model-zoo[zoo-all]"
+```
+
+Every model supports the PyBaMM releases the zoo's own `pybamm` requirement
+admits, so `pip` only installs a PyBaMM they all work with.
+
+In a PyBaMM checkout the zoo is a `uv` workspace member, so
+`uv sync --extra all --group dev` from the repository root installs it editable
+alongside `pybamm`.
+
+## Usage
+
 ```python
 import pybamm
 import pybamm_model_zoo as zoo
 
 zoo.list_models()
 entry = zoo.info("LinearisedSPM")
-entry.tier, entry.maintainers, entry.pybamm_requires
+entry.tier, entry.maintainers
 
 model = zoo.load("LinearisedSPM")()
 solution = pybamm.Simulation(model).solve([0, 300])
 print(solution["Voltage [V]"](150))
 ```
 
-The zoo is a `uv` workspace member, so `uv sync --extra all --group dev` from the
-repository root installs it editable alongside `pybamm`.
-
-It is not published to PyPI yet, so `pip install pybamm` does not provide it.
-Until it is released, users install it from the repository:
-
-```bash
-pip install "pybamm-model-zoo @ git+https://github.com/pybamm-team/PyBaMM.git#subdirectory=packages/pybamm-model-zoo"
-```
+Using a model registers its citation, so `pybamm.print_citations()` credits its
+authors.
 
 ## Adding a model
 
@@ -67,24 +85,35 @@ folder rather than reading prose.
 
 ### Dependencies
 
-A model's third-party dependencies go in a per-model **optional** extra named
-`zoo-<slug>` (dashes, not underscores) in this package's `pyproject.toml`, listed
-in the `zoo-all` aggregate — never in the base dependencies. Workspace members
-share one lockfile and one dev venv, so a base dependency here lands in every
-contributor's environment.
+A model's dependencies are declared in one place: a per-model **optional** extra
+named `zoo-<slug>` (dashes, not underscores) in this package's `pyproject.toml`,
+listed in the `zoo-all` aggregate — never in the base dependencies. Workspace
+members share one lockfile and one dev venv, so a base dependency here lands in
+every contributor's environment.
+
+For a PyBaMM feature with optional dependencies of its own, depend on PyBaMM's
+extra rather than the packages behind it, so their versions stay PyBaMM's to pin:
+
+```toml
+zoo-my-model = ["pybamm[fem]"]
+```
+
+The registry reads the extra from the installed package metadata. `zoo.load()`
+checks it before importing your model, and the template's
+`pybamm_model_zoo.require(SLUG)` checks it when the model is created, so a
+missing extra fails straight away with the `pip install` that fixes it, however
+the model was imported. Keep that call first in your `__init__`.
 
 The aggregate is deliberately not called `all`: `uv sync --extra all` applies the
 extra to every workspace member that defines one, so an `all` extra here would
 drag every model's heavy dependencies into the core dev environment.
 
-Declare the same requirements in your manifest, and the contract suite checks
-that the two agree:
+### PyBaMM versions
 
-```toml
-[model.dependencies]
-extra = "zoo-my-model"
-packages = ["scikit-fem>=12.0.2"]
-```
+Every model shares the zoo's one PyBaMM floor, its `pybamm>=` requirement in
+`pyproject.toml`. If your model needs a newer PyBaMM, raise the floor in the same
+pull request. The release workflow builds and solves every model against the
+floor before publishing.
 
 ## Tiers
 
@@ -119,14 +148,14 @@ hold an in-tree model and a third-party collection to the right rules.
 
 | Check | Scope | What it asserts |
 | --- | --- | --- |
-| `manifest` | model | Schema valid; `slug` matches the folder name; `class` is parseable; at least one maintainer; `pybamm_requires` is a valid specifier satisfied by the installed PyBaMM. |
+| `manifest` | model | Schema valid; `slug` matches the folder name; `class` is parseable; at least one maintainer. |
 | `layout` | model | `README.md`, `CITATION.bib`, `examples/`, and `tests/` present, and the README has `Summary`, `Usage`, `Validation`, and `Citation` sections. |
-| `import` | model | The declared class imports and subclasses `pybamm.BaseModel`. Skipped with a reason when your declared extra is absent. |
+| `import` | model | The declared class imports and subclasses `pybamm.BaseModel`. Skipped with a reason when your `zoo-<slug>` extra is not installed. |
 | `citation` | model | The manifest's citation key resolves in your `CITATION.bib`, and instantiating the model registers it, so `pybamm.print_citations()` credits you. |
 | `well_posed` | model | `model.check_well_posedness()` passes. |
 | `build` | model | `pybamm.Simulation(model).build()` succeeds. |
 | `solve` | model | The model solves for the manifest's `solve_time`, and every `key_variables` entry is finite read through the interpolating call interface. |
-| `packaging` | packaging | An in-tree model is importable as `pybamm_model_zoo.<slug>`, and any extra it declares exists and is aggregated into `zoo-all`. |
+| `packaging` | packaging | An in-tree model is importable as `pybamm_model_zoo.<slug>`, and `zoo-all` includes its extra if it has one. |
 | `license` | packaging | An in-tree model's manifest says `BSD-3-Clause`, the zoo package's license. Cannot be waived. |
 | `docs` | repo | The generated docs page is present *and current*, so docs cannot drift from code. |
 | `codeowners` | repo | `.github/CODEOWNERS` names an owner for your folder, so ownership cannot be dropped silently. |
@@ -166,7 +195,9 @@ my_lab_models = "my_lab_models"
 ```
 
 It can also hold itself to the `model`-scope contract in its own CI, since the
-checks ship in `pybamm_model_zoo.testing.contract`. In-tree models win a name
+checks ship in `pybamm_model_zoo.testing.contract`. Its models' extras follow the
+same `zoo-<slug>` naming in the collection's own distribution, and its own
+`pybamm` requirement is its PyBaMM floor. In-tree models win a name
 collision, so a third-party package cannot shadow one.
 
 ## Review checklist for a zoo pull request
@@ -177,7 +208,8 @@ Short by design — the contract suite does the rest.
 - [ ] License is BSD-3-Clause.
 - [ ] No edits to `packages/pybamm/src/` in the same pull request; core changes
       are split out.
-- [ ] Third-party dependencies declared as a `zoo-<slug>` extra.
+- [ ] Dependencies declared only as a `zoo-<slug>` extra, using PyBaMM's own
+      extras where they exist.
 - [ ] At least one test pins a physical result.
 - [ ] The example script runs.
 - [ ] The citation resolves and is registered on instantiation.
