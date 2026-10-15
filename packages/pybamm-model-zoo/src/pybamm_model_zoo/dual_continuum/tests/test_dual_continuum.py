@@ -6,7 +6,7 @@ analytical solution of the closure problem for a sphere) is PyBaMM's
 quadratic-profile particle, and DC1t with the isolated sphere's transient
 closure variable is PyBaMM's Fickian particle. The image-based surface area and
 the lithium-foil option are pinned against reference voltages from the
-standalone implementation, which has been previously validated against DNS
+standalone implementation, which Paten et al. (2026) validated against DNS
 (tests/data/standalone_reference.csv).
 """
 
