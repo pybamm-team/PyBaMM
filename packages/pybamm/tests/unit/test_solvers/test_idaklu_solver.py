@@ -1083,6 +1083,7 @@ class TestIDAKLUSolver:
             "init_all_y_ic": False,
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 6,
+            "klu_pivot_tolerance": 1.0,
             "epsilon_linear_tolerance": 0.06,
             "increment_factor": 0.99,
             "linear_solution_scaling": False,
@@ -1111,6 +1112,7 @@ class TestIDAKLUSolver:
             "epsilon_linear_tolerance": -1.0,
             "increment_factor": -1.0,
             "hermite_reduction_factor": -1.0,
+            "klu_pivot_tolerance": 0.0,
         }
 
         # test that the solver throws a warning
@@ -1119,6 +1121,11 @@ class TestIDAKLUSolver:
             with pytest.raises(pybamm.SolverError):
                 solver = pybamm.IDAKLUSolver(options=options)
                 solver.solve(model, t_eval)
+
+    @pytest.mark.parametrize("value", [-0.1, 0.0, 1.5, True, "0.1"])
+    def test_klu_pivot_tolerance_must_be_in_unit_interval(self, value):
+        with pytest.raises(pybamm.SolverError, match="klu_pivot_tolerance"):
+            pybamm.IDAKLUSolver(options={"klu_pivot_tolerance": value})
 
     def test_with_output_variables(self):
         # Construct a model and solve for all variables, then test

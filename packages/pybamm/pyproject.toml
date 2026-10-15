@@ -117,6 +117,8 @@ dev = [
     "pytest-snapshot",
     # For testing Jupyter notebooks
     "nbmake",
+    # ipykernel 7.4 fixes execute requests lost on the shell socket (ipykernel#1529)
+    "ipykernel>=7.4.0; python_version >= '3.11'",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
     { include-group = "bench" },
