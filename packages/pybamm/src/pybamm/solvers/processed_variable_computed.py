@@ -701,14 +701,10 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         using interpolation
         """
         if self.time_indep:
-            spatial = {"x": x, "r": r, "y": y, "z": z, "R": R}
-            spatial = {
-                key: value for key, value in spatial.items() if value is not None
-            }
-            if not spatial:
+            # A time integral has one value for the whole solution, whatever t is
+            if all(arg is None for arg in (x, r, y, z, R)):
                 return self.entries
-            values, grid = self._interpolation_grid()
-            return grid.interpolate(values, spatial)
+            t = None
         queries = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
         queries = {key: value for key, value in queries.items() if value is not None}
         values, grid = self._interpolation_grid()
