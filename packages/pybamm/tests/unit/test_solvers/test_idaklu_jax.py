@@ -1,4 +1,5 @@
 import sys
+from collections import OrderedDict
 
 import numpy as np
 import pytest
@@ -274,7 +275,7 @@ class TestIDAKLUJax:
 
     def test_f_batch_over_inputs(self, case):
         _, _, f, wrapper = case
-        inputs_mock = np.array([1.0, 2.0, 3.0])
+        inputs_mock = {"a": np.array([1.0, 2.0, 3.0]), "b": np.array([1.0, 2.0, 3.0])}
         with pytest.raises(NotImplementedError):
             wrapper(jax.vmap(f, in_axes=(None, 0)))(t_eval, inputs_mock)
 
@@ -456,18 +457,19 @@ class TestIDAKLUJax:
         np.testing.assert_allclose(flat_out, check.flatten())
 
     def test_jacfwd_vmap_wrt_time(self, case):
-        _, _, f, wrapper = case
-        with pytest.raises(NotImplementedError):
-            wrapper(
-                jax.vmap(
-                    jax.jacfwd(f, argnums=0),
-                    in_axes=(0, None),
-                ),
-            )(t_eval, inputs)
+        output_variables, _, f, wrapper = case
+        out = wrapper(
+            jax.vmap(
+                jax.jacfwd(f, argnums=0),
+                in_axes=(0, None),
+            ),
+        )(t_eval, inputs)
+        assert out.shape == (t_eval.size, len(output_variables))
+        assert np.isnan(out).all()
 
     def test_jacfwd_batch_over_inputs(self, case):
         _, _, f, wrapper = case
-        inputs_mock = np.array([1.0, 2.0, 3.0])
+        inputs_mock = {"a": np.array([1.0, 2.0, 3.0]), "b": np.array([1.0, 2.0, 3.0])}
         with pytest.raises(NotImplementedError):
             wrapper(
                 jax.vmap(
@@ -527,7 +529,7 @@ class TestIDAKLUJax:
 
     def test_jacrev_batch_over_inputs(self, case):
         _, _, f, wrapper = case
-        inputs_mock = np.array([1.0, 2.0, 3.0])
+        inputs_mock = {"a": np.array([1.0, 2.0, 3.0]), "b": np.array([1.0, 2.0, 3.0])}
         with pytest.raises(NotImplementedError):
             wrapper(
                 jax.vmap(
@@ -1086,15 +1088,40 @@ class TestIDAKLUJaxAnalytic:
 
     # Inputs and outputs
 
-    def test_unsorted_inputs(self, analytic_case, wrapper):
+    @pytest.mark.parametrize("mapping", [dict, OrderedDict])
+    def test_unsorted_inputs(self, analytic_case, wrapper, mapping):
         _, f = analytic_case
         t = analytic_t_off_grid
-        unsorted = {"b": analytic_inputs["b"], "a": analytic_inputs["a"]}
+        # OrderedDict flattens in insertion order, dict in sorted key order
+        unsorted = mapping(b=analytic_inputs["b"], a=analytic_inputs["a"])
         value, sensitivities = analytic_solution(t)
         assert_analytic(wrapper(f)(t, unsorted), value)
         out = wrapper(jax.jacfwd(f, argnums=1))(t, unsorted)
         for name in analytic_inputs:
             assert_analytic(out[name], sensitivities[name])
+
+    def test_retrace_with_other_inputs(self, analytic_case):
+        _, f = analytic_case
+        t = analytic_t_off_grid
+        value, sensitivities = analytic_solution(t)
+        f_jit = jax.jit(f)
+        jacobian_jit = jax.jit(jax.jacfwd(f, argnums=1))
+        assert_analytic(f_jit(t, analytic_inputs), value)
+        # Extra inputs are ignored, and must not change already compiled functions
+        extra = {"c": 1.0, **analytic_inputs}
+        assert_analytic(jax.jit(f)(t, extra), value)
+        assert_analytic(f_jit(t, analytic_inputs), value)
+        out = jacobian_jit(t, extra)
+        assert_analytic(out["c"], np.zeros_like(value))
+        out = jacobian_jit(t, analytic_inputs)
+        for name in analytic_inputs:
+            assert_analytic(out[name], sensitivities[name])
+
+    @pytest.mark.parametrize("inputs", [None, {"a": 2.0}], ids=["none", "partial"])
+    def test_missing_inputs(self, analytic_case, wrapper, inputs):
+        _, f = analytic_case
+        with pytest.raises(pybamm.SolverError, match=r"No value provided for input"):
+            wrapper(f)(analytic_t_off_grid, inputs)
 
     def test_array_input_values(self, analytic_case, wrapper):
         _, f = analytic_case
@@ -1175,6 +1202,8 @@ class TestIDAKLUJaxAnalytic:
         assert np.isnan(wrapper(jvp)(0.55)).all()
         out = wrapper(jax.grad(lambda t: f(t, analytic_inputs)[1]))(0.55)
         assert np.isnan(out)
+        out = wrapper(jax.jacfwd(f))(0.55, analytic_inputs)
+        assert np.isnan(out).all()
 
         # The inputs' cotangents are unaffected
         def vjp(t, inputs):
@@ -1186,3 +1215,20 @@ class TestIDAKLUJaxAnalytic:
         _, sensitivities = analytic_solution(0.55)
         for name in analytic_inputs:
             assert_analytic(inputs_bar[name], sensitivities[name][1])
+
+    @pytest.mark.parametrize("jac", ["jacfwd", "jacrev"])
+    def test_time_jacobian(self, analytic_case, wrapper, jac):
+        _, f = analytic_case
+        t = analytic_t_off_grid
+        t_jac, inputs_jac = wrapper(getattr(jax, jac)(f, argnums=(0, 1)))(
+            t, analytic_inputs
+        )
+        t_jac = np.asarray(t_jac)
+        # Each output depends only on its own time, whose derivative is unavailable
+        own_time = np.broadcast_to(np.eye(t.size, dtype=bool)[:, None, :], t_jac.shape)
+        assert np.isnan(t_jac[own_time]).all()
+        np.testing.assert_array_equal(t_jac[~own_time], 0.0)
+        # The inputs' Jacobian is unaffected
+        _, sensitivities = analytic_solution(t)
+        for name in analytic_inputs:
+            assert_analytic(inputs_jac[name], sensitivities[name])

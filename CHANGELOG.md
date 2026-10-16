@@ -3,7 +3,7 @@
 ## Bug fixes
 
 - `IDAKLUSolver.jaxify` now returns correct derivatives at any requested time. Before, it dropped negative tangents and scalar-time cotangents, and read sensitivities from the wrong solver step, or from the nearest `t_eval` point at off-grid times. ([#5916](https://github.com/pybamm-team/PyBaMM/pull/5916))
-  - An inputs dict not in sorted key order no longer swaps its values outside `jax.jit`.
+  - Inputs are looked up by name, so key order or an `OrderedDict` no longer swaps their values, and a call with other keys no longer breaks earlier `jax.jit` functions. Missing inputs raise a `SolverError`.
   - Input values may be JAX or size-1 arrays; larger arrays raise a `SolverError`.
   - `get_var` and `get_vars` now use the function they are given.
   - `jax.vmap` over tangent directions returns one result per direction, and over time shares one solve.
