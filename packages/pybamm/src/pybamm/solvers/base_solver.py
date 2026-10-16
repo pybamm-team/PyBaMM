@@ -309,6 +309,7 @@ class BaseSolver:
             interpolant_extrapolation_events,
             t_discon_constant_symbols,
             discontinuity_events,
+            discontinuity_periods,
         ) = self._set_up_events(model, t_eval, inputs, vars_for_processing)
 
         # Add the solver attributes
@@ -319,6 +320,7 @@ class BaseSolver:
         model.terminate_events_eval = terminate_events
         model.interpolant_extrapolation_events_eval = interpolant_extrapolation_events
         model.discontinuity_events_eval = discontinuity_events
+        model.discontinuity_periods_eval = discontinuity_periods
         model.t_discon_constant_symbols = t_discon_constant_symbols
 
         model.jac_rhs_eval = jac_rhs
@@ -571,8 +573,23 @@ class BaseSolver:
             # Only IDAKLUSolver supports discontinuities represented by t_eval
             return self.supports_t_eval_discontinuities and expr.is_constant()
 
+        def add_discontinuity_event(name, expression):
+            # Set-up reruns on the same model, which may already have this event
+            for event in model.events:
+                if (
+                    event.event_type == pybamm.EventType.DISCONTINUITY
+                    and event.name == name
+                    and event.expression == expression
+                ):
+                    return
+            model.events.append(
+                pybamm.Event(name, expression, pybamm.EventType.DISCONTINUITY)
+            )
+
         # Find all the constant time-based discontinuities
         t_discon_symbols = []
+        # Input-dependent periods of `t mod period`, expanded per input set at solve
+        discontinuity_periods = []
 
         for symbol in itertools.chain(
             model.concatenated_rhs.pre_order(),
@@ -592,28 +609,22 @@ class BaseSolver:
                     # save the symbol and expression ready for evaluation later
                     t_discon_symbols.append((symbol, expr, None))
                 else:
-                    model.events.append(
-                        pybamm.Event(
-                            str(symbol),
-                            expr,
-                            pybamm.EventType.DISCONTINUITY,
-                        )
-                    )
+                    add_discontinuity_event(str(symbol), expr)
 
             elif isinstance(symbol, pybamm.Modulo) and symbol.left == pybamm.t:
                 expr = symbol.right
-                num_events = 200 if (t_eval is None) else (tf // expr.value)
+                if not expr.is_constant():
+                    # The number of periods in t_eval depends on the inputs
+                    discontinuity_periods.append(expr)
+                    continue
+                num_events = 200 if (t_eval is None) else (tf // expr.evaluate())
 
                 if supports_t_eval_discontinuities(expr):
                     t_discon_symbols.append((symbol, expr, num_events))
                 else:
                     for i in np.arange(num_events):
-                        model.events.append(
-                            pybamm.Event(
-                                str(symbol),
-                                expr * pybamm.Scalar(i + 1),
-                                pybamm.EventType.DISCONTINUITY,
-                            )
+                        add_discontinuity_event(
+                            str(symbol), expr * pybamm.Scalar(i + 1)
                         )
             else:
                 continue
@@ -680,6 +691,7 @@ class BaseSolver:
             interpolant_extrapolation_events,
             t_discon_symbols,
             discontinuity_events,
+            discontinuity_periods,
         )
 
     def _set_consistent_initialization(
@@ -785,6 +797,16 @@ class BaseSolver:
 
         return calculate_sensitivities_list, sensitivities_have_changed
 
+    def _check_single_model(self, model: pybamm.BaseModel) -> None:
+        """Raise a ``RuntimeError`` if this solver is set up for a different model."""
+        if self._model_set_up and model not in self._model_set_up:
+            existing_model = next(iter(self._model_set_up))
+            raise RuntimeError(
+                "This solver has already been initialised for model "
+                f'"{existing_model.name}". Please create a separate '
+                "solver for this model"
+            )
+
     def _integrate(
         self,
         model: pybamm.BaseModel,
@@ -887,10 +909,11 @@ class BaseSolver:
             Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names.  **Limitations**: sensitivities are not calculated up to numerical tolerances
-            so are not guarenteed to be within the tolerances set by the solver, please raise an issue if you
+            so are not guaranteed to be within the tolerances set by the solver, please raise an issue if you
             require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
             do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
             if the timings of your experimental protocol change rapidly with respect to your input parameters.
+            Likewise, they do not include the movement of a discontinuity whose time depends on an input.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -905,6 +928,9 @@ class BaseSolver:
         :class:`pybamm.ModelError`
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}` and
             `model.variables = {}`)
+        :class:`pybamm.SolverError`
+            If `t_eval` or the period of a modulo of time is invalid, or the input sets
+            have discontinuities at different times
         :class:`RuntimeError`
             If multiple calls to `solve` pass in different models
 
@@ -955,6 +981,8 @@ class BaseSolver:
             self._set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
 
+        # Before the sensitivity setting below changes the model
+        self._check_single_model(model)
         _, sensitivities_have_changed = (
             BaseSolver._solve_process_calculate_sensitivities_arg(
                 model_inputs_list[0], model, calculate_sensitivities
@@ -973,13 +1001,6 @@ class BaseSolver:
         timer = pybamm.Timer()
         # Set the initial conditions
         if model not in self._model_set_up:
-            if len(self._model_set_up) > 0:
-                existing_model = next(iter(self._model_set_up))
-                raise RuntimeError(
-                    "This solver has already been initialised for model "
-                    f'"{existing_model.name}". Please create a separate '
-                    "solver for this model"
-                )
             self.set_up(model, model_inputs_list, t_eval)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
@@ -1038,47 +1059,16 @@ class BaseSolver:
 
         start_indices, end_indices, t_eval = first_row
 
-        # Integrate separately over each time segment and accumulate into the solution
-        # object, restarting the solver at each discontinuity (and recalculating a
-        # consistent state afterwards if a DAE)
-        old_y0_list = model.y0_list
-        solutions = None
-        for start_index, end_index in zip(start_indices, end_indices, strict=False):
-            pybamm.logger.verbose(
-                f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
-            )
-            new_solutions = self._integrate(
-                model,
-                t_eval[start_index:end_index],
-                model_inputs_list,
-                t_interp,
-                nproc=nproc,
-            )
-            # Setting the solve time for each segment.
-            # pybamm.Solution.__add__ assumes attribute solve_time.
-            solve_time = timer.time()
-            for sol in new_solutions:
-                sol.solve_time = solve_time
-            if start_index == start_indices[0]:
-                solutions = [sol for sol in new_solutions]
-            else:
-                for i, new_solution in enumerate(new_solutions):
-                    solutions[i] = solutions[i] + new_solution
-
-            if solutions[0].termination != "final time":
-                break
-
-            if end_index != len(t_eval):
-                # setup for next integration subsection
-                for i, soln in enumerate(new_solutions):
-                    last_state = soln.y[:, -1]
-                    # update y0 (for DAE solvers, this updates the initial guess for the
-                    # rootfinder)
-                    model.y0_list[i] = last_state
-                if len(model.algebraic) > 0:
-                    model.y0_list = self.calculate_consistent_state(
-                        model, t_eval[end_index], model_inputs_list
-                    )
+        solutions = self._integrate_segments(
+            model,
+            t_eval,
+            start_indices,
+            end_indices,
+            model_inputs_list,
+            t_interp,
+            timer,
+            nproc=nproc,
+        )
         solve_time = timer.time()
 
         for i, solution in enumerate(solutions):
@@ -1094,9 +1084,6 @@ class BaseSolver:
             # all solutions get the same solve time, but their integration time
             # will be different (see https://github.com/pybamm-team/PyBaMM/pull/1261)
             solutions[i].solve_time = solve_time
-
-        # Restore old y0
-        model.y0_list = old_y0_list
 
         # Report times
         if len(solutions) == 1:
@@ -1130,6 +1117,105 @@ class BaseSolver:
             return solutions[0]
         else:
             return solutions
+
+    def _integrate_segments(
+        self,
+        model: pybamm.BaseModel,
+        t_eval: npt.NDArray[np.float64],
+        start_indices: list[int],
+        end_indices: list[int],
+        inputs_list: list[dict],
+        t_interp: npt.NDArray[np.float64],
+        timer: pybamm.Timer,
+        nproc: int | None = None,
+    ) -> list[pybamm.Solution]:
+        """Integrate over each segment of ``t_eval`` between discontinuities.
+
+        Each input set that reaches the end of a segment restarts from its final
+        state and state sensitivities, made consistent if the model is a DAE. The
+        initial states and their sensitivities are restored afterwards.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model to integrate, with ``y0_list`` set for each input set.
+        t_eval : :class:`numpy.ndarray`
+            The times of all segments.
+        start_indices, end_indices : list of int
+            The slice of ``t_eval`` that each segment spans.
+        inputs_list : list of dict
+            The input parameters of each input set.
+        t_interp : :class:`numpy.ndarray`
+            The interpolation times of all segments.
+        timer : :class:`pybamm.Timer`
+            The timer that gives each segment its solve time.
+        nproc : int, optional
+            Number of processes to use for more than one input set.
+
+        Returns
+        -------
+        list of :class:`pybamm.Solution`
+            The solution of each input set, up to the end of ``t_eval`` or the
+            event that stopped it.
+        """
+        old_y0_list = model.y0_list
+        old_y0S_list = model.y0S_list
+        solutions = [None] * len(inputs_list)
+        # Indices of the input sets that reached the end of every segment so far
+        running = list(range(len(inputs_list)))
+        for start_index, end_index in zip(start_indices, end_indices, strict=True):
+            segment_t_eval = t_eval[start_index:end_index]
+            pybamm.logger.verbose(
+                f"Calling solver for {segment_t_eval[0]} < t < {segment_t_eval[-1]}"
+            )
+            new_solutions = self._integrate(
+                model,
+                segment_t_eval,
+                [inputs_list[i] for i in running],
+                self._segment_t_interp(
+                    t_interp,
+                    segment_t_eval,
+                    first=start_index == 0,
+                    last=end_index == len(t_eval),
+                ),
+                nproc=nproc,
+            )
+            # pybamm.Solution.__add__ assumes attribute solve_time
+            solve_time = timer.time()
+            for i, new_solution in zip(running, new_solutions, strict=True):
+                new_solution.solve_time = solve_time
+                if solutions[i] is None:
+                    solutions[i] = new_solution
+                else:
+                    solutions[i] = solutions[i] + new_solution
+
+            # A set that stopped on an event or failed is not restarted
+            restarts = [
+                (i, sol)
+                for i, sol in zip(running, new_solutions, strict=True)
+                if sol.termination == "final time"
+            ]
+            if not restarts or end_index == len(t_eval):
+                break
+
+            running = [i for i, _ in restarts]
+            model.y0_list = [sol.last_state.all_ys[0][:, 0] for _, sol in restarts]
+            if model.calculate_sensitivities:
+                model.y0S_list = [
+                    tuple(
+                        self._restart_state_sensitivities(
+                            sol, model.calculate_sensitivities
+                        ).T
+                    )
+                    for _, sol in restarts
+                ]
+            self._set_consistent_initialization(
+                model, t_eval[end_index], [inputs_list[i] for i in running]
+            )
+
+        model.y0_list = old_y0_list
+        model.y0S_list = old_y0S_list
+        return solutions
 
     @staticmethod
     def filter_discontinuities(t_discon: list, t_eval: list) -> np.ndarray:
@@ -1167,6 +1253,9 @@ class BaseSolver:
         raise NotImplementedError
 
     def _get_discontinuity_start_end_indices(self, model, y0, inputs, t_eval):
+        # Copy as float: integer times would truncate the points inserted around
+        # each discontinuity, and the caller's array must not be modified
+        t_eval = np.array(t_eval, dtype=float)
         if self.supports_t_eval_discontinuities and model.t_discon_constant_symbols:
             pybamm.logger.verbose("Discontinuity events found for constant symbols")
             _t_discon_constant = []
@@ -1178,16 +1267,28 @@ class BaseSolver:
             t_discon_constant = self.filter_discontinuities(_t_discon_constant, t_eval)
             t_eval = np.union1d(t_eval, t_discon_constant)
 
-        if not model.discontinuity_events_eval:
+        discontinuity_periods = model.discontinuity_periods_eval
+        if not model.discontinuity_events_eval and not discontinuity_periods:
             pybamm.logger.verbose("No additional discontinuity events found")
             return [0], [len(t_eval)], t_eval
 
         # Calculate all possible discontinuities
         _t_discon_full = [
-            event.expression.evaluate(inputs=inputs)
+            np.ravel(event.expression.evaluate(inputs=inputs))
             for event in model.discontinuity_events_eval
         ]
-        t_discon = self.filter_discontinuities(_t_discon_full, t_eval)
+        for period_expression in discontinuity_periods:
+            period = float(
+                np.ravel(period_expression.evaluate(0, y0, inputs=inputs))[0]
+            )
+            if not period > 0:
+                raise pybamm.SolverError(
+                    f"The period of '{period_expression}' in a modulo of time must "
+                    f"be positive, but is {period} for inputs {inputs}"
+                )
+            number_of_periods = int(t_eval[-1] // period)
+            _t_discon_full.append(period * np.arange(1, number_of_periods + 1))
+        t_discon = self.filter_discontinuities(np.concatenate(_t_discon_full), t_eval)
 
         pybamm.logger.verbose(f"Discontinuity events found at t = {t_discon}")
 
@@ -1282,19 +1383,23 @@ class BaseSolver:
         return defaults | user_options
 
     @staticmethod
-    def _check_restart_sensitivities(old_solution: pybamm.Solution) -> None:
-        """Reject a sensitivity restart from a solution that carries none.
+    def _check_restart_sensitivities(
+        old_solution: pybamm.Solution, sensitivity_names: list[str]
+    ) -> None:
+        """Reject a sensitivity restart from a solution that cannot seed it.
 
         Parameters
         ----------
         old_solution : :class:`pybamm.Solution`
             The solution the next step would restart from.
+        sensitivity_names : list of str
+            The inputs the next step calculates sensitivities for.
 
         Raises
         ------
         :class:`pybamm.SolverError`
-            If ``old_solution`` returned output variables only and holds no
-            state sensitivities to seed ``dy0/dp`` from.
+            If ``old_solution`` returned output variables only, or its final
+            state has no sensitivities for some of ``sensitivity_names``.
         """
         if isinstance(old_solution, pybamm.EmptySolution):
             return
@@ -1311,58 +1416,101 @@ class BaseSolver:
                 "'output_variables' or 'calculate_sensitivities' for "
                 "multi-step solves."
             )
+        # Only the final segment's sensitivities describe the final state
+        available = old_solution.sub_solutions[-1].sensitivity_names
+        missing = [name for name in sensitivity_names if name not in available]
+        if missing:
+            raise pybamm.SolverError(
+                f"The solution to continue from has no sensitivities for {missing}. "
+                "Solve it with 'calculate_sensitivities' including these inputs."
+            )
 
-    def _set_sens_initial_conditions_from(
-        self, solution: pybamm.Solution, model: pybamm.BaseModel
-    ) -> tuple:
-        """
-        A restricted version of BaseModel.set_initial_conditions_from that only extracts the
-        sensitivities from a solution object, and only for a model that has been discretised.
-        This is used when setting the initial conditions for a sensitivity model.
+    @staticmethod
+    def _restart_state_sensitivities(
+        solution: pybamm.Solution, sensitivity_names: list[str]
+    ) -> npt.NDArray[np.float64]:
+        """State sensitivities at the final state of a solution, selected by name.
 
         Parameters
         ----------
         solution : :class:`pybamm.Solution`
-            The solution to use to initialize the model
-
-        model: :class:`pybamm.BaseModel`
-            The model whose sensitivities to set
+            The solution to restart from.
+        sensitivity_names : list of str
+            The inputs to select, in the order of the returned columns.
 
         Returns
         -------
-
-        initial_conditions : tuple of ndarray
-            The initial conditions for the sensitivities, each element of the tuple
-            corresponds to an input parameter
+        :class:`numpy.ndarray`
+            Array of shape ``(number of states, len(sensitivity_names))``.
         """
+        sensitivities = solution.last_state._all_sensitivities
+        return np.hstack(
+            [
+                np.asarray(sensitivities[name][0], dtype=float).reshape(-1, 1)
+                for name in sensitivity_names
+            ]
+        )
 
-        ninputs = len(model.calculate_sensitivities)
-        initial_conditions = tuple([] for _ in range(ninputs))
-        solution = solution.last_state
+    def _set_sens_initial_conditions_from(
+        self,
+        solution: pybamm.Solution,
+        model: pybamm.BaseModel,
+        inputs: dict,
+    ) -> tuple:
+        """Sensitivities of the initial state set by name from a solution.
+
+        Each state is stored as ``(var - reference) / scale``, where the
+        reference and scale may depend on the inputs.
+
+        Parameters
+        ----------
+        solution : :class:`pybamm.Solution`
+            The solution to use to initialize the model.
+        model : :class:`pybamm.BaseModel`
+            The discretised model, with ``y0_list`` already set from ``solution``.
+        inputs : dict
+            The input parameters of ``model``.
+
+        Returns
+        -------
+        tuple of :class:`numpy.ndarray`
+            The initial state sensitivities, one array per name in
+            ``model.calculate_sensitivities``.
+        """
+        names = model.calculate_sensitivities
+        last_state = solution.last_state
+        y0 = casadi.DM(model.y0_list[0]).full().ravel()
+        p_casadi = {
+            name: casadi.MX.sym(name, np.size(value)) for name, value in inputs.items()
+        }
+        p_casadi_stacked = casadi.vertcat(*p_casadi.values())
+        p_sensitivities = casadi.vertcat(*[p_casadi[name] for name in names])
+        p_stacked = flatten_inputs(inputs)
+
+        y0S = np.zeros((model.len_rhs_and_alg, len(names)))
         for var in model.initial_conditions:
-            final_state = solution[var.name]
-            final_state = final_state.sensitivities
-            final_state_eval = tuple(
-                final_state[key] for key in model.calculate_sensitivities
+            sensitivities = last_state[var.name].sensitivities
+            dvar_dp = np.hstack([sensitivities[name].reshape(-1, 1) for name in names])
+            reference = var.reference.to_casadi(inputs=p_casadi)
+            scale = var.scale.to_casadi(inputs=p_casadi)
+            reference_and_scale = casadi.Function(
+                "reference_and_scale",
+                [p_casadi_stacked],
+                [
+                    scale,
+                    casadi.jacobian(reference, p_sensitivities),
+                    casadi.jacobian(scale, p_sensitivities),
+                ],
             )
-
-            scale, reference = var.scale.value, var.reference.value
-            for i in range(ninputs):
-                scaled_final_state_eval = (final_state_eval[i] - reference) / scale
-                initial_conditions[i].append(scaled_final_state_eval)
-
-        # Also update the concatenated initial conditions if the model is already
-        # discretised
-        # Unpack slices for sorting
-        y_slices = {var: slce for var, slce in model.y_slices.items()}
-        slices = [y_slices[symbol][0] for symbol in model.initial_conditions]
-
-        # sort equations according to slices
-        concatenated_initial_conditions = [
-            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init, strict=True))])
-            for init in initial_conditions
-        ]
-        return concatenated_initial_conditions
+            scale_value, dreference_dp, dscale_dp = (
+                value.full() for value in reference_and_scale(p_stacked)
+            )
+            # The derivative of (var - reference) / scale
+            y_slice = model.y_slices[var][0]
+            y0S[y_slice] = (
+                dvar_dp - dreference_dp - y0[y_slice, np.newaxis] * dscale_dp
+            ) / scale_value
+        return tuple(y0S.T)
 
     def _store_first_last_endpoints(self, t_eval):
         if not self.store_first_last:
@@ -1401,6 +1549,38 @@ class BaseSolver:
             t_interp = np.empty(0)
 
         return t_interp
+
+    @staticmethod
+    def _segment_t_interp(
+        t_interp, segment_t_eval: npt.NDArray[np.float64], first: bool, last: bool
+    ) -> npt.NDArray[np.float64]:
+        """Interpolation times of a solve that fall within one of its segments.
+
+        Parameters
+        ----------
+        t_interp : array-like
+            The interpolation times of the whole solve.
+        segment_t_eval : :class:`numpy.ndarray`
+            The times of the segment.
+        first : bool
+            Whether the segment starts the solve, so keeps the times before it.
+        last : bool
+            Whether the segment ends the solve, so keeps the times after it.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            ``t_interp`` if it is empty or the segment spans the whole solve,
+            otherwise the times in the segment with its end points.
+        """
+        t_interp = np.asarray(t_interp, dtype=float)
+        if t_interp.size == 0 or (first and last):
+            return t_interp
+        lower = -np.inf if first else segment_t_eval[0]
+        upper = np.inf if last else segment_t_eval[-1]
+        inside = t_interp[(t_interp >= lower) & (t_interp <= upper)]
+        # An empty t_interp would store every step, so keep the end points
+        return np.union1d(inside, segment_t_eval[[0, -1]])
 
     def step(
         self,
@@ -1446,19 +1626,27 @@ class BaseSolver:
             require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
             do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
             if the timings of your experimental protocol change rapidly with respect to your input parameters.
+            Likewise, they do not include the movement of a discontinuity whose time depends on an input.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
         state_mapper : tuple of (function, jacobian_y, jacobian_p), optional
-            A tuple containing a function and its Jacobians to map the state from the old solution to the new solution.
-            `function`, `jacobian_y` and `jacobian_p` are casadi/jax/python functions that have been processed using `BaseSolver.process`.
-            If not provided, then `BaseModel.set_initial_conditions_from` is used to map the state from the old solution to the new solution
+            The output of `BaseSolver.process` for a function that maps the final state of the old solution
+            to the initial state of `model`. Only `function` is used. If it is a CasADi function, sensitivities
+            are mapped by forward-mode differentiation of it; otherwise they are matched by variable name.
+            If not provided, then `BaseModel.set_initial_conditions_from` maps the state, and sensitivities are
+            matched by variable name.
 
         Raises
         ------
         :class:`pybamm.ModelError`
             If an empty model is passed (`model.rhs = {}` and `model.algebraic = {}` and
             `model.variables = {}`)
+        :class:`pybamm.SolverError`
+            If `dt`, `t_eval` or the period of a modulo of time is invalid, or the old
+            solution has no state sensitivities for an input in `calculate_sensitivities`
+        :class:`RuntimeError`
+            If the solver has already been set up for a different model
 
         """
 
@@ -1532,22 +1720,29 @@ class BaseSolver:
         # Set up inputs
         model_inputs = self._set_up_model_inputs(model, inputs)
 
+        # Before the sensitivity setting below changes the model
+        self._check_single_model(model)
+
         # process calculate_sensitivities argument
-        _, sensitivities_have_changed = (
+        previous_sensitivities = getattr(model, "calculate_sensitivities", [])
+        sensitivity_names, sensitivities_have_changed = (
             BaseSolver._solve_process_calculate_sensitivities_arg(
                 model_inputs, model, calculate_sensitivities
             )
         )
+        if sensitivity_names:
+            try:
+                self._check_restart_sensitivities(old_solution, sensitivity_names)
+            except pybamm.SolverError:
+                # Leave the model matching the solver's current set-up
+                model.calculate_sensitivities = previous_sensitivities
+                raise
+        if sensitivities_have_changed:
+            # Rebuild the solver for the new sensitivities, as solve() does
+            self._model_set_up.pop(model, None)
 
-        first_step_this_model = model not in self._model_set_up
-        if first_step_this_model or sensitivities_have_changed:
-            if len(self._model_set_up) > 0:
-                existing_model = next(iter(self._model_set_up))
-                raise RuntimeError(
-                    "This solver has already been initialised for model "
-                    f'"{existing_model.name}". Please create a separate '
-                    "solver for this model"
-                )
+        needs_set_up = model not in self._model_set_up
+        if needs_set_up:
             self.set_up(model, model_inputs)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
@@ -1560,27 +1755,26 @@ class BaseSolver:
             pybamm.logger.verbose(f"Start stepping {model.name} with {self.name}")
 
         using_sensitivities = len(model.calculate_sensitivities) > 0
-        if using_sensitivities:
-            self._check_restart_sensitivities(old_solution)
 
         if isinstance(old_solution, pybamm.EmptySolution):
-            if not first_step_this_model:
+            if not needs_set_up:
                 # reset y0 to original initial conditions
                 self.set_up(model, model_inputs, ics_only=True)
         elif old_solution.all_models[-1] == model:
             last_state = old_solution.last_state
             model.y0_list = [last_state.all_ys[0]]
             if using_sensitivities:
-                full_sens = last_state._all_sensitivities["all"][0]
-                model.y0S_list = [
-                    tuple(full_sens[:, i] for i in range(full_sens.shape[1]))
-                ]
+                sensitivities = self._restart_state_sensitivities(
+                    old_solution, model.calculate_sensitivities
+                )
+                model.y0S_list = [tuple(sensitivities.T)]
 
         else:
+            mapper_func = None
             if state_mapper is not None:
                 last_state = old_solution.last_state
                 y_from = last_state.all_ys[0]
-                mapper_func, _mapper_jac, _mapper_jacp = state_mapper
+                mapper_func = state_mapper[0]
                 # Mapper CasADi graph is compiled using previous_model.input_parameters
                 # (see Simulation._build_experiment_state_mappers); stack p in that
                 # layout, not the next model's model_inputs.
@@ -1615,9 +1809,29 @@ class BaseSolver:
                     concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
                 ]
 
-            if using_sensitivities:
+            if using_sensitivities and isinstance(mapper_func, casadi.Function):
+                # Forward-mode AD of the mapper gives J_y @ dy/dp + J_p
+                names = model.calculate_sensitivities
+                sizes = [np.size(value) for value in mapper_inputs.values()]
+                starts = dict(zip(mapper_inputs, np.cumsum([0, *sizes]), strict=False))
+                input_seeds = np.zeros((sum(sizes), len(names)))
+                for column, name in enumerate(names):
+                    input_seeds[starts[name], column] = 1
+                sensitivities = mapper_func.forward(len(names))(
+                    t_start_shifted,
+                    y_from,
+                    p_casadi_stacked,
+                    model.y0_list[0],
+                    np.zeros((1, len(names))),
+                    self._restart_state_sensitivities(old_solution, names),
+                    input_seeds,
+                )
+                model.y0S_list = [tuple(sensitivities.full().T)]
+            elif using_sensitivities:
                 model.y0S_list = [
-                    self._set_sens_initial_conditions_from(old_solution, model)
+                    self._set_sens_initial_conditions_from(
+                        old_solution, model, model_inputs
+                    )
                 ]
 
         set_up_time = timer.time()
@@ -1632,9 +1846,14 @@ class BaseSolver:
 
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
+        start_indices, end_indices, t_eval = self._get_discontinuity_start_end_indices(
+            model, model.y0_list[0], model_inputs, t_eval
+        )
         timer.reset()
 
-        solution = self._integrate(model, t_eval, [model_inputs], t_interp)[0]
+        solution = self._integrate_segments(
+            model, t_eval, start_indices, end_indices, [model_inputs], t_interp, timer
+        )[0]
         solution.solve_time = timer.time()
 
         # Check if extrapolation occurred
