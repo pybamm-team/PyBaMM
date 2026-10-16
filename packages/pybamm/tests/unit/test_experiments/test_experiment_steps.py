@@ -48,6 +48,18 @@ class TestExperimentSteps:
         with pytest.raises(ValueError, match=r"time must be positive"):
             pybamm.step.current(1, duration=0)
 
+        for time in ["0 seconds", "-5 minutes"]:
+            with pytest.raises(ValueError, match=r"time must be positive"):
+                pybamm.step.current(1, duration=time)
+            with pytest.raises(ValueError, match=r"time must be positive"):
+                pybamm.step.current(1, period=time)
+        with pytest.raises(ValueError, match=r"time must be positive"):
+            pybamm.step.string("Rest for -5 minutes")
+
+        for temperature in [np.int64(298), np.float32(298)]:
+            step = pybamm.step.current(1, temperature=temperature)
+            assert step.temperature == pytest.approx(298)
+
     def test_specific_steps(self):
         current = pybamm.step.current(1)
         assert isinstance(current, pybamm.step.Current)
