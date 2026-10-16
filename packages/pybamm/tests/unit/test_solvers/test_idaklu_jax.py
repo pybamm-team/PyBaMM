@@ -1123,15 +1123,32 @@ class TestIDAKLUJaxAnalytic:
         with pytest.raises(pybamm.SolverError, match=r"No value provided for input"):
             wrapper(f)(analytic_t_off_grid, inputs)
 
-    def test_array_input_values(self, analytic_case, wrapper):
+    @pytest.mark.parametrize(
+        "convert",
+        [
+            int,
+            np.float32,
+            jnp.float32,
+            jnp.asarray,
+            lambda x: jnp.array([x]),
+            lambda x: jnp.array([[x]]),
+        ],
+        ids=["int", "np-float32", "jnp-float32", "0d", "1d", "2d"],
+    )
+    def test_input_types(self, analytic_case, wrapper, convert):
         _, f = analytic_case
-        # Mixed shapes check that each input gets its own layout under jit
-        inputs = {
-            "a": jnp.asarray(analytic_inputs["a"]),
-            "b": jnp.array([analytic_inputs["b"]]),
-        }
-        value, _ = analytic_solution(analytic_t_off_grid)
-        assert_analytic(wrapper(f)(analytic_t_off_grid, inputs), value)
+        t = analytic_t_off_grid
+        inputs = {name: convert(value) for name, value in analytic_inputs.items()}
+        value, sensitivities = analytic_solution(t)
+        assert_analytic(wrapper(f)(t, inputs), value)
+        # JAX only differentiates with respect to floating-point inputs
+        if not jnp.issubdtype(jnp.result_type(inputs["a"]), jnp.floating):
+            return
+        for jac in (jax.jacfwd, jax.jacrev):
+            out = wrapper(jac(f, argnums=1))(t, inputs)
+            for name in analytic_inputs:
+                assert out[name].shape == value.shape + np.shape(inputs[name])
+                assert_analytic(np.reshape(out[name], value.shape), sensitivities[name])
 
     def test_non_scalar_input_values(self, analytic_case, wrapper):
         _, f = analytic_case

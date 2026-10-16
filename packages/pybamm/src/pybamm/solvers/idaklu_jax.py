@@ -638,6 +638,12 @@ class IDAKLUJax:
             values = [inputs[name] for name in self.jax_input_names]
             if any(np.size(value) != 1 for value in values):
                 raise pybamm.SolverError("IDAKLUJax only supports scalar inputs")
+            # The solver reads each input as one float64, and JAX restores the
+            # original shape and dtype of their cotangents
+            values = [
+                jnp.reshape(jnp.asarray(value, dtype=jnp.float64), ())
+                for value in values
+            ]
             self.jax_inputs = inputs
             out = f_p.bind(t, *values)
             return out
