@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added the `MolicelP45B_AboutEnergy2026` parameter set for the Molicel INR21700-P45B cell (NCA / graphite-SiOx composite), loaded from the BPX file published with the paper. Use it with the DFN, two negative particle phases, one-state hysteresis on the silicon phase and contact resistance. Requires the `bpx` optional dependency. ([#5914](https://github.com/pybamm-team/PyBaMM/pull/5914))
+
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
