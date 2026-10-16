@@ -480,7 +480,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "x-average side reactions": "false",
             "use lumped thermal capacity": "false",
         }
-        extra_options = extra_options or {}
+        # copy, so normalising the options below does not change the caller's dict
+        extra_options = dict(extra_options or {})
 
         # Handle OCP option renaming
         _rename_option(
