@@ -684,6 +684,9 @@ def _convert_time_to_seconds(time_and_units):
             "time units must be 'seconds', 'minutes' or 'hours'. "
             f"For example: {_examples}"
         )
+    # Strings like "-5 minutes" must fail like the number -300 does
+    if time_in_seconds <= 0:
+        raise ValueError("time must be positive")
     return time_in_seconds
 
 

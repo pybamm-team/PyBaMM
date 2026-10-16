@@ -106,6 +106,16 @@ def test_value_based_charge_or_discharge_with_input_parameter():
         ),
         (
             pybamm.experiment.step.base_step._convert_time_to_seconds,
+            "-5 minutes",
+            "time must be positive",
+        ),
+        (
+            pybamm.experiment.step.base_step._convert_time_to_seconds,
+            "0 seconds",
+            "time must be positive",
+        ),
+        (
+            pybamm.experiment.step.base_step._convert_time_to_seconds,
             "1 day",
             "time units must be 'seconds', 'minutes' or 'hours'",
         ),
