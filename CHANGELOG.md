@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added three-electrode EIS support to `pybamm.EISSimulation`: when the model has a reference electrode inserted via `insert_reference_electrode`, the solution also carries named positive/negative electrode impedances and the Nyquist plot shows each component. ([#5648](https://github.com/pybamm-team/PyBaMM/pull/5648))
+
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))

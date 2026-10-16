@@ -441,3 +441,113 @@ class TestReplaceOnModels:
         bc_value = next(iter(model.boundary_conditions.values()))
         assert bc_value["left"][0].value == 3
         assert bc_value["right"][0].value == 42
+
+
+class TestThreeElectrodeEIS:
+    """Tests for per-electrode impedance via an inserted reference electrode."""
+
+    @staticmethod
+    def _three_electrode_model(options=None):
+        model = pybamm.lithium_ion.SPM(
+            options={"surface form": "differential", **(options or {})}
+        )
+        model.insert_reference_electrode()
+        return model
+
+    def test_no_reference_electrode_gives_only_cell_impedance(self):
+        model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
+        solution = pybamm.EISSimulation(model).solve(np.logspace(-2, 2, 5))
+
+        assert "Cell impedance [Ohm]" not in solution._data
+        assert "Positive electrode impedance [Ohm]" not in solution._data
+        assert "Negative electrode impedance [Ohm]" not in solution._datas
+
+    @pytest.mark.parametrize(
+        "model_class",
+        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
+    )
+    def test_impedances_sum_to_cell_impedance(self, model_class):
+        model = model_class(options={"surface form": "differential"})
+        model.insert_reference_electrode()
+        solution = pybamm.EISSimulation(model).solve(np.logspace(-2, 2, 5))
+
+        z_cell = solution["Cell impedance [Ohm]"]
+        z_pos = solution["Positive electrode impedance [Ohm]"]
+        z_neg = solution["Negative electrode impedance [Ohm]"]
+
+        # SPMe's explicit potential expressions make the split approximate, so the
+        # tolerance is looser than the exact split SPM and DFN give.
+        np.testing.assert_allclose(z_pos + z_neg, z_cell, rtol=1e-5)
+        np.testing.assert_allclose(solution.impedance, z_cell)
+
+    def test_cell_impedance_matches_two_electrode_simulation(self):
+        frequencies = np.logspace(-2, 2, 5)
+        two_electrode = pybamm.EISSimulation(
+            pybamm.lithium_ion.SPM(options={"surface form": "differential"})
+        ).solve(frequencies)
+        three_electrode = pybamm.EISSimulation(self._three_electrode_model()).solve(
+            frequencies
+        )
+
+        np.testing.assert_allclose(
+            three_electrode.impedance, two_electrode.impedance, rtol=1e-8
+        )
+
+    def test_reference_position_changes_split_not_cell(self):
+        # DFN, not SPM: SPM has no electrolyte potential gradient, so the reference
+        # position cannot change where the cell impedance is split.
+        frequencies = np.logspace(-2, 2, 5)
+        solutions = []
+        for fraction in (0.25, 0.75):
+            model = pybamm.lithium_ion.DFN(options={"surface form": "differential"})
+            model.insert_reference_electrode(
+                position=model.param.n.L + fraction * model.param.s.L
+            )
+            solutions.append(pybamm.EISSimulation(model).solve(frequencies))
+
+        np.testing.assert_allclose(
+            solutions[0]["Cell impedance [Ohm]"],
+            solutions[1]["Cell impedance [Ohm]"],
+            rtol=1e-8,
+        )
+        assert not np.allclose(
+            solutions[0]["Positive electrode impedance [Ohm]"],
+            solutions[1]["Positive electrode impedance [Ohm]"],
+        )
+
+    def test_half_cell_gives_only_positive_component(self):
+        model = self._three_electrode_model({"working electrode": "positive"})
+        solution = pybamm.EISSimulation(model).solve(np.logspace(-2, 2, 5))
+
+        assert "Positive electrode impedance [Ohm]" in solution._data
+        assert "Negative electrode impedance [Ohm]" not in solution._data
+
+    def test_nyquist_plot_labels_each_component(self):
+        import matplotlib
+
+        matplotlib.use("Agg")
+
+        solution = pybamm.EISSimulation(self._three_electrode_model()).solve(
+            np.logspace(-2, 2, 5)
+        )
+        _, ax = solution.nyquist_plot(show_plot=False)
+
+        assert [line.get_label() for line in ax.get_lines()] == [
+            "Cell",
+            "Positive electrode",
+            "Negative electrode",
+        ]
+
+    def test_nyquist_plot_labels_half_cell_components(self):
+        import matplotlib
+
+        matplotlib.use("Agg")
+
+        model = self._three_electrode_model({"working electrode": "positive"})
+        solution = pybamm.EISSimulation(model).solve(np.logspace(-2, 2, 5))
+        _, ax = solution.nyquist_plot(show_plot=False)
+
+        assert [line.get_label() for line in ax.get_lines()] == [
+            "Cell",
+            "Positive electrode",
+        ]
