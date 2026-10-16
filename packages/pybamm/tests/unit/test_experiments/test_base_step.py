@@ -96,12 +96,29 @@ def test_value_based_charge_or_discharge_with_input_parameter():
     assert step.termination[0] == pybamm.step.CurrentTermination(2.0, operator=">")
 
 
+@pytest.mark.parametrize("temperature", [np.int64(298), np.float32(298.0), 298])
+def test_numeric_temperature_is_kelvin(temperature):
+    # NumPy scalars are not int or float, and used to be parsed as a string
+    step = pybamm.step.current(1, duration=10, temperature=temperature)
+    assert step.temperature == 298
+
+
 @pytest.mark.parametrize(
     "helper,input_value,match",
     [
         (
             pybamm.experiment.step.base_step._convert_time_to_seconds,
             0,
+            "time must be positive",
+        ),
+        (
+            pybamm.experiment.step.base_step._convert_time_to_seconds,
+            "-5 minutes",
+            "time must be positive",
+        ),
+        (
+            pybamm.experiment.step.base_step._convert_time_to_seconds,
+            "0 seconds",
             "time must be positive",
         ),
         (
