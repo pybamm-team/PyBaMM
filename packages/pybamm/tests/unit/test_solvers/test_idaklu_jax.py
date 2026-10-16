@@ -1123,13 +1123,14 @@ class TestIDAKLUJaxAnalytic:
         with pytest.raises(pybamm.SolverError, match=r"No value provided for input"):
             wrapper(f)(analytic_t_off_grid, inputs)
 
+    # Lambdas defer jnp lookups, as the module must collect without JAX
     @pytest.mark.parametrize(
         "convert",
         [
             int,
             np.float32,
-            jnp.float32,
-            jnp.asarray,
+            lambda x: jnp.float32(x),
+            lambda x: jnp.asarray(x),
             lambda x: jnp.array([x]),
             lambda x: jnp.array([[x]]),
         ],
