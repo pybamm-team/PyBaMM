@@ -520,6 +520,9 @@ class TestSimulationExperiment:
 
             if experiment_model_mode == "legacy":
                 assert (model_0, model_1) in sim.model_state_mappers
+                # step() only uses the mapper function, not its jacobian
+                _, jacobian, _ = sim._compiled_model_state_mappers[(model_0, model_1)]
+                assert jacobian is None
             else:
                 assert len(sim.model_state_mappers.values()) == 0
 
