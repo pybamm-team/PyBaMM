@@ -1080,16 +1080,20 @@ class Solution(SolutionBase):
 
         # Save cycle number and step number if the solution has them
         if cycles_and_steps and len(self.cycles) > 0:
-            data_short_names["Cycle"] = np.array([])
-            data_short_names["Step"] = np.array([])
+            cycle_numbers, step_numbers, previous_last_t = [], [], None
             for i, cycle in enumerate(self.cycles):
-                data_short_names["Cycle"] = np.concatenate(
-                    [data_short_names["Cycle"], i * np.ones_like(cycle.t)]
-                )
                 for j, step in enumerate(cycle.steps):
-                    data_short_names["Step"] = np.concatenate(
-                        [data_short_names["Step"], j * np.ones_like(step.t)]
+                    # a step's first point is dropped when it repeats the previous
+                    # step's last point, so don't number it twice
+                    repeated = (
+                        previous_last_t is not None and step.t[0] == previous_last_t
                     )
+                    previous_last_t = step.t[-1]
+                    length = len(step.t) - repeated
+                    cycle_numbers.append(np.full(length, i, dtype=float))
+                    step_numbers.append(np.full(length, j, dtype=float))
+            data_short_names["Cycle"] = np.concatenate(cycle_numbers)
+            data_short_names["Step"] = np.concatenate(step_numbers)
 
         return data_short_names
 
