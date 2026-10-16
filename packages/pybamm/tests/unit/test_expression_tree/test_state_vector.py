@@ -51,53 +51,78 @@ class TestStateVector:
         )
         assert sv.name == "y[0:10,20:30,...,60:70]"
 
-    def test_pass_evaluation_array(self):
-        # Turn off debug mode for this test
-        original_debug_mode = pybamm.settings.debug_mode
-        pybamm.settings.debug_mode = False
-        # Test that evaluation array gets passed down (doesn't have to be the correct
-        # array for this test)
-        array = np.array([1, 2, 3, 4, 5])
-        sv = pybamm.StateVector(slice(0, 10), evaluation_array=array)
-        np.testing.assert_array_equal(sv.evaluation_array, array)
-        # Turn debug mode back to what is was before
-        pybamm.settings.debug_mode = original_debug_mode
+    def test_evaluation_array_argument_deprecated(self):
+        with pytest.warns(DeprecationWarning, match=r"evaluation_array"):
+            sv = pybamm.StateVector(slice(0, 3), evaluation_array=[True, False, True])
+        # The slices define the entries read
+        assert sv.evaluation_array == [True, True, True]
 
     def test_failure(self):
         with pytest.raises(TypeError, match=r"all y_slices must be slice objects"):
             pybamm.StateVector(slice(0, 10), 1)
 
-    def test_to_from_json(self, mocker):
-        original_debug_mode = pybamm.settings.debug_mode
-        pybamm.settings.debug_mode = False
-
-        array = np.array([1, 2, 3, 4, 5])
-        sv = pybamm.StateVector(slice(0, 10), evaluation_array=array)
-
+    def test_to_from_json(self):
+        sv = pybamm.StateVector(slice(0, 3))
         json_dict = {
-            "name": "y[0:10]",
+            "name": "y[0:3]",
             "domains": {
                 "primary": [],
                 "secondary": [],
                 "tertiary": [],
                 "quaternary": [],
             },
-            "y_slice": [
-                {
-                    "start": 0,
-                    "stop": 10,
-                    "step": None,
-                }
-            ],
-            "evaluation_array": [1, 2, 3, 4, 5],
+            "y_slice": [{"start": 0, "stop": 3, "step": None}],
+            "evaluation_array": [True, True, True],
         }
-
         assert sv.to_json() == json_dict
-
         assert pybamm.StateVector._from_json(json_dict) == sv
 
-        # Turn debug mode back to what is was before
-        pybamm.settings.debug_mode = original_debug_mode
+    def test_several_slices(self):
+        sv = pybamm.StateVector(slice(0, 2), slice(4, 6))
+        assert sv.evaluation_array == [True, True, False, False, True, True]
+        assert sv.size == 4
+        np.testing.assert_array_equal(
+            sv.evaluate(y=np.arange(8.0)), [[0.0], [1.0], [4.0], [5.0]]
+        )
+
+    def test_identity_ignores_how_slices_are_split(self):
+        assert pybamm.StateVector(slice(53)) == pybamm.StateVector(slice(0, 53))
+        assert pybamm.StateVector(
+            slice(0, 2), slice(2, 5), name="y"
+        ) == pybamm.StateVector(slice(0, 5), name="y")
+        assert pybamm.StateVector(slice(0, 2)) != pybamm.StateVector(slice(0, 3))
+
+    @pytest.mark.parametrize(
+        "y_slices",
+        [
+            (slice(5, 8), slice(0, 3)),
+            (slice(0, 3), slice(2, 4)),
+            (slice(0, 6, 2),),
+        ],
+    )
+    def test_invalid_slices(self, y_slices):
+        with pytest.raises(pybamm.ShapeError, match=r"y_slices"):
+            pybamm.StateVector(*y_slices)
+
+    def test_unpickle_evaluation_array_state(self):
+        # Pickles from before the index ranges were stored hold the full mask
+        sv = pybamm.StateVector(slice(0, 2), slice(4, 6))
+        state = sv.__getstate__()
+        del state["_index_ranges"]
+        state["_evaluation_array"] = sv.evaluation_array
+        restored = pybamm.StateVector.__new__(pybamm.StateVector)
+        restored.__setstate__(state)
+        assert restored == sv
+        np.testing.assert_array_equal(
+            restored.evaluate(y=np.arange(6.0)), [[0.0], [1.0], [4.0], [5.0]]
+        )
+
+    def test_ranges_tile(self):
+        ranges_tile = pybamm.expression_tree.state_vector.ranges_tile
+        assert ranges_tile([(0, 2), (2, 5)], 0, 5)
+        assert not ranges_tile([(0, 2), (3, 5)], 0, 5)
+        assert not ranges_tile([(0, 3), (2, 5)], 0, 5)
+        assert not ranges_tile([(0, 2)], 0, 5)
 
 
 class TestStateVectorDot:

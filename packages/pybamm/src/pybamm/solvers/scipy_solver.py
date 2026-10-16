@@ -38,6 +38,8 @@ class ScipySolver(pybamm.BaseSolver):
         for details.
     """
 
+    uses_rhs_jacobian = True
+
     def __init__(
         self,
         method="BDF",

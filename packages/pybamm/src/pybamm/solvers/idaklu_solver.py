@@ -74,6 +74,19 @@ def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.n
 # integrator has located one or more root function zeros.
 _IDA_ROOT_RETURN = 2
 
+
+def to_idaklu_function(fn: casadi.Function):
+    """
+    Hand a casadi.Function to pybammsolvers.
+
+    When pybammsolvers links the Python casadi package's library, the C++ side
+    shares the function directly; otherwise it is serialised and rebuilt.
+    """
+    if idaklu.shares_python_casadi:
+        return idaklu.shared_function(int(fn.this))
+    return idaklu.generate_function(fn.serialize())
+
+
 # Function entries staged in ``_setup`` while building the C++ solver
 # group; popped after construction (C++ owns them via shared_ptr).
 _SETUP_FCN_KEYS = (
@@ -533,10 +546,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 p_casadi[name] = casadi.MX.sym(name, value.shape[0])
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
-        jac_times_cjmass_expression = (
-            model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked)
-            - cj_casadi * mass_matrix
-        )
+        jac_times_cjmass_expression = model.jac_rhs_algebraic_eval(
+            t_casadi, y_casadi, p_casadi_stacked
+        ) - cj_casadi * pybamm.expression_tree.array.to_casadi_dm(mass_matrix)
         if self._options["jacobian"] == "dense":
             jac_times_cjmass_expression = casadi.densify(jac_times_cjmass_expression)
 
@@ -569,7 +581,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 np.zeros(model.len_alg),
             )
         else:
-            mass_action_expression = casadi.densify(casadi.DM(mass_matrix) @ v_casadi)
+            mass_action_expression = casadi.densify(
+                pybamm.expression_tree.array.to_casadi_dm(mass_matrix) @ v_casadi
+            )
 
         # also need the action of the mass matrix on a vector
         mass_action = casadi.Function(
@@ -672,9 +686,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             compiled = aot_compile(list(fns.values()))
             fns = dict(zip(fns.keys(), compiled, strict=True))
 
-        def to_idaklu(fn):
-            return idaklu.generate_function(fn.serialize())
-
         self._setup = {
             "number_of_states": len(y0),
             "inputs": len(stacked_inputs),
@@ -702,20 +713,20 @@ class IDAKLUSolver(pybamm.BaseSolver):
         }
 
         for name in _SETUP_FCN_KEYS:
-            self._setup[name] = to_idaklu(fns[name])
+            self._setup[name] = to_idaklu_function(fns[name])
 
         # The idaklu-bound Function isn't callable from Python; keep the
         # original for the closest_event_idx lookup in _post_process_solution.
         self._setup["rootfn_casadi"] = fns["rootfn"]
 
         for key in self.output_variables:
-            self._setup["var_idaklu_fcns"].append(to_idaklu(fns[f"var:{key}"]))
+            self._setup["var_idaklu_fcns"].append(to_idaklu_function(fns[f"var:{key}"]))
             if has_sens:
                 self._setup["dvar_dy_idaklu_fcns"].append(
-                    to_idaklu(fns[f"dvar_dy:{key}"])
+                    to_idaklu_function(fns[f"dvar_dy:{key}"])
                 )
                 self._setup["dvar_dp_idaklu_fcns"].append(
-                    to_idaklu(fns[f"dvar_dp:{key}"])
+                    to_idaklu_function(fns[f"dvar_dp:{key}"])
                 )
 
         self._setup["solver"] = idaklu.create_casadi_solver_group(

@@ -7,7 +7,8 @@ import casadi
 import numpy as np
 import numpy.typing as npt
 import sympy
-from scipy.sparse import csr_matrix, issparse
+from pybammsolvers import idaklu
+from scipy.sparse import csc_matrix, csr_matrix, issparse
 
 import pybamm
 from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
@@ -132,12 +133,12 @@ class Array(pybamm.Symbol):
 
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
-        return casadi.MX(self.evaluate(t, y, y_dot, inputs))
+        return casadi.MX(to_casadi_dm(self.evaluate(t, y, y_dot, inputs)))
 
     def _jac(self, variable) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
         # Return zeros of correct size
-        jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
+        jac = csr_matrix((self.size, variable.size))
         return pybamm.Matrix(jac)
 
     def create_copy(
@@ -217,3 +218,46 @@ def meshgrid(
     """
     [x_grid, y_grid] = np.meshgrid(x.entries, y.entries)
     return pybamm.Array(x_grid), pybamm.Array(y_grid)
+
+
+def to_casadi_dm(entries) -> casadi.DM:
+    """
+    Convert a numpy array or scipy sparse matrix to a casadi.DM.
+
+    When pybammsolvers links the Python casadi library, the buffers are copied
+    once in C++; casadi's own conversion copies element by element.
+
+    Parameters
+    ----------
+    entries : numpy.ndarray or scipy.sparse matrix
+        The values, at most two-dimensional; a 1D array becomes a column.
+
+    Returns
+    -------
+    casadi.DM
+        The values, sparse if ``entries`` is sparse.
+    """
+    if not idaklu.shares_python_casadi:
+        return casadi.DM(entries)
+    matrix = casadi.DM()
+    if issparse(entries):
+        csc = csc_matrix(entries)
+        if not csc.has_canonical_format:
+            csc = csc.copy()
+            csc.sum_duplicates()
+        idaklu.fill_casadi_dm_sparse(
+            int(matrix.this),
+            csc.shape[0],
+            csc.shape[1],
+            csc.indptr.astype(np.int64),
+            csc.indices.astype(np.int64),
+            csc.data.astype(np.float64),
+        )
+    else:
+        values = np.asarray(entries, dtype=np.float64)
+        if values.ndim < 2:
+            values = values.reshape(-1, 1)
+        idaklu.fill_casadi_dm_dense(
+            int(matrix.this), values.shape[0], values.shape[1], values.ravel(order="F")
+        )
+    return matrix

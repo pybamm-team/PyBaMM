@@ -235,6 +235,12 @@ else ()
     endif()
 endif ()
 
+if (USE_PYTHON_CASADI)
+    # The extension links the Python casadi package's library, so it can share
+    # casadi::Function objects with Python instead of serialising them
+    target_compile_definitions(idaklu PRIVATE PYBAMM_SHARED_CASADI=1)
+endif()
+
 # Match idaklu's libstdc++ std::string ABI to the linked libcasadi (GNU only;
 # no-op for MSVC and macOS/libc++). CasADi's PyPI casadi-config.cmake forces
 # `_GLIBCXX_USE_CXX11_ABI=0` on consumers: correct for the x86_64 wheel (legacy

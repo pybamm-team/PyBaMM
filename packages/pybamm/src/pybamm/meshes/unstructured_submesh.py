@@ -107,13 +107,16 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_cell_geometry(self):
-        verts = self.vertices[self.elements]  # (n_cells, n_verts, d)
+        # Contiguous (n_cells, d) array per local vertex
+        verts = [
+            self.vertices[self.elements[:, i]] for i in range(self.elements.shape[1])
+        ]
         # Vertex mean is the exact centroid for simplices (triangles, tets);
         # quads and hexes overwrite it with the true area/volume centroid.
-        self.cell_centroids = verts.mean(axis=1)
+        self.cell_centroids = sum(verts) / len(verts)
 
         if self.element_type == ElementType.TRIANGLE:
-            v0, v1, v2 = verts[:, 0], verts[:, 1], verts[:, 2]
+            v0, v1, v2 = verts
             cross = (v1[:, 0] - v0[:, 0]) * (v2[:, 1] - v0[:, 1]) - (
                 v1[:, 1] - v0[:, 1]
             ) * (v2[:, 0] - v0[:, 0])
@@ -121,8 +124,8 @@ class UnstructuredSubMesh(SubMesh):
         elif self.element_type == ElementType.QUAD:
             # Shoelace formula for arbitrary simple quadrilaterals
             # Vertices ordered: v0, v1, v2, v3 (counterclockwise or clockwise)
-            x = verts[:, :, 0]  # (n_cells, 4)
-            y = verts[:, :, 1]  # (n_cells, 4)
+            x = np.column_stack([v[:, 0] for v in verts])  # (n_cells, 4)
+            y = np.column_stack([v[:, 1] for v in verts])  # (n_cells, 4)
             # shoelace: sum_i (x_i * y_{i+1} - x_{i+1} * y_i)
             x_next = np.roll(x, -1, axis=1)
             y_next = np.roll(y, -1, axis=1)
@@ -135,7 +138,7 @@ class UnstructuredSubMesh(SubMesh):
             cy = np.sum((y + y_next) * cross, axis=1) / (6.0 * signed_area)
             self.cell_centroids = np.column_stack([cx, cy])
         elif self.element_type == ElementType.TETRAHEDRON:
-            v0, v1, v2, v3 = verts[:, 0], verts[:, 1], verts[:, 2], verts[:, 3]
+            v0, v1, v2, v3 = verts
             d1 = v1 - v0
             d2 = v2 - v0
             d3 = v3 - v0
@@ -146,20 +149,18 @@ class UnstructuredSubMesh(SubMesh):
             )
             self.cell_volumes = np.abs(det) / 6.0
         elif self.element_type == ElementType.HEXAHEDRON:
-            # 5-tet decomposition, exact only for planar-faced hexes (warped
-            # faces are rejected in _compute_face_geometry). Tet volumes are
-            # summed signed so a degenerate or inverted cell cannot cancel
-            # into a plausible positive volume.
-            t = verts[:, self._HEX_TETS]  # (n_cells, 5, 4, d)
-            d1 = t[:, :, 1] - t[:, :, 0]
-            d2 = t[:, :, 2] - t[:, :, 0]
-            d3 = t[:, :, 3] - t[:, :, 0]
-            tet_vols = np.einsum("ijk,ijk->ij", d1, np.cross(d2, d3)) / 6.0
-            vol = tet_vols.sum(axis=1)
+            # 5-tet split, exact for planar-faced hexes; signed sum so an
+            # inverted cell cannot cancel into a plausible positive volume
+            vol = np.zeros(len(self.elements))
+            moment = np.zeros((len(self.elements), 3))
+            for tet in self._HEX_TETS:
+                p0, p1, p2, p3 = (verts[i] for i in tet)
+                tet_vol = _dot(p1 - p0, _cross(p2 - p0, p3 - p0)) / 6.0
+                vol += tet_vol
+                # Volume-weighted tet centroids: exact for planar-faced hexes
+                # such as frusta, where the vertex mean is not
+                moment += tet_vol[:, None] * (p0 + p1 + p2 + p3) / 4.0
             self.cell_volumes = np.abs(vol)
-            # Volume-weighted tet centroids: exact for planar-faced hexes
-            # such as frusta, where the vertex mean is not
-            moment = np.einsum("ij,ijk->ik", tet_vols, t.mean(axis=2))
             safe_vol = np.where(vol == 0.0, 1.0, vol)
             nonzero = (vol != 0.0)[:, None]
             self.cell_centroids = np.where(
@@ -178,7 +179,6 @@ class UnstructuredSubMesh(SubMesh):
             n_verts_per_face = self.dimension
 
         elems = self.elements
-        n_cells = len(elems)
 
         # Build all faces at once using local face definitions
         if self.element_type == ElementType.QUAD:
@@ -193,18 +193,10 @@ class UnstructuredSubMesh(SubMesh):
         n_fpc = len(local)
 
         all_faces = elems[:, local].reshape(-1, n_verts_per_face)
-        cell_ids = np.repeat(np.arange(n_cells), n_fpc)
 
-        # Canonical keys: sort vertex indices within each face
-        sorted_faces = np.sort(all_faces, axis=1)
-
-        # Find unique faces and which are shared (internal) vs single (boundary)
-        _, inverse, counts = np.unique(
-            sorted_faces, axis=0, return_inverse=True, return_counts=True
-        )
-        # numpy 2.0.0 (the declared floor) returns inverse with shape (n, 1);
-        # 2.0.1+ returns (n,). Flatten so masks below stay 1-D everywhere.
-        inverse = inverse.reshape(-1)
+        # Canonical keys: sort vertex indices within each face, then group
+        # duplicates; shared faces are internal, single faces boundary
+        order, counts = _group_rows(np.sort(all_faces, axis=1))
 
         # A manifold mesh shares each face between at most two cells. A count of
         # three or more means overlapping or non-conforming elements; such faces
@@ -216,28 +208,18 @@ class UnstructuredSubMesh(SubMesh):
                 "elements in the input mesh."
             )
 
-        is_internal = counts[inverse] == 2
-        is_boundary = counts[inverse] == 1
+        # The grouping is stable, so each internal face's two rows are adjacent
+        # with the lower-numbered (owner) cell first
+        internal_rows = order[counts == 2]
+        owner_rows = internal_rows[0::2]
+        internal_owner = owner_rows // n_fpc
+        internal_neighbor = internal_rows[1::2] // n_fpc
+        internal_face_verts = all_faces[owner_rows]
 
-        # For internal faces, we need owner/neighbor pairs.
-        # Group by unique face index; first occurrence is owner, second is neighbor.
-        internal_mask = is_internal
-        int_inv = inverse[internal_mask]
-        int_cells = cell_ids[internal_mask]
-        int_faces_raw = all_faces[internal_mask]
-
-        # Sort by unique-face-id to pair them up: [owner0, neighbor0, owner1, neighbor1, ...]
-        order = np.argsort(int_inv, kind="stable")
-        int_cells_sorted = int_cells[order]
-        int_faces_sorted = int_faces_raw[order]
-
-        internal_owner = int_cells_sorted[0::2]
-        internal_neighbor = int_cells_sorted[1::2]
-        internal_face_verts = int_faces_sorted[0::2]
-
-        # Boundary faces
-        bnd_face_verts = all_faces[is_boundary]
-        bnd_owners = cell_ids[is_boundary]
+        # Boundary faces keep their original (cell-major) order
+        boundary_rows = np.sort(order[counts == 1])
+        bnd_face_verts = all_faces[boundary_rows]
+        bnd_owners = boundary_rows // n_fpc
 
         n_internal = len(internal_owner)
         n_boundary = len(bnd_owners)
@@ -272,32 +254,31 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_face_geometry(self):
-        face_verts = self.vertices[self.faces]
-
-        self.face_centroids = face_verts.mean(axis=1)
+        # Contiguous per-vertex gathers; strided views of an (n, k, d) gather
+        # make every later vector operation slower
+        face_verts = [
+            self.vertices[self.faces[:, i]] for i in range(self.faces.shape[1])
+        ]
+        self.face_centroids = sum(face_verts) / len(face_verts)
 
         if self.dimension == 2:
-            v0, v1 = face_verts[:, 0], face_verts[:, 1]
+            v0, v1 = face_verts
             edge = v1 - v0
             self.face_areas = np.linalg.norm(edge, axis=1)
             normals = np.column_stack([edge[:, 1], -edge[:, 0]])
         elif self.element_type == ElementType.HEXAHEDRON:
             # Face = quad: 4 vertices. Area via cross product of diagonals.
-            v0 = face_verts[:, 0]
-            v1 = face_verts[:, 1]
-            v2 = face_verts[:, 2]
-            v3 = face_verts[:, 3]
+            v0, v1, v2, v3 = face_verts
 
             # Quad areas, normals, and the 5-tet cell volumes are only
             # well-defined when all four vertices of a face are coplanar,
             # so warped (non-planar) faces are rejected outright.
-            plane_normal = np.cross(v1 - v0, v2 - v0)
-            plane_norm = np.linalg.norm(plane_normal, axis=1)
+            plane_normal = _cross(v1 - v0, v2 - v0)
+            plane_norm = np.sqrt(_dot(plane_normal, plane_normal))
             safe_norm = np.where(plane_norm < 1e-30, 1.0, plane_norm)
-            offset = np.abs(
-                np.einsum("ij,ij->i", v3 - v0, plane_normal / safe_norm[:, None])
-            )
-            diag_len = np.linalg.norm(v2 - v0, axis=1)
+            n_hat = plane_normal / safe_norm[:, None]
+            offset = np.abs(_dot(v3 - v0, n_hat))
+            diag_len = np.sqrt(_dot(v2 - v0, v2 - v0))
             warped = offset > 1e-8 * np.maximum(diag_len, 1e-30)
             if warped.any():
                 raise pybamm.GeometryError(
@@ -309,17 +290,16 @@ class UnstructuredSubMesh(SubMesh):
 
             diag1 = v2 - v0
             diag2 = v3 - v1
-            cross = np.cross(diag1, diag2)
-            self.face_areas = 0.5 * np.linalg.norm(cross, axis=1)
+            cross = _cross(diag1, diag2)
+            self.face_areas = 0.5 * np.sqrt(_dot(cross, cross))
             normals = cross
 
             # Area-weighted centroid over the (0,1,2)/(0,2,3) triangle split:
             # exact for planar non-parallelogram quads (e.g. trapezoids),
             # where the vertex mean is not. Signed areas taken along the face
             # normal keep non-convex planar quads exact too.
-            n_hat = plane_normal / safe_norm[:, None]
-            area1 = 0.5 * np.einsum("ij,ij->i", np.cross(v1 - v0, v2 - v0), n_hat)
-            area2 = 0.5 * np.einsum("ij,ij->i", np.cross(v2 - v0, v3 - v0), n_hat)
+            area1 = 0.5 * _dot(plane_normal, n_hat)
+            area2 = 0.5 * _dot(_cross(v2 - v0, v3 - v0), n_hat)
             total = area1 + area2
             safe_total = np.where(np.abs(total) < 1e-30, 1.0, total)
             weighted = (
@@ -329,7 +309,7 @@ class UnstructuredSubMesh(SubMesh):
             self.face_centroids[nonzero] = weighted[nonzero]
         else:
             # Face = triangle: 3 vertices
-            v0, v1, v2 = face_verts[:, 0], face_verts[:, 1], face_verts[:, 2]
+            v0, v1, v2 = face_verts
             cross = np.cross(v1 - v0, v2 - v0)
             self.face_areas = 0.5 * np.linalg.norm(cross, axis=1)
             normals = cross
@@ -1531,3 +1511,39 @@ def _hex_to_tet(x_edges, y_edges, z_edges):
     elements = hex_verts[:, kuhn_tets].reshape(-1, 4)
 
     return nodes, elements
+
+
+def _cross(a, b):
+    """Row-wise cross product of two ``(n, 3)`` arrays, faster than ``np.cross``."""
+    a0, a1, a2 = a[:, 0], a[:, 1], a[:, 2]
+    b0, b1, b2 = b[:, 0], b[:, 1], b[:, 2]
+    return np.column_stack([a1 * b2 - a2 * b1, a2 * b0 - a0 * b2, a0 * b1 - a1 * b0])
+
+
+def _dot(a, b):
+    """Row-wise dot product of two ``(n, d)`` arrays."""
+    return np.einsum("ij,ij->i", a, b)
+
+
+def _group_rows(rows):
+    """
+    Stably sort the rows of a 2D array so equal rows are adjacent, and count them.
+
+    Parameters
+    ----------
+    rows : numpy.ndarray
+        2D array whose rows are compared.
+
+    Returns
+    -------
+    order : numpy.ndarray
+        Row indices in lexicographic order, ties kept in input order.
+    counts : numpy.ndarray
+        Multiplicity of the row at each position of ``order``.
+    """
+    order = np.lexsort(rows.T[::-1])
+    sorted_rows = rows[order]
+    starts_group = np.ones(len(rows), dtype=bool)
+    starts_group[1:] = (sorted_rows[1:] != sorted_rows[:-1]).any(axis=1)
+    group = np.cumsum(starts_group) - 1
+    return order, np.bincount(group)[group]

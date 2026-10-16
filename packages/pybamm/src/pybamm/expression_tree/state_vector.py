@@ -3,6 +3,8 @@
 #
 from __future__ import annotations
 
+import warnings
+
 import casadi
 import numpy as np
 import numpy.typing as npt
@@ -10,6 +12,30 @@ from scipy.sparse import csr_matrix, vstack
 
 import pybamm
 from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
+
+
+def ranges_tile(ranges, start: int, stop: int) -> bool:
+    """
+    Whether sorted ``(start, stop)`` ranges cover ``[start, stop)`` exactly once.
+
+    Parameters
+    ----------
+    ranges : iterable of tuple of int
+        Half-open index ranges, sorted by start.
+    start, stop : int
+        The interval to cover.
+
+    Returns
+    -------
+    bool
+        True if the ranges are contiguous, non-overlapping and span the interval.
+    """
+    position = start
+    for range_start, range_stop in ranges:
+        if range_start != position:
+            return False
+        position = range_stop
+    return position == stop
 
 
 class StateVectorBase(pybamm.Symbol):
@@ -33,13 +59,17 @@ class StateVectorBase(pybamm.Symbol):
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
     evaluation_array : list, optional
-        List of boolean arrays representing slices. Default is None, in which case the
-        evaluation_array is computed from y_slices.
+        Deprecated and ignored: the entries read are always given by ``y_slices``.
+
+    Raises
+    ------
+    :class:`pybamm.ShapeError`
+        If a slice has a step, or the slices are not in increasing order or overlap.
     """
 
-    __slots__ = ("_evaluation_array", "_first_point", "_last_point", "_y_slices")
-    # the evaluation array determines the slices and end points
-    _id_excluded_fields = ("_y_slices", "_first_point", "_last_point")
+    __slots__ = ("_first_point", "_index_ranges", "_last_point", "_y_slices")
+    # The merged index ranges define the entries read, however the slices split them
+    _id_excluded_fields = ("_first_point", "_last_point", "_y_slices")
 
     def __init__(
         self,
@@ -54,6 +84,13 @@ class StateVectorBase(pybamm.Symbol):
         for y_slice in y_slices:
             if not isinstance(y_slice, slice):
                 raise TypeError("all y_slices must be slice objects")
+        if evaluation_array is not None:
+            warnings.warn(
+                "The 'evaluation_array' argument of StateVector is deprecated and "
+                "ignored; the entries read are given by the y_slices.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         if name is None:
             if y_slices[0].start is None:
                 name = base_name + f"[0:{y_slice.stop:d}"
@@ -70,7 +107,7 @@ class StateVectorBase(pybamm.Symbol):
         self._y_slices = y_slices
         self._first_point = y_slices[0].start
         self._last_point = y_slices[-1].stop
-        self._evaluation_array = self._make_evaluation_array(y_slices, evaluation_array)
+        self._index_ranges = self._merge_slices(y_slices)
         super().__init__(
             name=name,
             domain=domain,
@@ -82,12 +119,7 @@ class StateVectorBase(pybamm.Symbol):
     def _from_json(cls, snippet: dict):
         y_slices = [slice(s["start"], s["stop"], s["step"]) for s in snippet["y_slice"]]
 
-        return cls(
-            *y_slices,
-            name=snippet["name"],
-            domains=snippet["domains"],
-            evaluation_array=snippet["evaluation_array"],
-        )
+        return cls(*y_slices, name=snippet["name"], domains=snippet["domains"])
 
     @property
     def y_slices(self):
@@ -103,35 +135,73 @@ class StateVectorBase(pybamm.Symbol):
 
     @property
     def evaluation_array(self):
-        """Array to use for evaluating."""
-        return self._evaluation_array
+        """Boolean mask, as long as ``last_point``, of the entries of y read."""
+        array = np.zeros(self._last_point, dtype=bool)
+        for start, stop in self._index_ranges:
+            array[start:stop] = True
+        return array.tolist()
 
     @property
     def size(self):
-        return self.evaluation_array.count(True)
+        return sum(stop - start for start, stop in self._index_ranges)
+
+    def _read(self, vector):
+        """The entries of ``vector`` this state vector reads, as a column."""
+        if len(self._index_ranges) == 1:
+            start, stop = self._index_ranges[0]
+            out = vector[start:stop].copy()
+        else:
+            out = np.concatenate(
+                [vector[start:stop] for start, stop in self._index_ranges]
+            )
+        if isinstance(out, np.ndarray) and out.ndim == 1:
+            out = out[:, np.newaxis]
+        return out
+
+    @staticmethod
+    def _merge_slices(y_slices) -> tuple[tuple[int, int], ...]:
+        """
+        The entries read by ``y_slices``, as ``(start, stop)`` ranges with adjacent
+        slices merged.
+
+        Raises
+        ------
+        :class:`pybamm.ShapeError`
+            If a slice has a step, or the slices are not increasing or overlap.
+        """
+        ranges: list[list[int]] = []
+        for y_slice in y_slices:
+            if y_slice.step not in (None, 1):
+                raise pybamm.ShapeError("y_slices must not have a step")
+            start = y_slice.start or 0
+            if ranges and start < ranges[-1][1]:
+                raise pybamm.ShapeError(
+                    "y_slices must be in increasing order and must not overlap"
+                )
+            if ranges and start == ranges[-1][1]:
+                ranges[-1][1] = y_slice.stop
+            elif y_slice.stop > start:
+                ranges.append([start, y_slice.stop])
+        return tuple((start, stop) for start, stop in ranges)
+
+    def __setstate__(self, state):
+        if "_evaluation_array" in state:  # pickled when the mask was stored
+            state = {
+                key: value for key, value in state.items() if key != "_evaluation_array"
+            }
+            state["_index_ranges"] = self._merge_slices(state["_y_slices"])
+        super().__setstate__(state)
 
     def set_evaluation_array(self, y_slices, evaluation_array):
-        """Set evaluation array using slices (deprecated)."""
+        """Set the slices to read (deprecated); ``evaluation_array`` is ignored."""
         pybamm.expression_tree.symbol._warn_mutation(
             "set_evaluation_array",
             "Construct a new StateVector with the desired slices.",
         )
-        object.__setattr__(
-            self,
-            "_evaluation_array",
-            self._make_evaluation_array(y_slices, evaluation_array),
-        )
-
-    @staticmethod
-    def _make_evaluation_array(y_slices, evaluation_array) -> list[bool]:
-        """The evaluation array: ``evaluation_array`` if given, else computed from
-        the slices."""
-        if evaluation_array is not None and pybamm.settings.debug_mode is False:
-            return evaluation_array
-        array = np.zeros(y_slices[-1].stop)
-        for y_slice in y_slices:
-            array[y_slice] = True
-        return [bool(x) for x in array]
+        object.__setattr__(self, "_y_slices", tuple(y_slices))
+        object.__setattr__(self, "_first_point", y_slices[0].start)
+        object.__setattr__(self, "_last_point", y_slices[-1].stop)
+        object.__setattr__(self, "_index_ranges", self._merge_slices(y_slices))
 
     def _jac_diff_vector(self, variable: pybamm.StateVectorBase):
         """
@@ -209,7 +279,6 @@ class StateVectorBase(pybamm.Symbol):
             *self.y_slices,
             name=self.name,
             domains=self._domains,
-            evaluation_array=self.evaluation_array,
         )
 
     def _evaluate_for_shape(self):
@@ -298,15 +367,11 @@ class StateVector(StateVectorBase):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y is None:
             raise TypeError("StateVector cannot evaluate input 'y=None'")
-        if y.shape[0] < len(self.evaluation_array):
+        if y.shape[0] < self._last_point:
             raise ValueError(
                 "y is too short, so value with slice is smaller than expected"
             )
-
-        out = (y[: len(self._evaluation_array)])[self._evaluation_array]
-        if isinstance(out, np.ndarray) and out.ndim == 1:
-            out = out[:, np.newaxis]
-        return out
+        return self._read(y)
 
     def diff(self, variable: pybamm.Symbol):
         if variable == self:
@@ -316,7 +381,6 @@ class StateVector(StateVectorBase):
                 *self._y_slices,
                 name=self.name + "'",
                 domains=self._domains,
-                evaluation_array=self.evaluation_array,
             )
         else:
             return pybamm.Scalar(0)
@@ -390,15 +454,11 @@ class StateVectorDot(StateVectorBase):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y_dot is None:
             raise TypeError("StateVectorDot cannot evaluate input 'y_dot=None'")
-        if y_dot.shape[0] < len(self.evaluation_array):
+        if y_dot.shape[0] < self._last_point:
             raise ValueError(
                 "y_dot is too short, so value with slice is smaller than expected"
             )
-
-        out = (y_dot[: len(self._evaluation_array)])[self._evaluation_array]
-        if isinstance(out, np.ndarray) and out.ndim == 1:
-            out = out[:, np.newaxis]
-        return out
+        return self._read(y_dot)
 
     def diff(self, variable: pybamm.Symbol):
         if variable == self:

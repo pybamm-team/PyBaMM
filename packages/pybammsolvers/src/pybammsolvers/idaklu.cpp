@@ -27,6 +27,40 @@ casadi::Function generate_casadi_function(const std::string &data)
 
 namespace py = pybind11;
 
+#ifdef PYBAMM_SHARED_CASADI
+// address is the casadi::Function behind a Python casadi.Function (int(f.this)),
+// from the same casadi library this extension links; the copy shares its node
+casadi::Function shared_casadi_function(std::uintptr_t address)
+{
+  return *reinterpret_cast<const casadi::Function *>(address);
+}
+
+// Fill the casadi::DM behind a Python casadi.DM (int(dm.this)) with a CSC
+// matrix, copying the buffers once instead of element by element through SWIG
+void fill_casadi_dm_sparse(
+  std::uintptr_t address, casadi_int nrow, casadi_int ncol,
+  const py::array_t<casadi_int, py::array::c_style | py::array::forcecast> &indptr,
+  const py::array_t<casadi_int, py::array::c_style | py::array::forcecast> &indices,
+  const py::array_t<double, py::array::c_style | py::array::forcecast> &data)
+{
+  std::vector<casadi_int> colind(indptr.data(), indptr.data() + indptr.size());
+  std::vector<casadi_int> row(indices.data(), indices.data() + indices.size());
+  std::vector<double> nonzeros(data.data(), data.data() + data.size());
+  *reinterpret_cast<casadi::DM *>(address) =
+    casadi::DM(casadi::Sparsity(nrow, ncol, colind, row), nonzeros);
+}
+
+// As fill_casadi_dm_sparse, for a dense matrix given in column-major order
+void fill_casadi_dm_dense(
+  std::uintptr_t address, casadi_int nrow, casadi_int ncol,
+  const py::array_t<double, py::array::c_style | py::array::forcecast> &data)
+{
+  std::vector<double> nonzeros(data.data(), data.data() + data.size());
+  *reinterpret_cast<casadi::DM *>(address) =
+    casadi::DM(casadi::Sparsity::dense(nrow, ncol), nonzeros);
+}
+#endif
+
 IDAKLUSolverGroup *create_casadi_solver_group(
   int number_of_states,
   int number_of_parameters,
@@ -201,6 +235,23 @@ PYBIND11_MODULE(idaklu, m)
     "Generate a casadi function",
     py::arg("string"),
     py::return_value_policy::take_ownership);
+
+#ifdef PYBAMM_SHARED_CASADI
+  m.attr("shares_python_casadi") = true;
+  m.def("shared_function", &shared_casadi_function,
+    "Share a Python casadi.Function, given int(f.this), without serialising it",
+    py::arg("address"),
+    py::return_value_policy::take_ownership);
+  m.def("fill_casadi_dm_sparse", &fill_casadi_dm_sparse,
+    "Fill a Python casadi.DM, given int(dm.this), with a CSC matrix",
+    py::arg("address"), py::arg("nrow"), py::arg("ncol"),
+    py::arg("indptr"), py::arg("indices"), py::arg("data"));
+  m.def("fill_casadi_dm_dense", &fill_casadi_dm_dense,
+    "Fill a Python casadi.DM, given int(dm.this), with a column-major dense matrix",
+    py::arg("address"), py::arg("nrow"), py::arg("ncol"), py::arg("data"));
+#else
+  m.attr("shares_python_casadi") = false;
+#endif
 
   m.def("sundials_error_message", &sundials_error_message,
     "Get a human-readable message for a SUNDIALS error code",
