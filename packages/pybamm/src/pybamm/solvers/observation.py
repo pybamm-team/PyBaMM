@@ -235,8 +235,9 @@ class OutputAssembly:
             values = entries
             if time_integral is not None:
                 # These rows are the integrand's trajectory, not the variable's.
+                indices = _sample_indices(name, time_integral, solution.t)
                 values = time_integral.postfix(
-                    entries.reshape(-1), solution.t, solution.all_inputs[0]
+                    entries[indices], solution.t[indices], solution.all_inputs[0]
                 )
             variable = pybamm.ProcessedVariableComputed(
                 [model.get_processed_variable_or_event(name)],
@@ -296,12 +297,23 @@ class OutputAssembly:
         all_sens = block.reshape(n_timesteps * var_len, n_params)
         time_integral = self._time_integrals.get(name)
         if time_integral is not None:
+            indices = _sample_indices(name, time_integral, solution.t)
             all_sens = time_integral.postfix_sensitivities(
                 name,
-                entries.reshape(-1),
-                solution.t,
+                entries[indices],
+                solution.t[indices],
                 solution.all_inputs[0],
                 sensitivity_names,
-                all_sens,
+                block[indices].reshape(-1, n_params),
             )
         return pack_sensitivity_dict(all_sens, sensitivity_names)
+
+
+def _sample_indices(name, time_integral, t_pts):
+    """The rows of ``t_pts`` a time integral output is evaluated from."""
+    indices = time_integral.sample_indices(t_pts)
+    if indices is None:
+        raise time_integral.missing_times_error(
+            name, t_pts, "an output_variables solve keeps no states to interpolate"
+        )
+    return indices

@@ -1793,9 +1793,13 @@ class TestProcessedVariable:
             model.variables["Electrolyte concentration [mol.m-3]"], pybamm.Scalar(0)
         )
         solution = pybamm.Simulation(model).solve([0, 600])
+        variable = solution[name]
 
-        with pytest.raises(NotImplementedError, match=r"spatially varying"):
-            solution[name].as_computed()
+        computed = variable.as_computed()
+
+        x = np.linspace(0, 1e-4, 5)
+        np.testing.assert_array_equal(computed.entries, variable.entries)
+        np.testing.assert_allclose(computed(x=x), variable(x=x), rtol=1e-12)
 
     def test_processed_variable_unstructured_3d_pouch(self):
         from pybamm.meshes.scikit_fem_submeshes_3d import ScikitFemGenerator3D
