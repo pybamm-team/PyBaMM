@@ -1,0 +1,24 @@
+[model]
+slug = "dual_continuum"
+name = "DualContinuum"
+title = "Dual Continuum Model"
+summary = "Dual Continuum Model: upscaled description of both electrolyte and active material phases"
+class = "pybamm_model_zoo.dual_continuum:DualContinuum"
+tier = "community"
+added = "2026-10-06"
+license = "BSD-3-Clause"
+
+[[model.maintainers]]
+name = "Isaac Paten"
+github = "isaacbasil"
+
+[model.citation]
+key = "PyBaMMModelZoo2026"
+
+[model.tests]
+solve_time = 300
+key_variables = [
+    "Voltage [V]",
+    "Positive particle surface concentration [mol.m-3]",
+]
+skip_contract = []
