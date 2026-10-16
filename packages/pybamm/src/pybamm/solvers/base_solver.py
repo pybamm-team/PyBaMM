@@ -238,7 +238,7 @@ class BaseSolver:
         inputs : dict or list of dict, optional
             Any input parameters to pass to the model when solving
         t_eval : numeric type, optional
-            The times at which to stop the integration due to a discontinuity in time.
+            Not used, kept for backwards compatibility.
         """
         if isinstance(inputs, dict):
             inputs = [inputs]
@@ -310,7 +310,7 @@ class BaseSolver:
             t_discon_constant_symbols,
             discontinuity_events,
             discontinuity_periods,
-        ) = self._set_up_events(model, t_eval, inputs, vars_for_processing)
+        ) = self._set_up_events(model, inputs, vars_for_processing)
 
         # Add the solver attributes
         model.rhs_eval = rhs
@@ -562,12 +562,11 @@ class BaseSolver:
             model.mass_matrix.entries[: model.len_rhs_and_alg, : model.len_rhs_and_alg]
         )
 
-    def _set_up_events(self, model, t_eval, inputs: list[dict], vars_for_processing):
+    def _set_up_events(self, model, inputs: list[dict], vars_for_processing):
         # Check for heaviside and modulo functions in rhs and algebraic and add
         # discontinuity events if these exist.
         # Note: only checks for the case of t < X, t <= X, X < t, or X <= t,
         # but also accounts for the fact that t might be dimensional
-        tf = np.max(t_eval)
 
         def supports_t_eval_discontinuities(expr):
             # Only IDAKLUSolver supports discontinuities represented by t_eval
@@ -588,7 +587,7 @@ class BaseSolver:
 
         # Find all the constant time-based discontinuities
         t_discon_symbols = []
-        # Input-dependent periods of `t mod period`, expanded per input set at solve
+        # Periods of `t mod period` that restart the solver, expanded at each solve
         discontinuity_periods = []
 
         for symbol in itertools.chain(
@@ -607,25 +606,17 @@ class BaseSolver:
 
                 if supports_t_eval_discontinuities(expr):
                     # save the symbol and expression ready for evaluation later
-                    t_discon_symbols.append((symbol, expr, None))
+                    t_discon_symbols.append((symbol, expr))
                 else:
                     add_discontinuity_event(str(symbol), expr)
 
             elif isinstance(symbol, pybamm.Modulo) and symbol.left == pybamm.t:
                 expr = symbol.right
-                if not expr.is_constant():
-                    # The number of periods in t_eval depends on the inputs
-                    discontinuity_periods.append(expr)
-                    continue
-                num_events = 200 if (t_eval is None) else (tf // expr.evaluate())
-
+                self._check_modulo_period(expr)
                 if supports_t_eval_discontinuities(expr):
-                    t_discon_symbols.append((symbol, expr, num_events))
+                    t_discon_symbols.append((symbol, expr))
                 else:
-                    for i in np.arange(num_events):
-                        add_discontinuity_event(
-                            str(symbol), expr * pybamm.Scalar(i + 1)
-                        )
+                    discontinuity_periods.append(expr)
             else:
                 continue
 
@@ -693,6 +684,36 @@ class BaseSolver:
             discontinuity_events,
             discontinuity_periods,
         )
+
+    @staticmethod
+    def _check_modulo_period(period: pybamm.Symbol) -> None:
+        """Raise a ``SolverError`` if ``period`` is not a valid period of time.
+
+        Parameters
+        ----------
+        period : :class:`pybamm.Symbol`
+            The period of a modulo of time.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If ``period`` is not a scalar, depends on time or the state, or is a
+            constant that is not positive.
+        """
+        if period.size != 1 or period.has_symbol_of_classes(
+            (pybamm.Time, pybamm.StateVectorBase)
+        ):
+            raise pybamm.SolverError(
+                f"The period of '{period}' in a modulo of time must be a scalar that "
+                "depends only on input parameters"
+            )
+        if period.is_constant():
+            value = float(np.ravel(period.evaluate())[0])
+            if not value > 0:
+                raise pybamm.SolverError(
+                    f"The period of '{period}' in a modulo of time must be positive, "
+                    f"but is {value}"
+                )
 
     def _set_consistent_initialization(
         self, model: pybamm.BaseModel, time: float, inputs_list: list[dict]
@@ -1259,10 +1280,8 @@ class BaseSolver:
         if self.supports_t_eval_discontinuities and model.t_discon_constant_symbols:
             pybamm.logger.verbose("Discontinuity events found for constant symbols")
             _t_discon_constant = []
-            for symbol, expr, num_events in model.t_discon_constant_symbols:
-                _t_discon_constant.extend(
-                    symbol._t_discon(expr, y0, inputs, num_events)
-                )
+            for symbol, expr in model.t_discon_constant_symbols:
+                _t_discon_constant.extend(symbol._t_discon(expr, y0, inputs, t_eval))
 
             t_discon_constant = self.filter_discontinuities(_t_discon_constant, t_eval)
             t_eval = np.union1d(t_eval, t_discon_constant)
@@ -1286,8 +1305,7 @@ class BaseSolver:
                     f"The period of '{period_expression}' in a modulo of time must "
                     f"be positive, but is {period} for inputs {inputs}"
                 )
-            number_of_periods = int(t_eval[-1] // period)
-            _t_discon_full.append(period * np.arange(1, number_of_periods + 1))
+            _t_discon_full.append(pybamm.Modulo._t_resets(period, t_eval))
         t_discon = self.filter_discontinuities(np.concatenate(_t_discon_full), t_eval)
 
         pybamm.logger.verbose(f"Discontinuity events found at t = {t_discon}")

@@ -745,14 +745,13 @@ def _switched_decay_with_experiment_event():
     return model
 
 
-def _modulo_ramp():
-    """y' = a (t mod P), y(0) = 0."""
+def _modulo_ramp(period=None):
+    """y' = a (t mod P), y(0) = 0, with an input P unless `period` is given."""
     model = pybamm.BaseModel()
     y = pybamm.Variable("y")
-    model.rhs = {
-        y: pybamm.InputParameter("a")
-        * pybamm.Modulo(pybamm.t, pybamm.InputParameter("P"))
-    }
+    if period is None:
+        period = pybamm.InputParameter("P")
+    model.rhs = {y: pybamm.InputParameter("a") * pybamm.Modulo(pybamm.t, period)}
     model.initial_conditions = {y: 0.0}
     model.variables = {"y": y}
     return model
@@ -1022,6 +1021,54 @@ class TestBaseSolverSensitivityRestarts:
 
         with pytest.raises(pybamm.SolverError, match=r"must be positive"):
             solver.solve(model, [0, 3], inputs={"a": 2.0, "P": 0.0})
+
+    @pytest.mark.parametrize("input_period", [False, True], ids=["constant", "input"])
+    def test_step_stops_at_every_modulo_reset(self, input_period):
+        # Each step spans 300 resets, and the second starts away from t = 0
+        period = 0.01
+        inputs = {"a": 2.0}
+        if input_period:
+            model = _modulo_ramp()
+            inputs["P"] = period
+        else:
+            model = _modulo_ramp(period)
+        solver = self._solver()
+
+        solution = solver.step(None, model, 3.0, inputs=inputs)
+        solution = solver.step(solution, model, 3.0, inputs=inputs)
+
+        t = solution.t
+        resets = period * np.arange(1, 600)
+        first_after_reset = t[np.searchsorted(t, resets)]
+        np.testing.assert_allclose(first_after_reset, resets, rtol=1e-12)
+        np.testing.assert_allclose(
+            solution["y"](t),
+            2.0 * _modulo_ramp_sensitivity(t, period),
+            rtol=1e-7,
+            atol=1e-9,
+        )
+
+    @pytest.mark.parametrize(
+        "period, message",
+        [
+            (1 + 0.1 * pybamm.t, "depends only on input parameters"),
+            (1 + pybamm.StateVector(slice(0, 1)), "depends only on input parameters"),
+            (pybamm.InputParameter("P", expected_size=2), "must be a scalar"),
+            (pybamm.Scalar(0), "must be positive, but is 0.0"),
+            (pybamm.Scalar(-1), "must be positive, but is -1.0"),
+        ],
+        ids=["time", "state", "vector", "zero", "negative"],
+    )
+    def test_check_modulo_period_rejects_invalid_period(self, period, message):
+        with pytest.raises(pybamm.SolverError, match=message):
+            pybamm.BaseSolver._check_modulo_period(period)
+
+    def test_modulo_with_time_dependent_period_raises(self):
+        # The resets of t mod (1 + 0.1 t) are not multiples of its initial period
+        with pytest.raises(pybamm.SolverError, match=r"depends only on input"):
+            self._solver().solve(
+                _modulo_ramp(1 + 0.1 * pybamm.t), [0, 3], inputs={"a": 2.0}
+            )
 
     @pytest.mark.parametrize("use_state_mapper", [False, True])
     @pytest.mark.parametrize(

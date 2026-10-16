@@ -369,6 +369,19 @@ class TestBinaryOperators:
         assert mod.evaluate(y=np.array([2.2]))[0, 0] == pytest.approx(2.2)
         assert str(mod) == "y[0:1] mod 3.0"
 
+    def test_modulo_t_discon(self):
+        # Only the resets over t_eval and one beyond each end, however far from t = 0
+        period = pybamm.Scalar(0.5)
+        mod = pybamm.Modulo(pybamm.t, period)
+        t_eval = 1e6 + np.array([0.2, 0.7, 1.2])
+        t_resets = 1e6 + np.array([0, 0.5, 1, 1.5])
+
+        np.testing.assert_array_equal(pybamm.Modulo._t_resets(0.5, t_eval), t_resets)
+        np.testing.assert_array_equal(
+            np.sort(mod._t_discon(period, None, {}, t_eval)),
+            np.sort(np.concatenate([np.nextafter(t_resets, -np.inf), t_resets])),
+        )
+
     def test_minimum_maximum(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))

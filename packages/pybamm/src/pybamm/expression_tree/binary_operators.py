@@ -272,7 +272,7 @@ class BinaryOperator(pybamm.Symbol):
 
         return json_dict
 
-    def _t_discon(self, expr, y0, inputs, num_events):
+    def _t_discon(self, expr, y0, inputs, t_eval):
         """Returns the discontinuity time-points for a function."""
         raise NotImplementedError(f"`_t_discon` not implemented for {self.name}")
 
@@ -834,7 +834,7 @@ class _Heaviside(BinaryOperator):
         # an array of NaNs
         return self._binary_evaluate(left, right) * np.nan
 
-    def _t_discon(self, expr, y0, inputs, num_events):
+    def _t_discon(self, expr, y0, inputs, t_eval):
         """Returns the discontinuity time-points for the heaviside function."""
         value = expr.evaluate(0, y0, inputs=inputs)
         t_discon = [value]
@@ -961,16 +961,33 @@ class Modulo(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.fmod(left, right)
 
-    def _t_discon(self, expr, y0, inputs, num_events):
-        value = expr.evaluate(0, y0, inputs=inputs)
-        t_discon = []
+    def _t_discon(self, expr, y0, inputs, t_eval):
+        """Returns the discontinuity time-points of ``t mod expr`` over ``t_eval``."""
+        period = float(np.ravel(expr.evaluate(0, y0, inputs=inputs))[0])
+        t_resets = self._t_resets(period, t_eval)
+        # Stop right before each reset and at it
+        return np.concatenate([np.nextafter(t_resets, -np.inf), t_resets])
 
-        for i in np.arange(num_events):
-            t = value * (i + 1)
-            # Stop right before t and at t
-            t_discon.append(np.nextafter(t, -np.inf))
-            t_discon.append(t)
-        return t_discon
+    @staticmethod
+    def _t_resets(period: float, t_eval: npt.ArrayLike) -> npt.NDArray[np.float64]:
+        """Times at which ``t mod period`` resets over the range of ``t_eval``.
+
+        Parameters
+        ----------
+        period : float
+            The positive period of the modulo.
+        t_eval : array-like
+            The times of the integration window.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The multiples of ``period`` in the range of ``t_eval``, and the nearest
+            multiple beyond each end, so that none inside is lost to rounding.
+        """
+        first = np.floor(t_eval[0] / period)
+        last = np.ceil(t_eval[-1] / period)
+        return period * np.arange(first, last + 1)
 
 
 class Minimum(BinaryOperator):

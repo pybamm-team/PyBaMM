@@ -16,6 +16,7 @@
 - `IDAKLUSolver.step`, and re-solving an experiment `Simulation`, can now change `calculate_sensitivities` between calls, as `solve()` can. This raised a `RuntimeError`. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
 - `IDAKLUSolver.step`, and so each experiment step, now stops at a discontinuity in time and restarts after it, as `solve()` does. Stepping across an input-timed jump in an algebraic state failed with `IDA_ERR_FAIL`. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
 - Setting up a solver again on the same model, e.g. after changing `calculate_sensitivities`, no longer adds duplicate discontinuity events to `model.events`. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
+- The solver now stops at every reset of `pybamm.Modulo(pybamm.t, period)` in a solve or step. It found only the resets up to the end of the first solve, or the first 200 when stepping, and integrated across the later ones. A period that depends on time or the state, is not a scalar, or is not positive now raises a `SolverError`. It raised an `AttributeError` or gave the wrong resets. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
 
 ## Optimizations
 
