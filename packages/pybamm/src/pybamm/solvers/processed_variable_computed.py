@@ -746,14 +746,20 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             or (joins_time_integrals and not self._time_integrals_joinable(other))
         )
 
+        # Respect the joined solution's sensitivity availability.
+        keep_sensitivities = new_sol.has_sensitivities()
         if unjoinable:
             # Raise on read rather than here, so the rest of the solution still joins
             base_variables_data = self.base_variables_data + other.base_variables_data
             sensitivities = None
         elif joins_time_integrals:
-            base_variables_data, sensitivities = self._join_time_integral(other)
+            base_variables_data, sensitivities = self._join_time_integral(
+                other, keep_sensitivities
+            )
         else:
-            base_variables_data, sensitivities = self._join_samples(other, n_repeated)
+            base_variables_data, sensitivities = self._join_samples(
+                other, n_repeated, keep_sensitivities
+            )
 
         new_var = self.__class__(
             self.base_variables + other.base_variables,
@@ -769,7 +775,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         new_var._unjoinable = unjoinable
         return new_var
 
-    def _join_samples(self, other, n_repeated):
+    def _join_samples(self, other, n_repeated, keep_sensitivities):
         """
         Return the data and sensitivities of this variable's time points followed
         by other's, leaving out other's first ``n_repeated`` time points.
@@ -781,6 +787,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             first_data[n_repeated:],
             *later_data,
         ]
+        # A mixed-sensitivity join must not retain partial derivatives.
+        if not keep_sensitivities:
+            return base_variables_data, {}
         other_sensitivities = other.sensitivities or {}
         sensitivities = {}
         for k, value in (self.sensitivities or {}).items():
@@ -789,16 +798,19 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             sensitivities[k] = np.concatenate((value, later[rows_repeated:]))
         return base_variables_data, sensitivities
 
-    def _join_time_integral(self, other):
+    def _join_time_integral(self, other, keep_sensitivities):
         """
         Return the data and sensitivities of the time integral over this
         variable's segments plus the one over other's.
         """
-        other_sensitivities = other.sensitivities or {}
-        sensitivities = {
-            k: value + other_sensitivities[k]
-            for k, value in (self.sensitivities or {}).items()
-        }
+        if keep_sensitivities:
+            other_sensitivities = other.sensitivities or {}
+            sensitivities = {
+                k: value + other_sensitivities[k]
+                for k, value in (self.sensitivities or {}).items()
+            }
+        else:
+            sensitivities = {}
         # other's integral starts again from its initial condition
         initial_condition = float(other.time_integral.initial_condition)
         return [self.entries + other.entries - initial_condition], sensitivities
