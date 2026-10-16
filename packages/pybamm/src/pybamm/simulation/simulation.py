@@ -666,7 +666,10 @@ class Simulation(BaseSimulation):
             )
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
-            f, jac, jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
+            # step() maps sensitivities by forward-mode AD of f, not with jacobians
+            f, jac, jacp, _jac_action = process(
+                mapper, "mapper", vars_for_processing, use_jacobian=False
+            )
             self._compiled_model_state_mappers[(previous_model, next_model)] = (
                 f,
                 jac,
