@@ -666,31 +666,35 @@ def _convert_time_to_seconds(time_and_units):
 
     # If the time is a number, assume it is in seconds
     if isinstance(time_and_units, numbers.Number):
-        if time_and_units <= 0:
-            raise ValueError("time must be positive")
-        return time_and_units
-
-    # Split number and units
-    units = get_unit_from(time_and_units)
-    time = time_and_units[: -len(units)]
-    if units in ["second", "seconds", "s", "sec"]:
-        time_in_seconds = float(time)
-    elif units in ["minute", "minutes", "m", "min"]:
-        time_in_seconds = float(time) * 60
-    elif units in ["hour", "hours", "h", "hr"]:
-        time_in_seconds = float(time) * 3600
+        time_in_seconds = time_and_units
     else:
-        raise ValueError(
-            "time units must be 'seconds', 'minutes' or 'hours'. "
-            f"For example: {_examples}"
-        )
+        # Split number and units
+        units = get_unit_from(time_and_units)
+        time = time_and_units[: -len(units)]
+        if units in ["second", "seconds", "s", "sec"]:
+            time_in_seconds = float(time)
+        elif units in ["minute", "minutes", "m", "min"]:
+            time_in_seconds = float(time) * 60
+        elif units in ["hour", "hours", "h", "hr"]:
+            time_in_seconds = float(time) * 3600
+        else:
+            raise ValueError(
+                "time units must be 'seconds', 'minutes' or 'hours'. "
+                f"For example: {_examples}"
+            )
+
+    if time_in_seconds <= 0:
+        raise ValueError("time must be positive")
     return time_in_seconds
 
 
 def _convert_temperature_to_kelvin(temperature_and_units):
     """Convert a temperature in Celsius or Kelvin to a temperature in Kelvin"""
     # If the temperature is a number, assume it is in Kelvin
-    if isinstance(temperature_and_units, int | float) or temperature_and_units is None:
+    if (
+        isinstance(temperature_and_units, numbers.Number)
+        or temperature_and_units is None
+    ):
         return temperature_and_units
 
     # Split number and units
