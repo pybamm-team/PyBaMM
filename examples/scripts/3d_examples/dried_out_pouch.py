@@ -18,12 +18,14 @@ def _top_hat(arg, a, b, k=500):
     return _sigmoid(k * (arg - a)) * _sigmoid(k * (b - arg))
 
 
-# Simulate drying out of the negative electrode edges by reducing porosity
+# Simulate drying out of the negative electrode edges by reducing porosity, to a
+# floor that stops the electrolyte there running out during the voltage hold
 def eps_n(x, y, z):
-    return 0.329 * (
-        _top_hat(arg=y, a=Ly * 0.02, b=Ly * 0.98)
-        * _top_hat(arg=z, a=Lz * 0.02, b=Lz * 0.98)
+    floor = 0.1
+    inside = _top_hat(arg=y, a=Ly * 0.02, b=Ly * 0.98) * _top_hat(
+        arg=z, a=Lz * 0.02, b=Lz * 0.98
     )
+    return 0.329 * (floor + (1 - floor) * inside)
 
 
 param.update({"Negative electrode porosity": eps_n})
