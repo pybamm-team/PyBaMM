@@ -592,9 +592,10 @@ class Divergence(SpatialOperator):
     For tensor fields (rank-2 tensors), returns a vector field.
     """
 
-    __slots__ = ()
+    __slots__ = ("no_simplification",)
+    _json_extra_fields = ("no_simplification",)
 
-    def __init__(self, child):
+    def __init__(self, child, no_simplification=False):
         if child._domains["primary"] == []:
             raise pybamm.DomainError(
                 f"Cannot take divergence of '{child}' since its domain is empty. "
@@ -610,6 +611,15 @@ class Divergence(SpatialOperator):
                 "divergence."
             )
         super().__init__("div", child)
+        self.no_simplification = no_simplification
+
+    def __setstate__(self, state):
+        """
+        Set default value for no_simplification if not present in state.
+        This is for backwards compatibility with old pickled objects.
+        """
+        state.setdefault("no_simplification", False)
+        super().__setstate__(state)
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -622,10 +632,10 @@ class Divergence(SpatialOperator):
         Uses the convenience function :meth:`div` to cover scenarios where divergence is
         0 or interacts with other functions.
         """
-        if perform_simplifications:
+        if perform_simplifications and not self.no_simplification:
             return div(child)
         else:
-            return Divergence(child)
+            return Divergence(child, no_simplification=self.no_simplification)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
@@ -1616,7 +1626,7 @@ def grad(symbol):
         return Gradient(symbol)
 
 
-def div(symbol):
+def div(symbol, no_simplification=False):
     """
     convenience function for creating a :class:`Divergence`
 
@@ -1639,16 +1649,17 @@ def div(symbol):
         else:
             new_child = pybamm.PrimaryBroadcast(0, symbol.child._domains["primary"])
         return pybamm.PrimaryBroadcast(new_child, symbol._domains["primary"])
-    # Divergence commutes with Negate operator
-    if isinstance(symbol, pybamm.Negate):
-        return -div(symbol.orphans[0])
-    elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
-        left, right = symbol.orphans
-        if isinstance(left, pybamm.Negate):
-            return -div(symbol._binary_new_copy(left.orphans[0], right))
+    if not no_simplification:
+        # Divergence commutes with Negate operator
+        if isinstance(symbol, pybamm.Negate):
+            return -div(symbol.orphans[0])
+        elif isinstance(symbol, pybamm.Multiplication | pybamm.Division):
+            left, right = symbol.orphans
+            if isinstance(left, pybamm.Negate):
+                return -div(symbol._binary_new_copy(left.orphans[0], right))
 
     # Last resort
-    return Divergence(symbol)
+    return Divergence(symbol, no_simplification=no_simplification)
 
 
 def laplacian(symbol):
