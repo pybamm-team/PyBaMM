@@ -399,7 +399,8 @@ def get_parameter_values():
         "Primary: Negative particle radius [m]": 5.86e-06,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 0,
-        "Negative electrode charge transfer coefficient": 0.5,
+        "Primary: Negative electrode Butler-Volmer transfer coefficient": 0.5,
+        "Secondary: Negative electrode Butler-Volmer transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         "Primary: Negative electrode exchange-current density [A.m-2]"
         "": graphite_LGM50_electrolyte_exchange_current_density_Chen2020,
@@ -431,7 +432,7 @@ def get_parameter_values():
         "Positive particle radius [m]": 5.22e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 0,
-        "Positive electrode charge transfer coefficient": 0.5,
+        "Positive electrode Butler-Volmer transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"
         "": nmc_LGM50_electrolyte_exchange_current_density_Chen2020,

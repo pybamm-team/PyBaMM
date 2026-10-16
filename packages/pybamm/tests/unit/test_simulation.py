@@ -437,9 +437,6 @@ class TestSimulation:
         param["Positive electrode Bruggeman coefficient (electrode)"] = param[
             "Positive electrode Bruggeman coefficient (electrode)"
         ]
-        param["Positive electrode charge transfer coefficient"] = param[
-            "Positive electrode charge transfer coefficient"
-        ]
         param["Positive electrode double-layer capacity [F.m-2]"] = param[
             "Positive electrode double-layer capacity [F.m-2]"
         ]

@@ -1,8 +1,13 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Deprecated
+
+- `"{Negative/Positive} electrode charge transfer coefficient"` is deprecated in favour of `"{Negative/Positive} electrode Butler-Volmer transfer coefficient"`. `ParameterValues` maps the old name to the new one with a `DeprecationWarning` when it is loaded, updated, set or read, so existing code and custom parameter sets keep working; rename the key to silence the warning. ([#5843](https://github.com/pybamm-team/PyBaMM/pull/5843))
+
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
+- Parameter sets now store the transfer coefficient as `"{Negative/Positive} electrode Butler-Volmer transfer coefficient"`, the name asymmetric Butler-Volmer kinetics read, instead of the unused `"... electrode charge transfer coefficient"`. `Ecker2015`, which had no transfer coefficient, now has 0.5 for both electrodes, so `{"intercalation kinetics": "asymmetric Butler-Volmer"}` works with every shipped lithium-ion and sodium-ion parameter set. ([#5843](https://github.com/pybamm-team/PyBaMM/pull/5843))
 
 # [v26.10.1.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.0) - 2026-10-13
 
