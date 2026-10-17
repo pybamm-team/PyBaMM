@@ -212,8 +212,10 @@ class TestThermal:
         )
         sol_fn = sim_fn.solve([0, 3600])
 
-        dphi_const = sol_const["Contact overpotential [V]"].entries
-        dphi_fn = sol_fn["Contact overpotential [V]"].entries
+        # Compare on a common time grid: the two solves take different steps
+        t = np.linspace(0, 3600, 100)
+        dphi_const = sol_const["Contact overpotential [V]"](t)
+        dphi_fn = sol_fn["Contact overpotential [V]"](t)
 
         if thermal == "isothermal":
             # temperature is fixed at the reference, so the two agree
@@ -222,3 +224,63 @@ class TestThermal:
             # cell heats up above the reference, so R (and hence the contact
             # overpotential magnitude) is larger than the constant case
             np.testing.assert_array_less(np.abs(dphi_const[1:]), np.abs(dphi_fn[1:]))
+
+    @pytest.mark.parametrize(
+        "thermal, extra_options",
+        [
+            ("lumped", {}),
+            ("x-full", {}),
+            (
+                "x-lumped",
+                {"current collector": "potential pair", "dimensionality": 1},
+            ),
+            (
+                "x-lumped",
+                {"current collector": "potential pair", "dimensionality": 2},
+            ),
+        ],
+    )
+    def test_contact_resistance_energy_balance(self, thermal, extra_options):
+        # With the temperature held at ambient, the extra "Total heating [W]"
+        # when the contact resistance is switched on must equal the electrical
+        # energy dissipated in the contact resistance
+        R_c = 0.05
+        t_end = 600
+        t = np.linspace(0, t_end, 61)
+
+        parameter_values = pybamm.ParameterValues("NCA_Kim2011")
+        parameter_values.update(
+            {
+                "Current function [A]": 1,
+                # Hold the temperature at ambient for every thermal option
+                "Total heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Negative tab heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Positive tab heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Edge heat transfer coefficient [W.m-2.K-1]": 1e6,
+            }
+        )
+
+        heating, current = {}, {}
+        for R in [0, R_c]:
+            params = parameter_values.copy()
+            params.update({"Contact resistance [Ohm]": R})
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPMe(
+                    {
+                        "thermal": thermal,
+                        "contact resistance": "true",
+                        **extra_options,
+                    }
+                ),
+                parameter_values=params,
+            )
+            sol = sim.solve([0, t_end])
+            heating[R] = sol["Total heating [W]"](t)
+            current[R] = sol["Current [A]"](t)
+
+        extra_heat = np.trapezoid(heating[R_c] - heating[0], t)
+        expected = np.trapezoid(current[R_c] ** 2 * R_c, t)
+        assert extra_heat > 0
+        np.testing.assert_allclose(extra_heat, expected, rtol=1e-2)

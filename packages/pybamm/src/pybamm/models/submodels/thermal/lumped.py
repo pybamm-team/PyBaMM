@@ -73,13 +73,6 @@ class Lumped(BaseThermal):
                 # Contact resistance
                 "Lumped contact resistance heating [W.m-3]": Q_cr_vol_av,
                 "Lumped contact resistance heating [W]": Q_cr_W,
-                # Contact resistance heating contributes to the total heating
-                # (it is included in the temperature equation in `set_rhs`)
-                "Total heating [W]": variables["Total heating [W]"] + Q_cr_W,
-                "Volume-averaged total heating [W.m-3]": variables[
-                    "Volume-averaged total heating [W.m-3]"
-                ]
-                + Q_cr_vol_av,
             }
         )
         return variables
@@ -87,7 +80,7 @@ class Lumped(BaseThermal):
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
         # "Volume-averaged total heating [W.m-3]" already includes contact
-        # resistance heating (see `get_coupled_variables`)
+        # resistance heating (added in BaseThermal)
         Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
         Q_cool_vol_av = variables["Surface total cooling [W.m-3]"]
         rho_c_p_eff_av = variables[

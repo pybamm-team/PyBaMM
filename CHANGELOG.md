@@ -2,7 +2,7 @@
 
 ## Bug fixes
 
-- The lumped thermal model's "Total heating [W]" and "Volume-averaged total heating [W.m-3]" now include the contact resistance heating, which was already part of the temperature equation. ([#5890](https://github.com/pybamm-team/PyBaMM/pull/5890))
+- Contact resistance heating is now included in the total heating of every thermal model, instead of only in the `lumped` temperature equation. ([#5890](https://github.com/pybamm-team/PyBaMM/pull/5890))
 
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 
