@@ -183,15 +183,34 @@ class TestDualContinuum:
             voltage(dc1, larger), voltage(dc1, parameter_values), rtol=1e-9
         )
 
+    @pytest.mark.parametrize(
+        ("name", "function"),
+        [
+            ("Paten2026", parameter_sets.paten2026_dc1),
+            ("Paten2026_DFN", parameter_sets.paten2026_dfn),
+            ("Paten2026_3D_NMC", parameter_sets.paten2026_3d_case),
+        ],
+    )
+    def test_registered_parameter_sets(self, name, function):
+        values = function()
+        assert isinstance(values, dict)
+        assert values["chemistry"] == "lithium_ion"
+        assert name in pybamm.parameter_sets
+        _compat.reset_citations()
+        loaded = pybamm.ParameterValues(name)
+        assert "Paten2026" in _compat.cited_keys()
+        assert set(loaded.keys()) == set(pybamm.ParameterValues(values).keys())
+        assert "Paten et al." in pybamm.parameter_sets.get_docstring(name)
+
     def test_paten2026_parameter_sets(self):
-        dc1 = parameter_sets.paten2026_dc1()
+        dc1 = pybamm.ParameterValues("Paten2026")
         assert dc1["Positive electrode s0 surface average"] == -500.38
         assert dc1[
             "Negative electrode specific surface area from image (AM-electrolyte) [m-1]"
         ] == pytest.approx(441818.3)
         for model_class, values in [
             (zoo.load("DualContinuum"), dc1),
-            (pybamm.lithium_ion.DFN, parameter_sets.paten2026_dfn()),
+            (pybamm.lithium_ion.DFN, pybamm.ParameterValues("Paten2026_DFN")),
         ]:
             # Bruggeman coefficients are the exact equivalent of the tortuosities
             np.testing.assert_allclose(
@@ -416,7 +435,7 @@ class TestTransientDualContinuum:
 
     def test_3d_case_against_dns(self):
         # Paten et al. (2026): closure data and DNS on a tomographic NMC electrode
-        parameter_values = parameter_sets.paten2026_3d_case()
+        parameter_values = pybamm.ParameterValues("Paten2026_3D_NMC")
         data = parameter_sets.load_3d_case_data()
         closure, dns = data["closure"], data["dns"]
         fit = fit_transient_closure(

@@ -5,6 +5,8 @@ top of :footcite:t:`Chen2020`, with tortuosities given both as tortuosity
 factors and as Bruggeman coefficients. :func:`paten2026_3d_case` and
 :func:`load_3d_case_data` are the tomographic NMC half cell, with its
 transient closure variable and a DNS of a discharge and rest.
+
+PyBaMM loads the three sets by name, e.g. ``pybamm.ParameterValues("Paten2026")``.
 """
 
 from __future__ import annotations
@@ -57,15 +59,19 @@ ACTIVATION_ENERGY = {"negative": 35000, "positive": 17800}
 
 
 def paten2026_dc1() -> dict:
-    """Table IV, DC1 column, on top of Chen2020.
+    """
+    Parameters for an LG M50 cell, for the dual-continuum DC1 model, from
+    Table IV (DC1 column) of Paten et al., J. Electrochem. Soc. 173, 030503
+    (2026), doi:10.1149/1945-7111/ae335f.
 
-    Table IV's specific surface area is used as the AM-electrolyte area, with
-    no AM-CBD or AM-separator contribution.
+    The Table IV values were fitted to the 1C discharge of
+    :footcite:t:`Chen2020`, whose parameter set gives all other values. Table
+    IV's specific surface area is used as the AM-electrolyte area, with no
+    AM-CBD or AM-separator contribution. Registered as ``"Paten2026"``.
     """
     zoo.register_citation("dual_continuum", "Paten2026")
     table = TABLE_IV_DC1
     values = _with_common_entries(table)
-    values["citations"].append("Paten2026")
     values.update(
         {
             "Negative electrode s0 surface average": table[
@@ -92,12 +98,20 @@ def paten2026_dc1() -> dict:
     return values
 
 
-def paten2026_dfn() -> pybamm.ParameterValues:
-    """Table IV, DFN column, on top of Chen2020, for comparison with DC1."""
-    zoo.register_citation("dual_continuum", "Paten2026_DFN")
+def paten2026_dfn() -> dict:
+    """
+    Parameters for an LG M50 cell, for the DFN, from Table IV (DFN column)
+    of Paten et al., J. Electrochem. Soc. 173, 030503 (2026),
+    doi:10.1149/1945-7111/ae335f.
+
+    The Table IV values were fitted to the 1C discharge of
+    :footcite:t:`Chen2020`, whose parameter set gives all other values, for
+    comparison with the DC1 fit of ``"Paten2026"``. Registered as
+    ``"Paten2026_DFN"``.
+    """
+    zoo.register_citation("dual_continuum", "Paten2026")
     table = TABLE_IV_DFN
     values = _with_common_entries(table)
-    values["citations"].append("Paten2026_DFN")
     for key in [
         "Negative particle diffusivity [m2.s-1]",
         "Positive particle diffusivity [m2.s-1]",
@@ -170,25 +184,24 @@ def _exchange_current_density(rate_constant, activation_energy):
     return exchange_current_density
 
 
-def paten2026_3d_case() -> pybamm.ParameterValues:
-    """NMC half cell reconstructed from a tomographic image, without CBD.
-
-    The DNS comparison of Paten et al. (2026), on top of "Xu2019" for values
-    the models do not use. "Current function [A]" is the DNS current (also
-    1C). Fit the transient closure modes to :func:`load_3d_case_data` with
-    :func:`~pybamm_model_zoo.dual_continuum.fit_transient_closure`.
-
-    Returns
-    -------
-    pybamm.ParameterValues
-        Parameters for the DFN and the dual-continuum model, for
-        ``{"working electrode": "positive"}``.
+def paten2026_3d_case() -> dict:
     """
+    Parameters for an NMC half cell reconstructed from a tomographic image
+    (no carbon-binder domain), from the DNS comparison of Paten et al., J.
+    Electrochem. Soc. 173, 030503 (2026), doi:10.1149/1945-7111/ae335f.
+
+    For the DFN and the dual-continuum model with
+    ``{"working electrode": "positive"}``. Values the models do not use come
+    from :footcite:t:`Xu2019`. "Current function [A]" is the DNS current (also
+    1C). The model zoo's ``dual_continuum.parameter_sets.load_3d_case_data``
+    returns the closure data to fit the transient closure modes to, and the
+    DNS. Registered as ``"Paten2026_3D_NMC"``.
+    """
+    zoo.register_citation("dual_continuum", "Paten2026")
     eps_s, eps_e = 0.492777, 0.505414
     area = 75.62e-6 * 75.62e-6
     current = 50.3357753 * area
     values = pybamm.parameter_sets["Xu2019"]
-    values["citations"].append("Paten2026_3D_NMC")
     values.update(
         {
             "Electrode height [m]": 75.62e-6,

@@ -4,11 +4,10 @@ import numpy as np
 
 import pybamm
 import pybamm_model_zoo as zoo
-from pybamm_model_zoo.dual_continuum import parameter_sets
 
 models = {
-    "DFN": (pybamm.lithium_ion.DFN(), parameter_sets.paten2026_dfn()),
-    "DC1": (zoo.load("DualContinuum")(), parameter_sets.paten2026_dc1()),
+    "DFN": (pybamm.lithium_ion.DFN(), pybamm.ParameterValues("Paten2026_DFN")),
+    "DC1": (zoo.load("DualContinuum")(), pybamm.ParameterValues("Paten2026")),
 }
 
 times = np.linspace(0, 3400, 69)

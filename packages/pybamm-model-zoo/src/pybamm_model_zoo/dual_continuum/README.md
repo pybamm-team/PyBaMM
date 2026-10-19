@@ -53,7 +53,6 @@ concentration.
 ```python
 import pybamm
 import pybamm_model_zoo as zoo
-from pybamm_model_zoo.dual_continuum import parameter_sets
 
 DualContinuum = zoo.load("DualContinuum")
 
@@ -65,7 +64,7 @@ model = DualContinuum({"working electrode": "positive"})
 
 # LG M50 cell with the parameters of Paten et al. (2026), Table IV
 solution = pybamm.Simulation(
-    DualContinuum(), parameter_values=parameter_sets.paten2026_dc1()
+    DualContinuum(), parameter_values=pybamm.ParameterValues("Paten2026")
 ).solve([0, 3600])
 
 # Any parameter set written for the DFN (no DC parameters needed)
@@ -232,7 +231,7 @@ closure variable of an isolated sphere.
 
 #### Example: tomographic NMC electrode
 
-`parameter_sets.paten2026_3d_case()` is the NMC half cell reconstructed from a
+`pybamm.ParameterValues("Paten2026_3D_NMC")` is the NMC half cell reconstructed from a
 tomographic image (no carbon-binder domain) used for the DNS comparisons of
 Paten et al. (2026), and `parameter_sets.load_3d_case_data()` returns its
 transient closure variable and a DNS of a discharge to 3.0 V followed by a
@@ -339,9 +338,12 @@ cell, Xu2019 for a half cell) passed through `add_dc_parameters`, which adds:
 - For DC1t, the isolated-sphere modes (weights, and time constants scaled by
   $R^2 / D$ at the reference state).
 
-`parameter_sets.paten2026_dc1()` and `parameter_sets.paten2026_dfn()` return the
-DC1 and DFN columns of Table IV (an LG M50 cell, fitted to the 1C discharge of
-Chen et al. 2020), on top of PyBaMM's Chen2020 set for all other values. The
+`pybamm.ParameterValues("Paten2026")` and `pybamm.ParameterValues("Paten2026_DFN")`
+are the DC1 and DFN columns of Table IV (an LG M50 cell, fitted to the 1C
+discharge of Chen et al. 2020), on top of PyBaMM's Chen2020 set for all other
+values. The model zoo registers these names, and `"Paten2026_3D_NMC"`, as PyBaMM
+parameter sets; the functions in `parameter_sets` return the same values as plain
+dictionaries. The
 electrolyte tortuosities are given both as tortuosity factors and as the
 equivalent Bruggeman coefficients, so either `"transport efficiency"` option
 gives the same result.

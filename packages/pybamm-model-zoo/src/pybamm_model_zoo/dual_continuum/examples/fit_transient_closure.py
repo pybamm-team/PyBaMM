@@ -80,7 +80,7 @@ def isolated_sphere():
 
 
 def tomographic_electrode():
-    parameter_values = parameter_sets.paten2026_3d_case()
+    parameter_values = pybamm.ParameterValues("Paten2026_3D_NMC")
     data = parameter_sets.load_3d_case_data()
     closure, dns = data["closure"], data["dns"]
 

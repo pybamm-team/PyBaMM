@@ -3,7 +3,7 @@
 Data for an NMC cathode half cell reconstructed from a tomographic image,
 without carbon-binder domain, used for the direct numerical simulation (DNS)
 comparisons of Paten et al. (2026). See Figures 4 and 5 in the article.
-The cell parameters are `parameter_sets.paten2026_3d_case()`, and
+The cell parameters are `pybamm.ParameterValues("Paten2026_3D_NMC")`, and
  `parameter_sets.load_3d_case_data()` reads these files.
 
 - `closure_transient.csv`: surface-averaged transient closure variable
