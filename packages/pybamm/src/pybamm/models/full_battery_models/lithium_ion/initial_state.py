@@ -1,6 +1,6 @@
 import pybamm
 
-from .util import _has_hysteresis, check_if_composite
+from .util import _has_hysteresis, _initial_hysteresis_state, check_if_composite
 
 
 def _set_hysteresis_branch(parameter_values, electrode, direction, options, phase=None):
@@ -9,7 +9,12 @@ def _set_hysteresis_branch(parameter_values, electrode, direction, options, phas
         phase_prefactor = phase.capitalize() + ": "
     else:
         phase_prefactor = ""
+    name = f"{phase_prefactor}Initial hysteresis state in {electrode} electrode"
     if direction is None:
+        if name in parameter_values:
+            # Keep the user's initial state; the initial stoichiometries are
+            # solved on the OCP at that state (see `get_initial_ocp`)
+            return parameter_values
         initial_hysteresis_branch = 0
     else:
         if (direction == "discharge" and electrode == "negative") or (
@@ -22,11 +27,7 @@ def _set_hysteresis_branch(parameter_values, electrode, direction, options, phas
             initial_hysteresis_branch = -1
         else:
             raise ValueError(f"Invalid direction: {direction}")
-    parameter_values.update(
-        {
-            f"{phase_prefactor}Initial hysteresis state in {electrode} electrode": initial_hysteresis_branch,
-        }
-    )
+    parameter_values.update({name: initial_hysteresis_branch})
     return parameter_values
 
 
@@ -291,6 +292,30 @@ def _fingerprint_composite(pv, param, options, inputs):
     return tuple(parts)
 
 
+def _fingerprint_hysteresis(pv, param, options, inputs):
+    """Initial hysteresis states that set the initial OCP when no direction is given."""
+    parts = []
+    if options.get("working electrode") == "positive":
+        electrodes = ["positive"]
+    else:
+        electrodes = ["negative", "positive"]
+    for electrode in electrodes:
+        domain_param = param.domain_params[electrode]
+        phases = ["primary"]
+        if check_if_composite(options, electrode):
+            phases.append("secondary")
+        for phase in phases:
+            phase_param = domain_param.phase_params[phase]
+            name = (
+                f"{phase_param.phase_prefactor}Initial hysteresis state in "
+                f"{electrode} electrode"
+            )
+            if _has_hysteresis(electrode, options, phase) and name in pv:
+                h0 = _initial_hysteresis_state(phase_param, electrode)
+                parts.append(float(pv.evaluate(h0, inputs=inputs)))
+    return tuple(parts)
+
+
 def compute_esoh_fingerprint(parameter_values, param, options, inputs):
     """Evaluate the quantities that determine the eSOH result for this model type.
 
@@ -319,10 +344,13 @@ def compute_esoh_fingerprint(parameter_values, param, options, inputs):
     if options.get("open-circuit potential") == "MSMR":
         return _fingerprint_standard(parameter_values, param, inputs)
     elif options.get("working electrode") == "positive":
-        return _fingerprint_half_cell(parameter_values, param, options, inputs)
+        fingerprint = _fingerprint_half_cell(parameter_values, param, options, inputs)
     elif check_if_composite(options, "positive") or check_if_composite(
         options, "negative"
     ):
-        return _fingerprint_composite(parameter_values, param, options, inputs)
+        fingerprint = _fingerprint_composite(parameter_values, param, options, inputs)
     else:
-        return _fingerprint_standard(parameter_values, param, inputs)
+        fingerprint = _fingerprint_standard(parameter_values, param, inputs)
+    return fingerprint + _fingerprint_hysteresis(
+        parameter_values, param, options, inputs
+    )
