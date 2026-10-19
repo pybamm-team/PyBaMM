@@ -484,21 +484,29 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             )
         else:
             raise ValueError("Invalid initialization method")
-        T = param.T_init if initialization_method == "voltage" else param.T_ref
+
+        def U(phase_param, sto, electrode, phase):
+            if initialization_method == "voltage":
+                return get_initial_ocp(
+                    phase_param, sto, param.T_init, direction, electrode, options, phase
+                )
+            # SOC is a reference quantity, so the split does not depend on the
+            # initial hysteresis state
+            lithiation = get_lithiation_delithiation(
+                direction, electrode, options, phase
+            )
+            return phase_param.U(sto, param.T_ref, lithiation)
+
         if is_positive_composite:
             y_init_2 = variables["y_init_2"]
-            self.algebraic[y_init_2] = get_initial_ocp(
-                param.p.prim, y_init_1, T, direction, "positive", options, "primary"
-            ) - get_initial_ocp(
-                param.p.sec, y_init_2, T, direction, "positive", options, "secondary"
-            )
+            self.algebraic[y_init_2] = U(
+                param.p.prim, y_init_1, "positive", "primary"
+            ) - U(param.p.sec, y_init_2, "positive", "secondary")
         if is_negative_composite:
             x_init_2 = variables["x_init_2"]
-            self.algebraic[x_init_2] = get_initial_ocp(
-                param.n.prim, x_init_1, T, direction, "negative", options, "primary"
-            ) - get_initial_ocp(
-                param.n.sec, x_init_2, T, direction, "negative", options, "secondary"
-            )
+            self.algebraic[x_init_2] = U(
+                param.n.prim, x_init_1, "negative", "primary"
+            ) - U(param.n.sec, x_init_2, "negative", "secondary")
 
         self.variables.update(variables)
         if initialization_method == "SOC":

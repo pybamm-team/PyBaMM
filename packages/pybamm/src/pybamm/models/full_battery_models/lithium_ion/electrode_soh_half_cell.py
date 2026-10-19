@@ -151,8 +151,14 @@ def get_initial_stoichiometry_half_cell(
     )
     x_0, x_100 = x_dict["x_0"], x_dict["x_100"]
     is_composite = check_if_composite(options, "positive")
+    lith_delith_primary = get_lithiation_delithiation(
+        direction, "positive", options, phase="primary"
+    )
     if is_composite:
         x_0_2, x_100_2 = x_dict["x_0_2"], x_dict["x_100_2"]
+        lith_delith_secondary = get_lithiation_delithiation(
+            direction, "positive", options, phase="secondary"
+        )
 
     if isinstance(initial_value, str) and initial_value.endswith("V"):
         V_init = float(initial_value[:-1])
@@ -223,12 +229,12 @@ def get_initial_stoichiometry_half_cell(
             model = pybamm.BaseModel()
             x = pybamm.Variable("x")
             x_2 = pybamm.Variable("x_2")
+            U_p = param.p.prim.U
+            U_p_2 = param.p.sec.U
             # here we use T_ref and SOC 0 and 1 are defined using the reference state
             T_ref = param.T_ref
-            model.algebraic[x] = get_initial_ocp(
-                param.p.prim, x, T_ref, direction, "positive", options, "primary"
-            ) - get_initial_ocp(
-                param.p.sec, x_2, T_ref, direction, "positive", options, "secondary"
+            model.algebraic[x] = U_p(x, T_ref, lith_delith_primary) - U_p_2(
+                x_2, T_ref, lith_delith_secondary
             )
             model.initial_conditions[x] = x_0 + initial_value * (x_100 - x_0)
             model.initial_conditions[x_2] = x_0_2 + initial_value * (x_100_2 - x_0_2)
