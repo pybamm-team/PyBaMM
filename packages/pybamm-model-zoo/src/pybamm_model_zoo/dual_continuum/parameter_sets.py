@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 
 import pybamm
+import pybamm_model_zoo as zoo
 
 #: Folder of the 3D case data.
 DATA_3D_CASE = Path(__file__).parent / "data" / "3d_case_data_Paten_2026"
@@ -55,14 +56,16 @@ TABLE_IV_DC1 = {
 ACTIVATION_ENERGY = {"negative": 35000, "positive": 17800}
 
 
-def paten2026_dc1() -> pybamm.ParameterValues:
+def paten2026_dc1() -> dict:
     """Table IV, DC1 column, on top of Chen2020.
 
     Table IV's specific surface area is used as the AM-electrolyte area, with
     no AM-CBD or AM-separator contribution.
     """
+    zoo.register_citation("dual_continuum", "Paten2026")
     table = TABLE_IV_DC1
     values = _with_common_entries(table)
+    values["citations"].append("Paten2026")
     values.update(
         {
             "Negative electrode s0 surface average": table[
@@ -74,7 +77,6 @@ def paten2026_dc1() -> pybamm.ParameterValues:
             "CBD surface porosity": 0.5,
             "Separator surface porosity": values["Separator porosity"],
         },
-        check_already_exists=False,
     )
     for domain in ["negative", "positive"]:
         prefix = f"{domain.capitalize()} electrode specific surface area from image"
@@ -86,15 +88,16 @@ def paten2026_dc1() -> pybamm.ParameterValues:
                 f"{prefix} (AM-CBD) [m-1]": 0.0,
                 f"{prefix} (AM-separator) [m-1]": 0.0,
             },
-            check_already_exists=False,
         )
     return values
 
 
 def paten2026_dfn() -> pybamm.ParameterValues:
     """Table IV, DFN column, on top of Chen2020, for comparison with DC1."""
+    zoo.register_citation("dual_continuum", "Paten2026_DFN")
     table = TABLE_IV_DFN
     values = _with_common_entries(table)
+    values["citations"].append("Paten2026_DFN")
     for key in [
         "Negative particle diffusivity [m2.s-1]",
         "Positive particle diffusivity [m2.s-1]",
@@ -107,7 +110,7 @@ def paten2026_dfn() -> pybamm.ParameterValues:
 
 def _with_common_entries(table):
     """Chen2020 with the Table IV entries shared by both columns."""
-    values = pybamm.ParameterValues("Chen2020")
+    values = pybamm.parameter_sets["Chen2020"]
     for key in [
         "Initial concentration in negative electrode [mol.m-3]",
         "Initial concentration in positive electrode [mol.m-3]",
@@ -137,7 +140,6 @@ def _with_common_entries(table):
                 ]
                 ** (1 - brugg_solid),
             },
-            check_already_exists=False,
         )
 
     separator_porosity = values["Separator porosity"]
@@ -146,7 +148,6 @@ def _with_common_entries(table):
             "Separator tortuosity factor (electrolyte)": separator_porosity
             ** (1 - values["Separator Bruggeman coefficient (electrolyte)"])
         },
-        check_already_exists=False,
     )
     return values
 
@@ -186,7 +187,8 @@ def paten2026_3d_case() -> pybamm.ParameterValues:
     eps_s, eps_e = 0.492777, 0.505414
     area = 75.62e-6 * 75.62e-6
     current = 50.3357753 * area
-    values = pybamm.ParameterValues("Xu2019")
+    values = pybamm.parameter_sets["Xu2019"]
+    values["citations"].append("Paten2026_3D_NMC")
     values.update(
         {
             "Electrode height [m]": 75.62e-6,
@@ -227,7 +229,6 @@ def paten2026_3d_case() -> pybamm.ParameterValues:
             "Lower voltage cut-off [V]": 3.0,
             "Upper voltage cut-off [V]": 4.5,
         },
-        check_already_exists=False,
     )
     values.update(
         {
@@ -242,7 +243,6 @@ def paten2026_3d_case() -> pybamm.ParameterValues:
             "Positive electrode s0 surface average": -416.7084594772896,
             "Positive electrode Yang fitting parameter": 1.0,
         },
-        check_already_exists=False,
     )
     return values
 
