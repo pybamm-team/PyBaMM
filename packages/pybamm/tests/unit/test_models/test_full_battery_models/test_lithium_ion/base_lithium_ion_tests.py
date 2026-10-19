@@ -296,6 +296,14 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_sei_film_capacitance(self):
+        options = {
+            "SEI": "reaction limited",
+            "surface form": "differential",
+            "SEI film capacitance": "true",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_sei_solvent_diffusion_limited(self):
         options = {"SEI": "solvent-diffusion limited"}
         self.check_well_posedness(options)

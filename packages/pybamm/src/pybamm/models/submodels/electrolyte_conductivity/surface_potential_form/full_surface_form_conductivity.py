@@ -42,6 +42,7 @@ class BaseModel(BaseElectrolyteConductivity):
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
+        variables.update(self._get_sei_film_variables(x_average=False))
 
         return variables
 
@@ -179,6 +180,9 @@ class BaseModel(BaseElectrolyteConductivity):
         delta_phi_e_init = self.domain_param.prim.U_init
 
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
+        self.initial_conditions.update(
+            self._get_sei_film_initial_conditions(variables, x_average=False)
+        )
 
     def set_boundary_conditions(self, variables):
         Domain = self.domain.capitalize()
@@ -289,4 +293,8 @@ class FullDifferential(BaseModel):
         ]
         a = variables[f"{Domain} electrode surface area to volume ratio [m-1]"]
 
-        self.rhs[delta_phi] = 1 / (a * C_dl) * (pybamm.div(i_e) - sum_a_j)
+        d_eta_sei = self._set_sei_film_rhs(
+            variables, pybamm.div(i_e) / a, x_average=False
+        )
+        # delta_phi = double-layer voltage - SEI film overpotential
+        self.rhs[delta_phi] = 1 / (a * C_dl) * (pybamm.div(i_e) - sum_a_j) - d_eta_sei
