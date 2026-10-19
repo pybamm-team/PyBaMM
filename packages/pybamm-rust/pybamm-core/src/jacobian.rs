@@ -668,18 +668,24 @@ impl JacobianData {
             narrowed[sparsity.indptr[row]..sparsity.indptr[row + 1]].fill(false);
         }
         let reduced = color_columns_masked(sparsity, &narrowed);
-        let full = color_columns_masked(sparsity, &swept);
-        let improves = reduced.n_colors < full.n_colors;
-        // Built once and moved out on either decline path, since the adopt path
-        // returns `narrowed` and `reduced` instead.
-        let declined = ColoringDecision {
-            coloring: full,
+        let n_candidate_rows = candidates.len();
+        let decline = |swept: Vec<bool>, full: Option<ColumnColoring>| ColoringDecision {
+            coloring: full.unwrap_or_else(|| color_columns_masked(sparsity, &swept)),
             swept,
             dense_rows: Vec::new(),
-            n_candidate_rows: candidates.len(),
+            n_candidate_rows,
         };
-        if !improves {
-            return declined;
+        // A row's swept columns all conflict, so the widest swept row bounds the
+        // full coloring from below. Beating it proves the split pays without
+        // coloring the dense rows, which costs O(width^2) edges.
+        let full_lower_bound = widths.iter().copied().max().unwrap_or(0);
+        let mut full = None;
+        if reduced.n_colors >= full_lower_bound {
+            let coloring = color_columns_masked(sparsity, &swept);
+            if reduced.n_colors >= coloring.n_colors {
+                return decline(swept, Some(coloring));
+            }
+            full = Some(coloring);
         }
 
         // Extraction is the expensive half of the decision, so it runs only once
@@ -687,7 +693,7 @@ impl JacobianData {
         let mut dense_rows = Vec::with_capacity(candidates.len().div_ceil(ROWS_PER_TAPE));
         for group in candidates.chunks(ROWS_PER_TAPE) {
             let Some(block) = extract_scalar_rows(arena, root, group) else {
-                return declined;
+                return decline(swept, full);
             };
             let entries = block
                 .rows

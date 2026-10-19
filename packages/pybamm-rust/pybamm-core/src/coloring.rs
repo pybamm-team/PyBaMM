@@ -13,6 +13,9 @@
 //! seeds only the columns a sweep must still recover, and lets two of them
 //! share a color unless a row makes one of them read the other.
 
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
+
 use crate::sparsity::SparsityPattern;
 
 /// A column no sweep produces, so it never receives a color.
@@ -191,10 +194,6 @@ fn color_with_seeds(pattern: &SparsityPattern, swept: &[bool], seeded: &[bool]) 
         };
     }
 
-    // Selection scans this list, not every column, which is what keeps the
-    // O(n^2) loop proportional to the columns a sweep actually produces.
-    let seeded_cols: Vec<usize> = (0..ncols).filter(|&col| seeded[col]).collect();
-
     let adj = build_column_adjacency_masked(pattern, swept, seeded);
     let degree = |v: usize| adj.indptr[v + 1] - adj.indptr[v];
 
@@ -206,23 +205,18 @@ fn color_with_seeds(pattern: &SparsityPattern, swept: &[bool], seeded: &[bool]) 
     let mut forbidden = vec![false; ncols];
     let mut n_colors: usize = 0;
 
-    for _ in 0..seeded_cols.len() {
-        // Select the uncolored column with maximum saturation degree.
-        let mut best: Option<usize> = None;
-        for &v in &seeded_cols {
-            if colors[v] != UNSEEDED {
-                continue;
-            }
-            best = Some(best.map_or(v, |b| {
-                let (sv, sb) = (neighbour_colors[v].len(), neighbour_colors[b].len());
-                if sv > sb || (sv == sb && degree(v) > degree(b)) {
-                    v
-                } else {
-                    b
-                }
-            }));
+    // Lazy max-heap on (saturation, degree, lowest index): a column is re-pushed
+    // whenever its saturation grows, and stale entries are skipped on pop. This
+    // replaces an O(n^2) scan per pick with O(E log n) overall.
+    let mut queue: BinaryHeap<(usize, usize, Reverse<usize>)> = (0..ncols)
+        .filter(|&col| seeded[col])
+        .map(|col| (0, degree(col), Reverse(col)))
+        .collect();
+
+    while let Some((saturation, _, Reverse(col))) = queue.pop() {
+        if colors[col] != UNSEEDED || saturation != neighbour_colors[col].len() {
+            continue;
         }
-        let col = best.expect("an uncolored seeded column remains while iterating");
 
         let neighbours = &adj.indices[adj.indptr[col]..adj.indptr[col + 1]];
 
@@ -247,8 +241,8 @@ fn color_with_seeds(pattern: &SparsityPattern, swept: &[bool], seeded: &[bool]) 
 
         // Propagate the new colour into uncolored neighbours' saturation sets.
         for &nbr in neighbours {
-            if colors[nbr] == UNSEEDED {
-                neighbour_colors[nbr].insert(c);
+            if colors[nbr] == UNSEEDED && neighbour_colors[nbr].insert(c) {
+                queue.push((neighbour_colors[nbr].len(), degree(nbr), Reverse(nbr)));
             }
         }
     }
@@ -626,6 +620,121 @@ mod tests {
         assert_eq!(coloring.n_colors, 2);
         assert_ne!(coloring.colors[0], coloring.colors[2]);
         assert_eq!(coloring.colors[1], UNSEEDED);
+    }
+
+    /// The pre-heap DSATUR: a full scan of the uncolored seeded columns per
+    /// pick. Kept to pin the heap version to the exact same colours.
+    fn reference_dsatur(pattern: &SparsityPattern, swept: &[bool]) -> Vec<usize> {
+        let mut seeded = vec![false; pattern.ncols];
+        for (&col, &is_swept) in pattern.indices.iter().zip(swept) {
+            seeded[col] |= is_swept;
+        }
+        let adj = build_column_adjacency_masked(pattern, swept, &seeded);
+        let degree = |v: usize| adj.indptr[v + 1] - adj.indptr[v];
+        let seeded_cols: Vec<usize> = (0..pattern.ncols).filter(|&c| seeded[c]).collect();
+        let mut colors = vec![UNSEEDED; pattern.ncols];
+        let mut saturation = vec![std::collections::BTreeSet::new(); pattern.ncols];
+        for _ in 0..seeded_cols.len() {
+            let mut best: Option<usize> = None;
+            for &v in seeded_cols.iter().filter(|&&v| colors[v] == UNSEEDED) {
+                best = Some(best.map_or(v, |b| {
+                    let (sv, sb) = (saturation[v].len(), saturation[b].len());
+                    if sv > sb || (sv == sb && degree(v) > degree(b)) {
+                        v
+                    } else {
+                        b
+                    }
+                }));
+            }
+            let col = best.unwrap();
+            let neighbours = &adj.indices[adj.indptr[col]..adj.indptr[col + 1]];
+            let used: HashSet<usize> = neighbours.iter().map(|&n| colors[n]).collect();
+            let c = (0..).find(|c| !used.contains(c)).unwrap();
+            colors[col] = c;
+            for &nbr in neighbours {
+                saturation[nbr].insert(c);
+            }
+        }
+        colors
+    }
+
+    /// 7-point stencil on an m^3 grid, plus a column every row reads (a global
+    /// heat source) and a row reading every column (a volume mean).
+    fn make_coupled_stencil_pattern(m: usize) -> SparsityPattern {
+        let n = m * m * m;
+        let (source, mean) = (n, n + 1);
+        let id = |i: usize, j: usize, k: usize| (i * m + j) * m + k;
+        let mut pattern = SparsityPattern::new(0, n + 2);
+        pattern.indptr = vec![0];
+        for i in 0..m {
+            for j in 0..m {
+                for k in 0..m {
+                    let mut row = vec![id(i, j, k), source];
+                    if i > 0 {
+                        row.push(id(i - 1, j, k));
+                    }
+                    if i + 1 < m {
+                        row.push(id(i + 1, j, k));
+                    }
+                    if j > 0 {
+                        row.push(id(i, j - 1, k));
+                    }
+                    if j + 1 < m {
+                        row.push(id(i, j + 1, k));
+                    }
+                    if k > 0 {
+                        row.push(id(i, j, k - 1));
+                    }
+                    if k + 1 < m {
+                        row.push(id(i, j, k + 1));
+                    }
+                    row.sort_unstable();
+                    pattern.indices.extend(row);
+                    pattern.indptr.push(pattern.indices.len());
+                }
+            }
+        }
+        pattern.indices.push(source);
+        pattern.indptr.push(pattern.indices.len());
+        pattern.indices.extend(0..n);
+        pattern.indices.push(mean);
+        pattern.indptr.push(pattern.indices.len());
+        pattern.nrows = pattern.indptr.len() - 1;
+        pattern
+    }
+
+    #[test]
+    fn heap_dsatur_matches_the_scanning_reference() {
+        let stencil = make_coupled_stencil_pattern(6);
+        let mut every_third = vec![true; stencil.nnz()];
+        for (entry, flag) in every_third.iter_mut().enumerate() {
+            *flag = entry % 3 != 0;
+        }
+        let cases = [
+            (make_tridiagonal_pattern(30), None),
+            (make_dense_pattern(7, 7), None),
+            (make_bidiagonal_pattern(17), None),
+            (stencil.clone(), None),
+            (stencil, Some(every_third)),
+        ];
+        for (pattern, mask) in cases {
+            let swept = mask.unwrap_or_else(|| vec![true; pattern.nnz()]);
+            let coloring = color_columns_masked(&pattern, &swept);
+            assert_valid_masked_coloring(&pattern, &swept, &coloring);
+            assert_eq!(coloring.colors, reference_dsatur(&pattern, &swept));
+            // The bound the Jacobian's dense-row split relies on to skip this
+            // coloring: a row's swept columns are a clique.
+            let widest = (0..pattern.nrows)
+                .map(|row| {
+                    swept[pattern.indptr[row]..pattern.indptr[row + 1]]
+                        .iter()
+                        .filter(|&&s| s)
+                        .count()
+                })
+                .max()
+                .unwrap_or(0);
+            assert!(coloring.n_colors >= widest);
+        }
     }
 
     #[test]
