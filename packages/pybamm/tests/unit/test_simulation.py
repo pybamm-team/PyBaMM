@@ -1186,8 +1186,8 @@ class TestSimulation:
         sol = sim.solve([0, 1], initial_soc="3.9 V")
 
         h = sol["X-averaged negative electrode secondary hysteresis state"]
-        assert h.entries[0] == pytest.approx(h0)
-        assert sol["Voltage [V]"].entries[0] == pytest.approx(3.9, abs=1e-4)
+        assert h(0) == pytest.approx(h0)
+        assert sol["Voltage [V]"](0) == pytest.approx(3.9, abs=1e-4)
 
     @pytest.mark.parametrize("cache_esoh", [True, False])
     @pytest.mark.parametrize("h0", [-1, 0.5])
@@ -1212,8 +1212,8 @@ class TestSimulation:
         sol = sim.solve([0, 1], initial_soc="3.9 V")
 
         h = sol["X-averaged negative electrode hysteresis state"]
-        assert h.entries[0] == pytest.approx(h0)
-        assert sol["Voltage [V]"].entries[0] == pytest.approx(3.9, abs=1e-4)
+        assert h(0) == pytest.approx(h0)
+        assert sol["Voltage [V]"](0) == pytest.approx(3.9, abs=1e-4)
 
     def test_cache_esoh_initial_hysteresis_state_change(self):
         options = {"open-circuit potential": ("one-state hysteresis", "single")}
@@ -1240,8 +1240,8 @@ class TestSimulation:
                 inputs={"Initial hysteresis state in negative electrode": h0},
             )
             h = sol["X-averaged negative electrode hysteresis state"]
-            assert h.entries[0] == pytest.approx(h0)
-            assert sol["Voltage [V]"].entries[0] == pytest.approx(3.9, abs=1e-4)
+            assert h(0) == pytest.approx(h0)
+            assert sol["Voltage [V]"](0) == pytest.approx(3.9, abs=1e-4)
 
     def test_initial_hysteresis_state_from_direction_is_not_kept(self):
         options = {"open-circuit potential": ("one-state hysteresis", "single")}
