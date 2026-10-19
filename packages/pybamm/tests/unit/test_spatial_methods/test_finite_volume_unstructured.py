@@ -1286,10 +1286,36 @@ class TestFiniteVolumeUnstructuredBehavior:
             left.face_centroids[left.boundary_faces["iface_right"], 0], 0.5
         )
 
+    def test_tag_under_a_coupled_interface_is_skipped(self):
+        # "right" lies wholly under the interface coupled by "iface_right",
+        # so its condition reaches no face
+        left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
+        right = _make_2d_mesh(2, 2, x_range=(0.5, 1))
+        method = FiniteVolumeUnstructured()
+        assert method._compute_pair_interface(left, right, "test", "right")
+        assert "right" in left.boundary_faces
+        method = _method_with_mesh(left)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        values = pybamm.Vector(left.cell_centroids[:, 0] ** 2, domain="test")
+        coupled = {
+            "left": (pybamm.Scalar(1), "Dirichlet"),
+            "iface_right": (pybamm.Scalar(2), "Neumann"),
+        }
+        with_tag = {**coupled, "right": (pybamm.Scalar(5), "Dirichlet")}
+        for operator in (
+            lambda bcs: method.laplacian(variable, values, {variable: bcs}),
+            lambda bcs: method.div_D_grad(
+                div_symbol, variable, pybamm.Scalar(2), values, {variable: bcs}
+            ),
+        ):
+            np.testing.assert_allclose(
+                operator(with_tag).evaluate(), operator(coupled).evaluate(), atol=1e-12
+            )
+
     def test_untagged_neighbour_outside_concatenation_keeps_bcs(self, caplog):
-        # An untagged box on top of the negative electrode is discovered as
-        # its neighbour, but it is not part of c: c's equations, including
-        # the "top" condition under the box, must not change
+        # The untagged box is a discovered neighbour but not part of c, so
+        # c's equations, including "top" under the box, must not change
         def discretised_rhs(with_tab):
             x_n = pybamm.SpatialVariable("x_n", "negative electrode")
             x_s = pybamm.SpatialVariable("x_s", "separator")
