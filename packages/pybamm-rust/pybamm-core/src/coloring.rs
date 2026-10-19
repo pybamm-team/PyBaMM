@@ -649,7 +649,7 @@ mod tests {
             let col = best.unwrap();
             let neighbours = &adj.indices[adj.indptr[col]..adj.indptr[col + 1]];
             let used: HashSet<usize> = neighbours.iter().map(|&n| colors[n]).collect();
-            let c = (0..).find(|c| !used.contains(c)).unwrap();
+            let c = (0..=used.len()).find(|c| !used.contains(c)).unwrap();
             colors[col] = c;
             for &nbr in neighbours {
                 saturation[nbr].insert(c);

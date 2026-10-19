@@ -679,14 +679,15 @@ impl JacobianData {
         // full coloring from below. Beating it proves the split pays without
         // coloring the dense rows, which costs O(width^2) edges.
         let full_lower_bound = widths.iter().copied().max().unwrap_or(0);
-        let mut full = None;
-        if reduced.n_colors >= full_lower_bound {
+        let full = if reduced.n_colors >= full_lower_bound {
             let coloring = color_columns_masked(sparsity, &swept);
             if reduced.n_colors >= coloring.n_colors {
                 return decline(swept, Some(coloring));
             }
-            full = Some(coloring);
-        }
+            Some(coloring)
+        } else {
+            None
+        };
 
         // Extraction is the expensive half of the decision, so it runs only once
         // the colouring is known to improve.
