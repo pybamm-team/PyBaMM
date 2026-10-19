@@ -500,7 +500,9 @@ impl ExprGraph {
         }
         let child_id = child.node_id_in(&slf)?;
         let coeffs: Vec<[f64; 4]> = coeffs
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|c| [c[0], c[1], c[2], c[3]])
             .collect();
         let data = CubicInterpolantData::try_new(breakpoints, coeffs).map_err(core_err_to_py)?;

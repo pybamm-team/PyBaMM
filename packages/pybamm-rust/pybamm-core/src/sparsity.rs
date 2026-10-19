@@ -491,7 +491,7 @@ fn compute_node_deps(
     }
 }
 
-fn child_deps(deps: &[Option<ElementDeps>], id: NodeId) -> &ElementDeps {
+const fn child_deps(deps: &[Option<ElementDeps>], id: NodeId) -> &ElementDeps {
     deps[id.index()]
         .as_ref()
         .expect("child must be processed before parent in topological order")

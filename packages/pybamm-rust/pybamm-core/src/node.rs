@@ -1037,7 +1037,7 @@ mod tests {
         let leaf = Node::Scalar(2.72);
         let mut leaf_children = Vec::new();
         leaf.for_each_child(|c| leaf_children.push(c));
-        assert!(leaf_children.is_empty());
+        assert_eq!(leaf_children, []);
 
         let concat = Node::Concat(vec![a, b, a]);
         let mut concat_children = Vec::new();

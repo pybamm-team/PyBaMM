@@ -1839,7 +1839,7 @@ pub(crate) mod tests {
         assert_eq!(detect_dense_rows(&pattern.row_widths()), vec![0]);
         // all-sparse pattern → no detection
         let diag = make_diagonal_pattern_local(20);
-        assert!(detect_dense_rows(&diag.row_widths()).is_empty());
+        assert_eq!(detect_dense_rows(&diag.row_widths()), Vec::<usize>::new());
     }
 
     /// A 2D current collector puts one dense row per collector node, so the
@@ -1876,7 +1876,10 @@ pub(crate) mod tests {
     #[test]
     fn detect_dense_rows_declines_when_no_split_pays() {
         let all_dense = make_pattern_with_n_dense_rows(20, 20);
-        assert!(detect_dense_rows(&all_dense.row_widths()).is_empty());
+        assert_eq!(
+            detect_dense_rows(&all_dense.row_widths()),
+            Vec::<usize>::new()
+        );
     }
 
     /// The number of reverse passes stays bounded however pathological the

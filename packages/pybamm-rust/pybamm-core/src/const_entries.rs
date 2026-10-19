@@ -393,7 +393,7 @@ fn classify_rows(arena: &Arena, tangent_root: NodeId, n_rows: usize) -> Coeffs {
     }
 }
 
-fn child_info(info: &[Option<NodeInfo>], id: NodeId) -> &NodeInfo {
+const fn child_info(info: &[Option<NodeInfo>], id: NodeId) -> &NodeInfo {
     info[id.index()]
         .as_ref()
         .expect("children are classified before their parents")
@@ -903,7 +903,7 @@ mod tests {
 
         let (_, varying, entries) = classify_states(&arena, root, 2, 2);
         assert!(varying.iter().all(|&v| v), "every entry must be swept");
-        assert!(entries.is_empty());
+        assert_eq!(entries, []);
     }
 
     #[test]
@@ -1018,6 +1018,6 @@ mod tests {
 
         let (_, varying, entries) = classify_states(&arena, root, 1, n);
         assert!(varying.iter().all(|&v| v));
-        assert!(entries.is_empty());
+        assert_eq!(entries, []);
     }
 }
