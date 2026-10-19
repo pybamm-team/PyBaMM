@@ -2613,7 +2613,7 @@ class BoundaryConditionsDict(dict):
                     "Neumann",
                 ] and not pybamm.is_flux_boundary_condition(bc[1]):
                     raise pybamm.ModelError(
-                        f"boundary condition types must be Dirichlet, Flux or Neumann, not '{bc[1]}'"
+                        f"boundary condition types must be Dirichlet, Neumann or ('Flux', pybammm.Symbol), not '{bc[1]}'"
                     )
 
         return boundary_conditions

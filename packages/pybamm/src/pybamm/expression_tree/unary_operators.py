@@ -613,6 +613,14 @@ class Divergence(SpatialOperator):
         super().__init__("div", child)
         self.no_simplification = no_simplification
 
+    @classmethod
+    def _from_json(cls, snippet):
+        """Instantiate from JSON, defaulting the simplification flag for old data."""
+        return cls(
+            snippet["children"][0],
+            no_simplification=snippet.get("no_simplification", False),
+        )
+
     def __setstate__(self, state):
         """
         Set default value for no_simplification if not present in state.
