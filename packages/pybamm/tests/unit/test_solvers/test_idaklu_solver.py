@@ -1047,7 +1047,7 @@ class TestIDAKLUSolver:
             "init_all_y_ic": False,
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 6,
-            "klu_pivot_tolerance": 1.0,
+            "klu_pivot_tolerance": 0.1,
             "epsilon_linear_tolerance": 0.06,
             "increment_factor": 0.99,
             "linear_solution_scaling": False,

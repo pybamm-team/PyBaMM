@@ -265,7 +265,7 @@ PYBIND11_MODULE(idaklu, m)
          py::arg("atol"), py::arg("rtol"), py::arg("step_tol"),
          py::arg("max_iter"), py::arg("max_backtracks"),
          py::arg("eps_newt"), py::arg("use_sparse"),
-         py::arg("klu_pivot_tolerance") = 0.1)
+         py::arg("klu_pivot_tolerance") = 1.0)
     .def("solve", &StandaloneNewtonSolver::solve,
          py::arg("t"), py::arg("y0"), py::arg("inputs"),
          py::arg("logger") = py::none(),

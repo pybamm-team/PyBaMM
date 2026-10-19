@@ -19,7 +19,7 @@ SetupOptions::SetupOptions(py::dict &py_opts)
       klu_pivot_tolerance(
           py_opts.contains("klu_pivot_tolerance")
               ? py_opts["klu_pivot_tolerance"].cast<double>()
-              : 0.1)
+              : 1.0)
 {
     if (!(klu_pivot_tolerance > 0.0 && klu_pivot_tolerance <= 1.0))
     {
