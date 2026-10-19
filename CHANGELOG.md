@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added an example notebook, `pouch-cell-DFN-3D`, that builds a 3D pouch cell DFN with both current collectors, their tabs and a 3D heat equation on hexahedral meshes, solved with `FiniteVolumeUnstructured`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
