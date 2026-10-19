@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
+
 ## Bug fixes
 
 - `set_initial_state` without a `direction` now keeps a user-set `"Initial hysteresis state in {electrode} electrode"` and solves the initial stoichiometries on the OCP at that state, `(1 + h0) / 2 * U_delith + (1 - h0) / 2 * U_lith`. Before, it reset the state to 0 and solved on `"{Electrode} electrode OCP [V]"`, so a hysteresis model started at h = 0 and, when that OCP differed from the branch average, away from the requested voltage. With h0 = 0 the initial stoichiometries now come from the branch average rather than `"OCP [V]"`. ([#5928](https://github.com/pybamm-team/PyBaMM/pull/5928))
