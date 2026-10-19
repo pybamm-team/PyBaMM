@@ -62,6 +62,11 @@ def set_initial_state(
         If string e.g. "4 V", interpreted as voltage, must be between V_min and V_max.
     parameter_values : :class:`pybamm.ParameterValues`
         Parameters and their corresponding values.
+    direction : str, optional
+        "charge" or "discharge" starts each hysteresis electrode on that OCP branch.
+        If None, a voltage is solved on the OCP at the initial hysteresis state (0
+        if unset). A spatially varying initial hysteresis state is evaluated at the
+        electrode midpoint, so the initial voltage is then approximate.
     param : :class:`pybamm.LithiumIonParameters`, optional
         The symbolic parameter set to use for the simulation.
         If not provided, the default parameter set will be used.
