@@ -8,7 +8,7 @@ PyBaMM's.
 ### Changed
 
 - Require `pybamm[plot]` so that every model's examples and README snippets can
-  plot results in a clean install ([#PR](https://github.com/pybamm-team/PyBaMM/pull/PR))
+  plot results in a clean install ([#5926](https://github.com/pybamm-team/PyBaMM/pull/5926))
 
 ## [0.1.1] - 2026-10-14
 
