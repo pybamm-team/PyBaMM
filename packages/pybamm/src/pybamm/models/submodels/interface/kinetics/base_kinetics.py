@@ -139,8 +139,6 @@ class BaseKinetics(BaseInterface):
             eta_sei = variables[
                 f"{Domain} electrode SEI film overpotential variable [V]"
             ]
-            if eta_r.domain == ["current collector"]:
-                eta_sei = eta_sei.orphans[0]
         elif self.options["SEI film resistance"] == "distributed":
             R_sei = self.phase_param.R_sei
             L_sei = variables[f"{Domain} {phase_name}SEI thickness [m]"]
