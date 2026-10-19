@@ -177,9 +177,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         dirichlet_type_bc = [side for side, bc in bcs.items() if bc[1] == "Dirichlet"]
         neumann_type_bc = [side for side, bc in bcs.items() if bc[1] == "Neumann"]
         flux_type_bc = [
-            side
-            for side, bc in bcs.items()
-            if pybamm.is_flux_boundary_condition(bc[1])
+            side for side, bc in bcs.items() if pybamm.is_flux_boundary_condition(bc[1])
         ]
         if dirichlet_type_bc:
             # add ghost nodes and update domain
@@ -1060,7 +1058,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Prepare sizes
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
         n = discretised_gradient.shape[0] // second_dim_repeats
-
 
         # Make matrix which appends extrapolated values of the discretised gradient.
         if "left" in boundaries:
