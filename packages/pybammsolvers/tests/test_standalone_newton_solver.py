@@ -19,6 +19,7 @@ def _build_solver(
     max_backtracks=5,
     eps_newt=0.33,
     use_sparse=False,
+    **kwargs,
 ):
     n_vars = res_fn.nnz_out(0)
     if atol is None:
@@ -33,6 +34,7 @@ def _build_solver(
         max_backtracks,
         eps_newt,
         use_sparse,
+        **kwargs,
     )
 
 
@@ -51,7 +53,7 @@ def _make_scalar_fns():
 
 def _make_3x3_linear_fns():
     """Ax - b = 0 where A = [[2,1,0],[1,3,1],[0,1,2]], b = [4,10,6].
-    Exact solution: x = [1, 2, 2]."""
+    Exact solution: x = [0.75, 2.5, 1.75]."""
     t = casadi.SX.sym("t")
     x = casadi.SX.sym("x", 3)
     p = casadi.SX.sym("p", 0)
@@ -221,6 +223,17 @@ class TestStandaloneNewtonSolver:
 
         assert ok_d and ok_s
         np.testing.assert_allclose(y_d, y_s, atol=1e-12)
+
+    @pytest.mark.parametrize("klu_pivot_tolerance", [0.001, 0.1, 1.0])
+    def test_klu_pivot_tolerance(self, klu_pivot_tolerance):
+        solver = _build_solver(
+            *_make_3x3_linear_fns(),
+            use_sparse=True,
+            klu_pivot_tolerance=klu_pivot_tolerance,
+        )
+        ok, y = solver.solve(0.0, np.zeros(3), np.array([]))
+        assert ok
+        np.testing.assert_allclose(y, [0.75, 2.5, 1.75], atol=1e-10)
 
     def test_n_vars_inferred(self):
         """Construct solvers for different sizes; n_vars is inferred automatically."""

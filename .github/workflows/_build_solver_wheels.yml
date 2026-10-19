@@ -57,8 +57,8 @@ defaults:
 
 env:
   CIBW_BUILD_VERBOSITY: 2
-  # Skip PyPy, MUSL, and free-threaded Python builds (CasADi lacks cp314t wheels)
-  CIBW_SKIP: "pp* *musllinux* cp314t*"
+  # Skip PyPy, MUSL, and free-threaded Python builds (CasADi lacks cp31Xt wheels)
+  CIBW_SKIP: "pp* *musllinux* cp314t* cp315t*"
   FORCE_COLOR: 3
 
 jobs:
@@ -150,7 +150,7 @@ jobs:
             python -m pytest {project}/tests
       - name: Upload vcpkg build logs
         if: ${{ inputs.save_vcpkg_logs && always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: vcpkg-logs-windows
           path: |
@@ -158,7 +158,7 @@ jobs:
             C:\vcpkg\buildtrees\detect_compiler\*.log
           if-no-files-found: ignore
       - name: Upload Windows wheels
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: wheels_windows
           path: packages/pybammsolvers/wheelhouse/*.whl
@@ -234,7 +234,7 @@ jobs:
             python -m pytest {project}/tests
 
       - name: Upload wheels for Linux
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ matrix.artifact }}
           path: packages/pybammsolvers/wheelhouse/*.whl
@@ -358,7 +358,7 @@ jobs:
             python -m pytest {project}/tests
 
       - name: Upload wheels for macOS (amd64, arm64)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: wheels_${{ matrix.os }}
           path: packages/pybammsolvers/wheelhouse/*.whl
@@ -384,7 +384,7 @@ jobs:
         run: pipx run build --sdist
 
       - name: Upload SDist
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sdist
           path: packages/pybammsolvers/dist/*.tar.gz

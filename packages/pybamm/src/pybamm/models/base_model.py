@@ -126,7 +126,8 @@ class BaseModel:
         self._fixed_input_parameters = {}
         self._parameter_info = None
         self._is_standard_form_dae = None
-        self._variables_casadi = {}
+        # Built on first read by pybamm.solvers.observation.ObserverCache
+        self._observer_cache = None
         self._geometry = pybamm.Geometry({})
         self._symbol_processor = SymbolProcessor()
         self._solution_observable = ModelSolutionObservability.ENABLED
@@ -226,6 +227,8 @@ class BaseModel:
         if "convert_to_format" in state:
             state = dict(state)
             state["_convert_to_format"] = state.pop("convert_to_format")
+        # Older pickles carry no observer cache
+        self._observer_cache = None
         self.__dict__.update(state)
 
     @property
@@ -1192,7 +1195,8 @@ class BaseModel:
         new_model._variables = self.variables.copy()
         new_model._variables_processed = self._variables_processed.copy()
         new_model._events = self.events.copy()
-        new_model._variables_casadi = self._variables_casadi.copy()
+        if self._observer_cache is not None:
+            new_model._observer_cache = self._observer_cache.copy()
         new_model._symbol_processor = self.symbol_processor.copy()
         new_model._solution_observable = self._solution_observable
         new_model.switching_control_variables = self.switching_control_variables.copy()
