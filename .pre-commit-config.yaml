@@ -2,6 +2,8 @@ ci:
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autofix_commit_msg: "style: pre-commit fixes"
   autoupdate_schedule: "weekly"
+  # No Rust toolchain on pre-commit.ci; the style job runs these with cargo.
+  skip: [cargo-fmt, cargo-clippy]
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
