@@ -10,8 +10,13 @@ def _set_hysteresis_branch(parameter_values, electrode, direction, options, phas
     else:
         phase_prefactor = ""
     name = f"{phase_prefactor}Initial hysteresis state in {electrode} electrode"
+    # Values written by earlier calls with a direction, so a later call without one
+    # resets them instead of keeping them as if the user had set them
+    from_direction = parameter_values._hysteresis_states_from_direction
     if direction is None:
-        if name in parameter_values:
+        if name in parameter_values and parameter_values[name] is not (
+            from_direction.pop(name, None)
+        ):
             # Keep the user's initial state; the initial stoichiometries are
             # solved on the OCP at that state (see `get_initial_ocp`)
             return parameter_values
@@ -27,6 +32,9 @@ def _set_hysteresis_branch(parameter_values, electrode, direction, options, phas
             initial_hysteresis_branch = -1
         else:
             raise ValueError(f"Invalid direction: {direction}")
+        # A new float object, so a value the user sets later is never this one
+        initial_hysteresis_branch = float(initial_hysteresis_branch)
+        from_direction[name] = initial_hysteresis_branch
     parameter_values.update({name: initial_hysteresis_branch})
     return parameter_values
 
