@@ -2,7 +2,7 @@
 
 ## Features
 
-- Added an example notebook, `pouch-cell-DFN-3D`, that builds a 3D pouch cell DFN with both current collectors, their tabs and a 3D heat equation on hexahedral meshes, solved with `FiniteVolumeUnstructured`. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- Added an example notebook, `pouch-cell-DFN-3D`, that builds a 3D pouch cell DFN with both current collectors, their tabs and a 3D heat equation on hexahedral meshes, solved with `FiniteVolumeUnstructured`. ([#5930](https://github.com/pybamm-team/PyBaMM/pull/5930))
 
 ## Bug fixes
 
