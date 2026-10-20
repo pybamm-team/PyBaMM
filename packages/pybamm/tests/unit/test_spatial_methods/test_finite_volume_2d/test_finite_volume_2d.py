@@ -8,6 +8,10 @@ import pybamm
 
 
 class TestFiniteVolume2D:
+    def test_deprecated(self):
+        with pytest.warns(DeprecationWarning, match=r"FiniteVolume2D is deprecated"):
+            pybamm.FiniteVolume2D()
+
     def test_node_to_edge_to_node(self, mesh_2d):
         # Create discretisation
         mesh = mesh_2d

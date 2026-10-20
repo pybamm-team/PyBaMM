@@ -1,6 +1,8 @@
 #
 # Finite Volume discretisation class
 #
+import warnings
+
 import numpy as np
 from scipy.sparse import (
     block_diag,
@@ -30,9 +32,20 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         currently available is "extrapolation", which has options for "order" and "use_bcs".
         It sets the order separately for `pybamm.BoundaryValue` and `pybamm.BoundaryGradient`.
         Default is "linear" for the value and quadratic for the gradient.
+
+    .. deprecated::
+        ``FiniteVolume2D`` is deprecated and will be removed in a future release.
+        Use :class:`pybamm.FiniteVolumeUnstructured` instead.
     """
 
     def __init__(self, options=None):
+        warnings.warn(
+            "FiniteVolume2D is deprecated and will be removed in a future release. "
+            "Use pybamm.FiniteVolumeUnstructured instead; see "
+            "https://github.com/pybamm-team/PyBaMM/issues/5938.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(options)
 
     def build(self, mesh):
