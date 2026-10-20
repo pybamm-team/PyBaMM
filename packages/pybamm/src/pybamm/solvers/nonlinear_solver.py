@@ -12,7 +12,7 @@ from pybamm.solvers.idaklu_solver import _check_klu_pivot_tolerance
 
 _DEFAULT_OPTIONS = {
     "compile": False,
-    "klu_pivot_tolerance": 1.0,
+    "klu_pivot_tolerance": 0.1,
 }
 
 
@@ -67,7 +67,7 @@ class NonlinearSolver(pybamm.BaseSolver):
     options : dict, optional
         Solver options. Supports ``compile`` (bool, default False) for
         ahead-of-time compilation of CasADi residual/Jacobian, and
-        ``klu_pivot_tolerance`` (float in (0, 1], default 1.0), the KLU threshold
+        ``klu_pivot_tolerance`` (float in (0, 1], default 0.1), the KLU threshold
         partial pivoting tolerance.
     """
 

@@ -193,7 +193,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # For the KLU linear solver, threshold partial pivoting tolerance
                 # in (0, 1]: a pivot is accepted if it is at least this fraction
                 # of the largest entry in its column (1.0 is full partial pivoting)
-                "klu_pivot_tolerance": 1.0,
+                "klu_pivot_tolerance": 0.1,
                 # Ratio between linear and nonlinear tolerances
                 "epsilon_linear_tolerance": 0.05,
                 # Increment factor used in DQ Jacobian-vector product approximation
@@ -353,7 +353,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "num_solvers": num_solvers,
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 5,
-            "klu_pivot_tolerance": 1.0,
+            "klu_pivot_tolerance": 0.1,
             "epsilon_linear_tolerance": 0.05,
             "increment_factor": 1.0,
             "linear_solution_scaling": True,

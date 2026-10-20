@@ -1019,12 +1019,15 @@ def _face_method_cases():
 
 class TestFaceCoefficientAveraging:
     @staticmethod
-    def _two_material_slab(flux):
+    def _two_material_slab(flux, harmonic_flux_coefficients=True):
         """Residual of div(flux(D, t, u, v)) at the exact steady profile of a slab
         whose diffusivity D jumps on the electrode/separator face. ``t`` is a
         node-valued factor that alternates between 1 and -1, and v = 0."""
         mesh = get_mesh_for_testing(xpts=7)
-        disc = pybamm.Discretisation(mesh, {"macroscale": pybamm.FiniteVolume()})
+        method = pybamm.FiniteVolume(
+            {"harmonic flux coefficients": harmonic_flux_coefficients}
+        )
+        disc = pybamm.Discretisation(mesh, {"macroscale": method})
         domain = ["negative electrode", "separator"]
         u = pybamm.Variable("u", domain=domain)
         v = pybamm.Variable("v", domain=domain)
@@ -1092,6 +1095,24 @@ class TestFaceCoefficientAveraging:
             self._two_material_slab(flux), 0, rtol=1e-10, atol=1e-10
         )
 
+    def test_harmonic_flux_coefficients_is_off_by_default(self):
+        assert pybamm.FiniteVolume().options["harmonic flux coefficients"] is False
+        # a single gradient's coefficient is harmonic either way
+        single = self._two_material_slab(
+            lambda D, t, u, v: D * pybamm.grad(u), harmonic_flux_coefficients=False
+        )
+        np.testing.assert_allclose(single, 0, rtol=1e-10, atol=1e-10)
+        combination = self._two_material_slab(
+            lambda D, t, u, v: D * (pybamm.grad(u) - pybamm.grad(v)),
+            harmonic_flux_coefficients=False,
+        )
+        assert np.abs(combination).max() > 1
+
+    @pytest.mark.parametrize("value", ["true", 1, None])
+    def test_harmonic_flux_coefficients_must_be_a_bool(self, value):
+        with pytest.raises(pybamm.OptionError, match="harmonic flux coefficients"):
+            pybamm.FiniteVolume({"harmonic flux coefficients": value})
+
     def test_two_material_slab_arithmetic_mean_is_not_exact(self):
         # a node-valued term (zero here) makes D an arithmetic-mean factor
         residual = self._two_material_slab(
@@ -1121,4 +1142,14 @@ class TestFaceCoefficientAveraging:
     def test_face_coefficient_method(self, bin_op, edge_child, expected):
         assert (
             pybamm.FiniteVolume._face_coefficient_method(bin_op, edge_child) == expected
+        )
+        # with the option off only a bare gradient's factor is harmonic
+        expected_off = (
+            "harmonic" if isinstance(edge_child, pybamm.Gradient) else "arithmetic"
+        )
+        assert (
+            pybamm.FiniteVolume._face_coefficient_method(
+                bin_op, edge_child, gradient_combinations=False
+            )
+            == expected_off
         )

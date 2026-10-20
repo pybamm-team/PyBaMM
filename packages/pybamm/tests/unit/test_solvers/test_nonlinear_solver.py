@@ -39,7 +39,7 @@ class TestNonlinearSolver:
             pybamm.NonlinearSolver(options={"compiel": True})
         assert pybamm.NonlinearSolver(options={"compile": True})._options == {
             "compile": True,
-            "klu_pivot_tolerance": 1.0,
+            "klu_pivot_tolerance": 0.1,
         }
 
     def test_simple_root_find(self):
