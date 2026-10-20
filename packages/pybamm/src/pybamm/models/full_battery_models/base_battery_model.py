@@ -430,6 +430,18 @@ def _check_electrode_compatibility(options):
             resolve_option("particle phases", options["particle phases"], domain)
         )
         phases = _PHASES[:number_of_phases]
+        if number_of_phases == 1:
+            for option in sorted(_PER_PHASE_OPTIONS):
+                electrode_value = resolve_option(
+                    option, options[option], domain, working_electrode=working_electrode
+                )
+                if isinstance(electrode_value, tuple):
+                    raise pybamm.OptionError(
+                        f"Option '{option}' at {domain} is {electrode_value}, a "
+                        "(primary, secondary) tuple, but 'particle phases' at "
+                        f"{domain} is '1'. Give one value for that electrode or "
+                        "set its 'particle phases' to '2'."
+                    )
         if number_of_phases > 1 and (
             options["surface form"] == "false"
             or any(

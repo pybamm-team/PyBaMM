@@ -1009,7 +1009,14 @@ class TestOptions:
 
     def test_domain_phase_options(self):
         options = BatteryModelOptions(
-            {"particle mechanics": (("swelling only", "swelling and cracking"), "none")}
+            {
+                "particle phases": ("2", "1"),
+                "surface form": "algebraic",
+                "particle mechanics": (
+                    ("swelling only", "swelling and cracking"),
+                    "none",
+                ),
+            }
         )
         assert options.negative["particle mechanics"] == (
             "swelling only",
@@ -1063,9 +1070,13 @@ class TestOptions:
     def test_renamed_hysteresis_ocp(self, ocp_option):
         # check old option is renamed to new option
         assert (
-            BatteryModelOptions({"open-circuit potential": ocp_option[0]}).get(
-                "open-circuit potential"
-            )
+            BatteryModelOptions(
+                {
+                    "particle phases": ("2", "1"),
+                    "surface form": "algebraic",
+                    "open-circuit potential": ocp_option[0],
+                }
+            ).get("open-circuit potential")
             == ocp_option[1]
         )
 
@@ -1129,13 +1140,38 @@ class TestOptions:
                 }
             )
 
+    @pytest.mark.parametrize(
+        ("options", "domain"),
+        [
+            (
+                {"open-circuit potential": (("single", "current sigmoid"), "single")},
+                "negative",
+            ),
+            (
+                {
+                    "particle phases": ("2", "1"),
+                    "surface form": "algebraic",
+                    "SEI": ("constant", ("constant", "none")),
+                },
+                "positive",
+            ),
+        ],
+    )
+    def test_rejects_phase_tuple_on_single_phase_electrode(self, options, domain):
+        with pytest.raises(
+            pybamm.OptionError, match=rf"at {domain} is .*'particle phases' at {domain}"
+        ):
+            BatteryModelOptions(options)
+
     def test_accepts_phase_exchange_current_density(self):
         options = BatteryModelOptions(
             {
+                "particle phases": ("2", "1"),
+                "surface form": "algebraic",
                 "exchange-current density": (
                     ("current sigmoid", "single"),
                     "single",
-                )
+                ),
             }
         )
         assert options.negative.primary["exchange-current density"] == "current sigmoid"
