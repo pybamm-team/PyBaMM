@@ -23,6 +23,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
     A class which implements the steps specific to the finite volume method during
     discretisation.
 
+    .. deprecated:: 26.11
+        Use :class:`pybamm.FiniteVolumeUnstructured` instead.
+
     For broadcast and mass_matrix, we follow the default behaviour from SpatialMethod.
 
     Parameters
@@ -32,10 +35,6 @@ class FiniteVolume2D(pybamm.SpatialMethod):
         currently available is "extrapolation", which has options for "order" and "use_bcs".
         It sets the order separately for `pybamm.BoundaryValue` and `pybamm.BoundaryGradient`.
         Default is "linear" for the value and quadratic for the gradient.
-
-    .. deprecated::
-        ``FiniteVolume2D`` is deprecated and will be removed in a future release.
-        Use :class:`pybamm.FiniteVolumeUnstructured` instead.
     """
 
     def __init__(self, options=None):
