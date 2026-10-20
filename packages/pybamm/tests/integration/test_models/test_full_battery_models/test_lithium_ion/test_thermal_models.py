@@ -352,3 +352,30 @@ class TestThermal:
         np.testing.assert_allclose(released, work + heat, rtol=0, atol=5e-3 * heat)
         # without the heat of mixing the balance fails, so the check has teeth
         assert abs(released - (work + heat - heat_of_mixing)) > 0.2 * heat
+
+    @pytest.mark.parametrize(
+        "model_class", [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN]
+    )
+    @pytest.mark.parametrize(
+        "particle, rtol", [("quadratic profile", 0.15), ("quartic profile", 0.05)]
+    )
+    def test_heat_of_mixing_polynomial_profile(self, model_class, particle, rtol):
+        # The polynomial profiles approximate Fickian diffusion, so once the initial
+        # transient has passed their heat of mixing should be close to it
+        t = np.linspace(600, 3000, 25)
+        heat_of_mixing = {}
+        for option in ["Fickian diffusion", particle]:
+            model = model_class(
+                {"particle": option, "thermal": "lumped", "heat of mixing": "true"}
+            )
+            solution = pybamm.Simulation(
+                model, parameter_values=pybamm.ParameterValues("Chen2020")
+            ).solve([0, 3000])
+            heat_of_mixing[option] = solution["Heat of mixing [W]"](t)
+
+        assert np.all(heat_of_mixing[particle] > 0)
+        np.testing.assert_allclose(
+            np.mean(heat_of_mixing[particle]),
+            np.mean(heat_of_mixing["Fickian diffusion"]),
+            rtol=rtol,
+        )
