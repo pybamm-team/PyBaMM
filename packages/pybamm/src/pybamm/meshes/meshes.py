@@ -54,8 +54,10 @@ class Mesh(dict):
         contains the geometry of the problem.
     submesh_types: dict
         contains the types of submeshes to use (e.g. Uniform1DSubMesh)
-    submesh_pts: dict
-        contains the number of points on each subdomain
+    var_pts: dict
+        contains the number of points for each spatial variable. Variables of
+        domains whose generator reads its resolution elsewhere (a mesh file,
+        i.e. ``requires_npts`` is False) may be omitted.
 
     """
 
@@ -122,13 +124,17 @@ class Mesh(dict):
                     if var != "tabs":
                         if isinstance(var, str):
                             var = getattr(pybamm.standard_spatial_vars, var)
-                        # Raise error if the number of points for a particular
-                        # variable haven't been provided, unless that variable
-                        # doesn't appear in the geometry
-                        if var.name not in var_name_pts and var.domain[0] in geometry:
-                            raise KeyError(
-                                f"Points not given for variable '{var.name}' in domain '{domain}'"
-                            )
+                        # Missing points are an error only for generators that
+                        # use them, on variables present in the geometry
+                        if var.name not in var_name_pts:
+                            if not getattr(
+                                submesh_types[domain], "requires_npts", True
+                            ):
+                                continue
+                            if var.domain[0] in geometry:
+                                raise KeyError(
+                                    f"Points not given for variable '{var.name}' in domain '{domain}'"
+                                )
                         # Otherwise add to the dictionary of submesh points
                         submesh_pts[domain][var.name] = var_name_pts[var.name]
         self.submesh_pts = submesh_pts
@@ -526,7 +532,17 @@ class MeshGenerator:
         The type of submesh to use (e.g. Uniform1DSubMesh).
     submesh_params: dict, optional
         Contains any parameters required by the submesh.
+
+    Attributes
+    ----------
+    requires_npts : bool
+        Whether the generator uses the number of points from ``var_pts``.
+        Generators that read their resolution from elsewhere (e.g. a mesh
+        file) set this to False, so :class:`pybamm.Mesh` does not require
+        ``var_pts`` entries for their spatial variables.
     """
+
+    requires_npts = True
 
     def __init__(self, submesh_type, submesh_params=None):
         self.submesh_type = submesh_type

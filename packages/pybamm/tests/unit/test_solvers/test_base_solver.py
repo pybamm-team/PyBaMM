@@ -577,6 +577,46 @@ class TestBaseSolver:
         (y0,) = solver._integrate(model, np.array([0.0]), [{}])
         np.testing.assert_array_equal(y0, [1.0])
 
+    def test_vector_valued_event_raises(self):
+        # A vector event would reach the compiled root function and crash
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model.events.append(pybamm.Event("Vector event", pybamm.Vector([1, 2]) * v))
+        pybamm.Discretisation().process_model(model)
+
+        with pytest.raises(pybamm.SolverError, match="'Vector event' must evaluate"):
+            pybamm.IDAKLUSolver().solve(model, [0, 1])
+
+    def test_field_valued_event_raises(self):
+        # The realistic mistake: an event on a spatial field, not a reduction
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c", domain="negative electrode")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.events.append(pybamm.Event("Field event", c - 0.5))
+        x_n = pybamm.SpatialVariable("x_n", domain="negative electrode")
+        mesh = pybamm.Mesh(
+            {"negative electrode": {x_n: {"min": 0, "max": 1}}},
+            {"negative electrode": pybamm.Uniform1DSubMesh},
+            {x_n: 5},
+        )
+        disc = pybamm.Discretisation(
+            mesh, {"negative electrode": pybamm.FiniteVolume()}
+        )
+        disc.process_model(model)
+
+        with pytest.raises(pybamm.SolverError, match=r"shape \(5, 1\)"):
+            pybamm.IDAKLUSolver().solve(model, [0, 1])
+        # the reduction an event needs is accepted and fires at c = 0.5
+        model.events[0] = pybamm.Event(
+            "Field event", disc.process_symbol(pybamm.min(c) - 0.5)
+        )
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
+        assert solution.termination == "event: Field event"
+        assert solution.t[-1] == pytest.approx(np.log(2), rel=1e-3)
+
     def test_discontinuity_events_different_times_error(self):
         # Test that an error is raised when discontinuity events occur at different
         # times for different input parameter sets
