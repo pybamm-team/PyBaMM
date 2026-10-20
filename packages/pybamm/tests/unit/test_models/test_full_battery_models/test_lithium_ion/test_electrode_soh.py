@@ -558,6 +558,7 @@ class TestElectrodeSOHComposite:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+            "surface form": "algebraic",
         }
         results = []
         for h0 in [-1, 1]:

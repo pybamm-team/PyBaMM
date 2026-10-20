@@ -569,7 +569,10 @@ class TestSavedOptionsVersion:
 
     # 26.9 stored this default for one-electrode mechanics
     LEGACY_STRESS = "true"
-    OPTIONS = {"particle mechanics": ("swelling only", "none")}
+    OPTIONS = {
+        "particle mechanics": ("swelling only", "none"),
+        "stress-induced diffusion": ("true", "false"),
+    }
 
     def _as_saved(self, options):
         options = json.loads(json.dumps(dict(options)))
@@ -636,6 +639,7 @@ class TestSavedOptionsVersion:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "surface form": "algebraic",
         }
         config = json.loads(
             json.dumps(pybamm.lithium_ion.SPM(options, build=False).to_config())
