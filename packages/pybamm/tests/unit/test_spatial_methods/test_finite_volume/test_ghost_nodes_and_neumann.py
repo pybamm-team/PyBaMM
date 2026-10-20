@@ -45,18 +45,24 @@ class TestGhostNodes:
         ) / 2 == 3
 
         # test errors
-        bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
-        with pytest.raises(ValueError, match=r"boundary condition must be"):
-            sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
-        with pytest.raises(ValueError, match=r"boundary condition must be"):
-            sp_meth.add_neumann_values(var, discretised_symbol, bcs, var.domain)
-        bcs = {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(3), "x")}
-        with pytest.raises(ValueError, match=r"boundary condition must be"):
-            sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
+        bcs = {
+            var: {
+                "left": (pybamm.Scalar(0), "x"),
+                "right": (pybamm.Scalar(3), "Neumann"),
+            }
+        }
+        with pytest.raises(pybamm.ModelError, match=r"boundary condition must be"):
+            sp_meth.gradient(var, discretised_symbol, bcs)
+        bcs = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(3), "x"),
+            }
+        }
+        with pytest.raises(pybamm.ModelError, match=r"boundary condition must be"):
+            sp_meth.gradient(var, discretised_symbol, bcs)
         with pytest.raises(ValueError, match=r"No boundary conditions"):
             sp_meth.add_ghost_nodes(var, discretised_symbol, {})
-        with pytest.raises(ValueError, match=r"boundary condition must be"):
-            sp_meth.add_neumann_values(var, discretised_symbol, bcs, var.domain)
 
     def test_add_ghost_nodes_concatenation(self):
         # Set up

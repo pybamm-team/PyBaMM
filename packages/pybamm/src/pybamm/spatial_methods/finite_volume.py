@@ -172,13 +172,24 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Discretise symbol
         domain = symbol.domain
 
-        # Add Dirichlet boundary conditions, if defined
+        # Validate boundary conditions once
         bcs = boundary_conditions.get(symbol, {})
+        for bc in bcs.values():
+            if bc[1] not in [
+                "Dirichlet",
+                "Neumann",
+            ] and not pybamm.is_flux_boundary_condition(bc[1]):
+                raise pybamm.ModelError(
+                    f"boundary condition must be Dirichlet, Neumann or ('Flux', pybammm.Symbol), not '{bc[1]}'"
+                )
+
         dirichlet_type_bc = [side for side, bc in bcs.items() if bc[1] == "Dirichlet"]
         neumann_type_bc = [side for side, bc in bcs.items() if bc[1] == "Neumann"]
         flux_type_bc = [
             side for side, bc in bcs.items() if pybamm.is_flux_boundary_condition(bc[1])
         ]
+
+        # Add Dirichlet boundary conditions, if defined
         if dirichlet_type_bc:
             # add ghost nodes and update domain
             discretised_symbol, domain = self.add_ghost_nodes(
@@ -872,14 +883,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 left_ghost_constant = 2 * lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
-        elif lbc_type in ["Neumann", None] or pybamm.is_flux_boundary_condition(
-            lbc_type
-        ):
-            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet, Neumann or a flux condition, not '{lbc_type}'"
-            )
+            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
 
         if rbc_type == "Dirichlet":
             rbc_sub_matrix = coo_matrix(
@@ -893,14 +898,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 right_ghost_constant = 2 * rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
-        elif rbc_type in ["Neumann", None] or pybamm.is_flux_boundary_condition(
-            rbc_type
-        ):
-            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
-            raise ValueError(
-                f"boundary condition must be Dirichlet, Neumann or a flux condition, not '{rbc_type}'"
-            )
+            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
 
         bcs_vector = lbc_vector + rbc_vector
         # Need to match the domain. E.g. in the case of the boundary condition
