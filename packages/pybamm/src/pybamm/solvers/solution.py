@@ -17,6 +17,7 @@ from scipy.io import savemat
 import pybamm
 from pybamm.codegen.compilation import aot_compile
 from pybamm.solvers.base_solver import flatten_inputs
+from pybamm.solvers.observation import build_variable
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -885,79 +886,8 @@ class Solution(SolutionBase):
         for variable in variables:
             self._update_variable(variable)
 
-    def _update_model_variable(
-        self,
-        model: pybamm.BaseModel,
-        var_pybamm: pybamm.Symbol,
-        time_integral: pybamm.ProcessedVariableTimeIntegral | None,
-        inputs: dict,
-        ys_shape: tuple,
-        cache_key,
-    ):
-        _var_casadi = model._variables_casadi.get(cache_key)
-        if _var_casadi is not None:
-            return _var_casadi, var_pybamm, time_integral
-
-        var_casadi, var_pybamm, time_integral = self._convert_to_casadi(
-            var_pybamm, inputs, ys_shape
-        )
-
-        # Only cache if it's not a time integral
-        if time_integral is None:
-            model._variables_casadi[cache_key] = var_casadi
-        return var_casadi, var_pybamm, time_integral
-
     def _update_variable(self, name: str):
-        time_integral = None
-        pybamm.logger.debug(f"Post-processing {name}")
-
-        # Iterate through all models, some may be in the list several times and
-        # therefore only get set up once
-        vars_pybamm = [
-            model.get_processed_variable_or_event(name) for model in self.all_models
-        ]
-        vars_casadi = [None] * len(self.all_models)
-        for i, (model, ys, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, strict=True)
-        ):
-            _var_pybamm = vars_pybamm[i]
-            if self.variables_returned and _var_pybamm.has_symbol_of_classes(
-                pybamm.expression_tree.state_vector.StateVector
-            ):
-                raise KeyError(
-                    f"Cannot process variable '{name}' as it was not part of the "
-                    "solve. Please re-run the solve with `output_variables` set to "
-                    "include this variable."
-                )
-            if isinstance(_var_pybamm, pybamm.VectorField):
-                comp_casadi = []
-                for k, comp in enumerate(_var_pybamm.components):
-                    cc, _, _ = self._update_model_variable(
-                        model,
-                        comp,
-                        inputs=inputs,
-                        ys_shape=ys.shape,
-                        time_integral=None,
-                        cache_key=f"{name}[{k}]",
-                    )
-                    comp_casadi.append(cc)
-                vars_casadi[i] = comp_casadi
-            else:
-                var_casadi, var_pybamm, time_integral = self._update_model_variable(
-                    model,
-                    _var_pybamm,
-                    inputs=inputs,
-                    ys_shape=ys.shape,
-                    time_integral=time_integral,
-                    cache_key=name,
-                )
-                vars_pybamm[i] = var_pybamm
-                vars_casadi[i] = var_casadi
-        var = pybamm.process_variable(
-            name, vars_pybamm, vars_casadi, self, time_integral=time_integral
-        )
-
-        self._variables[name] = var
+        self._variables[name] = build_variable(self, name)
 
     def observe(self, symbol: pybamm.Symbol) -> pybamm.ProcessedVariable:
         """

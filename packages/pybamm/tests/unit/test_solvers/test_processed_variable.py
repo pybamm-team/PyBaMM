@@ -5,6 +5,7 @@ from scipy.interpolate import CubicHermiteSpline
 
 import pybamm
 import tests
+from pybamm.solvers.processed_variable import ProcessedVariable0D
 
 _hermite_args = [True, False]
 
@@ -686,6 +687,11 @@ class TestProcessedVariable:
         # scalar
         np.testing.assert_allclose(processed_var(0.5), 2.5, rtol=1e-7, atol=1e-6)
         np.testing.assert_allclose(processed_var(0.7), 3.5, rtol=1e-7, atol=1e-6)
+        # JAX hands the IDAKLU-JAX primitives a scalar time as a 0-d array
+        assert processed_var(np.array(0.5)).shape == ()
+        np.testing.assert_allclose(
+            processed_var(np.array(0.5)), 2.5, rtol=1e-7, atol=1e-6
+        )
 
         eqn_casadi = to_casadi(eqn, y_sol)
         processed_eqn = pybamm.process_variable(
@@ -2164,6 +2170,46 @@ class TestProcessedVariable:
         )
 
         assert isinstance(processed_var, pybamm.ProcessedVariableUnstructured)
+
+    @staticmethod
+    def _scalar_variable():
+        """A scalar variable, its CasADi function and a solution to read it from."""
+        var = pybamm.t * pybamm.StateVector(slice(0, 1))
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        solution = pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {})
+        return var, to_casadi(var, y_sol), solution
+
+    @pytest.mark.parametrize(
+        "constructor",
+        [pybamm.ProcessedVariable, ProcessedVariable0D, pybamm.process_variable],
+    )
+    def test_base_variables_casadi_keyword_is_deprecated(self, constructor):
+        var, var_casadi, solution = self._scalar_variable()
+        with pytest.warns(DeprecationWarning, match=r"base_variables_casadi"):
+            processed_var = constructor(
+                "test", [var], base_variables_casadi=[var_casadi], solution=solution
+            )
+        assert processed_var._observer.leaves == [var_casadi]
+
+    def test_base_variables_casadi_keyword_cannot_repeat_the_observer(self):
+        var, var_casadi, solution = self._scalar_variable()
+        with pytest.raises(TypeError, match=r"once"):
+            pybamm.ProcessedVariable(
+                "test",
+                [var],
+                [var_casadi],
+                base_variables_casadi=[var_casadi],
+                solution=solution,
+            )
+
+    def test_base_variables_casadi_attribute_is_deprecated(self):
+        var, var_casadi, solution = self._scalar_variable()
+        processed_var = pybamm.process_variable("test", [var], [var_casadi], solution)
+        with pytest.warns(DeprecationWarning, match=r"base_variables_casadi"):
+            assert processed_var.base_variables_casadi == [var_casadi]
+        with pytest.raises(AttributeError):
+            processed_var.base_variables_casadi = [var_casadi]
 
 
 class TestProcessedVariableUnstructuredFVM:

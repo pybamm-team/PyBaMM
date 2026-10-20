@@ -1,7 +1,6 @@
 # mypy: ignore-errors
 import dataclasses
 import logging
-import math
 import numbers
 import warnings
 from enum import IntEnum
@@ -15,6 +14,7 @@ from scipy.sparse.linalg import spsolve
 import pybamm
 from pybamm.codegen.compilation import aot_compile
 from pybamm.solvers.base_solver import flatten_inputs, stack_inputs
+from pybamm.solvers.observation import OutputAssembly
 
 _UNSET = object()
 
@@ -105,6 +105,14 @@ _REBUILDABLE_STATE_KEYS = (
 )
 
 
+def _check_klu_pivot_tolerance(value):
+    """Raise a :class:`pybamm.SolverError` unless ``value`` is in (0, 1]."""
+    if isinstance(value, bool) or not isinstance(value, numbers.Real):
+        raise pybamm.SolverError("klu_pivot_tolerance must be a real number")
+    if not 0 < value <= 1:
+        raise pybamm.SolverError(f"klu_pivot_tolerance must be in (0, 1], got {value}")
+
+
 class IDAKLUSolver(pybamm.BaseSolver):
     """
     Solve a discretised model, using sundials with the KLU sparse linear solver.
@@ -182,6 +190,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "precon_half_bandwidth_keep": 5,
                 # For iterative linear solvers, max number of iterations
                 "linsol_max_iterations": 5,
+                # For the KLU linear solver, threshold partial pivoting tolerance
+                # in (0, 1]: a pivot is accepted if it is at least this fraction
+                # of the largest entry in its column (1.0 is full partial pivoting)
+                "klu_pivot_tolerance": 0.1,
                 # Ratio between linear and nonlinear tolerances
                 "epsilon_linear_tolerance": 0.05,
                 # Increment factor used in DQ Jacobian-vector product approximation
@@ -341,6 +353,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "num_solvers": num_solvers,
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 5,
+            "klu_pivot_tolerance": 0.1,
             "epsilon_linear_tolerance": 0.05,
             "increment_factor": 1.0,
             "linear_solution_scaling": True,
@@ -396,6 +409,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if not isinstance(options["compile"], bool):
             raise pybamm.SolverError("compile must be a bool")
+
+        _check_klu_pivot_tolerance(options["klu_pivot_tolerance"])
 
     def _check_atol_type(
         self, atol: float | list | tuple | np.ndarray, model: pybamm.BaseModel
@@ -604,11 +619,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, model)
 
-        # Build algebraic-only residual and Jacobian for Newton sub-block mode.
-        # When newton_mode="full", skip these so the C++ solver uses the
-        # full-system IDA linear solve (DECOUPLED_FULL or COUPLED_FULL),
-        # which supports any linear solver including iterative ones.
-        if self._options.get("newton_mode", "auto") == "auto":
+        # The sub-block Newton IC needs a standard-form DAE; else full system
+        if (
+            self._options.get("newton_mode", "auto") == "auto"
+            and model.is_standard_form_dae
+        ):
             alg_res_fn = model.algebraic_eval
             jac_alg_fn = model.jac_algebraic_eval
         else:
@@ -675,6 +690,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
             "standard_form_dae": model.is_standard_form_dae,
             "output_variables": self.output_variables,
+            "output_assembly": OutputAssembly(
+                self.output_variables,
+                self.computed_var_fcns,
+                time_integrals=self._time_integral_vars,
+            ),
             "var_fcns": self.computed_var_fcns,
             "var_idaklu_fcns": [],
             "dvar_dy_idaklu_fcns": [],
@@ -968,84 +988,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 sol.yS_term, sensitivity_names
             )
 
-        # Populate variables and sensitivities dictionaries directly
-        number_of_samples = sol.y.shape[0] // number_of_timesteps
-        sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
-        sensitivity_params = (
-            model.calculate_sensitivities if model.calculate_sensitivities else []
+        # sol.y holds the outputs, and sol.yS their sensitivities (n_t, n_rows, n_p)
+        self._setup["output_assembly"].attach(
+            newsol,
+            np.asarray(sol.y).reshape(number_of_timesteps, -1),
+            sensitivities=(
+                np.asarray(sol.yS) if number_of_sensitivity_parameters else None
+            ),
+            sensitivity_names=sensitivity_names,
         )
-
-        start_idx = 0
-        for var in self.output_variables:
-            var_nnz, var_shape, base_variables = self._get_variable_info(model, var)
-            end_idx = start_idx + var_nnz
-            data = sol.y[:, start_idx:end_idx]
-            if var_nnz != math.prod(var_shape):
-                # Scatter the returned structural nonzeros to their flat indices
-                indices = base_variables[0].sparsity_out(0).find()
-                dense = np.zeros((number_of_timesteps, math.prod(var_shape)))
-                dense[:, indices] = data
-                data = dense
-            time_integral = self._time_integral_vars.get(var)
-            values = data
-
-            # handle any time integral variables
-            if time_integral is not None:
-                # time integral variables should all be 1D
-                values = time_integral.postfix(data.reshape(-1), sol.t, inputs_dict)
-
-            newsol._variables[var] = pybamm.ProcessedVariableComputed(
-                [model.get_processed_variable_or_event(var)],
-                base_variables,
-                [values],
-                newsol,
-                time_integral=time_integral,
-            )
-
-            # Add sensitivities
-            newsol[var]._sensitivities = {}
-            if sensitivity_params:
-                if var_nnz != math.prod(var_shape):
-                    raise pybamm.SolverError(
-                        f"Sensitivity of sparse variables not supported. {var} is a sparse variable with number of non-zeros {var_nnz} and shape {var_shape}"
-                    )
-                sens_data = sol.yS[:, start_idx:end_idx, :]
-                sens_data = sens_data.reshape(
-                    number_of_timesteps * (end_idx - start_idx),
-                    number_of_sensitivity_parameters,
-                )
-                if time_integral is not None:
-                    sens_data = time_integral.postfix_sensitivities(
-                        var,
-                        data.reshape(-1),
-                        sol.t,
-                        inputs_dict,
-                        sensitivity_names,
-                        sens_data,
-                    )
-                newsol[var]._sensitivities["all"] = sens_data
-
-                # Add the individual sensitivity
-                for i, name in enumerate(sensitivity_names):
-                    sens = newsol[var]._sensitivities["all"][:, i : i + 1].reshape(-1)
-                    newsol[var]._sensitivities[name] = sens
-
-            start_idx += var_nnz
         return newsol
-
-    def _get_variable_info(self, model, var) -> tuple:
-        """Get variable length and base variables based on model format."""
-        if model.convert_to_format == "casadi":
-            base_var = self._setup["var_fcns"][var]
-            sparsity = base_var.sparsity_out(0)
-            var_nnz = sparsity.nnz()
-            var_shape = sparsity.shape
-            return var_nnz, var_shape, [base_var]
-        else:  # pragma: no cover
-            raise pybamm.SolverError(
-                f"Unsupported evaluation engine for convert_to_format="
-                f"{model.convert_to_format}"
-            )
 
     def _set_consistent_initialization(self, model, time, inputs_list):
         """
