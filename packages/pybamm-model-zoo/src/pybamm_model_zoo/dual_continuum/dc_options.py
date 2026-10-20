@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import pybamm
 
+#: Default number of DC1t exponential modes.
+DEFAULT_MODES = 8
+
 
 class DCModelOptions(pybamm.FuzzyDict):
     """Dual-continuum options; the first value of each list is the default.
@@ -18,7 +21,6 @@ class DCModelOptions(pybamm.FuzzyDict):
 
     possible_options = {
         "model type": ["DC1", "DC1t", "DC0", "Yang"],
-        "transient closure modes": [8],
         "calculate surface concentration a priori": ["false", "true"],
         "closure variable": ["dimensional", "dimensionless", "isolated sphere"],
         "surface area": ["from image", "spherical"],
@@ -28,22 +30,33 @@ class DCModelOptions(pybamm.FuzzyDict):
     def __init__(self, extra_options=None):
         extra_options = dict(extra_options or {})
         options = {k: v[0] for k, v in self.possible_options.items()}
+        options["transient closure modes"] = DEFAULT_MODES
 
         for key, value in extra_options.items():
-            if key not in self.possible_options:
-                raise pybamm.OptionError(
-                    f"DC option '{key}' not recognised. Possible options are "
-                    f"{list(self.possible_options)}"
-                )
             if key == "transient closure modes":
                 options[key] = self._number_of_modes(value)
                 continue
+            if key not in self.possible_options:
+                best = pybamm.FuzzyDict([*self.possible_options, "transient closure modes"]).get_best_matches(key)
+                hint = (
+                    f"Best matches are {best}"
+                    if best
+                    else f"Possible options are {list(self.possible_options)}"
+                )
+                raise pybamm.OptionError(
+                    f"DC option '{key}' not recognised. {hint}"
+                )
             if isinstance(value, bool):
                 value = "true" if value else "false"
             if value not in self.possible_options[key]:
+                best = pybamm.FuzzyDict(self.possible_options[key]).get_best_matches(value)
+                hint = (
+                    f"Best matches are {best}"
+                    if best
+                    else f"Possible options are {list(self.possible_options)}"
+                )
                 raise pybamm.OptionError(
-                    f"Invalid value '{value}' for DC option '{key}'. "
-                    f"Possible values are {self.possible_options[key]}"
+                    f"Invalid value '{value}' for DC option '{key}'. {hint}"
                 )
             options[key] = value
 
