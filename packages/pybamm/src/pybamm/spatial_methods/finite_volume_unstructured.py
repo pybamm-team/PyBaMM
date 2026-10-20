@@ -100,6 +100,7 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         # Discover interfaces between all unstructured submesh pairs so
         # internal BCs work for arbitrary topology, not just 1D stacks.
         self._auto_compute_all_interfaces(mesh)
+        self._add_stack_interface_buckets(mesh)
         # Tags come from the generator, not the constructor: a hand-built
         # mesh with none that touches no other domain is likely a mistake
         for dom in mesh:
@@ -235,6 +236,39 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             # returns False when the pair shares no conformal interface
             self._compute_pair_interface(ma, mb, a, b)
 
+    @staticmethod
+    def _add_stack_interface_buckets(mesh):
+        """Give each interface of a domain connected to a discovered
+        ``iface_*`` bucket its own bucket.
+
+        Pairs made by :class:`pybamm.Mesh`'s 1D-stack pairing carry
+        ``interface_data`` but no bucket, so concatenations routed through
+        :meth:`set_internal_bcs_for_concat` would leave them uncoupled.
+        Domains with no discovered interface keep the 1D-stack scheme.
+        """
+        from pybamm.meshes.unstructured_submesh import UnstructuredSubMesh
+
+        meshes = {
+            raw[0]: mesh[raw]
+            for raw in mesh
+            if isinstance(raw, tuple)
+            and len(raw) == 1
+            and isinstance(mesh[raw], UnstructuredSubMesh)
+        }
+        pending = [
+            name
+            for name, sm in meshes.items()
+            if any(tag.startswith("iface_") for tag in sm.boundary_faces)
+        ]
+        seen = set(pending)
+        while pending:
+            sm = meshes[pending.pop()]
+            for neighbor, data in sm.interface_data.items():
+                sm.boundary_faces.setdefault(f"iface_{neighbor}", data["left_faces"])
+                if neighbor in meshes and neighbor not in seen:
+                    seen.add(neighbor)
+                    pending.append(neighbor)
+
     # ------------------------------------------------------------------
     # internal BC assembly for arbitrary-topology Concatenation
     # ------------------------------------------------------------------
@@ -275,17 +309,6 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         bcs_out = {}
         name_to_child = {c.domain[0]: c for c in children}
-        # Pairs made by pybamm.Mesh's 1D-stack pairing have interface data but
-        # no face bucket; give them one so this route couples them too
-        for name in name_to_child:
-            mesh = self.mesh[name]
-            if not isinstance(mesh, UnstructuredSubMesh):
-                continue
-            for neighbor_name, data in mesh.interface_data.items():
-                if neighbor_name in name_to_child:
-                    mesh.boundary_faces.setdefault(
-                        f"iface_{neighbor_name}", data["left_faces"]
-                    )
 
         def side_bcs(mesh, neighbor):
             # The other coupled interfaces are interior to the variable; as
@@ -1137,7 +1160,16 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         bcs = boundary_conditions.get(symbol, {})
         if bcs:
-            missing = [tag for tag in submesh.boundary_faces if tag not in bcs]
+            # A tag may share faces with others (interface faces stay in user
+            # tags), so report only faces that no condition reaches
+            covered = np.concatenate(
+                [self._bc_side_faces(submesh, side, bcs) for side in bcs]
+            )
+            missing = [
+                tag
+                for tag, faces in submesh.boundary_faces.items()
+                if tag not in bcs and not np.isin(faces, covered).all()
+            ]
             if missing:
                 pybamm.logger.warning(
                     f"Gradient of {symbol.name!r}: boundary face buckets "

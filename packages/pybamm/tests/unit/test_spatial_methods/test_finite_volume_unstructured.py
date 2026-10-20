@@ -1286,6 +1286,47 @@ class TestFiniteVolumeUnstructuredBehavior:
             left.face_centroids[left.boundary_faces["iface_right"], 0], 0.5
         )
 
+    @pytest.mark.parametrize("with_box", [False, True])
+    def test_build_buckets_stack_pairs_next_to_discovered_interfaces(
+        self, with_box, caplog
+    ):
+        # Stack pairs get buckets at build, so the mesh does not depend on
+        # which models are discretised; a plain stack keeps its 1D scheme
+        left = _make_2d_mesh(2, 2, x_range=(0, 1))
+        middle = _make_2d_mesh(2, 2, x_range=(1, 2))
+        right = _make_2d_mesh(2, 2, x_range=(2, 3))
+        compute_interface_data(left, middle, "left", "middle")
+        compute_interface_data(middle, right, "middle", "right")
+        meshes = {("left",): left, ("middle",): middle, ("right",): right}
+        if with_box:
+            box = _make_2d_mesh(2, 1, x_range=(0, 1), z_range=(1, 1.5))
+            box.boundary_faces = {}
+            meshes[("box",)] = box
+        FiniteVolumeUnstructured().build(_MeshMap(meshes))
+
+        iface = {
+            name: sorted(t for t in mesh.boundary_faces if t.startswith("iface_"))
+            for (name,), mesh in meshes.items()
+        }
+        if with_box:
+            assert iface["left"] == ["iface_box", "iface_middle"]
+            assert iface["middle"] == ["iface_left", "iface_right"]
+            assert iface["right"] == ["iface_middle"]
+        else:
+            assert not any(iface.values())
+
+        # every face of the left mesh has a condition: no gradient warning
+        method = _method_with_mesh(left)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(left.cell_centroids[:, 0], domain="test")
+        bcs = {
+            side: (pybamm.Scalar(0), "Neumann")
+            for side in ("left", "right", "top", "bottom")
+        }
+        with caplog.at_level("WARNING", logger="pybamm"):
+            method.gradient(variable, values, {variable: bcs})
+        assert "no boundary condition" not in caplog.text
+
     def test_tag_under_a_coupled_interface_is_skipped(self):
         # "right" lies wholly under the interface coupled by "iface_right",
         # so its condition reaches no face
