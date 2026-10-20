@@ -36,11 +36,6 @@ class DCParticle(pybamm.particle.BaseParticle):
 
     def __init__(self, param, domain, options, dc_options, phase="primary"):
         super().__init__(param, domain, options, phase)
-        if self.size_distribution:
-            raise pybamm.OptionError(
-                "The dual-continuum particle does not support particle-size "
-                "distributions"
-            )
         self.dc_options = dc_options
 
     def get_fundamental_variables(self):

@@ -298,6 +298,34 @@ class TestDualContinuum:
         keys = _compat.cited_keys() & {"Paten2026", "Paten2026b", "Yang2025"}
         assert keys == {"Paten2026"} | cited
 
+    @pytest.mark.parametrize(
+        ("options", "dc_options", "message"),
+        [
+            (
+                {"operating mode": "voltage"},
+                {"calculate surface concentration a priori": "true"},
+                "requires galvanostatic",
+            ),
+            ({}, {"lithium foil surface porosity": "true"}, "only applies to half"),
+            (
+                {"particle phases": ("2", "1"), "surface form": "algebraic"},
+                {"calculate surface concentration a priori": "true"},
+                "single particle phase",
+            ),
+            (
+                {"loss of active material": "reaction-driven"},
+                {},
+                "loss of active material",
+            ),
+            ({"particle size": "distribution"}, {}, "particle-size distributions"),
+        ],
+    )
+    def test_unsupported_options_fail_before_building(
+        self, options, dc_options, message
+    ):
+        with pytest.raises(pybamm.OptionError, match=message):
+            zoo.load("DualContinuum")(options, dc_options, build=False)
+
     def test_options(self):
         with pytest.raises(pybamm.OptionError, match="not recognised"):
             dual_continuum(dc_options={"closure": "DC1"})

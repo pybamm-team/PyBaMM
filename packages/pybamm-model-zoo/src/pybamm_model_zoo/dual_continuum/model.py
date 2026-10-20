@@ -43,6 +43,12 @@ class DualContinuum(pybamm.lithium_ion.DFN):
     build : bool, optional
         Whether to build the model on instantiation.
 
+    Raises
+    ------
+    :class:`pybamm.OptionError`
+        If the PyBaMM options cannot be combined with the DC options, also
+        with ``build=False``.
+
     Examples
     --------
     >>> import pybamm_model_zoo as zoo
@@ -58,6 +64,7 @@ class DualContinuum(pybamm.lithium_ion.DFN):
     ) -> None:
         pybamm_model_zoo.require(SLUG)
         self.dc_options = DCModelOptions(dc_options)
+        self._check_options(pybamm.BatteryModelOptions(options))
         self._constructed = False
         super().__init__(options=options, name=name, build=build)
         pybamm_model_zoo.register_citation(SLUG, "PyBaMMModelZoo2026", "Paten2026")
@@ -67,36 +74,66 @@ class DualContinuum(pybamm.lithium_ion.DFN):
             pybamm_model_zoo.register_citation(SLUG, "Yang2025")
         self._constructed = True
 
-    def set_particle_submodel(self):
-        if (
-            self.dc_options["calculate surface concentration a priori"] == "true"
-            and self.options["operating mode"] != "current"
-        ):
+    def _check_options(self, options):
+        """Reject PyBaMM options that the DC options cannot be combined with.
+
+        Runs before the model is built, so an invalid combination fails at
+        construction, also with ``build=False``.
+
+        Parameters
+        ----------
+        options : :class:`pybamm.BatteryModelOptions`
+            The PyBaMM model options.
+
+        Raises
+        ------
+        :class:`pybamm.OptionError`
+            If the model cannot honour an option.
+        """
+        a_priori = self.dc_options["calculate surface concentration a priori"] == "true"
+        if a_priori and options["operating mode"] != "current":
             raise pybamm.OptionError(
                 "'calculate surface concentration a priori' requires galvanostatic "
                 "operation ('operating mode': 'current'), since it uses the applied "
                 "current to estimate the reaction rate"
             )
+        if (
+            self.dc_options["lithium foil surface porosity"] == "true"
+            and options["working electrode"] == "both"
+        ):
+            raise pybamm.OptionError(
+                "'lithium foil surface porosity' only applies to half cells"
+            )
         for domain in ["negative", "positive"]:
-            if self.options.electrode_types[domain] == "planar":
+            if options.electrode_types[domain] == "planar":
                 continue
-            phases = self.options.phases[domain]
-            if (
-                len(phases) > 1
-                and self.dc_options["calculate surface concentration a priori"]
-                == "true"
-            ):
+            if a_priori and len(options.phases[domain]) > 1:
                 raise pybamm.OptionError(
                     "'calculate surface concentration a priori' requires a single "
                     "particle phase: how the current splits between phases is not "
                     "known a priori"
                 )
+            domain_options = getattr(options, domain)
+            if domain_options["loss of active material"] != "none":
+                raise pybamm.OptionError(
+                    "The dual-continuum model does not support loss of active material"
+                )
+            if domain_options["particle size"] == "distribution":
+                raise pybamm.OptionError(
+                    "The dual-continuum model does not support particle-size "
+                    "distributions"
+                )
+
+    def set_particle_submodel(self):
+        for domain in ["negative", "positive"]:
+            if self.options.electrode_types[domain] == "planar":
+                continue
             particle = (
                 TransientDCParticle
                 if self.dc_options["model type"] == "DC1t"
                 else DCParticle
             )
-            for phase in phases:
+            for phase in self.options.phases[domain]:
                 self.submodels[f"{domain} {phase} particle"] = particle(
                     self.param, domain, self.options, self.dc_options, phase
                 )
@@ -119,10 +156,6 @@ class DualContinuum(pybamm.lithium_ion.DFN):
         if self.dc_options["lithium foil surface porosity"] == "false":
             super()._rebuild_param()
             return
-        if self.options["working electrode"] == "both":
-            raise pybamm.OptionError(
-                "'lithium foil surface porosity' only applies to half cells"
-            )
         self.param = LithiumIonParametersWithFoilPorosity(self.options)
 
     def set_active_material_submodel(self):
@@ -134,10 +167,6 @@ class DualContinuum(pybamm.lithium_ion.DFN):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "planar":
                 continue
-            if getattr(self.options, domain)["loss of active material"] != "none":
-                raise pybamm.OptionError(
-                    "The dual-continuum model does not support loss of active material"
-                )
             for phase in self.options.phases[domain]:
                 self.submodels[f"{domain} {phase} active material"] = submodel(
                     self.param, domain, self.options, phase
