@@ -436,42 +436,6 @@ class TestIDAKLUSolver:
             atol=1e-6,
         )
 
-    def test_sensitivities_initial_condition(self):
-        for output_variables in [[], ["2v"]]:
-            model = pybamm.BaseModel()
-            u = pybamm.Variable("u")
-            v = pybamm.Variable("v")
-            a = pybamm.InputParameter("a")
-            model.rhs = {u: -u}
-            model.algebraic = {v: a * u - v}
-            model.initial_conditions = {u: 1, v: 1}
-            model.variables = {"2v": 2 * v}
-
-            disc = pybamm.Discretisation()
-            disc.process_model(model)
-            solver = pybamm.IDAKLUSolver(
-                rtol=1e-6,
-                atol=1e-6,
-                output_variables=output_variables,
-            )
-
-            t_eval = [0, 3]
-            a_value = 0.1
-
-            sol = solver.solve(
-                model,
-                t_eval,
-                inputs={"a": a_value},
-                calculate_sensitivities=True,
-            )
-
-            np.testing.assert_allclose(
-                sol["2v"].sensitivities["a"].flatten(),
-                np.exp(-sol.t) * 2,
-                rtol=1e-5,
-                atol=1e-4,
-            )
-
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -1083,6 +1047,7 @@ class TestIDAKLUSolver:
             "init_all_y_ic": False,
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 6,
+            "klu_pivot_tolerance": 1.0,
             "epsilon_linear_tolerance": 0.06,
             "increment_factor": 0.99,
             "linear_solution_scaling": False,
@@ -1111,6 +1076,7 @@ class TestIDAKLUSolver:
             "epsilon_linear_tolerance": -1.0,
             "increment_factor": -1.0,
             "hermite_reduction_factor": -1.0,
+            "klu_pivot_tolerance": 0.0,
         }
 
         # test that the solver throws a warning
@@ -1119,6 +1085,11 @@ class TestIDAKLUSolver:
             with pytest.raises(pybamm.SolverError):
                 solver = pybamm.IDAKLUSolver(options=options)
                 solver.solve(model, t_eval)
+
+    @pytest.mark.parametrize("value", [-0.1, 0.0, 1.5, True, "0.1"])
+    def test_klu_pivot_tolerance_must_be_in_unit_interval(self, value):
+        with pytest.raises(pybamm.SolverError, match="klu_pivot_tolerance"):
+            pybamm.IDAKLUSolver(options={"klu_pivot_tolerance": value})
 
     def test_with_output_variables(self):
         # Construct a model and solve for all variables, then test
@@ -1249,6 +1220,100 @@ class TestIDAKLUSolver:
         ):
             sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
 
+    @pytest.mark.parametrize("output_variables", [["zero"], ["zero", "u"]])
+    def test_output_variable_with_no_structural_nonzeros(self, output_variables):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        # The solver returns no rows for a variable with no structural nonzeros
+        model.variables = {"u": u, "zero": pybamm.Matrix(csc_matrix((1, 1)))}
+        t_interp = np.linspace(0, 1, 5)
+
+        sol = pybamm.IDAKLUSolver(output_variables=output_variables).solve(
+            model, [0, 1], t_interp=t_interp
+        )
+
+        np.testing.assert_array_equal(sol["zero"](t_interp), np.zeros(5))
+        if "u" in output_variables:
+            np.testing.assert_allclose(sol["u"](t_interp), np.exp(-t_interp), rtol=1e-3)
+
+    def test_output_variables_sensitivities_to_some_inputs(self):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables = {"w": b * c}
+        t_interp = np.linspace(0, 1, 11)
+
+        solver = pybamm.IDAKLUSolver(output_variables=["w"], rtol=1e-8, atol=1e-10)
+        sol = solver.solve(
+            model,
+            [0, 1],
+            t_interp=t_interp,
+            inputs={"a": 1.0, "b": 2.0},
+            calculate_sensitivities=["b"],
+        )
+
+        # dw/db = c = e^-t; a is not a sensitivity input, so it has no entry
+        sensitivities = sol["w"].sensitivities
+        assert sorted(sensitivities) == ["all", "b"]
+        np.testing.assert_allclose(
+            sensitivities["all"], np.exp(-t_interp)[:, np.newaxis], rtol=1e-6
+        )
+        np.testing.assert_allclose(sensitivities["b"], np.exp(-t_interp), rtol=1e-6)
+
+    def test_output_variables_sensitivities_to_more_inputs_than_times(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a, b, c = (pybamm.InputParameter(name) for name in "abc")
+        model.rhs = {u: a + 2 * b + 3 * c}
+        model.initial_conditions = {u: 0}
+        model.variables = {"u": u}
+
+        sol = pybamm.IDAKLUSolver(output_variables=["u"]).solve(
+            model,
+            [0, 1],
+            t_interp=np.array([0.0, 1.0]),
+            inputs={"a": 1.0, "b": 1.0, "c": 1.0},
+            calculate_sensitivities=True,
+        )
+
+        # u = (a + 2 b + 3 c) t
+        for name, factor in zip("abc", [1, 2, 3], strict=True):
+            np.testing.assert_allclose(
+                sol["u"].sensitivities[name], [0, factor], atol=1e-10
+            )
+            np.testing.assert_allclose(
+                sol.last_state.sensitivities[name], [[factor]], rtol=1e-10
+            )
+
+    @pytest.mark.parametrize("output_variables", [None, ["u"], ["u", "v"]])
+    def test_step_with_output_variables_and_sensitivities(self, output_variables):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a * v, v: -v}
+        model.initial_conditions = {u: 0, v: 1}
+        model.variables = {"u": u, "v": v}
+        solver = pybamm.IDAKLUSolver(
+            output_variables=output_variables, rtol=1e-8, atol=1e-10
+        )
+
+        sol = None
+        for _ in range(2):
+            sol = solver.step(
+                sol, model, 1.0, inputs={"a": 2.0}, calculate_sensitivities=True
+            )
+
+        # du/da is the integral of v = e^-t, continued from the first step
+        np.testing.assert_allclose(
+            sol["u"].sensitivities["a"], 1 - np.exp(-sol.t), rtol=1e-6, atol=1e-9
+        )
+
     def test_with_output_variables_and_sensitivities(self):
         # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming
@@ -1344,6 +1409,43 @@ class TestIDAKLUSolver:
                     atol=tol,
                     err_msg=f"Failed for '{varname}', sensitivity '{key}'",
                 )
+
+    def test_output_variables_sensitivities_are_keyed_by_sensitivity_parameters(
+        self,
+    ):
+        # An input that no sensitivity was requested for takes no key or column.
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        inputs = {
+            "Current function [A]": 0.68,
+            "Electrode height [m]": parameter_values["Electrode height [m]"],
+        }
+        parameter_values.update({key: "[input]" for key in inputs})
+        name = "Voltage [V]"
+        t_interp = np.linspace(0, 600, 11)
+
+        def voltage_sensitivities(output_variables):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                solver=pybamm.IDAKLUSolver(output_variables=output_variables),
+            )
+            solution = sim.solve(
+                [0, 600],
+                t_interp=t_interp,
+                inputs=inputs,
+                calculate_sensitivities=["Current function [A]"],
+            )
+            return solution[name].sensitivities
+
+        full = voltage_sensitivities(None)
+        outputs_only = voltage_sensitivities([name])
+        assert set(outputs_only) == {"all", "Current function [A]"}
+        np.testing.assert_allclose(
+            outputs_only["Current function [A]"],
+            full["Current function [A]"],
+            rtol=1e-6,
+            atol=1e-10,
+        )
 
     def test_with_output_variables_and_event_termination(self):
         model = pybamm.lithium_ion.DFN()
@@ -2288,6 +2390,81 @@ class TestIDAKLUSensitivityScales:
             rtol=1e-4,
             atol=1e-5 * np.abs(finite_difference).max(),
         )
+
+
+class TestIDAKLUClosedFormSensitivities:
+    """Sensitivities of ``du/dt = -a u``, ``u(0) = b``, ``v = k u`` and ``w = d v``.
+
+    ``v`` is either an algebraic state or an output of the ODE, so ``b`` enters only
+    an initial condition, ``k`` only the algebraic equation or an output, and ``d``
+    only an output.
+    """
+
+    inputs = {"a": 0.7, "b": 2.0, "k": 1.5, "d": 3.0}
+
+    @staticmethod
+    def _model(algebraic):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a, b, k, d = (pybamm.InputParameter(name) for name in "abkd")
+        model.rhs = {u: -a * u}
+        if algebraic:
+            v = pybamm.Variable("v")
+            model.algebraic = {v: v - k * u}
+            # An inconsistent guess, so the solver finds v(0) and its gradient
+            model.initial_conditions = {u: b, v: 0}
+        else:
+            v = k * u
+            model.initial_conditions = {u: b}
+        model.variables = {"u": u, "v": v, "w": d * v}
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    def _closed_form(self, t):
+        a, b, k, d = (self.inputs[name] for name in "abkd")
+        u = b * np.exp(-a * t)
+        zero = np.zeros_like(t)
+        du = {"a": -t * u, "b": u / b, "k": zero, "d": zero}
+        dv = {name: k * gradient for name, gradient in du.items()} | {"k": u}
+        dw = {name: d * gradient for name, gradient in dv.items()} | {"d": k * u}
+        return {"u": du, "v": dv, "w": dw}
+
+    @pytest.mark.parametrize("algebraic", [False, True], ids=["ODE", "DAE"])
+    @pytest.mark.parametrize(
+        "output_variables", [None, ["u", "v", "w"]], ids=["full state", "outputs"]
+    )
+    @pytest.mark.parametrize(
+        "t_interp", [None, np.linspace(0, 2, 9)], ids=["adaptive", "t_interp"]
+    )
+    @pytest.mark.parametrize("hermite", [True, False], ids=["hermite", "no hermite"])
+    def test_sensitivities_match_closed_form(
+        self, algebraic, output_variables, t_interp, hermite
+    ):
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10,
+            atol=1e-12,
+            output_variables=output_variables,
+            options={"hermite_interpolation": hermite},
+        )
+        solution = solver.solve(
+            self._model(algebraic),
+            [0, 2],
+            inputs=self.inputs,
+            calculate_sensitivities=True,
+            t_interp=t_interp,
+        )
+        if t_interp is not None:
+            np.testing.assert_array_equal(solution.t, t_interp)
+        # The gradients are of order one and the global error about 20 * rtol
+        for output, gradients in self._closed_form(solution.t).items():
+            for name, gradient in gradients.items():
+                np.testing.assert_allclose(
+                    np.ravel(solution[output].sensitivities[name]),
+                    gradient,
+                    rtol=1e-7,
+                    atol=1e-7,
+                    err_msg=f"d{output}/d{name}",
+                )
 
 
 class TestIDAKLUAtol:

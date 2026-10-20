@@ -137,11 +137,9 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
   // lacks __kmpc_dispatch_deinit, and MSVC needs -openmp:llvm for omp atomic capture.
   std::atomic<int> next_group{1};
   std::atomic<bool> interrupted{false};
-  #pragma omp parallel num_threads(team_size)
-  {
+  auto run_thread = [&](const int thread) {
     // Thread 0 is the calling thread, which holds the GIL, so it always takes a
     // set and streams that set's diagnostics instead of buffering them.
-    const int thread = omp_get_thread_num();
     int i = thread == 0 ? 0 : next_group.fetch_add(1, std::memory_order_relaxed);
     while (i < number_of_groups && !interrupted.load(std::memory_order_relaxed)) {
       const sunrealtype *y = y0 + i * y0_np.shape(1);
@@ -165,6 +163,14 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
       }
       i = next_group.fetch_add(1, std::memory_order_relaxed);
     }
+  };
+  if (team_size == 1) {
+    // No one-thread region either: OpenMP code the model calls would then run
+    // nested, at level 1, and take nested-level settings such as OMP_NUM_THREADS=8,1
+    run_thread(0);
+  } else {
+    #pragma omp parallel num_threads(team_size)
+    run_thread(omp_get_thread_num());
   }
 
   // Drain before the rethrow below, so a solve that throws still emits its log
