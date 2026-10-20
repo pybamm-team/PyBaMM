@@ -2,12 +2,26 @@
 
 ## Bug fixes
 
+- Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
+- `IDAKLUSolver.jaxify` now returns correct derivatives at any requested time. Before, it dropped negative tangents and scalar-time cotangents, and read sensitivities from the wrong solver step, or from the nearest `t_eval` point at off-grid times. ([#5916](https://github.com/pybamm-team/PyBaMM/pull/5916))
+  - Inputs are looked up by name, so key order or an `OrderedDict` no longer swaps their values, and a call with other keys no longer breaks earlier `jax.jit` functions. Missing inputs raise a `SolverError`.
+  - Input values may be JAX or size-1 arrays of any numeric dtype, and their derivatives keep that shape; larger arrays raise a `SolverError`. Before, integer and `float32` inputs were misread under `jax.jit`.
+  - `get_var` and `get_vars` now use the function they are given.
+  - `jax.vmap` over tangent directions returns one result per direction, and over time shares one solve.
+  - Times outside the solution, and derivatives with respect to time, give NaN rather than an error or a wrong value.
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
+
+# [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
+
+## Bug fixes
+
+- `set_initial_state` without a `direction` now keeps a user-set `"Initial hysteresis state in {electrode} electrode"` and solves the initial stoichiometries on the OCP at that state, `(1 + h0) / 2 * U_delith + (1 - h0) / 2 * U_lith`. Before, it reset the state to 0 and solved on `"{Electrode} electrode OCP [V]"`, so a hysteresis model started at h = 0 and, when that OCP differed from the branch average, away from the requested voltage. With h0 = 0 the initial stoichiometries now come from the branch average rather than `"OCP [V]"`. ([#5928](https://github.com/pybamm-team/PyBaMM/pull/5928))
 
 # [v26.10.1.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.0) - 2026-10-13
 
 ## Features
 
+- `FiniteVolume` has a `"harmonic flux coefficients"` option, off by default. When it is on, a node-valued coefficient multiplying a sum of gradient terms, such as the electrolyte conductivity in `kappa * (chi * grad(c_e) - grad(phi_e))`, takes the distance-weighted harmonic mean on faces, not only one multiplying a single `grad`. With the arithmetic mean, the coefficient jump at the electrode/separator interface makes the DFN first order in x; with the option on, it converges at second order. ([#5856](https://github.com/pybamm-team/PyBaMM/pull/5856))
 - Added support for Python 3.15 to `pybamm` and `pybammsolvers`. On 3.15, the `vtk` extra installs nothing until cp315 wheels are available for it. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - The `jax` extra now accepts JAX up to 0.11 (previously below 0.9), which brings `JaxSolver` and the IDAKLU-JAX interface to Python 3.15. JAX 0.11 needs Python 3.12 or newer, so Python 3.11 gets JAX 0.10 at most. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - A `fem` extra installs the finite-element meshing dependencies, scikit-fem and meshio, so `pip install "pybamm[fem]"` is enough for 2D and 3D finite-element meshes. `pybamm[all]` includes it. ([#5881](https://github.com/pybamm-team/PyBaMM/pull/5881))
