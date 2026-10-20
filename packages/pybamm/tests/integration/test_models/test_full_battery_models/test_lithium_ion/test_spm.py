@@ -53,6 +53,21 @@ class TestSPM(BaseIntegrationTestLithiumIon):
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
+    def test_kinetics_marcus(self):
+        options = {
+            "intercalation kinetics": "Marcus",
+            "surface form": "algebraic",
+        }
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        parameter_values.update(
+            {
+                "Negative electrode reorganization energy [eV]": 0.35,
+                "Positive electrode reorganization energy [eV]": 0.35,
+                "Positive electrode exchange-current density [A.m-2]": 5,
+            }
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
     def test_basic_processing_msmr(self):
         # SPM's own model-specific default sets "surface form" to "algebraic"
         # whenever "intercalation kinetics" is supplied.
