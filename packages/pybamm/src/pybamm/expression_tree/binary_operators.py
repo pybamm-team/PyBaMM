@@ -965,8 +965,18 @@ class Modulo(BinaryOperator):
         """Returns the discontinuity time-points of ``t mod expr`` over ``t_eval``."""
         period = float(np.ravel(expr.evaluate(0, y0, inputs=inputs))[0])
         t_resets = self._t_resets(period, t_eval)
-        # Stop right before each reset and at it
-        return np.concatenate([np.nextafter(t_resets, -np.inf), t_resets])
+        # CasADi's fmod takes the new value at a reset for t > 0 but the old one
+        # for t < 0, and is continuous at t = 0
+        positive = t_resets[t_resets > 0]
+        negative = t_resets[t_resets < 0]
+        return np.concatenate(
+            [
+                np.nextafter(positive, -np.inf),
+                positive,
+                negative,
+                np.nextafter(negative, np.inf),
+            ]
+        )
 
     @staticmethod
     def _t_resets(period: float, t_eval: npt.ArrayLike) -> npt.NDArray[np.float64]:
@@ -984,7 +994,11 @@ class Modulo(BinaryOperator):
         :class:`numpy.ndarray`
             The multiples of ``period`` in the range of ``t_eval``, and the nearest
             multiple beyond each end, so that none inside is lost to rounding.
+            Empty if ``period`` is infinite.
         """
+        if not np.isfinite(period):
+            # t mod inf is t, which never resets
+            return np.array([])
         first = np.floor(t_eval[0] / period)
         last = np.ceil(t_eval[-1] / period)
         return period * np.arange(first, last + 1)

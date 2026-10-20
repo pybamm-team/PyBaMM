@@ -5,7 +5,6 @@ import itertools
 import multiprocessing as mp
 import numbers
 import platform
-import sys
 import warnings
 
 import casadi
@@ -1314,18 +1313,15 @@ class BaseSolver:
         # keep track of subsections to integrate by storing start and end indices
         start_indices = [0]
         end_indices = []
-        eps = sys.float_info.epsilon
         for dtime in t_discon:
-            dindex = np.searchsorted(t_eval, dtime, side="left")
-            end_indices.append(dindex + 1)
-            start_indices.append(dindex + 1)
-            if dtime * (1 - eps) < t_eval[dindex] < dtime * (1 + eps):
-                t_eval[dindex] *= 1 + eps
-                t_eval = np.insert(t_eval, dindex, dtime * (1 - eps))
-            else:
-                t_eval = np.insert(
-                    t_eval, dindex, [dtime * (1 - eps), dtime * (1 + eps)]
-                )
+            # Stop just before and restart just after, whichever side is continuous,
+            # in place of any time within one float of the discontinuity
+            before, after = np.nextafter(dtime, -np.inf), np.nextafter(dtime, np.inf)
+            lower = np.searchsorted(t_eval, before, side="left")
+            upper = np.searchsorted(t_eval, after, side="right")
+            t_eval = np.concatenate([t_eval[:lower], [before, after], t_eval[upper:]])
+            end_indices.append(lower + 1)
+            start_indices.append(lower + 1)
         end_indices.append(len(t_eval))
 
         return start_indices, end_indices, t_eval
@@ -1441,6 +1437,35 @@ class BaseSolver:
             raise pybamm.SolverError(
                 f"The solution to continue from has no sensitivities for {missing}. "
                 "Solve it with 'calculate_sensitivities' including these inputs."
+            )
+
+    @staticmethod
+    def _check_saved_sensitivities(
+        old_solution: pybamm.Solution, sensitivity_names: list[str]
+    ) -> None:
+        """Reject saving a step onto a solution with sensitivities for other inputs.
+
+        Parameters
+        ----------
+        old_solution : :class:`pybamm.Solution`
+            The solution the step would be appended to.
+        sensitivity_names : list of str
+            The inputs the step calculates sensitivities for.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If ``old_solution`` has sensitivities for a different set of inputs
+            than ``sensitivity_names``.
+        """
+        if isinstance(old_solution, pybamm.EmptySolution):
+            return
+        old_names = sorted(old_solution.sensitivity_names)
+        if old_names != sorted(sensitivity_names):
+            raise pybamm.SolverError(
+                f"Cannot save a step with sensitivities for {sensitivity_names} "
+                f"onto a solution with sensitivities for {old_names}. Step with "
+                "'save=False', or with the same 'calculate_sensitivities'."
             )
 
     @staticmethod
@@ -1661,8 +1686,9 @@ class BaseSolver:
             If an empty model is passed (`model.rhs = {}` and `model.algebraic = {}` and
             `model.variables = {}`)
         :class:`pybamm.SolverError`
-            If `dt`, `t_eval` or the period of a modulo of time is invalid, or the old
-            solution has no state sensitivities for an input in `calculate_sensitivities`
+            If `dt`, `t_eval` or the period of a modulo of time is invalid, the old
+            solution has no state sensitivities for an input in `calculate_sensitivities`,
+            or `save` is True and the old solution has sensitivities for other inputs
         :class:`RuntimeError`
             If the solver has already been set up for a different model
 
@@ -1748,13 +1774,15 @@ class BaseSolver:
                 model_inputs, model, calculate_sensitivities
             )
         )
-        if sensitivity_names:
-            try:
+        try:
+            if sensitivity_names:
                 self._check_restart_sensitivities(old_solution, sensitivity_names)
-            except pybamm.SolverError:
-                # Leave the model matching the solver's current set-up
-                model.calculate_sensitivities = previous_sensitivities
-                raise
+            if save:
+                self._check_saved_sensitivities(old_solution, sensitivity_names)
+        except pybamm.SolverError:
+            # Leave the model matching the solver's current set-up
+            model.calculate_sensitivities = previous_sensitivities
+            raise
         if sensitivities_have_changed:
             # Rebuild the solver for the new sensitivities, as solve() does
             self._model_set_up.pop(model, None)

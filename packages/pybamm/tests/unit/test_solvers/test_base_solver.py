@@ -887,6 +887,45 @@ class TestBaseSolverSensitivityRestarts:
                 _modulo_ramp(), [0, 3], inputs={"a": 2.0, "P": 1.0}, t_interp=t_interp
             )
 
+    @pytest.mark.parametrize("t_switch", [-0.5, 0.0], ids=["negative", "zero"])
+    def test_input_dependent_discontinuity_at_non_positive_time(self, t_switch):
+        inputs = {"k": 0.5, "t_switch": t_switch}
+        solution = self._solver().solve(
+            _switched_decay(), [-1, 1], inputs=inputs, calculate_sensitivities=["k"]
+        )
+
+        before, after = solution.sub_solutions
+        assert before.t[-1] < t_switch < after.t[0]
+        t = solution.t
+        # Starting from y(-1) = 1 shifts the solution from y(0) = 1 by one
+        exact, dexact_dk = _switched_decay_solution(t + 1, inputs["k"], t_switch + 1)
+        np.testing.assert_allclose(solution["y"](t), exact, rtol=1e-7, atol=1e-9)
+        np.testing.assert_allclose(
+            solution["y"].sensitivities["k"].ravel(), dexact_dk, rtol=1e-6, atol=1e-8
+        )
+
+    @pytest.mark.parametrize(
+        "t_point",
+        [np.nextafter(1.0, -np.inf), 1.0, np.nextafter(1.0, np.inf)],
+        ids=["below", "at", "above"],
+    )
+    def test_input_dependent_discontinuity_next_to_t_eval_point(self, t_point):
+        # A t_eval point within one float of the switch is replaced, not repeated
+        model = _switched_decay()
+        inputs = {"k": 0.5, "t_switch": 1.0}
+        solver = self._solver()
+        solver.set_up(model, [inputs])
+
+        start_indices, end_indices, t_eval = (
+            solver._get_discontinuity_start_end_indices(
+                model, model.y0_list[0], inputs, np.array([0.0, t_point, 2.0])
+            )
+        )
+
+        assert np.all(np.diff(t_eval) > 0)
+        assert start_indices[1] == end_indices[0]
+        assert t_eval[end_indices[0] - 1] < 1.0 < t_eval[start_indices[1]]
+
     def test_step_restarts_at_input_dependent_discontinuity(self):
         # The second step crosses the switch at t = 1, where z jumps
         model = _switched_decay(algebraic=True)
@@ -1048,6 +1087,53 @@ class TestBaseSolverSensitivityRestarts:
             atol=1e-9,
         )
 
+    @pytest.mark.parametrize("input_period", [False, True], ids=["constant", "input"])
+    def test_modulo_before_zero(self, input_period):
+        period = 0.5
+        inputs = {"a": 2.0}
+        if input_period:
+            model = _modulo_ramp()
+            inputs["P"] = period
+        else:
+            model = _modulo_ramp(period)
+
+        solution = self._solver().solve(
+            model, [-1.2, 0.8], inputs=inputs, calculate_sensitivities=["a"]
+        )
+
+        t = solution.t
+        # t mod P is continuous at t = 0, so need not stop there
+        resets = np.array([-1.0, -0.5, 0.5])
+        first_after_reset = t[np.searchsorted(t, resets)]
+        np.testing.assert_allclose(first_after_reset, resets, rtol=1e-12)
+        # CasADi's fmod is odd in t, so its integral from t = 0 is even
+        dexact_da_from_zero = _modulo_ramp_sensitivity(np.abs(t), period)
+        dexact_da = dexact_da_from_zero - _modulo_ramp_sensitivity(1.2, period)
+        np.testing.assert_allclose(
+            solution["y"](t), 2.0 * dexact_da, rtol=1e-7, atol=1e-9
+        )
+        np.testing.assert_allclose(
+            solution["y"].sensitivities["a"].ravel(), dexact_da, rtol=1e-7, atol=1e-9
+        )
+
+    # The suite ignores RuntimeWarning, but the resets raised one from inf * 0
+    @pytest.mark.filterwarnings("error::RuntimeWarning")
+    @pytest.mark.parametrize("input_period", [False, True], ids=["constant", "input"])
+    def test_modulo_with_infinite_period(self, input_period):
+        # t mod inf is t, which never resets
+        inputs = {"a": 2.0}
+        if input_period:
+            model = _modulo_ramp()
+            inputs["P"] = np.inf
+        else:
+            model = _modulo_ramp(np.inf)
+
+        solution = self._solver().solve(model, [0, 3], inputs=inputs)
+
+        assert len(solution.sub_solutions) == 1
+        t = solution.t
+        np.testing.assert_allclose(solution["y"](t), t**2, rtol=1e-7, atol=1e-9)
+
     @pytest.mark.parametrize(
         "period, message",
         [
@@ -1146,6 +1232,47 @@ class TestBaseSolverSensitivityRestarts:
         )
         np.testing.assert_allclose(
             solution["u"].sensitivities["b"].ravel(), 0, atol=1e-9
+        )
+
+    @pytest.mark.parametrize(
+        "first_sensitivities, second_sensitivities",
+        [(["a", "b"], ["b"]), (["a"], False)],
+        ids=["fewer", "none"],
+    )
+    def test_saved_step_rejects_changed_sensitivities(
+        self, first_sensitivities, second_sensitivities
+    ):
+        # The joined solution would label the second step's columns by the first's
+        model = _independent_decays()
+        inputs = {"a": 0.3, "b": 0.6}
+        solver = self._solver()
+        solution = solver.step(
+            None, model, 1.0, inputs=inputs, calculate_sensitivities=first_sensitivities
+        )
+
+        with pytest.raises(pybamm.SolverError, match=r"Step with 'save=False'"):
+            solver.step(
+                solution,
+                model,
+                1.0,
+                inputs=inputs,
+                calculate_sensitivities=second_sensitivities,
+            )
+
+        assert model.calculate_sensitivities == first_sensitivities
+        solution = solver.step(
+            solution,
+            model,
+            1.0,
+            inputs=inputs,
+            calculate_sensitivities=first_sensitivities,
+        )
+        t = solution.t
+        np.testing.assert_allclose(
+            solution["u"].sensitivities["a"].ravel(),
+            -t * np.exp(-0.3 * t),
+            rtol=1e-6,
+            atol=1e-9,
         )
 
     @pytest.mark.parametrize("same_solver", [True, False])

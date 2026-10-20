@@ -382,6 +382,38 @@ class TestBinaryOperators:
             np.sort(np.concatenate([np.nextafter(t_resets, -np.inf), t_resets])),
         )
 
+    def test_modulo_t_discon_before_zero(self):
+        # CasADi's fmod jumps just after a reset for t < 0, and not at t = 0
+        period = pybamm.Scalar(0.5)
+        mod = pybamm.Modulo(pybamm.t, period)
+        assert mod._casadi_evaluate(-0.5, 0.5) == 0
+        assert mod._casadi_evaluate(np.nextafter(-0.5, np.inf), 0.5) < -0.49
+        assert mod._casadi_evaluate(np.nextafter(0, -np.inf), 0.5) <= 0
+        t_eval = np.array([-0.7, 0.7])
+        negative = np.array([-1, -0.5])
+        positive = np.array([0.5, 1])
+
+        np.testing.assert_array_equal(
+            pybamm.Modulo._t_resets(0.5, t_eval), [*negative, 0, *positive]
+        )
+        np.testing.assert_array_equal(
+            np.sort(mod._t_discon(period, None, {}, t_eval)),
+            np.sort(
+                np.concatenate(
+                    [
+                        negative,
+                        np.nextafter(negative, np.inf),
+                        np.nextafter(positive, -np.inf),
+                        positive,
+                    ]
+                )
+            ),
+        )
+
+    def test_modulo_t_resets_infinite_period(self):
+        # t mod inf is t, which never resets
+        assert pybamm.Modulo._t_resets(np.inf, np.array([0.0, 1.0])).size == 0
+
     def test_minimum_maximum(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
