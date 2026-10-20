@@ -2,7 +2,7 @@
 
 ## Features
 
-- `Simulation.solve` with an experiment takes a `cycle_inputs` callable, which can change input parameters between cycles. It is called before each cycle after the first with the cycle that just ended, as `cycle_inputs(cycle_number, cycle_solution, inputs)`, and returns new values for some of `inputs`, which apply from the next cycle on. `cycle_solution` is the full solution, even for a cycle `save_at_cycles` does not keep, and has one entry in `.steps` per experiment step. This lets a per-cycle quantity, such as a cycle's voltage or stress range, drive a degradation input of the next cycle. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `Simulation.solve` with an experiment takes a `cycle_inputs` callable, which can change input parameters between cycles. It is called before each cycle after the first with the cycle that just ended, as `cycle_inputs(cycle_number, cycle_solution, inputs)`, and returns new values for some of `inputs`, which apply from the next cycle on. `cycle_solution` is the full solution, even for a cycle `save_at_cycles` does not keep, and has one entry in `.steps` per experiment step. This lets a per-cycle quantity, such as a cycle's voltage or stress range, drive a degradation input of the next cycle. ([#5941](https://github.com/pybamm-team/PyBaMM/pull/5941))
 
 ## Bug fixes
 
