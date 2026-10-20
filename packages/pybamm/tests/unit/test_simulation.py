@@ -1167,6 +1167,116 @@ class TestSimulation:
         fp3 = sim._esoh_fingerprint
         assert fp2 != fp3
 
+    @pytest.mark.parametrize("cache_esoh", [True, False])
+    @pytest.mark.parametrize("h0", [-1, -0.5, 0, 1])
+    def test_initial_voltage_keeps_initial_hysteresis_state_composite(
+        self, h0, cache_esoh
+    ):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        }
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Negative particle lithiation hysteresis decay rate": 10,
+                "Secondary: Negative particle delithiation hysteresis decay rate": 10,
+                "Secondary: Initial hysteresis state in negative electrode": h0,
+                "Current function [A]": 0,
+            },
+            check_already_exists=False,
+        )
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=cache_esoh)
+
+        sol = sim.solve([0, 1], initial_soc="3.9 V")
+
+        h = sol["X-averaged negative electrode secondary hysteresis state"]
+        assert h(0) == pytest.approx(h0)
+        assert sol["Voltage [V]"](0) == pytest.approx(3.9, abs=1e-4)
+
+    @pytest.mark.parametrize("cache_esoh", [True, False])
+    @pytest.mark.parametrize("h0", [-1, 0.5])
+    def test_initial_voltage_keeps_initial_hysteresis_state(self, h0, cache_esoh):
+        options = {"open-circuit potential": ("one-state hysteresis", "single")}
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020")
+        U = param["Negative electrode OCP [V]"]
+        param.update(
+            {
+                "Negative electrode lithiation OCP [V]": lambda sto: U(sto) - 0.05,
+                "Negative electrode delithiation OCP [V]": lambda sto: U(sto) + 0.05,
+                "Negative particle lithiation hysteresis decay rate": 10,
+                "Negative particle delithiation hysteresis decay rate": 10,
+                "Initial hysteresis state in negative electrode": h0,
+                "Current function [A]": 0,
+            },
+            check_already_exists=False,
+        )
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=cache_esoh)
+
+        sol = sim.solve([0, 1], initial_soc="3.9 V")
+
+        h = sol["X-averaged negative electrode hysteresis state"]
+        assert h(0) == pytest.approx(h0)
+        assert sol["Voltage [V]"](0) == pytest.approx(3.9, abs=1e-4)
+
+    def test_cache_esoh_initial_hysteresis_state_change(self):
+        options = {"open-circuit potential": ("one-state hysteresis", "single")}
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020")
+        U = param["Negative electrode OCP [V]"]
+        param.update(
+            {
+                "Negative electrode lithiation OCP [V]": lambda sto: U(sto) - 0.05,
+                "Negative electrode delithiation OCP [V]": lambda sto: U(sto) + 0.05,
+                "Negative particle lithiation hysteresis decay rate": 10,
+                "Negative particle delithiation hysteresis decay rate": 10,
+                "Initial hysteresis state in negative electrode": "[input]",
+                "Current function [A]": 0,
+            },
+            check_already_exists=False,
+        )
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=True)
+
+        for h0 in [-1, 1]:
+            sol = sim.solve(
+                [0, 1],
+                initial_soc="3.9 V",
+                inputs={"Initial hysteresis state in negative electrode": h0},
+            )
+            h = sol["X-averaged negative electrode hysteresis state"]
+            assert h(0) == pytest.approx(h0)
+            assert sol["Voltage [V]"](0) == pytest.approx(3.9, abs=1e-4)
+
+    def test_initial_hysteresis_state_from_direction_is_not_kept(self):
+        options = {"open-circuit potential": ("one-state hysteresis", "single")}
+        param = pybamm.ParameterValues("Chen2020")
+        U = param["Negative electrode OCP [V]"]
+        param.update(
+            {
+                "Negative electrode lithiation OCP [V]": lambda sto: U(sto) - 0.05,
+                "Negative electrode delithiation OCP [V]": lambda sto: U(sto) + 0.05,
+            }
+        )
+        name = "Initial hysteresis state in negative electrode"
+
+        # A state written by a call with a direction is reset by a call without one,
+        # including on a copy
+        param.set_initial_state(0.5, direction="charge", options=options)
+        assert param[name] == -1
+        param_copy = param.copy()
+        param_copy.set_initial_state("3.9 V", options=options)
+        assert param_copy[name] == 0
+        param.set_initial_state("3.9 V", options=options)
+        assert param[name] == 0
+
+        # A state the user sets after a call with a direction is kept
+        param.set_initial_state(0.5, direction="charge", options=options)
+        param.update({name: -1})
+        param.set_initial_state("3.9 V", options=options)
+        assert param[name] == -1
+
     def test_cache_esoh_fallback_path(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values

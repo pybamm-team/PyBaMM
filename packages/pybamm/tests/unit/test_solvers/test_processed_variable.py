@@ -687,6 +687,11 @@ class TestProcessedVariable:
         # scalar
         np.testing.assert_allclose(processed_var(0.5), 2.5, rtol=1e-7, atol=1e-6)
         np.testing.assert_allclose(processed_var(0.7), 3.5, rtol=1e-7, atol=1e-6)
+        # JAX hands the IDAKLU-JAX primitives a scalar time as a 0-d array
+        assert processed_var(np.array(0.5)).shape == ()
+        np.testing.assert_allclose(
+            processed_var(np.array(0.5)), 2.5, rtol=1e-7, atol=1e-6
+        )
 
         eqn_casadi = to_casadi(eqn, y_sol)
         processed_eqn = pybamm.process_variable(
