@@ -236,7 +236,8 @@ tomographic image (no carbon-binder domain) used for the DNS comparisons of
 Paten et al. (2026), and `parameter_sets.load_3d_case_data()` returns its
 transient closure variable and a DNS of a discharge to 3.0 V followed by a
 900 s rest (folder `data/3d_case_data_Paten_2026`).
-`examples/fit_transient_closure.py` fits the modes and compares the models:
+`examples/fit_transient_closure.py` fits the modes and plots the models against
+the DNS during the discharge and the rest:
 
 | Voltage [V] after the end of discharge | +1 s | +10 s | +100 s | +900 s |
 | --- | --- | --- | --- | --- |

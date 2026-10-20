@@ -1,5 +1,6 @@
 """DC1 and DFN on an LG M50 cell, with the parameters of Paten et al. Table IV."""
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 import pybamm
@@ -10,19 +11,19 @@ models = {
     "DC1": (zoo.load("DualContinuum")(), pybamm.ParameterValues("Paten2026")),
 }
 
-times = np.linspace(0, 3400, 69)
-voltages = {}
+fig, ax = plt.subplots()
 for label, (model, parameter_values) in models.items():
     solution = pybamm.Simulation(model, parameter_values=parameter_values).solve(
-        [0, 3600], t_interp=times
+        [0, 3600]
     )
-    voltages[label] = solution["Voltage [V]"](times)
     print(
         f"{label}: discharge ends at {solution.t[-1]:.0f} s, solve {solution.solve_time}"
     )
+    times = np.linspace(0, solution.t[-1], 300)
+    ax.plot(times / 60, solution["Voltage [V]"](times), label=label)
 
-print("  time [s]   V_DFN [V]   V_DC1 [V]")
-for t, v_dfn, v_dc1 in zip(
-    times[::10], voltages["DFN"][::10], voltages["DC1"][::10], strict=True
-):
-    print(f"{t:10.0f}   {v_dfn:9.4f}   {v_dc1:9.4f}")
+ax.set_xlabel("Time [min]")
+ax.set_ylabel("Voltage [V]")
+ax.set_title("LG M50, 1C discharge")
+ax.legend()
+plt.show()

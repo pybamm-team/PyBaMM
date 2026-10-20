@@ -7,6 +7,7 @@
    computed on the tomographic image, and compare with the DNS.
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 import pybamm
@@ -69,14 +70,23 @@ def isolated_sphere():
     dv = solutions["DC1t"]["Voltage [V]"](times) - solutions["DFN"]["Voltage [V]"](
         times
     )
-    di = solutions["DC1t"]["Current [A]"](times) - solutions["DFN"]["Current [A]"](
-        times
-    )
     print(
-        "Isolated sphere, DC1t vs Fickian DFN (CC, CV hold, rest): "
-        f"max |dV| = {1e3 * np.abs(dv).max():.2f} mV, "
-        f"max |dI| = {1e3 * np.abs(di).max():.3f} mA\n"
+        f"Isolated sphere, DC1t vs Fickian DFN: max |dV| = {1e3 * abs(dv).max():.2f} mV"
     )
+    fig, (ax_voltage, ax_current) = plt.subplots(2, 1, sharex=True)
+    # The curves overlap, so the DFN is drawn wide underneath DC1t
+    for label, style in [("DFN", {"lw": 4, "alpha": 0.4}), ("DC1t", {"ls": "--"})]:
+        solution = solutions[label]
+        ax_voltage.plot(
+            times / 60, solution["Voltage [V]"](times), label=label, **style
+        )
+        ax_current.plot(times / 60, solution["Current [A]"](times), **style)
+    ax_voltage.set_ylabel("Voltage [V]")
+    ax_current.set_ylabel("Current [A]")
+    ax_current.set_xlabel("Time [min]")
+    ax_voltage.set_title("Isolated sphere: DC1t and Fickian DFN, CC-CV-rest")
+    ax_voltage.legend()
+    fig.tight_layout()
 
 
 def tomographic_electrode():
@@ -106,24 +116,35 @@ def tomographic_electrode():
         fit.parameter_values("Positive"), check_already_exists=False
     )
 
+    fit.plot(show_plot=False)
+
+    # Discharge against time, and the rest against the time since its start
     t_dns, v_dns = dns["Time [s]"], dns["Voltage [V]"]
     end_dns = t_dns[np.nonzero(dns["Current density [A.m-2]"] == 0)[0][0] - 1]
-    print("3D electrode vs DNS: voltage [V] after the end of discharge")
-    print("        end of discharge [s]   +1 s     +10 s    +100 s   +900 s")
-    after = np.array([1, 10, 100, 900])
-    print(
-        f"DNS     {end_dns:20.0f}   "
-        + "   ".join(f"{v:.4f}" for v in np.interp(end_dns + after, t_dns, v_dns))
-    )
+    fig, (ax_discharge, ax_rest) = plt.subplots(1, 2, figsize=(10, 4))
+    resting = t_dns > end_dns
+    ax_discharge.plot(t_dns[~resting] / 60, v_dns[~resting], "k.", ms=2, label="DNS")
+    ax_rest.semilogx(t_dns[resting] - end_dns, v_dns[resting], "k.", ms=2)
+    after = np.geomspace(0.1, 900, 200)
     for label, model in models.items():
         solution = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment
         ).solve()
         end = solution.cycles[0].steps[0].t[-1]
-        voltage = solution["Voltage [V]"](end + after)
-        print(f"{label:6s}  {end:20.0f}   " + "   ".join(f"{v:.4f}" for v in voltage))
+        times = np.linspace(0, end, 300)
+        ax_discharge.plot(times / 60, solution["Voltage [V]"](times), label=label)
+        ax_rest.semilogx(after, solution["Voltage [V]"](end + after), label=label)
+    ax_discharge.set_xlabel("Time [min]")
+    ax_rest.set_xlabel("Time since the end of discharge [s]")
+    for ax in (ax_discharge, ax_rest):
+        ax.set_ylabel("Voltage [V]")
+    ax_discharge.set_title("Tomographic NMC electrode: discharge")
+    ax_rest.set_title("Rest")
+    ax_discharge.legend()
+    fig.tight_layout()
 
 
 if __name__ == "__main__":
     isolated_sphere()
     tomographic_electrode()
+    plt.show()
