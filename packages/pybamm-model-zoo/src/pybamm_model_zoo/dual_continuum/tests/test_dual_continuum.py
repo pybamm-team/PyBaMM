@@ -286,6 +286,16 @@ class TestDualContinuum:
     def test_options(self):
         with pytest.raises(pybamm.OptionError, match="not recognised"):
             dual_continuum(dc_options={"closure": "DC1"})
+        with pytest.raises(
+            pybamm.OptionError, match=r"Best matches are \['model type'\]"
+        ):
+            dual_continuum(dc_options={"model typ": "DC1"})
+        with pytest.raises(
+            pybamm.OptionError, match=r"Best matches are \['from image'\]"
+        ):
+            dual_continuum(dc_options={"surface area": "rom image"})
+        with pytest.raises(pybamm.OptionError, match="Possible values are"):
+            dual_continuum(dc_options={"model type": "xyz"})
         with pytest.raises(pybamm.OptionError, match="Invalid value"):
             dual_continuum(dc_options={"surface area": "components"})
         with pytest.raises(pybamm.OptionError, match="Invalid value"):
@@ -564,10 +574,6 @@ class TestCompositeElectrode:
         # PyBaMM's default set has no composite parameters: nothing is added
         defaults = model.default_parameter_values
         assert "Primary: Negative electrode s0 surface average" not in defaults
-        with pytest.raises(pybamm.OptionError, match=r"Best matches are \['model type'\]"):
-            dual_continuum(dc_options={"model typ": "DC1"})
-        with pytest.raises(pybamm.OptionError, match=r"Best matches are \['from image'\]"):
-            dual_continuum(dc_options={"surface area": "rom image"})
 
 
 def tight_solver():

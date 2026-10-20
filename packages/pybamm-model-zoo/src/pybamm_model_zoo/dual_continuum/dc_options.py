@@ -37,26 +37,17 @@ class DCModelOptions(pybamm.FuzzyDict):
                 options[key] = self._number_of_modes(value)
                 continue
             if key not in self.possible_options:
-                best = pybamm.FuzzyDict([*self.possible_options, "transient closure modes"]).get_best_matches(key)
-                hint = (
-                    f"Best matches are {best}"
-                    if best
-                    else f"Possible options are {list(self.possible_options)}"
-                )
+                names = [*self.possible_options, "transient closure modes"]
                 raise pybamm.OptionError(
-                    f"DC option '{key}' not recognised. {hint}"
+                    f"DC option '{key}' not recognised. "
+                    + _hint(key, names, "Possible options")
                 )
             if isinstance(value, bool):
                 value = "true" if value else "false"
             if value not in self.possible_options[key]:
-                best = pybamm.FuzzyDict(self.possible_options[key]).get_best_matches(value)
-                hint = (
-                    f"Best matches are {best}"
-                    if best
-                    else f"Possible options are {list(self.possible_options)}"
-                )
                 raise pybamm.OptionError(
-                    f"Invalid value '{value}' for DC option '{key}'. {hint}"
+                    f"Invalid value '{value}' for DC option '{key}'. "
+                    + _hint(value, self.possible_options[key], "Possible values")
                 )
             options[key] = value
 
@@ -101,3 +92,11 @@ class DCModelOptions(pybamm.FuzzyDict):
         if self["model type"] == "Yang":
             return True
         return self["calculate surface concentration a priori"] == "false"
+
+
+def _hint(name, candidates, label):
+    """The closest candidates to ``name``, or all of them if none is close."""
+    best = pybamm.FuzzyDict.fromkeys(candidates).get_best_matches(str(name))
+    if best:
+        return f"Best matches are {best}"
+    return f"{label} are {list(candidates)}"
