@@ -3,6 +3,7 @@
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
+- `Chen2020_composite` and `Bonkile2024` now run with thermal models. They gave the negative electrode density per particle phase, but the thermal model reads one electrode-level density, as it does for the heat capacity and thermal conductivity, so parameter processing raised a `KeyError`. Both sets now give `"Negative electrode density [kg.m-3]"` and drop the unused per-phase densities. ([#5877](https://github.com/pybamm-team/PyBaMM/issues/5877))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
 
