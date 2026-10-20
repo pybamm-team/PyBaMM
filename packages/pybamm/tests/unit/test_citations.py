@@ -253,6 +253,16 @@ class TestCitations:
                 "total interfacial current density as a state": "true",
             },
         )
+        pybamm.lithium_ion.SPM(
+            build=False,
+            options={
+                "particle phases": ("2", "1"),
+                "surface form": "algebraic",
+                "SEI": (("none", "constant"), "none"),
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            },
+        )
         assert "BrosaPlanella2022" not in citations._papers_to_cite
 
         pybamm.lithium_ion.SPM(

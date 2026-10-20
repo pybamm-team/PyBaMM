@@ -104,8 +104,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def calc_esoh(self):
         """Whether to include eSOH variables in the summary variables."""
         if (
-            self.options.negative["particle phases"] != "1"
-            or self.options.positive["particle phases"] != "1"
+            any(len(phases) > 1 for phases in self.options.phases.values())
             or self.options["working electrode"] != "both"
         ):
             self._calc_esoh = False
@@ -485,7 +484,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             domain_options = getattr(self.options, domain)
             if (
                 domain_options["SEI"] in ["none", "constant"]
-                and self.options["intercalation kinetics"]
+                and domain_options["intercalation kinetics"]
                 in ["linear", "symmetric Butler-Volmer"]
                 and self.options["surface form"] == "false"
             ):
@@ -495,7 +494,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                         self.param, domain, self.options
                     )
                 )
-                if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+                if (
+                    domain_options["intercalation kinetics"]
+                    == "symmetric Butler-Volmer"
+                ):
                     self.submodels[f"{domain} electrode interface"] = (
                         pybamm.kinetics.InverseButlerVolmer(
                             self.param, domain, "lithium metal plating", self.options

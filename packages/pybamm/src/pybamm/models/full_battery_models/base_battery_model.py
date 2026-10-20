@@ -109,20 +109,20 @@ _NEGATIVE_ONLY_SHORTHAND = {
 }
 
 
-def format_option_path(path):
-    """Format an electrode/phase path, e.g. ``("negative", "primary")``.
+def _option_location(path):
+    """Describe an electrode/phase path for an error, e.g. ``" at negative.primary"``.
 
     Parameters
     ----------
     path : tuple of str
-        Electrode and optionally phase names.
+        Electrode and optionally phase names; empty for whole-cell options.
 
     Returns
     -------
     str
-        The dotted path, e.g. ``"negative.primary"``.
+        The location suffix, or ``""`` for an empty path.
     """
-    return ".".join(path)
+    return f" at {'.'.join(path)}" if path else ""
 
 
 def iter_option_leaves(option, value):
@@ -248,9 +248,9 @@ def validate_option_value(option, value, possible_values, path=()):
         return
     if option == "number of MSMR reactions" and represents_positive_integer(value):
         return
-    location = f" at {format_option_path(path)}" if path else ""
     raise pybamm.OptionError(
-        f"\n'{value}' is not recognized in option '{option}'{location}. "
+        f"\n'{value}' is not recognized in option '{option}'"
+        f"{_option_location(path)}. "
         f"Possible values are {possible_values}"
     )
 
@@ -363,9 +363,8 @@ def dependency_error(option, value, companion, requirement, path=()):
     pybamm.OptionError
         The error, for the caller to raise.
     """
-    location = f" at {format_option_path(path)}" if path else ""
     return pybamm.OptionError(
-        f"Option '{option}'{location} is '{value}', which requires "
+        f"Option '{option}'{_option_location(path)} is '{value}', which requires "
         f"'{companion}' to be {requirement}."
     )
 
@@ -449,25 +448,23 @@ def _apply_legacy_defaults(options, supplied):
     if multi_phase:
         set_default("surface form", "algebraic")
     film_resistance = options["SEI film resistance"]
-    if film_resistance == "distributed" or (film_resistance != "none" and multi_phase):
+    needs_current_state = film_resistance == "distributed" or (
+        film_resistance != "none" and multi_phase
+    )
+    if needs_current_state:
         set_default("total interfacial current density as a state", "true")
     if options["operating mode"] in ("explicit power", "explicit resistance"):
         set_default("voltage as a state", "true")
 
     current_state = options["total interfacial current density as a state"]
-    if film_resistance == "distributed" and current_state == "false":
-        raise dependency_error(
-            "SEI film resistance",
-            "distributed",
-            "total interfacial current density as a state",
-            "'true'",
-        )
-    if film_resistance != "none" and multi_phase and current_state == "false":
+    if needs_current_state and current_state == "false":
         raise dependency_error(
             "SEI film resistance",
             film_resistance,
             "total interfacial current density as a state",
-            "'true' when an electrode has multiple particle phases",
+            "'true'"
+            if film_resistance == "distributed"
+            else "'true' when an electrode has multiple particle phases",
         )
 
     return fired
@@ -492,13 +489,22 @@ def _check_electrode_compatibility(options):
             resolve_option("particle phases", options["particle phases"], domain)
         )
         phases = _PHASES[:number_of_phases]
-        if number_of_phases > 1 and (
-            options["surface form"] == "false"
-            or any(
-                resolve_option("particle", options["particle"], domain, phase)
-                != "Fickian diffusion"
-                for phase in phases
-            )
+        if number_of_phases == 1:
+            for option in sorted(_PER_PHASE_OPTIONS):
+                electrode_value = resolve_option(
+                    option, options[option], domain, working_electrode=working_electrode
+                )
+                if isinstance(electrode_value, tuple):
+                    raise pybamm.OptionError(
+                        f"Option '{option}' at {domain} is {electrode_value}, a "
+                        "(primary, secondary) tuple, but 'particle phases' at "
+                        f"{domain} is '1'. Give one value for that electrode or "
+                        "set its 'particle phases' to '2'."
+                    )
+        elif options["surface form"] == "false" or any(
+            resolve_option("particle", options["particle"], domain, phase)
+            != "Fickian diffusion"
+            for phase in phases
         ):
             raise pybamm.OptionError(
                 f"Electrode at {domain} has multiple particle phases, which "
@@ -507,15 +513,22 @@ def _check_electrode_compatibility(options):
             )
         for phase in phases:
             path = (domain, phase) if number_of_phases > 1 else (domain,)
-
-            def value(option, domain=domain, phase=phase):
-                return resolve_option(
+            value = {
+                option: resolve_option(
                     option, options[option], domain, phase, working_electrode
                 )
-
+                for option in (
+                    "lithium plating",
+                    "SEI",
+                    "loss of active material",
+                    "particle mechanics",
+                    "SEI on cracks",
+                    "stress-induced diffusion",
+                )
+            }
             if (
-                value("lithium plating") == "partially reversible"
-                and value("SEI") == "none"
+                value["lithium plating"] == "partially reversible"
+                and value["SEI"] == "none"
             ):
                 raise dependency_error(
                     "lithium plating",
@@ -525,8 +538,8 @@ def _check_electrode_compatibility(options):
                     path,
                 )
             # stress-driven LAM acts on the particle stress from a mechanics model
-            lam = value("loss of active material")
-            if "stress" in lam and value("particle mechanics") == "none":
+            lam = value["loss of active material"]
+            if "stress" in lam and value["particle mechanics"] == "none":
                 raise dependency_error(
                     "loss of active material",
                     lam,
@@ -534,8 +547,8 @@ def _check_electrode_compatibility(options):
                     "a model other than 'none'",
                     path,
                 )
-            if value("SEI on cracks") == "true" and (
-                value("particle mechanics") != "swelling and cracking"
+            if value["SEI on cracks"] == "true" and (
+                value["particle mechanics"] != "swelling and cracking"
             ):
                 raise dependency_error(
                     "SEI on cracks",
@@ -544,8 +557,8 @@ def _check_electrode_compatibility(options):
                     "'swelling and cracking'",
                     path,
                 )
-            if value("stress-induced diffusion") == "true" and (
-                value("particle mechanics") == "none"
+            if value["stress-induced diffusion"] == "true" and (
+                value["particle mechanics"] == "none"
             ):
                 raise dependency_error(
                     "stress-induced diffusion",
@@ -1365,13 +1378,8 @@ class BatteryModelPhaseOptions(dict):
         self.index = index
 
     def __getitem__(self, key):
-        return resolve_option(
-            key,
-            dict.__getitem__(self.domain_options, key),
-            _ELECTRODES[self.domain_options.index],
-            _PHASES[self.index],
-            working_electrode=self.domain_options.get("working electrode", "both"),
-        )
+        value = self.domain_options[key]
+        return value[self.index] if isinstance(value, tuple) else value
 
 
 class BaseBatteryModel(pybamm.BaseModel):
@@ -1609,11 +1617,15 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Lead-acid models can only have thermal "
                     "effects if dimensionality is 0."
                 )
-            if options["SEI"] != "none" or options["SEI film resistance"] != "none":
+
+            def leaves(option):
+                return {leaf for _, leaf in iter_option_leaves(option, options[option])}
+
+            if leaves("SEI") != {"none"} or options["SEI film resistance"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
-            if options["lithium plating"] != "none":
+            if leaves("lithium plating") != {"none"}:
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
-            if options["open-circuit potential"] == "MSMR":
+            if "MSMR" in leaves("open-circuit potential"):
                 raise pybamm.OptionError(
                     "Lead-acid models cannot use the MSMR open-circuit potential model"
                 )

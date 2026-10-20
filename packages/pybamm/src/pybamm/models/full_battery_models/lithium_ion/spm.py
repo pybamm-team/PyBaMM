@@ -62,12 +62,13 @@ class SPM(BaseModel):
             pybamm.citations.register("Marquis2019")
 
         if any(
-            self.options.negative[option] not in values
-            or self.options.positive[option] not in values
+            getattr(getattr(self.options, domain), phase)[option] not in values
             for option, values in [
                 ("SEI", ("none", "constant")),
                 ("lithium plating", ("none",)),
             ]
+            for domain, phases in self.options.phases.items()
+            for phase in phases
         ):
             pybamm.citations.register("BrosaPlanella2022")
 

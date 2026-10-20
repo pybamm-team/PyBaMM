@@ -15,9 +15,11 @@ from pybamm.models.full_battery_models.base_battery_model import (
     BatteryModelDomainOptions,
     BatteryModelOptions,
     LegacyOptions,
+    active_electrodes,
     dependency_error,
     iter_option_leaves,
     join_electrode_values,
+    option_values_match,
     replace_option_leaf,
     resolve_option,
     restore_saved_options,
@@ -1043,6 +1045,8 @@ class TestOptions:
     def test_domain_phase_options(self):
         options = BatteryModelOptions(
             {
+                "particle phases": ("2", "1"),
+                "surface form": "algebraic",
                 "particle mechanics": (
                     ("swelling only", "swelling and cracking"),
                     "none",
@@ -1102,9 +1106,13 @@ class TestOptions:
     def test_renamed_hysteresis_ocp(self, ocp_option):
         # check old option is renamed to new option
         assert (
-            BatteryModelOptions({"open-circuit potential": ocp_option[0]}).get(
-                "open-circuit potential"
-            )
+            BatteryModelOptions(
+                {
+                    "particle phases": ("2", "1"),
+                    "surface form": "algebraic",
+                    "open-circuit potential": ocp_option[0],
+                }
+            ).get("open-circuit potential")
             == ocp_option[1]
         )
 
@@ -1152,6 +1160,63 @@ class TestOptions:
             "one-state differential capacity hysteresis"
         )
         assert options.positive["open-circuit potential"] == "one-state hysteresis"
+
+    def test_rejects_phase_kinetics(self):
+        with pytest.raises(pybamm.OptionError, match=r"cannot vary by particle phase"):
+            BatteryModelOptions(
+                {
+                    "intercalation kinetics": (
+                        ("symmetric Butler-Volmer", "asymmetric Butler-Volmer"),
+                        "symmetric Butler-Volmer",
+                    )
+                }
+            )
+
+    def test_rejects_phase_tuple_for_electrode_only_option(self):
+        with pytest.raises(pybamm.OptionError, match=r"cannot vary by particle phase"):
+            BatteryModelOptions(
+                {
+                    "particle phases": ("1", "2"),
+                    "loss of active material": ("none", ("reaction-driven", "none")),
+                }
+            )
+
+    @pytest.mark.parametrize(
+        ("options", "domain"),
+        [
+            (
+                {"open-circuit potential": (("single", "current sigmoid"), "single")},
+                "negative",
+            ),
+            (
+                {
+                    "particle phases": ("2", "1"),
+                    "surface form": "algebraic",
+                    "SEI": ("constant", ("constant", "none")),
+                },
+                "positive",
+            ),
+        ],
+    )
+    def test_rejects_phase_tuple_on_single_phase_electrode(self, options, domain):
+        with pytest.raises(
+            pybamm.OptionError, match=rf"at {domain} is .*'particle phases' at {domain}"
+        ):
+            BatteryModelOptions(options)
+
+    def test_accepts_phase_exchange_current_density(self):
+        options = BatteryModelOptions(
+            {
+                "particle phases": ("2", "1"),
+                "surface form": "algebraic",
+                "exchange-current density": (
+                    ("current sigmoid", "single"),
+                    "single",
+                ),
+            }
+        )
+        assert options.negative.primary["exchange-current density"] == "current sigmoid"
+        assert options.negative.secondary["exchange-current density"] == "single"
 
     def test_invalid_leaf_reports_path(self):
         with pytest.raises(
@@ -1342,6 +1407,20 @@ class TestOptionHelpers:
         )
         assert join_electrode_values("SEI", "none", "none") == "none"
 
+    def test_active_electrodes(self):
+        assert active_electrodes("both") == ("negative", "positive")
+        assert active_electrodes("positive") == ("positive",)
+
+    def test_option_values_match(self):
+        assert option_values_match("SEI", "constant", ("constant", "none"))
+        assert not option_values_match("SEI", "constant", ("constant", "constant"))
+        assert option_values_match(
+            "SEI", "constant", ("constant", "constant"), working_electrode="positive"
+        )
+        assert option_values_match("particle", ("a", "a"), "a")
+        assert option_values_match("particle", (("a", "a"), "b"), ("a", "b"))
+        assert not option_values_match("particle", ("a", "b"), "a")
+
     def test_dependency_error(self):
         error = dependency_error(
             "lithium plating",
@@ -1391,6 +1470,17 @@ class TestModelDefaultOptions:
         pybamm.lithium_ion.SPM(options)
         dfn = pybamm.lithium_ion.DFN(options)
         assert dfn.options["x-average side reactions"] == "false"
+
+    def test_identity_checks_accept_equivalent_spellings(self):
+        # the scalar shorthand resolves to Yang2017's negative-only SEI
+        pybamm.lithium_ion.Yang2017({"SEI": "ec reaction limited"})
+        model = pybamm.lithium_ion.MSMR(
+            {
+                "number of MSMR reactions": ("6", "4"),
+                "open-circuit potential": ("MSMR", "MSMR"),
+            }
+        )
+        assert model.options.negative["open-circuit potential"] == "MSMR"
 
     def test_identity_defaults(self):
         assert pybamm.lithium_ion.SPM().options["x-average side reactions"] == "true"

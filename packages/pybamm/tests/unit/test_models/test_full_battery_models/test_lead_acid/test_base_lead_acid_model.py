@@ -19,6 +19,12 @@ class TestBaseLeadAcidModel:
         )
         assert model.default_geometry["current collector"]["y"]["min"] == 0
 
+    def test_per_electrode_options_are_resolved(self):
+        pybamm.lead_acid.BaseModel({"SEI": ("none", "none")})
+        pybamm.lead_acid.BaseModel({"lithium plating": ("none", "none")})
+        with pytest.raises(pybamm.OptionError, match=r"MSMR"):
+            pybamm.lead_acid.BaseModel({"open-circuit potential": ("MSMR", "MSMR")})
+
     def test_incompatible_options(self):
         with pytest.raises(
             pybamm.OptionError,
