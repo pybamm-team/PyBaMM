@@ -10,8 +10,8 @@ from contextlib import redirect_stdout
 import pytest
 
 import pybamm
-from pybamm.models.full_battery_models import base_battery_model
-from pybamm.models.full_battery_models.base_battery_model import (
+from pybamm.models.full_battery_models import battery_model_options
+from pybamm.models.full_battery_models.battery_model_options import (
     BatteryModelDomainOptions,
     BatteryModelOptions,
     LegacyOptions,
@@ -1482,6 +1482,13 @@ class TestModelDefaultOptions:
         )
         assert model.options.negative["open-circuit potential"] == "MSMR"
 
+    def test_subclass_inherits_fixed_options(self):
+        class CustomSPM(pybamm.lithium_ion.SPM):
+            pass
+
+        model = CustomSPM(build=False)
+        assert model.options["x-average side reactions"] == "true"
+
     def test_identity_defaults(self):
         assert pybamm.lithium_ion.SPM().options["x-average side reactions"] == "true"
         assert pybamm.lithium_ion.SPMe().options["x-average side reactions"] == "false"
@@ -1515,7 +1522,7 @@ class TestModelDefaultOptions:
                     "number of MSMR reactions": ("6", "4"),
                     "particle": "Fickian diffusion",
                 },
-                r"'particle' must be 'MSMR'",
+                r"MSMR requires 'particle' to be 'MSMR'",
             ),
             (
                 LithiumMetalDFN,
@@ -1572,15 +1579,21 @@ class TestModelDefaultOptions:
         assert model.options == options
 
     @pytest.mark.parametrize(
-        "model_class, match",
+        "model_class, options, match",
         [
-            (pybamm.lead_acid.LOQS, r"particle shape"),
-            (pybamm.lithium_ion.MPM, r"particle size"),
+            (pybamm.lead_acid.LOQS, {}, r"particle shape"),
+            (
+                pybamm.lithium_ion.MPM,
+                {"x-average side reactions": "true"},
+                r"particle size",
+            ),
         ],
     )
-    def test_processed_options_are_checked_against_model(self, model_class, match):
+    def test_processed_options_are_checked_against_model(
+        self, model_class, options, match
+    ):
         with pytest.raises(pybamm.OptionError, match=match):
-            model_class(BatteryModelOptions({}))
+            model_class(BatteryModelOptions(options))
 
 
 LEGACY_DEFAULT_CASES = [
@@ -1622,7 +1635,7 @@ class TestLegacyDefaultDeprecation:
         with pytest.warns(pybamm.OptionDefaultDeprecationWarning) as record:
             options = BatteryModelOptions(supplied)
         assert len(record) == 1
-        assert str(record[0].message) == base_battery_model._legacy_default_message(
+        assert str(record[0].message) == battery_model_options._legacy_default_message(
             fired
         )
         # passing the named options reproduces the configuration without a warning
@@ -1632,7 +1645,7 @@ class TestLegacyDefaultDeprecation:
         assert explicit == options
 
     def test_message(self):
-        assert base_battery_model._legacy_default_message(
+        assert battery_model_options._legacy_default_message(
             {"cell geometry": "pouch"}
         ) == (
             "Options were set from other options because they were not given: "
@@ -1647,12 +1660,16 @@ class TestLegacyDefaultDeprecation:
         assert record[0].filename == __file__
 
     def test_forbidden_legacy_defaults_raise(self, monkeypatch):
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        monkeypatch.setattr(
+            battery_model_options, "_FORBID_LEGACY_OPTION_DEFAULTS", True
+        )
         with pytest.raises(pybamm.OptionError, match=r"'cell geometry': 'pouch'"):
             BatteryModelOptions({"dimensionality": 1})
 
     def test_invalid_values_precede_model_legacy_defaults(self, monkeypatch):
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        monkeypatch.setattr(
+            battery_model_options, "_FORBID_LEGACY_OPTION_DEFAULTS", True
+        )
         with pytest.raises(
             pybamm.OptionError,
             match=r"is not recognized in option 'intercalation kinetics'",
@@ -1660,13 +1677,17 @@ class TestLegacyDefaultDeprecation:
             pybamm.lithium_ion.SPM({"intercalation kinetics": "bad"})
 
     def test_invalid_combinations_precede_legacy_defaults(self, monkeypatch):
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        monkeypatch.setattr(
+            battery_model_options, "_FORBID_LEGACY_OPTION_DEFAULTS", True
+        )
         with pytest.raises(pybamm.OptionError, match=r"X-full.*1D current collectors"):
             BatteryModelOptions({"thermal": "x-full", "dimensionality": 1})
 
     def test_forbidden_model_defaults_do_not_update_options(self, monkeypatch):
         model = pybamm.lithium_ion.SPM()
-        monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", True)
+        monkeypatch.setattr(
+            battery_model_options, "_FORBID_LEGACY_OPTION_DEFAULTS", True
+        )
         with pytest.raises(pybamm.OptionError, match=r"SEI film resistance"):
             model.options = {"SEI": "constant"}
         assert model.options["SEI"] == "none"
@@ -1683,7 +1704,7 @@ class TestLegacyDefaultDeprecation:
         with pytest.warns(pybamm.OptionDefaultDeprecationWarning) as record:
             model = pybamm.lithium_ion.SPM({"intercalation kinetics": "linear"})
         assert [str(r.message) for r in record] == [
-            base_battery_model._legacy_default_message({"surface form": "algebraic"})
+            battery_model_options._legacy_default_message({"surface form": "algebraic"})
         ]
         assert model.options["surface form"] == "algebraic"
         with warnings.catch_warnings():

@@ -26,7 +26,7 @@ from pybamm.expression_tree.operations.serialise import (
     convert_symbol_from_json,
     convert_symbol_to_json,
 )
-from pybamm.models.full_battery_models.base_battery_model import (
+from pybamm.models.full_battery_models.battery_model_options import (
     _PER_ELECTRODE_OPTIONS,
     BatteryModelOptions,
 )
@@ -529,7 +529,7 @@ _STRING_OPTION_KEYS = sorted(
 )
 
 # Options accepting a 2-tuple of strings; mirrors ``_PER_ELECTRODE_OPTIONS`` in
-# base_battery_model.py (test_tuple_capable_keys_match_validation_source guards drift).
+# battery_model_options.py (test_tuple_capable_keys_match_validation_source guards drift).
 _TUPLE_CAPABLE_KEYS = frozenset(
     {
         "diffusivity",

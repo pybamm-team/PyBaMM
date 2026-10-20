@@ -84,6 +84,6 @@ def disable_telemetry():
 @pytest.fixture
 def allow_legacy_defaults(monkeypatch):
     """Let a test rely on legacy dependent option defaults."""
-    from pybamm.models.full_battery_models import base_battery_model
+    from pybamm.models.full_battery_models import battery_model_options
 
-    monkeypatch.setattr(base_battery_model, "_FORBID_LEGACY_OPTION_DEFAULTS", False)
+    monkeypatch.setattr(battery_model_options, "_FORBID_LEGACY_OPTION_DEFAULTS", False)

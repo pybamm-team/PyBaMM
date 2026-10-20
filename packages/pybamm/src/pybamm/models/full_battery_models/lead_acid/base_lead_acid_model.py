@@ -28,12 +28,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         built).
     """
 
-    def _model_default_options(self, supplied):
-        if supplied.get("particle shape", "no particles") != "no particles":
-            raise pybamm.OptionError(
-                "Lead-acid models require 'particle shape' to be 'no particles'."
-            )
-        return {"particle shape": "no particles"}
+    fixed_options = {"particle shape": "no particles"}
 
     def __init__(self, options=None, name="Unnamed lead-acid model", build=False):
         super().__init__(options, name)

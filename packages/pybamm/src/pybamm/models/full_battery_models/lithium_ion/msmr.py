@@ -1,29 +1,23 @@
 import re
 
 import pybamm
-from pybamm.models.full_battery_models.base_battery_model import option_values_match
 
 from .dfn import DFN
 
 
 class MSMR(DFN):
-    def _model_default_options(self, supplied):
-        if "number of MSMR reactions" not in supplied:
+    fixed_options = {
+        "open-circuit potential": "MSMR",
+        "particle": "MSMR",
+        "intercalation kinetics": "MSMR",
+    }
+
+    def _check_fixed_options(self, options):
+        if "number of MSMR reactions" not in options:
             raise pybamm.OptionError(
                 "number of MSMR reactions must be specified for MSMR"
             )
-        for option in ["open-circuit potential", "particle", "intercalation kinetics"]:
-            if option in supplied and not option_values_match(
-                option, supplied[option], "MSMR"
-            ):
-                raise pybamm.OptionError(
-                    f"'{option}' must be 'MSMR' for MSMR not '{supplied[option]}'"
-                )
-        return {
-            "open-circuit potential": "MSMR",
-            "particle": "MSMR",
-            "intercalation kinetics": "MSMR",
-        }
+        super()._check_fixed_options(options)
 
     def __init__(self, options=None, name="MSMR", build=True):
         super().__init__(options=options, name=name)
