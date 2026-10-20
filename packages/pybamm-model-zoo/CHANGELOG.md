@@ -15,6 +15,11 @@ PyBaMM's.
   paper. The paper's parameter sets are registered with PyBaMM as
   `"Paten2026"`, `"Paten2026_DFN"` and `"Paten2026_3D_NMC"` ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
 
+### Changed
+
+- Require `pybamm[plot]` so that every model's examples and README snippets can
+  plot results in a clean install ([#5926](https://github.com/pybamm-team/PyBaMM/pull/5926))
+
 ## [0.1.1] - 2026-10-14
 
 ### Fixed
