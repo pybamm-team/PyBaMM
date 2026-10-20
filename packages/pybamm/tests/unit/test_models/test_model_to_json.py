@@ -314,7 +314,7 @@ class TestBaseModelToConfig:
         assert config["pybamm_version"] == pybamm.__version__
 
     @pytest.mark.parametrize(
-        ("version", "loads"), [("26.9.0.0", True), (None, True), ("26.10.0.0", False)]
+        ("version", "loads"), [("26.10.1.1", True), (None, True), ("26.11.0.0", False)]
     )
     def test_from_config_uses_saved_option_rules(self, version, loads):
         """Full saved configs retain the option rules from their version."""

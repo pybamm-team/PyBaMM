@@ -2625,7 +2625,7 @@ class TestSerializationEdgeCases:
         assert isinstance(loaded.options["particle phases"], tuple)
 
     @pytest.mark.parametrize(
-        ("version", "loads"), [("26.9.0.0", True), (None, True), ("26.10.0.0", False)]
+        ("version", "loads"), [("26.10.1.1", True), (None, True), ("26.11.0.0", False)]
     )
     def test_custom_model_uses_saved_option_rules(self, version, loads):
         """Custom models retain the option rules from their saved version."""
