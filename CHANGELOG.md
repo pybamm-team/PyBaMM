@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added flux boundary conditions for 1D finite volume method. This is an alternative way to apply Neumann boundary conditions without specifying them as an explicit expression for the gradient. ([#5524](https://github.com/pybamm-team/PyBaMM/pull/5524))
+
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
@@ -14,7 +18,6 @@
 
 ## Features
 
-- Added flux boundary conditions for 1D finite volume method. This is an alternative way to apply Neumann boundary conditions without specifying them as an explicit expression for the gradient. ([#5524](https://github.com/pybamm-team/PyBaMM/pull/5524))
 - Added support for Python 3.15 to `pybamm` and `pybammsolvers`. On 3.15, the `vtk` extra installs nothing until cp315 wheels are available for it. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - The `jax` extra now accepts JAX up to 0.11 (previously below 0.9), which brings `JaxSolver` and the IDAKLU-JAX interface to Python 3.15. JAX 0.11 needs Python 3.12 or newer, so Python 3.11 gets JAX 0.10 at most. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - A `fem` extra installs the finite-element meshing dependencies, scikit-fem and meshio, so `pip install "pybamm[fem]"` is enough for 2D and 3D finite-element meshes. `pybamm[all]` includes it. ([#5881](https://github.com/pybamm-team/PyBaMM/pull/5881))
