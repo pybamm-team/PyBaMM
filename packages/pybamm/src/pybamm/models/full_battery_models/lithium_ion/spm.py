@@ -58,7 +58,7 @@ class SPM(BaseModel):
 
         self.set_submodels(build)
 
-        if self.__class__ != "MPM":
+        if not isinstance(self, pybamm.lithium_ion.MPM):
             pybamm.citations.register("Marquis2019")
 
         if any(

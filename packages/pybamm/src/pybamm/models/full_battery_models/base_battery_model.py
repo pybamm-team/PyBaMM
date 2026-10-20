@@ -580,8 +580,8 @@ def _rename_option(options_dict, option_name, old_name, new_name):
 
 
 # Options saved before this release skipped the per-electrode checks; bump it
-# if the release that ships them is not 26.10.
-_PER_ELECTRODE_OPTIONS_RELEASE = (26, 10)
+# if the release that ships them is not 26.11.
+_PER_ELECTRODE_OPTIONS_RELEASE = (26, 11)
 
 
 class LegacyOptions(dict):
@@ -1162,7 +1162,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             )
 
         # Options not yet compatible with particle-size distributions
-        if options["particle size"] == "distribution":
+        distribution_electrodes = [
+            domain
+            for domain in active_electrodes(options["working electrode"])
+            if resolve_option("particle size", options["particle size"], domain)
+            == "distribution"
+        ]
+        if distribution_electrodes:
             if options["lithium plating porosity change"] != "false":
                 raise pybamm.OptionError(
                     "Lithium plating porosity change not yet supported for particle-size"
@@ -1178,7 +1184,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "Heat of mixing submodels do not yet support particle-size "
                     "distributions."
                 )
-            if options["particle"] in ["quadratic profile", "quartic profile"]:
+            if any(
+                resolve_option("particle", options["particle"], domain)
+                in ["quadratic profile", "quartic profile"]
+                for domain in distribution_electrodes
+            ):
                 raise NotImplementedError(
                     "'quadratic' and 'quartic' concentration profiles have not yet "
                     "been implemented for particle-size ditributions"
