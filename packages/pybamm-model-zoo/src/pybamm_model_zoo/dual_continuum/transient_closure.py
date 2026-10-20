@@ -3,101 +3,23 @@
 DC1t writes :math:`\\langle s^t \\rangle_A(t) = s_0 \\sum_m w_m (1 - e^{-t/\\theta_m})`
 with :math:`\\sum_m w_m = 1`, so it starts at 0 and tends to :math:`s_0`, and
 each mode turns the time convolution into one ODE. This module fits the modes
-and gives the isolated-sphere solution.
+to closure data; the model itself does not use it.
 """
 
 from __future__ import annotations
 
-import functools
 from dataclasses import dataclass, field
 
 import numpy as np
 import numpy.typing as npt
-from scipy.optimize import brentq, nnls
 
 import pybamm
-
-#: Faraday constant [C.mol-1].
-FARADAY = 96485.33212
-#: Factor of the short-time limit, s ~ -(2 / sqrt(pi)) sqrt(t / D) / F.
-_SHORT_TIME_FACTOR = 2 / np.sqrt(np.pi)
-#: Number of eigenvalues of tan(x) = x used for the isolated sphere.
-_N_EIGENVALUES = 20000
-
-
-@functools.cache
-def sphere_eigenvalues(n: int = _N_EIGENVALUES) -> npt.NDArray[np.float64]:
-    """Positive roots of :math:`\\tan\\lambda = \\lambda`, in increasing order.
-
-    Parameters
-    ----------
-    n : int, optional
-        Number of roots.
-
-    Returns
-    -------
-    numpy.ndarray
-        The first ``n`` roots.
-    """
-    n_exact = min(n, 200)
-    exact = [
-        brentq(lambda x: np.tan(x) - x, k * np.pi + 1e-9, (k + 0.5) * np.pi - 1e-9)
-        for k in range(1, n_exact + 1)
-    ]
-    # Asymptotic expansion, accurate to round-off beyond the first 200 roots
-    q = (np.arange(n_exact + 1, n + 1) + 0.5) * np.pi
-    asymptotic = q - 1 / q - 2 / (3 * q**3)
-    return np.concatenate([exact, asymptotic])
-
-
-def isolated_sphere_closure(
-    t: npt.ArrayLike, radius: float | None = None, diffusivity: float | None = None
-) -> npt.NDArray[np.float64]:
-    """Surface-averaged transient closure variable of an isolated sphere.
-
-    The solution of the closure problem of Paten et al. (2026c, Eq. 13),
-
-    .. math::
-        \\langle s^t \\rangle_A(t) = -\\frac{R}{DF}\\left(\\frac{1}{5}
-        - \\sum_m \\frac{2}{\\lambda_m^2} e^{-\\lambda_m^2 D t / R^2}\\right),
-
-    where :math:`\\lambda_m` are the positive roots of :math:`\\tan\\lambda = \\lambda`.
-    Without ``radius`` and ``diffusivity`` it is the dimensionless closure
-    variable :math:`s D F / R` as a function of :math:`t D / R^2`.
-
-    Parameters
-    ----------
-    t : array_like
-        Times [s], or dimensionless times.
-    radius : float, optional
-        Sphere radius [m].
-    diffusivity : float, optional
-        Active-material diffusivity [m2.s-1].
-
-    Returns
-    -------
-    numpy.ndarray
-        The closure variable at ``t`` [mol.m-1.A-1], or dimensionless.
-    """
-    if (radius is None) != (diffusivity is None):
-        raise ValueError("Give both radius and diffusivity, or neither")
-    t_star = np.atleast_1d(np.asarray(t, dtype=float))
-    if np.any(t_star < 0):
-        raise ValueError("Times must be non-negative")
-    if radius is not None:
-        t_star = t_star * diffusivity / radius**2
-    lam2 = sphere_eigenvalues() ** 2
-    transient = np.zeros_like(t_star)
-    for start in range(0, lam2.size, 2000):
-        chunk = lam2[start : start + 2000]
-        transient += (2 / chunk * np.exp(-np.outer(t_star, chunk))).sum(axis=1)
-    s_star = -(0.2 - transient)
-    # The series converges slowly at very early times: use the short-time limit
-    early = t_star < 1e-8
-    s_star[early] = -_SHORT_TIME_FACTOR * np.sqrt(t_star[early])
-    if radius is None:
-        return s_star
-    return s_star * radius / (diffusivity * FARADAY)
+from pybamm_model_zoo.dual_continuum.isolated_sphere import (
+    FARADAY,
+    SHORT_TIME_FACTOR,
+    mode_weights,
+)
+from pybamm_model_zoo.dual_continuum.particle import parameter_name, time_constant_name
 
 
 @dataclass(frozen=True)
@@ -285,53 +207,6 @@ class TransientClosureFit:
         return "\n".join(lines)
 
 
-def parameter_name(domain: str, name: str, phase: str | None = None) -> str:
-    """Full name of a dual-continuum parameter.
-
-    Parameters
-    ----------
-    domain : str
-        "Positive" or "Negative".
-    name : str
-        The parameter, e.g. "s0 surface average".
-    phase : str, optional
-        "primary" or "secondary", only for an electrode with several particle
-        phases.
-
-    Returns
-    -------
-    str
-        "{Domain} electrode {name}", prefixed with "Primary: " or "Secondary: "
-        when ``phase`` is given, as for PyBaMM's own particle parameters.
-    """
-    Domain = domain.capitalize()
-    if Domain not in ("Positive", "Negative"):
-        raise ValueError(f"domain must be 'Positive' or 'Negative', not {domain}")
-    if phase not in (None, "primary", "secondary"):
-        raise ValueError(f"phase must be 'primary', 'secondary' or None, not {phase}")
-    prefix = f"{phase.capitalize()}: " if phase else ""
-    return f"{prefix}{Domain} electrode {name}"
-
-
-def time_constant_name(m: int, dimensionless: bool) -> str:
-    """Name of the time constant of mode ``m``, without electrode and phase.
-
-    Parameters
-    ----------
-    m : int
-        Mode number, from 1.
-    dimensionless : bool
-        Whether the time constant is dimensionless.
-
-    Returns
-    -------
-    str
-        The name to pass to :func:`parameter_name`.
-    """
-    unit = "dimensionless" if dimensionless else "[s]"
-    return f"transient closure time constant {m} {unit}"
-
-
 def short_time_limit(t, steady_value, diffusivity=None, dimensionless=False):
     """Short-time limit of the closure variable, valid for any geometry.
 
@@ -357,22 +232,10 @@ def short_time_limit(t, steady_value, diffusivity=None, dimensionless=False):
         The short-time limit at ``t``.
     """
     t = np.asarray(t, dtype=float)
-    magnitude = _SHORT_TIME_FACTOR * np.sqrt(t)
+    magnitude = SHORT_TIME_FACTOR * np.sqrt(t)
     if not dimensionless:
         magnitude = magnitude / (np.sqrt(diffusivity) * FARADAY)
     return np.sign(steady_value) * magnitude
-
-
-def _fit_weights(t, s, steady_value, time_constants):
-    """Non-negative weights, summing to 1, of modes with the given time constants."""
-    basis = 1 - np.exp(-np.outer(t, 1 / time_constants))
-    # A heavily weighted extra row imposes sum(w) = 1
-    penalty = 1e3 * np.sqrt(len(t))
-    matrix = np.vstack([basis, penalty * np.ones(len(time_constants))])
-    rhs = np.concatenate([s / steady_value, [penalty]])
-    weights, _ = nnls(matrix, rhs)
-    weights = weights / weights.sum()
-    return weights, np.abs(steady_value * (basis @ weights) - s).max()
 
 
 def fit_transient_closure(
@@ -480,7 +343,7 @@ def fit_transient_closure(
     best = None
     for n in candidates:
         time_constants = np.geomspace(low, high, n) if n > 1 else np.array([high])
-        weights, error = _fit_weights(t, s, steady_value, time_constants)
+        weights, error = mode_weights(t, s, steady_value, time_constants)
         if best is None or error < best[2] * (1 - 1e-6):
             best = (weights, time_constants, error)
         if error <= target:
@@ -580,40 +443,3 @@ def _replace_early_times(
         np.concatenate([s_short, s[keep]]),
         info,
     )
-
-
-@functools.cache
-def isolated_sphere_modes(n_modes: int) -> tuple[tuple[float, ...], tuple[float, ...]]:
-    """Weights and dimensionless time constants for an isolated sphere.
-
-    Time constants are in units of :math:`R^2/D`, fitted to
-    :func:`isolated_sphere_closure` between :math:`10^{-6}` and the slowest
-    eigenmode, :math:`1/\\lambda_1^2`.
-
-    Parameters
-    ----------
-    n_modes : int
-        Number of modes.
-
-    Returns
-    -------
-    tuple
-        The weights and the time constants.
-    """
-    t_star = np.geomspace(1e-8, 2, 600)
-    slowest = 1 / sphere_eigenvalues(1)[0] ** 2
-    fit = fit_transient_closure(
-        t_star,
-        isolated_sphere_closure(t_star),
-        steady_value=-0.2,
-        n_modes=n_modes,
-        time_constant_range=(1e-6, slowest),
-    )
-    # Modes dropped by the fit are kept with zero weight so the count matches
-    weights = np.zeros(n_modes)
-    time_constants = (
-        np.geomspace(1e-6, slowest, n_modes) if n_modes > 1 else np.array([slowest])
-    )
-    for weight, theta in zip(fit.weights, fit.time_constants, strict=True):
-        weights[np.argmin(np.abs(time_constants - theta))] = weight
-    return tuple(float(w) for w in weights), tuple(float(x) for x in time_constants)

@@ -8,12 +8,12 @@ from pybamm_model_zoo.dual_continuum import (
     isolated_sphere_closure,
     parameter_sets,
 )
-from pybamm_model_zoo.dual_continuum.transient_closure import (
+from pybamm_model_zoo.dual_continuum.isolated_sphere import (
     FARADAY,
     isolated_sphere_modes,
-    short_time_limit,
     sphere_eigenvalues,
 )
+from pybamm_model_zoo.dual_continuum.transient_closure import short_time_limit
 
 TIMES = np.geomspace(1e-3, 1e3, 300)
 

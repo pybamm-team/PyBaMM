@@ -4,17 +4,15 @@ from __future__ import annotations
 
 import pybamm
 import pybamm_model_zoo
-from pybamm_model_zoo.dual_continuum.dc_active_material import (
+from pybamm_model_zoo.dual_continuum.active_material import (
     ConstantFromImage,
     ConstantSpherical,
 )
-from pybamm_model_zoo.dual_continuum.dc_options import DCModelOptions
-from pybamm_model_zoo.dual_continuum.dc_particle import (
+from pybamm_model_zoo.dual_continuum.isolated_sphere import isolated_sphere_modes
+from pybamm_model_zoo.dual_continuum.options import DCModelOptions
+from pybamm_model_zoo.dual_continuum.particle import (
     DCParticle,
     TransientDCParticle,
-)
-from pybamm_model_zoo.dual_continuum.transient_closure import (
-    isolated_sphere_modes,
     parameter_name,
     time_constant_name,
 )

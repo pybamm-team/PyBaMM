@@ -1,13 +1,56 @@
-"""Dual-continuum particle submodel."""
+"""Dual-continuum particle submodels, and the names of their parameters."""
 
 from __future__ import annotations
 
 import pybamm
-from pybamm_model_zoo.dual_continuum.transient_closure import (
-    isolated_sphere_modes,
-    parameter_name,
-    time_constant_name,
-)
+from pybamm_model_zoo.dual_continuum.isolated_sphere import isolated_sphere_modes
+
+
+def parameter_name(domain: str, name: str, phase: str | None = None) -> str:
+    """Full name of a dual-continuum parameter.
+
+    Parameters
+    ----------
+    domain : str
+        "Positive" or "Negative".
+    name : str
+        The parameter, e.g. "s0 surface average".
+    phase : str, optional
+        "primary" or "secondary", only for an electrode with several particle
+        phases.
+
+    Returns
+    -------
+    str
+        "{Domain} electrode {name}", prefixed with "Primary: " or "Secondary: "
+        when ``phase`` is given, as for PyBaMM's own particle parameters.
+    """
+    Domain = domain.capitalize()
+    if Domain not in ("Positive", "Negative"):
+        raise ValueError(f"domain must be 'Positive' or 'Negative', not {domain}")
+    if phase not in (None, "primary", "secondary"):
+        raise ValueError(f"phase must be 'primary', 'secondary' or None, not {phase}")
+    prefix = f"{phase.capitalize()}: " if phase else ""
+    return f"{prefix}{Domain} electrode {name}"
+
+
+def time_constant_name(m: int, dimensionless: bool) -> str:
+    """Name of the time constant of mode ``m``, without electrode and phase.
+
+    Parameters
+    ----------
+    m : int
+        Mode number, from 1.
+    dimensionless : bool
+        Whether the time constant is dimensionless.
+
+    Returns
+    -------
+    str
+        The name to pass to :func:`parameter_name`.
+    """
+    unit = "dimensionless" if dimensionless else "[s]"
+    return f"transient closure time constant {m} {unit}"
 
 
 class DCParticle(pybamm.particle.BaseParticle):
