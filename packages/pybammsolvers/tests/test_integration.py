@@ -6,6 +6,10 @@ with realistic data and parameter configurations.
 
 from __future__ import annotations
 
+import ctypes
+import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -14,6 +18,26 @@ import pybammsolvers
 
 def is_monotonic_increasing(arr):
     return np.all(np.diff(arr) >= 0)
+
+
+def loaded_openmp_runtime():
+    """Return the OpenMP runtime already loaded by pybammsolvers, or None."""
+    if sys.platform == "darwin":
+        libsystem = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
+        image_name = libsystem["_dyld_get_image_name"]
+        image_name.restype = ctypes.c_char_p
+        image_count = libsystem["_dyld_image_count"]()
+        paths = [image_name(i).decode() for i in range(image_count)]
+    elif sys.platform.startswith("linux"):
+        maps = Path("/proc/self/maps").read_text().splitlines()
+        paths = [line.split()[-1] for line in maps if "/" in line]
+    else:
+        return None
+    for path in paths:
+        name = Path(path).name
+        if name.startswith(("libomp", "libgomp", "libiomp")):
+            return ctypes.CDLL(path)
+    return None
 
 
 class TestExponentialDecaySolver:
@@ -211,6 +235,29 @@ class TestExponentialDecaySolver:
         # For our model, the output variable is simply the final state slice
         np.testing.assert_allclose(sol.y_term, y_exact[-1], rtol=1e-5)
 
+    def test_solution_initial_state(self, exponential_decay_solver):
+        """
+        Verify Solution returns the initial state alongside the outputs.
+
+        Tests that y_init holds the state at t0, which the outputs do not.
+        """
+        solver_data = exponential_decay_solver
+        solver = solver_data["solver"]
+        y0 = solver_data["y0"]
+        yp0 = solver_data["yp0"]
+        inputs = solver_data["inputs"]
+        t_eval = solver_data["model"]["t_eval"]
+        model_y0 = solver_data["model"]["y0"]
+
+        solution = solver.solve(t_eval, t_eval, y0, yp0, inputs)
+        sol = solution[0]
+
+        np.testing.assert_allclose(sol.y_init, model_y0, rtol=1e-10)
+        assert sol.y_init.shape == sol.y_term.shape
+        # One row per sensitivity parameter, and this solve has none
+        assert sol.yS_init.shape == (0, sol.y_init.size)
+        assert sol.yS_term.shape == sol.yS_init.shape
+
     def test_solution_dimensions_consistency(self, exponential_decay_solver):
         """
         Verify Solution arrays have consistent dimensions.
@@ -264,6 +311,73 @@ class TestExponentialDecaySolver:
             for idx, sol in enumerate(solutions):
                 expected = model_y0 * np.exp(-decay_constants[idx] * sol.t)
                 np.testing.assert_allclose(sol.y, expected, rtol=1e-5, atol=1e-8)
+
+    def test_a_single_solve_runs_outside_any_openmp_region(
+        self, exponential_decay_solver
+    ):
+        """
+        Verify OpenMP code called during a single solve is not nested.
+
+        The logger runs on the calling thread mid-solve, so it sees the OpenMP
+        level that any OpenMP code the model calls would run at.
+        """
+        runtime = loaded_openmp_runtime()
+        if runtime is None:
+            pytest.skip("Could not locate the loaded OpenMP runtime")
+
+        solver_data = exponential_decay_solver
+        t_eval = solver_data["model"]["t_eval"]
+        levels = []
+        solver_data["solver"].solve(
+            t_eval,
+            t_eval,
+            solver_data["y0"],
+            solver_data["yp0"],
+            solver_data["inputs"],
+            logger=lambda _: levels.append(runtime.omp_get_level()),
+        )
+
+        assert levels
+        assert set(levels) == {0}
+
+    def test_multiple_solvers_still_run_in_an_openmp_region(
+        self, idaklu_module, exponential_decay_model, exponential_decay_solver_factory
+    ):
+        """
+        Verify the multi-solver path still solves inside an OpenMP parallel region.
+
+        The calling thread streams its own set's diagnostics mid-solve, so its
+        logger sees level 1. This also shows the probe in the single-solve test
+        can see a nonzero level.
+        """
+        runtime = loaded_openmp_runtime()
+        if runtime is None:
+            pytest.skip("Could not locate the loaded OpenMP runtime")
+
+        decay_constants = np.array([0.5, 1.0], dtype=np.float64)
+        solver_data = exponential_decay_solver_factory(
+            idaklu_module,
+            exponential_decay_model,
+            num_threads=2,
+            num_solvers=2,
+            decay_constants=decay_constants,
+        )
+        t_eval = solver_data["model"]["t_eval"]
+        levels = []
+        solutions = solver_data["solver"].solve(
+            t_eval,
+            t_eval,
+            solver_data["y0"],
+            solver_data["yp0"],
+            solver_data["inputs"],
+            logger=lambda _: levels.append(runtime.omp_get_level()),
+        )
+
+        assert 1 in levels
+        model_y0 = solver_data["model"]["y0"]
+        for idx, sol in enumerate(solutions):
+            expected = model_y0 * np.exp(-decay_constants[idx] * sol.t)
+            np.testing.assert_allclose(sol.y, expected, rtol=1e-5, atol=1e-8)
 
 
 class TestSensitivityScales:

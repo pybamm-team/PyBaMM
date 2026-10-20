@@ -260,11 +260,12 @@ PYBIND11_MODULE(idaklu, m)
   py::class_<StandaloneNewtonSolver>(m, "StandaloneNewtonSolver")
     .def(py::init<casadi::Function, casadi::Function,
                   std::vector<sunrealtype>, sunrealtype, sunrealtype,
-                  int, int, sunrealtype, bool>(),
+                  int, int, sunrealtype, bool, sunrealtype>(),
          py::arg("residual"), py::arg("jacobian"),
          py::arg("atol"), py::arg("rtol"), py::arg("step_tol"),
          py::arg("max_iter"), py::arg("max_backtracks"),
-         py::arg("eps_newt"), py::arg("use_sparse"))
+         py::arg("eps_newt"), py::arg("use_sparse"),
+         py::arg("klu_pivot_tolerance") = 0.1)
     .def("solve", &StandaloneNewtonSolver::solve,
          py::arg("t"), py::arg("y0"), py::arg("inputs"),
          py::arg("logger") = py::none(),
@@ -293,7 +294,10 @@ PYBIND11_MODULE(idaklu, m)
     .def_readwrite("yp", &Solution::yp)
     .def_readwrite("yS", &Solution::yS)
     .def_readwrite("ypS", &Solution::ypS)
+    .def_readwrite("y_init", &Solution::y_init)
     .def_readwrite("y_term", &Solution::y_term)
+    .def_readwrite("yS_init", &Solution::yS_init)
+    .def_readwrite("yS_term", &Solution::yS_term)
     .def_readwrite("flag", &Solution::flag)
     .def_readonly("stats", &Solution::stats);
 
