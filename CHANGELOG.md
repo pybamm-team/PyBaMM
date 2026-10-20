@@ -2,7 +2,7 @@
 
 ## Deprecated
 
-- `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created; `BasicDFN2D` uses it by default, so creating that model warns too. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#PR](https://github.com/pybamm-team/PyBaMM/pull/PR))
+- `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created; `BasicDFN2D` uses it by default, so creating that model warns too. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
 
 ## Bug fixes
 
