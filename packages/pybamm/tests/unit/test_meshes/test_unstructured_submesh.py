@@ -866,6 +866,10 @@ class TestFileGenerators:
         assert f({"z": {}, "x_n": {}}) == "negative electrode"
         assert f({"y": {}, "z": {}, "x_p": {}}) == "positive electrode"
         assert f({"z": {}}) == "current collector"
+        # ...even when the current collector is itself mapped
+        mapped = {"negative electrode": 1, "current collector": 2}
+        assert f({"z": {}, "x_n": {}, "y": {}}, mapped) == "negative electrode"
+        assert f({"z": {}}, mapped) == "current collector"
         # a domain in the mapping wins over any other
         assert f({x: {}, x_ncc: {}}, {"negative current collector": 1}) == (
             "negative current collector"

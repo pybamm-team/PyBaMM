@@ -1036,8 +1036,10 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
                 candidates.append(var.domain[0])
         # Standard y and z live on the current collector whichever domain
         # they mesh, so they only name it when nothing else does
+        in_mapping = [c for c in candidates if c in subdomain_mapping]
         for pool in (
-            [c for c in candidates if c in subdomain_mapping],
+            [c for c in in_mapping if c != "current collector"],
+            in_mapping,
             [c for c in candidates if c != "current collector"],
             candidates,
         ):
