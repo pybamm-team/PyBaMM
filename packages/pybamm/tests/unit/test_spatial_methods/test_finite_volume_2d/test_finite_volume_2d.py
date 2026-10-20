@@ -1122,6 +1122,23 @@ class TestFiniteVolume2D:
         roundtripped = pickle.loads(pickle.dumps(grad_disc))
         np.testing.assert_array_equal(roundtripped.lr_field.evaluate(None, y), expected)
 
+    def test_edge_direction(self):
+        vector_field = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        edge_direction = pybamm.FiniteVolume2D._edge_direction
+        assert edge_direction(pybamm.Component(vector_field, 0)) == "lr"
+        assert edge_direction(pybamm.Component(vector_field, 1)) == "tb"
+        with pytest.warns(DeprecationWarning, match="Magnitude is deprecated"):
+            magnitude = pybamm.Magnitude(vector_field, "tb")
+        assert edge_direction(magnitude) == "tb"
+
+        three_component_field = pybamm.VectorField(
+            pybamm.Scalar(1), pybamm.Scalar(2), pybamm.Scalar(3)
+        )
+        with pytest.raises(
+            pybamm.DiscretisationError, match=r"not a 2D lr/tb direction"
+        ):
+            edge_direction(pybamm.Component(three_component_field, 2))
+
     def test_delta_function(self, mesh_2d):
         # Create discretisation
         mesh = mesh_2d
