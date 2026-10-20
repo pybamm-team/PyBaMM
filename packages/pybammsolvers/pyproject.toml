@@ -18,7 +18,7 @@ requires-python = ">=3.10,<3.16"
 license-files = ["LICENSE"]
 readme = "README.md"
 # version.py stays the source of truth; a pre-commit hook mirrors it here.
-version = "0.11.0"
+version = "0.11.1"
 dependencies = [
     "casadi==3.8.1",
     "numpy>=2.0.0",

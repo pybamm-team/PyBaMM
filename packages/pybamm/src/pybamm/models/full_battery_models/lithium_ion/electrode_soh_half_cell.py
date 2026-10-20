@@ -6,7 +6,7 @@ import warnings
 import pybamm
 
 from .electrode_soh import get_esoh_default_solver
-from .util import check_if_composite, get_lithiation_delithiation
+from .util import check_if_composite, get_initial_ocp, get_lithiation_delithiation
 
 
 class ElectrodeSOHHalfCell(pybamm.BaseModel):
@@ -175,18 +175,32 @@ def get_initial_stoichiometry_half_cell(
         # Solve simple model for initial soc based on target voltage
         model = pybamm.BaseModel()
         x = pybamm.Variable("x")
-        Up = param.p.prim.U
         T_init = param.T_init
         model.variables["x"] = x
-        model.algebraic[x] = Up(x, T_init, lith_delith_primary) - V_init
+        model.algebraic[x] = (
+            get_initial_ocp(
+                param.p.prim, x, T_init, direction, "positive", options, "primary"
+            )
+            - V_init
+        )
         # initial guess for x linearly interpolates between 0 and 1
         # based on V linearly interpolating between V_max and V_min
         soc_initial_guess = (V_init - V_min) / (V_max - V_min)
         model.initial_conditions[x] = 1 - soc_initial_guess
         if is_composite:
-            Up_2 = param.p.sec.U
             x_2 = pybamm.Variable("x_2")
-            model.algebraic[x_2] = Up_2(x_2, T_init, lith_delith_secondary) - V_init
+            model.algebraic[x_2] = (
+                get_initial_ocp(
+                    param.p.sec,
+                    x_2,
+                    T_init,
+                    direction,
+                    "positive",
+                    options,
+                    "secondary",
+                )
+                - V_init
+            )
             model.variables["x_2"] = x_2
             model.initial_conditions[x_2] = 1 - soc_initial_guess
 

@@ -1,5 +1,17 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
+
+# [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
+
+## Bug fixes
+
+- `set_initial_state` without a `direction` now keeps a user-set `"Initial hysteresis state in {electrode} electrode"` and solves the initial stoichiometries on the OCP at that state, `(1 + h0) / 2 * U_delith + (1 - h0) / 2 * U_lith`. Before, it reset the state to 0 and solved on `"{Electrode} electrode OCP [V]"`, so a hysteresis model started at h = 0 and, when that OCP differed from the branch average, away from the requested voltage. With h0 = 0 the initial stoichiometries now come from the branch average rather than `"OCP [V]"`. ([#5928](https://github.com/pybamm-team/PyBaMM/pull/5928))
+
+# [v26.10.1.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.0) - 2026-10-13
+
 ## Features
 
 - Added support for Python 3.15 to `pybamm` and `pybammsolvers`. On 3.15, the `vtk` extra installs nothing until cp315 wheels are available for it. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
@@ -10,6 +22,7 @@
 
 ## Bug fixes
 
+- `IDAKLUSolver` no longer fails to converge when the AMD-ordered KLU factorisation picks a weak pivot. KLU now rejects pivots smaller than 0.1 of the largest entry in their column, instead of 0.001. The new `klu_pivot_tolerance` option of `IDAKLUSolver` and `NonlinearSolver` sets this tolerance, from just above 0 up to 1 (full partial pivoting). ([#5904](https://github.com/pybamm-team/PyBaMM/pull/5904))
 - `"intercalation kinetics": "Marcus"` now gives a positive current for a positive overpotential, as the other kinetics do, and converts the reorganization energy from eV with F/RT, as Marcus-Hush-Chidsey does. Previously the oxidation and reduction terms were swapped and the energy was used in mixed units, so models with Marcus kinetics failed to solve. ([#5872](https://github.com/pybamm-team/PyBaMM/pull/5872))
 - Evaluating a processed variable at a 0-d array time, e.g. `solution["Voltage [V]"](np.array(10.0))`, now returns the same value as passing the float rather than raising an `IndexError`. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - Fixed the particle concentration of the `"quartic profile"` particle model in models that resolve the electrode (e.g. DFN), which was missing a factor of the particle radius on the concentration gradient term and diverged to unphysical values. ([#5893](https://github.com/pybamm-team/PyBaMM/pull/5893))

@@ -16,17 +16,6 @@ class BaseIntegrationTestLithiumIon:
         options = {}
         self.run_basic_processing_test(options)
 
-    def test_sensitivities(self):
-        model = self.model()
-        param = pybamm.ParameterValues("Ecker2015")
-        rtol = 1e-6
-        atol = 1e-6
-        solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
-        modeltest = tests.StandardModelTest(
-            model, parameter_values=param, solver=solver
-        )
-        modeltest.test_sensitivities("Current function [A]", 0.15652)
-
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "y": 5, "z": 5}

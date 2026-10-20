@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pybamm-model-zoo"
-version = "0.1.0"
+version = "0.1.1"
 license = "BSD-3-Clause"
 license-files = ["LICENSE.txt"]
 description = "Community- and partner-contributed battery models for PyBaMM"
@@ -29,8 +29,9 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    # Every model's floor: a model that needs a newer PyBaMM raises it.
-    "pybamm>=26.10.1",
+    # Every model's floor: a model that needs a newer PyBaMM raises it. `cite` lets
+    # `pybamm.print_citations()` credit the zoo models' authors.
+    "pybamm[cite]>=26.10.1",
     "packaging>=23.0",
     "tomli>=2.0.1; python_version < '3.11'",
 ]
