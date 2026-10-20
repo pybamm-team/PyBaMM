@@ -5,7 +5,7 @@
 import warnings
 
 import pybamm
-from pybamm.models.full_battery_models import base_battery_model
+from pybamm.models.full_battery_models import battery_model_options
 
 all_options = pybamm.BatteryModelOptions({}).possible_options
 all_parameter_sets = [
@@ -14,14 +14,14 @@ all_parameter_sets = [
 
 
 def make_model(options):
-    previous_forbid = base_battery_model._FORBID_LEGACY_OPTION_DEFAULTS
-    base_battery_model._FORBID_LEGACY_OPTION_DEFAULTS = False
+    previous_forbid = battery_model_options._FORBID_LEGACY_OPTION_DEFAULTS
+    battery_model_options._FORBID_LEGACY_OPTION_DEFAULTS = False
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", pybamm.OptionDefaultDeprecationWarning)
             return pybamm.lithium_ion.SPM(options)
     finally:
-        base_battery_model._FORBID_LEGACY_OPTION_DEFAULTS = previous_forbid
+        battery_model_options._FORBID_LEGACY_OPTION_DEFAULTS = previous_forbid
 
 
 for option_name, option_list in all_options.items():
