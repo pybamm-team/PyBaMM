@@ -62,7 +62,19 @@ class TestBaseLithiumIonModel:
 
     @pytest.mark.parametrize(
         "options, explicit",
-        [({}, True), ({"SEI": ("reaction limited", "none")}, False)],
+        [
+            ({}, True),
+            ({"SEI": ("reaction limited", "none")}, False),
+            (
+                {
+                    "intercalation kinetics": (
+                        "symmetric Butler-Volmer",
+                        "asymmetric Butler-Volmer",
+                    )
+                },
+                True,
+            ),
+        ],
     )
     def test_half_cell_counter_electrode_reads_its_own_sei(self, options, explicit):
         model = pybamm.lithium_ion.DFN({"working electrode": "positive", **options})

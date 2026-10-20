@@ -1523,11 +1523,15 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Lead-acid models can only have thermal "
                     "effects if dimensionality is 0."
                 )
-            if options["SEI"] != "none" or options["SEI film resistance"] != "none":
+
+            def leaves(option):
+                return {leaf for _, leaf in iter_option_leaves(option, options[option])}
+
+            if leaves("SEI") != {"none"} or options["SEI film resistance"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
-            if options["lithium plating"] != "none":
+            if leaves("lithium plating") != {"none"}:
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
-            if options["open-circuit potential"] == "MSMR":
+            if "MSMR" in leaves("open-circuit potential"):
                 raise pybamm.OptionError(
                     "Lead-acid models cannot use the MSMR open-circuit potential model"
                 )

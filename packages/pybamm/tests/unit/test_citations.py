@@ -237,6 +237,14 @@ class TestCitations:
         pybamm.lithium_ion.SPM(build=False, options={"SEI": "constant"})
         pybamm.lithium_ion.SPMe(build=False, options={"SEI": "none"})
         pybamm.lithium_ion.SPMe(build=False, options={"SEI": "constant"})
+        pybamm.lithium_ion.SPM(
+            build=False,
+            options={
+                "particle phases": ("2", "1"),
+                "surface form": "algebraic",
+                "SEI": (("none", "constant"), "none"),
+            },
+        )
         assert "BrosaPlanella2022" not in citations._papers_to_cite
 
         pybamm.lithium_ion.SPM(build=False, options={"SEI": "ec reaction limited"})
