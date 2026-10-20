@@ -2,9 +2,12 @@
 # Tests for the base model class
 #
 
+import random
+import warnings
+
 import numpy as np
 import pytest
-from scipy.sparse import block_diag, issparse
+from scipy.sparse import block_diag, csr_matrix, issparse
 
 import pybamm
 from tests import (
@@ -65,6 +68,43 @@ class TestDiscretise:
 
         for child in c_e.children:
             assert child in disc.bcs
+
+    def test_internal_boundary_conditions_require_left_right(self):
+        model = pybamm.BaseModel()
+        c_e_n = pybamm.Variable("c_e_n", ["negative electrode"])
+        c_e_s = pybamm.Variable("c_e_s", ["separator"])
+        c_e_p = pybamm.Variable("c_e_p", ["positive electrode"])
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
+        bc = (pybamm.Scalar(0), "Neumann")
+        model.boundary_conditions = {c_e: {"top": bc, "bottom": bc}}
+
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": SpatialMethodForTesting()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.set_variable_slices([c_e_n, c_e_s, c_e_p])
+        disc.bcs = model.boundary_conditions
+        # the base hook declines, so the legacy 1D-stack routine runs (and
+        # raises here because it requires left/right BCs)
+        assert (
+            spatial_methods["macroscale"].set_internal_bcs_for_concat(
+                disc, c_e, c_e.orphans, disc.bcs[c_e]
+            )
+            is None
+        )
+        with pytest.raises(pybamm.DiscretisationError, match="'left' and 'right'"):
+            disc.set_internal_boundary_conditions(model)
+
+    def test_custom_side_containing_tab_substring(self):
+        # arbitrary mesh region tags containing "tab" (e.g. "tab_weld") must
+        # not be routed into the legacy tab-condition check, which raises
+        # ModelError outside the current-collector domain
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": SpatialMethodForTesting()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        disc.set_variable_slices([var])
+        disc.bcs = {var: {"tab_region": (pybamm.Scalar(0), "Neumann")}}
+        disc.process_symbol(var)
 
     def test_add_internal_boundary_conditions_symbolic(self):
         submesh_types = {
@@ -1036,7 +1076,6 @@ class TestDiscretise:
 
         # Without simplification
         conc = pybamm.concatenation(2 * a, 3 * b, 4 * c)
-        conc.bounds = (-np.inf, np.inf)
         disc.set_variable_slices([a, b, c])
         expr = disc.process_symbol(conc)
         assert isinstance(expr, pybamm.DomainConcatenation)
@@ -1117,6 +1156,26 @@ class TestDiscretise:
 
         assert issparse(model.mass_matrix.entries)
         assert not model.is_standard_form_dae
+
+    @pytest.mark.parametrize("domain", [[], "current collector"])
+    def test_mass_matrix_of_dense_blocks_is_a_sparse_matrix(self, domain):
+        u = pybamm.Variable("u", domain=domain)
+        v = pybamm.Variable("v", domain=domain)
+        model = pybamm.BaseModel()
+        model.rhs = {u: -u, v: -v}
+        model.initial_conditions = {u: 1, v: 2}
+        model.variables = {"u": u, "v": v}
+        disc = get_discretisation_for_testing(
+            cc_method=pybamm.ZeroDimensionalSpatialMethod
+        )
+
+        with warnings.catch_warnings():
+            # scipy 1.18 deprecates block_diag of only dense blocks
+            warnings.simplefilter("error", DeprecationWarning)
+            disc.process_model(model)
+
+        assert isinstance(model.mass_matrix.entries, csr_matrix)
+        np.testing.assert_array_equal(model.mass_matrix.entries.toarray(), np.eye(2))
 
     def test_process_input_variable(self):
         disc = get_discretisation_for_testing()
@@ -1251,6 +1310,28 @@ class TestDiscretise:
         disc.process_model(model)
         assert len(model.rhs) == 1
 
+    def test_discretised_nodes_keep_symbol_domains(self):
+        # a boundary value discretises onto the current collector; its parents
+        # must still carry the symbol's (empty) domains
+        model = pybamm.lithium_ion.SPM({"SEI": "reaction limited"})
+        sim = pybamm.Simulation(model)
+        sim.build()
+        name = "Loss of lithium to negative SEI [mol]"
+        assert sim.built_model.get_processed_variable(name).domain == []
+
+    def test_independent_rhs_keeps_last_equation(self):
+        x, y = pybamm.Variable("x"), pybamm.Variable("y")
+        model = pybamm.BaseModel()
+        model.rhs = {x: 1, y: 2}
+        model.initial_conditions = {x: 0, y: 0}
+        model.variables = {"x": x, "y": y}
+        disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
+        disc.process_model(model)
+        assert len(model.rhs) == 1
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
+        np.testing.assert_allclose(solution["x"](1), 1, rtol=1e-6)
+        np.testing.assert_allclose(solution["y"](1), 2, rtol=1e-6)
+
     def test_independent_rhs_with_event(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
@@ -1373,3 +1454,68 @@ class TestDiscretise:
             assert isinstance(var, (pybamm.Variable | pybamm.Concatenation)), (
                 f"Unexpected new variable '{name}' added by process_model"
             )
+
+    def test_process_model_is_independent_of_variable_order(self):
+        # a one-point integration or broadcast can simplify back to its child,
+        # which discretisation caches and would otherwise be mutated in place
+        def discretise(shuffle_seed):
+            model = pybamm.lithium_ion.SPMe()
+            names = list(model.variables)
+            if shuffle_seed is not None:
+                random.Random(shuffle_seed).shuffle(names)
+            model.variables = pybamm.FuzzyDict(
+                {name: model.variables[name] for name in names}
+            )
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            parameter_values.process_model(model)
+            geometry = model.default_geometry
+            parameter_values.process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
+            return model.get_processed_variables_dict()
+
+        reference = discretise(None)
+        for seed in (1, 2):
+            shuffled = discretise(seed)
+            differing = [
+                name for name, expr in reference.items() if expr.id != shuffled[name].id
+            ]
+            assert differing == []
+
+    def test_process_model_copies_function_subclass_child(self):
+        # a one-point integration simplifies back to its child; copying that child
+        # must go through the subclass, or Arcsinh2's bound `eps` is lost
+        model = pybamm.lithium_ion.SPM({"thermal": "lumped"})
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.process_model(model)
+        geometry = model.default_geometry
+        parameter_values.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+
+        disc.process_model(model)
+
+        assert "Voltage [V]" in model.get_processed_variables_dict()
+
+    def test_one_point_integral_copies_time_derivative_child(self):
+        # a one-point integration simplifies back to its child; the copy made to
+        # spare the cached child must still read y_dot rather than y
+        disc = get_discretisation_for_testing(
+            cc_method=pybamm.ZeroDimensionalSpatialMethod
+        )
+        variable = pybamm.Variable("variable", domain="current collector")
+        disc.y_slices = {variable: [slice(0, 1)]}
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        time_derivative = variable.diff(pybamm.t)
+        disc_time_derivative = disc.process_symbol(time_derivative)
+
+        integral = disc.process_symbol(pybamm.Integral(time_derivative, z))
+
+        assert integral is not disc_time_derivative
+        assert type(integral) is pybamm.StateVectorDot
+        np.testing.assert_array_equal(
+            integral.evaluate(y=np.array([7.0]), y_dot=np.array([3.0])), [[3.0]]
+        )

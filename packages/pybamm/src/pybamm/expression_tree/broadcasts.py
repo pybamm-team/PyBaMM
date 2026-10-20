@@ -9,6 +9,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 import pybamm
+from pybamm.expression_tree.symbol import _domain_list
 from pybamm.type_definitions import (
     AuxiliaryDomainType,
     DomainsType,
@@ -36,6 +37,8 @@ class Broadcast(pybamm.SpatialOperator):
     name : str
         name of the node
     """
+
+    __slots__ = ("broadcast_domain", "broadcast_type")
 
     def __init__(
         self,
@@ -99,6 +102,8 @@ class PrimaryBroadcast(Broadcast):
         name of the node
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         child: Numeric | pybamm.Symbol,
@@ -113,8 +118,7 @@ class PrimaryBroadcast(Broadcast):
         child = cast(pybamm.Symbol, child)
 
         # Convert domain to list if it's a string
-        if isinstance(broadcast_domain, str):
-            broadcast_domain = [broadcast_domain]
+        broadcast_domain = _domain_list(broadcast_domain)
         # perform some basic checks and set attributes
         domains = self.check_and_set_domains(child, broadcast_domain)
         self.broadcast_domain = broadcast_domain
@@ -128,9 +132,9 @@ class PrimaryBroadcast(Broadcast):
         # Note e.g. current collector to particle *is* allowed
         if broadcast_domain == []:
             raise pybamm.DomainError("Cannot Broadcast an object into empty domain.")
-        if child.domain == []:
+        if child._domains["primary"] == []:
             pass
-        elif child.domain == ["current collector"] and not (
+        elif child._domains["primary"] == ["current collector"] and not (
             broadcast_domain[0]
             in [
                 "negative electrode",
@@ -144,7 +148,7 @@ class PrimaryBroadcast(Broadcast):
                 or separator or particle or particle size domains"""
             )
         elif (
-            child.domain[0]
+            child._domains["primary"][0]
             in [
                 "negative electrode",
                 "separator",
@@ -156,7 +160,7 @@ class PrimaryBroadcast(Broadcast):
                 """Primary broadcast from electrode or separator must be to particle
                 or particle size domains"""
             )
-        elif child.domain[0] in [
+        elif child._domains["primary"][0] in [
             "negative particle size",
             "positive particle size",
         ] and broadcast_domain[0] not in ["negative particle", "positive particle"]:
@@ -164,14 +168,14 @@ class PrimaryBroadcast(Broadcast):
                 """Primary broadcast from particle size domain must be to particle
                 domain"""
             )
-        elif child.domain[0] in ["negative particle", "positive particle"]:
+        elif child._domains["primary"][0] in ["negative particle", "positive particle"]:
             raise pybamm.DomainError("Cannot do primary broadcast from particle domain")
 
         domains = {
             "primary": broadcast_domain,
-            "secondary": child.domain,
-            "tertiary": child.domains["secondary"],
-            "quaternary": child.domains["tertiary"],
+            "secondary": child._domains["primary"],
+            "tertiary": child._domains["secondary"],
+            "quaternary": child._domains["tertiary"],
         }
 
         return domains
@@ -181,8 +185,8 @@ class PrimaryBroadcast(Broadcast):
         Returns a vector of NaNs to represent the shape of a Broadcast.
         See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
         """
-        child_eval = self.children[0].evaluate_for_shape()
-        vec = pybamm.evaluate_for_shape_using_domain(self.domains["primary"])
+        child_eval = self._children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self._domains["primary"])
         return np.outer(child_eval, vec).reshape(-1, 1)
 
     def to_json(self):
@@ -208,6 +212,8 @@ class PrimaryBroadcast(Broadcast):
 
 class PrimaryBroadcastToEdges(PrimaryBroadcast):
     """A primary broadcast onto the edges of the domain."""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -245,6 +251,8 @@ class SecondaryBroadcast(Broadcast):
         name of the node
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         child: pybamm.Symbol,
@@ -252,8 +260,7 @@ class SecondaryBroadcast(Broadcast):
         name: str | None = None,
     ):
         # Convert domain to list if it's a string
-        if isinstance(broadcast_domain, str):
-            broadcast_domain = [broadcast_domain]
+        broadcast_domain = _domain_list(broadcast_domain)
         # perform some basic checks and set attributes
         domains = self.check_and_set_domains(child, broadcast_domain)
         self.broadcast_domain = broadcast_domain
@@ -262,14 +269,14 @@ class SecondaryBroadcast(Broadcast):
 
     def check_and_set_domains(self, child: pybamm.Symbol, broadcast_domain: list[str]):
         """See :meth:`Broadcast.check_and_set_domains`"""
-        if child.domain == []:
+        if child._domains["primary"] == []:
             raise TypeError(
                 "Cannot take SecondaryBroadcast of an object with empty domain. "
                 "Use PrimaryBroadcast instead."
             )
         # Can only do secondary broadcast from particle to electrode or current
         # collector or from electrode to current collector
-        if child.domain[0] in [
+        if child._domains["primary"][0] in [
             "negative particle",
             "positive particle",
         ] and broadcast_domain[0] not in [
@@ -284,7 +291,7 @@ class SecondaryBroadcast(Broadcast):
                 """Secondary broadcast from particle domain must be to particle-size,
                 electrode, separator, or current collector domains"""
             )
-        if child.domain[0] in [
+        if child._domains["primary"][0] in [
             "negative particle size",
             "positive particle size",
         ] and broadcast_domain[0] not in [
@@ -297,7 +304,7 @@ class SecondaryBroadcast(Broadcast):
                 """Secondary broadcast from particle size domain must be to
                 electrode or separator or current collector domains"""
             )
-        elif child.domain[0] in [
+        elif child._domains["primary"][0] in [
             "negative electrode",
             "separator",
             "positive electrode",
@@ -306,7 +313,7 @@ class SecondaryBroadcast(Broadcast):
                 """Secondary broadcast from electrode or separator must be to
                 current collector domains"""
             )
-        elif child.domain == ["current collector"]:
+        elif child._domains["primary"] == ["current collector"]:
             raise pybamm.DomainError(
                 "Cannot do secondary broadcast from current collector domain"
             )
@@ -314,10 +321,10 @@ class SecondaryBroadcast(Broadcast):
         # domain
         # Child's secondary domain becomes tertiary domain, tertiary becomes quaternary
         domains = {
-            "primary": child.domains["primary"],
+            "primary": child._domains["primary"],
             "secondary": broadcast_domain,
-            "tertiary": child.domains["secondary"],
-            "quaternary": child.domains["tertiary"],
+            "tertiary": child._domains["secondary"],
+            "quaternary": child._domains["tertiary"],
         }
 
         return domains
@@ -327,8 +334,8 @@ class SecondaryBroadcast(Broadcast):
         Returns a vector of NaNs to represent the shape of a Broadcast.
         See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
         """
-        child_eval = self.children[0].evaluate_for_shape()
-        vec = pybamm.evaluate_for_shape_using_domain(self.domains["secondary"])
+        child_eval = self._children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self._domains["secondary"])
         return np.outer(vec, child_eval).reshape(-1, 1)
 
     def to_json(self):
@@ -354,6 +361,8 @@ class SecondaryBroadcast(Broadcast):
 
 class SecondaryBroadcastToEdges(SecondaryBroadcast):
     """A secondary broadcast onto the edges of a domain."""
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -391,6 +400,8 @@ class TertiaryBroadcast(Broadcast):
         name of the node
     """
 
+    __slots__ = ()
+
     def __init__(
         self,
         child: pybamm.Symbol,
@@ -398,8 +409,7 @@ class TertiaryBroadcast(Broadcast):
         name: str | None = None,
     ):
         # Convert domain to list if it's a string
-        if isinstance(broadcast_domain, str):
-            broadcast_domain = [broadcast_domain]
+        broadcast_domain = _domain_list(broadcast_domain)
         # perform some basic checks and set attributes
         domains = self.check_and_set_domains(child, broadcast_domain)
         self.broadcast_domain = broadcast_domain
@@ -410,14 +420,14 @@ class TertiaryBroadcast(Broadcast):
         self, child: pybamm.Symbol, broadcast_domain: list[str] | str
     ):
         """See :meth:`Broadcast.check_and_set_domains`"""
-        if child.domains["secondary"] == []:
+        if child._domains["secondary"] == []:
             raise TypeError(
                 """Cannot take TertiaryBroadcast of an object without a secondary
                 domain. Use SecondaryBroadcast instead."""
             )
         # Can only do tertiary broadcast to a "higher dimension" than the
         # secondary domain of child
-        if child.domains["secondary"][0] in [
+        if child._domains["secondary"][0] in [
             "negative particle size",
             "positive particle size",
         ] and broadcast_domain[0] not in [
@@ -430,7 +440,7 @@ class TertiaryBroadcast(Broadcast):
                 """Tertiary broadcast from a symbol with particle size secondary
                 domain must be to electrode, separator or current collector"""
             )
-        if child.domains["secondary"][0] in [
+        if child._domains["secondary"][0] in [
             "negative electrode",
             "separator",
             "positive electrode",
@@ -439,7 +449,7 @@ class TertiaryBroadcast(Broadcast):
                 """Tertiary broadcast from a symbol with an electrode or
                 separator secondary domain must be to current collector"""
             )
-        if child.domains["secondary"] == ["current collector"]:
+        if child._domains["secondary"] == ["current collector"]:
             raise pybamm.DomainError(
                 """Cannot do tertiary broadcast for symbol with a current collector
                 secondary domain"""
@@ -447,10 +457,10 @@ class TertiaryBroadcast(Broadcast):
         # Primary and secondary domains stay the same as child's,
         # and broadcast domain is tertiary
         domains = {
-            "primary": child.domains["primary"],
-            "secondary": child.domains["secondary"],
+            "primary": child._domains["primary"],
+            "secondary": child._domains["secondary"],
             "tertiary": broadcast_domain,
-            "quaternary": child.domains["tertiary"],
+            "quaternary": child._domains["tertiary"],
         }
 
         return domains
@@ -460,8 +470,8 @@ class TertiaryBroadcast(Broadcast):
         Returns a vector of NaNs to represent the shape of a Broadcast.
         See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
         """
-        child_eval = self.children[0].evaluate_for_shape()
-        vec = pybamm.evaluate_for_shape_using_domain(self.domains["tertiary"])
+        child_eval = self._children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self._domains["tertiary"])
         return np.outer(vec, child_eval).reshape(-1, 1)
 
     def to_json(self):
@@ -488,6 +498,8 @@ class TertiaryBroadcast(Broadcast):
 class TertiaryBroadcastToEdges(TertiaryBroadcast):
     """A tertiary broadcast onto the edges of a domain."""
 
+    __slots__ = ()
+
     def __init__(
         self,
         child: pybamm.Symbol,
@@ -504,6 +516,8 @@ class TertiaryBroadcastToEdges(TertiaryBroadcast):
 
 class FullBroadcast(Broadcast):
     """A class for full broadcasts."""
+
+    __slots__ = ()
 
     # broadcast_domain and broadcast_domains are reconstructed from the stored
     # full domains dict; opt them out of the coverage guard.
@@ -525,9 +539,12 @@ class FullBroadcast(Broadcast):
 
         if isinstance(auxiliary_domains, str):
             auxiliary_domains = {"secondary": auxiliary_domains}
-        broadcast_domains = self.read_domain_or_domains(
-            broadcast_domain, auxiliary_domains, broadcast_domains
-        )
+        broadcast_domains = {
+            level: _domain_list(names)
+            for level, names in self._read_domain_or_domains(
+                broadcast_domain, auxiliary_domains, broadcast_domains
+            ).items()
+        }
         # perform some basic checks and set attributes
         domains = self.check_and_set_domains(child, broadcast_domains)
         self.broadcast_domain = broadcast_domains["primary"]
@@ -541,7 +558,7 @@ class FullBroadcast(Broadcast):
                 """Cannot do full broadcast to an empty primary domain"""
             )
         # Variables on the current collector can only be broadcast to 'primary'
-        if child.domain == ["current collector"]:
+        if child._domains["primary"] == ["current collector"]:
             raise pybamm.DomainError(
                 "Cannot do full broadcast from current collector domain"
             )
@@ -550,7 +567,7 @@ class FullBroadcast(Broadcast):
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
-        return self.__class__(child, broadcast_domains=self.domains)
+        return self.__class__(child, broadcast_domains=self._domains)
 
     def to_json(self):
         return {"name": self.name, "domains": self.domains}
@@ -569,22 +586,22 @@ class FullBroadcast(Broadcast):
         Returns a vector of NaNs to represent the shape of a Broadcast.
         See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
         """
-        child_eval = self.children[0].evaluate_for_shape()
-        vec = pybamm.evaluate_for_shape_using_domain(self.domains)
+        child_eval = self._children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self._domains)
 
         return child_eval * vec
 
     def reduce_one_dimension(self):
         """Reduce the broadcast by one dimension."""
-        if self.domains["secondary"] == []:
+        if self._domains["secondary"] == []:
             return self.orphans[0]
-        elif self.domains["tertiary"] == []:
-            return PrimaryBroadcast(self.orphans[0], self.domains["secondary"])
+        elif self._domains["tertiary"] == []:
+            return PrimaryBroadcast(self.orphans[0], self._domains["secondary"])
         else:
             domains = {
-                "primary": self.domains["secondary"],
-                "secondary": self.domains["tertiary"],
-                "tertiary": self.domains["quaternary"],
+                "primary": self._domains["secondary"],
+                "secondary": self._domains["tertiary"],
+                "tertiary": self._domains["quaternary"],
             }
             return FullBroadcast(self.orphans[0], broadcast_domains=domains)
 
@@ -594,6 +611,8 @@ class FullBroadcastToEdges(FullBroadcast):
     A full broadcast onto the edges of a domain (edges of primary dimension, nodes of
     other dimensions)
     """
+
+    __slots__ = ()
 
     def __init__(
         self,
@@ -614,16 +633,16 @@ class FullBroadcastToEdges(FullBroadcast):
 
     def reduce_one_dimension(self):
         """Reduce the broadcast by one dimension."""
-        if self.domains["secondary"] == []:
+        if self._domains["secondary"] == []:
             return self.orphans[0]
-        elif self.domains["tertiary"] == []:
-            return PrimaryBroadcastToEdges(self.orphans[0], self.domains["secondary"])
+        elif self._domains["tertiary"] == []:
+            return PrimaryBroadcastToEdges(self.orphans[0], self._domains["secondary"])
         else:
             return FullBroadcastToEdges(
                 self.orphans[0],
                 broadcast_domains={
-                    "primary": self.domains["secondary"],
-                    "secondary": self.domains["tertiary"],
+                    "primary": self._domains["secondary"],
+                    "secondary": self._domains["tertiary"],
                 },
             )
 
@@ -660,23 +679,23 @@ def full_like(symbols: tuple[pybamm.Symbol, ...], fill_value: float) -> pybamm.S
 
         # use vector or matrix
         if shape[1] == 1:
-            return pybamm.Vector(entries, domains=sum_symbol.domains)
+            return pybamm.Vector(entries, domains=sum_symbol._domains)
         else:
-            return pybamm.Matrix(entries, domains=sum_symbol.domains)
+            return pybamm.Matrix(entries, domains=sum_symbol._domains)
 
     except NotImplementedError:
         if (
             sum_symbol.shape_for_testing == (1, 1)
             or sum_symbol.shape_for_testing == (1,)
-            or sum_symbol.domain == []
+            or sum_symbol._domains["primary"] == []
         ):
             return pybamm.Scalar(fill_value)
         if sum_symbol.evaluates_on_edges("primary"):
             return FullBroadcastToEdges(
-                fill_value, broadcast_domains=sum_symbol.domains
+                fill_value, broadcast_domains=sum_symbol._domains
             )
         else:
-            return FullBroadcast(fill_value, broadcast_domains=sum_symbol.domains)
+            return FullBroadcast(fill_value, broadcast_domains=sum_symbol._domains)
 
 
 def zeros_like(*symbols: pybamm.Symbol):

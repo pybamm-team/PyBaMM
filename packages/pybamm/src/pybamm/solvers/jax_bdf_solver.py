@@ -8,31 +8,11 @@ import numpy as onp
 import pybamm
 
 if pybamm.has_jax():
-    import functools
-
     import jax
-    import jax.numpy as jnp
-    from jax import core, dtypes
-    from jax.api_util import flatten_fun_nokwargs
-    from jax.extend import linear_util as lu
-    from jax.flatten_util import ravel_pytree
-    from jax.interpreters import partial_eval as pe
-    from jax.tree_util import tree_flatten, tree_map, tree_unflatten
-
-    def split_list(lst, indices):
-        """Split a list at given indices."""
-        if not indices:
-            return [lst]
-
-        result = []
-        start = 0
-        for idx in indices:
-            result.append(lst[start:idx])
-            start = idx
-        result.append(lst[start:])
-        return result
-
     import jax.extend
+    import jax.numpy as jnp
+    from jax.flatten_util import ravel_pytree
+    from jax.tree_util import tree_flatten, tree_map
 
     platform = jax.extend.backend.get_backend().platform.casefold()
     if platform != "metal":
@@ -891,52 +871,11 @@ if pybamm.has_jax():
 
     _bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
 
-    @functools.cache
-    def closure_convert(fun, in_tree, in_avals):
-        wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
-        jaxpr, _, consts = pe.trace_to_jaxpr_dynamic(wrapped_fun, in_avals)
-        out_tree = out_tree()
-
-        # We only want to closure convert for constants with respect to which we're
-        # differentiating. As a proxy for that, we hoist consts with float dtype.
-        # TODO(mattjj): revise this approach
-        def is_float(c):
-            return dtypes.issubdtype(type(c), jnp.inexact)
-
-        (closure_consts, hoisted_consts), merge = partition_list(is_float, consts)
-        num_consts = len(hoisted_consts)
-
-        def converted_fun(y, t, *hconsts_args):
-            hoisted_consts, args = split_list(hconsts_args, [num_consts])
-            consts = merge(closure_consts, hoisted_consts)
-            all_args, _ = tree_flatten((y, t, *args))
-            out_flat = core.eval_jaxpr(jaxpr, consts, *all_args)
-            return tree_unflatten(out_tree, out_flat)
-
-        return converted_fun, hoisted_consts
-
-    def partition_list(choice, lst):
-        out = [], []
-        which = [out[choice(elt)].append(elt) or choice(elt) for elt in lst]
-
-        def merge(l1, l2):
-            i1, i2 = iter(l1), iter(l2)
-            return [next(i2 if snd else i1) for snd in which]
-
-        return out, merge
-
-    def abstractify(x):
-        return core.get_aval(x)
-
     def ravel_first_arg(f, unravel):
-        return ravel_first_arg_(lu.wrap_init(f), unravel).call_wrapped
+        def raveled(y_flat, *args):
+            return ravel_pytree(f(unravel(y_flat), *args))[0]
 
-    @lu.transformation
-    def ravel_first_arg_(unravel, y_flat, *args):
-        y = unravel(y_flat)
-        ans = yield (y, *args), {}
-        ans_flat, _ = ravel_pytree(ans)
-        yield ans_flat
+        return raveled
 
 
 def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
@@ -981,18 +920,9 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     if not pybamm.has_jax():
         pybamm.raise_jax_not_found()
 
-    def _check_arg(arg):
-        if not isinstance(arg, core.Tracer) and not core.valid_jaxtype(arg):
-            msg = (
-                "The contents of odeint *args must be arrays or scalars, but got \n{}."
-            )
-        raise TypeError(msg.format(arg))
-
-    flat_args, in_tree = tree_flatten((y0, t_eval[0], *args))
-    in_avals = tuple(map(abstractify, flat_args))
-    converted, consts = closure_convert(func, in_tree, in_avals)
+    converted, consts = jax.closure_convert(func, y0, t_eval[0], *args)
     if mass is None:
         mass = onp.identity(y0.shape[0], dtype=y0.dtype)
     else:
         mass = block_diag(tree_flatten(mass)[0])
-    return _bdf_odeint_wrapper(converted, mass, rtol, atol, y0, t_eval, *consts, *args)
+    return _bdf_odeint_wrapper(converted, mass, rtol, atol, y0, t_eval, *args, *consts)

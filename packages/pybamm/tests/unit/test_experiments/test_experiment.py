@@ -212,16 +212,10 @@ class TestExperiment:
             None,
         ]
 
-        # Test method directly
-        for next, end, steps in zip(
-            expected_next, expected_end, processed_steps, strict=False
-        ):
-            # useful form for debugging
-            assert steps.next_start_time == next
-            assert steps.end_time == end
-
-        # TODO: once #3176 is completed, the test should pass for
-        # operating_conditions_steps (or equivalent) as well
+        # Repeated identical steps must keep their own times after deduplication
+        for steps in (processed_steps, experiment.steps):
+            assert [step.next_start_time for step in steps] == expected_next
+            assert [step.end_time for step in steps] == expected_end
 
     def test_simulation_solve_updates_input_parameters(self):
         model = pybamm.lithium_ion.SPM()

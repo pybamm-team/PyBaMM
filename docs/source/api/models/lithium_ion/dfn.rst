@@ -13,4 +13,7 @@ Doyle-Fuller-Newman (DFN)
 .. autoclass:: pybamm.lithium_ion.BasicDFNHalfCell
     :members:
 
+.. autoclass:: pybamm.lithium_ion.BasicDFNUnstructured
+    :members:
+
 .. footbibliography::

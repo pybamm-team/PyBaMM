@@ -126,3 +126,14 @@ class TestStateVectorDot:
     def test_name(self):
         sv = pybamm.StateVectorDot(slice(0, 10))
         assert sv.name == "y_dot[0:10]"
+
+    def test_create_copy(self):
+        sv = pybamm.StateVectorDot(slice(0, 1), domain="test")
+
+        copied = sv.create_copy()
+
+        assert type(copied) is pybamm.StateVectorDot
+        assert copied == sv
+        np.testing.assert_array_equal(
+            copied.evaluate(y=np.array([7.0]), y_dot=np.array([3.0])), [[3.0]]
+        )
