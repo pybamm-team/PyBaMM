@@ -73,6 +73,53 @@ def get_lithiation_delithiation(direction, electrode, options, phase=None):
         raise ValueError()
 
 
+def _initial_hysteresis_state(phase_param, electrode):
+    """Initial hysteresis state of an electrode phase at the electrode midpoint."""
+    L = phase_param.domain_param.L
+    x_mid = L / 2 if electrode == "negative" else phase_param.main_param.L_x - L / 2
+    return pybamm.FunctionParameter(
+        f"{phase_param.phase_prefactor}Initial hysteresis state in {electrode} "
+        "electrode",
+        {"Through-cell distance (x) [m]": x_mid},
+    )
+
+
+def get_initial_ocp(phase_param, sto, T, direction, electrode, options, phase=None):
+    """
+    Open-circuit potential [V] an electrode phase starts on.
+
+    With a direction, or without hysteresis, this is the OCP branch given by
+    :func:`get_lithiation_delithiation`. For a hysteresis phase with no direction,
+    it is the OCP at the initial hysteresis state :math:`h_0`,
+    :math:`(1 + h_0) / 2 \\, U_{delith} + (1 - h_0) / 2 \\, U_{lith}`, with
+    :math:`h_0` evaluated at the electrode midpoint.
+
+    Parameters
+    ----------
+    phase_param : :class:`pybamm.LithiumIonParameters` phase
+        The phase parameters, e.g. ``param.n.prim``
+    sto : :class:`pybamm.Symbol`
+        The stoichiometry
+    T : :class:`pybamm.Symbol`
+        The temperature [K]
+    direction : str or None
+        The cell-level direction: "charge", "discharge", or None.
+    electrode : str
+        "negative" or "positive"
+    options : dict or BatteryModelOptions
+        Model options containing OCP settings
+    phase : str, optional
+        "primary" or "secondary" for composite electrodes
+    """
+    if direction is not None or not _has_hysteresis(electrode, options, phase):
+        lithiation = get_lithiation_delithiation(direction, electrode, options, phase)
+        return phase_param.U(sto, T, lithiation)
+    h0 = _initial_hysteresis_state(phase_param, electrode)
+    U_lith = phase_param.U(sto, T, "lithiation")
+    U_delith = phase_param.U(sto, T, "delithiation")
+    return (1 + h0) / 2 * U_delith + (1 - h0) / 2 * U_lith
+
+
 def get_equilibrium_direction(soc_state, electrode, options, phase=None):
     """
     Get the appropriate cell direction for equilibrium stoichiometry calculation.
