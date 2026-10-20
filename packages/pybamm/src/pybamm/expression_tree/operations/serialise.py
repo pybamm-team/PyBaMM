@@ -1465,7 +1465,7 @@ class Serialise:
         if opts is not None:
             opts = Serialise._convert_options(opts)
             if isinstance(model, pybamm.BaseBatteryModel):
-                from pybamm.models.full_battery_models.base_battery_model import (
+                from pybamm.models.full_battery_models.battery_model_options import (
                     restore_saved_options,
                 )
 

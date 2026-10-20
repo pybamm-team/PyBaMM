@@ -2441,7 +2441,7 @@ class BaseModel:
             # JSON has no tuples; convert (nested) lists back to tuples
             options = Serialise._convert_options(data.get("options", {}))
             if options and issubclass(model_cls, pybamm.BaseBatteryModel):
-                from pybamm.models.full_battery_models.base_battery_model import (
+                from pybamm.models.full_battery_models.battery_model_options import (
                     restore_saved_options,
                 )
 

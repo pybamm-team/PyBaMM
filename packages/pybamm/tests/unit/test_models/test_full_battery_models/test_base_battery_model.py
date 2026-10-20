@@ -9,7 +9,7 @@ from contextlib import redirect_stdout
 import pytest
 
 import pybamm
-from pybamm.models.full_battery_models.base_battery_model import (
+from pybamm.models.full_battery_models.battery_model_options import (
     BatteryModelDomainOptions,
     BatteryModelOptions,
     LegacyOptions,

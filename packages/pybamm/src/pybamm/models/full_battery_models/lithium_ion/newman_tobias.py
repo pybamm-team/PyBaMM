@@ -22,7 +22,7 @@ class NewmanTobias(DFN):
 
     def _model_default_options(self, supplied):
         # Other default options are those given in `pybamm.BatteryModelOptions`
-        # defined in `base_battery_model.py`.
+        # defined in `battery_model_options.py`.
         return {"particle": "uniform profile"}
 
     def __init__(self, options=None, name="Newman-Tobias model", build=True):

@@ -2,7 +2,7 @@
 # Many-Particle Model (MPM)
 #
 import pybamm
-from pybamm.models.full_battery_models.base_battery_model import option_values_match
+from pybamm.models.full_battery_models.battery_model_options import option_values_match
 
 from .spm import SPM
 
