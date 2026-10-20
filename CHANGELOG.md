@@ -21,6 +21,7 @@
 - Multi-phase electrodes are checked per electrode: a tuple of Fickian particles is accepted, and the error no longer claims `"particle size"` must be `"single"`. `Yang2017` now honours `build=`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Options not yet supported with particle-size distributions (SEI or lithium plating porosity change, heat of mixing, `"x-full"` thermal, polynomial concentration profiles) now raise when a distribution is set on only one electrode, e.g. `"particle size": ("single", "distribution")`, instead of failing while the model is built (#3303). A polynomial profile is only rejected on the electrode with the distribution. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - `MPM` no longer registers the `Marquis2019` (SPM) citation (#5800). ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Particle mechanics submodels read `"particle size"` per electrode, so a size distribution on one electrode, e.g. `("single", "distribution")`, now gets the size-distribution stress and crack equations on that electrode instead of the single-size ones on both. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Saved battery models and complete built-in model configs written before the per-electrode option checks retain their original validation rules when loaded. ([#5818](https://github.com/pybamm-team/PyBaMM/pull/5818))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
