@@ -1435,6 +1435,13 @@ class TestModelDefaultOptions:
         )
         assert model.options.negative["open-circuit potential"] == "MSMR"
 
+    def test_subclass_inherits_fixed_options(self):
+        class CustomSPM(pybamm.lithium_ion.SPM):
+            pass
+
+        model = CustomSPM(build=False)
+        assert model.options["x-average side reactions"] == "true"
+
     def test_identity_defaults(self):
         assert pybamm.lithium_ion.SPM().options["x-average side reactions"] == "true"
         assert pybamm.lithium_ion.SPMe().options["x-average side reactions"] == "false"
@@ -1468,7 +1475,7 @@ class TestModelDefaultOptions:
                     "number of MSMR reactions": ("6", "4"),
                     "particle": "Fickian diffusion",
                 },
-                r"'particle' must be 'MSMR'",
+                r"MSMR requires 'particle' to be 'MSMR'",
             ),
             (
                 LithiumMetalDFN,
@@ -1530,15 +1537,21 @@ class TestModelDefaultOptions:
         assert model.options == options
 
     @pytest.mark.parametrize(
-        "model_class, match",
+        "model_class, options, match",
         [
-            (pybamm.lead_acid.LOQS, r"particle shape"),
-            (pybamm.lithium_ion.MPM, r"particle size"),
+            (pybamm.lead_acid.LOQS, {}, r"particle shape"),
+            (
+                pybamm.lithium_ion.MPM,
+                {"x-average side reactions": "true"},
+                r"particle size",
+            ),
         ],
     )
-    def test_processed_options_are_checked_against_model(self, model_class, match):
+    def test_processed_options_are_checked_against_model(
+        self, model_class, options, match
+    ):
         with pytest.raises(pybamm.OptionError, match=match):
-            model_class(BatteryModelOptions({}))
+            model_class(BatteryModelOptions(options))
 
 
 class TestSavedOptions:

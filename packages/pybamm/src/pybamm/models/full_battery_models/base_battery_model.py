@@ -10,6 +10,7 @@ from pybamm.models.full_battery_models.battery_model_options import (
     BatteryModelPhaseOptions,
     LegacyOptions,
     iter_option_leaves,
+    option_values_match,
     restore_saved_options,
 )
 
@@ -166,8 +167,13 @@ class BaseBatteryModel(pybamm.BaseModel):
             base_spatial_methods["cell"] = pybamm.ScikitFiniteElement3D()
         return base_spatial_methods
 
-    def _model_default_options(self, supplied):
-        """Return the options that define this model, merged under the caller's.
+    #: Option values the model needs; a supplied value must match.
+    fixed_options = {}
+    #: Option values the model prefers; the caller may override them.
+    default_options = {}
+
+    def _dependent_default_options(self, supplied):
+        """Return model defaults that depend on the options the caller gave.
 
         Parameters
         ----------
@@ -177,14 +183,34 @@ class BaseBatteryModel(pybamm.BaseModel):
         Returns
         -------
         dict
-            The model's default options.
+            Defaults for options the caller did not give.
+        """
+        return {}
+
+    def _check_fixed_options(self, options):
+        """Check that options agree with the model's fixed options.
+
+        Parameters
+        ----------
+        options : dict
+            The options given by the caller, or processed options.
 
         Raises
         ------
         pybamm.OptionError
-            If a supplied option is incompatible with the model.
+            If an option does not match a fixed option of the model.
         """
-        return {}
+        working_electrode = options.get(
+            "working electrode", self.fixed_options.get("working electrode", "both")
+        )
+        for option, value in self.fixed_options.items():
+            if option in options and not option_values_match(
+                option, options[option], value, working_electrode
+            ):
+                raise pybamm.OptionError(
+                    f"{type(self).__name__} requires '{option}' to be {value!r}, "
+                    f"not {options[option]!r}."
+                )
 
     @property
     def options(self):
@@ -197,14 +223,19 @@ class BaseBatteryModel(pybamm.BaseModel):
         # so other submodels can pass in their own options class if needed
         if extra_options is None or type(extra_options) in (dict, LegacyOptions):
             supplied = dict(extra_options or {})
+            self._check_fixed_options(supplied)
             options = BatteryModelOptions(
-                {**self._model_default_options(supplied), **supplied},
+                {
+                    **self.default_options,
+                    **self._dependent_default_options(supplied),
+                    **self.fixed_options,
+                    **supplied,
+                },
                 legacy=isinstance(extra_options, LegacyOptions),
             )
         else:
             options = extra_options
-            # processed options carry every key, so only the model checks matter
-            self._model_default_options(dict(options))
+            self._check_fixed_options(options)
 
         # Options that are incompatible with models
         if (
@@ -225,14 +256,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "electrolyte conductivity '{}' not suitable for SPMe".format(
                     options["electrolyte conductivity"]
                 )
-            )
-        if (
-            isinstance(self, pybamm.lithium_ion.SPM)
-            and not isinstance(self, pybamm.lithium_ion.SPMe)
-            and options["x-average side reactions"] == "false"
-        ):
-            raise pybamm.OptionError(
-                "x-average side reactions cannot be 'false' for SPM models"
             )
         if isinstance(self, pybamm.lithium_ion.SPM) and (
             "distribution" in options["particle size"]

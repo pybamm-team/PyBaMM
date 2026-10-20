@@ -2,7 +2,6 @@
 # Many-Particle Model (MPM)
 #
 import pybamm
-from pybamm.models.full_battery_models.battery_model_options import option_values_match
 
 from .spm import SPM
 
@@ -21,19 +20,12 @@ class MPM(SPM):
 
     """
 
-    def _model_default_options(self, supplied):
-        defaults = super()._model_default_options(supplied)
-        particle_size = supplied.get("particle size", "distribution")
-        if not option_values_match("particle size", particle_size, "distribution"):
-            raise pybamm.OptionError(
-                f"particle size must be 'distribution' for MPM not '{particle_size}'"
-            )
-        if supplied.get("surface form") == "false":
-            raise pybamm.OptionError(
-                "surface form must be 'algebraic' or 'differential' for MPM not 'false'"
-            )
-        defaults.update({"particle size": "distribution", "surface form": "algebraic"})
-        return defaults
+    fixed_options = {**SPM.fixed_options, "particle size": "distribution"}
+    default_options = {"surface form": "algebraic"}
+
+    def _dependent_default_options(self, supplied):
+        # the surface form is already part of the model's own defaults
+        return {}
 
     def __init__(self, options=None, name="Many-Particle Model", build=True):
         super().__init__(options, name, build)
