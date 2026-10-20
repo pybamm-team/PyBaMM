@@ -765,7 +765,7 @@ class _ScalarReduction(SpecificFunction):
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return np.nan * np.ones((1, 1))
+        return np.full((1, 1), np.nan)
 
 
 class Max(_ScalarReduction):
