@@ -58,12 +58,14 @@ class DualContinuum(pybamm.lithium_ion.DFN):
     ) -> None:
         pybamm_model_zoo.require(SLUG)
         self.dc_options = DCModelOptions(dc_options)
+        self._constructed = False
         super().__init__(options=options, name=name, build=build)
         pybamm_model_zoo.register_citation(SLUG, "PyBaMMModelZoo2026", "Paten2026")
         if self.dc_options["model type"] == "DC1t":
             pybamm_model_zoo.register_citation(SLUG, "Paten2026b")
         elif self.dc_options["model type"] == "Yang":
             pybamm_model_zoo.register_citation(SLUG, "Yang2025")
+        self._constructed = True
 
     def set_particle_submodel(self):
         if (
@@ -105,8 +107,16 @@ class DualContinuum(pybamm.lithium_ion.DFN):
                 )
 
     def _rebuild_param(self):
-        dc_options = getattr(self, "dc_options", None)
-        if dc_options is None or dc_options["lithium foil surface porosity"] == "false":
+        # pybamm.Serialise and from_config reload a model by reassigning its
+        # options, but they do not save dc_options, which would revert to defaults.
+        if self._constructed:
+            raise pybamm.ModelError(
+                "A DualContinuum model cannot be reloaded by reassigning its "
+                "options, as pybamm.Serialise and BaseModel.from_config do: its "
+                "dc_options are not saved. Create a new DualContinuum(options, "
+                "dc_options) instead, or pickle the model."
+            )
+        if self.dc_options["lithium foil surface porosity"] == "false":
             super()._rebuild_param()
             return
         if self.options["working electrode"] == "both":

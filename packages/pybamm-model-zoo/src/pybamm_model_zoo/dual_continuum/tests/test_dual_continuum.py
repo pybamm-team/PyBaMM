@@ -10,6 +10,7 @@ standalone implementation, which Paten et al. (2026) validated against DNS
 (tests/data/standalone_reference.csv).
 """
 
+import pickle
 from pathlib import Path
 
 import numpy as np
@@ -154,6 +155,20 @@ class TestDualContinuum:
             voltage(reference, reference_values),
             rtol=1e-7,
         )
+
+    def test_reload_keeps_lithium_foil_surface_porosity(self):
+        model = dual_continuum(HALF_CELL, {"lithium foil surface porosity": "true"})
+        # pybamm.Serialise reassigns the options of a default-constructed model,
+        # which would drop the DC options; that must raise
+        data = pybamm.Serialise.serialise_custom_model(model)
+        with pytest.raises(pybamm.ModelError, match="dc_options are not saved"):
+            pybamm.Serialise.load_custom_model(data)
+        with pytest.raises(pybamm.ModelError, match="dc_options are not saved"):
+            pybamm.BaseModel.from_config(model.to_config())
+        # Pickling and copying keep them
+        for copy in [pickle.loads(pickle.dumps(model)), model.new_copy()]:
+            assert copy.dc_options == model.dc_options
+            assert type(copy.param) is type(model.param)
 
     @pytest.mark.parametrize("options", CELLS)
     def test_a_priori_close_to_implicit_at_low_rate(self, options):
