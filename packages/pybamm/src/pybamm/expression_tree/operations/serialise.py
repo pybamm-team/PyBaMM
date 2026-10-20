@@ -594,9 +594,9 @@ class Serialise:
         >>> import pybamm
         >>> model = pybamm.lithium_ion.BasicDFN()
         >>> from pybamm.expression_tree.operations.serialise import Serialise
-        >>> Serialise.save_custom_model(model, "basicdfn_model.json")
+        >>> Serialise.save_custom_model(model, "basicdfn_saved.json")
         >>> # Or with compression:
-        >>> Serialise.save_custom_model(model, "basicdfn_model.json", compress=True)
+        >>> Serialise.save_custom_model(model, "basicdfn_saved.json", compress=True)
 
         """
         try:
