@@ -80,11 +80,17 @@ class TestDualContinuum:
 
     @pytest.mark.parametrize("sei", ["reaction limited", "ec reaction limited"])
     def test_sei_matches_dfn(self, sei):
-        # PyBaMM's SEI options apply unchanged to the DC model
-        dfn = pybamm.lithium_ion.DFN({"SEI": sei, "particle": "quadratic profile"})
+        # PyBaMM's SEI options apply unchanged to the DC model. The options
+        # PyBaMM would otherwise derive from "SEI" are given explicitly.
+        options = {
+            "SEI": sei,
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
+        dfn = pybamm.lithium_ion.DFN({**options, "particle": "quadratic profile"})
         parameter_values = dfn.default_parameter_values
         solution = solve(
-            dual_continuum({"SEI": sei}, DFN_LIKE), parameter_values, tight_solver()
+            dual_continuum(options, DFN_LIKE), parameter_values, tight_solver()
         )
         np.testing.assert_allclose(
             solution["Voltage [V]"](TIMES),

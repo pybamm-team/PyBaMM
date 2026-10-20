@@ -278,9 +278,21 @@ compatibility with PyBaMM's DFN class, which this model builds on.
 
 ### SEI and other DFN options
 
-The DC model accepts PyBaMM's `"SEI"` options (e.g.
-`DualContinuum({"SEI": "reaction limited"})`) and the DFN's other options, with
-their parameters. With `"surface area": "from image"`, the SEI
+The DC model accepts PyBaMM's `"SEI"` options and the DFN's other options, with
+their parameters, for example
+
+```python
+model = DualContinuum(
+    {
+        "SEI": "reaction limited",
+        "SEI film resistance": "distributed",
+        "total interfacial current density as a state": "true",
+    }
+)
+```
+
+The last two options are what PyBaMM would otherwise derive from `"SEI"`;
+giving them explicitly avoids relying on those derived defaults. With `"surface area": "from image"`, the SEI
 grows on the same total specific surface area $a$ as the main reaction,
 including the AM-CBD and AM-separator contributions. Particle-size
 distributions and loss of active material are not supported.
