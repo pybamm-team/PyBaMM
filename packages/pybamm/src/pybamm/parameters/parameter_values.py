@@ -82,6 +82,9 @@ class ParameterValues:
         # Initialize the processor (uses this instance's store)
         self._processor = ParameterSubstitutor(self._store)
 
+        # Initial hysteresis states written by `set_initial_state` with a direction
+        self._hysteresis_states_from_direction = {}
+
         if isinstance(values, dict | ParameterValues):
             # Copy to avoid mutating input
             if isinstance(values, ParameterValues):
@@ -585,6 +588,9 @@ class ParameterValues:
         """
         new_copy = ParameterValues(dict(self._store._data))
         new_copy._set_initial_state = self._set_initial_state
+        new_copy._hysteresis_states_from_direction = dict(
+            self._hysteresis_states_from_direction
+        )
         return new_copy
 
     def search(self, key: str, print_values: bool = True) -> None:
