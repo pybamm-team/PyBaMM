@@ -22,6 +22,7 @@
 
 ## Features
 
+- `FiniteVolume` has a `"harmonic flux coefficients"` option, off by default. When it is on, a node-valued coefficient multiplying a sum of gradient terms, such as the electrolyte conductivity in `kappa * (chi * grad(c_e) - grad(phi_e))`, takes the distance-weighted harmonic mean on faces, not only one multiplying a single `grad`. With the arithmetic mean, the coefficient jump at the electrode/separator interface makes the DFN first order in x; with the option on, it converges at second order. ([#5856](https://github.com/pybamm-team/PyBaMM/pull/5856))
 - Added support for Python 3.15 to `pybamm` and `pybammsolvers`. On 3.15, the `vtk` extra installs nothing until cp315 wheels are available for it. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - The `jax` extra now accepts JAX up to 0.11 (previously below 0.9), which brings `JaxSolver` and the IDAKLU-JAX interface to Python 3.15. JAX 0.11 needs Python 3.12 or newer, so Python 3.11 gets JAX 0.10 at most. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - A `fem` extra installs the finite-element meshing dependencies, scikit-fem and meshio, so `pip install "pybamm[fem]"` is enough for 2D and 3D finite-element meshes. `pybamm[all]` includes it. ([#5881](https://github.com/pybamm-team/PyBaMM/pull/5881))
