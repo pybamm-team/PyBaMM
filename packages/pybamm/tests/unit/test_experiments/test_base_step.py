@@ -103,6 +103,16 @@ def test_numeric_temperature_is_kelvin(temperature):
     assert step.temperature == 298
 
 
+@pytest.mark.parametrize("time", ["0 seconds", "-5 minutes"])
+def test_non_positive_string_time_in_step(time):
+    with pytest.raises(ValueError, match=r"time must be positive"):
+        pybamm.step.current(1, duration=time)
+    with pytest.raises(ValueError, match=r"time must be positive"):
+        pybamm.step.current(1, period=time)
+    with pytest.raises(ValueError, match=r"time must be positive"):
+        pybamm.step.string(f"Rest for {time}")
+
+
 @pytest.mark.parametrize(
     "helper,input_value,match",
     [
