@@ -401,9 +401,9 @@ def _check_data(t, s, steady_value, diffusivity, dimensionless, tolerance):
                 f"The first data point (s = {s[0]:.4g}{s_unit} at "
                 f"t = {t[0]:.3g}{t_unit}) is {ratio:.3g} times the short-time "
                 f"limit {formula}. The closure solve probably does not resolve "
-                "early times (a surface value extrapolated from cells of size "
-                f"~{cell_size:.3g}{h_unit} would explain it); the model would then "
-                "jump too far when the current changes. See fix_early_times"
+                "early times: cell-centre values on a voxel mesh with cells of "
+                f"size ~{cell_size:.3g}{h_unit} would explain it. Prefer a finer "
+                "mesh near the surface, or use fix_early_times=True"
             )
     else:
         fraction = s[0] / steady_value
