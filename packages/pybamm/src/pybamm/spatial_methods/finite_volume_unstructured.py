@@ -238,36 +238,17 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     @staticmethod
     def _add_stack_interface_buckets(mesh):
-        """Give each interface of a domain connected to a discovered
-        ``iface_*`` bucket its own bucket.
-
-        Pairs made by :class:`pybamm.Mesh`'s 1D-stack pairing carry
-        ``interface_data`` but no bucket, so concatenations routed through
-        :meth:`set_internal_bcs_for_concat` would leave them uncoupled.
-        Domains with no discovered interface keep the 1D-stack scheme.
-        """
+        """Give every interface in ``interface_data`` an ``iface_*`` bucket,
+        including the pairs made by :class:`pybamm.Mesh`'s 1D-stack pairing,
+        which carry ``interface_data`` but no bucket."""
         from pybamm.meshes.unstructured_submesh import UnstructuredSubMesh
 
-        meshes = {
-            raw[0]: mesh[raw]
-            for raw in mesh
-            if isinstance(raw, tuple)
-            and len(raw) == 1
-            and isinstance(mesh[raw], UnstructuredSubMesh)
-        }
-        pending = [
-            name
-            for name, sm in meshes.items()
-            if any(tag.startswith("iface_") for tag in sm.boundary_faces)
-        ]
-        seen = set(pending)
-        while pending:
-            sm = meshes[pending.pop()]
+        for raw in mesh:
+            sm = mesh[raw]
+            if not isinstance(sm, UnstructuredSubMesh):
+                continue
             for neighbor, data in sm.interface_data.items():
                 sm.boundary_faces.setdefault(f"iface_{neighbor}", data["left_faces"])
-                if neighbor in meshes and neighbor not in seen:
-                    seen.add(neighbor)
-                    pending.append(neighbor)
 
     # ------------------------------------------------------------------
     # internal BC assembly for arbitrary-topology Concatenation
@@ -1588,21 +1569,14 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
     def boundary_integral(self, child, discretised_child, region):
         """Integral of the owner-cell values of ``child`` over the boundary
-        faces of ``region`` (``"entire"`` = all exterior faces)."""
+        faces of ``region`` (``"entire"`` = every exterior face of the mesh,
+        including faces shared with other domains)."""
         submesh = self.mesh[child.domain]
         repeats = self._get_auxiliary_domain_repeats(child.domains)
 
         if region == "entire":
-            # every exterior boundary face; iface_* buckets are internal
-            # interfaces, not part of the domain boundary
-            iface = [
-                indices
-                for tag, indices in submesh.boundary_faces.items()
-                if tag.startswith("iface_")
-            ]
-            face_indices = np.setdiff1d(
-                np.arange(submesh._boundary_face_start, len(submesh.face_owner)),
-                np.concatenate(iface) if iface else np.array([], dtype=int),
+            face_indices = np.arange(
+                submesh._boundary_face_start, len(submesh.face_owner)
             )
         else:
             face_indices = self._boundary_faces_for_side(submesh, region)
