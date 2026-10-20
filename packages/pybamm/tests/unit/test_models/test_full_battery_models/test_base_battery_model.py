@@ -943,6 +943,42 @@ class TestElectrodeCompatibility:
             {"particle phases": ("2", "1"), "particle size": "distribution"}
         )
 
+    @pytest.mark.parametrize(
+        "particle_size", [("single", "distribution"), ("distribution", "single")]
+    )
+    @pytest.mark.parametrize(
+        ("options", "error", "match"),
+        [
+            ({"SEI porosity change": "true"}, NotImplementedError, "SEI porosity"),
+            (
+                {"lithium plating porosity change": "true"},
+                pybamm.OptionError,
+                "Lithium plating porosity",
+            ),
+            ({"heat of mixing": "true"}, NotImplementedError, "Heat of mixing"),
+            ({"thermal": "x-full"}, NotImplementedError, "X-full thermal"),
+        ],
+    )
+    def test_distribution_on_one_electrode(self, particle_size, options, error, match):
+        with pytest.raises(error, match=match):
+            BatteryModelOptions({"particle size": particle_size, **options})
+
+    def test_distribution_profile_checked_per_electrode(self):
+        with pytest.raises(NotImplementedError, match="quadratic"):
+            BatteryModelOptions(
+                {
+                    "particle size": ("single", "distribution"),
+                    "particle": ("Fickian diffusion", "quadratic profile"),
+                }
+            )
+        # a polynomial profile on the electrode without a distribution is supported
+        BatteryModelOptions(
+            {
+                "particle size": ("distribution", "single"),
+                "particle": ("Fickian diffusion", "quadratic profile"),
+            }
+        )
+
 
 class TestOptions:
     def test_print_options(self):
@@ -1477,14 +1513,15 @@ class TestSavedOptions:
     }
 
     @pytest.mark.parametrize(
-        "version", [None, "23.9", "26.9.0.0", "26.9.0.1.dev3", "0.0.0", "unknown"]
+        "version",
+        [None, "23.9", "26.9.0.0", "26.9.0.1.dev3", "26.10.1.1", "0.0.0", "unknown"],
     )
     def test_restore_marks_options_saved_before_per_electrode_checks(self, version):
         restored = restore_saved_options(self.LEGACY, version)
         assert type(restored) is LegacyOptions
         assert restored == self.LEGACY
 
-    @pytest.mark.parametrize("version", ["26.10.0.0", "26.11.0.0.dev1", "27.1"])
+    @pytest.mark.parametrize("version", ["26.11.0.0", "26.11.0.0.dev1", "27.1"])
     def test_restore_keeps_options_saved_with_per_electrode_checks(self, version):
         assert restore_saved_options(self.LEGACY, version) is self.LEGACY
 

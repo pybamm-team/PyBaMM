@@ -544,7 +544,7 @@ class TestSavedOptionsVersion:
         options["stress-induced diffusion"] = self.LEGACY_STRESS
         return options
 
-    @pytest.mark.parametrize("version", ["26.9.0.0", None])
+    @pytest.mark.parametrize("version", ["26.10.1.1", None])
     def test_from_json_loads_legacy_options(self, version):
         data = pybamm.lithium_ion.SPM(self.OPTIONS, build=False).to_json()
         data["model"]["options"] = self._as_saved(data["model"]["options"])
@@ -556,7 +556,7 @@ class TestSavedOptionsVersion:
     def test_from_json_checks_options_saved_with_per_electrode_checks(self):
         data = pybamm.lithium_ion.SPM(self.OPTIONS, build=False).to_json()
         data["model"]["options"] = self._as_saved(data["model"]["options"])
-        data["pybamm_version"] = "26.10.0.0"
+        data["pybamm_version"] = "26.11.0.0"
         with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
             pybamm.BaseModel.from_json(data)
 
@@ -564,7 +564,7 @@ class TestSavedOptionsVersion:
         config = pybamm.lithium_ion.SPM().to_config()
         assert config["pybamm_version"] == pybamm.__version__
 
-    @pytest.mark.parametrize("version", ["26.9.0.0", None])
+    @pytest.mark.parametrize("version", ["26.10.1.1", None])
     def test_from_config_loads_legacy_options(self, version):
         config = pybamm.lithium_ion.SPM(self.OPTIONS).to_config()
         config["options"] = self._as_saved(config["options"])
@@ -578,7 +578,7 @@ class TestSavedOptionsVersion:
     def test_from_config_checks_options_saved_with_per_electrode_checks(self):
         config = pybamm.lithium_ion.SPM(self.OPTIONS).to_config()
         config["options"] = self._as_saved(config["options"])
-        config["pybamm_version"] = "26.10.0.0"
+        config["pybamm_version"] = "26.11.0.0"
         with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
             pybamm.BaseModel.from_config(config)
 
