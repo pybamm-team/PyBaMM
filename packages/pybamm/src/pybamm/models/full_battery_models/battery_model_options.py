@@ -1110,9 +1110,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if not legacy:
             _check_electrode_compatibility(options)
 
-        # All-or-nothing on full cells: if any of OCP/particle/intercalation
-        # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.
-        # Half-cells are loosened -- a tuple sets MSMR in the working electrode.
+        # MSMR OCP, particle and kinetics only work together; a half cell may set
+        # them on the working electrode only
         msmr_check_list = [
             any(leaf == "MSMR" for _, leaf in iter_option_leaves(opt, options[opt]))
             for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
@@ -1159,9 +1158,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "Contact resistance not yet supported for explicit resistance."
                 )
 
-        # Explicit power/resistance need voltage as a state variable because
-        # I = P/V (or I = V/R) creates a circular dependency when V is an
-        # expression that itself depends on I.
+        # I = P/V and I = V/R are circular unless the voltage is a state
         if options["voltage as a state"] == "false" and options["operating mode"] in (
             "explicit power",
             "explicit resistance",
