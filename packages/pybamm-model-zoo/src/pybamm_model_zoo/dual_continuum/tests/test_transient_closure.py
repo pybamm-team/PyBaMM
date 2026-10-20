@@ -154,6 +154,13 @@ class TestFitTransientClosure:
         t, s = closure["Time [s]"], closure["Closure variable [mol.m-1.A-1]"]
         fit = fit_transient_closure(t, s, diffusivity=4e-14)
         assert any("short-time limit" in w for w in fit.warnings)
+        # The implied cell size is in metres, or in units of L when dimensionless
+        assert any("cells of size ~3.83e-07 m " in w for w in fit.warnings)
+        length = 75.62e-6
+        fit = fit_transient_closure(
+            t * 4e-14 / length**2, s * 4e-14 * FARADAY / length, dimensionless=True
+        )
+        assert any("~0.00506 (in units of L)" in w for w in fit.warnings)
         # Without the diffusivity, the share of s0 reached at once is flagged
         fit = fit_transient_closure(t, s)
         assert any("first data point" in w for w in fit.warnings)

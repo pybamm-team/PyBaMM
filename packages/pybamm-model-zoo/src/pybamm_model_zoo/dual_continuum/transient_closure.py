@@ -197,9 +197,11 @@ class TransientClosureFit:
             lines.append(f"  {m:4d}   {theta:18.4g}   {weight:.4f}")
         if self.early_time_fix is not None:
             fix = self.early_time_fix
+            unit = "" if self.dimensionless else " s"
             lines.append(
-                f"Early times replaced: data before {fix['resolved_after']:.3g} dropped, "
-                f"short-time limit used up to {fix['short_time_until']:.3g}"
+                f"Early times replaced: data before {fix['resolved_after']:.3g}{unit} "
+                f"dropped, short-time limit used up to "
+                f"{fix['short_time_until']:.3g}{unit}"
             )
         if self.warnings:
             lines.append("Warnings:")
@@ -388,13 +390,20 @@ def _check_data(t, s, steady_value, diffusivity, dimensionless, tolerance):
         limit = short_time_limit(t[0], steady_value, diffusivity, dimensionless)
         ratio = s[0] / limit
         if ratio > 2:
+            if dimensionless:
+                s_unit, t_unit, h_unit = "", "", " (in units of L)"
+                formula = "-(2/sqrt(pi)) sqrt(t)"
+            else:
+                s_unit, t_unit, h_unit = " mol.m-1.A-1", " s", " m"
+                formula = "-(2/sqrt(pi)) sqrt(t/D)/F"
+            cell_size = _cell_size(s[0] - limit, diffusivity, dimensionless)
             warnings.append(
-                f"The first data point (s = {s[0]:.4g} at t = {t[0]:.3g}) is "
-                f"{ratio:.3g} times the short-time limit -(2/sqrt(pi)) sqrt(t/D)/F. "
-                "The closure solve probably does not resolve early times (a surface "
-                f"value extrapolated from cells of size ~{_cell_size(s[0] - limit, diffusivity, dimensionless):.3g} "
-                "would explain it); the model would then jump too far when the "
-                "current changes. See fix_early_times"
+                f"The first data point (s = {s[0]:.4g}{s_unit} at "
+                f"t = {t[0]:.3g}{t_unit}) is {ratio:.3g} times the short-time "
+                f"limit {formula}. The closure solve probably does not resolve "
+                "early times (a surface value extrapolated from cells of size "
+                f"~{cell_size:.3g}{h_unit} would explain it); the model would then "
+                "jump too far when the current changes. See fix_early_times"
             )
     else:
         fraction = s[0] / steady_value
