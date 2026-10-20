@@ -409,6 +409,81 @@ class TestAuxiliaryDomains:
             atol=1e-12,
         )
 
+    @pytest.mark.parametrize("orthogonal", [True, False])
+    # 2 auxiliary points equal the 2 "right" faces: the auxiliary domain of the
+    # value selects the per-point reading
+    @pytest.mark.parametrize("n_aux", [2, 3])
+    def test_per_point_bc_value(self, orthogonal, n_aux):
+        # A BC value with one entry per auxiliary point, such as a boundary
+        # value, applies to every face of the side at that point
+        mesh = _make_quad_mesh(2, 2) if orthogonal else _make_perturbed_tri_mesh(3)
+        aux = _make_quad_mesh(1, n_aux)
+        method = _method_with_mesh(mesh, aux=aux)
+        cell_values = mesh.cell_centroids[:, 0] ** 2
+        right = np.arange(1.0, n_aux + 1)
+
+        def bcs(variable, right_value):
+            return {
+                variable: {
+                    "left": (pybamm.Scalar(1), "Dirichlet"),
+                    "right": (right_value, "Neumann"),
+                    "top": (pybamm.Scalar(0), "Neumann"),
+                    "bottom": (pybamm.Scalar(3), "Dirichlet"),
+                }
+            }
+
+        def operators(variable, cells, bc_value, coefficient):
+            boundary_conditions = bcs(variable, bc_value)
+            div_symbol = pybamm.Variable("div", domains=variable.domains)
+            return (
+                method.laplacian(variable, cells, boundary_conditions),
+                method.div_D_grad(
+                    div_symbol, variable, coefficient, cells, boundary_conditions
+                ),
+                *method.gradient(variable, cells, boundary_conditions).components,
+            )
+
+        variable = pybamm.Variable("u", domain="test")
+        cells = pybamm.Vector(cell_values, domain="test")
+        coefficient = pybamm.Vector(np.full(mesh.npts, 2.0), domain="test")
+        single = [
+            operators(variable, cells, pybamm.Scalar(v), coefficient) for v in right
+        ]
+
+        domains = {"primary": ["test"], "secondary": ["aux"]}
+        repeated_var = pybamm.Variable("u rep", domains=domains)
+        repeated = operators(
+            repeated_var,
+            pybamm.Vector(np.tile(cell_values, n_aux), domains=domains),
+            pybamm.Vector(right, domain="aux"),
+            pybamm.Vector(np.full(mesh.npts * n_aux, 2.0), domains=domains),
+        )
+        for k, result in enumerate(repeated):
+            np.testing.assert_allclose(
+                result.evaluate()[:, 0],
+                np.concatenate([ops[k].evaluate()[:, 0] for ops in single]),
+                atol=1e-12,
+            )
+
+        # a discretised boundary value carries the auxiliary domain itself
+        field = pybamm.Vector(np.repeat(right, mesh.npts), domains=domains)
+        boundary_value = method.boundary_value_or_flux(
+            pybamm.BoundaryValue(repeated_var, "right"), field
+        )
+        assert boundary_value.domain == ["aux"]
+        np.testing.assert_allclose(boundary_value.evaluate()[:, 0], right)
+        np.testing.assert_allclose(
+            method.laplacian(
+                repeated_var, field, bcs(repeated_var, boundary_value)
+            ).evaluate(),
+            method.laplacian(
+                repeated_var,
+                field,
+                bcs(repeated_var, pybamm.Vector(right, domain="aux")),
+            ).evaluate(),
+            atol=1e-12,
+        )
+
     def test_gradient_with_secondary_domain(self):
         mesh = _make_quad_mesh(2, 2)
         aux = _make_quad_mesh(1, 3)
@@ -595,23 +670,22 @@ class TestBCValidation:
         result = method.boundary_integral(variable, ones, "entire")
         np.testing.assert_allclose(result.evaluate().sum(), 4.0, atol=1e-12)
 
-    def test_boundary_integral_entire_excludes_interface_faces(self):
+    def test_boundary_integral_entire_includes_interface_faces(self):
+        # the shared edge bounds the left mesh, so "entire" keeps it
         left, _right = _make_split_2d_meshes()
-        # emulate interface discovery: move left mesh's right faces to an
-        # iface bucket
         left.boundary_faces["iface_right"] = left.boundary_faces.pop("right")
         method = _method_with_mesh(left)
         variable = pybamm.Variable("u", domain="test")
         ones = pybamm.Vector(np.ones(left.npts), domain="test")
         result = method.boundary_integral(variable, ones, "entire")
-        # perimeter of [0, 0.5] x [0, 1] minus the shared edge (length 1)
-        np.testing.assert_allclose(result.evaluate().sum(), 2.0, atol=1e-12)
+        # perimeter of [0, 0.5] x [0, 1]
+        np.testing.assert_allclose(result.evaluate().sum(), 3.0, atol=1e-12)
 
-    def test_deleted_bucket_message_mentions_interface(self):
+    def test_unknown_side_message_lists_tags(self):
         mesh, method, variable, values = self._setup()
         mesh.boundary_faces["iface_other"] = mesh.boundary_faces.pop("right")
         bcs = {variable: {"right": (pybamm.Scalar(0), "Dirichlet")}}
-        with pytest.raises(pybamm.DiscretisationError, match="interface"):
+        with pytest.raises(pybamm.DiscretisationError, match="'iface_other'"):
             method.laplacian(variable, values, bcs)
 
 
@@ -1172,7 +1246,7 @@ class TestFiniteVolumeUnstructuredBehavior:
 
         untagged = _make_2d_mesh(2, 2)
         untagged.boundary_faces = {}
-        tagged = _make_2d_mesh(2, 2)
+        tagged = _make_2d_mesh(2, 2, x_range=(2, 3))
         method = FiniteVolumeUnstructured()
         with caplog.at_level(logging.WARNING):
             method.build(_MeshMap({("untagged",): untagged, ("tagged",): tagged}))
@@ -1181,20 +1255,170 @@ class TestFiniteVolumeUnstructuredBehavior:
         assert "'tagged'" not in caplog.text
 
     def test_interface_matching_edge_cases(self):
-        empty = _make_2d_mesh(1, 1)
-        empty.boundary_faces = {}
         other = _make_2d_mesh(1, 1)
-        a_idx, b_idx, matched = FiniteVolumeUnstructured._interface_face_match(
-            empty, other
-        )
-        assert not matched
-        assert a_idx.size == b_idx.size == 0
-
         mesh_3d = _make_3d_mesh(1, 1, 1)
         assert not FiniteVolumeUnstructured._interface_face_match(other, mesh_3d)[2]
 
         distant = _make_2d_mesh(1, 1, x_range=(2, 3))
         assert not FiniteVolumeUnstructured._interface_face_match(other, distant)[2]
+
+    def test_build_pairs_untagged_exterior_faces(self, caplog):
+        # File meshes often tag only a few faces; the shared face must still
+        # be discovered, and untagged faces stay out of every bucket
+        left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
+        right = _make_2d_mesh(2, 2, x_range=(0.5, 1))
+        left.boundary_faces = {"left": left.boundary_faces["left"]}
+        right.boundary_faces = {}
+        method = FiniteVolumeUnstructured()
+        with caplog.at_level("WARNING", logger="pybamm"):
+            method.build(_MeshMap({("left",): left, ("right",): right}))
+
+        assert set(left.boundary_faces) == {"left", "iface_right"}
+        assert set(right.boundary_faces) == {"iface_left"}
+        # coupled through its interface, so the untagged mesh is not reported
+        assert "no boundary tags" not in caplog.text
+        np.testing.assert_allclose(
+            left.face_centroids[left.boundary_faces["iface_right"]],
+            right.face_centroids[right.boundary_faces["iface_left"]],
+        )
+        np.testing.assert_allclose(
+            left.face_centroids[left.boundary_faces["iface_right"], 0], 0.5
+        )
+
+    @pytest.mark.parametrize("with_box", [False, True])
+    def test_build_buckets_stack_pairs(self, with_box, caplog):
+        # Stack pairs get buckets at build, so concatenations of a plain
+        # stack take the graph route too
+        left = _make_2d_mesh(2, 2, x_range=(0, 1))
+        middle = _make_2d_mesh(2, 2, x_range=(1, 2))
+        right = _make_2d_mesh(2, 2, x_range=(2, 3))
+        compute_interface_data(left, middle, "left", "middle")
+        compute_interface_data(middle, right, "middle", "right")
+        meshes = {("left",): left, ("middle",): middle, ("right",): right}
+        if with_box:
+            box = _make_2d_mesh(2, 1, x_range=(0, 1), z_range=(1, 1.5))
+            box.boundary_faces = {}
+            meshes[("box",)] = box
+        FiniteVolumeUnstructured().build(_MeshMap(meshes))
+
+        iface = {
+            name: sorted(t for t in mesh.boundary_faces if t.startswith("iface_"))
+            for (name,), mesh in meshes.items()
+        }
+        assert iface["left"] == (
+            ["iface_box", "iface_middle"] if with_box else ["iface_middle"]
+        )
+        assert iface["middle"] == ["iface_left", "iface_right"]
+        assert iface["right"] == ["iface_middle"]
+        np.testing.assert_array_equal(
+            left.boundary_faces["iface_middle"], left.boundary_faces["right"]
+        )
+
+        # every face of the left mesh has a condition: no gradient warning
+        method = _method_with_mesh(left)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(left.cell_centroids[:, 0], domain="test")
+        bcs = {
+            side: (pybamm.Scalar(0), "Neumann")
+            for side in ("left", "right", "top", "bottom")
+        }
+        with caplog.at_level("WARNING", logger="pybamm"):
+            method.gradient(variable, values, {variable: bcs})
+        assert "no boundary condition" not in caplog.text
+
+    def test_tag_under_a_coupled_interface_is_skipped(self):
+        # "right" lies wholly under the interface coupled by "iface_right",
+        # so its condition reaches no face
+        left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
+        right = _make_2d_mesh(2, 2, x_range=(0.5, 1))
+        method = FiniteVolumeUnstructured()
+        assert method._compute_pair_interface(left, right, "test", "right")
+        assert "right" in left.boundary_faces
+        method = _method_with_mesh(left)
+        variable = pybamm.Variable("u", domain="test")
+        div_symbol = pybamm.Variable("div", domain="test")
+        values = pybamm.Vector(left.cell_centroids[:, 0] ** 2, domain="test")
+        coupled = {
+            "left": (pybamm.Scalar(1), "Dirichlet"),
+            "iface_right": (pybamm.Scalar(2), "Neumann"),
+        }
+        with_tag = {**coupled, "right": (pybamm.Scalar(5), "Dirichlet")}
+        for operator in (
+            lambda bcs: method.laplacian(variable, values, {variable: bcs}),
+            lambda bcs: method.div_D_grad(
+                div_symbol, variable, pybamm.Scalar(2), values, {variable: bcs}
+            ),
+        ):
+            np.testing.assert_allclose(
+                operator(with_tag).evaluate(), operator(coupled).evaluate(), atol=1e-12
+            )
+
+    def test_untagged_neighbour_outside_concatenation_keeps_bcs(self, caplog):
+        # The untagged box is a discovered neighbour but not part of c, so
+        # c's equations, including "top" under the box, must not change
+        def discretised_rhs(with_tab):
+            x_n = pybamm.SpatialVariable("x_n", "negative electrode")
+            x_s = pybamm.SpatialVariable("x_s", "separator")
+            x_p = pybamm.SpatialVariable("x_p", "positive electrode")
+            z = pybamm.SpatialVariable("z", "current collector")
+            geometry = {
+                "negative electrode": {
+                    x_n: {"min": 0, "max": 1},
+                    z: {"min": 0, "max": 1},
+                },
+                "separator": {x_s: {"min": 1, "max": 2}, z: {"min": 0, "max": 1}},
+                "positive electrode": {
+                    x_p: {"min": 2, "max": 3},
+                    z: {"min": 0, "max": 1},
+                },
+            }
+            generator = pybamm.UnstructuredMeshGenerator(element_type="quad")
+            submesh_types = dict.fromkeys(geometry, generator)
+            var_pts = {x_n: 3, x_s: 3, x_p: 3, z: 3}
+            if with_tab:
+                x_t = pybamm.SpatialVariable("x_t", "tab region")
+                z_t = pybamm.SpatialVariable("z_t", "tab region")
+                geometry["tab region"] = {
+                    x_t: {"min": 0, "max": 1},
+                    z_t: {"min": 1, "max": 1.5},
+                }
+                submesh_types["tab region"] = generator
+                var_pts.update({x_t: 3, z_t: 2})
+            mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+            if with_tab:
+                mesh["tab region"].boundary_faces = {}
+
+            children = [
+                pybamm.Variable(f"c_{name[0]}", name)
+                for name in ("negative electrode", "separator", "positive electrode")
+            ]
+            c = pybamm.concatenation(*children)
+            model = pybamm.BaseModel()
+            model.rhs = {c: pybamm.div(pybamm.grad(c))}
+            model.boundary_conditions = {
+                c: {
+                    "left": (pybamm.Scalar(1), "Neumann"),
+                    "right": (pybamm.Scalar(0), "Neumann"),
+                    "top": (pybamm.Scalar(1), "Dirichlet"),
+                    "bottom": (pybamm.Scalar(0), "Neumann"),
+                }
+            }
+            model.initial_conditions = {c: pybamm.Scalar(0)}
+            methods = dict.fromkeys(geometry, FiniteVolumeUnstructured())
+            disc = pybamm.Discretisation(mesh, methods)
+            disc.process_model(model)
+            y = np.linspace(0.1, 1, model.concatenated_rhs.shape[0])[:, np.newaxis]
+            return model.concatenated_rhs.evaluate(y=y), disc.bcs[children[0]]
+
+        rhs, _ = discretised_rhs(with_tab=False)
+        with caplog.at_level("WARNING", logger="pybamm"):
+            rhs_tab, negative_bcs = discretised_rhs(with_tab=True)
+        np.testing.assert_allclose(rhs_tab, rhs, atol=1e-12)
+        # the electrode's own conditions: coupled to the separator, not the box
+        assert "top" in negative_bcs
+        assert "iface_separator" in negative_bcs
+        assert "iface_tab region" not in negative_bcs
+        assert "coupled" not in caplog.text
 
     def test_compute_pair_interface_success_and_noops(self):
         left = _make_2d_mesh(2, 2, x_range=(0, 0.5))
@@ -1614,8 +1838,30 @@ class TestFiniteVolumeUnstructuredBehavior:
             expected = np.argmin((x - target_x) ** 2 + (z - target_z) ** 2)
             assert result.evaluate().item() == expected
         else:
-            owners = mesh.face_owner[mesh.boundary_faces[side]]
-            np.testing.assert_array_equal(result.evaluate()[:, 0], owners)
+            faces = mesh.boundary_faces[side]
+            areas = mesh.face_areas[faces]
+            expected = np.sum(areas * mesh.face_owner[faces]) / areas.sum()
+            np.testing.assert_allclose(result.evaluate(), [[expected]])
+
+    def test_boundary_value_is_area_weighted_average(self):
+        # Uneven faces on a tagged side: the value is the area-weighted mean,
+        # so a linear field returns its value at the side's area centroid
+        mesh = _make_3d_mesh(2, 3, 2)
+        faces = mesh.boundary_faces["top"]
+        y = mesh.face_centroids[faces, 1]
+        mesh.boundary_faces["tab"] = faces[y < 0.5]
+        method = _method_with_mesh(mesh)
+        variable = pybamm.Variable("u", domain="test")
+        values = pybamm.Vector(mesh.cell_centroids[:, 1], domain="test")
+
+        result = method.boundary_value_or_flux(
+            pybamm.BoundaryValue(variable, "tab"), values
+        )
+        tab = mesh.boundary_faces["tab"]
+        areas = mesh.face_areas[tab]
+        expected = np.sum(areas * mesh.cell_centroids[mesh.face_owner[tab], 1])
+        assert result.shape == (1, 1)
+        np.testing.assert_allclose(result.evaluate(), [[expected / areas.sum()]])
 
     def test_boundary_gradient_raises(self):
         mesh = _make_2d_mesh(2, 2)
@@ -2461,6 +2707,134 @@ class TestProcessModelConcatenationZStack:
         np.testing.assert_allclose(rhs, 0.0, atol=1e-10)
 
 
+class TestProcessModelConcatenationXStack:
+    """Children of a concatenation stacked in x, paired by pybamm.Mesh, keep
+    the outer conditions on their transverse sides."""
+
+    _NAMES = ("negative electrode", "separator", "positive electrode")
+
+    def _discretise(self, three_dimensional, element_type, sides, rhs_of):
+        z = pybamm.SpatialVariable("z", "current collector")
+        y = pybamm.SpatialVariable("y", "current collector")
+        geometry = {}
+        var_pts = {z: 3, y: 3}
+        for i, name in enumerate(self._NAMES):
+            x = pybamm.SpatialVariable(f"x_{name[0]}", name)
+            var_pts[x] = 3
+            geometry[name] = {x: {"min": i, "max": i + 1}}
+            if three_dimensional:
+                geometry[name][y] = {"min": 0, "max": 1}
+            geometry[name][z] = {"min": 0, "max": 1}
+        generator = pybamm.UnstructuredMeshGenerator(element_type=element_type)
+        mesh = pybamm.Mesh(geometry, dict.fromkeys(geometry, generator), var_pts)
+        children = [pybamm.Variable(f"c_{name[0]}", name) for name in self._NAMES]
+        c = pybamm.concatenation(*children)
+        model = pybamm.BaseModel()
+        model.rhs = rhs_of(c, children)
+        model.boundary_conditions = {c: sides}
+        model.initial_conditions = dict.fromkeys(model.rhs, pybamm.Scalar(0))
+        disc = pybamm.Discretisation(
+            mesh, dict.fromkeys(geometry, FiniteVolumeUnstructured())
+        )
+        disc.process_model(model)
+        return mesh, disc, children, model
+
+    @staticmethod
+    def _per_child(c, children):
+        return {child: pybamm.div(pybamm.grad(child)) for child in children}
+
+    @pytest.mark.parametrize(
+        "three_dimensional, element_type",
+        [
+            (False, "quad"),
+            (False, "triangle"),
+            (True, "hexahedron"),
+            (True, "tetrahedron"),
+        ],
+    )
+    @pytest.mark.parametrize("field", ["z", "x + z"])
+    def test_per_child_laplacian_of_linear_field(
+        self, three_dimensional, element_type, field
+    ):
+        # u = z needs the top/bottom conditions on every child; u = x + z
+        # also needs the interfaces to carry the x flux
+        if field == "z":
+            sides = {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+                "top": (pybamm.Scalar(1), "Dirichlet"),
+                "bottom": (pybamm.Scalar(0), "Dirichlet"),
+            }
+        else:
+            sides = {
+                side: (pybamm.Scalar(1), "Neumann")
+                for side in ("left", "right", "top", "bottom")
+            }
+        transverse = ["top", "bottom"]
+        if three_dimensional:
+            sides["front"] = sides["back"] = (pybamm.Scalar(0), "Neumann")
+            transverse += ["front", "back"]
+        mesh, disc, children, model = self._discretise(
+            three_dimensional, element_type, sides, self._per_child
+        )
+
+        for child in children:
+            assert set(transverse) <= set(disc.bcs[child])
+        centroids = [mesh[name].cell_centroids for name in self._NAMES]
+        u = np.concatenate(
+            [c[:, -1] + (c[:, 0] if field == "x + z" else 0) for c in centroids]
+        )
+        rhs = model.concatenated_rhs.evaluate(t=0, y=u[:, np.newaxis])
+        np.testing.assert_allclose(rhs, 0, atol=1e-10)
+
+    def test_per_child_matches_concatenation_operator(self):
+        # On orthogonal quads the coupled per-child operators equal the
+        # operator on the welded mesh
+        sides = {
+            "left": (pybamm.Scalar(2), "Neumann"),
+            "right": (pybamm.Scalar(0), "Dirichlet"),
+            "top": (pybamm.Scalar(1), "Dirichlet"),
+            "bottom": (pybamm.Scalar(-1), "Neumann"),
+        }
+        results = []
+        for rhs_of in (
+            self._per_child,
+            lambda c, children: {c: pybamm.div(pybamm.grad(c))},
+        ):
+            _, _, _, model = self._discretise(False, "quad", sides, rhs_of)
+            u = np.linspace(0.1, 1, model.concatenated_rhs.shape[0])[:, np.newaxis]
+            results.append(model.concatenated_rhs.evaluate(t=0, y=u))
+        np.testing.assert_allclose(results[0], results[1], atol=1e-10)
+
+    def test_single_domain_variable_keeps_interface_tags(self):
+        # A variable on one child is not coupled, so its "right" condition and
+        # its "entire" boundary still include the faces shared with the next
+        sides = {
+            side: (pybamm.Scalar(0), "Neumann")
+            for side in ("left", "right", "top", "bottom")
+        }
+        mesh, disc, _, _ = self._discretise(False, "quad", sides, self._per_child)
+        negative = mesh["negative electrode"]
+        assert "iface_separator" in negative.boundary_faces
+
+        c_s_n = pybamm.Variable("c_s_n", "negative electrode")
+        disc.set_variable_slices([c_s_n])
+        disc.bcs = {
+            c_s_n: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        u = negative.cell_centroids[:, 0][:, np.newaxis]
+        laplacian = disc.process_symbol(pybamm.div(pybamm.grad(c_s_n)))
+        np.testing.assert_allclose(laplacian.evaluate(y=u), 0, atol=1e-10)
+
+        perimeter = disc.process_symbol(
+            pybamm.BoundaryIntegral(pybamm.PrimaryBroadcast(1, "negative electrode"))
+        )
+        np.testing.assert_allclose(perimeter.evaluate(), 4.0, atol=1e-12)
+
+
 # ======================================================================
 # Tests: non-orthogonal correction
 # ======================================================================
@@ -2966,3 +3340,79 @@ class TestOrthogonalityTolerance:
         skew = np.linalg.norm(k, axis=1)
         assert skew.max() > 0.4
         assert (skew > 0.4).sum() >= mesh.n_internal_faces // 2
+
+
+class TestTaggedFileMesh:
+    @staticmethod
+    def _write_two_region_mesh(path):
+        """Tets of [0, 2] x [0, 1] x [0, 1], region 1 at x < 1 and region 2
+        at x > 1, with only the x = 0 and x = 2 faces tagged."""
+        meshio = pytest.importorskip("meshio")
+        nodes, tets = _hex_to_tet(
+            np.linspace(0, 2, 5), np.linspace(0, 1, 2), np.linspace(0, 1, 3)
+        )
+        regions = np.where(nodes[tets].mean(axis=1)[:, 0] < 1, 1, 2)
+        whole = UnstructuredSubMesh(nodes, tets)
+        whole.detect_box_boundaries()
+        ends = [whole.faces[whole.boundary_faces[side]] for side in ("left", "right")]
+        meshio.write(
+            str(path),
+            meshio.Mesh(
+                nodes,
+                [("tetra", tets), ("triangle", np.concatenate(ends))],
+                cell_data={
+                    "tag": [
+                        regions,
+                        np.repeat([11, 12], [len(ends[0]), len(ends[1])]),
+                    ]
+                },
+            ),
+        )
+
+    def test_solve_without_workarounds(self, tmp_path, caplog):
+        # Custom domain names, no var_pts, untagged shared faces and an event
+        # on a tagged side's boundary value all work straight from the file
+        path = tmp_path / "two_regions.vtu"
+        self._write_two_region_mesh(path)
+        domains = ["negative current collector", "negative electrode"]
+        generator = pybamm.UserSuppliedUnstructuredMesh(
+            str(path),
+            subdomain_mapping=dict(zip(domains, [1, 2], strict=True)),
+            boundary_mapping={"cold end": 11, "hot end": 12},
+        )
+        x_ncc = pybamm.SpatialVariable("x_ncc", domain=domains[0])
+        x_n = pybamm.SpatialVariable("x_n", domain=domains[1])
+        geometry = {
+            domains[0]: {x_ncc: {"min": 0, "max": 1}},
+            domains[1]: {x_n: {"min": 1, "max": 2}},
+        }
+        with caplog.at_level("WARNING", logger="pybamm"):
+            mesh = pybamm.Mesh(geometry, dict.fromkeys(domains, generator), {})
+        assert mesh[domains[0]].npts == mesh[domains[1]].npts == 24
+
+        u_cc = pybamm.Variable("u_cc", domain=domains[0])
+        u_n = pybamm.Variable("u_n", domain=domains[1])
+        u = pybamm.concatenation(u_cc, u_n)
+        hot_end = pybamm.boundary_value(u_n, "hot end")
+        model = pybamm.BaseModel()
+        model.rhs = {u: pybamm.div(pybamm.grad(u))}
+        model.boundary_conditions = {
+            u: {
+                "cold end": (pybamm.Scalar(0), "Dirichlet"),
+                "hot end": (pybamm.Scalar(1), "Neumann"),
+            }
+        }
+        model.initial_conditions = {u: pybamm.Scalar(0)}
+        model.variables = {"u_cc": u_cc, "Hot end value": hot_end}
+        model.events = [pybamm.Event("Hot end limit", 0.5 - hot_end)]
+        spatial_methods = dict.fromkeys(domains, FiniteVolumeUnstructured())
+        with caplog.at_level("WARNING", logger="pybamm"):
+            pybamm.Discretisation(mesh, spatial_methods).process_model(model)
+        # each tag sits on one region only, which is not worth a warning
+        assert caplog.text == ""
+
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 10])
+        assert solution.termination == "event: Hot end limit"
+        assert solution["Hot end value"](solution.t[-1]) == pytest.approx(0.5)
+        # heat crosses the untagged shared face into the first region
+        assert solution["u_cc"](solution.t[-1]).max() > 0
