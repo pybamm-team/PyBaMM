@@ -118,29 +118,28 @@ def tomographic_electrode():
 
     fit.plot(show_plot=False)
 
-    # Discharge against time, and the rest against the time since its start
+    # Against the same time for every model, as in Paten et al. (2026): each
+    # model stops at its own 3.0 V cut-off, so their rests start at different times
     t_dns, v_dns = dns["Time [s]"], dns["Voltage [V]"]
     end_dns = t_dns[np.nonzero(dns["Current density [A.m-2]"] == 0)[0][0] - 1]
-    fig, (ax_discharge, ax_rest) = plt.subplots(1, 2, figsize=(10, 4))
-    resting = t_dns > end_dns
-    ax_discharge.plot(t_dns[~resting] / 60, v_dns[~resting], "k.", ms=2, label="DNS")
-    ax_rest.semilogx(t_dns[resting] - end_dns, v_dns[resting], "k.", ms=2)
-    after = np.geomspace(0.1, 900, 200)
+    fig, (ax_full, ax_rest) = plt.subplots(1, 2, figsize=(10, 4))
+    for ax in (ax_full, ax_rest):
+        ax.plot(t_dns, v_dns, "k.", ms=2, label="DNS")
     for label, model in models.items():
         solution = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment
         ).solve()
-        end = solution.cycles[0].steps[0].t[-1]
-        times = np.linspace(0, end, 300)
-        ax_discharge.plot(times / 60, solution["Voltage [V]"](times), label=label)
-        ax_rest.semilogx(after, solution["Voltage [V]"](end + after), label=label)
-    ax_discharge.set_xlabel("Time [min]")
-    ax_rest.set_xlabel("Time since the end of discharge [s]")
-    for ax in (ax_discharge, ax_rest):
+        times = np.linspace(0, solution.t[-1], 3000)
+        for ax in (ax_full, ax_rest):
+            ax.plot(times, solution["Voltage [V]"](times), label=label)
+    ax_rest.set_xlim(end_dns - 15, end_dns + 210)
+    ax_rest.set_ylim(2.95, 3.65)
+    for ax in (ax_full, ax_rest):
+        ax.set_xlabel("Time [s]")
         ax.set_ylabel("Voltage [V]")
-    ax_discharge.set_title("Tomographic NMC electrode: discharge")
-    ax_rest.set_title("Rest")
-    ax_discharge.legend()
+    ax_full.set_title("Tomographic NMC electrode: discharge and rest")
+    ax_rest.set_title("End of discharge and start of the rest")
+    ax_full.legend()
     fig.tight_layout()
 
 
