@@ -2,6 +2,8 @@
 # Tests particle size distribution parameters are loaded into a parameter set
 # and give expected values
 #
+import re
+
 import numpy as np
 import pytest
 
@@ -158,3 +160,14 @@ class TestSizeDistributionParameters:
         values.update({radius: "[input]"})
         processed = values.process_symbol(r_max)
         assert processed.evaluate(inputs={radius: 2e-6}) == pytest.approx(5e-6)
+
+    def test_missing_mean_radius_raises(self):
+        values = pybamm.ParameterValues("Chen2020")
+        with pytest.raises(
+            KeyError,
+            match=re.escape(
+                "get_size_distribution_parameters needs 'Primary: Negative particle "
+                "radius [m]' in the parameter values."
+            ),
+        ):
+            pybamm.get_size_distribution_parameters(values, composite="negative")

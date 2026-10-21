@@ -18,7 +18,8 @@
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 - Added `pybamm.bode_plot` and `pybamm.eis_plot`, which overlays labelled spectra. `EISSimulation.plot()` now shows Nyquist and Bode plots instead of failing. ([#5989](https://github.com/pybamm-team/PyBaMM/pull/5989))
 - When every sub-solver of `CompositeSolver` fails, their errors are chained to the raised `SolverError` as an `ExceptionGroup`, so each failure's traceback is kept. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
-- `get_size_distribution_parameters`, which sets the `MPM` default parameters, now sets the size distribution and minimum and maximum radii as expressions of the particle radius parameter, not numbers. Before, the radius was read once, so setting it to `"[input]"` left the distribution unchanged and its sensitivity zero. Pass `R_n_av` and `R_p_av` to keep numeric values. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `get_size_distribution_parameters`, which sets the `MPM` default parameters, now sets the size distribution and minimum and maximum radii as expressions of the particle radius parameter, so they follow changes to it, such as `"[input]"`. Pass `R_n_av` and `R_p_av` to keep numbers. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- A custom `SubMesh` subclass given input-dependent limits now raises a `GeometryError` unless it sets `supports_symbolic_limits = True`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Bug fixes
 
@@ -48,11 +49,12 @@
 - The heat of mixing now sums over every particle phase, so `"heat of mixing": "true"` works with `"particle phases": "2"` instead of raising a `ModelError`. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - The heat of mixing now uses the particle's effective diffusivity, so it conserves energy with `"current sigmoid"` diffusivity or stress-induced diffusion, and a uniform particle profile builds again. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - `"heat of mixing": "true"` now works with `"particle": "quadratic profile"` or `"quartic profile"`, using their closed-form flux instead of failing to discretise with a `ShapeError`. ([#5935](https://github.com/pybamm-team/PyBaMM/pull/5935))
-- `calculate_sensitivities` with a name that is not an input parameter of the model raises a `SolverError` listing the model's inputs, instead of a bare `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
-- `calculate_sensitivities=True` logs supplied inputs that the model does not use, instead of silently ignoring them. With an `Experiment`, it skips inputs that some step models lack, where it used to raise a `KeyError`, and a list naming such an input raises a `SolverError` before solving. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
-- Sensitivities with respect to a vector-valued input raise a `SolverError` naming the input, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols". ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
-- Setting a geometry parameter, such as an electrode thickness, to an input with the default `Uniform1DSubMesh` raises a `GeometryError` that points to `pybamm.SymbolicUniform1DSubMesh`, instead of an `IndexError`. Input-dependent tab positions raise a `GeometryError` instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
-- `output_variables` whose names contain characters such as `/` (e.g. `"Entropic change [V/K]"`) no longer fail with CasADi's "Function name is not valid", and names that differ only in punctuation no longer break the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Sensitivity and geometry inputs are validated with clear errors. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+  - `calculate_sensitivities` with a name that is not an input parameter of the model raises a `SolverError` listing the model's inputs, instead of a `KeyError`.
+  - `calculate_sensitivities=True` logs supplied inputs that the model does not use. With an `Experiment`, it skips inputs that some step models lack, where it used to raise a `KeyError`, and a list naming such an input raises a `SolverError` before solving.
+  - Sensitivities with respect to a vector-valued input raise a `SolverError`, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols".
+  - Input-dependent geometry limits on a submesh that needs numbers, such as the default `Uniform1DSubMesh`, raise a `GeometryError` that points to `pybamm.SymbolicUniform1DSubMesh`, instead of an `IndexError`. Input-dependent tab positions raise a `GeometryError` instead of a `KeyError`.
+  - `output_variables` with `/` in their names, such as `"Entropic change [V/K]"`, or with names that differ only in punctuation now work, including with the `compile` option.
 
 ## Optimizations
 
