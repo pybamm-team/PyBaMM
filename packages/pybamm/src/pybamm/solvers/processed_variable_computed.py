@@ -820,8 +820,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
 
     def _time_integrals_joinable(self, other):
         """Return whether this variable and other are joinable time integrals."""
-        # Every segment samples its end points, so a DiscreteTimeSum would count the
-        # boundary twice; a function of an integral cannot be split across segments
+        # A DiscreteTimeSum would count a discrete time on a segment boundary in both
+        # segments; a function of an integral cannot be split across segments
         return all(
             time_integral is not None
             and time_integral.method == "continuous"

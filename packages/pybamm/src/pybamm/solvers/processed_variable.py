@@ -174,18 +174,21 @@ class ProcessedVariable(BaseProcessedVariable):
     def _observe_time_integral(self):
         """The time integral's value, shaped like the variable at one time."""
         time_integral = self.time_integral
-        indices = time_integral.sample_indices(self.t_pts)
-        if indices is not None:
-            t = self.t_pts[indices]
-            entries = self._observe_postfix(self._observe_raw(), self.t_pts)
-            entries = entries[..., indices]
-        elif self.hermite_interpolation:
+        time_integral.warn_times_after_end(self._name, self.t_pts[-1])
+        if (
+            self.hermite_interpolation
+            and time_integral.sample_indices(self.t_pts) is None
+        ):
+            # Interpolate the summand to the discrete times the solver did not stop at
             t = time_integral.sample_times(self.t_pts)
             entries = self._observe_postfix(self._observe_hermite(t), t)
         else:
-            raise time_integral.missing_times_error(
+            indices = time_integral.checked_sample_indices(
                 self._name, self.t_pts, "the solution has no Hermite interpolant"
             )
+            t = self.t_pts[indices]
+            entries = self._observe_postfix(self._observe_raw(), self.t_pts)
+            entries = entries[..., indices]
         value = time_integral.postfix(
             np.moveaxis(entries, -1, 0), t, self.all_inputs[0]
         )

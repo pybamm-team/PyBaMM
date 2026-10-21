@@ -1677,13 +1677,15 @@ class TestSolution:
         np.testing.assert_allclose(sensitivities["y0"], [expected], rtol=1e-6)
 
     @pytest.mark.parametrize("use_output_var", [False, True])
-    def test_discrete_time_sum_reads_only_its_own_times(self, use_output_var):
+    def test_discrete_time_sum_reads_only_its_own_times(self, use_output_var, caplog):
         # The solution holds five times as many points as the data
-        data_times, sol = self._solve_discrete_sum(
-            use_output_var, np.linspace(0, 5, 51)
-        )
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            data_times, sol = self._solve_discrete_sum(
+                use_output_var, np.linspace(0, 5, 51)
+            )
+            self._assert_discrete_sum(sol["sum"], data_times)
 
-        self._assert_discrete_sum(sol["sum"], data_times)
+        assert "after the solution ends" not in caplog.text
 
     def test_discrete_time_sum_value_interpolates_full_state(self):
         data_times, sol = self._solve_discrete_sum(False, None)
@@ -1708,15 +1710,65 @@ class TestSolution:
             with pytest.raises(pybamm.SolverError, match=r"no Hermite interpolant"):
                 sol["sum"].entries
 
-    @pytest.mark.parametrize("use_output_var", [False, True])
-    def test_discrete_time_sum_over_event_terminated_solution(self, use_output_var):
-        data_times, sol = self._solve_discrete_sum(
-            use_output_var, np.linspace(0, 5, 11), y_min=1.0
-        )
+    def test_discrete_time_sum_missing_its_times_raises_before_integrating(self):
+        data_times = np.linspace(0, 5, 11)
+        model = self._discrete_sum_model(data_times)
+        solver = pybamm.IDAKLUSolver(output_variables=["sum"])
+        solve_kwargs = {
+            "inputs": {"k": 0.3, "y0": 2.0, "y_min": 0.0},
+            "calculate_sensitivities": ["k", "y0"],
+        }
+        # Solve once so the second solve reuses this group rather than rebuilding
+        # it, which would discard the spy.
+        solver.solve(model, [0, 5], t_interp=data_times, **solve_kwargs)
 
-        # y reaches 1 at t = ln(2) / 0.3, so only the data times before count
+        def integrate(*args, **kwargs):
+            pytest.fail("integrated before checking the output times")
+
+        solver._setup["solver"] = type("Spy", (), {"solve": staticmethod(integrate)})()
+        with pytest.raises(pybamm.SolverError, match=r"keeps no states"):
+            solver.solve(model, [0, 5], t_interp=np.linspace(0, 5, 6), **solve_kwargs)
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_discrete_time_sum_over_event_terminated_solution(
+        self, use_output_var, caplog
+    ):
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            data_times, sol = self._solve_discrete_sum(
+                use_output_var, np.linspace(0, 5, 11), y_min=1.0
+            )
+            # y reaches 1 at t = ln(2) / 0.3, so only the data times before count
+            self._assert_discrete_sum(
+                sol["sum"], data_times[data_times < np.log(2) / 0.3]
+            )
+
         assert sol.termination == "event: y = y_min"
-        self._assert_discrete_sum(sol["sum"], data_times[data_times < np.log(2) / 0.3])
+        messages = [
+            record.getMessage()
+            for record in caplog.records
+            if "after the solution ends" in record.getMessage()
+        ]
+        assert len(messages) == 1
+        assert '"sum": 6 of its 11 discrete times are after' in messages[0]
+
+    def test_discrete_time_sum_split_solve_does_not_warn(self, caplog):
+        # The first segment's later discrete times belong to the second
+        data_times = np.linspace(0, 5, 11)
+        model = self._discrete_sum_model(data_times)
+        y = model.variables["y"]
+        switch = pybamm.t > pybamm.InputParameter("t_switch")
+        model.rhs = {y: -pybamm.InputParameter("k") * y * (1 + switch)}
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, output_variables=["sum"])
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            sol = solver.solve(
+                model,
+                [0, 5],
+                inputs={"k": 0.3, "y0": 2.0, "y_min": 0.0, "t_switch": 2.7},
+                t_interp=data_times,
+            )
+
+        assert len(sol.sub_solutions) == 2
+        assert "after the solution ends" not in caplog.text
 
     @pytest.mark.parametrize("use_output_var", [False, True])
     def test_explicit_time_integral_initial_condition_depends_on_input(
@@ -1818,7 +1870,7 @@ class TestSolution:
         np.testing.assert_allclose(twice.sensitivities["k"], 2 * expected_dk, rtol=1e-6)
         np.testing.assert_allclose(twice.sensitivities["q0"], 2 * np.ones_like(nodes))
 
-        reloaded = pickle.loads(pickle.dumps(sol))["integral"]
+        reloaded = pickle.loads(pickle.dumps(sol))["integral"]  # nosec B301
         np.testing.assert_array_equal(reloaded.entries, integral.entries)
         np.testing.assert_allclose(
             reloaded.sensitivities["k"], integral.sensitivities["k"], rtol=1e-12

@@ -22,6 +22,8 @@ class ProcessedVariableTimeIntegral:
 
     A continuous integral applies the trapezoidal rule over the solution times; a
     discrete sum adds its summand at its discrete times within the solution's span.
+    A discrete sum leaves out its discrete times after the solution ends, such as
+    at an early event, and :meth:`warn_times_after_end` logs how many.
 
     Parameters
     ----------
@@ -65,7 +67,7 @@ class ProcessedVariableTimeIntegral:
 
     def sample_times(self, t_pts: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """
-        The times the integrand is sampled at.
+        The discrete times a discrete sum samples its summand at.
 
         Parameters
         ----------
@@ -75,11 +77,8 @@ class ProcessedVariableTimeIntegral:
         Returns
         -------
         numpy.ndarray
-            ``t_pts`` for a continuous integral, or the discrete times within
-            ``[t_pts[0], t_pts[-1]]`` for a discrete sum.
+            The discrete times within ``[t_pts[0], t_pts[-1]]``.
         """
-        if self.method == "continuous":
-            return t_pts
         times = np.asarray(self.discrete_times, dtype=float)
         start, end = t_pts[0], t_pts[-1]
         in_span = (
@@ -93,7 +92,7 @@ class ProcessedVariableTimeIntegral:
         self, t_pts: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.intp] | None:
         """
-        The indices of the solution times at :meth:`sample_times`.
+        The indices of the solution times the integrand is sampled at.
 
         Parameters
         ----------
@@ -103,19 +102,19 @@ class ProcessedVariableTimeIntegral:
         Returns
         -------
         numpy.ndarray or None
-            One index per sample time, or None if a sample time is not one of
-            ``t_pts``.
+            Every index for a continuous integral. For a discrete sum, one index
+            per :meth:`sample_times`, or None if one of them is not in ``t_pts``.
         """
         if self.method == "continuous":
             return np.arange(len(t_pts))
         nearest, matched = _nearest_times(t_pts, self.sample_times(t_pts))
         return nearest if np.all(matched) else None
 
-    def missing_times_error(
+    def checked_sample_indices(
         self, var_name: str, t_pts: npt.NDArray[np.float64], reason: str
-    ) -> pybamm.SolverError:
+    ) -> npt.NDArray[np.intp]:
         """
-        The error for a discrete sum whose times are not all solution times.
+        As :meth:`sample_indices`, but raise if a discrete time is not in ``t_pts``.
 
         Parameters
         ----------
@@ -124,19 +123,57 @@ class ProcessedVariableTimeIntegral:
         t_pts : numpy.ndarray
             The solution (or output) times, ascending.
         reason : str
-            Why the summand cannot be interpolated to the missing times.
+            Why the summand cannot be interpolated to discrete times not in
+            ``t_pts``.
 
         Returns
         -------
+        numpy.ndarray
+            One index per sample time.
+
+        Raises
+        ------
         :class:`pybamm.SolverError`
+            If a discrete time within the span of ``t_pts`` is not one of them.
         """
-        times = self.sample_times(t_pts)
-        missing = times[~_nearest_times(t_pts, times)[1]]
-        return pybamm.SolverError(
-            f'Discrete-time-sum variable "{var_name}": {len(missing)} of its '
-            f"discrete times (first: {missing[:3]}) are not solution times, and "
-            f"{reason}. Include the discrete times in `t_interp` (or `t_eval`)."
+        indices = self.sample_indices(t_pts)
+        if indices is None:
+            times = self.sample_times(t_pts)
+            missing = times[~_nearest_times(t_pts, times)[1]]
+            raise pybamm.SolverError(
+                f'Discrete-time-sum variable "{var_name}": {len(missing)} of its '
+                f"discrete times (first: {missing[:3]}) are not solution times, and "
+                f"{reason}. Include the discrete times in `t_interp` (or `t_eval`)."
+            )
+        return indices
+
+    def warn_times_after_end(self, var_name: str, t_end: float) -> None:
+        """
+        Log a warning if a discrete sum has discrete times after ``t_end``.
+
+        The sum leaves these times out, so a solution that ends early, such as at
+        an event, sums fewer terms.
+
+        Parameters
+        ----------
+        var_name : str
+            The name of the variable.
+        t_end : float
+            The time the solution ends at.
+        """
+        if self.method == "continuous":
+            return
+        times = np.asarray(self.discrete_times, dtype=float)
+        after_end = (times > t_end) & ~np.isclose(
+            times, t_end, rtol=_TIME_RTOL, atol=_TIME_ATOL
         )
+        n_after_end = np.count_nonzero(after_end)
+        if n_after_end:
+            pybamm.logger.warning(
+                f'Discrete-time-sum variable "{var_name}": {n_after_end} of its '
+                f"{times.size} discrete times are after the solution ends at "
+                f"t = {t_end:g}, so the sum leaves them out."
+            )
 
     def check_output_times(
         self,
@@ -166,13 +203,11 @@ class ProcessedVariableTimeIntegral:
         t_eval = np.asarray(t_eval, dtype=float)
         t_interp = np.asarray(t_interp, dtype=float)
         t_interp = t_interp[(t_interp >= t_eval[0]) & (t_interp <= t_eval[-1])]
-        output_times = np.union1d(t_eval, t_interp)
-        if self.sample_indices(output_times) is None:
-            raise self.missing_times_error(
-                var_name,
-                output_times,
-                "an output_variables solve keeps no states to interpolate",
-            )
+        self.checked_sample_indices(
+            var_name,
+            np.union1d(t_eval, t_interp),
+            "an output_variables solve keeps no states to interpolate",
+        )
 
     def initial_condition_value(self, inputs: dict) -> npt.NDArray[np.float64]:
         """
@@ -210,14 +245,15 @@ class ProcessedVariableTimeIntegral:
         numpy.ndarray
             Shape ``(n_initial_condition, n_p)``; zero for a constant.
         """
-        p_casadi, p_stacked, p_values = _symbolic_inputs(inputs, sensitivity_names)
         initial_condition = self.initial_condition
         if not (
             isinstance(initial_condition, pybamm.Symbol)
             and initial_condition.has_symbol_of_classes(pybamm.InputParameter)
         ):
             size = self.initial_condition_value(inputs).size
-            return np.zeros((size, p_stacked.shape[0]))
+            n_params = sum(_input_size(inputs[name]) for name in sensitivity_names)
+            return np.zeros((size, n_params))
+        p_casadi, p_stacked, p_values = _symbolic_inputs(inputs, sensitivity_names)
         initial_condition_casadi = initial_condition.to_casadi(
             casadi.MX.sym("t"), casadi.MX.sym("y", 0), inputs={**inputs, **p_casadi}
         )
@@ -451,11 +487,15 @@ def _nearest_times(t_pts, times):
 
 def _symbolic_inputs(inputs, sensitivity_names):
     """CasADi symbols for the sensitivity inputs, stacked, and their values."""
-    p_casadi = {}
-    for name in sensitivity_names:
-        value = inputs[name]
-        size = 1 if not isinstance(value, np.ndarray) else value.shape[0]
-        p_casadi[name] = casadi.MX.sym(name, size)
+    p_casadi = {
+        name: casadi.MX.sym(name, _input_size(inputs[name]))
+        for name in sensitivity_names
+    }
     p_stacked = casadi.vertcat(*p_casadi.values())
     values_stacked = casadi.vertcat(*[inputs[name] for name in sensitivity_names])
     return p_casadi, p_stacked, values_stacked
+
+
+def _input_size(value):
+    """The number of sensitivity parameters an input value holds."""
+    return value.shape[0] if isinstance(value, np.ndarray) else 1

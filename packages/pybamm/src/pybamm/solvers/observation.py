@@ -233,9 +233,17 @@ class OutputAssembly:
                 dense[:, sparsity.find()] = entries
                 entries = dense
             values = entries
+            indices = None
             if time_integral is not None:
                 # These rows are the integrand's trajectory, not the variable's.
-                indices = _sample_indices(name, time_integral, solution.t)
+                indices = time_integral.checked_sample_indices(
+                    name,
+                    solution.t,
+                    "an output_variables solve keeps no states to interpolate",
+                )
+                # A segment that reached its final time leaves later times to the next
+                if solution.termination != "final time":
+                    time_integral.warn_times_after_end(name, solution.t[-1])
                 values = time_integral.postfix(
                     entries[indices], solution.t[indices], solution.all_inputs[0]
                 )
@@ -255,6 +263,7 @@ class OutputAssembly:
                     sensitivities[:, rows, :],
                     solution,
                     sensitivity_names,
+                    indices,
                 )
             )
             solution._variables[name] = variable
@@ -283,9 +292,12 @@ class OutputAssembly:
         return array
 
     def _variable_sensitivities(
-        self, name, entries, block, solution, sensitivity_names
+        self, name, entries, block, solution, sensitivity_names, indices
     ):
-        """One variable's ``"all"`` block plus a flat vector per parameter."""
+        """
+        One variable's ``"all"`` block plus a flat vector per parameter; a time
+        integral's from the rows at ``indices``.
+        """
         sparsity = self._sparse.get(name)
         if sparsity is not None:
             raise pybamm.SolverError(
@@ -297,7 +309,6 @@ class OutputAssembly:
         all_sens = block.reshape(n_timesteps * var_len, n_params)
         time_integral = self._time_integrals.get(name)
         if time_integral is not None:
-            indices = _sample_indices(name, time_integral, solution.t)
             all_sens = time_integral.postfix_sensitivities(
                 name,
                 entries[indices],
@@ -307,13 +318,3 @@ class OutputAssembly:
                 block[indices].reshape(-1, n_params),
             )
         return pack_sensitivity_dict(all_sens, sensitivity_names)
-
-
-def _sample_indices(name, time_integral, t_pts):
-    """The rows of ``t_pts`` a time integral output is evaluated from."""
-    indices = time_integral.sample_indices(t_pts)
-    if indices is None:
-        raise time_integral.missing_times_error(
-            name, t_pts, "an output_variables solve keeps no states to interpolate"
-        )
-    return indices

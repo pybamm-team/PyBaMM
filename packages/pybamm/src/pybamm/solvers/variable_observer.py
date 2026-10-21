@@ -258,13 +258,11 @@ class CasadiObserver(VariableObserver):
         if time_integral is not None:
             # The value sums over every segment at once, so its sensitivity must too
             t_pts = variable.t_pts
-            indices = time_integral.sample_indices(t_pts)
-            if indices is None:
-                raise time_integral.missing_times_error(
-                    variable._name,
-                    t_pts,
-                    "the solution's sensitivities cannot be interpolated",
-                )
+            indices = time_integral.checked_sample_indices(
+                variable._name,
+                t_pts,
+                "the solution's sensitivities cannot be interpolated",
+            )
             n_params = S_var.shape[1]
             # Rows are time-major: one block of the variable's entries per time
             S_var = S_var.reshape(len(t_pts), -1, n_params)[indices]
