@@ -331,7 +331,14 @@ def option_values_match(option, first, second, working_electrode="both"):
     -------
     bool
         Whether both values give the same leaf for every electrode and phase.
+
+    Raises
+    ------
+    pybamm.OptionError
+        If either value is not a supported shape for the option.
     """
+    iter_option_leaves(option, first)
+    iter_option_leaves(option, second)
     return all(
         resolve_option(option, first, domain, phase, working_electrode)
         == resolve_option(option, second, domain, phase, working_electrode)
@@ -482,27 +489,33 @@ def _check_electrode_compatibility(options):
         If a per-electrode or per-phase combination is incompatible.
     """
     working_electrode = options["working electrode"]
+    # every electrode, so a half cell's unused entry is still checked for shape
+    for domain in _ELECTRODES:
+        if resolve_option("particle phases", options["particle phases"], domain) != "1":
+            continue
+        for option in sorted(_PER_PHASE_OPTIONS):
+            electrode_value = resolve_option(
+                option, options[option], domain, working_electrode=working_electrode
+            )
+            if isinstance(electrode_value, tuple):
+                raise pybamm.OptionError(
+                    f"Option '{option}' at {domain} is {electrode_value}, a "
+                    "(primary, secondary) tuple, but 'particle phases' at "
+                    f"{domain} is '1'. Give one value for that electrode or "
+                    "set its 'particle phases' to '2'."
+                )
     for domain in active_electrodes(working_electrode):
         number_of_phases = int(
             resolve_option("particle phases", options["particle phases"], domain)
         )
         phases = _PHASES[:number_of_phases]
-        if number_of_phases == 1:
-            for option in sorted(_PER_PHASE_OPTIONS):
-                electrode_value = resolve_option(
-                    option, options[option], domain, working_electrode=working_electrode
-                )
-                if isinstance(electrode_value, tuple):
-                    raise pybamm.OptionError(
-                        f"Option '{option}' at {domain} is {electrode_value}, a "
-                        "(primary, secondary) tuple, but 'particle phases' at "
-                        f"{domain} is '1'. Give one value for that electrode or "
-                        "set its 'particle phases' to '2'."
-                    )
-        elif options["surface form"] == "false" or any(
-            resolve_option("particle", options["particle"], domain, phase)
-            != "Fickian diffusion"
-            for phase in phases
+        if number_of_phases > 1 and (
+            options["surface form"] == "false"
+            or any(
+                resolve_option("particle", options["particle"], domain, phase)
+                != "Fickian diffusion"
+                for phase in phases
+            )
         ):
             raise pybamm.OptionError(
                 f"Electrode at {domain} has multiple particle phases, which "
@@ -1110,33 +1123,33 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if not legacy:
             _check_electrode_compatibility(options)
 
-        # MSMR OCP, particle and kinetics only work together; a half cell may set
-        # them on the working electrode only
-        msmr_check_list = [
-            any(leaf == "MSMR" for _, leaf in iter_option_leaves(opt, options[opt]))
-            for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
-        ]
-        if (
-            options["working electrode"] == "both"
-            and any(msmr_check_list)
-            and not all(msmr_check_list)
-        ):
-            raise pybamm.OptionError(
-                "If any of 'open-circuit potential', 'particle' or "
-                "'intercalation kinetics' is 'MSMR' then all of them must be 'MSMR'"
-            )
-
-        # Validate per electrode so a mixed full cell (MSMR in one electrode,
-        # conventional in the other) is accepted.
+        # MSMR OCP, particle and kinetics only work together, so check them per
+        # electrode and phase; one electrode may be MSMR and the other not
+        msmr_options = ["open-circuit potential", "particle", "intercalation kinetics"]
         for domain in active_electrodes(options["working electrode"]):
-            domain_uses_msmr = any(
-                resolve_option(opt, options[opt], domain) == "MSMR"
-                for opt in [
-                    "open-circuit potential",
-                    "particle",
-                    "intercalation kinetics",
+            phases = _PHASES[
+                : int(
+                    resolve_option(
+                        "particle phases", options["particle phases"], domain
+                    )
+                )
+            ]
+            uses_msmr = [
+                [
+                    resolve_option(opt, options[opt], domain, phase) == "MSMR"
+                    for opt in msmr_options
                 ]
-            )
+                for phase in phases
+            ]
+            for phase, flags in zip(phases, uses_msmr, strict=True):
+                if any(flags) and not all(flags):
+                    path = (domain, phase) if len(phases) > 1 else (domain,)
+                    raise pybamm.OptionError(
+                        "If any of 'open-circuit potential', 'particle' or "
+                        "'intercalation kinetics' is 'MSMR' then all of them must "
+                        f"be 'MSMR'{_option_location(path)}"
+                    )
+            domain_uses_msmr = any(any(flags) for flags in uses_msmr)
             domain_count = resolve_option(
                 "number of MSMR reactions", options["number of MSMR reactions"], domain
             )
