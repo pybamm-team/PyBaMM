@@ -361,8 +361,10 @@ public:
    * @brief Make the states and sensitivities consistent at t_val, then hand
    * them to IDAS.
    * @param calc_states If false, only the sensitivities are made consistent
+   * @return IDA_SUCCESS, or the negative IDACalcIC flag if the sensitivities
+   * could not be made consistent
    */
-  void ConsistentInitialization(
+  int ConsistentInitialization(
     const sunrealtype& t_val,
     const sunrealtype& t_next,
     const int& icopt,
@@ -382,15 +384,9 @@ public:
   bool NonlinearSolverInitialConditions(const sunrealtype& t_val);
 
   /**
-   * @brief Set a consistent initialization for ODEs
+   * @brief Set yp_diff = M^-1 f(t, y) and zero the algebraic components of yp
    */
   void ConsistentInitializationODE(const sunrealtype& t_val);
-
-  /**
-   * @brief Recover yp after a successful Newton IC solve.
-   * Sets yp_diff = M^-1 f(t, y) and zeros algebraic yp components.
-   */
-  void RecoverYp(const sunrealtype& t_val);
 
   /**
    * @brief Run IDACalcIC from the current yy/yyp and copy its result back.
@@ -541,13 +537,33 @@ public:
 
   /**
    * @brief Handle a breakpoint at t_eval: finalize interval, reinitialize
+   * @return The ConsistentInitialization flag, negative on failure
    */
-  void HandleBreakpoint(
+  int HandleBreakpoint(
     sunrealtype t_val,
     const std::vector<sunrealtype> &t_eval,
     int &i_eval,
     sunrealtype &t_eval_next,
     NoProgressGuard &no_progression
+  );
+
+  /**
+   * @brief Move across the t_eval points after t_val that are each within
+   * round-off of the one before, which IDAS cannot step between
+   *
+   * All but the last are made consistent and stored, as is the last if it
+   * ends t_eval.
+   * @param t_val t_eval[i_eval] on entry, and the last of the points on return
+   * @param i_eval The index of t_val
+   * @return The ConsistentInitialization flag, negative on failure
+   */
+  int RestartWithinRoundoff(
+    sunrealtype &t_val,
+    const std::vector<sunrealtype> &t_eval,
+    int &i_eval,
+    int &i_interp,
+    sunrealtype &t_interp_next,
+    const std::vector<sunrealtype> &t_interp
   );
 
   /**

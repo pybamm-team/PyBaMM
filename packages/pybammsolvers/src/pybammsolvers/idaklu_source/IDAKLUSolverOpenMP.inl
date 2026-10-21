@@ -393,28 +393,54 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     }
   }
 
+  NoProgressGuard no_progression(solver_opts.num_steps_no_progress, solver_opts.t_no_progress);
+  no_progression.Initialize();
+
+  int retval = IDA_SUCCESS;
+  bool save_restart_point = false;
+  if (within_roundoff(t0, t_eval_next)) {
+    // IDAS cannot step to t_eval[1], so t0 is stored as initialised
+    StoreInitialPoint(t0);
+    i_eval = 0;
+    retval = RestartWithinRoundoff(t_val, t_eval, i_eval,
+                                   i_interp, t_interp_next, t_interp);
+    if (retval >= 0 && i_eval < number_of_evals - 1) {
+      save_restart_point = true;
+      retval = HandleBreakpoint(t_val, t_eval, i_eval, t_eval_next, no_progression);
+    }
+    if (!save_restart_point || retval < 0) {
+      log_.log_integration_complete(0, t_val);
+      return BuildSolutionData(retval);
+    }
+  }
+
   // first step
   // Progress one step before the loop to ensure IDAGetDky works at t0 for dky = 1
   int n_steps = 0;
-  int retval = Step(tf_perturbed, t_val);
+  t_prev = t_val;
+  retval = Step(tf_perturbed, t_val);
   // Before IDAGetDky, which fails on a step that was never taken
   CheckErrors(retval, "IDASolve at t0");
-  GetSolutionFull(t0);
+  if (save_restart_point) {
+    SaveRestartPoint(t_prev);
+  } else {
+    GetSolutionFull(t0);
+  }
 
   log_.log_step(++n_steps, t_val);
 
-  NoProgressGuard no_progression(solver_opts.num_steps_no_progress, solver_opts.t_no_progress);
-  no_progression.Initialize();
-  no_progression.AddDt(t_val - t0);
+  no_progression.AddDt(t_val - t_prev);
 
-  StoreInitialPoint(t0);
+  if (!save_restart_point) {
+    StoreInitialPoint(t0);
+  }
+  save_restart_point = false;
 
   // Reset the states and sensitivities at t = t_val
   GetSolutionFull(t_val);
 
   // main integration loop
   DEBUG("IDASolve");
-  bool save_restart_point = false;
   while (true) {
     if (retval < 0) {
       break;
@@ -444,25 +470,19 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     } else if (hit_teval && i_eval + 1 < number_of_evals &&
                within_roundoff(t_val, t_eval[i_eval + 1])) {
       // pybamm brackets a discontinuity with t_eval points a roundoff apart.
-      // IDAS cannot step between them, so restart from the right-hand one.
-      sunrealtype const t_right = t_eval[i_eval + 1];
-      if (save_interp_steps_ && !use_knot_reduction_ && t_interp_next >= t_prev) {
-        SaveInterpPoints(i_interp, t_interp_next, t_interp,
-                         t_right, t_val, t_eval_next);
-      }
-      i_eval++;
-      t_val = t_right;
-      if (i_eval == number_of_evals - 1) {
-        SaveStats();
-        ConsistentInitialization(t_val, t_val, IDA_YA_YDP_INIT);
-        log_.log_consistent_init(t_val);
-        SavePoint(t_val, /*extend_arrays=*/false, /*is_breakpoint=*/false);
+      // IDAS cannot step between them, so restart from the last one.
+      retval = RestartWithinRoundoff(t_val, t_eval, i_eval,
+                                     i_interp, t_interp_next, t_interp);
+      if (retval < 0 || i_eval == number_of_evals - 1) {
         break;
       }
       save_restart_point = true;
-      HandleBreakpoint(t_val, t_eval, i_eval, t_eval_next, no_progression);
+      retval = HandleBreakpoint(t_val, t_eval, i_eval, t_eval_next, no_progression);
     } else if (hit_teval) {
-      HandleBreakpoint(t_val, t_eval, i_eval, t_eval_next, no_progression);
+      retval = HandleBreakpoint(t_val, t_eval, i_eval, t_eval_next, no_progression);
+    }
+    if (retval < 0) {
+      break;
     }
 
     t_prev = t_val;
@@ -621,13 +641,21 @@ void IDAKLUSolverOpenMP<ExprSet>::SetupInitialState(
   sunrealtype t_eval_next = t_eval[1];
   ReinitializeIntegrator(t0);
   int const init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
+  int flag = IDA_SUCCESS;
   if (solver_opts.calc_ic) {
-    ConsistentInitialization(t0, t_eval_next, init_type);
+    flag = ConsistentInitialization(t0, t_eval_next, init_type);
     log_.log_consistent_init(t0);
   } else if (sensitivity) {
     // The states are used as given, but dy0/dp only fixes the differential
     // sensitivities, so the rest must still be made consistent
-    ConsistentInitialization(t0, t_eval_next, init_type, /*calc_states=*/false);
+    flag = ConsistentInitialization(t0, t_eval_next, init_type, /*calc_states=*/false);
+  }
+  if (flag < 0) {
+    // As for a failed first step, there is no partial solution to return
+    std::string const context =
+      "Could not find consistent initial sensitivities at t = " +
+      std::to_string(t0) + ", IDACalcIC failed";
+    throw_sundials_error(flag, context.c_str());
   }
 
   // Set the initial stop time
@@ -721,7 +749,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SaveRestartPoint(sunrealtype t_restart) {
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
+int IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   sunrealtype t_val,
   const std::vector<sunrealtype> &t_eval,
   int &i_eval,
@@ -740,11 +768,52 @@ void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   SaveStats();
 
   // Reinitialize the solver to deal with the discontinuity at t = t_val
-  ConsistentInitialization(t_val, t_eval_next, IDA_YA_YDP_INIT);
-  log_.log_consistent_init(t_val);
+  int const flag = ConsistentInitialization(t_val, t_eval_next, IDA_YA_YDP_INIT);
+  if (flag >= 0) {
+    log_.log_consistent_init(t_val);
+  }
 
   // Reset the no-progress guard
   no_progression.Initialize();
+  return flag;
+}
+
+template <class ExprSet>
+int IDAKLUSolverOpenMP<ExprSet>::RestartWithinRoundoff(
+  sunrealtype &t_val,
+  const std::vector<sunrealtype> &t_eval,
+  int &i_eval,
+  int &i_interp,
+  sunrealtype &t_interp_next,
+  const std::vector<sunrealtype> &t_interp
+) {
+  DEBUG("IDAKLUSolver::RestartWithinRoundoff");
+
+  int const i_last = static_cast<int>(t_eval.size()) - 1;
+  while (true) {
+    sunrealtype const t_next = t_eval[i_eval + 1];
+    if (save_interp_steps_ && !use_knot_reduction_ && t_interp_next >= t_val) {
+      SaveInterpPoints(i_interp, t_interp_next, t_interp, t_next, t_val, t_next);
+    }
+    i_eval++;
+    t_val = t_next;
+    bool const more = i_eval < i_last && within_roundoff(t_val, t_eval[i_eval + 1]);
+    if (!more && i_eval < i_last) {
+      return IDA_SUCCESS;
+    }
+
+    // IDAS will not step from t_val, so store it as initialised
+    SaveStats();
+    int const flag = ConsistentInitialization(t_val, t_val, IDA_YA_YDP_INIT);
+    if (flag < 0) {
+      return flag;
+    }
+    log_.log_consistent_init(t_val);
+    SavePoint(t_val, /*extend_arrays=*/false, /*is_breakpoint=*/more);
+    if (!more) {
+      return flag;
+    }
+  }
 }
 
 template <class ExprSet>
@@ -886,7 +955,7 @@ void IDAKLUSolverOpenMP<ExprSet>::ApplySensitivityScales() {
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitialization(
+int IDAKLUSolverOpenMP<ExprSet>::ConsistentInitialization(
   const sunrealtype& t_val,
   const sunrealtype& t_next,
   const int& icopt,
@@ -902,19 +971,17 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitialization(
     }
   }
 
+  int flag = IDA_SUCCESS;
   if (sensitivity && !SensitivityConsistentInitialization(t_val)) {
-    int const flag = CalcICWithIDAS(t_val, t_next, IDA_YA_YDP_INIT,
-                                    /*with_sensitivities=*/true);
-    if (flag != IDA_SUCCESS) {
-      std::string const context =
-        "Could not find consistent initial sensitivities at t = " +
-        std::to_string(t_val) + ", IDACalcIC failed";
-      throw_sundials_error(flag, context.c_str());
+    flag = CalcICWithIDAS(t_val, t_next, IDA_YA_YDP_INIT, /*with_sensitivities=*/true);
+    if (flag < 0) {
+      log_.log_sensitivity_ic_failed(t_val, sundials_error_message(flag));
     }
   }
 
   // IDAReInit copies the vectors, so IDAS only sees the values they hold now
   ReinitializeIntegrator(t_val);
+  return flag;
 }
 
 template <class ExprSet>
@@ -937,7 +1004,7 @@ bool IDAKLUSolverOpenMP<ExprSet>::NonlinearSolverInitialConditions(
   // Keep the solved state if it is no worse than the guess: the Newton can
   // reduce the residual yet still fail the WRMS step-norm test at tiny atol.
   if (success || as.solver->final_res_norm() <= as.solver->initial_res_norm()) {
-    RecoverYp(t_val);
+    ConsistentInitializationODE(t_val);
   } else {
     std::memcpy(y_val, as.y_backup.data(), number_of_states * sizeof(sunrealtype));
     std::memcpy(yp_val, as.yp_backup.data(), number_of_states * sizeof(sunrealtype));
@@ -1070,11 +1137,6 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationODE(
       }
     }
   }
-}
-
-template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::RecoverYp(const sunrealtype& t_val) {
-  ConsistentInitializationODE(t_val);
 }
 
 template <class ExprSet>
