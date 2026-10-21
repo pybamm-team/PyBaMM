@@ -20,7 +20,7 @@ from .electrode_soh_half_cell import (
     ElectrodeSOHHalfCell,
     _solve_initial_stoichiometry_half_cell,
 )
-from .util import check_if_composite, get_lithiation_delithiation
+from .util import check_if_composite, get_initial_ocp, get_lithiation_delithiation
 
 _PLACEHOLDER_PREFIX = "__initial state unknown "
 
@@ -78,11 +78,11 @@ def _standard_system(initial_value, param, options, direction, known_value):
             algebraic[Up] = y - param.p.prim.x(Up, T_init)
             algebraic[soc] = Up - Un - V_init
         else:
-            Up = param.p.prim.U(
-                y, T_init, get_lithiation_delithiation(direction, "positive", options)
+            Up = get_initial_ocp(
+                param.p.prim, y, T_init, direction, "positive", options
             )
-            Un = param.n.prim.U(
-                x, T_init, get_lithiation_delithiation(direction, "negative", options)
+            Un = get_initial_ocp(
+                param.n.prim, x, T_init, direction, "negative", options
             )
             algebraic[soc] = Up - Un - V_init
     else:
@@ -114,9 +114,26 @@ def _half_cell_system(initial_value, param, options, direction):
 
     if _is_voltage(initial_value):
         V_init = float(initial_value[:-1])
-        algebraic = {x: param.p.prim.U(x, param.T_init, lith_primary) - V_init}
+        T_init = param.T_init
+        algebraic = {
+            x: get_initial_ocp(
+                param.p.prim, x, T_init, direction, "positive", options, "primary"
+            )
+            - V_init
+        }
         if is_composite:
-            algebraic[x_2] = param.p.sec.U(x_2, param.T_init, lith_secondary) - V_init
+            algebraic[x_2] = (
+                get_initial_ocp(
+                    param.p.sec,
+                    x_2,
+                    T_init,
+                    direction,
+                    "positive",
+                    options,
+                    "secondary",
+                )
+                - V_init
+            )
         return algebraic, outputs
 
     soh_model = ElectrodeSOHHalfCell(direction=direction, options=options)

@@ -100,25 +100,28 @@ def set_initial_state(
     parameter_values = parameter_values if inplace else parameter_values.copy()
     param = param or pybamm.LithiumIonParameters(options)
 
+    has_hysteresis = False
     for electrode in ["negative", "positive"]:
         if check_if_composite(options, electrode):
             for phase in ["primary", "secondary"]:
                 if _has_hysteresis(electrode, options, phase):
+                    has_hysteresis = True
                     parameter_values = _set_hysteresis_branch(
                         parameter_values, electrode, direction, options, phase
                     )
         else:
             if _has_hysteresis(electrode, options):
+                has_hysteresis = True
                 parameter_values = _set_hysteresis_branch(
                     parameter_values, electrode, direction, options
                 )
 
     if differentiable:
-        # The eSOH ignores the hysteresis states set above, and the original values
-        # keep their processing cache across calls
+        # The hysteresis states set above enter a voltage start's OCP; otherwise the
+        # original values keep their processing cache across calls
         initial_state = get_linearised_initial_state(
             initial_value,
-            original_parameter_values,
+            parameter_values if has_hysteresis else original_parameter_values,
             param,
             options,
             direction=direction,

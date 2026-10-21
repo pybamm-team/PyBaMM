@@ -30,6 +30,16 @@ def _hysteresis():
     return model, parameter_values
 
 
+def _hysteresis_state():
+    # Without a direction, a voltage start is solved on the OCP at this state
+    model, parameter_values = _hysteresis()
+    parameter_values.update(
+        {"Initial hysteresis state in negative electrode": 0.5},
+        check_already_exists=False,
+    )
+    return model, parameter_values
+
+
 def _msmr():
     model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
     return model, model.default_parameter_values
@@ -71,6 +81,18 @@ VARIANTS = {
         {EPS_P: 0.665},
         _concentrations(("", "negative"), ("", "positive")),
         {"direction": "discharge"},
+    ),
+    "hysteresis no direction": (
+        _hysteresis,
+        {EPS_P: 0.665},
+        _concentrations(("", "negative"), ("", "positive")),
+        {},
+    ),
+    "hysteresis state": (
+        _hysteresis_state,
+        {EPS_P: 0.665, "Initial hysteresis state in negative electrode": 0.5},
+        _concentrations(("", "negative"), ("", "positive")),
+        {},
     ),
     "msmr": (
         _msmr,
@@ -175,6 +197,30 @@ class TestLinearisedInitialState:
         key = "Initial concentration in negative electrode [mol.m-3]"
         assert isinstance(result[key], float)
         np.testing.assert_allclose(result[key], numeric[key], rtol=1e-12)
+
+    def test_resets_hysteresis_state_from_a_direction(self):
+        # An earlier call with a direction writes the initial hysteresis states
+        model, parameter_values = _hysteresis()
+        parameter_values.update({EPS_P: "[input]"})
+        inputs = {EPS_P: 0.665}
+        kwargs = {
+            "param": model.param,
+            "options": model.options,
+            "inputs": inputs,
+            "tol": 1e-12,
+        }
+        pybamm.lithium_ion.set_initial_state(
+            0.5, parameter_values, direction="charge", inplace=True, **kwargs
+        )
+        linearised = pybamm.lithium_ion.set_initial_state(
+            "3.9 V", parameter_values, inplace=False, differentiable=True, **kwargs
+        )
+        numeric = pybamm.lithium_ion.set_initial_state(
+            "3.9 V", parameter_values, inplace=False, **kwargs
+        )
+        for key in _concentrations(("", "negative"), ("", "positive")):
+            value = pybamm.convert_to_symbol(linearised[key]).evaluate(inputs=inputs)
+            np.testing.assert_allclose(np.squeeze(value), numeric[key], rtol=1e-12)
 
     @pytest.mark.parametrize("initial_value", [0.4, "3.9 V"])
     def test_input_names(self, initial_value):
