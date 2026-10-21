@@ -36,19 +36,40 @@ class TestFluxBoundaryConditions:
                 "right": (pybamm.convert_to_symbol(rbc), ("Flux", flux)),
             }
         }
+        # For evaluation
+        submesh = mesh[whole_cell]
+        y_test = np.linspace(0, 1, submesh.npts)
 
         sp_meth = pybamm.FiniteVolume()
         sp_meth.build(mesh)
+        # Gradient without boundary conditions
         gradient_symbol = sp_meth.gradient(var, discretised_symbol, {})
+
+        # extrapolate at both boundaries at once:
         extrapolated_symbol = sp_meth._extrapolate_gradient_to_boundaries(
             var, gradient_symbol, ["left", "right"], var.domain
         )
+        # extrapolate boundaries separately:
+        extrapolated_symbol2 = sp_meth._extrapolate_gradient_to_boundaries(
+            var, gradient_symbol, ["right"], var.domain
+        )
+        extrapolated_symbol2 = sp_meth._extrapolate_gradient_to_boundaries(
+            var, extrapolated_symbol2, ["left"], var.domain
+        )
+        np.testing.assert_allclose(
+            extrapolated_symbol.evaluate(y=y_test),
+            extrapolated_symbol2.evaluate(y=y_test),
+        )
+
+        # Assert extrapolation applied in gradient method
+        gradient_symbol2 = sp_meth.gradient(var, discretised_symbol, bcs)
+        np.testing.assert_allclose(
+            extrapolated_symbol.evaluate(y=y_test), gradient_symbol2.evaluate(y=y_test)
+        )
+
+        # Add flux boundary conditions and check that the values are correct
         flux_bc_symbol = sp_meth.add_flux_values(flux, extrapolated_symbol, bcs)
-
-        submesh = mesh[whole_cell]
-        y_test = np.linspace(0, 1, submesh.npts)
         evaluated_flux_bc = flux_bc_symbol.evaluate(y=y_test)
-
         assert np.isclose(evaluated_flux_bc[0], expected_lbc)
         assert np.isclose(evaluated_flux_bc[-1], expected_rbc)
         np.testing.assert_allclose(
