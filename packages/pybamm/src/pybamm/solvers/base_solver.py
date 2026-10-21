@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 import itertools
 import multiprocessing as mp
 import numbers
@@ -16,6 +17,57 @@ from pybamm import ParameterValues
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from pybamm.models.base_model import ModelSolutionObservability
+
+
+@dataclasses.dataclass(frozen=True)
+class _StartTimeShift:
+    """How the start time of a step moves with the differentiated inputs.
+
+    Attributes
+    ----------
+    sensitivities : numpy.ndarray
+        ``dt_start/dp``, one entry per sensitivity name in solver column order.
+    end_time_fixed : bool
+        Whether the step ends at a fixed time, rather than a fixed duration after
+        its start.
+    shift_rows : bool
+        Whether the solver's rows still need ``-y'(t) dt_start/dp`` to become
+        sensitivities at fixed time, because the step's equations read its start
+        time and so its initial sensitivities were left unshifted.
+    first_segment : bool
+        Whether the integration starts at the step's start time, rather than at a
+        discontinuity within the step whose time depends on an input.
+    last_segment : bool
+        Whether the integration ends at the step's end time, rather than at a
+        discontinuity within the step whose time depends on an input.
+    """
+
+    sensitivities: npt.NDArray[np.float64]
+    end_time_fixed: bool
+    shift_rows: bool
+    first_segment: bool = True
+    last_segment: bool = True
+
+    def for_segment(self, first: bool, last: bool) -> _StartTimeShift:
+        """The shift for one integration of a step split at discontinuities.
+
+        :class:`pybamm.IDAKLUSolver` only splits a step at discontinuities whose
+        time depends on an input, and stops at those at constant times within one
+        integration.
+
+        Parameters
+        ----------
+        first : bool
+            Whether the integration starts at the step's start time.
+        last : bool
+            Whether the integration ends at the step's end time.
+
+        Returns
+        -------
+        :class:`_StartTimeShift`
+            This shift, for that integration.
+        """
+        return dataclasses.replace(self, first_segment=first, last_segment=last)
 
 
 class BaseSolver:
@@ -1166,7 +1218,7 @@ class BaseSolver:
         t_interp: npt.NDArray[np.float64],
         timer: pybamm.Timer,
         nproc: int | None = None,
-        start_shift=None,
+        start_shift: _StartTimeShift | None = None,
     ) -> list[pybamm.Solution]:
         """Integrate over each segment of ``t_eval`` between discontinuities.
 
@@ -1190,7 +1242,7 @@ class BaseSolver:
             The timer that gives each segment its solve time.
         nproc : int, optional
             Number of processes to use for more than one input set.
-        start_shift : optional
+        start_shift : :class:`_StartTimeShift`, optional
             How the start time of a step moves with the inputs, from
             ``_prepare_start_time_shift``, or None if it does not move.
 
@@ -1499,7 +1551,7 @@ class BaseSolver:
         inputs: dict,
         end_time_fixed: bool,
         segmented: bool,
-    ):
+    ) -> _StartTimeShift | None:
         """Account for a step start time that moves with the inputs.
 
         Solvers that track event time sensitivities override this; the base
@@ -1518,13 +1570,14 @@ class BaseSolver:
         end_time_fixed : bool
             Whether the step ends at a fixed time.
         segmented : bool
-            Whether discontinuities split the step into more than one integration.
+            Whether a discontinuity whose time depends on an input splits the step
+            into more than one integration.
 
         Returns
         -------
-        None
-            A solver-specific description of the shift, passed to ``_integrate``
-            as ``start_shift``, or None if there is none.
+        :class:`_StartTimeShift` or None
+            The shift, passed to ``_integrate`` as ``start_shift``, or None if
+            there is none.
         """
 
     @staticmethod
@@ -1765,10 +1818,10 @@ class BaseSolver:
             by the solver, please raise an issue if you require this functionality.
             They do not include the movement of a discontinuity whose time depends
             on an input.
-            With ``output_variables``, or when a discontinuity splits it, a step
-            whose equations depend on its start time (e.g. a drive cycle) and that
-            starts at a moving time only accounts for the moving initial state, and a
-            warning is raised.
+            With ``output_variables``, or when a discontinuity whose time depends on
+            an input splits it, a step whose equations depend on its start time
+            (e.g. a drive cycle) and that starts at a moving time only accounts for
+            the moving initial state, and a warning is raised.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -1998,6 +2051,7 @@ class BaseSolver:
                 t_eval[0],
                 model_inputs,
                 end_time_fixed,
+                # IDAKLU only splits at discontinuities whose time depends on an input
                 segmented=len(start_indices) > 1,
             )
 

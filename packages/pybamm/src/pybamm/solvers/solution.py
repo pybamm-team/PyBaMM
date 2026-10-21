@@ -792,13 +792,13 @@ class Solution(SolutionBase):
     def t_event_sensitivities(self) -> dict | None:
         """Sensitivities of the event time to the inputs.
 
-        For a solve terminated by an event ``g(t, y, p) = 0``, the derivative
-        ``dt_event/dp = -(g_y S + g_p) / (g_y y' + g_t)``, where ``S`` holds the
-        state sensitivities and ``y'`` the state time derivatives at the event.
-        A dict with a ``(1,)`` array per input and a ``(1, n_p)`` row under
-        ``"all"``, or None if the solve did not end on an event or computed no
-        sensitivities. Like :attr:`sensitivities`, a join keeps only the inputs
-        every segment shares.
+        For a solve terminated by an event ``g(t, y, p, s) = 0``, the derivative
+        ``dt_event/dp = -(g_y S + g_p + g_s ds/dp) / (g_y y' + g_t)``, where ``S``
+        holds the state sensitivities and ``y'`` the state time derivatives at the
+        event, and ``s`` is the start time of the step. A dict with a ``(1,)``
+        array per input and a ``(1, n_p)`` row under ``"all"``, or None if the
+        solve did not end on an event or computed no sensitivities. Like
+        :attr:`sensitivities`, a join keeps only the inputs every segment shares.
 
         Raises
         ------

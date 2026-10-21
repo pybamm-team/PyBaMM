@@ -625,6 +625,53 @@ def check_variable_in_solve(
         )
 
 
+# Points per CasADi call in ``evaluate_at_points``, which bounds its memory use
+_POINTS_PER_CALL = 1024
+
+
+def evaluate_at_points(
+    function: casadi.Function,
+    times: npt.NDArray[np.float64],
+    states: npt.NDArray[np.float64],
+    *constants,
+) -> npt.NDArray[np.float64]:
+    """Evaluate ``function(t, y, *constants)`` at each of several points.
+
+    Parameters
+    ----------
+    function : casadi.Function
+        A function of a time, a state vector and ``constants``, with one output.
+    times : numpy.ndarray
+        The times, ``(n_points,)``.
+    states : numpy.ndarray
+        The states at ``times``, ``(n_states, n_points)``.
+    *constants
+        The remaining arguments, the same at every point.
+
+    Returns
+    -------
+    numpy.ndarray
+        The output at each point, side by side: ``(n_rows, n_columns * n_points)``.
+    """
+    times = np.asarray(times, dtype=np.float64).reshape(1, -1)
+    n_points = times.shape[1]
+    if n_points == 0:
+        return np.zeros((function.size1_out(0), 0))
+    mapped = {}
+    outputs = []
+    for start in range(0, n_points, _POINTS_PER_CALL):
+        stop = min(start + _POINTS_PER_CALL, n_points)
+        if stop - start not in mapped:
+            mapped[stop - start] = function.map(stop - start)
+        output = mapped[stop - start](
+            times[:, start:stop], states[:, start:stop], *constants
+        )
+        # Much faster than numpy's conversion of a CasADi matrix; column-major
+        values = np.array(output.elements())
+        outputs.append(values.reshape(output.size2(), output.size1()).T)
+    return np.hstack(outputs)
+
+
 def _by_name(
     values: dict | None, names: Sequence[str], index: int | None = None
 ) -> npt.NDArray[np.float64] | None:
@@ -725,13 +772,10 @@ def _explicit_time_shift(
     )
     start_value = float(np.ravel(inputs.get(start_name, 0.0))[0])
     p_values = np.concatenate([np.zeros(0), *sensitivity_inputs.values()])
-    rates = np.vstack(
-        [
-            function(t, ys[:, idx], p_values, start_value).full()
-            for idx, t in enumerate(ts)
-        ]
-    )
-    return rates @ np.vstack(shifts)
+    rates = evaluate_at_points(function, ts, ys, p_values, start_value)
+    # One row per time and entry of the variable, one column per shift
+    rates = rates.reshape(-1, len(ts), len(shifts)).transpose(1, 0, 2)
+    return rates.reshape(-1, len(shifts)) @ np.vstack(shifts)
 
 
 def time_integral_boundary_sensitivities(
@@ -757,13 +801,15 @@ def time_integral_boundary_sensitivities(
     Returns
     -------
     numpy.ndarray or None
-        ``(integrand size, n_p)``, or None if no segment time moves.
+        ``(n_entries, n_p)``, with one row per entry of the integrand at one time,
+        or None if no segment time moves.
     """
     segments = getattr(variable, "all_time_sensitivities", None)
     if segments is None or all(segment is None for segment in segments):
         return None
     integrand = np.asarray(integrand)
-    total = 0.0
+    integrand = integrand.reshape(integrand.shape[0], -1)
+    total = np.zeros((integrand.shape[1], len(sensitivity_names)))
     first_index = 0
     for ts, segment in zip(variable.all_ts, segments, strict=True):
         last_index = first_index + len(ts) - 1
@@ -772,8 +818,8 @@ def time_integral_boundary_sensitivities(
                 [segment.get(name, np.zeros(3)) for name in sensitivity_names]
             ).T
             total = total + (
-                np.outer(integrand[last_index].reshape(-1), bounds[1])
-                - np.outer(integrand[first_index].reshape(-1), bounds[0])
+                np.outer(integrand[last_index], bounds[1])
+                - np.outer(integrand[first_index], bounds[0])
             )
         first_index = last_index + 1
     return total

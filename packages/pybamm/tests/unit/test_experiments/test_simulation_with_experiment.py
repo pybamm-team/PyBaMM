@@ -1781,20 +1781,40 @@ class TestSimulationExperiment:
         assert rest_step._t_end_sensitivities is None
         assert charge._all_time_sensitivities is None
 
-    def test_start_time_steps_with_output_variables_warn_on_sensitivities(self, caplog):
-        time = np.arange(0, 61, 10.0)
+    @pytest.mark.parametrize(
+        ("solver", "warns"), [(pybamm.IDAKLUSolver, False), (pybamm.DummySolver, True)]
+    )
+    def test_moving_event_times_warn_only_without_idaklu(self, caplog, solver, warns):
         simulation, _ = self._diffusivity_simulation(
+            ["Discharge at 1C until 3.6 V", "Rest for 5 minutes"], solver=solver()
+        )
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            simulation.build_for_experiment(
+                solve_kwargs={"calculate_sensitivities": True}
+            )
+        assert ("termination condition based on an event" in caplog.text) is warns
+
+    def test_start_time_steps_with_output_variables_warn_once(self, caplog):
+        time = np.arange(0, 61, 10.0)
+        simulation, inputs = self._diffusivity_simulation(
             [
                 "Discharge at 1C until 3.6 V",
                 pybamm.step.current(np.column_stack([time, np.ones_like(time)])),
             ],
             solver=pybamm.IDAKLUSolver(output_variables=["Voltage [V]"]),
         )
-        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
-            simulation.build_for_experiment(
-                solve_kwargs={"calculate_sensitivities": True}
+        with (
+            caplog.at_level(logging.WARNING, logger="pybamm.logger"),
+            pytest.warns(
+                pybamm.SolverWarning, match="depend on its start time"
+            ) as record,
+        ):
+            simulation.solve(
+                inputs=inputs, calculate_sensitivities=True, calc_esoh=False
             )
-        assert "depends on its start time" in caplog.text
+        # One SolverWarning, and no logged warning as well
+        assert len(record) == 1
+        assert not caplog.records
 
     def test_unified_ambient_temperature_scalar_value(self):
         # Unified mode reads ambient temperature as a solver input; a pybamm.Scalar

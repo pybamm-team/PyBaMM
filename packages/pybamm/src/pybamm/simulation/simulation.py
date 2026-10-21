@@ -537,20 +537,21 @@ class Simulation(BaseSimulation):
 
         self._check_experiment_input_parameters(parameter_values)
 
+        # IDAKLU accounts for moving step start times, and warns where it cannot
         if (
             solve_kwargs is not None
             and solve_kwargs.get("calculate_sensitivities")
-            and getattr(self._solver, "output_variables", None)
-            and any(step.termination for step in self.experiment.steps)
+            and not isinstance(self._solver, pybamm.IDAKLUSolver)
         ):
-            for step in self.experiment.steps:
-                if step.is_drive_cycle or step.is_python_function:
+            # Only steps after an event-terminated step start at a moving time
+            for step in self.experiment.steps[:-1]:
+                if step.termination:
                     pybamm.logger.warning(
-                        f"Step '{step}' depends on its start time, which moves with "
-                        "the inputs after a step that ends on an event. With "
-                        "output_variables its sensitivities only account for the "
-                        "moving initial state; drop output_variables for exact "
-                        "sensitivities."
+                        f"Step '{step}' has a termination condition based on an "
+                        "event. Sensitivity calculation will be inaccurate if the "
+                        "time of each step event changes rapidly with respect to the "
+                        "parameters. pybamm.IDAKLUSolver accounts for moving event "
+                        "times."
                     )
                     break
 
