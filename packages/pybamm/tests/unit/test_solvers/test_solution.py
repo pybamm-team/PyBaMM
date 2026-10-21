@@ -2764,13 +2764,17 @@ class TestJoinedSensitivities:
         )
 
     @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
-    def test_a_join_keeps_the_parameters_every_segment_shares(self, join):
+    def test_a_join_keeps_the_parameters_every_segment_shares(self, join, caplog):
         first = self._solve(0, ["k"])
         later = self._solve(1, True)
         assert later.sensitivity_names == ["k", "y0"]
 
-        joined = _join(join, [first, later])
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            joined = _join(join, [first, later])
 
+        assert "keeps only those they all share, ['k'], and drops ['y0']" in (
+            caplog.text
+        )
         assert joined.sensitivity_names == ["k"]
         assert set(joined.sensitivities) == {"k", "all"}
         # The shared time t = 1 keeps the first segment's sample
@@ -2854,10 +2858,26 @@ class TestJoinedSensitivities:
             single.sensitivities["all"], single._all_sensitivities["all"][0]
         )
 
+    def test_sensitivities_are_read_only(self):
+        single = self._solve(0, True)
+        joined = single + self._solve(1, True)
+        expected = single["y"].sensitivities["k"].copy()
+
+        for solution in (single, joined):
+            for key in ["all", "k", "y0"]:
+                with pytest.raises(ValueError, match=r"read-only"):
+                    solution.sensitivities[key][:] = 0
+        # The stored arrays, which a variable and a restart read, are unchanged
+        single._variables.pop("y")
+        np.testing.assert_array_equal(single["y"].sensitivities["k"], expected)
+        assert single._all_sensitivities["all"][0].flags.writeable
+
     @pytest.mark.parametrize("output_variables", [None, ["y"]])
     def test_variable_sensitivities_of_a_solve_without_them(self, output_variables):
         solution = self._solve(0, False, output_variables)
         with pytest.raises(
-            pybamm.SolverError, match=r"its solve did not calculate any"
+            pybamm.SolverError,
+            match=r"Variable 'y' has no sensitivities because its solve did not "
+            r"calculate any",
         ):
             _ = solution["y"].sensitivities

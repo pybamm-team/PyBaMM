@@ -53,6 +53,35 @@ def _decay_model(factor):
     return model
 
 
+def _input_decay_model():
+    """Discretised ``du/dt = -a u`` from ``u = 1``, with "a u" as a variable."""
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    a = pybamm.InputParameter("a")
+    model.rhs = {u: -a * u}
+    model.initial_conditions = {u: 1}
+    model.variables = {"u": u, "a u": a * u}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+def _solve_with_sensitivities(model, t0=0, n_times=11):
+    """``model`` solved over ``[t0, t0 + 1]`` with ``a = 0.5``, for sensitivities."""
+    return pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12).solve(
+        model,
+        [t0, t0 + 1],
+        t_interp=np.linspace(t0, t0 + 1, n_times),
+        inputs={"a": 0.5},
+        calculate_sensitivities=True,
+    )
+
+
+def _exact_a_u_sensitivity(tau):
+    """d(a u)/da at times ``tau`` after a restart from ``u = 1``, with ``a = 0.5``."""
+    u = np.exp(-0.5 * tau)
+    return u - 0.5 * tau * u
+
+
 class TestObserverCache:
     def test_each_segment_reads_through_its_own_model(self):
         doubled, tripled = _decay_model(2), _decay_model(3)
@@ -110,6 +139,18 @@ class TestObserverCache:
         solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])
         np.testing.assert_allclose(solution["w"].entries, 2 * solution["u"].entries)
         assert "w" in ObserverCache.of(restored)._casadi_leaves
+
+    def test_pickling_a_model_drops_its_chain_rules(self):
+        model = _input_decay_model()
+        expected = _solve_with_sensitivities(model)["a u"].sensitivities["a"]
+        assert ObserverCache.of(model).chain_rules
+
+        restored = pickle.loads(pickle.dumps(model))  # nosec B301
+
+        assert "a u" in restored._observer_cache._casadi_leaves
+        assert "_chain_rules" not in restored._observer_cache.__dict__
+        sensitivities = _solve_with_sensitivities(restored)["a u"].sensitivities
+        np.testing.assert_allclose(sensitivities["a"], expected)
 
     def test_a_time_integral_is_converted_once_per_model(self):
         model = pybamm.BaseModel()
@@ -250,7 +291,7 @@ class TestCasadiObserverCaches:
 
         restored = pickle.loads(pickle.dumps(observer))  # nosec B301
 
-        for cache in ("_selector", "_selector_ts", "_serialised"):
+        for cache in ("_selector", "_selector_ts", "_serialised", "_chain_rules"):
             assert cache not in restored.__dict__
             assert cache in observer.__dict__
         variable._observer = restored
@@ -258,42 +299,71 @@ class TestCasadiObserverCaches:
 
 
 class TestCasadiObserverSensitivities:
-    @pytest.mark.parametrize("block_size", [3, 256])
+    @pytest.mark.parametrize("block_size", [4, 64])
     def test_sensitivities_over_blocks_of_times_and_segments(self, block_size):
-        # du/dt = -a u, solved twice from u = 1 and joined
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        a = pybamm.InputParameter("a")
-        model.rhs = {u: -a * u}
-        model.initial_conditions = {u: 1}
-        model.variables = {"u": u, "a u": a * u}
-        pybamm.Discretisation().process_model(model)
-        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
-        t_interp = np.linspace(0, 1, 11)
-        solution = solver.solve(
-            model,
-            [0, 1],
-            t_interp=t_interp,
-            inputs={"a": 0.5},
-            calculate_sensitivities=True,
-        )
-        joined = solution + solver.solve(
-            model,
-            [1, 2],
-            t_interp=t_interp + 1,
-            inputs={"a": 0.5},
-            calculate_sensitivities=True,
-        )
+        model = _input_decay_model()
+        joined = _solve_with_sensitivities(model) + _solve_with_sensitivities(model, 1)
 
         with mock.patch.object(variable_observer._ChainRule, "block_size", block_size):
             sensitivities = joined["a u"].sensitivities["a"]
 
-        # Each segment restarts from u = 1, so d(a u)/da = u - a tau u
+        t_interp = np.linspace(0, 1, 11)
         tau = np.concatenate([t_interp, t_interp[1:]])
-        u_exact = np.exp(-0.5 * tau)
         np.testing.assert_allclose(
-            sensitivities, u_exact - 0.5 * tau * u_exact, rtol=1e-6, atol=1e-12
+            sensitivities, _exact_a_u_sensitivity(tau), rtol=1e-6, atol=1e-12
         )
+
+    def test_segments_of_many_lengths_share_a_few_maps(self):
+        model = _input_decay_model()
+        lengths = range(2, 20)
+        joined = pybamm.Solution.from_sub_solutions(
+            [
+                _solve_with_sensitivities(model, t0, n_times)
+                for t0, n_times in enumerate(lengths)
+            ]
+        )
+
+        sensitivities = joined["a u"].sensitivities["a"]
+
+        # Each later segment drops its first time, which repeats the previous end
+        tau = np.concatenate(
+            [np.linspace(0, 1, n)[0 if i == 0 else 1 :] for i, n in enumerate(lengths)]
+        )
+        np.testing.assert_allclose(
+            sensitivities, _exact_a_u_sensitivity(tau), rtol=1e-6, atol=1e-12
+        )
+        ((_, chain_rule),) = ObserverCache.of(model).chain_rules.values()
+        assert set(chain_rule._maps) <= {1, 2, 4, 8, 16, 32, 64}
+
+    def test_later_solves_of_a_model_reuse_its_chain_rules(self):
+        model = _input_decay_model()
+
+        with mock.patch.object(
+            variable_observer, "_ChainRule", wraps=variable_observer._ChainRule
+        ) as spy:
+            first = _solve_with_sensitivities(model)["a u"].sensitivities["a"]
+            second = _solve_with_sensitivities(model)["a u"].sensitivities["a"]
+
+        assert spy.call_count == 1
+        np.testing.assert_array_equal(second, first)
+
+    def test_a_variable_of_neither_states_nor_inputs_has_zero_sensitivities(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -pybamm.InputParameter("a") * u}
+        model.initial_conditions = {u: 1}
+        model.variables = {"two": pybamm.Scalar(2)}
+        pybamm.Discretisation().process_model(model)
+
+        # Five times evaluate as a block of four and a block of one
+        solution = _solve_with_sensitivities(model, n_times=5)
+        sensitivities = solution["two"].sensitivities["a"]
+
+        np.testing.assert_array_equal(sensitivities, np.zeros(5))
+        ((_, chain_rule),) = ObserverCache.of(model).chain_rules.values()
+        assert set(chain_rule._maps) == {1, 4}
+        for mapped in chain_rule._maps.values():
+            assert mapped.sparsity_out(0).is_dense()
 
 
 class TestPackSensitivityDict:

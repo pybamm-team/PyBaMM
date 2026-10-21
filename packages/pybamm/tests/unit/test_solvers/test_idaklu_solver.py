@@ -2175,6 +2175,30 @@ class TestIDAKLUSolver:
             atol=1e-10,
         )
 
+    def test_reduce_solution_keeps_an_empty_segment(self, decay_model):
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10)
+        first, second = (
+            solver.solve(
+                decay_model,
+                [t0, t0 + 5],
+                inputs={"a": 0.3},
+                calculate_sensitivities=True,
+            )
+            for t0 in (0, 5)
+        )
+        # The last state repeats the end of the join, so its segment is emptied
+        joined = first + (first.last_state + second)
+        assert len(joined.all_ts[1]) == 0
+
+        reduced = solver.reduce_solution(joined, hermite_reduction_factor=4.0)
+
+        assert len(reduced.all_ts[1]) == 0
+        rows = np.searchsorted(joined.t, reduced.t)
+        np.testing.assert_array_equal(joined.t[rows], reduced.t)
+        np.testing.assert_array_equal(
+            reduced.sensitivities["all"], joined.sensitivities["all"][rows]
+        )
+
     def test_sensitivities_share_one_buffer(self, decay_model):
         sol = pybamm.IDAKLUSolver().solve(
             decay_model, [0, 1], inputs={"a": 0.3}, calculate_sensitivities=True

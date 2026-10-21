@@ -543,6 +543,7 @@ class ProcessedVariable(BaseProcessedVariable):
             base_data,
             _stub_solution(self),
             time_integral=self.time_integral,
+            name=self._name,
         )
 
         # add sensitivities if they exist

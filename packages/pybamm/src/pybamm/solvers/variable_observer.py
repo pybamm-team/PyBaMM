@@ -151,15 +151,17 @@ class VariableObserver(ABC):
     ``all_solution_sensitivities``, ``_name`` and ``_shape``.
     """
 
-    #: Derived caches: built on demand, never pickled (see __getstate__).
+    #: Caches, built on demand or shared with a model, never pickled (see
+    #: __getstate__).
     _selector = None
     _selector_ts = None
     _serialised = None
+    _chain_rules = None
 
     def __getstate__(self):
         """The observer's state without its derived caches, rebuilt on demand."""
         state = self.__dict__.copy()
-        for key in ("_selector", "_selector_ts", "_serialised"):
+        for key in ("_selector", "_selector_ts", "_serialised", "_chain_rules"):
             state.pop(key, None)
         return state
 
@@ -222,10 +224,16 @@ class CasadiObserver(VariableObserver):
     ----------
     leaves : list of :class:`casadi.Function`
         One function per sub-solution, evaluating ``(t, y, p_stacked)``.
+    chain_rules : list of dict, optional
+        One store per sub-solution, such as its model's
+        :attr:`~pybamm.solvers.observation.ObserverCache.chain_rules`, that keeps
+        the chain-rule functions built for its sensitivities for later reads. By
+        default they are kept for one read.
     """
 
-    def __init__(self, leaves: list):
+    def __init__(self, leaves: list, chain_rules: list[dict] | None = None):
         self._leaves = leaves
+        self._chain_rules = chain_rules
 
     @property
     def leaves(self) -> list:
@@ -297,15 +305,18 @@ class CasadiObserver(VariableObserver):
                 f"{len(variable.all_ts)} segments."
             )
         # One chain-rule function per distinct leaf and input layout, as
-        # experiment steps that share a model repeat them
-        functions = {}
+        # experiment steps and repeated solves that share a model repeat them
+        stores = self._chain_rules
+        if stores is None or len(stores) != len(variable.all_ts):
+            stores = [{}] * len(variable.all_ts)
         all_S_var = []
-        for ts, ys, inputs, base_variable, dy_dp in zip(
+        for ts, ys, inputs, base_variable, dy_dp, store in zip(
             variable.all_ts,
             variable.all_ys,
             variable.all_inputs,
             variable.base_variables,
             all_dy_dp,
+            stores,
             strict=True,
         ):
             missing = [name for name in sensitivity_names if name not in inputs]
@@ -346,12 +357,17 @@ class CasadiObserver(VariableObserver):
                 tuple((name, value.size) for name, value in sensitivity_inputs.items()),
                 tuple((name, value.size) for name, value in other_inputs.items()),
             )
-            function = functions.get(key)
-            if function is None:
-                function = _ChainRule(
-                    base_variable, n_states, sensitivity_inputs, other_inputs
+            entry = store.get(key)
+            if entry is None:
+                # Holding the expression keeps its id from being reused while stored
+                entry = (
+                    base_variable,
+                    _ChainRule(
+                        base_variable, n_states, sensitivity_inputs, other_inputs
+                    ),
                 )
-                functions[key] = function
+                store[key] = entry
+            function = entry[1]
             all_S_var.append(
                 function.evaluate(
                     ts,
@@ -396,6 +412,7 @@ class _ChainRule:
     At each time, the sensitivity to parameter ``k`` is ``dvar/dy @ dy/dp_k +
     dvar/dp @ e_k``, a pair of directional derivatives. They are evaluated over
     blocks of times at once, reading the state and its sensitivities in place.
+    The mapped functions are kept, so later evaluations reuse them.
 
     Parameters
     ----------
@@ -410,8 +427,9 @@ class _ChainRule:
         The remaining inputs; only their sizes are used.
     """
 
-    #: Times per evaluation; building a map costs time linear in its size
-    block_size = 256
+    #: Most times per evaluation, a power of two; building a map costs time
+    #: linear in its size, far more than evaluating it
+    block_size = 64
 
     def __init__(
         self,
@@ -447,15 +465,36 @@ class _ChainRule:
         self._n_states = n_states
         self._n_params = p_sensitivity.shape[0]
         self.var_len = function.numel_out(0)
-        self._buffers = {}
+        self._maps = {}
 
-    def _buffer(self, n_times):
-        """A buffer and evaluator for ``n_times`` times, built on first use."""
-        if n_times not in self._buffers:
+    def _mapped(self, n_times: int) -> casadi.Function:
+        """The function mapped over ``n_times`` times, built on first use."""
+        mapped = self._maps.get(n_times)
+        if mapped is None:
             # Inputs 2, 3 and 5 (the parameters and direction) are shared by all
             mapped = self._function.map("chain_rule", "serial", n_times, [2, 3, 5], [])
-            self._buffers[n_times] = mapped.buffer()
-        return self._buffers[n_times]
+            if not mapped.sparsity_out(0).is_dense():
+                # A map over one time drops an all-zero output's nonzeros, which
+                # would leave that block of the result unwritten
+                arguments = mapped.mx_in()
+                mapped = casadi.Function(
+                    "chain_rule", arguments, [casadi.densify(mapped(*arguments))]
+                )
+            self._maps[n_times] = mapped
+        return mapped
+
+    def _blocks(self, n_times: int):
+        """Spans ``(start, stop)`` covering ``n_times`` times, in order.
+
+        Full blocks come first, then halving powers of two, so evaluating any
+        number of times builds at most ``log2(block_size) + 1`` maps.
+        """
+        start, size = 0, self.block_size
+        while start < n_times:
+            while start + size > n_times:
+                size //= 2
+            yield start, start + size
+            start += size
 
     def evaluate(
         self,
@@ -492,12 +531,15 @@ class _ChainRule:
         p_other = np.ascontiguousarray(p_other, dtype=float)
         directions = np.eye(self._n_params)
         S_var = np.empty((n_times * var_len, self._n_params), order="F")
+        # Buffers are per call, so concurrent calls never share their memory
+        buffers = {}
         for k in range(self._n_params):
             dy_dp_k = np.ascontiguousarray(dy_dp[:, k], dtype=float)
             S_var_k = S_var[:, k]
-            for start in range(0, n_times, self.block_size):
-                stop = min(start + self.block_size, n_times)
-                buffer, run = self._buffer(stop - start)
+            for start, stop in self._blocks(n_times):
+                if stop - start not in buffers:
+                    buffers[stop - start] = self._mapped(stop - start).buffer()
+                buffer, run = buffers[stop - start]
                 buffer.set_arg(0, memoryview(ts[start:stop]))
                 buffer.set_arg(1, memoryview(ys[start * n_states : stop * n_states]))
                 buffer.set_arg(2, memoryview(p_sensitivity))

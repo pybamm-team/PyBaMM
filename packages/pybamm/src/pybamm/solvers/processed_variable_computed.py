@@ -57,10 +57,13 @@ class ProcessedVariableComputed(BaseProcessedVariable):
     time_integral : :class:`pybamm.ProcessedVariableTimeIntegral`, optional
         The time integral or sum whose value the variable holds. Setting it makes
         the variable time-independent.
+    name : str, optional
+        The variable's name, for error messages.
     """
 
     # Defaults for a variable pickled before __init__ set these
     time_integral = None
+    _name = None
     _unjoinable = False
     _xr_interp_args = None
 
@@ -73,7 +76,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         cumtrapz_ic=None,
         time_indep=False,
         time_integral=None,
+        name=None,
     ):
+        self._name = name
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
         self.base_variables_data = base_variables_data
@@ -754,7 +759,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         if self._sensitivity_mismatch is None and len(self.all_inputs[0]) == 0:
             # No inputs, so nothing to be sensitive to
             return {}
-        self._check_sensitivities_available(bool(self._sensitivities))
+        self._check_sensitivities_available(bool(self._sensitivities), self._name)
         return self._sensitivities
 
     def _concat(
@@ -805,6 +810,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             new_sol,
             time_indep=joins_time_integrals,
             time_integral=self.time_integral,
+            name=self._name,
         )
         # Not new_sol.t: from_sub_solutions passes the final solution to every join
         new_var.t_pts = np.concatenate((self.t_pts, other.t_pts[n_repeated:]))

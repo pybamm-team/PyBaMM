@@ -624,6 +624,8 @@ class Solution(SolutionBase):
     def sensitivities(self):
         """Values of the sensitivities. Returns a dict of param_name: np_array
 
+        The arrays are read-only; copy one to change it.
+
         Raises
         ------
         :class:`pybamm.SolverError`
@@ -639,24 +641,22 @@ class Solution(SolutionBase):
     def set_sensitivities(self):
         """Stack the per-segment sensitivities into one array per parameter.
 
-        A single segment's arrays are used as they are; with several, the
-        stacked ``"all"`` array is the only copy and each parameter's entry
-        is a view of its columns.
-
-        Raises
-        ------
-        :class:`pybamm.SolverError`
-            If the solution joins segments with sensitivities to different
-            parameters, none of which all of them share.
+        Each array is read-only. A single segment's are views of the stored
+        ones; with several, the stacked ``"all"`` array is the only copy and
+        each parameter's entry is a view of its columns.
         """
-        if self._sensitivity_mismatch is not None:
-            raise pybamm.SolverError(self._sensitivity_mismatch)
         self._sensitivities = {}
         if not self.has_sensitivities():
             return
 
         def stack(segments):
-            return segments[0] if len(segments) == 1 else np.vstack(segments)
+            if len(segments) == 1:
+                # Flag a view, not the stored array that copies of the solution share
+                stacked = np.asarray(segments[0]).view()
+            else:
+                stacked = np.vstack(segments)
+            stacked.flags.writeable = False
+            return stacked
 
         names = self.sensitivity_names
         all_segments = self._all_sensitivities.get("all")
@@ -804,14 +804,8 @@ class Solution(SolutionBase):
             status = model.solution_observable_status
             if status:
                 # Observability is enabled, but nothing can process new symbols
-                unique_reasons.add(
-                    "the model was not processed by both "
-                    "`ParameterValues.process_model()` and "
-                    "`Discretisation.process_model()`, so it cannot process new "
-                    "symbols"
-                )
-            else:
-                unique_reasons.add(status.value)
+                status = pybamm.ModelSolutionObservability.UNPROCESSED_MODEL
+            unique_reasons.add(status.value)
         if unique_reasons:
             reasons_str = ", ".join(sorted(unique_reasons))
             raise ValueError(f"Solution is not observable: {reasons_str}")
@@ -1306,6 +1300,8 @@ class Solution(SolutionBase):
     def _join_sensitivity_names(solutions):
         """The parameters a join of ``solutions`` keeps sensitivities for.
 
+        Logs a warning naming the parameters dropped when only some are shared.
+
         Parameters
         ----------
         solutions : list of :class:`pybamm.Solution`
@@ -1332,6 +1328,19 @@ class Solution(SolutionBase):
             if all(name in s.sensitivity_names for s in solutions[1:])
         ]
         if names or not any(s.has_sensitivities() for s in solutions):
+            dropped = list(
+                dict.fromkeys(
+                    name
+                    for s in solutions
+                    for name in s.sensitivity_names
+                    if name not in names
+                )
+            )
+            if dropped:
+                pybamm.logger.warning(
+                    "Joining solutions with sensitivities to different parameters "
+                    f"keeps only those they all share, {names}, and drops {dropped}."
+                )
             return names, None
         return [], sensitivity_mismatch_message(
             [s.sensitivity_names for s in solutions]
