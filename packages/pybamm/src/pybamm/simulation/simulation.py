@@ -621,13 +621,7 @@ class Simulation(BaseSimulation):
         list of str
             The input names, in the order they were supplied.
         """
-        if self._built_experiment_model is not None:
-            models = [self._built_experiment_model]
-        else:
-            models = list(self.steps_to_built_models.values())
-        shared_inputs = set.intersection(
-            *({ip.name for ip in model.input_parameters} for model in models)
-        )
+        shared_inputs = self._experiment_shared_inputs()
         names = [
             name
             for name in (inputs or {})
@@ -640,6 +634,46 @@ class Simulation(BaseSimulation):
                 "step model, so no sensitivities are calculated for them."
             )
         return [name for name in names if name in shared_inputs]
+
+    def _experiment_shared_inputs(self) -> set[str]:
+        """
+        Return the names of the input parameters that every experiment model has.
+
+        Returns
+        -------
+        set of str
+            The shared input parameter names.
+        """
+        if self._built_experiment_model is not None:
+            models = [self._built_experiment_model]
+        else:
+            models = list(self.steps_to_built_models.values())
+        return set.intersection(
+            *({ip.name for ip in model.input_parameters} for model in models)
+        )
+
+    def _check_experiment_sensitivity_names(self, names: list[str]) -> None:
+        """
+        Check that every experiment model has each named input parameter.
+
+        Parameters
+        ----------
+        names : list of str
+            The ``calculate_sensitivities`` names.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If an experiment model lacks one of the inputs.
+        """
+        shared_inputs = self._experiment_shared_inputs()
+        missing = [name for name in names if name not in shared_inputs]
+        if missing:
+            raise pybamm.SolverError(
+                f"calculate_sensitivities names {missing} are not input parameters "
+                "of every experiment step model. Pass calculate_sensitivities=True "
+                "to calculate sensitivities for only the inputs they all have."
+            )
 
     def _get_built_models(self):
         """Return list of built models that need IC recomputation."""
@@ -882,17 +916,6 @@ class Simulation(BaseSimulation):
                 if name not in self._INTERNAL_EXPERIMENT_INPUTS
             ]
 
-        # The result joins the starting solution's sensitivities to the steps'
-        if isinstance(starting_solution, pybamm.Solution):
-            starting_names = sorted(starting_solution.sensitivity_names)
-            requested_names = sorted(kwargs.get("calculate_sensitivities") or [])
-            if starting_names != requested_names:
-                raise pybamm.SolverError(
-                    f"Cannot continue a starting_solution with sensitivities for "
-                    f"{starting_names} with sensitivities for {requested_names}. "
-                    "Solve with the same 'calculate_sensitivities' as it."
-                )
-
         # Drop the prior solution before build/integration.
         self._solution = starting_solution
 
@@ -906,6 +929,20 @@ class Simulation(BaseSimulation):
             kwargs["calculate_sensitivities"] = self._experiment_sensitivity_inputs(
                 inputs
             )
+        elif isinstance(requested_sensitivities, list):
+            # A step failing on a missing input would end the experiment early
+            self._check_experiment_sensitivity_names(kwargs["calculate_sensitivities"])
+
+        # The result joins the starting solution's sensitivities to the steps'
+        if isinstance(starting_solution, pybamm.Solution):
+            starting_names = sorted(starting_solution.sensitivity_names)
+            requested_names = sorted(kwargs.get("calculate_sensitivities") or [])
+            if starting_names != requested_names:
+                raise pybamm.SolverError(
+                    f"Cannot continue a starting_solution with sensitivities for "
+                    f"{starting_names} with sensitivities for {requested_names}. "
+                    "Solve with the same 'calculate_sensitivities' as it."
+                )
         if t_eval is not None:
             pybamm.logger.warning(
                 "Ignoring t_eval as solution times are specified by the experiment"
