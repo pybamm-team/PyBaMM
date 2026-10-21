@@ -60,7 +60,7 @@ def test_restart_after_discontinuity_stores_the_right_limit():
     )
 
     left, right = np.flatnonzero(sol.t > 0.5)[0] - 1, np.flatnonzero(sol.t > 0.5)[0]
-    z = sol["z"].entries
+    z = sol["z"](sol.t)
     np.testing.assert_allclose(z[right] - z[left], 1.0, rtol=1e-9)
     np.testing.assert_allclose(sol["z"].sensitivities["c"][right], 1.0, rtol=1e-9)
 
