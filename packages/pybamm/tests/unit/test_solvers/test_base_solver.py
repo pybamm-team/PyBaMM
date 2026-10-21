@@ -517,6 +517,35 @@ class TestBaseSolver:
             solver.solve(model, [0, 1], inputs=inputs)
         assert "unused" not in caplog.text
 
+    def test_unused_inputs_logged_once_for_model_without_inputs(self, caplog):
+        def no_input_model():
+            model = pybamm.BaseModel()
+            y = pybamm.Variable("y")
+            model.rhs = {y: -y}
+            model.initial_conditions = {y: 1.0}
+            pybamm.Discretisation().process_model(model)
+            return model
+
+        inputs = {"unused": 1.0}
+        message = "Inputs ['unused'] are not input parameters of model"
+        model = no_input_model()
+        solver = pybamm.IDAKLUSolver()
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            for _ in range(3):
+                solver.solve(model, [0, 1], inputs=inputs, calculate_sensitivities=True)
+        assert caplog.text.count(message) == 1
+
+        caplog.clear()
+        model = no_input_model()
+        solver = pybamm.IDAKLUSolver()
+        solution = None
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            for _ in range(3):
+                solution = solver.step(
+                    solution, model, 1, inputs=inputs, calculate_sensitivities=True
+                )
+        assert caplog.text.count(message) == 1
+
     def test_calculate_sensitivities_list_is_sorted(self):
         model = self._decay_model()
         solution = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12).solve(

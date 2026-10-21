@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess  # nosec B404 - runs this interpreter on a fixed script
 import sys
 import textwrap
@@ -498,8 +499,24 @@ class TestIDAKLUSolver:
             atol=1e-9,
         )
 
+    @pytest.mark.parametrize(
+        "compile_functions",
+        [
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    not (shutil.which("gcc") or shutil.which("cc")),
+                    reason="No C compiler available for AOT compilation",
+                ),
+            ),
+        ],
+    )
     @pytest.mark.parametrize("calculate_sensitivities", [False, True])
-    def test_output_variables_with_special_characters(self, calculate_sensitivities):
+    def test_output_variables_with_special_characters(
+        self, calculate_sensitivities, compile_functions, caplog, monkeypatch, tmp_path
+    ):
+        monkeypatch.setenv("PYBAMM_CASADI_AOT_CACHE", str(tmp_path))
         # These names wrangle to CasADi names that are invalid or that collide
         names = [
             "Entropic change [V/K]",
@@ -518,13 +535,22 @@ class TestIDAKLUSolver:
         pybamm.Discretisation().process_model(model)
 
         t = np.linspace(0, 1, 6)
-        sol = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, output_variables=names).solve(
-            model,
-            [0, 1],
-            inputs={"k": 0.4},
-            calculate_sensitivities=calculate_sensitivities,
-            t_interp=t,
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10,
+            atol=1e-12,
+            output_variables=names,
+            options={"compile": compile_functions},
         )
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            sol = solver.solve(
+                model,
+                [0, 1],
+                inputs={"k": 0.4},
+                calculate_sensitivities=calculate_sensitivities,
+                t_interp=t,
+            )
+        # Compiling links every function into one library, so names must differ
+        assert "Failed to compile" not in caplog.text
         y_exact = np.exp(-0.4 * t)
         for i, name in enumerate(names):
             np.testing.assert_allclose(sol[name](t), (i + 2) * y_exact, rtol=1e-6)

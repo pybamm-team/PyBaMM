@@ -831,7 +831,6 @@ class BaseSolver:
         inputs: dict,
         model: pybamm.BaseModel,
         calculate_sensitivities: list[str] | bool,
-        supplied_inputs: dict | None,
     ) -> tuple[list[str], bool]:
         """
         Resolve ``calculate_sensitivities`` into sorted input names and store them
@@ -846,8 +845,6 @@ class BaseSolver:
         calculate_sensitivities : list of str or bool
             ``True`` for every input of the model, ``False`` for none, or a list of
             input names.
-        supplied_inputs : dict or None
-            The inputs as given by the caller.
 
         Returns
         -------
@@ -862,7 +859,6 @@ class BaseSolver:
             If a name is not an input parameter of the model, or is vector-valued.
         """
         excluded_sensitivity_inputs = {pybamm.Simulation._STEP_INDEX_INPUT}
-        unused_inputs = []
 
         # get a list-only version of calculate_sensitivities
         if isinstance(calculate_sensitivities, bool):
@@ -870,10 +866,6 @@ class BaseSolver:
                 calculate_sensitivities_list = [
                     p for p in inputs if p not in excluded_sensitivity_inputs
                 ]
-                supplied = set() if supplied_inputs is None else set(supplied_inputs)
-                unused_inputs = sorted(
-                    supplied - set(inputs) - excluded_sensitivity_inputs
-                )
             else:
                 calculate_sensitivities_list = []
         else:
@@ -909,20 +901,45 @@ class BaseSolver:
         sensitivities_have_changed = (
             calculate_sensitivities_list != model.calculate_sensitivities
         )
-        # Log once per set-up, not on every repeated solve
-        if unused_inputs and (
-            sensitivities_have_changed or not calculate_sensitivities_list
-        ):
-            pybamm.logger.warning(
-                f"Inputs {unused_inputs} are not input parameters of model "
-                f"'{model.name}', so no sensitivities are calculated for them."
-            )
 
         # save sensitivity parameters so we can identify them later on
         # (FYI: this is used in the Solution class)
         model.calculate_sensitivities = calculate_sensitivities_list
 
         return calculate_sensitivities_list, sensitivities_have_changed
+
+    @staticmethod
+    def _log_unused_sensitivity_inputs(
+        model: pybamm.BaseModel,
+        inputs: dict,
+        supplied_inputs: dict | None,
+        calculate_sensitivities: list[str] | bool,
+    ) -> None:
+        """
+        Log the supplied inputs that ``calculate_sensitivities=True`` skips because
+        they are not input parameters of the model.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model being solved.
+        inputs : dict
+            The model's input values, one per input parameter of the model.
+        supplied_inputs : dict or None
+            The inputs as given by the caller.
+        calculate_sensitivities : list of str or bool
+            The ``calculate_sensitivities`` argument.
+        """
+        if calculate_sensitivities is not True or not supplied_inputs:
+            return
+        unused_inputs = sorted(
+            set(supplied_inputs) - set(inputs) - {pybamm.Simulation._STEP_INDEX_INPUT}
+        )
+        if unused_inputs:
+            pybamm.logger.warning(
+                f"Inputs {unused_inputs} are not input parameters of model "
+                f"'{model.name}', so no sensitivities are calculated for them."
+            )
 
     def _check_single_model(self, model: pybamm.BaseModel) -> None:
         """Raise a ``RuntimeError`` if this solver is set up for a different model."""
@@ -1120,10 +1137,7 @@ class BaseSolver:
         self._check_single_model(model)
         _, sensitivities_have_changed = (
             BaseSolver._solve_process_calculate_sensitivities_arg(
-                model_inputs_list[0],
-                model,
-                calculate_sensitivities,
-                supplied_inputs=inputs_list[0],
+                model_inputs_list[0], model, calculate_sensitivities
             )
         )
 
@@ -1142,6 +1156,10 @@ class BaseSolver:
             self.set_up(model, model_inputs_list, t_eval)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
+            # Once per set-up, not on every repeated solve
+            BaseSolver._log_unused_sensitivity_inputs(
+                model, model_inputs_list[0], inputs_list[0], calculate_sensitivities
             )
         elif (
             self._model_set_up[model]["initial conditions"]
@@ -1929,7 +1947,7 @@ class BaseSolver:
         previous_sensitivities = getattr(model, "calculate_sensitivities", [])
         sensitivity_names, sensitivities_have_changed = (
             BaseSolver._solve_process_calculate_sensitivities_arg(
-                model_inputs, model, calculate_sensitivities, supplied_inputs=inputs
+                model_inputs, model, calculate_sensitivities
             )
         )
         try:
@@ -1950,6 +1968,9 @@ class BaseSolver:
             self.set_up(model, model_inputs)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
+            BaseSolver._log_unused_sensitivity_inputs(
+                model, model_inputs, inputs, calculate_sensitivities
             )
 
         if (

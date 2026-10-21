@@ -9,8 +9,10 @@ import pybamm
 
 def _mean_radius(param, name):
     """Return the radius parameter ``name``, so the distribution follows its value."""
-    # Raise a KeyError now if the parameter set lacks the radius
-    param[name]
+    if name not in param:
+        raise KeyError(
+            f"get_size_distribution_parameters needs '{name}' in the parameter values."
+        )
     return pybamm.Parameter(name)
 
 

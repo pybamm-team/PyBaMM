@@ -215,7 +215,9 @@ class Mesh(dict):
             raise pybamm.GeometryError(
                 "Geometry limits depend on input parameters, but the submesh types "
                 f"need numerical limits: {'; '.join(unsupported)}. Use "
-                "pybamm.SymbolicUniform1DSubMesh for these domains."
+                "pybamm.SymbolicUniform1DSubMesh for these domains, or set "
+                "supports_symbolic_limits = True on a custom SubMesh that accepts "
+                "symbolic limits."
             )
 
     def __getitem__(self, domains):

@@ -494,7 +494,9 @@ class TestMesh:
             f"{thickness}; 'separator' (Uniform1DSubMesh) depends on {thickness}; "
             f"'positive electrode' (Uniform1DSubMesh) depends on {thickness}; "
             f"'negative particle' (Uniform1DSubMesh) depends on {radius}. Use "
-            "pybamm.SymbolicUniform1DSubMesh for these domains"
+            "pybamm.SymbolicUniform1DSubMesh for these domains, or set "
+            "supports_symbolic_limits = True on a custom SubMesh that accepts "
+            "symbolic limits."
         )
         with pytest.raises(pybamm.GeometryError, match=match):
             make_mesh(dict(submesh_types))
