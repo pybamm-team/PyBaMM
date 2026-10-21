@@ -10,6 +10,7 @@
   - `jax.vmap` over tangent directions returns one result per direction, and over time shares one solve.
   - Times outside the solution, and derivatives with respect to time, give NaN rather than an error or a wrong value.
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
+- Irreversible heating now includes the resistive loss across the SEI film when `"SEI film resistance"` is `"distributed"` or `"average"`. Before, that loss lowered the voltage but never appeared in `"Total heating [W]"` or the cell temperature. ([#5841](https://github.com/pybamm-team/PyBaMM/pull/5841))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
 
