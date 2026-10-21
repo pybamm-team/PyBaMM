@@ -298,7 +298,7 @@ def get_parameter_values():
         "Negative particle radius [m]": 3.48e-6,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 0,
-        "Negative electrode charge transfer coefficient": 0.5,
+        "Negative electrode Butler-Volmer transfer coefficient": 0.5,
         "Negative electrode exchange-current density [A.m-2]"
         "": HC_electrolyte_exchange_current_density_Chayambuka2022,
         "Negative electrode OCP entropic change [V.K-1]": 0,
@@ -312,7 +312,7 @@ def get_parameter_values():
         "Positive particle radius [m]": 0.59e-6,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 0,
-        "Positive electrode charge transfer coefficient": 0.5,
+        "Positive electrode Butler-Volmer transfer coefficient": 0.5,
         "Positive electrode exchange-current density [A.m-2]"
         "": NVPF_electrolyte_exchange_current_density_Chayambuka2022,
         "Positive electrode OCP entropic change [V.K-1]": 0,

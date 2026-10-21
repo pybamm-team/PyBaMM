@@ -448,7 +448,7 @@ def get_parameter_values():
         "Negative electrode OCP entropic change [V.K-1]": 0.0,
         "Exchange-current density for lithium metal electrode [A.m-2]"
         "": li_metal_electrolyte_exchange_current_density_Xu2019,
-        "Negative electrode charge transfer coefficient": 0.5,
+        "Negative electrode Butler-Volmer transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 215.0,
@@ -460,7 +460,7 @@ def get_parameter_values():
         "Positive particle radius [m]": 5.86e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 1.5,
-        "Positive electrode charge transfer coefficient": 0.5,
+        "Positive electrode Butler-Volmer transfer coefficient": 0.5,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode exchange-current density [A.m-2]"
         "": graphite_LGM50_electrolyte_exchange_current_density_Chen2020,
