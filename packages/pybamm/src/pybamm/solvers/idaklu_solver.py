@@ -231,12 +231,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "nonlinear_convergence_coefficient": 0.33,
                 # Suppress algebraic variables from error test
                 "suppress_algebraic_error": False,
-                # Include the forward sensitivities in the local error test,
-                # using IDAS's staggered corrector. Off, only the states set the
-                # step size, so sensitivities can be far less accurate than rtol
-                # (a DFN's dV/dD_n is 3e-3 relative at rtol=1e-4, 1.5e-4 with
-                # this on, for 1.5-2x the solve time). Turn it on when
-                # sensitivities must meet the tolerances themselves.
+                # Include the forward sensitivities in the local error test, so
+                # they meet the tolerances too, at extra solve time
                 "sensitivity_error_control": False,
                 # Store Hermite interpolation data for the solution.
                 # This option is always disabled if output_variables are given

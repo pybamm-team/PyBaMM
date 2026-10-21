@@ -24,16 +24,14 @@ int IDAKLUSolverOpenMP<ExprSet>::SolveICLinearSystem(
   sunrealtype* delta_data = N_VGetArrayPointer(fs.delta_nvec);
   std::memcpy(res_data, res, number_of_states * sizeof(sunrealtype));
 
-  if (J != nullptr) {
-    // jacobian_eval ignores tempv1/2/3 in the casadi path; pass y_cache
-    // since the signature requires valid N_Vectors.
-    int flag = jacobian_eval<ExprSet>(
-      SUN_RCONST(0.0), SUN_RCONST(1.0), yy_ptr, yyp_ptr, fs.res_nvec, J,
-      functions.get(), y_cache, y_cache, y_cache);
-    if (flag != 0) return 1;
-  }
+  // jacobian_eval ignores tempv1/2/3 in the casadi path; pass y_cache
+  // since the signature requires valid N_Vectors.
+  int flag = jacobian_eval<ExprSet>(
+    SUN_RCONST(0.0), SUN_RCONST(1.0), yy_ptr, yyp_ptr, fs.res_nvec, J,
+    functions.get(), y_cache, y_cache, y_cache);
+  if (flag != 0) return 1;
 
-  int flag = SUNLinSolSetup(LS, J);
+  flag = SUNLinSolSetup(LS, J);
   std::memcpy(delta_data, res, number_of_states * sizeof(sunrealtype));
   if (flag == 0) {
     flag = SUNLinSolSolve(LS, J, fs.delta_nvec, fs.res_nvec, SUN_RCONST(0.0));

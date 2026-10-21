@@ -2895,15 +2895,34 @@ class TestIDAKLUSensitivityErrorControl:
     """The ``sensitivity_error_control`` option."""
 
     @staticmethod
-    def _forced_model():
+    def _forced_model(algebraic=False, switch=False):
         """``du/dt = -u / 10 + p sin(2 t)`` at ``p = 0``: ``u`` decays slowly,
-        so only error control on ``du/dp`` resolves its oscillation."""
+        so only error control on ``du/dp`` resolves its oscillation.
+
+        Parameters
+        ----------
+        algebraic : bool, optional
+            Add ``0 = v - b u``, with ``v`` started off its consistent value.
+        switch : bool, optional
+            Add ``(t > t_switch) / 10`` to ``du/dt``, which leaves ``du/dp`` as
+            it is.
+        """
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         p = pybamm.InputParameter("p")
-        model.rhs = {u: -u / 10 + p * pybamm.sin(2 * pybamm.t)}
-        model.initial_conditions = {u: 1}
-        model.variables = {"u": u}
+        rhs = -u / 10 + p * pybamm.sin(2 * pybamm.t)
+        if switch:
+            rhs = rhs + (pybamm.t > pybamm.InputParameter("t_switch")) / 10
+        model.rhs = {u: rhs}
+        initial_conditions = {u: 1}
+        variables = {"u": u}
+        if algebraic:
+            v = pybamm.Variable("v")
+            model.algebraic = {v: v - pybamm.InputParameter("b") * u}
+            initial_conditions[v] = 1
+            variables["v"] = v
+        model.initial_conditions = initial_conditions
+        model.variables = variables
         pybamm.Discretisation().process_model(model)
         return model
 
@@ -2945,21 +2964,67 @@ class TestIDAKLUSensitivityErrorControl:
         )
 
     def test_dae_sensitivities_meet_the_tolerances(self):
-        a, b = 2.0, 3.0
+        b = 3.0
         solver = pybamm.IDAKLUSolver(
-            rtol=1e-8, atol=1e-10, options={"sensitivity_error_control": True}
+            rtol=1e-6, atol=1e-6, options={"sensitivity_error_control": True}
         )
-        t = np.linspace(0, 1, 11)
+        t = np.linspace(0, 20, 101)
         solution = solver.solve(
-            _inconsistent_dae_model(),
-            t,
-            inputs={"a": a, "b": b},
+            self._forced_model(algebraic=True),
+            [0, 20],
+            inputs={"p": 0.0, "b": b},
             calculate_sensitivities=True,
             t_interp=t,
         )
-        decay = np.exp(-a * t)
         sensitivities = solution["v"].sensitivities
-        np.testing.assert_allclose(sensitivities["b"].ravel(), decay, atol=1e-6)
         np.testing.assert_allclose(
-            sensitivities["a"].ravel(), -b * t * decay, atol=1e-6
+            sensitivities["p"].ravel(), b * self._forced_sensitivity(t), atol=1e-4
         )
+        np.testing.assert_allclose(
+            sensitivities["b"].ravel(), np.exp(-t / 10), atol=1e-4
+        )
+
+    @pytest.mark.parametrize("output_variables", [None, ["u"]])
+    def test_stays_on_after_a_restart(self, output_variables):
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-6,
+            atol=1e-6,
+            output_variables=output_variables,
+            options={"sensitivity_error_control": True},
+        )
+        solution = solver.solve(
+            self._forced_model(switch=True),
+            [0, 20],
+            inputs={"p": 0.0, "t_switch": 7.0},
+            calculate_sensitivities=["p"],
+            t_interp=np.linspace(0, 20, 101),
+        )
+        # An input-dependent switch time makes the solver restart there
+        assert len(solution.sub_solutions) == 2
+        np.testing.assert_allclose(
+            solution["u"].sensitivities["p"].ravel(),
+            self._forced_sensitivity(solution.t),
+            atol=1e-4,
+        )
+
+    def test_max_nonlinear_iterations_caps_the_sensitivity_corrector(self):
+        def number_of_steps(max_nonlinear_iterations):
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-6,
+                atol=1e-6,
+                options={
+                    "sensitivity_error_control": True,
+                    "max_nonlinear_iterations": max_nonlinear_iterations,
+                },
+            )
+            solution = solver.solve(
+                self._forced_model(),
+                [0, 20],
+                inputs={"p": 0.0},
+                calculate_sensitivities=True,
+            )
+            return solution.solver_statistics.number_of_steps
+
+        # The states converge in one iteration, so only the staggered
+        # corrector's cap of one iteration makes the solver cut its steps
+        assert number_of_steps(1) > 2 * number_of_steps(40)

@@ -457,10 +457,15 @@ template <class ExprSet>
 int IDAKLUSolverOpenMP<ExprSet>::Step(sunrealtype tout, sunrealtype &t_val) {
   // Only while stepping: IDACalcIC's line search backtracks from a NaN trial
   // point by itself, where a recoverable failure would abandon the search
-  functions->reject_nonfinite = true;
-  int const retval = IDASolve(ida_mem, tout, &t_val, yy, yyp, IDA_ONE_STEP);
-  functions->reject_nonfinite = false;
-  return retval;
+  struct RejectNonfinite {
+    bool &reject;
+    explicit RejectNonfinite(bool &flag) : reject(flag) { reject = true; }
+    // Also cleared if a callback throws, so the next IDACalcIC never rejects
+    ~RejectNonfinite() { reject = false; }
+    RejectNonfinite(const RejectNonfinite &) = delete;
+    RejectNonfinite &operator=(const RejectNonfinite &) = delete;
+  } const guard(functions->reject_nonfinite);
+  return IDASolve(ida_mem, tout, &t_val, yy, yyp, IDA_ONE_STEP);
 }
 
 template <class ExprSet>
@@ -611,6 +616,7 @@ template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::GetSolutionDerivatives(sunrealtype t) {
   CheckErrors(IDAGetDky(ida_mem, t, 1, yyp), "IDAGetDky");
   if (sensitivity) {
+    // Not returned, but the guess IDASensReInit starts from at a breakpoint
     CheckErrors(IDAGetSensDky(ida_mem, t, 1, yypS), "IDAGetSensDky");
   }
 }
