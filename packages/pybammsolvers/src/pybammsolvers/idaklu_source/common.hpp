@@ -126,7 +126,8 @@ inline sunrealtype perturb_time(const sunrealtype t, bool increasing) {
 /**
  * @brief Whether two times are too close for IDAS to step from one to the other
  *
- * Matches the 100 * uround tolerance IDAS uses to decide a stop time is reached.
+ * Uses the 100 * uround tolerance IDAS uses to decide a stop time is reached,
+ * scaled by |t_a| + |t_b| in place of IDAS's |t_n| + |h|.
  */
 inline bool within_roundoff(const sunrealtype t_a, const sunrealtype t_b) {
   const sunrealtype tol = SUN_RCONST(100.0) * std::numeric_limits<sunrealtype>::epsilon();

@@ -137,13 +137,13 @@ class TestIDAKLUSolver:
                     t_eval,
                     inputs={**inputs, name: inputs[name] + sign * step},
                     t_interp=t_interp,
-                )["Voltage [V]"].entries
+                )["Voltage [V]"](t_interp[0])
                 for sign in [1, -1]
             ]
             # Only t0 is compared: integration error swamps later differences
             np.testing.assert_allclose(
                 solution["Voltage [V]"].sensitivities[name][0],
-                (voltages[0][0] - voltages[1][0]) / (2 * step),
+                (voltages[0] - voltages[1]) / (2 * step),
                 rtol=1e-5,
                 err_msg=name,
             )
