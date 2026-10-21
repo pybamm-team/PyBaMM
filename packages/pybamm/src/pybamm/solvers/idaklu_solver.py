@@ -82,8 +82,9 @@ def _sensitivities_at_knots(
     Parameters
     ----------
     all_sensitivities : dict
-        Map of parameter (and ``"all"``) to per-segment arrays holding one block
-        of rows per time point, time outer.
+        Map of parameter and ``"all"`` to per-segment arrays holding one block
+        of rows per time point, time outer. The parameters' columns tile
+        ``"all"``, in order, as the solver stores them.
     all_ts : list of numpy.ndarray
         Each segment's time points.
     knots : list of numpy.ndarray
@@ -92,14 +93,16 @@ def _sensitivities_at_knots(
     Returns
     -------
     dict
-        The sensitivities at the kept time points. Each parameter's entries are
-        views of the columns of ``"all"`` when the originals tile it.
+        The sensitivities at the kept time points, each parameter's entries
+        views of the columns of ``"all"``.
 
     Raises
     ------
     :class:`pybamm.SolverError`
         If a kept time is not one of its segment's time points.
     """
+    if not all_sensitivities:
+        return {}
     indices = []
     for ts, kept in zip(all_ts, knots, strict=True):
         index = np.searchsorted(ts, kept)
@@ -110,33 +113,22 @@ def _sensitivities_at_knots(
             )
         indices.append(index)
 
-    def select(segments):
-        selected = []
-        for array, ts, index in zip(segments, all_ts, indices, strict=True):
-            n_columns = array.shape[1]
-            # An outputs-only solve stores no state rows to select from
-            rows = array.reshape(len(ts), -1, n_columns) if array.size else None
-            selected.append(
-                array if rows is None else rows[index].reshape(-1, n_columns)
-            )
-        return selected
+    reduced_all = []
+    for array, ts, index in zip(all_sensitivities["all"], all_ts, indices, strict=True):
+        n_columns = array.shape[1]
+        # A join can leave a segment empty, with no rows to reshape
+        rows = array.reshape(len(ts), -1, n_columns) if len(ts) else None
+        reduced_all.append(
+            array if rows is None else rows[index].reshape(-1, n_columns)
+        )
 
-    names = [key for key in all_sensitivities if key != "all"]
-    widths = [all_sensitivities[name][0].shape[1] for name in names]
-    all_segments = all_sensitivities.get("all")
     reduced = {}
-    if all_segments is not None:
-        reduced_all = select(all_segments)
-        tiles = sum(widths) == all_segments[0].shape[1]
     start = 0
-    for name, width in zip(names, widths, strict=True):
-        if all_segments is not None and tiles:
-            reduced[name] = [array[:, start : start + width] for array in reduced_all]
-        else:
-            reduced[name] = select(all_sensitivities[name])
+    for name in [key for key in all_sensitivities if key != "all"]:
+        width = all_sensitivities[name][0].shape[1]
+        reduced[name] = [array[:, start : start + width] for array in reduced_all]
         start += width
-    if all_segments is not None:
-        reduced["all"] = reduced_all
+    reduced["all"] = reduced_all
     return reduced
 
 
