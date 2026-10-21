@@ -46,12 +46,19 @@ Community- and partner-contributed PyBaMM models. Each entry is one
 self-contained folder with its own maintainer, tests, examples, and
 citation; the table below is generated from those folders' manifests.
 
-The zoo is a separate distribution that is **not yet published to PyPI**, so
-`pip install pybamm` does not provide it. Until it is released, install it
-from the repository:
+The zoo is a separate distribution, released independently of PyBaMM, so
+`pip install pybamm` does not provide it. Install it from
+[PyPI](https://pypi.org/project/pybamm-model-zoo/):
 
 ```bash
-pip install "pybamm-model-zoo @ git+https://github.com/pybamm-team/PyBaMM.git#subdirectory=packages/pybamm-model-zoo"
+pip install pybamm-model-zoo
+```
+
+A model with third-party dependencies of its own declares them as an extra
+named `zoo-<slug>`, and the `zoo-all` extra installs every model's:
+
+```bash
+pip install "pybamm-model-zoo[zoo-all]"
 ```
 
 Zoo models are then reached through the zoo's registry, not the `pybamm`
@@ -70,19 +77,20 @@ the **community** tier are tested on every pull request too, but their
 results are advisory: a red community model never blocks a PyBaMM merge.
 See [contributing a model](contributing.md) to add your own.
 
-| Model | Tier | Maintainer | PyBaMM | Added |
-| --- | --- | --- | --- | --- |
+| Model | Tier | Maintainer | Added |
+| --- | --- | --- | --- |
 """
 
 _COMPATIBILITY_HEADER = """\
 
 ## Compatibility
 
-Refreshed weekly by the `model_zoo_status` workflow. Each model is run against
-`main` and against the most recent PyBaMM releases its `pybamm_requires`
-admits; `scripts/matrix.py --releases` sets how far back that window reaches,
-and the columns below are the window as it stands. A cell reading `missing` is
-one whose job never reported, not a pass.
+Every model shares one PyBaMM floor: the zoo's own `pybamm` requirement, which
+`pip` enforces when it installs the zoo. The `model_zoo_status` workflow
+refreshes the table below weekly, running every model against `main`, the
+oldest PyBaMM release the zoo supports, and the most recent releases
+(`scripts/matrix.py --releases` sets how many). A cell reading `missing` is one
+whose job never reported, not a pass.
 
 | Model | Results | Last passing |
 | --- | --- | --- |
@@ -214,7 +222,7 @@ def index_page(entries: list[ModelEntry], status: dict) -> str:
     records = status.get("models", {})
     rows = [
         f"| [{entry.title}](models/{entry.slug}.md) | {entry.tier} | "
-        f"{maintainer_links(entry)} | `{entry.pybamm_requires}` | {entry.added} |"
+        f"{maintainer_links(entry)} | {entry.added} |"
         for entry in entries
     ]
     status_rows = [

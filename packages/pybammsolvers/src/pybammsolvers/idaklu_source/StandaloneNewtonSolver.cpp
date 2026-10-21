@@ -8,11 +8,13 @@ StandaloneAlgebraicSystem::StandaloneAlgebraicSystem(
   std::unique_ptr<Expression> res_fn,
   std::unique_ptr<Expression> jac_fn,
   int n_vars,
-  bool use_sparse)
+  bool use_sparse,
+  sunrealtype klu_pivot_tolerance)
   : res_(std::move(res_fn)),
     jac_(std::move(jac_fn)),
     n_vars_(n_vars),
     use_sparse_(use_sparse),
+    klu_pivot_tolerance_(klu_pivot_tolerance),
     sunctx_(nullptr), J_(nullptr), LS_(nullptr),
     res_nvec_(nullptr), delta_nvec_(nullptr)
 {
@@ -35,12 +37,14 @@ StandaloneAlgebraicSystem::StandaloneAlgebraicSystem(
 StandaloneAlgebraicSystem::StandaloneAlgebraicSystem(
   casadi::Function res_fn,
   casadi::Function jac_fn,
-  bool use_sparse)
+  bool use_sparse,
+  sunrealtype klu_pivot_tolerance)
   : StandaloneAlgebraicSystem(
       std::make_unique<CasadiFunction>(res_fn),
       std::make_unique<CasadiFunction>(jac_fn),
       static_cast<int>(res_fn.nnz_out(0)),
-      use_sparse)
+      use_sparse,
+      klu_pivot_tolerance)
 {}
 
 StandaloneAlgebraicSystem::~StandaloneAlgebraicSystem() {
@@ -141,6 +145,7 @@ void StandaloneAlgebraicSystem::BuildSparseResources(int jac_nnz) {
   for (int i = 0; i < nnz_; i++) jr[i] = rowvals_[i];
 
   LS_ = SUNLinSol_KLU(delta_nvec_, J_, sunctx_);
+  configure_klu(LS_, klu_pivot_tolerance_);
 }
 
 void StandaloneAlgebraicSystem::BuildDenseResources() {
@@ -192,19 +197,24 @@ StandaloneNewtonSolver::StandaloneNewtonSolver(
   int max_iter,
   int max_backtracks,
   sunrealtype epsNewt,
-  bool use_sparse)
-  : system_(residual_fn, jacobian_fn, use_sparse),
+  bool use_sparse,
+  sunrealtype klu_pivot_tolerance)
+  : system_(residual_fn, jacobian_fn, use_sparse, klu_pivot_tolerance),
     solver_(system_, system_.n_vars(), atol.data(), rtol, step_tol,
             max_iter, max_backtracks, epsNewt),
     n_vars_(system_.n_vars()),
     y_work_(n_vars_)
-{}
+{
+  solver_.set_log(&log_);
+}
 
 std::pair<bool, np_array> StandaloneNewtonSolver::solve(
   sunrealtype t,
   const np_array& y0_np,
-  const np_array& inputs_np)
+  const np_array& inputs_np,
+  py::object logger)
 {
+  log_.set_logger(std::move(logger));
   auto y0 = y0_np.unchecked<1>();
   auto inp = inputs_np.unchecked<1>();
   system_.set_inputs(inp.data(0), static_cast<int>(inp.size()));
@@ -222,8 +232,10 @@ std::pair<bool, py::array_t<sunrealtype, py::array::f_style>>
 StandaloneNewtonSolver::solve_batch(
   const np_array& t_eval_np,
   const np_array& y0_alg_np,
-  const np_array& inputs_np)
+  const np_array& inputs_np,
+  py::object logger)
 {
+  log_.set_logger(std::move(logger));
   auto t_eval = t_eval_np.unchecked<1>();
   auto y0 = y0_alg_np.unchecked<1>();
   auto inp = inputs_np.unchecked<1>();

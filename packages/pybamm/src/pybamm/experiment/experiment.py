@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+
 import pybamm
 
 from .step.base_step import (
@@ -76,7 +78,10 @@ class Experiment:
             steps_unprocessed, self.period, self.temperature
         )
 
-        self.steps = [processed_steps[repr(step)] for step in steps_unprocessed]
+        # Shallow copies so repeated steps keep their own start/end times
+        self.steps = [
+            copy.copy(processed_steps[repr(step)]) for step in steps_unprocessed
+        ]
         self.steps = self._set_next_start_time(self.steps)
 
         # Save the processed unique steps and the processed operating conditions

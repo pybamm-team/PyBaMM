@@ -16,6 +16,8 @@ from scipy.io import savemat
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import flatten_inputs
+from pybamm.solvers.observation import build_variable
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -354,7 +356,10 @@ class Solution(SolutionBase):
         "_user_options",
         "_variables",
         "_y",
+        "_y0",
+        "_y0_sensitivities",
         "_y_event",
+        "_y_event_sensitivities",
         "_yp",
         "all_first_states",
         "all_inputs",
@@ -444,6 +449,11 @@ class Solution(SolutionBase):
         self._y_event = y_event
         self._termination = termination
         self.closest_event_idx = None
+        # Initial state of an output_variables solve, which stores no states
+        self._y0 = None
+        # Such a solve's state sensitivities at its first and last time points
+        self._y0_sensitivities = None
+        self._y_event_sensitivities = None
 
         super().__init__()
         self.integration_time = None
@@ -491,6 +501,9 @@ class Solution(SolutionBase):
         self.solver_statistics = None
         self._first_state = None
         self._last_state = None
+        self._y0 = None
+        self._y0_sensitivities = None
+        self._y_event_sensitivities = None
         if isinstance(state, dict):
             state = {
                 f"_{name}" if name in ("first_state", "last_state") else name: value
@@ -500,6 +513,14 @@ class Solution(SolutionBase):
 
     def has_sensitivities(self) -> bool:
         return len(self._all_sensitivities) > 0
+
+    @property
+    def sensitivity_names(self) -> list[str]:
+        """
+        Names of the inputs this solution has sensitivities for, in the column
+        order of ``sensitivities["all"]``.
+        """
+        return [key for key in self._all_sensitivities if key != "all"]
 
     @staticmethod
     def _ensure_t_evals(all_ts, all_t_evals):
@@ -653,9 +674,7 @@ class Solution(SolutionBase):
     @property
     def all_inputs_stacked(self) -> list[np.ndarray]:
         if self._all_inputs_stacked is None:
-            self._all_inputs_stacked = [
-                np.asarray(list(inp.values())).reshape(-1) for inp in self.all_inputs
-            ]
+            self._all_inputs_stacked = [flatten_inputs(inp) for inp in self.all_inputs]
         return self._all_inputs_stacked
 
     @property
@@ -736,21 +755,24 @@ class Solution(SolutionBase):
         return self._first_state
 
     def _build_first_state(self):
-        sensitivities = {}
         n_states = self.all_models[0].len_rhs_and_alg
-        for key in self._all_sensitivities:
-            sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
+        if self._y0_sensitivities is None:
+            sensitivities = {
+                key: value[0][:n_states, :]
+                for key, value in self._all_sensitivities.items()
+            }
+        else:
+            sensitivities = self._y0_sensitivities
 
         if self.all_yps is None:
             all_yps = None
         else:
             all_yps = self.all_yps[0][:, :1]
 
-        if not self.variables_returned:
+        if self._y0 is None:
             all_ys = self.all_ys[0][:, :1]
         else:
-            # Get first state from initial conditions as all_ys is empty
-            all_ys = self.all_models[0].y0full[0].reshape(-1, 1)
+            all_ys = self._y0.reshape(-1, 1)
 
         new_sol = Solution(
             self.all_ts[0][:1],
@@ -786,10 +808,14 @@ class Solution(SolutionBase):
         return self._last_state
 
     def _build_last_state(self):
-        sensitivities = {}
         n_states = self.all_models[-1].len_rhs_and_alg
-        for key in self._all_sensitivities:
-            sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
+        if self._y_event_sensitivities is None:
+            sensitivities = {
+                key: value[-1][-n_states:, :]
+                for key, value in self._all_sensitivities.items()
+            }
+        else:
+            sensitivities = self._y_event_sensitivities
 
         if self.all_yps is None:
             all_yps = None
@@ -860,79 +886,8 @@ class Solution(SolutionBase):
         for variable in variables:
             self._update_variable(variable)
 
-    def _update_model_variable(
-        self,
-        model: pybamm.BaseModel,
-        var_pybamm: pybamm.Symbol,
-        time_integral: pybamm.ProcessedVariableTimeIntegral | None,
-        inputs: dict,
-        ys_shape: tuple,
-        cache_key,
-    ):
-        _var_casadi = model._variables_casadi.get(cache_key)
-        if _var_casadi is not None:
-            return _var_casadi, var_pybamm, time_integral
-
-        var_casadi, var_pybamm, time_integral = self._convert_to_casadi(
-            var_pybamm, inputs, ys_shape
-        )
-
-        # Only cache if it's not a time integral
-        if time_integral is None:
-            model._variables_casadi[cache_key] = var_casadi
-        return var_casadi, var_pybamm, time_integral
-
     def _update_variable(self, name: str):
-        time_integral = None
-        pybamm.logger.debug(f"Post-processing {name}")
-
-        # Iterate through all models, some may be in the list several times and
-        # therefore only get set up once
-        vars_pybamm = [
-            model.get_processed_variable_or_event(name) for model in self.all_models
-        ]
-        vars_casadi = [None] * len(self.all_models)
-        for i, (model, ys, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, strict=True)
-        ):
-            _var_pybamm = vars_pybamm[i]
-            if self.variables_returned and _var_pybamm.has_symbol_of_classes(
-                pybamm.expression_tree.state_vector.StateVector
-            ):
-                raise KeyError(
-                    f"Cannot process variable '{name}' as it was not part of the "
-                    "solve. Please re-run the solve with `output_variables` set to "
-                    "include this variable."
-                )
-            if isinstance(_var_pybamm, pybamm.VectorField):
-                comp_casadi = []
-                for k, comp in enumerate(_var_pybamm.components):
-                    cc, _, _ = self._update_model_variable(
-                        model,
-                        comp,
-                        inputs=inputs,
-                        ys_shape=ys.shape,
-                        time_integral=None,
-                        cache_key=f"{name}[{k}]",
-                    )
-                    comp_casadi.append(cc)
-                vars_casadi[i] = comp_casadi
-            else:
-                var_casadi, var_pybamm, time_integral = self._update_model_variable(
-                    model,
-                    _var_pybamm,
-                    inputs=inputs,
-                    ys_shape=ys.shape,
-                    time_integral=time_integral,
-                    cache_key=name,
-                )
-                vars_pybamm[i] = var_pybamm
-                vars_casadi[i] = var_casadi
-        var = pybamm.process_variable(
-            name, vars_pybamm, vars_casadi, self, time_integral=time_integral
-        )
-
-        self._variables[name] = var
+        self._variables[name] = build_variable(self, name)
 
     def observe(self, symbol: pybamm.Symbol) -> pybamm.ProcessedVariable:
         """
@@ -1241,13 +1196,32 @@ class Solution(SolutionBase):
         return ts, ys, yps, tev
 
     @staticmethod
-    def _merge_sensitivities(acc, s):
-        """Fold one segment's sensitivities into the running dict ``acc``."""
-        for key, val in s._all_sensitivities.items():
-            acc.setdefault(key, []).extend(val)
+    def _merge_sensitivities(acc, s, repeated):
+        """Fold one segment's sensitivities into the running dict ``acc``,
+        dropping the leading time point's rows when ``repeated``."""
+        for key, (first, *rest) in s._all_sensitivities.items():
+            # Rows are time-major, one block per time point, as in _segment_series
+            rows_repeated = len(first) // len(s.all_ts[0]) if repeated else 0
+            acc.setdefault(key, []).extend([first[rows_repeated:], *rest])
 
     def __add__(self, other):
-        """Adds two solutions together, e.g. when stepping"""
+        """Join ``other`` onto the end of this solution, e.g. when stepping.
+
+        If ``other`` starts after this solution ends, an ``ExplicitTimeIntegral``
+        integrates across the gap, interpolating its integrand linearly there. If
+        either solution returned output variables only, the integral is instead
+        the sum of the integrals over each solution, so the gap adds nothing.
+
+        Parameters
+        ----------
+        other : :class:`pybamm.Solution` or None
+            The solution to append.
+
+        Returns
+        -------
+        :class:`pybamm.Solution`
+            The joined solution.
+        """
         if other is None or isinstance(other, EmptySolution):
             return self.copy()
         if not isinstance(other, Solution):
@@ -1303,7 +1277,7 @@ class Solution(SolutionBase):
         all_sensitivities = {
             key: list(value) for key, value in self._all_sensitivities.items()
         }
-        self._merge_sensitivities(all_sensitivities, other)
+        self._merge_sensitivities(all_sensitivities, other, repeated)
 
         options = self.user_options | other.user_options
 
@@ -1324,6 +1298,9 @@ class Solution(SolutionBase):
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
+        new_sol._y0 = self._y0
+        new_sol._y0_sensitivities = self._y0_sensitivities
+        new_sol._y_event_sensitivities = other._y_event_sensitivities
         new_sol._all_inputs_stacked = self.all_inputs_stacked + other.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
@@ -1406,8 +1383,8 @@ class Solution(SolutionBase):
 
         # sensitivities: fresh dict, no aliasing of any input solution's dict
         all_sensitivities = {}
-        for s in segments:
-            cls._merge_sensitivities(all_sensitivities, s)
+        for s, repeated in kept:
+            cls._merge_sensitivities(all_sensitivities, s, repeated)
 
         options = {}
         for s in segments:
@@ -1433,10 +1410,12 @@ class Solution(SolutionBase):
             _validate_time_structure=True,
         )
 
-        # last kept segment, not sols[-1]: __add__'s single-sample short-circuit
-        # keeps the running closest_event_idx, so a trailing duplicate must not
-        # overwrite it.
+        # last kept segment, not sols[-1]: __add__'s short-circuit keeps these from
+        # self, and a trailing last_state duplicate has no event sensitivities.
         new_sol.closest_event_idx = segments[-1].closest_event_idx
+        new_sol._y_event_sensitivities = segments[-1]._y_event_sensitivities
+        new_sol._y0 = segments[0]._y0
+        new_sol._y0_sensitivities = segments[0]._y0_sensitivities
         # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
         new_sol._sub_solutions = sub_sols
 
@@ -1481,6 +1460,9 @@ class Solution(SolutionBase):
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
         new_sol.closest_event_idx = self.closest_event_idx
+        new_sol._y0 = self._y0
+        new_sol._y0_sensitivities = self._y0_sensitivities
+        new_sol._y_event_sensitivities = self._y_event_sensitivities
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time

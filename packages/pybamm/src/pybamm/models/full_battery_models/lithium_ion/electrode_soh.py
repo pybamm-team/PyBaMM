@@ -10,7 +10,11 @@ import numpy as np
 
 import pybamm
 
-from .util import get_equilibrium_direction, get_lithiation_delithiation
+from .util import (
+    get_equilibrium_direction,
+    get_initial_ocp,
+    get_lithiation_delithiation,
+)
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):
@@ -832,22 +836,22 @@ class ElectrodeSOHSolver:
                 soc_model.initial_conditions[Up] = V_max
                 soc_model.algebraic[soc] = Up - Un - V_init
             else:
-                Up = self.param.p.prim.U
-                Un = self.param.n.prim.U
                 soc_model.algebraic[soc] = (
-                    Up(
+                    get_initial_ocp(
+                        self.param.p.prim,
                         y,
                         T_init,
-                        get_lithiation_delithiation(
-                            direction, "positive", self.options
-                        ),
+                        direction,
+                        "positive",
+                        self.options,
                     )
-                    - Un(
+                    - get_initial_ocp(
+                        self.param.n.prim,
                         x,
                         T_init,
-                        get_lithiation_delithiation(
-                            direction, "negative", self.options
-                        ),
+                        direction,
+                        "negative",
+                        self.options,
                     )
                     - V_init
                 )
@@ -964,18 +968,14 @@ class ElectrodeSOHSolver:
         else:
             T_init = parameter_values["Initial temperature [K]"]
             Un = parameter_values.evaluate(
-                self.param.n.prim.U(
-                    x,
-                    T_init,
-                    get_lithiation_delithiation(direction, "negative", self.options),
+                get_initial_ocp(
+                    self.param.n.prim, x, T_init, direction, "negative", self.options
                 ),
                 inputs=inputs,
             )
             Up = parameter_values.evaluate(
-                self.param.p.prim.U(
-                    y,
-                    T_init,
-                    get_lithiation_delithiation(direction, "positive", self.options),
+                get_initial_ocp(
+                    self.param.p.prim, y, T_init, direction, "positive", self.options
                 ),
                 inputs=inputs,
             )
