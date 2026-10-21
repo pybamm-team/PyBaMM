@@ -10,6 +10,7 @@
   - `jax.vmap` over tangent directions returns one result per direction, and over time shares one solve.
   - Times outside the solution, and derivatives with respect to time, give NaN rather than an error or a wrong value.
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
+- `"SEI film resistance": "average"` now works with `"particle size": "distribution"` in SPMe, DFN and Newman-Tobias, which raised a `DomainError` when building the model. ([#5892](https://github.com/pybamm-team/PyBaMM/pull/5892))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
 
