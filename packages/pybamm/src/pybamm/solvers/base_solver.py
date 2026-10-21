@@ -571,6 +571,10 @@ class BaseSolver:
             # Only IDAKLUSolver supports discontinuities represented by t_eval
             return self.supports_t_eval_discontinuities and expr.is_constant()
 
+        def process_time(expression, name):
+            # Evaluated as the residual is, since numpy can round it differently
+            return process(expression, name, vars_for_processing, use_jacobian=False)[0]
+
         def add_discontinuity_event(name, expression):
             # Set-up reruns on the same model, which may already have this event
             for event in model.events:
@@ -586,7 +590,8 @@ class BaseSolver:
 
         # Find all the constant time-based discontinuities
         t_discon_symbols = []
-        # Periods of `t mod period` that restart the solver, expanded at each solve
+        # Periods of `t mod period` that restart the solver, expanded at each solve,
+        # with their evaluators
         discontinuity_periods = []
 
         for symbol in itertools.chain(
@@ -615,7 +620,8 @@ class BaseSolver:
                 if supports_t_eval_discontinuities(expr):
                     t_discon_symbols.append((symbol, expr))
                 else:
-                    discontinuity_periods.append(expr)
+                    name = f"period_event_{len(discontinuity_periods)}"
+                    discontinuity_periods.append((expr, process_time(expr, name)))
             else:
                 continue
 
@@ -625,9 +631,10 @@ class BaseSolver:
         discontinuity_events = []
         for n, event in enumerate(model.events):
             if event.event_type == pybamm.EventType.DISCONTINUITY:
-                # discontinuity events are evaluated before the solver is called,
-                # so don't need to process them
-                discontinuity_events.append(event)
+                # Evaluated before the solver is called, for each input set
+                discontinuity_events.append(
+                    process_time(event.expression, f"event_{n}")
+                )
             elif event.event_type == pybamm.EventType.SWITCH and (
                 isinstance(self, pybamm.CasadiSolver)
                 and self.mode == "fast with events"
@@ -941,7 +948,9 @@ class BaseSolver:
         -------
         :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.
              If type of `inputs` is `list`, return a list of corresponding
-             :class:`pybamm.Solution` objects.
+             :class:`pybamm.Solution` objects. If no float lies between the start of
+             `t_eval` and a discontinuity whose time depends on an input, the solution
+             starts just after the discontinuity.
 
         Raises
         ------
@@ -1047,17 +1056,7 @@ class BaseSolver:
             # Set the standard initial conditions
             self._set_initial_conditions(model, t_eval[0], model_inputs_list)
 
-        # Solve for the consistent initialization
-        self._set_consistent_initialization(model, t_eval[0], model_inputs_list)
-
-        set_up_time = timer.time()
-        timer.reset()
-
-        # Check initial conditions don't violate events
-        for y0, inpts in zip(model.y0_list, model_inputs_list, strict=True):
-            self._check_event_violation_on_initialisation(t_eval, model, y0, inpts)
-
-        # Process discontinuities
+        # Process discontinuities, which can move the start to just after one
         t_eval_info = [
             self._get_discontinuity_start_end_indices(
                 model, model.y0_list[i], inputs, t_eval
@@ -1077,7 +1076,21 @@ class BaseSolver:
                     "Please ensure that all input sets produce the same discontinuities."
                 )
 
+        t_start = t_eval[0]
         start_indices, end_indices, t_eval = first_row
+        if t_eval[0] != t_start:
+            t_interp = np.asarray(t_interp, dtype=float)
+            t_interp = np.where(t_interp == t_start, t_eval[0], t_interp)
+
+        # Solve for the consistent initialization
+        self._set_consistent_initialization(model, t_eval[0], model_inputs_list)
+
+        set_up_time = timer.time()
+        timer.reset()
+
+        # Check initial conditions don't violate events
+        for y0, inpts in zip(model.y0_list, model_inputs_list, strict=True):
+            self._check_event_violation_on_initialisation(t_eval, model, y0, inpts)
 
         solutions = self._integrate_segments(
             model,
@@ -1290,36 +1303,52 @@ class BaseSolver:
             pybamm.logger.verbose("No additional discontinuity events found")
             return [0], [len(t_eval)], t_eval
 
-        # Calculate all possible discontinuities
-        _t_discon_full = [
-            np.ravel(event.expression.evaluate(inputs=inputs))
-            for event in model.discontinuity_events_eval
-        ]
-        for period_expression in discontinuity_periods:
-            period = float(
-                np.ravel(period_expression.evaluate(0, y0, inputs=inputs))[0]
-            )
+        stacked_inputs = stack_inputs(inputs) if model.uses_stacked_inputs else None
+
+        def evaluate(function):
+            if stacked_inputs is None:
+                return np.ravel(function(t=0, y=y0, inputs=inputs))
+            # Much faster than numpy's conversion of a CasADi matrix
+            return np.array(function(0, y0, stacked_inputs).elements())
+
+        # The last float before and the first float after each discontinuity
+        stops, restarts = [], []
+        for event in model.discontinuity_events_eval:
+            t_discon = evaluate(event)
+            # Either side of a switch time may be continuous, so skip it
+            stops.append(np.nextafter(t_discon, -np.inf))
+            restarts.append(np.nextafter(t_discon, np.inf))
+        for period_expression, period_eval in discontinuity_periods:
+            period = evaluate(period_eval)[0]
             if not period > 0:
                 raise pybamm.SolverError(
                     f"The period of '{period_expression}' in a modulo of time must "
                     f"be positive, but is {period} for inputs {inputs}"
                 )
-            _t_discon_full.append(pybamm.Modulo._t_resets(period, t_eval))
-        t_discon = self.filter_discontinuities(np.concatenate(_t_discon_full), t_eval)
+            period_stops, period_restarts = pybamm.Modulo._t_stops_restarts(
+                period, t_eval
+            )
+            stops.append(period_stops)
+            restarts.append(period_restarts)
+        stops, restarts = np.concatenate(stops), np.concatenate(restarts)
+        # Sorted by stop then restart, so that no restart precedes an earlier one
+        order = np.lexsort((restarts, stops))
+        stops, restarts = stops[order], restarts[order]
+        # Only those with a time to stop at in t_eval[0] <= t < t_eval[-1]
+        inside = (stops >= t_eval[0]) & (stops < t_eval[-1])
+        stops, restarts = stops[inside], restarts[inside]
 
-        pybamm.logger.verbose(f"Discontinuity events found at t = {t_discon}")
+        pybamm.logger.verbose(f"Discontinuity events found at t = {restarts}")
 
         # insert time points around discontinuities in t_eval
         # keep track of subsections to integrate by storing start and end indices
         start_indices = [0]
         end_indices = []
-        for dtime in t_discon:
-            # Stop just before and restart just after, whichever side is continuous,
-            # in place of any time within one float of the discontinuity
-            before, after = np.nextafter(dtime, -np.inf), np.nextafter(dtime, np.inf)
+        for before, after in zip(stops, restarts, strict=True):
             if after >= t_eval[-1]:
                 # No time left to restart in, so integrate across it to the end
                 break
+            # Stop and restart in place of any time between them
             upper = np.searchsorted(t_eval, after, side="right")
             segment_start = start_indices[-1]
             if before > t_eval[segment_start]:
@@ -1329,12 +1358,11 @@ class BaseSolver:
                 )
                 end_indices.append(lower + 1)
                 start_indices.append(lower + 1)
-            elif segment_start > 0:
-                # No time to stop in since the last restart, so restart after both
+            else:
+                # No time to stop in since the segment started, so start it after
                 t_eval = np.concatenate(
                     [t_eval[:segment_start], [after], t_eval[upper:]]
                 )
-            # Otherwise it is integrated across, as one at the start would be
         end_indices.append(len(t_eval))
 
         return start_indices, end_indices, t_eval
@@ -1668,7 +1696,9 @@ class BaseSolver:
         t_eval : list or numpy.ndarray, optional
             An array of times at which to stop the simulation and return the solution during the step
             (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
-            By default, the solution is returned at t0 and t0 + dt.
+            By default, the solution is returned at t0 and t0 + dt. If no float lies
+            between the start of the step and a discontinuity whose time depends on an
+            input, the step starts just after the discontinuity.
         npts : deprecated
         inputs : dict, optional
             Any input parameters to pass to the model when solving
@@ -1893,10 +1923,17 @@ class BaseSolver:
                     )
                 ]
 
+        # Process discontinuities, which can move the start to just after one
+        start_indices, end_indices, t_eval = self._get_discontinuity_start_end_indices(
+            model, model.y0_list[0], model_inputs, t_eval
+        )
+        if t_eval[0] != t_start_shifted:
+            t_interp = np.where(t_interp == t_start_shifted, t_eval[0], t_interp)
+
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initialization
-        self._set_consistent_initialization(model, t_start_shifted, [model_inputs])
+        self._set_consistent_initialization(model, t_eval[0], [model_inputs])
 
         # Check consistent initialization doesn't violate events
         self._check_event_violation_on_initialisation(
@@ -1904,10 +1941,7 @@ class BaseSolver:
         )
 
         # Step
-        pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
-        start_indices, end_indices, t_eval = self._get_discontinuity_start_end_indices(
-            model, model.y0_list[0], model_inputs, t_eval
-        )
+        pybamm.logger.verbose(f"Stepping for {t_eval[0]:.0f} < t < {t_end:.0f}")
         timer.reset()
 
         solution = self._integrate_segments(

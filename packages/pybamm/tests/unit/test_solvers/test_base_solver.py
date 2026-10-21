@@ -763,10 +763,29 @@ def _modulo_ramp_sensitivity(t, period):
     return (n * period**2 + (t - n * period) ** 2) / 2
 
 
+def _modulo_algebraic(period=None):
+    """x' = z, x(0) = 0, with z = t mod P, and an input P unless `period` is given."""
+    model = pybamm.BaseModel()
+    x = pybamm.Variable("x")
+    z = pybamm.Variable("z")
+    if period is None:
+        period = pybamm.InputParameter("P")
+    model.rhs = {x: z}
+    model.algebraic = {z: z - pybamm.Modulo(pybamm.t, period)}
+    model.initial_conditions = {x: 0.0, z: 0.0}
+    model.variables = {"x": x, "z": z}
+    return model
+
+
 class TestBaseSolverSensitivityRestarts:
     @staticmethod
     def _solver():
         return pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+
+    @staticmethod
+    def _modulo_algebraic_solver():
+        # Tighter tolerances fail to start where z is near zero, as after each reset
+        return pybamm.IDAKLUSolver()
 
     @pytest.mark.parametrize("output_variables", [False, True])
     @pytest.mark.parametrize("algebraic", [False, True])
@@ -926,16 +945,10 @@ class TestBaseSolverSensitivityRestarts:
         assert start_indices[1] == end_indices[0]
         assert t_eval[end_indices[0] - 1] < 1.0 < t_eval[start_indices[1]]
 
-    @pytest.mark.parametrize(
-        "t_eval, t_switch",
-        [([0, 0.1 + 0.2], 0.3), ([1.0, 3.0], np.nextafter(1.0, np.inf))],
-        ids=["end", "start"],
-    )
-    def test_input_dependent_discontinuity_within_one_float_of_t_eval_ends(
-        self, t_eval, t_switch
-    ):
-        # There is no time to stop or restart in, so the switch is integrated across
-        inputs = {"k": 0.5, "t_switch": t_switch}
+    def test_input_dependent_discontinuity_within_one_float_of_t_eval_end(self):
+        # There is no time to restart in, so the switch is integrated across
+        t_eval = [0, 0.1 + 0.2]
+        inputs = {"k": 0.5, "t_switch": 0.3}
         solution = self._solver().solve(
             _switched_decay(), t_eval, inputs=inputs, calculate_sensitivities=["k"]
         )
@@ -945,12 +958,94 @@ class TestBaseSolverSensitivityRestarts:
         t = solution.t
         t_start = t_eval[0]
         exact, dexact_dk = _switched_decay_solution(
-            t - t_start, inputs["k"], t_switch - t_start
+            t - t_start, inputs["k"], inputs["t_switch"] - t_start
         )
         np.testing.assert_allclose(solution["y"](t), exact, rtol=1e-7, atol=1e-9)
         np.testing.assert_allclose(
             solution["y"].sensitivities["k"].ravel(), dexact_dk, rtol=1e-6, atol=1e-8
         )
+
+    def test_input_dependent_discontinuity_one_float_after_t_eval_start(self):
+        # There is no time to stop in before z jumps, so the solve starts after it
+        t_switch = np.nextafter(1.0, np.inf)
+        inputs = {"k": 0.5, "t_switch": t_switch}
+        solution = self._solver().solve(
+            _switched_decay(algebraic=True),
+            [1.0, 3.0],
+            inputs=inputs,
+            calculate_sensitivities=["k"],
+            t_interp=[1.0, 2.0, 3.0],
+        )
+
+        np.testing.assert_array_equal(
+            solution.t, [np.nextafter(t_switch, np.inf), 2.0, 3.0]
+        )
+        t = solution.t
+        exact, dexact_dk = _switched_decay_solution(t - 1.0, inputs["k"], 0.0)
+        np.testing.assert_allclose(
+            solution["z"](t), 2 * exact + inputs["k"], rtol=1e-7, atol=1e-9
+        )
+        np.testing.assert_allclose(
+            solution["z"].sensitivities["k"].ravel(),
+            2 * dexact_dk + 1,
+            rtol=1e-6,
+            atol=1e-8,
+        )
+
+    @pytest.mark.parametrize("discontinuity", ["switch", "modulo"])
+    def test_input_dependent_discontinuity_times_match_casadi(self, discontinuity):
+        # numpy's tanh can round differently from CasADi's, which the residual uses
+        time = pybamm.tanh(pybamm.InputParameter("b")) + 1.5
+        if discontinuity == "switch":
+            model = _switched_decay()
+            model.rhs = {
+                y: rhs.create_copy() + (pybamm.t > time) for y, rhs in model.rhs.items()
+            }
+        else:
+            model = _modulo_ramp(time)
+        inputs = {"a": 2.0, "k": 0.5, "t_switch": 100.0, "b": 0.0}
+        solver = self._solver()
+        solver.set_up(model, [inputs])
+        b = casadi.MX.sym("b")
+        time_casadi = casadi.Function("time", [b], [time.to_casadi(inputs={"b": b})])
+
+        for value in np.linspace(-3, 3, 101):
+            inputs["b"] = value
+            start_indices, end_indices, t_eval = (
+                solver._get_discontinuity_start_end_indices(
+                    model, model.y0_list[0], inputs, np.array([0.0, 10.0])
+                )
+            )
+
+            stops = t_eval[np.array(end_indices[:-1]) - 1]
+            restarts = t_eval[start_indices[1:]]
+            time_value = float(time_casadi(value))
+            if discontinuity == "switch":
+                np.testing.assert_array_less(stops, time_value)
+                np.testing.assert_array_less(time_value, restarts)
+            else:
+                drops = np.fmod(stops, time_value) - np.fmod(restarts, time_value)
+                assert np.all(drops > time_value / 2)
+
+    def test_input_dependent_discontinuities_with_python_format(self):
+        # The python format evaluates the times with numpy, as its residual does
+        model = _modulo_ramp()
+        model.convert_to_format = "python"
+        pybamm.Discretisation().process_model(model)
+        inputs = {"a": 2.0, "P": 0.7}
+        solver = pybamm.BaseSolver()
+        solver.set_up(model, [inputs])
+
+        start_indices, end_indices, t_eval = (
+            solver._get_discontinuity_start_end_indices(
+                model, model.y0_list[0], inputs, np.array([0.0, 3.0])
+            )
+        )
+
+        restarts = t_eval[start_indices[1:]]
+        np.testing.assert_allclose(restarts, [0.7, 1.4, 2.1, 2.8], rtol=1e-15)
+        stops = t_eval[np.array(end_indices[:-1]) - 1]
+        np.testing.assert_array_equal(stops, np.nextafter(restarts, -np.inf))
 
     @pytest.mark.parametrize("floats_apart", [1, 2])
     def test_input_dependent_discontinuities_within_one_float(self, floats_apart):
@@ -1172,6 +1267,41 @@ class TestBaseSolverSensitivityRestarts:
         )
         np.testing.assert_allclose(
             solution["y"].sensitivities["a"].ravel(), dexact_da, rtol=1e-7, atol=1e-9
+        )
+
+    @pytest.mark.parametrize("k", [5, 9, 10])
+    def test_modulo_restarts_where_fmod_resets(self, k):
+        # k * 0.1 rounds to just short of these resets, where fmod has not reset, so a
+        # restart there would cross the jump in z straight away
+        t_start = 0.1 * k - 0.05
+        solution = self._modulo_algebraic_solver().solve(
+            _modulo_algebraic(0.1), np.linspace(t_start, t_start + 0.1, 5)
+        )
+
+        t = solution.t
+        np.testing.assert_allclose(
+            solution["x"](t),
+            _modulo_ramp_sensitivity(t, 0.1) - _modulo_ramp_sensitivity(t_start, 0.1),
+            rtol=1e-5,
+            atol=1e-5,
+        )
+
+    def test_step_one_float_before_modulo_reset(self):
+        # The first step ends two floats before the reset at t = 0.5, so the second
+        # starts one float before it, where fmod has not reset
+        model = _modulo_algebraic()
+        inputs = {"P": 0.1}
+        reset = np.nextafter(0.5, np.inf)
+        t_end = np.nextafter(np.nextafter(reset, -np.inf), -np.inf)
+        solver = self._modulo_algebraic_solver()
+        solution = solver.step(None, model, t_end, inputs=inputs)
+
+        solution = solver.step(solution, model, 0.1, inputs=inputs)
+
+        assert solution.sub_solutions[-1].t[0] == reset
+        t = solution.t
+        np.testing.assert_allclose(
+            solution["z"](t), np.fmod(t, 0.1), rtol=1e-5, atol=1e-5
         )
 
     # The suite ignores RuntimeWarning, but the resets raised one from inf * 0

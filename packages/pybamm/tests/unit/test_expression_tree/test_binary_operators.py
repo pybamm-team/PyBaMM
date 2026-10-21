@@ -410,6 +410,20 @@ class TestBinaryOperators:
             ),
         )
 
+    def test_modulo_t_stops_restarts_either_side_of_each_reset(self):
+        # k * period rounds to just short of the multiple, where fmod has not reset,
+        # for about half of all k
+        rng = np.random.default_rng(0)
+        for period in 10 ** rng.uniform(-3, 3, 50):
+            t_eval = period * np.array([-500.5, 500.5])
+            stops, restarts = pybamm.Modulo._t_stops_restarts(period, t_eval)
+
+            assert len(stops) == 1002
+            np.testing.assert_array_equal(restarts, np.nextafter(stops, np.inf))
+            # CasADi's fmod is C's fmod, which drops by a period at each reset
+            drops = np.fmod(stops, period) - np.fmod(restarts, period)
+            assert np.all(drops > period / 2)
+
     def test_modulo_t_resets_infinite_period(self):
         # t mod inf is t, which never resets
         assert pybamm.Modulo._t_resets(np.inf, np.array([0.0, 1.0])).size == 0
