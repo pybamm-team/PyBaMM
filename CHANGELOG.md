@@ -27,6 +27,12 @@
   - A NaN or inf residual or sensitivity residual makes IDAS cut the step, so a NaN Newton iterate is no longer accepted as a NaN solution that reports reaching the final time. If cutting the step cannot help, the whole solve fails, states included, with `IDA_REP_RES_ERR` or `IDA_REP_SRES_ERR`. Before, a non-finite sensitivity residual, such as that of `sqrt(p)` at `p = 0`, gave finite states with NaN sensitivities.
   - A failing first step raises its own IDAS error, such as `IDASolve at t0: IDA_CONV_FAIL`, instead of `IDAGetDky: IDA_BAD_K`.
   - `"newton_mode": "full"`, or `"auto"` on a DAE not in standard form, no longer segfaults with an iterative linear solver; IDAS's `IDACalcIC` finds those initial conditions.
+- `IDAKLUSolver` sensitivities are now consistent at the initial time and after every `t_eval` breakpoint. ([#5949](https://github.com/pybamm-team/PyBaMM/pull/5949))
+  - `pybammsolvers` solves the linear sensitivity equations directly instead of with `IDACalcIC`, whose failures at tight tolerances were ignored. For a DFN with Ai2020 at `atol=1e-11`, they left `dV/dI(t=0) = 0`.
+  - The initial sensitivities are also consistent with `calc_ic=False`, and all sensitivities with `init_all_y_ic=True`.
+  - The `t_eval` point just after a constant-time discontinuity holds the right-hand limit of the states and sensitivities rather than the left-hand one, also when the solve starts at the discontinuity.
+  - Sensitivity initial conditions that cannot be found raise a `SolverError` instead of being ignored. After the initial time, `on_failure="warn"` gives a partial solution instead.
+  - Needs `pybammsolvers` 0.12.0.
 
 ## Optimizations
 

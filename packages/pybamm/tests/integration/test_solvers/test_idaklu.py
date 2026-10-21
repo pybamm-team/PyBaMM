@@ -94,6 +94,60 @@ class TestIDAKLUSolver:
             atol=1e-3,
         )
 
+    @pytest.mark.parametrize(
+        ("options", "names"),
+        [
+            ({}, ["Current function [A]"]),
+            (
+                {"calc_ic": False},
+                ["Current function [A]", "Positive electrode conductivity [S.m-1]"],
+            ),
+        ],
+    )
+    def test_dfn_sensitivities_at_t0_match_finite_differences(self, options, names):
+        # At this atol and current IDACalcIC fails, which left dV/dI(t0) = 0
+        parameter_values = pybamm.ParameterValues("Ai2020")
+        inputs = {name: parameter_values[name] for name in names}
+        inputs["Current function [A]"] = 2.0
+        parameter_values.update(dict.fromkeys(names, "[input]"))
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            parameter_values=parameter_values,
+            var_pts={"x_n": 6, "x_s": 5, "x_p": 6, "r_n": 8, "r_p": 8},
+        )
+        sim.build()
+        model = sim.built_model
+        solver = pybamm.IDAKLUSolver(rtol=1e-9, atol=1e-11, options=options)
+        t_eval = [0, 10]
+        t_interp = np.array([0, 1, 10])
+
+        solution = solver.solve(
+            model,
+            t_eval,
+            inputs=inputs,
+            calculate_sensitivities=True,
+            t_interp=t_interp,
+        )
+
+        for name in names:
+            step = 1e-3 * inputs[name]
+            voltages = [
+                solver.solve(
+                    model,
+                    t_eval,
+                    inputs={**inputs, name: inputs[name] + sign * step},
+                    t_interp=t_interp,
+                )["Voltage [V]"](t_interp[0])
+                for sign in [1, -1]
+            ]
+            # Only t0 is compared: integration error swamps later differences
+            np.testing.assert_allclose(
+                solution["Voltage [V]"].sensitivities[name][0],
+                (voltages[0] - voltages[1]) / (2 * step),
+                rtol=1e-5,
+                err_msg=name,
+            )
+
     def test_changing_grid(self):
         model = pybamm.lithium_ion.SPM()
 

@@ -60,6 +60,16 @@ public:
     append(format("Consistent initialization at t = %.17e", t_val));
   }
 
+  void log_calc_ic_failed(double t_val, const char* reason) {
+    if (!enabled()) return;
+    append(format("IDACalcIC failed at t = %.17e, keeping the current states (%s)", t_val, reason));
+  }
+
+  void log_sensitivity_ic_failed(double t_val, const char* reason) {
+    if (!enabled()) return;
+    append(format("Could not find consistent sensitivities at t = %.17e (%s)", t_val, reason));
+  }
+
   void log_breakpoint(double t_val) {
     if (!enabled()) return;
     append(format("Breakpoint at t = %.17e, reinitializing", t_val));

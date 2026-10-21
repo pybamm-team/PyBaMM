@@ -1049,12 +1049,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             y0S_list = model.y0S_list
             y0full = []
             ydot0full = []
-            for y0, ydot0, y0S, inputs_dict in zip(
-                y0_list, ydot0_list, y0S_list, inputs_list, strict=True
-            ):
-                y0f, ydot0f = self._sensitivity_consistent_initialization(
-                    y0, ydot0, y0S, time, inputs_dict
-                )
+            for y0, ydot0, y0S in zip(y0_list, ydot0_list, y0S_list, strict=True):
+                y0f, ydot0f = self._stack_initial_sensitivities(y0, ydot0, y0S)
                 y0full.append(y0f)
                 ydot0full.append(ydot0f)
         else:
@@ -1105,9 +1101,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return ydot0
 
-    def _sensitivity_consistent_initialization(self, y0, ydot0, y0S, time, inputs_dict):
+    @staticmethod
+    def _stack_initial_sensitivities(y0, ydot0, y0S):
         """
-        Extend the consistent initialization to include the sensitivty equations
+        Stack the states and their sensitivities into the solver's initial values.
+
+        The time derivatives of the sensitivities are zero, as a starting guess.
 
         Parameters
         ----------
@@ -1117,11 +1116,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The initial values of the time derivatives of the state vector.
         y0S : :class:`numpy.array`
             The initial values of the sensitivity state vectors.
-        time : numeric type
-            The time at which to calculate the initial conditions.
-        inputs_dict : dict
-            Any input parameters to pass to the model when solving.
 
+        Returns
+        -------
+        tuple of :class:`numpy.array`
+            The stacked initial values and their time derivatives.
         """
 
         if isinstance(y0S, casadi.DM):
