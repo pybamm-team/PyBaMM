@@ -471,6 +471,24 @@ class TestBaseBatteryModel:
                     "number of MSMR reactions": "1.5",
                 }
             )
+        # each electrode must be all-MSMR or not MSMR at all
+        with pytest.raises(pybamm.OptionError, match=r"all of them must be 'MSMR' at"):
+            pybamm.BaseBatteryModel(
+                {
+                    "open-circuit potential": ("MSMR", "single"),
+                    "particle": ("Fickian diffusion", "MSMR"),
+                    "intercalation kinetics": ("symmetric Butler-Volmer", "MSMR"),
+                    "number of MSMR reactions": ("6", "4"),
+                }
+            )
+        with pytest.raises(pybamm.OptionError, match=r"all of them must be 'MSMR' at"):
+            pybamm.BaseBatteryModel(
+                {
+                    "working electrode": "positive",
+                    "open-circuit potential": "MSMR",
+                    "number of MSMR reactions": "4",
+                }
+            )
         # MSMR inside a per-electrode tuple must be rejected cleanly, not slip
         # through to crash later as int('none') in parameter construction.
         with pytest.raises(pybamm.OptionError, match=r"MSMR"):
@@ -1155,6 +1173,13 @@ class TestOptions:
                 },
                 "positive",
             ),
+            (
+                {
+                    "working electrode": "positive",
+                    "SEI": (("constant", "reaction limited"), "none"),
+                },
+                "negative",
+            ),
         ],
     )
     def test_rejects_phase_tuple_on_single_phase_electrode(self, options, domain):
@@ -1372,8 +1397,12 @@ class TestOptionHelpers:
             "SEI", "constant", ("constant", "constant"), working_electrode="positive"
         )
         assert option_values_match("particle", ("a", "a"), "a")
-        assert option_values_match("particle", (("a", "a"), "b"), ("a", "b"))
+        assert option_values_match(
+            "open-circuit potential", (("a", "a"), "b"), ("a", "b")
+        )
         assert not option_values_match("particle", ("a", "b"), "a")
+        with pytest.raises(pybamm.OptionError, match=r"particle"):
+            option_values_match("particle", (("a", "a"), "b"), ("a", "b"))
 
     def test_dependency_error(self):
         error = dependency_error(
@@ -1441,6 +1470,10 @@ class TestModelDefaultOptions:
 
         model = CustomSPM(build=False)
         assert model.options["x-average side reactions"] == "true"
+
+    def test_fixed_options_reject_bad_shapes(self):
+        with pytest.raises(pybamm.OptionError, match=r"particle size"):
+            pybamm.lithium_ion.MPM({"particle size": ("distribution",)}, build=False)
 
     def test_identity_defaults(self):
         assert pybamm.lithium_ion.SPM().options["x-average side reactions"] == "true"
