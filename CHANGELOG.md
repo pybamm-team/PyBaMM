@@ -53,7 +53,7 @@
 - A NaN or inf residual or sensitivity residual in an `IDAKLUSolver` sensitivity solve now cuts the step, or fails the solve, instead of accepting a NaN step as reaching the final time or returning NaN sensitivities. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 - A failing first `IDAKLUSolver` step, at the start or after a breakpoint, raises its own IDAS error, such as `IDASolve at t0: IDA_CONV_FAIL`, instead of `IDAGetDky: IDA_BAD_K`. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 - `IDAKLUSolver` with `"newton_mode": "full"`, or `"auto"` on a DAE not in standard form, no longer segfaults with an iterative linear solver; IDAS's `IDACalcIC` finds those initial conditions. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
-- `IDAKLUSolver` sensitivities are now consistent at the initial time and after every `t_eval` breakpoint. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `IDAKLUSolver` sensitivities are now consistent at the initial time and after every `t_eval` breakpoint. ([#5949](https://github.com/pybamm-team/PyBaMM/pull/5949))
   - `pybammsolvers` solves the linear sensitivity equations directly instead of with `IDACalcIC`, whose failures at tight tolerances were ignored. For a DFN with Ai2020 at `atol=1e-11`, they left `dV/dI(t=0) = 0`.
   - The initial sensitivities are also consistent with `calc_ic=False`, and all sensitivities with `init_all_y_ic=True`.
   - The `t_eval` point just after a constant-time discontinuity holds the right-hand limit of the states and sensitivities rather than the left-hand one, also when the solve starts at the discontinuity.
