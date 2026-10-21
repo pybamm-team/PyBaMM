@@ -177,8 +177,9 @@ Short by design — the contract suite does the rest.
 - [ ] No edits to `packages/pybamm/src/` in the same pull request; core changes
       are split out.
 - [ ] Third-party dependencies declared as a `zoo-<slug>` extra.
+- [ ] The model is clearly documented, either by citing a relevant article or in a clear `README.md`.
 - [ ] At least one test pins a physical result.
 - [ ] The example script runs.
-- [ ] The citation resolves and is registered on instantiation.
+- [ ] The citation (if available) resolves and is registered on instantiation.
 - [ ] `.github/CODEOWNERS` line added.
 - [ ] `CHANGELOG.md` entry in this package.
