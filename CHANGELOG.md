@@ -2,11 +2,11 @@
 
 ## Breaking changes
 
-- `pybammsolvers` 0.12.0 removes `ypS`, the time derivatives of the sensitivities, from the `solution` of its IDAKLU solver. `pybamm` never read it. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `pybammsolvers` 0.12.0 removes `ypS`, the time derivatives of the sensitivities, from the `solution` of its IDAKLU solver. `pybamm` never read it. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 
 ## Features
 
-- `IDAKLUSolver` has a `"sensitivity_error_control"` option, off by default, that puts the forward sensitivities in IDAS's local error test, so they meet the tolerances as the states do. Without it, a DFN's voltage sensitivity to the negative particle diffusivity is 3e-3 relative at `rtol=1e-4`; with it, 1.5e-4, for 1.5 to 2 times the solve time. Requires `pybammsolvers` 0.12.0; earlier versions ignore it. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `IDAKLUSolver` has a `"sensitivity_error_control"` option, off by default, that puts the forward sensitivities in IDAS's local error test, so they meet the tolerances as the states do. Without it, a DFN's voltage sensitivity to the negative particle diffusivity is 3e-3 relative at `rtol=1e-4`; with it, 1.5e-4, for 1.5 to 2 times the solve time. Requires `pybammsolvers` 0.12.0; earlier versions ignore it. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 
 ## Bug fixes
 
@@ -23,7 +23,7 @@
   - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.
   - Sensitivities are correct after a change of model between experiment steps, or from a `starting_solution`, for states with a nonzero reference or an input-dependent scale. `step()` seeds them by input name, and raises a `SolverError` if the solution it continues has none for a requested input.
   - `step()`, and re-solving an experiment, can change `calculate_sensitivities` between calls, with `save=False` for a step that does, and setting up again no longer duplicates discontinuity events.
-- `IDAKLUSolver` robustness fixes in `pybammsolvers` 0.12.0. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `IDAKLUSolver` robustness fixes in `pybammsolvers` 0.12.0. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
   - A NaN or inf residual or sensitivity residual makes IDAS cut the step, so a NaN Newton iterate is no longer accepted as a NaN solution that reports reaching the final time. If cutting the step cannot help, the whole solve fails, states included, with `IDA_REP_RES_ERR` or `IDA_REP_SRES_ERR`. Before, a non-finite sensitivity residual, such as that of `sqrt(p)` at `p = 0`, gave finite states with NaN sensitivities.
   - A failing first step raises its own IDAS error, such as `IDASolve at t0: IDA_CONV_FAIL`, instead of `IDAGetDky: IDA_BAD_K`.
   - `"newton_mode": "full"`, or `"auto"` on a DAE not in standard form, no longer segfaults with an iterative linear solver; IDAS's `IDACalcIC` finds those initial conditions.
@@ -31,7 +31,7 @@
 ## Optimizations
 
 - Experiments with a different model per step no longer compile Jacobians of the state mappers between models, which were unused. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
-- `pybammsolvers` 0.12.0 no longer stores the time derivatives of the sensitivities. With Hermite interpolation, a DFN solve with 3 sensitivities over 3200 steps peaks 237 MB lower, at 294 MB above its starting memory instead of 531 MB. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- `pybammsolvers` 0.12.0 no longer stores the time derivatives of the sensitivities. With Hermite interpolation, a DFN solve with 3 sensitivities over 3200 steps peaks 237 MB lower, at 294 MB above its starting memory instead of 531 MB. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
 
