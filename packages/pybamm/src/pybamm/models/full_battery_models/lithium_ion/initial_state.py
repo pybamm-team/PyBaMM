@@ -51,7 +51,7 @@ def set_initial_state(
     inputs=None,
     tol=1e-6,
     esoh_solver=None,
-    differentiable=False,
+    differentiable: bool | list[str] = False,
 ):
     """
     Set the values of the parameters representing the initial model states.
@@ -89,11 +89,19 @@ def set_initial_state(
         Default is 1e-6.
     esoh_solver : optional
         A pre-built electrode SOH solver or simulation to reuse.
-    differentiable : bool, optional
+    differentiable : bool or list of str, optional
         If True, set the initial states as expressions in the input parameters that
         match the solution, and its first derivative with respect to the inputs, at
-        ``inputs``. Required for forward sensitivities with respect to inputs that
-        the initial state depends on. Default is False.
+        ``inputs``. A list of input names restricts the derivative to those inputs.
+        Required for forward sensitivities with respect to inputs that the initial
+        state depends on. Default is False.
+
+    Raises
+    ------
+    :class:`pybamm.ModelError`
+        If ``differentiable`` is set and the electrode SOH solution cannot be
+        differentiated, for example because an input it depends on has more than
+        one value or its equations are singular at the solution.
     """
     options = options or {}
     original_parameter_values = parameter_values
@@ -129,6 +137,7 @@ def set_initial_state(
             tol=tol,
             inputs=inputs,
             esoh_solver=esoh_solver,
+            sensitivity_inputs=None if differentiable is True else differentiable,
         )
 
     def set_concentration(electrode, phase, stoich):
@@ -140,7 +149,7 @@ def set_initial_state(
             stoich,
             inputs,
             options,
-            differentiable=differentiable,
+            differentiable=bool(differentiable),
         )
 
     if options is not None and options.get("open-circuit potential", None) == "MSMR":

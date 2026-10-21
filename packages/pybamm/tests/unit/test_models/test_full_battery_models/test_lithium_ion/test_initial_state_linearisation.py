@@ -8,6 +8,8 @@ import pytest
 import pybamm
 
 EPS_P = "Positive electrode active material volume fraction"
+C_N_MAX = "Maximum concentration in negative electrode [mol.m-3]"
+OCP_SHIFT = "Positive electrode OCP shift [V]"
 
 
 def _standard():
@@ -46,8 +48,20 @@ def _msmr():
 
 
 def _half_cell():
+    # The shift enters the equations for both an SOC and a voltage start
     model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
-    return model, pybamm.ParameterValues("Xu2019")
+    parameter_values = pybamm.ParameterValues("Xu2019")
+    ocp = parameter_values["Positive electrode OCP [V]"]
+    parameter_values.update(
+        {
+            "Positive electrode OCP [V]": lambda sto: (
+                ocp(sto) + pybamm.Parameter(OCP_SHIFT)
+            ),
+            OCP_SHIFT: 0.0,
+        },
+        check_already_exists=False,
+    )
+    return model, parameter_values
 
 
 def _composite():
@@ -66,7 +80,7 @@ def _concentrations(*names):
 VARIANTS = {
     "standard": (
         _standard,
-        {EPS_P: 0.665, "Maximum concentration in negative electrode [mol.m-3]": 33133},
+        {EPS_P: 0.665, C_N_MAX: 33133},
         _concentrations(("", "negative"), ("", "positive")),
         {},
     ),
@@ -108,6 +122,7 @@ VARIANTS = {
         {
             "Maximum concentration in positive electrode [mol.m-3]": 48390,
             "Open-circuit voltage at 100% SOC [V]": 4.2,
+            OCP_SHIFT: 0.01,
         },
         _concentrations(("", "positive")),
         {},
@@ -183,6 +198,44 @@ class TestLinearisedInitialState:
                     atol=1e-9 * max(abs(numeric[key]), 1) / inputs[name],
                 )
 
+    @pytest.mark.parametrize("value", [np.array([0.665]), np.array([[0.665]])])
+    def test_size_one_array_inputs(self, value):
+        keys = _concentrations(("", "negative"), ("", "positive"))
+        inputs = {EPS_P: 0.665, C_N_MAX: 33133.0}
+        expected = _set_initial_state("standard", 0.4, inputs, True)
+        result = _set_initial_state("standard", 0.4, {**inputs, EPS_P: value}, True)
+        for key in keys:
+            for name in inputs:
+                np.testing.assert_allclose(
+                    _derivative(result[key], name, inputs),
+                    _derivative(expected[key], name, inputs),
+                    rtol=1e-12,
+                )
+
+    def test_derivative_only_for_requested_inputs(self):
+        # An unrequested input of size one but two dimensions is still accepted
+        inputs = {EPS_P: 0.665, C_N_MAX: 33133.0}
+        linearised = _set_initial_state(
+            "standard", 0.4, {**inputs, EPS_P: np.array([[0.665]])}, [C_N_MAX]
+        )
+        full = _set_initial_state("standard", 0.4, inputs, True)
+        key = "Initial concentration in positive electrode [mol.m-3]"
+        np.testing.assert_allclose(
+            pybamm.convert_to_symbol(linearised[key]).evaluate(inputs=inputs),
+            pybamm.convert_to_symbol(full[key]).evaluate(inputs=inputs),
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            _derivative(linearised[key], C_N_MAX, inputs),
+            _derivative(full[key], C_N_MAX, inputs),
+            rtol=1e-12,
+        )
+        # The dependence on the unrequested input through the solution is dropped
+        restricted, total = (
+            _derivative(value[key], EPS_P, inputs) for value in [linearised, full]
+        )
+        assert abs(restricted - total) > 1e-3 * abs(total)
+
     def test_numeric_without_inputs(self):
         model, parameter_values = _standard()
         result = pybamm.lithium_ion.set_initial_state(
@@ -250,7 +303,7 @@ class TestLinearisedInitialState:
         [
             # e.g. a solver that stopped at a bound short of the root
             (1e-2, 4.2, r"does not satisfy its equations"),
-            (0, np.array([[4.2]]), r"scalar input parameters"),
+            (0, np.array([4.2, 4.2]), r"scalar input parameters"),
         ],
     )
     def test_undifferentiable_solution_raises(self, perturbation, inputs, match):

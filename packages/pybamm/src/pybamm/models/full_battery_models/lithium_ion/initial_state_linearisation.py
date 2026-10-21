@@ -4,6 +4,7 @@
 #
 from __future__ import annotations
 
+from collections.abc import Collection
 from functools import lru_cache
 
 import casadi
@@ -102,12 +103,6 @@ def _standard_system(initial_value, param, options, direction, known_value):
 def _half_cell_system(initial_value, param, options, direction):
     """Equations for the initial stoichiometry of a half-cell working electrode."""
     is_composite = check_if_composite(options, "positive")
-    lith_primary = get_lithiation_delithiation(
-        direction, "positive", options, phase="primary"
-    )
-    lith_secondary = get_lithiation_delithiation(
-        direction, "positive", options, phase="secondary"
-    )
     x = pybamm.Variable("x")
     x_2 = pybamm.Variable("x_2")
     outputs = {"x": x, "x_2": x_2} if is_composite else {"x": x}
@@ -144,6 +139,12 @@ def _half_cell_system(initial_value, param, options, direction):
         x_0, x_100 = variables["x_0"], variables["x_100"]
         return algebraic, {"x": x_0 + soc * (x_100 - x_0)}
 
+    lith_primary = get_lithiation_delithiation(
+        direction, "positive", options, phase="primary"
+    )
+    lith_secondary = get_lithiation_delithiation(
+        direction, "positive", options, phase="secondary"
+    )
     Q_w = param.p.prim.Q_init
     Q_w_2 = param.p.sec.Q_init
     Q_min = variables["x_100"] * Q_w + variables["x_100_2"] * Q_w_2
@@ -301,13 +302,13 @@ def _residual_jacobians(residuals, input_names):
 
 
 def get_initial_state_input_names(
-    initial_value,
-    parameter_values,
-    param,
-    options,
-    direction=None,
-    known_value="cyclable lithium capacity",
-):
+    initial_value: float | str,
+    parameter_values: pybamm.ParameterValues,
+    param: pybamm.LithiumIonParameters,
+    options: dict,
+    direction: str | None = None,
+    known_value: str = "cyclable lithium capacity",
+) -> set[str]:
     """
     Names of the input parameters that the initial state set by
     :func:`set_initial_state` depends on.
@@ -359,7 +360,20 @@ def _stoichiometry_phases(param, options):
     return phases
 
 
-def _linearise_about_solution(names, residuals, outputs, solution, inputs, tol):
+def _scalar_input(name, value):
+    """The value of an input in the electrode SOH equations, as a float."""
+    value = np.asarray(value, dtype=float)
+    if value.size != 1:
+        raise pybamm.ModelError(
+            "The initial state can only be differentiated with respect to scalar "
+            f"input parameters, but '{name}' has {value.size} values."
+        )
+    return value.item()
+
+
+def _linearise_about_solution(
+    names, residuals, outputs, solution, inputs, tol, sensitivity_inputs=None
+):
     """
     Express the outputs of an implicit system as functions of the input parameters
     whose value and first derivative match the solved system at ``inputs``.
@@ -384,6 +398,8 @@ def _linearise_about_solution(names, residuals, outputs, solution, inputs, tol):
         Input parameter values at which the system was solved.
     tol : float
         The tolerance the system was solved to.
+    sensitivity_inputs : collection of str, optional
+        The inputs to differentiate with respect to. Default is every input.
 
     Returns
     -------
@@ -394,23 +410,24 @@ def _linearise_about_solution(names, residuals, outputs, solution, inputs, tol):
     Raises
     ------
     :class:`pybamm.ModelError`
-        If an input in the residuals is not a scalar, the solution does not satisfy
-        the residuals, or their Jacobian with respect to the unknowns is singular.
+        If an input in the residuals has more than one value, the solution does not
+        satisfy the residuals, or their Jacobian with respect to the unknowns is
+        singular.
     """
     z_star = np.array([float(np.squeeze(solution[name])) for name in names])
     parameters = {}
     for residual in residuals:
         parameters.update(_input_parameters(residual))
     input_names = tuple(sorted(parameters))
-    p_star = np.array([inputs[name] for name in input_names], dtype=float)
-    if p_star.ndim != 1:
-        raise pybamm.ModelError(
-            "The initial state can only be differentiated with respect to scalar "
-            "input parameters."
-        )
+    differentiated = [
+        k
+        for k, name in enumerate(input_names)
+        if sensitivity_inputs is None or name in sensitivity_inputs
+    ]
 
     dz_dp = np.zeros((len(names), len(input_names)))
-    if input_names:
+    if differentiated:
+        p_star = np.array([_scalar_input(name, inputs[name]) for name in input_names])
         residual, jacobian_z, jacobian_p = (
             np.array(value)
             for value in _residual_jacobians(tuple(residuals), input_names)(
@@ -437,10 +454,10 @@ def _linearise_about_solution(names, residuals, outputs, solution, inputs, tol):
     substitutions = {}
     for i in range(len(names)):
         value = pybamm.Scalar(z_star[i])
-        for k, name in enumerate(input_names):
+        for k in differentiated:
             if dz_dp[i, k] != 0:
                 value = value + pybamm.Scalar(dz_dp[i, k]) * (
-                    parameters[name] - p_star[k]
+                    parameters[input_names[k]] - p_star[k]
                 )
         substitutions[pybamm.InputParameter(f"{_PLACEHOLDER_PREFIX}{i}")] = value
 
@@ -455,16 +472,17 @@ def _linearise_about_solution(names, residuals, outputs, solution, inputs, tol):
 
 
 def get_linearised_initial_state(
-    initial_value,
-    parameter_values,
-    param,
-    options,
-    direction=None,
-    known_value="cyclable lithium capacity",
-    tol=1e-6,
-    inputs=None,
-    esoh_solver=None,
-):
+    initial_value: float | str,
+    parameter_values: pybamm.ParameterValues,
+    param: pybamm.LithiumIonParameters,
+    options: dict,
+    direction: str | None = None,
+    known_value: str = "cyclable lithium capacity",
+    tol: float = 1e-6,
+    inputs: dict | None = None,
+    esoh_solver: ElectrodeSOHSolver | pybamm.Simulation | None = None,
+    sensitivity_inputs: Collection[str] | None = None,
+) -> dict[str, float | pybamm.Symbol]:
     """
     Solve for the initial state and express it in terms of the input parameters,
     with the value and first derivative of the solution at ``inputs``.
@@ -489,6 +507,8 @@ def get_linearised_initial_state(
         Input parameter values at which to solve.
     esoh_solver : optional
         A pre-built electrode SOH solver or simulation to reuse.
+    sensitivity_inputs : collection of str, optional
+        The inputs to differentiate with respect to. Default is every input.
 
     Returns
     -------
@@ -540,4 +560,6 @@ def get_linearised_initial_state(
     names, residuals, outputs = _processed_system(
         initial_value, parameter_values, param, options, direction, known_value
     )
-    return _linearise_about_solution(names, residuals, outputs, solution, inputs, tol)
+    return _linearise_about_solution(
+        names, residuals, outputs, solution, inputs, tol, sensitivity_inputs
+    )
