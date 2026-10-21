@@ -275,6 +275,55 @@ class TestCasadiConverter:
                     err_msg=f"exponent={exponent}, scale={scale}, x={x_val}",
                 )
 
+    @pytest.mark.parametrize("exponent", [0.5, 2.0])
+    @pytest.mark.parametrize("scale", [1.0, 33133.0])
+    def test_reg_power_casadi_is_bitwise_identical_to_evaluate(self, exponent, scale):
+        # These exponents use only operations IEEE 754 rounds correctly
+        magnitudes = np.concatenate([[0.0, 5e-324], np.geomspace(1e-12, 2.0, 2000)])
+        base = scale * np.concatenate([magnitudes, -magnitudes])
+        y = pybamm.StateVector(slice(0, base.size))
+        expr = pybamm.reg_power(y, exponent, scale=scale)
+
+        reference = expr.evaluate(y=base).ravel()
+        y_casadi = casadi.MX.sym("y", base.size)
+        f = casadi.Function("f", [y_casadi], [expr.to_casadi(y=y_casadi)])
+        for name, function in {"MX": f, "SX": f.expand()}.items():
+            np.testing.assert_array_equal(
+                np.asarray(function(base), dtype=np.float64).ravel().view(np.uint64),
+                reference.view(np.uint64),
+                err_msg=name,
+            )
+
+    @pytest.mark.parametrize("exponent", [0.5, 2.0])
+    def test_reg_power_with_zero_delta_is_power_in_evaluate_and_casadi(self, exponent):
+        base = np.array([0.0, -4.0, 4.0])
+        y = pybamm.StateVector(slice(0, base.size))
+        expr = pybamm.RegPower(y, exponent, delta=0)
+        y_casadi = casadi.MX.sym("y", base.size)
+        f = casadi.Function("f", [y_casadi], [expr.to_casadi(y=y_casadi)])
+
+        with np.errstate(invalid="ignore"):
+            expected = np.power(base, exponent)
+            evaluated = expr.evaluate(y=base).ravel()
+        np.testing.assert_array_equal(evaluated, expected)
+        np.testing.assert_array_equal(np.asarray(f(base)).ravel(), expected)
+
+    @pytest.mark.parametrize("exponent", [0.5, 2.0])
+    def test_reg_power_with_zero_delta_jacobian_matches_casadi(self, exponent):
+        base = np.array([0.0, -4.0, 4.0])
+        y = pybamm.StateVector(slice(0, base.size))
+        expr = pybamm.RegPower(y, exponent, delta=0)
+        y_casadi = casadi.MX.sym("y", base.size)
+        casadi_jac = casadi.Function(
+            "J", [y_casadi], [casadi.jacobian(expr.to_casadi(y=y_casadi), y_casadi)]
+        )
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            jac = expr.jac(y).evaluate(y=base)
+        np.testing.assert_array_equal(
+            np.diag(jac.toarray()), np.diag(np.asarray(casadi_jac(base)))
+        )
+
     def test_kronecker_product(self):
         a = np.array([1.0, 2.0, 3.0])
         b = np.array([[1, 2, 3], [4, 5, 6]])

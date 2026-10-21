@@ -16,6 +16,8 @@
   - Sensitivities are correct after a change of model between experiment steps, or from a `starting_solution`, for states with a nonzero reference or an input-dependent scale. `step()` seeds them by input name, and raises a `SolverError` if the solution it continues has none for a requested input.
   - `step()`, and re-solving an experiment, can change `calculate_sensitivities` between calls, with `save=False` for a step that does, and setting up again no longer duplicates discontinuity events.
 - Fixed copying a function without simplification, as `ParameterValues` does for a parameter set loaded with `Serialise.load_parameters`, returning a generic `pybamm.Function`: `pybamm.exp` and the other specific functions lost their class, and an `Arcsinh2` copy could not be evaluated. ([#5954](https://github.com/pybamm-team/PyBaMM/pull/5954))
+- `RegPower` now evaluates one sequence of operations in `evaluate` and CasADi, and a literal exponent of 0.5 or 2 uses square roots, e.g. `x / sqrt(sqrt(x^2 + delta^2)) * sqrt(scale)` with `x = base / scale` for 0.5, so the two agree bitwise and its relative error stays below `6 * 2^-53`. CasADi previously evaluated a `hypot`-based form that disagreed with `evaluate`. With `delta=0`, `evaluate` and the symbolic Jacobian now use `base ** exponent`, as CasADi already did. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
+- CasADi linear and `pchip` interpolants on a uniform grid now find the segment holding `x` by binary search. CasADi's `"exact"` lookup, used for uniform grids, could pick the neighbouring segment for a point at or one ulp beside a knot, giving that segment's slope in the Jacobian. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 
 ## Optimizations
 
