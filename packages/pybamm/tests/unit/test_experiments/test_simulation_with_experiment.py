@@ -1601,6 +1601,54 @@ class TestSimulationExperiment:
             rtol=1e-8,
         )
 
+    @pytest.mark.parametrize(
+        "starting_sensitivities, next_sensitivities",
+        [(["a", "b"], ["a"]), (["a"], False), (False, ["a"])],
+        ids=["fewer", "none", "more"],
+    )
+    def test_starting_solution_rejects_changed_sensitivities(
+        self, starting_sensitivities, next_sensitivities
+    ):
+        # The result joins the starting solution's sensitivities to the steps'
+        names = {
+            "a": "Negative particle diffusivity [m2.s-1]",
+            "b": "Positive particle diffusivity [m2.s-1]",
+        }
+        param = pybamm.ParameterValues("Chen2020")
+        param.update({name: "[input]" for name in names.values()})
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=param,
+            experiment=pybamm.Experiment(
+                ["Discharge at 1C for 1 minute"], period="20 seconds"
+            ),
+        )
+        inputs = {names["a"]: 3.3e-14, names["b"]: 4e-15}
+
+        def sensitivities(keys):
+            return keys and [names[key] for key in keys]
+
+        starting_solution = sim.solve(
+            inputs=inputs,
+            calculate_sensitivities=sensitivities(starting_sensitivities),
+        )
+        with pytest.raises(pybamm.SolverError, match=r"same 'calculate_sensitivities'"):
+            sim.solve(
+                inputs=inputs,
+                starting_solution=starting_solution,
+                calculate_sensitivities=sensitivities(next_sensitivities),
+            )
+
+        solution = sim.solve(
+            inputs=inputs,
+            starting_solution=starting_solution,
+            calculate_sensitivities=sensitivities(starting_sensitivities),
+        )
+        assert solution.t[-1] == pytest.approx(120)
+        if starting_sensitivities:
+            voltage = solution["Voltage [V]"]
+            assert voltage.sensitivities[names["a"]].shape == solution.t.shape
+
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
         experiment = pybamm.Experiment(

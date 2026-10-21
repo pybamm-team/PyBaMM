@@ -926,6 +926,64 @@ class TestBaseSolverSensitivityRestarts:
         assert start_indices[1] == end_indices[0]
         assert t_eval[end_indices[0] - 1] < 1.0 < t_eval[start_indices[1]]
 
+    @pytest.mark.parametrize(
+        "t_eval, t_switch",
+        [([0, 0.1 + 0.2], 0.3), ([1.0, 3.0], np.nextafter(1.0, np.inf))],
+        ids=["end", "start"],
+    )
+    def test_input_dependent_discontinuity_within_one_float_of_t_eval_ends(
+        self, t_eval, t_switch
+    ):
+        # There is no time to stop or restart in, so the switch is integrated across
+        inputs = {"k": 0.5, "t_switch": t_switch}
+        solution = self._solver().solve(
+            _switched_decay(), t_eval, inputs=inputs, calculate_sensitivities=["k"]
+        )
+
+        assert len(solution.sub_solutions) == 1
+        np.testing.assert_array_equal(solution.t[[0, -1]], t_eval)
+        t = solution.t
+        t_start = t_eval[0]
+        exact, dexact_dk = _switched_decay_solution(
+            t - t_start, inputs["k"], t_switch - t_start
+        )
+        np.testing.assert_allclose(solution["y"](t), exact, rtol=1e-7, atol=1e-9)
+        np.testing.assert_allclose(
+            solution["y"].sensitivities["k"].ravel(), dexact_dk, rtol=1e-6, atol=1e-8
+        )
+
+    @pytest.mark.parametrize("floats_apart", [1, 2])
+    def test_input_dependent_discontinuities_within_one_float(self, floats_apart):
+        # z jumps at both switches, so the solver must restart after the second
+        model = _switched_decay(algebraic=True)
+        z = model.variables["z"]
+        model.algebraic[z] -= pybamm.t > pybamm.InputParameter("t_second")
+        t_second = 1.0
+        for _ in range(floats_apart):
+            t_second = np.nextafter(t_second, np.inf)
+        inputs = {"k": 0.5, "t_switch": 1.0, "t_second": t_second}
+
+        solution = self._solver().solve(
+            model, [0, 3], inputs=inputs, calculate_sensitivities=["k"]
+        )
+
+        before, after = solution.sub_solutions
+        assert before.t[-1] < 1.0 and after.t[0] > t_second
+        t = solution.t
+        exact, dexact_dk = _switched_decay_solution(t, inputs["k"], 1.0)
+        np.testing.assert_allclose(
+            solution["z"](t),
+            2 * exact + inputs["k"] * (t > 1.0) + (t > t_second),
+            rtol=1e-7,
+            atol=1e-9,
+        )
+        np.testing.assert_allclose(
+            solution["z"].sensitivities["k"].ravel(),
+            2 * dexact_dk + (t > 1.0),
+            rtol=1e-6,
+            atol=1e-8,
+        )
+
     def test_step_restarts_at_input_dependent_discontinuity(self):
         # The second step crosses the switch at t = 1, where z jumps
         model = _switched_decay(algebraic=True)

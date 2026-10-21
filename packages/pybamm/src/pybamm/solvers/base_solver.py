@@ -1317,11 +1317,24 @@ class BaseSolver:
             # Stop just before and restart just after, whichever side is continuous,
             # in place of any time within one float of the discontinuity
             before, after = np.nextafter(dtime, -np.inf), np.nextafter(dtime, np.inf)
-            lower = np.searchsorted(t_eval, before, side="left")
+            if after >= t_eval[-1]:
+                # No time left to restart in, so integrate across it to the end
+                break
             upper = np.searchsorted(t_eval, after, side="right")
-            t_eval = np.concatenate([t_eval[:lower], [before, after], t_eval[upper:]])
-            end_indices.append(lower + 1)
-            start_indices.append(lower + 1)
+            segment_start = start_indices[-1]
+            if before > t_eval[segment_start]:
+                lower = np.searchsorted(t_eval, before, side="left")
+                t_eval = np.concatenate(
+                    [t_eval[:lower], [before, after], t_eval[upper:]]
+                )
+                end_indices.append(lower + 1)
+                start_indices.append(lower + 1)
+            elif segment_start > 0:
+                # No time to stop in since the last restart, so restart after both
+                t_eval = np.concatenate(
+                    [t_eval[:segment_start], [after], t_eval[upper:]]
+                )
+            # Otherwise it is integrated across, as one at the start would be
         end_indices.append(len(t_eval))
 
         return start_indices, end_indices, t_eval
