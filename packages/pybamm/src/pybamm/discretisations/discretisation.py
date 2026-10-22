@@ -1182,7 +1182,7 @@ class Discretisation:
             raise pybamm.DiscretisationError(
                 "Component can only be applied to a VectorField"
             )
-        if symbol.index >= disc_child.n_components:
+        if not 0 <= symbol.index < disc_child.n_components:
             raise pybamm.DiscretisationError(
                 f"Component index {symbol.index} is out of range for a "
                 f"VectorField with {disc_child.n_components} components"

@@ -3,6 +3,8 @@
 #
 from __future__ import annotations
 
+import warnings
+
 import casadi
 import numpy as np
 import numpy.typing as npt
@@ -1450,12 +1452,23 @@ class NodeToEdge2D(SpatialOperator):
 
 class Magnitude(UnaryOperator):
     """
-    A node in the expression tree representing the magnitude of a vector field.
+    Extract a directional component from a 2D :class:`VectorField`.
+
+    .. deprecated:: 26.11
+        Use :class:`Component` with index ``0`` (``"lr"``) or ``1`` (``"tb"``)
+        instead. ``Magnitude`` will be removed in 27.1.
     """
 
     __slots__ = ("direction",)
 
     def __init__(self, child, direction):
+        warnings.warn(
+            "pybamm.Magnitude is deprecated and will be removed in 27.1. "
+            "Use pybamm.Component(symbol, 0) for the lr/x component "
+            "or pybamm.Component(symbol, 1) for the tb/z component.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__("magnitude" + f"({direction})", child)
         self.direction = direction
 
@@ -1467,12 +1480,19 @@ class Magnitude(UnaryOperator):
         }
 
     @classmethod
+    def _without_warning(cls, child, direction):
+        # Internal copies and loads must not re-warn users who never built one
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            return cls(child, direction)
+
+    @classmethod
     def _from_json(cls, snippet):
-        return cls(snippet["children"][0], snippet["direction"])
+        return cls._without_warning(snippet["children"][0], snippet["direction"])
 
     def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return self.__class__(child, self.direction)
+        return self._without_warning(child, self.direction)
 
 
 class Component(UnaryOperator):
