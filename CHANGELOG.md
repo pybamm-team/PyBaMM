@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- The composite electrode-SOH model's phase-capacity inputs are renamed `Q_n_1` -> `Primary: Negative electrode capacity [A.h]`, `Q_n_2` -> `Secondary: Negative electrode capacity [A.h]`, `Q_p_1` -> `Primary: Positive electrode capacity [A.h]`, and `Q_p_2` -> `Secondary: Positive electrode capacity [A.h]`. The numbered names matched the deprecated-MSMR pattern, so every composite solve emitted a `DeprecationWarning` for an internal input. Code solving a standalone `ElectrodeSOHComposite` simulation must use the new names. ([#5738](https://github.com/pybamm-team/PyBaMM/pull/5738))
+
 ## Bug fixes
 
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))

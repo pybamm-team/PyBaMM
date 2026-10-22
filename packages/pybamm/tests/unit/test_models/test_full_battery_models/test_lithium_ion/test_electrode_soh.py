@@ -3,6 +3,7 @@
 #
 
 import contextlib
+import warnings
 
 import pytest
 
@@ -551,6 +552,41 @@ class TestElectrodeSOHComposite:
                     assert 0 <= results[key] <= 1, (
                         f"Stoichiometry {key} out of bounds: {results[key]}"
                     )
+
+    def test_phase_capacity_input_names(self):
+        options = {"particle phases": ("2", "1")}
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.ElectrodeSOHComposite(options),
+            parameter_values=pybamm.ParameterValues("Chen2020_composite"),
+        )
+        simulation.build()
+
+        capacity_names = {
+            parameter.name
+            for parameter in simulation.built_model.input_parameters
+            if parameter.name.endswith("electrode capacity [A.h]")
+        }
+
+        assert capacity_names == {
+            "Primary: Negative electrode capacity [A.h]",
+            "Secondary: Negative electrode capacity [A.h]",
+            "Primary: Positive electrode capacity [A.h]",
+        }
+
+    def test_phase_capacity_inputs_are_not_deprecated_msmr_names(self):
+        pvals = pybamm.ParameterValues("Chen2020_composite")
+        options = {"particle phases": ("2", "1")}
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            pybamm.lithium_ion.get_initial_stoichiometries_composite(
+                0.5, pvals, options=options
+            )
+
+        renamed = [
+            w for w in caught if "host site occupancy capacity" in str(w.message)
+        ]
+        assert renamed == []
 
     def test_composite_soc_independent_of_initial_hysteresis_state(self):
         options = {
