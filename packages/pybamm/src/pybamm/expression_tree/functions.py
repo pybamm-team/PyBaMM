@@ -19,17 +19,11 @@ import pybamm
 _CASADI_EQUIVALENTS = {special.erf: casadi.erf}
 
 
-def _is_constant_value(x, value: float) -> bool:
-    # True iff ``x`` is a scalar constant equal to ``value``. Conservative on
-    # symbolic or multi-element inputs.
-    if isinstance(x, casadi.MX) and np.prod(x.size(), initial=1) > 2:
-        return False
-    if isinstance(x, np.ndarray):
-        return bool(np.all(x == value))
-    try:
-        return bool(x == value)
-    except (TypeError, ValueError, RuntimeError):
-        return False
+def _array_sqrt(value):
+    # np.sqrt cannot trace a JAX array, which the generated Python evaluator passes
+    if isinstance(value, (np.ndarray, np.generic, float, int)):
+        return np.sqrt(value)
+    return value**0.5
 
 
 class Function(pybamm.Symbol):
@@ -967,9 +961,29 @@ class RegPower(Function):
 
     def _reg_power_evaluate(self, base, exponent, scale):
         """Evaluate reg_power using numpy."""
+        return self._decomposition(
+            base, exponent, scale, _array_sqrt, lambda a, b: a**b, lambda v: v
+        )
+
+    def _decomposition(self, base, exponent, scale, sqrt, power, constant):
+        """``x * (x*x + delta^2)^((a-1)/2) * scale^a`` with ``x = base / scale``.
+
+        Every backend evaluates this sequence of operations, given its own ``sqrt``,
+        ``power(base, exponent)`` and ``constant(float)``. A literal ``a`` of 0.5 or 2
+        takes its powers as square roots, so the backends agree bitwise. With
+        ``delta == 0`` it is ``power(base, exponent)``.
+        """
+        if self.delta == 0:
+            return power(base, exponent)
         x = base / scale
-        x2_d2 = x**2 + self.delta**2
-        return x * (x2_d2 ** ((exponent - 1) / 2)) * (scale**exponent)
+        inner = x * x + constant(self.delta * self.delta)
+        literal = self.children[1]
+        if isinstance(literal, pybamm.Scalar) and float(literal.value) == 0.5:
+            return x / sqrt(sqrt(inner)) * sqrt(scale)
+        if isinstance(literal, pybamm.Scalar) and float(literal.value) == 2.0:
+            return x * sqrt(inner) * (scale * scale)
+        inner_exponent = (exponent - constant(1.0)) * constant(0.5)
+        return x * power(inner, inner_exponent) * power(scale, exponent)
 
     def _function_evaluate(self, evaluated_children):
         """See :meth:`pybamm.Function._function_evaluate()`."""
@@ -983,6 +997,15 @@ class RegPower(Function):
         """
         base, exponent, scale = children
         delta = self.delta
+
+        if delta == 0:
+            # Partials of the ``base ** exponent`` fallback
+            if idx == 0:
+                return exponent * base ** (exponent - 1)
+            if idx == 1:
+                return base**exponent * pybamm.log(base)
+            if idx == 2:
+                return pybamm.Scalar(0)
 
         x = base / scale
         x2_d2 = x**2 + delta**2
@@ -1019,6 +1042,8 @@ class RegPower(Function):
 
     def _function_jac(self, children_jacs):
         """See :meth:`pybamm.Function._function_jac()`."""
+        if self.delta == 0:
+            return super()._function_jac(children_jacs)
         children = self.orphans
         base, exponent, scale = children
         delta = self.delta
@@ -1076,29 +1101,10 @@ class RegPower(Function):
         return new_function
 
     def _casadi_evaluate(self, base, exponent, scale):
-        """See :meth:`pybamm.Function._casadi_evaluate()`.
-
-        Evaluates ``y = x * r^(a-1) * scale^a`` with ``x = base / scale`` and
-        ``r = hypot(x, delta)``. The ``a == 0.5`` case (hot for Butler-Volmer)
-        is specialised to avoid a general ``power`` call.
-        """
-        delta = self.delta
-        if delta == 0:
-            return casadi.power(base, exponent)
-
-        x = base / scale
-        r = casadi.hypot(x, delta)
-
-        if _is_constant_value(exponent, 0.5):
-            # ``exponent**0`` acts as a ``ones_like(exponent)`` that works
-            # across casadi.MX / numpy / float.
-            scale_factor = casadi.sqrt(scale) * exponent**0
-            inner_factor = 1 / casadi.sqrt(r)
-        else:
-            scale_factor = casadi.power(scale, exponent)
-            inner_factor = casadi.power(r, exponent - 1)
-
-        return x * inner_factor * scale_factor
+        """See :meth:`pybamm.Function._casadi_evaluate()`."""
+        return self._decomposition(
+            base, exponent, scale, casadi.sqrt, casadi.power, lambda v: v
+        )
 
     def _sympy_operator(self, base, exponent, scale):
         """Convert to SymPy expression."""
