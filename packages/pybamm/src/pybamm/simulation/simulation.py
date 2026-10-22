@@ -667,7 +667,10 @@ class Simulation(BaseSimulation):
             )
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
-            f, jac, jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
+            # step() maps sensitivities by forward-mode AD of f, not with jacobians
+            f, jac, jacp, _jac_action = process(
+                mapper, "mapper", vars_for_processing, use_jacobian=False
+            )
             self._compiled_model_state_mappers[(previous_model, next_model)] = (
                 f,
                 jac,
@@ -795,7 +798,8 @@ class Simulation(BaseSimulation):
             cycle in the list is saved. The first cycle (cycle 1) is always saved.
         starting_solution : :class:`pybamm.Solution`
             The solution to start stepping from. If None (default), then self._solution
-            is used. Must be None if not using an experiment.
+            is used. Must be None if not using an experiment, and otherwise have
+            sensitivities for the inputs in `calculate_sensitivities` only.
         showprogress : bool, optional
             Whether to show a progress bar for cycling. If true, shows a progress bar
             for cycles. Has no effect when not used with an experiment.
@@ -868,6 +872,17 @@ class Simulation(BaseSimulation):
                     for name in requested
                     if name not in self._INTERNAL_EXPERIMENT_INPUTS
                 ]
+
+        # The result joins the starting solution's sensitivities to the steps'
+        if isinstance(starting_solution, pybamm.Solution):
+            starting_names = sorted(starting_solution.sensitivity_names)
+            requested_names = sorted(kwargs.get("calculate_sensitivities") or [])
+            if starting_names != requested_names:
+                raise pybamm.SolverError(
+                    f"Cannot continue a starting_solution with sensitivities for "
+                    f"{starting_names} with sensitivities for {requested_names}. "
+                    "Solve with the same 'calculate_sensitivities' as it."
+                )
 
         # Drop the prior solution before build/integration.
         self._solution = starting_solution
