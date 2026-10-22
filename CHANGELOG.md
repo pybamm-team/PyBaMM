@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added the `MolicelP45B_AboutEnergy2026` parameter set for the Molicel INR21700-P45B cell (NCA / graphite-SiOx composite), loaded from the BPX file published with the paper. Use it with the DFN, two negative particle phases, one-state hysteresis on the silicon phase and contact resistance. Requires the `bpx` optional dependency. ([#5914](https://github.com/pybamm-team/PyBaMM/pull/5914))
+
 ## Bug fixes
 
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
