@@ -151,6 +151,8 @@ gets wrong:
   `pybamm.X`) and get a `docs/source/api/*.rst` entry.
 - Every feature or fix adds a `CHANGELOG.md` bullet under `# [Unreleased]` (Keep a Changelog
   format), ending with the PR link, e.g. `([#1234](https://github.com/pybamm-team/PyBaMM/pull/1234))`.
+  Get a prediction from `uv run --no-project scripts/next_pr_number.py`. If another issue, pull
+  request, or discussion takes that number before the PR opens, update the entry manually.
 
 ### Tests
 
