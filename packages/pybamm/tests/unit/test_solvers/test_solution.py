@@ -1623,6 +1623,36 @@ class TestSolution:
             sensitivities[sensitivity_name], [expected], rtol=1e-6
         )
 
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    @pytest.mark.parametrize(
+        "integrand,expected",
+        [
+            (pybamm.Scalar(2), 2.0),
+            (pybamm.InputParameter("a"), 2.0),
+            (2 * pybamm.t, 1.0),
+        ],
+    )
+    def test_explicit_time_integral_state_independent_integrand(
+        self, integrand, expected, use_output_var
+    ):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["c"] = c
+        model.variables["integral"] = pybamm.ExplicitTimeIntegral(integrand, 0)
+        model.variables["integral squared"] = (
+            pybamm.ExplicitTimeIntegral(integrand, 0) ** 2
+        )
+
+        output_variables = ["integral", "integral squared"] if use_output_var else None
+        solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+        t = np.linspace(0, 1, 11)
+        sol = solver.solve(model, [0, 1], t_interp=t, inputs={"a": 2})
+
+        np.testing.assert_allclose(sol["integral"].data, expected)
+        np.testing.assert_allclose(sol["integral squared"].data, expected**2)
+
     def test_observe(self):
         """Test the observe method with pybamm symbols, comparing with model variables."""
         # Set up a simple model
