@@ -2,6 +2,7 @@
 # Test some experiments
 #
 import numpy as np
+import pytest
 
 import pybamm
 
@@ -127,3 +128,86 @@ class TestExperiments:
         sol = sim.solve()
 
         assert sol.t[-1] == tf
+
+
+class TestExperimentSensitivities:
+    """Sensitivities across experiment step changes against finite differences."""
+
+    @staticmethod
+    def _solve(model_options, name, value, sensitivities, continue_from_solution):
+        def simulation(steps):
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            parameter_values.update({name: "[input]"})
+            return pybamm.Simulation(
+                pybamm.lithium_ion.SPMe(model_options),
+                parameter_values=parameter_values,
+                experiment=pybamm.Experiment(steps, period="30 seconds"),
+                var_pts={"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 8, "r_p": 8},
+                solver=pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12),
+            )
+
+        steps = [
+            "Discharge at 1C for 5 minutes",
+            "Rest for 2 minutes",
+            "Charge at 0.5C for 2 minutes",
+        ]
+        kwargs = {"inputs": {name: value}, "calculate_sensitivities": sensitivities}
+        if not continue_from_solution:
+            return simulation(steps).solve(**kwargs)
+        # A solution from another simulation is mapped by variable name
+        starting_solution = simulation(steps[:1]).solve(**kwargs)
+        return simulation(steps[1:]).solve(
+            starting_solution=starting_solution, **kwargs
+        )
+
+    @pytest.mark.parametrize("continue_from_solution", [False, True])
+    @pytest.mark.parametrize(
+        "model_options, name, value",
+        [
+            # The surface potential differences are stored about a nonzero reference
+            (
+                {"surface form": "differential"},
+                "Positive electrode conductivity [S.m-1]",
+                0.18,
+            ),
+            # These inputs set the scale of the particle and electrolyte states
+            ({}, "Maximum concentration in negative electrode [mol.m-3]", 33133.0),
+            ({}, "Initial concentration in electrolyte [mol.m-3]", 1000.0),
+        ],
+        ids=["reference", "particle_scale", "electrolyte_scale"],
+    )
+    def test_sensitivities_across_model_changes(
+        self, model_options, name, value, continue_from_solution
+    ):
+        solution = self._solve(
+            model_options, name, value, [name], continue_from_solution
+        )
+        h = 1e-4 * value
+        plus = self._solve(
+            model_options, name, value + h, False, continue_from_solution
+        )
+        minus = self._solve(
+            model_options, name, value - h, False, continue_from_solution
+        )
+
+        def steps(sol):
+            return [step for cycle in sol.cycles for step in cycle.steps]
+
+        assert len(steps(solution)) == 3
+        finite_differences = [
+            (step_plus["Voltage [V]"](step.t) - step_minus["Voltage [V]"](step.t))
+            / (2 * h)
+            for step, step_plus, step_minus in zip(
+                steps(solution), steps(plus), steps(minus), strict=True
+            )
+        ]
+        scale = max(np.max(np.abs(fd)) for fd in finite_differences)
+        for step, finite_difference in zip(
+            steps(solution), finite_differences, strict=True
+        ):
+            np.testing.assert_allclose(
+                step["Voltage [V]"].sensitivities[name].ravel(),
+                finite_difference,
+                rtol=0,
+                atol=2e-4 * scale,
+            )
