@@ -135,6 +135,9 @@ class TestVectorFieldAndMagnitude:
         ):
             disc.process_symbol(pybamm.Norm(pybamm.Scalar(1)))
 
+        with pytest.raises(pybamm.DiscretisationError, match=r"out of range"):
+            disc.process_symbol(pybamm.Component(vector_field, -1))
+
     def test_mismatched_vector_field_components(self, mesh_2d):
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
         disc = pybamm.Discretisation(mesh_2d, spatial_methods)

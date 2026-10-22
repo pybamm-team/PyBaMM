@@ -38,14 +38,29 @@ class FiniteVolume2D(pybamm.SpatialMethod):
     @staticmethod
     def _edge_direction(symbol):
         """lr/tb direction for edge-averaging binary-op children."""
+        directions = FiniteVolume2D._edge_directions(symbol)
+        if len(directions) != 1:
+            raise pybamm.DiscretisationError(
+                f"Cannot determine a single lr/tb edge direction for {symbol!r}"
+            )
+        return directions.pop()
+
+    @staticmethod
+    def _edge_directions(symbol):
+        """Directions of the edge-valued leaves (Component, Magnitude, NodeToEdge2D)."""
+        if not symbol.evaluates_on_edges("primary"):
+            return set()
         if isinstance(symbol, pybamm.Component):
-            try:
-                return ("lr", "tb")[symbol.index]
-            except IndexError as err:
+            if symbol.index not in (0, 1):
                 raise pybamm.DiscretisationError(
                     f"Component index {symbol.index} is not a 2D lr/tb direction"
-                ) from err
-        return symbol.direction
+                )
+            return {("lr", "tb")[symbol.index]}
+        if isinstance(symbol, pybamm.Magnitude | pybamm.NodeToEdge2D):
+            return {symbol.direction}
+        return set().union(
+            *(FiniteVolume2D._edge_directions(child) for child in symbol.children)
+        )
 
     def build(self, mesh):
         super().build(mesh)
