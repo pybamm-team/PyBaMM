@@ -1313,7 +1313,13 @@ class TestDiscretise:
     def test_discretised_nodes_keep_symbol_domains(self):
         # a boundary value discretises onto the current collector; its parents
         # must still carry the symbol's (empty) domains
-        model = pybamm.lithium_ion.SPM({"SEI": "reaction limited"})
+        model = pybamm.lithium_ion.SPM(
+            {
+                "SEI": "reaction limited",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            }
+        )
         sim = pybamm.Simulation(model)
         sim.build()
         name = "Loss of lithium to negative SEI [mol]"

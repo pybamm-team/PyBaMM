@@ -586,7 +586,11 @@ def test_options_setter_rebuilds_param():
     ``param`` via the setter, keeping it in sync without an explicit hook call.
     """
     # A complete, valid two-phase options set (as a load path would restore).
-    full_opts = dict(pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}).options)
+    full_opts = dict(
+        pybamm.lithium_ion.SPM(
+            {"particle phases": ("2", "1"), "surface form": "algebraic"}
+        ).options
+    )
 
     model = pybamm.lithium_ion.SPM(build=False)  # default: single particle phase
     model.options = full_opts
@@ -690,21 +694,41 @@ def test_int_option_survives_json_round_trip_as_int():
 # Buildable tuple options that must round-trip through both load paths --
 # deterministic, always-run coverage of the bug shape.
 _TUPLE_OPTION_FIXTURES = [
-    (pybamm.lithium_ion.SPM, "particle phases", ("2", "1")),
-    (pybamm.lithium_ion.SPM, "SEI", ("none", "constant")),
-    (pybamm.lithium_ion.DFN, "particle size", ("single", "distribution")),
-    (pybamm.lithium_ion.DFN, "particle", ("Fickian diffusion", "uniform profile")),
+    (
+        pybamm.lithium_ion.SPM,
+        "particle phases",
+        ("2", "1"),
+        {"surface form": "algebraic"},
+    ),
+    (
+        pybamm.lithium_ion.SPM,
+        "SEI",
+        ("none", "constant"),
+        {
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        },
+    ),
+    (pybamm.lithium_ion.DFN, "particle size", ("single", "distribution"), {}),
+    (
+        pybamm.lithium_ion.DFN,
+        "particle",
+        ("Fickian diffusion", "uniform profile"),
+        {},
+    ),
 ]
 
 
 class TestTupleOptionRoundTripRegression:
     @pytest.mark.parametrize(
-        "model_cls,key,value",
+        "model_cls,key,value,extra_options",
         _TUPLE_OPTION_FIXTURES,
         ids=["SPM-particle phases", "SPM-SEI", "DFN-particle size", "DFN-particle"],
     )
-    def test_tuple_option_survives_both_paths(self, model_cls, key, value):
-        model = model_cls({key: value}, build=False)
+    def test_tuple_option_survives_both_paths(
+        self, model_cls, key, value, extra_options
+    ):
+        model = model_cls({key: value, **extra_options}, build=False)
 
         via_json = pybamm.BaseModel.from_json(
             json.loads(json.dumps(model.to_json(), default=Serialise._json_encoder))

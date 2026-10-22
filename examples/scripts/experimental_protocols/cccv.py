@@ -18,7 +18,13 @@ experiment = pybamm.Experiment(
     ]
     * 3
 )
-model = pybamm.lithium_ion.DFN({"SEI": "ec reaction limited"})
+model = pybamm.lithium_ion.DFN(
+    {
+        "SEI": "ec reaction limited",
+        "SEI film resistance": "distributed",
+        "total interfacial current density as a state": "true",
+    }
+)
 parameter_values = pybamm.ParameterValues("Chen2020")
 
 sim = pybamm.Simulation(

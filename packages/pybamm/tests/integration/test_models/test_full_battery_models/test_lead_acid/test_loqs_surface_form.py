@@ -41,6 +41,7 @@ class TestLeadAcidLoqsSurfaceForm:
             "surface form": "algebraic",
             "current collector": "potential pair",
             "dimensionality": 1,
+            "cell geometry": "pouch",
         }
         model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)

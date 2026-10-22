@@ -8,6 +8,7 @@ model = pb.lithium_ion.SPM(
         "SEI porosity change": "true",
         "lithium plating": "irreversible",
         "lithium plating porosity change": "true",
+        "total interfacial current density as a state": "true",
     }
 )
 

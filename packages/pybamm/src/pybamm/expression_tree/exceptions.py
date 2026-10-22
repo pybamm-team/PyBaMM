@@ -15,6 +15,10 @@ class OptionWarning(UserWarning):
     """Option warning: the chosen options may not give the desired output."""
 
 
+class OptionDefaultDeprecationWarning(DeprecationWarning):
+    """An option was set from another option instead of being given."""
+
+
 class GeometryError(Exception):
     """Geometry error: Raised if the an unimplemented geometry is used."""
 

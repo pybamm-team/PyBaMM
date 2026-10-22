@@ -19,12 +19,14 @@ class TestThermal:
             "thermal": "x-lumped",
             "current collector": "potential pair",
             "dimensionality": 1,
+            "cell geometry": "pouch",
         }
         spme_1p1D = pybamm.lithium_ion.SPMe(options=options)
         options = {
             "thermal": "x-lumped",
             "current collector": "potential pair",
             "dimensionality": 2,
+            "cell geometry": "pouch",
         }
         spme_2p1D = pybamm.lithium_ion.SPMe(options=options)
         models = {"SPMe 1D": spme_1D, "SPMe 1+1D": spme_1p1D, "SPMe 2+1D": spme_2p1D}
@@ -195,6 +197,8 @@ class TestThermal:
 
         parameter_values = pybamm.ParameterValues("Marquis2019")
         options = {"thermal": thermal, "contact resistance": "true"}
+        if thermal == "x-full":
+            options["cell geometry"] = "pouch"
 
         # constant value
         const_params = parameter_values.copy()

@@ -26,6 +26,7 @@ BOX_FACES = {"x_min", "x_max", "y_min", "y_max", "z_min", "z_max"}
 COMPOSITE = {
     "particle phases": ("2", "1"),
     "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+    "surface form": "algebraic",
 }
 #: The same, with Marcus-Hush-Chidsey kinetics on the negative electrode.
 COMPOSITE_MHC = {

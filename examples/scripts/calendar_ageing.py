@@ -4,18 +4,22 @@ import pybamm as pb
 
 pb.set_logging_level("INFO")
 
+sei_defaults = {
+    "SEI film resistance": "distributed",
+    "total interfacial current density as a state": "true",
+}
 models = [
-    pb.lithium_ion.SPM({"SEI": "reaction limited"}),
-    pb.lithium_ion.SPMe({"SEI": "reaction limited"}),
+    pb.lithium_ion.SPM({"SEI": "reaction limited", **sei_defaults}),
+    pb.lithium_ion.SPMe({"SEI": "reaction limited", **sei_defaults}),
     pb.lithium_ion.SPM(
-        {"SEI": "reaction limited", "surface form": "algebraic"},
+        {"SEI": "reaction limited", "surface form": "algebraic", **sei_defaults},
         name="Algebraic SPM",
     ),
     pb.lithium_ion.SPMe(
-        {"SEI": "reaction limited", "surface form": "algebraic"},
+        {"SEI": "reaction limited", "surface form": "algebraic", **sei_defaults},
         name="Algebraic SPMe",
     ),
-    pb.lithium_ion.DFN({"SEI": "reaction limited"}),
+    pb.lithium_ion.DFN({"SEI": "reaction limited", **sei_defaults}),
 ]
 
 sims = []
