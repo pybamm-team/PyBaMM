@@ -2,6 +2,8 @@
 # Test for the Finite Volume Mesh class
 #
 
+import re
+
 import numpy as np
 import pytest
 
@@ -460,6 +462,81 @@ class TestMesh:
             rgs_submesh.edges[0] * rgs_submesh.length + rgs_submesh.min,
             submesh.edges[-1] * submesh.length + submesh.min,
         )
+
+    def test_input_dependent_geometry_needs_symbolic_submesh(self):
+        param = get_param()
+        param.update(
+            {
+                "Negative electrode thickness [m]": "[input]",
+                "Negative particle radius [m]": "[input]",
+            }
+        )
+        var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
+
+        def make_mesh(submesh_types):
+            geometry = pybamm.battery_geometry()
+            param.process_geometry(geometry)
+            return pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.SubMesh0D,
+        }
+        thickness = "['Negative electrode thickness [m]']"
+        radius = "['Negative particle radius [m]']"
+        match = re.escape(
+            "Geometry limits depend on input parameters, but the submesh types need "
+            f"numerical limits: 'negative electrode' (Uniform1DSubMesh) depends on "
+            f"{thickness}; 'separator' (Uniform1DSubMesh) depends on {thickness}; "
+            f"'positive electrode' (Uniform1DSubMesh) depends on {thickness}; "
+            f"'negative particle' (Uniform1DSubMesh) depends on {radius}. Use "
+            "pybamm.SymbolicUniform1DSubMesh for these domains, or set "
+            "supports_symbolic_limits = True on a custom SubMesh that accepts "
+            "symbolic limits."
+        )
+        with pytest.raises(pybamm.GeometryError, match=match):
+            make_mesh(dict(submesh_types))
+
+        symbolic_domains = [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+            "negative particle",
+        ]
+        mesh = make_mesh(
+            {
+                **submesh_types,
+                **dict.fromkeys(symbolic_domains, pybamm.SymbolicUniform1DSubMesh),
+            }
+        )
+        assert isinstance(mesh["negative particle"].length, pybamm.InputParameter)
+        assert mesh["positive particle"].edges[-1] == pytest.approx(0.5)
+
+    def test_input_dependent_tabs_raise(self):
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        geometry = {
+            "current collector": {
+                z: {"min": 0, "max": 1},
+                "tabs": {
+                    "negative": {"z_centre": pybamm.InputParameter("tab")},
+                    "positive": {"z_centre": 1},
+                },
+            }
+        }
+        with pytest.raises(
+            pybamm.GeometryError,
+            match=re.escape(
+                "Tab z_centre for 'negative' in domain 'current collector' depends "
+                "on input parameter(s) ['tab']"
+            ),
+        ):
+            pybamm.Mesh(
+                geometry, {"current collector": pybamm.Uniform1DSubMesh}, {z: 10}
+            )
 
     def test_mesh_coord_sys(self, submesh_types):
         param = get_param()

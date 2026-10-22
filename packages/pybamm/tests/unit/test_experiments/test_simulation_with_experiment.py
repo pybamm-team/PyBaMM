@@ -1649,6 +1649,97 @@ class TestSimulationExperiment:
             voltage = solution["Voltage [V]"]
             assert voltage.sensitivities[names["a"]].shape == solution.t.shape
 
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_starting_solution_with_sensitivities_true(self, experiment_model_mode):
+        name = "Negative particle diffusivity [m2.s-1]"
+        param = pybamm.ParameterValues("Chen2020")
+        param.update({name: "[input]"})
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=param,
+            experiment=pybamm.Experiment(
+                ["Discharge at 1C for 1 minute"], period="20 seconds"
+            ),
+            experiment_model_mode=experiment_model_mode,
+        )
+        inputs = {name: 3.3e-14}
+        starting_solution = sim.solve(inputs=inputs, calculate_sensitivities=True)
+
+        solution = sim.solve(
+            inputs=inputs,
+            starting_solution=starting_solution,
+            calculate_sensitivities=True,
+        )
+        assert solution.t[-1] == pytest.approx(120)
+        assert solution.sensitivity_names == [name]
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_solve_with_sensitivities_true_skips_inputs_steps_lack(
+        self, caplog, experiment_model_mode
+    ):
+        # "unused" is in no model; "current" is only in the current step's legacy model
+        diffusivity_name = "Positive particle diffusivity [m2.s-1]"
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({diffusivity_name: "[input]"})
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.Current(pybamm.InputParameter("current"), duration=10),
+                pybamm.step.Rest(duration=10),
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+            experiment_model_mode=experiment_model_mode,
+        )
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            sol = sim.solve(
+                inputs={"current": 0.1, diffusivity_name: 1e-14, "unused": 1.0},
+                calculate_sensitivities=True,
+                calc_esoh=False,
+            )
+
+        skipped = (
+            ["unused"] if experiment_model_mode == "unified" else ["current", "unused"]
+        )
+        assert (
+            f"Inputs {skipped} are not input parameters of every experiment step "
+            "model, so no sensitivities are calculated for them."
+        ) in caplog.text
+        expected = {diffusivity_name} | (
+            {"current"} if experiment_model_mode == "unified" else set()
+        )
+        sensitivities = sol["Voltage [V]"].sensitivities
+        assert set(sensitivities) - {"all"} == expected
+        assert np.any(np.asarray(sensitivities[diffusivity_name]) != 0)
+
+    def test_solve_with_sensitivity_names_some_steps_lack_raises(self):
+        # In the legacy mode only the current step's model has "current"
+        diffusivity_name = "Positive particle diffusivity [m2.s-1]"
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({diffusivity_name: "[input]"})
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.Current(pybamm.InputParameter("current"), duration=10),
+                pybamm.step.Rest(duration=10),
+            ]
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+            experiment_model_mode="legacy",
+        )
+        with pytest.raises(pybamm.SolverError, match=r"\['current'\] are not input"):
+            sim.solve(
+                inputs={"current": 0.1, diffusivity_name: 1e-14},
+                calculate_sensitivities=["current", diffusivity_name],
+                calc_esoh=False,
+            )
+
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
         experiment = pybamm.Experiment(

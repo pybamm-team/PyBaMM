@@ -7,6 +7,15 @@ import numpy as np
 import pybamm
 
 
+def _mean_radius(param, name):
+    """Return the radius parameter ``name``, so the distribution follows its value."""
+    if name not in param:
+        raise KeyError(
+            f"get_size_distribution_parameters needs '{name}' in the parameter values."
+        )
+    return pybamm.Parameter(name)
+
+
 def get_size_distribution_parameters(
     param,
     R_n_av=None,
@@ -42,7 +51,9 @@ def get_size_distribution_parameters(
     each electrode, with mean set equal to the particle radius parameter in the
     set (default) or a custom value. The standard deviations and min/max radii
     are specified relative (i.e. scaled by) the mean radius for convenience.
-    Only the dimensional values are output from this method.
+    Only the dimensional values are output from this method. By default the
+    distribution and min/max radii are expressions of the particle radius
+    parameter, so they follow later changes to it.
 
     Parameters
     ----------
@@ -50,10 +61,10 @@ def get_size_distribution_parameters(
         The parameter values to add the distribution parameters to.
     R_n_av : float (optional)
         The area-weighted mean particle radius (dimensional) of the negative electrode.
-        Default is the value "Negative particle radius [m]" from param.
+        Default is the parameter "Negative particle radius [m]" in param.
     R_p_av : float (optional)
         The area-weighted mean particle radius (dimensional) of the positive electrode.
-        Default is the value "Positive particle radius [m]" from param.
+        Default is the parameter "Positive particle radius [m]" in param.
     sd_n : float (optional)
         The area-weighted standard deviation, scaled by the mean radius R_n_av.
         Default is 0.3 * R_n_av.
@@ -81,8 +92,8 @@ def get_size_distribution_parameters(
     if working_electrode == "both":
         # Radii from given parameter set
         if composite == "negative" or composite == "both":
-            R_n_typ_prim = param["Primary: Negative particle radius [m]"]
-            R_n_typ_sec = param["Secondary: Negative particle radius [m]"]
+            R_n_typ_prim = _mean_radius(param, "Primary: Negative particle radius [m]")
+            R_n_typ_sec = _mean_radius(param, "Secondary: Negative particle radius [m]")
             # Set the mean particle radii
             R_n_av_prim = R_n_av_prim or R_n_typ_prim
             R_n_av_sec = R_n_av_sec or R_n_typ_sec
@@ -118,7 +129,7 @@ def get_size_distribution_parameters(
                 }
             )
         else:
-            R_n_typ = param["Negative particle radius [m]"]
+            R_n_typ = _mean_radius(param, "Negative particle radius [m]")
             # Set the mean particle radii
             R_n_av = R_n_av or R_n_typ
             # Minimum radii
@@ -141,8 +152,8 @@ def get_size_distribution_parameters(
             )
 
     if composite == "positive" or composite == "both":
-        R_p_typ_prim = param["Primary: Positive particle radius [m]"]
-        R_p_typ_sec = param["Secondary: Positive particle radius [m]"]
+        R_p_typ_prim = _mean_radius(param, "Primary: Positive particle radius [m]")
+        R_p_typ_sec = _mean_radius(param, "Secondary: Positive particle radius [m]")
         # Set the mean particle radii
         R_p_av_prim = R_p_av_prim or R_p_typ_prim
         R_p_av_sec = R_p_av_sec or R_p_typ_sec
@@ -179,7 +190,7 @@ def get_size_distribution_parameters(
         )
     else:
         # Radii from given parameter set
-        R_p_typ = param["Positive particle radius [m]"]
+        R_p_typ = _mean_radius(param, "Positive particle radius [m]")
 
         # Set the mean particle radii
         R_p_av = R_p_av or R_p_typ
