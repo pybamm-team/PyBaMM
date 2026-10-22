@@ -291,13 +291,25 @@ class TestQuickPlot:
         with pytest.raises(ValueError, match=r"No default output variables"):
             pybamm.QuickPlot(solution)
 
-    def test_default_colors_follow_matplotlib_cycle(self):
+    def test_default_colors(self):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
         model.rhs = {a: -a}
         model.initial_conditions = {a: pybamm.Scalar(1)}
         model.variables = {"a": a}
         solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
+        pybamm_colors = ["r", "b", "k", "g", "m", "c"]
+
+        # matplotlib's default cycle keeps PyBaMM's colors
+        with matplotlib.rc_context(
+            {"axes.prop_cycle": matplotlib.rcParamsDefault["axes.prop_cycle"]}
+        ):
+            quick_plot = pybamm.QuickPlot([solution, solution], ["a"])
+            assert quick_plot.colors == pybamm_colors
+            assert quick_plot.linestyles == ["-", ":", "--", "-."]
+            quick_plot.plot(0.5)
+            lines = quick_plot.plots[("a",)]
+            assert [lines[i][0].get_color() for i in range(2)] == ["r", "b"]
 
         cycle_colors = ["#123456", "#abcdef"]
         with matplotlib.rc_context(
@@ -310,11 +322,22 @@ class TestQuickPlot:
             assert [lines[i][0].get_color() for i in range(2)] == cycle_colors
             assert pybamm.QuickPlot(solution, ["a"], colors=["r"]).colors == ["r"]
 
-        # a cycle without colors draws in black, as matplotlib does
+        # as many NumPy array colors as the default cycle, so they get compared
+        n_colors = len(matplotlib.rcParamsDefault["axes.prop_cycle"])
+        colormap_colors = matplotlib.colormaps["viridis"](np.linspace(0, 1, n_colors))
+        with matplotlib.rc_context(
+            {"axes.prop_cycle": matplotlib.cycler(color=colormap_colors)}
+        ):
+            quick_plot = pybamm.QuickPlot(solution, ["a"])
+            np.testing.assert_array_equal(quick_plot.colors, colormap_colors)
+
+        # a cycle without colors keeps PyBaMM's colors
         with matplotlib.rc_context(
             {"axes.prop_cycle": matplotlib.cycler(linestyle=["-", "--"])}
         ):
-            assert pybamm.QuickPlot(solution, ["a"]).colors == ["k"]
+            quick_plot = pybamm.QuickPlot(solution, ["a"])
+            assert quick_plot.colors == pybamm_colors
+            quick_plot.plot(0.5)
 
         pybamm.close_plots()
 
