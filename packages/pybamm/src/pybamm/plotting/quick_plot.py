@@ -129,9 +129,10 @@ class QuickPlot:
         # Set colors, linestyles, figsize, axis limits
         # call LoopList to make sure list index never runs out
         if colors is None:
-            self.colors = LoopList(colors or ["r", "b", "k", "g", "m", "c"])
-        else:
-            self.colors = LoopList(colors)
+            rc_params = import_optional_dependency("matplotlib", "rcParams")
+            # matplotlib draws in black when the cycle sets no colors
+            colors = rc_params["axes.prop_cycle"].by_key().get("color", ["k"])
+        self.colors = LoopList(colors)
         self.linestyles = LoopList(linestyles or ["-", ":", "--", "-."])
         self.shading = shading
 

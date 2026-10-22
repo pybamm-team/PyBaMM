@@ -1,5 +1,6 @@
 import os
 
+import matplotlib
 import numpy as np
 import pytest
 
@@ -289,6 +290,33 @@ class TestQuickPlot:
         solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
         with pytest.raises(ValueError, match=r"No default output variables"):
             pybamm.QuickPlot(solution)
+
+    def test_default_colors_follow_matplotlib_cycle(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        model.rhs = {a: -a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
+
+        cycle_colors = ["#123456", "#abcdef"]
+        with matplotlib.rc_context(
+            {"axes.prop_cycle": matplotlib.cycler(color=cycle_colors)}
+        ):
+            quick_plot = pybamm.QuickPlot([solution, solution], ["a"])
+            assert quick_plot.colors == cycle_colors
+            quick_plot.plot(0.5)
+            lines = quick_plot.plots[("a",)]
+            assert [lines[i][0].get_color() for i in range(2)] == cycle_colors
+            assert pybamm.QuickPlot(solution, ["a"], colors=["r"]).colors == ["r"]
+
+        # a cycle without colors draws in black, as matplotlib does
+        with matplotlib.rc_context(
+            {"axes.prop_cycle": matplotlib.cycler(linestyle=["-", "--"])}
+        ):
+            assert pybamm.QuickPlot(solution, ["a"]).colors == ["k"]
+
+        pybamm.close_plots()
 
     def test_spm_simulation(self, tmp_path):
         # SPM
