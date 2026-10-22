@@ -43,6 +43,8 @@ def string(text, **kwargs):
 
     # Save the original string
     description = text
+    # Extra spaces or newlines would otherwise end up inside the parsed units
+    text = " ".join(text.split())
 
     # extract period
     if "period)" in text:
@@ -55,16 +57,32 @@ def string(text, **kwargs):
         period, _ = period_full.split(" period)")
         kwargs["period"] = period
     # extract termination condition based on "until" keyword
-    if "until" in text:
+    if " until " in text:
+        if text.count(" until ") > 1:
+            raise ValueError(
+                "Operating conditions can only contain 'until' once. "
+                f"For example: {_examples}"
+            )
         # e.g. "Charge at 4 A until 3.8 V"
         text, termination = text.split(" until ")
+        if " for " in termination:
+            raise ValueError(
+                "The duration must come before 'until', e.g. "
+                "'Charge at 1 C for 1 hour or until 4.2 V'. "
+                f"For example: {_examples}"
+            )
         # sometimes we use "or until" instead of "until", so remove "or"
         text = text.replace(" or", "")
     else:
         termination = None
 
     # extract duration based on "for" keyword
-    if "for" in text:
+    if " for " in text:
+        if text.count(" for ") > 1:
+            raise ValueError(
+                "Operating conditions can only contain 'for' once. "
+                f"For example: {_examples}"
+            )
         # e.g. "Charge at 4 A for 3 hours"
         text, duration = text.split(" for ")
     else:
@@ -90,15 +108,16 @@ def string(text, **kwargs):
         # split by what is before and after "at"
         # e.g. "Charge at 4 A" -> ["Charge", "4 A"]
         # e.g. "Discharge at C/2" -> ["Discharge", "C/2"]
-        instruction, value_string = text.split(" at ")
+        instruction, _, value_string = text.partition(" at ")
         if instruction == "Charge":
             sign = -1
         elif instruction in ["Discharge", "Hold"]:
             sign = 1
         else:
             raise ValueError(
-                "Instruction must be 'discharge', 'charge', 'rest', or 'hold'. "
-                f"For example: {_examples}"
+                "Instruction must be 'Discharge', 'Charge', 'Rest', or 'Hold', "
+                "followed by 'at' and a value (except for 'Rest'). "
+                f"For example: {_examples}\n"
                 f"The following instruction does not comply: {instruction}"
             )
         # extract units (type) and convert value to float
