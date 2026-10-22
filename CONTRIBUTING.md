@@ -102,6 +102,8 @@ If your PR is internal-only (refactor, docs typo, CI tweak, tests), no changelog
 
 Each entry is a single bullet ending in a PR link, e.g. `([#1234](https://github.com/pybamm-team/PyBaMM/pull/1234))`. Use the full URL so the rendered markdown on docs.pybamm.org links correctly.
 
+To write the entry before opening the PR, run `uv run --no-project scripts/next_pr_number.py`. It prints the likely next number using the [GitHub CLI](https://cli.github.com). This is only a prediction: if another issue, pull request, or discussion takes the number first, update the entry manually.
+
 For the full release policy — what counts as "public API", deprecation horizon, version scheme — see [`RELEASE.md`](https://github.com/pybamm-team/PyBaMM/blob/main/RELEASE.md).
 
 ## Coding style guidelines
