@@ -661,6 +661,16 @@ class ParticleLithiumIonParameters(BaseParameters):
             post_processor=regulariser,
         )
 
+    def k0_coupled_ion_electron_transfer(self, T):
+        """Coupled ion-electron transfer rate constant [A.m-2]"""
+        Domain = self.domain.capitalize()
+        inputs = {"Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} electrode coupled ion-electron "
+            "transfer rate constant [A.m-2]",
+            inputs,
+        )
+
     def j0_stripping(self, c_e, c_Li, T):
         """Dimensional exchange-current density for stripping [A.m-2]"""
         tol = pybamm.settings.tolerances["j0__c_e"]
