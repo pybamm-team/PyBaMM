@@ -194,41 +194,35 @@ class Function(pybamm.Symbol):
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         children = self._children_for_copying(new_children)
+        return self._function_new_copy(children, perform_simplifications)
 
-        if not perform_simplifications:
-            return pybamm.Function(
-                self.function,
-                *children,
-                name=self.name,
-                differentiated_function=self.differentiated_function,
-            )
-        else:
-            # performs additional simplifications, rather than just calling the
-            # constructor
-            return self._function_new_copy(children)
-
-    def _function_new_copy(self, children: list) -> Function:
+    def _function_new_copy(
+        self, children: list, perform_simplifications: bool = True
+    ) -> Function:
         """
-        Returns a new copy of the function.
+        Returns a new copy of the function, of the same class.
 
         Inputs
         ------
         children : : list
             A list of the children of the function
+        perform_simplifications : bool, optional
+            Whether to simplify the copy if it is constant (default True).
 
         Returns
         -------
             : :pybamm.Function
             A new copy of the function
         """
-        return pybamm.simplify_if_constant(
-            pybamm.Function(
-                self.function,
-                *children,
-                name=self.name,
-                differentiated_function=self.differentiated_function,
-            )
+        new_function = pybamm.Function(
+            self.function,
+            *children,
+            name=self.name,
+            differentiated_function=self.differentiated_function,
         )
+        if perform_simplifications:
+            return pybamm.simplify_if_constant(new_function)
+        return new_function
 
     def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
@@ -296,9 +290,12 @@ class SpecificFunction(Function):
 
         return instance
 
-    def _function_new_copy(self, children):
+    def _function_new_copy(self, children, perform_simplifications=True):
         """See :meth:`pybamm.Function._function_new_copy()`"""
-        return pybamm.simplify_if_constant(self.__class__(*children))
+        new_function = self.__class__(*children)
+        if perform_simplifications:
+            return pybamm.simplify_if_constant(new_function)
+        return new_function
 
     def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
@@ -478,7 +475,7 @@ class Arcsinh2(Function):
         else:
             raise IndexError("Arcsinh2 only has two children (a, b)")
 
-    def _function_new_copy(self, children):
+    def _function_new_copy(self, children, perform_simplifications=True):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         return Arcsinh2(*children, eps=self.eps)
 
@@ -1070,12 +1067,13 @@ class RegPower(Function):
 
         return jacobian
 
-    def _function_new_copy(self, children):
+    def _function_new_copy(self, children, perform_simplifications=True):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         base, exponent, scale = children
-        return pybamm.simplify_if_constant(
-            RegPower(base, exponent, scale=scale, delta=self.delta)
-        )
+        new_function = RegPower(base, exponent, scale=scale, delta=self.delta)
+        if perform_simplifications:
+            return pybamm.simplify_if_constant(new_function)
+        return new_function
 
     def _casadi_evaluate(self, base, exponent, scale):
         """See :meth:`pybamm.Function._casadi_evaluate()`.
