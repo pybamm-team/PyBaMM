@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 
 import pybamm
@@ -94,6 +96,21 @@ class TestVectorFieldAndMagnitude:
             pytest.warns(DeprecationWarning, match="Magnitude is deprecated"),
         ):
             disc.process_symbol(pybamm.Magnitude(vector_field, "asdf"))
+
+    def test_magnitude_internal_copies_do_not_warn(self):
+        from pybamm.expression_tree.operations.serialise_kernel import decode, encode
+
+        vector_field = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
+        with pytest.warns(DeprecationWarning, match="Magnitude is deprecated"):
+            magnitude = pybamm.Magnitude(vector_field, "tb")
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            copied = magnitude.create_copy()
+            rebuilt = decode(encode(magnitude))
+        assert copied == magnitude
+        assert rebuilt == magnitude
+        assert rebuilt.direction == "tb"
 
     def test_component_and_norm_discretisation(self, mesh_2d):
         spatial_methods = {"macroscale": pybamm.FiniteVolume2D()}
