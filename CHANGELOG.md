@@ -2,9 +2,25 @@
 
 ## Bug fixes
 
+- Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
+- `IDAKLUSolver.jaxify` now returns correct derivatives at any requested time. Before, it dropped negative tangents and scalar-time cotangents, and read sensitivities from the wrong solver step, or from the nearest `t_eval` point at off-grid times. ([#5916](https://github.com/pybamm-team/PyBaMM/pull/5916))
+  - Inputs are looked up by name, so key order or an `OrderedDict` no longer swaps their values, and a call with other keys no longer breaks earlier `jax.jit` functions. Missing inputs raise a `SolverError`.
+  - Input values may be JAX or size-1 arrays of any numeric dtype, and their derivatives keep that shape; larger arrays raise a `SolverError`. Before, integer and `float32` inputs were misread under `jax.jit`.
+  - `get_var` and `get_vars` now use the function they are given.
+  - `jax.vmap` over tangent directions returns one result per direction, and over time shares one solve.
+  - Times outside the solution, and derivatives with respect to time, give NaN rather than an error or a wrong value.
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
+- Solver restarts now start from the right state and sensitivities. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
+  - After a discontinuity whose time depends on an input, such as `pybamm.t > pybamm.InputParameter("t_switch")`, `IDAKLUSolver.solve` restarts from the end of the previous segment rather than from the initial conditions. `step()`, and so each experiment step, now stops at such discontinuities as `solve()` does.
+  - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.
+  - Sensitivities are correct after a change of model between experiment steps, or from a `starting_solution`, for states with a nonzero reference or an input-dependent scale. `step()` seeds them by input name, and raises a `SolverError` if the solution it continues has none for a requested input.
+  - `step()`, and re-solving an experiment, can change `calculate_sensitivities` between calls, with `save=False` for a step that does, and setting up again no longer duplicates discontinuity events.
 - Irreversible heating now includes the resistive loss across the SEI film when `"SEI film resistance"` is `"distributed"` or `"average"`. Before, that loss lowered the voltage but never appeared in `"Total heating [W]"` or the cell temperature. ([#5841](https://github.com/pybamm-team/PyBaMM/pull/5841))
 - Irreversible heating now includes the heat released by the SEI growth, SEI on cracks and lithium plating side reactions, including SEI growth on a lithium metal electrode, each as its current times the departure of the surface potential difference from that reaction's open-circuit potential. Before, the electrical energy lost to these reactions never appeared in `"Total heating [W]"` or the cell temperature. ([#5875](https://github.com/pybamm-team/PyBaMM/pull/5875))
+
+## Optimizations
+
+- Experiments with a different model per step no longer compile Jacobians of the state mappers between models, which were unused. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
 
@@ -16,6 +32,7 @@
 
 ## Features
 
+- `FiniteVolume` has a `"harmonic flux coefficients"` option, off by default. When it is on, a node-valued coefficient multiplying a sum of gradient terms, such as the electrolyte conductivity in `kappa * (chi * grad(c_e) - grad(phi_e))`, takes the distance-weighted harmonic mean on faces, not only one multiplying a single `grad`. With the arithmetic mean, the coefficient jump at the electrode/separator interface makes the DFN first order in x; with the option on, it converges at second order. ([#5856](https://github.com/pybamm-team/PyBaMM/pull/5856))
 - Added support for Python 3.15 to `pybamm` and `pybammsolvers`. On 3.15, the `vtk` extra installs nothing until cp315 wheels are available for it. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - The `jax` extra now accepts JAX up to 0.11 (previously below 0.9), which brings `JaxSolver` and the IDAKLU-JAX interface to Python 3.15. JAX 0.11 needs Python 3.12 or newer, so Python 3.11 gets JAX 0.10 at most. ([#5762](https://github.com/pybamm-team/PyBaMM/pull/5762))
 - A `fem` extra installs the finite-element meshing dependencies, scikit-fem and meshio, so `pip install "pybamm[fem]"` is enough for 2D and 3D finite-element meshes. `pybamm[all]` includes it. ([#5881](https://github.com/pybamm-team/PyBaMM/pull/5881))
