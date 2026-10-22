@@ -1259,6 +1259,25 @@ class TestSolution:
         np.testing.assert_allclose(solution["c"].entries, built.entries)
         assert "2c" in solution._variables
 
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_update_stores_nothing_when_a_listed_variable_fails(
+        self, convert_to_format
+    ):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables = {"c": c, "2c": 2 * c}
+        model.convert_to_format = convert_to_format
+        solution = pybamm.IDAKLUSolver().solve(model, [0, 1])
+        built = solution["c"]
+
+        with pytest.raises(KeyError, match=r"missing"):
+            solution.update(["c", "2c", "missing"])
+
+        assert solution._variables["c"] is built
+        assert "2c" not in solution._variables
+
     def test_solution_save_load_rust_backend(self, tmp_path):
         model = pybamm.lithium_ion.SPM()
         model.convert_to_format = "rust"
@@ -1532,10 +1551,14 @@ class TestSolution:
                 )
                 assert isinstance(sol["integral"].sensitivities["a"], np.ndarray)
 
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
     @pytest.mark.parametrize("use_output_var", [False, True])
-    def test_explicit_time_integral_initial_condition_sensitivity(self, use_output_var):
+    def test_explicit_time_integral_initial_condition_sensitivity(
+        self, use_output_var, convert_to_format
+    ):
         times = np.linspace(0, 1, 10)
         model = pybamm.BaseModel()
+        model.convert_to_format = convert_to_format
         c = pybamm.Variable("c")
         a = pybamm.InputParameter("a")
         model.rhs = {c: -a * c}
@@ -1560,6 +1583,7 @@ class TestSolution:
             sol["integral"].sensitivities["a"], [expected], rtol=1e-3
         )
 
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
     @pytest.mark.parametrize("use_post_sum", [False, True])
     @pytest.mark.parametrize(
         ("t_later", "integral", "integral_sensitivity"),
@@ -1567,9 +1591,10 @@ class TestSolution:
         ids=["shared-boundary", "gap"],
     )
     def test_explicit_time_integral_sensitivity_over_joined_solutions(
-        self, t_later, integral, integral_sensitivity, use_post_sum
+        self, t_later, integral, integral_sensitivity, use_post_sum, convert_to_format
     ):
         model = pybamm.BaseModel()
+        model.convert_to_format = convert_to_format
         y = pybamm.Variable("y")
         a = pybamm.InputParameter("a")
         model.rhs = {y: 0 * y}
@@ -1593,12 +1618,14 @@ class TestSolution:
         np.testing.assert_allclose(joined.entries, [value], rtol=1e-6)
         np.testing.assert_allclose(joined.sensitivities["a"], [sensitivity], rtol=1e-6)
 
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
     @pytest.mark.parametrize("use_output_var", [False, True])
     @pytest.mark.parametrize("sensitivity_name", ["a", "b"])
     def test_explicit_time_integral_post_sum_sensitivity_to_one_input(
-        self, sensitivity_name, use_output_var
+        self, sensitivity_name, use_output_var, convert_to_format
     ):
         model = pybamm.BaseModel()
+        model.convert_to_format = convert_to_format
         c = pybamm.Variable("c")
         a = pybamm.InputParameter("a")
         b = pybamm.InputParameter("b")
@@ -1627,6 +1654,7 @@ class TestSolution:
             "a": 2 * integral * 2.0 * dintegral_da,
             "b": integral**2,
         }[sensitivity_name]
+        np.testing.assert_allclose(sol["value"].entries, [integral**2 * 2.0], rtol=1e-6)
         sensitivities = sol["value"].sensitivities
         assert sorted(sensitivities) == sorted(["all", sensitivity_name])
         np.testing.assert_allclose(sensitivities["all"], [[expected]], rtol=1e-6)

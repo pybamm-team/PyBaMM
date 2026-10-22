@@ -300,6 +300,11 @@ class QuickPlot:
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
 
+        # Every name below is read from every solution, so build them as one set
+        names = [var for variable_tuple in output_variables for var in variable_tuple]
+        for solution in solutions:
+            solution._build_missing(names)
+
         for k, variable_tuple in enumerate(output_variables):
             # Prepare list of variables
             variables = [None] * len(solutions)
