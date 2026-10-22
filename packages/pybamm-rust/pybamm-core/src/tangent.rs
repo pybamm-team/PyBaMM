@@ -32,7 +32,11 @@ pub fn tangent_wrt_params(arena: &mut Arena, expr: NodeId) -> NodeId {
 /// `active_indices` must ascend. Overlap is all-or-nothing: a node straddling the
 /// boundary is seeded over its whole range.
 #[must_use]
-pub fn tangent_wrt_subset(arena: &mut Arena, expr: NodeId, active_indices: &[usize]) -> NodeId {
+pub(crate) fn tangent_wrt_subset(
+    arena: &mut Arena,
+    expr: NodeId,
+    active_indices: &[usize],
+) -> NodeId {
     assert!(
         active_indices.is_sorted(),
         "active state indices must ascend"
@@ -162,7 +166,7 @@ fn is_literal_zero(arena: &Arena, id: NodeId) -> bool {
     }
 }
 
-/// `d(a^b)/db`: `a^b * ln(a)` where `a > 0` and 0 elsewhere.
+/// `d(a^b)/db`: `a^b * ln(a)` where `a > 0` and 0 elsewhere, as reverse mode takes it.
 ///
 /// `ln` reads `max(a, smallest subnormal)`, so the gated-off product is a finite zero, not
 /// `0 * -inf`; for `a > 0` the gate and the `max` are exact, so the value is `a^b * ln(a)`.
@@ -538,6 +542,7 @@ impl Differentiator<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::adjoint::AdjointTape;
     use crate::arena::DagRef;
     use crate::eval::{CompiledExpr, TangentInputs};
     use crate::node::InterpolantData;
@@ -586,6 +591,16 @@ mod tests {
             .collect()
     }
 
+    /// The gradient of a scalar `root` from one reverse pass.
+    fn reverse_gradient(arena: &Arena, root: NodeId, y: &[f64], inputs: &[f64]) -> Vec<f64> {
+        let tape = AdjointTape::new(DagRef::new(arena, root), y.len());
+        let mut scratch = vec![0.0; tape.scratch_len()];
+        let mut bar = vec![0.0; tape.scratch_len()];
+        let mut grad = vec![0.0; y.len()];
+        tape.assemble(&mut scratch, &mut bar, &mut grad, 0.0, y, &[], inputs);
+        grad
+    }
+
     #[test]
     fn power_rule_with_an_input_exponent_holds_at_a_zero_or_negative_base() {
         // d(y0^p)/dy0 = p * y0^(p - 1); a 0 * (1 / 0) form made it NaN at the origin.
@@ -601,18 +616,20 @@ mod tests {
         for y in [0.0, -1.0, 2.0] {
             let closed_form = [2.0 * y];
             assert_eq!(forward_gradient(&arena, root, &[y], &[2.0]), closed_form);
+            assert_eq!(reverse_gradient(&arena, root, &[y], &[2.0]), closed_form);
         }
     }
 
     #[test]
     fn power_rule_with_a_state_exponent_is_finite_at_a_zero_base() {
-        // At (0, 2): d/dy0 = 2 * 0 and d/dy1 is 0 by the `a > 0` convention.
+        // At (0, 2): d/dy0 = 2 * 0 and d/dy1 is 0 by the `a > 0` convention both modes share.
         let mut arena = Arena::new();
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
         let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
         let root = arena.alloc(Node::Pow(y0, y1));
         let y = [0.0, 2.0];
         assert_eq!(forward_gradient(&arena, root, &y, &[]), [0.0, 0.0]);
+        assert_eq!(reverse_gradient(&arena, root, &y, &[]), [0.0, 0.0]);
     }
 
     #[test]
