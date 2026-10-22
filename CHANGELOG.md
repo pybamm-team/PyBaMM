@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added an example notebook, `pouch-cell-DFN-3D`, that builds a 3D pouch cell DFN with both current collectors, their tabs and a 3D heat equation on hexahedral meshes, solved with `FiniteVolumeUnstructured` and animated with `VTKQuickPlot`. ([#5930](https://github.com/pybamm-team/PyBaMM/pull/5930))
+
 ## Bug fixes
 
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
