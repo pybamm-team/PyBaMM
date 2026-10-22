@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Deprecated
+
+- `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
+
 ## Bug fixes
 
 - Joining `Solution` objects with incompatible sensitivities now warns and drops sensitivity data while preserving the numerical solution, instead of raising errors or producing invalid gradients. ([#5924](https://github.com/pybamm-team/PyBaMM/pull/5924))
