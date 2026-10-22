@@ -25,6 +25,10 @@ no-build-isolation-package = ["pybammsolvers"]
 [dependency-groups]
 dev = [
     "nox[uv]",
+    "maturin>=1.14.1,<2.0",  # the verified floor; <1.9.4 skips PYO3_BUILD_EXTENSION_MODULE
+    "hatchling>=1.31.0",
+    "mypy>=1.14",
+    "scipy-stubs",
     "pre-commit",
     # pybammsolvers build toolchain, required in the venv because the solver is
     # installed with --no-build-isolation (above) and rebuilds itself on import.
