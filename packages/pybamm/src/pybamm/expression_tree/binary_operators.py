@@ -272,7 +272,7 @@ class BinaryOperator(pybamm.Symbol):
 
         return json_dict
 
-    def _t_discon(self, expr, y0, inputs, num_events):
+    def _t_discon(self, expr, y0, inputs, t_eval):
         """Returns the discontinuity time-points for a function."""
         raise NotImplementedError(f"`_t_discon` not implemented for {self.name}")
 
@@ -834,7 +834,7 @@ class _Heaviside(BinaryOperator):
         # an array of NaNs
         return self._binary_evaluate(left, right) * np.nan
 
-    def _t_discon(self, expr, y0, inputs, num_events):
+    def _t_discon(self, expr, y0, inputs, t_eval):
         """Returns the discontinuity time-points for the heaviside function."""
         value = expr.evaluate(0, y0, inputs=inputs)
         t_discon = [value]
@@ -961,16 +961,72 @@ class Modulo(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._casadi_evaluate()`."""
         return casadi.fmod(left, right)
 
-    def _t_discon(self, expr, y0, inputs, num_events):
-        value = expr.evaluate(0, y0, inputs=inputs)
-        t_discon = []
+    def _t_discon(self, expr, y0, inputs, t_eval):
+        """Returns the discontinuity time-points of ``t mod expr`` over ``t_eval``."""
+        period = float(np.ravel(expr.evaluate(0, y0, inputs=inputs))[0])
+        return np.concatenate(self._t_stops_restarts(period, t_eval))
 
-        for i in np.arange(num_events):
-            t = value * (i + 1)
-            # Stop right before t and at t
-            t_discon.append(np.nextafter(t, -np.inf))
-            t_discon.append(t)
-        return t_discon
+    @staticmethod
+    def _t_stops_restarts(
+        period: float, t_eval: npt.ArrayLike
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Times either side of each reset of ``t mod period`` over ``t_eval``.
+
+        Parameters
+        ----------
+        period : float
+            The positive period of the modulo.
+        t_eval : array-like
+            The times of the integration window.
+
+        Returns
+        -------
+        stops, restarts : :class:`numpy.ndarray`
+            The last float before and the first float after each reset in
+            :meth:`Modulo._t_resets`, at which ``t mod period`` takes its old and its
+            new value.
+        """
+        t_resets = Modulo._t_resets(period, t_eval)
+        # CasADi's fmod takes the new value at a reset for t > 0 but the old one
+        # for t < 0, and is continuous at t = 0
+        positive = t_resets[t_resets > 0]
+        negative = t_resets[t_resets < 0]
+        stops = np.concatenate([np.nextafter(positive, -np.inf), negative])
+        restarts = np.concatenate([positive, np.nextafter(negative, np.inf)])
+        return stops, restarts
+
+    @staticmethod
+    def _t_resets(period: float, t_eval: npt.ArrayLike) -> npt.NDArray[np.float64]:
+        """Times at which ``t mod period`` resets over the range of ``t_eval``.
+
+        Parameters
+        ----------
+        period : float
+            The positive period of the modulo.
+        t_eval : array-like
+            The times of the integration window.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The multiples of ``period`` in the range of ``t_eval``, and the nearest
+            multiple beyond each end, so that none inside is lost to rounding. Each is
+            rounded away from zero, to the float at which ``fmod`` has reset for
+            ``t > 0`` and has not yet for ``t < 0``. Empty if ``period`` is infinite.
+        """
+        if not np.isfinite(period):
+            # t mod inf is t, which never resets
+            return np.array([])
+        first = np.floor(t_eval[0] / period)
+        last = np.ceil(t_eval[-1] / period)
+        t_resets = period * np.arange(first, last + 1)
+        # k * period can round to the float short of the multiple, where the exact
+        # fmod has not reset, so move those one float on
+        short = np.abs(np.fmod(t_resets, period)) > period / 2
+        t_resets[short] = np.nextafter(
+            t_resets[short], np.copysign(np.inf, t_resets[short])
+        )
+        return t_resets
 
 
 class Minimum(BinaryOperator):
