@@ -372,10 +372,53 @@ class TestScipySolver:
             )
             np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
-    def test_model_solver_with_inputs_with_casadi(self):
+    def test_rust_evaluators_receive_numpy_inputs(self, monkeypatch):
+        # A CasADi DM would be converted to numpy again on every evaluation
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+
+        input_types = []
+        evaluate = RustEvaluator.__call__
+
+        def recording_call(self, t, y, inputs, v=None):
+            input_types.append(type(inputs))
+            return evaluate(self, t, y, inputs, v)
+
+        monkeypatch.setattr(RustEvaluator, "__call__", recording_call)
+        model = pybamm.BaseModel()
+        model.convert_to_format = "rust"
+        var = pybamm.Variable("var")
+        model.rhs = {var: -pybamm.InputParameter("rate") * var}
+        model.initial_conditions = {var: 1}
+        model.events = [pybamm.Event("var=0.5", var - 0.5)]
+        pybamm.Discretisation().process_model(model)
+
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
+        solver.solve(model, np.linspace(0, 10, 20), inputs={"rate": 0.1})
+
+        assert input_types
+        assert set(input_types) == {np.ndarray}
+
+    def test_rust_model_with_an_input_dependent_discontinuity(self):
+        # The switch time is evaluated through Rust, with the inputs stacked for it
+        model = pybamm.BaseModel()
+        model.convert_to_format = "rust"
+        var = pybamm.Variable("var")
+        t_switch = pybamm.InputParameter("t_switch")
+        model.rhs = {var: -(1 + (pybamm.t > t_switch)) * var}
+        model.initial_conditions = {var: 1}
+        pybamm.Discretisation().process_model(model)
+
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
+        solution = solver.solve(model, np.linspace(0, 1, 11), inputs={"t_switch": 0.45})
+        t = solution.t
+        expected = np.where(t <= 0.45, np.exp(-t), np.exp(-0.45 - 2 * (t - 0.45)))
+        np.testing.assert_allclose(solution.y[0], expected, rtol=1e-7, atol=1e-9)
+
+    @pytest.mark.parametrize("convert_to_format", ["casadi", "rust"])
+    def test_model_solver_with_inputs_and_event(self, convert_to_format):
         # Create model
         model = pybamm.BaseModel()
-        model.convert_to_format = "casadi"
+        model.convert_to_format = convert_to_format
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: -pybamm.InputParameter("rate") * var}
