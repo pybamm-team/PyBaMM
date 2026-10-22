@@ -59,6 +59,7 @@ jobs:
               - '.github/workflows/_build_solver_wheels.yml'
             pybamm:
               - 'packages/pybamm/**'
+              - 'packages/pybamm-rust/**'
               - 'pyproject.toml'
               - 'uv.lock'
               - 'noxfile.py'
@@ -103,6 +104,48 @@ jobs:
             echo "macos_runners=$macos"
           } >> "$GITHUB_OUTPUT"
 
+  rust_msrv:
+    needs: changes
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    name: Rust MSRV (1.89)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the MSRV toolchain
+        run: rustup toolchain install 1.89 --profile minimal --no-self-update
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
+          key: msrv-1.89
+      - name: Check against the declared MSRV
+        run: >
+          cargo +1.89 check --manifest-path packages/pybamm-rust/Cargo.toml
+          --locked --all-targets --all-features
+
+  rust_tests:
+    needs: changes
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    name: Rust tests
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
+          key: tests
+      - name: Run the Rust test suite
+        run: >
+          cargo test --manifest-path packages/pybamm-rust/Cargo.toml
+          --locked --workspace --all-features
+
   style:
     runs-on: ubuntu-latest
     permissions:
@@ -125,6 +168,14 @@ jobs:
         with:
           python-version: 3.12
 
+      # Pinned, as each Rust release adds pedantic and nursery lints that `-D warnings` fails on.
+      - name: Install the pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal --component clippy,rustfmt --no-self-update
+          rustup default 1.99.1
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
@@ -343,6 +394,8 @@ jobs:
     needs:
       - changes
       - style
+      - rust_msrv
+      - rust_tests
       - build_solver
       - run_unit_tests
       - run_coverage
