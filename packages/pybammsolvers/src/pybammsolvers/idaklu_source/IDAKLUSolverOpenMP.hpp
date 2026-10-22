@@ -110,14 +110,12 @@ public:
   //   y[i][j]        -> y[i * stride_y + j]      where stride_y = length_of_return_vector
   //   yp[i][j]       -> yp[i * stride_yp + j]    where stride_yp = number_of_states
   //   yS[i][p][j]    -> yS[(i * n_params + p) * stride_y + j]
-  //   ypS[i][p][j]   -> ypS[(i * n_params + p) * stride_yp + j]
   vector<sunrealtype> t;   // [n_timesteps]
   vector<sunrealtype> y;   // [n_timesteps * length_of_return_vector]  (flat)
   vector<sunrealtype> yp;  // [n_timesteps * number_of_states]         (flat)
   // In save_outputs_only mode yS instead uses the final numpy layout,
   // yS[(i * stride_y + j) * n_params + p], so no transpose is needed at the end
   vector<sunrealtype> yS;  // [n_timesteps * n_params * length_of_return_vector] (flat)
-  vector<sunrealtype> ypS; // [n_timesteps * n_params * number_of_states]        (flat)
   SetupOptions const setup_opts;
   SolverOptions const solver_opts;
   IDAKLUStats accumulated_stats;  // Accumulated stats across reinitializations
@@ -238,6 +236,14 @@ public:
 
 
   /**
+   * @brief Take one IDASolve step towards tout, rejecting non-finite residuals
+   * @param tout The time IDASolve integrates towards
+   * @param t_val Set to the time reached
+   * @return The IDASolve return flag
+   */
+  int Step(sunrealtype tout, sunrealtype &t_val);
+
+  /**
    * @brief Concrete implementation of initialization method
    */
   void Initialize() override;
@@ -306,6 +312,12 @@ public:
   void ReinitializeIntegrator(const sunrealtype& t_val);
 
   /**
+   * @brief The IDAS sensitivity corrector: IDA_STAGGERED with sensitivity
+   * error control, else IDA_SIMULTANEOUS
+   */
+  int SensitivityMethod() const;
+
+  /**
    * @brief Hand IDAS the per-parameter scales held in sens_scales_.
    *
    * Must run after every IDASensInit/IDASensReInit, both of which reset pbar
@@ -348,6 +360,8 @@ public:
   /**
    * @brief Build the algebraic Newton solver for consistent initial conditions.
    * Only built when mass matrix has zeros in algebraic rows (standard-form).
+   * Not built for a full-system solve with an iterative linear solver, which
+   * leaves the initial conditions to IDACalcIC.
    */
   void BuildAlgebraicSolver(const sunrealtype* id_val);
 
@@ -441,10 +455,7 @@ public:
    * numpy layout unless save_outputs_only already wrote them that way.
    * @brief Hand the sensitivity arrays over in numpy layout
    */
-  void ReorderSensitivities(
-    std::vector<sunrealtype> &yS_out,
-    std::vector<sunrealtype> &ypS_out
-  );
+  void ReorderSensitivities(std::vector<sunrealtype> &yS_out);
 
   /**
    * @brief Emit buffered log and statistics output (GIL held, serial section)
@@ -452,12 +463,12 @@ public:
   void flush_log() override;
 
   /**
-   * @brief Set the step values (uses member state y_val_, yp_val_, yS_val_, ypS_val_, i_save_)
+   * @brief Set the step values (uses member state y_val_, yp_val_, yS_val_, i_save_)
    */
   void SetStep(sunrealtype &tval);
 
   /**
-   * @brief Save interpolated step values (uses member state for y/yp/yS/ypS/i_save)
+   * @brief Save interpolated step values (uses member state for y/yp/yS/i_save)
    */
   void SaveInterpPoints(
     int &i_interp,
@@ -492,11 +503,6 @@ public:
    * @brief Save Hermite interpolation derivatives at the requested time
    */
   void SetStepHermite(sunrealtype &tval);
-
-  /**
-   * @brief Save Hermite interpolation sensitivity derivatives at the requested time
-   */
-  void SetStepHermiteSensitivities(sunrealtype &tval);
 
 };
 

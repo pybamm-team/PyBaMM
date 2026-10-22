@@ -2733,3 +2733,298 @@ class TestIDAKLUSolverStatistics:
         stats = solution.solver_statistics
         assert stats.number_of_steps > 0
         assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
+
+
+def _inconsistent_dae_model():
+    """Discretised ``du/dt = -a u``, ``0 = v - b u``, with ``v`` started off its
+    consistent value ``b``, so the initial conditions have to be solved for."""
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    v = pybamm.Variable("v")
+    a = pybamm.InputParameter("a")
+    b = pybamm.InputParameter("b")
+    model.rhs = {u: -a * u}
+    model.algebraic = {v: v - b * u}
+    model.initial_conditions = {u: 1, v: 1}
+    model.variables = {"u": u, "v": v}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+class TestIDAKLUNonFiniteResiduals:
+    """A NaN or inf residual makes IDAS cut the step rather than accept it."""
+
+    @staticmethod
+    def _square_root_decay_model():
+        """``du/dt = -a sqrt(u) + b``: a full step overshoots ``u`` below zero,
+        where the residual is NaN, so the solver has to cut the step."""
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        model.rhs = {u: -a * pybamm.sqrt(u) + b}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    def test_a_nan_iterate_is_rejected_with_sensitivities(self):
+        # The sensitivity corrector's convergence norm drops NaN, so only the
+        # residual check stops a NaN state being accepted here
+        model = self._square_root_decay_model()
+        t_eval = np.linspace(0, 5, 6)
+        inputs = {"a": 10.0, "b": 1e-3}
+        solver = pybamm.IDAKLUSolver()
+        reference = solver.solve(model, t_eval, inputs=inputs)
+        solution = solver.solve(
+            model, t_eval, inputs=inputs, calculate_sensitivities=True
+        )
+
+        assert solution.termination == "final time"
+        assert np.all(np.isfinite(solution.y))
+        np.testing.assert_allclose(
+            solution["u"](t_eval), reference["u"](t_eval), rtol=1e-3, atol=1e-6
+        )
+        for name in inputs:
+            assert np.all(np.isfinite(solution["u"].sensitivities[name]))
+
+    @pytest.mark.parametrize("output_variables", [None, ["u"]])
+    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
+    def test_a_residual_that_stays_nan_fails(
+        self, calculate_sensitivities, output_variables
+    ):
+        # NaN for every state once t > 0.5, so no step past it can succeed
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: -a * u + pybamm.sqrt(0.5 - pybamm.t)}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+        with pytest.raises(pybamm.SolverError, match=r"^input set 0: IDA_"):
+            solver.solve(
+                model,
+                np.linspace(0, 1, 5),
+                inputs={"a": 2.0},
+                calculate_sensitivities=calculate_sensitivities,
+            )
+
+    def test_an_infinite_sensitivity_residual_fails(self):
+        # d sqrt(p) / dp is infinite at p = 0, though the residual is not
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: pybamm.sqrt(pybamm.InputParameter("p"))}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+        pybamm.Discretisation().process_model(model)
+
+        with pytest.raises(pybamm.SolverError, match=r"IDA_REP_SRES_ERR"):
+            pybamm.IDAKLUSolver().solve(
+                model, [0, 1], inputs={"p": 0.0}, calculate_sensitivities=True
+            )
+
+    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
+    def test_a_failing_first_step_reports_its_own_error(self, calculate_sensitivities):
+        # Reading back a step that was never taken fails with IDA_BAD_K instead
+        with pytest.raises(pybamm.SolverError) as error:
+            pybamm.IDAKLUSolver().solve(
+                get_broken_input_model(),
+                [0, 1],
+                inputs={"k": -1.0},
+                calculate_sensitivities=calculate_sensitivities,
+            )
+        message = str(error.value)
+        assert message.startswith("input set 0: IDASolve at t0: IDA_REP_RES_ERR")
+        assert "IDA_BAD_K" not in message
+
+
+class TestIDAKLUFullNewtonIterativeLinearSolver:
+    """``newton_mode="full"`` with an iterative linear solver, which IDA must
+    set up before its linear solver can be driven."""
+
+    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
+    @pytest.mark.parametrize(
+        ("jacobian", "preconditioner"),
+        [
+            ("sparse", "BBDP"),
+            ("sparse", "none"),
+            ("matrix-free", "BBDP"),
+            ("matrix-free", "none"),
+        ],
+    )
+    def test_initial_conditions_and_solution(
+        self, jacobian, preconditioner, calculate_sensitivities
+    ):
+        a, b = 2.0, 3.0
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-8,
+            atol=1e-10,
+            options={
+                "newton_mode": "full",
+                "linear_solver": "SUNLinSol_SPGMR",
+                "jacobian": jacobian,
+                "preconditioner": preconditioner,
+            },
+        )
+        t = np.linspace(0, 1, 11)
+        solution = solver.solve(
+            _inconsistent_dae_model(),
+            t,
+            inputs={"a": a, "b": b},
+            calculate_sensitivities=calculate_sensitivities,
+        )
+
+        decay = np.exp(-a * t)
+        np.testing.assert_allclose(solution["u"](t), decay, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(solution["v"](t), b * decay, rtol=1e-5, atol=1e-8)
+        if calculate_sensitivities:
+            sensitivities = solution["v"].sensitivities
+            np.testing.assert_allclose(
+                sensitivities["b"].ravel()[[0, -1]], decay[[0, -1]], atol=1e-5
+            )
+            np.testing.assert_allclose(
+                sensitivities["a"].ravel()[[0, -1]],
+                (-b * t * decay)[[0, -1]],
+                atol=1e-5,
+            )
+
+
+class TestIDAKLUSensitivityErrorControl:
+    """The ``sensitivity_error_control`` option."""
+
+    @staticmethod
+    def _forced_model(algebraic=False, switch=False):
+        """``du/dt = -u / 10 + p sin(2 t)`` at ``p = 0``: ``u`` decays slowly,
+        so only error control on ``du/dp`` resolves its oscillation.
+
+        Parameters
+        ----------
+        algebraic : bool, optional
+            Add ``0 = v - b u``, with ``v`` started off its consistent value.
+        switch : bool, optional
+            Add ``(t > t_switch) / 10`` to ``du/dt``, which leaves ``du/dp`` as
+            it is.
+        """
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        p = pybamm.InputParameter("p")
+        rhs = -u / 10 + p * pybamm.sin(2 * pybamm.t)
+        if switch:
+            rhs = rhs + (pybamm.t > pybamm.InputParameter("t_switch")) / 10
+        model.rhs = {u: rhs}
+        initial_conditions = {u: 1}
+        variables = {"u": u}
+        if algebraic:
+            v = pybamm.Variable("v")
+            model.algebraic = {v: v - pybamm.InputParameter("b") * u}
+            initial_conditions[v] = 1
+            variables["v"] = v
+        model.initial_conditions = initial_conditions
+        model.variables = variables
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    @staticmethod
+    def _forced_sensitivity(t):
+        """``du/dp`` of :meth:`_forced_model` at ``p = 0``."""
+        return (np.sin(2 * t) / 10 - 2 * np.cos(2 * t) + 2 * np.exp(-t / 10)) / 4.01
+
+    def test_defaults_to_off(self):
+        assert pybamm.IDAKLUSolver().options["sensitivity_error_control"] is False
+
+    @pytest.mark.parametrize("value", [1, "True", None])
+    def test_must_be_a_bool(self, value):
+        with pytest.raises(pybamm.SolverError, match="sensitivity_error_control"):
+            pybamm.IDAKLUSolver(options={"sensitivity_error_control": value})
+
+    @pytest.mark.parametrize("output_variables", [None, ["u"]])
+    # Breakpoints reinitialise the sensitivities, in the staggered corrector too
+    @pytest.mark.parametrize("t_eval", [[0, 20], np.array([0, 7, 13, 20])])
+    def test_sensitivities_meet_the_tolerances(self, t_eval, output_variables):
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-6,
+            atol=1e-6,
+            output_variables=output_variables,
+            options={"sensitivity_error_control": True},
+        )
+        t = np.linspace(0, 20, 101)
+        solution = solver.solve(
+            self._forced_model(),
+            t_eval,
+            inputs={"p": 0.0},
+            calculate_sensitivities=True,
+            t_interp=t,
+        )
+        np.testing.assert_allclose(
+            solution["u"].sensitivities["p"].ravel(),
+            self._forced_sensitivity(t),
+            atol=1e-4,
+        )
+
+    def test_dae_sensitivities_meet_the_tolerances(self):
+        b = 3.0
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-6, atol=1e-6, options={"sensitivity_error_control": True}
+        )
+        t = np.linspace(0, 20, 101)
+        solution = solver.solve(
+            self._forced_model(algebraic=True),
+            [0, 20],
+            inputs={"p": 0.0, "b": b},
+            calculate_sensitivities=True,
+            t_interp=t,
+        )
+        sensitivities = solution["v"].sensitivities
+        np.testing.assert_allclose(
+            sensitivities["p"].ravel(), b * self._forced_sensitivity(t), atol=1e-4
+        )
+        np.testing.assert_allclose(
+            sensitivities["b"].ravel(), np.exp(-t / 10), atol=1e-4
+        )
+
+    @pytest.mark.parametrize("output_variables", [None, ["u"]])
+    def test_stays_on_after_a_restart(self, output_variables):
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-6,
+            atol=1e-6,
+            output_variables=output_variables,
+            options={"sensitivity_error_control": True},
+        )
+        solution = solver.solve(
+            self._forced_model(switch=True),
+            [0, 20],
+            inputs={"p": 0.0, "t_switch": 7.0},
+            calculate_sensitivities=["p"],
+            t_interp=np.linspace(0, 20, 101),
+        )
+        # An input-dependent switch time makes the solver restart there
+        assert len(solution.sub_solutions) == 2
+        np.testing.assert_allclose(
+            solution["u"].sensitivities["p"].ravel(),
+            self._forced_sensitivity(solution.t),
+            atol=1e-4,
+        )
+
+    def test_max_nonlinear_iterations_caps_the_sensitivity_corrector(self):
+        def number_of_steps(max_nonlinear_iterations):
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-6,
+                atol=1e-6,
+                options={
+                    "sensitivity_error_control": True,
+                    "max_nonlinear_iterations": max_nonlinear_iterations,
+                },
+            )
+            solution = solver.solve(
+                self._forced_model(),
+                [0, 20],
+                inputs={"p": 0.0},
+                calculate_sensitivities=True,
+            )
+            return solution.solver_statistics.number_of_steps
+
+        # The states converge in one iteration, so only the staggered
+        # corrector's cap of one iteration makes the solver cut its steps
+        assert number_of_steps(1) > 2 * number_of_steps(40)

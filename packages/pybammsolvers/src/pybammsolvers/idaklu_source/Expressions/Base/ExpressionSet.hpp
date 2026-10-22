@@ -79,6 +79,9 @@ public:
 
   SetupOptions setup_opts;
 
+  // While set, a residual with a NaN or inf entry returns a recoverable failure
+  bool reject_nonfinite = false;  // cppcheck-suppress unusedStructMember
+
   virtual sunrealtype *get_tmp_state_vector() = 0;
   virtual sunrealtype *get_tmp_sparse_jacobian_data() = 0;
 

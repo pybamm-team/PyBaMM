@@ -195,6 +195,12 @@ SolverOptions::SolverOptions(py::dict &py_opts)
         silence_sundials_errors = py_opts["silence_sundials_errors"].cast<bool>();
     }
 
+    // Off by default, as in IDAS: sensitivities then only enter the Newton test
+    sensitivity_error_control = false;
+    if (py_opts.contains("sensitivity_error_control")) {
+        sensitivity_error_control = py_opts["sensitivity_error_control"].cast<bool>();
+    }
+
     // Knot reduction multiplier (1.0 = no reduction, >1.0 = active)
     hermite_reduction_factor = 1.0;
     if (py_opts.contains("hermite_reduction_factor")) {

@@ -48,7 +48,9 @@ def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.n
 
     IDAS weights the scaled sensitivity ``pbar_i * dy/dp_i`` like a state, so
     ``pbar_i = |p_i|`` weights each column independently of the units of
-    ``p_i``.
+    ``p_i``. The weights set the sensitivities' Newton convergence test, and
+    enter the local error test only with the ``"sensitivity_error_control"``
+    option.
 
     Parameters
     ----------
@@ -229,6 +231,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "nonlinear_convergence_coefficient": 0.33,
                 # Suppress algebraic variables from error test
                 "suppress_algebraic_error": False,
+                # Include the forward sensitivities in the local error test, so
+                # they meet the tolerances too, at extra solve time
+                "sensitivity_error_control": False,
                 # Store Hermite interpolation data for the solution.
                 # This option is always disabled if output_variables are given
                 # or if t_interp values are specified
@@ -273,8 +278,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 #         algebraic variables. Requires a direct linear solver and
                 #         a standard form DAE.
                 # "full": always use IDA's full-system linear solve. This uses the full
-                #         system of equationd and can handle non-standard form DAEs and
-                #         all classes of linear solvers/
+                #         system of equations and can handle non-standard form DAEs.
+                #         With an iterative linear solver, IDA's own initial
+                #         condition solver is used instead.
                 "newton_mode": "auto",
                 ## Early termination
                 # Maximum number of consecutive steps allowed without advancing
@@ -368,6 +374,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "max_convergence_failures": 100,
             "nonlinear_convergence_coefficient": 0.33,
             "suppress_algebraic_error": False,
+            "sensitivity_error_control": False,
             "hermite_interpolation": True,
             "hermite_reduction_factor": 1.0,
             "nonlinear_convergence_coefficient_ic": 0.0033,
@@ -409,6 +416,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if not isinstance(options["compile"], bool):
             raise pybamm.SolverError("compile must be a bool")
+
+        if not isinstance(options["sensitivity_error_control"], bool | np.bool_):
+            raise pybamm.SolverError("sensitivity_error_control must be a bool")
 
         _check_klu_pivot_tolerance(options["klu_pivot_tolerance"])
 
