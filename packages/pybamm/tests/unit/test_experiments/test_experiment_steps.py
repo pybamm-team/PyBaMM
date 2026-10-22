@@ -267,6 +267,34 @@ class TestExperimentSteps:
             pybamm.step.string("Discharge at 1 B for 2 hours")
         with pytest.raises(ValueError, match=r"time units must be"):
             pybamm.step.string("Discharge at 1 A for 2 years")
+        # used to fail with "not enough values to unpack"
+        with pytest.raises(ValueError, match=r"Instruction must be"):
+            pybamm.step.string("Charge 1 A for 2 hours")
+        with pytest.raises(ValueError, match=r"Instruction must be"):
+            pybamm.step.string("rest for 2 hours")
+        # used to fail with "too many values to unpack"
+        with pytest.raises(ValueError, match=r"'until' once"):
+            pybamm.step.string("Charge at 1 C until 4.1 V or until 1 hour")
+        with pytest.raises(ValueError, match=r"'for' once"):
+            pybamm.step.string("Discharge at 1 A for 1 hour for 2 hours")
+        # used to complain about the units
+        with pytest.raises(ValueError, match=r"duration must come before 'until'"):
+            pybamm.step.string("Charge at 1 C until 4.2 V for 1 hour")
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Discharge at 1 A for 1 hour  ",
+            "  Discharge at 1 A for 1 hour",
+            "Discharge at 1 A  for 1 hour",
+            "Discharge at 1 A for 1 hour\n",
+        ],
+    )
+    def test_step_string_extra_whitespace(self, text):
+        step = pybamm.step.string(text)
+        assert step.value == 1
+        assert step.duration == 3600
+        assert step.description == text
 
     def test_start_times(self):
         # Test start_times
