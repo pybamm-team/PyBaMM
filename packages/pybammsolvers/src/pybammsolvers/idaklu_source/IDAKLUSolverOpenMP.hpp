@@ -98,6 +98,10 @@ public:
   vector<sunrealtype> res_dvar_dp;
   // Reused scratch for sparse->dense output sensitivity scatter (outputs-only mode)
   vector<sunrealtype> dvar_dp_dense;
+  // Staged (t, y) points for batched output evaluation (Rust ExprSet only).
+  vector<sunrealtype> stage_out_t_;
+  vector<sunrealtype> stage_out_y_;
+  size_t stage_out_first_ = 0;  // i_save_ index of the first staged point
   bool const sensitivity;  // cppcheck-suppress unusedStructMember
   bool const save_outputs_only; // cppcheck-suppress unusedStructMember
   bool save_hermite;  // cppcheck-suppress unusedStructMember
@@ -174,6 +178,21 @@ public:
     std::unique_ptr<FullSystemResources> full;
   };
   std::unique_ptr<AlgSolverState> alg_state_;
+
+  // Scratch for SensitivityInitialConditions, allocated only when it can run
+  struct SensitivityICResources {
+    SUNMatrix mass_jac = nullptr;  // J at cj = 1
+    N_Vector* res = nullptr;
+    N_Vector delta = nullptr;
+    int number_of_parameters = 0;
+
+    ~SensitivityICResources() {
+      if (res) N_VDestroyVectorArray(res, number_of_parameters);
+      if (delta) N_VDestroy(delta);
+      if (mass_jac) SUNMatDestroy(mass_jac);
+    }
+  };
+  std::unique_ptr<SensitivityICResources> sens_ic_;
 
   int len_rhs_;
   int len_alg_;
@@ -335,6 +354,27 @@ public:
   bool NonlinearSolverInitialConditions(const sunrealtype& t_val);
 
   /**
+   * @brief Run IDACalcIC, returning true on success.
+   *
+   * A failure is logged, and raised when with_sensitivities: IDACalcIC then
+   * leaves the sensitivities at their unconverged guess.
+   */
+  bool CalcIC(
+    const sunrealtype& t_val,
+    const sunrealtype& t_next_perturbed,
+    const int& icopt,
+    bool with_sensitivities);
+
+  /**
+   * @brief Make the algebraic sensitivities and differential sensitivity
+   * derivatives consistent at t_val; returns true on success.
+   *
+   * Solves the linear YA_YDP_INIT sensitivity system once per parameter with
+   * IDA's matrix and direct linear solver.
+   */
+  bool SensitivityInitialConditions(const sunrealtype& t_val);
+
+  /**
    * @brief Set a consistent initialization for ODEs
    */
   void ConsistentInitializationODE(const sunrealtype& t_val);
@@ -483,10 +523,20 @@ public:
    */
   void SetStepOutput(sunrealtype &tval);
 
+  /** @brief Evaluate and store any staged batched-output points */
+  void FlushOutputBatch();
+
   /**
    * @brief Save the output function sensitivities at the requested time
    */
   void SetStepOutputSensitivities(sunrealtype &tval);
+
+  /** @brief Save output sensitivities via native projection, in the CasADi path's yS layout */
+  void NativeSetStepOutputSensitivities(sunrealtype &tval);
+
+  // Native-projection scratch: [n_params * n_states] and [n_params * length_of_return_vector].
+  std::vector<sunrealtype> yS_flat_;
+  std::vector<sunrealtype> out_sens_flat_;
 
   /**
    * @brief Save Hermite interpolation derivatives at the requested time

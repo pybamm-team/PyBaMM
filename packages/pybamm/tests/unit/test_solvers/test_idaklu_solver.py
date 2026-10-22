@@ -380,6 +380,33 @@ class TestIDAKLUSolver:
             atol=1e-5,
         )
 
+    def test_an_input_free_model_takes_zero_width_inputs_rows(self):
+        # An empty input stack is 1 x 0, so each solver must copy no values from a row
+        model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
+        u = pybamm.Variable("u")
+        model.rhs = {u: -u}
+        model.initial_conditions = {u: 1}
+        pybamm.Discretisation().process_model(model)
+        solver = pybamm.IDAKLUSolver()
+        t_eval = np.array([0.0, 1.0])
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_allclose(
+            solution["u"](t_eval), np.exp(-t_eval), rtol=1e-3, atol=1e-6
+        )
+
+        group = solver._setup["solver"]
+        with pytest.raises(
+            ValueError, match=r"wrong number of cols\. Expected 0 but got 1"
+        ):
+            group.solve(
+                t_eval,
+                np.array([]),
+                np.ones((1, 1)),
+                np.zeros((1, 1)),
+                np.ones((1, 1)),
+            )
+
     def test_input_params(self):
         # test a mix of scalar and vector input params
         model = pybamm.BaseModel()
