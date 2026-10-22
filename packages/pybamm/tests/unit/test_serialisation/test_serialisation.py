@@ -1869,7 +1869,8 @@ class TestSpatialMethodsSerialization:
             "extrapolation": {
                 "order": {"gradient": "linear", "value": "quadratic"},
                 "use bcs": True,
-            }
+            },
+            "harmonic flux coefficients": True,
         }
         spatial_methods = {"macroscale": pybamm.FiniteVolume(options=custom_options)}
 
