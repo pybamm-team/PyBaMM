@@ -231,5 +231,6 @@ disable_error_code = ["call-overload", "operator"]
 module = [
     "pybamm.models.base_model.*",
     "pybamm.models.full_battery_models.base_battery_model.*",
+    "pybamm.models.full_battery_models.battery_model_options.*",
 ]
 disable_error_code = "attr-defined"

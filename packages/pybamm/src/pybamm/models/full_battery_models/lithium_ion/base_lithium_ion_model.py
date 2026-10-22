@@ -104,7 +104,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def calc_esoh(self):
         """Whether to include eSOH variables in the summary variables."""
         if (
-            self.options["particle phases"] not in ["1", ("1", "1")]
+            any(len(phases) > 1 for phases in self.options.phases.values())
             or self.options["working electrode"] != "both"
         ):
             self._calc_esoh = False
@@ -337,10 +337,10 @@ class BaseModel(pybamm.BaseBatteryModel):
         for domain in self.options.whole_cell_domains:
             if domain != "separator":
                 domain = domain.split()[0].lower()
-                sei_option = getattr(self.options, domain)["SEI"]
                 sei_on_cracks_option = getattr(self.options, domain)["SEI on cracks"]
                 phases = self.options.phases[domain]
                 for phase in phases:
+                    sei_option = getattr(getattr(self.options, domain), phase)["SEI"]
                     if (
                         sei_option in ["none", "constant"]
                         or sei_on_cracks_option == "false"
@@ -481,9 +481,10 @@ class BaseModel(pybamm.BaseBatteryModel):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "porous":
                 continue
+            domain_options = getattr(self.options, domain)
             if (
-                self.options["SEI"] in ["none", "constant"]
-                and self.options["intercalation kinetics"]
+                domain_options["SEI"] in ["none", "constant"]
+                and domain_options["intercalation kinetics"]
                 in ["linear", "symmetric Butler-Volmer"]
                 and self.options["surface form"] == "false"
             ):
@@ -493,7 +494,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                         self.param, domain, self.options
                     )
                 )
-                if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+                if (
+                    domain_options["intercalation kinetics"]
+                    == "symmetric Butler-Volmer"
+                ):
                     self.submodels[f"{domain} electrode interface"] = (
                         pybamm.kinetics.InverseButlerVolmer(
                             self.param, domain, "lithium metal plating", self.options

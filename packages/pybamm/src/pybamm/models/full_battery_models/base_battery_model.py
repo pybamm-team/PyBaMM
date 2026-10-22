@@ -2,1044 +2,25 @@
 # Base battery model class
 #
 
-from functools import cached_property
-
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
-
-
-def represents_positive_integer(s):
-    """Check if a string represents a positive integer"""
-    try:
-        val = int(s)
-    except ValueError:
-        return False
-    else:
-        return val > 0
-
-
-def _is_msmr(value):
-    """True if an option requests MSMR, including inside a per-electrode tuple."""
-    if isinstance(value, (tuple, list)):
-        return "MSMR" in value
-    return value == "MSMR"
-
-
-def _per_electrode(value, index):
-    """Resolve a possibly per-electrode option to one electrode.
-
-    Per-electrode tuples are ``(negative, positive)``; a scalar applies to
-    both. ``index`` is 0 for the negative electrode, 1 for the positive.
-    """
-    if isinstance(value, (tuple, list)):
-        return value[index]
-    return value
-
-
-def _rename_option(options_dict, option_name, old_name, new_name):
-    if option_name not in options_dict:
-        return
-
-    option = options_dict[option_name]
-
-    if option is None:
-        return
-
-    if isinstance(option, str):
-        if option == old_name:
-            pybamm.logger.warning(
-                f"The '{old_name}' {option_name} model has been renamed to '{new_name}'"
-            )
-            options_dict[option_name] = new_name
-        return
-
-    if isinstance(option, tuple):
-        # Handle tuple of tuples case
-        if isinstance(option[0], tuple):
-            # Check if any element contains old_name
-            has_old_name = False
-            for x in option:
-                if isinstance(x, tuple):
-                    if isinstance(x[0], tuple):
-                        # Handle 2-tuple of 2-tuple of 2-tuple case
-                        for y in x:
-                            if isinstance(y, tuple) and old_name in y:
-                                has_old_name = True
-                    # Handle 2-tuple of 2-tuple case
-                    elif old_name in x:
-                        has_old_name = True
-                elif x == old_name:
-                    has_old_name = True
-
-            if has_old_name:
-                pybamm.logger.warning(
-                    f"The '{old_name}' {option_name} model has been renamed to "
-                    f"'{new_name}'"
-                )
-
-                # Replace old_name with new_name at any nesting level
-                def replace_name(t):
-                    if isinstance(t, tuple):
-                        return tuple(replace_name(x) for x in t)
-                    return new_name if t == old_name else t
-
-                options_dict[option_name] = replace_name(option)
-
-        # Handle single tuple case
-        elif old_name in option:
-            pybamm.logger.warning(
-                f"The '{old_name}' {option_name} model has been renamed to '{new_name}'"
-            )
-            options_dict[option_name] = tuple(
-                new_name if x == old_name else x for x in option
-            )
-
-
-class BatteryModelOptions(pybamm.FuzzyDict):
-    """
-    Attributes
-    ----------
-
-    options: dict
-        A dictionary of options to be passed to the model. The options that can
-        be set are listed below. Note that not all of the options are compatible with
-        each other and with all of the models implemented in PyBaMM. Each option is
-        optional and takes a default value if not provided.
-        In general, the option provided must be a string, but there are some cases
-        where a 2-tuple of strings can be provided instead to indicate a different
-        option for the negative and positive electrodes.
-
-            * "calculate discharge energy": str
-                Whether to calculate the discharge energy, throughput energy and
-                throughput capacity in addition to discharge capacity. Must be one of
-                "true" or "false". "false" is the default, since calculating discharge
-                energy can be computationally expensive for simple models like SPM.
-            * "cell geometry" : str
-                Sets the geometry of the cell. Can be "arbitrary" (default) or
-                "pouch". The arbitrary geometry option solves a 1D electrochemical
-                model with prescribed cell volume and cross-sectional area, and
-                (if thermal effects are included) solves a lumped thermal model
-                with prescribed surface area for cooling.
-            * "calculate heat source for isothermal models" : str
-                Whether to calculate the heat source terms during isothermal operation.
-                Can be "true" or "false". If "false", the heat source terms are set
-                to zero. Default is "false" since this option may require additional
-                parameters not needed by the electrochemical model.
-            * "contact resistance" : str
-                Whether to include an additional series resistance, added to the
-                terminal voltage and contributing Ohmic (I^2 R) heating. Can be
-                "false" (default) or "true". Set via the parameter "Contact
-                resistance [Ohm]", which may be a constant or a function of the
-                volume-averaged cell temperature.
-            * "convection" : str
-                Whether to include the effects of convection in the model. Can be
-                "none" (default), "uniform transverse" or "full transverse".
-                Must be "none" for lithium-ion models.
-            * "current collector" : str
-                Sets the current collector model to use. Can be "uniform" (default),
-                "potential pair" or "potential pair quite conductive".
-            * "diffusivity" : str
-                Sets the model for the diffusivity. Can be "single"
-                (default) or "current sigmoid". A 2-tuple can be provided for different
-                behaviour in negative and positive electrodes.
-            * "dimensionality" : int
-                Sets the dimension of the current collector problem. Can be 0
-                (default), 1 or 2.
-            * "electrolyte conductivity" : str
-                Can be "default" (default), "full", "leading order", "composite" or
-                "integrated".
-            * "exchange-current density" : str
-                Sets the model for the exchange-current density. Can be "single"
-                (default) or "current sigmoid". A 2-tuple can be provided for different
-                behaviour in negative and positive electrodes.
-            * "hydrolysis" : str
-                Whether to include hydrolysis in the model. Only implemented for
-                lead-acid models. Can be "false" (default) or "true". If "true", then
-                "surface form" cannot be 'false'.
-            * "intercalation kinetics" : str
-                Model for intercalation kinetics. Can be "symmetric Butler-Volmer"
-                (default), "asymmetric Butler-Volmer", "linear", "Marcus",
-                "Marcus-Hush-Chidsey" (which uses the asymptotic form from Zeng 2014),
-                or "MSMR" (which uses the form from Baker 2018). A 2-tuple can be
-                provided for different behaviour in negative and positive electrodes.
-            * "interface utilisation": str
-                Can be "full" (default), "constant", or "current-driven".
-            * "lithium plating" : str
-                Sets the model for lithium plating. Can be "none" (default),
-                "reversible", "partially reversible", or "irreversible".
-            * "lithium plating porosity change" : str
-                Whether to include porosity change due to lithium plating, can be
-                "false" (default) or "true".
-            * "loss of active material" : str
-                Sets the model for loss of active material. Can be "none" (default),
-                "stress-driven", "asymmetric stress-driven", "reaction-driven",
-                "current-driven", "stress and reaction-driven", or
-                "asymmetric stress and reaction-driven".
-                A 2-tuple can be provided for different behaviour in negative and
-                positive electrodes.
-            * "number of MSMR reactions" : str
-                Sets the number of reactions to use in the MSMR model in each electrode.
-                A 2-tuple can be provided to give a different number of reactions in
-                the negative and positive electrodes. Default is "none". Can be any
-                2-tuple of strings of integers. For example, set to ("6", "4") for a
-                negative electrode with 6 reactions and a positive electrode with 4
-                reactions.
-            * "open-circuit potential" : str
-                Sets the model for the open circuit potential. Can be "single"
-                (default), "current sigmoid", "one-state hysteresis", "one-state differential capacity hysteresis", or "MSMR".
-                If "MSMR" then the "particle" option must also be "MSMR".
-                A 2-tuple can be provided for different behaviour in negative
-                and positive electrodes.
-            * "operating mode" : str
-                Sets the operating mode for the model. This determines how the current
-                is set. Can be:
-
-                - "current" (default) : the current is explicity supplied
-                - "voltage"/"power"/"resistance" : solve an algebraic equation for \
-                    current such that voltage/power/resistance is correct
-                - "differential power"/"differential resistance" : solve a \
-                    differential equation for the power or resistance
-                - "explicit power"/"explicit resistance" : current is defined in terms \
-                    of the voltage such that power/resistance is correct
-                - "CCCV": a special implementation of the common constant-current \
-                    constant-voltage charging protocol, via an ODE for the current
-                - callable : if a callable is given as this option, the function \
-                    defines the residual of an algebraic equation. The applied current \
-                    will be solved for such that the algebraic constraint is satisfied.
-            * "particle" : str
-                Sets the submodel to use to describe behaviour within the particle.
-                Can be "Fickian diffusion" (default), "uniform profile",
-                "quadratic profile", "quartic profile", or "MSMR". If "MSMR" then the
-                "open-circuit potential" option must also be "MSMR". A 2-tuple can be
-                provided for different behaviour in negative and positive electrodes.
-            * "particle mechanics" : str
-                Sets the model to account for mechanical effects such as particle
-                swelling and cracking. Can be "none" (default), "swelling only",
-                or "swelling and cracking".
-                A 2-tuple can be provided for different behaviour in negative and
-                positive electrodes.
-            * "particle phases": str
-                Number of phases present in the electrode. A 2-tuple can be provided for
-                different behaviour in negative and positive electrodes.
-                For example, set to ("2", "1") for a negative electrode with 2 phases,
-                e.g. graphite and silicon.
-            * "particle shape" : str
-                Sets the model shape of the electrode particles. This is used to
-                calculate the surface area to volume ratio. Can be "spherical"
-                (default), or "no particles".
-            * "particle size" : str
-                Sets the model to include a single active particle size or a
-                distribution of sizes at any macroscale location. Can be "single"
-                (default) or "distribution". Option applies to both electrodes.
-            * "SEI" : str
-                Set the SEI submodel to be used. Options are:
-
-                - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
-                - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
-                - "reaction limited", "reaction limited (asymmetric)", \
-                    "solvent-diffusion limited", "electron-migration limited", \
-                    "interstitial-diffusion limited", "ec reaction limited" ,   \
-                    "VonKolzenberg2020", "tunnelling limited",\
-                    or "ec reaction limited (asymmetric)": :class:`pybamm.sei.SEIGrowth`
-            * "SEI film resistance" : str
-                Set the submodel for additional term in the overpotential due to SEI.
-                The default value is "none" if the "SEI" option is "none", and
-                "distributed" otherwise. This is because the "distributed" model is more
-                complex than the model with no additional resistance, which adds
-                unnecessary complexity if there is no SEI in the first place
-
-                - "none": no additional resistance\
-
-                    .. math::
-                        \\eta_r = \\frac{F}{RT} * (\\phi_s - \\phi_e - U)
-
-                - "distributed": properly included additional resistance term\
-
-                    .. math::
-                        \\eta_r = \\frac{F}{RT}
-                        * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * j)
-
-                - "average": constant additional resistance term (approximation to the \
-                    true model). This model can give similar results to the \
-                    "distributed" case without needing to make j an algebraic state\
-
-                    .. math::
-                        \\eta_r = \\frac{F}{RT}
-                        * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
-            * "SEI on cracks" : str
-                Whether to include SEI growth on particle cracks, can be "false"
-                (default) or "true".
-            * "SEI porosity change" : str
-                Whether to include porosity change due to SEI formation, can be "false"
-                (default) or "true".
-            * "stress-induced diffusion" : str
-                Whether to include stress-induced diffusion, can be "false" or "true".
-                The default is "false" if "particle mechanics" is "none" and "true"
-                otherwise. A 2-tuple can be provided for different behaviour in negative
-                and positive electrodes.
-            * "surface form" : str
-                Whether to use the surface formulation of the problem. Can be "false"
-                (default), "differential" or "algebraic".
-            * "surface temperature" : str
-                Sets the surface temperature model to use. Can be "ambient" (default),
-                which sets the surface temperature equal to the ambient temperature, or
-                "lumped", which adds an ODE for the surface temperature (e.g. to model
-                internal heating of a thermal chamber).
-            * "thermal" : str
-                Sets the thermal model to use. Can be "isothermal" (default), "lumped",
-                "x-lumped", or "x-full". The 'cell geometry' option must be set to
-                'pouch' for 'x-lumped' or 'x-full' to be valid. Using the 'x-lumped'
-                option with 'dimensionality' set to 0 is equivalent to using the
-                'lumped' option.
-            * "total interfacial current density as a state" : str
-                Whether to make a state for the total interfacial current density and
-                solve an algebraic equation for it. Default is "false", unless "SEI film
-                resistance" is distributed in which case it is automatically set to
-                "true".
-            * "voltage as a state" : str
-                Whether to promote voltage to an algebraic state variable.
-                Can be "false" (default) or "true", unless the operating mode
-                is "explicit power" or "explicit resistance", in which case it
-                is automatically set to "true". When "true", the model is a DAE
-                and requires a DAE-capable solver (e.g. the default
-                IDAKLUSolver). When "false", voltage is computed as an
-                expression. Note that setting this to "false" only removes the
-                voltage algebraic equation; SPM/SPMe with ``surface
-                form="false"`` become pure ODE models, but DFN retains other
-                algebraic states (electrode/electrolyte potentials) regardless
-                of this option.
-            * "working electrode" : str
-                Can be "both" (default) for a standard battery or "positive" for a
-                half-cell where the negative electrode is replaced with a lithium metal
-                counter electrode.
-            * "x-average side reactions": str
-                Whether to average the side reactions (SEI growth, lithium plating and
-                the respective porosity change) over the x-axis in Single Particle
-                Models, can be "false" or "true". Default is "false" for SPMe and
-                "true" for SPM.
-            * "use lumped thermal capacity" : str
-                Whether to use a lumped capacity model for the thermal model. Can be
-                "false" (default) or "true". This is only available for the lumped
-                thermal model.
-    """
-
-    def __init__(self, extra_options):
-        self.possible_options = {
-            "calculate discharge energy": ["false", "true"],
-            "calculate heat source for isothermal models": ["false", "true"],
-            "cell geometry": ["arbitrary", "pouch", "cylindrical"],
-            "contact resistance": ["false", "true"],
-            "convection": ["none", "uniform transverse", "full transverse"],
-            "current collector": [
-                "uniform",
-                "potential pair",
-                "potential pair quite conductive",
-            ],
-            "diffusivity": ["single", "current sigmoid"],
-            "dimensionality": [0, 1, 2, 3],
-            "electrolyte conductivity": [
-                "default",
-                "full",
-                "leading order",
-                "composite",
-                "integrated",
-            ],
-            "exchange-current density": ["single", "current sigmoid"],
-            "heat of mixing": ["false", "true"],
-            "hydrolysis": ["false", "true"],
-            "intercalation kinetics": [
-                "symmetric Butler-Volmer",
-                "asymmetric Butler-Volmer",
-                "linear",
-                "Marcus",
-                "Marcus-Hush-Chidsey",
-                "MSMR",
-            ],
-            "interface utilisation": ["full", "constant", "current-driven"],
-            "lithium plating": [
-                "none",
-                "reversible",
-                "partially reversible",
-                "irreversible",
-            ],
-            "lithium plating porosity change": ["false", "true"],
-            "loss of active material": [
-                "none",
-                "stress-driven",
-                "asymmetric stress-driven",
-                "reaction-driven",
-                "current-driven",
-                "stress and reaction-driven",
-                "asymmetric stress and reaction-driven",
-            ],
-            "number of MSMR reactions": ["none"],
-            "open-circuit potential": [
-                "single",
-                "current sigmoid",
-                "MSMR",
-                "one-state hysteresis",
-                "one-state differential capacity hysteresis",
-            ],
-            "operating mode": [
-                "current",
-                "voltage",
-                "power",
-                "differential power",
-                "explicit power",
-                "resistance",
-                "differential resistance",
-                "explicit resistance",
-                "CCCV",
-            ],
-            "particle": [
-                "Fickian diffusion",
-                "uniform profile",
-                "quadratic profile",
-                "quartic profile",
-                "MSMR",
-            ],
-            "particle mechanics": ["none", "swelling only", "swelling and cracking"],
-            "particle phases": ["1", "2"],
-            "particle shape": ["spherical", "no particles"],
-            "particle size": ["single", "distribution"],
-            "SEI": [
-                "none",
-                "constant",
-                "reaction limited",
-                "reaction limited (asymmetric)",
-                "solvent-diffusion limited",
-                "electron-migration limited",
-                "interstitial-diffusion limited",
-                "ec reaction limited",
-                "ec reaction limited (asymmetric)",
-                "VonKolzenberg2020",
-                "tunnelling limited",
-            ],
-            "SEI film resistance": ["none", "distributed", "average"],
-            "SEI on cracks": ["false", "true"],
-            "SEI porosity change": ["false", "true"],
-            "stress-induced diffusion": ["false", "true"],
-            "surface form": ["false", "differential", "algebraic"],
-            "surface temperature": ["ambient", "lumped"],
-            "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
-            "total interfacial current density as a state": ["false", "true"],
-            "transport efficiency": [
-                "Bruggeman",
-                "ordered packing",
-                "hyperbola of revolution",
-                "overlapping spheres",
-                "tortuosity factor",
-                "random overlapping cylinders",
-                "heterogeneous catalyst",
-                "cation-exchange membrane",
-            ],
-            "voltage as a state": ["false", "true"],
-            "working electrode": ["both", "positive"],
-            "x-average side reactions": ["false", "true"],
-            "use lumped thermal capacity": ["false", "true"],
-        }
-
-        default_options = {
-            "calculate discharge energy": "false",
-            "calculate heat source for isothermal models": "false",
-            "cell geometry": "arbitrary",
-            "contact resistance": "false",
-            "convection": "none",
-            "current collector": "uniform",
-            "diffusivity": "single",
-            "dimensionality": 0,
-            "electrolyte conductivity": "default",
-            "exchange-current density": "single",
-            "heat of mixing": "false",
-            "hydrolysis": "false",
-            "intercalation kinetics": "symmetric Butler-Volmer",
-            "interface utilisation": "full",
-            "lithium plating": "none",
-            "lithium plating porosity change": "false",
-            "loss of active material": "none",
-            "number of MSMR reactions": "none",
-            "open-circuit potential": "single",
-            "operating mode": "current",
-            "particle": "Fickian diffusion",
-            "particle mechanics": "none",
-            "particle phases": "1",
-            "particle shape": "spherical",
-            "particle size": "single",
-            "SEI": "none",
-            "SEI film resistance": "none",
-            "SEI on cracks": "false",
-            "SEI porosity change": "false",
-            "stress-induced diffusion": "false",
-            "surface form": "false",
-            "surface temperature": "ambient",
-            "thermal": "isothermal",
-            "total interfacial current density as a state": "false",
-            "transport efficiency": "Bruggeman",
-            "voltage as a state": "false",
-            "working electrode": "both",
-            "x-average side reactions": "false",
-            "use lumped thermal capacity": "false",
-        }
-        extra_options = extra_options or {}
-
-        # Handle OCP option renaming
-        _rename_option(
-            extra_options,
-            "open-circuit potential",
-            "Wycisk",
-            "one-state differential capacity hysteresis",
-        )
-
-        _rename_option(
-            extra_options,
-            "open-circuit potential",
-            "Axen",
-            "one-state hysteresis",
-        )
-
-        working_electrode_option = extra_options.get("working electrode", "both")
-        SEI_option = extra_options.get("SEI", "none")  # return "none" if not given
-        SEI_cr_option = extra_options.get("SEI on cracks", "false")
-        plating_option = extra_options.get("lithium plating", "none")
-        # For the full cell model, if "SEI", "SEI on cracks" and "lithium plating"
-        # options are not provided as tuples, change them to tuples with "none" or
-        # "false" on the positive electrode. To use these options on the positive
-        # electrode of a full cell, the tuple must be provided by the user
-        if working_electrode_option == "both":
-            if not (isinstance(SEI_option, tuple)) and SEI_option != "none":
-                extra_options["SEI"] = (SEI_option, "none")
-            if not (isinstance(SEI_cr_option, tuple)) and SEI_cr_option != "false":
-                extra_options["SEI on cracks"] = (SEI_cr_option, "false")
-            if not (isinstance(plating_option, tuple)) and plating_option != "none":
-                extra_options["lithium plating"] = (plating_option, "none")
-
-        # Change the default for cell geometry based on the current collector
-        # dimensionality
-        # return "none" if option not given
-        dimensionality_option = extra_options.get("dimensionality", "none")
-        if dimensionality_option in [1, 2]:
-            default_options["cell geometry"] = "pouch"
-        # The "cell geometry" option will still be overridden by extra_options if
-        # provided
-
-        # Change the default for cell geometry based on the thermal model
-        # return "none" if option not given
-        thermal_option = extra_options.get("thermal", "none")
-        if thermal_option == "x-full":
-            default_options["cell geometry"] = "pouch"
-        # The "cell geometry" option will still be overridden by extra_options if
-        # provided
-
-        # Change the default for SEI film resistance based on which SEI option is
-        # provided
-        # return "none" if option not given
-        sei_option = extra_options.get("SEI", "none")
-        if sei_option == "none":
-            default_options["SEI film resistance"] = "none"
-        else:
-            default_options["SEI film resistance"] = "distributed"
-        # The "SEI film resistance" option will still be overridden by extra_options if
-        # provided
-
-        # Change the default for particle mechanics based on which half-cell,
-        # SEI on cracks and LAM options are provided
-        # return "false", "false" and "none" respectively if options not given
-        SEI_cracks_option = extra_options.get("SEI on cracks", "false")
-        LAM_opt = extra_options.get("loss of active material", "none")
-        if SEI_cracks_option == "true":
-            default_options["particle mechanics"] = "swelling and cracking"
-        elif SEI_cracks_option == ("true", "false"):
-            if any(
-                s in LAM_opt
-                for s in [
-                    "stress-driven",
-                    "stress and reaction-driven",
-                    "asymmetric stress-driven",
-                    "asymmetric stress and reaction-driven",
-                ]
-            ):
-                default_options["particle mechanics"] = (
-                    "swelling and cracking",
-                    "swelling only",
-                )
-            else:
-                default_options["particle mechanics"] = (
-                    "swelling and cracking",
-                    "none",
-                )
-        else:
-            if any(
-                s in LAM_opt
-                for s in [
-                    "stress-driven",
-                    "stress and reaction-driven",
-                    "asymmetric stress-driven",
-                    "asymmetric stress and reaction-driven",
-                ]
-            ):
-                default_options["particle mechanics"] = "swelling only"
-            else:
-                default_options["particle mechanics"] = "none"
-        # The "particle mechanics" option will still be overridden by extra_options if
-        # provided
-
-        # Change the default for stress-induced diffusion based on which particle
-        # mechanics option is provided. If the user doesn't supply a particle mechanics
-        # option set the default stress-induced diffusion option based on the default
-        # particle mechanics option which may change depending on other options
-        # (e.g. for stress-driven LAM the default mechanics option is "swelling only")
-        mechanics_option = extra_options.get("particle mechanics", "none")
-        if (
-            mechanics_option == "none"
-            and default_options["particle mechanics"] == "none"
-        ):
-            default_options["stress-induced diffusion"] = "false"
-        else:
-            default_options["stress-induced diffusion"] = "true"
-        # The "stress-induced diffusion" option will still be overridden by
-        # extra_options if provided
-
-        # Change the default for surface form based on which particle
-        # phases option is provided.
-        # return "1" if option not given
-        phases_option = extra_options.get("particle phases", "1")
-        if phases_option == "1":
-            default_options["surface form"] = "false"
-        else:
-            default_options["surface form"] = "algebraic"
-        # The "surface form" option will still be overridden by
-        # extra_options if provided
-
-        # Explicit power/resistance control requires voltage as a state:
-        # I = P/V (or I = V/R) is circular when V is an expression that
-        # itself depends on I.
-        mode_option = extra_options.get("operating mode", "current")
-        if mode_option in ("explicit power", "explicit resistance"):
-            default_options["voltage as a state"] = "true"
-
-        # Change default SEI model based on which lithium plating option is provided
-        # return "none" if option not given
-        plating_option = extra_options.get("lithium plating", "none")
-        if plating_option == "partially reversible":
-            default_options["SEI"] = "constant"
-        elif plating_option == ("partially reversible", "none"):
-            default_options["SEI"] = ("constant", "none")
-        else:
-            default_options["SEI"] = "none"
-        # The "SEI" option will still be overridden by extra_options if provided
-
-        options = pybamm.FuzzyDict(default_options)
-        # any extra options overwrite the default options
-        for name, opt in extra_options.items():
-            if name in default_options:
-                options[name] = opt
-            else:
-                if name == "particle cracking":
-                    raise pybamm.OptionError(
-                        "The 'particle cracking' option has been renamed. "
-                        "Use 'particle mechanics' instead."
-                    )
-                else:
-                    raise pybamm.OptionError(
-                        f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
-                    )
-
-        # All-or-nothing on full cells: if any of OCP/particle/intercalation
-        # kinetics requests MSMR (incl. inside a per-electrode tuple), all must.
-        # Half-cells are loosened -- a tuple sets MSMR in the working electrode.
-        msmr_check_list = [
-            _is_msmr(options[opt])
-            for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
-        ]
-        if (
-            options["working electrode"] == "both"
-            and any(msmr_check_list)
-            and not all(msmr_check_list)
-        ):
-            raise pybamm.OptionError(
-                "If any of 'open-circuit potential', 'particle' or "
-                "'intercalation kinetics' is 'MSMR' then all of them must be 'MSMR'"
-            )
-
-        # Validate per electrode so a mixed full cell (MSMR in one electrode,
-        # conventional in the other) is accepted.
-        if options["working electrode"] == "both":
-            electrode_domains = [("negative", 0), ("positive", 1)]
-        else:
-            electrode_domains = [("positive", 1)]
-        for domain, index in electrode_domains:
-            domain_uses_msmr = any(
-                _per_electrode(options[opt], index) == "MSMR"
-                for opt in [
-                    "open-circuit potential",
-                    "particle",
-                    "intercalation kinetics",
-                ]
-            )
-            domain_count = _per_electrode(options["number of MSMR reactions"], index)
-            if domain_uses_msmr and not represents_positive_integer(domain_count):
-                raise pybamm.OptionError(
-                    "'number of MSMR reactions' must be a positive integer for "
-                    f"the {domain} electrode when it uses 'MSMR' "
-                    f"(got {domain_count!r})"
-                )
-
-        # If "SEI film resistance" is "distributed" then "total interfacial current
-        # density as a state" must be "true"
-        if options["SEI film resistance"] == "distributed":
-            options["total interfacial current density as a state"] = "true"
-            # Check that extra_options did not try to provide a clashing option
-            if (
-                extra_options.get("total interfacial current density as a state")
-                == "false"
-            ):
-                raise pybamm.OptionError(
-                    "If 'sei film resistance' is 'distributed' then 'total interfacial "
-                    "current density as a state' must be 'true'"
-                )
-
-        # If "SEI film resistance" is not "none" and there are multiple phases
-        # then "total interfacial current density as a state" must be "true"
-        if (
-            options["SEI film resistance"] != "none"
-            and options["particle phases"] != "1"
-        ):
-            options["total interfacial current density as a state"] = "true"
-            # Check that extra_options did not try to provide a clashing option
-            if (
-                extra_options.get("total interfacial current density as a state")
-                == "false"
-            ):
-                raise pybamm.OptionError(
-                    "If 'SEI film resistance' is not 'none' "
-                    "and there are multiple phases then 'total interfacial "
-                    "current density as a state' must be 'true'"
-                )
-
-        # Options not yet compatible with contact resistance
-        if options["contact resistance"] == "true":
-            if options["operating mode"] == "explicit power":
-                raise NotImplementedError(
-                    "Contact resistance not yet supported for explicit power."
-                )
-            if options["operating mode"] == "explicit resistance":
-                raise NotImplementedError(
-                    "Contact resistance not yet supported for explicit resistance."
-                )
-
-        # Explicit power/resistance need voltage as a state variable because
-        # I = P/V (or I = V/R) creates a circular dependency when V is an
-        # expression that itself depends on I.
-        if options["voltage as a state"] == "false" and options["operating mode"] in (
-            "explicit power",
-            "explicit resistance",
-        ):
-            raise pybamm.OptionError(
-                f"Cannot use '{options['operating mode']}' operating mode with "
-                "'voltage as a state' set to 'false'. Explicit power and "
-                "resistance control require voltage as an algebraic state."
-            )
-
-        # Options not yet compatible with particle-size distributions
-        if options["particle size"] == "distribution":
-            if options["lithium plating porosity change"] != "false":
-                raise pybamm.OptionError(
-                    "Lithium plating porosity change not yet supported for particle-size"
-                    " distributions."
-                )
-            if options["SEI porosity change"] == "true":
-                raise NotImplementedError(
-                    "SEI porosity change submodels do not yet support particle-size "
-                    "distributions."
-                )
-            if options["heat of mixing"] != "false":
-                raise NotImplementedError(
-                    "Heat of mixing submodels do not yet support particle-size "
-                    "distributions."
-                )
-            if options["particle"] in ["quadratic profile", "quartic profile"]:
-                raise NotImplementedError(
-                    "'quadratic' and 'quartic' concentration profiles have not yet "
-                    "been implemented for particle-size ditributions"
-                )
-            if options["particle shape"] != "spherical":
-                raise NotImplementedError(
-                    "Particle shape must be 'spherical' for particle-size distribution"
-                    " submodels."
-                )
-            if options["thermal"] == "x-full":
-                raise NotImplementedError(
-                    "X-full thermal submodels do not yet support particle-size"
-                    " distributions."
-                )
-
-        # Renamed options
-        if options["working electrode"] == "negative":
-            raise pybamm.OptionError(
-                "The 'negative' working electrode option has been removed because "
-                "the voltage - and therefore the energy stored - would be negative."
-                "Use the 'positive' working electrode option instead and set whatever "
-                "would normally be the negative electrode as the positive electrode."
-            )
-
-        # Some standard checks to make sure options are compatible
-        if options["dimensionality"] == 0:
-            if options["current collector"] not in ["uniform"]:
-                raise pybamm.OptionError(
-                    "current collector model must be uniform in 0D model"
-                )
-            if options["convection"] == "full transverse":
-                raise pybamm.OptionError(
-                    "cannot have transverse convection in 0D model"
-                )
-        if options["dimensionality"] == 3 and options["cell geometry"] not in [
-            "pouch",
-            "cylindrical",
-        ]:
-            raise pybamm.OptionError(
-                "'cell geometry' must be 'pouch' or 'cylindrical' if 'dimensionality' is '3'"
-            )
-
-        if options["cell geometry"] == "cylindrical" and options["dimensionality"] != 3:
-            raise pybamm.OptionError(
-                "'dimensionality' must be '3' if 'cell geometry' is 'cylindrical'"
-            )
-
-        if (
-            options["thermal"] in ["x-lumped", "x-full"]
-            and options["cell geometry"] != "pouch"
-        ):
-            raise pybamm.OptionError(
-                options["thermal"] + " model must have pouch cell geometry."
-            )
-        if options["thermal"] == "x-full" and options["dimensionality"] != 0:
-            n = options["dimensionality"]
-            raise pybamm.OptionError(
-                f"X-full thermal submodels do not yet support {n}D current collectors"
-            )
-
-        if (
-            options["use lumped thermal capacity"] == "true"
-            and "lumped" not in options["thermal"]
-        ):
-            raise pybamm.OptionError(
-                "Lumped thermal capacity model only compatible with lumped thermal "
-                "models"
-            )
-
-        if isinstance(options["stress-induced diffusion"], str) and (
-            options["stress-induced diffusion"] == "true"
-            and options["particle mechanics"] == "none"
-        ):
-            raise pybamm.OptionError(
-                "cannot have stress-induced diffusion without a particle "
-                "mechanics model"
-            )
-
-        if options["working electrode"] != "both":
-            if options["thermal"] == "x-full":
-                raise pybamm.OptionError(
-                    "X-full thermal submodel is not compatible with half-cell models"
-                )
-            elif options["thermal"] == "x-lumped" and options["dimensionality"] != 0:
-                n = options["dimensionality"]
-                raise pybamm.OptionError(
-                    f"X-lumped thermal submodels do not yet support {n}D "
-                    "current collectors in a half-cell configuration"
-                )
-
-        if options["particle phases"] not in ["1", ("1", "1")] and not (
-            options["surface form"] != "false"
-            and options["particle"] == "Fickian diffusion"
-        ):
-            raise pybamm.OptionError(
-                "If there are multiple particle phases: 'surface form' cannot be "
-                "'false', 'particle size' must be 'single', 'particle' must be "
-                "'Fickian diffusion'."
-            )
-
-        if options["surface temperature"] == "lumped" and options["thermal"] not in [
-            "isothermal",
-            "lumped",
-        ]:
-            raise pybamm.OptionError(
-                "lumped surface temperature model only compatible with isothermal "
-                "or lumped thermal model"
-            )
-        if "true" in options["SEI on cracks"]:
-            sei_on_cr = options["SEI on cracks"]
-            p_mechanics = options["particle mechanics"]
-            if isinstance(p_mechanics, str) and isinstance(sei_on_cr, tuple):
-                p_mechanics = (p_mechanics, p_mechanics)
-            if any(
-                sei == "true" and mech != "swelling and cracking"
-                for mech, sei in zip(p_mechanics, sei_on_cr, strict=False)
-            ):
-                raise pybamm.OptionError(
-                    "If 'SEI on cracks' is 'true' then 'particle mechanics' must be "
-                    "'swelling and cracking'."
-                )
-
-        # Check options are valid
-        for option, value in options.items():
-            if isinstance(value, str) or option in [
-                "dimensionality",
-                "operating mode",
-            ]:  # some options accept non-strings
-                value = (value,)
-            else:
-                if not (
-                    option
-                    in [
-                        "diffusivity",
-                        "exchange-current density",
-                        "intercalation kinetics",
-                        "interface utilisation",
-                        "lithium plating",
-                        "loss of active material",
-                        "number of MSMR reactions",
-                        "open-circuit potential",
-                        "particle",
-                        "particle mechanics",
-                        "particle phases",
-                        "particle size",
-                        "SEI",
-                        "SEI on cracks",
-                        "stress-induced diffusion",
-                    ]
-                    and isinstance(value, tuple)
-                    and len(value) == 2
-                ):
-                    # more possible options that can take 2-tuples to be added
-                    # as they come
-                    raise pybamm.OptionError(
-                        f"\n'{value}' is not recognized in option '{option}'. "
-                        "Values must be strings or (in some cases) "
-                        "2-tuples of strings"
-                    )
-            # flatten value
-            value_list = []
-            for val in value:
-                if isinstance(val, tuple):
-                    value_list.extend(list(val))
-                else:
-                    value_list.append(val)
-            for val in value_list:
-                if val not in self.possible_options[option]:
-                    if option == "operating mode" and callable(val):
-                        # "operating mode" can be a function
-                        pass
-                    elif (
-                        option == "number of MSMR reactions"
-                        and represents_positive_integer(val)
-                    ):
-                        # "number of MSMR reactions" can be a positive integer
-                        pass
-                    else:
-                        raise pybamm.OptionError(
-                            f"\n'{val}' is not recognized in option '{option}'. "
-                            f"Possible values are {self.possible_options[option]}"
-                        )
-
-        super().__init__(options.items())
-
-    @property
-    def phases(self):
-        try:
-            return self._phases
-        except AttributeError:
-            self._phases = {}
-            for domain in ["negative", "positive"]:
-                number = int(getattr(self, domain)["particle phases"])
-                phases = ["primary"]
-                if number >= 2:
-                    phases.append("secondary")
-                self._phases[domain] = phases
-            return self._phases
-
-    @cached_property
-    def whole_cell_domains(self):
-        if self["working electrode"] == "positive":
-            return ["separator", "positive electrode"]
-        elif self["working electrode"] == "both":
-            return ["negative electrode", "separator", "positive electrode"]
-        else:
-            raise NotImplementedError  # future proofing
-
-    @property
-    def electrode_types(self):
-        try:
-            return self._electrode_types
-        except AttributeError:
-            self._electrode_types = {}
-            for domain in ["negative", "positive"]:
-                if f"{domain} electrode" in self.whole_cell_domains:
-                    self._electrode_types[domain] = "porous"
-                else:
-                    self._electrode_types[domain] = "planar"
-            return self._electrode_types
-
-    def print_options(self):
-        """
-        Print the possible options with the ones currently selected
-        """
-        for key, value in self.items():
-            print(rf"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
-
-    def print_detailed_options(self):
-        """
-        Print the docstring for Options
-        """
-        print(self.__doc__)
-
-    @property
-    def negative(self):
-        "Returns the options for the negative electrode"
-        # index 0 in a 2-tuple for the negative electrode
-        return BatteryModelDomainOptions(self.items(), 0)
-
-    @property
-    def positive(self):
-        "Returns the options for the positive electrode"
-        # index 1 in a 2-tuple for the positive electrode
-        return BatteryModelDomainOptions(self.items(), 1)
-
-
-class BatteryModelDomainOptions(dict):
-    def __init__(self, dict_items, index):
-        super().__init__(dict_items)
-        self.index = index
-
-    def __getitem__(self, key):
-        options = super().__getitem__(key)
-        if isinstance(options, str):
-            return options
-        else:
-            # 2-tuple, first is negative domain, second is positive domain
-            return options[self.index]
-
-    @property
-    def primary(self):
-        return BatteryModelPhaseOptions(self, 0)
-
-    @property
-    def secondary(self):
-        return BatteryModelPhaseOptions(self, 1)
-
-
-class BatteryModelPhaseOptions(dict):
-    def __init__(self, domain_options, index):
-        super().__init__(domain_options.items())
-        self.domain_options = domain_options
-        self.index = index
-
-    def __getitem__(self, key):
-        options = self.domain_options.__getitem__(key)
-        if isinstance(options, str):
-            return options
-        else:
-            # 2-tuple, first is primary phase, second is secondary phase
-            return options[self.index]
+from pybamm.models.full_battery_models.battery_model_options import (
+    BatteryModelDomainOptions,
+    BatteryModelOptions,
+    BatteryModelPhaseOptions,
+    LegacyOptions,
+    iter_option_leaves,
+    option_values_match,
+    restore_saved_options,
+)
+
+# saved pickles refer to the option classes by this module's path
+__all__ = [
+    "BaseBatteryModel",
+    "BatteryModelDomainOptions",
+    "BatteryModelOptions",
+    "BatteryModelPhaseOptions",
+]
 
 
 class BaseBatteryModel(pybamm.BaseModel):
@@ -1071,7 +52,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # append the model name with _saved to differentiate
         instance = cls(
-            options=properties["options"], name=properties["name"] + "_saved"
+            options=restore_saved_options(
+                properties["options"], properties.get("pybamm_version")
+            ),
+            name=properties["name"] + "_saved",
         )
 
         return cls.generic_deserialise(instance, properties)
@@ -1183,6 +167,51 @@ class BaseBatteryModel(pybamm.BaseModel):
             base_spatial_methods["cell"] = pybamm.ScikitFiniteElement3D()
         return base_spatial_methods
 
+    #: Option values the model needs; a supplied value must match.
+    fixed_options = {}
+    #: Option values the model prefers; the caller may override them.
+    default_options = {}
+
+    def _dependent_default_options(self, supplied):
+        """Return model defaults that depend on the options the caller gave.
+
+        Parameters
+        ----------
+        supplied : dict
+            The options given by the caller.
+
+        Returns
+        -------
+        dict
+            Defaults for options the caller did not give.
+        """
+        return {}
+
+    def _check_fixed_options(self, options):
+        """Check that options agree with the model's fixed options.
+
+        Parameters
+        ----------
+        options : dict
+            The options given by the caller, or processed options.
+
+        Raises
+        ------
+        pybamm.OptionError
+            If an option does not match a fixed option of the model.
+        """
+        working_electrode = options.get(
+            "working electrode", self.fixed_options.get("working electrode", "both")
+        )
+        for option, value in self.fixed_options.items():
+            if option in options and not option_values_match(
+                option, options[option], value, working_electrode
+            ):
+                raise pybamm.OptionError(
+                    f"{type(self).__name__} requires '{option}' to be {value!r}, "
+                    f"not {options[option]!r}."
+                )
+
     @property
     def options(self):
         return self._options
@@ -1192,10 +221,21 @@ class BaseBatteryModel(pybamm.BaseModel):
         # if extra_options is a dict then process it into a BatteryModelOptions
         # this does not catch cases that subclass the dict type
         # so other submodels can pass in their own options class if needed
-        if extra_options is None or type(extra_options) == dict:
-            options = BatteryModelOptions(extra_options)
+        if extra_options is None or type(extra_options) in (dict, LegacyOptions):
+            supplied = dict(extra_options or {})
+            self._check_fixed_options(supplied)
+            options = BatteryModelOptions(
+                {
+                    **self.default_options,
+                    **self._dependent_default_options(supplied),
+                    **self.fixed_options,
+                    **supplied,
+                },
+                legacy=isinstance(extra_options, LegacyOptions),
+            )
         else:
             options = extra_options
+            self._check_fixed_options(options)
 
         # Options that are incompatible with models
         if (
@@ -1217,14 +257,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                     options["electrolyte conductivity"]
                 )
             )
-        if (
-            isinstance(self, pybamm.lithium_ion.SPM)
-            and not isinstance(self, pybamm.lithium_ion.SPMe)
-            and options["x-average side reactions"] == "false"
-        ):
-            raise pybamm.OptionError(
-                "x-average side reactions cannot be 'false' for SPM models"
-            )
         if isinstance(self, pybamm.lithium_ion.SPM) and (
             "distribution" in options["particle size"]
             and options["surface form"] == "false"
@@ -1239,11 +271,15 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Lead-acid models can only have thermal "
                     "effects if dimensionality is 0."
                 )
-            if options["SEI"] != "none" or options["SEI film resistance"] != "none":
+
+            def leaves(option):
+                return {leaf for _, leaf in iter_option_leaves(option, options[option])}
+
+            if leaves("SEI") != {"none"} or options["SEI film resistance"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
-            if options["lithium plating"] != "none":
+            if leaves("lithium plating") != {"none"}:
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
-            if options["open-circuit potential"] == "MSMR":
+            if "MSMR" in leaves("open-circuit potential"):
                 raise pybamm.OptionError(
                     "Lead-acid models cannot use the MSMR open-circuit potential model"
                 )

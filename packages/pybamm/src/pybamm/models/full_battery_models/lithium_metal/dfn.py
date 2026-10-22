@@ -25,11 +25,11 @@ class DFN(LithiumIonDFN):
         built).
     """
 
+    fixed_options = {"working electrode": "positive"}
+
     def __init__(
         self, options=None, name="Doyle-Fuller-Newman lithium metal model", build=True
     ):
-        options = options or {}
-        options["working electrode"] = "positive"
         super().__init__(options, name, build=False)
 
         if build:
