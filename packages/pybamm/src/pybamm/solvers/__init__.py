@@ -5,6 +5,7 @@ __all__ = [
     "casadi_algebraic_solver",
     "casadi_solver",
     "composite_solver",
+    "diffsol_solver",
     "dummy_solver",
     "idaklu_jax",
     "idaklu_solver",

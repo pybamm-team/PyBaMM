@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import numbers
 import pickle
-from dataclasses import astuple, dataclass
+from dataclasses import astuple, dataclass, fields
 from itertools import chain
 
 import casadi
@@ -50,6 +50,27 @@ class SolverStatistics:
         Convergence failures of the nonlinear solver.
     number_of_error_test_failures : int
         Steps rejected by the local error test.
+    number_of_linear_solver_setups_from_checkpoint : int
+        Linear solver setups triggered by a checkpoint or reinitialisation.
+    number_of_linear_solver_setups_from_first_convergence_fail : int
+        Linear solver setups triggered by a first nonlinear convergence failure.
+    number_of_linear_solver_setups_from_second_convergence_fail : int
+        Linear solver setups triggered by a second nonlinear convergence failure.
+    number_of_linear_solver_setups_from_error_test_fail : int
+        Linear solver setups triggered by a local error test failure.
+    number_of_linear_solver_setups_from_step_success : int
+        Linear solver setups triggered after a successful step.
+    problem_setup_time_secs : float
+        Seconds spent building the problem, before any initialisation.
+    ic_time_secs : float
+        Seconds spent computing consistent initial conditions.
+    solver_setup_time_secs : float
+        Seconds spent creating the solver instance.
+    sens_error_control_relaxed : bool
+        Whether sensitivities were excluded from error control after a failure.
+
+    Only :class:`pybamm.DiffsolSolver` reports the fields after
+    ``number_of_error_test_failures``.
     """
 
     number_of_steps: int = 0
@@ -57,13 +78,31 @@ class SolverStatistics:
     number_of_nonlinear_solver_iterations: int = 0
     number_of_nonlinear_solver_fails: int = 0
     number_of_error_test_failures: int = 0
+    number_of_linear_solver_setups_from_checkpoint: int = 0
+    number_of_linear_solver_setups_from_first_convergence_fail: int = 0
+    number_of_linear_solver_setups_from_second_convergence_fail: int = 0
+    number_of_linear_solver_setups_from_error_test_fail: int = 0
+    number_of_linear_solver_setups_from_step_success: int = 0
+    problem_setup_time_secs: float = 0.0
+    ic_time_secs: float = 0.0
+    solver_setup_time_secs: float = 0.0
+    sens_error_control_relaxed: bool = False
 
     def __add__(self, other: SolverStatistics) -> SolverStatistics:
         if not isinstance(other, SolverStatistics):
             return NotImplemented
         return SolverStatistics(
-            *(a + b for a, b in zip(astuple(self), astuple(other), strict=True))
+            *(
+                (a or b) if isinstance(a, bool) else a + b
+                for a, b in zip(astuple(self), astuple(other), strict=True)
+            )
         )
+
+    def __setstate__(self, state: list) -> None:
+        # Pickles from before the diffsol fields carry only the leading values
+        for index, field in enumerate(fields(self)):
+            value = state[index] if index < len(state) else field.default
+            object.__setattr__(self, field.name, value)
 
 
 # Shared by every first and last state, which do no solver work

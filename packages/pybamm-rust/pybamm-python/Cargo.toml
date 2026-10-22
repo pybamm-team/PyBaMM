@@ -9,14 +9,16 @@ name = "_core"
 crate-type = ["cdylib"]
 
 [features]
-default = ["serialize"]
+default = ["serialize", "diffsol"]
 serialize = ["pybamm-core/serialize", "dep:bincode"]
+diffsol = ["pybamm-core/diffsol", "dep:rayon"]
 
 [dependencies]
 pybamm-core = { path = "../pybamm-core" }
 pyo3 = { version = "0.28" }
 numpy = "0.28"
 bincode = { version = "1", optional = true }
+rayon = { version = "1", optional = true }
 
 [lints]
 workspace = true

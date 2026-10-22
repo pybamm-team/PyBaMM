@@ -158,6 +158,14 @@ class TestRustRootResolution:
         assert model.convert_to_format == "rust"
         assert isinstance(solver.root_method, pybamm.NonlinearSolver)
 
+    def test_diffsol_normalises_model_to_rust(self):
+        from tests.unit.test_solvers.test_process_rust import _toy_dae
+
+        model = _toy_dae("casadi")
+        solver = pybamm.DiffsolSolver()
+        solver.solve(model, np.linspace(0, 1, 10), inputs={"a": 0.5})
+        assert model.convert_to_format == "rust"
+
     def test_dae_consistent_ic_parity_rust_newton_vs_casadi(self):
         from tests.unit.test_solvers.test_process_rust import _toy_dae
 
