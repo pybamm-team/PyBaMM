@@ -591,10 +591,15 @@ class BaseSolver:
 
         if (
             isinstance(self, pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver)
-        ) and model.convert_to_format != "casadi":
-            pybamm.logger.warning(
-                f"Converting {model.name} to CasADi for solving with CasADi solver"
+            and model.convert_to_format != "casadi"
+        ):
+            # Converting a model left at the default format is routine
+            log = (
+                pybamm.logger.info
+                if model.convert_to_format == model._DEFAULT_CONVERT_TO_FORMAT
+                else pybamm.logger.warning
             )
+            log(f"Converting {model.name} to CasADi for solving with CasADi solver")
             model.convert_to_format = "casadi"
         if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver):
             if model.convert_to_format == "rust":
