@@ -239,10 +239,8 @@ class TestThermal:
         }
         parameter_values = pybamm.ParameterValues("Chen2020")
         if composite:
-            # Split the positive electrode, which carries most of the heat of mixing,
-            # into two identical halves, and give the second hysteresis about its OCP
-            # and a direction-dependent diffusivity. The OCP branches are tilted so
-            # that their slopes differ from the OCP's
+            # Tilted hysteresis branches and a direction-dependent diffusivity make
+            # the second phase's equilibrium OCP and flux differ from the first's
             options["particle phases"] = ("1", "2")
             options["open-circuit potential"] = (
                 "single",
