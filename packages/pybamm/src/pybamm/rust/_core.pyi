@@ -1,7 +1,7 @@
 """Hand-maintained stubs for ``pybamm.rust._core``, checked by ``mypy.stubtest``."""
 
 from collections.abc import Callable, Sequence
-from typing import Literal, TypeAlias, final
+from typing import Literal, TypeAlias, TypedDict, final
 
 import numpy as np
 import numpy.typing as npt
@@ -10,6 +10,8 @@ from scipy.sparse import csc_matrix
 __all__ = [
     "CompiledFunction",
     "CompiledJacobian",
+    "CompiledModel",
+    "EvaluatorPool",
     "Expr",
     "ExprGraph",
 ]
@@ -22,6 +24,24 @@ _IntSequence: TypeAlias = Sequence[int] | npt.NDArray[np.integer]
 _TimeGrid: TypeAlias = (
     Sequence[float] | npt.NDArray[np.floating] | npt.NDArray[np.integer]
 )
+
+class _JacobianStats(TypedDict):
+    """Assembly stats returned by :meth:`CompiledModel.jacobian_stats`."""
+
+    n_colors: int
+    nnz: int
+    n_dense_rows: int
+    n_dense_row_candidates: int
+    n_constant_entries: int
+    n_swept_columns: int
+    jac_lane_width: int
+    dense_row_entries: int
+    dense_row_tape_instructions: int
+    split_eval_primal_instructions: int
+    split_eval_total_instructions: int
+    split_eval_raw_instructions: int
+    split_eval_dispatch_count: int
+    branch_block_lens: tuple[int, ...]
 
 @final
 class ExprGraph:
@@ -325,3 +345,160 @@ class CompiledJacobian:
     def n_dense_rows(self) -> int: ...
     @property
     def wrt(self) -> Literal["y", "p"]: ...
+
+@final
+class CompiledModel:
+    """Compiled DAE bundle: residual/jacobian FFI surface plus shareable views."""
+
+    @staticmethod
+    def from_expr(
+        graph: ExprGraph,
+        expr: Expr,
+        mass_data: _FloatArray,
+        mass_indptr: npt.NDArray[np.int64],
+        mass_indices: npt.NDArray[np.int64],
+        n_inputs: int | None = None,
+        sens_param_indices: Sequence[int] = ...,
+        output_exprs: Sequence[Expr] = ...,
+        algebraic_expr: Expr | None = None,
+        algebraic_variable_indices: Sequence[int] = ...,
+        event_exprs: Sequence[Expr] = ...,
+    ) -> CompiledModel:
+        """Build from an rhs expression and a CSR mass matrix."""
+
+    @staticmethod
+    def _rebuild(
+        graph: ExprGraph,
+        rhs_root: int,
+        output_roots: Sequence[int],
+        event_roots: Sequence[int],
+        algebraic_root: int | None,
+        algebraic_variable_indices: Sequence[int],
+        mass_data: Sequence[float],
+        mass_indptr: Sequence[int],
+        mass_indices: Sequence[int],
+        n_inputs: int,
+        sens_param_indices: Sequence[int],
+    ) -> CompiledModel: ...
+    def __reduce__(
+        self,
+    ) -> tuple[
+        Callable[..., CompiledModel],
+        tuple[
+            ExprGraph,
+            int,
+            list[int],
+            list[int],
+            int | None,
+            list[int],
+            list[float],
+            list[int],
+            list[int],
+            int,
+            list[int],
+        ],
+    ]: ...
+    @property
+    def rhs(self) -> CompiledFunction:
+        """Primal ``f(t, y, p)`` as a shareable view."""
+
+    @property
+    def jacobian(self) -> CompiledJacobian:
+        """Pure ``df/dy`` (``cj = 0``, no mass), composed over the bundle's tapes."""
+
+    @property
+    def outputs(self) -> list[CompiledFunction]: ...
+    @property
+    def events(self) -> list[CompiledFunction]: ...
+    @property
+    def algebraic_residual(self) -> CompiledFunction | None:
+        """``g(t, y, p)`` as a shareable view, or ``None`` for ODEs."""
+
+    @property
+    def algebraic_jacobian(self) -> CompiledJacobian | None:
+        """``dg/dy_alg`` (``n_algebraic`` square), or ``None`` for ODEs."""
+
+    def eval_residual(
+        self,
+        t: float,
+        y: _FloatArray,
+        yp: _FloatArray,
+        inputs: _FloatArray,
+    ) -> _FloatArray:
+        """DAE residual ``r = M @ yp - f(t, y)`` as a new array (packed inputs only)."""
+
+    def eval_residual_into(
+        self,
+        t: float,
+        y: _FloatArray,
+        yp: _FloatArray,
+        inputs: _FloatArray,
+        output: _FloatArray,
+    ) -> None:
+        """DAE residual into pre-allocated ``output`` (length ``n_states``)."""
+
+    def assemble_jacobian_csc_into(
+        self,
+        t: float,
+        y: _FloatArray,
+        cj: float,
+        inputs: _FloatArray,
+        jac_data: _FloatArray,
+    ) -> None:
+        """Assemble ``df/dy - cj * M`` into a pre-allocated CSC data buffer."""
+
+    def algebraic_ids(self) -> _FloatArray:
+        """IDA-convention ids: ``1.0`` differential, ``0.0`` algebraic, per state."""
+
+    def sparsity_pattern(
+        self,
+    ) -> tuple[npt.NDArray[np.uintp], npt.NDArray[np.uintp]]:
+        """CSR ``(indptr, indices)`` of ``df/dy`` merged with the mass pattern."""
+
+    def csc_sparsity_pattern(
+        self,
+    ) -> tuple[npt.NDArray[np.uintp], npt.NDArray[np.uintp]]:
+        """CSC ``(colptr, rowind)`` for KLU compatibility."""
+
+    def algebraic_jacobian_sparsity_pattern(
+        self,
+    ) -> tuple[npt.NDArray[np.uintp], npt.NDArray[np.uintp]]:
+        """COO ``(rows, cols)`` of the algebraic jacobian; raises for ODEs."""
+
+    def jacobian_stats(self) -> _JacobianStats: ...
+    def evaluator_pool(self, n: int) -> EvaluatorPool:
+        """``n`` independent evaluators over this model's tape (``n >= 1``)."""
+
+    @property
+    def n_states(self) -> int: ...
+    @property
+    def n_inputs(self) -> int:
+        """Packed input width."""
+
+    @property
+    def has_algebraic(self) -> bool: ...
+    @property
+    def n_algebraic(self) -> int: ...
+    @property
+    def algebraic_jacobian_nnz(self) -> int: ...
+    @property
+    def n_sens_params(self) -> int: ...
+    @property
+    def n_outputs(self) -> int: ...
+    @property
+    def n_events(self) -> int: ...
+    @property
+    def output_len(self) -> int: ...
+    @property
+    def n_colors(self) -> int: ...
+    @property
+    def nnz(self) -> int: ...
+
+@final
+class EvaluatorPool:
+    """N independent evaluators over one shared tape, one per parallel solver."""
+
+    def as_ptr(self, index: int) -> int:
+        """Address of evaluator ``index``, handed out once; the pool must outlive it."""
+
+    def __len__(self) -> int: ...

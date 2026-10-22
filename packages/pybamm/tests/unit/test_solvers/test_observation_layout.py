@@ -128,6 +128,26 @@ class TestOutputAssembly:
                 sensitivity_names=["a", "b"],
             )
 
+    def test_a_dense_layout_attaches_without_casadi_functions(self, solution):
+        model = solution.all_models[0]
+        lens = [
+            int(np.prod(model.get_processed_variable_or_event(name).shape))
+            for name in self._NAMES
+        ]
+        assembly = OutputAssembly.dense(self._NAMES, lens)
+        data = np.tile(np.arange(assembly.n_rows, dtype=float), (len(solution.t), 1))
+        assembly.attach(solution, data)
+
+        assert solution["Voltage [V]"].base_variables_casadi == [None]
+        np.testing.assert_allclose(
+            solution[self._NAMES[1]].entries[:, 0], np.arange(1.0, 21.0)
+        )
+        np.testing.assert_allclose(solution["Current [A]"].entries, 21.0)
+
+    def test_a_dense_layout_needs_one_length_per_name(self):
+        with pytest.raises(pybamm.SolverError, match=r"Output layout mismatch"):
+            OutputAssembly.dense(["Voltage [V]", "Current [A]"], [1])
+
     def test_a_solve_without_sensitivities_leaves_an_empty_mapping(self, solution):
         # Empty, not None: an outputs-only solve keeps no state to compute them from
         assembly, data = self._assembly(solution, ["Voltage [V]"])
