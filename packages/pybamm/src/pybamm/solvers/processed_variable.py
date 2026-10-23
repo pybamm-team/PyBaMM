@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xr
 
 import pybamm
-from pybamm.solvers.variable_observer import as_observer
+from pybamm.solvers.variable_observer import as_observer, fill_gaps
 
 from .base_processed_variable import BaseProcessedVariable
 
@@ -99,6 +99,7 @@ class ProcessedVariable(BaseProcessedVariable):
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.all_solution_sensitivities = solution._all_sensitivities
+        self._sensitivity_mismatch = getattr(solution, "_sensitivity_mismatch", None)
 
         # Store time
         self.t_pts = solution.t
@@ -148,11 +149,20 @@ class ProcessedVariable(BaseProcessedVariable):
     def observe_and_interp(self, t, fill_value):
         """
         Interpolate the variable at the given time points and y values.
-        t must be a sorted array of time points.
+        t must be a sorted array of time points. Times between sub-solutions
+        are placed as :meth:`_resolve_gaps` describes.
         """
-
-        entries = self._observe_hermite(t)
-        processed_entries = self._observe_postfix(entries, t)
+        t, in_gap = self._resolve_gaps(t)
+        if in_gap is None:
+            processed_entries = self._observe_postfix(self._observe_hermite(t), t)
+        else:
+            processed_entries = np.empty(self._shape(t))
+            covered = ~in_gap
+            if covered.any():
+                t_covered = t[covered]
+                processed_entries[..., covered] = self._observe_postfix(
+                    self._observe_hermite(t_covered), t_covered
+                )
 
         tf = self.t_pts[-1]
         if t[-1] > tf and fill_value != "extrapolate":
@@ -160,7 +170,28 @@ class ProcessedVariable(BaseProcessedVariable):
             idx = np.searchsorted(t, tf, side="right")
             processed_entries[..., idx:] = fill_value
 
-        return processed_entries
+        return fill_gaps(processed_entries, in_gap, fill_value)
+
+    def _resolve_gaps(self, t):
+        """Place times that fall between the variable's sub-solutions.
+
+        A time in a round-off gap, as left around a discontinuity, takes the
+        value at the end of the earlier sub-solution (the left limit); one in a
+        longer gap, as left by ``save_at_cycles``, has no value.
+
+        Parameters
+        ----------
+        t : numpy.ndarray
+            Query times.
+
+        Returns
+        -------
+        t : numpy.ndarray
+            The times, with those in round-off gaps moved.
+        in_gap : numpy.ndarray of bool or None
+            Which times lie in a longer gap, or None if none do.
+        """
+        return self._observer.resolve_gaps(self, t)
 
     def observe_raw(self):
         """
@@ -287,6 +318,7 @@ class ProcessedVariable(BaseProcessedVariable):
         xr_interp = spatial_interp or not hermite_time_interp
 
         if xr_interp:
+            in_gap = None
             if hermite_time_interp:
                 # Already interpolated in time
                 t = None
@@ -297,6 +329,16 @@ class ProcessedVariable(BaseProcessedVariable):
                     self._entries_for_interp_raw,
                     self._coords_raw,
                 )
+                if (
+                    not observe_raw
+                    and t is not None
+                    and np.ndim(t) <= 1
+                    and not isinstance(t, xr.DataArray)
+                ):
+                    # Linear interpolation would bridge gaps between sub-solutions
+                    t, in_gap = self._resolve_gaps(t)
+                    if np.ndim(t) == 0:
+                        t = float(t)
 
             processed_entries = self._xr_interpolate(
                 entries_for_interp,
@@ -310,6 +352,7 @@ class ProcessedVariable(BaseProcessedVariable):
                 R,
                 fill_value,
             )
+            processed_entries = fill_gaps(processed_entries, in_gap, fill_value)
         else:
             processed_entries = entries
 
@@ -384,7 +427,8 @@ class ProcessedVariable(BaseProcessedVariable):
         else:
             t_observe = t
 
-        if t_observe[0] < self.t_pts[0]:
+        # The earliest time, which need not be the first
+        if np.min(t_observe) < self.t_pts[0]:
             raise ValueError(
                 "The interpolation points must be greater than or equal to the initial solution time"
             )
@@ -421,21 +465,21 @@ class ProcessedVariable(BaseProcessedVariable):
         The keys are the input parameters, and the value is a matrix of size
         (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
         points, and n_p is the size of the input parameter
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If the solve calculated no sensitivities, or the solution joins
+            segments solved for parameters none of which they share.
         """
-        # No sensitivities if there are no inputs
-        if len(self.all_inputs[0]) == 0:
+        if self._sensitivity_mismatch is None and len(self.all_inputs[0]) == 0:
+            # No inputs, so nothing to be sensitive to
             return {}
-        # Otherwise initialise and return sensitivities
         if self._sensitivities is None:
-            if self.all_solution_sensitivities:
-                self.initialise_sensitivity_explicit_forward()
-            else:
-                raise ValueError(
-                    "Cannot compute sensitivities. The 'calculate_sensitivities' "
-                    "argument of the solver.solve should be changed from 'None' to "
-                    "allow sensitivities calculations. Check solver documentation for "
-                    "details."
-                )
+            self._check_sensitivities_available(
+                bool(self.all_solution_sensitivities), self._name
+            )
+            self.initialise_sensitivity_explicit_forward()
         return self._sensitivities
 
     def initialise_sensitivity_explicit_forward(self):
@@ -470,14 +514,11 @@ class ProcessedVariable(BaseProcessedVariable):
             """
 
             class StubSolution:
-                def __init__(
-                    self, ts, ys, inputs, inputs_stacked, sensitivities, t_pts
-                ):
+                def __init__(self, ts, ys, inputs, inputs_stacked, t_pts):
                     self.all_ts = ts
                     self.all_ys = ys
                     self.all_inputs = inputs
                     self.all_inputs_stacked = inputs_stacked
-                    self.sensitivities = sensitivities
                     self.t = t_pts
 
             return StubSolution(
@@ -485,7 +526,6 @@ class ProcessedVariable(BaseProcessedVariable):
                 self.all_ys,
                 self.all_inputs,
                 self.all_inputs_stacked,
-                sensitivities or {},
                 self.t_pts,
             )
 
@@ -503,11 +543,13 @@ class ProcessedVariable(BaseProcessedVariable):
             base_data,
             _stub_solution(self),
             time_integral=self.time_integral,
+            name=self._name,
         )
 
         # add sensitivities if they exist
         if sensitivities:
             cpv._sensitivities = sensitivities
+        cpv._sensitivity_mismatch = self._sensitivity_mismatch
 
         return cpv
 

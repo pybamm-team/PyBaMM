@@ -1198,27 +1198,44 @@ class TestIDAKLUSolver:
         assert sol.variables_returned is True
 
     def test_with_sparse_output_variables_and_sensitivities(self):
-        # Construct a model and solve for all variables, then test
-        # the 'output_variables' option for each variable in turn, confirming
-        # equivalence
-        input_parameters = {  # Sensitivities dictionary
-            "Current function [A]": 0.222,
-            "Separator porosity": 0.3,
-        }
-
-        # construct model
-        solver = pybamm.IDAKLUSolver(
-            output_variables=["Negative particle flux [mol.m-2.s-1]"],
-        )
-        model = pybamm.lithium_ion.DFN()
-        params = model.default_parameter_values
+        # These outputs have structural zeros, so the solver returns fewer rows
+        # than entries; their sensitivities must match a full-state solve's
+        output_variables = [
+            "Negative particle flux [mol.m-2.s-1]",
+            "Gradient of electrolyte potential [V.m-1]",
+            "Voltage [V]",
+        ]
+        params = pybamm.ParameterValues("Chen2020")
         params.update({"Current function [A]": "[input]"})
-        sim = pybamm.Simulation(model, solver=solver, parameter_values=params)
-        with pytest.raises(
-            pybamm.SolverError,
-            match=r"Sensitivity of sparse variables not supported",
-        ):
-            sim.solve([0, 100], inputs=input_parameters, calculate_sensitivities=True)
+        var_pts = {"x_n": 3, "x_s": 3, "x_p": 3, "r_n": 3, "r_p": 3}
+        solutions = []
+        for solver_output_variables in (None, output_variables):
+            solver = pybamm.IDAKLUSolver(output_variables=solver_output_variables)
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPMe(),
+                parameter_values=params,
+                var_pts=var_pts,
+                solver=solver,
+            )
+            solutions.append(
+                sim.solve(
+                    [0, 600],
+                    inputs={"Current function [A]": 5.0},
+                    calculate_sensitivities=True,
+                    t_interp=np.linspace(0, 600, 7),
+                )
+            )
+        full, outputs_only = solutions
+
+        for name in output_variables:
+            expected = full[name].sensitivities["Current function [A]"]
+            assert np.any(expected != 0)
+            np.testing.assert_allclose(
+                outputs_only[name].sensitivities["Current function [A]"],
+                expected,
+                rtol=1e-8,
+                atol=1e-14,
+            )
 
     @pytest.mark.parametrize("output_variables", [["zero"], ["zero", "u"]])
     def test_output_variable_with_no_structural_nonzeros(self, output_variables):
@@ -2130,6 +2147,66 @@ class TestIDAKLUSolver:
         assert ax is existing_axes[1]
         assert "nnz" in ax.get_title()
         plt.close("all")
+
+    def test_reduce_solution_keeps_sensitivities_at_the_kept_knots(self, decay_model):
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10)
+        sol = solver.solve(
+            decay_model, [0, 5], inputs={"a": 0.3}, calculate_sensitivities=True
+        )
+
+        reduced = solver.reduce_solution(sol, hermite_reduction_factor=4.0)
+
+        assert len(reduced.t) < len(sol.t)
+        # The kept knots are original time points, so their sensitivities are too
+        rows = np.searchsorted(sol.t, reduced.t)
+        np.testing.assert_array_equal(sol.t[rows], reduced.t)
+        for key in ["a", "all"]:
+            np.testing.assert_array_equal(
+                reduced.sensitivities[key], sol.sensitivities[key][rows]
+            )
+        assert np.shares_memory(
+            reduced._all_sensitivities["a"][0], reduced._all_sensitivities["all"][0]
+        )
+        # u = exp(-a t), so du/da = -t u
+        np.testing.assert_allclose(
+            reduced["u"].sensitivities["a"],
+            -reduced.t * np.exp(-0.3 * reduced.t),
+            rtol=1e-5,
+            atol=1e-10,
+        )
+
+    def test_reduce_solution_keeps_an_empty_segment(self, decay_model):
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10)
+        first, second = (
+            solver.solve(
+                decay_model,
+                [t0, t0 + 5],
+                inputs={"a": 0.3},
+                calculate_sensitivities=True,
+            )
+            for t0 in (0, 5)
+        )
+        # The last state repeats the end of the join, so its segment is emptied
+        joined = first + (first.last_state + second)
+        assert len(joined.all_ts[1]) == 0
+
+        reduced = solver.reduce_solution(joined, hermite_reduction_factor=4.0)
+
+        assert len(reduced.all_ts[1]) == 0
+        rows = np.searchsorted(joined.t, reduced.t)
+        np.testing.assert_array_equal(joined.t[rows], reduced.t)
+        np.testing.assert_array_equal(
+            reduced.sensitivities["all"], joined.sensitivities["all"][rows]
+        )
+
+    def test_sensitivities_share_one_buffer(self, decay_model):
+        sol = pybamm.IDAKLUSolver().solve(
+            decay_model, [0, 1], inputs={"a": 0.3}, calculate_sensitivities=True
+        )
+
+        all_sensitivities = sol._all_sensitivities["all"][0]
+        assert all_sensitivities.shape == (len(sol.t), 1)
+        assert np.shares_memory(sol._all_sensitivities["a"][0], all_sensitivities)
 
     def test_reduce_solution_vs_online(self):
         """Compare post-hoc reduce_solution with online knot reduction on a drive cycle.

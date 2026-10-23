@@ -424,7 +424,10 @@ class TestProcessedVariableComputed:
         )
 
         # test no sensitivity raises error
-        assert processed_var.sensitivities is None
+        with pytest.raises(
+            pybamm.SolverError, match=r"its solve did not calculate any"
+        ):
+            _ = processed_var.sensitivities
 
     def test_processed_variable_1D(self):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
@@ -590,7 +593,10 @@ class TestProcessedVariableComputed:
             return sol, sol["a times y"]
 
         _, processed_var_no_sens = solve_processed_var([0, 1], False)
-        assert processed_var_no_sens.sensitivities == {}
+        with pytest.raises(
+            pybamm.SolverError, match=r"its solve did not calculate any"
+        ):
+            _ = processed_var_no_sens.sensitivities
 
         sol1, processed_var1 = solve_processed_var([0, 1], True)
         sol2, processed_var2 = solve_processed_var(t_later, True)

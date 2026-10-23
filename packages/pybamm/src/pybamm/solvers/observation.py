@@ -36,9 +36,29 @@ class ObserverCache:
     ``cse``) of the first solve that reads it, and later solves reuse it as is.
     """
 
+    #: Built on demand and never pickled (see __getstate__)
+    _chain_rules = None
+
     def __init__(self):
         # Key -> (leaf, the expression it evaluates, time integral or None)
         self._casadi_leaves: dict[str, tuple] = {}
+
+    def __getstate__(self):
+        """The cache's state without its chain-rule functions, rebuilt on demand."""
+        state = self.__dict__.copy()
+        state.pop("_chain_rules", None)
+        return state
+
+    @property
+    def chain_rules(self) -> dict:
+        """The chain-rule functions built for sensitivities of the model's variables.
+
+        Filled by :meth:`pybamm.solvers.variable_observer.CasadiObserver.sensitivities`,
+        keyed by expression and input layout.
+        """
+        if self._chain_rules is None:
+            self._chain_rules = {}
+        return self._chain_rules
 
     @classmethod
     def of(cls, model: pybamm.BaseModel) -> ObserverCache:
@@ -51,6 +71,7 @@ class ObserverCache:
         """A cache that starts with these leaves and grows independently."""
         new = type(self)()
         new._casadi_leaves = self._casadi_leaves.copy()
+        new._chain_rules = self.chain_rules.copy()
         return new
 
     def casadi_leaf(
@@ -112,12 +133,14 @@ def build_variable(solution: pybamm.Solution, name: str) -> BaseProcessedVariabl
         model.get_processed_variable_or_event(name) for model in solution.all_models
     ]
     vars_casadi = [None] * len(solution.all_models)
+    chain_rules = [None] * len(solution.all_models)
     for i, (model, ys, inputs) in enumerate(
         zip(solution.all_models, solution.all_ys, solution.all_inputs, strict=True)
     ):
         var_pybamm = vars_pybamm[i]
         check_variable_in_solve(solution, name, var_pybamm)
         cache = ObserverCache.of(model)
+        chain_rules[i] = cache.chain_rules
         if isinstance(var_pybamm, pybamm.VectorField):
             vars_casadi[i] = [
                 cache.casadi_leaf(
@@ -132,7 +155,7 @@ def build_variable(solution: pybamm.Solution, name: str) -> BaseProcessedVariabl
     return pybamm.process_variable(
         name,
         vars_pybamm,
-        CasadiObserver(vars_casadi),
+        CasadiObserver(vars_casadi, chain_rules),
         solution,
         time_integral=time_integral,
     )
@@ -214,8 +237,7 @@ class OutputAssembly:
         Raises
         ------
         :class:`pybamm.SolverError`
-            If the payload does not match this layout, or if sensitivities were
-            requested for a variable whose CasADi rows are sparse.
+            If the payload does not match this layout.
         """
         data = self._checked_rows(data)
         if sensitivities is not None:
@@ -253,6 +275,7 @@ class OutputAssembly:
                 [values],
                 solution,
                 time_integral=time_integral,
+                name=name,
             )
             variable._sensitivities = (
                 {}
@@ -300,11 +323,10 @@ class OutputAssembly:
         """
         sparsity = self._sparse.get(name)
         if sparsity is not None:
-            raise pybamm.SolverError(
-                f"Sensitivity of sparse variables not supported. {name} is a sparse "
-                f"variable with number of non-zeros {sparsity.nnz()} and shape "
-                f"{sparsity.shape}"
-            )
+            # Scatter the nonzeros' rows like the values; the rest are always zero
+            dense = np.zeros((block.shape[0], sparsity.numel(), block.shape[2]))
+            dense[:, sparsity.find(), :] = block
+            block = dense
         n_timesteps, var_len, n_params = block.shape
         all_sens = block.reshape(n_timesteps * var_len, n_params)
         time_integral = self._time_integrals.get(name)

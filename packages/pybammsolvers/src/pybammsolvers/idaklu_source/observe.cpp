@@ -1,5 +1,8 @@
 #include "observe.hpp"
 
+#include <limits>
+#include <stdexcept>
+
 int _setup_len_spatial(const std::vector<int>& shape) {
     // Calculate the product of all dimensions except the last (spatial dimensions)
     int size_spatial = 1;
@@ -26,7 +29,12 @@ public:
                        vector<sunrealtype>& c,
                        vector<sunrealtype>& d,
                        const vector<casadi_int>& active_y) const {
-        // Must be called after compute_knots
+        if (t.size() < 2) {
+            // A single point has no interval: interpolate linearly from it
+            std::fill(c.begin(), c.begin() + active_y.size(), 0.0);
+            std::fill(d.begin(), d.begin() + active_y.size(), 0.0);
+            return;
+        }
         const sunrealtype h_full = t(j + 1) - t(j);
         const sunrealtype inv_h = 1.0 / h_full;
         const sunrealtype inv_h2 = inv_h * inv_h;
@@ -89,6 +97,13 @@ public:
         int i_entries = 0;
         const ssize_t N_interp = t_interp.size();
 
+        for (ssize_t k = 1; k < N_interp; ++k) {
+            if (t_interp(k) < t_interp(k - 1)) {
+                throw std::invalid_argument(
+                    "interpolation times must be sorted in non-decreasing order");
+            }
+        }
+
         // Main processing within bounds
         process_within_bounds(i_interp, i_entries, t_interp, N_interp);
 
@@ -105,6 +120,9 @@ public:
             const ssize_t N_interp
         ) {
         for (size_t i = 0; i < ts_data_np.size(); i++) {
+            if (i_interp == N_interp) {
+                return;
+            }
             const auto& t_data = ts_data_np[i].unchecked<1>();
             // Continue if there is no data
             if (t_data.size() == 0) {
@@ -129,36 +147,47 @@ public:
             args[1] = y_buffer.data();
             args[2] = input;
 
+            // Last interval, or the single point of a one-point segment
+            const ssize_t j_last = std::max<ssize_t>(t_data.size() - 2, 0);
             ssize_t j = 0;
             ssize_t j_prev = -1;
             const auto itp = HermiteInterpolator(t_data, y_data, yp_data);
             while (t_interp_next <= t_data_final) {
-                for (; j < t_data.size() - 2; ++j) {
-                    if (t_data(j) <= t_interp_next && t_interp_next <= t_data(j + 1)) {
-                        break;
+                if (t_interp_next < t_data(0)) {
+                    // No segment covers this time, so it has no value
+                    fill_nan(i_entries);
+                } else {
+                    // Times are sorted, so the interval never moves backwards
+                    while (j < j_last && t_interp_next > t_data(j + 1)) {
+                        ++j;
                     }
+
+                    if (j != j_prev) {
+                        // Compute c and d for the new interval
+                        itp.compute_knots(j, c, d, active_y);
+                        j_prev = j;
+                    }
+
+                    itp.interpolate(y_buffer, t_interp_next, j, c, d, active_y);
+
+                    args[0] = &t_interp(i_interp);
+                    results[0] = &entries[i_entries];
+                    func(args.data(), results.data(), iw.data(), w.data(), 0);
                 }
-
-                if (j != j_prev) {
-                    // Compute c and d for the new interval
-                    itp.compute_knots(j, c, d, active_y);
-                }
-
-                itp.interpolate(y_buffer, t_interp(i_interp), j, c, d, active_y);
-
-                args[0] = &t_interp(i_interp);
-                results[0] = &entries[i_entries];
-                func(args.data(), results.data(), iw.data(), w.data(), 0);
 
                 ++i_interp;
+                i_entries += size_spatial;
                 if (i_interp == N_interp) {
                     return;
                 }
                 t_interp_next = t_interp(i_interp);
-                i_entries += size_spatial;
-                j_prev = j;
             }
         }
+    }
+
+    void fill_nan(const int i_entries) {
+        std::fill(entries + i_entries, entries + i_entries + size_spatial,
+                  std::numeric_limits<sunrealtype>::quiet_NaN());
     }
 
     void extrapolate_remaining(
@@ -167,14 +196,22 @@ public:
             const py::detail::unchecked_reference<sunrealtype, 1>& t_interp,
             const ssize_t N_interp
         ) {
-        const auto& t_data = ts_data_np.back().unchecked<1>();
-        const auto& y_data = ys_data_np.back().unchecked<2>();
-        const auto& yp_data = yps_data_np.back().unchecked<2>();
-        const auto input = inputs_np.back().data();
-        const auto& fd = func_data.back();
+        // Extrapolate from the last segment that has data
+        ssize_t last = static_cast<ssize_t>(ts_data_np.size()) - 1;
+        while (last >= 0 && ts_data_np[last].size() == 0) {
+            --last;
+        }
+        if (last < 0) {
+            throw std::invalid_argument("no time points to interpolate from");
+        }
+        const auto& t_data = ts_data_np[last].unchecked<1>();
+        const auto& y_data = ys_data_np[last].unchecked<2>();
+        const auto& yp_data = yps_data_np[last].unchecked<2>();
+        const auto input = inputs_np[last].data();
+        const auto& fd = func_data[last];
         const auto func = *fd.func;
         const auto& active_y = fd.active_y;
-        const ssize_t j = t_data.size() - 2;
+        const ssize_t j = std::max<ssize_t>(t_data.size() - 2, 0);
 
         resize_arrays(y_data.shape(0), fd.func, active_y.size());
         args[1] = y_buffer.data();
