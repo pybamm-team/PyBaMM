@@ -537,22 +537,21 @@ class Simulation(BaseSimulation):
 
         self._check_experiment_input_parameters(parameter_values)
 
+        # IDAKLU accounts for moving step start times, and warns where it cannot
         if (
             solve_kwargs is not None
-            and "calculate_sensitivities" in solve_kwargs
-            and solve_kwargs["calculate_sensitivities"]
+            and solve_kwargs.get("calculate_sensitivities")
+            and not isinstance(self._solver, pybamm.IDAKLUSolver)
         ):
-            for step in self.experiment.steps:
-                if any(
-                    isinstance(
-                        term,
-                        pybamm.experiment.step.step_termination.BaseTermination,
-                    )
-                    for term in step.termination
-                ):
+            # Only steps after an event-terminated step start at a moving time
+            for step in self.experiment.steps[:-1]:
+                if step.termination:
                     pybamm.logger.warning(
-                        f"Step '{step}' has a termination condition based on an event. Sensitivity calculation will be inaccurate "
-                        "if the time of each step event changes rapidly with respect to the parameters. "
+                        f"Step '{step}' has a termination condition based on an "
+                        "event. Sensitivity calculation will be inaccurate if the "
+                        "time of each step event changes rapidly with respect to the "
+                        "parameters. pybamm.IDAKLUSolver accounts for moving event "
+                        "times."
                     )
                     break
 
@@ -1077,6 +1076,8 @@ class Simulation(BaseSimulation):
                         save=False,
                         inputs=inputs,
                         state_mapper=state_mapper,
+                        # A step cut short by an end or stop time ends at that time
+                        end_time_fixed=dt < step.duration,
                         **kwargs,
                     )
                 except pybamm.SolverError as error:
@@ -1310,6 +1311,8 @@ class Simulation(BaseSimulation):
             save=False,
             inputs=inputs,
             state_mapper=state_mapper,
+            # The rest pads up to the next step's scheduled start time
+            end_time_fixed=True,
             **kwargs,
         )
 

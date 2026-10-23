@@ -217,6 +217,7 @@ class OutputAssembly:
         *,
         sensitivities: npt.ArrayLike | None = None,
         sensitivity_names: Sequence[str] = (),
+        time_sensitivities: npt.NDArray[np.float64] | None = None,
     ) -> None:
         """Populate ``solution``'s variables from one outputs-only payload.
 
@@ -233,6 +234,10 @@ class OutputAssembly:
             to recompute them from.
         sensitivity_names : list of str, optional
             Sensitivity-parameter names, in ``sensitivities``' column order.
+        time_sensitivities : numpy.ndarray, optional
+            How the payload's first and last times move with the parameters,
+            ``[dt_first/dp, dt_last/dp]`` of shape ``(2, n_p)``; a time integral's
+            sensitivity includes the integrand's values there times these.
 
         Raises
         ------
@@ -287,6 +292,7 @@ class OutputAssembly:
                     solution,
                     sensitivity_names,
                     indices,
+                    time_sensitivities,
                 )
             )
             solution._variables[name] = variable
@@ -315,11 +321,19 @@ class OutputAssembly:
         return array
 
     def _variable_sensitivities(
-        self, name, entries, block, solution, sensitivity_names, indices
+        self,
+        name,
+        entries,
+        block,
+        solution,
+        sensitivity_names,
+        indices,
+        time_sensitivities,
     ):
         """
         One variable's ``"all"`` block plus a flat vector per parameter; a time
-        integral's from the rows at ``indices``.
+        integral's from the rows at ``indices``, and for a continuous integral
+        also from the integrand at the payload's moving first and last times.
         """
         sparsity = self._sparse.get(name)
         if sparsity is not None:
@@ -331,6 +345,12 @@ class OutputAssembly:
         all_sens = block.reshape(n_timesteps * var_len, n_params)
         time_integral = self._time_integrals.get(name)
         if time_integral is not None:
+            boundary = None
+            # A discrete sum samples fixed times, so only an integral's bounds move
+            if time_sensitivities is not None and time_integral.method == "continuous":
+                boundary = np.outer(entries[-1], time_sensitivities[1]) - np.outer(
+                    entries[0], time_sensitivities[0]
+                )
             all_sens = time_integral.postfix_sensitivities(
                 name,
                 entries[indices],
@@ -338,5 +358,6 @@ class OutputAssembly:
                 solution.all_inputs[0],
                 sensitivity_names,
                 block[indices].reshape(-1, n_params),
+                boundary_sensitivities=boundary,
             )
         return pack_sensitivity_dict(all_sens, sensitivity_names)

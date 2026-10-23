@@ -315,6 +315,248 @@ class TestIDAKLUSolver:
         )
 
 
+class TestIDAKLUEventTimeSensitivities:
+    """Sensitivities across moving event times against central differences."""
+
+    var_pts = {"x_n": 4, "x_s": 3, "x_p": 4, "r_n": 8, "r_p": 8}
+
+    @staticmethod
+    def _central_difference(run, inputs, name, read, relative_step=1e-5):
+        step = relative_step * inputs[name]
+        plus, minus = (
+            read(run({**inputs, name: inputs[name] + sign * step}, False))
+            for sign in (1, -1)
+        )
+        return (plus - minus) / (2 * step)
+
+    @pytest.mark.parametrize(
+        "output_variables", [None, ["Discharge capacity [A.h]", "Voltage [V]"]]
+    )
+    def test_spm_discharge_to_cutoff(self, output_variables):
+        names = ["Current function [A]", "Contact resistance [Ohm]"]
+        inputs = {"Current function [A]": 5.0, "Contact resistance [Ohm]": 0.01}
+
+        def run(inputs, sensitivities, output_variables=None):
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            parameter_values.update({name: "[input]" for name in names})
+            simulation = pybamm.Simulation(
+                pybamm.lithium_ion.SPM({"contact resistance": "true"}),
+                parameter_values=parameter_values,
+                var_pts=self.var_pts,
+                solver=pybamm.IDAKLUSolver(
+                    rtol=1e-9, atol=1e-11, output_variables=output_variables or []
+                ),
+            )
+            return simulation.solve(
+                [0, 3 * 3600], inputs=inputs, calculate_sensitivities=sensitivities
+            )
+
+        solution = run(inputs, names, output_variables)
+        assert solution.termination == "event: Minimum voltage [V]"
+        last_state = solution.last_state
+        for name in names:
+            np.testing.assert_allclose(
+                solution.t_event_sensitivities[name],
+                self._central_difference(run, inputs, name, lambda s: s.t[-1:]),
+                rtol=1e-5,
+            )
+            np.testing.assert_allclose(
+                last_state["Discharge capacity [A.h]"].sensitivities[name],
+                self._central_difference(
+                    run,
+                    inputs,
+                    name,
+                    lambda s: s["Discharge capacity [A.h]"].entries[-1:],
+                ),
+                rtol=1e-5,
+            )
+            # The voltage at the cut-off is the cut-off, whatever the inputs
+            np.testing.assert_allclose(
+                last_state["Voltage [V]"].sensitivities[name], 0.0, atol=1e-8
+            )
+
+    @pytest.mark.parametrize("mode", ["legacy", "unified"])
+    @pytest.mark.parametrize(
+        "output_variables",
+        [None, ["Voltage [V]", "Discharge capacity [A.h]"]],
+    )
+    def test_experiment_after_event_matches_finite_differences(
+        self, mode, output_variables
+    ):
+        names = [
+            "Negative particle diffusivity [m2.s-1]",
+            "Positive electrode active material volume fraction",
+        ]
+        inputs = {names[0]: 3.3e-14, names[1]: 0.665}
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at 1C until 3.5 V",
+                "Rest for 10 minutes",
+                "Charge at C/2 for 10 minutes",
+            ]
+        )
+
+        def run(inputs, sensitivities, output_variables=None):
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            parameter_values.update({name: "[input]" for name in names})
+            simulation = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                var_pts=self.var_pts,
+                solver=pybamm.IDAKLUSolver(
+                    rtol=1e-10, atol=1e-12, output_variables=output_variables or []
+                ),
+                experiment=experiment,
+                experiment_model_mode=mode,
+            )
+            return simulation.solve(
+                inputs=inputs, calculate_sensitivities=sensitivities
+            )
+
+        solution = run(inputs, names, output_variables)
+        steps = [step for cycle in solution.cycles for step in cycle.steps]
+        assert len(steps) == 3
+        assert "[experiment]" in steps[0].termination
+        # Solution times away from the step transitions, which move with the inputs
+        transitions = np.array([step.t[-1] for step in steps[:-1]])
+        t = solution.t[
+            np.min(np.abs(solution.t[:, np.newaxis] - transitions), axis=1) > 10
+        ]
+        t = t[t < solution.t[-1] - 10]
+        t = np.concatenate([t[t < transitions[0]][::10], t[t > transitions[0]]])
+        assert np.sum(t > transitions[0]) > 5
+        for name in names:
+            np.testing.assert_allclose(
+                steps[0].t_event_sensitivities[name],
+                self._central_difference(
+                    run, inputs, name, lambda s: s.cycles[0].steps[0].t[-1:]
+                ),
+                rtol=1e-5,
+            )
+            for variable in ["Voltage [V]", "Discharge capacity [A.h]"]:
+                sensitivity = np.interp(
+                    t,
+                    solution.t,
+                    np.asarray(solution[variable].sensitivities[name]).ravel(),
+                )
+                finite_difference = self._central_difference(
+                    run, inputs, name, lambda s, variable=variable: s[variable](t)
+                )
+                np.testing.assert_allclose(
+                    sensitivity,
+                    finite_difference,
+                    rtol=1e-4,
+                    atol=1e-4 * np.max(np.abs(finite_difference)),
+                )
+
+    @classmethod
+    def _diffusivity_run(cls, experiment, name):
+        def run(inputs, sensitivities):
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            parameter_values.update({name: "[input]"})
+            simulation = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                var_pts=cls.var_pts,
+                solver=pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12),
+                experiment=experiment,
+            )
+            return simulation.solve(
+                inputs=inputs, calculate_sensitivities=sensitivities, calc_esoh=False
+            )
+
+        return run
+
+    def _assert_matches_finite_differences(self, run, inputs, solution, t, variables):
+        name = next(iter(inputs))
+        for variable in variables:
+            sensitivity = np.interp(
+                t,
+                solution.t,
+                np.asarray(solution[variable].sensitivities[name]).ravel(),
+            )
+            finite_difference = self._central_difference(
+                run, inputs, name, lambda s, variable=variable: s[variable](t)
+            )
+            np.testing.assert_allclose(
+                sensitivity,
+                finite_difference,
+                rtol=1e-4,
+                atol=1e-4 * np.max(np.abs(finite_difference)),
+            )
+
+    # A flat start has no start-time dependence at the step's first time
+    @pytest.mark.parametrize("flat_start", [False, True])
+    def test_drive_cycle_after_event_matches_finite_differences(self, flat_start):
+        name = "Negative particle diffusivity [m2.s-1]"
+        inputs = {name: 3.3e-14}
+        time = np.arange(0, 601, 10.0)
+        current = 2.0 + 1.5 * np.sin(time / 40)
+        if flat_start:
+            current = np.where(time < 60, 1.0, 1.0 + 1.5 * np.sin((time - 60) / 40))
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at 1C until 3.6 V",
+                pybamm.step.current(np.column_stack([time, current]), duration=600),
+            ]
+        )
+        run = self._diffusivity_run(experiment, name)
+
+        solution = run(inputs, [name])
+        t_start = solution.cycles[0].steps[0].t[-1]
+        # Solution times between the drive cycle's knots, where its current has kinks
+        offset = (solution.t - t_start) % 10
+        t = solution.t[(solution.t > t_start + 5) & (offset > 2) & (offset < 8)]
+        t = t[t < solution.t[-1] - 5]
+        self._assert_matches_finite_differences(
+            run,
+            inputs,
+            solution,
+            t,
+            ["Voltage [V]", "Current [A]", "Discharge capacity [A.h]"],
+        )
+
+    def test_drive_cycle_until_step_after_event_matches_finite_differences(self):
+        name = "Negative particle diffusivity [m2.s-1]"
+        inputs = {name: 3.3e-14}
+        time = np.arange(0, 3601, 10.0)
+        # The drive cycle ends on a voltage that reads its current, a function of
+        # time since its moving start
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at 1C until 3.7 V",
+                pybamm.step.current(
+                    np.column_stack([time, 5.0 + 4.0 * np.sin(time / 40)]),
+                    duration=3600,
+                    termination="< 3.5 V",
+                ),
+                "Rest for 10 minutes",
+            ]
+        )
+        run = self._diffusivity_run(experiment, name)
+
+        solution = run(inputs, [name])
+        steps = [cycle.steps[0] for cycle in solution.cycles]
+        assert all("[experiment]" in step.termination for step in steps[:2])
+        for index, step in enumerate(steps[:2]):
+            np.testing.assert_allclose(
+                step.t_event_sensitivities[name],
+                self._central_difference(
+                    run,
+                    inputs,
+                    name,
+                    lambda s, index=index: s.cycles[index].steps[0].t[-1:],
+                ),
+                rtol=1e-5,
+            )
+        t_end = steps[1].t[-1]
+        t = solution.t[(solution.t > t_end + 10) & (solution.t < solution.t[-1] - 10)]
+        assert t.size > 5
+        self._assert_matches_finite_differences(
+            run, inputs, solution, t, ["Voltage [V]", "Discharge capacity [A.h]"]
+        )
+
+
 @pytest.mark.skipif(
     not (shutil.which("gcc") or shutil.which("cc")),
     reason="No C compiler available for AOT compilation",

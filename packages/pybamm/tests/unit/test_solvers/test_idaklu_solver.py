@@ -4,6 +4,7 @@ import itertools
 import json
 import logging
 import os
+import pickle
 import re
 import subprocess  # nosec B404 - runs this interpreter on a fixed script
 import sys
@@ -2542,6 +2543,439 @@ class TestIDAKLUClosedFormSensitivities:
                     atol=1e-7,
                     err_msg=f"d{output}/d{name}",
                 )
+
+
+def _threshold_model(
+    *,
+    algebraic=False,
+    events=True,
+    reads_start_time=False,
+    flat_start=False,
+    switch=False,
+    rate_event=False,
+):
+    """Discretised ``dy/dt = -a c y``, ``y(0) = 2``, that stops when the watched
+    variable, ``y`` or the algebraic ``z = b y``, falls to ``thr``.
+
+    With ``reads_start_time`` the rate is ``a (1 + t - s)`` instead, where ``s``
+    is the experiment's "start time" input, or ``a (1 + max(t - s - 1/2, 0)^2)``,
+    flat at first, with ``flat_start``. With ``switch`` the rate gains ``a``
+    after the "t_switch" input, where IDAKLU restarts because the time depends
+    on an input. With ``rate_event`` the model also stops when the rate reaches
+    "rate_thr".
+    """
+    model = pybamm.BaseModel()
+    y = pybamm.Variable("y")
+    a = pybamm.InputParameter("a")
+    thr = pybamm.InputParameter("thr")
+    rate = a * pybamm.InputParameter("c")
+    if reads_start_time:
+        time_since_start = pybamm.t - pybamm.InputParameter("start time")
+        if flat_start:
+            time_since_start = pybamm.maximum(time_since_start - 0.5, 0) ** 2
+        rate = a * (1 + time_since_start)
+    if switch:
+        rate = rate + a * (pybamm.t > pybamm.InputParameter("t_switch"))
+    model.rhs = {y: -rate * y}
+    model.initial_conditions = {y: 2.0}
+    model.variables = {
+        "y": y,
+        "int y": pybamm.ExplicitTimeIntegral(y, pybamm.Scalar(0.0)),
+        "Time [s]": pybamm.t,
+        "rate": rate,
+        "thr": thr,
+    }
+    watched = y
+    if algebraic:
+        z = pybamm.Variable("z")
+        model.algebraic = {z: z - pybamm.InputParameter("b") * y}
+        model.initial_conditions[z] = 1.0
+        model.variables["z"] = z
+        watched = z
+    if events:
+        model.events = [pybamm.Event("threshold [experiment]", watched - thr)]
+    if rate_event:
+        model.events.append(
+            pybamm.Event(
+                "rate threshold [experiment]",
+                pybamm.InputParameter("rate_thr") - rate,
+            )
+        )
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+def _sensitivity(solution, variable, name):
+    return np.asarray(solution[variable].sensitivities[name]).ravel()
+
+
+class TestIDAKLUEventTimeSensitivities:
+    """``dt_event/dp`` and fixed-time sensitivities across moving step starts."""
+
+    a, thr, b, duration = 0.3, 0.5, 1.5, 2.0
+
+    def _solve(self, *, algebraic=False, output_variables=None):
+        model = _threshold_model(algebraic=algebraic)
+        inputs = {"a": self.a, "thr": self.thr, "c": 1.0}
+        if algebraic:
+            inputs["b"] = self.b
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10, atol=1e-12, output_variables=output_variables or []
+        )
+        names = sorted(set(inputs) - {"c"})
+        solution = solver.solve(
+            model, [0, 20], inputs=inputs, calculate_sensitivities=names
+        )
+        return solution, inputs, names
+
+    def _exact_event(self, algebraic):
+        b = self.b if algebraic else 1.0
+        t_event = np.log(2 * b / self.thr) / self.a
+        dt_event = {
+            "a": -t_event / self.a,
+            "thr": -1 / (self.a * self.thr),
+            "b": 1 / (self.a * b),
+        }
+        return b, t_event, dt_event
+
+    @pytest.mark.parametrize("algebraic", [False, True])
+    @pytest.mark.parametrize("output_variables", [None, ["y", "int y"]])
+    def test_event_time_and_last_state_are_total_derivatives(
+        self, algebraic, output_variables
+    ):
+        solution, _, names = self._solve(
+            algebraic=algebraic, output_variables=output_variables
+        )
+        b, t_event, dt_event = self._exact_event(algebraic)
+        np.testing.assert_allclose(solution.t[-1], t_event, rtol=1e-8)
+
+        t_event_sensitivities = solution.t_event_sensitivities
+        for name in names:
+            np.testing.assert_allclose(
+                t_event_sensitivities[name], [dt_event[name]], rtol=1e-6
+            )
+        np.testing.assert_allclose(
+            t_event_sensitivities["all"],
+            [[dt_event[name] for name in names]],
+            rtol=1e-6,
+        )
+
+        # The final y is thr / b whatever a, so its total derivative ignores a
+        last_y = solution.last_state["y"].sensitivities
+        exact_y = {"a": 0.0, "thr": 1 / b, "b": -self.thr / b**2}
+        for name in names:
+            np.testing.assert_allclose(
+                last_y[name], [exact_y[name]], rtol=1e-6, atol=1e-8
+            )
+
+        # Rows stay partial derivatives at fixed time
+        t = solution.t
+        np.testing.assert_allclose(
+            _sensitivity(solution, "y", "a"),
+            -2 * t * np.exp(-self.a * t),
+            rtol=1e-5,
+            atol=1e-8,
+        )
+        np.testing.assert_allclose(_sensitivity(solution, "y", "thr"), 0.0, atol=1e-8)
+
+        # The integral up to the event gains f(t_e) dt_e/dp
+        integral = solution["int y"].sensitivities
+        exact_integral = {
+            "a": -(2 - self.thr / b) / self.a**2,
+            "thr": -1 / (self.a * b),
+            "b": self.thr / (self.a * b**2),
+        }
+        for name in names:
+            np.testing.assert_allclose(
+                integral[name], [exact_integral[name]], rtol=1e-4
+            )
+
+    def test_last_state_includes_explicit_time_dependence(self):
+        solution, _, names = self._solve()
+        time = solution.last_state["Time [s]"].sensitivities
+        for name in names:
+            np.testing.assert_allclose(
+                time[name], solution.t_event_sensitivities[name], rtol=1e-12
+            )
+
+    @pytest.mark.parametrize("algebraic", [False, True])
+    @pytest.mark.parametrize("output_variables", [None, ["y", "int y"]])
+    def test_step_after_event_has_fixed_time_sensitivities(
+        self, algebraic, output_variables
+    ):
+        solution, inputs, names = self._solve(
+            algebraic=algebraic, output_variables=output_variables
+        )
+        b, _, dt_event = self._exact_event(algebraic)
+        t_event = solution.t[-1]
+        # The next step decays twice as fast, so y' jumps at the moving t_e
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10, atol=1e-12, output_variables=output_variables or []
+        )
+        stepped = solver.step(
+            solution,
+            _threshold_model(algebraic=algebraic, events=False),
+            self.duration,
+            t_eval=np.linspace(0, self.duration, 11),
+            inputs=dict(inputs, c=2.0),
+            calculate_sensitivities=names,
+        )
+        after = stepped.t > solution.t[-1]
+        t = stepped.t[after]
+        y = self.thr / b * np.exp(-2 * self.a * (t - t_event))
+        exact = {"a": -2 * t * y, "thr": -y / self.thr, "b": y / b}
+        for name in names:
+            np.testing.assert_allclose(
+                _sensitivity(stepped, "y", name)[after],
+                exact[name],
+                rtol=1e-6,
+                atol=1e-9,
+            )
+
+        # The end moves with the start, and the integral spans both moving ends
+        for name in names:
+            np.testing.assert_allclose(
+                stepped._t_end_sensitivities[name], dt_event[name], rtol=1e-6
+            )
+        decay = (1 - np.exp(-2 * self.a * self.duration)) / (2 * self.a)
+        np.testing.assert_allclose(
+            stepped["int y"].sensitivities["thr"],
+            [(decay - 1 / self.a) / b],
+            rtol=1e-4,
+        )
+
+    def test_step_split_at_discontinuity_after_event(self):
+        solution, inputs, names = self._solve()
+        t_event = solution.t[-1]
+        _, _, dt_event = self._exact_event(algebraic=False)
+        # The rate steps from 2a to 3a at a fixed time inside the next step
+        t_switch = t_event + self.duration / 2
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        stepped = solver.step(
+            solution,
+            _threshold_model(events=False, switch=True),
+            self.duration,
+            t_eval=np.linspace(0, self.duration, 11),
+            inputs=dict(inputs, c=2.0, t_switch=t_switch),
+            calculate_sensitivities=names,
+        )
+        assert len(stepped.sub_solutions) == 3
+        after = stepped.t > t_event
+        t = stepped.t[after]
+        decay_before = np.exp(-2 * self.a * (np.minimum(t, t_switch) - t_event))
+        decay_after = np.exp(-3 * self.a * np.maximum(t - t_switch, 0))
+        y = self.thr * decay_before * decay_after
+        exact = {
+            "a": np.where(t > t_switch, t_switch - 3 * t, -2 * t) * y,
+            "thr": -y / self.thr,
+        }
+        for name in names:
+            np.testing.assert_allclose(
+                _sensitivity(stepped, "y", name)[after],
+                exact[name],
+                rtol=1e-6,
+                atol=1e-9,
+            )
+
+        # Only the step's end moves with its start, not the switch inside it
+        t_end = stepped.t[-1]
+        y_end = y[-1]
+        for name in names:
+            np.testing.assert_allclose(
+                stepped._t_end_sensitivities[name], dt_event[name], rtol=1e-6
+            )
+            np.testing.assert_allclose(
+                stepped.last_state["y"].sensitivities[name],
+                [exact[name][-1] - 3 * self.a * y_end * dt_event[name]],
+                rtol=1e-6,
+            )
+        E1 = np.exp(-2 * self.a * (t_switch - t_event))
+        E2 = np.exp(-3 * self.a * (t_end - t_switch))
+        step_integral = self.thr * (
+            (1 - E1) / (2 * self.a) + E1 * (1 - E2) / (3 * self.a)
+        )
+        np.testing.assert_allclose(
+            stepped["int y"].sensitivities["thr"],
+            [-step_integral / self.thr - y_end / (self.a * self.thr)],
+            rtol=1e-4,
+        )
+
+    def test_split_step_that_reads_its_start_time_warns(self):
+        solution, inputs, names = self._solve()
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        with pytest.warns(
+            pybamm.SolverWarning, match="depends on an input splits"
+        ) as record:
+            solver.step(
+                solution,
+                _threshold_model(events=False, reads_start_time=True, switch=True),
+                self.duration,
+                inputs={
+                    **inputs,
+                    "start time": solution.t[-1],
+                    "t_switch": solution.t[-1] + self.duration / 2,
+                },
+                calculate_sensitivities=names,
+            )
+        # Raised at the caller of step()
+        assert record[0].filename == __file__
+
+    def test_step_with_fixed_end_time(self):
+        solution, inputs, names = self._solve()
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        stepped = solver.step(
+            solution,
+            _threshold_model(events=False),
+            self.duration,
+            inputs=dict(inputs, c=2.0),
+            calculate_sensitivities=names,
+            end_time_fixed=True,
+        )
+        assert stepped._t_end_sensitivities is None
+        last = stepped.last_state
+        for name in names:
+            np.testing.assert_allclose(
+                last["y"].sensitivities[name],
+                _sensitivity(stepped, "y", name)[-1:],
+                rtol=1e-12,
+            )
+            np.testing.assert_allclose(
+                last["Time [s]"].sensitivities[name], 0.0, atol=1e-12
+            )
+
+    # A flat start has no start-time dependence near the step's first time
+    @pytest.mark.parametrize("flat_start", [False, True])
+    def test_step_that_reads_its_start_time(self, flat_start):
+        solution, inputs, names = self._solve()
+        # The solver's event time, which the closed forms below are relative to
+        t_event = solution.t[-1]
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        stepped = solver.step(
+            solution,
+            _threshold_model(
+                events=False, reads_start_time=True, flat_start=flat_start
+            ),
+            self.duration,
+            t_eval=np.linspace(0, self.duration, 11),
+            inputs={**inputs, "start time": solution.t[-1]},
+            calculate_sensitivities=names,
+        )
+        after = stepped.t > solution.t[-1]
+        tau = stepped.t[after] - t_event
+        # rate = a R(tau), with tau = t - s and y = thr exp(-a E(tau)), E' = R
+        if flat_start:
+            flat = np.maximum(tau - 0.5, 0)
+            exponent, rate, rate_slope = tau + flat**3 / 3, 1 + flat**2, 2 * flat
+        else:
+            exponent, rate, rate_slope = tau + tau**2 / 2, 1 + tau, 1.0
+        y = self.thr * np.exp(-self.a * exponent)
+        exact_y = {
+            "a": y * (-exponent - rate * t_event),
+            "thr": -(rate - 1) * y / self.thr,
+        }
+        # The rate reads t - s, and s moves with t_e
+        exact_rate = {"a": rate + rate_slope * t_event, "thr": rate_slope / self.thr}
+        for name in names:
+            np.testing.assert_allclose(
+                _sensitivity(stepped, "y", name)[after],
+                exact_y[name],
+                rtol=1e-6,
+                atol=1e-9,
+            )
+            np.testing.assert_allclose(
+                _sensitivity(stepped, "rate", name)[after],
+                exact_rate[name],
+                rtol=1e-6,
+                atol=1e-9,
+            )
+
+    def test_event_that_reads_the_moving_start_time(self):
+        solution, inputs, names = self._solve()
+        _, _, dt_start = self._exact_event(algebraic=False)
+        rate_thr = 2 * self.a
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        stepped = solver.step(
+            solution,
+            _threshold_model(events=False, reads_start_time=True, rate_event=True),
+            self.duration,
+            inputs={**inputs, "start time": solution.t[-1], "rate_thr": rate_thr},
+            calculate_sensitivities=names,
+        )
+        assert stepped.termination == "event: rate threshold [experiment]"
+        # a (1 + t - s) reaches rate_thr at t_e = s + rate_thr / a - 1
+        exact = {"a": dt_start["a"] - rate_thr / self.a**2, "thr": dt_start["thr"]}
+        for name in names:
+            np.testing.assert_allclose(
+                stepped.t_event_sensitivities[name], [exact[name]], rtol=1e-6
+            )
+
+    def test_step_that_reads_its_start_time_with_output_variables_warns(self):
+        solution, inputs, names = self._solve(output_variables=["y"])
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, output_variables=["y"])
+        with pytest.warns(
+            pybamm.SolverWarning, match="depend on its start time"
+        ) as record:
+            solver.step(
+                solution,
+                _threshold_model(events=False, reads_start_time=True),
+                self.duration,
+                inputs={**inputs, "start time": solution.t[-1]},
+                calculate_sensitivities=names,
+            )
+        assert record[0].filename == __file__
+
+    def test_time_sensitivities_survive_copy_join_and_pickle(self):
+        solution, inputs, names = self._solve()
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        step = solver.step(
+            solution,
+            _threshold_model(events=False),
+            self.duration,
+            inputs=dict(inputs, c=2.0),
+            calculate_sensitivities=names,
+            save=False,
+        )
+        joined = solution + step
+        assert joined.t_event_sensitivities is None
+        assert joined._t_end_sensitivities == step._t_end_sensitivities
+        assert len(joined._segment_time_sensitivities()) == len(joined.all_ts)
+
+        folded = pybamm.Solution.from_sub_solutions([solution, step])
+        np.testing.assert_allclose(
+            folded["int y"].sensitivities["all"],
+            joined["int y"].sensitivities["all"],
+            rtol=1e-12,
+        )
+
+        for copied in (
+            solution.copy(),
+            pickle.loads(pickle.dumps(solution)),
+            solution.last_state,
+            solution.last_state.last_state,
+        ):
+            np.testing.assert_array_equal(
+                copied.t_event_sensitivities["all"],
+                solution.t_event_sensitivities["all"],
+            )
+            np.testing.assert_allclose(
+                copied.last_state["y"].sensitivities["thr"], [1.0], rtol=1e-8
+            )
+
+        # The first state of a step is a total derivative along its moving start
+        first = step.first_state
+        np.testing.assert_allclose(first["y"].sensitivities["thr"], [1.0], rtol=1e-8)
+
+    def test_solution_without_event_has_no_event_time_sensitivities(self):
+        model = _threshold_model(events=False)
+        solution = pybamm.IDAKLUSolver().solve(
+            model,
+            [0, 1],
+            inputs={"a": self.a, "thr": self.thr, "c": 1.0},
+            calculate_sensitivities=["a"],
+        )
+        assert solution.t_event_sensitivities is None
+        assert solution._t_end_sensitivities is None
+        assert solution._all_time_sensitivities is None
 
 
 class TestIDAKLUAtol:

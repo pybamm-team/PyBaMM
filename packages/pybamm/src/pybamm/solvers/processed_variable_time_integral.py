@@ -323,6 +323,7 @@ class ProcessedVariableTimeIntegral:
         inputs,
         sensitivity_names,
         sensitivities,
+        boundary_sensitivities=None,
     ) -> np.ndarray:
         """
         Compute the sensitivities of the postfix sum or integral.
@@ -343,17 +344,37 @@ class ProcessedVariableTimeIntegral:
         sensitivities : np.ndarray
             The sensitivities of the integrand at each sample time, of shape
             ``(n_t * n_entries, n_p)``, time-major.
+        boundary_sensitivities : np.ndarray, optional
+            The continuous integral's sensitivity to its moving segment first and
+            last times, of shape ``(n_entries, n_p)``, added to the integral of
+            ``sensitivities``. A discrete sum has no such term.
 
         Returns
         -------
         np.ndarray
             The sensitivities of the postfix value, of shape ``(n_entries, n_p)``.
+
+        Raises
+        ------
+        :class:`pybamm.ShapeError`
+            If ``boundary_sensitivities`` has a different size to the integral's
+            sensitivities.
         """
         n_params = np.shape(sensitivities)[-1]
         sensitivities = self._time_major(sensitivities, len(t_pts), (n_params,))
         integral_sensitivities = self._sum_over_time(
             sensitivities, t_pts
         ) + self.initial_condition_sensitivities(inputs, sensitivity_names)
+        if boundary_sensitivities is not None and self.method == "continuous":
+            if np.size(boundary_sensitivities) != integral_sensitivities.size:
+                raise pybamm.ShapeError(
+                    f'Processing time integral "{var_name}": its boundary '
+                    f"sensitivities have shape {np.shape(boundary_sensitivities)}, "
+                    f"not {integral_sensitivities.shape}."
+                )
+            integral_sensitivities = integral_sensitivities + np.reshape(
+                boundary_sensitivities, integral_sensitivities.shape
+            )
         if self.post_sum_node is None:
             return integral_sensitivities
 
