@@ -2,8 +2,8 @@
 
 ## Breaking changes
 
-- Reading a variable's sensitivities after a solve that calculated none raises a `SolverError` naming the variable and saying to pass `calculate_sensitivities`. A full-state variable raised a `ValueError`, which `SolverError` does not subclass, and an `output_variables` one returned `{}` or `None`. `ProcessedVariableComputed.solution_sensitivities` is removed. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
-- The arrays in `Solution.sensitivities` are read-only, so writing to them can no longer change the solution's variables or the state a restart starts from. Copy an array to change it. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- Reading a variable's sensitivities after a solve that calculated none raises a `SolverError` naming the variable and saying to pass `calculate_sensitivities`. A full-state variable raised a `ValueError`, which `SolverError` does not subclass, and an `output_variables` one returned `{}` or `None`. `ProcessedVariableComputed.solution_sensitivities` is removed. ([#5972](https://github.com/pybamm-team/PyBaMM/pull/5972))
+- The arrays in `Solution.sensitivities` are read-only, so writing to them can no longer change the solution's variables or the state a restart starts from. Copy an array to change it. ([#5972](https://github.com/pybamm-team/PyBaMM/pull/5972))
 
 ## Bug fixes
 
@@ -24,7 +24,7 @@
   - A `DiscreteTimeSum` sums only at its own discrete times, not at every solution time. A full-state value uses Hermite interpolation at discrete times the solution lacks, and an `output_variables` solve that would miss them raises a `SolverError` before solving. Discrete times after an early event are left out with a warning.
   - An `ExplicitTimeIntegral` of a variable that varies in one spatial dimension returns one value per point, with sensitivities. Integrands that vary in more dimensions, and expressions of an integral that change its shape, raise `NotImplementedError`.
   - An `ExplicitTimeIntegral` whose initial condition depends on an input, as `remove_independent_variables_from_rhs=True` creates, no longer raises a `KeyError`, and its sensitivities include the initial condition's derivative.
-- Joined and reduced solutions now have the right sensitivities, and variables read correctly between a solution's segments. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- Joined and reduced solutions now have the right sensitivities, and variables read correctly between a solution's segments. ([#5972](https://github.com/pybamm-team/PyBaMM/pull/5972))
   - Joining solutions with sensitivities to different parameters keeps those every segment shares, with a logged warning naming the ones dropped, instead of giving wrong columns or a cryptic error. With none shared, reading the sensitivities raises a `SolverError` naming each segment's parameters, while the values still join. The first and last states keep their own segment's sensitivities.
   - `IDAKLUSolver.reduce_solution` keeps the sensitivities at the kept knots, so a variable's sensitivities can be read from the reduced solution.
   - A time between two segments no longer extrapolates a segment's cubic backwards, shifts later values or crashes. In the round-off gap left at a discontinuity it takes the end of the earlier segment (the left limit), and in a longer gap, such as one left by `save_at_cycles`, the fill value (NaN by default). A time before the start is rejected whatever order the times are in.
@@ -35,7 +35,7 @@
 ## Optimizations
 
 - Experiments with a different model per step no longer compile Jacobians of the state mappers between models, which were unused. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
-- Reading a variable's sensitivities from a full-state solution evaluates the chain rule over blocks of time points in compiled code, reusing it across solves of the same model, instead of building a Jacobian per time point in Python. A DFN voltage over 3001 time points now takes 4 ms instead of 0.3 s, and over a 120-step experiment 12 ms instead of 0.85 s. An `IDAKLUSolver` solution also stores its state sensitivities once, each parameter's entry a view of the `"all"` array, halving their memory. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- Reading a variable's sensitivities from a full-state solution evaluates the chain rule over blocks of time points in compiled code, reusing it across solves of the same model, instead of building a Jacobian per time point in Python. A DFN voltage over 3001 time points now takes 4 ms instead of 0.3 s, and over a 120-step experiment 12 ms instead of 0.85 s. An `IDAKLUSolver` solution also stores its state sensitivities once, each parameter's entry a view of the `"all"` array, halving their memory. ([#5972](https://github.com/pybamm-team/PyBaMM/pull/5972))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
 
