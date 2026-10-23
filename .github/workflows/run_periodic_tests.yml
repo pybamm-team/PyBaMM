@@ -104,6 +104,7 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
 
       - name: Install nox
         run: uv tool install nox
