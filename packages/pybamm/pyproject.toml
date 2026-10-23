@@ -227,7 +227,7 @@ disable_warnings = ["couldnt-parse", "module-not-measured"]
 # mypy-like leniency: unannotated function bodies go unchecked
 preset = "legacy"
 project-includes = ["src/pybamm"]
-# The Python CI and the nox session check with
+# Pinned to the CI type-check job's interpreter, so local runs match CI
 python-version = "3.13"
 python-platform = "linux"
 ignore-missing-imports = ["*"]

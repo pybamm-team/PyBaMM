@@ -132,7 +132,11 @@ class Concatenation(pybamm.Symbol):
         if len(children_eval) == 0:
             return np.array([])
         if self.concatenation_function is None:
-            raise TypeError(f"{type(self).__name__} has no concatenation function")
+            # Like an undiscretised Variable, so evaluate_ignoring_errors returns None
+            raise NotImplementedError(
+                f"{type(self).__name__} has no concatenation function until it is "
+                "discretised"
+            )
         return self.concatenation_function(children_eval)
 
     def evaluate(
