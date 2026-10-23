@@ -342,6 +342,9 @@ class ParameterSubstitutor:
             new_node = pybamm.rebuild(node, new_leaves, simplify=False)
             if node in placeholders:
                 return new_node.with_domains(placeholders[node])
+            if not new_node.children:
+                # A leaf keeps its own domains (e.g. a SpatialVariable)
+                return new_node
             return new_node.with_domains(
                 new_node._combine_children_domains(new_node.children)
             )
