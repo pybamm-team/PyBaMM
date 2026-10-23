@@ -297,6 +297,19 @@ jobs:
       sessions: scripts
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
+  # Advisory while the baseline is burned down: fails only on type errors that
+  # are not in packages/pybamm/pyrefly-baseline.json.
+  run_type_check_advisory:
+    needs: [changes, build_solver]
+    if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Type check
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: type-check
+      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+
   run_memory_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}

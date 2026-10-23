@@ -155,6 +155,22 @@ def run_unit(session):
     session.run("python", "-m", "pytest", "-m", "unit", "packages/pybamm/tests")
 
 
+@nox.session(name="type-check", default=False)
+def run_type_check(session):
+    """Type check pybamm with Pyrefly, failing only on errors not in its baseline.
+
+    Pass ``-- --update-baseline`` to re-record the baseline after fixing errors.
+    """
+    install_locked(session, extras=["all", "jax"], groups=["typecheck"])
+    session.run(
+        "pyrefly",
+        "check",
+        "--config",
+        "packages/pybamm/pyproject.toml",
+        *session.posargs,
+    )
+
+
 @nox.session(name="memory", default=False)
 def run_memory(session):
     """Run memory leak tests using pytest-memray (Linux/macOS only)."""

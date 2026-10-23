@@ -76,7 +76,7 @@ CasadiFunction::CasadiFunction(
   size_t sz_w;
   m_func.sz_work(sz_arg, sz_res, sz_iw, sz_w);
 
-  int nnz = (sz_res>0) ? m_func.nnz_out() : 0;  // cppcheck-suppress unreadVariable
+  int nnz = (sz_res>0) ? m_func.nnz_out() : 0;
   DEBUG("name = "<< m_func.name() << " arg = " << sz_arg << " res = "
     << sz_res << " iw = " << sz_iw << " w = " << sz_w << " nnz = " << nnz);
 

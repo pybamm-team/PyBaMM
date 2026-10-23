@@ -103,6 +103,7 @@ bench = [
     # For memory benchmarking (Linux/macOS only)
     "pytest-memray>=1.7.0; sys_platform != 'win32'",
 ]
+typecheck = ["pyrefly>=1.4.0"]
 dev = [
     # For working with pre-commit hooks
     "pre-commit",
@@ -222,14 +223,26 @@ concurrency = ["multiprocessing"]
 disable_warnings = ["couldnt-parse", "module-not-measured"]
 
 
-[tool.mypy]
-ignore_missing_imports = true
-allow_redefinition = true
-disable_error_code = ["call-overload", "operator"]
+[tool.pyrefly]
+# mypy-like leniency: unannotated function bodies go unchecked
+preset = "legacy"
+project-includes = ["src/pybamm"]
+# Pinned so results don't depend on the interpreter that runs the check
+python-version = "3.10"
+python-platform = "linux"
+ignore-missing-imports = ["*"]
+baseline = "pyrefly-baseline.json"
 
-[[tool.mypy.overrides]]
-module = [
-    "pybamm.models.base_model.*",
-    "pybamm.models.full_battery_models.base_battery_model.*",
-]
-disable_error_code = "attr-defined"
+# Carried over from the mypy config this replaces
+[tool.pyrefly.errors]
+no-matching-overload = "ignore"
+unsupported-operation = "ignore"
+redefinition = "ignore"
+
+[[tool.pyrefly.sub-config]]
+matches = "src/pybamm/models/base_model.py"
+errors = { missing-attribute = "ignore" }
+
+[[tool.pyrefly.sub-config]]
+matches = "src/pybamm/models/full_battery_models/base_battery_model.py"
+errors = { missing-attribute = "ignore" }

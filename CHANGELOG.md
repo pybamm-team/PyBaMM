@@ -4,6 +4,10 @@
 
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
 
+## Features
+
+- Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. Two advisory checks are new: clang-tidy reports solver findings to code scanning, and `nox -s type-check` runs Pyrefly against a committed baseline, so only new type errors fail. ([#5972](https://github.com/pybamm-team/PyBaMM/pull/5972))
+
 ## Bug fixes
 
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))

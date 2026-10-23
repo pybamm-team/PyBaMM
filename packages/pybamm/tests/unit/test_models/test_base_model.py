@@ -3,9 +3,9 @@
 #
 
 import os
-import pickle  # nosec B403 - used in tests with trusted input
+import pickle
 import platform
-import subprocess  # nosec
+import subprocess
 import sys
 from io import StringIO
 
@@ -831,7 +831,7 @@ class TestBaseModel:
         # Compile
         subprocess.run(
             ["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"], check=True
-        )  # nosec
+        )
 
         # Read the generated functions
         x0_fn = casadi.external("x0", "./test.so")
@@ -1826,7 +1826,7 @@ class TestBaseModel:
         data = pickle.dumps(model)
         monkeypatch.undo()
 
-        restored = pickle.loads(data)  # nosec B301
+        restored = pickle.loads(data)
         assert restored.convert_to_format == "python"
         assert "convert_to_format" not in vars(restored)
         solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])

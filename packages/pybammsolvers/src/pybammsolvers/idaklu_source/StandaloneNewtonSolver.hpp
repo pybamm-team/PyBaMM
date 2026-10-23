@@ -58,8 +58,8 @@ private:
   void BuildSparseResources(int jac_nnz);
   void BuildDenseResources();
 
-  std::unique_ptr<Expression> res_;  // cppcheck-suppress unusedStructMember
-  std::unique_ptr<Expression> jac_;  // cppcheck-suppress unusedStructMember
+  std::unique_ptr<Expression> res_;
+  std::unique_ptr<Expression> jac_;
   int n_vars_;
   bool use_sparse_;
   sunrealtype klu_pivot_tolerance_;

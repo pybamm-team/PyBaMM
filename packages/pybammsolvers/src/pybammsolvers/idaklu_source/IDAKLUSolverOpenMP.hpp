@@ -70,26 +70,23 @@ struct PendingStats {
 template <class ExprSet>
 class IDAKLUSolverOpenMP : public IDAKLUSolver
 {
-  // NB: cppcheck-suppress unusedStructMember is used because codacy reports
-  //     these members as unused even though they are important in child
-  //     classes, but are passed by variadic arguments (and are therefore unnamed)
 public:
   void *ida_mem = nullptr;
   np_array atol_np;
   np_array rhs_alg_id;
-  int const number_of_states;  // cppcheck-suppress unusedStructMember
-  int const number_of_parameters;  // cppcheck-suppress unusedStructMember
-  int const number_of_events;  // cppcheck-suppress unusedStructMember
+  int const number_of_states;
+  int const number_of_parameters;
+  int const number_of_events;
   int number_of_timesteps;
-  int precon_type;  // cppcheck-suppress unusedStructMember
+  int precon_type;
   N_Vector yy, yyp, y_cache, avtol;  // y, y', y cache vector, and absolute tolerance
-  N_Vector *yyS;  // cppcheck-suppress unusedStructMember
-  N_Vector *yypS;  // cppcheck-suppress unusedStructMember
+  N_Vector *yyS;
+  N_Vector *yypS;
   N_Vector id;              // rhs_alg_id
   sunrealtype rtol;
-  int const jac_times_cjmass_nnz;  // cppcheck-suppress unusedStructMember
-  int const jac_bandwidth_lower;  // cppcheck-suppress unusedStructMember
-  int const jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
+  int const jac_times_cjmass_nnz;
+  int const jac_bandwidth_lower;
+  int const jac_bandwidth_upper;
   SUNMatrix J;
   SUNLinearSolver LS = nullptr;
   std::unique_ptr<ExprSet> functions;
@@ -98,11 +95,11 @@ public:
   vector<sunrealtype> res_dvar_dp;
   // Reused scratch for sparse->dense output sensitivity scatter (outputs-only mode)
   vector<sunrealtype> dvar_dp_dense;
-  bool const sensitivity;  // cppcheck-suppress unusedStructMember
-  bool const save_outputs_only; // cppcheck-suppress unusedStructMember
-  bool save_hermite;  // cppcheck-suppress unusedStructMember
-  bool is_ODE;  // cppcheck-suppress unusedStructMember
-  int length_of_return_vector;  // cppcheck-suppress unusedStructMember
+  bool const sensitivity;
+  bool const save_outputs_only;
+  bool save_hermite;
+  bool is_ODE;
+  int length_of_return_vector;
 
   // Arrays are stored flat (contiguous) for cache efficiency and zero-copy
   // to numpy. Indexing uses strides:

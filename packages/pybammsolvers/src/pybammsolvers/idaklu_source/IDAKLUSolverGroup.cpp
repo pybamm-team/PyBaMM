@@ -131,7 +131,6 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
   // may log directly or must buffer until flush_logs().
   set_loggers(logger);
 
-  // cppcheck-suppress unreadVariable
   const int team_size = std::max<int>(1, std::min<int>(m_solvers.size(), number_of_groups));
   // Emulates schedule(dynamic) with an atomic counter: the macOS wheels' libomp
   // lacks __kmpc_dispatch_deinit, and MSVC needs -openmp:llvm for omp atomic capture.
