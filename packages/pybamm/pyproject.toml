@@ -227,11 +227,10 @@ disable_warnings = ["couldnt-parse", "module-not-measured"]
 # mypy-like leniency: unannotated function bodies go unchecked
 preset = "legacy"
 project-includes = ["src/pybamm"]
-# Pinned so results don't depend on the interpreter that runs the check
-python-version = "3.10"
+# The Python CI and the nox session check with
+python-version = "3.13"
 python-platform = "linux"
 ignore-missing-imports = ["*"]
-baseline = "pyrefly-baseline.json"
 
 # Carried over from the mypy config this replaces
 [tool.pyrefly.errors]

@@ -66,6 +66,11 @@ class TestBaseModel:
         assert isinstance(model.initial_conditions[c0], pybamm.Scalar)
         assert model.initial_conditions[c0].value == 34
 
+        # update takes the same arguments as dict.update
+        d0 = pybamm.Symbol("d0")
+        model.initial_conditions.update([(d0, 5)])
+        assert model.initial_conditions[d0].value == 5
+
         # Variable in initial conditions should fail
         with pytest.raises(
             TypeError, match=r"Initial conditions cannot contain 'Variable' objects"
@@ -100,6 +105,13 @@ class TestBaseModel:
         assert model.boundary_conditions[c0]["right"][0].value == 4
         assert model.boundary_conditions[c0]["left"][1] == "Dirichlet"
         assert model.boundary_conditions[c0]["right"][1] == "Dirichlet"
+
+        # update takes the same arguments as dict.update
+        model.boundary_conditions.update(
+            [(c0, {"left": (1, "Neumann"), "right": (2, "Neumann")})]
+        )
+        assert model.boundary_conditions[c0]["left"][0].value == 1
+        assert model.boundary_conditions[c0]["right"][1] == "Neumann"
 
         # Check bad bc type
         bad_bcs = {c0: {"left": (-2, "bad type"), "right": (4, "bad type")}}

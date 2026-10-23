@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import functools
 import numbers
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import cast
 
 import casadi
@@ -174,6 +174,8 @@ class BinaryOperator(pybamm.Symbol):
         children = self._children_for_copying(new_children)
 
         if not perform_simplifications:
+            # Concrete subclasses take (left, right), not the base's (name, left, right)
+            # pyrefly: ignore[missing-argument, bad-argument-type]
             out = self.__class__(children[0], children[1])
         else:
             # creates a new instance using the overloaded binary operator to perform
@@ -183,7 +185,7 @@ class BinaryOperator(pybamm.Symbol):
         # new children determine the domains; a plain copy keeps this node's
         return out if new_children else out.with_domains(self)
 
-    def _binary_new_copy(self, left: ChildSymbol, right: ChildSymbol):
+    def _binary_new_copy(self, left: pybamm.Symbol, right: pybamm.Symbol):
         """
         Performs the overloaded binary operation on the two symbols `left` and `right`,
         to create a binary class instance after performing appropriate simplifying
@@ -235,7 +237,7 @@ class BinaryOperator(pybamm.Symbol):
         )
         return self._casadi_evaluate(converted_left, converted_right)
 
-    def _evaluates_on_edges(self, dimension: str) -> bool:
+    def _evaluates_on_edges(self, dimension: str) -> bool | str:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(
             dimension
@@ -542,8 +544,8 @@ class TensorProduct(BinaryOperator):
 
     def _binary_new_copy(
         self,
-        left: ChildSymbol,
-        right: ChildSymbol,
+        left: pybamm.Symbol,
+        right: pybamm.Symbol,
     ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return tensor_product(left, right)
@@ -968,7 +970,7 @@ class Modulo(BinaryOperator):
 
     @staticmethod
     def _t_stops_restarts(
-        period: float, t_eval: npt.ArrayLike
+        period: float, t_eval: Sequence[float] | npt.NDArray[np.float64]
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Times either side of each reset of ``t mod period`` over ``t_eval``.
 
@@ -996,7 +998,9 @@ class Modulo(BinaryOperator):
         return stops, restarts
 
     @staticmethod
-    def _t_resets(period: float, t_eval: npt.ArrayLike) -> npt.NDArray[np.float64]:
+    def _t_resets(
+        period: float, t_eval: Sequence[float] | npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         """Times at which ``t mod period`` resets over the range of ``t_eval``.
 
         Parameters
@@ -1907,8 +1911,8 @@ def smooth_max(left, right, k):
 
 
 def sigmoid(
-    left: pybamm.Symbol,
-    right: pybamm.Symbol,
+    left: Numeric | pybamm.Symbol,
+    right: Numeric | pybamm.Symbol,
     k: float,
 ):
     """
@@ -1917,7 +1921,9 @@ def sigmoid(
     Note that the concept of deciding which side to pick when left=right does not apply
     for this smooth approximation. When left=right, the value is (left+right)/2.
     """
-    return (1 + pybamm.tanh(k * (right - left))) / 2
+    # Callers pass a symbol on at least one side, so the difference is a symbol
+    difference = cast("pybamm.Symbol", right - left)
+    return (1 + pybamm.tanh(k * difference)) / 2
 
 
 def source(

@@ -297,9 +297,7 @@ jobs:
       sessions: scripts
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
-  # Advisory while the baseline is burned down: fails only on type errors that
-  # are not in packages/pybamm/pyrefly-baseline.json.
-  run_type_check_advisory:
+  run_type_check:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Type check
@@ -364,6 +362,7 @@ jobs:
       - run_doctests
       - run_example_tests
       - run_scripts_tests
+      - run_type_check
       - run_memory_tests
       - run_zoo_gating
     runs-on: ubuntu-latest

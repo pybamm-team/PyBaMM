@@ -155,12 +155,9 @@ def run_unit(session):
     session.run("python", "-m", "pytest", "-m", "unit", "packages/pybamm/tests")
 
 
-@nox.session(name="type-check", default=False)
+@nox.session(name="type-check", python="3.13", default=False)
 def run_type_check(session):
-    """Type check pybamm with Pyrefly, failing only on errors not in its baseline.
-
-    Pass ``-- --update-baseline`` to re-record the baseline after fixing errors.
-    """
+    """Type check pybamm with Pyrefly."""
     install_locked(session, extras=["all", "jax"], groups=["typecheck"])
     session.run(
         "pyrefly",
