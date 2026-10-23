@@ -66,10 +66,12 @@ class TestBaseModel:
         assert isinstance(model.initial_conditions[c0], pybamm.Scalar)
         assert model.initial_conditions[c0].value == 34
 
-        # update takes the same arguments as dict.update
+        # update accepts iterable pairs as well as mappings
         d0 = pybamm.Symbol("d0")
         model.initial_conditions.update([(d0, 5)])
         assert model.initial_conditions[d0].value == 5
+        with pytest.raises(TypeError, match="does not accept keyword arguments"):
+            model.initial_conditions.update(d0=5)
 
         # Variable in initial conditions should fail
         with pytest.raises(
@@ -106,7 +108,7 @@ class TestBaseModel:
         assert model.boundary_conditions[c0]["left"][1] == "Dirichlet"
         assert model.boundary_conditions[c0]["right"][1] == "Dirichlet"
 
-        # update takes the same arguments as dict.update
+        # update accepts iterable pairs as well as mappings
         model.boundary_conditions.update(
             [(c0, {"left": (1, "Neumann"), "right": (2, "Neumann")})]
         )

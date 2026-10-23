@@ -2595,7 +2595,12 @@ class EquationDict(dict):
         self.update({key: value})
 
     def update(self, equations=(), /, **kwargs):
-        equations = self.check_and_convert_equations(dict(equations, **kwargs))
+        if kwargs:
+            raise TypeError(
+                "EquationDict.update does not accept keyword arguments because "
+                "equation keys must be pybamm.Symbol objects"
+            )
+        equations = self.check_and_convert_equations(dict(equations))
         super().update(equations)
 
     def check_and_convert_equations(self, equations):

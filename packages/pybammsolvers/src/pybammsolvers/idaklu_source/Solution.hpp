@@ -3,6 +3,7 @@
 
 #include "common.hpp"
 #include "IDAKLUStats.hpp"
+#include <utility>
 
 /**
  * @brief Solution class

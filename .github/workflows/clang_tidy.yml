@@ -1,7 +1,5 @@
 name: clang-tidy
 
-# Advisory: findings go to code scanning, which flags only the alerts a pull
-# request introduces, so the solver's existing warnings never block a merge.
 on:
   pull_request:
     paths:
