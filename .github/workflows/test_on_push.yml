@@ -129,7 +129,6 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
-          # Save only from main (PRs still restore it) to stay under the 10 GB cache limit.
           prune-cache: true
           save-cache: ${{ github.ref == 'refs/heads/main' }}
 
@@ -258,7 +257,6 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
-          # Save only from main (PRs still restore it) to stay under the 10 GB cache limit.
           prune-cache: true
           save-cache: ${{ github.ref == 'refs/heads/main' }}
 
