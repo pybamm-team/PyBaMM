@@ -55,20 +55,27 @@ jobs:
       - name: Build the solver from source
         run: uv sync --frozen --group dev
 
+      # The build is GCC's, and clang ships no omp.h, so GCC's is searched last
+      # for SuiteSparse's `#include <omp.h>` under -fopenmp.
       - name: Run clang-tidy
         run: |
           uv tool install clang-tidy==22.1.8
           db=$(dirname packages/pybammsolvers/build/*/compile_commands.json)
           jq -r '.[].file' "$db/compile_commands.json" \
             | xargs -P "$(nproc)" -n 1 "$(uv tool dir --bin)/clang-tidy" -p "$db" --quiet \
-            > clang-tidy.txt
-          cat clang-tidy.txt
+                --extra-arg=-idirafter"$(gcc -print-file-name=include)" \
+            | tee clang-tidy.txt
 
       # Paths are made repo-relative and `..`-free so alerts map onto files.
       - name: Convert to SARIF
+        env:
+          SARIF_URL: https://github.com/psastras/sarif-rs/releases/download/clang-tidy-sarif-v0.8.0/clang-tidy-sarif-x86_64-unknown-linux-gnu
+          SARIF_SHA256: 7198518c1d01830cf368c5f924df5ac177ce5ada4f6f54bcc4a1dd8841d07202
         run: |
-          cargo install clang-tidy-sarif@0.8.0 --locked
-          clang-tidy-sarif -i clang-tidy.txt \
+          curl -fsSL "$SARIF_URL" -o "$RUNNER_TEMP/clang-tidy-sarif"
+          echo "$SARIF_SHA256  $RUNNER_TEMP/clang-tidy-sarif" | sha256sum --check --strict
+          chmod +x "$RUNNER_TEMP/clang-tidy-sarif"
+          "$RUNNER_TEMP/clang-tidy-sarif" -i clang-tidy.txt \
             | jq --arg root "$GITHUB_WORKSPACE/" '
                 def norm: if test("/[^/]+/\\.\\./") then sub("/[^/]+/\\.\\./"; "/") | norm else . end;
                 (.runs[].results[] | (.locations, .relatedLocations)[]?.physicalLocation.artifactLocation.uri)
