@@ -111,7 +111,7 @@ def set_initial_state(
     :class:`pybamm.ModelError`
         If ``differentiable`` is set and the electrode SOH solution cannot be
         differentiated, for example because an input it depends on has more than
-        one value or its equations are singular at the solution.
+        one value or its derivative with respect to an input is unbounded.
     """
     options = options or {}
     original_parameter_values = parameter_values

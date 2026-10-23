@@ -6,6 +6,10 @@ import pytest
 
 import pybamm
 from pybamm.expression_tree.operations.input_jacobian import compile_input_jacobian
+from pybamm.models.full_battery_models.lithium_ion.initial_state_linearisation import (
+    _PLACEHOLDER_PREFIX,
+    _linearise_about_solution,
+)
 
 EPS_P = "Positive electrode active material volume fraction"
 C_N_MAX = "Maximum concentration in negative electrode [mol.m-3]"
@@ -327,6 +331,51 @@ class TestLinearisedInitialState:
                 esoh_solver=_FixedSolution(solution),
                 differentiable=True,
             )
+
+    def test_singular_jacobian(self):
+        # z_0 + z_1 = p leaves z_0 - z_1 undetermined, and no change in the unknowns
+        # can balance a change in q
+        z_0, z_1 = _unknowns(2)
+        p, q = pybamm.InputParameter("p"), pybamm.InputParameter("q")
+        inputs = {"p": 1.0, "q": 1.0}
+        args = (
+            ["z_0", "z_1"],
+            [z_0 + z_1 - p, q - 1],
+            {"sum": z_0 + z_1, "first": z_0},
+            {"z_0": 0.2, "z_1": 0.8},
+            inputs,
+            1e-12,
+        )
+        linearised = _linearise_about_solution(*args, ["p"])
+        np.testing.assert_allclose(
+            _derivative(linearised["sum"], "p", inputs), 1, rtol=1e-12
+        )
+        # Nothing moves along the undetermined direction
+        np.testing.assert_allclose(
+            _derivative(linearised["first"], "p", inputs), 0.5, rtol=1e-12
+        )
+        with pytest.raises(pybamm.ModelError, match=r"\['q'\] is unbounded"):
+            _linearise_about_solution(*args, ["q"])
+
+    @pytest.mark.parametrize(
+        ("residual", "z_star", "match"),
+        [
+            (pybamm.sqrt, 0.0, r"Jacobian .* is not finite"),
+            (pybamm.log, -1.0, r"maximum residual nan"),
+        ],
+    )
+    def test_non_finite_system_raises(self, residual, z_star, match):
+        (z,) = _unknowns(1)
+        p = pybamm.InputParameter("p")
+        with pytest.raises(pybamm.ModelError, match=match):
+            _linearise_about_solution(
+                ["z"], [residual(z) - p], {"z": z}, {"z": z_star}, {"p": 0.0}, 1e-12
+            )
+
+
+def _unknowns(n):
+    """Placeholders for the unknowns of a system passed to the linearisation."""
+    return [pybamm.InputParameter(f"{_PLACEHOLDER_PREFIX}{i}") for i in range(n)]
 
 
 class _FixedSolution:

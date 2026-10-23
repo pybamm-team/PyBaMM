@@ -285,7 +285,9 @@ def _linearise_about_solution(
     For residuals :math:`G(z, p) = 0` solved by :math:`z^*` at inputs :math:`p^*`,
     each output :math:`f(z, p)` becomes :math:`f^* + f'(p - p^*)`, with
     :math:`f^* = f(z^*, p^*)` and :math:`f' = f_z z' + f_p`, where the implicit
-    function theorem gives :math:`z' = -G_z^{-1} G_p` at :math:`(z^*, p^*)`.
+    function theorem gives :math:`z' = -G_z^{+} G_p` at :math:`(z^*, p^*)`. The
+    pseudo-inverse :math:`G_z^{+}` gives :math:`z'` no component along the
+    directions that a singular :math:`G_z` leaves undetermined.
 
     Parameters
     ----------
@@ -314,8 +316,8 @@ def _linearise_about_solution(
     ------
     :class:`pybamm.ModelError`
         If an input in the system has more than one value, or, when differentiating,
-        the solution does not satisfy the residuals or their Jacobian with respect
-        to the unknowns is singular.
+        the solution does not satisfy the residuals, their Jacobian is not finite,
+        or the derivative of the solution is unbounded.
     """
     z_star = np.array([float(np.squeeze(solution[name])) for name in names])
     parameters = {}
@@ -329,41 +331,54 @@ def _linearise_about_solution(
         [*residuals, *outputs.values()], [*unknown_names, *input_names]
     )
     values, jacobian = function(np.concatenate([z_star, p_star]))
-    residual, value = values[:n], values[n:]
-    residual_z, residual_p = jacobian[:n, :n], jacobian[:n, n:]
-    value_z, value_p = jacobian[n:, :n], jacobian[n:, n:]
     differentiated = [
         k
         for k, name in enumerate(input_names)
         if sensitivity_inputs is None or name in sensitivity_inputs
     ]
+    jacobian = jacobian[:, [*range(n), *(n + k for k in differentiated)]]
+    residual, value = values[:n], values[n:]
+    residual_z, residual_p = jacobian[:n, :n], jacobian[:n, n:]
+    value_z, value_p = jacobian[n:, :n], jacobian[n:, n:]
 
     derivative = np.zeros((len(outputs), len(differentiated)))
     if differentiated:
         # The solvers can stop at a bound short of a root, where there is no derivative
         max_residual = np.max(np.abs(residual))
-        if max_residual > max(1e-5, 10 * tol):
+        if np.isnan(max_residual) or max_residual > max(1e-5, 10 * tol):
             raise pybamm.ModelError(
                 "Cannot differentiate the initial state with respect to the input "
                 "parameters: the electrode SOH solution does not satisfy its "
                 f"equations (maximum residual {max_residual:.2e}). Check that the "
                 "electrode SOH problem is feasible for these inputs."
             )
-        try:
-            dz_dp = -np.linalg.solve(residual_z, residual_p[:, differentiated])
-        except np.linalg.LinAlgError as error:
+        if not np.isfinite(jacobian).all():
             raise pybamm.ModelError(
                 "Cannot differentiate the initial state with respect to the input "
-                "parameters: the electrode SOH equations are singular at the solution."
-            ) from error
-        derivative = value_z @ dz_dp + value_p[:, differentiated]
+                "parameters: the Jacobian of the electrode SOH equations is not "
+                "finite at the solution."
+            )
+        # A singular Jacobian gives no derivative along its undetermined directions,
+        # but an input whose residual it cannot balance has an unbounded one
+        dz_dp, _, _, singular_values = np.linalg.lstsq(residual_z, -residual_p)
+        mismatch = np.linalg.norm(residual_z @ dz_dp + residual_p, axis=0)
+        scale = singular_values[0] * np.linalg.norm(dz_dp, axis=0)
+        scale += np.linalg.norm(residual_p, axis=0)
+        inconsistent = np.flatnonzero(mismatch > 1e-8 * scale)
+        if inconsistent.size:
+            unbounded = [input_names[differentiated[j]] for j in inconsistent]
+            raise pybamm.ModelError(
+                "Cannot differentiate the initial state with respect to the input "
+                "parameters: the electrode SOH equations are singular at the solution "
+                f"and its derivative with respect to {unbounded} is unbounded."
+            )
+        derivative = value_z @ dz_dp + value_p
 
     linearised = {}
     for i, name in enumerate(outputs):
         terms = [
             pybamm.Scalar(derivative[i, j]) * (parameters[input_names[k]] - p_star[k])
             for j, k in enumerate(differentiated)
-            if derivative[i, j] != 0
         ]
         output = value[i].item()
         linearised[name] = sum(terms, pybamm.Scalar(output)) if terms else output
