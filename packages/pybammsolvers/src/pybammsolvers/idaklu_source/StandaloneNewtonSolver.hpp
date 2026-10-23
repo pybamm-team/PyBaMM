@@ -35,8 +35,8 @@ public:
    * @brief Casadi convenience constructor; delegates to the Expression ctor.
    */
   StandaloneAlgebraicSystem(
-    casadi::Function res_fn,
-    casadi::Function jac_fn,
+    const casadi::Function &res_fn,
+    const casadi::Function &jac_fn,
     bool use_sparse,
     sunrealtype klu_pivot_tolerance);
 
@@ -87,8 +87,8 @@ private:
 class StandaloneNewtonSolver {
 public:
   StandaloneNewtonSolver(
-    casadi::Function residual_fn,
-    casadi::Function jacobian_fn,
+    const casadi::Function &residual_fn,
+    const casadi::Function &jacobian_fn,
     const std::vector<sunrealtype>& atol,
     sunrealtype rtol,
     sunrealtype step_tol,

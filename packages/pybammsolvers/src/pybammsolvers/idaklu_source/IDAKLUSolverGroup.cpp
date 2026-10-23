@@ -7,13 +7,13 @@
 #include <optional>
 
 std::vector<Solution> IDAKLUSolverGroup::solve(
-    np_array t_eval_np,
-    np_array t_interp_np,
-    np_array y0_np,
-    np_array yp0_np,
-    np_array inputs,
-    py::object logger,
-    np_array pbar) {
+    const np_array &t_eval_np,
+    const np_array &t_interp_np,
+    const np_array &y0_np,
+    const np_array &yp0_np,
+    const np_array &inputs,
+    const py::object &logger,
+    const np_array &pbar) {
   DEBUG("IDAKLUSolverGroup::solve");
 
   // If t_interp is empty, save all adaptive steps
@@ -187,8 +187,9 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     std::string failures;
     for (int i = 0; i < number_of_groups; i++) {
       std::string error;
-      if (errors[i].has_value()) {
-        error = *errors[i];
+      const auto &thrown = errors[i];
+      if (thrown.has_value()) {
+        error = *thrown;
       } else if (results[i].get_flag() < 0) {
         error = sundials_error_message(results[i].get_flag());
       } else {
@@ -217,7 +218,7 @@ void IDAKLUSolverGroup::flush_logs() {
   }
 }
 
-void IDAKLUSolverGroup::set_loggers(py::object logger) {
+void IDAKLUSolverGroup::set_loggers(const py::object &logger) {
   for (const auto& solver : m_solvers) {
     solver->set_logger(logger);
   }

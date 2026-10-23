@@ -201,9 +201,9 @@ public:
    * @brief Constructor
    */
   IDAKLUSolverOpenMP(
-    np_array atol_np,
+    const np_array &atol_np,
     double rel_tol,
-    np_array rhs_alg_id,
+    const np_array &rhs_alg_id,
     int number_of_parameters,
     int number_of_events,
     int jac_times_cjmass_nnz,

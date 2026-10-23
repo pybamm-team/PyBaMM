@@ -22,9 +22,11 @@ public:
            np_array yS_np, np_array ypS_np, np_array y_init_np,
            np_array y_term_np, np_array yS_init_np, np_array yS_term_np,
            const IDAKLUStats &stats)
-      : flag(retval), t(t_np), y(y_np), yp(yp_np), yS(yS_np), ypS(ypS_np),
-        y_init(y_init_np), y_term(y_term_np), yS_init(yS_init_np),
-        yS_term(yS_term_np), stats(stats)
+      : flag(retval), t(std::move(t_np)), y(std::move(y_np)),
+        yp(std::move(yp_np)), yS(std::move(yS_np)), ypS(std::move(ypS_np)),
+        y_init(std::move(y_init_np)), y_term(std::move(y_term_np)),
+        yS_init(std::move(yS_init_np)), yS_term(std::move(yS_term_np)),
+        stats(stats)
   {
   }
 
