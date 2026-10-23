@@ -67,6 +67,14 @@ class UnstructuredSubMesh(SubMesh):
         built-in generator tags its own box output, file generators use
         the mesh file's boundary names), or call
         :meth:`detect_box_boundaries` for a hand-built axis-aligned box.
+
+    Attributes
+    ----------
+    coordinate_axes : tuple[str, ...] or None
+        Physical axis (``"x"``, ``"y"`` or ``"z"``) of each vertex column,
+        e.g. ``("x", "z")`` for a 2D mesh in the x-z plane. ``None`` when
+        unknown; set by the mesh generators from the geometry's spatial
+        variables.
     """
 
     def __init__(self, vertices, elements, coord_sys="cartesian", boundary_faces=None):
@@ -101,6 +109,7 @@ class UnstructuredSubMesh(SubMesh):
         self.npts_tb = 1
         self.internal_boundaries = []
         self.interface_data = {}
+        self.coordinate_axes = None
 
     # ------------------------------------------------------------------
     # Cell geometry
@@ -430,6 +439,13 @@ class UnstructuredSubMesh(SubMesh):
                 f"types: {sorted(t.value for t in element_types)}. All domains "
                 f"must use the same element type."
             )
+        known_axes = {sm.coordinate_axes for sm in submeshes} - {None}
+        if len(known_axes) > 1:
+            # welding by coincident coordinates would join different places
+            raise pybamm.GeometryError(
+                f"Cannot combine unstructured submeshes in different coordinate "
+                f"frames: {sorted(known_axes)}."
+            )
 
         # Weld coincident nodes across submeshes regardless of which face tag
         # they belong to, so that interfaces of arbitrary topology (star, tree,
@@ -456,6 +472,8 @@ class UnstructuredSubMesh(SubMesh):
             combined_elements,
             coord_sys=submeshes[0].coord_sys,
         )
+        if len(known_axes) == 1:
+            combined.coordinate_axes = known_axes.pop()
 
         # The combined mesh starts with no tags: every tag is propagated from
         # the input submeshes by matching boundary face centroids. Faces that
@@ -838,6 +856,7 @@ class UnstructuredMeshGenerator(MeshGenerator):
         else:
             raise pybamm.GeometryError(f"Unsupported 2D element_type: {etype!r}")
         submesh = UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
+        submesh.coordinate_axes = _coordinate_axes(spatial_vars)
         # The generator's output is an axis-aligned box by construction
         submesh.detect_box_boundaries()
         return submesh
@@ -865,6 +884,7 @@ class UnstructuredMeshGenerator(MeshGenerator):
         else:
             raise pybamm.GeometryError(f"Unsupported 3D element_type: {etype!r}")
         submesh = UnstructuredSubMesh(nodes, elements, coord_sys=self.coord_sys)
+        submesh.coordinate_axes = _coordinate_axes(spatial_vars)
         # The generator's output is an axis-aligned box by construction
         submesh.detect_box_boundaries()
         return submesh
@@ -970,6 +990,9 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         submesh = UnstructuredSubMesh(
             compact_nodes, compact_elements, coord_sys=self.coord_sys
         )
+        spatial_vars, _ = UnstructuredMeshGenerator._parse_lims(lims)
+        if len(spatial_vars) == submesh.dimension:
+            submesh.coordinate_axes = _coordinate_axes(spatial_vars)
 
         if self.boundary_mapping:
             facet_type = "triangle" if cell_type == ElementType.TETRAHEDRON else "line"
@@ -1303,6 +1326,36 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
         }
 
     return result
+
+
+def _coordinate_axes(spatial_vars):
+    """Physical axis of each spatial variable, from its ``direction`` or,
+    failing that, its leading name token (e.g. ``x_n`` -> ``"x"``).
+
+    Returns ``None`` if any variable's axis cannot be identified.
+    """
+    direction_axes = {"lr": "x", "fb": "y", "tb": "z"}
+    axes = []
+    for var in spatial_vars:
+        direction = getattr(var, "direction", None)
+        axis = direction_axes.get(direction) or var.name.split("_")[0]
+        if axis not in ("x", "y", "z"):
+            return None
+        axes.append(axis)
+    return tuple(axes)
+
+
+def _share_coordinate_frame(a_mesh, b_mesh):
+    """Whether two submeshes' vertex columns can describe the same space.
+
+    Meshes of different dimension never can; meshes whose known coordinate
+    axes differ (e.g. an x-z and a y-z plane) cannot either.
+    """
+    if a_mesh.dimension != b_mesh.dimension:
+        return False
+    a_axes = a_mesh.coordinate_axes
+    b_axes = b_mesh.coordinate_axes
+    return a_axes is None or b_axes is None or a_axes == b_axes
 
 
 # ======================================================================
