@@ -5,12 +5,11 @@
 from __future__ import annotations
 
 from collections.abc import Collection
-from functools import lru_cache
 
-import casadi
 import numpy as np
 
 import pybamm
+from pybamm.expression_tree.operations.input_jacobian import compile_input_jacobian
 
 from .electrode_soh import (
     _ElectrodeSOH,
@@ -224,28 +223,6 @@ def _input_parameters(symbol):
     }
 
 
-@lru_cache(maxsize=16)
-def _linearisation_function(residuals, outputs, input_names):
-    """
-    CasADi function of the unknowns and inputs returning the residuals and the
-    outputs, each with its Jacobians with respect to both.
-    """
-    z = casadi.MX.sym("z", len(residuals))
-    p = casadi.MX.sym("p", len(input_names))
-    casadi_inputs = {name: p[k] for k, name in enumerate(input_names)}
-    casadi_inputs.update(
-        {f"{_PLACEHOLDER_PREFIX}{i}": z[i] for i in range(len(residuals))}
-    )
-    cache = {}
-    results = []
-    for symbols in [residuals, outputs]:
-        value = casadi.vertcat(
-            *[s.to_casadi(inputs=casadi_inputs, casadi_symbols=cache) for s in symbols]
-        )
-        results += [value, casadi.jacobian(value, z), casadi.jacobian(value, p)]
-    return casadi.Function("linearisation", [z, p], results)
-
-
 def get_initial_state_input_names(
     initial_value: float | str,
     parameter_values: pybamm.ParameterValues,
@@ -346,12 +323,15 @@ def _linearise_about_solution(
         parameters.update(_input_parameters(symbol))
     input_names = tuple(sorted(parameters))
     p_star = np.array([_scalar_input(name, inputs[name]) for name in input_names])
-    function = _linearisation_function(
-        tuple(residuals), tuple(outputs.values()), input_names
+    n = len(names)
+    unknown_names = [f"{_PLACEHOLDER_PREFIX}{i}" for i in range(n)]
+    function = compile_input_jacobian(
+        [*residuals, *outputs.values()], [*unknown_names, *input_names]
     )
-    residual, residual_z, residual_p, value, value_z, value_p = (
-        np.array(result) for result in function(z_star, p_star)
-    )
+    values, jacobian = function(np.concatenate([z_star, p_star]))
+    residual, value = values[:n], values[n:]
+    residual_z, residual_p = jacobian[:n, :n], jacobian[:n, n:]
+    value_z, value_p = jacobian[n:, :n], jacobian[n:, n:]
     differentiated = [
         k
         for k, name in enumerate(input_names)
@@ -385,7 +365,7 @@ def _linearise_about_solution(
             for j, k in enumerate(differentiated)
             if derivative[i, j] != 0
         ]
-        output = value[i, 0].item()
+        output = value[i].item()
         linearised[name] = sum(terms, pybamm.Scalar(output)) if terms else output
     return linearised
 

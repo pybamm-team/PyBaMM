@@ -1,11 +1,11 @@
 #
 # Tests for initial states that carry their derivatives with respect to inputs
 #
-import casadi
 import numpy as np
 import pytest
 
 import pybamm
+from pybamm.expression_tree.operations.input_jacobian import compile_input_jacobian
 
 EPS_P = "Positive electrode active material volume fraction"
 C_N_MAX = "Maximum concentration in negative electrode [mol.m-3]"
@@ -142,12 +142,12 @@ VARIANTS = {
 
 
 def _derivative(value, name, inputs):
-    """Derivative of a parameter value with respect to an input, as the solver
-    computes it."""
-    p = casadi.MX.sym("p")
-    expression = pybamm.convert_to_symbol(value).to_casadi(inputs={**inputs, name: p})
-    jacobian = casadi.Function("jacobian", [p], [casadi.jacobian(expression, p)])
-    return float(jacobian(inputs[name]))
+    """Derivative of a parameter value with respect to an input, as the default
+    backend computes it."""
+    names = list(inputs)
+    function = compile_input_jacobian([pybamm.convert_to_symbol(value)], names)
+    _, jacobian = function(np.array([inputs[n] for n in names], dtype=float))
+    return jacobian[0, names.index(name)]
 
 
 def _set_initial_state(variant, initial_value, inputs, differentiable):
