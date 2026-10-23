@@ -99,11 +99,10 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev
 
-      # Opt-in and uncached, so kept minimal: sympy.preview needs the standalone class
-      # (texlive-latex-extra) and dvipng
+      # Opt-in and uncached, so kept minimal: latexify's preamble needs only latex-base.
       - name: Install TeXLive for Linux
         if: ${{ startsWith(matrix.leg.os, 'ubuntu') && inputs.texlive }}
-        run: sudo apt-get install --no-install-recommends texlive-latex-extra dvipng
+        run: sudo apt-get install --no-install-recommends texlive-latex-base dvipng
 
       - name: Install macOS system dependencies
         if: startsWith(matrix.leg.os, 'macos')
