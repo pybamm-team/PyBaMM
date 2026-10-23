@@ -25,8 +25,9 @@ Every model in the zoo belongs to one of two tiers, recorded in its manifest:
 ## 3. No endorsement and no warranty
 
 1. Inclusion of a community model in the zoo does not mean the PyBaMM team endorses it. The PyBaMM team does not check, and does not vouch for, the correctness, accuracy, validity, or fitness for any purpose of community models, their parameters, or their results.
-2. The automated checks the zoo runs show that a model is well defined and runs; they do not show that its physics is right.
-3. All models in the zoo, core and community, are provided "as is", without warranty of any kind, as set out in the license (section 4). Users are responsible for judging whether a model is suitable for their use.
+2. Models must be clearly documented, either by citing a published article or preprint that explains the model, or by giving a clear and complete description of the model and its assumptions in its `README.md`. The PyBaMM team may remove a model that is not clearly documented.
+3. The automated checks the zoo runs show that a model is well defined and runs; they do not show that its physics is right.
+4. All models in the zoo, core and community, are provided "as is", without warranty of any kind, as set out in the license (section 4). Users are responsible for judging whether a model is suitable for their use.
 
 ## 4. License
 
