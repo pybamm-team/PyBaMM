@@ -141,8 +141,7 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
-          # Prune pre-built wheels and save only from main (PRs still restore it):
-          # oversized uv caches push the repo past 10 GB and evict the solver caches.
+          # Unpruned per-PR uv caches overflow the 10 GB limit and evict solver wheels.
           prune-cache: true
           save-cache: ${{ github.ref == 'refs/heads/main' }}
 
