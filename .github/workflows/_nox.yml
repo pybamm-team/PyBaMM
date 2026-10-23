@@ -136,10 +136,11 @@ jobs:
         with:
           python-version: ${{ matrix.leg.python }}
 
+      # No uv cache: a locked sync is fast anyway, and these crowded out the solver wheels.
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
-          enable-cache: true
+          enable-cache: false
 
       - name: Install nox
         run: uv tool install nox
