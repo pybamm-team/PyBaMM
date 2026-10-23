@@ -12,16 +12,20 @@ import numpy as np
 
 import pybamm
 
-from .electrode_soh import ElectrodeSOHSolver, _ElectrodeSOH, _ElectrodeSOHMSMR
-from .electrode_soh_composite import (
-    ElectrodeSOHComposite,
-    get_initial_stoichiometries_composite,
+from .electrode_soh import (
+    _ElectrodeSOH,
+    _ElectrodeSOHMSMR,
+    _initial_soc_equations,
+    _msmr_potential_equations,
+    _soc_stoichiometries,
 )
+from .electrode_soh_composite import ElectrodeSOHComposite
 from .electrode_soh_half_cell import (
     ElectrodeSOHHalfCell,
-    _solve_initial_stoichiometry_half_cell,
+    _composite_soc_equations,
+    _initial_voltage_equations,
 )
-from .util import check_if_composite, get_initial_ocp, get_lithiation_delithiation
+from .util import _initial_state_parameters, _initial_state_variant, check_if_composite
 
 _PLACEHOLDER_PREFIX = "__initial state unknown "
 
@@ -30,25 +34,8 @@ def _is_voltage(initial_value):
     return isinstance(initial_value, str) and initial_value.endswith("V")
 
 
-def _initial_state_variant(options):
-    """Name the electrode SOH formulation used by :func:`set_initial_state`."""
-    if options.get("open-circuit potential") == "MSMR":
-        return "msmr"
-    if options.get("working electrode") == "positive":
-        return "half-cell"
-    if check_if_composite(options, "positive") or check_if_composite(
-        options, "negative"
-    ):
-        return "composite"
-    return "standard"
-
-
-def _soc_stoichiometries(soc, x_0, x_100, y_100, y_0):
-    return x_0 + soc * (x_100 - x_0), y_0 - soc * (y_0 - y_100)
-
-
 def _standard_system(initial_value, param, options, direction, known_value):
-    """Electrode SOH equations, plus the initial SOC equation for a voltage."""
+    """Electrode SOH equations, plus the initial SOC equations for a voltage."""
     msmr = options.get("open-circuit potential") == "MSMR"
     soh_model = (_ElectrodeSOHMSMR if msmr else _ElectrodeSOH)(
         direction, param=param, known_value=known_value, options=options
@@ -62,41 +49,26 @@ def _standard_system(initial_value, param, options, direction, known_value):
     algebraic = {
         var: pybamm.replace(eqn, capacities) for var, eqn in soh_model.algebraic.items()
     }
-    limits = [
+    limits = tuple(
         pybamm.replace(soh_model.variables[name], capacities)
         for name in ["x_0", "x_100", "y_100", "y_0"]
-    ]
+    )
 
     if _is_voltage(initial_value):
-        V_init = float(initial_value[:-1])
-        T_init = param.T_init
         soc = pybamm.Variable("soc")
-        x, y = _soc_stoichiometries(soc, *limits)
-        if msmr:
-            Un = pybamm.Variable("Un(soc)")
-            Up = pybamm.Variable("Up(soc)")
-            algebraic[Un] = x - param.n.prim.x(Un, T_init)
-            algebraic[Up] = y - param.p.prim.x(Up, T_init)
-            algebraic[soc] = Up - Un - V_init
-        else:
-            Up = get_initial_ocp(
-                param.p.prim, y, T_init, direction, "positive", options
-            )
-            Un = get_initial_ocp(
-                param.n.prim, x, T_init, direction, "negative", options
-            )
-            algebraic[soc] = Up - Un - V_init
+        V_init = float(initial_value[:-1])
+        algebraic.update(
+            _initial_soc_equations(soc, limits, V_init, param, options, direction)
+        )
     else:
-        x, y = _soc_stoichiometries(pybamm.Scalar(initial_value), *limits)
-
+        soc = pybamm.Scalar(initial_value)
+    x, y = _soc_stoichiometries(soc, *limits)
     if not msmr:
         return algebraic, {"x": x, "y": y}
 
-    # MSMR initial states are electrode potentials at the reference temperature
     Un = pybamm.Variable("Un")
     Up = pybamm.Variable("Up")
-    algebraic[Un] = param.n.prim.x(Un, param.T_ref) - x
-    algebraic[Up] = param.p.prim.x(Up, param.T_ref) - y
+    algebraic.update(_msmr_potential_equations(Un, Up, x, y, param))
     return algebraic, {"Un": Un, "Up": Up}
 
 
@@ -104,56 +76,29 @@ def _half_cell_system(initial_value, param, options, direction):
     """Equations for the initial stoichiometry of a half-cell working electrode."""
     is_composite = check_if_composite(options, "positive")
     x = pybamm.Variable("x")
-    x_2 = pybamm.Variable("x_2")
+    x_2 = pybamm.Variable("x_2") if is_composite else None
     outputs = {"x": x, "x_2": x_2} if is_composite else {"x": x}
 
     if _is_voltage(initial_value):
         V_init = float(initial_value[:-1])
-        T_init = param.T_init
-        algebraic = {
-            x: get_initial_ocp(
-                param.p.prim, x, T_init, direction, "positive", options, "primary"
-            )
-            - V_init
-        }
-        if is_composite:
-            algebraic[x_2] = (
-                get_initial_ocp(
-                    param.p.sec,
-                    x_2,
-                    T_init,
-                    direction,
-                    "positive",
-                    options,
-                    "secondary",
-                )
-                - V_init
-            )
+        algebraic = _initial_voltage_equations(
+            x, x_2, V_init, param, options, direction
+        )
         return algebraic, outputs
 
     soh_model = ElectrodeSOHHalfCell(direction=direction, options=options)
     algebraic = dict(soh_model.algebraic)
     variables = soh_model.variables
-    soc = pybamm.Scalar(initial_value)
     if not is_composite:
         x_0, x_100 = variables["x_0"], variables["x_100"]
-        return algebraic, {"x": x_0 + soc * (x_100 - x_0)}
+        return algebraic, {"x": x_0 + initial_value * (x_100 - x_0)}
 
-    lith_primary = get_lithiation_delithiation(
-        direction, "positive", options, phase="primary"
+    limits = tuple(variables[name] for name in ["x_0", "x_100", "x_0_2", "x_100_2"])
+    algebraic.update(
+        _composite_soc_equations(
+            x, x_2, initial_value, limits, param, options, direction
+        )
     )
-    lith_secondary = get_lithiation_delithiation(
-        direction, "positive", options, phase="secondary"
-    )
-    Q_w = param.p.prim.Q_init
-    Q_w_2 = param.p.sec.Q_init
-    Q_min = variables["x_100"] * Q_w + variables["x_100_2"] * Q_w_2
-    Q_max = variables["x_0"] * Q_w + variables["x_0_2"] * Q_w_2
-    Q_now = x * Q_w + x_2 * Q_w_2
-    algebraic[x] = param.p.prim.U(x, param.T_ref, lith_primary) - param.p.sec.U(
-        x_2, param.T_ref, lith_secondary
-    )
-    algebraic[x_2] = (Q_now - Q_min) / (Q_max - Q_min) - soc
     return algebraic, outputs
 
 
@@ -192,8 +137,8 @@ def _composite_system(initial_value, param, options, direction):
 
 def _initial_state_system(initial_value, param, options, direction, known_value):
     """
-    Equations whose solution sets the initial state, and the initial-state values
-    expressed in terms of their unknowns.
+    Equations whose solution sets the initial state, and the solved values that
+    set it expressed in terms of their unknowns.
     """
     variant = _initial_state_variant(options)
     if variant == "half-cell":
@@ -218,7 +163,8 @@ def _placeholder_system(initial_value, param, options, direction, known_value):
     Returns
     -------
     tuple
-        The unknowns' names, the residuals and the outputs.
+        The unknowns' names, the residuals and the initial-state parameter values
+        keyed by parameter name.
     """
     key = (
         initial_value,
@@ -232,9 +178,13 @@ def _placeholder_system(initial_value, param, options, direction, known_value):
     if cached is not None and cached[0] is param:
         return cached[1]
 
-    algebraic, outputs = _initial_state_system(
+    algebraic, solved = _initial_state_system(
         initial_value, param, options, direction, known_value
     )
+    outputs = {
+        name: solved[key] * scale
+        for name, (key, scale) in _initial_state_parameters(param, options).items()
+    }
     placeholders = {
         var: pybamm.InputParameter(f"{_PLACEHOLDER_PREFIX}{i}")
         for i, var in enumerate(algebraic)
@@ -274,15 +224,11 @@ def _input_parameters(symbol):
     }
 
 
-def _input_names(symbol):
-    return set(_input_parameters(symbol))
-
-
 @lru_cache(maxsize=16)
-def _residual_jacobians(residuals, input_names):
+def _linearisation_function(residuals, outputs, input_names):
     """
-    CasADi function of the unknowns and inputs returning the residuals and their
-    Jacobians with respect to both.
+    CasADi function of the unknowns and inputs returning the residuals and the
+    outputs, each with its Jacobians with respect to both.
     """
     z = casadi.MX.sym("z", len(residuals))
     p = casadi.MX.sym("p", len(input_names))
@@ -291,14 +237,13 @@ def _residual_jacobians(residuals, input_names):
         {f"{_PLACEHOLDER_PREFIX}{i}": z[i] for i in range(len(residuals))}
     )
     cache = {}
-    residual = casadi.vertcat(
-        *[g.to_casadi(inputs=casadi_inputs, casadi_symbols=cache) for g in residuals]
-    )
-    return casadi.Function(
-        "residual_jacobians",
-        [z, p],
-        [residual, casadi.jacobian(residual, z), casadi.jacobian(residual, p)],
-    )
+    results = []
+    for symbols in [residuals, outputs]:
+        value = casadi.vertcat(
+            *[s.to_casadi(inputs=casadi_inputs, casadi_symbols=cache) for s in symbols]
+        )
+        results += [value, casadi.jacobian(value, z), casadi.jacobian(value, p)]
+    return casadi.Function("linearisation", [z, p], results)
 
 
 def get_initial_state_input_names(
@@ -338,26 +283,8 @@ def get_initial_state_input_names(
     )
     names = set()
     for symbol in [*residuals, *outputs.values()]:
-        names |= _input_names(symbol)
-    # Stoichiometries are converted to concentrations with the maximum concentrations
-    for phase in _stoichiometry_phases(param, options):
-        names |= _input_names(parameter_values.process_symbol(phase.c_max))
+        names.update(_input_parameters(symbol))
     return names
-
-
-def _stoichiometry_phases(param, options):
-    """Phase parameters whose initial concentration is set from a stoichiometry."""
-    variant = _initial_state_variant(options)
-    if variant == "msmr":
-        return []
-    electrodes = ["positive"] if variant == "half-cell" else ["negative", "positive"]
-    phases = []
-    for electrode in electrodes:
-        electrode_param = param.domain_params[electrode]
-        phases.append(electrode_param.prim)
-        if check_if_composite(options, electrode):
-            phases.append(electrode_param.sec)
-    return phases
 
 
 def _scalar_input(name, value):
@@ -375,14 +302,13 @@ def _linearise_about_solution(
     names, residuals, outputs, solution, inputs, tol, sensitivity_inputs=None
 ):
     """
-    Express the outputs of an implicit system as functions of the input parameters
-    whose value and first derivative match the solved system at ``inputs``.
+    Linearise the outputs of an implicit system in the input parameters, about the
+    solution at ``inputs``.
 
     For residuals :math:`G(z, p) = 0` solved by :math:`z^*` at inputs :math:`p^*`,
-    each output :math:`f(z, p)` becomes :math:`f(z^* + z'(p - p^*), p)`, where the
-    implicit function theorem gives
-    :math:`z' = -(\\partial G / \\partial z)^{-1} \\partial G / \\partial p` at
-    :math:`(z^*, p^*)`.
+    each output :math:`f(z, p)` becomes :math:`f^* + f'(p - p^*)`, with
+    :math:`f^* = f(z^*, p^*)` and :math:`f' = f_z z' + f_p`, where the implicit
+    function theorem gives :math:`z' = -G_z^{-1} G_p` at :math:`(z^*, p^*)`.
 
     Parameters
     ----------
@@ -399,41 +325,41 @@ def _linearise_about_solution(
     tol : float
         The tolerance the system was solved to.
     sensitivity_inputs : collection of str, optional
-        The inputs to differentiate with respect to. Default is every input.
+        The inputs to linearise in. Default is every input.
 
     Returns
     -------
     dict
-        For each output, a float when it does not depend on any input parameter,
-        otherwise an expression in the input parameters.
+        For each output, a float when it has no derivative with respect to these
+        inputs, otherwise an expression in them.
 
     Raises
     ------
     :class:`pybamm.ModelError`
-        If an input in the residuals has more than one value, the solution does not
-        satisfy the residuals, or their Jacobian with respect to the unknowns is
-        singular.
+        If an input in the system has more than one value, or, when differentiating,
+        the solution does not satisfy the residuals or their Jacobian with respect
+        to the unknowns is singular.
     """
     z_star = np.array([float(np.squeeze(solution[name])) for name in names])
     parameters = {}
-    for residual in residuals:
-        parameters.update(_input_parameters(residual))
+    for symbol in [*residuals, *outputs.values()]:
+        parameters.update(_input_parameters(symbol))
     input_names = tuple(sorted(parameters))
+    p_star = np.array([_scalar_input(name, inputs[name]) for name in input_names])
+    function = _linearisation_function(
+        tuple(residuals), tuple(outputs.values()), input_names
+    )
+    residual, residual_z, residual_p, value, value_z, value_p = (
+        np.array(result) for result in function(z_star, p_star)
+    )
     differentiated = [
         k
         for k, name in enumerate(input_names)
         if sensitivity_inputs is None or name in sensitivity_inputs
     ]
 
-    dz_dp = np.zeros((len(names), len(input_names)))
+    derivative = np.zeros((len(outputs), len(differentiated)))
     if differentiated:
-        p_star = np.array([_scalar_input(name, inputs[name]) for name in input_names])
-        residual, jacobian_z, jacobian_p = (
-            np.array(value)
-            for value in _residual_jacobians(tuple(residuals), input_names)(
-                z_star, p_star
-            )
-        )
         # The solvers can stop at a bound short of a root, where there is no derivative
         max_residual = np.max(np.abs(residual))
         if max_residual > max(1e-5, 10 * tol):
@@ -444,34 +370,28 @@ def _linearise_about_solution(
                 "electrode SOH problem is feasible for these inputs."
             )
         try:
-            dz_dp = -np.linalg.solve(jacobian_z, jacobian_p)
+            dz_dp = -np.linalg.solve(residual_z, residual_p[:, differentiated])
         except np.linalg.LinAlgError as error:
             raise pybamm.ModelError(
                 "Cannot differentiate the initial state with respect to the input "
                 "parameters: the electrode SOH equations are singular at the solution."
             ) from error
-
-    substitutions = {}
-    for i in range(len(names)):
-        value = pybamm.Scalar(z_star[i])
-        for k in differentiated:
-            if dz_dp[i, k] != 0:
-                value = value + pybamm.Scalar(dz_dp[i, k]) * (
-                    parameters[input_names[k]] - p_star[k]
-                )
-        substitutions[pybamm.InputParameter(f"{_PLACEHOLDER_PREFIX}{i}")] = value
+        derivative = value_z @ dz_dp + value_p[:, differentiated]
 
     linearised = {}
-    for name, output in outputs.items():
-        output = pybamm.replace(output, substitutions)
-        if _input_names(output):
-            linearised[name] = output
-        else:
-            linearised[name] = float(np.squeeze(output.evaluate()))
+    for i, name in enumerate(outputs):
+        terms = [
+            pybamm.Scalar(derivative[i, j]) * (parameters[input_names[k]] - p_star[k])
+            for j, k in enumerate(differentiated)
+            if derivative[i, j] != 0
+        ]
+        output = value[i, 0].item()
+        linearised[name] = sum(terms, pybamm.Scalar(output)) if terms else output
     return linearised
 
 
-def get_linearised_initial_state(
+def _linearise_initial_state(
+    solution: dict,
     initial_value: float | str,
     parameter_values: pybamm.ParameterValues,
     param: pybamm.LithiumIonParameters,
@@ -480,15 +400,16 @@ def get_linearised_initial_state(
     known_value: str = "cyclable lithium capacity",
     tol: float = 1e-6,
     inputs: dict | None = None,
-    esoh_solver: ElectrodeSOHSolver | pybamm.Simulation | None = None,
     sensitivity_inputs: Collection[str] | None = None,
 ) -> dict[str, float | pybamm.Symbol]:
     """
-    Solve for the initial state and express it in terms of the input parameters,
-    with the value and first derivative of the solution at ``inputs``.
+    Express the initial state in terms of the input parameters, with the value and
+    first derivative of the solution at ``inputs``.
 
     Parameters
     ----------
+    solution : dict
+        The electrode SOH solution that sets the initial state, keyed by name.
     initial_value : float or str
         Target initial SOC, or voltage as a string ending in "V".
     parameter_values : :class:`pybamm.ParameterValues`
@@ -502,64 +423,21 @@ def get_linearised_initial_state(
     known_value : str, optional
         The known value needed to complete the electrode SOH model.
     tol : float, optional
-        The tolerance for the electrode SOH solvers. Default is 1e-6.
+        The tolerance the electrode SOH was solved to. Default is 1e-6.
     inputs : dict, optional
-        Input parameter values at which to solve.
-    esoh_solver : optional
-        A pre-built electrode SOH solver or simulation to reuse.
+        Input parameter values at which the electrode SOH was solved.
     sensitivity_inputs : collection of str, optional
         The inputs to differentiate with respect to. Default is every input.
 
     Returns
     -------
     dict
-        The initial state values keyed as in :func:`_initial_state_system`, each a
-        float or an expression in the input parameters.
+        The value of each initial-state parameter, a float or an expression in the
+        inputs in ``sensitivity_inputs``.
     """
-    inputs = inputs or {}
-    variant = _initial_state_variant(options)
-    if variant == "half-cell":
-        solution = _solve_initial_stoichiometry_half_cell(
-            initial_value,
-            parameter_values,
-            options=options,
-            tol=tol,
-            inputs=inputs,
-            direction=direction,
-            esoh_sim=esoh_solver,
-        )
-    elif variant == "composite":
-        solution = get_initial_stoichiometries_composite(
-            initial_value,
-            parameter_values,
-            direction=direction,
-            param=param,
-            options=options,
-            tol=tol,
-            inputs=inputs,
-            known_value=known_value,
-            esoh_sim=esoh_solver,
-        )
-    else:
-        if esoh_solver is None:
-            esoh_solver = ElectrodeSOHSolver(
-                parameter_values,
-                direction=direction,
-                param=param,
-                known_value=known_value,
-                options=options,
-            )
-        if variant == "msmr":
-            solution = esoh_solver._solve_initial_ocps(
-                initial_value, direction=direction, tol=tol, inputs=inputs
-            )
-        else:
-            solution = esoh_solver._solve_initial_stoichiometries(
-                initial_value, direction=direction, tol=tol, inputs=inputs
-            )
     names, residuals, outputs = _processed_system(
         initial_value, parameter_values, param, options, direction, known_value
     )
     return _linearise_about_solution(
-        names, residuals, outputs, solution, inputs, tol, sensitivity_inputs
+        names, residuals, outputs, solution, inputs or {}, tol, sensitivity_inputs
     )

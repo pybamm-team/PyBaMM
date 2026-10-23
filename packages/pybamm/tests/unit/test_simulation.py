@@ -1793,8 +1793,7 @@ class TestSimulationInitialSocSensitivities:
             )
 
     def test_half_cell_input_maximum_concentration(self):
-        # The initial stoichiometry does not depend on it, so the scaled initial
-        # concentration has no inputs while its bounds do
+        # The bounds of the particle concentration depend on it
         name = "Maximum concentration in positive electrode [mol.m-3]"
         parameter_values = pybamm.ParameterValues("Xu2019")
         parameter_values.update({name: "[input]"})

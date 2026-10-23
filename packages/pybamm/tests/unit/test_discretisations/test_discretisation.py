@@ -860,7 +860,14 @@ class TestDiscretise:
         model = pybamm.BaseModel()
         model.rhs = {c: 1}
         model.initial_conditions = {c: pybamm.Scalar(3)}
-        pybamm.Discretisation().process_model(model)
+        pybamm.Discretisation().process_model(model, inplace=False)
+
+        # the other bound is still checked
+        model.initial_conditions = {c: pybamm.Scalar(-1)}
+        with pytest.raises(
+            pybamm.ModelError, match=r"initial condition is outside of variable bounds"
+        ):
+            pybamm.Discretisation().process_model(model)
 
     def test_process_empty_model(self):
         model = pybamm.BaseModel()

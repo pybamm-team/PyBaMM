@@ -212,29 +212,30 @@ class TestLinearisedInitialState:
                     rtol=1e-12,
                 )
 
-    def test_derivative_only_for_requested_inputs(self):
-        # An unrequested input of size one but two dimensions is still accepted
-        inputs = {EPS_P: 0.665, C_N_MAX: 33133.0}
-        linearised = _set_initial_state(
-            "standard", 0.4, {**inputs, EPS_P: np.array([[0.665]])}, [C_N_MAX]
-        )
-        full = _set_initial_state("standard", 0.4, inputs, True)
-        key = "Initial concentration in positive electrode [mol.m-3]"
-        np.testing.assert_allclose(
-            pybamm.convert_to_symbol(linearised[key]).evaluate(inputs=inputs),
-            pybamm.convert_to_symbol(full[key]).evaluate(inputs=inputs),
-            rtol=1e-12,
-        )
-        np.testing.assert_allclose(
-            _derivative(linearised[key], C_N_MAX, inputs),
-            _derivative(full[key], C_N_MAX, inputs),
-            rtol=1e-12,
-        )
-        # The dependence on the unrequested input through the solution is dropped
-        restricted, total = (
-            _derivative(value[key], EPS_P, inputs) for value in [linearised, full]
-        )
-        assert abs(restricted - total) > 1e-3 * abs(total)
+    @pytest.mark.parametrize("variant", ["standard", "cell capacity"])
+    def test_derivative_only_for_requested_inputs(self, variant):
+        _, inputs, keys, _ = VARIANTS[variant]
+        full = _set_initial_state(variant, 0.4, inputs, True)
+        for requested in inputs:
+            # An unrequested input of size one but two dimensions is still accepted
+            values = {
+                name: value if name == requested else np.array([[value]])
+                for name, value in inputs.items()
+            }
+            linearised = _set_initial_state(variant, 0.4, values, [requested])
+            for key in keys:
+                np.testing.assert_allclose(
+                    pybamm.convert_to_symbol(linearised[key]).evaluate(inputs=inputs),
+                    pybamm.convert_to_symbol(full[key]).evaluate(inputs=inputs),
+                    rtol=1e-12,
+                )
+                for name in inputs:
+                    expected = _derivative(full[key], name, inputs)
+                    np.testing.assert_allclose(
+                        _derivative(linearised[key], name, inputs),
+                        expected if name == requested else 0,
+                        rtol=1e-12,
+                    )
 
     def test_numeric_without_inputs(self):
         model, parameter_values = _standard()
