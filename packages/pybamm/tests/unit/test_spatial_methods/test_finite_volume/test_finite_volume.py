@@ -1014,6 +1014,19 @@ def _face_method_cases():
             "arithmetic",
             id="(grad(u) - grad(w)) / w",
         ),
+        pytest.param(
+            pybamm.Multiplication(grad_u, w), grad_u, "harmonic", id="grad(u) * w"
+        ),
+        # a divisor of a gradient is a resistance, and a sum has no coefficient
+        pytest.param(
+            pybamm.Division(grad_u, w), grad_u, "arithmetic", id="grad(u) / w"
+        ),
+        pytest.param(
+            pybamm.Addition(w, grad_u), grad_u, "arithmetic", id="w + grad(u)"
+        ),
+        pytest.param(
+            pybamm.Subtraction(grad_u, w), grad_u, "arithmetic", id="grad(u) - w"
+        ),
     ]
 
 
@@ -1108,6 +1121,17 @@ class TestFaceCoefficientAveraging:
         )
         assert np.abs(combination).max() > 1
 
+    @pytest.mark.parametrize("harmonic_flux_coefficients", [True, False])
+    def test_two_material_slab_divided_by_resistivity_is_exact(
+        self, harmonic_flux_coefficients
+    ):
+        # 1 / D is a resistivity, whose series value on a face is the arithmetic mean
+        residual = self._two_material_slab(
+            lambda D, t, u, v: pybamm.grad(u) / (1 / D),
+            harmonic_flux_coefficients=harmonic_flux_coefficients,
+        )
+        np.testing.assert_allclose(residual, 0, rtol=1e-10, atol=1e-10)
+
     @pytest.mark.parametrize("value", ["true", 1, None])
     def test_harmonic_flux_coefficients_must_be_a_bool(self, value):
         with pytest.raises(pybamm.OptionError, match="harmonic flux coefficients"):
@@ -1143,9 +1167,12 @@ class TestFaceCoefficientAveraging:
         assert (
             pybamm.FiniteVolume._face_coefficient_method(bin_op, edge_child) == expected
         )
-        # with the option off only a bare gradient's factor is harmonic
+        # with the option off only a coefficient of a bare gradient is harmonic
         expected_off = (
-            "harmonic" if isinstance(edge_child, pybamm.Gradient) else "arithmetic"
+            "harmonic"
+            if isinstance(edge_child, pybamm.Gradient)
+            and isinstance(bin_op, pybamm.Multiplication)
+            else "arithmetic"
         )
         assert (
             pybamm.FiniteVolume._face_coefficient_method(
