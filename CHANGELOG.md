@@ -18,6 +18,7 @@
 
 ## Optimizations
 
+- Pull-request CI finishes sooner: each test leg now waits only for the solver wheel of its own platform rather than for every platform's build; the uv package cache is no longer saved from the test matrix, whose ~400 MB per-leg entries were evicting the solver-wheel caches and forcing 45-minute Windows rebuilds; `latexify` renders with its own `article`-class preamble, so CI installs `texlive-latex-base` instead of `texlive-latex-extra`; and the example notebooks run in parallel. ([#5976](https://github.com/pybamm-team/PyBaMM/pull/5976))
 - Experiments with a different model per step no longer compile Jacobians of the state mappers between models, which were unused. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
