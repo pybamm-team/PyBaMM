@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Deprecated
+
+- `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
+
 ## Bug fixes
 
 - `from pybamm.models.submodels.interface.kinetics import *` no longer raises an `AttributeError`; `__all__` listed two modules that live in the `inverse_kinetics` subpackage. ([#5970](https://github.com/pybamm-team/PyBaMM/pull/5970))
