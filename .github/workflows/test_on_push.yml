@@ -129,6 +129,8 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check style
         run: uvx pre-commit run -a
@@ -255,6 +257,8 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       - name: From-source uv sync (auto-bootstraps SUNDIALS) + IDAKLU smoke
         run: |
