@@ -105,6 +105,14 @@ _REBUILDABLE_STATE_KEYS = (
 )
 
 
+def _check_klu_pivot_tolerance(value):
+    """Raise a :class:`pybamm.SolverError` unless ``value`` is in (0, 1]."""
+    if isinstance(value, bool) or not isinstance(value, numbers.Real):
+        raise pybamm.SolverError("klu_pivot_tolerance must be a real number")
+    if not 0 < value <= 1:
+        raise pybamm.SolverError(f"klu_pivot_tolerance must be in (0, 1], got {value}")
+
+
 class IDAKLUSolver(pybamm.BaseSolver):
     """
     Solve a discretised model, using sundials with the KLU sparse linear solver.
@@ -182,6 +190,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "precon_half_bandwidth_keep": 5,
                 # For iterative linear solvers, max number of iterations
                 "linsol_max_iterations": 5,
+                # For the KLU linear solver, threshold partial pivoting tolerance
+                # in (0, 1]: a pivot is accepted if it is at least this fraction
+                # of the largest entry in its column (1.0 is full partial pivoting)
+                "klu_pivot_tolerance": 0.1,
                 # Ratio between linear and nonlinear tolerances
                 "epsilon_linear_tolerance": 0.05,
                 # Increment factor used in DQ Jacobian-vector product approximation
@@ -341,6 +353,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "num_solvers": num_solvers,
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 5,
+            "klu_pivot_tolerance": 0.1,
             "epsilon_linear_tolerance": 0.05,
             "increment_factor": 1.0,
             "linear_solution_scaling": True,
@@ -396,6 +409,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if not isinstance(options["compile"], bool):
             raise pybamm.SolverError("compile must be a bool")
+
+        _check_klu_pivot_tolerance(options["klu_pivot_tolerance"])
 
     def _check_atol_type(
         self, atol: float | list | tuple | np.ndarray, model: pybamm.BaseModel
@@ -1138,8 +1153,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
         t_interp : None, list or ndarray, optional
-            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
-            which returns the adaptive time-stepping times.
+            Extra times (in seconds) to store in every solve, so that calls at those
+            times share one cached solve. Defaults to `None`.
         """
         obj = pybamm.IDAKLUJax(
             self,  # IDAKLU solver instance

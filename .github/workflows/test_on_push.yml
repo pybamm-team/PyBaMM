@@ -125,7 +125,7 @@ jobs:
         with:
           python-version: 3.12
 
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
           enable-cache: true
@@ -177,10 +177,11 @@ jobs:
          {"os": "ubuntu-latest", "python": "3.11"},
          {"os": "ubuntu-latest", "python": "3.12"},
          {"os": "ubuntu-latest", "python": "3.14"},
+         {"os": "ubuntu-latest", "python": "3.15"},
          {"os": "ubuntu-24.04-arm", "python": "3.10"},
-         {"os": "ubuntu-24.04-arm", "python": "3.14"},
+         {"os": "ubuntu-24.04-arm", "python": "3.15"},
          {"os": "macos-latest", "python": "3.10"},
-         {"os": "macos-latest", "python": "3.14"}]
+         {"os": "macos-latest", "python": "3.15"}]
 
   # Advisory: reports red on failure but is deliberately absent from ci_gate's
   # needs, so a flaky Windows run never blocks a merge.
@@ -195,7 +196,7 @@ jobs:
       sessions: unit
       legs: >-
         [{"os": "windows-latest", "python": "3.10"},
-         {"os": "windows-latest", "python": "3.14"}]
+         {"os": "windows-latest", "python": "3.15"}]
 
   run_coverage:
     needs: [changes, build_solver]
@@ -250,7 +251,7 @@ jobs:
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
           enable-cache: true
@@ -318,7 +319,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: zoo-gating
-      fetch_depth: 0
       timeout_minutes: 30
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
@@ -333,7 +333,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: zoo-community
-      fetch_depth: 0
       timeout_minutes: 60
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 

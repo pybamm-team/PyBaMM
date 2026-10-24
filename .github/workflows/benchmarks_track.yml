@@ -48,7 +48,7 @@ jobs:
 
       - name: Download benchmark image
         if: steps.artifact.outputs.found == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: benchmark-image
           run-id: ${{ github.event.workflow_run.id }}
@@ -56,7 +56,7 @@ jobs:
 
       - name: Download pull request event
         if: steps.artifact.outputs.found == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: pr-event
           path: pr-event
@@ -118,9 +118,9 @@ jobs:
             --start-point-reset \
             --testbed bare-metal \
             --spec intel-v1 \
-            --adapter python_pytest \
-            --file /tmp/results.json \
+            --adapter json \
+            --file /tmp/bencher.json \
             --error-on-alert \
             --github-actions "$GITHUB_TOKEN" \
             --ci-number "$PR_NUMBER" \
-            "pytest -m 'time_bench and not slow_bench' -v -o addopts= --benchmark-group-by func --benchmark-disable-gc --benchmark-json /tmp/results.json"
+            "pytest -m 'time_bench and not slow_bench' -v -o addopts= --benchmark-group-by func --benchmark-disable-gc --benchmark-json /tmp/results.json --bencher-json /tmp/bencher.json"
