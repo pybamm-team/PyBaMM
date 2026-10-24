@@ -20,6 +20,8 @@
   - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.
   - Sensitivities are correct after a change of model between experiment steps, or from a `starting_solution`, for states with a nonzero reference or an input-dependent scale. `step()` seeds them by input name, and raises a `SolverError` if the solution it continues has none for a requested input.
   - `step()`, and re-solving an experiment, can change `calculate_sensitivities` between calls, with `save=False` for a step that does, and setting up again no longer duplicates discontinuity events.
+- Irreversible heating now includes the resistive loss across the SEI film when `"SEI film resistance"` is `"distributed"` or `"average"`. Before, that loss lowered the voltage but never appeared in `"Total heating [W]"` or the cell temperature. ([#5841](https://github.com/pybamm-team/PyBaMM/pull/5841))
+- Irreversible heating now includes the heat released by the SEI growth, SEI on cracks and lithium plating side reactions, including SEI growth on a lithium metal electrode, each as its current times the departure of the surface potential difference from that reaction's open-circuit potential. Before, the electrical energy lost to these reactions never appeared in `"Total heating [W]"` or the cell temperature. ([#5875](https://github.com/pybamm-team/PyBaMM/pull/5875))
 
 ## Optimizations
 

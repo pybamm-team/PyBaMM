@@ -222,3 +222,83 @@ class TestThermal:
             # cell heats up above the reference, so R (and hence the contact
             # overpotential magnitude) is larger than the constant case
             np.testing.assert_array_less(np.abs(dphi_const[1:]), np.abs(dphi_fn[1:]))
+
+    @pytest.mark.parametrize(
+        "model, options, parameter_set, current",
+        [
+            (
+                pybamm.lithium_ion.SPMe,
+                {"SEI film resistance": "distributed"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.SPMe,
+                {"SEI film resistance": "average"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.DFN,
+                {"SEI film resistance": "distributed"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.MPM,
+                {"SEI film resistance": "distributed"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.SPMe,
+                {"working electrode": "positive", "SEI film resistance": "distributed"},
+                "Xu2019",
+                2.4e-3,
+            ),
+        ],
+    )
+    def test_sei_film_heating(self, model, options, parameter_set, current):
+        # With the temperature held at ambient, the extra heat generated when the SEI
+        # film resistance is switched on must match the extra electrical energy lost
+        parameter_values = pybamm.ParameterValues(parameter_set)
+        # Xu2019 has no current collector or thermal parameters, so take them from
+        # Chen2020
+        chen2020 = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {k: chen2020[k] for k in chen2020 if k not in parameter_values},
+            check_already_exists=False,
+        )
+        if model is pybamm.lithium_ion.MPM:
+            parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        parameter_values.update(
+            {
+                "Current function [A]": current,
+                "Initial SEI thickness [m]": 5e-8,
+                "Total heat transfer coefficient [W.m-2.K-1]": 1e6,
+            }
+        )
+        t = np.linspace(0, 600, 61)
+
+        voltage, heating = {}, {}
+        for film in ["none", options["SEI film resistance"]]:
+            sim = pybamm.Simulation(
+                model(
+                    {
+                        **options,
+                        "SEI": "constant",
+                        "SEI film resistance": film,
+                        "thermal": "lumped",
+                    }
+                ),
+                parameter_values=parameter_values,
+            )
+            sol = sim.solve([0, 600])
+            voltage[film] = sol["Voltage [V]"](t)
+            heating[film] = sol["Total heating [W]"](t)
+
+        film = options["SEI film resistance"]
+        electrical_loss = np.trapezoid(current * (voltage["none"] - voltage[film]), t)
+        extra_heat = np.trapezoid(heating[film] - heating["none"], t)
+        assert electrical_loss > 0
+        np.testing.assert_allclose(extra_heat, electrical_loss, rtol=1e-2)
