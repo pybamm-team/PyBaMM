@@ -7,6 +7,7 @@
 
 ## Bug fixes
 
+- Joining `Solution` objects with incompatible sensitivities now warns and drops sensitivity data while preserving the numerical solution, instead of raising errors or producing invalid gradients. ([#5924](https://github.com/pybamm-team/PyBaMM/pull/5924))
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
 - `IDAKLUSolver.jaxify` now returns correct derivatives at any requested time. Before, it dropped negative tangents and scalar-time cotangents, and read sensitivities from the wrong solver step, or from the nearest `t_eval` point at off-grid times. ([#5916](https://github.com/pybamm-team/PyBaMM/pull/5916))
   - Inputs are looked up by name, so key order or an `OrderedDict` no longer swaps their values, and a call with other keys no longer breaks earlier `jax.jit` functions. Missing inputs raise a `SolverError`.
