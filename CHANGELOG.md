@@ -20,6 +20,7 @@
   - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.
   - Sensitivities are correct after a change of model between experiment steps, or from a `starting_solution`, for states with a nonzero reference or an input-dependent scale. `step()` seeds them by input name, and raises a `SolverError` if the solution it continues has none for a requested input.
   - `step()`, and re-solving an experiment, can change `calculate_sensitivities` between calls, with `save=False` for a step that does, and setting up again no longer duplicates discontinuity events.
+- `Chen2020_composite` and `Bonkile2024` now run with thermal models. They gave the negative electrode density per particle phase, but the thermal model reads one electrode-level density, as it does for the heat capacity and thermal conductivity, so parameter processing raised a `KeyError`. Both sets now give `"Negative electrode density [kg.m-3]"` and drop the unused per-phase densities. ([#5934](https://github.com/pybamm-team/PyBaMM/pull/5934))
 
 ## Optimizations
 
