@@ -230,8 +230,15 @@ def run_examples(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     install_locked(session, extras=["all", "jax"], groups=["dev"])
     notebooks_to_test = session.posargs if session.posargs else []
+    # Run from the repo root, so the package's `-nauto` addopts do not apply.
     session.run(
-        "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
+        "pytest",
+        "--nbmake",
+        "-n",
+        "auto",
+        *notebooks_to_test,
+        "docs/source/examples/",
+        external=True,
     )
 
 

@@ -99,11 +99,10 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev
 
-      # Opt-in and uncached, so kept minimal: sympy.preview needs the standalone class
-      # (texlive-latex-extra) and dvipng
+      # Opt-in and uncached, so kept minimal: latexify's preamble needs only latex-base.
       - name: Install TeXLive for Linux
         if: ${{ startsWith(matrix.leg.os, 'ubuntu') && inputs.texlive }}
-        run: sudo apt-get install --no-install-recommends texlive-latex-extra dvipng
+        run: sudo apt-get install --no-install-recommends texlive-latex-base dvipng
 
       - name: Install macOS system dependencies
         if: startsWith(matrix.leg.os, 'macos')
@@ -137,10 +136,11 @@ jobs:
         with:
           python-version: ${{ matrix.leg.python }}
 
+      # No uv cache: a locked sync is fast anyway, and these crowded out the solver wheels.
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
-          enable-cache: true
+          enable-cache: false
 
       - name: Install nox
         run: uv tool install nox

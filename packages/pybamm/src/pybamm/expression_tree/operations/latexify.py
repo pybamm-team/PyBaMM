@@ -12,6 +12,16 @@ import sympy
 import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
 
+# sympy's default preamble uses the `standalone` class, which only ships in the
+# large texlive-latex-extra bundle; `article` needs just texlive-latex-base.
+LATEX_PREAMBLE = r"""\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage[margin=1cm]{geometry}
+\pagestyle{empty}
+\begin{document}
+"""
+
 
 def get_rng_min_max_name(rng, min_or_max):
     if getattr(rng[min_or_max], "print_name", None) is None:
@@ -279,7 +289,9 @@ class Latexify:
                 return eqn_list
 
         elif self.filename.endswith(".tex"):  # pragma: no cover
-            return sympy.preview(eqn_new_line, outputTexFile=self.filename)
+            return sympy.preview(
+                eqn_new_line, outputTexFile=self.filename, preamble=LATEX_PREAMBLE
+            )
 
         elif self.filename is not None:
             # Formats - pdf
@@ -289,7 +301,7 @@ class Latexify:
                     output="pdf",
                     viewer="file",
                     filename=self.filename,
-                    euler=False,
+                    preamble=LATEX_PREAMBLE,
                 )
 
             else:
@@ -299,7 +311,7 @@ class Latexify:
                         viewer="file",
                         filename=self.filename,
                         dvioptions=["-D", "900"],
-                        euler=False,
+                        preamble=LATEX_PREAMBLE,
                     )
 
                 # When equations are too huge, set output resolution to default
@@ -312,5 +324,5 @@ class Latexify:
                         eqn_new_line,
                         viewer="file",
                         filename=self.filename,
-                        euler=False,
+                        preamble=LATEX_PREAMBLE,
                     )

@@ -142,10 +142,10 @@ jobs:
   # The reusable workflow's CIBW_TEST_COMMAND also runs the solver's own pytest
   # on every platform, which (with the PyBaMM matrix) supersedes the solver's
   # old standalone unit/integration workflows.
-  build_solver:
+  build_solver_linux:
     needs: changes
     if: ${{ needs.changes.outputs.run_docs_tests == 'true' || needs.changes.outputs.run_zoo_tests == 'true' }}
-    name: Solver wheels
+    name: Solver wheels (Linux)
     # Pass contents:read down to the called workflow (this workflow's top-level
     # permissions are {}, so the reusable workflow's checkout would otherwise
     # get no token scope).
@@ -155,15 +155,41 @@ jobs:
     with:
       cache_wheels: true
       build_sdist: false
-      # Build only the wheels the triggered jobs consume (see the changes job's route step).
-      platforms: ${{ needs.changes.outputs.platforms }}
+      platforms: '["linux"]'
+      macos_runners: '[]'
+
+  # Own job, so the slow uncached Windows build never holds up the Linux legs.
+  build_solver_windows:
+    needs: changes
+    if: ${{ contains(fromJSON(needs.changes.outputs.platforms), 'windows') }}
+    name: Solver wheels (Windows)
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: true
+      build_sdist: false
+      platforms: '["windows"]'
+      macos_runners: '[]'
+
+  build_solver_macos:
+    needs: changes
+    if: ${{ needs.changes.outputs.macos_runners != '[]' }}
+    name: Solver wheels (macOS)
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: true
+      build_sdist: false
+      platforms: '[]'
       macos_runners: ${{ needs.changes.outputs.macos_runners }}
 
   # Gated by ci_gate. Full Python on x86 Linux + min/max endpoints on ARM Linux and
   # macOS; interior versions run nightly (run_periodic_tests.yml). ubuntu-latest/3.13
   # is absent here because it runs the coverage and integration jobs below instead.
   run_unit_tests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux, build_solver_macos]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Tests
     permissions:
@@ -186,7 +212,7 @@ jobs:
   # Advisory: reports red on failure but is deliberately absent from ci_gate's
   # needs, so a flaky Windows run never blocks a merge.
   run_unit_tests_advisory:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_windows]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Tests
     permissions:
@@ -199,7 +225,7 @@ jobs:
          {"os": "windows-latest", "python": "3.15"}]
 
   run_coverage:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Coverage
     permissions:
@@ -214,7 +240,7 @@ jobs:
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_integration_tests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Integration tests
     permissions:
@@ -262,7 +288,7 @@ jobs:
           uv run python -m pytest packages/pybamm/tests/unit/test_solvers/test_idaklu_solver.py -q
 
   run_doctests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
     name: Doctests
     permissions:
@@ -275,7 +301,7 @@ jobs:
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_example_tests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
     name: Example notebooks
     permissions:
@@ -287,7 +313,7 @@ jobs:
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Example scripts
     permissions:
@@ -298,7 +324,7 @@ jobs:
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_memory_tests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Memory tests
     permissions:
@@ -311,7 +337,7 @@ jobs:
   # The `core` tier: models the maintainers have adopted, so a failure blocks a
   # merge exactly as a core test failure would.
   run_zoo_gating:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
     name: Model zoo (core tier)
     permissions:
@@ -325,7 +351,7 @@ jobs:
   # Advisory like run_unit_tests_advisory above: `community` reports red without
   # blocking. The gate above covers `core`, so this runs only what it does not.
   run_zoo_tests_advisory:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
     name: Model zoo
     permissions:
@@ -343,7 +369,9 @@ jobs:
     needs:
       - changes
       - style
-      - build_solver
+      - build_solver_linux
+      - build_solver_windows
+      - build_solver_macos
       - run_unit_tests
       - run_coverage
       - run_integration_tests
