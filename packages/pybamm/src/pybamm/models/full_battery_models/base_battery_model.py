@@ -266,6 +266,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     .. math::
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
+            * "SEI film capacitance" : str
+                Whether to add a capacitance in parallel with the SEI film resistance,
+                with value (SEI relative permittivity) * epsilon_0 / (SEI thickness).
+                Can be "false" (default) or "true". Requires "surface form" to be
+                "differential", "SEI film resistance" to be "distributed", a single
+                particle phase, a single particle size and a full cell. In models
+                that x-average the surface potential difference (SPM, SPMe), the SEI
+                film overpotential is also x-averaged.
             * "SEI on cracks" : str
                 Whether to include SEI growth on particle cracks, can be "false"
                 (default) or "true".
@@ -416,6 +424,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "tunnelling limited",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
+            "SEI film capacitance": ["false", "true"],
             "SEI on cracks": ["false", "true"],
             "SEI porosity change": ["false", "true"],
             "stress-induced diffusion": ["false", "true"],
@@ -467,6 +476,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "particle size": "single",
             "SEI": "none",
             "SEI film resistance": "none",
+            "SEI film capacitance": "false",
             "SEI on cracks": "false",
             "SEI porosity change": "false",
             "stress-induced diffusion": "false",
@@ -715,6 +725,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "and there are multiple phases then 'total interfacial "
                     "current density as a state' must be 'true'"
                 )
+
+        if options["SEI film capacitance"] == "true" and (
+            options["surface form"] != "differential"
+            or options["SEI film resistance"] != "distributed"
+            or options["particle phases"] not in ["1", ("1", "1")]
+            or options["particle size"] != "single"
+            or options["working electrode"] != "both"
+        ):
+            raise pybamm.OptionError(
+                "'SEI film capacitance' requires 'surface form' to be "
+                "'differential', 'SEI film resistance' to be 'distributed', a single "
+                "particle phase, a single particle size and a full cell"
+            )
 
         # Options not yet compatible with contact resistance
         if options["contact resistance"] == "true":

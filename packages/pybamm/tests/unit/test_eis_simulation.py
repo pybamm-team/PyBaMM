@@ -441,3 +441,36 @@ class TestReplaceOnModels:
         bc_value = next(iter(model.boundary_conditions.values()))
         assert bc_value["left"][0].value == 3
         assert bc_value["right"][0].value == 42
+
+
+class TestEISSEIFilmCapacitance:
+    @pytest.mark.parametrize(
+        "model_class",
+        [pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe, pybamm.lithium_ion.DFN],
+    )
+    def test_sei_film_capacitance(self, model_class):
+        parameter_values = pybamm.ParameterValues("OKane2022")
+        parameter_values.update(
+            {"SEI resistivity [Ohm.m]": 2e6, "SEI relative permittivity": 1.0},
+            check_already_exists=False,
+        )
+        frequencies = np.array([1e-3, 9e3])
+        impedances = {}
+        for capacitance in ["false", "true"]:
+            model = model_class(
+                {
+                    "surface form": "differential",
+                    "SEI": "constant",
+                    "SEI film capacitance": capacitance,
+                }
+            )
+            simulation = pybamm.EISSimulation(model, parameter_values)
+            impedances[capacitance] = simulation.solve(
+                frequencies, initial_soc=0.5
+            ).impedance
+        # The film capacitor is open at low frequency and adds an arc near
+        # f = 1 / (2 pi rho eps_r eps_0) ~ 9 kHz
+        np.testing.assert_allclose(
+            impedances["true"][0], impedances["false"][0], rtol=1e-2
+        )
+        assert -impedances["true"][1].imag > -impedances["false"][1].imag
