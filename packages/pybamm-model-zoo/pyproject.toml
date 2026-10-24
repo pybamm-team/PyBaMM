@@ -43,6 +43,11 @@ Repository = "https://github.com/pybamm-team/PyBaMM/tree/main/packages/pybamm-mo
 Changelog = "https://github.com/pybamm-team/PyBaMM/blob/main/packages/pybamm-model-zoo/CHANGELOG.md"
 Issues = "https://github.com/pybamm-team/PyBaMM/issues"
 
+[project.entry-points."pybamm_parameter_sets"]
+Paten2026 = "pybamm_model_zoo.dual_continuum.parameter_sets:paten2026_dc1"
+Paten2026_DFN = "pybamm_model_zoo.dual_continuum.parameter_sets:paten2026_dfn"
+Paten2026_3D_NMC = "pybamm_model_zoo.dual_continuum.parameter_sets:paten2026_3d_case"
+
 # A model's dependencies belong in a per-model `zoo-<slug>` extra, never in the
 # base dependencies above: workspace members share one lockfile and one dev venv.
 [project.optional-dependencies]

@@ -41,6 +41,7 @@ See [contributing a model](contributing.md) to add your own.
 
 | Model | Tier | Maintainer | Added |
 | --- | --- | --- | --- |
+| [Dual Continuum Model](models/dual_continuum.md) | community | [@isaacbasil](https://github.com/isaacbasil) | 2026-10-06 |
 | [Single Particle Model with a linearised open-circuit potential](models/linearised_spm.md) | core | @pybamm-team/maintainers | 2026-08-20 |
 | [Multilayer pouch cell stack with a 3D temperature field in every zone](models/multilayer_3d_thermal.md) | community | [@mleot](https://github.com/mleot) | 2026-09-28 |
 
@@ -55,6 +56,7 @@ whose job never reported, not a pass.
 
 | Model | Results | Last passing |
 | --- | --- | --- |
+| dual_continuum | not yet run | — |
 | linearised_spm | `26.10.1.0`: pass, `main`: pass | 26.10.1.0 |
 | multilayer_3d_thermal | `26.10.1.0`: pass, `main`: pass | 26.10.1.0 |
 
@@ -63,6 +65,7 @@ whose job never reported, not a pass.
 :maxdepth: 1
 
 Contributing a model <contributing>
+models/dual_continuum
 models/linearised_spm
 models/multilayer_3d_thermal
 ```
