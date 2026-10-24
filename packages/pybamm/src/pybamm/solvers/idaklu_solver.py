@@ -794,6 +794,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format != "casadi":  # pragma: no cover
             raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
 
+        # Fail before integrating if a discrete-sum output will miss its times
+        for name, time_integral in self._time_integral_vars.items():
+            time_integral.check_output_times(name, t_eval, t_interp)
+
         inputs_list = inputs_list or [{}]
 
         # stack inputs so that they are a 2D array of shape (number_of_inputs, number_of_parameters)

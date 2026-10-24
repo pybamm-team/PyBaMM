@@ -233,10 +233,19 @@ class OutputAssembly:
                 dense[:, sparsity.find()] = entries
                 entries = dense
             values = entries
+            indices = None
             if time_integral is not None:
                 # These rows are the integrand's trajectory, not the variable's.
+                indices = time_integral.checked_sample_indices(
+                    name,
+                    solution.t,
+                    "an output_variables solve keeps no states to interpolate",
+                )
+                # A segment that reached its final time leaves later times to the next
+                if solution.termination != "final time":
+                    time_integral.warn_times_after_end(name, solution.t[-1])
                 values = time_integral.postfix(
-                    entries.reshape(-1), solution.t, solution.all_inputs[0]
+                    entries[indices], solution.t[indices], solution.all_inputs[0]
                 )
             variable = pybamm.ProcessedVariableComputed(
                 [model.get_processed_variable_or_event(name)],
@@ -254,6 +263,7 @@ class OutputAssembly:
                     sensitivities[:, rows, :],
                     solution,
                     sensitivity_names,
+                    indices,
                 )
             )
             solution._variables[name] = variable
@@ -282,9 +292,12 @@ class OutputAssembly:
         return array
 
     def _variable_sensitivities(
-        self, name, entries, block, solution, sensitivity_names
+        self, name, entries, block, solution, sensitivity_names, indices
     ):
-        """One variable's ``"all"`` block plus a flat vector per parameter."""
+        """
+        One variable's ``"all"`` block plus a flat vector per parameter; a time
+        integral's from the rows at ``indices``.
+        """
         sparsity = self._sparse.get(name)
         if sparsity is not None:
             raise pybamm.SolverError(
@@ -298,10 +311,10 @@ class OutputAssembly:
         if time_integral is not None:
             all_sens = time_integral.postfix_sensitivities(
                 name,
-                entries.reshape(-1),
-                solution.t,
+                entries[indices],
+                solution.t[indices],
                 solution.all_inputs[0],
                 sensitivity_names,
-                all_sens,
+                block[indices].reshape(-1, n_params),
             )
         return pack_sensitivity_dict(all_sens, sensitivity_names)

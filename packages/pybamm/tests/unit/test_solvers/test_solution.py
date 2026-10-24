@@ -1426,17 +1426,31 @@ class TestSolution:
                 assert isinstance(sol["data_comparison"].sensitivities["a"], np.ndarray)
                 assert sol["data_comparison"].sensitivities["a"].shape == (1,)
 
-                # should raise error if t_interp is not equal to data_times
-                with pytest.raises(
-                    pybamm.SolverError,
-                    match=r"solution times and discrete times of the time integral are not equal",
-                ):
-                    solver.solve(
+                # Without t_interp only a full-state value reaches the data times
+                if use_output_var:
+                    with pytest.raises(
+                        pybamm.SolverError, match=r"are not solution times"
+                    ):
+                        solver.solve(
+                            model,
+                            t_eval=t_eval,
+                            inputs={"a": a, "b": b},
+                            calculate_sensitivities=True,
+                        )
+                else:
+                    sol = solver.solve(
                         model,
                         t_eval=t_eval,
                         inputs={"a": a, "b": b},
                         calculate_sensitivities=True,
-                    )["data_comparison"].sensitivities["a"]
+                    )
+                    np.testing.assert_allclose(
+                        sol["data_comparison"].entries, expected, rtol=1e-3, atol=1e-2
+                    )
+                    with pytest.raises(
+                        pybamm.SolverError, match=r"are not solution times"
+                    ):
+                        sol["data_comparison"].sensitivities
 
     @pytest.mark.parametrize(
         "solver_class,use_post_sum,use_output_var", _solver_classes
@@ -1622,6 +1636,275 @@ class TestSolution:
         np.testing.assert_allclose(
             sensitivities[sensitivity_name], [expected], rtol=1e-6
         )
+
+    @staticmethod
+    def _discrete_sum_model(data_times):
+        """dy/dt = -k y from y0 until y = y_min, and the sum of y^2 at data_times."""
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        model.rhs = {y: -pybamm.InputParameter("k") * y}
+        model.initial_conditions = {y: pybamm.InputParameter("y0")}
+        model.events = [pybamm.Event("y = y_min", y - pybamm.InputParameter("y_min"))]
+        data = pybamm.DiscreteTimeData(data_times, np.zeros_like(data_times), "data")
+        model.variables = {"y": y, "sum": pybamm.DiscreteTimeSum((y - data) ** 2)}
+        return model
+
+    def _solve_discrete_sum(self, use_output_var, t_interp, y_min=0.0):
+        data_times = np.linspace(0, 5, 11)
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10,
+            atol=1e-12,
+            output_variables=["sum"] if use_output_var else None,
+        )
+        return data_times, solver.solve(
+            self._discrete_sum_model(data_times),
+            [0, 5],
+            inputs={"k": 0.3, "y0": 2.0, "y_min": y_min},
+            t_interp=t_interp,
+            calculate_sensitivities=["k", "y0"],
+        )
+
+    @staticmethod
+    def _assert_discrete_sum(variable, data_times):
+        y_squared = 4.0 * np.exp(-0.6 * data_times)
+        expected = np.sum(y_squared)
+        np.testing.assert_allclose(variable.entries, [expected], rtol=1e-7)
+        np.testing.assert_allclose(variable(), [expected], rtol=1e-7)
+        sensitivities = variable.sensitivities
+        np.testing.assert_allclose(
+            sensitivities["k"], [np.sum(-2 * data_times * y_squared)], rtol=1e-6
+        )
+        np.testing.assert_allclose(sensitivities["y0"], [expected], rtol=1e-6)
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_discrete_time_sum_reads_only_its_own_times(self, use_output_var, caplog):
+        # The solution holds five times as many points as the data
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            data_times, sol = self._solve_discrete_sum(
+                use_output_var, np.linspace(0, 5, 51)
+            )
+            self._assert_discrete_sum(sol["sum"], data_times)
+
+        assert "after the solution ends" not in caplog.text
+
+    def test_discrete_time_sum_value_interpolates_full_state(self):
+        data_times, sol = self._solve_discrete_sum(False, None)
+        variable = sol["sum"]
+
+        # Hermite data reaches the data times for the value, not its sensitivities
+        expected = np.sum(4.0 * np.exp(-0.6 * data_times))
+        np.testing.assert_allclose(variable.entries, [expected], rtol=1e-6)
+        np.testing.assert_allclose(variable(), [expected], rtol=1e-6)
+        with pytest.raises(pybamm.SolverError, match=r"9 of its discrete times"):
+            variable.sensitivities
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_discrete_time_sum_missing_its_times(self, use_output_var):
+        # Without Hermite data, nothing reaches the data times the solution misses
+        t_interp = np.linspace(0, 5, 6)
+        if use_output_var:
+            with pytest.raises(pybamm.SolverError, match=r"keeps no states"):
+                self._solve_discrete_sum(use_output_var, t_interp)
+        else:
+            _, sol = self._solve_discrete_sum(use_output_var, t_interp)
+            with pytest.raises(pybamm.SolverError, match=r"no Hermite interpolant"):
+                sol["sum"].entries
+
+    def test_discrete_time_sum_missing_its_times_raises_before_integrating(self):
+        data_times = np.linspace(0, 5, 11)
+        model = self._discrete_sum_model(data_times)
+        solver = pybamm.IDAKLUSolver(output_variables=["sum"])
+        solve_kwargs = {
+            "inputs": {"k": 0.3, "y0": 2.0, "y_min": 0.0},
+            "calculate_sensitivities": ["k", "y0"],
+        }
+        # Solve once so the second solve reuses this group rather than rebuilding
+        # it, which would discard the spy.
+        solver.solve(model, [0, 5], t_interp=data_times, **solve_kwargs)
+
+        def integrate(*args, **kwargs):
+            pytest.fail("integrated before checking the output times")
+
+        solver._setup["solver"] = type("Spy", (), {"solve": staticmethod(integrate)})()
+        with pytest.raises(pybamm.SolverError, match=r"keeps no states"):
+            solver.solve(model, [0, 5], t_interp=np.linspace(0, 5, 6), **solve_kwargs)
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_discrete_time_sum_over_event_terminated_solution(
+        self, use_output_var, caplog
+    ):
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            data_times, sol = self._solve_discrete_sum(
+                use_output_var, np.linspace(0, 5, 11), y_min=1.0
+            )
+            # y reaches 1 at t = ln(2) / 0.3, so only the data times before count
+            self._assert_discrete_sum(
+                sol["sum"], data_times[data_times < np.log(2) / 0.3]
+            )
+
+        assert sol.termination == "event: y = y_min"
+        messages = [
+            record.getMessage()
+            for record in caplog.records
+            if "after the solution ends" in record.getMessage()
+        ]
+        assert len(messages) == 1
+        assert '"sum": 6 of its 11 discrete times are after' in messages[0]
+
+    def test_discrete_time_sum_split_solve_does_not_warn(self, caplog):
+        # The first segment's later discrete times belong to the second
+        data_times = np.linspace(0, 5, 11)
+        model = self._discrete_sum_model(data_times)
+        y = model.variables["y"]
+        switch = pybamm.t > pybamm.InputParameter("t_switch")
+        model.rhs = {y: -pybamm.InputParameter("k") * y * (1 + switch)}
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, output_variables=["sum"])
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            sol = solver.solve(
+                model,
+                [0, 5],
+                inputs={"k": 0.3, "y0": 2.0, "y_min": 0.0, "t_switch": 2.7},
+                t_interp=data_times,
+            )
+
+        assert len(sol.sub_solutions) == 2
+        assert "after the solution ends" not in caplog.text
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_explicit_time_integral_initial_condition_depends_on_input(
+        self, use_output_var
+    ):
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        charge = pybamm.Variable("charge")
+        k = pybamm.InputParameter("k")
+        model.rhs = {y: -k * y, charge: k * y}
+        model.initial_conditions = {y: 1, charge: pybamm.InputParameter("charge0")}
+        model.variables = {"charge": charge}
+        # charge leaves rhs and is read as a time integral from its initial condition
+        disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
+        disc.process_model(model)
+        assert len(model.rhs) == 1
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10,
+            atol=1e-12,
+            output_variables=["charge"] if use_output_var else None,
+        )
+        times = np.linspace(0, 2, 101)
+
+        sol = solver.solve(
+            model,
+            [0, 2],
+            inputs={"k": 1.3, "charge0": 0.5},
+            t_interp=times,
+            calculate_sensitivities=True,
+        )
+
+        # The trapezoid rule of k exp(-k t) over the solution times
+        decay = np.exp(-1.3 * times)
+        expected = 0.5 + scipy.integrate.trapezoid(1.3 * decay, times)
+        expected_dk = scipy.integrate.trapezoid((1 - 1.3 * times) * decay, times)
+        variable = sol["charge"]
+        np.testing.assert_allclose(variable.entries, [expected], rtol=1e-7)
+        np.testing.assert_allclose(
+            variable.sensitivities["k"], [expected_dk], rtol=1e-6
+        )
+        np.testing.assert_allclose(variable.sensitivities["charge0"], [1.0])
+
+    @staticmethod
+    def _decay_model_1d():
+        """dy/dt = -k (1 + x) y from y = 1 on x in [0, 1], with time integrals of y."""
+        model = pybamm.BaseModel()
+        x = pybamm.SpatialVariable("x", "line")
+        y = pybamm.Variable("y", domain="line")
+        # A second state, so the model has more states than the integral has entries
+        w = pybamm.Variable("w")
+        model.rhs = {y: -pybamm.InputParameter("k") * (1 + x) * y, w: -w}
+        model.initial_conditions = {y: 1, w: 1}
+        integral = pybamm.ExplicitTimeIntegral(y, pybamm.InputParameter("q0"))
+        model.variables = {
+            "integral": integral,
+            "twice integral": 2 * integral,
+            "integral over x": pybamm.Integral(integral, x),
+        }
+        geometry = {"line": {x: {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(geometry, {"line": pybamm.Uniform1DSubMesh}, {"x": 6})
+        disc = pybamm.Discretisation(mesh, {"line": pybamm.FiniteVolume()})
+        disc.process_model(model)
+        return model, mesh["line"].nodes
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_explicit_time_integral_of_1d_variable(self, use_output_var):
+        model, nodes = self._decay_model_1d()
+        names = ["integral", "twice integral"]
+        solver = pybamm.IDAKLUSolver(
+            rtol=1e-10,
+            atol=1e-12,
+            output_variables=names if use_output_var else None,
+        )
+        times = np.linspace(0, 2, 101)
+
+        sol = solver.solve(
+            model,
+            [0, 2],
+            inputs={"k": 0.7, "q0": 0.4},
+            t_interp=times,
+            calculate_sensitivities=True,
+        )
+
+        # One value per node: the trapezoid rule over the solution times
+        rate = 1 + nodes[:, np.newaxis]
+        decay = np.exp(-0.7 * rate * times)
+        expected = 0.4 + scipy.integrate.trapezoid(decay, times, axis=1)
+        expected_dk = scipy.integrate.trapezoid(-rate * times * decay, times, axis=1)
+        integral = sol["integral"]
+        np.testing.assert_allclose(integral.entries, expected[:, np.newaxis], rtol=1e-7)
+        np.testing.assert_allclose(integral(), expected[:, np.newaxis], rtol=1e-7)
+        np.testing.assert_allclose(
+            integral(x=nodes[2:4]), expected[2:4, np.newaxis], rtol=1e-7
+        )
+        np.testing.assert_allclose(integral.sensitivities["k"], expected_dk, rtol=1e-6)
+        np.testing.assert_allclose(integral.sensitivities["q0"], np.ones_like(nodes))
+        twice = sol["twice integral"]
+        np.testing.assert_allclose(twice.entries, 2 * integral.entries, rtol=1e-12)
+        np.testing.assert_allclose(twice.sensitivities["k"], 2 * expected_dk, rtol=1e-6)
+        np.testing.assert_allclose(twice.sensitivities["q0"], 2 * np.ones_like(nodes))
+
+        reloaded = pickle.loads(pickle.dumps(sol))["integral"]  # nosec B301
+        np.testing.assert_array_equal(reloaded.entries, integral.entries)
+        np.testing.assert_allclose(
+            reloaded.sensitivities["k"], integral.sensitivities["k"], rtol=1e-12
+        )
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_explicit_time_integral_reduced_in_space_raises(self, use_output_var):
+        model, _ = self._decay_model_1d()
+        name = "integral over x"
+        solver = pybamm.IDAKLUSolver(
+            output_variables=[name] if use_output_var else None
+        )
+
+        with pytest.raises(
+            NotImplementedError, match=r"must keep the integral's shape"
+        ):
+            solver.solve(model, [0, 1], inputs={"k": 0.7, "q0": 0.4})[name]
+
+    @pytest.mark.parametrize("use_output_var", [False, True])
+    def test_explicit_time_integral_of_2d_variable_raises(self, use_output_var):
+        model = pybamm.lithium_ion.SPM()
+        name = "Time-integrated particle concentration [mol.m-3.s]"
+        model.variables[name] = pybamm.ExplicitTimeIntegral(
+            model.variables["Negative particle concentration [mol.m-3]"],
+            pybamm.Scalar(0),
+        )
+        # output_variables makes the solver compile the variable at set-up
+        solver = pybamm.IDAKLUSolver(
+            output_variables=[name] if use_output_var else None
+        )
+        sim = pybamm.Simulation(model, solver=solver)
+
+        with pytest.raises(NotImplementedError, match=r"one spatial dimension"):
+            sim.solve([0, 60])[name]
 
     def test_observe(self):
         """Test the observe method with pybamm symbols, comparing with model variables."""

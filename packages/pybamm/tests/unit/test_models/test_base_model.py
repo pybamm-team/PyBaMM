@@ -440,6 +440,21 @@ class TestBaseModel:
         }
         assert all(isinstance(x, pybamm.InputParameter) for x in model.input_parameters)
 
+    def test_read_input_parameters_of_removed_initial_condition(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        q = pybamm.Variable("q")
+        model.rhs = {u: -pybamm.InputParameter("a") * u, q: u}
+        model.initial_conditions = {u: 1, q: pybamm.InputParameter("q0")}
+        model.variables = {"q": q}
+        disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
+
+        disc.process_model(model)
+
+        # q0 now only sets the initial value of the time integral q became
+        assert q not in model.initial_conditions
+        assert {x.name for x in model.input_parameters} == {"a", "q0"}
+
     def test_update(self):
         # model
         whole_cell = ["negative electrode", "separator", "positive electrode"]

@@ -254,15 +254,26 @@ class CasadiObserver(VariableObserver):
             all_S_var.append(S_var)
 
         S_var = np.vstack(all_S_var)
-        if variable.time_integral is not None:
+        time_integral = variable.time_integral
+        if time_integral is not None:
             # The value sums over every segment at once, so its sensitivity must too
-            S_var = variable.time_integral.postfix_sensitivities(
+            t_pts = variable.t_pts
+            indices = time_integral.checked_sample_indices(
                 variable._name,
-                self.observe_raw(variable),
-                variable.t_pts,
+                t_pts,
+                "the solution's sensitivities cannot be interpolated",
+            )
+            n_params = S_var.shape[1]
+            # Rows are time-major: one block of the variable's entries per time
+            S_var = S_var.reshape(len(t_pts), -1, n_params)[indices]
+            integrand = np.moveaxis(self.observe_raw(variable), -1, 0)[indices]
+            S_var = time_integral.postfix_sensitivities(
+                variable._name,
+                integrand,
+                t_pts[indices],
                 variable.all_inputs[0],
                 sensitivity_names,
-                S_var,
+                S_var.reshape(-1, n_params),
             )
         return pack_sensitivity_dict(S_var, sensitivity_names)
 
