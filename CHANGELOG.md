@@ -53,6 +53,7 @@
 - `Ai2020`'s electrolyte diffusivity now converts the Valoen and Reimers (2005) fit from cm2/s to m2/s. It was 1e4 times too large, so DFN simulations with Ai2020 had almost no electrolyte concentration gradient. ([#5887](https://github.com/pybamm-team/PyBaMM/issues/5887), [#5888](https://github.com/pybamm-team/PyBaMM/pull/5888))
 - `Chayambuka2022`'s NVPF (positive electrode) diffusivity is now looked up at the solid concentration, `sto * c_max`, instead of `sto` times the initial electrolyte concentration, which made it 20 to 50 times too large. ([#5885](https://github.com/pybamm-team/PyBaMM/issues/5885), [#5889](https://github.com/pybamm-team/PyBaMM/pull/5889))
 - Fixed the 1+1D and 2+1D potential pair current collector models ignoring `"Number of electrodes connected in parallel to make a cell"`. The tab boundary condition now uses the current through one electrode pair instead of the whole cell current. ([#5826](https://github.com/pybamm-team/PyBaMM/pull/5826))
+- `pybamm.max` and `pybamm.min` now return a symbol with no domains, since they reduce their child to a single value. Previously they kept the child's domains, so reading a variable such as `"Maximum negative particle surface stoichiometry"` from a 2+1D model raised `UnboundLocalError`. ([#5894](https://github.com/pybamm-team/PyBaMM/pull/5894))
 
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 

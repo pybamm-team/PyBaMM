@@ -13,6 +13,7 @@ from scipy import special
 from typing_extensions import TypeVar
 
 import pybamm
+from pybamm.expression_tree.symbol import _EMPTY_DOMAINS
 
 # CasADi 3.8 stopped dispatching scipy's erf ufunc onto symbolic values, so the
 # generic Function path needs the CasADi equivalent spelled out.
@@ -746,7 +747,28 @@ def log10(child: pybamm.Symbol):
     return log(child, base=10)
 
 
-class Max(SpecificFunction):
+class _ScalarReduction(SpecificFunction):
+    """
+    Parent class for functions that reduce their child to a single value, so the
+    result has no domains.
+    """
+
+    __slots__ = ()
+
+    def _combine_children_domains(self, children):
+        """See :meth:`pybamm.Symbol._combine_children_domains()`"""
+        return _EMPTY_DOMAINS
+
+    def _evaluates_on_edges(self, dimension: str) -> bool:
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`"""
+        return False
+
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
+        return np.full((1, 1), np.nan)
+
+
+class Max(_ScalarReduction):
     """Max function."""
 
     __slots__ = ()
@@ -765,11 +787,6 @@ class Max(SpecificFunction):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.mmax(child)
 
-    def _evaluate_for_shape(self):
-        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        # Max will always return a scalar
-        return np.nan * np.ones((1, 1))
-
 
 def max(child: pybamm.Symbol):
     """
@@ -779,7 +796,7 @@ def max(child: pybamm.Symbol):
     return pybamm.simplify_if_constant(Max(child))
 
 
-class Min(SpecificFunction):
+class Min(_ScalarReduction):
     """Min function."""
 
     __slots__ = ()
@@ -797,11 +814,6 @@ class Min(SpecificFunction):
     def _casadi_evaluate(self, child):
         """See :meth:`pybamm.SpecificFunction._casadi_evaluate()`."""
         return casadi.mmin(child)
-
-    def _evaluate_for_shape(self):
-        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        # Min will always return a scalar
-        return np.nan * np.ones((1, 1))
 
 
 def min(child: pybamm.Symbol):
