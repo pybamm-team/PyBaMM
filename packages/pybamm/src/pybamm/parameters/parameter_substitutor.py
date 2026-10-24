@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import numbers
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -10,6 +10,8 @@ import pybamm
 from pybamm.models.base_model import ModelSolutionObservability
 
 if TYPE_CHECKING:
+    from pybamm.type_definitions import Numeric
+
     from .parameter_store import ParameterStore
 
 
@@ -84,7 +86,7 @@ class ParameterSubstitutor:
         >>> result = processed.evaluate()  # Returns evaluated value
         """
         if isinstance(symbol, numbers.Number):
-            return pybamm.Scalar(symbol)
+            return pybamm.Scalar(cast("Numeric", symbol))
         return pybamm.tree_map(
             self._substitute, symbol, cache=self._cache, is_leaf=self._is_leaf
         )
@@ -128,7 +130,7 @@ class ParameterSubstitutor:
             if isinstance(reference, pybamm.Vector):
                 # address numpy 1.25 deprecation warning: array should have ndim=0
                 # before conversion
-                reference = pybamm.Scalar((reference.evaluate()).item())
+                reference = pybamm.Scalar(reference.entries.item())
             return symbol.create_copy(
                 scale=scale, reference=reference, bounds=tuple(bounds)
             )
@@ -172,7 +174,7 @@ class ParameterSubstitutor:
             if np.isnan(value):
                 raise ValueError(f"Parameter '{symbol.name}' not found")
             # Scalar inherits name
-            return pybamm.Scalar(value, name=symbol.name)
+            return pybamm.Scalar(cast("Numeric", value), name=symbol.name)
         elif isinstance(value, pybamm.Symbol):
             return self.process_symbol(value).with_domains(symbol)
         else:
@@ -230,7 +232,7 @@ class ParameterSubstitutor:
                 )
             # If the "function" is provided is actually a scalar, return a Scalar
             # object instead of throwing an error.
-            function = pybamm.Scalar(function_name, name=symbol.name)
+            function = pybamm.Scalar(cast("Numeric", function_name), name=symbol.name)
         elif callable(function_name):
             # otherwise evaluate the function to create a new PyBaMM object
             self._check_electrode_conductivity_signature(symbol, function_name)
