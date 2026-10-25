@@ -2,6 +2,7 @@
 Tests for the batch_study.py
 """
 
+import numpy as np
 import pytest
 
 import pybamm
@@ -89,6 +90,29 @@ class TestBatchStudy:
                 experiment.steps for experiment in bs_true.experiments.values()
             ]
             assert output_experiment in experiments_list
+
+    @pytest.mark.parametrize("permutations", [False, True])
+    def test_solve_honours_t_interp(self, permutations):
+        models = {}
+        t_interp = np.array([0.0, 0.25, 0.5, 1.0])
+        for name in ["first", "second"]:
+            model = pybamm.BaseModel()
+            state = pybamm.Variable("State")
+            model.rhs = {state: -state}
+            model.initial_conditions = {state: 1}
+            model.variables = {"State": state}
+            direct_solution = pybamm.Simulation(model).solve(
+                [0, 1], t_interp=t_interp, calc_esoh=False
+            )
+            np.testing.assert_array_equal(direct_solution.t, t_interp)
+            models[name] = model
+
+        study = pybamm.BatchStudy(models=models, permutations=permutations)
+        study.solve([0, 1], t_interp=t_interp, calc_esoh=False)
+
+        assert len(study.sims) == 2
+        for simulation in study.sims:
+            np.testing.assert_array_equal(simulation.solution.t, t_interp)
 
     def test_solve_honours_solver_argument(self):
         spm = pybamm.lithium_ion.SPM()
