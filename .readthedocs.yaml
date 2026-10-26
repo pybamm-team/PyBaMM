@@ -12,8 +12,8 @@ formats:
   - epub
   - htmlzip
 
-# Read the Docs runs `uv sync` natively and owns the venv, UV_PYTHON and
-# UV_PROJECT_ENVIRONMENT; `all` here is PyBaMM's own extra, not `--all-extras`.
+# Read the Docs sets up uv and the venv from this entry. build.jobs.install
+# replaces its `uv sync`; `all` is PyBaMM's own extra, not `--all-extras`.
 python:
   install:
     - method: uv
@@ -25,8 +25,8 @@ python:
 
 # Set the version of Python and other tools you might need
 build:
-  # graphviz builds SVG files; the from-source SUNDIALS build uses
-  # ENABLE_LAPACK=ON, needing gfortran (configure) and libopenblas (LAPACK).
+  # graphviz builds SVG files; gfortran and libopenblas are only for the
+  # from-source solver build that the install job falls back to.
   apt_packages:
     - "graphviz"
     - "gfortran"
@@ -35,24 +35,36 @@ build:
   tools:
     python: "3.14"
   jobs:
-    pre_build:
-      # linkcheck is advisory: external link flake (bot-blocks, transient 5xx) must
-      # not fail the build. Broken links are swept weekly by the CI lychee job.
-      - python -m sphinx -b linkcheck -D linkcheck_timeout=20 docs/ ./linkcheck_output || true
-    # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
     post_checkout:
+      # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
       - git fetch --unshallow
-      # pybammsolvers is a uv workspace member built from source; fetch its
-      # SUNDIALS/SuiteSparse submodule sources so `uv sync` can compile it.
-      - git submodule update --init --recursive
-    # Altered PDF build and upload job
-    # This also runs on PR builds, but does not upload the PDF
+      # Exit code 183 cancels a pull request build that changes nothing the docs render.
+      - |
+        if [ "$READTHEDOCS_VERSION_TYPE" = external ] && git diff --quiet origin/main...HEAD -- \
+            docs/ packages/pybamm/src/ packages/pybamm/pyproject.toml pyproject.toml uv.lock .readthedocs.yaml; then
+          exit 183
+        fi
+    install:
+      - UV_PROJECT_ENVIRONMENT="$READTHEDOCS_VIRTUALENV_PATH" uv sync --frozen --group docs --extra all --no-install-package pybammsolvers
+      # The docs only import the solver, so the released wheel of the in-repo version
+      # replaces a 2-minute compile; a version not yet on PyPI is built from source.
+      - |
+        version=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' packages/pybammsolvers/src/pybammsolvers/version.py)
+        if ! uv pip install --python "$READTHEDOCS_VIRTUALENV_PATH" --no-deps "pybammsolvers==$version"; then
+          git submodule update --init --recursive
+          UV_PROJECT_ENVIRONMENT="$READTHEDOCS_VIRTUALENV_PATH" uv sync --frozen --group docs --extra all
+        fi
+    # Altered PDF build and upload job, skipped on pull requests, which never publish it
     post_build:
-      - mkdir --parents $READTHEDOCS_OUTPUT/pdf/
-      # Generate LaTeX files in docs/build/ and doctrees in docs/_build/doctrees, skipping notebooks
-      - python -m sphinx -T -E -b latex -d docs/_build/doctrees -D language=en docs docs/build/
-      - cd docs/build/ && cat latexmkrc
-      # Map non-zero exit codes to zero
-      - cd docs/build/ && latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode || true
-      - test -f docs/build/pybamm.pdf && echo "pybamm.pdf exists. Copying source file to $READTHEDOCS_OUTPUT/pdf/."
-      - cp "docs/build/pybamm.pdf" $READTHEDOCS_OUTPUT/pdf/
+      - |
+        if [ "$READTHEDOCS_VERSION_TYPE" != external ]; then
+          set -e
+          mkdir --parents "$READTHEDOCS_OUTPUT/pdf/"
+          # LaTeX files in docs/build/ and doctrees in docs/_build/doctrees, skipping notebooks
+          python -m sphinx -T -E -b latex -d docs/_build/doctrees -D language=en docs docs/build/
+          cat docs/build/latexmkrc
+          # latexmk errors are tolerated as long as it still writes the PDF
+          (cd docs/build/ && latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode) || true
+          test -f docs/build/pybamm.pdf && echo "pybamm.pdf exists. Copying source file to $READTHEDOCS_OUTPUT/pdf/."
+          cp docs/build/pybamm.pdf "$READTHEDOCS_OUTPUT/pdf/"
+        fi
