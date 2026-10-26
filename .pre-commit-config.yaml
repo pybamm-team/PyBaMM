@@ -65,7 +65,7 @@ repos:
         name: Report comment slop on changed lines
         entry: python .github/scripts/check_comment_slop.py
         language: python
-        additional_dependencies: ["comment-slop==0.1.0"]
+        additional_dependencies: ["comment-slop==0.3.0"]
         require_serial: true
 
       - id: model-zoo-docs
