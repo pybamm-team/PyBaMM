@@ -192,7 +192,7 @@ def _solve_secondary_stoichiometry(
     param: pybamm.LithiumIonParameters,
     electrode: str,
     direction: str | None,
-    options: dict,
+    options: dict | None,
     T: float,
     tol: float = 1e-6,
 ) -> float:
@@ -211,7 +211,7 @@ def _solve_secondary_stoichiometry(
         "negative" or "positive"
     direction : str
         "charge" or "discharge"
-    options : dict
+    options : dict or None
         Model options
     T : float
         Temperature
