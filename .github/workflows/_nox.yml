@@ -141,6 +141,9 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
+          # Unpruned per-PR uv caches overflow the 10 GB limit and evict solver wheels.
+          prune-cache: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install nox
         run: uv tool install nox

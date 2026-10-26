@@ -1,5 +1,7 @@
 import importlib
+import importlib.util
 import os
+import pkgutil
 import sys
 from io import StringIO
 
@@ -147,6 +149,20 @@ class TestUtil:
             pytest.fail(
                 f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
             )
+
+    def test_package_all_names_exist(self):
+        # `from package import *` raises for a name that is neither an attribute
+        # nor a submodule
+        for _, package_name, is_package in pkgutil.walk_packages(
+            pybamm.__path__, "pybamm."
+        ):
+            if not is_package:
+                continue
+            package = importlib.import_module(package_name)
+            for name in getattr(package, "__all__", []):
+                assert hasattr(package, name) or importlib.util.find_spec(
+                    f"{package_name}.{name}"
+                ), f"{package_name}.__all__ lists {name!r}, which does not exist"
 
     def test_optional_dependencies(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
