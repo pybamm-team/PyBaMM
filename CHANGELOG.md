@@ -28,6 +28,7 @@
 
 ## Optimizations
 
+- Pull request CI no longer installs TeXLive, compilers or OpenBLAS, which also removes the `apt-get update` from every Linux job. The tests install prebuilt solver wheels, which already bundle OpenBLAS. The latexify unit test mocks `sympy.preview`, so it now runs on every platform, and renders through real LaTeX only where LaTeX is installed: one Linux leg of the nightly run. In 6 of the last 15 runs, downloading TeXLive from the Ubuntu mirror took 12–50 minutes on at least one leg. ([#5985](https://github.com/pybamm-team/PyBaMM/pull/5985))
 - Experiments with a different model per step no longer compile Jacobians of the state mappers between models, which were unused. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19

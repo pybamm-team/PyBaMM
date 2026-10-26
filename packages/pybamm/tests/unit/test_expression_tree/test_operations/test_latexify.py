@@ -2,9 +2,7 @@
 Tests for the latexify.py
 """
 
-import os
-import platform
-import uuid
+import shutil
 
 import pytest
 
@@ -81,17 +79,71 @@ class TestLatexify:
         func = str(model.latexify())
         assert "Voltage [V]" not in func
 
-    @pytest.mark.skipif(
-        platform.system() in ["Windows", "Darwin"], reason="Only run for Linux"
+    @pytest.fixture
+    def ode_model(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0}
+        model.initial_conditions = {var: 0}
+        return model
+
+    @pytest.mark.parametrize(
+        ("filename", "expected_kwargs"),
+        [
+            ("eqn.tex", {"outputTexFile": "eqn.tex"}),
+            (
+                "eqn.pdf",
+                {
+                    "output": "pdf",
+                    "viewer": "file",
+                    "filename": "eqn.pdf",
+                    "euler": False,
+                },
+            ),
+            (
+                "eqn.png",
+                {
+                    "viewer": "file",
+                    "filename": "eqn.png",
+                    "dvioptions": ["-D", "900"],
+                    "euler": False,
+                },
+            ),
+            (
+                "eqn.jpg",
+                {
+                    "viewer": "file",
+                    "filename": "eqn.jpg",
+                    "dvioptions": ["-D", "900"],
+                    "euler": False,
+                },
+            ),
+        ],
     )
-    def test_sympy_preview(self):
-        # Test sympy preview
+    def test_sympy_preview(self, mocker, ode_model, filename, expected_kwargs):
+        preview = mocker.patch("sympy.preview")
+        ode_model.latexify(filename)
+        preview.assert_called_once()
+        assert preview.call_args.kwargs == expected_kwargs
+
+    def test_sympy_preview_resolution_fallback(self, mocker, ode_model):
+        preview = mocker.patch("sympy.preview", side_effect=[RuntimeError, None])
+        with pytest.warns(UserWarning, match="output resolution to default"):
+            ode_model.latexify("eqn.png")
+        assert preview.call_count == 2
+        assert "dvioptions" not in preview.call_args.kwargs
+
+    @pytest.mark.skipif(
+        shutil.which("latex") is None or shutil.which("dvipng") is None,
+        reason="Rendering needs a LaTeX installation with dvipng",
+    )
+    def test_sympy_preview_renders(self, tmp_path):
         model_spme = pybamm.lithium_ion.SPMe()
 
         for ext in ["png", "jpg", "pdf"]:
-            filename = f"{uuid.uuid4()}.{ext}"
-            model_spme.latexify(filename)
-            os.remove(filename)
+            filename = tmp_path / f"equations.{ext}"
+            model_spme.latexify(str(filename))
+            assert filename.stat().st_size > 0
 
     def test_latexify_with_lithium_plating(self):
         model = pybamm.lithium_ion.SPM(options={"lithium plating": "irreversible"})
