@@ -86,7 +86,6 @@ jobs:
           packages: graphviz pandoc libosmesa6 libegl1
           execute_install_scripts: true
 
-      # No apt-get update or compilers: the prebuilt solver wheels bundle OpenBLAS.
       - name: Register graphviz plugins
         if: startsWith(matrix.leg.os, 'ubuntu')
         run: sudo dot -c

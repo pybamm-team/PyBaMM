@@ -10,6 +10,14 @@ import pybamm
 
 
 class TestLatexify:
+    @pytest.fixture
+    def ode_model(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0}
+        model.initial_conditions = {var: 0}
+        return model
+
     def test_latexify(self):
         model_dfn = pybamm.lithium_ion.DFN()
         func_dfn = str(model_dfn.latexify())
@@ -62,7 +70,7 @@ class TestLatexify:
         assert "coefficient" in func_spme
         assert "diffusivity" in func_spme
 
-    def test_latexify_other_variables(self):
+    def test_latexify_other_variables(self, ode_model):
         model_spme = pybamm.lithium_ion.SPMe()
         func_spme = str(
             model_spme.latexify(
@@ -72,20 +80,8 @@ class TestLatexify:
         assert "Electrolyte concentration [mol.m-3]" in func_spme
 
         # Default behavior when voltage is not in the model variables
-        model = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        model.rhs = {var: 0}
-        model.initial_conditions = {var: 0}
-        func = str(model.latexify())
+        func = str(ode_model.latexify())
         assert "Voltage [V]" not in func
-
-    @pytest.fixture
-    def ode_model(self):
-        model = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        model.rhs = {var: 0}
-        model.initial_conditions = {var: 0}
-        return model
 
     @pytest.mark.parametrize(
         ("filename", "expected_kwargs"),
@@ -133,17 +129,21 @@ class TestLatexify:
         assert preview.call_count == 2
         assert "dvioptions" not in preview.call_args.kwargs
 
-    @pytest.mark.skipif(
-        shutil.which("latex") is None or shutil.which("dvipng") is None,
-        reason="Rendering needs a LaTeX installation with dvipng",
+    @pytest.mark.parametrize(
+        ("ext", "converters"),
+        [
+            ("png", ["dvipng"]),
+            ("jpg", ["dvipng"]),
+            ("pdf", ["dvipdfmx", "dvipdfm", "dvipdf"]),
+        ],
     )
-    def test_sympy_preview_renders(self, tmp_path):
+    def test_sympy_preview_renders(self, tmp_path, ext, converters):
+        if shutil.which("latex") is None or not any(map(shutil.which, converters)):
+            pytest.skip(f"Rendering .{ext} needs LaTeX with one of {converters}")
         model_spme = pybamm.lithium_ion.SPMe()
-
-        for ext in ["png", "jpg", "pdf"]:
-            filename = tmp_path / f"equations.{ext}"
-            model_spme.latexify(str(filename))
-            assert filename.stat().st_size > 0
+        filename = tmp_path / f"equations.{ext}"
+        model_spme.latexify(str(filename))
+        assert filename.stat().st_size > 0
 
     def test_latexify_with_lithium_plating(self):
         model = pybamm.lithium_ion.SPM(options={"lithium plating": "irreversible"})
