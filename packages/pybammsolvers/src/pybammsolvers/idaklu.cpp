@@ -42,8 +42,8 @@ IDAKLUSolverGroup *create_casadi_solver_group(
   const CasadiFunctions::BaseFunctionType &sens,
   const CasadiFunctions::BaseFunctionType &events,
   const int number_of_events,
-  np_array rhs_alg_id,
-  np_array atol_np,
+  const np_array &rhs_alg_id,
+  const np_array &atol_np,
   double rel_tol,
   int inputs_length,
   const std::vector<CasadiFunctions::BaseFunctionType*>& var_fcns,
@@ -275,7 +275,8 @@ PYBIND11_MODULE(idaklu, m)
          py::arg("logger") = py::none(),
          py::return_value_policy::move);
 
-  py::class_<casadi::Function>(m, "Function");
+  // Registering the type is the whole job of this temporary
+  (void)py::class_<casadi::Function>(m, "Function");
 
   py::class_<IDAKLUStats>(m, "SolverStats")
     .def_readonly("number_of_steps", &IDAKLUStats::nsteps)

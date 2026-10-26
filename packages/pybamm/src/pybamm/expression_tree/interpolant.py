@@ -68,9 +68,11 @@ class Interpolant(pybamm.Function):
 
     def __init__(
         self,
-        x: npt.NDArray[np.float64] | Sequence[npt.NDArray[np.float64]],
+        x: npt.NDArray[np.float64]
+        | list[npt.NDArray[np.float64]]
+        | tuple[npt.NDArray[np.float64], ...],
         y: npt.NDArray[Any],
-        children: Sequence[pybamm.Symbol] | pybamm.Time,
+        children: Sequence[pybamm.Symbol] | pybamm.Symbol,
         name: str | None = None,
         interpolator: str | None = "linear",
         extrapolate: bool = True,
@@ -129,7 +131,9 @@ class Interpolant(pybamm.Function):
         if ndim == 1:
             x1 = x[0]
             if interpolator == "linear":
-                fill_value: float | str = "extrapolate" if extrapolate else np.nan
+                fill_value: float | str | None = (
+                    "extrapolate" if extrapolate else np.nan
+                )
                 interpolating_function = interpolate.interp1d(
                     x1,
                     y,

@@ -44,6 +44,7 @@ uv run --group dev pytest -m integration packages/pybamm/tests # integration sui
 uv run --group dev pytest packages/pybamm/tests/unit/test_solvers/test_solution.py   # one file
 uv run --group dev pytest "packages/pybamm/tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model"  # one test
 nox -s unit | nox -s tests | nox -s integration | nox -s doctests   # sessions used in CI
+nox -s type-check   # Pyrefly type check of packages/pybamm/src
 ```
 
 Lint/format is Ruff via pre-commit; this is the source of truth for style.
