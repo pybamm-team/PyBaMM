@@ -770,6 +770,8 @@ class Simulation(BaseSimulation):
         )
         self._needs_ic_rebuild = False
 
+    # Experiment arguments stay between the base ones for positional callers
+    # pyrefly: ignore[bad-override]
     def solve(
         self,
         t_eval=None,

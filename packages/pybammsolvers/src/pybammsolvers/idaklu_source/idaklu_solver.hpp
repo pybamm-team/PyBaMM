@@ -20,12 +20,12 @@ IDAKLUSolver *create_idaklu_solver(
   const int jac_bandwidth_lower,
   const int jac_bandwidth_upper,
   const int number_of_events,
-  np_array rhs_alg_id,
-  np_array atol_np,
+  const np_array &rhs_alg_id,
+  const np_array &atol_np,
   double rel_tol,
   int inputs_length,
-  SolverOptions solver_opts,
-  SetupOptions setup_opts
+  const SolverOptions &solver_opts,
+  const SetupOptions &setup_opts
 ) {
 
   IDAKLUSolver *idakluSolver = nullptr;

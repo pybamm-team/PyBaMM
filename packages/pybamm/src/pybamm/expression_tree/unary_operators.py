@@ -148,7 +148,7 @@ class UnaryOperator(pybamm.Symbol):
         """
         return self._children[0].evaluate_for_shape()
 
-    def _evaluates_on_edges(self, dimension: str) -> bool:
+    def _evaluates_on_edges(self, dimension: str) -> bool | str:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.child.evaluates_on_edges(dimension)
 

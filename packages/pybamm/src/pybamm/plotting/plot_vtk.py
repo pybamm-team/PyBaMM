@@ -261,13 +261,14 @@ class VTKQuickPlot:
         options: dict[str, dict[str, Any] | list[dict[str, Any]]] | None = None,
         interpolate_time: bool = False,
     ):
-        solutions = pybamm.QuickPlot.preprocess_solutions(solutions)
-        if len(solutions) != 1:
+        processed_solutions = pybamm.QuickPlot.preprocess_solutions(solutions)
+        if len(processed_solutions) != 1:
             raise pybamm.OptionError(
-                f"VTKQuickPlot plots a single solution, but {len(solutions)} were "
-                "given. Use pybamm.QuickPlot to compare solutions."
+                "VTKQuickPlot plots a single solution, but "
+                f"{len(processed_solutions)} were given. Use pybamm.QuickPlot to "
+                "compare solutions."
             )
-        self.solution = solutions[0]
+        self.solution = processed_solutions[0]
 
         if output_variables is None:
             output_variables = self._default_output_variables()
@@ -575,7 +576,7 @@ class VTKQuickPlot:
 
             ren.SetViewport(*viewport(panel_idx))
 
-            if plot_type == "slice":
+            if cutter is not None:
                 # Use the cutter output bounds so axes align with
                 # the visible slice geometry, not the full 3D grid.
                 axes_bounds = list(cutter.GetOutput().GetBounds())
