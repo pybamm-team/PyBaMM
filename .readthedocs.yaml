@@ -25,8 +25,7 @@ python:
 
 # Set the version of Python and other tools you might need
 build:
-  # graphviz builds SVG files; gfortran and libopenblas are only for the
-  # from-source solver build that the install job falls back to.
+  # graphviz builds SVG files; gfortran and libopenblas build the solver from source.
   apt_packages:
     - "graphviz"
     - "gfortran"
@@ -38,22 +37,26 @@ build:
     post_checkout:
       # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
       - git fetch --unshallow
-      # Exit code 183 cancels a pull request build that changes nothing the docs render.
+      # Exit code 183 cancels a pull request build that changes nothing the docs render or include.
       - |
         if [ "$READTHEDOCS_VERSION_TYPE" = external ] && git diff --quiet origin/main...HEAD -- \
-            docs/ packages/pybamm/src/ packages/pybamm/pyproject.toml pyproject.toml uv.lock .readthedocs.yaml; then
+            docs/ packages/pybamm/src/ packages/pybamm/pyproject.toml packages/pybamm-model-zoo/ \
+            CONTRIBUTING.md RELEASE.md pyproject.toml uv.lock .readthedocs.yaml; then
           exit 183
         fi
     install:
-      - UV_PROJECT_ENVIRONMENT="$READTHEDOCS_VIRTUALENV_PATH" uv sync --frozen --group docs --extra all --no-install-package pybammsolvers
-      # Use the in-repo solver's PyPI wheel, compiling only if unreleased. No single
-      # quotes in build.jobs: Read the Docs wraps each command in sh -c '...'.
+      # Pull requests try the solver's PyPI wheel; production builds compile the checkout.
+      # No single quotes in build.jobs: Read the Docs wraps each command in sh -c '...'.
       - |
-        version=$(uv version --package pybammsolvers --short)
-        if ! uv pip install --python "$READTHEDOCS_VIRTUALENV_PATH" --no-deps "pybammsolvers==$version"; then
-          git submodule update --init --recursive
-          UV_PROJECT_ENVIRONMENT="$READTHEDOCS_VIRTUALENV_PATH" uv sync --frozen --group docs --extra all
+        if [ "$READTHEDOCS_VERSION_TYPE" = external ]; then
+          version=$(uv version --package pybammsolvers --short)
+          if UV_PROJECT_ENVIRONMENT="$READTHEDOCS_VIRTUALENV_PATH" uv sync --frozen --no-default-groups --group docs --extra all --no-install-package pybammsolvers \
+              && uv pip install --python "$READTHEDOCS_VIRTUALENV_PATH" --no-deps "pybammsolvers==$version"; then
+            exit 0
+          fi
         fi
+        git submodule update --init --recursive
+        UV_PROJECT_ENVIRONMENT="$READTHEDOCS_VIRTUALENV_PATH" uv sync --frozen --group docs --extra all
     # Altered PDF build and upload job, skipped on pull requests, which never publish it
     post_build:
       - |
