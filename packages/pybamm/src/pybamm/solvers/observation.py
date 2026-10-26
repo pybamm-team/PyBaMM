@@ -23,6 +23,7 @@ import pybamm
 from pybamm.solvers.base_processed_variable import BaseProcessedVariable
 from pybamm.solvers.variable_observer import (
     CasadiObserver,
+    SampledObserver,
     check_variable_in_solve,
     pack_sensitivity_dict,
 )
@@ -138,6 +139,28 @@ def build_variable(solution: pybamm.Solution, name: str) -> BaseProcessedVariabl
     )
 
 
+def _has_computed_layout(symbol: pybamm.Symbol) -> bool:
+    """Whether :class:`pybamm.ProcessedVariableComputed` can lay out ``symbol``.
+
+    Its spatial layouts are grids of 1D mesh nodes or edges, which vector fields
+    and variables on 2D finite-volume meshes do not have.
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        A discretised output variable.
+
+    Returns
+    -------
+    bool
+    """
+    if isinstance(symbol, pybamm.VectorField):
+        return False
+    if len(symbol.shape) == 0 or symbol.shape[0] == 1:
+        return True
+    return not isinstance(symbol.mesh, pybamm.SubMesh2D | pybamm.UnstructuredSubMesh)
+
+
 class OutputAssembly:
     """The row layout of an ``output_variables`` payload, and its attachment.
 
@@ -224,7 +247,6 @@ class OutputAssembly:
             )
         model = solution.all_models[0]
         for name, rows in zip(self._names, self._rows, strict=True):
-            time_integral = self._time_integrals.get(name)
             entries = np.ascontiguousarray(data[:, rows])
             sparsity = self._sparse.get(name)
             if sparsity is not None:
@@ -232,20 +254,17 @@ class OutputAssembly:
                 dense = np.zeros((entries.shape[0], sparsity.numel()))
                 dense[:, sparsity.find()] = entries
                 entries = dense
-            values = entries
-            if time_integral is not None:
-                # These rows are the integrand's trajectory, not the variable's.
-                values = time_integral.postfix(
-                    entries.reshape(-1), solution.t, solution.all_inputs[0]
+            symbol = model.get_processed_variable_or_event(name)
+            time_integral = self._time_integrals.get(name)
+            computed_layout = _has_computed_layout(symbol)
+            if time_integral is not None and not computed_layout:
+                # Only 0D processed variables apply a time integral to their values
+                raise NotImplementedError(
+                    f"Variable {name!r}: time integrals of vector fields or of "
+                    "variables on 2D finite-volume meshes are not supported as "
+                    "output variables."
                 )
-            variable = pybamm.ProcessedVariableComputed(
-                [model.get_processed_variable_or_event(name)],
-                [self._casadi_fns[name]],
-                [values],
-                solution,
-                time_integral=time_integral,
-            )
-            variable._sensitivities = (
+            variable_sensitivities = (
                 {}
                 if sensitivities is None
                 else self._variable_sensitivities(
@@ -256,6 +275,27 @@ class OutputAssembly:
                     sensitivity_names,
                 )
             )
+            if computed_layout:
+                values = entries
+                if time_integral is not None:
+                    # These rows are the integrand's trajectory, not the variable's.
+                    values = time_integral.postfix(
+                        entries.reshape(-1), solution.t, solution.all_inputs[0]
+                    )
+                variable = pybamm.ProcessedVariableComputed(
+                    [symbol],
+                    [self._casadi_fns[name]],
+                    [values],
+                    solution,
+                    time_integral=time_integral,
+                )
+                variable._sensitivities = variable_sensitivities
+            else:
+                # Read with the classes of a full-state solve
+                observer = SampledObserver(
+                    [self._casadi_fns[name]], entries, variable_sensitivities
+                )
+                variable = pybamm.process_variable(name, [symbol], observer, solution)
             solution._variables[name] = variable
 
     def _checked_rows(self, data):
