@@ -46,10 +46,10 @@ build:
         fi
     install:
       - UV_PROJECT_ENVIRONMENT="$READTHEDOCS_VIRTUALENV_PATH" uv sync --frozen --group docs --extra all --no-install-package pybammsolvers
-      # The docs only import the solver, so the released wheel of the in-repo version
-      # replaces a 2-minute compile; a version not yet on PyPI is built from source.
+      # Use the in-repo solver's PyPI wheel, compiling only if unreleased. No single
+      # quotes in build.jobs: Read the Docs wraps each command in sh -c '...'.
       - |
-        version=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' packages/pybammsolvers/src/pybammsolvers/version.py)
+        version=$(uv version --package pybammsolvers --short)
         if ! uv pip install --python "$READTHEDOCS_VIRTUALENV_PATH" --no-deps "pybammsolvers==$version"; then
           git submodule update --init --recursive
           UV_PROJECT_ENVIRONMENT="$READTHEDOCS_VIRTUALENV_PATH" uv sync --frozen --group docs --extra all
