@@ -373,6 +373,99 @@ class TestNyquistPlot:
         with pytest.raises(ValueError, match="has not been solved"):
             eis_sim.nyquist_plot()
 
+    def test_nyquist_plot_overlay_rescales_axes(self):
+        import matplotlib
+        import matplotlib.pyplot as plt
+
+        matplotlib.use("Agg")
+
+        _, ax = plt.subplots()
+        pybamm.nyquist_plot(np.array([1 + 1j, 2 + 2j]), ax=ax)
+        pybamm.nyquist_plot(np.array([10 + 5j, 20 + 10j]), ax=ax)
+        assert ax.get_xlim()[1] >= 20
+        assert ax.get_xlim() == ax.get_ylim()
+        plt.close("all")
+
+
+class TestBodePlot:
+    """Tests for Bode and combined EIS plotting."""
+
+    def test_bode_plot_data(self):
+        import matplotlib
+        import matplotlib.pyplot as plt
+
+        matplotlib.use("Agg")
+
+        frequencies = np.array([1.0, 10.0])
+        impedance = np.array([1 - 1j, 2 + 0j])
+        fig, (ax_magnitude, ax_phase) = pybamm.bode_plot(frequencies, impedance)
+        assert fig is not None
+        np.testing.assert_allclose(ax_magnitude.lines[0].get_ydata(), [np.sqrt(2), 2.0])
+        np.testing.assert_allclose(ax_phase.lines[0].get_ydata(), [45.0, 0.0])
+        assert ax_magnitude.get_xscale() == "log"
+        assert ax_magnitude.get_yscale() == "log"
+        plt.close("all")
+
+    def test_bode_plot_with_existing_axes(self):
+        import matplotlib
+        import matplotlib.pyplot as plt
+
+        matplotlib.use("Agg")
+
+        _, axes = plt.subplots(2, 1)
+        fig, returned_axes = pybamm.bode_plot([1.0], [1 - 1j], ax=axes)
+        assert fig is None
+        assert returned_axes == tuple(axes)
+        plt.close("all")
+
+    def test_eis_simulation_plot(self):
+        import matplotlib
+        import matplotlib.pyplot as plt
+
+        matplotlib.use("Agg")
+
+        model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
+        eis_sim = pybamm.EISSimulation(model)
+        eis_sim.solve(np.logspace(-2, 2, 5))
+        _, axes = eis_sim.plot(show_plot=False)
+        assert len(axes) == 3
+        _, (ax_magnitude, _) = eis_sim.bode_plot(show_plot=False)
+        assert len(ax_magnitude.lines) == 1
+        plt.close("all")
+
+    def test_eis_plot_overlays_labelled_spectra(self):
+        import matplotlib
+        import matplotlib.pyplot as plt
+
+        matplotlib.use("Agg")
+
+        frequencies = [1.0, 10.0]
+        solutions = [
+            pybamm.EISSolution(frequencies, [1 - 1j, 2 - 0.5j]),
+            pybamm.EISSolution(frequencies, [3 - 2j, 4 - 1j]),
+        ]
+        _, (ax_nyquist, ax_magnitude, ax_phase) = pybamm.eis_plot(
+            solutions, labels=["a", "b"], show_plot=False
+        )
+        for ax in (ax_nyquist, ax_magnitude, ax_phase):
+            assert len(ax.lines) == 2
+        assert [t.get_text() for t in ax_nyquist.get_legend().get_texts()] == [
+            "a",
+            "b",
+        ]
+        plt.close("all")
+
+    def test_eis_plot_errors(self):
+        model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
+        eis_sim = pybamm.EISSimulation(model)
+        with pytest.raises(ValueError, match="has not been solved"):
+            eis_sim.plot()
+        with pytest.raises(ValueError, match="has not been solved"):
+            pybamm.eis_plot(eis_sim, show_plot=False)
+        solution = pybamm.EISSolution([1.0], [1 - 1j])
+        with pytest.raises(ValueError, match="same length"):
+            pybamm.eis_plot([solution], labels=["a", "b"], show_plot=False)
+
 
 class TestReplaceOnModels:
     """Symbol replacement through :func:`pybamm.replace`."""

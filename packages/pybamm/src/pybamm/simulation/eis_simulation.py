@@ -248,8 +248,41 @@ class EISSimulation(BaseSimulation):
         fig : matplotlib.figure.Figure or None
         ax : matplotlib.axes.Axes
         """
+        return self._solved_solution().nyquist_plot(**kwargs)
+
+    def bode_plot(self, **kwargs):
+        """Generate a Bode plot from the most recent solution.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments forwarded to :func:`pybamm.bode_plot`.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure or None
+        ax : tuple of matplotlib.axes.Axes
+        """
+        return self._solved_solution().bode_plot(**kwargs)
+
+    def plot(self, **kwargs):
+        """Plot Nyquist and Bode plots of the most recent solution side by side.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments forwarded to :func:`pybamm.eis_plot`.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+        axes : tuple of matplotlib.axes.Axes
+        """
+        return self._solved_solution().plot(**kwargs)
+
+    def _solved_solution(self):
         if self._solution is None:
             raise ValueError(
                 "EIS simulation has not been solved yet. Call solve() before plotting."
             )
-        return self._solution.nyquist_plot(**kwargs)
+        return self._solution
