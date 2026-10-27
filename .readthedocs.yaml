@@ -12,16 +12,12 @@ formats:
   - epub
   - htmlzip
 
-# Read the Docs sets up uv and the venv from this entry. build.jobs.install
-# replaces its `uv sync`; `all` is PyBaMM's own extra, not `--all-extras`.
+# This entry makes Read the Docs install uv, create the venv and export UV_PYTHON and
+# UV_PROJECT_ENVIRONMENT; build.jobs.install replaces its `uv sync`.
 python:
   install:
     - method: uv
       command: sync
-      groups:
-        - docs
-      extras:
-        - all
 
 # Set the version of Python and other tools you might need
 build:
@@ -48,15 +44,18 @@ build:
       # Pull requests try the solver's PyPI wheel; production builds compile the checkout.
       # No single quotes in build.jobs: Read the Docs wraps each command in sh -c '...'.
       - |
+        # `all` names the PyBaMM extra, not `--all-extras`
+        flags="--frozen --no-default-groups --group docs --extra all"
         if [ "$READTHEDOCS_VERSION_TYPE" = external ]; then
           version=$(uv version --package pybammsolvers --short)
-          if UV_PROJECT_ENVIRONMENT="$READTHEDOCS_VIRTUALENV_PATH" uv sync --frozen --no-default-groups --group docs --extra all --no-install-package pybammsolvers \
-              && uv pip install --python "$READTHEDOCS_VIRTUALENV_PATH" --no-deps "pybammsolvers==$version"; then
+          if uv sync $flags --no-install-package pybammsolvers \
+              && uv pip install --no-deps --only-binary pybammsolvers "pybammsolvers==$version"; then
             exit 0
           fi
         fi
         git submodule update --init --recursive
-        UV_PROJECT_ENVIRONMENT="$READTHEDOCS_VIRTUALENV_PATH" uv sync --frozen --group docs --extra all
+        # The solver builds without isolation and rebuilds on import, so it needs the dev group toolchain
+        uv sync $flags --group dev
     # Altered PDF build and upload job, skipped on pull requests, which never publish it
     post_build:
       - |
