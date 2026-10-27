@@ -9,6 +9,55 @@ def check_if_composite(options, electrode):
     return particle_phases == "2"
 
 
+def _initial_state_variant(options):
+    """Name the electrode SOH formulation that sets the initial state."""
+    if options.get("open-circuit potential") == "MSMR":
+        return "msmr"
+    if options.get("working electrode") == "positive":
+        return "half-cell"
+    if check_if_composite(options, "positive") or check_if_composite(
+        options, "negative"
+    ):
+        return "composite"
+    return "standard"
+
+
+def _initial_state_parameters(param, options):
+    """
+    The parameters that set the initial state, each with the name of the solved
+    value that sets it and the symbol that value is scaled by.
+    """
+    variant = _initial_state_variant(options)
+    if variant == "msmr":
+        return {
+            "Initial voltage in negative electrode [V]": ("Un", pybamm.Scalar(1)),
+            "Initial voltage in positive electrode [V]": ("Up", pybamm.Scalar(1)),
+        }
+    if variant == "half-cell":
+        stoichiometries = {"positive": ["x", "x_2"]}
+    elif variant == "composite":
+        stoichiometries = {
+            "negative": ["x_init_1", "x_init_2"],
+            "positive": ["y_init_1", "y_init_2"],
+        }
+    else:
+        stoichiometries = {"negative": ["x"], "positive": ["y"]}
+    parameters = {}
+    for electrode, keys in stoichiometries.items():
+        electrode_param = param.domain_params[electrode]
+        if check_if_composite(options, electrode):
+            phases = [
+                ("Primary: ", electrode_param.prim, keys[0]),
+                ("Secondary: ", electrode_param.sec, keys[1]),
+            ]
+        else:
+            phases = [("", electrode_param.prim, keys[0])]
+        for prefix, phase_param, key in phases:
+            name = f"{prefix}Initial concentration in {electrode} electrode [mol.m-3]"
+            parameters[name] = (key, phase_param.c_max)
+    return parameters
+
+
 def _has_hysteresis(electrode, options, phase=None):
     if not isinstance(options, pybamm.BatteryModelOptions):
         options = pybamm.BatteryModelOptions(options)
