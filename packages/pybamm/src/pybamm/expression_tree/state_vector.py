@@ -19,8 +19,8 @@ class StateVectorBase(pybamm.Symbol):
     Parameters
     ----------
 
-    y_slice: slice
-        the slice of an external y to read
+    *y_slices : slice
+        the slices of an external y to read
     name: str, optional
         the name of the node
     domain : iterable of str, optional
@@ -249,8 +249,8 @@ class StateVector(StateVectorBase):
     Parameters
     ----------
 
-    y_slice: slice
-        the slice of an external y to read
+    *y_slices : slice
+        the slices of an external y to read
     name: str, optional
         the name of the node
     domain : iterable of str, optional
@@ -341,8 +341,8 @@ class StateVectorDot(StateVectorBase):
     Parameters
     ----------
 
-    y_slice: slice
-        the slice of an external ydot to read
+    *y_slices : slice
+        the slices of an external ydot to read
     name: str, optional
         the name of the node
     domain : iterable of str, optional
