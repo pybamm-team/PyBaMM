@@ -11,7 +11,7 @@ for a model, and still import cleanly, so every model is also built and solved.
 from __future__ import annotations
 
 import argparse
-import subprocess  # nosec B404 - lists the checkout's own tracked files
+import subprocess
 from pathlib import Path
 
 ZOO_ROOT = Path(__file__).parents[1]
@@ -21,7 +21,7 @@ TAG_PREFIX = "pybamm-model-zoo-v"
 
 def tracked_files(root: Path) -> list[str]:
     """Every file git tracks under ``root``, relative to it."""
-    listing = subprocess.run(  # nosec B603 B607 - fixed git invocation
+    listing = subprocess.run(
         ["git", "ls-files", "-z", "--", "."],
         cwd=root,
         check=True,

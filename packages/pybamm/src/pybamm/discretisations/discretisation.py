@@ -17,6 +17,13 @@ def has_bc_of_form(symbol, side, bcs, form):
     return (symbol in bcs) and (bcs[symbol][side][1] == form)
 
 
+def _evaluate_bound(bound, unbounded):
+    """The value of a variable bound, or ``unbounded`` if it depends on inputs."""
+    if bound.has_symbol_of_classes(pybamm.InputParameter):
+        return unbounded
+    return bound.evaluate()
+
+
 # legacy current-collector tab BC side names, converted to left/right for
 # 1D meshes by Discretisation.check_tab_conditions
 LEGACY_TAB_SIDES = frozenset({"negative tab", "positive tab", "no tab"})
@@ -409,22 +416,13 @@ class Discretisation:
             y_slices_explicit[variable].append(slice(start, end))
 
             # Add to bounds
-            def evaluate_bound(bound, side):
-                if bound.has_symbol_of_classes(pybamm.InputParameter):
-                    if side == "lower":
-                        return -np.inf
-                    elif side == "upper":
-                        return np.inf
-                else:
-                    return bound.evaluate()
-
             # symbols without physical bounds (e.g. constants) are unbounded
             bounds = getattr(variable, "bounds", None)
             if bounds is None:
                 lower, upper = -np.inf, np.inf
             else:
-                lower = evaluate_bound(bounds[0], "lower")
-                upper = evaluate_bound(bounds[1], "upper")
+                lower = _evaluate_bound(bounds[0], -np.inf)
+                upper = _evaluate_bound(bounds[1], np.inf)
             lower_bounds.extend([lower] * (end - start))
             upper_bounds.extend([upper] * (end - start))
             # Increment start
@@ -916,6 +914,8 @@ class Discretisation:
 
     # classes whose handler discretises what it needs itself (see is_leaf)
     _self_discretising: tuple[type, ...] = ()
+    # assigned after the class body, once the handler methods exist
+    _handlers: dict[type, Callable]
 
     @classmethod
     @functools.cache
@@ -1381,15 +1381,15 @@ class Discretisation:
                     f"they are {type(ic_eval)} for variable '{var}'."
                 )
 
-            # Check that the initial condition is within the bounds
-            # Skip this check if there are input parameters in the initial conditions
-            bounds = var.bounds
-            if not eqn.has_symbol_of_classes(pybamm.InputParameter) and not (
-                all(bounds[0].value <= ic_eval) and all(ic_eval <= bounds[1].value)
-            ):
+            # Initial conditions and bounds that depend on inputs are not known yet
+            if eqn.has_symbol_of_classes(pybamm.InputParameter):
+                continue
+            lower = _evaluate_bound(var.bounds[0], -np.inf)
+            upper = _evaluate_bound(var.bounds[1], np.inf)
+            if not (np.all(lower <= ic_eval) and np.all(ic_eval <= upper)):
                 raise pybamm.ModelError(
                     "initial condition is outside of variable bounds "
-                    f"{bounds} for variable '{var}'."
+                    f"{var.bounds} for variable '{var}'."
                 )
 
         # Check initial conditions and model equations have the same shape
