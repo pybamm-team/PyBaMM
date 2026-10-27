@@ -60,22 +60,24 @@ class Function(pybamm.Symbol):
         differentiated_function: Callable | None = None,
     ):
         # Turn numbers into scalars
-        children = list(children)
-        for idx, child in enumerate(children):
-            if isinstance(child, float | int | np.number):
-                children[idx] = pybamm.Scalar(child)
+        symbols = [
+            pybamm.Scalar(child)
+            if isinstance(child, float | int | np.number)
+            else child
+            for child in children
+        ]
 
         if name is None:
             try:
                 name = f"function ({function.__name__})"
             except AttributeError:
                 name = f"function ({function.__class__})"
-        domains = self._combine_children_domains(children)
+        domains = self._combine_children_domains(symbols)
 
         self.function = function
         self.differentiated_function = differentiated_function
 
-        super().__init__(name, children=children, domains=domains)
+        super().__init__(name, children=symbols, domains=domains)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -230,7 +232,7 @@ class Function(pybamm.Symbol):
             )
         )
 
-    def _sympy_operator(self, child):
+    def _sympy_operator(self, child, /):
         """Apply appropriate SymPy operators."""
         return child
 
@@ -306,6 +308,8 @@ class SpecificFunction(Function):
         sympy_function = getattr(sympy, class_name)
         return sympy_function(child)
 
+    # Specific functions have exactly one child, unlike the variadic base
+    # pyrefly: ignore[bad-override]
     def _casadi_evaluate(self, child):
         """See :meth:`pybamm.Function._casadi_evaluate()`. Subclasses must override."""
         raise NotImplementedError(
@@ -482,14 +486,16 @@ class Arcsinh2(Function):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         return Arcsinh2(*children, eps=self.eps)
 
-    def _casadi_evaluate(self, a, b):
+    def _casadi_evaluate(self, *converted_children):
         """See :meth:`pybamm.Function._casadi_evaluate()`."""
+        a, b = converted_children
         sign_b = 2 * (b >= 0) - 1
         b_eff = sign_b * casadi.hypot(b, self.eps)
         return casadi.arcsinh(a / b_eff)
 
-    def _sympy_operator(self, a, b):
+    def _sympy_operator(self, *children):
         """Convert to SymPy expression."""
+        a, b = children
         # sign(b) but treat sign(0) as non-zero
         sign_b = sympy.Piecewise((1, b >= 0), (-1, True))
         b_eff = sign_b * sympy.sqrt(b**2 + self.eps**2)
@@ -1077,13 +1083,14 @@ class RegPower(Function):
             RegPower(base, exponent, scale=scale, delta=self.delta)
         )
 
-    def _casadi_evaluate(self, base, exponent, scale):
+    def _casadi_evaluate(self, *converted_children):
         """See :meth:`pybamm.Function._casadi_evaluate()`.
 
         Evaluates ``y = x * r^(a-1) * scale^a`` with ``x = base / scale`` and
         ``r = hypot(x, delta)``. The ``a == 0.5`` case (hot for Butler-Volmer)
         is specialised to avoid a general ``power`` call.
         """
+        base, exponent, scale = converted_children
         delta = self.delta
         if delta == 0:
             return casadi.power(base, exponent)
@@ -1102,8 +1109,9 @@ class RegPower(Function):
 
         return x * inner_factor * scale_factor
 
-    def _sympy_operator(self, base, exponent, scale):
+    def _sympy_operator(self, *children):
         """Convert to SymPy expression."""
+        base, exponent, scale = children
         x = base / scale
         x2_d2 = x**2 + self.delta**2
         return x * sympy.Pow(x2_d2, (exponent - 1) / 2) * sympy.Pow(scale, exponent)

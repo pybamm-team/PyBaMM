@@ -544,7 +544,7 @@ class Solution(SolutionBase):
                 )
 
     @staticmethod
-    def _ensure_sorted_t(ts: list[np.ndarray | casadi.DM | casadi.MX], name: str):
+    def _ensure_sorted_t(ts: list[np.ndarray], name: str):
         t_f_previous = None
         for t in ts:
             if len(t) == 0:
@@ -655,11 +655,11 @@ class Solution(SolutionBase):
                 )
 
     @property
-    def all_ts(self) -> list[np.ndarray | casadi.DM | casadi.MX]:
+    def all_ts(self) -> list[np.ndarray]:
         return self._all_ts
 
     @property
-    def all_t_evals(self) -> list[np.ndarray | casadi.DM | casadi.MX]:
+    def all_t_evals(self) -> list[np.ndarray]:
         return self._all_t_evals
 
     @property
@@ -1093,7 +1093,8 @@ class Solution(SolutionBase):
 
         return data_short_names
 
-    def save_data(
+    # `variables` stays second for existing positional callers
+    def save_data(  # pyrefly: ignore[bad-override]
         self, filename=None, variables=None, to_format="pickle", short_names=None
     ):
         """

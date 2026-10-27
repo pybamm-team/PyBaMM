@@ -3,7 +3,7 @@
 #
 from __future__ import annotations
 
-from collections.abc import Generator, Sequence
+from collections.abc import Iterable, Sequence
 
 import pybamm
 
@@ -15,7 +15,7 @@ class SymbolUnpacker:
 
     Parameters
     ----------
-    classes_to_find : list of pybamm classes
+    classes_to_find : class or tuple of classes
         Classes to identify in the equations
     unpacked_symbols: set, optional
         cached unpacked equations
@@ -25,7 +25,7 @@ class SymbolUnpacker:
 
     def __init__(
         self,
-        classes_to_find: Sequence[pybamm.Symbol] | type[pybamm.Symbol],
+        classes_to_find: type[pybamm.Symbol] | tuple[type[pybamm.Symbol], ...],
         unpacked_symbols: dict | None = None,
     ):
         self.classes_to_find = classes_to_find
@@ -33,7 +33,7 @@ class SymbolUnpacker:
 
     def unpack_list_of_symbols(
         self,
-        list_of_symbols: Sequence[pybamm.Symbol] | Generator[pybamm.Symbol, None, None],
+        list_of_symbols: Iterable[pybamm.Symbol],
     ) -> set[pybamm.Symbol]:
         """
         Unpack a list of symbols. See :meth:`SymbolUnpacker.unpack()`
@@ -56,7 +56,10 @@ class SymbolUnpacker:
         return all_instances
 
     def unpack_parameter_values(
-        self, parameter_values: pybamm.ParameterValues | dict
+        self,
+        parameter_values: pybamm.ParameterValues
+        | pybamm.parameters.ParameterStore
+        | dict,
     ) -> set[pybamm.Symbol]:
         """
         Unpack a parameter values object.
