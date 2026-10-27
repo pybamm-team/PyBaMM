@@ -926,7 +926,7 @@ class ElectrodeSOHSolver:
                 self.param.Q_Li_particles_init, inputs=inputs
             )
             all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        elif self.known_value == "cell capacity":
+        else:
             Q = parameter_values.evaluate(self.param.Q, inputs=inputs)
             all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
         return self.solve(all_inputs)
