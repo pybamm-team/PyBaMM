@@ -1696,7 +1696,7 @@ def deserialize_parameter_value(value: Any) -> Any:
 
 
 def convert_parameter_values_to_json(
-    parameter_values: Mapping[str, Any], filename: str | None = None
+    parameter_values: ParameterValues | Mapping[str, Any], filename: str | None = None
 ) -> dict:
     """
     Convert a mapping of parameter values to a JSON-serializable dictionary.

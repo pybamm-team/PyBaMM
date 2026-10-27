@@ -914,6 +914,8 @@ class Discretisation:
 
     # classes whose handler discretises what it needs itself (see is_leaf)
     _self_discretising: tuple[type, ...] = ()
+    # assigned after the class body, once the handler methods exist
+    _handlers: dict[type, Callable]
 
     @classmethod
     @functools.cache

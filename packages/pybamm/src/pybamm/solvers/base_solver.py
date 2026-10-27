@@ -6,6 +6,7 @@ import multiprocessing as mp
 import numbers
 import platform
 import warnings
+from typing import cast
 
 import casadi
 import numpy as np
@@ -408,7 +409,10 @@ class BaseSolver:
 
         stacked = model.uses_stacked_inputs
         model.y0_list = []
-        model.y0S_list = [] if model.jacp_initial_conditions_eval is not None else None
+        y0S_list = []
+        model.y0S_list = (
+            y0S_list if model.jacp_initial_conditions_eval is not None else None
+        )
         for ipts in inputs:
             if stacked:
                 inputs_y0_ics = stack_inputs(ipts)
@@ -432,7 +436,7 @@ class BaseSolver:
                         for key, value in ipts.items()
                     }
 
-                model.y0S_list.append(
+                y0S_list.append(
                     model.jacp_initial_conditions_eval(time, y_zero, inputs_jacp_ics)
                 )
 
@@ -589,7 +593,7 @@ class BaseSolver:
             )
 
         # Find all the constant time-based discontinuities
-        t_discon_symbols = []
+        t_discon_symbols: list[tuple[pybamm.Symbol, pybamm.Symbol]] = []
         # Periods of `t mod period` that restart the solver, expanded at each solve,
         # with their evaluators
         discontinuity_periods = []
@@ -789,6 +793,7 @@ class BaseSolver:
             y0s.append(s.all_ys[0])
         return y0s
 
+    @staticmethod
     def _solve_process_calculate_sensitivities_arg(
         inputs: dict, model: pybamm.BaseModel, calculate_sensitivities: list[str] | bool
     ):
@@ -1193,7 +1198,7 @@ class BaseSolver:
         """
         old_y0_list = model.y0_list
         old_y0S_list = model.y0S_list
-        solutions = [None] * len(inputs_list)
+        solutions: list[pybamm.Solution | None] = [None] * len(inputs_list)
         # Indices of the input sets that reached the end of every segment so far
         running = list(range(len(inputs_list)))
         for start_index, end_index in zip(start_indices, end_indices, strict=True):
@@ -1217,10 +1222,10 @@ class BaseSolver:
             solve_time = timer.time()
             for i, new_solution in zip(running, new_solutions, strict=True):
                 new_solution.solve_time = solve_time
-                if solutions[i] is None:
-                    solutions[i] = new_solution
-                else:
-                    solutions[i] = solutions[i] + new_solution
+                previous = solutions[i]
+                solutions[i] = (
+                    new_solution if previous is None else previous + new_solution
+                )
 
             # A set that stopped on an event or failed is not restarted
             restarts = [
@@ -1248,7 +1253,8 @@ class BaseSolver:
 
         model.y0_list = old_y0_list
         model.y0S_list = old_y0S_list
-        return solutions
+        # The first segment solves every input set
+        return cast(list[pybamm.Solution], solutions)
 
     @staticmethod
     def filter_discontinuities(t_discon: list, t_eval: list) -> np.ndarray:

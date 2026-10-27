@@ -954,14 +954,17 @@ class BaseSimulation:
             The desired name of the JSON file. If no name is provided, one will be
             created based on the model name, and the current datetime.
         """
-        mesh = self._mesh if (mesh or variables) else None
-        variables = self._built_model.variables if variables else None
+        mesh_to_save = self._mesh if (mesh or variables) else None
+        variables_to_save = self._built_model.variables if variables else None
 
         if self._built_model:
             from pybamm.expression_tree.operations.serialise import Serialise
 
             Serialise().save_model(
-                self._built_model, filename=filename, mesh=mesh, variables=variables
+                self._built_model,
+                filename=filename,
+                mesh=mesh_to_save,
+                variables=variables_to_save,
             )
         else:
             raise NotImplementedError(

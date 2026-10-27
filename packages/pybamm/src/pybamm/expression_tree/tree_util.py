@@ -128,7 +128,7 @@ def identity_key(symbol: pybamm.Symbol, leaf_ids: Sequence[int]) -> tuple:
     """
     cls = type(symbol)
     domains_type = pybamm.expression_tree.symbol.Domains
-    key = [cls]
+    key: list[Any] = [cls]
     for field in layout(cls)[2]:
         value = getattr(symbol, field, None)
         value_type = type(value)

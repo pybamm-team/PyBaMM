@@ -35,8 +35,8 @@ class Array(pybamm.Symbol):
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
-    entries_string : str
-        String representing the entries (slow to recalculate when copying)
+    entries_string : tuple, optional
+        Hashable form of the entries (slow to recalculate when copying)
     """
 
     __slots__ = ("_entries", "_entries_string")
@@ -53,7 +53,7 @@ class Array(pybamm.Symbol):
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
-        entries_string: str | None = None,
+        entries_string: tuple | None = None,
     ) -> None:
         # if
         if isinstance(entries, list):
