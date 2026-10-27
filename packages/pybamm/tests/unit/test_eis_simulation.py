@@ -456,6 +456,9 @@ class TestBodePlot:
         plt.close("all")
 
     def test_eis_plot_errors(self):
+        import matplotlib.pyplot as plt
+
+        plt.close("all")
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
         eis_sim = pybamm.EISSimulation(model)
         with pytest.raises(ValueError, match="has not been solved"):
@@ -465,6 +468,7 @@ class TestBodePlot:
         solution = pybamm.EISSolution([1.0], [1 - 1j])
         with pytest.raises(ValueError, match="same length"):
             pybamm.eis_plot([solution], labels=["a", "b"], show_plot=False)
+        assert not plt.get_fignums()
 
 
 class TestReplaceOnModels:

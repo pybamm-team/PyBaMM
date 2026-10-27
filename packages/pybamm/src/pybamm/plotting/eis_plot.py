@@ -28,7 +28,16 @@ def eis_plot(solutions, labels=None, show_plot=True, **kwargs):
 
     if not isinstance(solutions, list):
         solutions = [solutions]
-    if labels is not None and len(labels) != len(solutions):
+    solutions = [
+        s.solution if isinstance(s, pybamm.EISSimulation) else s for s in solutions
+    ]
+    if any(s is None for s in solutions):
+        raise ValueError(
+            "EIS simulation has not been solved yet. Call solve() before plotting."
+        )
+    if labels is None:
+        labels = [None] * len(solutions)
+    elif len(labels) != len(solutions):
         raise ValueError("labels must have the same length as solutions")
 
     fig = plt.figure(figsize=(12, 5))
@@ -37,14 +46,7 @@ def eis_plot(solutions, labels=None, show_plot=True, **kwargs):
     ax_magnitude = fig.add_subplot(grid[0, 1])
     ax_phase = fig.add_subplot(grid[1, 1], sharex=ax_magnitude)
 
-    for i, solution in enumerate(solutions):
-        if isinstance(solution, pybamm.EISSimulation):
-            solution = solution.solution
-        if solution is None:
-            raise ValueError(
-                "EIS simulation has not been solved yet. Call solve() before plotting."
-            )
-        label = labels[i] if labels is not None else None
+    for solution, label in zip(solutions, labels, strict=True):
         pybamm.nyquist_plot(solution.impedance, ax=ax_nyquist, label=label, **kwargs)
         pybamm.bode_plot(
             solution.frequencies,
@@ -54,7 +56,7 @@ def eis_plot(solutions, labels=None, show_plot=True, **kwargs):
             **kwargs,
         )
 
-    if labels is not None:
+    if any(label is not None for label in labels):
         ax_nyquist.legend()
     fig.tight_layout()
     if show_plot:  # pragma: no cover
