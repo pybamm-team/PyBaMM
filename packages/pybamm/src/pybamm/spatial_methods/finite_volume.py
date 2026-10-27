@@ -1413,10 +1413,10 @@ class FiniteVolume(pybamm.SpatialMethod):
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
         """Discretise binary operators in model equations.  Averages a child that
         evaluates on nodes onto the edges when the other child evaluates on edges, so
-        that discretised sizes match up. A factor of a bare gradient takes the harmonic
-        mean [1], as does a coefficient multiplying a signed sum of gradient terms
-        when the "harmonic flux coefficients" option is True; anything else takes the
-        arithmetic mean.
+        that discretised sizes match up. A coefficient multiplying a bare gradient
+        takes the harmonic mean [1], as does a coefficient multiplying a signed sum of
+        gradient terms when the "harmonic flux coefficients" option is True; anything
+        else, including a divisor of a gradient, takes the arithmetic mean.
 
         [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
         the diffusion equation." (2012).
@@ -1475,8 +1475,8 @@ class FiniteVolume(pybamm.SpatialMethod):
     def _face_coefficient_method(bin_op, edge_child, gradient_combinations=True):
         """
         Choose how to average a node-valued factor onto the edges it shares with
-        ``edge_child``. Any factor of a bare gradient takes the harmonic mean, as
-        does, if ``gradient_combinations`` is True, a coefficient multiplying a
+        ``edge_child``. A coefficient multiplying a bare gradient takes the harmonic
+        mean, as does, if ``gradient_combinations`` is True, a coefficient multiplying a
         signed sum of gradient terms, such as ``K`` in
         ``K * (grad(u) - a * grad(v))``; anything else takes the arithmetic mean.
 
@@ -1496,11 +1496,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             ``"harmonic"`` or ``"arithmetic"``
         """
         # a coefficient of a flux is a conductance in series between two cells;
-        # a bare gradient keeps the harmonic mean under any operator, as before
+        # a divisor is a resistance in series, whose mean is arithmetic
+        if not isinstance(bin_op, pybamm.Multiplication):
+            return "arithmetic"
         if isinstance(edge_child, pybamm.Gradient) or (
-            gradient_combinations
-            and isinstance(bin_op, pybamm.Multiplication)
-            and FiniteVolume._is_gradient_combination(edge_child)
+            gradient_combinations and FiniteVolume._is_gradient_combination(edge_child)
         ):
             return "harmonic"
         return "arithmetic"
