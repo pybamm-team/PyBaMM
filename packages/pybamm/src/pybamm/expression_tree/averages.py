@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import ClassVar
+from typing import ClassVar, cast
 
 import pybamm
 
@@ -195,7 +195,8 @@ class XAverage(_BaseAverage):
                 ls[tuple(orp._domains["primary"])] * cls.from_symbol(orp)
                 for orp in symbol.orphans
             ) / sum(ls[tuple(orp._domains["primary"])] for orp in symbol.orphans)
-            return out
+            # A concatenation has children, so neither sum falls back to 0
+            return cast("pybamm.Symbol", out)
 
         # Linearity + constant-factor pull-out
         simplified = cls._try_separable(symbol, cls.from_symbol)

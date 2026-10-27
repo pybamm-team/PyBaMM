@@ -1,4 +1,4 @@
-import pickle  # nosec B403 - used in tests with trusted input
+import pickle
 
 import numpy as np
 import pytest
@@ -159,7 +159,7 @@ class TestEISSolution:
             def __reduce__(self):
                 return object.__new__, (pybamm.EISSolution,), state
 
-        loaded = pickle.loads(pickle.dumps(PreSlotsPickle()))  # nosec B301
+        loaded = pickle.loads(pickle.dumps(PreSlotsPickle()))
         np.testing.assert_array_equal(loaded.impedance, z)
         np.testing.assert_array_equal(loaded.frequencies, freqs)
         assert loaded.data.keys() == data.keys()

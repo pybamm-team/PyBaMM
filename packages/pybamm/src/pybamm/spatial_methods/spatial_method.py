@@ -251,7 +251,9 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def integral(self, child, discretised_child, integration_dimension):
+    def integral(
+        self, child, discretised_child, integration_dimension, integration_variable
+    ):
         """
         Implements the integral for a spatial method.
 
@@ -263,6 +265,8 @@ class SpatialMethod:
             The discretised symbol of the correct size
         integration_dimension : str, optional
             The dimension in which to integrate (default is "primary")
+        integration_variable : list of :class:`pybamm.IndependentVariable`
+            The variables over which to integrate
 
         Returns
         -------
