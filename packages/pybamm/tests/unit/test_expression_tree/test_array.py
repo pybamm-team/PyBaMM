@@ -7,7 +7,7 @@ import casadi
 import numpy as np
 import pytest
 import sympy
-from scipy.sparse import csc_matrix
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix
 
 import pybamm
 
@@ -62,10 +62,13 @@ class TestArray:
         # json to array conversion
         assert pybamm.Array._from_json(created_json) == arr
 
-    def test_to_casadi_dm_sparse(self):
+    @pytest.mark.parametrize(
+        "matrix_format, shape", [(csc_matrix, (3, 4)), (csr_matrix, (4, 3))]
+    )
+    def test_to_casadi_dm_sparse(self, matrix_format, shape):
         # Duplicate, unsorted entries must be summed as scipy does
-        matrix = csc_matrix(
-            ([1.0, 2.0, 3.0, 4.0], [2, 2, 0, 1], [0, 0, 3, 3, 4]), shape=(3, 4)
+        matrix = matrix_format(
+            ([1.0, 2.0, 3.0, 4.0], [2, 2, 0, 1], [0, 0, 3, 3, 4]), shape=shape
         )
         matrix.has_canonical_format = False
         converted = pybamm.expression_tree.array.to_casadi_dm(matrix)
@@ -73,6 +76,11 @@ class TestArray:
         assert converted.nnz() == 3
         # The input is left untouched
         assert not matrix.has_canonical_format
+
+    def test_to_casadi_dm_other_sparse_format(self):
+        matrix = coo_matrix(([1.0, 2.0], ([0, 2], [1, 0])), shape=(3, 2))
+        converted = pybamm.expression_tree.array.to_casadi_dm(matrix)
+        np.testing.assert_array_equal(converted.full(), matrix.toarray())
 
     @pytest.mark.parametrize(
         "entries",

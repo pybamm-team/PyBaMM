@@ -35,17 +35,45 @@ casadi::Function shared_casadi_function(std::uintptr_t address)
   return *reinterpret_cast<const casadi::Function *>(address);
 }
 
-// Fill the casadi::DM behind a Python casadi.DM (int(dm.this)) with a CSC
+// Fill the casadi::DM behind a Python casadi.DM (int(dm.this)) with a CSC or CSR
 // matrix, copying the buffers once instead of element by element through SWIG
 void fill_casadi_dm_sparse(
   std::uintptr_t address, casadi_int nrow, casadi_int ncol,
   const py::array_t<casadi_int, py::array::c_style | py::array::forcecast> &indptr,
   const py::array_t<casadi_int, py::array::c_style | py::array::forcecast> &indices,
-  const py::array_t<double, py::array::c_style | py::array::forcecast> &data)
+  const py::array_t<double, py::array::c_style | py::array::forcecast> &data,
+  bool compressed_rows)
 {
-  std::vector<casadi_int> colind(indptr.data(), indptr.data() + indptr.size());
-  std::vector<casadi_int> row(indices.data(), indices.data() + indices.size());
-  std::vector<double> nonzeros(data.data(), data.data() + data.size());
+  const casadi_int *pointers = indptr.data();
+  const casadi_int *index = indices.data();
+  const double *values = data.data();
+  const auto nnz = static_cast<std::size_t>(data.size());
+  std::vector<casadi_int> colind, row;
+  std::vector<double> nonzeros;
+  if (compressed_rows) {
+    // Transpose by counting sort; rows come out sorted within each column
+    colind.assign(ncol + 1, 0);
+    for (std::size_t k = 0; k < nnz; k++) {
+      colind[index[k] + 1]++;
+    }
+    for (casadi_int j = 0; j < ncol; j++) {
+      colind[j + 1] += colind[j];
+    }
+    std::vector<casadi_int> next(colind.begin(), colind.end() - 1);
+    row.resize(nnz);
+    nonzeros.resize(nnz);
+    for (casadi_int i = 0; i < nrow; i++) {
+      for (casadi_int k = pointers[i]; k < pointers[i + 1]; k++) {
+        const casadi_int position = next[index[k]]++;
+        row[position] = i;
+        nonzeros[position] = values[k];
+      }
+    }
+  } else {
+    colind.assign(pointers, pointers + indptr.size());
+    row.assign(index, index + nnz);
+    nonzeros.assign(values, values + nnz);
+  }
   *reinterpret_cast<casadi::DM *>(address) =
     casadi::DM(casadi::Sparsity(nrow, ncol, colind, row), nonzeros);
 }
@@ -243,9 +271,10 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("address"),
     py::return_value_policy::take_ownership);
   m.def("fill_casadi_dm_sparse", &fill_casadi_dm_sparse,
-    "Fill a Python casadi.DM, given int(dm.this), with a CSC matrix",
+    "Fill a Python casadi.DM, given int(dm.this), with a CSC or CSR matrix",
     py::arg("address"), py::arg("nrow"), py::arg("ncol"),
-    py::arg("indptr"), py::arg("indices"), py::arg("data"));
+    py::arg("indptr"), py::arg("indices"), py::arg("data"),
+    py::arg("compressed_rows") = false);
   m.def("fill_casadi_dm_dense", &fill_casadi_dm_dense,
     "Fill a Python casadi.DM, given int(dm.this), with a column-major dense matrix",
     py::arg("address"), py::arg("nrow"), py::arg("ncol"), py::arg("data"));

@@ -241,17 +241,19 @@ def to_casadi_dm(entries) -> casadi.DM:
         return casadi.DM(entries)
     matrix = casadi.DM()
     if issparse(entries):
-        csc = csc_matrix(entries)
-        if not csc.has_canonical_format:
-            csc = csc.copy()
-            csc.sum_duplicates()
+        compressed_rows = entries.format == "csr"
+        compressed = entries if compressed_rows else csc_matrix(entries)
+        if not compressed.has_canonical_format:
+            compressed = compressed.copy()
+            compressed.sum_duplicates()
         idaklu.fill_casadi_dm_sparse(
             int(matrix.this),
-            csc.shape[0],
-            csc.shape[1],
-            csc.indptr.astype(np.int64),
-            csc.indices.astype(np.int64),
-            csc.data.astype(np.float64),
+            compressed.shape[0],
+            compressed.shape[1],
+            compressed.indptr.astype(np.int64),
+            compressed.indices.astype(np.int64),
+            compressed.data.astype(np.float64),
+            compressed_rows=compressed_rows,
         )
     else:
         values = np.asarray(entries, dtype=np.float64)
