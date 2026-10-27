@@ -1,6 +1,8 @@
 #
 # Finite Volume discretisation class
 #
+import warnings
+
 import numpy as np
 from scipy.sparse import (
     block_diag,
@@ -21,6 +23,9 @@ class FiniteVolume2D(pybamm.SpatialMethod):
     A class which implements the steps specific to the finite volume method during
     discretisation.
 
+    .. deprecated:: 26.11
+        Use :class:`pybamm.FiniteVolumeUnstructured` instead.
+
     For broadcast and mass_matrix, we follow the default behaviour from SpatialMethod.
 
     Parameters
@@ -33,6 +38,13 @@ class FiniteVolume2D(pybamm.SpatialMethod):
     """
 
     def __init__(self, options=None):
+        warnings.warn(
+            "FiniteVolume2D is deprecated and will be removed in a future release. "
+            "Use pybamm.FiniteVolumeUnstructured instead; see "
+            "https://github.com/pybamm-team/PyBaMM/issues/5938.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(options)
 
     @staticmethod
