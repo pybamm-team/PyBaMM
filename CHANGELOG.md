@@ -8,7 +8,7 @@
 ## Features
 
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
-- Added `pybamm.bode_plot` and `pybamm.eis_plot`, with `bode_plot()` methods on `EISSolution` and `EISSimulation`. `EISSimulation.plot()` now shows Nyquist and Bode plots side by side instead of failing, and `eis_plot` overlays several labelled spectra on square Nyquist axes. ([#5989](https://github.com/pybamm-team/PyBaMM/pull/5989))
+- Added `pybamm.bode_plot` and `pybamm.eis_plot`, which overlays labelled spectra. `EISSimulation.plot()` now shows Nyquist and Bode plots instead of failing. ([#5989](https://github.com/pybamm-team/PyBaMM/pull/5989))
 
 ## Bug fixes
 

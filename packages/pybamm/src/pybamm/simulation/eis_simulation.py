@@ -265,6 +265,7 @@ class EISSimulation(BaseSimulation):
         """
         return self._solved_solution().bode_plot(**kwargs)
 
+    # pyrefly: ignore[bad-override]
     def plot(self, **kwargs):
         """Plot Nyquist and Bode plots of the most recent solution side by side.
 
