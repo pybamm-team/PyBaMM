@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from scipy.special import erfc
+from scipy.integrate import quad
 
 import pybamm
 
@@ -11,17 +11,25 @@ REORGANIZATION_ENERGY = 0.2
 RATE_CONSTANT = 10.0
 
 
-def expected_current(eta_r, stoichiometry, relative_c_e):
+def mhc_rate(eta):
+    """Marcus-Hush-Chidsey rate integral, with eta and lambda in units of kT/e."""
     F_RT = pybamm.constants.F.value / (pybamm.constants.R.value * T)
     lambda_T = F_RT * REORGANIZATION_ENERGY
+    return quad(
+        lambda x: np.exp(
+            -((x - lambda_T + eta) ** 2) / (4 * lambda_T) - np.logaddexp(0, x)
+        ),
+        -np.inf,
+        np.inf,
+    )[0]
+
+
+def expected_current(eta_r, stoichiometry, relative_c_e):
+    F_RT = pybamm.constants.F.value / (pybamm.constants.R.value * T)
     eta_f = F_RT * eta_r + np.log(relative_c_e * (1 - stoichiometry) / stoichiometry)
-    arg = (lambda_T - np.sqrt(1 + np.sqrt(lambda_T) + eta_f**2)) / (
-        2 * np.sqrt(lambda_T)
-    )
-    rate = RATE_CONSTANT * np.sqrt(np.pi * lambda_T) * erfc(arg)
-    oxidation = stoichiometry / (1 + np.exp(-eta_f))
-    reduction = relative_c_e * (1 - stoichiometry) / (1 + np.exp(eta_f))
-    return rate * (oxidation - reduction)
+    oxidation = stoichiometry * mhc_rate(eta_f)
+    reduction = relative_c_e * (1 - stoichiometry) * mhc_rate(-eta_f)
+    return RATE_CONSTANT * (oxidation - reduction)
 
 
 class TestCoupledIonElectronTransfer:
@@ -68,12 +76,13 @@ class TestCoupledIonElectronTransfer:
         _, j = self.get_current(0.0, stoichiometry, relative_c_e)
         assert j == pytest.approx(0, abs=1e-12)
 
-    @pytest.mark.parametrize("eta_r", [-0.2, -0.02, 0.02, 0.2])
+    @pytest.mark.parametrize("eta_r", [-0.4, -0.2, -0.02, 0.02, 0.2, 0.4])
     @pytest.mark.parametrize("stoichiometry", [0.1, 0.6])
-    def test_current_follows_rate_law(self, eta_r, stoichiometry):
+    def test_current_matches_marcus_integral(self, eta_r, stoichiometry):
+        # The Zeng asymptotic form is within 5% of the integral at this lambda
         _, j = self.get_current(eta_r, stoichiometry, 1.2)
         np.testing.assert_allclose(
-            j, expected_current(eta_r, stoichiometry, 1.2), rtol=1e-10
+            j, expected_current(eta_r, stoichiometry, 1.2), rtol=0.05
         )
         assert np.sign(j) == np.sign(eta_r)
 
@@ -103,3 +112,28 @@ class TestCoupledIonElectronTransfer:
                 "lead-acid main",
                 pybamm.BatteryModelOptions({}),
             )
+
+    def test_current_sigmoid_not_supported(self):
+        options = pybamm.BatteryModelOptions(
+            {
+                "intercalation kinetics": "coupled ion-electron transfer",
+                "exchange-current density": "current sigmoid",
+            }
+        )
+        with pytest.raises(pybamm.OptionError, match=r"exchange-current density"):
+            pybamm.kinetics.CoupledIonElectronTransfer(
+                pybamm.LithiumIonParameters(), "negative", "lithium-ion main", options
+            )
+
+    def test_citations(self):
+        citations = pybamm.citations
+        citations._reset()
+        pybamm.kinetics.CoupledIonElectronTransfer(
+            pybamm.LithiumIonParameters(),
+            "negative",
+            "lithium-ion main",
+            pybamm.BatteryModelOptions({}),
+        )
+        assert "Fraggedakis2021" in citations._papers_to_cite
+        assert "Zeng2014" in citations._papers_to_cite
+        assert "Sripad2020" not in citations._papers_to_cite

@@ -7,6 +7,7 @@ import numpy as np
 
 import pybamm
 
+from .base_kinetics import BaseKinetics
 from .marcus import MarcusHushChidsey
 
 
@@ -44,7 +45,18 @@ class CoupledIonElectronTransfer(MarcusHushChidsey):
                 "Coupled ion-electron transfer kinetics are only implemented for "
                 f"lithium-ion intercalation, not '{reaction}'"
             )
-        super().__init__(param, domain, reaction, options, phase)
+        # Skip MarcusHushChidsey.__init__ so Sripad2020 is only cited for plating
+        BaseKinetics.__init__(self, param, domain, reaction, options, phase)
+        if reaction == "lithium metal plating":
+            pybamm.citations.register("Sripad2020")
+            return
+        domain_options = getattr(self.options, self.domain)
+        if getattr(domain_options, self.phase)["exchange-current density"] != "single":
+            raise pybamm.OptionError(
+                "Coupled ion-electron transfer kinetics do not use the "
+                "exchange-current density parameter, so 'exchange-current density' "
+                "must be 'single'"
+            )
         pybamm.citations.register("Fraggedakis2021")
         pybamm.citations.register("Zeng2014")
 
