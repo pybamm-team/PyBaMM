@@ -28,6 +28,14 @@ from pybamm.models.full_battery_models.lithium_ion.basic_dfn import BasicDFN
 from pybamm.models.full_battery_models.lithium_ion.basic_spm import BasicSPM
 
 
+def _make_base_class_unimportable(data, name, mro=None):
+    """Set a serialised model's base class to the unimportable ``name``, ahead of
+    ``mro`` (default: the recorded MRO)."""
+    model = data["model"]
+    model["base_class"] = name
+    model["base_class_mro"] = [name, *(model["base_class_mro"] if mro is None else mro)]
+
+
 class TestSerialiseModels:
     def test_user_defined_model_recreaction(self):
         # Start with a base model
@@ -804,11 +812,7 @@ class TestSerialise:
 
         with open(file_path) as f:
             data = json.load(f)
-        data["model"]["base_class"] = "user_private_pkg.MyLiIon"
-        data["model"]["base_class_mro"] = [
-            "user_private_pkg.MyLiIon",
-            *data["model"]["base_class_mro"],
-        ]
+        _make_base_class_unimportable(data, "user_private_pkg.MyLiIon")
         with open(file_path, "w") as f:
             json.dump(data, f)
 
@@ -836,11 +840,9 @@ class TestSerialise:
 
         with open(file_path) as f:
             data = json.load(f)
-        data["model"]["base_class"] = "nonexistent_module.A"
-        data["model"]["base_class_mro"] = [
-            "nonexistent_module.A",
-            "another_missing_module.B",
-        ]
+        _make_base_class_unimportable(
+            data, "nonexistent_module.A", mro=["another_missing_module.B"]
+        )
         with open(file_path, "w") as f:
             json.dump(data, f)
 
@@ -927,8 +929,7 @@ class TestSerialise:
             data = json.load(f)
         assert "discretisation" in data["model"]
         # ...and force the import-failed fallback to a bare pybamm.BaseModel.
-        data["model"]["base_class"] = "nonexistent_module.DiscModel"
-        data["model"]["base_class_mro"] = ["nonexistent_module.DiscModel"]
+        _make_base_class_unimportable(data, "nonexistent_module.DiscModel", mro=[])
         with open(file_path, "w") as f:
             json.dump(data, f)
 
@@ -966,11 +967,7 @@ class TestSerialise:
 
         model = _HalfRadiusSPM({"x-average side reactions": "true"})
         data = Serialise.serialise_custom_model(model)
-        data["model"]["base_class"] = "user_private_pkg.HalfRadiusSPM"
-        data["model"]["base_class_mro"] = [
-            "user_private_pkg.HalfRadiusSPM",
-            *data["model"]["base_class_mro"][1:],
-        ]
+        _make_base_class_unimportable(data, "user_private_pkg.HalfRadiusSPM")
 
         with pytest.warns(UserWarning, match=r"Falling back to ancestor"):
             loaded = Serialise.load_custom_model(data)
