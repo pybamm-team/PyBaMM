@@ -95,9 +95,8 @@ def composite_parameter_values(options=None):
             "Secondary: Negative electrode OCP [V]": (
                 lambda sto: (lithiation(sto) + delithiation(sto)) / 2
             ),
-            "Negative electrode density [kg.m-3]": parameter_values[
-                "Primary: Negative electrode density [kg.m-3]"
-            ],
+            # Chen2020_composite's electrode-level density, for older pybamm
+            "Negative electrode density [kg.m-3]": 1657.0,
         },
         check_already_exists=False,
     )

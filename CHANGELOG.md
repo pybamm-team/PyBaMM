@@ -30,6 +30,7 @@
 - Fixed copying a function without simplification, as `ParameterValues` does for a parameter set loaded with `Serialise.load_parameters`, returning a generic `pybamm.Function`: `pybamm.exp` and the other specific functions lost their class, and an `Arcsinh2` copy could not be evaluated. ([#5954](https://github.com/pybamm-team/PyBaMM/pull/5954))
 - `RegPower` now evaluates the same operations in `evaluate` and CasADi, taking a literal exponent of 0.5 or 2 as square roots, so they agree bitwise; CasADi used a `hypot` form. With `delta=0`, `evaluate` and the Jacobian use `base ** exponent`, as CasADi did. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - CasADi linear and `pchip` interpolants on a uniform grid now find a point's segment by binary search. The `"exact"` lookup could pick the neighbouring segment at or one ulp beside a knot, giving the Jacobian that segment's slope. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
+- `Chen2020_composite` and `Bonkile2024` now run with thermal models. They gave the negative electrode density per particle phase, but the thermal model reads one electrode-level density, as it does for the heat capacity and thermal conductivity, so parameter processing raised a `KeyError`. Both sets now give `"Negative electrode density [kg.m-3]"` and drop the unused per-phase densities. ([#5934](https://github.com/pybamm-team/PyBaMM/pull/5934))
 
 ## Optimizations
 
