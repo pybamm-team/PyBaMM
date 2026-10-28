@@ -2,7 +2,7 @@
 
 ## Features
 
-- Added `"coupled ion-electron transfer"` as an `"intercalation kinetics"` option, following Fraggedakis et al. (2021). It uses the existing reorganization energy and a new temperature-dependent `"... electrode coupled ion-electron transfer rate constant [A.m-2]"` per electrode, and its current saturates at large overpotential.
+- Added `"coupled ion-electron transfer"` as an `"intercalation kinetics"` option, following Fraggedakis et al. (2021). It uses the existing reorganization energy and a new temperature-dependent `"... electrode coupled ion-electron transfer rate constant [A.m-2]"` per electrode, and its current saturates at large overpotential. ([#5993](https://github.com/pybamm-team/PyBaMM/pull/5993))
 
 ## Bug fixes
 
