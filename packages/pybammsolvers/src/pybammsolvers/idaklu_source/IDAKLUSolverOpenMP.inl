@@ -468,16 +468,15 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
   );
 
   use_upsampling_ = (
-    solver_opts.hermite_upsampling_factor > 1.0 &&
+    solver_opts.upsampling_factor > 1.0 &&
     save_adaptive_steps_ &&
     !use_knot_reduction_ &&
-    functions->hermite_upsampling_fcn != nullptr &&
-    functions->hermite_upsampling_fcn->nnz_out() > 0
+    functions->upsampling_fcn != nullptr &&
+    functions->upsampling_fcn->nnz_out() > 0
   );
   upsample_f_prev_valid_ = false;
   if (use_upsampling_) {
-    upsample_in_.resize(2 * number_of_states);
-    upsample_end_.resize(2 * number_of_states);
+    upsample_end_.resize(number_of_states);
     upsampling_atol_ = N_VMin(avtol);
   }
 
@@ -670,8 +669,6 @@ void IDAKLUSolverOpenMP<ExprSet>::UpsampleStep(
   DEBUG("IDAKLUSolver::UpsampleStep");
   // The state at t_b is already loaded, so it is evaluated once and reused
   std::copy(y_val_, y_val_ + number_of_states, upsample_end_.begin());
-  std::copy(yp_val_, yp_val_ + number_of_states,
-            upsample_end_.begin() + number_of_states);
   std::vector<sunrealtype> f_b;
   EvaluateUpsampleOutputs(t_b, upsample_end_.data(), f_b);
   if (!upsample_f_prev_valid_) {
@@ -679,13 +676,10 @@ void IDAKLUSolverOpenMP<ExprSet>::UpsampleStep(
   }
 
   if (UpsampleInterval(t_a, upsample_f_prev_, t_b, f_b, 0) > 0) {
-    // Saving a midpoint also moved the sensitivities
+    // Saving a midpoint also moved the derivatives and sensitivities
     GetSolutionFull(t_b);
   } else {
-    std::copy(upsample_end_.begin(), upsample_end_.begin() + number_of_states,
-              y_val_);
-    std::copy(upsample_end_.begin() + number_of_states, upsample_end_.end(),
-              yp_val_);
+    std::copy(upsample_end_.begin(), upsample_end_.end(), y_val_);
   }
   upsample_f_prev_ = std::move(f_b);
   upsample_f_prev_valid_ = true;
@@ -705,16 +699,12 @@ int IDAKLUSolverOpenMP<ExprSet>::UpsampleInterval(
   std::vector<sunrealtype> f_m;
   EvaluateUpsampleOutputsAt(t_m, f_m);
 
-  // f holds (value, rate) pairs; the cubic Hermite midpoint is
-  // (v_a + v_b) / 2 + h (r_a - r_b) / 8
-  sunrealtype const h = solver_opts.upsampling_linear ? 0.0 : t_b - t_a;
-  sunrealtype const budget = 1.0 / (solver_opts.hermite_upsampling_factor - 1.0);
+  sunrealtype const budget = 1.0 / (solver_opts.upsampling_factor - 1.0);
   bool resolved = true;
-  for (size_t k = 0; k + 1 < f_m.size(); k += 2) {
-    sunrealtype const hermite =
-      0.5 * (f_a[k] + f_b[k]) + 0.125 * h * (f_a[k + 1] - f_b[k + 1]);
+  for (size_t k = 0; k < f_m.size(); k++) {
+    sunrealtype const linear = 0.5 * (f_a[k] + f_b[k]);
     sunrealtype const tol = budget * (upsampling_atol_ + rtol * std::abs(f_m[k]));
-    resolved = resolved && std::abs(hermite - f_m[k]) <= tol;
+    resolved = resolved && std::abs(linear - f_m[k]) <= tol;
   }
   if (resolved) {
     return 0;
@@ -728,11 +718,10 @@ int IDAKLUSolverOpenMP<ExprSet>::UpsampleInterval(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutputs(
-  sunrealtype t, sunrealtype *y_and_yp, std::vector<sunrealtype> &out
+  sunrealtype t, sunrealtype *y, std::vector<sunrealtype> &out
 ) {
-  out.resize(functions->hermite_upsampling_fcn->nnz_out());
-  (*functions->hermite_upsampling_fcn)(
-    {&t, y_and_yp, functions->inputs.data()}, {out.data()});
+  out.resize(functions->upsampling_fcn->nnz_out());
+  (*functions->upsampling_fcn)({&t, y, functions->inputs.data()}, {out.data()});
 }
 
 template <class ExprSet>
@@ -740,14 +729,7 @@ void IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutputsAt(
   sunrealtype t, std::vector<sunrealtype> &out
 ) {
   CheckErrors(IDAGetDky(ida_mem, t, 0, yy), "IDAGetDky");
-  // The linear check reads values only
-  if (!solver_opts.upsampling_linear) {
-    CheckErrors(IDAGetDky(ida_mem, t, 1, yyp), "IDAGetDky");
-  }
-  std::copy(y_val_, y_val_ + number_of_states, upsample_in_.begin());
-  std::copy(yp_val_, yp_val_ + number_of_states,
-            upsample_in_.begin() + number_of_states);
-  EvaluateUpsampleOutputs(t, upsample_in_.data(), out);
+  EvaluateUpsampleOutputs(t, y_val_, out);
 }
 
 template <class ExprSet>
@@ -771,7 +753,7 @@ void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
 
   // Reinitialize the solver to deal with the discontinuity at t = t_val
   ReinitializeIntegrator(t_val);
-  // yp jumps here, so the next step starts from a fresh evaluation
+  // Algebraic states can jump here, so the next step starts afresh
   upsample_f_prev_valid_ = false;
   ConsistentInitialization(t_val, t_eval_next, IDA_YA_YDP_INIT);
   log_.log_consistent_init(t_val);

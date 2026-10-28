@@ -197,12 +197,12 @@ SolverOptions::SolverOptions(py::dict &py_opts)
     }
 
     // Output upsampling multiplier (1.0 = off, >1.0 = active)
-    hermite_upsampling_factor = 1.0;
-    if (py_opts.contains("hermite_upsampling_factor")) {
-        hermite_upsampling_factor = py_opts["hermite_upsampling_factor"].cast<double>();
-        if (hermite_upsampling_factor < 1.0) {
+    upsampling_factor = 1.0;
+    if (py_opts.contains("upsampling_factor")) {
+        upsampling_factor = py_opts["upsampling_factor"].cast<double>();
+        if (upsampling_factor < 1.0) {
             throw std::domain_error(
-                "hermite_upsampling_factor must be >= 1.0. Got " + std::to_string(hermite_upsampling_factor)
+                "upsampling_factor must be >= 1.0. Got " + std::to_string(upsampling_factor)
             );
         }
     }
@@ -211,11 +211,6 @@ SolverOptions::SolverOptions(py::dict &py_opts)
     newton_step_tol = 1e-4;
     if (py_opts.contains("newton_step_tol")) {
         newton_step_tol = py_opts["newton_step_tol"].cast<double>();
-    }
-
-    upsampling_linear = false;
-    if (py_opts.contains("upsampling_basis")) {
-        upsampling_linear = py_opts["upsampling_basis"].cast<std::string>() == "linear";
     }
 
     newton_mode = "auto";

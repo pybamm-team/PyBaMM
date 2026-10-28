@@ -85,7 +85,7 @@ _SETUP_FCN_KEYS = (
     "rootfn",
     "alg_res",
     "alg_jac",
-    "hermite_upsampling_fcn",
+    "upsampling_fcn",
 )
 _SETUP_FCN_LIST_KEYS = (
     "var_idaklu_fcns",
@@ -242,11 +242,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # only active if `hermite_interpolation` is True and sensitivities
                 # are disabled.
                 "hermite_reduction_factor": 1.0,
-                # Setting hermite_upsampling_factor > 1.0 adds points within each
-                # step until the cubic Hermite interpolant of the model's
-                # `hermite_upsampling_variables` (default: the voltage) is within
-                # the solver tolerances divided by (factor - 1). Ignored with t_interp.
-                "hermite_upsampling_factor": 1.0,
+                # Setting upsampling_factor > 1.0 adds points within each step
+                # until linear interpolation of the model's `upsampling_variables`
+                # (default: the voltage) is within the solver tolerances divided
+                # by (factor - 1). Ignored with t_interp.
+                "upsampling_factor": 1.0,
                 ## Initial conditions calculation
                 # Positive constant in the Newton iteration convergence test within the
                 # initial condition calculation
@@ -376,8 +376,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "suppress_algebraic_error": False,
             "hermite_interpolation": True,
             "hermite_reduction_factor": 1.0,
-            "hermite_upsampling_factor": 1.0,
-            "upsampling_basis": "hermite",
+            "upsampling_factor": 1.0,
             "nonlinear_convergence_coefficient_ic": 0.0033,
             "max_num_steps_ic": 50,
             "max_num_jacobians_ic": 40,
@@ -415,12 +414,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
             if hermite_reduction_factor < 1.0:
                 raise pybamm.SolverError("hermite_reduction_factor must be >= 1.0.")
 
-        hermite_upsampling_factor = options["hermite_upsampling_factor"]
-        if hermite_upsampling_factor < 1.0:
-            raise pybamm.SolverError("hermite_upsampling_factor must be >= 1.0.")
-        if hermite_upsampling_factor > 1.0 and hermite_reduction_factor > 1.0:
+        upsampling_factor = options["upsampling_factor"]
+        if upsampling_factor < 1.0:
+            raise pybamm.SolverError("upsampling_factor must be >= 1.0.")
+        if upsampling_factor > 1.0 and hermite_reduction_factor > 1.0:
             raise pybamm.SolverError(
-                "hermite_upsampling_factor and hermite_reduction_factor are "
+                "upsampling_factor and hermite_reduction_factor are "
                 "mutually exclusive; at most one can be > 1.0."
             )
 
@@ -659,7 +658,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 stacklevel=2,
             )
 
-        hermite_upsampling_fcn = self._hermite_upsampling_fcn(model, inputs_dict)
+        upsampling_fcn = self._upsampling_fcn(model, inputs_dict)
 
         # Collect all casadi functions for AOT compilation. With compile=True,
         # all functions are bundled into a single shared library via one gcc
@@ -677,7 +676,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     rootfn,
                     alg_res_fn,
                     jac_alg_fn,
-                    hermite_upsampling_fcn,
+                    upsampling_fcn,
                 ),
                 strict=True,
             )
@@ -763,7 +762,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options=self._options,
             alg_res=self._setup["alg_res"],
             alg_jac=self._setup["alg_jac"],
-            hermite_upsampling_fcn=self._setup["hermite_upsampling_fcn"],
+            upsampling_fcn=self._setup["upsampling_fcn"],
         )
 
         # C++ solver group now owns each casadi::Function via shared_ptr;
@@ -781,20 +780,20 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return base_set_up_return
 
-    def _hermite_upsampling_fcn(self, model, inputs_dict):
-        """``g(t, [y; yp], p)``: each upsampled variable and its time derivative.
+    def _upsampling_fcn(self, model, inputs_dict):
+        """``g(t, y, p)``: the upsampled variables.
 
         Algebraic states are skipped: the integrator's error test already
         resolves them. Empty if there is nothing to upsample.
         """
-        empty = casadi.Function("empty_hermite_upsampling", [], [])
-        if self._options["hermite_upsampling_factor"] <= 1.0:
+        empty = casadi.Function("empty_upsampling", [], [])
+        if self._options["upsampling_factor"] <= 1.0:
             return empty
         # Model copies keep a state's name but not its id
         algebraic_names = {variable.name for variable in model.algebraic}
         names = [
             name
-            for name in getattr(model, "hermite_upsampling_variables", ["Voltage [V]"])
+            for name in getattr(model, "upsampling_variables", ["Voltage [V]"])
             if name in model.variables
             and not (
                 isinstance(model.variables[name], pybamm.Variable)
@@ -804,11 +803,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if not names:
             return empty
         vars_for_processing = self._get_vars_for_processing(model, inputs_dict)
-        n = model.len_rhs_and_alg
         t = casadi.MX.sym("t")
-        y_and_yp = casadi.MX.sym("y_and_yp", 2 * n)
-        y = y_and_yp[:n]
-        direction = casadi.vertcat(y_and_yp[n:], casadi.MX.zeros(n))
+        y = casadi.MX.sym("y", model.len_rhs_and_alg)
         p = casadi.MX.sym("p", vars_for_processing["p_casadi_stacked"].shape[0])
         outputs = []
         for name in names:
@@ -820,19 +816,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )[0]
             if var_fcn.numel_out() != 1:
                 raise pybamm.SolverError(
-                    f"hermite_upsampling_factor needs a scalar variable, got '{name}'"
+                    f"upsampling_factor needs a scalar variable, got '{name}'"
                 )
-            value = var_fcn(t, y, p)
-            if self._options["upsampling_basis"] == "linear":
-                rate = casadi.MX.zeros(1)
-            else:
-                rate = casadi.jacobian(value, t) + casadi.jtimes(
-                    value, y_and_yp, direction
-                )
-            outputs += [value, rate]
-        function = casadi.Function(
-            "hermite_upsampling", [t, y_and_yp, p], [casadi.vertcat(*outputs)]
-        )
+            outputs.append(var_fcn(t, y, p))
+        function = casadi.Function("upsampling", [t, y, p], [casadi.vertcat(*outputs)])
         try:
             return function.expand()
         except RuntimeError as error:

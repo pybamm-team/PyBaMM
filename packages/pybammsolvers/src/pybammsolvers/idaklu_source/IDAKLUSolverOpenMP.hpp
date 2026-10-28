@@ -181,9 +181,8 @@ public:
   bool use_knot_reduction_ = false;
   bool use_upsampling_ = false;
   sunrealtype upsampling_atol_ = 0.0;
-  std::vector<sunrealtype> upsample_in_;  // [y; yp] passed to hermite_upsampling_fcn
-  std::vector<sunrealtype> upsample_end_;  // [y; yp] at the end of the current step
-  // hermite_upsampling_fcn at the previous step end, reused as the next step start
+  std::vector<sunrealtype> upsample_end_;  // y at the end of the current step
+  // upsampling_fcn at the previous step end, reused as the next step start
   std::vector<sunrealtype> upsample_f_prev_;
   bool upsample_f_prev_valid_ = false;
   bool save_adaptive_steps_ = false;
@@ -425,14 +424,14 @@ public:
   void SavePoint(sunrealtype t_val, bool extend_arrays, bool is_breakpoint);
 
   /**
-   * @brief Save points inside the last step [t_a, t_b] until the cubic Hermite
-   * interpolant of each upsampled output resolves it, then restore the state at t_b
+   * @brief Save points inside the last step [t_a, t_b] until linear interpolation
+   * of each upsampled output resolves it, then restore the state at t_b
    */
   void UpsampleStep(sunrealtype t_a, sunrealtype t_b);
 
   /**
-   * @brief Bisect [t_a, t_b] while the outputs' Hermite interpolant misses the
-   * midpoint, saving each midpoint in time order
+   * @brief Bisect [t_a, t_b] while linear interpolation of the outputs misses
+   * the midpoint, saving each midpoint in time order
    * @return The number of points saved
    */
   int UpsampleInterval(
@@ -441,14 +440,14 @@ public:
     int depth);
 
   /**
-   * @brief Evaluate hermite_upsampling_fcn at t from y_and_yp = [y; yp]
+   * @brief Evaluate upsampling_fcn at t from the states y
    */
   void EvaluateUpsampleOutputs(
-    sunrealtype t, sunrealtype *y_and_yp, std::vector<sunrealtype> &out);
+    sunrealtype t, sunrealtype *y, std::vector<sunrealtype> &out);
 
   /**
-   * @brief Evaluate hermite_upsampling_fcn on the integrator's interpolant at t,
-   * loading only the states and their derivatives (not the sensitivities)
+   * @brief Evaluate upsampling_fcn on the integrator's interpolant at t,
+   * loading only the states (not their derivatives or sensitivities)
    */
   void EvaluateUpsampleOutputsAt(sunrealtype t, std::vector<sunrealtype> &out);
 

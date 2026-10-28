@@ -194,7 +194,7 @@ class Voltage(BaseStepImplicit):
     """
 
     control_kind = ControlKind.VOLTAGE
-    hermite_upsampling_variable = "Current [A]"
+    upsampling_variable = "Current [A]"
 
     def get_parameter_values(self, variables):
         return {"Voltage function [V]": self.value}

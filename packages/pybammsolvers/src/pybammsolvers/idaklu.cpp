@@ -52,7 +52,7 @@ IDAKLUSolverGroup *create_casadi_solver_group(
   py::dict py_opts,
   const CasadiFunctions::BaseFunctionType &alg_res,
   const CasadiFunctions::BaseFunctionType &alg_jac,
-  const CasadiFunctions::BaseFunctionType &hermite_upsampling_fcn)
+  const CasadiFunctions::BaseFunctionType &upsampling_fcn)
 {
   auto setup_opts = SetupOptions(py_opts);
   auto solver_opts = SolverOptions(py_opts);
@@ -97,7 +97,7 @@ IDAKLUSolverGroup *create_casadi_solver_group(
       serialized_fcns ? &*serialized_fcns : nullptr,
       alg_res,
       alg_jac,
-      hermite_upsampling_fcn
+      upsampling_fcn
     );
     solvers.emplace_back(
       std::unique_ptr<IDAKLUSolver>(
@@ -176,7 +176,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("options"),
     py::arg("alg_res"),
     py::arg("alg_jac"),
-    py::arg("hermite_upsampling_fcn"),
+    py::arg("upsampling_fcn"),
     py::return_value_policy::take_ownership);
 
   m.def("observe", &observe,

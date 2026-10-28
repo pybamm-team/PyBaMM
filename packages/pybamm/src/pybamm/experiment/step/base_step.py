@@ -296,8 +296,8 @@ class BaseStep:
     #: their target value collapse to one unified-mode branch.
     control_kind = None
 
-    #: The scalar output the solver's ``hermite_upsampling_factor`` resolves.
-    hermite_upsampling_variable = "Voltage [V]"
+    #: The scalar output the solver's ``upsampling_factor`` resolves.
+    upsampling_variable = "Voltage [V]"
 
     def get_control_residual(self, variables, target=None):
         """Control residual. ``target`` is the per-step input that collapsible steps
@@ -465,9 +465,7 @@ class BaseStep:
             inplace=inplace,
             delayed_variable_processing=delayed_variable_processing,
         )
-        processed_model.hermite_upsampling_variables = [
-            self.hermite_upsampling_variable
-        ]
+        processed_model.upsampling_variables = [self.upsampling_variable]
         return processed_model
 
     def get_termination_events(self, variables):

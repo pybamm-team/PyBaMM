@@ -173,5 +173,5 @@ def test_parse_termination_requires_operator_for_input_parameter():
         (pybamm.step.voltage(4.1), "Current [A]"),
     ],
 )
-def test_hermite_upsampling_variable(step, variable):
-    assert step.hermite_upsampling_variable == variable
+def test_upsampling_variable(step, variable):
+    assert step.upsampling_variable == variable
