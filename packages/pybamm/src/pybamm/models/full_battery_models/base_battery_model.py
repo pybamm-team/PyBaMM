@@ -1078,9 +1078,6 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
-        # Set by Serialise when a loaded model's own class could not be imported
-        if restored := getattr(self, "_default_geometry", None):
-            return restored
         if self.options["cell geometry"] == "cylindrical":
             return pybamm.battery_geometry(
                 options=self.options, form_factor="cylindrical"
@@ -1090,8 +1087,6 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_var_pts(self):
-        if restored := getattr(self, "_default_var_pts", None):
-            return restored
         base_var_pts = {
             "x_n": 20,
             "x_s": 20,
@@ -1118,8 +1113,6 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_submesh_types(self):
-        if restored := getattr(self, "_default_submesh_types", None):
-            return restored
         base_submeshes = {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
@@ -1159,8 +1152,6 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_spatial_methods(self):
-        if restored := getattr(self, "_default_spatial_methods", None):
-            return restored
         base_spatial_methods = {
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),

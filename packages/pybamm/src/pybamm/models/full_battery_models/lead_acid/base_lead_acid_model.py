@@ -43,14 +43,10 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_geometry(self):
-        if restored := getattr(self, "_default_geometry", None):
-            return restored
         return pybamm.battery_geometry(include_particles=False, options=self.options)
 
     @property
     def default_var_pts(self):
-        if restored := getattr(self, "_default_var_pts", None):
-            return restored
         # Choose points that give uniform grid for the standard parameter values
         return {"x_n": 25, "x_s": 41, "x_p": 34, "y": 10, "z": 10}
 

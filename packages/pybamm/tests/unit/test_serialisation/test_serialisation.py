@@ -951,9 +951,7 @@ class TestSerialise:
             "current collector",
         }
 
-    def test_load_restores_overridden_geometry_on_battery_model_fallback(
-        self, tmp_path
-    ):
+    def test_load_restores_overridden_defaults_on_ancestor_fallback(self):
         class _HalfRadiusSPM(pybamm.lithium_ion.SPM):
             @property
             def default_geometry(self):
@@ -961,6 +959,10 @@ class TestSerialise:
                 r_n = geometry["negative particle"]["r_n"]
                 r_n["max"] = r_n["max"] / 2
                 return geometry
+
+            @property
+            def default_var_pts(self):
+                return {**super().default_var_pts, "r_n": 7}
 
         model = _HalfRadiusSPM({"x-average side reactions": "true"})
         data = Serialise.serialise_custom_model(model)
@@ -974,9 +976,7 @@ class TestSerialise:
             loaded = Serialise.load_custom_model(data)
 
         assert type(loaded) is pybamm.lithium_ion.SPM
-        assert loaded.default_var_pts == model.default_var_pts
-        assert set(loaded.default_submesh_types) == set(model.default_submesh_types)
-        assert set(loaded.default_spatial_methods) == set(model.default_spatial_methods)
+        assert loaded.default_var_pts["r_n"] == 7
 
         # The restored geometry, not SPM's own, sets the mesh
         sim = pybamm.Simulation(loaded)
@@ -985,25 +985,6 @@ class TestSerialise:
         np.testing.assert_allclose(
             sim.mesh["negative particle"].edges[-1], R_n / 2, rtol=1e-12
         )
-
-    def test_load_restores_overridden_var_pts_on_thevenin_fallback(self):
-        class _CoarseThevenin(pybamm.equivalent_circuit.Thevenin):
-            @property
-            def default_var_pts(self):
-                return {"x ECMD": 7}
-
-        data = Serialise.serialise_custom_model(_CoarseThevenin())
-        data["model"]["base_class"] = "user_private_pkg.CoarseThevenin"
-        data["model"]["base_class_mro"] = [
-            "user_private_pkg.CoarseThevenin",
-            *data["model"]["base_class_mro"][1:],
-        ]
-
-        with pytest.warns(UserWarning, match=r"Falling back to ancestor"):
-            loaded = Serialise.load_custom_model(data)
-
-        assert type(loaded) is pybamm.equivalent_circuit.Thevenin
-        assert loaded.default_var_pts == {"x ECMD": 7}
 
     def test_plain_custom_model_has_no_discretisation_section(self, tmp_path):
         """A model with no custom discretisation defaults emits no

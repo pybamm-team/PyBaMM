@@ -247,8 +247,6 @@ class Thevenin(pybamm.BaseModel):
 
     @property
     def default_var_pts(self):
-        if restored := getattr(self, "_default_var_pts", None):
-            return restored
         x = pybamm.SpatialVariable(
             "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
         )
@@ -256,8 +254,6 @@ class Thevenin(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
-        if restored := getattr(self, "_default_geometry", None):
-            return restored
         x = pybamm.SpatialVariable(
             "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
         )
@@ -265,12 +261,8 @@ class Thevenin(pybamm.BaseModel):
 
     @property
     def default_submesh_types(self):
-        if restored := getattr(self, "_default_submesh_types", None):
-            return restored
         return {"ECMD particle": pybamm.Uniform1DSubMesh}
 
     @property
     def default_spatial_methods(self):
-        if restored := getattr(self, "_default_spatial_methods", None):
-            return restored
         return {"ECMD particle": pybamm.FiniteVolume()}
