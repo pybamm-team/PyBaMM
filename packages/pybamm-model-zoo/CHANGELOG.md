@@ -7,13 +7,7 @@ PyBaMM's.
 
 ### Added
 
-- `dual_continuum`: the dual-continuum (DC) model of Paten et al. (2026), a DFN
-  whose particle problem is replaced by a homogenised active-material balance
-  with a DC0, DC1, transient DC1t (exponential modes) or Yang surface
-  concentration, image-based specific surface areas, composite electrodes, the
-  `fit_transient_closure` helper, and the 3D electrode data and DNS of the
-  paper. The paper's parameter sets are registered with PyBaMM as
-  `"Paten2026"`, `"Paten2026_DFN"` and `"Paten2026_3D_NMC"` ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
+- `dual_continuum`: the dual-continuum model of Paten et al. (2026), a DFN with a homogenised active-material balance (DC0, DC1, transient DC1t or Yang closures), closure fitting, and the `Paten2026_DC`, `Paten2026_DFN` and `Paten2026_3D_NMC` parameter sets ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
 
 ### Changed
 

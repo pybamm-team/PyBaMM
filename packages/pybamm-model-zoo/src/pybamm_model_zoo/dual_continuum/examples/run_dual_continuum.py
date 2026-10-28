@@ -8,7 +8,7 @@ import pybamm_model_zoo as zoo
 
 models = {
     "DFN": (pybamm.lithium_ion.DFN(), pybamm.ParameterValues("Paten2026_DFN")),
-    "DC1": (zoo.load("DualContinuum")(), pybamm.ParameterValues("Paten2026")),
+    "DC1": (zoo.load("DualContinuum")(), pybamm.ParameterValues("Paten2026_DC")),
 }
 
 fig, ax = plt.subplots()

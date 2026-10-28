@@ -207,7 +207,7 @@ class TestDualContinuum:
     @pytest.mark.parametrize(
         ("name", "function"),
         [
-            ("Paten2026", parameter_sets.paten2026_dc1),
+            ("Paten2026_DC", parameter_sets.paten2026_dc1),
             ("Paten2026_DFN", parameter_sets.paten2026_dfn),
             ("Paten2026_3D_NMC", parameter_sets.paten2026_3d_case),
         ],
@@ -224,7 +224,7 @@ class TestDualContinuum:
         assert "Paten et al." in pybamm.parameter_sets.get_docstring(name)
 
     def test_paten2026_parameter_sets(self):
-        dc1 = pybamm.ParameterValues("Paten2026")
+        dc1 = pybamm.ParameterValues("Paten2026_DC")
         assert dc1["Positive electrode s0 surface average"] == -500.38
         assert dc1[
             "Negative electrode specific surface area from image (AM-electrolyte) [m-1]"

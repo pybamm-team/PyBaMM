@@ -6,7 +6,7 @@ factors and as Bruggeman coefficients. :func:`paten2026_3d_case` and
 :func:`load_3d_case_data` are the tomographic NMC half cell, with its
 transient closure variable and a DNS of a discharge and rest.
 
-PyBaMM loads the three sets by name, e.g. ``pybamm.ParameterValues("Paten2026")``.
+PyBaMM loads the three sets by name, e.g. ``pybamm.ParameterValues("Paten2026_DC")``.
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ def paten2026_dc1() -> dict:
     The Table IV values were fitted to the 1C discharge of
     :footcite:t:`Chen2020`, whose parameter set gives all other values. Table
     IV's specific surface area is used as the AM-electrolyte area, with no
-    AM-CBD or AM-separator contribution. Registered as ``"Paten2026"``.
+    AM-CBD or AM-separator contribution. Registered as ``"Paten2026_DC"``.
     """
     zoo.register_citation("dual_continuum", "Paten2026")
     table = TABLE_IV_DC1
@@ -106,7 +106,7 @@ def paten2026_dfn() -> dict:
 
     The Table IV values were fitted to the 1C discharge of
     :footcite:t:`Chen2020`, whose parameter set gives all other values, for
-    comparison with the DC1 fit of ``"Paten2026"``. Registered as
+    comparison with the DC1 fit of ``"Paten2026_DC"``. Registered as
     ``"Paten2026_DFN"``.
     """
     zoo.register_citation("dual_continuum", "Paten2026")
