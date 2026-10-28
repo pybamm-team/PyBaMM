@@ -66,6 +66,8 @@ public:
   Expression *events = nullptr;
   Expression *alg_res = nullptr;
   Expression *alg_jac = nullptr;
+  // g(t, [y; yp], p) -> (value, time derivative) pairs of the upsampled outputs
+  Expression *hermite_upsampling_fcn = nullptr;
 
   std::vector<Expression*> var_fcns;
   std::vector<Expression*> dvar_dy_fcns;

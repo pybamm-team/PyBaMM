@@ -179,6 +179,13 @@ public:
 
   // ── Solve-duration state (valid only during solve()) ──
   bool use_knot_reduction_ = false;
+  bool use_upsampling_ = false;
+  sunrealtype upsampling_atol_ = 0.0;
+  std::vector<sunrealtype> upsample_in_;  // [y; yp] passed to hermite_upsampling_fcn
+  std::vector<sunrealtype> upsample_end_;  // [y; yp] at the end of the current step
+  // hermite_upsampling_fcn at the previous step end, reused as the next step start
+  std::vector<sunrealtype> upsample_f_prev_;
+  bool upsample_f_prev_valid_ = false;
   bool save_adaptive_steps_ = false;
   bool save_interp_steps_ = false;
   int i_save_ = 0;
@@ -416,6 +423,34 @@ public:
    * @brief Save a solution point (delegates to Hermite knot reduction or direct save path)
    */
   void SavePoint(sunrealtype t_val, bool extend_arrays, bool is_breakpoint);
+
+  /**
+   * @brief Save points inside the last step [t_a, t_b] until the cubic Hermite
+   * interpolant of each upsampled output resolves it, then restore the state at t_b
+   */
+  void UpsampleStep(sunrealtype t_a, sunrealtype t_b);
+
+  /**
+   * @brief Bisect [t_a, t_b] while the outputs' Hermite interpolant misses the
+   * midpoint, saving each midpoint in time order
+   * @return The number of points saved
+   */
+  int UpsampleInterval(
+    sunrealtype t_a, const std::vector<sunrealtype> &f_a,
+    sunrealtype t_b, const std::vector<sunrealtype> &f_b,
+    int depth);
+
+  /**
+   * @brief Evaluate hermite_upsampling_fcn at t from y_and_yp = [y; yp]
+   */
+  void EvaluateUpsampleOutputs(
+    sunrealtype t, sunrealtype *y_and_yp, std::vector<sunrealtype> &out);
+
+  /**
+   * @brief Evaluate hermite_upsampling_fcn on the integrator's interpolant at t,
+   * loading only the states and their derivatives (not the sensitivities)
+   */
+  void EvaluateUpsampleOutputsAt(sunrealtype t, std::vector<sunrealtype> &out);
 
   /**
    * @brief Handle a breakpoint at t_eval: finalize interval, reinitialize

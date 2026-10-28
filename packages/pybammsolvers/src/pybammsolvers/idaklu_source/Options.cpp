@@ -196,6 +196,17 @@ SolverOptions::SolverOptions(py::dict &py_opts)
         }
     }
 
+    // Output upsampling multiplier (1.0 = off, >1.0 = active)
+    hermite_upsampling_factor = 1.0;
+    if (py_opts.contains("hermite_upsampling_factor")) {
+        hermite_upsampling_factor = py_opts["hermite_upsampling_factor"].cast<double>();
+        if (hermite_upsampling_factor < 1.0) {
+            throw std::domain_error(
+                "hermite_upsampling_factor must be >= 1.0. Got " + std::to_string(hermite_upsampling_factor)
+            );
+        }
+    }
+
     // Newton solver for algebraic initial conditions
     newton_step_tol = 1e-4;
     if (py_opts.contains("newton_step_tol")) {

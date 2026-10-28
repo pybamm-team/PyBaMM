@@ -7,6 +7,7 @@
 
 ## Features
 
+- Added the `IDAKLUSolver` option `hermite_upsampling_factor`: a value above 1.0 saves extra points inside each step until the voltage (or current, for voltage control) is resolved by its own cubic Hermite interpolant. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 
 ## Bug fixes

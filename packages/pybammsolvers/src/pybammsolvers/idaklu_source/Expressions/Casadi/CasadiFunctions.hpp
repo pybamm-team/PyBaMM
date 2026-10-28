@@ -110,7 +110,8 @@ public:
     const SetupOptions& setup_opts,
     const SerializedCasadiFunctions *serialized_fcns = nullptr,
     const BaseFunctionType &alg_res_fn = BaseFunctionType(),
-    const BaseFunctionType &alg_jac_fn = BaseFunctionType()
+    const BaseFunctionType &alg_jac_fn = BaseFunctionType(),
+    const BaseFunctionType &hermite_upsampling_fn = BaseFunctionType()
   ) :
     rhs_alg_casadi(
       rhs_alg,
@@ -138,6 +139,7 @@ public:
       serialized_fcns != nullptr ? &serialized_fcns->events : nullptr),
     alg_res_casadi_(alg_res_fn),
     alg_jac_casadi_(alg_jac_fn),
+    hermite_upsampling_casadi_(hermite_upsampling_fn, setup_opts.num_solvers > 1),
     ExpressionSet<CasadiFunction>(
       static_cast<Expression*>(&rhs_alg_casadi),
       static_cast<Expression*>(&jac_times_cjmass_casadi),
@@ -158,6 +160,7 @@ public:
   {
     this->alg_res = static_cast<Expression*>(&alg_res_casadi_);
     this->alg_jac = static_cast<Expression*>(&alg_jac_casadi_);
+    this->hermite_upsampling_fcn = static_cast<Expression*>(&hermite_upsampling_casadi_);
     // NOTE: You must allocate ALL std::vector elements before taking references
     const bool deep_copy = setup_opts.num_solvers > 1;
     if (serialized_fcns != nullptr) {
@@ -222,6 +225,7 @@ public:
   CasadiFunction events_casadi;
   CasadiFunction alg_res_casadi_;
   CasadiFunction alg_jac_casadi_;
+  CasadiFunction hermite_upsampling_casadi_;
 
   std::vector<CasadiFunction> var_fcns_casadi;
   std::vector<CasadiFunction> dvar_dy_fcns_casadi;

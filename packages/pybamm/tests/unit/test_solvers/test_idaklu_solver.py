@@ -2733,3 +2733,177 @@ class TestIDAKLUSolverStatistics:
         stats = solution.solver_statistics
         assert stats.number_of_steps > 0
         assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
+
+
+class TestHermiteUpsampling:
+    @staticmethod
+    def _solve(options=None, **solver_kwargs):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values["Current function [A]"] = 10
+        solver = pybamm.IDAKLUSolver(options=options, **solver_kwargs)
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), parameter_values=parameter_values, solver=solver
+        )
+        return sim.solve([0, 3600])
+
+    def test_adds_points_in_every_storage_mode(self):
+        baseline = self._solve()
+        upsampled = self._solve({"hermite_upsampling_factor": 2.0})
+        assert upsampled.t.size > baseline.t.size
+        assert np.all(np.isin(baseline.t, upsampled.t))
+
+        # Upsampling uses the integrator's own interpolant, not stored derivatives
+        no_hermite = self._solve(
+            {"hermite_upsampling_factor": 2.0, "hermite_interpolation": False}
+        )
+        outputs_only = self._solve(
+            {"hermite_upsampling_factor": 2.0}, output_variables=["Voltage [V]"]
+        )
+        np.testing.assert_array_equal(no_hermite.t, upsampled.t)
+        np.testing.assert_array_equal(outputs_only.t, upsampled.t)
+        np.testing.assert_allclose(
+            outputs_only["Voltage [V]"].entries,
+            upsampled["Voltage [V]"].entries,
+            rtol=1e-12,
+        )
+
+    def test_resolves_voltage_hermite_interpolant(self):
+        reference = self._solve(rtol=1e-10, atol=1e-12)
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values["Current function [A]"] = 10
+        runs = []
+        for factor in [1.0, 2.0]:
+            solver = pybamm.IDAKLUSolver(options={"hermite_upsampling_factor": factor})
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                solver=solver,
+            )
+            runs.append((solver, sim, sim.solve([0, 3600])))
+        # The factor-2 solver builds the voltage and its rate for both runs
+        value_and_rate = runs[1][0]._hermite_upsampling_fcn(runs[1][1].built_model, {})
+        ratios = []
+        for solver, _, solution in runs:
+            t = solution.t
+            voltage, rate = np.hstack(
+                [
+                    np.asarray(
+                        value_and_rate(
+                            t[k],
+                            np.concatenate([solution.y[:, k], solution.yp[:, k]]),
+                            [],
+                        )
+                    )
+                    for k in range(t.size)
+                ]
+            )
+            h = np.diff(t)
+            hermite = (
+                0.5 * (voltage[:-1] + voltage[1:]) + h * (rate[:-1] - rate[1:]) / 8
+            )
+            truth = reference["Voltage [V]"](t[:-1] + h / 2)
+            ratios.append(
+                np.max(np.abs(hermite - truth) / (solver.atol + solver.rtol * truth))
+            )
+        assert ratios[0] > 2
+        assert ratios[1] < 2
+
+    def test_sensitivities(self):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values["Current function [A]"] = "[input]"
+        inputs = {"Current function [A]": 5}
+
+        def solve(factor, t_interp=None, output_variables=None):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                solver=pybamm.IDAKLUSolver(
+                    options={"hermite_upsampling_factor": factor},
+                    output_variables=output_variables,
+                ),
+            )
+            return sim.solve(
+                [0, 3600],
+                inputs=inputs,
+                calculate_sensitivities=True,
+                t_interp=t_interp,
+            )
+
+        baseline = solve(1.0)
+        upsampled = solve(2.0)
+        assert upsampled.t.size > baseline.t.size
+
+        # The added points carry the integrator's own interpolated sensitivities
+        reference = solve(1.0, t_interp=upsampled.t)
+        outputs_only = solve(2.0, output_variables=["Voltage [V]"])
+        np.testing.assert_array_equal(outputs_only.t, upsampled.t)
+        for solution in [upsampled, outputs_only]:
+            np.testing.assert_allclose(
+                solution["Voltage [V]"].sensitivities["Current function [A]"],
+                reference["Voltage [V]"].sensitivities["Current function [A]"],
+                rtol=1e-10,
+                atol=1e-12,
+            )
+
+    def test_option_errors(self):
+        with pytest.raises(pybamm.SolverError, match=r"must be >= 1.0"):
+            pybamm.IDAKLUSolver(options={"hermite_upsampling_factor": 0.5})
+        with pytest.raises(pybamm.SolverError, match="mutually exclusive"):
+            pybamm.IDAKLUSolver(
+                options={
+                    "hermite_upsampling_factor": 2.0,
+                    "hermite_reduction_factor": 2.0,
+                }
+            )
+        model = pybamm.lithium_ion.SPM()
+        model.hermite_upsampling_variables = [
+            "Negative particle concentration [mol.m-3]"
+        ]
+        solver = pybamm.IDAKLUSolver(options={"hermite_upsampling_factor": 2.0})
+        sim = pybamm.Simulation(model, solver=solver)
+        with pytest.raises(pybamm.SolverError, match="needs a scalar variable"):
+            sim.solve([0, 600])
+
+    def test_skips_algebraic_and_missing_variables(self):
+        experiment = pybamm.Experiment(
+            ["Charge at 1C until 4.1 V", "Hold at 4.1 V for 10 minutes"]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(options={"hermite_upsampling_factor": 2.0}),
+        )
+        sim.solve()
+        charge, hold = experiment.steps
+        solver = sim._get_built_experiment_solver(charge)
+        model = sim._get_built_experiment_model(charge)
+        assert solver._hermite_upsampling_fcn(model, {}).n_out() == 1
+        model.hermite_upsampling_variables = ["Not a variable"]
+        assert solver._hermite_upsampling_fcn(model, {}).n_out() == 0
+
+        # In a voltage hold the current is an algebraic state
+        solver = sim._get_built_experiment_solver(hold)
+        model = sim._get_built_experiment_model(hold)
+        assert model.hermite_upsampling_variables == ["Current [A]"]
+        assert solver._hermite_upsampling_fcn(model, {}).n_out() == 0
+
+    @pytest.mark.parametrize("mode", ["legacy", "unified"])
+    def test_experiment_sets_variables_at_build(self, mode):
+        experiment = pybamm.Experiment(
+            ["Charge at 1C until 4.1 V", "Hold at 4.1 V for 10 minutes"]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(options={"hermite_upsampling_factor": 2.0}),
+            experiment_model_mode=mode,
+        )
+        sim.solve()
+        variables = [
+            sim._get_built_experiment_model(step).hermite_upsampling_variables
+            for step in experiment.steps
+        ]
+        if mode == "legacy":
+            assert variables == [["Voltage [V]"], ["Current [A]"]]
+        else:
+            assert variables == [["Voltage [V]", "Current [A]"]] * 2
