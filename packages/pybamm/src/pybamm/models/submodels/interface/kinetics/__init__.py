@@ -19,5 +19,4 @@ from .inverse_kinetics.inverse_linear import InverseLinear
 __all__ = ['base_kinetics', 'butler_volmer', 'coupled_ion_electron_transfer',
            'diffusion_limited',
            'inverse_kinetics', 'linear', 'marcus', 'msmr_butler_volmer',
-           'no_reaction', 'tafel', 'total_main_kinetics', 'inverse_butler_volmer',
-           'inverse_linear']
+           'no_reaction', 'tafel', 'total_main_kinetics']
