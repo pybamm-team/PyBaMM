@@ -740,7 +740,10 @@ void IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutputsAt(
   sunrealtype t, std::vector<sunrealtype> &out
 ) {
   CheckErrors(IDAGetDky(ida_mem, t, 0, yy), "IDAGetDky");
-  CheckErrors(IDAGetDky(ida_mem, t, 1, yyp), "IDAGetDky");
+  // The linear check reads values only
+  if (!solver_opts.upsampling_linear) {
+    CheckErrors(IDAGetDky(ida_mem, t, 1, yyp), "IDAGetDky");
+  }
   std::copy(y_val_, y_val_ + number_of_states, upsample_in_.begin());
   std::copy(yp_val_, yp_val_ + number_of_states,
             upsample_in_.begin() + number_of_states);
