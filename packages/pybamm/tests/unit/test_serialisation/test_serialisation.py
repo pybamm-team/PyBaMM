@@ -951,6 +951,41 @@ class TestSerialise:
             "current collector",
         }
 
+    def test_load_restores_overridden_geometry_on_battery_model_fallback(
+        self, tmp_path
+    ):
+        class _HalfRadiusSPM(pybamm.lithium_ion.SPM):
+            @property
+            def default_geometry(self):
+                geometry = super().default_geometry
+                r_n = geometry["negative particle"]["r_n"]
+                r_n["max"] = r_n["max"] / 2
+                return geometry
+
+        model = _HalfRadiusSPM({"x-average side reactions": "true"})
+        data = Serialise.serialise_custom_model(model)
+        data["model"]["base_class"] = "user_private_pkg.HalfRadiusSPM"
+        data["model"]["base_class_mro"] = [
+            "user_private_pkg.HalfRadiusSPM",
+            *data["model"]["base_class_mro"][1:],
+        ]
+
+        with pytest.warns(UserWarning, match=r"Falling back to ancestor"):
+            loaded = Serialise.load_custom_model(data)
+
+        assert type(loaded) is pybamm.lithium_ion.SPM
+        assert loaded.default_var_pts == model.default_var_pts
+        assert set(loaded.default_submesh_types) == set(model.default_submesh_types)
+        assert set(loaded.default_spatial_methods) == set(model.default_spatial_methods)
+
+        # The restored geometry, not SPM's own, sets the mesh
+        sim = pybamm.Simulation(loaded)
+        sim.build()
+        R_n = loaded.default_parameter_values["Negative particle radius [m]"]
+        np.testing.assert_allclose(
+            sim.mesh["negative particle"].edges[-1], R_n / 2, rtol=1e-12
+        )
+
     def test_plain_custom_model_has_no_discretisation_section(self, tmp_path):
         """A model with no custom discretisation defaults emits no
         ``discretisation`` section, so existing payloads are unaffected."""
