@@ -21,7 +21,7 @@ _FIX = pathlib.Path(__file__).parent / "fixtures" / "legacy_pickle"
 
 def _load(name):
     with gzip.open(_FIX / name, "rb") as f:
-        return pickle.load(f)  # nosec B301 - trusted, generated fixture
+        return pickle.load(f)
 
 
 class TestLegacyPickles:

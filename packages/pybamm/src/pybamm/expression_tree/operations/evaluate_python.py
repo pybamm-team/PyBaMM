@@ -97,7 +97,7 @@ class JaxCooMatrix:
         return self.dot_product(b)
 
 
-def create_jax_coo_matrix(value: scipy.sparse):
+def create_jax_coo_matrix(value: scipy.sparse.spmatrix | scipy.sparse.sparray):
     """
     Creates a JaxCooMatrix from a scipy.sparse matrix
 

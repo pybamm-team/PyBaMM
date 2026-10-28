@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import importlib
 import inspect
 import json
@@ -8,6 +9,7 @@ import numbers
 import re
 import warnings
 import zlib
+from collections.abc import Mapping
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -140,7 +142,7 @@ class Serialise:
         self,
         model: pybamm.BaseModel,
         mesh: pybamm.Mesh | None = None,
-        variables: None = None,
+        variables: Mapping[str, pybamm.Symbol] | None = None,
     ) -> dict:
         """Converts a discretised model to a JSON-serialisable dictionary.
 
@@ -154,7 +156,7 @@ class Serialise:
         mesh : :class:`pybamm.Mesh` (optional)
             The mesh the model has been discretised over. Not necessary to solve
             the model when read in, but required to use pybamm's plotting tools.
-        variables: None (optional)
+        variables: dict (optional)
             This parameter is deprecated and enabled by default.
 
         Returns
@@ -217,7 +219,7 @@ class Serialise:
         self,
         model: pybamm.BaseModel,
         mesh: pybamm.Mesh | None = None,
-        variables: None = None,
+        variables: Mapping[str, pybamm.Symbol] | None = None,
         filename: str | None = None,
     ):
         """Saves a discretised model to a JSON file.
@@ -232,7 +234,7 @@ class Serialise:
         mesh : :class:`pybamm.Mesh` (optional)
             The mesh the model has been discretised over. Not neccesary to solve
             the model when read in, but required to use pybamm's plotting tools.
-        variables: None (optional)
+        variables: dict (optional)
             This parameter is deprecated and enabled by default.
         filename: str (optional)
             The desired name of the JSON file. If no name is provided, one will be
@@ -1417,7 +1419,7 @@ class Serialise:
                 compressed_bytes = base64.b64decode(compressed_b64)
                 json_str = zlib.decompress(compressed_bytes).decode("utf-8")
                 data = json.loads(json_str)
-            except (KeyError, zlib.error, base64.binascii.Error) as e:
+            except (KeyError, zlib.error, binascii.Error) as e:
                 raise ValueError(f"Failed to decompress model data: {e}") from e
 
         # Validate outer structure
