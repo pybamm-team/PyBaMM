@@ -300,7 +300,7 @@ class ParameterValues:
                         f"got {initial_soc}."
                     )
                 particle_phases = _get_particle_phases_option(bpx)
-                option_dict = {"particle phases": particle_phases}
+                option_dict: dict[str, object] = {"particle phases": particle_phases}
                 if any(phases != "1" for phases in particle_phases):
                     # keep the multi-phase legacy default explicit
                     option_dict["surface form"] = "algebraic"
