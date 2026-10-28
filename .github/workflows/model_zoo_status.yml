@@ -29,10 +29,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
 
       - id: matrix
         run: |
@@ -70,10 +71,11 @@ jobs:
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
 
       # --no-sources stops the workspace routing substituting the in-repo package
       # for the released one; `main` is the checkout itself.

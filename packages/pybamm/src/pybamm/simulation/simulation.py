@@ -666,7 +666,10 @@ class Simulation(BaseSimulation):
             )
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
-            f, jac, jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
+            # step() maps sensitivities by forward-mode AD of f, not with jacobians
+            f, jac, jacp, _jac_action = process(
+                mapper, "mapper", vars_for_processing, use_jacobian=False
+            )
             self._compiled_model_state_mappers[(previous_model, next_model)] = (
                 f,
                 jac,
@@ -742,7 +745,14 @@ class Simulation(BaseSimulation):
         experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
-            self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
+            self.set_initial_state(
+                initial_soc,
+                direction=direction,
+                inputs=inputs,
+                calculate_sensitivities=(solve_kwargs or {}).get(
+                    "calculate_sensitivities", False
+                ),
+            )
 
         if self._built_experiment_model is not None or self.steps_to_built_models:
             if self._needs_ic_rebuild:
@@ -766,6 +776,8 @@ class Simulation(BaseSimulation):
         )
         self._needs_ic_rebuild = False
 
+    # Experiment arguments stay between the base ones for positional callers
+    # pyrefly: ignore[bad-override]
     def solve(
         self,
         t_eval=None,
@@ -793,7 +805,8 @@ class Simulation(BaseSimulation):
             cycle in the list is saved. The first cycle (cycle 1) is always saved.
         starting_solution : :class:`pybamm.Solution`
             The solution to start stepping from. If None (default), then self._solution
-            is used. Must be None if not using an experiment.
+            is used. Must be None if not using an experiment, and otherwise have
+            sensitivities for the inputs in `calculate_sensitivities` only.
         showprogress : bool, optional
             Whether to show a progress bar for cycling. If true, shows a progress bar
             for cycles. Has no effect when not used with an experiment.
@@ -846,6 +859,17 @@ class Simulation(BaseSimulation):
                     for name in requested
                     if name not in self._INTERNAL_EXPERIMENT_INPUTS
                 ]
+
+        # The result joins the starting solution's sensitivities to the steps'
+        if isinstance(starting_solution, pybamm.Solution):
+            starting_names = sorted(starting_solution.sensitivity_names)
+            requested_names = sorted(kwargs.get("calculate_sensitivities") or [])
+            if starting_names != requested_names:
+                raise pybamm.SolverError(
+                    f"Cannot continue a starting_solution with sensitivities for "
+                    f"{starting_names} with sensitivities for {requested_names}. "
+                    "Solve with the same 'calculate_sensitivities' as it."
+                )
 
         # Drop the prior solution before build/integration.
         self._solution = starting_solution
