@@ -377,6 +377,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "hermite_interpolation": True,
             "hermite_reduction_factor": 1.0,
             "hermite_upsampling_factor": 1.0,
+            "upsampling_basis": "hermite",
             "nonlinear_convergence_coefficient_ic": 0.0033,
             "max_num_steps_ic": 50,
             "max_num_jacobians_ic": 40,
@@ -822,7 +823,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     f"hermite_upsampling_factor needs a scalar variable, got '{name}'"
                 )
             value = var_fcn(t, y, p)
-            rate = casadi.jacobian(value, t) + casadi.jtimes(value, y_and_yp, direction)
+            if self._options["upsampling_basis"] == "linear":
+                rate = casadi.MX.zeros(1)
+            else:
+                rate = casadi.jacobian(value, t) + casadi.jtimes(
+                    value, y_and_yp, direction
+                )
             outputs += [value, rate]
         function = casadi.Function(
             "hermite_upsampling", [t, y_and_yp, p], [casadi.vertcat(*outputs)]

@@ -707,7 +707,7 @@ int IDAKLUSolverOpenMP<ExprSet>::UpsampleInterval(
 
   // f holds (value, rate) pairs; the cubic Hermite midpoint is
   // (v_a + v_b) / 2 + h (r_a - r_b) / 8
-  sunrealtype const h = t_b - t_a;
+  sunrealtype const h = solver_opts.upsampling_linear ? 0.0 : t_b - t_a;
   sunrealtype const budget = 1.0 / (solver_opts.hermite_upsampling_factor - 1.0);
   bool resolved = true;
   for (size_t k = 0; k + 1 < f_m.size(); k += 2) {

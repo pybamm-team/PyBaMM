@@ -213,6 +213,11 @@ SolverOptions::SolverOptions(py::dict &py_opts)
         newton_step_tol = py_opts["newton_step_tol"].cast<double>();
     }
 
+    upsampling_linear = false;
+    if (py_opts.contains("upsampling_basis")) {
+        upsampling_linear = py_opts["upsampling_basis"].cast<std::string>() == "linear";
+    }
+
     newton_mode = "auto";
     if (py_opts.contains("newton_mode")) {
         newton_mode = py_opts["newton_mode"].cast<std::string>();
