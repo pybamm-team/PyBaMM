@@ -137,3 +137,19 @@ class TestCoupledIonElectronTransfer:
         assert "Fraggedakis2021" in citations._papers_to_cite
         assert "Zeng2014" in citations._papers_to_cite
         assert "Sripad2020" not in citations._papers_to_cite
+
+    def test_x_averaged_concentrations_broadcast_to_electrode(self):
+        submodel = pybamm.kinetics.CoupledIonElectronTransfer(
+            pybamm.LithiumIonParameters(),
+            "negative",
+            "lithium-ion main",
+            pybamm.BatteryModelOptions({}),
+        )
+        x_averaged = pybamm.PrimaryBroadcast(
+            pybamm.Variable("c", domain="current collector"), "negative particle"
+        )
+        eta_r = pybamm.PrimaryBroadcast(
+            pybamm.Variable("eta", domain="negative electrode"), "negative particle"
+        )
+        matched = submodel._match_domains(x_averaged, eta_r)
+        assert matched.secondary_domain == ["negative electrode"]

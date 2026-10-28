@@ -11,7 +11,7 @@ from .base_kinetics import BaseKinetics
 from .marcus import MarcusHushChidsey
 
 
-class CoupledIonElectronTransfer(MarcusHushChidsey):
+class CoupledIonElectronTransfer(BaseKinetics):
     """
     Intercalation rate law in which the ion and electron transfer in one concerted
     step :footcite:t:`Fraggedakis2021`, using the asymptotic Marcus-Hush-Chidsey
@@ -45,8 +45,7 @@ class CoupledIonElectronTransfer(MarcusHushChidsey):
                 "Coupled ion-electron transfer kinetics are only implemented for "
                 f"lithium-ion intercalation, not '{reaction}'"
             )
-        # Skip MarcusHushChidsey.__init__ so Sripad2020 is only cited for plating
-        BaseKinetics.__init__(self, param, domain, reaction, options, phase)
+        super().__init__(param, domain, reaction, options, phase)
         if reaction == "lithium metal plating":
             pybamm.citations.register("Sripad2020")
             return
@@ -114,7 +113,7 @@ class CoupledIonElectronTransfer(MarcusHushChidsey):
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
         if self.reaction != "lithium-ion main":
-            return super()._get_kinetics(j0, ne, eta_r, T, u)
+            return MarcusHushChidsey._get_kinetics(self, j0, ne, eta_r, T, u)
 
         stoichiometry = self._match_domains(self._stoichiometry, eta_r)
         relative_c_e = self._match_domains(self._relative_c_e, eta_r)
