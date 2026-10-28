@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+import pybamm
 from pybamm_model_zoo.dual_continuum import (
     fit_transient_closure,
     isolated_sphere_closure,
@@ -127,7 +128,7 @@ class TestFitTransientClosure:
             "Positive electrode transient closure time constant 1 dimensionless"
             in dimensionless
         )
-        with pytest.raises(ValueError, match="Positive"):
+        with pytest.raises(pybamm.DomainError, match="Positive"):
             fit.parameter_values("separator")
         # Electrodes with several particle phases use PyBaMM's phase prefixes
         secondary = fit.parameter_values("Negative", phase="secondary")
@@ -138,7 +139,7 @@ class TestFitTransientClosure:
             "Secondary: Negative electrode transient closure time constant 1 [s]"
             in secondary
         )
-        with pytest.raises(ValueError, match="phase"):
+        with pytest.raises(pybamm.OptionError, match="phase"):
             fit.parameter_values("Negative", phase="tertiary")
 
     def test_report(self):

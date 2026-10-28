@@ -24,12 +24,23 @@ def parameter_name(domain: str, name: str, phase: str | None = None) -> str:
     str
         "{Domain} electrode {name}", prefixed with "Primary: " or "Secondary: "
         when ``phase`` is given, as for PyBaMM's own particle parameters.
+
+    Raises
+    ------
+    :class:`pybamm.DomainError`
+        If ``domain`` is not "Positive" or "Negative".
+    :class:`pybamm.OptionError`
+        If ``phase`` is not "primary", "secondary" or None.
     """
     Domain = domain.capitalize()
     if Domain not in ("Positive", "Negative"):
-        raise ValueError(f"domain must be 'Positive' or 'Negative', not {domain}")
+        raise pybamm.DomainError(
+            f"domain must be 'Positive' or 'Negative', not {domain}"
+        )
     if phase not in (None, "primary", "secondary"):
-        raise ValueError(f"phase must be 'primary', 'secondary' or None, not {phase}")
+        raise pybamm.OptionError(
+            f"phase must be 'primary', 'secondary' or None, not {phase}"
+        )
     prefix = f"{phase.capitalize()}: " if phase else ""
     return f"{prefix}{Domain} electrode {name}"
 
