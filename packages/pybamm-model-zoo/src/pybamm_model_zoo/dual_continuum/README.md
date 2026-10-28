@@ -96,7 +96,13 @@ solution = pybamm.Simulation(
     DC1 coincides with PyBaMM's `"quadratic profile"` particle for spherical
     geometry.
 
-  $D$ is evaluated at the local volume-averaged concentration. For DC1t the
+  $D$ is evaluated at the local volume-averaged concentration and
+  temperature. The choice is therefore not only one of units: with a
+  diffusivity that depends on concentration or temperature, `"dimensional"`
+  holds $\langle s \rangle_A$ fixed at the value of the closure solve, while
+  `"dimensionless"` and `"isolated sphere"` rescale it with
+  $D(c_\mathrm{vol}, T)$. With a constant diffusivity,
+  `"dimensional"` and `"dimensionless"` give the same result. For DC1t the
   option also sets how the mode time constants are given; see the
   *Transient closure (DC1t)* section below.
 - `"calculate surface concentration a priori": "true"` estimates $j$ from the
@@ -173,7 +179,7 @@ $N$ is the `"transient closure modes"` option. The default parameter values
 contain the isolated-sphere modes, so the default DC1t describes the same cell
 as the Fickian DFN. With a concentration-dependent diffusivity, the
 dimensionless and isolated-sphere time constants are scaled with
-$D(c_\mathrm{vol})$, an approximation.
+$D(c_\mathrm{vol})$.
 
 #### Choosing the modes: `fit_transient_closure`
 
