@@ -986,6 +986,25 @@ class TestSerialise:
             sim.mesh["negative particle"].edges[-1], R_n / 2, rtol=1e-12
         )
 
+    def test_load_restores_overridden_var_pts_on_thevenin_fallback(self):
+        class _CoarseThevenin(pybamm.equivalent_circuit.Thevenin):
+            @property
+            def default_var_pts(self):
+                return {"x ECMD": 7}
+
+        data = Serialise.serialise_custom_model(_CoarseThevenin())
+        data["model"]["base_class"] = "user_private_pkg.CoarseThevenin"
+        data["model"]["base_class_mro"] = [
+            "user_private_pkg.CoarseThevenin",
+            *data["model"]["base_class_mro"][1:],
+        ]
+
+        with pytest.warns(UserWarning, match=r"Falling back to ancestor"):
+            loaded = Serialise.load_custom_model(data)
+
+        assert type(loaded) is pybamm.equivalent_circuit.Thevenin
+        assert loaded.default_var_pts == {"x ECMD": 7}
+
     def test_plain_custom_model_has_no_discretisation_section(self, tmp_path):
         """A model with no custom discretisation defaults emits no
         ``discretisation`` section, so existing payloads are unaffected."""

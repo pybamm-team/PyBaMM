@@ -389,6 +389,8 @@ class BasicDFN2D(BaseModel):
 
     @property
     def default_geometry(self):
+        if restored := getattr(self, "_default_geometry", None):
+            return restored
         z_2d = pybamm.SpatialVariable(
             "z_2d",
             domain=["negative electrode", "separator", "positive electrode"],
@@ -424,6 +426,8 @@ class BasicDFN2D(BaseModel):
 
     @property
     def default_spatial_methods(self):
+        if restored := getattr(self, "_default_spatial_methods", None):
+            return restored
         return {
             "negative electrode": pybamm.FiniteVolume2D(),
             "separator": pybamm.FiniteVolume2D(),
@@ -435,6 +439,8 @@ class BasicDFN2D(BaseModel):
 
     @property
     def default_submesh_types(self):
+        if restored := getattr(self, "_default_submesh_types", None):
+            return restored
         return {
             "negative electrode": pybamm.Uniform2DSubMesh,
             "separator": pybamm.Uniform2DSubMesh,
@@ -446,6 +452,8 @@ class BasicDFN2D(BaseModel):
 
     @property
     def default_var_pts(self):
+        if restored := getattr(self, "_default_var_pts", None):
+            return restored
         z_2d = pybamm.SpatialVariable(
             "z_2d",
             domain=["negative electrode", "separator", "positive electrode"],

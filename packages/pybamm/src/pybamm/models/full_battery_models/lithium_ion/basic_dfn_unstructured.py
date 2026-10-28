@@ -327,6 +327,8 @@ class BasicDFNUnstructured(BaseModel):
 
     @property
     def default_geometry(self):
+        if restored := getattr(self, "_default_geometry", None):
+            return restored
         transverse = {"z": {"min": 0, "max": self.param.L_z}}
         if self.options["dimensionality"] == 2:
             transverse = {"y": {"min": 0, "max": self.param.L_y}, **transverse}
@@ -359,6 +361,8 @@ class BasicDFNUnstructured(BaseModel):
 
     @property
     def default_spatial_methods(self):
+        if restored := getattr(self, "_default_spatial_methods", None):
+            return restored
         return {
             "negative electrode": pybamm.FiniteVolumeUnstructured(),
             "separator": pybamm.FiniteVolumeUnstructured(),
@@ -370,6 +374,8 @@ class BasicDFNUnstructured(BaseModel):
 
     @property
     def default_submesh_types(self):
+        if restored := getattr(self, "_default_submesh_types", None):
+            return restored
         if self.options["dimensionality"] == 1:
             element_type = "quad"
         else:
@@ -389,6 +395,8 @@ class BasicDFNUnstructured(BaseModel):
 
     @property
     def default_var_pts(self):
+        if restored := getattr(self, "_default_var_pts", None):
+            return restored
         if self.options["dimensionality"] == 1:
             return {"x_n": 20, "x_s": 30, "x_p": 20, "r_n": 20, "r_p": 20, "z": 10}
         return {
