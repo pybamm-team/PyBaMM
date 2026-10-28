@@ -8,7 +8,6 @@ import numpy as np
 import pybamm
 
 from .base_kinetics import BaseKinetics
-from .marcus import MarcusHushChidsey
 
 
 class CoupledIonElectronTransfer(BaseKinetics):
@@ -22,7 +21,7 @@ class CoupledIonElectronTransfer(BaseKinetics):
 
     where :math:`\\eta_f = \\eta_r + \\ln(\\tilde{c}_e (1 - \\theta) / \\theta)`,
     :math:`\\theta = c_{s,surf}/c_{max}` and :math:`\\tilde{c}_e = c_e/c_{e,init}`.
-    Lithium metal plating falls back to Marcus-Hush-Chidsey kinetics.
+    Not available for a lithium metal electrode, which has no host lattice.
 
     Parameters
     ----------
@@ -40,15 +39,20 @@ class CoupledIonElectronTransfer(BaseKinetics):
     """
 
     def __init__(self, param, domain, reaction, options, phase="primary"):
-        if reaction not in ["lithium-ion main", "lithium metal plating"]:
+        if reaction == "lithium metal plating":
+            raise pybamm.OptionError(
+                "Coupled ion-electron transfer kinetics need a host lattice, so "
+                "they cannot be used for the lithium metal electrode of a half-cell. "
+                "Set 'intercalation kinetics' per electrode instead, e.g. "
+                "('Marcus-Hush-Chidsey', 'coupled ion-electron transfer') for a "
+                "positive working electrode"
+            )
+        if reaction != "lithium-ion main":
             raise pybamm.OptionError(
                 "Coupled ion-electron transfer kinetics are only implemented for "
                 f"lithium-ion intercalation, not '{reaction}'"
             )
         super().__init__(param, domain, reaction, options, phase)
-        if reaction == "lithium metal plating":
-            pybamm.citations.register("Sripad2020")
-            return
         domain_options = getattr(self.options, self.domain)
         if getattr(domain_options, self.phase)["exchange-current density"] != "single":
             raise pybamm.OptionError(
@@ -60,9 +64,6 @@ class CoupledIonElectronTransfer(BaseKinetics):
         pybamm.citations.register("Zeng2014")
 
     def _get_exchange_current_density(self, variables):
-        if self.reaction != "lithium-ion main":
-            return super()._get_exchange_current_density(variables)
-
         c_e, c_s_surf, T = self._get_intercalation_concentrations(variables)
         phase_param = self.phase_param
         tol_c_s = pybamm.settings.tolerances["j0__c_s"]
@@ -112,9 +113,6 @@ class CoupledIonElectronTransfer(BaseKinetics):
         return symbol
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        if self.reaction != "lithium-ion main":
-            return MarcusHushChidsey._get_kinetics(self, j0, ne, eta_r, T, u)
-
         stoichiometry = self._match_domains(self._stoichiometry, eta_r)
         relative_c_e = self._match_domains(self._relative_c_e, eta_r)
 
