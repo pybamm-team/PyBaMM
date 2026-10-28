@@ -819,6 +819,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
     def __setstate__(self, d):
         self.__dict__.update(d)
+        # Pickles from older versions lack newer options
+        self._options = self._combine_options(self._options)
         # Restore the empty defaults BaseSolver.__init__ would set, so the
         # solver reads as "not yet set up" until the next solve().
         self._model_set_up = {}
