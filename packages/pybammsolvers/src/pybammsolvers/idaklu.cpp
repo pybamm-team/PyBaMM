@@ -28,11 +28,19 @@ casadi::Function generate_casadi_function(const std::string &data)
 namespace py = pybind11;
 
 #ifdef PYBAMM_SHARED_CASADI
+// The C++ object behind a Python casadi object, given int(obj.this); Python only
+// exposes it as an integer, so the cast cannot be avoided
+template <class T>
+T *python_casadi_object(std::uintptr_t address)
+{
+  return reinterpret_cast<T *>(address);  // NOLINT(performance-no-int-to-ptr)
+}
+
 // address is the casadi::Function behind a Python casadi.Function (int(f.this)),
 // from the same casadi library this extension links; the copy shares its node
 casadi::Function shared_casadi_function(std::uintptr_t address)
 {
-  return *reinterpret_cast<const casadi::Function *>(address);
+  return *python_casadi_object<const casadi::Function>(address);
 }
 
 // Fill the casadi::DM behind a Python casadi.DM (int(dm.this)) with a CSC or CSR
@@ -74,7 +82,7 @@ void fill_casadi_dm_sparse(
     row.assign(index, index + nnz);
     nonzeros.assign(values, values + nnz);
   }
-  *reinterpret_cast<casadi::DM *>(address) =
+  *python_casadi_object<casadi::DM>(address) =
     casadi::DM(casadi::Sparsity(nrow, ncol, colind, row), nonzeros);
 }
 
@@ -84,7 +92,7 @@ void fill_casadi_dm_dense(
   const py::array_t<double, py::array::c_style | py::array::forcecast> &data)
 {
   std::vector<double> nonzeros(data.data(), data.data() + data.size());
-  *reinterpret_cast<casadi::DM *>(address) =
+  *python_casadi_object<casadi::DM>(address) =
     casadi::DM(casadi::Sparsity::dense(nrow, ncol), nonzeros);
 }
 #endif
