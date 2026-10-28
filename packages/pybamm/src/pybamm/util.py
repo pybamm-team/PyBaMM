@@ -352,9 +352,9 @@ class TimerTime:
 
 
 def load(filename):
-    """Load a saved object"""
+    """Load a saved object. Only load files you trust: unpickling can run code."""
     with open(filename, "rb") as f:
-        obj = pickle.load(f)
+        obj = pickle.load(f)  # noqa: S301 - documented trust requirement above
     return obj
 
 

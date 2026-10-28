@@ -1,7 +1,7 @@
 import hashlib
 import os
 import re
-import subprocess  # nosec B404 - compiler validated against _ALLOWED_COMPILERS
+import subprocess
 import sys
 import tempfile
 import time
@@ -173,7 +173,7 @@ def _aot_compile(
         try:
             with open(tmp_cfile, "w") as f:
                 f.write(c_source)
-            subprocess.run(  # nosec B603 B607 - compiler validated against allowlist
+            subprocess.run(
                 [compiler, *flags, "-shared", tmp_cfile, "-o", tmp_sofile],
                 check=True,
             )

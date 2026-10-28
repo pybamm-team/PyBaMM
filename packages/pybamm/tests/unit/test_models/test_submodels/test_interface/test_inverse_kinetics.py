@@ -1,3 +1,6 @@
+import importlib
+import importlib.util
+
 import numpy as np
 import pytest
 
@@ -272,3 +275,13 @@ class TestCurrentForInverseKineticsLithiumMetal:
         j = result["Lithium metal plating current density [A.m-2]"]
 
         assert j.evaluate() == pytest.approx(i_cc, rel=1e-10)
+
+
+class TestKineticsPackage:
+    def test_all_names_importable(self):
+        package = "pybamm.models.submodels.interface.kinetics"
+        module = importlib.import_module(package)
+        for name in module.__all__:
+            assert hasattr(module, name) or importlib.util.find_spec(
+                f"{package}.{name}"
+            ), name

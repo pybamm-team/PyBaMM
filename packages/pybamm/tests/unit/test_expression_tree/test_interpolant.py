@@ -7,6 +7,7 @@ import re
 import casadi
 import numpy as np
 import pytest
+from scipy import interpolate
 
 import pybamm
 
@@ -392,6 +393,34 @@ class TestInterpolant:
 
         assert_casadi_matches_evaluate(interp.diff(y), casadi_y, y_test)
         assert_casadi_matches_evaluate(interp.diff(y).diff(y), casadi_y, y_test)
+
+    @pytest.mark.parametrize(("interpolator", "order"), [("linear", 1), ("pchip", 2)])
+    def test_to_casadi_uses_the_segment_holding_x_on_a_uniform_grid(
+        self, interpolator, order
+    ):
+        # At and beside each knot, only the segment holding x has the right slope
+        # (linear) or curvature (pchip); a neighbour's differs.
+        grid = np.linspace(0.0, 1.0, 101)
+        knots = grid[1:-1]
+        x = np.concatenate(
+            [np.nextafter(knots, -np.inf), knots, np.nextafter(knots, np.inf)]
+        )
+        child = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(grid, grid**3, child, interpolator=interpolator)
+        casadi_x = casadi.MX.sym("x", 1)
+        derivative = interp.to_casadi(y=casadi_x)
+        for _ in range(order):
+            derivative = casadi.jacobian(derivative, casadi_x)
+        f = casadi.Function("f", [casadi_x], [derivative])
+        got = np.array([float(f(v)) for v in x])
+
+        segment = np.searchsorted(grid, x, side="right") - 1
+        if interpolator == "linear":
+            y = grid**3
+            want = (y[segment + 1] - y[segment]) / (grid[segment + 1] - grid[segment])
+        else:
+            want = interpolate.PchipInterpolator(grid, grid**3).derivative(2)(x)
+        np.testing.assert_allclose(got, want, rtol=1e-6, atol=1e-9)
 
     @pytest.mark.parametrize("interpolator", ["cubic", "pchip"])
     def test_diff_to_casadi_vector_valued(
