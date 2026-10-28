@@ -237,16 +237,19 @@ def to_casadi_dm(entries) -> casadi.DM:
     casadi.DM
         The values, sparse if ``entries`` is sparse.
     """
-    if not idaklu.shares_python_casadi:
-        return casadi.DM(entries)
-    matrix = casadi.DM()
     if issparse(entries):
         compressed_rows = entries.format == "csr"
         compressed = entries if compressed_rows else csc_matrix(entries)
+        # casadi aborts the process on unsorted or duplicate entries
         if not compressed.has_canonical_format:
             compressed = compressed.copy()
             compressed.sum_duplicates()
+        if not idaklu.shares_python_casadi:
+            return casadi.DM(csc_matrix(compressed))
+        matrix = casadi.DM()
         idaklu.fill_casadi_dm_sparse(
+            # SWIG's address attribute is not in casadi's stubs
+            # pyrefly: ignore[missing-attribute]
             int(matrix.this),
             compressed.shape[0],
             compressed.shape[1],
@@ -256,10 +259,17 @@ def to_casadi_dm(entries) -> casadi.DM:
             compressed_rows=compressed_rows,
         )
     else:
+        if not idaklu.shares_python_casadi:
+            return casadi.DM(entries)
+        matrix = casadi.DM()
         values = np.asarray(entries, dtype=np.float64)
         if values.ndim < 2:
             values = values.reshape(-1, 1)
         idaklu.fill_casadi_dm_dense(
-            int(matrix.this), values.shape[0], values.shape[1], values.ravel(order="F")
+            # pyrefly: ignore[missing-attribute]
+            int(matrix.this),
+            values.shape[0],
+            values.shape[1],
+            values.ravel(order="F"),
         )
     return matrix

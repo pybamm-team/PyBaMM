@@ -12,6 +12,15 @@ from scipy.sparse import coo_matrix, csc_matrix, csr_matrix
 import pybamm
 
 
+@pytest.fixture(params=[True, False], ids=["shared", "copied"])
+def casadi_sharing(request, monkeypatch):
+    """Run with and without the shared casadi library, where it is available."""
+    idaklu = pybamm.expression_tree.array.idaklu
+    if request.param and not idaklu.shares_python_casadi:
+        pytest.skip("pybammsolvers does not share the Python casadi library")
+    monkeypatch.setattr(idaklu, "shares_python_casadi", request.param)
+
+
 class TestArray:
     def test_name(self):
         arr = pybamm.Array(np.array([1, 2, 3]))
@@ -65,7 +74,7 @@ class TestArray:
     @pytest.mark.parametrize(
         "matrix_format, shape", [(csc_matrix, (3, 4)), (csr_matrix, (4, 3))]
     )
-    def test_to_casadi_dm_sparse(self, matrix_format, shape):
+    def test_to_casadi_dm_sparse(self, matrix_format, shape, casadi_sharing):
         # Duplicate, unsorted entries must be summed as scipy does
         matrix = matrix_format(
             ([1.0, 2.0, 3.0, 4.0], [2, 2, 0, 1], [0, 0, 3, 3, 4]), shape=shape
@@ -77,7 +86,7 @@ class TestArray:
         # The input is left untouched
         assert not matrix.has_canonical_format
 
-    def test_to_casadi_dm_other_sparse_format(self):
+    def test_to_casadi_dm_other_sparse_format(self, casadi_sharing):
         matrix = coo_matrix(([1.0, 2.0], ([0, 2], [1, 0])), shape=(3, 2))
         converted = pybamm.expression_tree.array.to_casadi_dm(matrix)
         np.testing.assert_array_equal(converted.full(), matrix.toarray())
@@ -90,7 +99,7 @@ class TestArray:
             np.array(7.0),
         ],
     )
-    def test_to_casadi_dm_dense(self, entries):
+    def test_to_casadi_dm_dense(self, entries, casadi_sharing):
         converted = pybamm.expression_tree.array.to_casadi_dm(entries)
         expected = casadi.DM(entries)
         assert converted.shape == expected.shape

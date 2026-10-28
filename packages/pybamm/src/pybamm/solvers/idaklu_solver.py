@@ -83,6 +83,8 @@ def to_idaklu_function(fn: casadi.Function):
     shares the function directly; otherwise it is serialised and rebuilt.
     """
     if idaklu.shares_python_casadi:
+        # SWIG's address attribute is not in casadi's stubs
+        # pyrefly: ignore[missing-attribute]
         return idaklu.shared_function(int(fn.this))
     return idaklu.generate_function(fn.serialize())
 
