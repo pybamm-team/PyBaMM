@@ -29,8 +29,9 @@ class TestConcatenations:
         e = pybamm.Vector([1], domain="test b")
         f = pybamm.Vector([3], domain="test c")
         conc2 = pybamm.concatenation(d, e, f)
-        with pytest.raises(TypeError):
+        with pytest.raises(NotImplementedError, match=r"until it is discretised"):
             conc2.evaluate()
+        assert conc2.evaluate_ignoring_errors() is None
 
         # trying to concatenate non-pybamm symbols
         with pytest.raises(TypeError):
