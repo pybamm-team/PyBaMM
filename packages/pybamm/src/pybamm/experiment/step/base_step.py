@@ -465,7 +465,7 @@ class BaseStep:
             inplace=inplace,
             delayed_variable_processing=delayed_variable_processing,
         )
-        processed_model.upsampling_variables = [self.upsampling_variable]
+        processed_model.upsampling_variable = self.upsampling_variable
         return processed_model
 
     def get_termination_events(self, variables):

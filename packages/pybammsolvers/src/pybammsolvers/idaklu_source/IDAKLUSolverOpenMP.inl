@@ -419,7 +419,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     }
 
     if (hit_adaptive || hit_teval || hit_event || hit_final_time) {
-      if (use_upsampling_ && t_val > t_prev) {
+      if (use_upsampling_) {
         UpsampleStep(t_prev, t_val);
       }
       bool is_breakpoint = (hit_teval || hit_event) && !final_step;
@@ -476,7 +476,6 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
   );
   upsample_f_prev_valid_ = false;
   if (use_upsampling_) {
-    upsample_end_.resize(number_of_states);
     upsampling_atol_ = N_VMin(avtol);
   }
 
@@ -668,45 +667,32 @@ void IDAKLUSolverOpenMP<ExprSet>::UpsampleStep(
 ) {
   DEBUG("IDAKLUSolver::UpsampleStep");
   // The state at t_b is already loaded, so it is evaluated once and reused
-  std::copy(y_val_, y_val_ + number_of_states, upsample_end_.begin());
-  std::vector<sunrealtype> f_b;
-  EvaluateUpsampleOutputs(t_b, upsample_end_.data(), f_b);
+  sunrealtype const f_b = EvaluateUpsampleOutput(t_b, y_val_);
   if (!upsample_f_prev_valid_) {
-    EvaluateUpsampleOutputsAt(t_a, upsample_f_prev_);
+    upsample_f_prev_ = EvaluateUpsampleOutputAt(t_a);
   }
 
   if (UpsampleInterval(t_a, upsample_f_prev_, t_b, f_b, 0) > 0) {
-    // Saving a midpoint also moved the derivatives and sensitivities
+    // Saving a midpoint loaded its state, so reload t_b
     GetSolutionFull(t_b);
-  } else {
-    std::copy(upsample_end_.begin(), upsample_end_.end(), y_val_);
   }
-  upsample_f_prev_ = std::move(f_b);
+  upsample_f_prev_ = f_b;
   upsample_f_prev_valid_ = true;
 }
 
 template <class ExprSet>
 int IDAKLUSolverOpenMP<ExprSet>::UpsampleInterval(
-  sunrealtype t_a, const std::vector<sunrealtype> &f_a,
-  sunrealtype t_b, const std::vector<sunrealtype> &f_b,
-  int depth
+  sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b, int depth
 ) {
   constexpr int max_depth = 20;
   if (depth >= max_depth) {
     return 0;
   }
   sunrealtype const t_m = 0.5 * (t_a + t_b);
-  std::vector<sunrealtype> f_m;
-  EvaluateUpsampleOutputsAt(t_m, f_m);
-
+  sunrealtype const f_m = EvaluateUpsampleOutputAt(t_m);
   sunrealtype const budget = 1.0 / (solver_opts.upsampling_factor - 1.0);
-  bool resolved = true;
-  for (size_t k = 0; k < f_m.size(); k++) {
-    sunrealtype const linear = 0.5 * (f_a[k] + f_b[k]);
-    sunrealtype const tol = budget * (upsampling_atol_ + rtol * std::abs(f_m[k]));
-    resolved = resolved && std::abs(linear - f_m[k]) <= tol;
-  }
-  if (resolved) {
+  sunrealtype const tol = budget * (upsampling_atol_ + rtol * std::abs(f_m));
+  if (std::abs(0.5 * (f_a + f_b) - f_m) <= tol) {
     return 0;
   }
 
@@ -717,19 +703,18 @@ int IDAKLUSolverOpenMP<ExprSet>::UpsampleInterval(
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutputs(
-  sunrealtype t, sunrealtype *y, std::vector<sunrealtype> &out
+sunrealtype IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutput(
+  sunrealtype t, sunrealtype *y
 ) {
-  out.resize(functions->upsampling_fcn->nnz_out());
-  (*functions->upsampling_fcn)({&t, y, functions->inputs.data()}, {out.data()});
+  sunrealtype out;
+  (*functions->upsampling_fcn)({&t, y, functions->inputs.data()}, {&out});
+  return out;
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutputsAt(
-  sunrealtype t, std::vector<sunrealtype> &out
-) {
-  CheckErrors(IDAGetDky(ida_mem, t, 0, yy), "IDAGetDky");
-  EvaluateUpsampleOutputs(t, y_val_, out);
+sunrealtype IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutputAt(sunrealtype t) {
+  CheckErrors(IDAGetDky(ida_mem, t, 0, y_cache), "IDAGetDky");
+  return EvaluateUpsampleOutput(t, N_VGetArrayPointer(y_cache));
 }
 
 template <class ExprSet>

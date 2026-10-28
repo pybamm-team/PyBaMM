@@ -349,9 +349,6 @@ class Simulation(BaseSimulation):
         # BaseModel.build_casadi_jacobian. The attribute rides this same model object
         # (in-place parameter processing and discretisation) through to solver.process.
         new_model.switching_control_variables = {var.name for var in submodel.algebraic}
-        new_model.upsampling_variables = list(
-            dict.fromkeys(step.upsampling_variable for step in unique_steps)
-        )
 
         # Combine each step's local termination expression into one experiment event,
         # selecting the active branch with the step index input.

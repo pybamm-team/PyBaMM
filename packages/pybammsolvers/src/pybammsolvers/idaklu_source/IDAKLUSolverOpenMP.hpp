@@ -181,9 +181,8 @@ public:
   bool use_knot_reduction_ = false;
   bool use_upsampling_ = false;
   sunrealtype upsampling_atol_ = 0.0;
-  std::vector<sunrealtype> upsample_end_;  // y at the end of the current step
   // upsampling_fcn at the previous step end, reused as the next step start
-  std::vector<sunrealtype> upsample_f_prev_;
+  sunrealtype upsample_f_prev_ = 0.0;
   bool upsample_f_prev_valid_ = false;
   bool save_adaptive_steps_ = false;
   bool save_interp_steps_ = false;
@@ -425,31 +424,28 @@ public:
 
   /**
    * @brief Save points inside the last step [t_a, t_b] until linear interpolation
-   * of each upsampled output resolves it, then restore the state at t_b
+   * of the upsampled output resolves it
    */
   void UpsampleStep(sunrealtype t_a, sunrealtype t_b);
 
   /**
-   * @brief Bisect [t_a, t_b] while linear interpolation of the outputs misses
+   * @brief Bisect [t_a, t_b] while linear interpolation of the output misses
    * the midpoint, saving each midpoint in time order
    * @return The number of points saved
    */
   int UpsampleInterval(
-    sunrealtype t_a, const std::vector<sunrealtype> &f_a,
-    sunrealtype t_b, const std::vector<sunrealtype> &f_b,
-    int depth);
+    sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b, int depth);
 
   /**
    * @brief Evaluate upsampling_fcn at t from the states y
    */
-  void EvaluateUpsampleOutputs(
-    sunrealtype t, sunrealtype *y, std::vector<sunrealtype> &out);
+  sunrealtype EvaluateUpsampleOutput(sunrealtype t, sunrealtype *y);
 
   /**
-   * @brief Evaluate upsampling_fcn on the integrator's interpolant at t,
-   * loading only the states (not their derivatives or sensitivities)
+   * @brief Evaluate upsampling_fcn on the integrator's interpolant at t, using
+   * y_cache so the current state in yy is left untouched
    */
-  void EvaluateUpsampleOutputsAt(sunrealtype t, std::vector<sunrealtype> &out);
+  sunrealtype EvaluateUpsampleOutputAt(sunrealtype t);
 
   /**
    * @brief Handle a breakpoint at t_eval: finalize interval, reinitialize

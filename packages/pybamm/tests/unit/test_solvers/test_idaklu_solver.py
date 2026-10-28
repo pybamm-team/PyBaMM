@@ -2839,7 +2839,7 @@ class TestUpsampling:
                 }
             )
         model = pybamm.lithium_ion.SPM()
-        model.upsampling_variables = ["Negative particle concentration [mol.m-3]"]
+        model.upsampling_variable = "Negative particle concentration [mol.m-3]"
         solver = pybamm.IDAKLUSolver(options={"upsampling_factor": 2.0})
         sim = pybamm.Simulation(model, solver=solver)
         with pytest.raises(pybamm.SolverError, match="needs a scalar variable"):
@@ -2859,32 +2859,36 @@ class TestUpsampling:
         solver = sim._get_built_experiment_solver(charge)
         model = sim._get_built_experiment_model(charge)
         assert solver._upsampling_fcn(model, {}).n_out() == 1
-        model.upsampling_variables = ["Not a variable"]
+        model.upsampling_variable = "Not a variable"
         assert solver._upsampling_fcn(model, {}).n_out() == 0
 
         # In a voltage hold the current is an algebraic state
         solver = sim._get_built_experiment_solver(hold)
         model = sim._get_built_experiment_model(hold)
-        assert model.upsampling_variables == ["Current [A]"]
+        assert model.upsampling_variable == "Current [A]"
         assert solver._upsampling_fcn(model, {}).n_out() == 0
 
     @pytest.mark.parametrize("mode", ["legacy", "unified"])
-    def test_experiment_sets_variables_at_build(self, mode):
+    def test_experiment_sets_variable_at_build(self, mode):
         experiment = pybamm.Experiment(
-            ["Charge at 1C until 4.1 V", "Hold at 4.1 V for 10 minutes"]
+            ["Discharge at 1C until 3.0 V", "Hold at 3.0 V for 10 minutes"]
         )
-        sim = pybamm.Simulation(
-            pybamm.lithium_ion.SPM(),
-            experiment=experiment,
-            solver=pybamm.IDAKLUSolver(options={"upsampling_factor": 2.0}),
-            experiment_model_mode=mode,
-        )
-        sim.solve()
-        variables = [
-            sim._get_built_experiment_model(step).upsampling_variables
-            for step in experiment.steps
-        ]
+        solutions = []
+        for factor in [1.0, 2.0]:
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(options={"upsampling_factor": factor}),
+                experiment_model_mode=mode,
+            )
+            solutions.append(sim.solve())
+        models = [sim._get_built_experiment_model(step) for step in experiment.steps]
         if mode == "legacy":
-            assert variables == [["Voltage [V]"], ["Current [A]"]]
+            assert [model.upsampling_variable for model in models] == [
+                "Voltage [V]",
+                "Current [A]",
+            ]
         else:
-            assert variables == [["Voltage [V]", "Current [A]"]] * 2
+            # One model serves every step, so it keeps the default voltage
+            assert not hasattr(models[0], "upsampling_variable")
+        assert solutions[1].cycles[0].t.size > solutions[0].cycles[0].t.size

@@ -243,7 +243,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # are disabled.
                 "hermite_reduction_factor": 1.0,
                 # Setting upsampling_factor > 1.0 adds points within each step
-                # until linear interpolation of the model's `upsampling_variables`
+                # until linear interpolation of the model's `upsampling_variable`
                 # (default: the voltage) is within the solver tolerances divided
                 # by (factor - 1). Ignored with t_interp.
                 "upsampling_factor": 1.0,
@@ -781,52 +781,32 @@ class IDAKLUSolver(pybamm.BaseSolver):
         return base_set_up_return
 
     def _upsampling_fcn(self, model, inputs_dict):
-        """``g(t, y, p)``: the upsampled variables.
+        """``g(t, y, p)``: the model's scalar ``upsampling_variable``.
 
-        Algebraic states are skipped: the integrator's error test already
-        resolves them. Empty if there is nothing to upsample.
+        Empty if upsampling is off, or the variable is missing or an algebraic
+        state, which the integrator's error test already resolves.
         """
         empty = casadi.Function("empty_upsampling", [], [])
-        if self._options["upsampling_factor"] <= 1.0:
+        name = getattr(model, "upsampling_variable", "Voltage [V]")
+        if self._options["upsampling_factor"] <= 1.0 or name not in model.variables:
             return empty
         # Model copies keep a state's name but not its id
-        algebraic_names = {variable.name for variable in model.algebraic}
-        names = [
-            name
-            for name in getattr(model, "upsampling_variables", ["Voltage [V]"])
-            if name in model.variables
-            and not (
-                isinstance(model.variables[name], pybamm.Variable)
-                and model.variables[name].name in algebraic_names
-            )
-        ]
-        if not names:
+        variable = model.variables[name]
+        if isinstance(variable, pybamm.Variable) and variable.name in {
+            state.name for state in model.algebraic
+        }:
             return empty
-        vars_for_processing = self._get_vars_for_processing(model, inputs_dict)
-        t = casadi.MX.sym("t")
-        y = casadi.MX.sym("y", model.len_rhs_and_alg)
-        p = casadi.MX.sym("p", vars_for_processing["p_casadi_stacked"].shape[0])
-        outputs = []
-        for name in names:
-            var_fcn = process(
-                model.get_processed_variable_or_event(name),
-                pybamm.BaseSolver._wrangle_name(name),
-                vars_for_processing,
-                use_jacobian=False,
-            )[0]
-            if var_fcn.numel_out() != 1:
-                raise pybamm.SolverError(
-                    f"upsampling_factor needs a scalar variable, got '{name}'"
-                )
-            outputs.append(var_fcn(t, y, p))
-        function = casadi.Function("upsampling", [t, y, p], [casadi.vertcat(*outputs)])
-        try:
-            return function.expand()
-        except RuntimeError as error:
-            # Interpolants, for example, cannot be expanded
-            if "'eval_sx' not defined for" not in str(error):
-                raise  # pragma: no cover
-            return function
+        upsampling_fcn = process(
+            model.get_processed_variable_or_event(name),
+            pybamm.BaseSolver._wrangle_name(name),
+            self._get_vars_for_processing(model, inputs_dict),
+            use_jacobian=False,
+        )[0]
+        if upsampling_fcn.numel_out() != 1:
+            raise pybamm.SolverError(
+                f"upsampling_factor needs a scalar variable, got '{name}'"
+            )
+        return upsampling_fcn
 
     def __getstate__(self):
         # Drop the rebuildable state (C++ solver + casadi.Function graphs)

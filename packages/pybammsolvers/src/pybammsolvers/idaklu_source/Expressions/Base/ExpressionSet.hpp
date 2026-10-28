@@ -66,7 +66,7 @@ public:
   Expression *events = nullptr;
   Expression *alg_res = nullptr;
   Expression *alg_jac = nullptr;
-  // g(t, y, p) -> the upsampled outputs
+  // g(t, y, p) -> the scalar upsampled output
   Expression *upsampling_fcn = nullptr;
 
   std::vector<Expression*> var_fcns;
