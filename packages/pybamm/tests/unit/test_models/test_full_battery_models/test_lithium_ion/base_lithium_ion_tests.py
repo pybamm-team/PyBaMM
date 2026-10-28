@@ -174,6 +174,15 @@ class BaseUnitTestLithiumIon:
         options = {"particle": "quartic profile"}
         self.check_well_posedness(options)
 
+    def test_well_posed_particle_polynomial_hom(self):
+        for particle in ["quadratic profile", "quartic profile"]:
+            options = {
+                "particle": particle,
+                "thermal": "lumped",
+                "heat of mixing": "true",
+            }
+            self.check_well_posedness(options)
+
     def test_well_posed_particle_mixed(self):
         options = {"particle": ("Fickian diffusion", "quartic profile")}
         self.check_well_posedness(options)
