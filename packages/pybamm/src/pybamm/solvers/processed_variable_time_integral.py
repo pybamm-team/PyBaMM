@@ -38,9 +38,9 @@ class ProcessedVariableTimeIntegral:
         if self.post_sum_node is None:
             ret = the_integral
         elif self.post_sum is None:
-            ret = self.post_sum_node.evaluate(0.0, the_integral, None, inputs).reshape(
-                -1
-            )
+            ret = np.asarray(
+                self.post_sum_node.evaluate(0.0, the_integral, None, inputs)
+            ).reshape(-1)
         else:
             ret = self.post_sum(0.0, the_integral, inputs).full().reshape(-1)
         return ret
@@ -80,9 +80,11 @@ class ProcessedVariableTimeIntegral:
         # post fix for discrete time integral won't give correct result
         # if ts are not equal to the discrete times. Raise error
         # in this case
+        discrete_times = self.discrete_times
         if self.method == "discrete" and not (
-            len(t_pts) == len(self.discrete_times)
-            and np.allclose(t_pts, self.discrete_times, atol=1e-10)
+            discrete_times is not None
+            and len(t_pts) == len(discrete_times)
+            and np.allclose(t_pts, discrete_times, atol=1e-10)
         ):
             raise pybamm.SolverError(
                 f'Processing discrete-time-sum variable "{var_name}": solution times '

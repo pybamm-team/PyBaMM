@@ -12,4 +12,6 @@ Electrode SOH models
 
 .. autofunction:: pybamm.lithium_ion.get_min_max_ocps
 
+.. autofunction:: pybamm.lithium_ion.get_initial_state_input_names
+
 .. footbibliography::

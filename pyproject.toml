@@ -64,7 +64,7 @@ extend-select = [
     "UP",     # pyupgrade
     "YTT",    # flake8-2020
     "TID252", # relative-imports
-    "S101",   # to identify use of assert statement
+    "S",      # flake8-bandit
     "PT027",  # remove unittest style assertion
     "PT009",  # Use pytest.raises instead of unittest-style
 ]
@@ -83,6 +83,8 @@ ignore = [
     "RET506",  # Unnecessary `elif`
     "B018",    # Found useless expression
     "RUF002",  # Docstring contains ambiguous
+    "S603",    # Flags every subprocess call; S602/S604/S605 still catch shell use
+    "S607",    # Partial executable paths (`git`, `make`) are fine in dev scripts
     # Enabled by ruff 0.16.0's wider default selection, but at odds with
     # deliberate choices in this repo:
     "DTZ",     # Experiment step `start_time`s are naive wall-clock by design
@@ -91,12 +93,13 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"packages/pybamm/tests/*" = ["T20", "S101"]
+# Security rules guard shipped code; tests assert, pickle and spawn on purpose.
+"packages/pybamm/tests/*" = ["T20", "S"]
 # `exec` is how this module evaluates the Python it generates
 "packages/pybamm/src/pybamm/expression_tree/operations/evaluate_python.py" = ["S102"]
 # The zoo's contract checks are test helpers that happen to ship in src/, so
 # `assert` is the right tool there as well as in the test tree.
-"packages/pybamm-model-zoo/**/tests/*" = ["T20", "S101"]
+"packages/pybamm-model-zoo/**/tests/*" = ["T20", "S"]
 "packages/pybamm-model-zoo/src/pybamm_model_zoo/testing/*" = ["S101"]
 "packages/pybamm-model-zoo/scripts/*" = ["T20"]
 "docs/*" = ["T20"]
@@ -119,7 +122,7 @@ known-first-party = ["pybamm", "pybamm_model_zoo"]
 # in packages/pybamm).
 [tool.repo-review]
 ignore = [
-    "MY",     # all MyPy setting checks (mypy config lives in packages/pybamm)
+    "MY",     # all MyPy setting checks (Pyrefly is the type checker)
     "PP004",  # upper cap on Python requires
     "PP308",  # explicit pytest summary flag (-ra)
     "PC140",  # missing type checker in pre-commit
