@@ -103,6 +103,7 @@ pyvenv.cfg
 # third party
 third-party
 *.so
+*.pyd
 
 
 # test

@@ -310,7 +310,7 @@ jobs:
   #  Guards both the bootstrap and the clean-clone dev experience.
   from_source_smoke:
     needs: changes
-    if: ${{ github.event_name == 'push' || needs.changes.outputs.solver == 'true' }}
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.solver == 'true' || needs.changes.outputs.pybamm == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -333,6 +333,10 @@ jobs:
         with:
           python-version: 3.13
 
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
