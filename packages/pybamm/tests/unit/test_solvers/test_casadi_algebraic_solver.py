@@ -36,6 +36,19 @@ class TestCasadiAlgebraicSolver:
         solution = solver.solve(model, np.linspace(0, 1, 10))
         np.testing.assert_array_equal(solution.y, -2)
 
+    def test_rust_model_is_converted_to_casadi(self):
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var + 2}
+        model.initial_conditions = {var: 2}
+        model.convert_to_format = "rust"
+        pybamm.Discretisation().process_model(model)
+
+        solution = pybamm.CasadiAlgebraicSolver().solve(model, np.linspace(0, 1, 10))
+
+        assert model.convert_to_format == "casadi"
+        np.testing.assert_array_equal(solution.y, -2)
+
     def test_algebraic_root_solver_reuse(self):
         # Create a model with an input parameter and
         # check that the algebraic root solver is reused
