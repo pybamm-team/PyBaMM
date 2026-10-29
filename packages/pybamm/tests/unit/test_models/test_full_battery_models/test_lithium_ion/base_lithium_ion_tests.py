@@ -533,6 +533,28 @@ class BaseUnitTestLithiumIon:
         options = {"particle phases": "2", "thermal": "lumped"}
         self.check_well_posedness(options)
 
+    def test_well_posed_particle_phases_heat_of_mixing(self):
+        options = {
+            "particle phases": "2",
+            "thermal": "lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+        options = {
+            "particle phases": ("2", "1"),
+            "thermal": "lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+        options = {
+            "particle phases": ("1", "2"),
+            "thermal": "lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_particle_phases_sei(self):
         options = {"particle phases": "2", "SEI": "ec reaction limited"}
         self.check_well_posedness(options)
