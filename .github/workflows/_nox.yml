@@ -33,11 +33,6 @@ on:
         default: 1
         required: false
         type: number
-      texlive:
-        description: "Install TeXLive on Linux, for sessions that render model equations with latexify."
-        default: false
-        required: false
-        type: boolean
       upload_coverage:
         description: "Upload coverage.xml to Codecov after the sessions finish."
         default: false
@@ -88,22 +83,12 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
         if: startsWith(matrix.leg.os, 'ubuntu')
         with:
-          packages: gfortran gcc graphviz pandoc libosmesa6 libegl1
+          packages: graphviz pandoc libosmesa6 libegl1
           execute_install_scripts: true
 
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS for Linux
+      - name: Register graphviz plugins
         if: startsWith(matrix.leg.os, 'ubuntu')
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install libopenblas-dev
-
-      # Opt-in and uncached, so kept minimal: sympy.preview needs the standalone class
-      # (texlive-latex-extra) and dvipng
-      - name: Install TeXLive for Linux
-        if: ${{ startsWith(matrix.leg.os, 'ubuntu') && inputs.texlive }}
-        run: sudo apt-get install --no-install-recommends texlive-latex-extra dvipng
+        run: sudo dot -c
 
       - name: Install macOS system dependencies
         if: startsWith(matrix.leg.os, 'macos')
@@ -113,11 +98,9 @@ jobs:
           HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
-        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz libomp
-          brew reinstall gcc
+          brew install graphviz
 
       - name: Install Windows system dependencies
         if: startsWith(matrix.leg.os, 'windows')
@@ -141,6 +124,9 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
+          # Unpruned per-PR uv caches overflow the 10 GB limit and evict solver wheels.
+          prune-cache: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install nox
         run: uv tool install nox

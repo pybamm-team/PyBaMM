@@ -70,6 +70,8 @@ class TestCoupledVariable:
         a = pybamm.CoupledVariable("a")
         b = a.create_copy()
         assert a == b
+        # Takes the base class's arguments, as tree rebuilds pass them
+        assert a.create_copy(new_children=None, perform_simplifications=False) == a
 
     def test_setter(self):
         model = pybamm.BaseModel()
