@@ -53,8 +53,7 @@ class TestCoupledVariable:
 
         model = combine_models([model_1, model_2])
 
-        # CoupledVariables in rhs require resolve_coupled_variables=True
-        disc = pybamm.Discretisation(resolve_coupled_variables=True)
+        disc = pybamm.Discretisation()
         disc.process_model(model)
 
         solver = pybamm.IDAKLUSolver()
@@ -109,18 +108,24 @@ class TestCoupledVariable:
 
     def test_unresolved_coupled_variable_in_rhs_raises_error(self):
         """Test that a CoupledVariable in rhs raises error during discretisation."""
-        model = pybamm.BaseModel()
-        a = pybamm.Variable("a")
-        unresolved = pybamm.CoupledVariable("missing_variable")
 
-        model.rhs = {a: unresolved}  # CoupledVariable in rhs
-        model.initial_conditions = {a: pybamm.Scalar(1)}
-        model.variables = {"a": a}  # "missing_variable" NOT in variables
+        def make_model():
+            model = pybamm.BaseModel()
+            a = pybamm.Variable("a")
+            model.rhs = {a: pybamm.CoupledVariable("missing_variable")}
+            model.initial_conditions = {a: pybamm.Scalar(1)}
+            model.variables = {"a": a}  # "missing_variable" NOT in variables
+            return model
 
-        sim = pybamm.Simulation(model)
+        with pytest.raises(
+            ValueError, match="CoupledVariable 'missing_variable' not found"
+        ):
+            pybamm.Simulation(make_model()).solve([0, 1])
 
-        # Without resolve_coupled_variables=True, CoupledVariable is not resolved
-        # and hits the discretisation error
+        # Without resolving, the CoupledVariable hits the discretisation error
+        sim = pybamm.Simulation(
+            make_model(), discretisation_kwargs={"resolve_coupled_variables": False}
+        )
         with pytest.raises(
             pybamm.DiscretisationError,
             match="CoupledVariable 'missing_variable' was not resolved",
@@ -171,9 +176,7 @@ class TestCoupledVariable:
 
         solutions = []
         for flux in [pybamm.Scalar(2), pybamm.CoupledVariable("Flux")]:
-            disc = pybamm.Discretisation(
-                mesh, spatial_methods, resolve_coupled_variables=True
-            )
+            disc = pybamm.Discretisation(mesh, spatial_methods)
             model = disc.process_model(make_model(flux), inplace=False)
             solutions.append(pybamm.IDAKLUSolver().solve(model, [0, 1]))
 
@@ -190,8 +193,52 @@ class TestCoupledVariable:
         model.initial_conditions = {a: pybamm.Scalar(1), b: pybamm.Scalar(0)}
         model.variables = {"a": a, "b": b}
 
-        disc = pybamm.Discretisation(resolve_coupled_variables=True)
+        disc = pybamm.Discretisation()
         disc.process_model(model, inplace=False)
 
         assert model.rhs[a] is rhs_a
         assert not model.is_discretised
+
+    def test_resolve_shares_cache_across_equations(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        model.rhs = {
+            a: pybamm.CoupledVariable("Source"),
+            b: pybamm.CoupledVariable("Source"),
+            c: pybamm.Scalar(1),
+        }
+        model.initial_conditions = {
+            a: pybamm.Scalar(0),
+            b: pybamm.Scalar(0),
+            c: pybamm.Scalar(0),
+        }
+        model.variables = {
+            "Source": pybamm.CoupledVariable("c") + 1,
+            "a": a,
+            "b": b,
+            "c": c,
+        }
+
+        disc = pybamm.Discretisation()
+        resolved = disc._resolve_coupled_variables_in_model(model, inplace=True)
+
+        assert resolved is model
+        assert model.rhs[a] == c + 1
+        # the "Source" target is resolved once and shared between equations
+        assert model.rhs[a] is model.rhs[b]
+
+    def test_resolve_without_coupled_variables_keeps_model(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        rhs_a = -a
+        model.rhs = {a: rhs_a}
+        model.initial_conditions = {a: pybamm.Scalar(1)}
+        model.variables = {"a": a}
+
+        disc = pybamm.Discretisation()
+        resolved = disc._resolve_coupled_variables_in_model(model, inplace=False)
+
+        assert resolved is model
+        assert model.rhs[a] is rhs_a

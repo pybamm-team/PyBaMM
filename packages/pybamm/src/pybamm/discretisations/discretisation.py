@@ -55,7 +55,7 @@ class Discretisation:
         Default is False.
     resolve_coupled_variables : bool, optional
         If True, resolve CoupledVariables in rhs, algebraic, initial_conditions,
-        and boundary_conditions before processing. Default is False.
+        and boundary_conditions before processing. Default is True.
     """
 
     def __init__(
@@ -64,7 +64,7 @@ class Discretisation:
         spatial_methods=None,
         check_model=True,
         remove_independent_variables_from_rhs=False,
-        resolve_coupled_variables=False,
+        resolve_coupled_variables=True,
     ):
         self._mesh = mesh
         if mesh is None:
@@ -201,9 +201,7 @@ class Discretisation:
 
         # resolve before boundary conditions are discretised below
         if self._resolve_coupled_variables:
-            if not inplace:
-                model = model.new_copy()
-            self._resolve_coupled_variables_in_model(model)
+            model = self._resolve_coupled_variables_in_model(model, inplace)
 
         # Set the y split for variables
         pybamm.logger.verbose(f"Set variable slices for {model.name}")
@@ -314,27 +312,68 @@ class Discretisation:
         model_disc.is_discretised = True
         return model_disc
 
-    def _resolve_coupled_variables_in_model(self, model):
-        """Resolve CoupledVariables in rhs, algebraic, initial_conditions, and boundary_conditions."""
+    def _resolve_coupled_variables_in_model(self, model, inplace):
+        """
+        Resolve CoupledVariables in rhs, algebraic, initial_conditions, and
+        boundary_conditions.
 
-        resolve_symbol = model._resolve_coupled_variables
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose equations are resolved.
+        inplace : bool
+            If False, resolve into a copy of ``model`` and leave ``model`` unchanged.
 
-        # assign new dicts: the inner boundary condition dicts may be shared with
-        # the model this one was copied from
-        model.rhs = {var: resolve_symbol(expr) for var, expr in model.rhs.items()}
-        model.algebraic = {
-            var: resolve_symbol(expr) for var, expr in model.algebraic.items()
+        Returns
+        -------
+        :class:`pybamm.BaseModel`
+            The model with resolved equations: ``model`` itself if nothing needed
+            resolving or ``inplace`` is True, otherwise a copy.
+        """
+        cache = {}
+
+        def resolve(expr):
+            return model._resolve_coupled_variables(expr, cache)
+
+        rhs = {var: resolve(expr) for var, expr in model.rhs.items()}
+        algebraic = {var: resolve(expr) for var, expr in model.algebraic.items()}
+        initial_conditions = {
+            var: resolve(expr) for var, expr in model.initial_conditions.items()
         }
-        model.initial_conditions = {
-            var: resolve_symbol(expr) for var, expr in model.initial_conditions.items()
-        }
-        model.boundary_conditions = {
+        boundary_conditions = {
             var: {
-                side: (resolve_symbol(expr), bc_type)
-                for side, (expr, bc_type) in bcs.items()
+                side: (resolve(expr), bc_type) for side, (expr, bc_type) in bcs.items()
             }
             for var, bcs in model.boundary_conditions.items()
         }
+
+        # the shared cache may return an equal node from another equation, so
+        # compare by equality rather than identity
+        unchanged = (
+            all(rhs[var] == expr for var, expr in model.rhs.items())
+            and all(algebraic[var] == expr for var, expr in model.algebraic.items())
+            and all(
+                initial_conditions[var] == expr
+                for var, expr in model.initial_conditions.items()
+            )
+            and all(
+                boundary_conditions[var][side][0] == expr
+                for var, bcs in model.boundary_conditions.items()
+                for side, (expr, _) in bcs.items()
+            )
+        )
+        if unchanged:
+            return model
+
+        if not inplace:
+            model = model.new_copy()
+        # assign new dicts: the inner boundary condition dicts may be shared with
+        # the model this one was copied from
+        model.rhs = rhs
+        model.algebraic = algebraic
+        model.initial_conditions = initial_conditions
+        model.boundary_conditions = boundary_conditions
+        return model
 
     def set_variable_slices(self, variables):
         """
