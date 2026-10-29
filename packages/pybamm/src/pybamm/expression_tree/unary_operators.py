@@ -130,6 +130,48 @@ class UnaryOperator(pybamm.Symbol):
         ]
         return self._casadi_evaluate(converted_child)
 
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        (child,) = self._children_to_rust(graph, rust_symbols)
+        if isinstance(self, Negate):
+            return graph.neg(child)
+        elif isinstance(self, AbsoluteValue):
+            return graph.abs(child)
+        elif isinstance(self, Sign):
+            return graph.sign(child)
+        elif isinstance(self, Floor):
+            return graph.floor(child)
+        elif isinstance(self, Ceiling):
+            return graph.ceiling(child)
+        elif isinstance(self, Index):
+            s = self.slice
+            if s.step is not None and s.step != 1:
+                raise NotImplementedError(
+                    "Cannot convert strided Index (step != 1) to Rust"
+                )
+            size = self.children[0].size
+            start = 0 if s.start is None else s.start
+            stop = size if s.stop is None else s.stop
+            if start < 0:
+                start += size
+            if stop < 0:
+                stop += size
+            # Clamp like numpy slicing; the Rust builder takes usize bounds
+            start = max(0, min(start, size))
+            stop = max(0, min(stop, size))
+            return graph.index(child, start, stop)
+        elif isinstance(self, (ExplicitTimeIntegral, NotConstant)):
+            # Pass-through operators: actual computation happens in ProcessedVariable
+            return child
+        else:
+            raise TypeError(
+                f"Cannot convert unary operator of type '{type(self).__name__}' "
+                "to the Rust backend. Use a CasADi-backed model (set "
+                "`model.convert_to_format = 'casadi'`) for models using "
+                "this operator."
+            )
+
     def evaluate(
         self,
         t: float | None = None,

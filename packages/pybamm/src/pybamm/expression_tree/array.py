@@ -3,6 +3,8 @@
 #
 from __future__ import annotations
 
+from typing import cast
+
 import casadi
 import numpy as np
 import numpy.typing as npt
@@ -133,6 +135,45 @@ class Array(pybamm.Symbol):
     def _to_casadi(self, t, y, y_dot, inputs, casadi_symbols):
         """See :meth:`pybamm.Symbol._to_casadi()`."""
         return casadi.MX(self.evaluate(t, y, y_dot, inputs))
+
+    def _to_rust(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        entries = self.evaluate()
+        # A Rust sparse matrix only feeds a matrix product, so a value is dense
+        if issparse(entries):
+            entries = cast(csr_matrix, entries).toarray()
+        entries = np.asarray(entries, dtype=float)
+        if entries.ndim == 2 and entries.shape[1] > 1:
+            return graph.dense_matrix(
+                np.ascontiguousarray(entries).ravel(),
+                entries.shape[0],
+                entries.shape[1],
+            )
+        return graph.array(entries.flatten())
+
+    def _to_rust_matmul_left(
+        self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
+    ) -> pybamm.rust.Expr:
+        entries = self.evaluate()
+        if not issparse(entries):
+            return self._to_rust_inner(graph, rust_symbols)
+        # Keyed apart from the dense value of the same symbol
+        key = (self.id, "matmul left")
+        cached = rust_symbols.get(key)
+        if cached is None:
+            # Rows sum in stored order; in column order a stencil's rounding telescopes
+            csr = csr_matrix(entries, copy=True)
+            csr.sum_duplicates()
+            cached = graph.sparse_matrix(
+                csr.indptr.tolist(),
+                csr.indices.tolist(),
+                csr.data.astype(float),
+                csr.shape[0],
+                csr.shape[1],
+            )
+            rust_symbols[key] = cached
+        return cached
 
     def _jac(self, variable) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
