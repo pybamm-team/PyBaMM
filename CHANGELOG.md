@@ -4,6 +4,7 @@
 
 - `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
+- `Solution.y` and `Solution.yp` are deprecated: they hold only the stored states, which need not match `Solution.t`. Use `solution[name]` for variables, or `all_ys` and `all_yps` for the raw states. ([#6005](https://github.com/pybamm-team/PyBaMM/pull/6005))
 
 ## Features
 

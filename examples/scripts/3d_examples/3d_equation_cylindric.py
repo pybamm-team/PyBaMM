@@ -66,7 +66,7 @@ solver = pybamm.AlgebraicSolver()
 solution = solver.solve(model)
 
 nodes = mesh["current collector"].nodes
-T_solution = solution.y.flatten()
+T_solution = solution.all_ys[0].flatten()
 
 print(f"Number of FEM nodes: {nodes.shape[0]}")
 print(f"Temperature range: [{T_solution.min():.2f}, {T_solution.max():.2f}]°C")

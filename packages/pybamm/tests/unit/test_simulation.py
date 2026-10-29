@@ -7,7 +7,7 @@ from scipy.integrate import trapezoid
 
 import pybamm
 from pybamm.solvers.base_solver import BaseSolver
-from tests import no_internet_connection
+from tests import concatenated_states, no_internet_connection
 
 
 class TestSimulation:
@@ -18,7 +18,9 @@ class TestSimulation:
         model.initial_conditions = {v: 1}
         sim = pybamm.Simulation(model)
         sol = sim.solve([0, 1])
-        np.testing.assert_allclose(sol.y[0], np.exp(-sol.t), rtol=1e-4, atol=1e-4)
+        np.testing.assert_allclose(
+            sol.all_ys[0][0], np.exp(-sol.t), rtol=1e-4, atol=1e-4
+        )
 
     def test_solve(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -173,7 +175,7 @@ class TestSimulation:
         sim = pybamm.Simulation(model)
 
         sim.step(dt)  # 1 step stores first 12 points
-        assert sim.solution.y[0, :].size == 12
+        assert sim.solution.all_ys[0][0, :].size == 12
         np.testing.assert_allclose(
             [sim.solution.t[0], sim.solution.t[-1]],
             np.array([0, dt]),
@@ -183,7 +185,7 @@ class TestSimulation:
         saved_sol = sim.solution
 
         sim.step(dt)  # automatically append the next step
-        assert sim.solution.y[0, :].size == 24
+        assert concatenated_states(sim.solution.all_ys)[0, :].size == 24
         np.testing.assert_allclose(
             [sim.solution.t[0], sim.solution.t[-1]],
             np.array([0, 2 * dt]),
@@ -192,7 +194,7 @@ class TestSimulation:
         )
 
         sim.step(dt, save=False)  # now only store the two end step points
-        assert sim.solution.y[0, :].size == 12
+        assert sim.solution.all_ys[0][0, :].size == 12
         np.testing.assert_allclose(
             [sim.solution.t[0], sim.solution.t[-1]],
             np.array([2 * dt + 1e-9, 3 * dt]),
@@ -201,7 +203,7 @@ class TestSimulation:
         )
         # Start from saved solution
         sim.step(dt, starting_solution=saved_sol)
-        assert sim.solution.y[0, :].size == 24
+        assert concatenated_states(sim.solution.all_ys)[0, :].size == 24
         np.testing.assert_allclose(
             [sim.solution.t[0], sim.solution.t[-1]],
             np.array([0, 2 * dt]),
@@ -661,7 +663,7 @@ class TestSimulation:
             dt, inputs={"Current function [A]": 1}
         )  # 1 step stores first 12 points
         assert sim.solution.t.size == 12
-        assert sim.solution.y[0, :].size == 12
+        assert sim.solution.all_ys[0][0, :].size == 12
         assert sim.solution.t[0] == 0
         assert sim.solution.t[-1] == dt
         np.testing.assert_array_equal(
@@ -670,7 +672,7 @@ class TestSimulation:
         sim.step(
             dt, inputs={"Current function [A]": 2}
         )  # automatically append the next step
-        assert sim.solution.y[0, :].size == 24
+        assert concatenated_states(sim.solution.all_ys)[0, :].size == 24
         np.testing.assert_allclose(
             [sim.solution.t[0], sim.solution.t[-1]],
             np.array([0, 2 * dt]),

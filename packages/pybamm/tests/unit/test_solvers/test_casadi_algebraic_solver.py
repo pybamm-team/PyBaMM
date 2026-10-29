@@ -34,7 +34,7 @@ class TestCasadiAlgebraicSolver:
         # Solve
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, np.linspace(0, 1, 10))
-        np.testing.assert_array_equal(solution.y, -2)
+        np.testing.assert_array_equal(solution.all_ys[0], -2)
 
     def test_algebraic_root_solver_reuse(self):
         # Create a model with an input parameter and
@@ -140,7 +140,7 @@ class TestCasadiAlgebraicSolver:
         solution = solver.solve(model, t_eval)
 
         sol = np.vstack((3 * t_eval, 6 * t_eval))
-        np.testing.assert_allclose(solution.y, sol, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(solution.all_ys[0], sol, rtol=1e-7, atol=1e-6)
         np.testing.assert_allclose(
             solution["var1"].data.flatten(), sol[0, :], rtol=1e-7, atol=1e-6
         )
@@ -166,7 +166,7 @@ class TestCasadiAlgebraicSolver:
         solution = solver.solve(model, t_eval)
 
         sol = np.vstack((3 + 0 * t_eval, 6 + 0 * t_eval))
-        np.testing.assert_allclose(solution.y, sol, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(solution.all_ys[0], sol, rtol=1e-7, atol=1e-6)
 
     def test_model_solver_with_bounds(self):
         # Note: we need a better test case to test this functionality properly
@@ -198,7 +198,7 @@ class TestCasadiAlgebraicSolver:
         # Solve
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"param": 7})
-        np.testing.assert_array_equal(solution.y, -7)
+        np.testing.assert_array_equal(solution.all_ys[0], -7)
 
     def test_deprecated(self):
         with pytest.warns(
