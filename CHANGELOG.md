@@ -24,6 +24,7 @@
 - `IDAKLUSolver` solves `convert_to_format = "rust"` models through a Rust `CompiledModel`, one evaluator per thread, so `num_threads` parallelises input sets. `output_variables` support sensitivities and time integrals, and `NonlinearSolver` compiles its own model. ([#5962](https://github.com/pybamm-team/PyBaMM/pull/5962))
 - `IDAKLUSolver` observes rust-model solutions natively: variables and their sensitivities are evaluated on tapes compiled into the solve's Rust graph, with no CasADi function, and `Solution.update([...])` compiles a set of variables into one tape per segment. ([#5963](https://github.com/pybamm-team/PyBaMM/pull/5963))
 - `pybamm-core` gains an in-process DAE solver built on diffsol's BDF, with forward sensitivities under error control, batched one lane per parameter, and a rayon batch layer for input-set sweeps. ([#5964](https://github.com/pybamm-team/PyBaMM/pull/5964))
+- Added `pybamm.DiffsolSolver`, which integrates rust models entirely in Rust, releasing the GIL. Like `IDAKLUSolver`, it finds consistent initial conditions, solves input sets on `num_threads` threads, and computes forward sensitivities natively under error control. ([#5965](https://github.com/pybamm-team/PyBaMM/pull/5965))
 
 ## Bug fixes
 

@@ -4,11 +4,16 @@ use pybamm_core::CoreError;
 use pyo3::PyErr;
 use pyo3::exceptions::PyValueError;
 
-/// Map a core error to a Python exception: caller-argument and invalid-data
-/// problems (a malformed matrix or interpolant crossing the boundary) become
-/// `ValueError`.
-// By value, because every caller hands it over through `map_err`.
-#[allow(clippy::needless_pass_by_value)]
+/// Map a core error to `RuntimeError` for integration failures, else `ValueError`.
 pub fn core_err_to_py(err: CoreError) -> PyErr {
-    PyValueError::new_err(err.to_string())
+    match err {
+        #[cfg(feature = "diffsol")]
+        CoreError::Diffsol(source) => {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("diffsol error: {source}"))
+        },
+        retry @ CoreError::SensRetryFailed { .. } => {
+            pyo3::exceptions::PyRuntimeError::new_err(retry.to_string())
+        },
+        other => PyValueError::new_err(other.to_string()),
+    }
 }

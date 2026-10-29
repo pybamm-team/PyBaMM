@@ -8,6 +8,23 @@ use rayon::prelude::*;
 use super::solve::{InputSet, PreparedSolver, SolveOutcome, SolveRequest};
 use crate::error::CoreError;
 
+/// Check that every per-set argument agrees on the batch width.
+pub const fn check_batch_widths(
+    y0: usize,
+    inputs: usize,
+    y0_sens: Option<usize>,
+) -> Result<(), CoreError> {
+    if y0 != inputs {
+        return Err(CoreError::BatchWidths { y0, inputs });
+    }
+    if let Some(got) = y0_sens
+        && got != y0
+    {
+        return Err(CoreError::BatchSensWidth { got, expected: y0 });
+    }
+    Ok(())
+}
+
 impl PreparedSolver {
     /// Solve one trajectory per input set, concurrently, each factorising serially.
     ///
@@ -174,5 +191,20 @@ mod tests {
                 assert!(result.is_ok(), "set {i} failed alongside set 2");
             }
         }
+    }
+
+    #[test]
+    fn mismatched_batch_widths_are_rejected_before_any_solve() {
+        let err = check_batch_widths(2, 1, None).expect_err("mismatched widths accepted");
+        assert!(matches!(err, CoreError::BatchWidths { y0: 2, inputs: 1 }));
+
+        let err = check_batch_widths(2, 2, Some(1)).expect_err("mismatched seed count accepted");
+        assert!(matches!(
+            err,
+            CoreError::BatchSensWidth {
+                got: 1,
+                expected: 2
+            }
+        ));
     }
 }
