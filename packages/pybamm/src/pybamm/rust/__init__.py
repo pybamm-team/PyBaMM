@@ -24,6 +24,8 @@ with _global_symbol_visibility():
     from pybamm.rust._core import (
         CompiledFunction,
         CompiledJacobian,
+        CompiledModel,
+        EvaluatorPool,
         Expr,
         ExprGraph,
     )
@@ -31,6 +33,8 @@ with _global_symbol_visibility():
 __all__ = [
     "CompiledFunction",
     "CompiledJacobian",
+    "CompiledModel",
+    "EvaluatorPool",
     "Expr",
     "ExprGraph",
 ]

@@ -1258,6 +1258,17 @@ class TestSolution:
         np.testing.assert_allclose(solution["c"].entries, built.entries)
         assert "2c" in solution._variables
 
+    def test_solution_save_load_rust_backend(self, tmp_path):
+        model = pybamm.lithium_ion.SPM()
+        model.convert_to_format = "rust"
+        sim = pybamm.Simulation(model, solver=pybamm.IDAKLUSolver())
+        sol = sim.solve([0, 3600])
+        expected = sol["Voltage [V]"].data
+        path = tmp_path / "sol.pkl"
+        sol.save(str(path))
+        loaded = pybamm.load(str(path))
+        np.testing.assert_allclose(loaded["Voltage [V]"].data, expected)
+
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry
