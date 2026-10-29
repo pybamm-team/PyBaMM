@@ -17,7 +17,7 @@ from scipy.io import savemat
 import pybamm
 from pybamm.codegen.compilation import aot_compile
 from pybamm.solvers.base_solver import flatten_inputs
-from pybamm.solvers.observation import build_variable
+from pybamm.solvers.observation import build_variable, build_variables
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -877,14 +877,25 @@ class Solution(SolutionBase):
         )
 
     def update(self, variables: str | list[str]):
-        """Add ProcessedVariables to the dictionary of variables in the solution"""
-        # Single variable
-        if isinstance(variables, str):
-            variables = [variables]
+        """Add ProcessedVariables to the dictionary of variables in the solution.
 
-        # Process
-        for variable in variables:
-            self._update_variable(variable)
+        Every listed variable is rebuilt; a list is built as one set, and stored
+        only once every variable in it has built.
+        """
+        if isinstance(variables, str):
+            self._update_variable(variables)
+            return
+        names = list(dict.fromkeys(variables))
+        self._variables.update(build_variables(self, names))
+
+    def _build_missing(self, names: list[str]) -> None:
+        """Build, as one set, the variables in ``names`` not yet built.
+
+        Built variables are kept: one computed during the solve has no states.
+        """
+        missing = [name for name in dict.fromkeys(names) if name not in self._variables]
+        if missing:
+            self._variables.update(build_variables(self, missing))
 
     def _update_variable(self, name: str):
         self._variables[name] = build_variable(self, name)
@@ -1059,6 +1070,7 @@ class Solution(SolutionBase):
         else:
             if isinstance(variables, str):
                 variables = [variables]
+            self._build_missing(variables)
             # otherwise, save only the variables specified
             data_long_names = {}
             for name in variables:
