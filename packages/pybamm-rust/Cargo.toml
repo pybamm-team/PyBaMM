@@ -5,6 +5,7 @@ members = [
     "pybamm-python",
 ]
 
+# Floor set by the dep graph (nalgebra 0.35 needs 1.89), not by edition 2024.
 [workspace.package]
 rust-version = "1.89"
 

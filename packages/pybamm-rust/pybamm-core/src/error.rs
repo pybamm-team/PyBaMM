@@ -26,6 +26,30 @@ pub enum CoreError {
     #[error("InterpolantNd: expected {axes} children (one per axis), got {children}")]
     InterpolantNdArity { axes: usize, children: usize },
 
+    #[error("t_eval must not be empty")]
+    EmptyTimePoints,
+
+    /// The evaluation time grid decreased at some point.
+    #[error("t_eval must increase monotonically, but t_eval[{index}] = {got} follows {previous}")]
+    UnsortedTimePoints {
+        index: usize,
+        got: f64,
+        previous: f64,
+    },
+
+    /// The evaluation time grid held a NaN or an infinity.
+    #[error("t_eval must be finite, but t_eval[{index}] = {got}")]
+    NonFiniteTimePoint { index: usize, got: f64 },
+
+    #[error("y0 has length {got} but the model has {expected} states")]
+    Y0Length { got: usize, expected: usize },
+
+    #[error("inputs has length {got} but the model expects {expected} packed parameter value(s)")]
+    InputsLength { got: usize, expected: usize },
+
+    #[error("atol has length {got} but the model has {expected} states")]
+    AtolLength { got: usize, expected: usize },
+
     /// A sensitivity index names no registered input parameter.
     #[error(
         "sensitivity index {index} names no input parameter; the model registers {n_registered}"
@@ -154,6 +178,45 @@ pub enum CoreError {
     )]
     AlgebraicBlockNotSquare { rows: usize, columns: usize },
 
+    #[error("no sensitivity parameters were requested when the model was compiled")]
+    NoSensitivityParams,
+
+    #[error("no output variables were registered when the model was compiled")]
+    NoOutputVariables,
+
+    #[error(
+        "y0_sens has length {got} but must be empty or {expected} (n_states x n_sens_params, column-major)"
+    )]
+    Y0SensLength { got: usize, expected: usize },
+
+    #[error("sens_atol_factor must be finite and > 0, got {got}")]
+    SensAtolFactor { got: f64 },
+
+    /// A solver option held a value diffsol would accept and then misbehave on.
+    #[error("solver option {name} must be {requirement}, got {got}")]
+    SolverOption {
+        name: &'static str,
+        requirement: &'static str,
+        got: f64,
+    },
+
+    /// A tolerance IDAS would reject: non-finite, negative, or zero in both `rtol` and `atol`.
+    #[error(
+        "{name}{} = {got} is not a valid tolerance: rtol and atol must be finite and >= 0, and not both zero",
+        .index.map_or_else(String::new, |i| format!("[{i}]"))
+    )]
+    Tolerance {
+        name: &'static str,
+        index: Option<usize>,
+        got: f64,
+    },
+
+    /// Both the error-controlled sensitivity solve and its relaxed retry failed.
+    #[error(
+        "sensitivity solve failed under error control ({controlled}); the retry with sensitivities excluded from error control also failed ({relaxed})"
+    )]
+    SensRetryFailed { controlled: String, relaxed: String },
+
     #[error("invalid CSR matrix: {0}")]
     Csr(String),
 
@@ -162,4 +225,8 @@ pub enum CoreError {
 
     #[error("invalid interpolant: {0}")]
     Interpolant(String),
+
+    #[cfg(feature = "diffsol")]
+    #[error(transparent)]
+    Diffsol(#[from] diffsol::DiffsolError),
 }
