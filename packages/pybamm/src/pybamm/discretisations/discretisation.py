@@ -199,6 +199,12 @@ class Discretisation:
                         f"for variable {var.name} with domain {var.domain}"
                     )
 
+        # resolve before boundary conditions are discretised below
+        if self._resolve_coupled_variables:
+            if not inplace:
+                model = model.new_copy()
+            self._resolve_coupled_variables_in_model(model)
+
         # Set the y split for variables
         pybamm.logger.verbose(f"Set variable slices for {model.name}")
         self.set_variable_slices(itertools.chain(model.rhs, model.algebraic))
@@ -217,9 +223,6 @@ class Discretisation:
         else:
             # create a copy of the original model
             model_disc = model.new_copy()
-
-        if self._resolve_coupled_variables:
-            self._resolve_coupled_variables_in_model(model)
 
         # Keep a record of y_slices in the model
         model_disc.y_slices = self.y_slices_explicit
@@ -316,26 +319,22 @@ class Discretisation:
 
         resolve_symbol = model._resolve_coupled_variables
 
-        for var, expr in model.rhs.items():
-            resolved = resolve_symbol(expr)
-            if resolved is not expr:
-                model.rhs[var] = resolved
-
-        for var, expr in model.algebraic.items():
-            resolved = resolve_symbol(expr)
-            if resolved is not expr:
-                model.algebraic[var] = resolved
-
-        for var, expr in model.initial_conditions.items():
-            resolved = resolve_symbol(expr)
-            if resolved is not expr:
-                model.initial_conditions[var] = resolved
-
-        for var, bcs in model.boundary_conditions.items():
-            for side, (expr, bc_type) in bcs.items():
-                resolved = resolve_symbol(expr)
-                if resolved is not expr:
-                    model.boundary_conditions[var][side] = (resolved, bc_type)
+        # assign new dicts: the inner boundary condition dicts may be shared with
+        # the model this one was copied from
+        model.rhs = {var: resolve_symbol(expr) for var, expr in model.rhs.items()}
+        model.algebraic = {
+            var: resolve_symbol(expr) for var, expr in model.algebraic.items()
+        }
+        model.initial_conditions = {
+            var: resolve_symbol(expr) for var, expr in model.initial_conditions.items()
+        }
+        model.boundary_conditions = {
+            var: {
+                side: (resolve_symbol(expr), bc_type)
+                for side, (expr, bc_type) in bcs.items()
+            }
+            for var, bcs in model.boundary_conditions.items()
+        }
 
     def set_variable_slices(self, variables):
         """

@@ -143,3 +143,55 @@ class TestCoupledVariable:
 
         # Double voltage should be exactly 2x the voltage
         np.testing.assert_allclose(double_voltage, 2 * voltage, rtol=1e-10)
+
+    def test_coupled_variable_in_boundary_condition(self):
+        mesh = pybamm.Mesh(
+            pybamm.Geometry(
+                {
+                    "negative electrode": {
+                        "x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+                    }
+                }
+            ),
+            {"negative electrode": pybamm.Uniform1DSubMesh},
+            {"x_n": 10},
+        )
+        spatial_methods = {"negative electrode": pybamm.FiniteVolume()}
+
+        def make_model(flux):
+            model = pybamm.BaseModel()
+            c = pybamm.Variable("c", domain="negative electrode")
+            model.rhs = {c: pybamm.div(pybamm.grad(c))}
+            model.boundary_conditions = {
+                c: {"left": (pybamm.Scalar(0), "Neumann"), "right": (flux, "Neumann")}
+            }
+            model.initial_conditions = {c: pybamm.Scalar(1)}
+            model.variables = {"Flux": pybamm.Scalar(2), "c": c}
+            return model
+
+        solutions = []
+        for flux in [pybamm.Scalar(2), pybamm.CoupledVariable("Flux")]:
+            disc = pybamm.Discretisation(
+                mesh, spatial_methods, resolve_coupled_variables=True
+            )
+            model = disc.process_model(make_model(flux), inplace=False)
+            solutions.append(pybamm.IDAKLUSolver().solve(model, [0, 1]))
+
+        np.testing.assert_allclose(
+            solutions[1]["c"](1.0), solutions[0]["c"](1.0), rtol=1e-10
+        )
+
+    def test_resolve_does_not_modify_model_when_not_inplace(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        rhs_a = -pybamm.CoupledVariable("b")
+        model.rhs = {a: rhs_a, b: pybamm.Scalar(1)}
+        model.initial_conditions = {a: pybamm.Scalar(1), b: pybamm.Scalar(0)}
+        model.variables = {"a": a, "b": b}
+
+        disc = pybamm.Discretisation(resolve_coupled_variables=True)
+        disc.process_model(model, inplace=False)
+
+        assert model.rhs[a] is rhs_a
+        assert not model.is_discretised
