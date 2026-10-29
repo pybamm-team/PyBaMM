@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import numbers
 import pickle
+import warnings
 from dataclasses import astuple, dataclass
 from itertools import chain
 
@@ -601,14 +602,28 @@ class Solution(SolutionBase):
 
     @property
     def y(self):
-        """Values of the solution"""
+        """The stored states, concatenated (deprecated)."""
+        warnings.warn(
+            "`Solution.y` is deprecated and will be removed in a future release; "
+            "it holds only the stored states, which need not match `Solution.t`. "
+            "Use `solution[name]` for variables, or `all_ys` for the raw states.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if self._y is None:
             self._y = self._concatenate_states(self.all_ys)
         return self._y
 
     @property
     def yp(self):
-        """Time derivatives of the solution"""
+        """The stored state time derivatives, concatenated (deprecated)."""
+        warnings.warn(
+            "`Solution.yp` is deprecated and will be removed in a future release; "
+            "it holds only the stored states, which need not match `Solution.t`. "
+            "Use `all_yps` for the raw state derivatives.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if self.hermite_interpolation and self._yp is None:
             self._yp = self._concatenate_states(self.all_yps)
         return self._yp

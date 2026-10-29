@@ -491,7 +491,7 @@ class Simulation(BaseSimulation):
             y = (
                 step_solution.y_event
                 if step_solution.y_event is not None
-                else step_solution.y[:, -1]
+                else step_solution.all_ys[-1][:, -1]
             )
 
             try:

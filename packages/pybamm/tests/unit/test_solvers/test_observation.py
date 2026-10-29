@@ -32,7 +32,7 @@ def _split(solution, *boundaries):
     return [
         pybamm.Solution(
             solution.t[start:end],
-            solution.y[:, start:end],
+            solution.all_ys[0][:, start:end],
             model,
             {},
             all_yps=solution.all_yps[0][:, start:end],
