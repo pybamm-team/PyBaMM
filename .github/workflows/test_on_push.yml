@@ -129,11 +129,39 @@ jobs:
 
   rust_tests:
     needs: changes
-    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' }}
-    runs-on: ubuntu-latest
+    # The ABI drift test reads pybammsolvers' C++ consumer, so a solver-only change runs it too.
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The bitwise tests hold per target, so each architecture and toolchain runs them.
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
-    name: Rust tests
+    name: Rust tests (${{ matrix.os }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: packages/pybamm-rust
+          key: tests
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Run the Rust test suite
+        run: >
+          cargo test --manifest-path packages/pybamm-rust/Cargo.toml
+          --locked --workspace --all-features
+
+  # Advisory, like the Windows unit tests, so a Windows-only failure never blocks a merge.
+  rust_tests_advisory:
+    needs: changes
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.pybamm == 'true' || needs.changes.outputs.solver == 'true' }}
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    name: Rust tests (windows-latest)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
