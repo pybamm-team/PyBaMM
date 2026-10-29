@@ -129,6 +129,8 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check style
         run: uvx pre-commit run -a
@@ -171,7 +173,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: unit
-      texlive: true
       legs: >-
         [{"os": "ubuntu-latest", "python": "3.10"},
          {"os": "ubuntu-latest", "python": "3.11"},
@@ -209,7 +210,6 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
       sessions: coverage
-      texlive: true
       upload_coverage: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
@@ -255,6 +255,8 @@ jobs:
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       - name: From-source uv sync (auto-bootstraps SUNDIALS) + IDAKLU smoke
         run: |
@@ -283,7 +285,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: examples
-      texlive: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
