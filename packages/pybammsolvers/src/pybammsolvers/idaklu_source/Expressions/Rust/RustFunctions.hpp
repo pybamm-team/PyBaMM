@@ -15,6 +15,11 @@
 
 namespace pybamm_rust_detail {
 
+/* Rust models reach C++ as the integer address Python holds, so the cast is unavoidable. */
+inline void* model_from_address(std::uintptr_t address) {
+    return reinterpret_cast<void*>(address);  // NOLINT(performance-no-int-to-ptr)
+}
+
 /* Throw unless `given`, a count C++ sizes buffers from, equals the Rust model's `rust`. */
 inline void check_dim(const char* name, int64_t given, int64_t rust) {
     if (given != rust) {
