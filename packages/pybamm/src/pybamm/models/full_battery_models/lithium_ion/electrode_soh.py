@@ -803,8 +803,39 @@ class ElectrodeSOHSolver:
         x, y
             The initial stoichiometries that give the desired initial state of charge
         """
+        details = self._solve_initial_stoichiometries(
+            initial_value, direction=direction, tol=tol, inputs=inputs
+        )
+        return details["x"], details["y"]
+
+    def _solve_initial_stoichiometries(
+        self, initial_value, direction=None, tol=1e-6, inputs=None
+    ):
+        """
+        Solve for the initial stoichiometries, keeping the intermediate values.
+
+        Parameters
+        ----------
+        initial_value : float or str
+            Target initial SOC, or voltage as a string ending in "V".
+        direction : str, optional
+            The OCV branch to use. Can be "charge" or "discharge".
+        tol : float, optional
+            The tolerance for the initial SOC solve. Default is 1e-6.
+        inputs : dict, optional
+            A dictionary of input parameters passed to the model.
+
+        Returns
+        -------
+        dict
+            The electrode SOH solution, extended with the initial SOC ("soc"), the
+            initial stoichiometries ("x", "y") and, for MSMR voltage
+            initialisation, the electrode potentials at that SOC ("Un(soc)",
+            "Up(soc)").
+        """
         parameter_values = self.parameter_values
-        x_0, x_100, y_100, y_0 = self.get_min_max_stoichiometries(inputs=inputs)
+        details = self._solve_min_max(inputs)
+        limits = tuple(details[k] for k in ["x_0", "x_100", "y_100", "y_0"])
 
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
@@ -822,49 +853,28 @@ class ElectrodeSOHSolver:
             # Solve simple model for initial soc based on target voltage
             soc_model = pybamm.BaseModel()
             soc = pybamm.Variable("soc")
-            x = x_0 + soc * (x_100 - x_0)
-            y = y_0 - soc * (y_0 - y_100)
-            T_init = parameter_values["Initial temperature [K]"]
-            if self.options["open-circuit potential"] == "MSMR":
-                xn = self.param.n.prim.x
-                xp = self.param.p.prim.x
-                Up = pybamm.Variable("Up")
-                Un = pybamm.Variable("Un")
-                soc_model.algebraic[Up] = x - xn(Un, T_init)
-                soc_model.algebraic[Un] = y - xp(Up, T_init)
-                soc_model.initial_conditions[Un] = 0
-                soc_model.initial_conditions[Up] = V_max
-                soc_model.algebraic[soc] = Up - Un - V_init
-            else:
-                soc_model.algebraic[soc] = (
-                    get_initial_ocp(
-                        self.param.p.prim,
-                        y,
-                        T_init,
-                        direction,
-                        "positive",
-                        self.options,
-                    )
-                    - get_initial_ocp(
-                        self.param.n.prim,
-                        x,
-                        T_init,
-                        direction,
-                        "negative",
-                        self.options,
-                    )
-                    - V_init
-                )
+            soc_model.algebraic = _initial_soc_equations(
+                soc, limits, V_init, self.param, self.options, direction
+            )
             # initial guess for soc linearly interpolates between 0 and 1
             # based on V linearly interpolating between V_max and V_min
-            soc_model.initial_conditions[soc] = (V_init - V_min) / (V_max - V_min)
-            soc_model.variables["soc"] = soc
+            guesses = {
+                "soc": (V_init - V_min) / (V_max - V_min),
+                "Un(soc)": 0,
+                "Up(soc)": V_max,
+            }
+            soc_model.initial_conditions = {
+                var: guesses[var.name] for var in soc_model.algebraic
+            }
+            soc_model.variables = {var.name: var for var in soc_model.algebraic}
             parameter_values.process_model(soc_model)
-            initial_soc = (
-                pybamm.AlgebraicSolver(tol=tol)
-                .solve(soc_model, [0], inputs=inputs)["soc"]
-                .data[0]
+            soc_solution = pybamm.AlgebraicSolver(tol=tol).solve(
+                soc_model, [0], inputs=inputs
             )
+            details.update(
+                {name: soc_solution[name].data[0] for name in soc_model.variables}
+            )
+            initial_soc = details["soc"]
         elif isinstance(initial_value, int | float):
             initial_soc = initial_value
             if initial_soc > 1:
@@ -887,10 +897,39 @@ class ElectrodeSOHSolver:
                 f"{initial_value!r} of type {type(initial_value).__name__}"
             )
 
-        x = x_0 + initial_soc * (x_100 - x_0)
-        y = y_0 - initial_soc * (y_0 - y_100)
+        x, y = _soc_stoichiometries(initial_soc, *limits)
+        details.update({"soc": initial_soc, "x": x, "y": y})
+        return details
 
-        return x, y
+    def _solve_min_max(self, inputs=None):
+        """
+        Solve the electrode SOH model at the capacities given by the parameters.
+
+        Parameters
+        ----------
+        inputs : dict, optional
+            A dictionary of input parameters passed to the model.
+
+        Returns
+        -------
+        dict
+            The electrode SOH solution, keyed by variable name.
+        """
+        inputs = inputs or {}
+        parameter_values = self.parameter_values
+
+        Q_n = parameter_values.evaluate(self.param.n.Q_init, inputs=inputs)
+        Q_p = parameter_values.evaluate(self.param.p.Q_init, inputs=inputs)
+
+        if self.known_value == "cyclable lithium capacity":
+            Q_Li = parameter_values.evaluate(
+                self.param.Q_Li_particles_init, inputs=inputs
+            )
+            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
+        else:
+            Q = parameter_values.evaluate(self.param.Q, inputs=inputs)
+            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
+        return self.solve(all_inputs)
 
     def get_min_max_stoichiometries(self, inputs=None):
         """
@@ -907,22 +946,7 @@ class ElectrodeSOHSolver:
         x_0, x_100, y_100, y_0
             The min/max stoichiometries
         """
-        inputs = inputs or {}
-        parameter_values = self.parameter_values
-
-        Q_n = parameter_values.evaluate(self.param.n.Q_init, inputs=inputs)
-        Q_p = parameter_values.evaluate(self.param.p.Q_init, inputs=inputs)
-
-        if self.known_value == "cyclable lithium capacity":
-            Q_Li = parameter_values.evaluate(
-                self.param.Q_Li_particles_init, inputs=inputs
-            )
-            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        elif self.known_value == "cell capacity":
-            Q = parameter_values.evaluate(self.param.Q, inputs=inputs)
-            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
-        # Solve the model and check outputs
-        sol = self.solve(all_inputs)
+        sol = self._solve_min_max(inputs)
         return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
 
     def get_initial_ocps(self, initial_value, direction=None, tol=1e-6, inputs=None):
@@ -951,11 +975,38 @@ class ElectrodeSOHSolver:
         Un, Up
             The initial open-circuit potentials at the desired initial state of charge
         """
+        details = self._solve_initial_ocps(
+            initial_value, direction=direction, tol=tol, inputs=inputs
+        )
+        return details["Un"], details["Up"]
+
+    def _solve_initial_ocps(self, initial_value, direction=None, tol=1e-6, inputs=None):
+        """
+        Solve for the initial open-circuit potentials, keeping the intermediate values.
+
+        Parameters
+        ----------
+        initial_value : float or str
+            Target initial SOC, or voltage as a string ending in "V".
+        direction : str, optional
+            The OCV branch to use. Can be "charge" or "discharge".
+        tol : float, optional
+            The tolerance for the initial SOC solve. Default is 1e-6.
+        inputs : dict, optional
+            A dictionary of input parameters passed to the model.
+
+        Returns
+        -------
+        dict
+            The values returned by :meth:`_solve_initial_stoichiometries`, extended
+            with the initial open-circuit potentials ("Un", "Up").
+        """
         inputs = inputs or {}
         parameter_values = self.parameter_values
-        x, y = self.get_initial_stoichiometries(
+        details = self._solve_initial_stoichiometries(
             initial_value, tol=tol, inputs=inputs, direction=direction
         )
+        x, y = details["x"], details["y"]
         if self.options["open-circuit potential"] == "MSMR":
             msmr_pot_model = _get_msmr_potential_model(
                 self.parameter_values, self.param
@@ -979,7 +1030,8 @@ class ElectrodeSOHSolver:
                 ),
                 inputs=inputs,
             )
-        return Un, Up
+        details.update({"Un": Un, "Up": Up})
+        return details
 
     def get_min_max_ocps(self, inputs=None):
         """
@@ -996,22 +1048,7 @@ class ElectrodeSOHSolver:
         Un_0, Un_100, Up_100, Up_0
             The min/max ocps
         """
-        inputs = inputs or {}
-        parameter_values = self.parameter_values
-
-        Q_n = parameter_values.evaluate(self.param.n.Q_init, inputs=inputs)
-        Q_p = parameter_values.evaluate(self.param.p.Q_init, inputs=inputs)
-
-        if self.known_value == "cyclable lithium capacity":
-            Q_Li = parameter_values.evaluate(
-                self.param.Q_Li_particles_init, inputs=inputs
-            )
-            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        elif self.known_value == "cell capacity":
-            Q = parameter_values.evaluate(self.param.Q, inputs=inputs)
-            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
-        # Solve the model and check outputs
-        sol = self.solve(all_inputs)
+        sol = self._solve_min_max(inputs)
         return [sol["Un(x_0)"], sol["Un(x_100)"], sol["Up(y_100)"], sol["Up(y_0)"]]
 
     def __get_energy_ocv_function(self, points, direction):
@@ -1338,21 +1375,68 @@ def calculate_theoretical_energy(
     return E
 
 
+def _soc_stoichiometries(soc, x_0, x_100, y_100, y_0):
+    """Stoichiometries at an SOC, between those at 0% and 100% SOC."""
+    return x_0 + soc * (x_100 - x_0), y_0 - soc * (y_0 - y_100)
+
+
+def _initial_soc_equations(soc, limits, V_init, param, options, direction):
+    """
+    Equations for the SOC at which the open-circuit voltage is ``V_init``.
+
+    Parameters
+    ----------
+    soc : :class:`pybamm.Variable`
+        The SOC.
+    limits : tuple
+        The stoichiometry limits x_0, x_100, y_100 and y_0.
+    V_init : float
+        The open-circuit voltage [V].
+    param : :class:`pybamm.LithiumIonParameters`
+        The symbolic parameter set.
+    options : dict-like
+        Model options.
+    direction : str or None
+        The OCV branch to use. Can be "charge" or "discharge".
+
+    Returns
+    -------
+    dict
+        The residual of each unknown: the SOC and, for MSMR, the electrode
+        potentials "Un(soc)" and "Up(soc)".
+    """
+    x, y = _soc_stoichiometries(soc, *limits)
+    T_init = param.T_init
+    if options.get("open-circuit potential") == "MSMR":
+        Un = pybamm.Variable("Un(soc)")
+        Up = pybamm.Variable("Up(soc)")
+        return {
+            Un: x - param.n.prim.x(Un, T_init),
+            Up: y - param.p.prim.x(Up, T_init),
+            soc: Up - Un - V_init,
+        }
+    return {
+        soc: get_initial_ocp(param.p.prim, y, T_init, direction, "positive", options)
+        - get_initial_ocp(param.n.prim, x, T_init, direction, "negative", options)
+        - V_init
+    }
+
+
+def _msmr_potential_equations(Un, Up, x, y, param):
+    """Equations for the MSMR electrode potentials at stoichiometries x and y."""
+    T = param.T_ref
+    return {Un: param.n.prim.x(Un, T) - x, Up: param.p.prim.x(Up, T) - y}
+
+
 def _get_msmr_potential_model(parameter_values, param):
     V_max = param.ocp_soc_100
     V_min = param.ocp_soc_0
-    x_n = param.n.prim.x
-    x_p = param.p.prim.x
-    T = param.T_ref
     model = pybamm.BaseModel()
     Un = pybamm.Variable("Un")
     Up = pybamm.Variable("Up")
     x = pybamm.InputParameter("x")
     y = pybamm.InputParameter("y")
-    model.algebraic = {
-        Un: x_n(Un, T) - x,
-        Up: x_p(Up, T) - y,
-    }
+    model.algebraic = _msmr_potential_equations(Un, Up, x, y, param)
     model.initial_conditions = {
         Un: 1 - x,
         Up: V_max * (1 - y) + V_min * y,
