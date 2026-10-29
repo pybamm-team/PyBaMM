@@ -127,7 +127,13 @@ class TestSimulationConsistentState:
                 pybamm.step.Current(arr, duration=float(t[-1])),
             ]
         )
-        model = pybamm.lithium_ion.SPM({"SEI": "solvent-diffusion limited"})
+        model = pybamm.lithium_ion.SPM(
+            {
+                "SEI": "solvent-diffusion limited",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            }
+        )
         model.events = []
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values["SEI solvent diffusivity [m2.s-1]"] = "[input]"

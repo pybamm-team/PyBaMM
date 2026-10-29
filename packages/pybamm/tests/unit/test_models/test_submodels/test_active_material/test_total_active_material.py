@@ -47,7 +47,9 @@ class TestTotalActiveMaterial:
     def test_surface_area_to_volume_ratio_is_sum_over_phases(self):
         eps_1, R_1, eps_2, R_2 = 0.5, 5.86e-6, 0.25, 2e-6
         parameter_values = two_phase_parameter_values(eps_1, R_1, eps_2, R_2)
-        model = pybamm.lithium_ion.SPM({"particle phases": ("2", "1")})
+        model = pybamm.lithium_ion.SPM(
+            {"particle phases": ("2", "1"), "surface form": "algebraic"}
+        )
 
         for prefix in ["Negative", "X-averaged negative"]:
             a = evaluate_variable(
@@ -69,7 +71,9 @@ class TestTotalActiveMaterial:
             pybamm.lithium_ion.SPM(), single_phase_values, name
         )
         a_split = evaluate_variable(
-            pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}),
+            pybamm.lithium_ion.SPM(
+                {"particle phases": ("2", "1"), "surface form": "algebraic"}
+            ),
             two_phase_parameter_values(eps / 2, R, eps / 2, R),
             name,
         )

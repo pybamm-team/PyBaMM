@@ -11,7 +11,7 @@ pybamm.set_logging_level("INFO")
 # for the lumped model we use the "arbitrary" cell geometry, which means that we can
 # specify the surface area for cooling and total heat transfer coefficient
 full_thermal_model = pybamm.lithium_ion.SPMe(
-    {"thermal": "x-full"}, name="full thermal model"
+    {"thermal": "x-full", "cell geometry": "pouch"}, name="full thermal model"
 )
 lumped_thermal_model = pybamm.lithium_ion.SPMe(
     {"cell geometry": "arbitrary", "thermal": "lumped"}, name="lumped thermal model"

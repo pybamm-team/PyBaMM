@@ -10,6 +10,7 @@
 
 ## Deprecated
 
+- Battery-model options set from another option because they were not given now emit `pybamm.OptionDefaultDeprecationWarning`, naming the options; removal no earlier than `27.1.0.0`. To migrate, pass the named options with the same values. ([#5818](https://github.com/pybamm-team/PyBaMM/pull/5818))
 - `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
 
@@ -43,6 +44,7 @@
 - `MPM` no longer cites `Marquis2019` (#5800) and accepts `"particle size": ("distribution", "distribution")`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Models declare `fixed_options` and `default_options`, checked in one place and inherited, so an `SPM` subclass gets `"x-average side reactions": "true"`. Conflicting values raise an `OptionError` naming the model. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Particle mechanics submodels read `"particle size"` per electrode, so a one-electrode size distribution gets the size-distribution stress and crack equations there. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Saved battery models and complete built-in configs written before the per-electrode option checks keep their original validation rules when loaded. ([#5818](https://github.com/pybamm-team/PyBaMM/pull/5818))
 - Solver restarts now start from the right state and sensitivities. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
   - After a discontinuity whose time depends on an input, such as `pybamm.t > pybamm.InputParameter("t_switch")`, `IDAKLUSolver.solve` restarts from the end of the previous segment rather than from the initial conditions. `step()`, and so each experiment step, now stops at such discontinuities as `solve()` does.
   - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.

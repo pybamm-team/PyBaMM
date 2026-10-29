@@ -9,7 +9,11 @@ class TestLeadAcidFull:
         [
             {},
             {"convection": "uniform transverse"},
-            {"dimensionality": 1, "convection": "full transverse"},
+            {
+                "dimensionality": 1,
+                "convection": "full transverse",
+                "cell geometry": "pouch",
+            },
         ],
         ids=["well_posed", "with_convention", "with_convention_1plus1d"],
     )
@@ -23,7 +27,11 @@ class TestLeadAcidFullSurfaceForm:
         "options",
         [
             {"surface form": "differential"},
-            {"surface form": "differential", "dimensionality": 1},
+            {
+                "surface form": "differential",
+                "dimensionality": 1,
+                "cell geometry": "pouch",
+            },
             {"surface form": "algebraic"},
         ],
         ids=["differential", "differential_1plus1d", "algebraic"],

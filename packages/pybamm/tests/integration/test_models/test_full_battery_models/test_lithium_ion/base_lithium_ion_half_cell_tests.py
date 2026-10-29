@@ -110,15 +110,27 @@ class BaseIntegrationTestLithiumIonHalfCell:
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_sei_constant(self):
-        options = {"SEI": "constant"}
+        options = {
+            "SEI": "constant",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.run_basic_processing_test(options)
 
     def test_sei_reaction_limited(self):
-        options = {"SEI": "reaction limited"}
+        options = {
+            "SEI": "reaction limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.run_basic_processing_test(options)
 
     def test_sei_asymmetric_reaction_limited(self):
-        options = {"SEI": "reaction limited (asymmetric)"}
+        options = {
+            "SEI": "reaction limited (asymmetric)",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
         parameter_values.update(
             {"SEI growth transfer coefficient": 0.2, "Current function [A]": -0.07826}
@@ -126,23 +138,43 @@ class BaseIntegrationTestLithiumIonHalfCell:
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_sei_solvent_diffusion_limited(self):
-        options = {"SEI": "solvent-diffusion limited"}
+        options = {
+            "SEI": "solvent-diffusion limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.run_basic_processing_test(options)
 
     def test_sei_electron_migration_limited(self):
-        options = {"SEI": "electron-migration limited"}
+        options = {
+            "SEI": "electron-migration limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.run_basic_processing_test(options)
 
     def test_sei_interstitial_diffusion_limited(self):
-        options = {"SEI": "interstitial-diffusion limited"}
+        options = {
+            "SEI": "interstitial-diffusion limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.run_basic_processing_test(options)
 
     def test_sei_ec_reaction_limited(self):
-        options = {"SEI": "ec reaction limited"}
+        options = {
+            "SEI": "ec reaction limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.run_basic_processing_test(options)
 
     def test_sei_asymmetric_ec_reaction_limited(self):
-        options = {"SEI": "ec reaction limited (asymmetric)"}
+        options = {
+            "SEI": "ec reaction limited (asymmetric)",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
         parameter_values.update(
             {"SEI growth transfer coefficient": 0.2, "Current function [A]": -0.07826}
@@ -150,7 +182,10 @@ class BaseIntegrationTestLithiumIonHalfCell:
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_swelling_only(self):
-        options = {"particle mechanics": "swelling only"}
+        options = {
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+        }
         parameter_values = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
         parameter_values.update({"Current function [A]": -2.5})  # C/2 charge
         self.run_basic_processing_test(options, parameter_values=parameter_values)
