@@ -1712,6 +1712,44 @@ class TestExpressionFunctionParameter:
         assert "[sto, T, c]" in src
         assert 'name="D_3d"' in src
 
+    @pytest.mark.parametrize("interpolator", ["linear", "cubic"])
+    @pytest.mark.parametrize("num_derivatives", [1, 2])
+    def test_interpolant_derivative(self, interpolator, num_derivatives):
+        """Test that a derivative Interpolant's source evaluates the derivative."""
+        x_data = np.linspace(0.0, 1.0, 8)
+        y_data = x_data**3 + 0.5 * x_data
+        sto = pybamm.Parameter("sto")
+        interp = pybamm.Interpolant(
+            x_data,
+            y_data,
+            sto,
+            name="U",
+            interpolator=interpolator,
+            _num_derivatives=num_derivatives,
+        )
+
+        efp = ExpressionFunctionParameter("dU", interp, "dU", ["sto"])
+        src = efp.to_source()
+        assert f"_num_derivatives={num_derivatives}" in src
+
+        namespace = {"pybamm": pybamm, "np": np}
+        exec(src, namespace)  # noqa: S102 - runs the source this test generated
+        for value in [0.13, 0.41, 0.77]:
+            expected = interp.create_copy([pybamm.Scalar(value)]).evaluate()
+            np.testing.assert_allclose(
+                namespace["dU"](pybamm.Scalar(value)).evaluate(), expected
+            )
+
+    def test_interpolant_no_derivative_omits_num_derivatives(self):
+        """Test that an undifferentiated Interpolant's source has no derivative."""
+        x_data = np.array([0.0, 0.5, 1.0])
+        sto = pybamm.Parameter("sto")
+        interp = pybamm.Interpolant(x_data, 2 * x_data, sto, name="U")
+
+        src = ExpressionFunctionParameter("U", interp, "U", ["sto"]).to_source()
+
+        assert "_num_derivatives" not in src
+
 
 class TestGeometrySerialization:
     def test_serialise_and_load_geometry(self):
