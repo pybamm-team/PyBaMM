@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- `pybamm` now ships platform wheels with its Rust core compiled in as `pybamm.rust._core`: one `cp310-abi3` wheel per platform for Python 3.10-3.15. Building from source or the sdist requires `cargo` 1.89+; `pip install --only-binary pybamm pybamm` forces a wheel. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
+
 ## Deprecated
 
 - `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
@@ -12,6 +16,7 @@
 - `pybamm-core` evaluates transcendentals through the platform C library, as CasADi does: bitwise identical across evaluation paths, last-bit differences across platforms. `pow` is exact for exponents `0`, `1`, `2` and `-1`; `erf`, `asinh` and IEEE 754-2019 `minimum`/`maximum` use `libm`. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
 - `pybamm-core` compiles a model into a `CompiledModel`: a DAE with a symbolic Jacobian, per-output sparsity, coloured and lane-batched Jacobian sweeps, fused event and output tapes, and a versioned C ABI (`ffi.rs`) that a drift test pins against pybammsolvers' header. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
 - `pybamm-core`'s reverse-mode AD values the primitives through the same definitions as the interpreters, and a test holds its partials bitwise to them. ([#5957](https://github.com/pybamm-team/PyBaMM/pull/5957))
+- `pybamm.rust` exposes `ExprGraph`, `CompiledFunction` (one expression, or a named set via `compile_outputs`, with lane-batched trajectory and Hermite evaluation) and `CompiledJacobian`, with hand-written type stubs that `mypy.stubtest` pins against the built extension. ([#5958](https://github.com/pybamm-team/PyBaMM/pull/5958))
 
 ## Bug fixes
 
