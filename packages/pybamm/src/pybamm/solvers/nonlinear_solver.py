@@ -8,7 +8,10 @@ from pybammsolvers import idaklu
 import pybamm
 from pybamm.codegen.compilation import aot_compile
 from pybamm.solvers.base_solver import flatten_inputs
-from pybamm.solvers.idaklu_solver import _check_klu_pivot_tolerance, to_idaklu_function
+from pybamm.solvers.idaklu_solver import (
+    _check_klu_pivot_tolerance,
+    casadi_to_idaklu_function,
+)
 
 _DEFAULT_OPTIONS = {
     "compile": False,
@@ -70,6 +73,8 @@ class NonlinearSolver(pybamm.BaseSolver):
         ``klu_pivot_tolerance`` (float in (0, 1], default 0.1), the KLU threshold
         partial pivoting tolerance.
     """
+
+    uses_rhs_jacobian = False
 
     def __init__(
         self,
@@ -186,8 +191,8 @@ class NonlinearSolver(pybamm.BaseSolver):
 
     def _build_newton_solver(self, res_fn, jac_fn, len_alg):
         _setup = idaklu.StandaloneNewtonSolver(
-            residual=to_idaklu_function(res_fn),
-            jacobian=to_idaklu_function(jac_fn),
+            residual=casadi_to_idaklu_function(res_fn),
+            jacobian=casadi_to_idaklu_function(jac_fn),
             atol=np.full(len_alg, float(self.atol)).tolist(),
             rtol=float(self.rtol),
             step_tol=float(self.step_tol),

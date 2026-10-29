@@ -98,11 +98,18 @@ class TestStateVector:
             (slice(5, 8), slice(0, 3)),
             (slice(0, 3), slice(2, 4)),
             (slice(0, 6, 2),),
+            (slice(-2, 10),),
+            (slice(0, -1),),
         ],
     )
     def test_invalid_slices(self, y_slices):
         with pytest.raises(pybamm.ShapeError, match=r"y_slices"):
             pybamm.StateVector(*y_slices)
+
+    def test_empty_slice(self):
+        sv = pybamm.StateVector(slice(0, 0))
+        assert sv.size == 0
+        assert sv.evaluate(y=np.arange(10.0)).shape == (0, 1)
 
     def test_unpickle_evaluation_array_state(self):
         # Pickles from before the index ranges were stored hold the full mask

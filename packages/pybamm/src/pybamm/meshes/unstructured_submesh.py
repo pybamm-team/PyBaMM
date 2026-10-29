@@ -254,8 +254,7 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_face_geometry(self):
-        # Contiguous per-vertex gathers; strided views of an (n, k, d) gather
-        # make every later vector operation slower
+        # Contiguous (n_faces, d) array per local vertex
         face_verts = [
             self.vertices[self.faces[:, i]] for i in range(self.faces.shape[1])
         ]

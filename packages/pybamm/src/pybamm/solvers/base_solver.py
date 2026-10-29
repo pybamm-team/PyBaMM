@@ -14,6 +14,7 @@ import numpy.typing as npt
 
 import pybamm
 from pybamm import ParameterValues
+from pybamm.expression_tree.array import to_casadi_dm
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from pybamm.models.base_model import ModelSolutionObservability
@@ -64,7 +65,7 @@ class BaseSolver:
     """
 
     #: Whether the solver uses the jacobian of the rhs on its own
-    uses_rhs_jacobian = False
+    uses_rhs_jacobian = True
 
     def __init__(
         self,
@@ -357,7 +358,7 @@ class BaseSolver:
                 if model.is_standard_form_dae:
                     explicit_rhs = rhs_eval
                 else:
-                    M_ode = pybamm.expression_tree.array.to_casadi_dm(
+                    M_ode = to_casadi_dm(
                         model.mass_matrix.entries[: model.len_rhs, : model.len_rhs]
                     )
                     explicit_rhs = casadi.solve(M_ode, rhs_eval)
@@ -2268,7 +2269,7 @@ def stack_inputs(inputs_dict: dict) -> casadi.DM:
     stacked = np.concatenate(
         [np.asarray(value, dtype=float).reshape(-1) for value in inputs_dict.values()]
     )
-    return pybamm.expression_tree.array.to_casadi_dm(stacked)
+    return to_casadi_dm(stacked)
 
 
 def process(

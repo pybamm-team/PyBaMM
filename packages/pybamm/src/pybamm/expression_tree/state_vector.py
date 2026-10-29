@@ -64,7 +64,8 @@ class StateVectorBase(pybamm.Symbol):
     Raises
     ------
     :class:`pybamm.ShapeError`
-        If a slice has a step, or the slices are not in increasing order or overlap.
+        If a slice has a step or a negative bound, or the slices are not in
+        increasing order or overlap.
     """
 
     __slots__ = ("_first_point", "_index_ranges", "_last_point", "_y_slices")
@@ -147,8 +148,8 @@ class StateVectorBase(pybamm.Symbol):
 
     def _read(self, vector):
         """The entries of ``vector`` this state vector reads, as a column."""
-        if len(self._index_ranges) == 1:
-            start, stop = self._index_ranges[0]
+        if len(self._index_ranges) <= 1:
+            start, stop = self._index_ranges[0] if self._index_ranges else (0, 0)
             out = vector[start:stop].copy()
         else:
             out = np.concatenate(
@@ -167,13 +168,16 @@ class StateVectorBase(pybamm.Symbol):
         Raises
         ------
         :class:`pybamm.ShapeError`
-            If a slice has a step, or the slices are not increasing or overlap.
+            If a slice has a step or a negative bound, or the slices are not
+            increasing or overlap.
         """
         ranges: list[list[int]] = []
         for y_slice in y_slices:
             if y_slice.step not in (None, 1):
                 raise pybamm.ShapeError("y_slices must not have a step")
             start = y_slice.start or 0
+            if start < 0 or y_slice.stop < 0:
+                raise pybamm.ShapeError("y_slices must not have negative bounds")
             if ranges and start < ranges[-1][1]:
                 raise pybamm.ShapeError(
                     "y_slices must be in increasing order and must not overlap"

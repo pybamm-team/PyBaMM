@@ -13,6 +13,7 @@ from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.expression_tree.array import to_casadi_dm
 from pybamm.solvers.base_solver import flatten_inputs, stack_inputs
 from pybamm.solvers.observation import OutputAssembly
 
@@ -75,7 +76,7 @@ def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.n
 _IDA_ROOT_RETURN = 2
 
 
-def to_idaklu_function(fn: casadi.Function):
+def casadi_to_idaklu_function(fn: casadi.Function):
     """
     Hand a casadi.Function to pybammsolvers.
 
@@ -306,6 +307,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
 
     """
+
+    uses_rhs_jacobian = False
 
     class StateID(IntEnum):
         ALGEBRAIC = 0
@@ -550,7 +553,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         jac_times_cjmass_expression = model.jac_rhs_algebraic_eval(
             t_casadi, y_casadi, p_casadi_stacked
-        ) - cj_casadi * pybamm.expression_tree.array.to_casadi_dm(mass_matrix)
+        ) - cj_casadi * to_casadi_dm(mass_matrix)
         if self._options["jacobian"] == "dense":
             jac_times_cjmass_expression = casadi.densify(jac_times_cjmass_expression)
 
@@ -584,7 +587,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
         else:
             mass_action_expression = casadi.densify(
-                pybamm.expression_tree.array.to_casadi_dm(mass_matrix) @ v_casadi
+                to_casadi_dm(mass_matrix) @ v_casadi
             )
 
         # also need the action of the mass matrix on a vector
@@ -715,20 +718,22 @@ class IDAKLUSolver(pybamm.BaseSolver):
         }
 
         for name in _SETUP_FCN_KEYS:
-            self._setup[name] = to_idaklu_function(fns[name])
+            self._setup[name] = casadi_to_idaklu_function(fns[name])
 
         # The idaklu-bound Function isn't callable from Python; keep the
         # original for the closest_event_idx lookup in _post_process_solution.
         self._setup["rootfn_casadi"] = fns["rootfn"]
 
         for key in self.output_variables:
-            self._setup["var_idaklu_fcns"].append(to_idaklu_function(fns[f"var:{key}"]))
+            self._setup["var_idaklu_fcns"].append(
+                casadi_to_idaklu_function(fns[f"var:{key}"])
+            )
             if has_sens:
                 self._setup["dvar_dy_idaklu_fcns"].append(
-                    to_idaklu_function(fns[f"dvar_dy:{key}"])
+                    casadi_to_idaklu_function(fns[f"dvar_dy:{key}"])
                 )
                 self._setup["dvar_dp_idaklu_fcns"].append(
-                    to_idaklu_function(fns[f"dvar_dp:{key}"])
+                    casadi_to_idaklu_function(fns[f"dvar_dp:{key}"])
                 )
 
         self._setup["solver"] = idaklu.create_casadi_solver_group(

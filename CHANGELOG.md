@@ -2,7 +2,7 @@
 
 ## Breaking changes
 
-- `StateVector` and `StateVectorDot` raise `ShapeError` for stepped, overlapping or out-of-order slices; pass sorted, disjoint slices. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
+- `StateVector` and `StateVectorDot` raise `ShapeError` for stepped, negative, overlapping or out-of-order slices; pass sorted, disjoint, non-negative slices. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
 
 ## Deprecated
 
