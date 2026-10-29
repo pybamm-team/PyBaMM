@@ -142,17 +142,17 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(solution.t[-1], 2.0, rtol=1e-7, atol=1e-6)
 
         # test that final value is the event value
-        np.testing.assert_allclose(solution.y[0, -1], 0.2, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(solution.all_ys[0][0, -1], 0.2, rtol=1e-7, atol=1e-6)
 
         # test that y[1] remains constant
         np.testing.assert_allclose(
-            solution.y[1, :], np.ones(solution.t.shape), rtol=1e-7, atol=1e-6
+            solution.all_ys[0][1, :], np.ones(solution.t.shape), rtol=1e-7, atol=1e-6
         )
 
         # test that y[0] = to true solution
         true_solution = 0.1 * solution.t
         np.testing.assert_allclose(
-            solution.y[0, :], true_solution, rtol=1e-7, atol=1e-6
+            solution.all_ys[0][0, :], true_solution, rtol=1e-7, atol=1e-6
         )
 
     def test_multiple_inputs(self):
@@ -190,7 +190,7 @@ class TestIDAKLUSolver:
                 print("checking solution", inputs, solution.all_inputs)
                 np.testing.assert_array_equal(solution.t, t_interp)
                 np.testing.assert_allclose(
-                    solution.y[0],
+                    solution.all_ys[0][0],
                     2 * np.exp(-inputs["rate"] * solution.t),
                     atol=1e-4,
                     rtol=1e-4,
@@ -301,7 +301,7 @@ class TestIDAKLUSolver:
             t_interp,
         )
         np.testing.assert_allclose(
-            solution.y[0],
+            solution.all_ys[0][0],
             np.exp(0.1 * solution.t),
             rtol=1e-6,
             atol=1e-5,
@@ -321,7 +321,7 @@ class TestIDAKLUSolver:
         solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
         np.testing.assert_array_equal(solution.t, t_interp)
         np.testing.assert_allclose(
-            solution.y[0],
+            solution.all_ys[0][0],
             np.exp(0.1 * solution.t),
             rtol=1e-6,
             atol=1e-5,
@@ -337,7 +337,7 @@ class TestIDAKLUSolver:
         solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
         assert len(solution.t) < len(t_interp)
         np.testing.assert_allclose(
-            solution.y[0],
+            solution.all_ys[0][0],
             np.exp(0.1 * solution.t),
             rtol=1e-6,
             atol=1e-5,
@@ -364,18 +364,18 @@ class TestIDAKLUSolver:
         )
         t_eval = np.array([0, 5])
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(solution.y[0, :-1], 1.5)
-        np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
+        np.testing.assert_array_less(solution.all_ys[0][0, :-1], 1.5)
+        np.testing.assert_array_less(solution.all_ys[0][-1, :-1], 2.5)
         np.testing.assert_equal(solution.t_event[0], solution.t[-1])
-        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.all_ys[0][:, -1])
         np.testing.assert_allclose(
-            solution.y[0],
+            solution.all_ys[0][0],
             np.exp(0.1 * solution.t),
             rtol=1e-6,
             atol=1e-5,
         )
         np.testing.assert_allclose(
-            solution.y[-1],
+            solution.all_ys[0][-1],
             2 * np.exp(0.1 * solution.t),
             rtol=1e-6,
             atol=1e-5,
@@ -413,7 +413,7 @@ class TestIDAKLUSolver:
 
         # test that y[3] remains constant
         np.testing.assert_allclose(
-            sol.y[3],
+            sol.all_ys[0][3],
             np.ones(sol.t.shape),
             rtol=1e-7,
             atol=1e-6,
@@ -422,7 +422,7 @@ class TestIDAKLUSolver:
         # test that y[0] = to true solution
         true_solution = a_value * sol.t
         np.testing.assert_allclose(
-            sol.y[0],
+            sol.all_ys[0][0],
             true_solution,
             rtol=1e-7,
             atol=1e-6,
@@ -431,7 +431,7 @@ class TestIDAKLUSolver:
         # test that y[1:3] = to true solution
         true_solution = b_value * sol.t
         np.testing.assert_allclose(
-            sol.y[1:3],
+            sol.all_ys[0][1:3],
             true_solution,
             rtol=1e-7,
             atol=1e-6,
@@ -594,7 +594,7 @@ class TestIDAKLUSolver:
 
         # test that y[1] remains constant
         np.testing.assert_allclose(
-            sol.y[1, :],
+            sol.all_ys[0][1, :],
             np.ones(sol.t.shape),
             rtol=1e-7,
             atol=1e-6,
@@ -603,7 +603,7 @@ class TestIDAKLUSolver:
         # test that y[0] = to true solution
         true_solution = a_value * sol.t
         np.testing.assert_allclose(
-            sol.y[0, :],
+            sol.all_ys[0][0, :],
             true_solution,
             rtol=1e-7,
             atol=1e-6,
@@ -624,7 +624,7 @@ class TestIDAKLUSolver:
 
         # test that y[1] remains constant
         np.testing.assert_allclose(
-            sol.y[1, :],
+            sol.all_ys[0][1, :],
             np.ones(sol.t.shape),
             rtol=1e-7,
             atol=1e-6,
@@ -633,7 +633,7 @@ class TestIDAKLUSolver:
         # test that y[0] = to true solution
         true_solution = a_value * sol.t
         np.testing.assert_allclose(
-            sol.y[0, :],
+            sol.all_ys[0][0, :],
             true_solution,
             rtol=1e-7,
             atol=1e-6,
@@ -650,7 +650,7 @@ class TestIDAKLUSolver:
         sol_neg = solver.solve(
             model, t_eval, inputs={"a": a_value - 0.5 * h}, t_interp=t_interp
         )
-        dyda_fd = (sol_plus.y - sol_neg.y) / h
+        dyda_fd = (sol_plus.all_ys[0] - sol_neg.all_ys[0]) / h
         dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
         np.testing.assert_allclose(
@@ -692,7 +692,7 @@ class TestIDAKLUSolver:
 
         # u(t0) = 0, v(t0) = 1 (corrected from v=2 by Newton IC solver)
         np.testing.assert_allclose(
-            sol.y[:, 0],
+            sol.all_ys[0][:, 0],
             [0, 1],
             rtol=1e-7,
             atol=1e-6,
@@ -734,7 +734,7 @@ class TestIDAKLUSolver:
 
         # test that y[1] remains constant
         np.testing.assert_allclose(
-            sol.y[1, :],
+            sol.all_ys[0][1, :],
             np.ones(sol.t.shape),
             rtol=1e-7,
             atol=1e-6,
@@ -743,7 +743,7 @@ class TestIDAKLUSolver:
         # test that y[0] = to true solution
         true_solution = a_value * sol.t
         np.testing.assert_allclose(
-            sol.y[0, :],
+            sol.all_ys[0][0, :],
             true_solution,
             rtol=1e-7,
             atol=1e-6,
@@ -767,8 +767,10 @@ class TestIDAKLUSolver:
             inputs={"a": a_value - 0.5 * h, "b": b_value},
             t_interp=t_interp,
         )
-        max_index = min(sol_plus.y.shape[1], sol_neg.y.shape[1]) - 1
-        dyda_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
+        max_index = min(sol_plus.all_ys[0].shape[1], sol_neg.all_ys[0].shape[1]) - 1
+        dyda_fd = (
+            sol_plus.all_ys[0][:, :max_index] - sol_neg.all_ys[0][:, :max_index]
+        ) / h
         dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
         np.testing.assert_allclose(
@@ -790,8 +792,10 @@ class TestIDAKLUSolver:
             inputs={"a": a_value, "b": b_value - 0.5 * h},
             t_interp=t_interp,
         )
-        max_index = min(sol_plus.y.shape[1], sol_neg.y.shape[1]) - 1
-        dydb_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
+        max_index = min(sol_plus.all_ys[0].shape[1], sol_neg.all_ys[0].shape[1]) - 1
+        dydb_fd = (
+            sol_plus.all_ys[0][:, :max_index] - sol_neg.all_ys[0][:, :max_index]
+        ) / h
         dydb_fd = dydb_fd.transpose().reshape(-1, 1)
 
         np.testing.assert_allclose(
@@ -864,12 +868,12 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
         t_eval = [0, 1]
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solution.y, -1)
+        np.testing.assert_array_equal(solution.all_ys[0], -1)
 
         # change initial_conditions and re-solve (to test if ics_only works)
         model.concatenated_initial_conditions = pybamm.Vector(np.array([[1]]))
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solution.y, -1)
+        np.testing.assert_array_equal(solution.all_ys[0], -1)
 
     def test_banded(self):
         model = pybamm.lithium_ion.SPM()
@@ -894,7 +898,9 @@ class TestIDAKLUSolver:
         solver_banded = pybamm.IDAKLUSolver(options=options)
         soln_banded = solver_banded.solve(model, t_eval, t_interp=t_interp)
 
-        np.testing.assert_allclose(soln.y, soln_banded.y, rtol=1e-6, atol=1e-5)
+        np.testing.assert_allclose(
+            soln.all_ys[0], soln_banded.all_ys[0], rtol=1e-6, atol=1e-5
+        )
 
     @pytest.mark.parametrize(
         ("num_threads", "n_inputs"),
@@ -1128,7 +1134,9 @@ class TestIDAKLUSolver:
 
             if works:
                 soln = solver.solve(model, t_eval, t_interp=t_interp)
-                np.testing.assert_allclose(soln.y, soln_base.y, rtol=1e-5, atol=1e-4)
+                np.testing.assert_allclose(
+                    soln.all_ys[0], soln_base.all_ys[0], rtol=1e-5, atol=1e-4
+                )
             else:
                 with pytest.raises(ValueError):
                     _ = solver.solve(model, t_eval, t_interp=t_interp)
@@ -1186,12 +1194,14 @@ class TestIDAKLUSolver:
             solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
             soln = solver.solve(model, t_eval)
             # Hermite upsample y
-            itp = CubicHermiteSpline(soln.t, soln.y, soln.yp, axis=1)
+            itp = CubicHermiteSpline(soln.t, soln.all_ys[0], soln.all_yps[0], axis=1)
             y_upsampled = itp(t_interp)
 
             # Asserts
             assert all(v == solver.options[k] for k, v in options.items())
-            np.testing.assert_allclose(y_upsampled, soln_base.y, rtol=1e-5, atol=1e-4)
+            np.testing.assert_allclose(
+                y_upsampled, soln_base.all_ys[0], rtol=1e-5, atol=1e-4
+            )
 
         options_fail = {
             "max_order_bdf": -1,
@@ -1798,8 +1808,8 @@ class TestIDAKLUSolver:
         t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         solution = solver.solve(model, t_eval, t_interp=t_interp)
         np.testing.assert_array_equal(solution.t, t_interp)
-        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
-        np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.all_ys[0][0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.all_ys[0][-1], 2 * np.exp(0.1 * solution.t))
 
     def test_multiple_initial_conditions_single_variable(self):
         model = pybamm.BaseModel()
@@ -2673,7 +2683,9 @@ class TestIDAKLUAtol:
         expected = pybamm.IDAKLUSolver(atol=np.array([1e-3, 1e-9])).solve(model, t_eval)
         solution = pybamm.IDAKLUSolver(atol=sequence([1e-3, 1e-9])).solve(model, t_eval)
         assert solution.solver_statistics == expected.solver_statistics
-        np.testing.assert_allclose(solution.y, expected.y, rtol=1e-12, atol=0)
+        np.testing.assert_allclose(
+            solution.all_ys[0], expected.all_ys[0], rtol=1e-12, atol=0
+        )
 
     def test_per_state_atol_survives_a_config_round_trip(self):
         model = self._two_state_model()
