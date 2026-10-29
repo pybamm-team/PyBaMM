@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cmath>
+#include <limits>
 
 
 using namespace std::string_literals;
@@ -197,7 +198,7 @@ SolverOptions::SolverOptions(py::dict &py_opts)
     }
 
     // Output upsampling
-    upsampling_tolerance = 0.0;
+    upsampling_tolerance = std::numeric_limits<double>::infinity();
     if (py_opts.contains("upsampling_tolerance") && !py_opts["upsampling_tolerance"].is_none()) {
         upsampling_tolerance = py_opts["upsampling_tolerance"].cast<double>();
         if (upsampling_tolerance <= 0.0) {

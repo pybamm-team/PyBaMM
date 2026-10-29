@@ -470,7 +470,7 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
   );
 
   use_upsampling_ = (
-    solver_opts.upsampling_tolerance > 0.0 &&
+    std::isfinite(solver_opts.upsampling_tolerance) &&
     save_adaptive_steps_ &&
     functions->upsampling_fcn != nullptr &&
     functions->upsampling_fcn->nnz_out() > 0
