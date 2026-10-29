@@ -113,7 +113,7 @@ class UnstructuredSubMesh(SubMesh):
         ]
         # Vertex mean is the exact centroid for simplices (triangles, tets);
         # quads and hexes overwrite it with the true area/volume centroid.
-        self.cell_centroids = sum(verts) / len(verts)
+        self.cell_centroids = np.mean(verts, axis=0)
 
         if self.element_type == ElementType.TRIANGLE:
             v0, v1, v2 = verts
@@ -258,7 +258,7 @@ class UnstructuredSubMesh(SubMesh):
         face_verts = [
             self.vertices[self.faces[:, i]] for i in range(self.faces.shape[1])
         ]
-        self.face_centroids = sum(face_verts) / len(face_verts)
+        self.face_centroids = np.mean(face_verts, axis=0)
 
         if self.dimension == 2:
             v0, v1 = face_verts
