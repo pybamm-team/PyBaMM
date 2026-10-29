@@ -1733,7 +1733,7 @@ class TestExpressionFunctionParameter:
         assert f"_num_derivatives={num_derivatives}" in src
 
         namespace = {"pybamm": pybamm, "np": np}
-        exec(src, namespace)  # noqa: S102 - runs the source this test generated
+        exec(src, namespace)
         for value in [0.13, 0.41, 0.77]:
             expected = interp.create_copy([pybamm.Scalar(value)]).evaluate()
             np.testing.assert_allclose(
