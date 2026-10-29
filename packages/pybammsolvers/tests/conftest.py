@@ -171,6 +171,7 @@ def make_exponential_decay_solver(
     # No algebraic equations for this pure ODE: provide empty functions
     alg_res = casadi.Function("empty_alg_res", [], [])
     alg_jac = casadi.Function("empty_alg_jac", [], [])
+    upsampling = casadi.Function("empty_upsampling", [], [])
 
     # DAE identifier (1 = differential, 0 = algebraic)
     # For ODE, all states are differential
@@ -210,6 +211,7 @@ def make_exponential_decay_solver(
     events_func = idaklu_module.generate_function(events.serialize())
     alg_res_func = idaklu_module.generate_function(alg_res.serialize())
     alg_jac_func = idaklu_module.generate_function(alg_jac.serialize())
+    upsampling_func = idaklu_module.generate_function(upsampling.serialize())
 
     # Solver options
     options = {
@@ -281,6 +283,7 @@ def make_exponential_decay_solver(
         options,
         alg_res_func,
         alg_jac_func,
+        upsampling_func,
     )
 
     # Initial conditions need to be 2D: [number_of_groups, n_coeffs]

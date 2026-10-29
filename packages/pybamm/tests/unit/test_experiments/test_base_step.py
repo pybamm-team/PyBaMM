@@ -160,3 +160,18 @@ def test_parse_termination_requires_operator_for_input_parameter():
         pybamm.experiment.step.base_step._parse_termination(
             "2A", pybamm.InputParameter("I_app")
         )
+
+
+@pytest.mark.parametrize(
+    "step, variable",
+    [
+        (pybamm.step.current(1), "Voltage [V]"),
+        (pybamm.step.c_rate(1), "Voltage [V]"),
+        (pybamm.step.rest(), "Voltage [V]"),
+        (pybamm.step.power(1), "Voltage [V]"),
+        (pybamm.step.resistance(1), "Voltage [V]"),
+        (pybamm.step.voltage(4.1), "Current [A]"),
+    ],
+)
+def test_upsampling_variable(step, variable):
+    assert step.upsampling_variable == variable

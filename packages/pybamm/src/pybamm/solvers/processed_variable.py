@@ -168,7 +168,15 @@ class ProcessedVariable(BaseProcessedVariable):
         t = self.t_pts
         return self._observe_postfix(self._observe_raw(), t)
 
+    @property
+    def has_t_additive(self) -> bool:
+        """Whether ``t_pts`` includes times without stored states."""
+        return len(self.t_pts) != sum(len(t) for t in self.all_ts)
+
     def _observe_raw(self):
+        # Hermite interpolation fills in the times without stored states
+        if self.has_t_additive:
+            return self._observe_hermite(self.t_pts)
         return self._observer.observe_raw(self)
 
     def _observe_hermite(self, t):

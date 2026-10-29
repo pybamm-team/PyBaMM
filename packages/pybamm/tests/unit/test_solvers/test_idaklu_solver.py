@@ -2733,3 +2733,241 @@ class TestIDAKLUSolverStatistics:
         stats = solution.solver_statistics
         assert stats.number_of_steps > 0
         assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
+
+
+class TestUpsampling:
+    @staticmethod
+    def _solve(options=None, **solver_kwargs):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values["Current function [A]"] = 10
+        solver = pybamm.IDAKLUSolver(options=options, **solver_kwargs)
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), parameter_values=parameter_values, solver=solver
+        )
+        return sim.solve([0, 3600])
+
+    def test_t_additive(self):
+        baseline = self._solve()
+        assert baseline.t_additive is None
+
+        options = {"upsampling_tolerance": 1e-4}
+        upsampled = self._solve(options)
+        # The added times leave the stored states untouched
+        stored = np.concatenate(upsampled.all_ts)
+        np.testing.assert_array_equal(stored, baseline.t)
+        assert upsampled.all_ys[0].shape == baseline.all_ys[0].shape
+        t_additive = upsampled.t_additive
+        assert t_additive.size > 0
+        assert np.all(np.diff(t_additive) > 0)
+        assert not np.any(np.isin(t_additive, stored))
+        # t and the variables' entries cover both
+        expected = np.union1d(stored, t_additive)
+        np.testing.assert_array_equal(upsampled.t, expected)
+        assert upsampled["Voltage [V]"].entries.shape == expected.shape
+
+        # Reduction upsamples its own spline: every midpoint is within tolerance
+        # Reducing a finished solution keeps its added times
+        solver = pybamm.IDAKLUSolver()
+        np.testing.assert_array_equal(
+            solver.reduce_solution(upsampled).t_additive, t_additive
+        )
+
+        reduced = self._solve(options | {"hermite_reduction_factor": 2.0})
+        reduced_stored = np.concatenate(reduced.all_ts)
+        assert reduced_stored.size < stored.size
+        assert not np.any(np.isin(reduced.t_additive, reduced_stored))
+        voltage = reduced["Voltage [V]"]
+        t_mid = 0.5 * (reduced.t[:-1] + reduced.t[1:])
+        linear = 0.5 * (voltage.entries[:-1] + voltage.entries[1:])
+        assert np.max(np.abs(linear - voltage(t_mid))) <= 1.0001e-4
+
+        # Without Hermite data the added times are saved into the solution
+        no_hermite = self._solve(options | {"hermite_interpolation": False})
+        outputs_only = self._solve(options, output_variables=["Voltage [V]"])
+        for solution in [no_hermite, outputs_only]:
+            assert solution.t_additive is None
+            np.testing.assert_array_equal(solution.t, expected)
+        # The Hermite interpolant matches IDA's own one to within tolerance
+        np.testing.assert_allclose(
+            outputs_only["Voltage [V]"].entries,
+            upsampled["Voltage [V]"].entries,
+            rtol=1e-5,
+        )
+
+    def test_resolves_voltage_linear_interpolant(self):
+        reference = self._solve(rtol=1e-10, atol=1e-12)
+        errors = []
+        for tolerance in [None, 1e-3, 1e-4]:
+            solution = self._solve({"upsampling_tolerance": tolerance})
+            t = solution.t
+            if solution.t_additive is not None:
+                t = np.union1d(t, solution.t_additive)
+            voltage = solution["Voltage [V]"](t)
+            t_mid = 0.5 * (t[:-1] + t[1:])
+            linear = 0.5 * (voltage[:-1] + voltage[1:])
+            errors.append(np.max(np.abs(linear - reference["Voltage [V]"](t_mid))))
+        assert errors[0] > 1e-2
+        assert errors[1] < 1.5e-3
+        assert errors[2] < 1.5e-4
+
+    def test_scale(self):
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x", scale=10)
+        model.rhs = {x: -x}
+        model.initial_conditions = {x: 20}
+        model.variables = {"x": x, "2x": 2 * x}
+        model.upsampling_variable = "x"
+        solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3})
+        solver.solve(model, [0, 1])
+        upsampling_fcn = solver._upsampling_fcn(model, {})
+        y0 = model.concatenated_initial_conditions.evaluate()
+        np.testing.assert_allclose(float(upsampling_fcn(0, y0, [])), 2.0)
+
+        # A variable without a scale is used as is
+        model.upsampling_variable = "2x"
+        upsampling_fcn = solver._upsampling_fcn(model, {})
+        np.testing.assert_allclose(float(upsampling_fcn(0, y0, [])), 40.0)
+
+    def test_sensitivities(self):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values["Current function [A]"] = "[input]"
+        inputs = {"Current function [A]": 5}
+        options = {"upsampling_tolerance": 1e-4}
+
+        def solve(options, t_interp=None, output_variables=None):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                solver=pybamm.IDAKLUSolver(
+                    options=options, output_variables=output_variables
+                ),
+            )
+            return sim.solve(
+                [0, 3600],
+                inputs=inputs,
+                calculate_sensitivities=True,
+                t_interp=t_interp,
+            )
+
+        # With sensitivities the added points are saved into the solution, carrying
+        # the integrator's own interpolated sensitivities
+        baseline = solve({})
+        upsampled = solve(options)
+        assert upsampled.t_additive is None
+        assert upsampled.t.size > baseline.t.size
+        reference = solve({}, t_interp=upsampled.t)
+        outputs_only = solve(options, output_variables=["Voltage [V]"])
+        np.testing.assert_array_equal(outputs_only.t, upsampled.t)
+        for solution in [upsampled, outputs_only]:
+            np.testing.assert_allclose(
+                solution["Voltage [V]"].sensitivities["Current function [A]"],
+                reference["Voltage [V]"].sensitivities["Current function [A]"],
+                rtol=1e-10,
+                atol=1e-12,
+            )
+
+    def test_option_errors(self):
+        for tolerance in [0.0, -1e-3]:
+            with pytest.raises(pybamm.SolverError, match=r"must be None or > 0"):
+                pybamm.IDAKLUSolver(options={"upsampling_tolerance": tolerance})
+        model = pybamm.lithium_ion.SPM()
+        model.upsampling_variable = "Negative particle concentration [mol.m-3]"
+        solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3})
+        sim = pybamm.Simulation(model, solver=solver)
+        with pytest.raises(pybamm.SolverError, match="needs a scalar variable"):
+            sim.solve([0, 600])
+
+    def test_skips_algebraic_and_missing_variables(self):
+        experiment = pybamm.Experiment(
+            ["Charge at 1C until 4.1 V", "Hold at 4.1 V for 10 minutes"]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3}),
+        )
+        sim.solve()
+        charge, hold = experiment.steps
+        solver = sim._get_built_experiment_solver(charge)
+        model = sim._get_built_experiment_model(charge)
+        assert solver._upsampling_fcn(model, {}).n_out() == 1
+        model.upsampling_variable = "Not a variable"
+        assert solver._upsampling_fcn(model, {}).n_out() == 0
+
+        # In a voltage hold the current is an algebraic state
+        solver = sim._get_built_experiment_solver(hold)
+        model = sim._get_built_experiment_model(hold)
+        assert model.upsampling_variable == "Current [A]"
+        assert solver._upsampling_fcn(model, {}).n_out() == 0
+
+    def test_t_additive_survives_saving_and_joining(self, tmp_path):
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 1C until 3.5 V", "Rest for 10 minutes"),
+                "Charge at 1C until 4 V",
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-4}),
+        )
+        solution = sim.solve()
+        t_additive = solution.t_additive
+        assert t_additive.size > 0
+        sim.save(tmp_path / "sim.pkl")
+        solution.save(tmp_path / "solution.pkl")
+        for other in [
+            solution.copy(),
+            pybamm.load(tmp_path / "solution.pkl"),
+            pybamm.load_sim(tmp_path / "sim.pkl").solution,
+            pybamm.Solution.from_sub_solutions(solution.sub_solutions),
+            solution.cycles[0] + solution.cycles[1],
+        ]:
+            np.testing.assert_array_equal(other.t_additive, t_additive)
+            np.testing.assert_array_equal(other.t, solution.t)
+        # The cycles and steps split the added times between them
+        steps = [step for cycle in solution.cycles for step in cycle.steps]
+        np.testing.assert_array_equal(
+            np.concatenate([step.t_additive for step in steps]), t_additive
+        )
+
+    @pytest.mark.parametrize("mode", ["legacy", "unified"])
+    def test_experiment_sets_variable_at_build(self, mode):
+        experiment = pybamm.Experiment(
+            ["Discharge at 1C until 3.0 V", "Hold at 3.0 V for 10 minutes"]
+        )
+        solutions = []
+        for tolerance in [None, 1e-4]:
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": tolerance}),
+                experiment_model_mode=mode,
+            )
+            solutions.append(sim.solve())
+        models = [sim._get_built_experiment_model(step) for step in experiment.steps]
+        if mode == "legacy":
+            assert [model.upsampling_variable for model in models] == [
+                "Voltage [V]",
+                "Current [A]",
+            ]
+        else:
+            # One model serves every step, so it selects the step's output
+            model = models[0]
+            assert model.upsampling_variable == "Experiment upsampling variable"
+            assert isinstance(
+                model.variables["Experiment upsampling variable"], pybamm.Conditional
+            )
+        assert solutions[0].t_additive is None
+        np.testing.assert_array_equal(
+            np.concatenate(solutions[1].all_ts), solutions[0].t
+        )
+        discharge, hold = solutions[1].cycles
+        assert discharge.t_additive.size > 0
+        # The hold's current is an algebraic state, so it is not upsampled
+        if mode == "legacy":
+            assert hold.t_additive is None
+        else:
+            assert hold.t_additive.size == 0
+        np.testing.assert_array_equal(discharge.t_additive, solutions[1].t_additive)

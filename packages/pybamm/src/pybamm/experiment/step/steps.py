@@ -194,6 +194,7 @@ class Voltage(BaseStepImplicit):
     """
 
     control_kind = ControlKind.VOLTAGE
+    upsampling_variable = "Current [A]"
 
     def get_parameter_values(self, variables):
         return {"Voltage function [V]": self.value}

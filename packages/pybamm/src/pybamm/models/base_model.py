@@ -427,6 +427,15 @@ class BaseModel:
         self.process_and_register_variable(name, value)
         return self._variables_processed[name]
 
+    def is_algebraic_state(self, symbol: pybamm.Symbol) -> bool:
+        """Whether ``symbol`` is one of the model's algebraic state variables.
+
+        Matched by name, since a model copy keeps a state's name but not its id.
+        """
+        return isinstance(symbol, pybamm.Variable) and symbol.name in {
+            state.name for state in self.algebraic
+        }
+
     def get_processed_variable_or_event(self, name: str) -> pybamm.Symbol:
         """
         Get a processed variable or event by name.

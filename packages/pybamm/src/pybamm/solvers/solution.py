@@ -326,6 +326,9 @@ class Solution(SolutionBase):
         Solvers should forward the user's selection so observed variables use
         the same backend as the integration.
 
+    t_additive : :class:`numpy.array`, optional
+        Sorted times between the stored states, included in ``t`` and evaluated by
+        Hermite interpolation of the states.
     """
 
     # Solvers, Simulation and make_cycle_solution set all_first_states, closest_event_idx,
@@ -350,6 +353,7 @@ class Solution(SolutionBase):
         "_sub_solutions",
         "_summary_variables",
         "_t",
+        "_t_additive",
         "_t_eval",
         "_t_event",
         "_termination",
@@ -388,6 +392,7 @@ class Solution(SolutionBase):
         variables_returned=False,
         check_solution=True,
         options=None,
+        t_additive=None,
         _validate_time_structure=True,
     ):
         if not isinstance(all_ts, list):
@@ -474,6 +479,7 @@ class Solution(SolutionBase):
 
         # Initialize empty inputs
         self._t = None
+        self._t_additive = t_additive
         self._t_eval = None
         self._y = None
         self._yp = None
@@ -501,6 +507,7 @@ class Solution(SolutionBase):
         self.solver_statistics = None
         self._first_state = None
         self._last_state = None
+        self._t_additive = None
         self._y0 = None
         self._y0_sensitivities = None
         self._y_event_sensitivities = None
@@ -565,10 +572,25 @@ class Solution(SolutionBase):
 
     @property
     def t(self) -> np.ndarray:
-        """Times at which the solution is evaluated"""
+        """Times at which the solution is evaluated, including ``t_additive``"""
         if self._t is None:
             self._t = np.concatenate(self.all_ts)
+            t_additive = self.t_additive
+            if t_additive is not None:
+                self._t = np.union1d(self._t, t_additive)
         return self._t
+
+    @property
+    def t_additive(self) -> np.ndarray | None:
+        """Times between the stored states that resolve the solver's upsampled
+        output variable, or None if the solver did not upsample"""
+        return self._t_additive
+
+    @staticmethod
+    def _join_t_additive(solutions):
+        """The solutions' ``t_additive`` joined, or None if none has any."""
+        parts = [s._t_additive for s in solutions if s._t_additive is not None]
+        return np.concatenate(parts) if parts else None
 
     @property
     def t_eval(self) -> np.ndarray:
@@ -1295,6 +1317,7 @@ class Solution(SolutionBase):
             all_t_evals=all_t_evals,
             variables_returned=other.variables_returned,
             options=options,
+            t_additive=self._join_t_additive([self, other]),
             _validate_time_structure=False,
         )
 
@@ -1407,6 +1430,7 @@ class Solution(SolutionBase):
             all_t_evals=all_t_evals if t_evals_present else None,
             variables_returned=any(s.variables_returned for s in segments),
             options=options,
+            t_additive=cls._join_t_additive(sols),
             # validates the joined series once (O(N), not O(N^2))
             _validate_time_structure=True,
         )
@@ -1455,6 +1479,7 @@ class Solution(SolutionBase):
             all_t_evals=self._all_t_evals,
             variables_returned=self.variables_returned,
             options=self.user_options,
+            t_additive=self._t_additive,
             _validate_time_structure=False,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked

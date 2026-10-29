@@ -693,6 +693,36 @@ class TestSolution:
         assert sol_copy.solve_time == sol1.solve_time
         assert sol_copy.integration_time == sol1.integration_time
 
+    def test_t_additive(self):
+        model = pybamm.BaseModel()
+        t1, t2, t3 = np.linspace(0, 1), np.linspace(1, 2), np.linspace(2, 3)
+        plain = pybamm.Solution(t1, np.tile(t1, (2, 1)), model, {})
+        assert plain.t_additive is None
+        np.testing.assert_array_equal(plain.t, t1)
+        sol1, sol2, sol3 = (
+            pybamm.Solution(t, np.tile(t, (2, 1)), model, {}, t_additive=t_additive)
+            for t, t_additive in [
+                (t1, np.array([0.25])),
+                (t2, None),
+                (t3, np.array([2.5])),
+            ]
+        )
+        assert (plain + sol2).t_additive is None
+        for joined in [
+            sol1 + sol2 + sol3,
+            pybamm.Solution.from_sub_solutions([sol1, sol2, sol3]),
+        ]:
+            np.testing.assert_array_equal(joined.t_additive, [0.25, 2.5])
+            # The single-point states hold no added times
+            for state in [joined.first_state, joined.last_state]:
+                assert state.t_additive is None
+                assert state.t.size == 1
+        np.testing.assert_array_equal(sol1.copy().t_additive, [0.25])
+        np.testing.assert_array_equal(sol1.t, np.union1d(t1, [0.25]))
+        np.testing.assert_array_equal(
+            pickle.loads(pickle.dumps(sol1)).t_additive, [0.25]
+        )
+
     def test_copy_with_computed_variables(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
