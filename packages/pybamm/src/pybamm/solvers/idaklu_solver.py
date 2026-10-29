@@ -242,7 +242,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # only active if `hermite_interpolation` is True and sensitivities
                 # are disabled.
                 "hermite_reduction_factor": 1.0,
-                # Output upsampling (0 = off). Adds times inside each solver step
+                # Output upsampling (None = off). Adds times inside each solver step
                 # until linear interpolation of one scalar output variable between
                 # them is accurate to upsampling_tolerance times the variable's
                 # scale (1 if it has none). The variable is the voltage, or the
@@ -251,7 +251,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # times go to `Solution.t_additive` (and `Solution.t`) when Hermite
                 # data is stored and sensitivities are off; otherwise they are
                 # saved as full solution points. Ignored with t_interp.
-                "upsampling_tolerance": 0.0,
+                "upsampling_tolerance": None,
                 ## Initial conditions calculation
                 # Positive constant in the Newton iteration convergence test within the
                 # initial condition calculation
@@ -381,7 +381,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "suppress_algebraic_error": False,
             "hermite_interpolation": True,
             "hermite_reduction_factor": 1.0,
-            "upsampling_tolerance": 0.0,
+            "upsampling_tolerance": None,
             "nonlinear_convergence_coefficient_ic": 0.0033,
             "max_num_steps_ic": 50,
             "max_num_jacobians_ic": 40,
@@ -419,8 +419,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             if hermite_reduction_factor < 1.0:
                 raise pybamm.SolverError("hermite_reduction_factor must be >= 1.0.")
 
-        if options["upsampling_tolerance"] < 0.0:
-            raise pybamm.SolverError("upsampling_tolerance must be >= 0.")
+        upsampling_tolerance = options["upsampling_tolerance"]
+        if upsampling_tolerance is not None and not upsampling_tolerance > 0.0:
+            raise pybamm.SolverError("upsampling_tolerance must be None or > 0.")
 
         if not isinstance(options["compile"], bool):
             raise pybamm.SolverError("compile must be a bool")
@@ -789,7 +790,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
         empty = casadi.Function("empty_upsampling", [], [])
         name = getattr(model, "upsampling_variable", "Voltage [V]")
-        if self._options["upsampling_tolerance"] == 0 or name not in model.variables:
+        if self._options["upsampling_tolerance"] is None or name not in model.variables:
             return empty
         variable = model.variables[name]
         if model.is_algebraic_state(variable):
@@ -1325,6 +1326,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             all_t_evals=solution.all_t_evals,
             variables_returned=solution.variables_returned,
             options=solution.user_options,
+            t_additive=solution.t_additive,
         )
 
         # Propagate metadata from the original solution

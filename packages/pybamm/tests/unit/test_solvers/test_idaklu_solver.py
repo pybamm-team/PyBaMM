@@ -2777,8 +2777,13 @@ class TestUpsampling:
         np.testing.assert_array_equal(upsampled.t, expected)
         assert upsampled["Voltage [V]"].entries.shape == expected.shape
 
-        # With knot reduction, the reduced Hermite spline is upsampled, so every
-        # interval's midpoint is linear to within the tolerance
+        # Reduction upsamples its own spline: every midpoint is within tolerance
+        # Reducing a finished solution keeps its added times
+        solver = pybamm.IDAKLUSolver()
+        np.testing.assert_array_equal(
+            solver.reduce_solution(upsampled).t_additive, t_additive
+        )
+
         reduced = self._solve(options | {"hermite_reduction_factor": 2.0})
         reduced_stored = np.concatenate(reduced.all_ts)
         assert reduced_stored.size < stored.size
@@ -2804,7 +2809,7 @@ class TestUpsampling:
     def test_resolves_voltage_linear_interpolant(self):
         reference = self._solve(rtol=1e-10, atol=1e-12)
         errors = []
-        for tolerance in [0.0, 1e-3, 1e-4]:
+        for tolerance in [None, 1e-3, 1e-4]:
             solution = self._solve({"upsampling_tolerance": tolerance})
             t = solution.t
             if solution.t_additive is not None:
@@ -2874,8 +2879,9 @@ class TestUpsampling:
             )
 
     def test_option_errors(self):
-        with pytest.raises(pybamm.SolverError, match=r"must be >= 0"):
-            pybamm.IDAKLUSolver(options={"upsampling_tolerance": -1e-3})
+        for tolerance in [0.0, -1e-3]:
+            with pytest.raises(pybamm.SolverError, match=r"must be None or > 0"):
+                pybamm.IDAKLUSolver(options={"upsampling_tolerance": tolerance})
         model = pybamm.lithium_ion.SPM()
         model.upsampling_variable = "Negative particle concentration [mol.m-3]"
         solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3})
@@ -2906,13 +2912,45 @@ class TestUpsampling:
         assert model.upsampling_variable == "Current [A]"
         assert solver._upsampling_fcn(model, {}).n_out() == 0
 
+    def test_t_additive_survives_saving_and_joining(self, tmp_path):
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 1C until 3.5 V", "Rest for 10 minutes"),
+                "Charge at 1C until 4 V",
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-4}),
+        )
+        solution = sim.solve()
+        t_additive = solution.t_additive
+        assert t_additive.size > 0
+        sim.save(tmp_path / "sim.pkl")
+        solution.save(tmp_path / "solution.pkl")
+        for other in [
+            solution.copy(),
+            pybamm.load(tmp_path / "solution.pkl"),
+            pybamm.load_sim(tmp_path / "sim.pkl").solution,
+            pybamm.Solution.from_sub_solutions(solution.sub_solutions),
+            solution.cycles[0] + solution.cycles[1],
+        ]:
+            np.testing.assert_array_equal(other.t_additive, t_additive)
+            np.testing.assert_array_equal(other.t, solution.t)
+        # The cycles and steps split the added times between them
+        steps = [step for cycle in solution.cycles for step in cycle.steps]
+        np.testing.assert_array_equal(
+            np.concatenate([step.t_additive for step in steps]), t_additive
+        )
+
     @pytest.mark.parametrize("mode", ["legacy", "unified"])
     def test_experiment_sets_variable_at_build(self, mode):
         experiment = pybamm.Experiment(
             ["Discharge at 1C until 3.0 V", "Hold at 3.0 V for 10 minutes"]
         )
         solutions = []
-        for tolerance in [0.0, 1e-4]:
+        for tolerance in [None, 1e-4]:
             sim = pybamm.Simulation(
                 pybamm.lithium_ion.SPM(),
                 experiment=experiment,

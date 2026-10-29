@@ -726,6 +726,10 @@ class TestSolution:
             pybamm.Solution.from_sub_solutions([sol1, sol2, sol3]),
         ]:
             np.testing.assert_array_equal(joined.t_additive, [0.25, 2.5])
+            # The single-point states hold no added times
+            for state in [joined.first_state, joined.last_state]:
+                assert state.t_additive is None
+                assert state.t.size == 1
         np.testing.assert_array_equal(sol1.copy().t_additive, [0.25])
         np.testing.assert_array_equal(sol1.t, np.union1d(t1, [0.25]))
         np.testing.assert_array_equal(

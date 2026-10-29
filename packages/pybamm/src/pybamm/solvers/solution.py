@@ -585,7 +585,12 @@ class Solution(SolutionBase):
     def t_additive(self) -> np.ndarray | None:
         """Times between the stored states that resolve the solver's upsampled
         output variable, or None if the solver did not upsample"""
-        parts = [s._t_additive for s in self.sub_solutions if s._t_additive is not None]
+        return self._t_additive
+
+    @staticmethod
+    def _join_t_additive(solutions):
+        """The solutions' ``t_additive`` joined, or None if none has any."""
+        parts = [s._t_additive for s in solutions if s._t_additive is not None]
         return np.concatenate(parts) if parts else None
 
     @property
@@ -1327,6 +1332,7 @@ class Solution(SolutionBase):
             all_t_evals=all_t_evals,
             variables_returned=other.variables_returned,
             options=options,
+            t_additive=self._join_t_additive([self, other]),
             _validate_time_structure=False,
         )
 
@@ -1439,6 +1445,7 @@ class Solution(SolutionBase):
             all_t_evals=all_t_evals if t_evals_present else None,
             variables_returned=any(s.variables_returned for s in segments),
             options=options,
+            t_additive=cls._join_t_additive(sols),
             # validates the joined series once (O(N), not O(N^2))
             _validate_time_structure=True,
         )
@@ -1487,6 +1494,7 @@ class Solution(SolutionBase):
             all_t_evals=self._all_t_evals,
             variables_returned=self.variables_returned,
             options=self.user_options,
+            t_additive=self._t_additive,
             _validate_time_structure=False,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked
