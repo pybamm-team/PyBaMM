@@ -30,10 +30,10 @@ class ReactionDriven(BaseModel):
             if domain != "separator":  # separator porosity does not change
                 dom = domain.split()[0]
                 Domain = dom.capitalize()
-                SEI_option = getattr(self.options, dom)["SEI"]
                 phases_option = getattr(self.options, dom)["particle phases"]
                 phases = self.options.phases[dom]
                 for phase in phases:
+                    SEI_option = getattr(getattr(self.options, dom), phase)["SEI"]
                     if phases_option == "1" and phase == "primary":
                         # `domain` has one phase
                         phase_name = ""

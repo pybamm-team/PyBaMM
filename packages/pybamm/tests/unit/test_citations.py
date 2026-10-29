@@ -124,6 +124,10 @@ class TestCitations:
         pybamm.lithium_ion.SPMe(build=False)
         assert "Marquis2019" in citations._papers_to_cite
 
+        citations._reset()
+        pybamm.lithium_ion.MPM(build=False)
+        assert "Marquis2019" not in citations._papers_to_cite
+
     def test_doyle_1993(self):
         citations = pybamm.citations
         citations._reset()
@@ -233,6 +237,14 @@ class TestCitations:
         pybamm.lithium_ion.SPM(build=False, options={"SEI": "constant"})
         pybamm.lithium_ion.SPMe(build=False, options={"SEI": "none"})
         pybamm.lithium_ion.SPMe(build=False, options={"SEI": "constant"})
+        pybamm.lithium_ion.SPM(
+            build=False,
+            options={
+                "particle phases": ("2", "1"),
+                "surface form": "algebraic",
+                "SEI": (("none", "constant"), "none"),
+            },
+        )
         assert "BrosaPlanella2022" not in citations._papers_to_cite
 
         pybamm.lithium_ion.SPM(build=False, options={"SEI": "ec reaction limited"})
@@ -252,6 +264,22 @@ class TestCitations:
         )
         assert "BrosaPlanella2022" in citations._papers_to_cite
         assert "BrosaPlanella2022" in citations._citation_tags
+        citations._reset()
+
+    @pytest.mark.parametrize(
+        "options, cited",
+        [
+            ({"SEI": "reaction limited"}, True),
+            ({"lithium plating": "irreversible"}, True),
+            ({"SEI": "constant"}, False),
+            ({"SEI": ("none", "constant")}, False),
+        ],
+    )
+    def test_brosaplanella_2022_per_electrode(self, options, cited):
+        citations = pybamm.citations
+        citations._reset()
+        pybamm.lithium_ion.SPM(build=False, options=options)
+        assert ("BrosaPlanella2022" in citations._papers_to_cite) == cited
         citations._reset()
 
     def test_VonKolzenberg_2020(self):
