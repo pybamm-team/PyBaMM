@@ -1434,8 +1434,7 @@ class BaseModel:
 
         def _extract_from_y_slices(var, solution_var, solution_model, solution):
             solution_y_slice = solution_model.y_slices[solution_var][0]
-            y = solution.all_ys[-1]
-            y_last = y[:, -1] if y.ndim > 1 else y
+            y_last = solution.y[:, -1] if solution.y.ndim > 1 else solution.y
 
             # Validate slice bounds
             slice_stop = (

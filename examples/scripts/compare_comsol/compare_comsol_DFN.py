@@ -120,7 +120,7 @@ comsol_model.update_processed_variables(comsol_model.variables)
 # Make new solution with same t and y
 # Update solution scales to match the pybamm model
 comsol_solution = pybamm.Solution(
-    pybamm_solution.all_ts, pybamm_solution.all_ys, comsol_model, {}
+    pybamm_solution.t, pybamm_solution.y, comsol_model, {}
 )
 
 # plot

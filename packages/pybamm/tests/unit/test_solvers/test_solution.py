@@ -18,7 +18,7 @@ from scipy.io import loadmat
 
 import pybamm
 from pybamm.solvers.solution import _DEFAULT_SOLUTION_OPTIONS, make_cycle_solution
-from tests import concatenated_states, get_discretisation_for_testing
+from tests import get_discretisation_for_testing
 
 
 class _PicklerBeforeVariableObservers(pickle.Pickler):
@@ -45,7 +45,7 @@ class TestSolution:
         y = np.tile(t, (20, 1))
         sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
         np.testing.assert_array_equal(sol.t, t)
-        np.testing.assert_array_equal(sol.all_ys[0], y)
+        np.testing.assert_array_equal(sol.y, y)
         assert sol.t_event is None
         assert sol.y_event is None
         assert sol.termination == "final time"
@@ -93,12 +93,12 @@ class TestSolution:
         # Without yps, yp should be None
         sol_no_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {})
         assert sol_no_yp.hermite_interpolation is False
-        assert sol_no_yp.all_yps is None
+        assert sol_no_yp.yp is None
 
         # With yps, yp should return the concatenated time derivatives
         sol_with_yp = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_yps=yp)
         assert sol_with_yp.hermite_interpolation is True
-        np.testing.assert_array_equal(sol_with_yp.all_yps[0], yp)
+        np.testing.assert_array_equal(sol_with_yp.yp, yp)
 
     def test_sensitivities(self):
         t = np.linspace(0, 1)
@@ -334,7 +334,7 @@ class TestSolution:
         assert sol_sum.integration_time == 0.8
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
         np.testing.assert_array_equal(
-            concatenated_states(sol_sum.all_ys), np.concatenate([y1, y2[:, 1:]], axis=1)
+            sol_sum.y, np.concatenate([y1, y2[:, 1:]], axis=1)
         )
         np.testing.assert_array_equal(sol_sum.all_inputs, [{"a": 1}, {"a": 2}])
         assert sol_sum.all_inputs_stacked[0] is sol1.all_inputs_stacked[0]
@@ -605,12 +605,8 @@ class TestSolution:
 
         # Test
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
-        with (
-            pytest.warns(DeprecationWarning),
-            pytest.raises(
-                pybamm.SolverError,
-                match=r"The solution is made up from different models",
-            ),
+        with pytest.raises(
+            pybamm.SolverError, match=r"The solution is made up from different models"
         ):
             sol_sum.y
 
@@ -696,15 +692,6 @@ class TestSolution:
         assert sol_copy.set_up_time == sol1.set_up_time
         assert sol_copy.solve_time == sol1.solve_time
         assert sol_copy.integration_time == sol1.integration_time
-
-    def test_states_are_deprecated(self):
-        t = np.linspace(0, 1)
-        y = np.tile(t, (2, 1))
-        solution = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_yps=2 * y)
-        with pytest.warns(DeprecationWarning, match=r"`Solution\.y` is deprecated"):
-            np.testing.assert_array_equal(solution.y, y)
-        with pytest.warns(DeprecationWarning, match=r"`Solution\.yp` is deprecated"):
-            np.testing.assert_array_equal(solution.yp, 2 * y)
 
     def test_t_additive(self):
         model = pybamm.BaseModel()
@@ -931,13 +918,9 @@ class TestSolution:
             for output_variables in (None, ["u"])
         )
 
+        np.testing.assert_allclose(solution.first_state.y, [[1], [2]], rtol=1e-6)
         np.testing.assert_allclose(
-            solution.first_state.all_ys[0], [[1], [2]], rtol=1e-6
-        )
-        np.testing.assert_allclose(
-            solution.first_state.all_ys[0],
-            full_solution.first_state.all_ys[0],
-            rtol=1e-6,
+            solution.first_state.y, full_solution.first_state.y, rtol=1e-6
         )
 
     def test_first_last_state_empty_y(self):
@@ -985,17 +968,11 @@ class TestSolution:
 
         assert isinstance(sol.cycles[0], pybamm.Solution)
         np.testing.assert_array_equal(sol.cycles[0].t, sol.t[:len_cycle_1])
-        np.testing.assert_array_equal(
-            concatenated_states(sol.cycles[0].all_ys),
-            concatenated_states(sol.all_ys)[:, :len_cycle_1],
-        )
+        np.testing.assert_array_equal(sol.cycles[0].y, sol.y[:, :len_cycle_1])
 
         assert isinstance(sol.cycles[1], pybamm.Solution)
         np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1:])
-        np.testing.assert_allclose(
-            concatenated_states(sol.cycles[1].all_ys),
-            concatenated_states(sol.all_ys)[:, len_cycle_1:],
-        )
+        np.testing.assert_allclose(sol.cycles[1].y, sol.y[:, len_cycle_1:])
 
     def test_solutions_reject_undefined_attributes(self):
         # An experiment keeps several solutions per step, so none carries a __dict__
@@ -1030,9 +1007,7 @@ class TestSolution:
         first_state = solution.first_state
         loaded = pickle.loads(pickle.dumps(solution))
         np.testing.assert_array_equal(loaded.t, t)
-        np.testing.assert_array_equal(
-            loaded.first_state.all_ys[0], first_state.all_ys[0]
-        )
+        np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
 
     def test_total_time(self):
         sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]), pybamm.BaseModel(), {})
@@ -1988,9 +1963,7 @@ class TestSolution:
         folded = functools.reduce(operator.add, [s.copy() for s in sols])
 
         np.testing.assert_array_equal(batch.t, folded.t)
-        np.testing.assert_array_equal(
-            concatenated_states(batch.all_ys), concatenated_states(folded.all_ys)
-        )
+        np.testing.assert_array_equal(batch.y, folded.y)
         assert [len(s) for s in batch.all_ts] == [len(s) for s in folded.all_ts]
         assert len(batch.sub_solutions) == len(folded.sub_solutions)
         assert batch.all_inputs == folded.all_inputs
@@ -2114,9 +2087,7 @@ class TestSolution:
         folded = functools.reduce(operator.add, [s.copy() for s in sols])
 
         assert out.hermite_interpolation
-        np.testing.assert_array_equal(
-            concatenated_states(out.all_yps), concatenated_states(folded.all_yps)
-        )
+        np.testing.assert_array_equal(out.yp, folded.yp)
 
     def test_from_sub_solutions_mixed_hermite_is_not_hermite(self):
         # If any segment lacks yps, the fold is non-hermite (mirrors __add__'s AND).
@@ -2327,9 +2298,7 @@ class TestSolution:
 
         assert out.hermite_interpolation == folded.hermite_interpolation
         assert out.hermite_interpolation is True
-        np.testing.assert_array_equal(
-            concatenated_states(out.all_yps), concatenated_states(folded.all_yps)
-        )
+        np.testing.assert_array_equal(out.yp, folded.yp)
 
     def test_join_trailing_last_state_keeps_event_sensitivities(self):
         # Simulation carries last_state over a cycle whose steps are all infeasible;
@@ -2486,7 +2455,5 @@ class TestSolutionSolverStatistics:
         assert not hasattr(loaded, "label")
         assert loaded.solver_statistics is None
         np.testing.assert_array_equal(loaded.t, solution.t)
-        np.testing.assert_array_equal(
-            loaded.first_state.all_ys[0], first_state.all_ys[0]
-        )
+        np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
         assert loaded.last_state.t[0] == pytest.approx(solution.t[-1])

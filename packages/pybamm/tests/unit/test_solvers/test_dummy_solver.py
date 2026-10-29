@@ -4,7 +4,6 @@
 import numpy as np
 
 import pybamm
-from tests import concatenated_states
 
 
 class TestDummySolver:
@@ -20,7 +19,7 @@ class TestDummySolver:
         t_eval = np.linspace(0, 1)
         sol = solver.solve(model, t_eval)
         np.testing.assert_array_equal(sol.t, t_eval)
-        np.testing.assert_array_equal(sol.all_ys[0], np.zeros((1, t_eval.size)))
+        np.testing.assert_array_equal(sol.y, np.zeros((1, t_eval.size)))
         np.testing.assert_array_equal(sol["v"].data, np.ones(t_eval.size))
 
     def test_dummy_solver_step(self):
@@ -41,7 +40,5 @@ class TestDummySolver:
         # if t_eval is [0,1,2,3]
         # sol.t should be [0,1,1+eps,2,2+eps,3] i.e. size 2n-2
         np.testing.assert_array_equal(len(sol.t), t_eval.size * 2 - 2)
-        np.testing.assert_array_equal(
-            concatenated_states(sol.all_ys), np.zeros((1, sol.t.size))
-        )
+        np.testing.assert_array_equal(sol.y, np.zeros((1, sol.t.size)))
         np.testing.assert_array_equal(sol["v"].data, np.ones(sol.t.size))

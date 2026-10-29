@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests import concatenated_states, get_mesh_for_testing
+from tests import get_mesh_for_testing
 
 
 class TestScipySolver:
@@ -63,7 +63,7 @@ class TestScipySolver:
             t_eval = np.linspace(0, 1, 80)
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_equal(solution.t, t_eval)
-            np.testing.assert_allclose(solution.all_ys[0][0], np.exp(0.1 * solution.t))
+            np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
             # Test time
             assert solution.total_time == solution.solve_time + solution.set_up_time
@@ -119,13 +119,9 @@ class TestScipySolver:
         solution = solver.solve(model, t_eval)
         assert len(solution.t) < len(t_eval)
         np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
-        np.testing.assert_allclose(
-            concatenated_states(solution.all_ys)[0], np.exp(-0.1 * solution.t)
-        )
+        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
         np.testing.assert_equal(solution.t_event[0], solution.t[-1])
-        np.testing.assert_array_equal(
-            solution.y_event[:, 0], concatenated_states(solution.all_ys)[:, -1]
-        )
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
 
         # Test event in solution variables_and_events
         np.testing.assert_allclose(
@@ -172,7 +168,7 @@ class TestScipySolver:
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
 
-        T, Y = solution.t, solution.all_ys[0]
+        T, Y = solution.t, solution.y
         np.testing.assert_allclose(
             model.get_processed_variable("var1").evaluate(T, Y),
             np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
@@ -208,7 +204,7 @@ class TestScipySolver:
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
         np.testing.assert_allclose(
-            step_sol.all_ys[0][0], np.exp(0.1 * step_sol.t), rtol=1e-7, atol=1e-6
+            step_sol.y[0], np.exp(0.1 * step_sol.t), rtol=1e-7, atol=1e-6
         )
 
         # Step again (return 5 points)
@@ -217,18 +213,13 @@ class TestScipySolver:
             step_sol_2.t, np.array([0, 1, np.nextafter(1, np.inf), 1.25, 1.5, 1.75, 2])
         )
         np.testing.assert_allclose(
-            concatenated_states(step_sol_2.all_ys)[0],
-            np.exp(0.1 * step_sol_2.t),
-            rtol=1e-7,
-            atol=1e-6,
+            step_sol_2.y[0], np.exp(0.1 * step_sol_2.t), rtol=1e-7, atol=1e-6
         )
 
         # Check steps give same solution as solve
         t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
-        np.testing.assert_allclose(
-            solution.all_ys[0][0], step_sol.all_ys[0][0], rtol=1e-7, atol=1e-6
-        )
+        np.testing.assert_allclose(solution.y[0], step_sol.y[0], rtol=1e-7, atol=1e-6)
 
     def test_step_different_model(self):
         disc = pybamm.Discretisation()
@@ -258,7 +249,7 @@ class TestScipySolver:
         step_sol1 = solver.step(None, model1, dt)
         np.testing.assert_array_equal(step_sol1.t, [0, dt])
         np.testing.assert_allclose(
-            step_sol1.all_ys[0][0], np.exp(0.1 * step_sol1.t), rtol=1e-7, atol=1e-6
+            step_sol1.y[0], np.exp(0.1 * step_sol1.t), rtol=1e-7, atol=1e-6
         )
 
         # Step again, the model has changed so this raises an error
@@ -287,9 +278,7 @@ class TestScipySolver:
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         assert len(solution.t) < len(t_eval)
         np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
-        np.testing.assert_allclose(
-            concatenated_states(solution.all_ys)[0], np.exp(-0.1 * solution.t)
-        )
+        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_multiple_inputs_happy_path(self, subtests):
         for convert_to_format in ["python", "casadi"]:
@@ -317,7 +306,7 @@ class TestScipySolver:
                     solution = solutions[i]
                     np.testing.assert_array_equal(solution.t, t_eval)
                     np.testing.assert_allclose(
-                        solution.all_ys[0][0], np.exp(-0.01 * (i + 1) * solution.t)
+                        solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
                     )
 
     def test_model_solver_multiple_inputs_initial_conditions(self):
@@ -381,9 +370,7 @@ class TestScipySolver:
             np.testing.assert_array_equal(
                 solution.t[:-1], t_eval[: len(solution.t) - 1]
             )
-            np.testing.assert_allclose(
-                concatenated_states(solution.all_ys)[0], np.exp(-0.1 * solution.t)
-            )
+            np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_with_inputs_with_casadi(self):
         # Create model
@@ -408,9 +395,7 @@ class TestScipySolver:
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         assert len(solution.t) < len(t_eval)
         np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
-        np.testing.assert_allclose(
-            concatenated_states(solution.all_ys)[0], np.exp(-0.1 * solution.t)
-        )
+        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_inputs_in_initial_conditions(self):
         # Create model
@@ -426,7 +411,7 @@ class TestScipySolver:
         solutions = solver.solve(model, t_eval, inputs=inputs_list)
         for i, ic in enumerate(inputs_list):
             np.testing.assert_allclose(
-                solutions[i].all_ys[0][0],
+                solutions[i].y[0],
                 ic["ic 1"] * np.exp(ic["rate"] * solutions[i].t),
                 rtol=1e-6,
                 atol=1e-5,
@@ -436,7 +421,7 @@ class TestScipySolver:
         # Solve again with different initial conditions
         solution = solver.solve(model, t_eval, inputs={"rate": -0.1, "ic 1": 1})
         np.testing.assert_allclose(
-            solution.all_ys[0][0], 1 * np.exp(-0.1 * solution.t), rtol=1e-6, atol=1e-5
+            solution.y[0], 1 * np.exp(-0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
 
     def test_model_solver_manually_update_initial_conditions(self):
@@ -451,7 +436,7 @@ class TestScipySolver:
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_allclose(
-            solution.all_ys[0][0], 1 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
+            solution.y[0], 1 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
         )
 
         # Change initial conditions and solve again
@@ -461,7 +446,7 @@ class TestScipySolver:
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
         solution = solver.solve(model, t_eval)
         np.testing.assert_allclose(
-            solution.all_ys[0][0], 2 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
+            solution.y[0], 2 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
         )
 
     def test_scale_and_reference(self):
@@ -480,10 +465,7 @@ class TestScipySolver:
             model.concatenated_initial_conditions.evaluate(), 1, rtol=1e-7, atol=1e-6
         )
         np.testing.assert_allclose(
-            solution.all_ys[0][0],
-            (solution["var1"].data - 1) / 2,
-            rtol=1e-15,
-            atol=1e-14,
+            solution.y[0], (solution["var1"].data - 1) / 2, rtol=1e-15, atol=1e-14
         )
 
     def test_deprecated(self):

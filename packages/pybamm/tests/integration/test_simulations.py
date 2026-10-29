@@ -47,15 +47,11 @@ class TestSimulationPickleRoundtrip:
                 sol_orig.t, sol_loaded.t, err_msg=f"{tag} sol.t mismatch"
             )
             np.testing.assert_array_equal(
-                sol_orig.all_ys[0],
-                sol_loaded.all_ys[0],
-                err_msg=f"{tag} sol.all_ys[0] mismatch",
+                sol_orig.y, sol_loaded.y, err_msg=f"{tag} sol.y mismatch"
             )
-            if sol_orig.all_yps[0] is not None:
+            if sol_orig.yp is not None:
                 np.testing.assert_array_equal(
-                    sol_orig.all_yps[0],
-                    sol_loaded.all_yps[0],
-                    err_msg=f"{tag} sol.all_yps[0] mismatch",
+                    sol_orig.yp, sol_loaded.yp, err_msg=f"{tag} sol.yp mismatch"
                 )
 
 

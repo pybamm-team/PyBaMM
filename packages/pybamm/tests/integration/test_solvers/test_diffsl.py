@@ -125,7 +125,9 @@ class TestDiffSLExport:
         t_interp = np.linspace(t_eval[0], t_eval[1], 100)
 
         solver = pybamm.IDAKLUSolver(output_variables=[output_variable])
-        solver.solve(model_disc, t_eval, t_interp=t_interp, inputs=pv_inputs)
+        _soln_pybamm = solver.solve(
+            model_disc, t_eval, t_interp=t_interp, inputs=pv_inputs
+        ).y
 
         t0 = time.perf_counter()
         voltage_pybamm = solver.solve(

@@ -218,7 +218,10 @@ class CasadiSolver(pybamm.BaseSolver):
                 # create integrator once, without grid,
                 # to avoid having to create several times
                 self.create_integrator(model, y0, inputs)
-                # Keep every segment's states CasADi, even if y0 is an ndarray
+                # Initialize solution. Coerce y0 to a CasADi DM so that when
+                # subsequent CasADi integration segments are appended, the
+                # concatenated ``solution.y`` stays a CasADi type. When the
+                # root method is NonlinearSolver, y0 arrives as an ndarray.
                 y0_init = y0 if isinstance(y0, casadi.DM | casadi.MX) else casadi.DM(y0)
                 solution = pybamm.Solution(
                     np.array([t]),
@@ -392,9 +395,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         # We take away 1e-5 to deal with the case where the event sits
                         # exactly on zero, as can happen when the event switch is used
                         # (fast with events mode)
-                        f_eval[idx] = (
-                            event(sol.t[idx], sol.all_ys[0][:, idx], inputs) - 1e-5
-                        )
+                        f_eval[idx] = event(sol.t[idx], sol.y[:, idx], inputs) - 1e-5
                         return f_eval[idx]
 
                 def integer_bisect():
@@ -434,7 +435,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 t_event = np.nanmin(t_events)
                 # create interpolant to evaluate y in the current integration
                 # window
-                y_sol = interp1d(sol.t, sol.all_ys[0], kind="linear")
+                y_sol = interp1d(sol.t, sol.y, kind="linear")
                 y_event = y_sol(t_event)
 
                 closest_event_idx = event_idx[np.nanargmin(t_events)]
@@ -466,7 +467,7 @@ class CasadiSolver(pybamm.BaseSolver):
             self.create_integrator(model, y0, inputs, t_window_event_dense)
             use_grid = True
 
-        y0 = coarse_solution.all_ys[0][:, event_idx_lower]
+        y0 = coarse_solution.y[:, event_idx_lower]
         dense_step_sol = self._run_integrator(
             model,
             y0,
@@ -486,12 +487,12 @@ class CasadiSolver(pybamm.BaseSolver):
             # This is extremely rare, it's difficult to find a test that triggers this
             # hence no coverage check
             t_event = coarse_solution.t[event_idx_lower + 1]
-            y_event = coarse_solution.all_ys[0][:, event_idx_lower + 1].full().flatten()
+            y_event = coarse_solution.y[:, event_idx_lower + 1].full().flatten()
 
         # Return solution truncated at the first coarse event time
         # Also assign t_event
         t_sol = coarse_solution.t[: event_idx_lower + 1]
-        y_sol = coarse_solution.all_ys[0][:, : event_idx_lower + 1]
+        y_sol = coarse_solution.y[:, : event_idx_lower + 1]
         solution = pybamm.Solution(
             t_sol,
             y_sol,

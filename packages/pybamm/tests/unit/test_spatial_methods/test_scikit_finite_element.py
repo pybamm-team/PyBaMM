@@ -524,9 +524,7 @@ class TestScikitFiniteElement:
 
         z = mesh["current collector"].coordinates[1, :][:, np.newaxis]
         u_exact = z**2 / 2 - 1 / 6
-        np.testing.assert_allclose(
-            solution.all_ys[0][:-1], u_exact, rtol=1e-2, atol=1e-1
-        )
+        np.testing.assert_allclose(solution.y[:-1], u_exact, rtol=1e-2, atol=1e-1)
 
     def test_dirichlet_bcs(self):
         # manufactured solution u = a*z^2 + b*z + c
@@ -564,7 +562,7 @@ class TestScikitFiniteElement:
         z = mesh["current collector"].edges["z"][:, np.newaxis]
         u_exact = a * z**2 + b * z + c
         np.testing.assert_allclose(
-            solution.all_ys[0][0 : len(z)], u_exact, rtol=1e-7, atol=1e-6
+            solution.y[0 : len(z)], u_exact, rtol=1e-7, atol=1e-6
         )
 
     def test_disc_spatial_var(self):

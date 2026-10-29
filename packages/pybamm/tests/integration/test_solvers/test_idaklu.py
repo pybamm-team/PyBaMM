@@ -84,7 +84,7 @@ class TestIDAKLUSolver:
         sol_neg = solver.solve(
             model, t_eval, inputs={param_name: param_value - 0.5 * h}, t_interp=t_interp
         )
-        dyda_fd = (sol_plus.all_ys[0] - sol_neg.all_ys[0]) / h
+        dyda_fd = (sol_plus.y - sol_neg.y) / h
         dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
         np.testing.assert_allclose(
@@ -177,11 +177,11 @@ class TestIDAKLUSolver:
         for sol in sols:
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_allclose(sol.all_ys[0][0], true_solution)
+            np.testing.assert_allclose(sol.y[0], true_solution)
 
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
-            np.testing.assert_allclose(sol.all_ys[0][1:3], true_solution)
+            np.testing.assert_allclose(sol.y[1:3], true_solution)
 
     def test_with_experiments(self):
         summary_vars = []
@@ -277,7 +277,7 @@ class TestIDAKLUSolver:
             sol_ind = indep_sols[idx]
 
             np.testing.assert_allclose(sol_vec.t, sol_ind.t)
-            np.testing.assert_allclose(sol_vec.all_ys[0], sol_ind.all_ys[0])
+            np.testing.assert_allclose(sol_vec.y, sol_ind.y)
 
     def test_outvars_with_experiments_multi_simulation(self):
         model = pybamm.lithium_ion.SPM()

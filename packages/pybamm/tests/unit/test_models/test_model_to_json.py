@@ -12,7 +12,7 @@ import pybamm
 
 def _assert_solution_y_almost_equal(sol_orig, sol_loaded, key_output="Voltage [V]"):
     """Assert solution state vector has same shape and key output is almost equal."""
-    np.testing.assert_array_equal(sol_orig.all_ys[0].shape, sol_loaded.all_ys[0].shape)
+    np.testing.assert_array_equal(sol_orig.y.shape, sol_loaded.y.shape)
     v_orig = sol_orig[key_output].data
     v_loaded = sol_loaded[key_output].data
     np.testing.assert_allclose(v_orig, v_loaded, rtol=5e-3, atol=1e-4)

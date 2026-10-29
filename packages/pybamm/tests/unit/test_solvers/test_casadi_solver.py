@@ -4,11 +4,7 @@ import numpy as np
 import pytest
 
 import pybamm
-from tests import (
-    concatenated_states,
-    get_discretisation_for_testing,
-    get_mesh_for_testing,
-)
+from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestCasadiSolver:
@@ -52,7 +48,7 @@ class TestCasadiSolver:
         solution = solver.solve(model_disc, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(
-            solution.all_ys[0].full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
+            solution.y.full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
 
         # Safe mode (enforce events that won't be triggered)
@@ -62,7 +58,7 @@ class TestCasadiSolver:
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(
-            solution.all_ys[0].full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
+            solution.y.full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
 
         # Fast with events
@@ -71,7 +67,7 @@ class TestCasadiSolver:
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(
-            solution.all_ys[0].full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
+            solution.y.full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
 
     def test_without_grid(self):
@@ -89,10 +85,7 @@ class TestCasadiSolver:
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[0],
-            np.exp(0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
+            solution.y.full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
 
         # DAE model
@@ -109,16 +102,10 @@ class TestCasadiSolver:
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[0],
-            np.exp(0.1 * t_eval),
-            rtol=1e-6,
-            atol=1e-5,
+            solution.y.full()[0], np.exp(0.1 * t_eval), rtol=1e-6, atol=1e-5
         )
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[1],
-            np.ones_like(t_eval),
-            rtol=1e-6,
-            atol=1e-5,
+            solution.y.full()[1], np.ones_like(t_eval), rtol=1e-6, atol=1e-5
         )
 
         # DAE model, errors
@@ -149,7 +136,7 @@ class TestCasadiSolver:
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(
-            solution.all_ys[0].full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
+            solution.y.full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
         pybamm.set_logging_level("WARNING")
 
@@ -230,27 +217,15 @@ class TestCasadiSolver:
         solver = pybamm.CasadiSolver(mode="safe", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(
-            concatenated_states(solution.all_ys).full()[0, :-1], 1.5
-        )
-        np.testing.assert_array_less(
-            concatenated_states(solution.all_ys).full()[-1, :-1], 2.5
-        )
+        np.testing.assert_array_less(solution.y.full()[0, :-1], 1.5)
+        np.testing.assert_array_less(solution.y.full()[-1, :-1], 2.5)
         np.testing.assert_equal(solution.t_event[0], solution.t[-1])
-        np.testing.assert_array_equal(
-            solution.y_event[:, 0], concatenated_states(solution.all_ys).full()[:, -1]
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y.full()[:, -1])
+        np.testing.assert_allclose(
+            solution.y.full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[0],
-            np.exp(0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
-        )
-        np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[-1],
-            2 * np.exp(0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
+            solution.y.full()[-1], 2 * np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
 
         # Solve using "safe" mode with debug off
@@ -258,27 +233,15 @@ class TestCasadiSolver:
         solver = pybamm.CasadiSolver(mode="safe", rtol=1e-8, atol=1e-8, dt_max=1)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(
-            concatenated_states(solution.all_ys).full()[0], 1.5
-        )
-        np.testing.assert_array_less(
-            concatenated_states(solution.all_ys).full()[-1], 2.5 + 1e-10
-        )
+        np.testing.assert_array_less(solution.y.full()[0], 1.5)
+        np.testing.assert_array_less(solution.y.full()[-1], 2.5 + 1e-10)
         # test the last entry is exactly 2.5
+        np.testing.assert_allclose(solution.y[-1, -1], 2.5, rtol=1e-3, atol=1e-2)
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys)[-1, -1], 2.5, rtol=1e-3, atol=1e-2
+            solution.y.full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[0],
-            np.exp(0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
-        )
-        np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[-1],
-            2 * np.exp(0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
+            solution.y.full()[-1], 2 * np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
         pybamm.settings.debug_mode = True
 
@@ -286,23 +249,13 @@ class TestCasadiSolver:
         solver = pybamm.CasadiSolver(dt_max=0, rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(
-            concatenated_states(solution.all_ys).full()[0], 1.5
-        )
-        np.testing.assert_array_less(
-            concatenated_states(solution.all_ys).full()[-1], 2.5 + 1e-10
+        np.testing.assert_array_less(solution.y.full()[0], 1.5)
+        np.testing.assert_array_less(solution.y.full()[-1], 2.5 + 1e-10)
+        np.testing.assert_allclose(
+            solution.y.full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[0],
-            np.exp(0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
-        )
-        np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[-1],
-            2 * np.exp(0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
+            solution.y.full()[-1], 2 * np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
 
         # Solve using "fast with events" mode
@@ -322,27 +275,17 @@ class TestCasadiSolver:
         solver = pybamm.CasadiSolver(mode="fast with events", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(
-            concatenated_states(solution.all_ys).full()[0, :-1], 1.5
-        )
-        np.testing.assert_array_less(
-            concatenated_states(solution.all_ys).full()[-1, :-1], 2.5
-        )
+        np.testing.assert_array_less(solution.y.full()[0, :-1], 1.5)
+        np.testing.assert_array_less(solution.y.full()[-1, :-1], 2.5)
         np.testing.assert_equal(solution.t_event[0], solution.t[-1])
         np.testing.assert_allclose(
             solution.y_event[:, 0].flatten(), [1.25, 2.5], rtol=1e-6, atol=1e-5
         )
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[0],
-            np.exp(0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
+            solution.y.full()[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[-1],
-            2 * np.exp(0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
+            solution.y.full()[-1], 2 * np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
 
         # Test when an event returns nan
@@ -356,12 +299,8 @@ class TestCasadiSolver:
         ]
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(
-            concatenated_states(solution.all_ys).full()[0], 1.02 + 1e-10
-        )
-        np.testing.assert_allclose(
-            concatenated_states(solution.all_ys)[0, -1], 1.02, rtol=1e-3, atol=1e-2
-        )
+        np.testing.assert_array_less(solution.y.full()[0], 1.02 + 1e-10)
+        np.testing.assert_allclose(solution.y[0, -1], 1.02, rtol=1e-3, atol=1e-2)
 
     def test_model_step(self):
         # Create model
@@ -383,7 +322,7 @@ class TestCasadiSolver:
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
         np.testing.assert_allclose(
-            step_sol.all_ys[0].full()[0], np.exp(0.1 * step_sol.t), rtol=1e-7, atol=1e-6
+            step_sol.y.full()[0], np.exp(0.1 * step_sol.t), rtol=1e-7, atol=1e-6
         )
 
         # Step again (return 5 points)
@@ -392,20 +331,14 @@ class TestCasadiSolver:
             step_sol_2.t, np.array([0, 1, np.nextafter(1, np.inf), 1.25, 1.5, 1.75, 2])
         )
         np.testing.assert_allclose(
-            concatenated_states(step_sol_2.all_ys).full()[0],
-            np.exp(0.1 * step_sol_2.t),
-            rtol=1e-7,
-            atol=1e-6,
+            step_sol_2.y.full()[0], np.exp(0.1 * step_sol_2.t), rtol=1e-7, atol=1e-6
         )
 
         # Check steps give same solution as solve
         t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
         np.testing.assert_allclose(
-            solution.all_ys[0].full()[0],
-            step_sol.all_ys[0].full()[0],
-            rtol=1e-7,
-            atol=1e-6,
+            solution.y.full()[0], step_sol.y.full()[0], rtol=1e-7, atol=1e-6
         )
 
     def test_model_step_with_input(self):
@@ -423,9 +356,7 @@ class TestCasadiSolver:
         dt = 0.1
         step_sol = solver.step(None, model, dt, npts=5, inputs={"a": 0.1})
         np.testing.assert_array_equal(step_sol.t, np.linspace(0, dt, 5))
-        np.testing.assert_allclose(
-            step_sol.all_ys[0].full()[0], np.exp(0.1 * step_sol.t)
-        )
+        np.testing.assert_allclose(step_sol.y.full()[0], np.exp(0.1 * step_sol.t))
 
         # Step again with different inputs
         step_sol_2 = solver.step(step_sol, model, dt, npts=5, inputs={"a": -1})
@@ -440,7 +371,7 @@ class TestCasadiSolver:
             np.array([0.1, 0.1, 0.1, 0.1, 0.1, -1, -1, -1, -1, -1]),
         )
         np.testing.assert_allclose(
-            concatenated_states(step_sol_2.all_ys).full()[0],
+            step_sol_2.y.full()[0],
             np.concatenate(
                 [
                     np.exp(0.1 * step_sol_2.t[:5]),
@@ -472,25 +403,20 @@ class TestCasadiSolver:
         while time < end_time:
             step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
             time += dt
-        np.testing.assert_array_less(
-            concatenated_states(step_solution.all_ys).full()[0, :-1], 1.5
-        )
-        np.testing.assert_array_less(
-            concatenated_states(step_solution.all_ys).full()[-1, :-1], 2.5
-        )
+        np.testing.assert_array_less(step_solution.y.full()[0, :-1], 1.5)
+        np.testing.assert_array_less(step_solution.y.full()[-1, :-1], 2.5)
         np.testing.assert_equal(step_solution.t_event[0], step_solution.t[-1])
         np.testing.assert_array_equal(
-            step_solution.y_event[:, 0],
-            concatenated_states(step_solution.all_ys).full()[:, -1],
+            step_solution.y_event[:, 0], step_solution.y.full()[:, -1]
         )
         np.testing.assert_allclose(
-            concatenated_states(step_solution.all_ys).full()[0],
+            step_solution.y.full()[0],
             np.exp(0.1 * step_solution.t),
             rtol=1e-6,
             atol=1e-5,
         )
         np.testing.assert_allclose(
-            concatenated_states(step_solution.all_ys).full()[-1],
+            step_solution.y.full()[-1],
             2 * np.exp(0.1 * step_solution.t),
             rtol=1e-5,
             atol=1e-4,
@@ -515,9 +441,7 @@ class TestCasadiSolver:
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         assert len(solution.t) < len(t_eval)
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[0],
-            np.exp(-0.1 * solution.t),
-            rtol=1e-04,
+            solution.y.full()[0], np.exp(-0.1 * solution.t), rtol=1e-04
         )
 
         # Without grid
@@ -526,16 +450,12 @@ class TestCasadiSolver:
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         assert len(solution.t) < len(t_eval)
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[0],
-            np.exp(-0.1 * solution.t),
-            rtol=1e-04,
+            solution.y.full()[0], np.exp(-0.1 * solution.t), rtol=1e-04
         )
         solution = solver.solve(model, t_eval, inputs={"rate": 1.1})
         assert len(solution.t) < len(t_eval)
         np.testing.assert_allclose(
-            concatenated_states(solution.all_ys).full()[0],
-            np.exp(-1.1 * solution.t),
-            rtol=1e-04,
+            solution.y.full()[0], np.exp(-1.1 * solution.t), rtol=1e-04
         )
 
     def test_model_solver_dae_inputs_in_initial_conditions(self):
@@ -561,13 +481,13 @@ class TestCasadiSolver:
         for i, ipts in enumerate(inputs_list):
             np.testing.assert_equal(solutions[i]["var1"](0), ipts["ic 1"])
             np.testing.assert_allclose(
-                solutions[i].all_ys[0].full()[0],
+                solutions[i].y.full()[0],
                 ipts["ic 1"] * np.exp(ipts["rate"] * solutions[i].t),
                 rtol=1e-6,
                 atol=1e-5,
             )
             np.testing.assert_allclose(
-                solutions[i].all_ys[0].full()[-1],
+                solutions[i].y.full()[-1],
                 ipts["ic 1"] * np.exp(ipts["rate"] * solutions[i].t),
                 rtol=1e-6,
                 atol=1e-5,
@@ -578,16 +498,10 @@ class TestCasadiSolver:
             model, t_eval, inputs={"rate": -0.1, "ic 1": 1, "ic 2": 3}
         )
         np.testing.assert_allclose(
-            solution.all_ys[0].full()[0],
-            1 * np.exp(-0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
+            solution.y.full()[0], 1 * np.exp(-0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
         np.testing.assert_allclose(
-            solution.all_ys[0].full()[-1],
-            1 * np.exp(-0.1 * solution.t),
-            rtol=1e-6,
-            atol=1e-5,
+            solution.y.full()[-1], 1 * np.exp(-0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
 
     def test_model_solver_with_non_identity_mass(self):
@@ -613,12 +527,8 @@ class TestCasadiSolver:
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(
-            solution.all_ys[0].full()[0], np.exp(0.1 * solution.t)
-        )
-        np.testing.assert_allclose(
-            solution.all_ys[0].full()[-1], 2 * np.exp(0.1 * solution.t)
-        )
+        np.testing.assert_allclose(solution.y.full()[0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.y.full()[-1], 2 * np.exp(0.1 * solution.t))
 
     def test_dae_solver_algebraic_model(self):
         model = pybamm.BaseModel()
@@ -712,30 +622,19 @@ class TestCasadiSolver:
         while time < end_time:
             step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
             time += dt
-        np.testing.assert_array_less(
-            concatenated_states(step_solution.all_ys)[0, :-1], 0.55
-        )
-        np.testing.assert_array_less(
-            concatenated_states(step_solution.all_ys)[-1, :-1], 1.2
-        )
+        np.testing.assert_array_less(step_solution.y[0, :-1], 0.55)
+        np.testing.assert_array_less(step_solution.y[-1, :-1], 1.2)
         np.testing.assert_equal(step_solution.t_event[0], step_solution.t[-1])
         np.testing.assert_array_equal(
-            step_solution.y_event[:, 0],
-            concatenated_states(step_solution.all_ys).full()[:, -1],
+            step_solution.y_event[:, 0], step_solution.y.full()[:, -1]
         )
         var1_soln = (step_solution.t % a) ** 2 / 2 + a**2 / 2 * (step_solution.t // a)
         var2_soln = 2 * var1_soln
         np.testing.assert_allclose(
-            concatenated_states(step_solution.all_ys).full()[0],
-            var1_soln,
-            rtol=1e-5,
-            atol=1e-4,
+            step_solution.y.full()[0], var1_soln, rtol=1e-5, atol=1e-4
         )
         np.testing.assert_allclose(
-            concatenated_states(step_solution.all_ys).full()[-1],
-            var2_soln,
-            rtol=1e-5,
-            atol=1e-4,
+            step_solution.y.full()[-1], var2_soln, rtol=1e-5, atol=1e-4
         )
 
     def test_solver_interpolation_warning(self):

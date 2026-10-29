@@ -212,7 +212,7 @@ class TestScikitFiniteElement3D:
         disc.process_model(model)
         solver = pybamm.AlgebraicSolver()
         solution = solver.solve(model)
-        T_numerical = solution.all_ys[0].flatten()
+        T_numerical = solution.y.flatten()
 
         # Define the analytical solution: T(x) = 0.5 * x * (L - x)
         x_coords = mesh["current collector"].nodes[:, 0]
@@ -488,7 +488,7 @@ class TestScikitFiniteElement3D:
 
         solver = pybamm.AlgebraicSolver()
         solution = solver.solve(model)
-        u_numerical = solution.all_ys[0][:-1]
+        u_numerical = solution.y[:-1]
 
         z_coords = mesh["current collector"].nodes[:, 2]
 
@@ -535,10 +535,7 @@ class TestScikitFiniteElement3D:
         u_exact_at_nodes = a_val * x_coords**2 + b_val * x_coords + k_val
 
         np.testing.assert_allclose(
-            solution.all_ys[0].flatten(),
-            u_exact_at_nodes.flatten(),
-            rtol=1e-2,
-            atol=1e-2,
+            solution.y.flatten(), u_exact_at_nodes.flatten(), rtol=1e-2, atol=1e-2
         )
 
     def test_scalar_field_discretization(self):
@@ -662,7 +659,7 @@ class TestScikitFiniteElement3D:
         disc.process_model(model)
         solver = pybamm.AlgebraicSolver()
         solution = solver.solve(model)
-        u_numerical = solution.all_ys[0].flatten()
+        u_numerical = solution.y.flatten()
         nodes = mesh["current collector"].nodes
         x_nodes, y_nodes, z_nodes = nodes.T
         r_nodes = np.sqrt(x_nodes**2 + y_nodes**2)

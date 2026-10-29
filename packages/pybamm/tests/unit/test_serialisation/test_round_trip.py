@@ -817,7 +817,7 @@ class TestDiscretisedModelRoundTrip:
         loaded_solution = loaded.default_solver.solve(loaded, t_eval)
 
         assert np.allclose(
-            original_solution.all_ys[0], loaded_solution.all_ys[0], rtol=1e-6, atol=1e-8
+            original_solution.y, loaded_solution.y, rtol=1e-6, atol=1e-8
         ), (
             f"{model_cls.__name__} state trajectory diverged after a "
             "discretised round-trip"
