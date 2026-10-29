@@ -17,6 +17,7 @@ from pybamm import ParameterValues
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from pybamm.models.base_model import ModelSolutionObservability
+from pybamm.solvers.rust_lowering import rust_input_parameter_widths
 
 
 class BaseSolver:
@@ -415,7 +416,7 @@ class BaseSolver:
         )
         for ipts in inputs:
             if stacked:
-                inputs_y0_ics = stack_inputs(ipts)
+                inputs_y0_ics = stack_inputs(ipts, model.convert_to_format)
             else:
                 inputs_y0_ics = ipts
 
@@ -518,7 +519,11 @@ class BaseSolver:
             "model": model,
         }
 
-        if model.convert_to_format != "casadi":
+        if model.convert_to_format == "rust":
+            vars_for_processing.update({"input_names": list(inputs.keys())})
+            return vars_for_processing
+
+        elif model.convert_to_format != "casadi":
             # Create Jacobian from concatenated rhs and algebraic
             y = pybamm.StateVector(slice(0, model.len_rhs_and_alg))
             # set up Jacobian object, for re-use of dict
@@ -1309,13 +1314,20 @@ class BaseSolver:
             pybamm.logger.verbose("No additional discontinuity events found")
             return [0], [len(t_eval)], t_eval
 
-        stacked_inputs = stack_inputs(inputs) if model.uses_stacked_inputs else None
+        stacked_inputs = (
+            stack_inputs(inputs, model.convert_to_format)
+            if model.uses_stacked_inputs
+            else None
+        )
 
         def evaluate(function):
             if stacked_inputs is None:
                 return np.ravel(function(t=0, y=y0, inputs=inputs))
-            # Much faster than numpy's conversion of a CasADi matrix
-            return np.array(function(0, y0, stacked_inputs).elements())
+            value = function(0, y0, stacked_inputs)
+            if isinstance(value, casadi.DM):
+                # Much faster than numpy's conversion of a CasADi matrix
+                return np.array(value.elements())
+            return np.ravel(value)
 
         # The last float before and the first float after each discontinuity
         stops, restarts = [], []
@@ -1386,7 +1398,7 @@ class BaseSolver:
 
         inputs = inputs_dict
         if model.uses_stacked_inputs:
-            inputs = stack_inputs(inputs_dict)
+            inputs = stack_inputs(inputs_dict, model.convert_to_format)
 
         events_eval = np.empty(num_terminate_events)
         for idx, event in enumerate(model.terminate_events_eval):
@@ -2155,6 +2167,8 @@ class BaseSolver:
     def _set_up_model_inputs(model: pybamm.BaseModel, inputs: dict):
         """Set up input parameters"""
         inputs = ParameterValues.check_parameter_values(inputs)
+        if model.convert_to_format == "rust":
+            validate_rust_input_widths(model, inputs)
 
         # First, check all the strictly required input parameters that must be included
         # for the model to be solvable.
@@ -2203,6 +2217,19 @@ class BaseSolver:
             if name not in inputs_in_model:
                 inputs_in_model[name] = value
 
+        if model.convert_to_format == "rust":
+            # The dummy is one value, but the Rust backend packs each input at its width
+            widths = rust_input_parameter_widths(model)
+            vector_inputs = sorted(
+                missing for missing in missing_inputs if widths.get(missing, 1) > 1
+            )
+            if vector_inputs:
+                raise pybamm.SolverError(
+                    f"No value provided for vector input(s): {vector_inputs}. "
+                    "With convert_to_format='rust', every vector input needs a value "
+                    "of its expected size, even one that only variables use."
+                )
+
         if solution_is_observable and missing_inputs:
             missing_inputs_str = ", ".join(f"'{n}'" for n in missing_inputs)
             pybamm.logger.warning(
@@ -2216,6 +2243,40 @@ class BaseSolver:
         ordered_inputs = {name: inputs_in_model[name] for name in ordered_inputs_names}
 
         return ordered_inputs
+
+
+def validate_rust_input_widths(model: pybamm.BaseModel, inputs: dict) -> None:
+    """Reject a given input whose number of values is not its packed width."""
+    widths = rust_input_parameter_widths(model)
+    for name, value in inputs.items():
+        expected = widths.get(name)
+        if value is None or expected is None:
+            continue
+        if np.size(value) != expected:
+            raise pybamm.SolverError(
+                f"Input '{name}' has {np.size(value)} value(s), but the model "
+                f"expects {expected}."
+            )
+
+
+def validate_rust_sensitivity_widths(
+    model: pybamm.BaseModel, calculate_sensitivities: list[str]
+) -> None:
+    """Reject sensitivity requests for vector-width inputs on the Rust backend."""
+    widths = rust_input_parameter_widths(model)
+    wide_params = sorted(
+        name for name in calculate_sensitivities if widths.get(name, 1) > 1
+    )
+    if wide_params:
+        raise pybamm.SolverError(
+            "convert_to_format='rust' sensitivities are not supported "
+            f"for vector-width input parameters: {wide_params}. The Rust "
+            "backend's tangent/JVP machinery assumes one scalar direction "
+            "per named parameter, so seeding a sensitivity direction for "
+            "a vector input would silently compute the wrong derivative. "
+            "Use convert_to_format='casadi' for sensitivities with "
+            "respect to these inputs."
+        )
 
 
 def flatten_inputs(inputs_dict: dict) -> npt.NDArray[np.float64]:
@@ -2244,19 +2305,26 @@ def flatten_inputs(inputs_dict: dict) -> npt.NDArray[np.float64]:
     )
 
 
-def stack_inputs(inputs_dict: dict) -> casadi.DM:
+def stack_inputs(
+    inputs_dict: dict, convert_to_format: str = "casadi"
+) -> casadi.DM | npt.NDArray[np.float64]:
     """Stack ``{name: value}`` into one column vector, in dict-key order.
 
     Parameters
     ----------
     inputs_dict : dict
         Input values for one input set.
+    convert_to_format : str, optional
+        The format of the evaluators the vector is for (default is "casadi").
 
     Returns
     -------
-    :class:`casadi.DM`
-        Column vector of the input values, with zero rows for an empty dict.
+    :class:`casadi.DM` or numpy.ndarray
+        The input values, with zero rows for an empty dict: a flat numpy array
+        for ``"rust"``, and a column :class:`casadi.DM` otherwise.
     """
+    if convert_to_format == "rust":
+        return flatten_inputs(inputs_dict)
     return casadi.vertcat(*inputs_dict.values())
 
 
@@ -2282,25 +2350,29 @@ def process(
     -------
     func: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJax` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for the function $f(y, t, p)$ given by `symbol`
 
     jac: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxJacobian` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for the Jacobian $\\frac{\\partial f}{\\partial y}$
         of the function given by `symbol`
 
     jacp: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxSensitivities` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for the parameter sensitivities
         $\frac{\\partial f}{\\partial p}$
         of the function given by `symbol`
 
     jac_action: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJax` or
-            :class:`casadi.Function`
+            :class:`casadi.Function` or
+            :class:`pybamm.solvers.rust_evaluator.RustEvaluator`
         evaluator for product of the Jacobian with a vector $v$,
         i.e. $\\frac{\\partial f}{\\partial y} * v$
     """
@@ -2329,6 +2401,49 @@ def process(
             report(f"Calculating jacobian for {name} using jax")
             jac = func.get_jacobian()
             jac_action = func.get_jacobian_action()
+        else:
+            jac = None
+            jac_action = None
+
+    elif model.convert_to_format == "rust":
+        from pybamm.solvers.rust_evaluator import RustEvaluator
+        from pybamm.solvers.rust_lowering import rust_graph_with_inputs
+
+        if return_jacp_stacked:
+            raise pybamm.SolverError(
+                "return_jacp_stacked is not supported for convert_to_format='rust'. "
+                "Use the per-parameter tuple returned by jacp instead."
+            )
+
+        report(f"Converting {name} to Rust")
+        input_names = vars_for_processing["input_names"]
+
+        graph = rust_graph_with_inputs(model, input_names)
+        rust_expr = symbol.to_rust(graph, {})
+
+        # Full system width, so rectangular sub-groups differentiate wrt all states
+        cf = graph.compile(rust_expr, name=name, n_states=model.len_rhs_and_alg)
+        func = RustEvaluator(cf, "func")
+
+        if model.calculate_sensitivities:
+            report(
+                f"Calculating sensitivities for {name} with respect "
+                f"to parameters {model.calculate_sensitivities} using Rust"
+            )
+            # The graph's registry numbers the parameters; `input_names` only filters
+            sens_indices = []
+            for p in model.calculate_sensitivities:
+                index = graph.input_index(p)
+                if index is not None and p in input_names:
+                    sens_indices.append(index)
+            jacp = RustEvaluator(cf, "jacp", sens_indices=sens_indices)
+        else:
+            jacp = None
+
+        if use_jacobian:
+            report(f"Calculating jacobian for {name} using Rust")
+            jac = RustEvaluator(cf, "jac")
+            jac_action = RustEvaluator(cf, "jac_action")
         else:
             jac = None
             jac_action = None

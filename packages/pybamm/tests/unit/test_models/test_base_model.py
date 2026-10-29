@@ -16,6 +16,8 @@ from numpy import testing
 
 import pybamm
 
+pytest_plugins = ["tests.conftest_rust"]
+
 
 class TestBaseModel:
     def test_rhs_set_get(self):
@@ -1792,7 +1794,7 @@ class TestBaseModel:
 
     def test_convert_to_format_validated(self):
         model = pybamm.BaseModel()
-        for valid in ("python", "casadi", "jax"):
+        for valid in ("python", "casadi", "jax", "rust"):
             model.convert_to_format = valid
             assert model.convert_to_format == valid
         with pytest.raises(
@@ -1813,6 +1815,7 @@ class TestBaseModel:
         model = pybamm.BaseModel()
         for convert_to_format, stacked in [
             ("casadi", True),
+            ("rust", True),
             ("python", False),
             ("jax", False),
         ]:
@@ -1845,3 +1848,6 @@ class TestBaseModel:
         assert "convert_to_format" not in vars(restored)
         solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])
         np.testing.assert_allclose(solution["u"](1.0), np.exp(-1.0), rtol=1e-3)
+
+    def test_rust_backend_fixture_drives_default(self, rust_backend):
+        assert pybamm.BaseModel().convert_to_format == "rust"

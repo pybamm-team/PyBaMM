@@ -4,7 +4,7 @@ Expression compiler and evaluator for PyBaMM models, filling the role CasADi pla
 PyBaMM's other backends. Python hands over a discretised model as an expression DAG;
 this workspace turns it into flat instruction tapes it can evaluate and differentiate.
 
-Python reaches it through `pybamm.rust`.
+Models opt in with `model.convert_to_format = "rust"`.
 
 ## Layout
 
