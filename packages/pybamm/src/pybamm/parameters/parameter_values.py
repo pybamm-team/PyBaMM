@@ -114,8 +114,12 @@ class ParameterValues:
 
         # Save citations
         if "citations" in self._store:
+            default_reason = values if isinstance(values, str) else None
             for citation in self._store["citations"]:
-                pybamm.citations.register(citation)
+                if isinstance(citation, tuple) and len(citation) == 2:
+                    pybamm.citations.register(citation[0], reason=citation[1])
+                else:
+                    pybamm.citations.register(citation, reason=default_reason)
 
     @property
     def store(self) -> ParameterStore:

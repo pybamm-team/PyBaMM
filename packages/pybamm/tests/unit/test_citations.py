@@ -1,11 +1,194 @@
 import contextlib
 import io
+import sys
 import warnings
 
 import pytest
-from pybtex.database import Entry
+from pybtex.database import Entry, parse_string
+from pybtex.exceptions import PybtexError
 
 import pybamm
+
+
+@pytest.fixture(autouse=True)
+def citations(monkeypatch):
+    registry = pybamm.Citations()
+    monkeypatch.setattr(pybamm, "citations", registry)
+    return registry
+
+
+class TestDownstreamCitations:
+    @pytest.mark.parametrize("as_string", [False, True])
+    def test_external_database(self, citations, tmp_path, capsys, as_string):
+        path = tmp_path / "downstream.bib"
+        path.write_text("@misc{Downstream2026, title={Downstream example}}")
+        registered = citations._papers_to_cite.copy()
+        citations.read_citations(str(path) if as_string else path)
+        assert "Downstream2026" in citations._all_citations
+        assert citations._papers_to_cite == registered
+        assert "Marquis2019" in citations._all_citations
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            citations.read_citations(path)
+            citations.read_citations()
+        assert not caught
+        citations.register("Downstream2026")
+        citations.print(output_format="bibtex")
+        assert "Downstream2026" in capsys.readouterr().out
+        path.write_text("@misc{Downstream2026, title={Replacement}}")
+        with pytest.warns(UserWarning, match="Replacing citation for Downstream2026"):
+            citations.read_citations(path)
+        with pytest.raises(PybtexError):
+            citations.read_citations(tmp_path / "missing.bib")
+
+    def test_reasons(self, citations, monkeypatch):
+        def unexpected_caller():
+            pytest.fail("Explicit reasons must not inspect the caller")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(pybamm.Citations, "_caller_name", unexpected_caller)
+            citations.register("Marquis2019", reason="SPM model")
+            citations.register("Marquis2019", reason="SPM model")
+            citations.register("Marquis2019", reason="Parameter values")
+        citations.register("Marquis2019")
+        assert citations._citation_tags["Marquis2019"] == {
+            "SPM model",
+            "Parameter values",
+            type(self).__qualname__,
+        }
+        namespace = {"register": citations.register}
+        exec("register('Marquis2019'); register('Doyle1993')", namespace)
+        assert len(citations._citation_tags["Marquis2019"]) == 3
+        assert "Doyle1993" not in citations._citation_tags
+        with pytest.raises(TypeError, match="reason"):
+            citations.register("Marquis2019", reason=123)
+        citations._reset()
+        assert "Marquis2019" not in citations._citation_tags
+        assert not citations._unknown_citations
+
+    def test_deferred_reasons(self, citations, capsys):
+        raw = "@misc{One2026, title={One}}\n@misc{Two2026, title={Two}}"
+        citations.register(raw, reason="Downstream model")
+        citations.register(raw, reason="Other use")
+        citations.print(output_format="bibtex", verbose=True)
+        entries = parse_string(capsys.readouterr().out, "bibtex").entries
+        for key in ["One2026", "Two2026"]:
+            assert entries[key].fields["note"] == (
+                "Cited for: Downstream model; Other use"
+            )
+        assert not citations._unknown_citations
+        citations.register(raw, reason="Later use")
+        citations.print(output_format="bibtex", verbose=True)
+        entries = parse_string(capsys.readouterr().out, "bibtex").entries
+        assert "Later use" in entries["One2026"].fields["note"]
+        citations.register(raw, reason="Pending use")
+        citations._reset()
+        assert raw not in citations._citation_tags
+        assert not citations._unknown_citations
+
+    def test_unmatched_braces_in_reason(self, citations, capsys):
+        citations.register("Marquis2019", reason=r"Literal { and \ path")
+        citations.print(output_format="bibtex", verbose=True)
+        entry = parse_string(capsys.readouterr().out, "bibtex").entries["Marquis2019"]
+        assert entry.fields["note"] == (
+            r"Cited for: Literal \textbraceleft{} and \textbackslash{} path"
+        )
+
+    def test_registration_before_loading(self, citations, tmp_path, capsys):
+        citations.register("Downstream2026", reason="Before loading")
+        path = tmp_path / "downstream.bib"
+        path.write_text("@misc{Downstream2026, title={Example}}")
+        citations.read_citations(path)
+        assert "Downstream2026" in citations._papers_to_cite
+        assert "Downstream2026" not in citations._unknown_citations
+        citations.print(output_format="bibtex", verbose=True)
+        entries = parse_string(capsys.readouterr().out, "bibtex").entries
+        assert entries["Downstream2026"].fields["note"] == "Cited for: Before loading"
+
+    @pytest.mark.parametrize("key_first", [True, False])
+    def test_pending_key_and_bibtex_reasons(self, citations, capsys, key_first):
+        key = "Downstream2026"
+        raw = "@misc{Downstream2026, title={Example}}"
+        citations.register(key, reason="Key registration")
+        citations.register(raw, reason="Raw registration")
+        order = (key, raw) if key_first else (raw, key)
+
+        class PendingCitations(set):
+            def __iter__(self):
+                return (citation for citation in order if citation in self)
+
+        # Exercise both possible traversal orders of the pending set.
+        citations._unknown_citations = PendingCitations(citations._unknown_citations)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            citations.print(output_format="bibtex", verbose=True)
+        assert not caught
+        entries = parse_string(capsys.readouterr().out, "bibtex").entries
+        assert entries[key].fields["note"] == (
+            "Cited for: Key registration; Raw registration"
+        )
+        assert not citations._unknown_citations
+        assert raw not in citations._citation_tags
+
+    @pytest.mark.parametrize("output_format", ["text", "bibtex"])
+    @pytest.mark.parametrize("to_file", [False, True])
+    def test_annotated_output(
+        self, citations, tmp_path, capsys, output_format, to_file
+    ):
+        raw = r"@misc{Example2026, title={Example}, note={Original {note} \& details}}"
+        reason = 'Model {A} & parameters: 50%_# "quoted"'
+        citations.register(raw, reason=reason)
+        citations.register(raw, reason="Another reason")
+        filename = tmp_path / "citations" if to_file else None
+
+        def export(verbose):
+            pybamm.print_citations(filename, output_format, verbose=verbose)
+            return filename.read_text() if to_file else capsys.readouterr().out
+
+        first = export(True)
+        source = citations._all_citations.copy()
+        original_note = (
+            parse_string(source["Example2026"], "bibtex")
+            .entries["Example2026"]
+            .fields["note"]
+        )
+        assert export(True) == first
+        assert first.count("Another reason") == 1
+        if output_format == "bibtex":
+            entries = parse_string(first, "bibtex").entries
+            assert entries["Example2026"].fields["note"] == (
+                original_note
+                + r". Cited for: Another reason; Model \textbraceleft{}A\textbraceright{} "
+                r'\& parameters: 50\%\_\# "quoted"'
+            )
+        else:
+            assert (
+                "Example2026 was cited due to the use of Another reason; " + reason
+                in first
+            )
+        citations.register("Example2026", reason="Later reason")
+        assert "Later reason" in export(True)
+        plain = export(False)
+        assert "Another reason" not in plain
+        assert citations._all_citations == source
+        if output_format == "bibtex":
+            assert parse_string(plain, "bibtex").entries["Example2026"].fields[
+                "note"
+            ] == (original_note)
+        with pytest.raises(pybamm.OptionError, match="'text' or 'bibtex'"):
+            pybamm.print_citations(filename, "invalid", verbose=True)
+
+    def test_without_pybtex(self, monkeypatch, tmp_path, caplog):
+        for name in list(sys.modules):
+            if name == "pybtex" or name.startswith("pybtex."):
+                monkeypatch.setitem(sys.modules, name, None)
+        citations = pybamm.Citations()
+        citations.read_citations(tmp_path / "not-read.bib")
+        citations.register("Marquis2019", reason="Model")
+        citations.register("@misc{Example2026, title={Example}}", reason="Manual")
+        citations.print(tmp_path / "not-written.bib", "bibtex", verbose=True)
+        assert "Could not print citations" in caplog.text
+        assert not (tmp_path / "not-written.bib").exists()
 
 
 class TestCitations:
