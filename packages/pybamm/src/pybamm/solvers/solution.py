@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import numbers
 import pickle
+import warnings
 from dataclasses import astuple, dataclass
 from itertools import chain
 
@@ -326,6 +327,9 @@ class Solution(SolutionBase):
         Solvers should forward the user's selection so observed variables use
         the same backend as the integration.
 
+    t_additive : :class:`numpy.array`, optional
+        Sorted times between the stored states, included in ``t`` and evaluated by
+        Hermite interpolation of the states.
     """
 
     # Solvers, Simulation and make_cycle_solution set all_first_states, closest_event_idx,
@@ -350,6 +354,7 @@ class Solution(SolutionBase):
         "_sub_solutions",
         "_summary_variables",
         "_t",
+        "_t_additive",
         "_t_eval",
         "_t_event",
         "_termination",
@@ -388,6 +393,7 @@ class Solution(SolutionBase):
         variables_returned=False,
         check_solution=True,
         options=None,
+        t_additive=None,
         _validate_time_structure=True,
     ):
         if not isinstance(all_ts, list):
@@ -474,6 +480,7 @@ class Solution(SolutionBase):
 
         # Initialize empty inputs
         self._t = None
+        self._t_additive = t_additive
         self._t_eval = None
         self._y = None
         self._yp = None
@@ -501,6 +508,7 @@ class Solution(SolutionBase):
         self.solver_statistics = None
         self._first_state = None
         self._last_state = None
+        self._t_additive = None
         self._y0 = None
         self._y0_sensitivities = None
         self._y_event_sensitivities = None
@@ -565,10 +573,20 @@ class Solution(SolutionBase):
 
     @property
     def t(self) -> np.ndarray:
-        """Times at which the solution is evaluated"""
+        """Times at which the solution is evaluated, including ``t_additive``"""
         if self._t is None:
             self._t = np.concatenate(self.all_ts)
+            t_additive = self.t_additive
+            if t_additive is not None:
+                self._t = np.union1d(self._t, t_additive)
         return self._t
+
+    @property
+    def t_additive(self) -> np.ndarray | None:
+        """Times between the stored states that resolve the solver's upsampled
+        output variable, or None if the solver did not upsample"""
+        parts = [s._t_additive for s in self.sub_solutions if s._t_additive is not None]
+        return np.concatenate(parts) if parts else None
 
     @property
     def t_eval(self) -> np.ndarray:
@@ -579,14 +597,28 @@ class Solution(SolutionBase):
 
     @property
     def y(self):
-        """Values of the solution"""
+        """The stored states, concatenated (deprecated)."""
+        warnings.warn(
+            "`Solution.y` is deprecated and will be removed in a future release; "
+            "it holds only the stored states, which need not match `Solution.t`. "
+            "Use `solution[name]` for variables, or `all_ys` for the raw states.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if self._y is None:
             self._y = self._concatenate_states(self.all_ys)
         return self._y
 
     @property
     def yp(self):
-        """Time derivatives of the solution"""
+        """The stored state time derivatives, concatenated (deprecated)."""
+        warnings.warn(
+            "`Solution.yp` is deprecated and will be removed in a future release; "
+            "it holds only the stored states, which need not match `Solution.t`. "
+            "Use `all_yps` for the raw state derivatives.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if self.hermite_interpolation and self._yp is None:
             self._yp = self._concatenate_states(self.all_yps)
         return self._yp

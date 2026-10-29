@@ -196,13 +196,13 @@ SolverOptions::SolverOptions(py::dict &py_opts)
         }
     }
 
-    // Output upsampling multiplier (1.0 = off, >1.0 = active)
-    upsampling_factor = 1.0;
-    if (py_opts.contains("upsampling_factor")) {
-        upsampling_factor = py_opts["upsampling_factor"].cast<double>();
-        if (upsampling_factor < 1.0) {
+    // Output upsampling
+    upsampling_tolerance = 0.0;
+    if (py_opts.contains("upsampling_tolerance")) {
+        upsampling_tolerance = py_opts["upsampling_tolerance"].cast<double>();
+        if (upsampling_tolerance < 0.0) {
             throw std::domain_error(
-                "upsampling_factor must be >= 1.0. Got " + std::to_string(upsampling_factor)
+                "upsampling_tolerance must be >= 0. Got " + std::to_string(upsampling_tolerance)
             );
         }
     }

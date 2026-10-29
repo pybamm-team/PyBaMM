@@ -40,6 +40,7 @@ class Simulation(BaseSimulation):
     _PADDING_REST_KEY = "Rest for padding"
     _STEP_INDEX_INPUT = "Experiment step index"
     _STEP_VALUE_INPUT = "Experiment step value"
+    _UPSAMPLING_VARIABLE = "Experiment upsampling variable"
     _TERMINATION_TIME = "experiment time limit reached"
     _TERMINATION_VOLTAGE = "experiment voltage limit reached"
     _TERMINATION_CAPACITY = "experiment capacity limit reached"
@@ -350,6 +351,22 @@ class Simulation(BaseSimulation):
         # (in-place parameter processing and discretisation) through to solver.process.
         new_model.switching_control_variables = {var.name for var in submodel.algebraic}
 
+        # Upsample each step's own output by selecting it with the step index input.
+        # An algebraic state is resolved by the integrator, so its branch is constant.
+        upsampling_steps = list(unique_steps)
+        if self._experiment_includes_padding_rest:
+            upsampling_steps.append(padding_rest_step)
+        upsampling_branches = []
+        for step in upsampling_steps:
+            variable = variables[step.upsampling_variable]
+            if new_model.is_algebraic_state(variable):
+                variable = pybamm.Scalar(0)
+            upsampling_branches.append(variable)
+        new_model.variables[self._UPSAMPLING_VARIABLE] = pybamm.Conditional(
+            pybamm.InputParameter(self._STEP_INDEX_INPUT), *upsampling_branches
+        )
+        new_model.upsampling_variable = self._UPSAMPLING_VARIABLE
+
         # Combine each step's local termination expression into one experiment event,
         # selecting the active branch with the step index input.
         termination_branches = [
@@ -474,7 +491,7 @@ class Simulation(BaseSimulation):
             y = (
                 step_solution.y_event
                 if step_solution.y_event is not None
-                else step_solution.y[:, -1]
+                else step_solution.all_ys[-1][:, -1]
             )
 
             try:

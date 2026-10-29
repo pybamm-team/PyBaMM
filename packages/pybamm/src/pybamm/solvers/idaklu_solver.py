@@ -242,11 +242,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # only active if `hermite_interpolation` is True and sensitivities
                 # are disabled.
                 "hermite_reduction_factor": 1.0,
-                # Setting upsampling_factor > 1.0 adds points within each step
-                # until linear interpolation of the model's `upsampling_variable`
-                # (default: the voltage) is within the solver tolerances divided
-                # by (factor - 1). Ignored with t_interp.
-                "upsampling_factor": 1.0,
+                # Output upsampling (0 = off). Adds times inside each solver step
+                # until linear interpolation of one scalar output variable between
+                # them is accurate to upsampling_tolerance times the variable's
+                # scale (1 if it has none). The variable is the voltage, or the
+                # current in voltage-controlled experiment steps. For example, 1e-3
+                # gives a linear-interpolation voltage error of about 1 mV. The
+                # times go to `Solution.t_additive` (and `Solution.t`) when Hermite
+                # data is stored and sensitivities are off; otherwise they are
+                # saved as full solution points. Ignored with t_interp.
+                "upsampling_tolerance": 0.0,
                 ## Initial conditions calculation
                 # Positive constant in the Newton iteration convergence test within the
                 # initial condition calculation
@@ -376,7 +381,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "suppress_algebraic_error": False,
             "hermite_interpolation": True,
             "hermite_reduction_factor": 1.0,
-            "upsampling_factor": 1.0,
+            "upsampling_tolerance": 0.0,
             "nonlinear_convergence_coefficient_ic": 0.0033,
             "max_num_steps_ic": 50,
             "max_num_jacobians_ic": 40,
@@ -414,14 +419,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             if hermite_reduction_factor < 1.0:
                 raise pybamm.SolverError("hermite_reduction_factor must be >= 1.0.")
 
-        upsampling_factor = options["upsampling_factor"]
-        if upsampling_factor < 1.0:
-            raise pybamm.SolverError("upsampling_factor must be >= 1.0.")
-        if upsampling_factor > 1.0 and hermite_reduction_factor > 1.0:
-            raise pybamm.SolverError(
-                "upsampling_factor and hermite_reduction_factor are "
-                "mutually exclusive; at most one can be > 1.0."
-            )
+        if options["upsampling_tolerance"] < 0.0:
+            raise pybamm.SolverError("upsampling_tolerance must be >= 0.")
 
         if not isinstance(options["compile"], bool):
             raise pybamm.SolverError("compile must be a bool")
@@ -726,6 +725,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # The idaklu-bound Function isn't callable from Python; keep the
         # original for the closest_event_idx lookup in _post_process_solution.
         self._setup["rootfn_casadi"] = fns["rootfn"]
+        self._setup["upsampling"] = fns["upsampling_fcn"].n_out() > 0
 
         for key in self.output_variables:
             self._setup["var_idaklu_fcns"].append(to_idaklu(fns[f"var:{key}"]))
@@ -781,30 +781,31 @@ class IDAKLUSolver(pybamm.BaseSolver):
         return base_set_up_return
 
     def _upsampling_fcn(self, model, inputs_dict):
-        """``g(t, y, p)``: the model's scalar ``upsampling_variable``.
+        """``g(t, y, p)``: the model's scalar ``upsampling_variable`` divided
+        by its scale, or by 1 if it has none.
 
         Empty if upsampling is off, or the variable is missing or an algebraic
         state, which the integrator's error test already resolves.
         """
         empty = casadi.Function("empty_upsampling", [], [])
         name = getattr(model, "upsampling_variable", "Voltage [V]")
-        if self._options["upsampling_factor"] <= 1.0 or name not in model.variables:
+        if self._options["upsampling_tolerance"] == 0 or name not in model.variables:
             return empty
-        # Model copies keep a state's name but not its id
         variable = model.variables[name]
-        if isinstance(variable, pybamm.Variable) and variable.name in {
-            state.name for state in model.algebraic
-        }:
+        if model.is_algebraic_state(variable):
             return empty
+        scale = getattr(variable, "scale", None)
+        if not (isinstance(scale, pybamm.Symbol) and scale.is_constant()):
+            scale = 1
         upsampling_fcn = process(
-            model.get_processed_variable_or_event(name),
+            model.get_processed_variable_or_event(name) / scale,
             pybamm.BaseSolver._wrangle_name(name),
             self._get_vars_for_processing(model, inputs_dict),
             use_jacobian=False,
         )[0]
         if upsampling_fcn.numel_out() != 1:
             raise pybamm.SolverError(
-                f"upsampling_factor needs a scalar variable, got '{name}'"
+                f"upsampling_tolerance needs a scalar variable, got '{name}'"
             )
         return upsampling_fcn
 
@@ -991,6 +992,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # backend as the integration.
         solution_options = {"compile": self._options["compile"]}
 
+        # Without Hermite data or with sensitivities, the points went into the states
+        t_additive = None
+        if (
+            yp is not None
+            and self._setup["upsampling"]
+            and number_of_sensitivity_parameters == 0
+        ):
+            t_additive = sol.t_additive
+
         newsol = pybamm.Solution(
             t,
             np.transpose(y_out),
@@ -1004,6 +1014,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             all_t_evals=t_eval,
             variables_returned=bool(save_outputs_only),
             options=solution_options,
+            t_additive=t_additive,
         )
 
         # Set closest_event_idx so BaseSolver.get_termination_reason doesn't

@@ -53,6 +53,7 @@ class SolutionData
       std::vector<sunrealtype>&& t,
       std::vector<sunrealtype>&& y,
       std::vector<sunrealtype>&& yp,
+      std::vector<sunrealtype>&& t_additive,
       std::vector<sunrealtype>&& yS,
       std::vector<sunrealtype>&& ypS,
       std::vector<sunrealtype>&& yinit,
@@ -68,6 +69,7 @@ class SolutionData
         t_vec(std::move(t)),
         y_vec(std::move(y)),
         yp_vec(std::move(yp)),
+        t_additive_vec(std::move(t_additive)),
         yS_vec(std::move(yS)),
         ypS_vec(std::move(ypS)),
         yinit_vec(std::move(yinit)),
@@ -106,6 +108,7 @@ class SolutionData
         vector_to_numpy(std::move(t_vec)),
         vector_to_numpy(std::move(y_vec)),
         vector_to_numpy(std::move(yp_vec)),
+        vector_to_numpy(std::move(t_additive_vec)),
         vector_to_numpy_3d(std::move(yS_vec), arg_sens0, arg_sens1, arg_sens2),
         vector_to_numpy_3d(std::move(ypS_vec),
                            save_hermite ? arg_sens0 : 0, arg_sens1, arg_sens2),
@@ -122,6 +125,7 @@ private:
     std::vector<sunrealtype> t_vec;
     std::vector<sunrealtype> y_vec;
     std::vector<sunrealtype> yp_vec;
+    std::vector<sunrealtype> t_additive_vec;
     std::vector<sunrealtype> yS_vec;
     std::vector<sunrealtype> ypS_vec;
     std::vector<sunrealtype> yinit_vec;

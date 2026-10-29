@@ -1350,8 +1350,8 @@ class TestSimulationExperiment:
         full_solution, solution = solutions
 
         np.testing.assert_allclose(
-            solution.cycles[0].first_state.y,
-            full_solution.cycles[0].first_state.y,
+            solution.cycles[0].first_state.all_ys[0],
+            full_solution.cycles[0].first_state.all_ys[0],
             rtol=1e-6,
         )
         change = "Change in throughput capacity [A.h]"
@@ -2152,8 +2152,8 @@ class TestSimulationExperiment:
                 experiment_model_mode=experiment_model_mode,
             )
             sim.solve(initial_soc=1)
-            previous_state = sim.solution.cycles[0].last_state.y
-            next_state = sim.solution.cycles[1].steps[-1].first_state.y
+            previous_state = sim.solution.cycles[0].last_state.all_ys[0]
+            next_state = sim.solution.cycles[1].steps[-1].first_state.all_ys[0]
 
             built_model = sim.steps_to_built_models[
                 sim.experiment.steps[0].basic_repr()
@@ -2345,7 +2345,7 @@ class TestSimulationExperiment:
                 self.t_event = None
                 self.y_event = None
                 self.t = source.t
-                self.y = source.y
+                self.all_ys = source.all_ys
                 self.all_inputs = source.all_inputs
 
             def __getitem__(self, key):

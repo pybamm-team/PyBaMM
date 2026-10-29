@@ -88,7 +88,8 @@ class QuickPlot:
         variables). Options are:
     n_t_linear: int, optional
         The number of linearly spaced time points added to the t axis for each sub-solution.
-        Note: this is only used if the solution has hermite interpolation enabled.
+        Note: this is only used if the solution has hermite interpolation enabled
+        and no ``t_additive`` times, which are added instead.
 
         - "fixed" (default): keep all axes fixes so that all data is visible
         - "tight": make axes tight to plot at each time
@@ -181,7 +182,9 @@ class QuickPlot:
         hermite_interp = all(sol.hermite_interpolation for sol in solutions)
 
         def t_sample(sol):
-            if hermite_interp and n_t_linear > 2:
+            if sol.t_additive is not None:
+                t_plot = sol.t
+            elif hermite_interp and n_t_linear > 2:
                 # Linearly spaced time points
                 t_linspace = np.linspace(sol.t[0], sol.t[-1], n_t_linear + 2)[1:-1]
                 t_plot = np.union1d(sol.t, t_linspace)

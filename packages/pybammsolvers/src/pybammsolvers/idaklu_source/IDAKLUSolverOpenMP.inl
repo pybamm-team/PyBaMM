@@ -2,6 +2,7 @@
 
 #include "Expressions/Expressions.hpp"
 #include "sundials_functions.hpp"
+#include <algorithm>
 #include <vector>
 #include "common.hpp"
 #include "SolutionData.hpp"
@@ -419,7 +420,8 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     }
 
     if (hit_adaptive || hit_teval || hit_event || hit_final_time) {
-      if (use_upsampling_) {
+      // With knot reduction, upsampling waits for the final knots
+      if (use_upsampling_ && !use_knot_reduction_) {
         UpsampleStep(t_prev, t_val);
       }
       bool is_breakpoint = (hit_teval || hit_event) && !final_step;
@@ -468,16 +470,16 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
   );
 
   use_upsampling_ = (
-    solver_opts.upsampling_factor > 1.0 &&
+    solver_opts.upsampling_tolerance > 0.0 &&
     save_adaptive_steps_ &&
-    !use_knot_reduction_ &&
     functions->upsampling_fcn != nullptr &&
     functions->upsampling_fcn->nnz_out() > 0
   );
+  // Sensitivities can't be interpolated at unsaved times, so they need the states
+  upsample_to_t_additive_ = use_upsampling_ && save_hermite && !sensitivity;
   upsample_f_prev_valid_ = false;
-  if (use_upsampling_) {
-    upsampling_atol_ = N_VMin(avtol);
-  }
+  t_additive_.clear();
+  upsample_knot_ = -1;
 
   length_of_return_vector = ReturnVectorLength();
   i_save_ = 0;
@@ -672,34 +674,68 @@ void IDAKLUSolverOpenMP<ExprSet>::UpsampleStep(
     upsample_f_prev_ = EvaluateUpsampleOutputAt(t_a);
   }
 
-  if (UpsampleInterval(t_a, upsample_f_prev_, t_b, f_b, 0) > 0) {
+  RefineUpsampleInterval(t_a, upsample_f_prev_, t_b, f_b);
+  if (upsample_to_t_additive_) {
+    t_additive_.insert(t_additive_.end(), upsample_times_.begin(), upsample_times_.end());
+  } else if (!upsample_times_.empty()) {
+    // No Hermite data is stored here, so only the states are needed
+    for (sunrealtype const t_m : upsample_times_) {
+      GetSolutionStates(t_m);
+      SavePoint(t_m, /*extend_arrays=*/true, /*is_breakpoint=*/false);
+    }
     // Saving a midpoint loaded its state, so reload t_b
-    GetSolutionFull(t_b);
+    GetSolutionStates(t_b);
   }
   upsample_f_prev_ = f_b;
   upsample_f_prev_valid_ = true;
 }
 
 template <class ExprSet>
-int IDAKLUSolverOpenMP<ExprSet>::UpsampleInterval(
-  sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b, int depth
-) {
-  constexpr int max_depth = 20;
-  if (depth >= max_depth) {
-    return 0;
+void IDAKLUSolverOpenMP<ExprSet>::UpsampleReducedKnots() {
+  DEBUG("IDAKLUSolver::UpsampleReducedKnots");
+  sunrealtype f_b = EvaluateUpsampleOutput(t[0], &y[0]);
+  for (int k = 0; k + 1 < number_of_timesteps; ++k) {
+    sunrealtype const f_a = f_b;
+    f_b = EvaluateUpsampleOutput(t[k + 1], &y[(k + 1) * number_of_states]);
+    upsample_knot_ = k;
+    RefineUpsampleInterval(t[k], f_a, t[k + 1], f_b);
+    t_additive_.insert(t_additive_.end(), upsample_times_.begin(), upsample_times_.end());
   }
+  upsample_knot_ = -1;
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::RefineUpsampleInterval(
+  sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b
+) {
+  // Split the worst interval first; the cap only guards against discontinuities
+  constexpr size_t max_points_per_interval = 100;
+  upsample_heap_.clear();
+  upsample_times_.clear();
+  PushUpsampleInterval(t_a, f_a, t_b, f_b);
+  while (!upsample_heap_.empty() &&
+         upsample_times_.size() < max_points_per_interval) {
+    std::pop_heap(upsample_heap_.begin(), upsample_heap_.end());
+    UpsampleInterval const worst = upsample_heap_.back();
+    upsample_heap_.pop_back();
+    upsample_times_.push_back(worst.t_m);
+    PushUpsampleInterval(worst.t_a, worst.f_a, worst.t_m, worst.f_m);
+    PushUpsampleInterval(worst.t_m, worst.f_m, worst.t_b, worst.f_b);
+  }
+  std::sort(upsample_times_.begin(), upsample_times_.end());
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::PushUpsampleInterval(
+  sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b
+) {
   sunrealtype const t_m = 0.5 * (t_a + t_b);
   sunrealtype const f_m = EvaluateUpsampleOutputAt(t_m);
-  sunrealtype const budget = 1.0 / (solver_opts.upsampling_factor - 1.0);
-  sunrealtype const tol = budget * (upsampling_atol_ + rtol * std::abs(f_m));
-  if (std::abs(0.5 * (f_a + f_b) - f_m) <= tol) {
-    return 0;
+  sunrealtype const error = std::abs(0.5 * (f_a + f_b) - f_m);
+  if (error > solver_opts.upsampling_tolerance) {
+    upsample_heap_.push_back({error, t_a, f_a, t_m, f_m, t_b, f_b});
+    std::push_heap(upsample_heap_.begin(), upsample_heap_.end());
   }
-
-  int saved = UpsampleInterval(t_a, f_a, t_m, f_m, depth + 1);
-  GetSolutionFull(t_m);
-  SavePoint(t_m, /*extend_arrays=*/true, /*is_breakpoint=*/false);
-  return saved + 1 + UpsampleInterval(t_m, f_m, t_b, f_b, depth + 1);
 }
 
 template <class ExprSet>
@@ -712,9 +748,28 @@ sunrealtype IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutput(
 }
 
 template <class ExprSet>
-sunrealtype IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutputAt(sunrealtype t) {
-  CheckErrors(IDAGetDky(ida_mem, t, 0, y_cache), "IDAGetDky");
-  return EvaluateUpsampleOutput(t, N_VGetArrayPointer(y_cache));
+sunrealtype IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutputAt(sunrealtype t_query) {
+  sunrealtype *y_t = N_VGetArrayPointer(y_cache);
+  if (upsample_knot_ < 0) {
+    CheckErrors(IDAGetDky(ida_mem, t_query, 0, y_cache), "IDAGetDky");
+    return EvaluateUpsampleOutput(t_query, y_t);
+  }
+  // Cubic Hermite on the final knots, as the solution interpolates them
+  int const k = upsample_knot_;
+  sunrealtype const h = t[k + 1] - t[k];
+  sunrealtype const s = (t_query - t[k]) / h;
+  sunrealtype const h00 = (1 + 2 * s) * (1 - s) * (1 - s);
+  sunrealtype const h10 = s * (1 - s) * (1 - s) * h;
+  sunrealtype const h01 = s * s * (3 - 2 * s);
+  sunrealtype const h11 = s * s * (s - 1) * h;
+  sunrealtype const *y_a = &y[k * number_of_states];
+  sunrealtype const *y_b = y_a + number_of_states;
+  sunrealtype const *yp_a = &yp[k * number_of_states];
+  sunrealtype const *yp_b = yp_a + number_of_states;
+  for (int j = 0; j < number_of_states; ++j) {
+    y_t[j] = h00 * y_a[j] + h10 * yp_a[j] + h01 * y_b[j] + h11 * yp_b[j];
+  }
+  return EvaluateUpsampleOutput(t_query, y_t);
 }
 
 template <class ExprSet>
@@ -760,6 +815,9 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
   if (use_knot_reduction_) {
     knot_reducer->Finalize();
     number_of_timesteps = knot_reducer->GetOutputCount();
+    if (upsample_to_t_additive_) {
+      UpsampleReducedKnots();
+    }
   } else {
     number_of_timesteps = i_save_;
     t.resize(number_of_timesteps);
@@ -793,6 +851,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     std::move(t),
     std::move(y),
     save_hermite ? std::move(yp) : std::vector<sunrealtype>(),
+    std::move(t_additive_),
     std::move(yS_reordered),
     std::move(ypS_reordered),
     std::move(y_init_),

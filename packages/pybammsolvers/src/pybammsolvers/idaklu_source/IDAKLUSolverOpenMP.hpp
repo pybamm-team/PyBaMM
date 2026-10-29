@@ -180,7 +180,18 @@ public:
   // ── Solve-duration state (valid only during solve()) ──
   bool use_knot_reduction_ = false;
   bool use_upsampling_ = false;
-  sunrealtype upsampling_atol_ = 0.0;
+  // Upsampled times go to t_additive, not the states
+  bool upsample_to_t_additive_ = false;
+  std::vector<sunrealtype> t_additive_;
+  // Knot interval whose Hermite spline EvaluateUpsampleOutputAt uses (-1: IDA's)
+  int upsample_knot_ = -1;
+  // An interval of the step being upsampled, ordered by its midpoint error
+  struct UpsampleInterval {
+    sunrealtype error, t_a, f_a, t_m, f_m, t_b, f_b;
+    bool operator<(UpsampleInterval const &other) const { return error < other.error; }
+  };
+  std::vector<UpsampleInterval> upsample_heap_;
+  std::vector<sunrealtype> upsample_times_;
   // upsampling_fcn at the previous step end, reused as the next step start
   sunrealtype upsample_f_prev_ = 0.0;
   bool upsample_f_prev_valid_ = false;
@@ -423,18 +434,29 @@ public:
   void SavePoint(sunrealtype t_val, bool extend_arrays, bool is_breakpoint);
 
   /**
-   * @brief Save points inside the last step [t_a, t_b] until linear interpolation
+   * @brief Add points inside the last step [t_a, t_b] until linear interpolation
    * of the upsampled output resolves it
    */
   void UpsampleStep(sunrealtype t_a, sunrealtype t_b);
 
   /**
-   * @brief Bisect [t_a, t_b] while linear interpolation of the output misses
-   * the midpoint, saving each midpoint in time order
-   * @return The number of points saved
+   * @brief Add points between the reduced knots until linear interpolation of
+   * the upsampled output on their Hermite spline resolves it
    */
-  int UpsampleInterval(
-    sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b, int depth);
+  void UpsampleReducedKnots();
+
+  /**
+   * @brief Split [t_a, t_b], worst midpoint first, into upsample_times_
+   */
+  void RefineUpsampleInterval(
+    sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b);
+
+  /**
+   * @brief Queue [t_a, t_b] for splitting if linear interpolation of the output
+   * misses its midpoint by more than upsampling_tolerance
+   */
+  void PushUpsampleInterval(
+    sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b);
 
   /**
    * @brief Evaluate upsampling_fcn at t from the states y
@@ -442,10 +464,11 @@ public:
   sunrealtype EvaluateUpsampleOutput(sunrealtype t, sunrealtype *y);
 
   /**
-   * @brief Evaluate upsampling_fcn on the integrator's interpolant at t, using
-   * y_cache so the current state in yy is left untouched
+   * @brief Evaluate upsampling_fcn at t_query on the integrator's interpolant, or
+   * on knot interval upsample_knot_'s Hermite spline, using y_cache so the
+   * current state in yy is left untouched
    */
-  sunrealtype EvaluateUpsampleOutputAt(sunrealtype t);
+  sunrealtype EvaluateUpsampleOutputAt(sunrealtype t_query);
 
   /**
    * @brief Handle a breakpoint at t_eval: finalize interval, reinitialize

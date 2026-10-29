@@ -4,10 +4,11 @@
 
 - `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
+- `Solution.y` and `Solution.yp` are deprecated: they hold only the stored states, which need not match `Solution.t`. Use `solution[name]` for variables, or `all_ys` and `all_yps` for the raw states. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
 
 ## Features
 
-- Added the `IDAKLUSolver` option `upsampling_factor`: a value above 1.0 saves extra points inside each step until linear interpolation of the voltage (or current, for voltage control) is within the solver tolerances divided by `factor - 1`. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
+- Added the `IDAKLUSolver` option `upsampling_tolerance`, which adds times within each step until linear interpolation of the voltage (current, for voltage control) is within tolerance. They are stored in `Solution.t_additive` and included in `Solution.t`. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 
 ## Bug fixes

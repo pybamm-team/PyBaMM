@@ -296,7 +296,7 @@ class BaseStep:
     #: their target value collapse to one unified-mode branch.
     control_kind = None
 
-    #: The scalar output the solver's ``upsampling_factor`` resolves.
+    #: The scalar output the solver's ``upsampling_tolerance`` resolves.
     upsampling_variable = "Voltage [V]"
 
     def get_control_residual(self, variables, target=None):
