@@ -95,7 +95,7 @@ class BaseModel:
         different submodels in the full concatenated solution vector.
     """
 
-    _DEFAULT_CONVERT_TO_FORMAT = "casadi"
+    _DEFAULT_CONVERT_TO_FORMAT = "rust"
     _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax", "rust")
 
     # Set by discretisation, deserialisation and BaseSolver.set_up. Evaluators are CasADi
@@ -280,7 +280,7 @@ class BaseModel:
             - "jax": convert to JAX expression tree.
             - "rust": convert to a compiled Rust expression graph.
 
-        Default is "casadi". ``None`` is deprecated: it evaluates as "python" and
+        Default is "rust". ``None`` is deprecated: it evaluates as "python" and
         raises a ``DeprecationWarning`` when set.
         """
         return self._convert_to_format

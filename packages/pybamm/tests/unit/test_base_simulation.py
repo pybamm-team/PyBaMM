@@ -176,6 +176,7 @@ class TestBaseSimulationPickle:
         # in each model's instance dict under the public name.
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sim.build()
+        convert_to_format = sim.built_model.convert_to_format
 
         def public_name_state(self):
             state = self.__dict__.copy()
@@ -189,7 +190,7 @@ class TestBaseSimulationPickle:
         monkeypatch.undo()
 
         loaded = pickle.loads(data)
-        assert loaded.built_model.convert_to_format == "casadi"
+        assert loaded.built_model.convert_to_format == convert_to_format
         solution = loaded.solve([0, 100])
         np.testing.assert_allclose(
             solution["Voltage [V]"](100.0),

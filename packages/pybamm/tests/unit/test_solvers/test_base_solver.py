@@ -1003,6 +1003,7 @@ class TestBaseSolverSensitivityRestarts:
             }
         else:
             model = _modulo_ramp(time)
+        model.convert_to_format = "casadi"
         inputs = {"a": 2.0, "k": 0.5, "t_switch": 100.0, "b": 0.0}
         solver = self._solver()
         solver.set_up(model, [inputs])

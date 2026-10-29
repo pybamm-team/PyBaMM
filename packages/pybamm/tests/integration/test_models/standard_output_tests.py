@@ -186,8 +186,9 @@ class VoltageTests(BaseOutputTest):
         elif self.operating_condition == "off":
             np.testing.assert_allclose(self.eta_r_av(self.t), 0, rtol=1e-7, atol=1e-6)
             np.testing.assert_allclose(self.eta_e_av(self.t), 0, rtol=1e-12, atol=1e-11)
+            # Analytically zero; round-off of ~4 V potentials varies by backend.
             np.testing.assert_allclose(
-                self.delta_phi_s_av(self.t), 0, atol=2e-14, rtol=1e-16
+                self.delta_phi_s_av(self.t), 0, atol=5e-14, rtol=1e-16
             )
 
     def test_ocps(self):
