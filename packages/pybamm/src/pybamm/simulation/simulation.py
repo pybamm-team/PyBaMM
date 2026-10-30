@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import warnings
+from collections.abc import Mapping
 from datetime import timedelta
 from numbers import Number
 
@@ -791,6 +792,7 @@ class Simulation(BaseSimulation):
         showprogress=False,
         inputs=None,
         t_interp=None,
+        cycle_inputs=None,
         **kwargs,
     ):
         """Solve the model, with experiment support.
@@ -811,8 +813,23 @@ class Simulation(BaseSimulation):
             Whether to show a progress bar for cycling. If true, shows a progress bar
             for cycles. Has no effect when not used with an experiment.
             Default is False.
+        cycle_inputs : callable, optional
+            Called as ``cycle_inputs(cycle_number, cycle_solution, inputs)`` before
+            each cycle after the first, with the 1-based number of the cycle that
+            just ended, its full solution (even if ``save_at_cycles`` does not keep
+            it) and the inputs it ran with. It returns a dict of new values for some
+            of ``inputs``, used from the next cycle on, or None to keep them.
+            ``cycle_solution.steps`` holds one solution per experiment step, an
+            :class:`EmptySolution` for a skipped step. Only names passed in
+            ``inputs`` can be updated, and each value keeps its shape. Values used
+            once when the experiment is built, such as the initial state, are not
+            updated. It is not called for the cycles of ``starting_solution``.
         """
         if self.operating_mode != self.MODE_WITH_EXPERIMENT:
+            if cycle_inputs is not None:
+                raise ValueError(
+                    "cycle_inputs can only be provided if simulating an Experiment"
+                )
             if save_at_cycles is not None:
                 raise ValueError(
                     "'save_at_cycles' option can only be used if simulating an "
@@ -845,6 +862,11 @@ class Simulation(BaseSimulation):
         if isinstance(inputs, list):
             raise pybamm.SolverError(
                 "Solving with a list of input sets is not supported with experiments."
+            )
+
+        if cycle_inputs is not None and not callable(cycle_inputs):
+            raise TypeError(
+                f"cycle_inputs must be callable, not {type(cycle_inputs).__name__}"
             )
 
         # Take sensitivities only w.r.t. user inputs, not the control inputs the
@@ -1014,11 +1036,20 @@ class Simulation(BaseSimulation):
         # Solver work of the cycles left out of the fold, totalled so their
         # solutions can be freed; None once one of them has no statistics
         discarded_cycle_statistics = pybamm.SolverStatistics()
+        # The last cycle's (number, full solution, inputs), awaiting cycle_inputs
+        ended_cycle = None
 
         for cycle_num, cycle_length in enumerate(
             cycle_lengths,
             start=1,
         ):
+            if ended_cycle is not None:
+                user_inputs = self._update_cycle_inputs(
+                    user_inputs,
+                    cycle_inputs(*ended_cycle),
+                    kwargs.get("calculate_sensitivities"),
+                )
+                ended_cycle = None
             logs["cycle number"] = (
                 cycle_num + cycle_offset,
                 num_cycles + cycle_offset,
@@ -1219,10 +1250,18 @@ class Simulation(BaseSimulation):
                 cycle_sol = pybamm.make_cycle_solution(
                     steps,
                     esoh_solver=esoh_solver,
-                    save_this_cycle=save_this_cycle,
+                    save_this_cycle=save_this_cycle or cycle_inputs is not None,
                     inputs=user_inputs,
                 )
                 cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
+                if cycle_inputs is not None:
+                    ended_cycle = (
+                        cycle_num + cycle_offset,
+                        cycle_solution,
+                        dict(user_inputs),
+                    )
+                    if not save_this_cycle:
+                        cycle_solution = None
                 all_cycle_solutions.append(cycle_solution)
                 all_summary_variables.append(cycle_sum_vars)
                 all_first_states.append(cycle_first_state)
@@ -1301,6 +1340,33 @@ class Simulation(BaseSimulation):
         self._solution.initial_start_time = initial_start_time
 
         return self._solution
+
+    def _update_cycle_inputs(self, inputs, updates, sensitivity_inputs):
+        """Return ``inputs`` with the values ``cycle_inputs`` returned."""
+        if updates is None:
+            return inputs
+        if not isinstance(updates, Mapping):
+            raise TypeError(
+                "cycle_inputs must return a dict of input values or None, "
+                f"not {type(updates).__name__}"
+            )
+        for name, value in updates.items():
+            if name not in inputs or name in self._INTERNAL_EXPERIMENT_INPUTS:
+                raise ValueError(
+                    f"cycle_inputs returned '{name}', which is not one of the inputs "
+                    "passed to solve. Pass its value for the first cycle in `inputs`."
+                )
+            if np.shape(value) != np.shape(inputs[name]):
+                raise ValueError(
+                    f"cycle_inputs returned '{name}' with shape {np.shape(value)}, "
+                    f"but its value in `inputs` has shape {np.shape(inputs[name])}"
+                )
+            if sensitivity_inputs and name in sensitivity_inputs:
+                raise ValueError(
+                    f"Cannot calculate sensitivities with respect to '{name}', "
+                    "which cycle_inputs updates between cycles"
+                )
+        return {**inputs, **updates}
 
     def run_padding_rest(self, kwargs, rest_time, step_solution, inputs):
         model = self._get_built_experiment_model(self._PADDING_REST_KEY)

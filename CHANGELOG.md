@@ -13,6 +13,7 @@
 ## Features
 
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
+- `Simulation.solve` takes a `cycle_inputs` callable that sets input parameters for each experiment cycle from the previous cycle's full solution, including cycles `save_at_cycles` does not keep. ([#5941](https://github.com/pybamm-team/PyBaMM/pull/5941))
 
 ## Bug fixes
 
