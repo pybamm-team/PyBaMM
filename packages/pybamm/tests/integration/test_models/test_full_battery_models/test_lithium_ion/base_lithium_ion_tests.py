@@ -159,6 +159,22 @@ class BaseIntegrationTestLithiumIon:
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
+    def test_kinetics_coupled_ion_electron_transfer(self):
+        options = {"intercalation kinetics": "coupled ion-electron transfer"}
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        parameter_values.update(
+            {
+                "Negative electrode reorganization energy [eV]": 0.2,
+                "Positive electrode reorganization energy [eV]": 0.2,
+                "Negative electrode coupled ion-electron transfer rate constant "
+                "[A.m-2]": 10,
+                "Positive electrode coupled ion-electron transfer rate constant "
+                "[A.m-2]": 10,
+            },
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
     def test_kinetics_marcus(self):
         options = {"intercalation kinetics": "Marcus"}
         parameter_values = pybamm.ParameterValues("Marquis2019")

@@ -160,6 +160,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Model for intercalation kinetics. Can be "symmetric Butler-Volmer"
                 (default), "asymmetric Butler-Volmer", "linear", "Marcus",
                 "Marcus-Hush-Chidsey" (which uses the asymptotic form from Zeng 2014),
+                "coupled ion-electron transfer" (which uses the form from Fraggedakis
+                2021),
                 or "MSMR" (which uses the form from Baker 2018). A 2-tuple can be
                 provided for different behaviour in negative and positive electrodes.
             * "interface utilisation": str
@@ -353,6 +355,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "linear",
                 "Marcus",
                 "Marcus-Hush-Chidsey",
+                "coupled ion-electron transfer",
                 "MSMR",
             ],
             "interface utilisation": ["full", "constant", "current-driven"],
@@ -1388,6 +1391,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             return pybamm.kinetics.Marcus
         elif options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
             return pybamm.kinetics.MarcusHushChidsey
+        elif options["intercalation kinetics"] == "coupled ion-electron transfer":
+            return pybamm.kinetics.CoupledIonElectronTransfer
         elif options["intercalation kinetics"] == "MSMR":
             return pybamm.kinetics.MSMRButlerVolmer
 
