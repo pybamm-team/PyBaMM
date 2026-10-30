@@ -61,6 +61,10 @@ class Interpolant(pybamm.Function):
     # entries_string is a derived hash cache of x/y, which are emitted by to_json.
     _serialise_derived_params = frozenset({"entries_string"})
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.union(self.children)
+
     def __init__(
         self,
         x: npt.NDArray[np.float64]

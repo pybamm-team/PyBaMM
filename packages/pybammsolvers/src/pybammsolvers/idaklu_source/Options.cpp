@@ -1,4 +1,5 @@
 #include "Options.hpp"
+#include "BlockPreconditioner.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <cmath>
@@ -66,7 +67,8 @@ SetupOptions::SetupOptions(py::dict &py_opts)
     const bool direct_solver_fits_jacobian =
         (linear_solver == "SUNLinSol_Dense" && (jacobian == "dense" || jacobian == "none")) ||
         ((linear_solver == "SUNLinSol_KLU" ||
-          linear_solver == "SUNLinSol_cuSolverSp_batchQR") && jacobian == "sparse") ||
+          linear_solver == "SUNLinSol_cuSolverSp_batchQR" ||
+          linear_solver == "block") && jacobian == "sparse") ||
         (linear_solver == "SUNLinSol_Band" && jacobian == "banded");
     if (direct_solver_fits_jacobian)
     {
@@ -125,17 +127,34 @@ SetupOptions::SetupOptions(py::dict &py_opts)
 
     if (using_iterative_solver)
     {
-        if (preconditioner != "none" && preconditioner != "BBDP")
+        if (preconditioner != "none" && preconditioner != "BBDP" &&
+            preconditioner != "block")
         {
             throw std::domain_error(
                 "Unknown preconditioner \""s + preconditioner +
-                "\", use one of \"BBDP\" or \"none\""s
+                "\", use one of \"BBDP\", \"block\" or \"none\""s
             );
         }
     }
     else
     {
         preconditioner = "none";
+    }
+
+    if (preconditioner == "block" || linear_solver == "block")
+    {
+        if (!py_opts.contains("_preconditioner"))
+        {
+            throw std::domain_error(
+                "the \"block\" preconditioner and linear solver need the analysed "
+                "tree in the \"_preconditioner\" option"
+            );
+        }
+        std::shared_ptr<const BlockAnalysis> analysis =
+            py_opts["_preconditioner"].cast<std::shared_ptr<BlockAnalysis>>();
+        make_preconditioner = [analysis]() -> std::unique_ptr<Preconditioner> {
+            return std::make_unique<BlockPreconditioner>(analysis);
+        };
     }
 }
 

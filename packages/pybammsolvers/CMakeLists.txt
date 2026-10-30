@@ -117,6 +117,12 @@ pybind11_add_module(idaklu
         src/pybammsolvers/idaklu_source/observe.hpp
         src/pybammsolvers/idaklu_source/Options.hpp
         src/pybammsolvers/idaklu_source/Options.cpp
+        src/pybammsolvers/idaklu_source/Preconditioner.hpp
+        src/pybammsolvers/idaklu_source/Preconditioner.cpp
+        src/pybammsolvers/idaklu_source/BlockPreconditioner.hpp
+        src/pybammsolvers/idaklu_source/BlockPreconditioner.cpp
+        src/pybammsolvers/idaklu_source/BlockAnalysis.cpp
+        src/pybammsolvers/include/pybamm_block_solver.h
         src/pybammsolvers/idaklu_source/StandaloneNewtonSolver.hpp
         src/pybammsolvers/idaklu_source/StandaloneNewtonSolver.cpp
         # IDAKLU expressions / function evaluation [abstract]

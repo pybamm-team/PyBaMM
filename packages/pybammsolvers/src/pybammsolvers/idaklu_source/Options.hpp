@@ -1,7 +1,10 @@
 #ifndef PYBAMM_OPTIONS_HPP
 #define PYBAMM_OPTIONS_HPP
 
+#include <memory>
+
 #include "common.hpp"
+#include "Preconditioner.hpp"
 
 /**
  * @brief SetupOptions passed to the idaklu setup by pybamm
@@ -11,7 +14,9 @@ struct SetupOptions {
   bool using_banded_matrix;
   bool using_iterative_solver;
   std::string jacobian;
-  std::string preconditioner; // spbcg
+  std::string preconditioner; // "none", "BBDP" or "block"
+  // For "block": makes each solver's preconditioner
+  PreconditionerFactory make_preconditioner;
   int precon_half_bandwidth;
   int precon_half_bandwidth_keep;
   int num_threads;
