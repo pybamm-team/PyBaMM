@@ -7,8 +7,8 @@
 
 ## Features
 
-- Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 - `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6001](https://github.com/pybamm-team/PyBaMM/issues/6001), [#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
+- Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 
 ## Bug fixes
 
