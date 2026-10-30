@@ -2,8 +2,8 @@ ci:
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autofix_commit_msg: "style: pre-commit fixes"
   autoupdate_schedule: "weekly"
-  # No base ref here, so comment-slop would scan nothing; `style` gates it.
-  skip: [comment-slop]
+  # No base ref or Rust toolchain here; the `style` CI job gates these.
+  skip: [comment-slop, cargo-fmt, cargo-clippy]
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -83,3 +83,19 @@ repos:
         additional_dependencies: [pyyaml]
         files: ^\.github/(workflows/test_on_push\.yml|scripts/check_ci_gate\.py)$
         pass_filenames: false
+      # Skipped, saying so, where cargo is not installed.
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: python .github/scripts/run_cargo.py fmt --manifest-path packages/pybamm-rust/Cargo.toml --all
+        language: python
+        types: [rust]
+        pass_filenames: false
+        verbose: true
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: python .github/scripts/run_cargo.py clippy --quiet --manifest-path packages/pybamm-rust/Cargo.toml --all-targets --all-features
+        language: python
+        types: [rust]
+        pass_filenames: false
+        verbose: true
+        args: ["--", "-D", "warnings"]

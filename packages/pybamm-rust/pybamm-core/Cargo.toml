@@ -1,0 +1,27 @@
+[package]
+name = "pybamm-core"
+version = "0.1.0"
+edition = "2024"
+rust-version.workspace = true
+
+[dependencies]
+rustc-hash = "2"
+thiserror = "2"
+# `erf`, which `f64` lacks; `asinh`, as `f64`'s overflows past `f64::MAX / 2`; and IEEE
+# 754-2019 `minimumNumber`/`maximumNumber`, as `f64::min`/`max` leave signed zeros unordered.
+libm = "0.2"
+serde = { version = "1", features = ["derive"], optional = true }
+bincode = { version = "1", optional = true }
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+# Compiles matrix products for the detected instruction set, so `accumulate` needs no `unsafe`.
+pulp = "0.22"
+
+[dev-dependencies]
+proptest = "1"
+
+[features]
+serialize = ["serde", "bincode"]
+
+[lints]
+workspace = true
