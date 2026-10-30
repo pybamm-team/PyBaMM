@@ -165,6 +165,7 @@ class BatchStudy:
                     calc_esoh,
                     starting_solution,
                     initial_soc,
+                    t_interp=t_interp,
                     **kwargs,
                 )
                 solve_time += sol.solve_time
