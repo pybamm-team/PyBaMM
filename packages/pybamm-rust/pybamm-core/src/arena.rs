@@ -132,6 +132,37 @@ impl Arena {
         }
         order
     }
+
+    /// One value per node of `order` (children first), returning the last node's.
+    ///
+    /// `visit` reads its children's values from the map. Each value is dropped once its
+    /// last parent has run, so only the frontier stays live.
+    pub(crate) fn fold_frontier<T>(
+        &self,
+        order: &[NodeId],
+        mut visit: impl FnMut(NodeId, &NodeMap<T>) -> T,
+    ) -> T {
+        let mut pending_parents = vec![0usize; self.len()];
+        for &id in order {
+            self.get(id)
+                .for_each_child(|child| pending_parents[child.index()] += 1);
+        }
+        let mut values = NodeMap::new(self.len());
+        for &id in order {
+            let value = visit(id, &values);
+            values.insert(id, value);
+            self.get(id).for_each_child(|child| {
+                pending_parents[child.index()] -= 1;
+                if pending_parents[child.index()] == 0 {
+                    values.take(child);
+                }
+            });
+        }
+        let root = order.last().expect("a topological order ends at its root");
+        values
+            .take(*root)
+            .expect("the root has no parent to drop it")
+    }
 }
 
 /// The on-disk form of an [`Arena`], refused unless every child precedes its parent.
@@ -379,6 +410,12 @@ impl<T> NodeMap<T> {
     #[inline]
     pub(crate) fn contains_key(&self, id: NodeId) -> bool {
         self.slots.get(id.index()).is_some_and(Option::is_some)
+    }
+
+    /// Remove and return the value for `id`, if set.
+    #[inline]
+    pub(crate) fn take(&mut self, id: NodeId) -> Option<T> {
+        self.slots.get_mut(id.index()).and_then(Option::take)
     }
 }
 
