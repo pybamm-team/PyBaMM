@@ -1105,21 +1105,13 @@ class ProcessedVariableVectorFieldUnstructuredFVM:
         self.internal_boundaries = []
 
         self._component_vars = []
-        leaves = as_observer(observer).leaves
+        observer = as_observer(observer)
         for k in range(vf.n_components):
             comp_base_k = [bv.components[k] for bv in base_variables]
-            comp_casadi_k = []
-            for bvc in leaves:
-                if isinstance(bvc, list):
-                    comp_casadi_k.append(bvc[k])
-                elif isinstance(bvc, pybamm.VectorField):
-                    comp_casadi_k.append(bvc.components[k])
-                else:
-                    comp_casadi_k.append(bvc)
             pv = ProcessedVariableUnstructuredFVM(
                 f"{name}[{k}]",
                 comp_base_k,
-                comp_casadi_k,
+                observer.component(k, vf.n_components),
                 solution,
                 time_integral=time_integral,
             )
