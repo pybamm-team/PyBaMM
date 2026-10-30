@@ -1533,9 +1533,7 @@ class Symbol:
         except ValueError:
             unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
             state_vectors_in_node = unpacker.unpack_symbol(self)
-            min_y_size = max(
-                max(len(x._evaluation_array) for x in state_vectors_in_node), 1
-            )
+            min_y_size = max(max(x.last_point for x in state_vectors_in_node), 1)
             # Pick a y that won't cause RuntimeWarnings
             y = np.nan * np.ones((min_y_size, 1))
             evaluated_self = self.evaluate(0, y, y, inputs="shape test")
