@@ -65,6 +65,23 @@ IDAKLUSolver *create_idaklu_solver(
       solver_opts
      );
   }
+  else if (setup_opts.linear_solver == "block")
+  {
+    DEBUG("\tsetting block linear solver");
+    idakluSolver = new IDAKLUSolverOpenMP_Block<ExprSet>(
+      atol_np,
+      rel_tol,
+      rhs_alg_id,
+      number_of_parameters,
+      number_of_events,
+      jac_times_cjmass_nnz,
+      jac_bandwidth_lower,
+      jac_bandwidth_upper,
+      std::move(functions),
+      setup_opts,
+      solver_opts
+     );
+  }
   else if (setup_opts.linear_solver == "SUNLinSol_Band")
   {
     DEBUG("\tsetting SUNLinSol_Band linear solver");

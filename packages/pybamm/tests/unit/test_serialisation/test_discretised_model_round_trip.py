@@ -84,3 +84,34 @@ def test_round_trip_model_still_solves(model_cls):
         rtol=1e-6,
         atol=1e-6,
     )
+
+
+def test_round_trip_keeps_the_compiled_preconditioner():
+    import numpy as np
+
+    P = pybamm.preconditioners
+    preconditioner = {
+        "Negative particle concentration [mol.m-3]": P.Tridiagonal(stage=0),
+        "Positive particle concentration [mol.m-3]": P.Tridiagonal(stage=0),
+    }
+    sim = pybamm.Simulation(pybamm.lithium_ion.DFN(), preconditioner=preconditioner)
+    sim.build()
+    s = Serialise()
+    data = json.loads(json.dumps(s.serialise_model(sim.built_model)))
+    reloaded = s.load_model(data)
+    assert P.describe(reloaded.preconditioner) == P.describe(
+        sim.built_model.preconditioner
+    )
+
+    solver = pybamm.IDAKLUSolver(
+        options={"linear_solver": "SUNLinSol_SPGMR", "preconditioner": "block"}
+    )
+    t_eval = np.linspace(0, 600, 50)
+    reference = pybamm.Simulation(pybamm.lithium_ion.DFN()).solve(t_eval)
+    solution = solver.solve(reloaded, t_eval)
+    np.testing.assert_allclose(
+        solution["Voltage [V]"](t_eval),
+        reference["Voltage [V]"](t_eval),
+        rtol=0,
+        atol=1e-3,
+    )

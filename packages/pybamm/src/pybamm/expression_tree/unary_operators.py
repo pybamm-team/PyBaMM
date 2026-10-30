@@ -177,6 +177,10 @@ class Negate(UnaryOperator):
 
     __slots__ = ()
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.union(self.children)
+
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("-", child)
@@ -216,6 +220,10 @@ class AbsoluteValue(UnaryOperator):
     """
 
     __slots__ = ()
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.union(self.children)
 
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
@@ -283,6 +291,11 @@ class Sign(UnaryOperator):
 
     __slots__ = ()
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        # Piecewise constant, so the derivative is zero wherever it exists
+        return sparsity.independent(self.children)
+
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("sign", child)
@@ -328,6 +341,11 @@ class Floor(UnaryOperator):
 
     __slots__ = ()
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        # Piecewise constant, so the derivative is zero wherever it exists
+        return sparsity.independent(self.children)
+
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("floor", child)
@@ -355,6 +373,11 @@ class Ceiling(UnaryOperator):
     """
 
     __slots__ = ()
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        # Piecewise constant, so the derivative is zero wherever it exists
+        return sparsity.independent(self.children)
 
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
@@ -400,6 +423,14 @@ class Index(UnaryOperator):
     __slots__ = ("index", "slice")
     # ``slice`` determines the index; ``index`` may be an int or the same slice
     _id_excluded_fields = ("index",)
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        child_size, child_pattern = sparsity.size_and_pattern(self.child)
+        size = len(range(*self.slice.indices(child_size)))
+        if child_pattern is None:
+            return size, None
+        return size, child_pattern[self.slice]
 
     def __init__(self, child, index, name=None, check_size=True):
         self.index = index
@@ -1641,6 +1672,10 @@ class NotConstant(UnaryOperator):
     """Special class to wrap a symbol that should not be treated as a constant."""
 
     __slots__ = ()
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.union(self.children)
 
     def __init__(self, child):
         super().__init__("not_constant", child)
