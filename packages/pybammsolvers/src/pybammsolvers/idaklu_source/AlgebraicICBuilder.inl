@@ -14,9 +14,9 @@ int IDAKLUSolverOpenMP<ExprSet>::SolveICLinearSystem(
     const sunrealtype* y_in, sunrealtype* res, sunrealtype* delta) {
 
   // Reuses IDA's J and LS — no extra full-size matrix or solver allocation.
-  // Direct LS (J != nullptr): refill J at cj=1, then SUNLinSolSetup/Solve.
-  // Iterative LS (J == nullptr): SUNLinSolSetup runs the registered
-  // preconditioner setup; SUNLinSolSolve uses IDA's installed ATimes/PSolve.
+  // Direct LS: refill J at cj=1, then SUNLinSolSetup/Solve.
+  // Iterative LS: SUNLinSolSetup runs the registered preconditioner setup;
+  // SUNLinSolSolve uses IDA's installed ATimes/PSolve.
   auto& fs = *this->alg_state_->full;
 
   sunrealtype* yy_data = NV_DATA(yy_ptr);
@@ -26,24 +26,81 @@ int IDAKLUSolverOpenMP<ExprSet>::SolveICLinearSystem(
   sunrealtype* delta_data = N_VGetArrayPointer(fs.delta_nvec);
   std::memcpy(res_data, res, number_of_states * sizeof(sunrealtype));
 
-  if (J != nullptr) {
+  // The differential residuals and steps are zeroed, so identity rows make the
+  // step solve J_aa delta_a = res_a exactly
+  const sunrealtype* id_data = N_VGetArrayPointer(id);
+  const bool iterative = SUNLinSolGetType(LS) != SUNLINEARSOLVER_DIRECT;
+  if (iterative) {
+    // IDA's iterative-solver wrappers pass its own y and cj, which are unset
+    // before the first step and stale after it, so linearise about y_in here
+    functions->linearisation_y = yy_data;
+    functions->linearisation_t = SUN_RCONST(0.0);
+    functions->linearisation_cj = SUN_RCONST(0.0);
+    functions->linearisation_id = id_data;
+    SUNLinSolSetScalingVectors(LS, nullptr, nullptr);
+  } else {
     // jacobian_eval ignores tempv1/2/3 in the casadi path; pass y_cache
     // since the signature requires valid N_Vectors.
     int flag = jacobian_eval<ExprSet>(
-      SUN_RCONST(0.0), SUN_RCONST(1.0), yy_ptr, yyp_ptr, fs.res_nvec, J,
+      SUN_RCONST(0.0), SUN_RCONST(0.0), yy_ptr, yyp_ptr, fs.res_nvec, J,
       functions.get(), y_cache, y_cache, y_cache);
     if (flag != 0) return 1;
+    SetIdentityRows(J, id_data);
   }
 
   int flag = SUNLinSolSetup(LS, J);
   std::memcpy(delta_data, res, number_of_states * sizeof(sunrealtype));
   if (flag == 0) {
     flag = SUNLinSolSolve(LS, J, fs.delta_nvec, fs.res_nvec, SUN_RCONST(0.0));
+    // A zero tolerance runs every Krylov iteration; an inexact step suffices
+    if (iterative && flag == SUNLS_RES_REDUCED) flag = 0;
+  }
+  if (iterative) {
+    functions->linearisation_y = nullptr;
+    functions->linearisation_id = nullptr;
   }
 
   if (flag != 0) return 1;
   std::memcpy(delta, delta_data, number_of_states * sizeof(sunrealtype));
   return 0;
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::SetIdentityRows(SUNMatrix A, const sunrealtype* id_data) {
+  const SUNMatrix_ID type = SUNMatGetID(A);
+  if (type == SUNMATRIX_SPARSE) {
+    sunindextype* colptrs = SUNSparseMatrix_IndexPointers(A);
+    sunindextype* rowvals = SUNSparseMatrix_IndexValues(A);
+    sunrealtype* data = SUNSparseMatrix_Data(A);
+    // IDAKLU's sparse matrices are CSC
+    for (sunindextype col = 0; col < number_of_states; col++) {
+      for (sunindextype k = colptrs[col]; k < colptrs[col + 1]; k++) {
+        if (is_differential(id_data[rowvals[k]])) {
+          data[k] = rowvals[k] == col ? SUN_RCONST(1.0) : SUN_RCONST(0.0);
+        }
+      }
+    }
+  } else if (type == SUNMATRIX_DENSE) {
+    for (sunindextype col = 0; col < number_of_states; col++) {
+      for (sunindextype row = 0; row < number_of_states; row++) {
+        if (is_differential(id_data[row])) {
+          SM_ELEMENT_D(A, row, col) = row == col ? SUN_RCONST(1.0) : SUN_RCONST(0.0);
+        }
+      }
+    }
+  } else if (type == SUNMATRIX_BAND) {
+    const sunindextype upper = SUNBandMatrix_UpperBandwidth(A);
+    const sunindextype lower = SUNBandMatrix_LowerBandwidth(A);
+    for (sunindextype col = 0; col < number_of_states; col++) {
+      const sunindextype first = std::max<sunindextype>(0, col - upper);
+      const sunindextype last = std::min<sunindextype>(number_of_states - 1, col + lower);
+      for (sunindextype row = first; row <= last; row++) {
+        if (is_differential(id_data[row])) {
+          SM_ELEMENT_B(A, row, col) = row == col ? SUN_RCONST(1.0) : SUN_RCONST(0.0);
+        }
+      }
+    }
+  }
 }
 
 // ────────────────────── NonlinearSystem implementations ──────────────────────
@@ -236,7 +293,8 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
     n_solve_vars = len_alg_;
 
     bool use_sparse = (setup_opts.jacobian == "sparse" &&
-                       setup_opts.linear_solver == "SUNLinSol_KLU");
+                       (setup_opts.linear_solver == "SUNLinSol_KLU" ||
+                        setup_opts.linear_solver == "block"));
 
     as.sub = std::make_unique<SubBlockResources>();
     auto& sb = *as.sub;

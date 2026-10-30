@@ -35,6 +35,23 @@ public:
 };
 
 /**
+ * @brief IDAKLUSolver that applies its preconditioner as a direct linear solver
+ */
+template <class T>
+class IDAKLUSolverOpenMP_Block : public IDAKLUSolverOpenMP<T> {
+public:
+  using Base = IDAKLUSolverOpenMP<T>;
+  template<typename ... Args>
+  IDAKLUSolverOpenMP_Block(Args&& ... args) : Base(std::forward<Args>(args) ...)
+  {
+    Base::functions->preconditioner = Base::setup_opts.make_preconditioner();
+    Base::LS = SUNLinSol_Preconditioner(
+      Base::functions->preconditioner.get(), Base::sunctx);
+    Base::Initialize();
+  }
+};
+
+/**
  * @brief IDAKLUSolver Banded implementation with OpenMP class
  */
 template <class T>
