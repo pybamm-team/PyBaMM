@@ -12,10 +12,12 @@
 
 ## Features
 
+- `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6001](https://github.com/pybamm-team/PyBaMM/issues/6001), [#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 
 ## Bug fixes
 
+- `Discretisation(resolve_coupled_variables=True)` now resolves a `pybamm.CoupledVariable` used in a boundary condition, which used to raise a `DiscretisationError`. It also no longer rewrites the equations of the model it is given when `inplace=False`. ([#6001](https://github.com/pybamm-team/PyBaMM/issues/6001), [#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
 - `from pybamm.models.submodels.interface.kinetics import *` no longer raises an `AttributeError` ([#5970](https://github.com/pybamm-team/PyBaMM/pull/5970))
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
 - `IDAKLUSolver.jaxify` now returns correct derivatives at any requested time. Before, it dropped negative tangents and scalar-time cotangents, and read sensitivities from the wrong solver step, or from the nearest `t_eval` point at off-grid times. ([#5916](https://github.com/pybamm-team/PyBaMM/pull/5916))
