@@ -22,6 +22,33 @@ from tests import shared
 
 
 class TestParameterValues:
+    @pytest.mark.parametrize(
+        "metadata",
+        [
+            ["Chen2020"],
+            [("Nyman2008", "Electrolyte transport")],
+            ["Chen2020", ("Nyman2008", "Electrolyte transport")],
+        ],
+    )
+    def test_citation_reasons(self, metadata, monkeypatch):
+        citations = pybamm.Citations()
+        monkeypatch.setattr(pybamm, "citations", citations)
+        values = {"Some parameter [m]": 1, "citations": metadata}
+        original = metadata.copy()
+        parameters = pybamm.ParameterValues(values)
+        assert values == {"Some parameter [m]": 1, "citations": original}
+        assert parameters["citations"] == original
+        if "Chen2020" in metadata:
+            assert citations._citation_tags["Chen2020"] == {"ParameterValues"}
+        if ("Nyman2008", "Electrolyte transport") in metadata:
+            assert citations._citation_tags["Nyman2008"] == {"Electrolyte transport"}
+
+    def test_named_set_citation_reason(self, monkeypatch):
+        citations = pybamm.Citations()
+        monkeypatch.setattr(pybamm, "citations", citations)
+        pybamm.ParameterValues("Chen2020")
+        assert citations._citation_tags["Chen2020"] == {"Chen2020"}
+
     def test_init(self):
         # from dict
         param = pybamm.ParameterValues({"a": 1})

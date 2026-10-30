@@ -12,6 +12,7 @@
 
 ## Features
 
+- Load downstream BibTeX databases without citing every entry, and accumulate optional citation reasons, including parameter-set metadata, in verbose text and BibTeX exports to the terminal or files. ([#6003](https://github.com/pybamm-team/PyBaMM/pull/6003))
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 
 ## Bug fixes
