@@ -438,11 +438,8 @@ class Simulation(BaseSimulation):
             )
             new_parameter_values[control] = variable
             switching_control_variables.add(control)
-        # The control residuals are the switches over the per-step control laws.
-        # Record their variables so the solver builds those rows' jacobians sparsely
-        # instead of via CasADi's dense Switch -- see BaseModel.build_casadi_jacobian.
-        # The attribute rides this same model object (in-place parameter processing
-        # and discretisation) through to solver.process.
+        # The solver builds the jacobian rows of these switched residuals sparsely,
+        # see BaseModel.build_casadi_jacobian
         new_model.switching_control_variables = switching_control_variables
 
         # Combine each step's local termination expression into one experiment event,

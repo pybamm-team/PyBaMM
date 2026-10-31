@@ -477,11 +477,9 @@ class CustomStepImplicit(BaseStepImplicit):
 
 class ControlStep(BaseStep):
     """
-    Step that drives any of the model's parameters, its controls, such as an inlet
-    temperature or a mass flow rate. Each control is either set to a value
-    (explicit), or adjusted, as an algebraic variable, so that a residual is zero
-    (implicit). Controls that the step does not drive keep the value they have in the
-    parameter values.
+    Step that drives model parameters, its controls. It sets each control to a value
+    (explicit), or adjusts it so that a residual is zero (implicit). Controls it does
+    not drive keep their parameter values.
 
     Values and targets can be a number, a 2-column array of times and values (as a
     drive cycle), or a function of the time since the start of the step. Steps of the
@@ -580,13 +578,13 @@ class ControlStep(BaseStep):
         ]
         return max(ends) if ends else self._default_timespan(value)
 
-    def record_tags(self, value, *args):
+    def record_tags(self, value, *args, **kwargs):
         parts = []
         if self.input_explicit:
             parts.append(f"explicit={self.input_explicit}")
         if self.input_implicit:
             parts.append(f"implicit={self.input_implicit}")
-        return super().record_tags(", ".join(parts), *args)
+        return super().record_tags(", ".join(parts), *args, **kwargs)
 
     def copy(self):
         # A shallow copy keeps the processed targets and supports subclasses with
