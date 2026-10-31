@@ -16,6 +16,7 @@
 
 ## Bug fixes
 
+- A battery model loaded with `Serialise.load_custom_model` keeps its saved geometry, mesh points, submesh types and spatial methods when its own class can't be imported. Before, the built-in ancestor's defaults silently replaced them. ([#5995](https://github.com/pybamm-team/PyBaMM/pull/5995))
 - `from pybamm.models.submodels.interface.kinetics import *` no longer raises an `AttributeError` ([#5970](https://github.com/pybamm-team/PyBaMM/pull/5970))
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
 - `IDAKLUSolver.jaxify` now returns correct derivatives at any requested time. Before, it dropped negative tangents and scalar-time cotangents, and read sensitivities from the wrong solver step, or from the nearest `t_eval` point at off-grid times. ([#5916](https://github.com/pybamm-team/PyBaMM/pull/5916))

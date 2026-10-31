@@ -23,6 +23,15 @@ from pybamm.models.symbol_processor import SymbolProcessor
 _SymbolT = TypeVar("_SymbolT", bound="pybamm.Symbol")
 
 
+def _prefer_restored(override: property, attribute: str) -> property:
+    """Wrap ``override`` so it returns ``attribute`` on the instance when set."""
+
+    def getter(self):
+        return getattr(self, attribute, None) or override.fget(self)
+
+    return property(getter, override.fset, override.fdel, override.__doc__)
+
+
 class ModelSolutionObservability(str, Enum):
     """
     Enum to specify the observability states for a PyBaMM model's solution.
@@ -97,6 +106,20 @@ class BaseModel:
 
     _DEFAULT_CONVERT_TO_FORMAT = "casadi"
     _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax")
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Serialise restores a saved discretisation onto ``_default_*`` when the
+        # saved class can't be imported; it must win over an ancestor's override
+        for name in (
+            "default_geometry",
+            "default_var_pts",
+            "default_submesh_types",
+            "default_spatial_methods",
+        ):
+            override = cls.__dict__.get(name)
+            if isinstance(override, property):
+                setattr(cls, name, _prefer_restored(override, f"_{name}"))
 
     # Set by discretisation, deserialisation and BaseSolver.set_up. Evaluators are
     # CasADi functions or pybamm.EvaluatorPython/EvaluatorJax, by convert_to_format.
