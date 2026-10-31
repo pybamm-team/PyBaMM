@@ -6,6 +6,7 @@ import pytest
 
 import pybamm
 from pybamm.solvers.observation import OutputAssembly
+from pybamm.solvers.variable_observer import SampledObserver
 
 
 @pytest.fixture(scope="module")
@@ -153,3 +154,170 @@ class TestOutputAssembly:
                 sensitivities=np.zeros((n_t, 2, 1)),
                 sensitivity_names=["a"],
             )
+
+
+_DOMAIN = "negative electrode"
+# Both solves take the same steps, so only roundoff separates their values
+_TOLERANCES = {"rtol": 1e-10, "atol": 1e-12}
+
+
+def _finite_volume_model(dimension):
+    """A decaying field that varies across the cells, and variables of it."""
+    x = pybamm.SpatialVariable(
+        "x_n", domain=[_DOMAIN], coord_sys="cartesian", direction="lr"
+    )
+    z = pybamm.SpatialVariable(
+        "z_n", domain=[_DOMAIN], coord_sys="cartesian", direction="tb"
+    )
+    spatial_variables = [x, z]
+    if dimension == 3:
+        y = pybamm.SpatialVariable("y_n", domain=[_DOMAIN], coord_sys="cartesian")
+        spatial_variables = [x, y, z]
+    u = pybamm.Variable("u", domain=[_DOMAIN])
+    model = pybamm.BaseModel()
+    model.rhs = {u: -pybamm.InputParameter("k") * (1 + x + 2 * z) * u}
+    model.initial_conditions = {u: 1 + x * z}
+    model.variables = {
+        "u": u,
+        "grad u": pybamm.grad(u),
+        "Time [s]": pybamm.t,
+        "Time integral of u": pybamm.ExplicitTimeIntegral(u, pybamm.Scalar(0)),
+    }
+    # Unequal point counts, so a transposed layout would not line up
+    geometry = {
+        _DOMAIN: {
+            var: {"min": 0, "max": 1 + k} for k, var in enumerate(spatial_variables)
+        }
+    }
+    var_pts = dict(
+        zip(spatial_variables, [3, 4, 5][: len(spatial_variables)], strict=True)
+    )
+    return model, geometry, var_pts
+
+
+_FINITE_VOLUME_MESHES = {
+    "unstructured 2D": (
+        2,
+        pybamm.UnstructuredMeshGenerator,
+        pybamm.FiniteVolumeUnstructured,
+    ),
+    "unstructured 3D": (
+        3,
+        pybamm.UnstructuredMeshGenerator,
+        pybamm.FiniteVolumeUnstructured,
+    ),
+    "structured 2D": (2, lambda: pybamm.Uniform2DSubMesh, pybamm.FiniteVolume2D),
+}
+
+
+def _solve_on_mesh(mesh_key, output_variables=None, calculate_sensitivities=False):
+    dimension, submesh_type, spatial_method = _FINITE_VOLUME_MESHES[mesh_key]
+    model, geometry, var_pts = _finite_volume_model(dimension)
+    sim = pybamm.Simulation(
+        model,
+        geometry=geometry,
+        submesh_types={_DOMAIN: submesh_type()},
+        var_pts=var_pts,
+        spatial_methods={_DOMAIN: spatial_method()},
+        # output_variables is an IDAKLUSolver option
+        solver=pybamm.IDAKLUSolver(output_variables=output_variables),
+    )
+    return sim.solve(
+        [0, 1], inputs={"k": 1.0}, calculate_sensitivities=calculate_sensitivities
+    )
+
+
+class TestOutputsOnFiniteVolume2DMeshes:
+    """Outputs whose mesh has no 1D node grid read like a full-state solve."""
+
+    @pytest.mark.parametrize("mesh_key", list(_FINITE_VOLUME_MESHES))
+    def test_scalar_output_matches_full_solve(self, mesh_key):
+        full = _solve_on_mesh(mesh_key)["u"]
+        output = _solve_on_mesh(mesh_key, output_variables=["u"])["u"]
+
+        assert type(output) is type(full)
+        np.testing.assert_allclose(output.entries, full.entries, **_TOLERANCES)
+        # At the solve's own times; off them the full solve interpolates in states
+        t = full.t_pts[[2, -1]]
+        np.testing.assert_allclose(
+            output(t=t, x=[0.2, 0.7], z=[0.3, 1.5]),
+            full(t=t, x=[0.2, 0.7], z=[0.3, 1.5]),
+            **_TOLERANCES,
+        )
+
+    @pytest.mark.parametrize("mesh_key", ["unstructured 2D", "unstructured 3D"])
+    def test_vector_field_output_matches_full_solve(self, mesh_key):
+        full = _solve_on_mesh(mesh_key)["grad u"]
+        output = _solve_on_mesh(mesh_key, output_variables=["grad u"])["grad u"]
+
+        assert isinstance(output, pybamm.ProcessedVariableVectorFieldUnstructuredFVM)
+        assert output.n_components == full.n_components
+        for output_component, full_component in zip(
+            output.entries, full.entries, strict=True
+        ):
+            np.testing.assert_allclose(output_component, full_component, **_TOLERANCES)
+
+    @pytest.mark.parametrize("mesh_key", ["unstructured 2D", "structured 2D"])
+    def test_scalar_output_sensitivities_match_full_solve(self, mesh_key):
+        full = _solve_on_mesh(mesh_key, calculate_sensitivities=True)["u"]
+        output = _solve_on_mesh(
+            mesh_key, output_variables=["u"], calculate_sensitivities=True
+        )["u"]
+
+        np.testing.assert_allclose(
+            output.sensitivities["k"], full.sensitivities["k"], **_TOLERANCES
+        )
+
+    def test_vector_field_output_sensitivities_match_full_solve(self):
+        full = _solve_on_mesh("unstructured 2D", calculate_sensitivities=True)
+        output = _solve_on_mesh(
+            "unstructured 2D",
+            output_variables=["grad u"],
+            calculate_sensitivities=True,
+        )
+
+        for output_component, full_component in zip(
+            output["grad u"]._component_vars,
+            full["grad u"]._component_vars,
+            strict=True,
+        ):
+            np.testing.assert_allclose(
+                output_component.sensitivities["k"],
+                full_component.sensitivities["k"],
+                **_TOLERANCES,
+            )
+
+    @pytest.mark.parametrize("mesh_key", ["unstructured 2D", "structured 2D"])
+    def test_time_integral_output_is_not_supported(self, mesh_key):
+        # A full-state read of it on a structured mesh returns the integrand
+        with pytest.raises(NotImplementedError, match=r"time integrals"):
+            _solve_on_mesh(mesh_key, output_variables=["Time integral of u"])
+
+    def test_copy_keeps_every_output(self):
+        solution = _solve_on_mesh("unstructured 2D", output_variables=["u", "Time [s]"])
+        expected = {name: solution[name].entries for name in ["u", "Time [s]"]}
+
+        copied = solution.copy()
+
+        assert isinstance(copied["Time [s]"], pybamm.ProcessedVariableComputed)
+        for name, entries in expected.items():
+            np.testing.assert_array_equal(copied[name].entries, entries)
+
+    def test_vector_field_output_on_structured_mesh_is_not_supported(self):
+        with pytest.raises(NotImplementedError, match=r"structured 2D finite-volume"):
+            _solve_on_mesh("structured 2D", output_variables=["grad u"])
+
+
+class TestSampledObserver:
+    def test_component_owns_its_rows_and_leaf(self):
+        t, y, p = (casadi.MX.sym(name) for name in "typ")
+        leaf = casadi.Function(
+            "vector", [t, y, p], [casadi.vertcat(y, 2 * y, 3 * y, 4 * y)]
+        )
+        samples = np.arange(12, dtype=float).reshape(3, 4)
+
+        component = SampledObserver([leaf], samples).component(1, 2)
+
+        np.testing.assert_array_equal(component._samples, samples[:, 2:])
+        (component_leaf,) = component.leaves
+        np.testing.assert_allclose(component_leaf(0, 5, 0).full().ravel(), [15, 20])
