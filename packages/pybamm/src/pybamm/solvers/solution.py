@@ -262,6 +262,40 @@ class EISSolution(SolutionBase):
 
         return nyquist_plot(self.impedance, **kwargs)
 
+    def bode_plot(self, **kwargs):
+        """Generate a Bode plot from the impedance data.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments forwarded to :func:`pybamm.bode_plot`.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure or None
+        ax : tuple of matplotlib.axes.Axes
+        """
+        from pybamm.plotting.bode_plot import bode_plot
+
+        return bode_plot(self.frequencies, self.impedance, **kwargs)
+
+    def plot(self, **kwargs):
+        """Plot Nyquist and Bode plots side by side.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments forwarded to :func:`pybamm.eis_plot`.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+        axes : tuple of matplotlib.axes.Axes
+        """
+        from pybamm.plotting.eis_plot import eis_plot
+
+        return eis_plot(self, **kwargs)
+
 
 _DEFAULT_SOLUTION_OPTIONS = {
     "compile": False,
