@@ -1,11 +1,25 @@
+import copy
+
+import numpy as np
+
 import pybamm
 
 from .base_step import (
+    BaseStep,
     BaseStepExplicit,
     BaseStepImplicit,
     ControlKind,
+    _adjusted_control_variable,
+    _check_drive_cycle,
+    _check_function_of_time,
+    _constant_value,
+    _control_variable,
     _convert_electric,
+    _default_control_value,
+    _drive_cycle_interpolant,
     _examples,
+    _initial_control_guess,
+    _step_time,
 )
 
 
@@ -459,3 +473,196 @@ class CustomStepImplicit(BaseStepImplicit):
         return CustomStepImplicit(
             self.current_rhs_function, self.control, **self.kwargs
         )
+
+
+class ControlStep(BaseStep):
+    """
+    Step that drives any of the model's parameters, its controls, such as an inlet
+    temperature or a mass flow rate. Each control is either set to a value
+    (explicit), or adjusted, as an algebraic variable, so that a residual is zero
+    (implicit). Controls that the step does not drive keep the value they have in the
+    parameter values.
+
+    Values and targets can be a number, a 2-column array of times and values (as a
+    drive cycle), or a function of the time since the start of the step. Steps of the
+    same structure whose values and targets are numbers share one branch of the
+    unified experiment model.
+
+    Subclasses can override :meth:`control_residuals` to define their own control laws.
+
+    Parameters
+    ----------
+    explicit : dict, optional
+        Maps the name of each control that the step sets to its value.
+    implicit : dict, optional
+        Maps the name of each control that the step adjusts to its residual: either a
+        function of the model variables, or a tuple ``(function, target)`` in which
+        ``function`` takes the variables and the target.
+    **kwargs
+        Any other keyword arguments are passed to :class:`pybamm.step.BaseStep`.
+
+    Examples
+    --------
+    Set the inlet temperature and the mass flow rate of a heat exchanger:
+
+    >>> step = pybamm.step.ControlStep(
+    ...     explicit={"Inlet temperature [K]": 350, "Mass flow rate [kg.s-1]": 0.1},
+    ...     duration=3600,
+    ... )
+
+    Hold the inlet temperature, and adjust the mass flow rate to deliver 2 kW:
+
+    >>> def power_residual(variables, target):
+    ...     return variables["Power [W]"] - target
+    >>> step = pybamm.step.ControlStep(
+    ...     explicit={"Inlet temperature [K]": 350},
+    ...     implicit={"Mass flow rate [kg.s-1]": (power_residual, 2000)},
+    ...     duration=3600,
+    ... )
+    """
+
+    def __init__(self, explicit=None, implicit=None, **kwargs):
+        explicit = dict(explicit or {})
+        implicit = dict(implicit or {})
+        if not explicit and not implicit:
+            raise ValueError("A control step must set or adjust at least one control")
+        both = sorted(explicit.keys() & implicit.keys())
+        if both:
+            raise ValueError(f"Controls {both} cannot be both set and adjusted")
+        self.residual_functions = {}
+        input_targets = dict(explicit)
+        for name, residual in implicit.items():
+            if isinstance(residual, tuple):
+                self.residual_functions[name], input_targets[name] = residual
+            else:
+                self.residual_functions[name] = residual
+            if not callable(self.residual_functions[name]):
+                raise TypeError(f"The residual of '{name}' must be a function")
+        for value in input_targets.values():
+            if isinstance(value, np.ndarray):
+                _check_drive_cycle(value)
+            elif callable(value):
+                _check_function_of_time(value)
+        self.input_explicit = explicit
+        self.input_implicit = implicit
+        self.input_targets = input_targets
+        super().__init__(None, **kwargs)
+        self.uses_default_duration = kwargs.get("duration") is None and not any(
+            isinstance(value, np.ndarray) for value in input_targets.values()
+        )
+        self.controls = (*explicit, *implicit)
+        #: The step's own target of each control, as a number or a symbol, keyed by
+        #: control name. Implicit controls without a target are left out.
+        self.targets = {
+            name: self._process_target(value) for name, value in input_targets.items()
+        }
+        self.control_kind = self._control_structure()
+
+    def _process_target(self, value):
+        if isinstance(value, np.ndarray):
+            return _drive_cycle_interpolant(value, self.duration)
+        if callable(value):
+            return value(_step_time())
+        return value
+
+    def _control_structure(self):
+        """Everything that defines the control law of the step except its targets."""
+        return (
+            f"{type(self).__name__}(explicit={list(self.input_explicit)}, "
+            f"implicit={self.residual_functions})"
+        )
+
+    def default_duration(self, value):
+        ends = [
+            value[-1, 0]
+            for value in self.input_targets.values()
+            if isinstance(value, np.ndarray)
+        ]
+        return max(ends) if ends else self._default_timespan(value)
+
+    def record_tags(self, value, *args):
+        parts = []
+        if self.input_explicit:
+            parts.append(f"explicit={self.input_explicit}")
+        if self.input_implicit:
+            parts.append(f"implicit={self.input_implicit}")
+        return super().record_tags(", ".join(parts), *args)
+
+    def copy(self):
+        # A shallow copy keeps the processed targets and supports subclasses with
+        # other arguments
+        return copy.copy(self)
+
+    def is_implicit(self):
+        return bool(self.input_implicit)
+
+    def to_dict(self):
+        step_dict = super().to_dict()
+        del step_dict["value"]
+        step_dict["explicit"] = self.input_explicit
+        step_dict["implicit"] = self.input_implicit
+        return step_dict
+
+    def control_target_values(self, parameter_values):
+        return {
+            name: _constant_value(parameter_values, self.targets.get(name))
+            for name in self.controls
+        }
+
+    def get_control_residuals(self, variables, targets=None):
+        targets = {**self.targets, **(targets or {})}
+        return self.control_residuals(variables, targets)
+
+    def control_residuals(self, variables, targets):
+        """
+        Residual of each control, which the control law makes zero.
+
+        Parameters
+        ----------
+        variables : dict
+            The model variables, including the controls.
+        targets : dict
+            The target of each control, as a symbol, keyed by control name.
+
+        Returns
+        -------
+        dict
+            The residual of each control in :attr:`controls`, keyed by control name.
+        """
+        residuals = {
+            name: _control_variable(variables, name) - targets[name]
+            for name in self.input_explicit
+        }
+        for name, function in self.residual_functions.items():
+            if isinstance(self.input_implicit[name], tuple):
+                residuals[name] = function(variables, targets[name])
+            else:
+                residuals[name] = function(variables)
+        return residuals
+
+    def set_up(self, new_model, new_parameter_values):
+        for name in self.input_explicit:
+            new_parameter_values[name] = self.targets[name]
+
+        variables = new_model.variables
+        control_variables = {}
+        for name in self.input_implicit:
+            default = _default_control_value(new_model, new_parameter_values, name)
+            control_variables[name] = _adjusted_control_variable(name, default)
+            new_model.initial_conditions[control_variables[name]] = (
+                _initial_control_guess(default)
+            )
+            variables[name] = control_variables[name]
+        residuals = self.get_control_residuals(variables)
+        for name, variable in control_variables.items():
+            new_model.algebraic[variable] = residuals[name]
+            new_parameter_values[name] = variable
+        return new_model, new_parameter_values
+
+
+def control(explicit=None, implicit=None, **kwargs):
+    """
+    Step that drives any of the model's parameters, see
+    :class:`pybamm.step.ControlStep`.
+    """
+    return ControlStep(explicit, implicit, **kwargs)

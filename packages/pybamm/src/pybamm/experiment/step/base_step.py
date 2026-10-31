@@ -20,6 +20,9 @@ class ControlKind(str, Enum):
     RESISTANCE = "resistance"
 
 
+#: The parameter that battery steps drive.
+CURRENT_CONTROL = "Current function [A]"
+
 _examples = """
 
     "Discharge at 1C for 0.5 hours",
@@ -101,30 +104,9 @@ class BaseStep:
         self.is_drive_cycle = isinstance(value, np.ndarray)
         self.is_python_function = callable(value)
         if self.is_drive_cycle:
-            if value.ndim != 2 or value.shape[1] != 2:
-                raise ValueError(
-                    "Drive cycle must be a 2-column array with time in the first column"
-                    " and current/C-rate/power/voltage/resistance in the second"
-                )
-            # Check that drive cycle starts at t=0
-            t = value[:, 0]
-            if t[0] != 0:
-                raise ValueError("Drive cycle must start at t=0")
+            _check_drive_cycle(value)
         elif self.is_python_function:
-            t0 = 0
-            # Check if the function is only a function of t
-            try:
-                value_t0 = value(t0)
-            except TypeError:
-                raise TypeError(
-                    "Input function must have only 1 positional argument for time"
-                ) from None
-
-            # Check if the value at t0 is feasible
-            if not (np.isfinite(value_t0) and np.isscalar(value_t0)):
-                raise ValueError(
-                    f"Input function must return a real number output at t = {t0}"
-                )
+            _check_function_of_time(value)
 
         # Record whether the step uses the default duration
         # This will be used by the experiment to check whether the step is feasible
@@ -138,31 +120,9 @@ class BaseStep:
         # If drive cycle, repeat the drive cycle until the end of the experiment,
         # and create an interpolant
         if self.is_drive_cycle:
-            t_max = self.duration
-            if t_max > value[-1, 0]:
-                # duration longer than drive cycle values so loop
-                nloop = np.ceil(t_max / value[-1, 0]).astype(int)
-                tstep = np.diff(value[:, 0])[0]
-                t = []
-                y = []
-                for i in range(nloop):
-                    t.append(value[:, 0] + ((value[-1, 0] + tstep) * i))
-                    y.append(value[:, 1])
-                t = np.asarray(t).flatten()
-                y = np.asarray(y).flatten()
-            else:
-                t, y = value[:, 0], value[:, 1]
-
-            self.value = pybamm.Interpolant(
-                t,
-                y,
-                pybamm.t - pybamm.InputParameter("start time"),
-                name="Drive Cycle",
-            )
-
+            self.value = _drive_cycle_interpolant(value, self.duration)
         elif self.is_python_function:
-            t = pybamm.t - pybamm.InputParameter("start time")
-            self.value = value(t)
+            self.value = value(_step_time())
         else:
             self.value = value
         self.period = _convert_time_to_seconds(period)
@@ -295,6 +255,24 @@ class BaseStep:
     #: Control-law shape (a :class:`ControlKind`); steps sharing it and differing only in
     #: their target value collapse to one unified-mode branch.
     control_kind = None
+
+    #: Names of the model parameters that the step drives (its controls).
+    controls = (CURRENT_CONTROL,)
+
+    def get_control_residuals(self, variables, targets=None):
+        """
+        Residual of each control, keyed by control name. ``targets`` maps control
+        names to per-step inputs that override the step's own targets.
+        """
+        target = None if targets is None else targets.get(CURRENT_CONTROL)
+        return {CURRENT_CONTROL: self.get_control_residual(variables, target)}
+
+    def control_target_values(self, parameter_values):
+        """
+        Target of each control as a number, or ``None`` if it is not a constant,
+        keyed by control name.
+        """
+        return {CURRENT_CONTROL: self.control_target_value(parameter_values)}
 
     def get_control_residual(self, variables, target=None):
         """Control residual. ``target`` is the per-step input that collapsible steps
@@ -583,9 +561,7 @@ class BaseStepExplicit(BaseStep):
         return variables["Current [A]"] - target
 
     def set_up(self, new_model, new_parameter_values):
-        new_parameter_values["Current function [A]"] = self.current_value(
-            new_model.variables
-        )
+        new_parameter_values[CURRENT_CONTROL] = self.current_value(new_model.variables)
         return new_model, new_parameter_values
 
 
@@ -618,9 +594,7 @@ class BaseStepImplicit(BaseStep):
         new_model.initial_conditions.update(submodel.initial_conditions)
 
         if new_parameter_values is not None:
-            new_parameter_values["Current function [A]"] = submodel.variables[
-                "Current [A]"
-            ]
+            new_parameter_values[CURRENT_CONTROL] = submodel.variables["Current [A]"]
 
         return new_model, variables
 
@@ -653,6 +627,100 @@ def _constant_value(parameter_values, target):
         return None
     processed = parameter_values.process_symbol(pybamm.convert_to_symbol(target))
     return float(processed.evaluate()) if processed.is_constant() else None
+
+
+def _control_parameters(model):
+    """The model's parameters that a step can drive, keyed by name."""
+    return {
+        parameter.name: parameter
+        for parameter in model.parameters
+        if isinstance(parameter, pybamm.Parameter | pybamm.FunctionParameter)
+    }
+
+
+def _control_variable(variables, control):
+    """The variable that a control becomes when it is adjusted."""
+    if control == CURRENT_CONTROL:
+        return variables["Current [A]"]
+    return variables[control]
+
+
+def _default_control_value(model, parameter_values, control):
+    """The value of a control in ``parameter_values``, or ``None`` if it has none."""
+    try:
+        return parameter_values.process_symbol(_control_parameters(model)[control])
+    except KeyError:
+        return None
+
+
+def _adjusted_control_variable(control, default):
+    """Variable of an adjusted control, scaled by its default value if constant."""
+    scale = 1
+    if default is not None and default.is_constant():
+        scale = abs(float(default.evaluate())) or 1
+    return pybamm.Variable(control, scale=scale)
+
+
+def _initial_control_guess(default, value=None):
+    """
+    Initial guess for an adjusted control: ``value`` if it is a number, else its
+    default value if it is constant.
+    """
+    if isinstance(value, numbers.Number):
+        return pybamm.Scalar(value)
+    if default is not None and default.is_constant():
+        return default
+    return pybamm.Scalar(0)
+
+
+def _step_time():
+    """Time since the start of the step."""
+    return pybamm.t - pybamm.InputParameter("start time")
+
+
+def _check_drive_cycle(value):
+    if value.ndim != 2 or value.shape[1] != 2:
+        raise ValueError(
+            "Drive cycle must be a 2-column array with time in the first column"
+            " and current/C-rate/power/voltage/resistance in the second"
+        )
+    # Check that drive cycle starts at t=0
+    if value[0, 0] != 0:
+        raise ValueError("Drive cycle must start at t=0")
+
+
+def _check_function_of_time(value):
+    t0 = 0
+    # Check if the function is only a function of t
+    try:
+        value_t0 = value(t0)
+    except TypeError:
+        raise TypeError(
+            "Input function must have only 1 positional argument for time"
+        ) from None
+
+    # Check if the value at t0 is feasible
+    if not (np.isfinite(value_t0) and np.isscalar(value_t0)):
+        raise ValueError(f"Input function must return a real number output at t = {t0}")
+
+
+def _drive_cycle_interpolant(value, t_max):
+    """Interpolant of a drive cycle, repeated until ``t_max`` if it is shorter."""
+    if t_max > value[-1, 0]:
+        # duration longer than drive cycle values so loop
+        nloop = np.ceil(t_max / value[-1, 0]).astype(int)
+        tstep = np.diff(value[:, 0])[0]
+        t = []
+        y = []
+        for i in range(nloop):
+            t.append(value[:, 0] + ((value[-1, 0] + tstep) * i))
+            y.append(value[:, 1])
+        t = np.asarray(t).flatten()
+        y = np.asarray(y).flatten()
+    else:
+        t, y = value[:, 0], value[:, 1]
+
+    return pybamm.Interpolant(t, y, _step_time(), name="Drive Cycle")
 
 
 def get_unit_from(a_string: str) -> str:

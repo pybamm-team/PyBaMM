@@ -503,3 +503,94 @@ class TestExperimentSteps:
         assert a == b
         assert hash(a) == hash(b)
         assert len({a, b}) == 1
+
+    def test_battery_steps_drive_the_current(self):
+        step = pybamm.step.current(2)
+        assert step.controls == ("Current function [A]",)
+        parameter_values = pybamm.ParameterValues({})
+        assert step.control_target_values(parameter_values) == {
+            "Current function [A]": 2
+        }
+
+    def test_control_step(self):
+        def residual(variables, target):
+            return variables["Power [W]"] - target
+
+        step = pybamm.step.control(
+            explicit={"Inlet temperature [K]": 350},
+            implicit={"Mass flow rate [kg.s-1]": (residual, 2000)},
+            duration=60,
+        )
+        assert step.controls == ("Inlet temperature [K]", "Mass flow rate [kg.s-1]")
+        assert step.is_implicit()
+        assert step.direction is None
+        assert step.duration == 60
+        assert step.targets == {
+            "Inlet temperature [K]": 350,
+            "Mass flow rate [kg.s-1]": 2000,
+        }
+        parameter_values = pybamm.ParameterValues({})
+        assert step.control_target_values(parameter_values) == step.targets
+        assert step.to_dict()["explicit"] == {"Inlet temperature [K]": 350}
+        assert "value" not in step.to_dict()
+
+        variables = {
+            "Inlet temperature [K]": pybamm.Variable("Inlet temperature [K]"),
+            "Power [W]": pybamm.Variable("Power [W]"),
+        }
+        residuals = step.get_control_residuals(variables)
+        assert residuals["Inlet temperature [K]"] == (
+            variables["Inlet temperature [K]"] - pybamm.Scalar(350)
+        )
+        assert residuals["Mass flow rate [kg.s-1]"] == (
+            variables["Power [W]"] - pybamm.Scalar(2000)
+        )
+        target = pybamm.InputParameter("target")
+        residuals = step.get_control_residuals(
+            variables, {"Mass flow rate [kg.s-1]": target}
+        )
+        assert residuals["Mass flow rate [kg.s-1]"] == variables["Power [W]"] - target
+
+        # Explicit only, with a function of time and a time series
+        step = pybamm.step.ControlStep(
+            {"A": lambda t: 2 * t, "B": np.array([[0, 1], [10, 2]])}
+        )
+        assert not step.is_implicit()
+        assert step.duration == 10
+        assert not step.uses_default_duration
+        assert step.control_target_values(parameter_values) == {"A": None, "B": None}
+
+        step = pybamm.step.ControlStep({"A": 1})
+        assert step.duration == 24 * 3600
+        assert step.uses_default_duration
+
+    def test_control_step_equality_and_copy(self):
+        def residual(variables):
+            return variables["Power [W]"]
+
+        a = pybamm.step.ControlStep({"A": 1}, {"B": residual}, duration=10)
+        assert a == pybamm.step.ControlStep({"A": 1}, {"B": residual}, duration=10)
+        assert a != pybamm.step.ControlStep({"A": 2}, {"B": residual}, duration=10)
+        assert a != pybamm.step.ControlStep({"B": 1}, {"A": residual}, duration=10)
+        assert "explicit={'A': 1}" in repr(a)
+
+        copied = a.copy()
+        assert copied == a
+        assert copied is not a
+        assert copied.controls == a.controls
+
+        # Steps that only differ in their targets share a control structure
+        b = pybamm.step.ControlStep({"A": 2}, {"B": residual}, duration=20)
+        assert a.unified_branch_repr() == b.unified_branch_repr()
+
+    def test_control_step_errors(self):
+        with pytest.raises(ValueError, match=r"at least one control"):
+            pybamm.step.ControlStep()
+        with pytest.raises(ValueError, match=r"Controls \['A'\] cannot be both"):
+            pybamm.step.ControlStep({"A": 1}, {"A": lambda variables: 0})
+        with pytest.raises(TypeError, match=r"residual of 'A' must be a function"):
+            pybamm.step.ControlStep(implicit={"A": (1, 2)})
+        with pytest.raises(ValueError, match=r"Drive cycle must start at t=0"):
+            pybamm.step.ControlStep({"A": np.array([[1, 1], [2, 2]])})
+        with pytest.raises(TypeError, match=r"only 1 positional argument"):
+            pybamm.step.ControlStep({"A": lambda t, y: t})

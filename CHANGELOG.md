@@ -12,6 +12,7 @@
 
 ## Features
 
+- Experiment steps can drive any of a model's parameters, not only the battery current. `pybamm.step.ControlStep` (or `pybamm.step.control`) sets each of its controls to a value, or adjusts it so that a residual is zero, in both experiment model modes. Steps whose values are numbers share one branch of the unified model, with one input per control. The unified mode sets `"Ambient temperature [K]"` as an input only if the model reads it. ([#6014](https://github.com/pybamm-team/PyBaMM/issues/6014), [#6015](https://github.com/pybamm-team/PyBaMM/pull/6015))
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 
 ## Bug fixes
