@@ -201,6 +201,10 @@ class Serialise:
             "mass_matrix": encode(model.mass_matrix),
             "_solution_observable": model._solution_observable.name,
         }
+        if model.preconditioner is not None:
+            model_json["preconditioner"] = pybamm.preconditioners.tree_to_config(
+                model.preconditioner
+            )
 
         if mesh:
             model_json["mesh"] = encode(mesh)
@@ -317,6 +321,11 @@ class Serialise:
             ),
             "events": [self._decode_model_node(e) for e in model_data["events"]],
             "mass_matrix": self._decode_model_node(model_data["mass_matrix"]),
+            "preconditioner": (
+                pybamm.preconditioners.tree_from_config(model_data["preconditioner"])
+                if "preconditioner" in model_data
+                else None
+            ),
         }
 
         recon_model_dict["geometry"] = (
@@ -862,6 +871,11 @@ class Serialise:
             out["spatial_methods"] = Serialise.serialise_spatial_methods(
                 spatial_methods
             )
+        if model.default_preconditioner:
+            out["preconditioner"] = {
+                name: solver.to_config()
+                for name, solver in model.default_preconditioner.items()
+            }
         return out
 
     @staticmethod
@@ -889,6 +903,11 @@ class Serialise:
             model._default_spatial_methods = Serialise.load_spatial_methods(
                 discretisation["spatial_methods"]
             )
+        if "preconditioner" in discretisation:
+            model._default_preconditioner = {
+                name: pybamm.preconditioners.BlockSolver.from_config(config)
+                for name, config in discretisation["preconditioner"].items()
+            }
 
     @staticmethod
     def serialise_spatial_method_item(method) -> dict:

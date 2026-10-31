@@ -526,6 +526,27 @@ class TestSimulationExperiment:
             else:
                 assert len(sim.model_state_mappers.values()) == 0
 
+    def test_state_mapper_with_field_input_built_without_inputs(self):
+        # The mapper's inputs are shaped by the model, not the build-time values
+        model = pybamm.lithium_ion.SPM()
+        q = pybamm.Variable("q", domain="negative electrode")
+        model.rhs[q] = -pybamm.InputParameter("k", domain="negative electrode") * q
+        model.initial_conditions[q] = pybamm.Scalar(1)
+        model.variables["q"] = q
+        sim = pybamm.Simulation(
+            model,
+            experiment=pybamm.Experiment(
+                ["Discharge at 1C for 10 minutes", "Hold at 3.9 V for 10 minutes"]
+            ),
+            experiment_model_mode="legacy",
+        )
+        sim.build_for_experiment()
+        solution = sim.solve(inputs={"k": np.full(20, 1e-3)})
+        assert len(solution.cycles) == 2
+        np.testing.assert_allclose(
+            solution["q"](solution.t[-1])[0], np.exp(-1e-3 * solution.t[-1]), rtol=1e-4
+        )
+
     def test_built_models_and_state_mappers_independent_of_cycle_count(self):
         cycle_template = [
             {

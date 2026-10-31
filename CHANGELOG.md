@@ -3,16 +3,20 @@
 ## Breaking changes
 
 - `StateVector` and `StateVectorDot` raise `ShapeError` for stepped, negative, overlapping or out-of-order slices; pass sorted, disjoint, non-negative slices. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
+- `IDAKLUSolver`'s `"preconditioner"` option defaults to `"block"` instead of `"BBDP"`; pass `preconditioner="BBDP"` to restore it. ([#6009](https://github.com/pybamm-team/PyBaMM/pull/6009))
 
 ## Deprecated
 
 - `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
 - The `evaluation_array` argument of `StateVector` and `StateVectorDot` is deprecated and ignored; drop the argument. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
+- `IDAKLUSolver.spy` and `get_jacobian_sparsity` are deprecated; use `BaseModel.spy` and `BaseModel.jacobian_sparsity`. ([#6009](https://github.com/pybamm-team/PyBaMM/pull/6009))
 
 ## Features
 
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
+- Added block preconditioners for `IDAKLUSolver` (`pybamm.preconditioners`), extensible through C++ block-solver plugins. ([#6009](https://github.com/pybamm-team/PyBaMM/pull/6009))
+- `BaseModel.jacobian_sparsity` and `BaseModel.spy` give a discretised model's structural iteration-matrix pattern. ([#6009](https://github.com/pybamm-team/PyBaMM/pull/6009))
 
 ## Bug fixes
 
@@ -36,6 +40,10 @@
 - `RegPower` now evaluates the same operations in `evaluate` and CasADi, taking a literal exponent of 0.5 or 2 as square roots, so they agree bitwise; CasADi used a `hypot` form. With `delta=0`, `evaluate` and the Jacobian use `base ** exponent`, as CasADi did. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - CasADi linear and `pchip` interpolants on a uniform grid now find a point's segment by binary search. The `"exact"` lookup could pick the neighbouring segment at or one ulp beside a knot, giving the Jacobian that segment's slope. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - `QuickPlot`, and so `Simulation.plot`, now uses matplotlib's color cycle (`axes.prop_cycle`) for default colors when a style sheet or rcParams changes it; otherwise it keeps its red, blue, black, green, magenta and cyan colors. ([#5953](https://github.com/pybamm-team/PyBaMM/pull/5953))
+- Fixed `newton_mode="full"` failing to converge consistent initial conditions. ([#6009](https://github.com/pybamm-team/PyBaMM/pull/6009))
+- Fixed a segmentation fault with `newton_mode="full"` and iterative linear solvers. ([#6009](https://github.com/pybamm-team/PyBaMM/pull/6009))
+- `IDAKLUSolver` reports why a failed first step failed, not `IDA_BAD_K`. ([#6009](https://github.com/pybamm-team/PyBaMM/pull/6009))
+- Experiments with per-cell input parameters can be built before their inputs are known. ([#6009](https://github.com/pybamm-team/PyBaMM/pull/6009))
 
 ## Optimizations
 
@@ -43,6 +51,7 @@
 - Pull request CI no longer installs TeXLive, or the compilers and OpenBLAS that the prebuilt solver wheels make redundant. The latexify test mocks `sympy.preview` and runs everywhere. TeXLive downloads took 12–50 minutes in 6 of 15 runs. ([#5985](https://github.com/pybamm-team/PyBaMM/pull/5985))
 - Faster model build and `IDAKLUSolver` set-up for large models. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
 - Experiments with a different model per step no longer compile Jacobians of the state mappers between models, which were unused. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
+- Block-preconditioned iterative solves compute only the Jacobian entries the preconditioner reads. ([#6009](https://github.com/pybamm-team/PyBaMM/pull/6009))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
 

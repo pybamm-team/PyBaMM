@@ -9,6 +9,7 @@ Solvers
   jax_solver
   idaklu_solver
   idaklu_jax
+  preconditioners
   casadi_solver
   algebraic_solvers
   solution

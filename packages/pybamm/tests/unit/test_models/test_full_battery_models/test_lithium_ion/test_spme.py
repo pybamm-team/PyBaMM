@@ -86,6 +86,5 @@ class TestSPMe(BaseUnitTestLithiumIon):
             solver=pybamm.IDAKLUSolver(),
         )
         sim.build()
-        sim._solver.set_up(sim._built_model)
-        J = sim._solver.get_jacobian_sparsity()
+        J = sim.built_model.jacobian_sparsity()
         assert J.nnz < 900, f"Jacobian nnz={J.nnz} should be < 900 (was 3127)"

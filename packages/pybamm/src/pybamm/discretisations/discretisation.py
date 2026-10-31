@@ -56,6 +56,10 @@ class Discretisation:
     resolve_coupled_variables : bool, optional
         If True, resolve CoupledVariables in rhs, algebraic, initial_conditions,
         and boundary_conditions before processing. Default is False.
+    preconditioner : dict, optional
+        Block solvers of the preconditioner
+        (:class:`pybamm.preconditioners.BlockSolver`), keyed by state variable
+        name. If not provided, ``model.default_preconditioner`` is used.
     """
 
     def __init__(
@@ -65,8 +69,10 @@ class Discretisation:
         check_model=True,
         remove_independent_variables_from_rhs=False,
         resolve_coupled_variables=False,
+        preconditioner=None,
     ):
         self._mesh = mesh
+        self._preconditioner = preconditioner
         if mesh is None:
             self._spatial_methods = {}
         else:
@@ -282,6 +288,16 @@ class Discretisation:
         # Create mass matrix
         pybamm.logger.verbose(f"Create mass matrix for {model.name}")
         model_disc.mass_matrix = self.create_mass_matrix(model_disc)
+
+        pybamm.logger.verbose(f"Compile preconditioner for {model.name}")
+        preconditioner = (
+            model.default_preconditioner
+            if self._preconditioner is None
+            else self._preconditioner
+        )
+        model_disc.preconditioner = pybamm.preconditioners.compile_tree(
+            model_disc, preconditioner
+        )
 
         # Save geometry
         pybamm.logger.verbose(f"Save geometry for {model.name}")

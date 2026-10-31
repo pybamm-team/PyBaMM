@@ -90,6 +90,13 @@ def casadi_to_idaklu_function(fn: casadi.Function):
     return idaklu.generate_function(fn.serialize())
 
 
+_ITERATIVE_LINEAR_SOLVERS = (
+    "SUNLinSol_SPBCGS",
+    "SUNLinSol_SPFGMR",
+    "SUNLinSol_SPGMR",
+    "SUNLinSol_SPTFQMR",
+)
+
 # Function entries staged in ``_setup`` while building the C++ solver
 # group; popped after construction (C++ owns them via shared_ptr).
 _SETUP_FCN_KEYS = (
@@ -118,6 +125,7 @@ _REBUILDABLE_STATE_KEYS = (
     "computed_dvar_dy_fcns",
     "computed_dvar_dp_fcns",
     "_time_integral_vars",
+    "_jacobian_analysis",
 )
 
 
@@ -127,6 +135,15 @@ def _check_klu_pivot_tolerance(value):
         raise pybamm.SolverError("klu_pivot_tolerance must be a real number")
     if not 0 < value <= 1:
         raise pybamm.SolverError(f"klu_pivot_tolerance must be in (0, 1], got {value}")
+
+
+def _compiled_preconditioner(model):
+    if model.preconditioner is None:
+        raise pybamm.SolverError(
+            "The model has no compiled preconditioner. Discretise it with "
+            "pybamm.Discretisation, or set preconditioner='none'."
+        )
+    return model.preconditioner
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
@@ -191,13 +208,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 ## Linear solver interface
                 # name of sundials linear solver to use options are: "SUNLinSol_KLU",
                 # "SUNLinSol_Dense", "SUNLinSol_Band", "SUNLinSol_SPBCGS",
-                # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
+                # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR", or
+                # "block" (solves with the model's preconditioner alone, so it
+                # must be exact: direct block solves and no dropped couplings)
                 "linear_solver": "SUNLinSol_KLU",
                 # Jacobian form, can be "none", "dense",
                 # "banded", "sparse", "matrix-free"
                 "jacobian": "sparse",
-                # Preconditioner for iterative solvers, can be "none", "BBDP"
-                "preconditioner": "BBDP",
+                # Preconditioner for iterative solvers, can be "none", "BBDP" or
+                # "block" (the model's block preconditioner, see
+                # pybamm.preconditioners)
+                "preconditioner": "block",
                 # For iterative linear solver preconditioner, bandwidth of
                 # approximate jacobian
                 "precon_half_bandwidth": 5,
@@ -291,6 +312,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # "full": always use IDA's full-system linear solve. This uses the full
                 #         system of equationd and can handle non-standard form DAEs and
                 #         all classes of linear solvers/
+                # "auto" uses "full" with the "block" linear solver or
+                # preconditioner, and with an iterative linear solver (except with
+                # "BBDP"), so the IC solve reuses it
                 "newton_mode": "auto",
                 ## Early termination
                 # Maximum number of consecutive steps allowed without advancing
@@ -352,6 +376,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self.name = "IDA KLU solver"
         self._supports_interp = True
         self._supports_t_eval_discontinuities = True
+        self._jacobian_analysis = None
 
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
@@ -364,7 +389,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "print_stats": False,
             "compile": False,
             "jacobian": "sparse",
-            "preconditioner": "BBDP",
+            "preconditioner": "block",
             "precon_half_bandwidth": 5,
             "precon_half_bandwidth_keep": 5,
             "num_threads": 1,
@@ -429,6 +454,20 @@ class IDAKLUSolver(pybamm.BaseSolver):
             raise pybamm.SolverError("compile must be a bool")
 
         _check_klu_pivot_tolerance(options["klu_pivot_tolerance"])
+        if (
+            options["newton_mode"] == "full"
+            and options["linear_solver"] in _ITERATIVE_LINEAR_SOLVERS
+            and options["preconditioner"] == "BBDP"
+        ):
+            raise pybamm.SolverError(
+                "newton_mode='full' does not support the 'BBDP' preconditioner; "
+                "use preconditioner='block' or 'none', or newton_mode='auto'."
+            )
+        if options["linear_solver"] == "block" and options["jacobian"] != "sparse":
+            raise pybamm.SolverError(
+                "The 'block' linear solver needs jacobian='sparse', not "
+                f"'{options['jacobian']}'."
+            )
 
     def _check_atol_type(
         self, atol: float | list | tuple | np.ndarray, model: pybamm.BaseModel
@@ -639,10 +678,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = self._check_atol_type(atol, model)
 
         # The sub-block Newton IC needs a standard-form DAE; else full system
-        if (
-            self._options.get("newton_mode", "auto") == "auto"
-            and model.is_standard_form_dae
-        ):
+        if self._newton_sub_block and model.is_standard_form_dae:
             alg_res_fn = model.algebraic_eval
             jac_alg_fn = model.jac_algebraic_eval
         else:
@@ -681,6 +717,22 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 strict=True,
             )
         )
+        precomputed = model.precomputed_input_evals
+        if precomputed:
+            # Input-only values are computed once per solve, after the inputs
+            jacobian = precomputed["rhs_algebraic_jac"]
+            extended = casadi.MX.sym("inputs", jacobian.size1_in(2))
+            fns["rhs_algebraic"] = precomputed["rhs_algebraic"]
+            fns["jac_rhs_algebraic_action"] = precomputed["rhs_algebraic_jac_action"]
+            fns["jac_times_cjmass"] = casadi.Function(
+                "jac_times_cjmass",
+                [t_casadi, y_casadi, extended, cj_casadi],
+                [
+                    jacobian(t_casadi, y_casadi, extended)
+                    - cj_casadi * to_casadi_dm(mass_matrix)
+                ],
+            )
+            fns["precompute"] = precomputed["precompute"]
         for key in self.output_variables:
             fns[f"var:{key}"] = self.computed_var_fcns[key]
             if has_sens:
@@ -736,6 +788,41 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     casadi_to_idaklu_function(fns[f"dvar_dp:{key}"])
                 )
 
+        precompute = {}
+        if "precompute" in fns:
+            precompute["precompute"] = casadi_to_idaklu_function(fns["precompute"])
+
+        cpp_options = self._options
+        # Only analysed when the linear solver applies it
+        if self._block_linear_solver or self._block_preconditioned:
+            pattern = csc_matrix(
+                (
+                    np.ones(jac_times_cjmass_nnz),
+                    jac_times_cjmass_rowvals,
+                    jac_times_cjmass_colptrs,
+                ),
+                shape=(len(y0), len(y0)),
+            )
+            analysed = self._jacobian_analysis
+            if analysed is not None and (analysed.pattern != pattern).nnz == 0:
+                analysis = analysed.analysis
+            else:
+                analysis = pybamm.preconditioners.analyse(
+                    _compiled_preconditioner(model), pattern
+                )
+            self._jacobian_analysis = None
+            if self._block_linear_solver and not analysis.exact:
+                raise pybamm.SolverError(
+                    "The 'block' linear solver applies the model's preconditioner "
+                    "directly, so it must be exact: every block solved directly and "
+                    "no couplings between blocks dropped. Use an iterative linear "
+                    "solver with preconditioner='block' for an approximate one."
+                )
+            cpp_options = {**self._options, "_preconditioner": analysis}
+            if self._block_preconditioned:
+                # Krylov products come from the jacobian action, not a matrix
+                cpp_options["jacobian"] = "matrix-free"
+
         self._setup["solver"] = idaklu.create_casadi_solver_group(
             number_of_states=self._setup["number_of_states"],
             number_of_parameters=self._setup["number_of_sensitivity_parameters"],
@@ -758,9 +845,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             var_fcns=self._setup["var_idaklu_fcns"],
             dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
             dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],
-            options=self._options,
+            options=cpp_options,
             alg_res=self._setup["alg_res"],
             alg_jac=self._setup["alg_jac"],
+            **precompute,
         )
 
         # C++ solver group now owns each casadi::Function via shared_ptr;
@@ -793,6 +881,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # solver reads as "not yet set up" until the next solve().
         self._model_set_up = {}
         self.computed_var_fcns = {}
+        self._jacobian_analysis = None
 
     @property
     def options(self):
@@ -874,6 +963,51 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
             for soln, inputs_dict in zip(solns, inputs_list, strict=False)
         ]
+
+    def _jacobian_entries(self, model, sparsity):
+        """
+        See :meth:`pybamm.BaseSolver._jacobian_entries`. An iterative linear solver
+        with the block preconditioner reads only the entries the preconditioner
+        uses; its products with vectors come from the jacobian action.
+        """
+        if not self._block_preconditioned:
+            return None
+        # Kept for set-up, which analyses the same iteration matrix
+        self._jacobian_analysis = pybamm.preconditioners.analyse_jacobian(
+            _compiled_preconditioner(model), sparsity, model.mass_matrix.entries
+        )
+        return self._jacobian_analysis.entries
+
+    @property
+    def _jacobian_free(self) -> bool:
+        return self._block_preconditioned
+
+    @property
+    def _block_linear_solver(self) -> bool:
+        """Whether the model's block preconditioner is the linear solver."""
+        return self._options["linear_solver"] == "block"
+
+    @property
+    def _block_preconditioned(self) -> bool:
+        """Whether an iterative linear solver uses the block preconditioner."""
+        return (
+            self._options["linear_solver"] in _ITERATIVE_LINEAR_SOLVERS
+            and self._options["preconditioner"] == "block"
+        )
+
+    @property
+    def _newton_sub_block(self) -> bool:
+        """Whether the IC Newton solve uses its own algebraic sub-block solver."""
+        if self._options["newton_mode"] != "auto":
+            return False
+        # The block solver or preconditioner is reused in full mode; BBDP's
+        # setup reads IDA state that is unset there
+        if self._block_linear_solver or self._block_preconditioned:
+            return False
+        return (
+            self._options["linear_solver"] not in _ITERATIVE_LINEAR_SOLVERS
+            or self._options["preconditioner"] == "BBDP"
+        )
 
     @property
     def _internal_initialisation(self) -> bool:
@@ -1300,34 +1434,31 @@ class IDAKLUSolver(pybamm.BaseSolver):
         return new_sol
 
     def get_jacobian_sparsity(self) -> csc_matrix:
-        """Get the sparsity pattern of the iteration matrix that IDA factorizes.
+        """
+        Sparsity pattern of the iteration matrix that IDA factorises, ``J - cj * M``.
 
-        This is the pattern of ``J - cj * M``, where ``J`` is the Jacobian of the
-        model residuals with respect to the states, ``M`` is the mass matrix and
-        ``cj`` is IDA's step-size-dependent scalar. It is the union of the patterns
-        of ``J`` and ``M``, so every differential state has a diagonal entry even
-        where ``J`` has none.
+        .. deprecated::
+            Use :meth:`pybamm.BaseModel.jacobian_sparsity` on the discretised model.
 
         Returns
         -------
         :class:`scipy.sparse.csc_matrix`
-            The sparsity pattern of ``J - cj * M``, with every stored entry set to 1.
+            The pattern, with every stored entry set to 1.
         """
-        setup = getattr(self, "_setup", None)
-        if setup is None:
-            raise pybamm.SolverError("Solver not set up. Call set_up() first.")
-        indptr = setup["jac_times_cjmass_colptrs"]
-        indices = setup["jac_times_cjmass_rowvals"]
-        nnz = setup["jac_times_cjmass_nnz"]
-        n = setup["number_of_states"]
-        data = np.ones(nnz)
-        return csc_matrix((data, indices, indptr), shape=(n, n))
+        warnings.warn(
+            "IDAKLUSolver.get_jacobian_sparsity is deprecated; use "
+            "BaseModel.jacobian_sparsity on the discretised model.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._iteration_sparsity()
 
     def spy(self, ax=None, *, show_plot=None, **kwargs):
-        """Plot the sparsity pattern of the Jacobian, delineating differential
-        and algebraic states.
+        """
+        Plot the sparsity pattern of the iteration matrix.
 
-        Requires matplotlib (imported on call).
+        .. deprecated::
+            Use :meth:`pybamm.BaseModel.spy` on the discretised model.
 
         Parameters
         ----------
@@ -1340,42 +1471,46 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         Returns
         -------
-        ax : :class:`matplotlib.axes.Axes`
+        :class:`matplotlib.axes.Axes`
         """
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError as e:
-            raise ImportError(
-                "matplotlib is required for IDAKLUSolver.spy. "
-                "Install it with: pip install matplotlib"
-            ) from e
-
-        if show_plot is None:
-            show_plot = True
-
-        J = self.get_jacobian_sparsity()
-
-        n = J.shape[0]
-        nnz = J.nnz
+        warnings.warn(
+            "IDAKLUSolver.spy is deprecated; use BaseModel.spy on the discretised "
+            "model.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        plt = pybamm.import_optional_dependency("matplotlib.pyplot")
+        pattern = self._iteration_sparsity()
+        n = pattern.shape[0]
         n_rhs = int(self._setup["ids"].sum())
-        n_alg = n - n_rhs
-        sparsity = 100.0 * (1 - nnz / (n * n) if n > 0 else 0.0)
         created_figure = ax is None
         if created_figure:
-            fig, ax = plt.subplots(1, 1)
-
-        ax.spy(J, **kwargs)
-
+            figure, ax = plt.subplots(1, 1)
+        ax.spy(pattern, **kwargs)
         ax.set_xlabel("State index")
         ax.set_ylabel("Equation index")
-
-        info = f"{nnz} nnz, {sparsity:.2f}% sparse"
-        info += f"\n{n} states: {n_rhs} differential and {n_alg} algebraic"
-        ax.set_title(info, fontsize=10)
+        sparse_percent = 100.0 * (1 - pattern.nnz / (n * n)) if n > 0 else 0.0
+        ax.set_title(
+            f"{pattern.nnz} nnz, {sparse_percent:.2f}% sparse\n{n} states: {n_rhs} "
+            f"differential and {n - n_rhs} algebraic",
+            fontsize=10,
+        )
         if created_figure:
-            fig.tight_layout()
-
-        if show_plot:
+            figure.tight_layout()
+        if show_plot is None or show_plot:
             plt.show()
-
         return ax
+
+    def _iteration_sparsity(self) -> csc_matrix:
+        setup = getattr(self, "_setup", None)
+        if setup is None:
+            raise pybamm.SolverError("Solver not set up. Call set_up() first.")
+        n = setup["number_of_states"]
+        return csc_matrix(
+            (
+                np.ones(setup["jac_times_cjmass_nnz"]),
+                setup["jac_times_cjmass_rowvals"],
+                setup["jac_times_cjmass_colptrs"],
+            ),
+            shape=(n, n),
+        )
