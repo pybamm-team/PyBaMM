@@ -24,6 +24,7 @@
 !src/pybamm/CITATIONS.bib
 !src/pybamm/input/**/*.csv
 !tests/unit/test_parameters/*.csv
+!packages/pybamm-model-zoo/src/pybamm_model_zoo/**/data/**/*.csv
 
 # running files
 *.pyc
