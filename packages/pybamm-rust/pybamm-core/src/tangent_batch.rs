@@ -13,6 +13,134 @@ use crate::ir::ids::BufSlot;
 use crate::ir::{BinaryOp, BroadcastKind, ConstPool, Instruction, TypedIr, UnaryOp};
 use crate::node::CsrData;
 
+/// Lane counts the batched sweep is instantiated for, widest first.
+const SUPPORTED_LANES: [usize; 2] = [8, 4];
+
+/// The widest lane count [`run_tangent_batch`] supports.
+pub(crate) const MAX_LANES: usize = SUPPORTED_LANES[0];
+
+/// Scratch ceiling for one batched tangent region.
+const LANE_SCRATCH_BUDGET: usize = 32 << 20;
+
+/// How many lanes each walk of one tangent tape carries, chosen once from the tape's shape.
+///
+/// Per-lane arithmetic is width-independent, so a plan moves no bits, only time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct LanePlan {
+    /// Per [`SUPPORTED_LANES`] entry, the fewest seeds left at which a walk that wide pays.
+    min_seeds: [Option<usize>; 2],
+}
+
+impl LanePlan {
+    /// One scalar walk per seed.
+    pub(crate) const SCALAR: Self = Self {
+        min_seeds: [None; 2],
+    };
+
+    /// The cheapest plan for `expr` by [`walk_costs`]; scalar when it is not batchable.
+    pub(crate) fn new(expr: &SplitCompiledExpr) -> Self {
+        if !is_batchable(expr) {
+            return Self::SCALAR;
+        }
+        let (scalar, batched) = walk_costs(expr);
+        let fits =
+            |lanes| tangent_scratch_len(expr, lanes) * size_of::<f64>() <= LANE_SCRATCH_BUDGET;
+        let mut wide = [None; 2];
+        for ((slot, cost), lanes) in wide.iter_mut().zip(batched).zip(SUPPORTED_LANES) {
+            *slot = fits(lanes).then_some(cost);
+        }
+        Self::from_costs(scalar, wide)
+    }
+
+    /// The plan for a scalar walk costing `scalar` and, per [`SUPPORTED_LANES`] entry, a walk
+    /// that wide costing `wide` (`None` where it may not run).
+    fn from_costs(scalar: usize, wide: [Option<usize>; 2]) -> Self {
+        let mut plan = Self::SCALAR;
+        // Narrowest first, so each width is weighed against the plan of the narrower ones.
+        for (i, &lanes) in SUPPORTED_LANES.iter().enumerate().rev() {
+            let Some(cost) = wide[i] else { continue };
+            plan.min_seeds[i] = (1..=lanes).find(|&seeds| cost < plan.cost(seeds, scalar, wide));
+        }
+        plan
+    }
+
+    /// Lanes for the next walk with `seeds` seeds left: 1, or a [`SUPPORTED_LANES`] entry.
+    ///
+    /// Never fewer than for fewer seeds, so a scratch sized for the first walk fits every walk.
+    pub(crate) fn lanes(self, seeds: usize) -> usize {
+        self.width_index(seeds).map_or(1, |i| SUPPORTED_LANES[i])
+    }
+
+    /// The most lanes any walk carries.
+    pub(crate) fn widest(self) -> usize {
+        self.lanes(usize::MAX)
+    }
+
+    fn width_index(self, seeds: usize) -> Option<usize> {
+        self.min_seeds
+            .iter()
+            .position(|min| min.is_some_and(|min| seeds >= min))
+    }
+
+    /// What walking `seeds` seeds by this plan costs.
+    fn cost(self, mut seeds: usize, scalar: usize, wide: [Option<usize>; 2]) -> usize {
+        let mut total = 0;
+        while seeds > 0 {
+            let walk = self.width_index(seeds);
+            total += walk.and_then(|i| wide[i]).unwrap_or(scalar);
+            seeds -= walk.map_or(1, |i| SUPPORTED_LANES[i]).min(seeds);
+        }
+        total
+    }
+}
+
+/// Estimated cost of one walk of `expr`'s tangent section, scalar and at each
+/// [`SUPPORTED_LANES`] entry, in scalar element-wise operations (fitted on Apple M4).
+///
+/// A batched walk dispatches each instruction once for all its lanes and runs a sparse
+/// product's latency-bound row sums side by side, but repeats element-wise work per lane.
+fn walk_costs(expr: &SplitCompiledExpr) -> (usize, [usize; 2]) {
+    /// Per instruction, a scalar and a batched walk's dispatch.
+    const DISPATCH: (usize, usize) = (15, 32);
+    /// Per stored matrix entry of a sparse product, a scalar and a batched walk's row sums.
+    const ENTRY: (usize, usize) = (5, 7);
+    /// Per element of an element-wise instruction, a walk at each [`SUPPORTED_LANES`] entry.
+    const ELEMENT: [usize; 2] = [7, 4];
+    /// Lane-minor values past which an operand outgrows L1, costing half again per element.
+    const CACHED_VALUES: usize = 2048;
+    let (ir, split) = (expr.ir(), expr.split_info());
+    let consts = ir.consts();
+    let mut scalar = 0;
+    let mut batched = [0; 2];
+    for instr in &ir.instructions()[split.primal_end..] {
+        let (elements, entries) = match *instr {
+            Instruction::LoadTangentState { width: len, .. }
+            | Instruction::Binary { len, .. }
+            | Instruction::Unary { len, .. }
+            | Instruction::Index { len, .. } => (len.index(), 0),
+            Instruction::Concat {
+                sources_idx,
+                sources_len,
+                ..
+            } => {
+                let sources = &consts.concat_sources[sources_idx.index()..][..sources_len.index()];
+                (sources.iter().map(|slot| slot.len_usize()).sum(), 0)
+            },
+            Instruction::MatMul { csr_idx, .. } => (0, consts.csr_data[csr_idx.index()].data.len()),
+            _ => (0, 0),
+        };
+        scalar += DISPATCH.0 + elements + ENTRY.0 * entries;
+        for ((cost, lanes), per_element) in batched.iter_mut().zip(SUPPORTED_LANES).zip(ELEMENT) {
+            let mut work = elements * per_element;
+            if elements * lanes > CACHED_VALUES {
+                work += work / 2;
+            }
+            *cost += DISPATCH.1 + work + ENTRY.1 * entries;
+        }
+    }
+    (scalar, batched)
+}
+
 #[derive(Clone, Copy)]
 enum Operand {
     Primal(usize),
@@ -382,5 +510,68 @@ fn binary<const K: usize, F: Fn(f64, f64) -> f64>(
         (Operand::Primal(_), Operand::Primal(_)) => {
             unreachable!("is_batchable admits no binary over two primal operands")
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The lanes of each walk that `seeds` seeds take under `plan`.
+    fn walks(plan: LanePlan, seeds: usize) -> Vec<usize> {
+        let mut left = seeds;
+        std::iter::from_fn(|| {
+            let lanes = (left > 0).then(|| plan.lanes(left))?;
+            left -= lanes.min(left);
+            Some(lanes)
+        })
+        .collect()
+    }
+
+    #[test]
+    fn a_wider_walk_runs_only_where_it_is_cheaper() {
+        // (scalar, 8-lane, 4-lane) walk costs, then the walks for 2, 3, 5, 7, 9 and 11 seeds.
+        type Case = (usize, [Option<usize>; 2], [&'static [usize]; 6]);
+        let cases: [Case; 4] = [
+            // Dispatch-bound: a part-empty walk beats three or more scalar ones.
+            (
+                100,
+                [Some(260), Some(230)],
+                [&[1, 1], &[4], &[8], &[8], &[8, 1], &[8, 4]],
+            ),
+            // Long element-wise vectors: even a full walk loses.
+            (
+                100,
+                [Some(1000), Some(420)],
+                [&[1, 1], &[1; 3], &[1; 5], &[1; 7], &[1; 9], &[1; 11]],
+            ),
+            // In between: only (nearly) full walks pay.
+            (
+                100,
+                [Some(640), Some(350)],
+                [&[1, 1], &[1; 3], &[4, 1], &[8], &[8, 1], &[8, 1, 1, 1]],
+            ),
+            // 8 lanes over the scratch budget.
+            (
+                100,
+                [None, Some(230)],
+                [&[1, 1], &[4], &[4, 1], &[4, 4], &[4, 4, 1], &[4, 4, 4]],
+            ),
+        ];
+        for (scalar, wide, plans) in cases {
+            let plan = LanePlan::from_costs(scalar, wide);
+            for (seeds, want) in [2, 3, 5, 7, 9, 11].into_iter().zip(plans) {
+                assert_eq!(
+                    walks(plan, seeds),
+                    want,
+                    "{seeds} seeds at costs {scalar}, {wide:?}"
+                );
+            }
+            let lanes: Vec<usize> = (1..=20).map(|seeds| plan.lanes(seeds)).collect();
+            assert!(
+                lanes.is_sorted(),
+                "lanes must not shrink with more seeds: {lanes:?}"
+            );
+        }
     }
 }

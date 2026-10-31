@@ -36,12 +36,15 @@ pub enum Extra {
     MinMax,
     /// `0.0`, `-0.0` and `ZeroVector` leaves, never a `Div` denominator.
     Zeros,
-    /// A sparse `MatMul` of random pattern, a `Conditional` on a literal or input selector,
-    /// a 2-knot linear interpolant, and `MaxReduce`/`MinReduce`.
+    /// A sparse `MatMul` of random pattern, a `Conditional` on a literal, input or (away from
+    /// the smooth mode) state-dependent selector, a 2-knot linear interpolant, and
+    /// `MaxReduce`/`MinReduce`.
     Structural,
     /// `Log` of a positive argument and `Hypot` with a literal leg; away from the smooth mode,
     /// also `Modulo` by a positive divisor, `Sign` and `Floor`, and in the full mode `<` and `==`.
     Elementwise,
+    /// A `Time` leaf, bounded like a smooth state, so a case must be read at `|t| <= 1.5`.
+    Time,
 }
 
 #[allow(dead_code)]
@@ -52,6 +55,7 @@ pub const ALL_EXTRAS: &[Extra] = &[
     Extra::Zeros,
     Extra::Structural,
     Extra::Elementwise,
+    Extra::Time,
 ];
 
 /// Widths of the [`Extra::Inputs`] leaves, packed in order.
@@ -115,6 +119,7 @@ enum BinarySpec {
 #[derive(Clone, Debug)]
 enum ExprSpec {
     Scalar(f64),
+    Time,
     Input {
         index: usize,
         offset: usize,
@@ -177,6 +182,7 @@ const fn can_broadcast(a_len: usize, b_len: usize) -> bool {
 fn lower_expr(arena: &mut Arena, spec: &ExprSpec) -> NodeId {
     match spec {
         ExprSpec::Scalar(v) => arena.alloc(Node::Scalar(*v)),
+        ExprSpec::Time => arena.alloc(Node::Time),
         &ExprSpec::Input {
             index,
             offset,
@@ -681,7 +687,7 @@ fn build_random_spec(entropy: &[u8], n_states: usize, mode: GenMode, extras: &[E
             },
             5 => {
                 if let Some(entry) =
-                    structural_entry(&pool, &mut || next_byte(&mut byte_cursor), extras)
+                    structural_entry(&pool, &mut || next_byte(&mut byte_cursor), mode, extras)
                 {
                     pool.push(entry);
                     last_good_idx = pool.len() - 1;
@@ -722,6 +728,7 @@ fn hypot_entry(leg: &TypedEntry, byte: u8) -> TypedEntry {
 fn structural_entry(
     pool: &[TypedEntry],
     next_byte: &mut impl FnMut() -> u8,
+    mode: GenMode,
     extras: &[Extra],
 ) -> Option<TypedEntry> {
     fn pick(pool: &[TypedEntry], byte: u8) -> &TypedEntry {
@@ -741,15 +748,19 @@ fn structural_entry(
             } else {
                 ValueClass::AnyFinite
             };
-            // A literal window centre always picks a branch; the input does unless it lands on
-            // a half-way value, where the zeros it gives are still bounded.
-            let selector = match next_byte() % 3 {
+            // Any selector picks a branch or gives bounded zeros; one that reads the state would
+            // switch branch inside a finite-difference stencil, so the smooth mode has none.
+            let selector = match next_byte() % 4 {
                 0 => ExprSpec::Scalar(1.0),
-                1 => ExprSpec::Scalar(2.0),
-                _ if extras.contains(&Extra::Inputs) => ExprSpec::Input {
+                2 if extras.contains(&Extra::Inputs) => ExprSpec::Input {
                     index: 0,
                     offset: 0,
                     width: 1,
+                },
+                3 if mode != GenMode::Smooth => ExprSpec::Index {
+                    child: Box::new(pick(pool, next_byte()).spec.clone()),
+                    start: 0,
+                    end: 1,
                 },
                 _ => ExprSpec::Scalar(2.0),
             };
@@ -821,8 +832,15 @@ fn structural_entry(
     }
 }
 
-/// Push the leaves `extras` add: input parameters, then zeros of each length present.
+/// Push the leaves `extras` add: the time, input parameters, then zeros of each length present.
 fn add_extra_leaves(pool: &mut Vec<TypedEntry>, n_states: usize, extras: &[Extra]) {
+    if extras.contains(&Extra::Time) {
+        pool.push(TypedEntry {
+            spec: ExprSpec::Time,
+            len: 1,
+            class: ValueClass::BoundedSmall,
+        });
+    }
     let mut lens = vec![n_states];
     if extras.contains(&Extra::Inputs) {
         let mut offset = 0;
@@ -1053,6 +1071,29 @@ pub fn conditional_case() -> DagCase {
     }
 }
 
+/// A conditional whose selector reads the state, so contracted probes switch its branch.
+#[allow(dead_code)]
+pub fn state_conditional_case() -> DagCase {
+    let mut arena = Arena::new();
+    let selector = arena.alloc(Node::StateVector { start: 0, end: 1 });
+    let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
+    let s2 = arena.alloc(Node::Scalar(2.0));
+    let b1 = arena.alloc(Node::Mul(s2, y1));
+    let s3 = arena.alloc(Node::Scalar(3.0));
+    let b2 = arena.alloc(Node::Mul(s3, y1));
+    let root = arena.alloc(Node::Conditional {
+        selector,
+        branches: vec![b1, b2],
+    });
+    DagCase {
+        arena,
+        root,
+        y: vec![2.2, 1.0],
+        n_states: 2,
+        inputs: Vec::new(),
+    }
+}
+
 #[allow(dead_code)]
 pub fn interpolant_case() -> DagCase {
     let mut arena = Arena::new();
@@ -1174,6 +1215,7 @@ pub fn targeted_split_eval_cases() -> Vec<TangentCase> {
         tangent_case_from_dag(wide_concat_case(8), &[17, 18, 19, 20]),
         tangent_case_from_dag(index_slice_case(), &[21, 22, 23, 24]),
         tangent_case_from_dag(conditional_case(), &[25, 26, 27, 28]),
+        tangent_case_from_dag(state_conditional_case(), &[33, 34, 35, 36]),
         tangent_case_from_dag(sparse_matmul_case(), &[29, 30, 31, 32]),
     ]
 }

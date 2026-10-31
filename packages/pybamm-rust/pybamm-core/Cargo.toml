@@ -18,10 +18,29 @@ bincode = { version = "1", optional = true }
 pulp = "0.22"
 
 [dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
 proptest = "1"
 
 [features]
 serialize = ["serde", "bincode"]
+
+[[bench]]
+name = "compile"
+harness = false
+
+[[bench]]
+name = "eval"
+harness = false
+
+[[bench]]
+name = "sparsity"
+harness = false
+required-features = ["serialize"]
+
+[[bench]]
+name = "derivatives"
+harness = false
+required-features = ["serialize"]
 
 [lints]
 workspace = true
