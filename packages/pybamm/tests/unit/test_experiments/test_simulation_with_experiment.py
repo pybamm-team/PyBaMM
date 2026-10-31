@@ -2958,7 +2958,7 @@ class TestSimulationExperiment:
 
     def test_control_steps_errors(self):
         experiment = pybamm.Experiment(
-            [pybamm.step.control({"Mass flow rate [kg.s-1]": 1}, duration=10)]
+            [pybamm.step.control({"Unread parameter": 1}, duration=10)]
         )
         sim = pybamm.Simulation(
             self._cooled_body(),
@@ -2967,7 +2967,7 @@ class TestSimulationExperiment:
         )
         with pytest.raises(
             pybamm.ModelError,
-            match=r"set 'Mass flow rate \[kg.s-1\]', which the model 'Unnamed model' "
+            match=r"set 'Unread parameter', which the model 'Unnamed model' "
             r"does not read",
         ):
             sim.solve()

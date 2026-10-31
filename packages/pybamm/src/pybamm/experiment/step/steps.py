@@ -501,20 +501,21 @@ class ControlStep(BaseStep):
 
     Examples
     --------
-    Set the inlet temperature and the mass flow rate of a heat exchanger:
+    Set the heating power and the coolant temperature:
 
     >>> step = pybamm.step.ControlStep(
-    ...     explicit={"Inlet temperature [K]": 350, "Mass flow rate [kg.s-1]": 0.1},
+    ...     explicit={"Heating power [W]": 100, "Coolant temperature [K]": 290},
     ...     duration=3600,
     ... )
 
-    Hold the inlet temperature, and adjust the mass flow rate to deliver 2 kW:
+    Hold the coolant temperature, and adjust the heating power to keep the net power
+    at 50 W:
 
-    >>> def power_residual(variables, target):
-    ...     return variables["Power [W]"] - target
+    >>> def net_power_residual(variables, target):
+    ...     return variables["Net power [W]"] - target
     >>> step = pybamm.step.ControlStep(
-    ...     explicit={"Inlet temperature [K]": 350},
-    ...     implicit={"Mass flow rate [kg.s-1]": (power_residual, 2000)},
+    ...     explicit={"Coolant temperature [K]": 290},
+    ...     implicit={"Heating power [W]": (net_power_residual, 50)},
     ...     duration=3600,
     ... )
     """

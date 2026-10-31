@@ -514,42 +514,40 @@ class TestExperimentSteps:
 
     def test_control_step(self):
         def residual(variables, target):
-            return variables["Power [W]"] - target
+            return variables["Net power [W]"] - target
 
         step = pybamm.step.control(
-            explicit={"Inlet temperature [K]": 350},
-            implicit={"Mass flow rate [kg.s-1]": (residual, 2000)},
+            explicit={"Coolant temperature [K]": 290},
+            implicit={"Heating power [W]": (residual, 50)},
             duration=60,
         )
-        assert step.controls == ("Inlet temperature [K]", "Mass flow rate [kg.s-1]")
+        assert step.controls == ("Coolant temperature [K]", "Heating power [W]")
         assert step.is_implicit()
         assert step.direction is None
         assert step.duration == 60
         assert step.targets == {
-            "Inlet temperature [K]": 350,
-            "Mass flow rate [kg.s-1]": 2000,
+            "Coolant temperature [K]": 290,
+            "Heating power [W]": 50,
         }
         parameter_values = pybamm.ParameterValues({})
         assert step.control_target_values(parameter_values) == step.targets
-        assert step.to_dict()["explicit"] == {"Inlet temperature [K]": 350}
+        assert step.to_dict()["explicit"] == {"Coolant temperature [K]": 290}
         assert "value" not in step.to_dict()
 
         variables = {
-            "Inlet temperature [K]": pybamm.Variable("Inlet temperature [K]"),
-            "Power [W]": pybamm.Variable("Power [W]"),
+            "Coolant temperature [K]": pybamm.Variable("Coolant temperature [K]"),
+            "Net power [W]": pybamm.Variable("Net power [W]"),
         }
         residuals = step.get_control_residuals(variables)
-        assert residuals["Inlet temperature [K]"] == (
-            variables["Inlet temperature [K]"] - pybamm.Scalar(350)
+        assert residuals["Coolant temperature [K]"] == (
+            variables["Coolant temperature [K]"] - pybamm.Scalar(290)
         )
-        assert residuals["Mass flow rate [kg.s-1]"] == (
-            variables["Power [W]"] - pybamm.Scalar(2000)
+        assert residuals["Heating power [W]"] == (
+            variables["Net power [W]"] - pybamm.Scalar(50)
         )
         target = pybamm.InputParameter("target")
-        residuals = step.get_control_residuals(
-            variables, {"Mass flow rate [kg.s-1]": target}
-        )
-        assert residuals["Mass flow rate [kg.s-1]"] == variables["Power [W]"] - target
+        residuals = step.get_control_residuals(variables, {"Heating power [W]": target})
+        assert residuals["Heating power [W]"] == variables["Net power [W]"] - target
 
         # Explicit only, with a function of time and a time series
         step = pybamm.step.ControlStep(
