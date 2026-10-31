@@ -50,6 +50,21 @@ class BaseUnitTestLithiumIonHalfCell:
         options = {"intercalation kinetics": "Marcus-Hush-Chidsey"}
         self.check_well_posedness(options)
 
+    def test_well_posed_kinetics_coupled_ion_electron_transfer(self):
+        options = {
+            "intercalation kinetics": (
+                "Marcus-Hush-Chidsey",
+                "coupled ion-electron transfer",
+            )
+        }
+        self.check_well_posedness(options)
+
+    def test_coupled_ion_electron_transfer_lithium_metal_not_supported(self):
+        options = {"intercalation kinetics": "coupled ion-electron transfer"}
+        if self.model is not None:
+            with pytest.raises(pybamm.OptionError, match=r"lithium metal electrode"):
+                self.check_well_posedness(options)
+
     def test_well_posed_constant_sei(self):
         options = {"SEI": "constant"}
         self.check_well_posedness(options)

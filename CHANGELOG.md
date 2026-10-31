@@ -12,6 +12,7 @@
 
 ## Features
 
+- Added `"coupled ion-electron transfer"` as an `"intercalation kinetics"` option, following Fraggedakis et al. (2021). It uses the existing reorganization energy and a new temperature-dependent `"... electrode coupled ion-electron transfer rate constant [A.m-2]"` per electrode, and its current saturates at large overpotential. ([#5993](https://github.com/pybamm-team/PyBaMM/pull/5993))
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 
 ## Bug fixes
