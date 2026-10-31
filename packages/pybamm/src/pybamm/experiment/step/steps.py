@@ -546,9 +546,6 @@ class ControlStep(BaseStep):
         self.input_implicit = implicit
         self.input_targets = input_targets
         super().__init__(None, **kwargs)
-        self.uses_default_duration = kwargs.get("duration") is None and not any(
-            isinstance(value, np.ndarray) for value in input_targets.values()
-        )
         self.controls = (*explicit, *implicit)
         #: The step's own target of each control, as a number or a symbol, keyed by
         #: control name. Implicit controls without a target are left out.
@@ -569,6 +566,11 @@ class ControlStep(BaseStep):
         return (
             f"{type(self).__name__}(explicit={list(self.input_explicit)}, "
             f"implicit={self.residual_functions})"
+        )
+
+    def _has_drive_cycle(self):
+        return any(
+            isinstance(value, np.ndarray) for value in self.input_targets.values()
         )
 
     def default_duration(self, value):

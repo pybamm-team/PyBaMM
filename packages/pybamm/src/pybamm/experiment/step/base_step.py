@@ -110,7 +110,7 @@ class BaseStep:
 
         # Record whether the step uses the default duration
         # This will be used by the experiment to check whether the step is feasible
-        self.uses_default_duration = duration is None and not self.is_drive_cycle
+        self.uses_default_duration = duration is None and not self._has_drive_cycle()
 
         # Set duration
         if duration is None:
@@ -180,6 +180,10 @@ class BaseStep:
     @staticmethod
     def is_implicit() -> bool:
         return False
+
+    def _has_drive_cycle(self):
+        """Whether the step follows a time series, which sets its default duration."""
+        return self.is_drive_cycle
 
     def copy(self):
         """
