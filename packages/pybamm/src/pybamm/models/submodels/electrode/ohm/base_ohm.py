@@ -42,7 +42,15 @@ class BaseModel(BaseElectrode):
     def set_boundary_conditions(self, variables):
         Domain = self.domain.capitalize()
 
-        if self.options.electrode_types["negative"] == "planar":
+        # Skip only when THIS domain is planar (Li metal): then `phi_s` is not
+        # a porous electrode potential and there is no submodel-level BC to
+        # set. The previous check skipped the entire method as soon as the
+        # NEGATIVE electrode was planar, which silently dropped the BCs for
+        # the half-cell positive electrode too, leaving `grad(phi_s_p)` with
+        # no Dirichlet/Neumann boundary conditions and breaking any
+        # downstream consumer (e.g. the Ohmic-heating term in the lumped
+        # thermal model). See #5414.
+        if self.options.electrode_types[self.domain] == "planar":
             return
 
         if self.domain == "negative":
