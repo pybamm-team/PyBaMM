@@ -13,6 +13,7 @@
 ## Features
 
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
+- Added the `"SEI film capacitance"` option, which puts a capacitance (`"SEI relative permittivity"` times the vacuum permittivity, divided by the SEI thickness) in parallel with the SEI film resistance, in series with the double layer. With `"surface form": "differential"`, this gives a separate SEI arc in impedance spectra. ([#5927](https://github.com/pybamm-team/PyBaMM/pull/5927))
 
 ## Bug fixes
 
