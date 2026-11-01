@@ -20,6 +20,7 @@ from .base_step import (
     _examples,
     _initial_control_guess,
     _step_time,
+    _value_identity,
 )
 
 
@@ -582,12 +583,31 @@ class ControlStep(BaseStep):
         return max(ends) if ends else self._default_timespan(value)
 
     def record_tags(self, value, *args, **kwargs):
+        repr_args, _ = super().record_tags(self._controls_text(repr), *args, **kwargs)
+        _, hash_args = super().record_tags(
+            self._controls_text(_value_identity), *args, **kwargs
+        )
+        return repr_args, hash_args
+
+    def _controls_text(self, value_text):
+        """The explicit and implicit controls as text, with values as ``value_text``."""
+
+        def entry_text(entry):
+            if isinstance(entry, tuple):
+                return f"({', '.join(value_text(item) for item in entry)})"
+            return value_text(entry)
+
         parts = []
-        if self.input_explicit:
-            parts.append(f"explicit={self.input_explicit}")
-        if self.input_implicit:
-            parts.append(f"implicit={self.input_implicit}")
-        return super().record_tags(", ".join(parts), *args, **kwargs)
+        for label, controls in (
+            ("explicit", self.input_explicit),
+            ("implicit", self.input_implicit),
+        ):
+            if controls:
+                entries = ", ".join(
+                    f"{name!r}: {entry_text(entry)}" for name, entry in controls.items()
+                )
+                parts.append(f"{label}={{{entries}}}")
+        return ", ".join(parts)
 
     def copy(self):
         # A shallow copy keeps the processed targets and supports subclasses with

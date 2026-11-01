@@ -598,6 +598,36 @@ class TestExperimentSteps:
         b = pybamm.step.ControlStep({"A": 2}, {"B": residual}, duration=20)
         assert a.unified_branch_repr() == b.unified_branch_repr()
 
+    def test_control_steps_with_time_series_differing_in_the_middle(self):
+        # numpy shortens the repr of large arrays to their ends
+        time = np.linspace(0, 1000, 2001)
+        series = np.column_stack([time, np.ones_like(time)])
+        changed = series.copy()
+        changed[1000, 1] = 5
+
+        def residual(variables, target):
+            return variables["Net power [W]"] - target
+
+        def step(value, target):
+            return pybamm.step.control(
+                explicit={"Coolant temperature [K]": value},
+                implicit={"Heating power [W]": (residual, target)},
+            )
+
+        base = step(series, series)
+        same = step(series.copy(), series.copy())
+        assert base == same
+        assert hash(base) == hash(same)
+        assert repr(base) == repr(step(changed, changed))
+        assert base != step(changed, series)
+        assert base != step(series, changed)
+
+        experiment = pybamm.Experiment([base, step(changed, series)])
+        assert len(experiment.unique_steps) == 2
+        np.testing.assert_array_equal(
+            experiment.steps[1].input_explicit["Coolant temperature [K]"], changed
+        )
+
     def test_control_step_errors(self):
         with pytest.raises(ValueError, match=r"at least one control"):
             pybamm.step.ControlStep()
