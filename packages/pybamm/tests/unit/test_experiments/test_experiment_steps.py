@@ -497,6 +497,23 @@ class TestExperimentSteps:
 
         assert len({current, voltage, c_rate, power}) == 4
 
+    def test_drive_cycles_differing_in_the_middle_not_equal(self):
+        # Regression: numpy shortens the repr of large arrays to their ends
+        time = np.linspace(0, 1000, 2001)
+        drive_cycle = np.column_stack([time, np.ones_like(time)])
+        changed = drive_cycle.copy()
+        changed[1000, 1] = 5
+
+        step = pybamm.step.current(drive_cycle)
+        same = pybamm.step.current(drive_cycle.copy())
+        different = pybamm.step.current(changed)
+
+        assert step == same
+        assert hash(step) == hash(same)
+        assert step != different
+        assert step.basic_repr() != different.basic_repr()
+        assert len({step, same, different}) == 2
+
     def test_steps_with_same_value_same_type_equal(self):
         a = pybamm.step.Current(4.2)
         b = pybamm.step.Current(4.2)
