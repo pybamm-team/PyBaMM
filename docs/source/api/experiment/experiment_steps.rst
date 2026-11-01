@@ -34,8 +34,8 @@ Control steps
 -------------
 
 Battery steps drive the current, through ``"Current function [A]"``. Control steps can
-drive any of a model's parameters, its controls, such as a heating power or a coolant
-temperature, so that experiments can run on models that are not battery models:
+drive any of a model's parameters, its controls so that experiments can run on
+models that are not battery models:
 
 .. autofunction:: pybamm.step.control
 
