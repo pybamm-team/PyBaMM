@@ -270,6 +270,15 @@ class TestSearch:
             )
             assert fake_out.getvalue() == out
 
+        # Blank terms are dropped without shifting the labels of the other terms
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["", "Electrolyte", "Potenteel"])
+            out = (
+                "Exact matches for 'Electrolyte': ['Electrolyte concentration']\n"
+                "No exact matches found for 'Potenteel'. Best matches are: ['Electrode potential']\n"
+            )
+            assert fake_out.getvalue() == out
+
         # Test invalid input type
         with pytest.raises(
             TypeError,
