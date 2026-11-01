@@ -16,7 +16,8 @@ registered before loading its database is resolved when that database is loaded.
 
 Reasons are plain text. Distinct reasons accumulate, and repeated reasons are
 included only once. Without an explicit reason, the calling class name is used
-when available. Parameter metadata can mix keys and ``(key, reason)`` tuples:
+when available. Parameter metadata can mix keys and two-string ``(key, reason)``
+tuples or lists:
 
 .. code-block:: python
 
@@ -25,12 +26,14 @@ when available. Parameter metadata can mix keys and ``(key, reason)`` tuples:
    )
 
 For named parameter sets, plain keys use the set name as their reason; dictionary
-construction retains the ``ParameterValues`` fallback.
+construction retains the ``ParameterValues`` fallback. Named-set reasons survive
+copies and JSON round-trips. Invalid metadata entries raise ``ValueError`` when
+the parameter values are constructed.
 
 Reasons appear only with ``verbose=True``; default output remains unannotated.
-Text output appends a list of keys and reasons. BibTeX output appends reasons to
-each entry's ``note`` field, preserving existing notes and escaping special
-characters. Both formats support terminal and file output:
+Text output appends ``key: reason; other reason`` annotations. BibTeX output
+appends reasons to each entry's ``note`` field, preserving existing notes and
+escaping special characters. Both formats support terminal and file output:
 
 .. code-block:: python
 

@@ -3,6 +3,7 @@
 #
 
 
+import copy
 import os
 import re
 import warnings
@@ -22,6 +23,86 @@ from tests import shared
 
 
 class TestParameterValues:
+    @pytest.mark.parametrize("pair_type", [tuple, list])
+    def test_citation_metadata_pairs(self, pair_type):
+        pybamm.citations._reset()
+        metadata = ["Chen2020", pair_type(["Nyman2008", "Electrolyte transport"])]
+        original = copy.deepcopy(metadata)
+        parameters = pybamm.ParameterValues({"citations": metadata})
+        assert metadata == original
+        assert pybamm.citations._citation_tags["Chen2020"] == {"ParameterValues"}
+        assert pybamm.citations._citation_tags["Nyman2008"] == {"Electrolyte transport"}
+        parameters["citations"].append("Marquis2019")
+        assert metadata == original
+        if pair_type is list:
+            parameters["citations"][1][1] = "Changed reason"
+            assert metadata == original
+
+    @pytest.mark.parametrize("pair_type", [tuple, list])
+    @pytest.mark.parametrize(
+        "members",
+        [
+            [],
+            ["Nyman2008"],
+            ["Nyman2008", "reason", "extra"],
+            [1, "reason"],
+            ["Nyman2008", 1],
+            [None, "reason"],
+            ["Nyman2008", None],
+            [[], "reason"],
+            ["Nyman2008", {}],
+        ],
+    )
+    def test_invalid_citation_pair(self, pair_type, members):
+        with pytest.raises(ValueError, match=r"Invalid citation.*expected"):
+            pybamm.ParameterValues({"citations": [pair_type(members)]})
+
+    @pytest.mark.parametrize("citation", [None, 1, {}, {"key": "Nyman2008"}])
+    def test_invalid_citation_metadata(self, citation):
+        with pytest.raises(ValueError, match=r"Invalid citation.*expected"):
+            pybamm.ParameterValues({"citations": [citation]})
+
+    @pytest.mark.parametrize(
+        "copy_parameters", [lambda p: p.copy(), pybamm.ParameterValues]
+    )
+    def test_named_citation_reason_copy(self, copy_parameters):
+        parameters = pybamm.ParameterValues("Chen2020")
+        original = copy.deepcopy(parameters["citations"])
+        pybamm.citations._reset()
+        copied = copy_parameters(parameters)
+        copy_parameters(copied)
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020"}
+        copied["citations"].append("Marquis2019")
+        assert parameters["citations"] == original
+
+    def test_named_citation_metadata(self, monkeypatch):
+        metadata = ["Chen2020", ["Nyman2008", "Custom reason"]]
+        original = copy.deepcopy(metadata)
+        monkeypatch.setattr(
+            type(pybamm.parameter_sets),
+            "__getitem__",
+            lambda self, name: {"citations": metadata},
+        )
+        parameters = pybamm.ParameterValues("Chen2020")
+        assert metadata == original
+        pybamm.citations._reset()
+        copied = parameters.copy()
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020"}
+        assert pybamm.citations._citation_tags["Nyman2008"] == {"Custom reason"}
+        copied["citations"][1][1] = "Changed reason"
+        assert parameters["citations"][1][1] == "Custom reason"
+        assert metadata == original
+
+    def test_simulation_citation_reason(self):
+        pybamm.citations._reset()
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=pybamm.ParameterValues("Chen2020"),
+        )
+        solution = simulation.solve([0, 3600])
+        assert np.isfinite(solution["Voltage [V]"](0))
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020"}
+
     @pytest.mark.parametrize(
         "metadata",
         [
@@ -30,9 +111,9 @@ class TestParameterValues:
             ["Chen2020", ("Nyman2008", "Electrolyte transport")],
         ],
     )
-    def test_citation_reasons(self, metadata, monkeypatch):
-        citations = pybamm.Citations()
-        monkeypatch.setattr(pybamm, "citations", citations)
+    def test_citation_reasons(self, metadata):
+        citations = pybamm.citations
+        citations._reset()
         values = {"Some parameter [m]": 1, "citations": metadata}
         original = metadata.copy()
         parameters = pybamm.ParameterValues(values)
@@ -43,9 +124,9 @@ class TestParameterValues:
         if ("Nyman2008", "Electrolyte transport") in metadata:
             assert citations._citation_tags["Nyman2008"] == {"Electrolyte transport"}
 
-    def test_named_set_citation_reason(self, monkeypatch):
-        citations = pybamm.Citations()
-        monkeypatch.setattr(pybamm, "citations", citations)
+    def test_named_set_citation_reason(self):
+        citations = pybamm.citations
+        citations._reset()
         pybamm.ParameterValues("Chen2020")
         assert citations._citation_tags["Chen2020"] == {"Chen2020"}
 

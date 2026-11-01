@@ -115,11 +115,32 @@ class ParameterValues:
         # Save citations
         if "citations" in self._store:
             default_reason = values if isinstance(values, str) else None
+            citations = []
             for citation in self._store["citations"]:
-                if isinstance(citation, tuple) and len(citation) == 2:
+                if isinstance(citation, str):
+                    citation = (
+                        (citation, default_reason) if default_reason else citation
+                    )
+                elif (
+                    isinstance(citation, list | tuple)
+                    and len(citation) == 2
+                    and all(isinstance(member, str) for member in citation)
+                ):
+                    citation = (
+                        citation.copy() if isinstance(citation, list) else citation
+                    )
+                else:
+                    raise ValueError(
+                        f"Invalid citation {citation!r}: expected a key string or "
+                        "a (key, reason) pair of strings"
+                    )
+                citations.append(citation)
+            self._store["citations"] = citations
+            for citation in citations:
+                if isinstance(citation, list | tuple):
                     pybamm.citations.register(citation[0], reason=citation[1])
                 else:
-                    pybamm.citations.register(citation, reason=default_reason)
+                    pybamm.citations.register(citation)
 
     @property
     def store(self) -> ParameterStore:
@@ -1681,8 +1702,7 @@ def deserialize_parameter_value(value: Any) -> Any:
     """
     Reconstruct a single parameter value from its JSON representation.
 
-    Inverse of :func:`serialize_parameter_value`: dicts are decoded back to
-    :class:`pybamm.Symbol` objects, scalars pass through unchanged.
+    Decode dictionaries and list items; scalars pass through unchanged.
 
     Parameters
     ----------
@@ -1696,6 +1716,8 @@ def deserialize_parameter_value(value: Any) -> Any:
     """
     if isinstance(value, dict):
         return convert_symbol_from_json(value)
+    if isinstance(value, list):
+        return [deserialize_parameter_value(item) for item in value]
     return value
 
 

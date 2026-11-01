@@ -11,15 +11,32 @@ import pybamm
 
 
 @pytest.fixture(autouse=True)
-def citations(monkeypatch):
-    registry = pybamm.Citations()
-    monkeypatch.setattr(pybamm, "citations", registry)
-    return registry
+def citations():
+    pybamm.citations._reset()
+    yield pybamm.citations
+    pybamm.citations._reset()
 
 
-class TestDownstreamCitations:
+@pytest.fixture
+def citation_database(citations, monkeypatch):
+    # Resetting registrations does not restore added or replaced bibliography entries.
+    monkeypatch.setattr(citations, "_all_citations", citations._all_citations.copy())
+
+
+class TestCitations:
+    def test_default_reasons(self):
+        citations = pybamm.Citations()
+        for _ in range(2):
+            assert citations._citation_tags == {
+                "Sulzer2021": {"PyBaMM"},
+                "Harris2020": {"NumPy"},
+            }
+            citations._reset()
+
     @pytest.mark.parametrize("as_string", [False, True])
-    def test_external_database(self, citations, tmp_path, capsys, as_string):
+    def test_external_database(
+        self, citations, citation_database, tmp_path, capsys, as_string
+    ):
         path = tmp_path / "downstream.bib"
         path.write_text("@misc{Downstream2026, title={Downstream example}}")
         registered = citations._papers_to_cite.copy()
@@ -66,7 +83,7 @@ class TestDownstreamCitations:
         assert "Marquis2019" not in citations._citation_tags
         assert not citations._unknown_citations
 
-    def test_deferred_reasons(self, citations, capsys):
+    def test_deferred_reasons(self, citations, citation_database, capsys):
         raw = "@misc{One2026, title={One}}\n@misc{Two2026, title={Two}}"
         citations.register(raw, reason="Downstream model")
         citations.register(raw, reason="Other use")
@@ -94,7 +111,9 @@ class TestDownstreamCitations:
             r"Cited for: Literal \textbraceleft{} and \textbackslash{} path"
         )
 
-    def test_registration_before_loading(self, citations, tmp_path, capsys):
+    def test_registration_before_loading(
+        self, citations, citation_database, tmp_path, capsys
+    ):
         citations.register("Downstream2026", reason="Before loading")
         path = tmp_path / "downstream.bib"
         path.write_text("@misc{Downstream2026, title={Example}}")
@@ -106,7 +125,9 @@ class TestDownstreamCitations:
         assert entries["Downstream2026"].fields["note"] == "Cited for: Before loading"
 
     @pytest.mark.parametrize("key_first", [True, False])
-    def test_pending_key_and_bibtex_reasons(self, citations, capsys, key_first):
+    def test_pending_key_and_bibtex_reasons(
+        self, citations, citation_database, capsys, key_first
+    ):
         key = "Downstream2026"
         raw = "@misc{Downstream2026, title={Example}}"
         citations.register(key, reason="Key registration")
@@ -133,7 +154,7 @@ class TestDownstreamCitations:
     @pytest.mark.parametrize("output_format", ["text", "bibtex"])
     @pytest.mark.parametrize("to_file", [False, True])
     def test_annotated_output(
-        self, citations, tmp_path, capsys, output_format, to_file
+        self, citations, citation_database, tmp_path, capsys, output_format, to_file
     ):
         raw = r"@misc{Example2026, title={Example}, note={Original {note} \& details}}"
         reason = 'Model {A} & parameters: 50%_# "quoted"'
@@ -162,10 +183,7 @@ class TestDownstreamCitations:
                 r'\& parameters: 50\%\_\# "quoted"'
             )
         else:
-            assert (
-                "Example2026 was cited due to the use of Another reason; " + reason
-                in first
-            )
+            assert "Example2026: Another reason; " + reason in first
         citations.register("Example2026", reason="Later reason")
         assert "Later reason" in export(True)
         plain = export(False)
@@ -182,6 +200,7 @@ class TestDownstreamCitations:
         for name in list(sys.modules):
             if name == "pybtex" or name.startswith("pybtex."):
                 monkeypatch.setitem(sys.modules, name, None)
+        # Construction must exercise imports while pybtex is unavailable.
         citations = pybamm.Citations()
         citations.read_citations(tmp_path / "not-read.bib")
         citations.register("Marquis2019", reason="Model")
@@ -190,8 +209,6 @@ class TestDownstreamCitations:
         assert "Could not print citations" in caplog.text
         assert not (tmp_path / "not-written.bib").exists()
 
-
-class TestCitations:
     def test_citations(self):
         citations = pybamm.citations
         # Default papers should be in both _all_citations dict and in the papers to cite
@@ -240,7 +257,7 @@ class TestCitations:
         with pytest.warns(UserWarning, match=r"not a citation"):
             pybamm.print_citations()
 
-    def test_overwrite_citation(self):
+    def test_overwrite_citation(self, citation_database):
         # Unknown citation
         fake_citation = r"@article{NotACitation, title = {This Doesn't Exist}}"
         with warnings.catch_warnings():

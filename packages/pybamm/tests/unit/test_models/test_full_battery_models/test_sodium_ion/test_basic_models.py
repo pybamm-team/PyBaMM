@@ -11,4 +11,6 @@ class TestBasicModels:
 
     def test_default_parameters(self):
         model = pybamm.sodium_ion.BasicDFN()
-        assert "Chayambuka2022" in model.default_parameter_values["citations"]
+        assert ("Chayambuka2022", "Chayambuka2022") in model.default_parameter_values[
+            "citations"
+        ]

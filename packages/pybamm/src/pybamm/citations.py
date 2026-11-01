@@ -53,8 +53,8 @@ class Citations:
         self._unknown_citations = set()
         self._citation_tags = {}
         # Register the PyBaMM paper and the NumPy paper
-        self.register("Sulzer2021")
-        self.register("Harris2020")
+        self.register("Sulzer2021", reason="PyBaMM")
+        self.register("Harris2020", reason="NumPy")
 
     @staticmethod
     def _caller_name():
@@ -137,6 +137,7 @@ class Citations:
             try:
                 reason = Citations._caller_name()
             except KeyError:
+                # Standalone callers need not provide a class context or reason.
                 pass
         if reason is not None:
             self._add_citation_tag(key, reason)
@@ -188,7 +189,7 @@ class Citations:
     def _tag_citations(self):
         """Format citation reasons in a stable order."""
         lines = [
-            f"{key} was cited due to the use of {'; '.join(sorted(reasons))}"
+            f"{key}: {'; '.join(sorted(reasons))}"
             for key, reasons in sorted(self._citation_tags.items())
             if key in self._papers_to_cite
         ]
@@ -229,7 +230,7 @@ class Citations:
 
             Citations registered:
 
-            Marquis2019 was cited due to the use of SPM
+            Marquis2019: SPM
 
         """
         # Parse citations that were not known keys at registration, but do not
@@ -240,6 +241,7 @@ class Citations:
                 try:
                     self._parse_citation(key)
                 except KeyError:
+                    # Another pending BibTeX entry may define this key before we warn.
                     pass
             # Raw BibTeX can resolve a key that failed earlier in this pass.
             for key in tuple(self._unknown_citations):
