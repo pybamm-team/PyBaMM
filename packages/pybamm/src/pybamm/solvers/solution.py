@@ -1275,10 +1275,22 @@ class Solution(SolutionBase):
 
         # sensitivities are a dict of {parameter: [sensitivities]}; start from a
         # fresh copy of self's lists so the in-place merge never aliases them
-        all_sensitivities = {
-            key: list(value) for key, value in self._all_sensitivities.items()
-        }
-        self._merge_sensitivities(all_sensitivities, other, repeated)
+        mixed_sensitivities = (
+            self.has_sensitivities() != other.has_sensitivities()
+            or self.sensitivity_names != other.sensitivity_names
+        )
+
+        if mixed_sensitivities:
+            pybamm.logger.warning(
+                "Joining solutions with incompatible sensitivities; "
+                "discarding sensitivities from the joined solution."
+            )
+            all_sensitivities = {}
+        else:
+            all_sensitivities = {
+                key: list(value) for key, value in self._all_sensitivities.items()
+            }
+            self._merge_sensitivities(all_sensitivities, other, repeated)
 
         options = self.user_options | other.user_options
 
@@ -1300,8 +1312,12 @@ class Solution(SolutionBase):
 
         new_sol.closest_event_idx = other.closest_event_idx
         new_sol._y0 = self._y0
-        new_sol._y0_sensitivities = self._y0_sensitivities
-        new_sol._y_event_sensitivities = other._y_event_sensitivities
+        new_sol._y0_sensitivities = (
+            None if mixed_sensitivities else self._y0_sensitivities
+        )
+        new_sol._y_event_sensitivities = (
+            None if mixed_sensitivities else other._y_event_sensitivities
+        )
         new_sol._all_inputs_stacked = self.all_inputs_stacked + other.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
@@ -1382,10 +1398,23 @@ class Solution(SolutionBase):
             all_inputs.extend(s.all_inputs)
             sub_sols.extend(s.sub_solutions)
 
-        # sensitivities: fresh dict, no aliasing of any input solution's dict
+        # Discard sensitivities when the joined segments are inconsistent.
+        reference = segments[0]
+        mixed_sensitivities = any(
+            s.has_sensitivities() != reference.has_sensitivities()
+            or s.sensitivity_names != reference.sensitivity_names
+            for s in segments[1:]
+        )
+
         all_sensitivities = {}
-        for s, repeated in kept:
-            cls._merge_sensitivities(all_sensitivities, s, repeated)
+        if mixed_sensitivities:
+            pybamm.logger.warning(
+                "Joining solutions with incompatible sensitivities; "
+                "discarding sensitivities from the joined solution."
+            )
+        else:
+            for s, repeated in kept:
+                cls._merge_sensitivities(all_sensitivities, s, repeated)
 
         options = {}
         for s in segments:
@@ -1414,9 +1443,15 @@ class Solution(SolutionBase):
         # last kept segment, not sols[-1]: __add__'s short-circuit keeps these from
         # self, and a trailing last_state duplicate has no event sensitivities.
         new_sol.closest_event_idx = segments[-1].closest_event_idx
-        new_sol._y_event_sensitivities = segments[-1]._y_event_sensitivities
+
+        new_sol._y_event_sensitivities = (
+            None if mixed_sensitivities else segments[-1]._y_event_sensitivities
+        )
         new_sol._y0 = segments[0]._y0
-        new_sol._y0_sensitivities = segments[0]._y0_sensitivities
+        new_sol._y0_sensitivities = (
+            None if mixed_sensitivities else segments[0]._y0_sensitivities
+        )
+
         # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
         new_sol._sub_solutions = sub_sols
 
