@@ -42,3 +42,14 @@ Further details can be found in a number of [detailed examples](https://github.c
 GitHub. In addition, full details of classes and methods can be found in the [](api_docs).
 Additional supporting material can be found
 [here](https://github.com/pybamm-team/pybamm-supporting-material/).
+
+## Licence and commercial use
+
+PyBaMM is released under the [BSD 3-Clause licence](https://github.com/pybamm-team/PyBaMM/blob/main/LICENSE.txt), a permissive open-source licence.
+You may use, modify and redistribute PyBaMM, including in commercial and closed-source products, provided that:
+
+- redistributions keep the copyright notice, the list of conditions and the disclaimer from `LICENSE.txt`, in the source code or in the documentation shipped with binaries;
+- the name of PyBaMM or its contributors is not used to endorse or promote derived products without prior written permission.
+
+PyBaMM is provided "as is", without warranty of any kind.
+See [`LICENSE.txt`](https://github.com/pybamm-team/PyBaMM/blob/main/LICENSE.txt) for the full terms.

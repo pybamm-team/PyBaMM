@@ -14,6 +14,7 @@ import numpy.typing as npt
 
 import pybamm
 from pybamm import ParameterValues
+from pybamm.expression_tree.array import to_casadi_dm
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from pybamm.models.base_model import ModelSolutionObservability
@@ -62,6 +63,9 @@ class BaseSolver:
         post-processing queries a non-endpoint time within a step.
         Default is False.
     """
+
+    #: Whether the solver uses the jacobian of the rhs on its own
+    uses_rhs_jacobian = True
 
     def __init__(
         self,
@@ -279,7 +283,10 @@ class BaseSolver:
         # Process rhs, algebraic, residual and event expressions
         # and wrap in callables
         rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(
-            model.concatenated_rhs, "RHS", vars_for_processing
+            model.concatenated_rhs,
+            "RHS",
+            vars_for_processing,
+            use_jacobian=model.use_jacobian and self.uses_rhs_jacobian,
         )
 
         algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
@@ -351,7 +358,7 @@ class BaseSolver:
                 if model.is_standard_form_dae:
                     explicit_rhs = rhs_eval
                 else:
-                    M_ode = casadi.DM(
+                    M_ode = to_casadi_dm(
                         model.mass_matrix.entries[: model.len_rhs, : model.len_rhs]
                     )
                     explicit_rhs = casadi.solve(M_ode, rhs_eval)
@@ -2257,7 +2264,12 @@ def stack_inputs(inputs_dict: dict) -> casadi.DM:
     :class:`casadi.DM`
         Column vector of the input values, with zero rows for an empty dict.
     """
-    return casadi.vertcat(*inputs_dict.values())
+    if not inputs_dict:
+        return casadi.DM.zeros(0, 1)
+    stacked = np.concatenate(
+        [np.asarray(value, dtype=float).reshape(-1) for value in inputs_dict.values()]
+    )
+    return to_casadi_dm(stacked)
 
 
 def process(
