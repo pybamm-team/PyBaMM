@@ -88,7 +88,7 @@ class InputParameter(pybamm.Symbol):
 
     def _jac(self, variable: pybamm.StateVector) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
-        n_variable = variable.evaluation_array.count(True)
+        n_variable = variable.size
         nan_vector = self._evaluate_for_shape()
         if isinstance(nan_vector, numbers.Number):
             n_self = 1

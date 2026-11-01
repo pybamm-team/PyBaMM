@@ -1,9 +1,14 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- `StateVector` and `StateVectorDot` raise `ShapeError` for stepped, negative, overlapping or out-of-order slices; pass sorted, disjoint, non-negative slices. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
+
 ## Deprecated
 
 - `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
+- The `evaluation_array` argument of `StateVector` and `StateVectorDot` is deprecated and ignored; drop the argument. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
 
 ## Features
 
@@ -26,12 +31,18 @@
   - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.
   - Sensitivities are correct after a change of model between experiment steps, or from a `starting_solution`, for states with a nonzero reference or an input-dependent scale. `step()` seeds them by input name, and raises a `SolverError` if the solution it continues has none for a requested input.
   - `step()`, and re-solving an experiment, can change `calculate_sensitivities` between calls, with `save=False` for a step that does, and setting up again no longer duplicates discontinuity events.
+- Sensitivities from `Simulation.solve(initial_soc=...)` now include how inputs such as active material volume fractions, maximum concentrations, voltage limits and OCP parameters set the initial state. Before, they could be off by 100% or have the wrong sign. ([#5948](https://github.com/pybamm-team/PyBaMM/pull/5948))
 - `from pybamm.expression_tree import *` no longer raises `AttributeError`, nor does the same import from `pybamm.parameters`, `pybamm.solvers` or `pybamm.models.submodels.interface.kinetics`; their `__all__` listed modules that were moved or removed. `CoupledVariable.create_copy` now takes the same arguments as other symbols, so `create_copy(new_children)` and `new_copy()` no longer raise `TypeError`. Evaluating a concatenation before discretisation raises `NotImplementedError`, as an undiscretised variable does, so `evaluate_ignoring_errors()` returns `None` instead of raising `TypeError`. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
+- Fixed copying a function without simplification, as `ParameterValues` does for a parameter set loaded with `Serialise.load_parameters`, returning a generic `pybamm.Function`: `pybamm.exp` and the other specific functions lost their class, and an `Arcsinh2` copy could not be evaluated. ([#5954](https://github.com/pybamm-team/PyBaMM/pull/5954))
+- `RegPower` now evaluates the same operations in `evaluate` and CasADi, taking a literal exponent of 0.5 or 2 as square roots, so they agree bitwise; CasADi used a `hypot` form. With `delta=0`, `evaluate` and the Jacobian use `base ** exponent`, as CasADi did. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
+- CasADi linear and `pchip` interpolants on a uniform grid now find a point's segment by binary search. The `"exact"` lookup could pick the neighbouring segment at or one ulp beside a knot, giving the Jacobian that segment's slope. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
+- `QuickPlot`, and so `Simulation.plot`, now uses matplotlib's color cycle (`axes.prop_cycle`) for default colors when a style sheet or rcParams changes it; otherwise it keeps its red, blue, black, green, magenta and cyan colors. ([#5953](https://github.com/pybamm-team/PyBaMM/pull/5953))
 
 ## Optimizations
 
 - Read the Docs pull request builds drop `linkcheck` and the unpublished PDF, install the released solver wheel instead of compiling it, and are skipped when nothing the docs render changed, saving about 14 of 20 minutes. ([#5986](https://github.com/pybamm-team/PyBaMM/pull/5986))
 - Pull request CI no longer installs TeXLive, or the compilers and OpenBLAS that the prebuilt solver wheels make redundant. The latexify test mocks `sympy.preview` and runs everywhere. TeXLive downloads took 12–50 minutes in 6 of 15 runs. ([#5985](https://github.com/pybamm-team/PyBaMM/pull/5985))
+- Faster model build and `IDAKLUSolver` set-up for large models. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
 - Experiments with a different model per step no longer compile Jacobians of the state mappers between models, which were unused. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
