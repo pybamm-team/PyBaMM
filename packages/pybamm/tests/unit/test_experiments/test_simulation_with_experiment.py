@@ -158,6 +158,28 @@ class TestSimulationExperiment:
             out[mode] = sol["Voltage [V]"](time)
         np.testing.assert_allclose(out["unified"], out["legacy"], rtol=1e-4, atol=1e-4)
 
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_drive_cycles_differing_in_the_middle(self, experiment_model_mode):
+        # numpy shortens the reprs of these drive cycles to the same text
+        time = np.linspace(0, 1000, 2001)
+        drive_cycle = np.column_stack([time, np.ones_like(time)])
+        changed = drive_cycle.copy()
+        changed[1000, 1] = 5
+        experiment = pybamm.Experiment(
+            [pybamm.step.current(drive_cycle), pybamm.step.current(changed)]
+        )
+        assert len(experiment.unique_steps) == 2
+        np.testing.assert_array_equal(experiment.steps[1].input_value, changed)
+
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+        )
+        solution = sim.solve()
+        currents = [cycle["Current [A]"](cycle.t[0] + 500) for cycle in solution.cycles]
+        np.testing.assert_allclose(currents, [1, 5], rtol=1e-6)
+
     def test_set_up_unified_preserves_voltage_safety_events(self):
         experiment = pybamm.Experiment(
             [

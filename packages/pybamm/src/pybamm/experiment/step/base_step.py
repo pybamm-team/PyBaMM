@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import numbers
 from datetime import datetime
 from enum import Enum
@@ -526,7 +527,7 @@ class BaseStep:
     ):
         """Record all the args for repr and hash"""
         repr_args = f"{value}, duration={duration}"
-        hash_args = f"{value}"
+        hash_args = _value_identity(value)
         if termination:
             repr_args += f", termination={termination}"
             hash_args += f", termination={termination}"
@@ -725,6 +726,15 @@ def _drive_cycle_interpolant(value, t_max):
         t, y = value[:, 0], value[:, 1]
 
     return pybamm.Interpolant(t, y, _step_time(), name="Drive Cycle")
+
+
+def _value_identity(value) -> str:
+    """Text that identifies a step value, with arrays identified by their contents."""
+    # numpy shortens the repr of large arrays, which would merge different drive cycles
+    if isinstance(value, np.ndarray):
+        digest = hashlib.sha256(np.ascontiguousarray(value).tobytes()).hexdigest()
+        return f"array(shape={value.shape}, dtype={value.dtype}, sha256={digest})"
+    return f"{value}"
 
 
 def get_unit_from(a_string: str) -> str:
