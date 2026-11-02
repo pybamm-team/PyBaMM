@@ -240,6 +240,23 @@ class TestUnaryOperators:
         xavg_nodes = [n for n in quot.pre_order() if isinstance(n, pybamm.XAverage)]
         assert len(xavg_nodes) == 1
 
+    def test_x_average_does_not_split_on_piecewise_constant_concatenation(self):
+        # e.g. a porosity concatenation after parameter substitution
+        eps = pybamm.concatenation(
+            pybamm.PrimaryBroadcast(pybamm.Scalar(0.3), "negative electrode"),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(1.0), "separator"),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(0.3), "positive electrode"),
+        )
+        assert not XAverage.symbol_is_constant(eps)
+
+        eps_c = pybamm.concatenation(
+            pybamm.Variable("eps_c_n", domain="negative electrode"),
+            pybamm.Variable("eps_c_s", domain="separator"),
+            pybamm.Variable("eps_c_p", domain="positive electrode"),
+        )
+        out = pybamm.x_average(eps_c / eps)
+        assert out == pybamm.XAverage(eps_c / eps)
+
     def test_x_average_factors_out_compound_x_constant(self):
         f = pybamm.Variable("f", domain="negative electrode")
         out = pybamm.x_average(2 * pybamm.t * f)

@@ -12,12 +12,13 @@ import pybamm
 def _is_independent_of(
     symbol: pybamm.Symbol, domain_matches: Callable[[str], bool]
 ) -> bool:
-    """True if no leaf of ``symbol`` has any domain (primary or auxiliary) that
-    ``domain_matches`` matches. Only leaves are inspected, so a broadcast of an
-    independent child is itself independent.
+    """True if no leaf or concatenation in ``symbol`` has any domain (primary or
+    auxiliary) that ``domain_matches`` matches. Other nodes are skipped, so a
+    broadcast of an independent child is itself independent.
     """
     for node in symbol.pre_order():
-        if not node.children and any(
+        # a concatenation varies between subdomains even if its children do not
+        if (not node.children or isinstance(node, pybamm.Concatenation)) and any(
             domain_matches(dom) for doms in node._domains.values() for dom in doms
         ):
             return False
