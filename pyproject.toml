@@ -7,6 +7,8 @@
 
 [tool.uv.workspace]
 members = ["packages/*"]
+# uv would glob the Rust crate and error on its absent pyproject.
+exclude = ["packages/pybamm-rust"]
 
 [tool.uv.sources]
 pybammsolvers = { workspace = true }
