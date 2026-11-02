@@ -3,7 +3,7 @@
 ## Bug fixes
 
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
-- Checking whether a name is in `pybamm.parameter_sets` or `pybamm.dispatch.models` no longer builds the parameter set or model, so `ParameterValues("Chen2020")` builds the set once instead of twice, and the check no longer raises when building the set fails (for example, a set that needs a missing optional dependency). ([#5871](https://github.com/pybamm-team/PyBaMM/pull/5871))
+- Checking whether a name is in `pybamm.parameter_sets` or `pybamm.dispatch.models` no longer builds the parameter set or model, so `ParameterValues("Chen2020")` builds the set once instead of twice, and the check no longer raises when building the set fails (for example, a set that needs a missing optional dependency). `pybamm.parameter_sets.items()` and `.values()` now skip sets whose optional dependencies are not installed. ([#5871](https://github.com/pybamm-team/PyBaMM/pull/5871))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
 
