@@ -1,9 +1,14 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- `StateVector` and `StateVectorDot` raise `ShapeError` for stepped, negative, overlapping or out-of-order slices; pass sorted, disjoint, non-negative slices. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
+
 ## Deprecated
 
 - `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
+- The `evaluation_array` argument of `StateVector` and `StateVectorDot` is deprecated and ignored; drop the argument. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
 
 ## Features
 
@@ -30,6 +35,7 @@
 - Fixed copying a function without simplification, as `ParameterValues` does for a parameter set loaded with `Serialise.load_parameters`, returning a generic `pybamm.Function`: `pybamm.exp` and the other specific functions lost their class, and an `Arcsinh2` copy could not be evaluated. ([#5954](https://github.com/pybamm-team/PyBaMM/pull/5954))
 - `RegPower` now evaluates the same operations in `evaluate` and CasADi, taking a literal exponent of 0.5 or 2 as square roots, so they agree bitwise; CasADi used a `hypot` form. With `delta=0`, `evaluate` and the Jacobian use `base ** exponent`, as CasADi did. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - CasADi linear and `pchip` interpolants on a uniform grid now find a point's segment by binary search. The `"exact"` lookup could pick the neighbouring segment at or one ulp beside a knot, giving the Jacobian that segment's slope. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
+- `QuickPlot`, and so `Simulation.plot`, now uses matplotlib's color cycle (`axes.prop_cycle`) for default colors when a style sheet or rcParams changes it; otherwise it keeps its red, blue, black, green, magenta and cyan colors. ([#5953](https://github.com/pybamm-team/PyBaMM/pull/5953))
 - The heat of mixing now sums over every particle phase, so `"heat of mixing": "true"` works on a composite electrode. It previously read the single-phase variable names (`"Negative particle radius [m]"`) and `param.n.prim` only, so any model with `"particle phases": "2"` raised `ModelError: Missing variable for submodel 'thermal': 'Negative particle radius [m]'` at build time. Single-phase results are unchanged. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - The heat of mixing now uses the particle's effective diffusivity, the one its flux uses, instead of re-evaluating the base diffusivity. With `"diffusivity": "current sigmoid"` or `"stress-induced diffusion": "true"` the two differ, and the heat sources stopped conserving energy: a phase with lithiation and delithiation diffusivities of a third and three times the base value was off by 33% of the heat. A uniform particle profile now has zero heat of mixing, so a DFN with `"particle": "uniform profile"` and `"heat of mixing": "true"` builds again. Results with the default options are unchanged. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - `"heat of mixing": "true"` now works with `"particle": "quadratic profile"` or `"quartic profile"`, which failed to discretise with a `ShapeError`. These profiles reconstruct the concentration as a polynomial in `r`, so the heat of mixing now uses their closed-form flux instead of a finite-volume gradient. ([#5935](https://github.com/pybamm-team/PyBaMM/pull/5935))
@@ -38,6 +44,7 @@
 
 - Read the Docs pull request builds drop `linkcheck` and the unpublished PDF, install the released solver wheel instead of compiling it, and are skipped when nothing the docs render changed, saving about 14 of 20 minutes. ([#5986](https://github.com/pybamm-team/PyBaMM/pull/5986))
 - Pull request CI no longer installs TeXLive, or the compilers and OpenBLAS that the prebuilt solver wheels make redundant. The latexify test mocks `sympy.preview` and runs everywhere. TeXLive downloads took 12–50 minutes in 6 of 15 runs. ([#5985](https://github.com/pybamm-team/PyBaMM/pull/5985))
+- Faster model build and `IDAKLUSolver` set-up for large models. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
 - Experiments with a different model per step no longer compile Jacobians of the state mappers between models, which were unused. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19

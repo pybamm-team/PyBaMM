@@ -7,6 +7,7 @@ from pybamm.meshes.unstructured_submesh import (
     UnstructuredMeshGenerator,
     UnstructuredSubMesh,
     UserSuppliedUnstructuredMesh,
+    _group_rows,
     _hex_grid,
     _hex_to_tet,
     _quad_to_tri,
@@ -502,6 +503,16 @@ class TestUnstructuredSubMesh:
         )
         assert len(spatial_vars) == 2
         assert len(spatial_lims) == 2
+
+    def test_group_rows_matches_unique(self):
+        rng = np.random.default_rng(0)
+        rows = np.sort(rng.integers(0, 6, size=(200, 3)), axis=1)
+        order, counts = _group_rows(rows)
+        _, inverse, unique_counts = np.unique(
+            rows, axis=0, return_inverse=True, return_counts=True
+        )
+        np.testing.assert_array_equal(order, np.lexsort(rows.T[::-1]))
+        np.testing.assert_array_equal(counts, unique_counts[inverse[order]])
 
 
 # ======================================================================
