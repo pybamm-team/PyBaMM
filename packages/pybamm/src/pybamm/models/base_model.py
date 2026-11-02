@@ -394,6 +394,20 @@ class BaseModel:
                 )
         self._variables = pybamm.FuzzyDict(variables)
 
+    @property
+    def summary_variables(self):
+        """Names of the variables to summarise per cycle when solving an experiment."""
+        return self._summary_variables
+
+    @summary_variables.setter
+    def summary_variables(self, value):
+        for var in value:
+            if var not in self.variables:
+                raise KeyError(
+                    f"No cycling variable defined for summary variable '{var}'"
+                )
+        self._summary_variables = value
+
     def get_processed_variables_dict(self) -> dict[str, pybamm.Symbol]:
         """
         Get a dictionary of processed variables.

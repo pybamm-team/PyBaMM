@@ -37,6 +37,7 @@ class Simulation(BaseSimulation):
     _START_TIME_INPUT = "start time"
     _INITIAL_TEMPERATURE_INPUT = "Initial temperature [K]"
     _AMBIENT_TEMPERATURE_INPUT = "Ambient temperature [K]"
+    _CURRENT_CONTROL = "Current function [A]"
     _PADDING_REST_KEY = "Rest for padding"
     _STEP_INDEX_INPUT = "Experiment step index"
     _STEP_VALUE_INPUT = "Experiment step value"
@@ -526,6 +527,23 @@ class Simulation(BaseSimulation):
                 f"None of these parameters are able to be input parameters."
             )
 
+    def _check_model_reads_experiment_controls(self) -> None:
+        # Every step drives the model through the current function, so a model that
+        # does not read it would silently ignore the whole experiment
+        if any(
+            isinstance(parameter, pybamm.Parameter | pybamm.FunctionParameter)
+            and parameter.name == self._CURRENT_CONTROL
+            for parameter in self._model.parameters
+        ):
+            return
+        steps = list(dict.fromkeys(str(step) for step in self.experiment.steps))
+        steps_str = ", ".join(f"'{step}'" for step in steps)
+        raise pybamm.ModelError(
+            f"The experiment steps {steps_str} set '{self._CURRENT_CONTROL}', which "
+            f"the model '{self._model.name}' does not read, so they would have no "
+            "effect on it."
+        )
+
     def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
         Create and parameterise the models for each step in the experiment.
@@ -536,6 +554,7 @@ class Simulation(BaseSimulation):
         parameter_values = self._parameter_values.copy()
 
         self._check_experiment_input_parameters(parameter_values)
+        self._check_model_reads_experiment_controls()
 
         if (
             solve_kwargs is not None

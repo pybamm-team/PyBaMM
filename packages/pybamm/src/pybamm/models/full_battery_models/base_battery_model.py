@@ -1352,27 +1352,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._built = True
         pybamm.logger.info(f"Finish building {self.name}")
 
-    @property
-    def summary_variables(self):
-        return self._summary_variables
-
-    @summary_variables.setter
-    def summary_variables(self, value):
-        """
-        Set summary variables
-
-        Parameters
-        ----------
-        value : list of strings
-            Names of the summary variables. Must all be in self.variables.
-        """
-        for var in value:
-            if var not in self.variables:
-                raise KeyError(
-                    f"No cycling variable defined for summary variable '{var}'"
-                )
-        self._summary_variables = value
-
     def set_summary_variables(self):
         self._summary_variables = []
 
