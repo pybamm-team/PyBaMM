@@ -52,6 +52,8 @@ class JaxSolver(pybamm.BaseSolver):
         for details.
     """
 
+    uses_rhs_jacobian = False
+
     def __init__(
         self,
         method="BDF",

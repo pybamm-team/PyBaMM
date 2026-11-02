@@ -674,6 +674,32 @@ class TestBaseSolver:
     def test_check_restart_sensitivities_allows_empty_solution(self):
         pybamm.BaseSolver._check_restart_sensitivities(pybamm.EmptySolution(), ["p"])
 
+    def test_stack_inputs(self):
+        inputs = {
+            "scalar": 2.0,
+            "vector": np.array([1.0, 3.0]),
+            "column": np.array([[4.0], [5.0]]),
+            "casadi": casadi.DM([6.0, 7.0]),
+        }
+        stacked = pybamm.solvers.base_solver.stack_inputs(inputs)
+        expected = casadi.vertcat(*inputs.values())
+        assert stacked.shape == expected.shape
+        np.testing.assert_array_equal(stacked.full(), expected.full())
+        assert pybamm.solvers.base_solver.stack_inputs({}).shape == (0, 1)
+
+    def test_rhs_jacobian_only_for_solvers_that_use_it(self):
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+        sim.build()
+        idaklu_model = sim.built_model.new_copy()
+        pybamm.IDAKLUSolver().set_up(idaklu_model)
+        assert idaklu_model.jac_rhs_eval is None
+        with pytest.warns(DeprecationWarning):
+            scipy_solver = pybamm.ScipySolver()
+        scipy_model = sim.built_model.new_copy()
+        scipy_solver.set_up(scipy_model)
+        assert scipy_model.jac_rhs_eval is not None
+
 
 def _independent_decays():
     """u' = -a u and v' = -b v, with u(0) = v(0) = 1."""
