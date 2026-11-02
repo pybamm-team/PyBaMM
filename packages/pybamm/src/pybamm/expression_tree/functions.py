@@ -19,17 +19,11 @@ import pybamm
 _CASADI_EQUIVALENTS = {special.erf: casadi.erf}
 
 
-def _is_constant_value(x, value: float) -> bool:
-    # True iff ``x`` is a scalar constant equal to ``value``. Conservative on
-    # symbolic or multi-element inputs.
-    if isinstance(x, casadi.MX) and np.prod(x.size(), initial=1) > 2:
-        return False
-    if isinstance(x, np.ndarray):
-        return bool(np.all(x == value))
-    try:
-        return bool(x == value)
-    except (TypeError, ValueError, RuntimeError):
-        return False
+def _array_sqrt(value):
+    # np.sqrt cannot trace a JAX array, which the generated Python evaluator passes
+    if isinstance(value, (np.ndarray, np.generic, float, int)):
+        return np.sqrt(value)
+    return value**0.5
 
 
 class Function(pybamm.Symbol):
@@ -196,41 +190,35 @@ class Function(pybamm.Symbol):
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         children = self._children_for_copying(new_children)
+        return self._function_new_copy(children, perform_simplifications)
 
-        if not perform_simplifications:
-            return pybamm.Function(
-                self.function,
-                *children,
-                name=self.name,
-                differentiated_function=self.differentiated_function,
-            )
-        else:
-            # performs additional simplifications, rather than just calling the
-            # constructor
-            return self._function_new_copy(children)
-
-    def _function_new_copy(self, children: list) -> Function:
+    def _function_new_copy(
+        self, children: list, perform_simplifications: bool = True
+    ) -> Function:
         """
-        Returns a new copy of the function.
+        Returns a new copy of the function, of the same class.
 
         Inputs
         ------
         children : : list
             A list of the children of the function
+        perform_simplifications : bool, optional
+            Whether to simplify the copy if it is constant (default True).
 
         Returns
         -------
             : :pybamm.Function
             A new copy of the function
         """
-        return pybamm.simplify_if_constant(
-            pybamm.Function(
-                self.function,
-                *children,
-                name=self.name,
-                differentiated_function=self.differentiated_function,
-            )
+        new_function = pybamm.Function(
+            self.function,
+            *children,
+            name=self.name,
+            differentiated_function=self.differentiated_function,
         )
+        if perform_simplifications:
+            return pybamm.simplify_if_constant(new_function)
+        return new_function
 
     def _sympy_operator(self, child, /):
         """Apply appropriate SymPy operators."""
@@ -298,9 +286,12 @@ class SpecificFunction(Function):
 
         return instance
 
-    def _function_new_copy(self, children):
+    def _function_new_copy(self, children, perform_simplifications=True):
         """See :meth:`pybamm.Function._function_new_copy()`"""
-        return pybamm.simplify_if_constant(self.__class__(*children))
+        new_function = self.__class__(*children)
+        if perform_simplifications:
+            return pybamm.simplify_if_constant(new_function)
+        return new_function
 
     def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
@@ -482,7 +473,7 @@ class Arcsinh2(Function):
         else:
             raise IndexError("Arcsinh2 only has two children (a, b)")
 
-    def _function_new_copy(self, children):
+    def _function_new_copy(self, children, perform_simplifications=True):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         return Arcsinh2(*children, eps=self.eps)
 
@@ -976,9 +967,29 @@ class RegPower(Function):
 
     def _reg_power_evaluate(self, base, exponent, scale):
         """Evaluate reg_power using numpy."""
+        return self._decomposition(
+            base, exponent, scale, _array_sqrt, lambda a, b: a**b, lambda v: v
+        )
+
+    def _decomposition(self, base, exponent, scale, sqrt, power, constant):
+        """``x * (x*x + delta^2)^((a-1)/2) * scale^a`` with ``x = base / scale``.
+
+        Every backend evaluates this sequence of operations, given its own ``sqrt``,
+        ``power(base, exponent)`` and ``constant(float)``. A literal ``a`` of 0.5 or 2
+        takes its powers as square roots, so the backends agree bitwise. With
+        ``delta == 0`` it is ``power(base, exponent)``.
+        """
+        if self.delta == 0:
+            return power(base, exponent)
         x = base / scale
-        x2_d2 = x**2 + self.delta**2
-        return x * (x2_d2 ** ((exponent - 1) / 2)) * (scale**exponent)
+        inner = x * x + constant(self.delta * self.delta)
+        literal = self.children[1]
+        if isinstance(literal, pybamm.Scalar) and float(literal.value) == 0.5:
+            return x / sqrt(sqrt(inner)) * sqrt(scale)
+        if isinstance(literal, pybamm.Scalar) and float(literal.value) == 2.0:
+            return x * sqrt(inner) * (scale * scale)
+        inner_exponent = (exponent - constant(1.0)) * constant(0.5)
+        return x * power(inner, inner_exponent) * power(scale, exponent)
 
     def _function_evaluate(self, evaluated_children):
         """See :meth:`pybamm.Function._function_evaluate()`."""
@@ -992,6 +1003,15 @@ class RegPower(Function):
         """
         base, exponent, scale = children
         delta = self.delta
+
+        if delta == 0:
+            # Partials of the ``base ** exponent`` fallback
+            if idx == 0:
+                return exponent * base ** (exponent - 1)
+            if idx == 1:
+                return base**exponent * pybamm.log(base)
+            if idx == 2:
+                return pybamm.Scalar(0)
 
         x = base / scale
         x2_d2 = x**2 + delta**2
@@ -1028,6 +1048,8 @@ class RegPower(Function):
 
     def _function_jac(self, children_jacs):
         """See :meth:`pybamm.Function._function_jac()`."""
+        if self.delta == 0:
+            return super()._function_jac(children_jacs)
         children = self.orphans
         base, exponent, scale = children
         delta = self.delta
@@ -1076,38 +1098,20 @@ class RegPower(Function):
 
         return jacobian
 
-    def _function_new_copy(self, children):
+    def _function_new_copy(self, children, perform_simplifications=True):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         base, exponent, scale = children
-        return pybamm.simplify_if_constant(
-            RegPower(base, exponent, scale=scale, delta=self.delta)
-        )
+        new_function = RegPower(base, exponent, scale=scale, delta=self.delta)
+        if perform_simplifications:
+            return pybamm.simplify_if_constant(new_function)
+        return new_function
 
     def _casadi_evaluate(self, *converted_children):
-        """See :meth:`pybamm.Function._casadi_evaluate()`.
-
-        Evaluates ``y = x * r^(a-1) * scale^a`` with ``x = base / scale`` and
-        ``r = hypot(x, delta)``. The ``a == 0.5`` case (hot for Butler-Volmer)
-        is specialised to avoid a general ``power`` call.
-        """
+        """See :meth:`pybamm.Function._casadi_evaluate()`."""
         base, exponent, scale = converted_children
-        delta = self.delta
-        if delta == 0:
-            return casadi.power(base, exponent)
-
-        x = base / scale
-        r = casadi.hypot(x, delta)
-
-        if _is_constant_value(exponent, 0.5):
-            # ``exponent**0`` acts as a ``ones_like(exponent)`` that works
-            # across casadi.MX / numpy / float.
-            scale_factor = casadi.sqrt(scale) * exponent**0
-            inner_factor = 1 / casadi.sqrt(r)
-        else:
-            scale_factor = casadi.power(scale, exponent)
-            inner_factor = casadi.power(r, exponent - 1)
-
-        return x * inner_factor * scale_factor
+        return self._decomposition(
+            base, exponent, scale, casadi.sqrt, casadi.power, lambda v: v
+        )
 
     def _sympy_operator(self, *children):
         """Convert to SymPy expression."""
