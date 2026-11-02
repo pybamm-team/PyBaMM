@@ -28,6 +28,14 @@ from pybamm.models.full_battery_models.lithium_ion.basic_dfn import BasicDFN
 from pybamm.models.full_battery_models.lithium_ion.basic_spm import BasicSPM
 
 
+def _make_base_class_unimportable(data, name, mro=None):
+    """Set a serialised model's base class to the unimportable ``name``, ahead of
+    ``mro`` (default: the recorded MRO)."""
+    model = data["model"]
+    model["base_class"] = name
+    model["base_class_mro"] = [name, *(model["base_class_mro"] if mro is None else mro)]
+
+
 class TestSerialiseModels:
     def test_user_defined_model_recreaction(self):
         # Start with a base model
@@ -804,11 +812,7 @@ class TestSerialise:
 
         with open(file_path) as f:
             data = json.load(f)
-        data["model"]["base_class"] = "user_private_pkg.MyLiIon"
-        data["model"]["base_class_mro"] = [
-            "user_private_pkg.MyLiIon",
-            *data["model"]["base_class_mro"],
-        ]
+        _make_base_class_unimportable(data, "user_private_pkg.MyLiIon")
         with open(file_path, "w") as f:
             json.dump(data, f)
 
@@ -836,11 +840,9 @@ class TestSerialise:
 
         with open(file_path) as f:
             data = json.load(f)
-        data["model"]["base_class"] = "nonexistent_module.A"
-        data["model"]["base_class_mro"] = [
-            "nonexistent_module.A",
-            "another_missing_module.B",
-        ]
+        _make_base_class_unimportable(
+            data, "nonexistent_module.A", mro=["another_missing_module.B"]
+        )
         with open(file_path, "w") as f:
             json.dump(data, f)
 
@@ -927,8 +929,7 @@ class TestSerialise:
             data = json.load(f)
         assert "discretisation" in data["model"]
         # ...and force the import-failed fallback to a bare pybamm.BaseModel.
-        data["model"]["base_class"] = "nonexistent_module.DiscModel"
-        data["model"]["base_class_mro"] = ["nonexistent_module.DiscModel"]
+        _make_base_class_unimportable(data, "nonexistent_module.DiscModel", mro=[])
         with open(file_path, "w") as f:
             json.dump(data, f)
 
@@ -950,6 +951,37 @@ class TestSerialise:
             "positive particle",
             "current collector",
         }
+
+    def test_load_restores_overridden_defaults_on_ancestor_fallback(self):
+        class _HalfRadiusSPM(pybamm.lithium_ion.SPM):
+            @property
+            def default_geometry(self):
+                geometry = super().default_geometry
+                r_n = geometry["negative particle"]["r_n"]
+                r_n["max"] = r_n["max"] / 2
+                return geometry
+
+            @property
+            def default_var_pts(self):
+                return {**super().default_var_pts, "r_n": 7}
+
+        model = _HalfRadiusSPM({"x-average side reactions": "true"})
+        data = Serialise.serialise_custom_model(model)
+        _make_base_class_unimportable(data, "user_private_pkg.HalfRadiusSPM")
+
+        with pytest.warns(UserWarning, match=r"Falling back to ancestor"):
+            loaded = Serialise.load_custom_model(data)
+
+        assert type(loaded) is pybamm.lithium_ion.SPM
+        assert loaded.default_var_pts["r_n"] == 7
+
+        # The restored geometry, not SPM's own, sets the mesh
+        sim = pybamm.Simulation(loaded)
+        sim.build()
+        R_n = loaded.default_parameter_values["Negative particle radius [m]"]
+        np.testing.assert_allclose(
+            sim.mesh["negative particle"].edges[-1], R_n / 2, rtol=1e-12
+        )
 
     def test_plain_custom_model_has_no_discretisation_section(self, tmp_path):
         """A model with no custom discretisation defaults emits no
