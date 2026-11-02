@@ -97,6 +97,29 @@ int residual_eval_approx(sunindextype Nlocal, sunrealtype tt, N_Vector yy,
 //     tmp2 are pointers to memory allocated for variables of type N Vector
 //     which can
 //        be used by IDALsJacTimesVecFn as temporary storage or work space.
+// Jv[i] = v[i] for the differential rows of an algebraic-only linearisation
+inline void set_identity_rows(int n, const sunrealtype *id, const sunrealtype *v,
+                              sunrealtype *jv)
+{
+  for (int i = 0; i < n; i++) {
+    if (is_differential(id[i])) jv[i] = v[i];
+  }
+}
+
+// Replace the differential rows of a CSC matrix's data with identity rows
+inline void set_identity_rows_csc(int n, const sunrealtype *id,
+                                  const int64_t *colptrs, const int64_t *rowvals,
+                                  sunrealtype *data)
+{
+  for (int col = 0; col < n; col++) {
+    for (int64_t k = colptrs[col]; k < colptrs[col + 1]; k++) {
+      if (is_differential(id[rowvals[k]])) {
+        data[k] = rowvals[k] == col ? 1.0 : 0.0;
+      }
+    }
+  }
+}
+
 template<class T>
 int jtimes_eval(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
                   N_Vector v, N_Vector Jv, sunrealtype cj, void *user_data,
@@ -104,10 +127,19 @@ int jtimes_eval(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 {
   DEBUG("jtimes_eval");
   auto *p_python_functions = static_cast<T *>(user_data);
+  const sunrealtype *y = NV_DATA(yy);
+  if (p_python_functions->linearisation_y != nullptr) {
+    tt = p_python_functions->linearisation_t;
+    y = p_python_functions->linearisation_y;
+    cj = p_python_functions->linearisation_cj;
+  }
+
+  const int ns = p_python_functions->number_of_states;
+  const sunrealtype *identity_rows = p_python_functions->linearisation_id;
 
   // Jv has ∂F/∂y v
   p_python_functions->jac_action->m_arg[0] = &tt;
-  p_python_functions->jac_action->m_arg[1] = NV_DATA(yy);
+  p_python_functions->jac_action->m_arg[1] = y;
   p_python_functions->jac_action->m_arg[2] = p_python_functions->inputs.data();
   p_python_functions->jac_action->m_arg[3] = NV_DATA(v);
   p_python_functions->jac_action->m_res[0] = NV_DATA(Jv);
@@ -121,8 +153,10 @@ int jtimes_eval(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 
   // AXPY: y <- a*x + y
   // Jv has ∂F/∂y v + cj ∂F/∂y˙ v
-  const int ns = p_python_functions->number_of_states;
   axpy(ns, -cj, tmp, NV_DATA(Jv));
+  if (identity_rows != nullptr) {
+    set_identity_rows(ns, identity_rows, NV_DATA(v), NV_DATA(Jv));
+  }
 
   DEBUG_VECTORn(Jv, 10);
 
@@ -343,5 +377,46 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
     axpy(ns, -1., tmp, NV_DATA(resvalS[i]));
   }
 
+  return 0;
+}
+
+// IDA's IDALsPrecSetupFn / IDALsPrecSolveFn for a Preconditioner. Setup
+// evaluates the entries of dF/dy - cj M that the preconditioner reads and sets
+// it up from them; solve applies z = P^-1 r.
+template<class T>
+int precon_setup_matrix(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+                        sunrealtype cj, void *user_data)
+{
+  DEBUG("precon_setup_matrix");
+  auto *f = static_cast<T *>(user_data);
+  const sunrealtype *y = NV_DATA(yy);
+  if (f->linearisation_y != nullptr) {
+    tt = f->linearisation_t;
+    y = f->linearisation_y;
+    cj = f->linearisation_cj;
+  }
+  sunrealtype *jac_data = f->get_tmp_sparse_jacobian_data();
+  f->jac_times_cjmass->m_arg[0] = &tt;
+  f->jac_times_cjmass->m_arg[1] = y;
+  f->jac_times_cjmass->m_arg[2] = f->inputs.data();
+  f->jac_times_cjmass->m_arg[3] = &cj;
+  f->jac_times_cjmass->m_res[0] = jac_data;
+  (*f->jac_times_cjmass)();
+  if (f->linearisation_id != nullptr) {
+    set_identity_rows_csc(f->number_of_states, f->linearisation_id,
+                          f->jac_times_cjmass_colptrs.data(),
+                          f->jac_times_cjmass_rowvals.data(), jac_data);
+  }
+  return f->preconditioner->setup(jac_data);
+}
+
+template<class T>
+int precon_solve_matrix(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+                        N_Vector rvec, N_Vector zvec, sunrealtype cj,
+                        sunrealtype delta, void *user_data)
+{
+  DEBUG("precon_solve_matrix");
+  auto *f = static_cast<T *>(user_data);
+  f->preconditioner->solve(NV_DATA(rvec), NV_DATA(zvec));
   return 0;
 }

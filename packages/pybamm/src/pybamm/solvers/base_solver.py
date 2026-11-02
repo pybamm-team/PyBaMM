@@ -303,12 +303,26 @@ class BaseSolver:
                 model.concatenated_rhs, model.concatenated_algebraic
             )
 
+        conversion = None
+        if self._jacobian_free and model.convert_to_format == "casadi":
+            conversion = pybamm.CasadiConversion(
+                pybamm.JacobianSparsity(model.len_rhs_and_alg),
+                vars_for_processing["t_casadi"],
+                vars_for_processing["y_casadi"],
+                vars_for_processing["p_casadi"],
+            )
         (
             rhs_algebraic,
             jac_rhs_algebraic,
             jacp_rhs_algebraic,
             jac_rhs_algebraic_action,
-        ) = process(rhs_algebraic, "rhs_algebraic", vars_for_processing)
+        ) = process(
+            rhs_algebraic,
+            "rhs_algebraic",
+            vars_for_processing,
+            conversion=conversion,
+            jacobian_entries=self._jacobian_entries,
+        )
 
         (
             casadi_switch_events,
@@ -337,6 +351,13 @@ class BaseSolver:
         model.jac_algebraic_eval = jac_algebraic
         model.jac_algebraic_action_eval = jac_algebraic_action
         model.jacp_algebraic_eval = jacp_algebraic
+
+        # The rhs and algebraic functions with input-only values computed once
+        model.precomputed_input_evals = {}
+        if conversion is not None and model.use_jacobian:
+            model.precomputed_input_evals = conversion.precomputed_functions(
+                ["rhs_algebraic", "rhs_algebraic_jac", "rhs_algebraic_jac_action"]
+            )
 
         model.jac_rhs_algebraic_eval = jac_rhs_algebraic
         model.jac_rhs_algebraic_action_eval = jac_rhs_algebraic_action
@@ -518,6 +539,60 @@ class BaseSolver:
                 f"Converting {model.name} to CasADi for calculating ICs with CasADi"
             )
             model.convert_to_format = "casadi"
+
+    @staticmethod
+    def _mapper_inputs(model: pybamm.BaseModel, inputs: dict) -> dict:
+        """
+        Values of every input parameter of a discretised ``model``, sorted by name,
+        for a state mapper from it. Missing inputs are zero, shaped as the model's
+        input parameters, so a mapper compiled with them takes any later values.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The discretised model the mapper maps from.
+        inputs : dict
+            Input values, which may omit some of the model's inputs.
+
+        Returns
+        -------
+        dict
+        """
+        sizes = {parameter.name: parameter.size for parameter in model.input_parameters}
+        values = {}
+        for name in sorted(sizes):
+            value = inputs.get(name)
+            if value is None:
+                value = 0.0 if sizes[name] == 1 else np.zeros(sizes[name])
+            values[name] = value
+        return values
+
+    @property
+    def _jacobian_free(self) -> bool:
+        """
+        Whether the linear solver reads only part of the jacobian, with its products
+        with vectors from the jacobian action.
+        """
+        return False
+
+    def _jacobian_entries(self, model, sparsity):
+        """
+        Entries of the rhs and algebraic jacobian that the solver reads.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model being set up.
+        sparsity : :class:`scipy.sparse.spmatrix`
+            Structural sparsity pattern of the jacobian.
+
+        Returns
+        -------
+        numpy.ndarray or None
+            Positions of the entries in the CSC data of ``sparsity``, or None for
+            every entry.
+        """
+        return
 
     @staticmethod
     def _get_vars_for_processing(model, inputs: dict):
@@ -1885,12 +1960,8 @@ class BaseSolver:
                 # (include_temperature=False). Padding-rest models still list ambient
                 # as an input parameter; match compile-time defaults from
                 # Simulation._build_experiment_state_mappers (inputs.get(name, 0)).
-                mapper_p_inputs = dict(inputs)
-                for name in sorted(ip.name for ip in previous_model.input_parameters):
-                    if name not in mapper_p_inputs or mapper_p_inputs[name] is None:
-                        mapper_p_inputs[name] = inputs.get(name, 0)
                 mapper_inputs = BaseSolver._set_up_model_inputs(
-                    previous_model, mapper_p_inputs
+                    previous_model, BaseSolver._mapper_inputs(previous_model, inputs)
                 )
                 p_casadi_stacked = casadi.vertcat(*[p for p in mapper_inputs.values()])
 
@@ -2273,7 +2344,13 @@ def stack_inputs(inputs_dict: dict) -> casadi.DM:
 
 
 def process(
-    symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None
+    symbol,
+    name,
+    vars_for_processing,
+    use_jacobian=None,
+    return_jacp_stacked=None,
+    conversion=None,
+    jacobian_entries=None,
 ):
     """
     Parameters
@@ -2289,6 +2366,13 @@ def process(
     return_jacp_stacked: bool, optional
         returns Jacobian function wrt the stacked sensitivity parameters instead
         of jacp
+    conversion: :class:`pybamm.CasadiConversion`, optional
+        converts to CasADi with linear operators folded and input-only parts
+        hoisted, and builds the Jacobian from its structural sparsity
+    jacobian_entries: callable, optional
+        with ``conversion``, ``jacobian_entries(model, sparsity)`` gives the
+        positions, in the CSC data of the Jacobian's structural sparsity, of the
+        entries to compute; the rest are zero. Returns None for every entry.
 
     Returns
     -------
@@ -2381,7 +2465,22 @@ def process(
 
         # Process with CasADi
         report(f"Converting {name} to CasADi")
-        casadi_expression = symbol.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+        if conversion is None:
+            casadi_expression = symbol.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+            function = casadi.Function
+        else:
+            # In time, the states and the input-only values a solver can precompute
+            casadi_expression = conversion.to_casadi(symbol)
+            function = conversion.function
+        func = function(
+            name, [t_casadi, y_casadi, p_casadi_stacked], [casadi_expression]
+        )
+        # Sensitivities differentiate through any input-only values too
+        expression_in_inputs = (
+            casadi_expression
+            if conversion is None
+            else func(t_casadi, y_casadi, p_casadi_stacked)
+        )
         # Add sensitivity vectors to the rhs and algebraic equations
         jacp = None
 
@@ -2399,7 +2498,7 @@ def process(
                 jacp = casadi.Function(
                     f"d{name}_dp",
                     [t_casadi, y_casadi, p_casadi_stacked],
-                    [casadi.jacobian(casadi_expression, sensitivity_inputs_stacked)],
+                    [casadi.jacobian(expression_in_inputs, sensitivity_inputs_stacked)],
                 )
             else:
                 # WARNING, jacp for convert_to_format=casadi does not return a dict
@@ -2410,7 +2509,7 @@ def process(
                     [t_casadi, y_casadi, p_casadi_stacked],
                     [
                         casadi.densify(
-                            casadi.jacobian(casadi_expression, p_casadi[pname])
+                            casadi.jacobian(expression_in_inputs, p_casadi[pname])
                         )
                         for pname in model.calculate_sensitivities
                     ],
@@ -2418,15 +2517,22 @@ def process(
 
         if use_jacobian:
             report(f"Calculating jacobian for {name} using CasADi")
+            sparsity = entries = None
+            if conversion is not None:
+                try:
+                    sparsity = conversion.jacobian_sparsity.pattern(symbol)
+                except NotImplementedError as error:
+                    report(f"Using CasADi's sparsity detection for {name}: {error}")
+                if sparsity is not None and jacobian_entries is not None:
+                    entries = jacobian_entries(model, sparsity)
             # The model owns how its jacobian is built (plain CasADi AD unless the model
             # has a switching control equation it must differentiate structurally).
-            jac_casadi = model.build_casadi_jacobian(casadi_expression, y_casadi)
-            jac = casadi.Function(
-                name + "_jac",
-                [t_casadi, y_casadi, p_casadi_stacked],
-                [jac_casadi],
+            jac_casadi = model.build_casadi_jacobian(
+                casadi_expression, y_casadi, sparsity, entries
             )
-
+            jac = function(
+                name + "_jac", [t_casadi, y_casadi, p_casadi_stacked], [jac_casadi]
+            )
             v = casadi.MX.sym(
                 "v",
                 model.len_rhs_and_alg,
@@ -2434,7 +2540,7 @@ def process(
             jac_action_casadi = casadi.densify(
                 casadi.jtimes(casadi_expression, y_casadi, v)
             )
-            jac_action = casadi.Function(
+            jac_action = function(
                 name + "_jac_action",
                 [t_casadi, y_casadi, p_casadi_stacked, v],
                 [jac_action_casadi],
@@ -2442,9 +2548,5 @@ def process(
         else:
             jac = None
             jac_action = None
-
-        func = casadi.Function(
-            name, [t_casadi, y_casadi, p_casadi_stacked], [casadi_expression]
-        )
 
     return func, jac, jacp, jac_action

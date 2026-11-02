@@ -10,6 +10,7 @@
 #include <pybind11/stl_bind.h>
 
 #include "idaklu_source/idaklu_solver.hpp"
+#include "idaklu_source/BlockPreconditioner.hpp"
 #include "idaklu_source/observe.hpp"
 #include "idaklu_source/IDAKLUSolverGroup.hpp"
 #include "idaklu_source/IdakluJax.hpp"
@@ -96,6 +97,50 @@ void fill_casadi_dm_dense(
     casadi::DM(casadi::Sparsity::dense(nrow, ncol), nonzeros);
 }
 #endif
+namespace {
+
+// Example block solver plugin (Jacobi) written against pybamm_block_solver.h,
+// used to test the plugin interface
+struct ExampleBlockSolver {
+  std::vector<int64_t> diagonal;
+  std::vector<double> inverse;
+};
+
+void *example_create(int64_t size, const int64_t *indptr, const int64_t *indices,
+                     const char *) {
+  auto *solver = new ExampleBlockSolver;
+  solver->diagonal.assign(size, -1);
+  solver->inverse.assign(size, 0.0);
+  for (int64_t c = 0; c < size; c++) {
+    for (int64_t e = indptr[c]; e < indptr[c + 1]; e++) {
+      if (indices[e] == c) solver->diagonal[c] = e;
+    }
+  }
+  return solver;
+}
+
+int example_setup(void *context, const double *values) {
+  auto *solver = static_cast<ExampleBlockSolver *>(context);
+  for (size_t i = 0; i < solver->inverse.size(); i++) {
+    const int64_t e = solver->diagonal[i];
+    if (e < 0 || values[e] == 0.0) return 1;
+    solver->inverse[i] = 1.0 / values[e];
+  }
+  return 0;
+}
+
+void example_solve(void *context, double *x) {
+  const auto *solver = static_cast<ExampleBlockSolver *>(context);
+  for (size_t i = 0; i < solver->inverse.size(); i++) x[i] *= solver->inverse[i];
+}
+
+void example_destroy(void *context) { delete static_cast<ExampleBlockSolver *>(context); }
+
+pybamm_block_solver example_block_solver = {
+  PYBAMM_BLOCK_SOLVER_ABI_VERSION, example_create, example_setup, example_solve,
+  example_destroy};
+
+}  // namespace
 
 IDAKLUSolverGroup *create_casadi_solver_group(
   int number_of_states,
@@ -121,8 +166,13 @@ IDAKLUSolverGroup *create_casadi_solver_group(
   const std::vector<CasadiFunctions::BaseFunctionType*>& dvar_dp_fcns,
   py::dict py_opts,
   const CasadiFunctions::BaseFunctionType &alg_res,
-  const CasadiFunctions::BaseFunctionType &alg_jac)
+  const CasadiFunctions::BaseFunctionType &alg_jac,
+  const py::object &precompute)
 {
+  // Optional: from the stacked inputs to values fixed for a solve
+  const auto precompute_fn = precompute.is_none()
+    ? CasadiFunctions::BaseFunctionType()
+    : precompute.cast<CasadiFunctions::BaseFunctionType>();
   auto setup_opts = SetupOptions(py_opts);
   auto solver_opts = SolverOptions(py_opts);
 
@@ -165,7 +215,8 @@ IDAKLUSolverGroup *create_casadi_solver_group(
       setup_opts,
       serialized_fcns ? &*serialized_fcns : nullptr,
       alg_res,
-      alg_jac
+      alg_jac,
+      precompute_fn
     );
     solvers.emplace_back(
       std::unique_ptr<IDAKLUSolver>(
@@ -218,6 +269,41 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("pbar") = np_array(),
     py::return_value_policy::take_ownership);
 
+  m.def("example_block_solver", []() {
+    return py::capsule(static_cast<void *>(&example_block_solver),
+                       PYBAMM_BLOCK_SOLVER_CAPSULE);
+  }, "Capsule of an example block solver plugin (Jacobi), for tests");
+
+  py::class_<BlockAnalysis, std::shared_ptr<BlockAnalysis>>(m, "BlockAnalysis")
+    .def(py::init([](const py::dict &tree,
+                     py::array_t<int64_t, py::array::c_style | py::array::forcecast> indptr,
+                     py::array_t<int64_t, py::array::c_style | py::array::forcecast> indices) {
+      return std::make_shared<BlockAnalysis>(
+        tree, IndexVector(indptr.data(), indptr.data() + indptr.size()),
+        IndexVector(indices.data(), indices.data() + indices.size()));
+    }), "Analyse a preconditioner tree against the iteration matrix's CSC pattern",
+       py::arg("tree"), py::arg("indptr"), py::arg("indices"))
+    .def_property_readonly("exact", &BlockAnalysis::exact,
+       "Whether applying the tree solves the linear system exactly")
+    .def_property_readonly("read_entries", [](const BlockAnalysis &self) {
+      return py::array_t<int64_t>(self.read_entries.size(), self.read_entries.data());
+    }, "Sorted positions of the iteration matrix's CSC data that the tree reads")
+    .def_readonly("size", &BlockAnalysis::size);
+
+  py::class_<BlockPreconditioner>(m, "BlockPreconditioner")
+    .def(py::init([](std::shared_ptr<BlockAnalysis> analysis) {
+      return std::make_unique<BlockPreconditioner>(analysis);
+    }), py::arg("analysis"))
+    .def("setup", [](BlockPreconditioner &self, np_array matrix_data) {
+      return self.setup(matrix_data.data());
+    }, "Set up from the iteration matrix's CSC data; 0 on success",
+       py::arg("matrix_data"))
+    .def("solve", [](BlockPreconditioner &self, np_array r) {
+      np_array z(r.size());
+      self.solve(r.data(), z.mutable_data());
+      return z;
+    }, "Apply the preconditioner: z = P^-1 r", py::arg("r"));
+
   m.def("create_casadi_solver_group", &create_casadi_solver_group,
     "Create a group of casadi idaklu solver objects",
     py::arg("number_of_states"),
@@ -244,6 +330,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("options"),
     py::arg("alg_res"),
     py::arg("alg_jac"),
+    py::arg("precompute") = py::none(),
     py::return_value_policy::take_ownership);
 
   m.def("observe", &observe,

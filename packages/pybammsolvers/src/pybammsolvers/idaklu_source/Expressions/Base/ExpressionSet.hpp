@@ -73,9 +73,24 @@ public:
 
   std::vector<int64_t> jac_times_cjmass_rowvals;
   std::vector<int64_t> jac_times_cjmass_colptrs;
+  // The inputs, followed by the values the precompute function derives from them
+  // once per solve
   std::vector<sunrealtype> inputs;
+  int number_of_inputs = 0;
+  Expression *precompute = nullptr;
 
   SetupOptions setup_opts;
+
+  // Per-solver preconditioner
+  std::unique_ptr<Preconditioner> preconditioner;
+
+  // While set, the Jacobian-vector product and the block preconditioner use
+  // this state and cj rather than IDA's (stale outside of IDASolve)
+  const sunrealtype *linearisation_y = nullptr;
+  sunrealtype linearisation_t = 0.0;
+  sunrealtype linearisation_cj = 0.0;
+  // If set, differential rows (id > 0.5) of the linearisation are identity rows
+  const sunrealtype *linearisation_id = nullptr;
 
   virtual sunrealtype *get_tmp_state_vector() = 0;
   virtual sunrealtype *get_tmp_sparse_jacobian_data() = 0;

@@ -229,6 +229,10 @@ class NumpyConcatenation(Concatenation):
 
     __slots__ = ()
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.stack(self.children)
+
     def __init__(self, *children: pybamm.Symbol):
         # Turn objects that evaluate to scalars to objects that evaluate to vectors,
         # so that we can concatenate them
@@ -330,6 +334,25 @@ class DomainConcatenation(Concatenation):
     _serialise_derived_params = Concatenation._serialise_derived_params | frozenset(
         {"full_mesh"}
     )
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        size, stacked = sparsity.stack(self.children)
+        if stacked is None:
+            return size, None
+        # Row of the stacked children that each row of the concatenation comes from
+        source = np.empty(size, dtype=np.int64)
+        offset = 0
+        for child, slices in zip(self.children, self._children_slices, strict=True):
+            for domain, child_slices in slices.items():
+                for target, child_slice in zip(
+                    self._slices[domain], child_slices, strict=True
+                ):
+                    source[target] = offset + np.arange(
+                        child_slice.start, child_slice.stop
+                    )
+            offset += sparsity.size_and_pattern(child)[0]
+        return size, stacked[source]
 
     def __init__(
         self,
@@ -529,6 +552,10 @@ class SparseStack(Concatenation):
     """
 
     __slots__ = ()
+
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        return sparsity.stack(self.children)
 
     def __init__(self, *children, name="sparse_stack"):
         children = list(children)

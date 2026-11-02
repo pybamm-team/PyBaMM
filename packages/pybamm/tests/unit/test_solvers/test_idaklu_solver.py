@@ -1,4 +1,5 @@
 import dataclasses
+import functools
 import io
 import itertools
 import json
@@ -2091,7 +2092,8 @@ class TestIDAKLUSolver:
 
         solver = pybamm.IDAKLUSolver()
         solver.set_up(model)
-        J = solver.get_jacobian_sparsity()
+        with pytest.warns(DeprecationWarning, match="BaseModel.jacobian_sparsity"):
+            J = solver.get_jacobian_sparsity()
 
         assert J.shape == (2, 2)
         assert J.nnz > 0
@@ -2099,7 +2101,10 @@ class TestIDAKLUSolver:
 
     def test_get_jacobian_sparsity_not_set_up(self):
         solver = pybamm.IDAKLUSolver()
-        with pytest.raises(pybamm.SolverError, match="Solver not set up"):
+        with (
+            pytest.warns(DeprecationWarning),
+            pytest.raises(pybamm.SolverError, match="Solver not set up"),
+        ):
             solver.get_jacobian_sparsity()
 
     def test_spy(self):
@@ -2119,14 +2124,16 @@ class TestIDAKLUSolver:
         import matplotlib
 
         matplotlib.use("Agg")
-        ax = solver.spy(show_plot=False)
+        with pytest.warns(DeprecationWarning, match="BaseModel.spy"):
+            ax = solver.spy(show_plot=False)
         assert ax is not None
         assert "nnz" in ax.get_title()
 
         import matplotlib.pyplot as plt
 
         _, existing_axes = plt.subplots(1, 2)
-        ax = solver.spy(ax=existing_axes[1], show_plot=False)
+        with pytest.warns(DeprecationWarning):
+            ax = solver.spy(ax=existing_axes[1], show_plot=False)
         assert ax is existing_axes[1]
         assert "nnz" in ax.get_title()
         plt.close("all")
@@ -2733,3 +2740,297 @@ class TestIDAKLUSolverStatistics:
         stats = solution.solver_statistics
         assert stats.number_of_steps > 0
         assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
+
+
+def _small_dae():
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    v = pybamm.Variable("v")
+    model.rhs = {u: -pybamm.InputParameter("a") * u + 0.1 * v}
+    model.algebraic = {v: v - 2 * u + pybamm.sin(v) * 0.01}
+    model.initial_conditions = {u: 1, v: 1}
+    model.variables = {"u": u, "v": v}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+_CCCV = [
+    "Discharge at 1C until 3.0 V",
+    "Rest for 10 minutes",
+    "Charge at 1C until 4.1 V",
+    "Hold at 4.1 V until C/50",
+]
+
+
+def _particles_eliminated():
+    P = pybamm.preconditioners
+    return {
+        "Negative particle concentration [mol.m-3]": P.Tridiagonal(stage=0),
+        "Positive particle concentration [mol.m-3]": P.Tridiagonal(stage=0),
+    }
+
+
+@functools.cache
+def _cccv_reference():
+    experiment = pybamm.Experiment(_CCCV)
+    return pybamm.Simulation(pybamm.lithium_ion.DFN(), experiment=experiment).solve()
+
+
+def _assert_cccv_matches(options, preconditioner, atol):
+    reference = _cccv_reference()
+    solver = pybamm.IDAKLUSolver(options=options)
+    solution = pybamm.Simulation(
+        pybamm.lithium_ion.DFN(),
+        experiment=pybamm.Experiment(_CCCV),
+        solver=solver,
+        preconditioner=preconditioner,
+    ).solve()
+    assert len(solution.cycles) == len(_CCCV)
+    # The C/50 end of the hold is sensitive to the step history
+    np.testing.assert_allclose(solution.t[-1], reference.t[-1], rtol=5e-3)
+    # Away from the steep end of discharge, which moves with the step history
+    times = np.concatenate(
+        [np.linspace(0, 3000, 40), np.linspace(4500, reference.t[-1] - 100, 40)]
+    )
+    np.testing.assert_allclose(
+        solution["Voltage [V]"](times),
+        reference["Voltage [V]"](times),
+        rtol=0,
+        atol=atol,
+    )
+
+
+class TestIDAKLUBlockPreconditioner:
+    @pytest.mark.parametrize(
+        "linear_solver",
+        [
+            "SUNLinSol_SPGMR",
+            "SUNLinSol_SPFGMR",
+            "SUNLinSol_SPBCGS",
+            "SUNLinSol_SPTFQMR",
+        ],
+    )
+    def test_dfn_matches_klu(self, linear_solver):
+        t_eval = [0, 3600]
+        times = np.linspace(0, 3600, 50)
+        reference = pybamm.Simulation(pybamm.lithium_ion.DFN()).solve(t_eval)
+        solver = pybamm.IDAKLUSolver(
+            options={"linear_solver": linear_solver, "preconditioner": "block"}
+        )
+        solution = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            solver=solver,
+            preconditioner=_particles_eliminated(),
+        ).solve(t_eval)
+        np.testing.assert_allclose(
+            solution["Voltage [V]"](times),
+            reference["Voltage [V]"](times),
+            rtol=0,
+            atol=1e-3,
+        )
+
+    @pytest.mark.parametrize(
+        "preconditioner",
+        [
+            {},
+            _particles_eliminated(),
+            {
+                **_particles_eliminated(),
+                "Electrolyte potential [V]": pybamm.preconditioners.ILU(fill=1),
+            },
+        ],
+    )
+    def test_cccv(self, preconditioner):
+        _assert_cccv_matches(
+            {"linear_solver": "SUNLinSol_SPGMR", "preconditioner": "block"},
+            preconditioner,
+            atol=2e-3,
+        )
+
+    def test_input_only_values_are_precomputed_per_solve(self):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update({"Electrode height [m]": "[input]"})
+        times = np.linspace(0, 3600, 50)
+        default = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(), parameter_values=parameter_values
+        )
+        block = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(
+                options={"linear_solver": "SUNLinSol_SPGMR", "preconditioner": "block"}
+            ),
+            preconditioner=_particles_eliminated(),
+        )
+        for height in [0.065, 0.08]:
+            inputs = {"Electrode height [m]": height}
+            reference = default.solve([0, 3600], inputs=inputs)
+            solution = block.solve([0, 3600], inputs=inputs)
+            np.testing.assert_allclose(
+                solution["Voltage [V]"](times),
+                reference["Voltage [V]"](times),
+                rtol=0,
+                atol=1e-3,
+            )
+        assert default.built_model.precomputed_input_evals == {}
+        assert "precompute" in block.built_model.precomputed_input_evals
+
+    def test_sensitivities(self):
+        model = _small_dae()
+        t_eval = np.linspace(0, 2, 5)
+        inputs = {"a": 0.5}
+        reference = pybamm.IDAKLUSolver().solve(
+            model, t_eval, inputs=inputs, calculate_sensitivities=True
+        )
+        solution = pybamm.IDAKLUSolver(
+            options={"linear_solver": "SUNLinSol_SPGMR", "preconditioner": "block"}
+        ).solve(model, t_eval, inputs=inputs, calculate_sensitivities=True)
+        for name in ["u", "v"]:
+            np.testing.assert_allclose(
+                solution[name](t_eval), reference[name](t_eval), rtol=1e-3
+            )
+            np.testing.assert_allclose(
+                solution[name].sensitivities["a"],
+                reference[name].sensitivities["a"],
+                rtol=1e-2,
+                atol=1e-6,
+            )
+
+    @pytest.mark.parametrize(
+        "options, match",
+        [
+            (
+                {
+                    "linear_solver": "SUNLinSol_SPGMR",
+                    "preconditioner": "BBDP",
+                    "newton_mode": "full",
+                },
+                r"does not support the 'BBDP' preconditioner",
+            ),
+        ],
+    )
+    def test_option_errors(self, options, match):
+        with pytest.raises(pybamm.SolverError, match=match):
+            pybamm.IDAKLUSolver(options=options)
+
+
+class TestIDAKLUBlockLinearSolver:
+    @pytest.mark.parametrize(
+        "preconditioner",
+        [
+            {},
+            _particles_eliminated(),
+            {
+                "Negative particle concentration [mol.m-3]": (
+                    pybamm.preconditioners.Tridiagonal(stage=0)
+                ),
+                "Positive particle concentration [mol.m-3]": (
+                    pybamm.preconditioners.Tridiagonal(stage=1)
+                ),
+            },
+        ],
+    )
+    def test_cccv(self, preconditioner):
+        _assert_cccv_matches({"linear_solver": "block"}, preconditioner, atol=1e-3)
+
+    def test_needs_a_compiled_preconditioner(self):
+        model = _small_dae()
+        model.preconditioner = None
+        solver = pybamm.IDAKLUSolver(
+            options={"linear_solver": "SUNLinSol_SPGMR", "preconditioner": "block"}
+        )
+        with pytest.raises(pybamm.SolverError, match=r"no compiled preconditioner"):
+            solver.solve(model, [0, 1], inputs={"a": 0.5})
+
+    def test_needs_exact_preconditioner(self):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.DFN(),
+            solver=pybamm.IDAKLUSolver(options={"linear_solver": "block"}),
+            preconditioner={"Electrolyte potential [V]": pybamm.preconditioners.ILU()},
+        )
+        with pytest.raises(pybamm.SolverError, match=r"must be exact"):
+            sim.solve([0, 10])
+
+    def test_sensitivities(self):
+        model = _small_dae()
+        t_eval = np.linspace(0, 2, 5)
+        inputs = {"a": 0.5}
+        reference = pybamm.IDAKLUSolver().solve(
+            model, t_eval, inputs=inputs, calculate_sensitivities=True
+        )
+        solution = pybamm.IDAKLUSolver(options={"linear_solver": "block"}).solve(
+            model, t_eval, inputs=inputs, calculate_sensitivities=True
+        )
+        np.testing.assert_allclose(
+            solution["u"].sensitivities["a"],
+            reference["u"].sensitivities["a"],
+            rtol=1e-6,
+            atol=1e-10,
+        )
+
+    def test_needs_sparse_jacobian(self):
+        with pytest.raises(pybamm.SolverError, match=r"needs jacobian='sparse'"):
+            pybamm.IDAKLUSolver(options={"linear_solver": "block", "jacobian": "dense"})
+
+
+class TestIDAKLUBlockInitialConditions:
+    @pytest.mark.parametrize(
+        "options",
+        [
+            {"linear_solver": "block"},
+            {"linear_solver": "SUNLinSol_SPGMR", "preconditioner": "block"},
+        ],
+    )
+    def test_reuses_block_solver_in_full_mode(self, options, caplog):
+        # The IC Newton solve must run on the full system through the block
+        # solver or preconditioner, not a separate algebraic sub-block solver
+        model = pybamm.lithium_ion.DFN()
+        solver = pybamm.IDAKLUSolver(options=options)
+        assert not solver._newton_sub_block
+        sim = pybamm.Simulation(model, solver=solver)
+        with caplog.at_level(logging.DEBUG, logger="pybamm.logger"):
+            pybamm.set_logging_level("DEBUG")
+            try:
+                sim.solve([0, 10])
+            finally:
+                pybamm.set_logging_level("WARNING")
+        n = sim.built_model.len_rhs_and_alg
+        assert f"n_alg = {n}" in caplog.text
+        assert "Newton converged" in caplog.text
+        assert "Newton FAILED" not in caplog.text
+
+
+class TestIDAKLUFullNewtonInitialConditions:
+    def test_direct_full_mode_converges(self, caplog):
+        # The full-system Newton solves only for the algebraic states, so its
+        # differential rows are identity rows
+        model = pybamm.lithium_ion.DFN()
+        solver = pybamm.IDAKLUSolver(options={"newton_mode": "full"})
+        with caplog.at_level(logging.DEBUG, logger="pybamm.logger"):
+            pybamm.set_logging_level("DEBUG")
+            try:
+                pybamm.Simulation(model, solver=solver).solve([0, 10])
+            finally:
+                pybamm.set_logging_level("WARNING")
+        assert "Newton converged" in caplog.text
+        assert "Newton FAILED" not in caplog.text
+
+    @pytest.mark.parametrize("jacobian", ["sparse", "matrix-free"])
+    def test_iterative_without_preconditioner(self, jacobian):
+        # IDA's own state is unset before the first step, so the IC linear
+        # solves must not read it
+        model = _small_dae()
+        t_eval = np.linspace(0, 1, 5)
+        reference = pybamm.IDAKLUSolver().solve(model, t_eval, inputs={"a": 0.3})
+        solution = pybamm.IDAKLUSolver(
+            options={
+                "linear_solver": "SUNLinSol_SPGMR",
+                "preconditioner": "none",
+                "jacobian": jacobian,
+                "newton_mode": "full",
+            }
+        ).solve(model, t_eval, inputs={"a": 0.3})
+        for name in ["u", "v"]:
+            np.testing.assert_allclose(
+                solution[name](t_eval), reference[name](t_eval), rtol=1e-3
+            )

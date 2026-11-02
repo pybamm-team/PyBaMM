@@ -110,7 +110,8 @@ public:
     const SetupOptions& setup_opts,
     const SerializedCasadiFunctions *serialized_fcns = nullptr,
     const BaseFunctionType &alg_res_fn = BaseFunctionType(),
-    const BaseFunctionType &alg_jac_fn = BaseFunctionType()
+    const BaseFunctionType &alg_jac_fn = BaseFunctionType(),
+    const BaseFunctionType &precompute_fn = BaseFunctionType()
   ) :
     rhs_alg_casadi(
       rhs_alg,
@@ -138,6 +139,7 @@ public:
       serialized_fcns != nullptr ? &serialized_fcns->events : nullptr),
     alg_res_casadi_(alg_res_fn),
     alg_jac_casadi_(alg_jac_fn),
+    precompute_casadi_(precompute_fn, setup_opts.num_solvers > 1),
     ExpressionSet<CasadiFunction>(
       static_cast<Expression*>(&rhs_alg_casadi),
       static_cast<Expression*>(&jac_times_cjmass_casadi),
@@ -211,7 +213,13 @@ public:
       jac_times_cjmass_colptrs[i] = p_jac_times_cjmass_colptrs[i];
     }
 
-    inputs.resize(inputs_length);
+    number_of_inputs = inputs_length;
+    int precomputed = 0;
+    if (!precompute_casadi_.m_func.is_null() && precompute_casadi_.m_func.n_out() > 0) {
+      this->precompute = static_cast<Expression*>(&precompute_casadi_);
+      precomputed = static_cast<int>(precompute_casadi_.m_func.nnz_out());
+    }
+    inputs.resize(inputs_length + precomputed);
   }
 
   CasadiFunction rhs_alg_casadi;
@@ -222,6 +230,7 @@ public:
   CasadiFunction events_casadi;
   CasadiFunction alg_res_casadi_;
   CasadiFunction alg_jac_casadi_;
+  CasadiFunction precompute_casadi_;
 
   std::vector<CasadiFunction> var_fcns_casadi;
   std::vector<CasadiFunction> dvar_dy_fcns_casadi;

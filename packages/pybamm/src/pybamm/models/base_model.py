@@ -120,6 +120,7 @@ class BaseModel:
     jac_rhs_algebraic_eval: Callable[..., Any] | None
     jac_rhs_algebraic_action_eval: Callable[..., Any] | None
     jacp_rhs_algebraic_eval: Callable[..., Any] | None
+    precomputed_input_evals: dict[str, casadi.Function]
     terminate_events_eval: list[Callable[..., Any]]
     interpolant_extrapolation_events_eval: list[Callable[..., Any]]
     discontinuity_events_eval: list[Callable[..., Any]]
@@ -143,6 +144,7 @@ class BaseModel:
         self._rhs = {}
         self._algebraic = {}
         self._initial_conditions = {}
+        self._default_preconditioner = {}
         self._boundary_conditions = {}
         self._variables_by_submodel = {}
         self._variables = pybamm.FuzzyDict({})
@@ -156,6 +158,7 @@ class BaseModel:
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
         self._mass_matrix_inv = None
+        self._preconditioner = None
         self._jacobian = None
         self._jacobian_algebraic = None
         self._parameters = None
@@ -222,6 +225,7 @@ class BaseModel:
         instance.bounds = properties["bounds"]
         instance.events = properties["events"]
         instance.mass_matrix = properties["mass_matrix"]
+        instance.preconditioner = properties.get("preconditioner")
         instance._variables_processed = dict(properties.get("_variables_processed", {}))
 
         def assign_meshes_to_variables(variables_dict, mesh):
@@ -601,6 +605,15 @@ class BaseModel:
         self._mass_matrix = mass_matrix
 
     @property
+    def preconditioner(self):
+        """Returns the preconditioner compiled for the states after discretisation."""
+        return self._preconditioner
+
+    @preconditioner.setter
+    def preconditioner(self, preconditioner):
+        self._preconditioner = preconditioner
+
+    @property
     def jacobian(self):
         """Returns the Jacobian matrix for the model, computed automatically if `use_jacobian` is True."""
         return self._jacobian
@@ -629,28 +642,135 @@ class BaseModel:
     def jacobian_algebraic(self, jacobian_algebraic):
         self._jacobian_algebraic = jacobian_algebraic
 
-    def build_casadi_jacobian(self, expression, y):
-        """Build the CasADi jacobian of a converted model ``expression`` w.r.t. ``y``.
+    def jacobian_sparsity(self) -> scipy.sparse.csc_matrix:
+        """
+        Structural sparsity pattern of the iteration matrix ``J - cj * M`` that an
+        implicit solver factorises, where ``J`` is the Jacobian of the residuals with
+        respect to the states, ``M`` is the mass matrix and ``cj`` a step-size
+        dependent scalar. It is the union of the patterns of ``J`` and ``M``, so
+        every differential state has a diagonal entry.
 
-        The solver calls this for every model in place of a bare ``casadi.jacobian``. It
-        is plain AD, except for the full rhs+algebraic jacobian of a model that has a
-        *switching control* equation -- a :class:`pybamm.Conditional` over per-step
-        control laws, recorded in :attr:`switching_control_variables` by the unified
-        experiment setup. CasADi turns that ``Conditional`` into a ``Switch`` and
-        differentiates it as a dense, full-bandwidth row inside the combined sweep.
+        Returns
+        -------
+        :class:`scipy.sparse.csc_matrix`
+            The pattern, with every stored entry set to 1.
 
-        Such a control residual is written against state variables (the current, and --
-        with "voltage as a state" -- the voltage), so its jacobian can only be nonzero in
-        those state columns. We differentiate those rows on their own and restrict them to
-        exactly those columns, and differentiate the physics block-wise (rhs and algebraic
-        separately, which CasADi handles efficiently). The result is identical to plain
-        AD -- only sparse on the control rows and cheaper to evaluate.
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If the model is not discretised.
+        """
+        if not self.is_discretised:
+            raise pybamm.ModelError(
+                "The Jacobian sparsity of a model is only known once it is discretised."
+            )
+        if not self.rhs:
+            residuals = self.concatenated_algebraic
+        elif not self.algebraic:
+            residuals = self.concatenated_rhs
+        else:
+            residuals = pybamm.NumpyConcatenation(
+                self.concatenated_rhs, self.concatenated_algebraic
+            )
+        try:
+            jacobian = pybamm.JacobianSparsity(self.len_rhs_and_alg).pattern(residuals)
+        except NotImplementedError:
+            # A node without a structural rule: CasADi detects the pattern instead
+            y = casadi.MX.sym("y", self.len_rhs_and_alg)
+            inputs = {
+                symbol.name: casadi.MX.sym(symbol.name, symbol.size)
+                for symbol in residuals.pre_order()
+                if isinstance(symbol, pybamm.InputParameter)
+            }
+            expression = residuals.to_casadi(casadi.MX.sym("t"), y, inputs=inputs)
+            detected = casadi.jacobian_sparsity(expression, y)
+            jacobian = scipy.sparse.csc_matrix(
+                (np.ones(detected.nnz()), detected.row(), detected.colind()),
+                shape=detected.shape,
+            )
+        pattern = scipy.sparse.csc_matrix(
+            (jacobian != 0) + (self.mass_matrix.entries != 0), dtype=float
+        )
+        pattern.sort_indices()
+        pattern.data[:] = 1.0
+        return pattern
+
+    def spy(self, ax=None, *, show_plot=True, **kwargs):
+        """
+        Plot the sparsity pattern of :meth:`jacobian_sparsity`, delineating
+        differential and algebraic states. Requires matplotlib.
+
+        Parameters
+        ----------
+        ax : :class:`matplotlib.axes.Axes`, optional
+            Axes to plot on. If ``None``, a new figure is created.
+        show_plot : bool, optional
+            Whether to show the plot. Default is True.
+        **kwargs
+            Forwarded to :meth:`matplotlib.axes.Axes.spy`.
+
+        Returns
+        -------
+        :class:`matplotlib.axes.Axes`
+        """
+        plt = pybamm.import_optional_dependency("matplotlib.pyplot")
+        pattern = self.jacobian_sparsity()
+        n = pattern.shape[0]
+        nnz = pattern.nnz
+        created_figure = ax is None
+        if created_figure:
+            figure, ax = plt.subplots(1, 1)
+        ax.spy(pattern, **kwargs)
+        ax.set_xlabel("State index")
+        ax.set_ylabel("Equation index")
+        sparse_percent = 100.0 * (1 - nnz / (n * n)) if n > 0 else 0.0
+        ax.set_title(
+            f"{nnz} nnz, {sparse_percent:.2f}% sparse\n{n} states: {self.len_rhs} "
+            f"differential and {self.len_alg} algebraic",
+            fontsize=10,
+        )
+        if created_figure:
+            figure.tight_layout()
+        if show_plot:
+            plt.show()
+        return ax
+
+    def build_casadi_jacobian(self, expression, y, sparsity=None, entries=None):
+        """
+        Build the CasADi jacobian of a converted model ``expression`` w.r.t. ``y``.
+
+        With a structural ``sparsity`` (see :class:`pybamm.JacobianSparsity`) the
+        jacobian is assembled by :func:`pybamm.casadi_jacobian`, with only the
+        given ``entries`` computed; without it, it is plain CasADi AD. The full
+        rhs+algebraic jacobian of a model with a switching control equation
+        (:attr:`switching_control_variables`) is computed in full: the control rows
+        on their own, restricted to the state columns they reference, and the
+        physics rhs and algebraic rows separately.
+
+        Parameters
+        ----------
+        expression : :class:`casadi.MX`
+            The converted expression.
+        y : :class:`casadi.MX`
+            The state vector.
+        sparsity : :class:`scipy.sparse.spmatrix`, optional
+            Structural sparsity pattern of the jacobian.
+        entries : numpy.ndarray, optional
+            Positions, in the CSC data of ``sparsity``, of the entries to compute;
+            the rest are zero. Default is every entry.
+
+        Returns
+        -------
+        :class:`casadi.MX`
+            The jacobian.
         """
         if (
             not self.switching_control_variables
             or expression.shape[0] != self.len_rhs_and_alg
         ):
-            return casadi.jacobian(expression, y)
+            if sparsity is None:
+                return casadi.jacobian(expression, y)
+            return pybamm.casadi_jacobian(expression, y, sparsity, entries)
 
         switch_columns = self._switching_control_columns()
         switch_rows = sorted(switch_columns)
@@ -753,6 +873,16 @@ class BaseModel:
     def default_var_pts(self):
         """Returns a dictionary of the default variable points for the model, which is empty by default."""
         return getattr(self, "_default_var_pts", None) or {}
+
+    @property
+    def default_preconditioner(self):
+        """
+        Returns a dictionary of the default block solvers of the preconditioner
+        (:class:`pybamm.preconditioners.BlockSolver`), keyed by state variable
+        name, which is empty by default. A state variable without an entry is
+        solved by :class:`pybamm.preconditioners.KLU` in the last stage.
+        """
+        return self._default_preconditioner
 
     @property
     def default_geometry(self):

@@ -68,6 +68,11 @@ from .expression_tree.operations.evaluate_python import EvaluatorJax
 from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
+from .expression_tree.operations.jacobian_sparsity import (
+    JacobianSparsity,
+    casadi_jacobian,
+)
+from .expression_tree.operations.linear_operators import CasadiConversion
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 from .expression_tree.operations.serialise import Serialise,ExpressionFunctionParameter
 from .expression_tree.operations.regularise import RegulariseSqrtAndPower
@@ -227,6 +232,7 @@ from .solvers.composite_solver import CompositeSolver
 from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
+from .solvers import preconditioners
 from .solvers.idaklu_jax import IDAKLUJax
 from .solvers.idaklu_solver import IDAKLUSolver
 from .solvers.nonlinear_solver import NonlinearSolver

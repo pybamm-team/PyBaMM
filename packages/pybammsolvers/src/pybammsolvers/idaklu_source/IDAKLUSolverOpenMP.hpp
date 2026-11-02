@@ -357,6 +357,11 @@ public:
    * Safe because IC is always followed by IDAReInit, which forces IDA to
    * re-run its own lsetup on the next step.
    */
+  /**
+   * @brief Replace the differential rows of A with identity rows
+   */
+  void SetIdentityRows(SUNMatrix A, const sunrealtype* id_data);
+
   int SolveICLinearSystem(
     N_Vector yy_ptr, N_Vector yyp_ptr,
     const sunrealtype* y_in, sunrealtype* res, sunrealtype* delta);

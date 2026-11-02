@@ -41,6 +41,10 @@ class BaseSimulation:
         Parameters and their corresponding numerical values.
     submesh_types: dict (optional)
         A dictionary of the types of submesh to use on each subdomain
+    preconditioner: dict (optional)
+        Block solvers of the preconditioner
+        (:class:`pybamm.preconditioners.BlockSolver`), keyed by state variable
+        name. If not provided, ``model.default_preconditioner`` is used.
     var_pts: dict (optional)
         A dictionary of the number of points used by each spatial variable
     spatial_methods: dict (optional)
@@ -74,6 +78,7 @@ class BaseSimulation:
         C_rate=None,
         discretisation_kwargs=None,
         cache_esoh=True,
+        preconditioner=None,
     ):
         self._parameter_values = parameter_values or model.default_parameter_values
         self._unprocessed_parameter_values = self._parameter_values
@@ -99,6 +104,7 @@ class BaseSimulation:
         self._geometry = geometry or self._model.default_geometry
         self._submesh_types = submesh_types or self._model.default_submesh_types
         self._var_pts = var_pts or self._model.default_var_pts
+        self._preconditioner = preconditioner or self._model.default_preconditioner
         self._spatial_methods = spatial_methods or self._model.default_spatial_methods
         self._solver = solver or self._model.default_solver
         self._output_variables = output_variables
@@ -571,7 +577,10 @@ class BaseSimulation:
             self._set_parameters()
             self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
             self._disc = pybamm.Discretisation(
-                self._mesh, self._spatial_methods, **self._discretisation_kwargs
+                self._mesh,
+                self._spatial_methods,
+                preconditioner=self._preconditioner,
+                **self._discretisation_kwargs,
             )
             self._built_model = self._disc.process_model(
                 self._model_with_set_params,
@@ -889,6 +898,10 @@ class BaseSimulation:
     @property
     def var_pts(self):
         return self._var_pts
+
+    @property
+    def preconditioner(self):
+        return self._preconditioner
 
     @property
     def spatial_methods(self):

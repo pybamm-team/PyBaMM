@@ -1845,3 +1845,58 @@ class TestBaseModel:
         assert "convert_to_format" not in vars(restored)
         solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])
         np.testing.assert_allclose(solution["u"](1.0), np.exp(-1.0), rtol=1e-3)
+
+    @staticmethod
+    def _small_dae():
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        pybamm.Discretisation().process_model(model)
+        return model
+
+    def test_jacobian_sparsity(self):
+        model = self._small_dae()
+        pattern = model.jacobian_sparsity()
+        # du/dt reads v, and the mass matrix adds u's diagonal entry
+        np.testing.assert_array_equal(pattern.toarray(), [[1.0, 1.0], [0.0, 1.0]])
+
+    def test_jacobian_sparsity_matches_the_solver(self):
+        sim = pybamm.Simulation(pybamm.lithium_ion.DFN())
+        sim.build()
+        solver = pybamm.IDAKLUSolver()
+        solver.set_up(sim.built_model)
+        expected = solver._iteration_sparsity()
+        assert (sim.built_model.jacobian_sparsity() != expected).nnz == 0
+
+    def test_jacobian_sparsity_without_a_structural_rule(self, monkeypatch):
+        model = self._small_dae()
+        expected = model.jacobian_sparsity()
+
+        def unsupported(self, symbol):
+            raise NotImplementedError
+
+        monkeypatch.setattr(pybamm.JacobianSparsity, "pattern", unsupported)
+        assert (model.jacobian_sparsity() != expected).nnz == 0
+
+    def test_jacobian_sparsity_needs_discretisation(self):
+        model = pybamm.BaseModel()
+        model.rhs = {pybamm.Variable("u"): pybamm.Scalar(1)}
+        with pytest.raises(pybamm.ModelError, match="discretised"):
+            model.jacobian_sparsity()
+
+    def test_spy(self):
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        model = self._small_dae()
+        ax = model.spy(show_plot=False)
+        assert "3 nnz" in ax.get_title()
+        assert "1 differential and 1 algebraic" in ax.get_title()
+        _, existing_axes = plt.subplots(1, 2)
+        assert model.spy(ax=existing_axes[1], show_plot=False) is existing_axes[1]
+        plt.close("all")

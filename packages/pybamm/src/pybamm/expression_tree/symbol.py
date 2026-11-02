@@ -1182,6 +1182,34 @@ class Symbol:
         """
         raise NotImplementedError
 
+    def _jacobian_sparsity(self, sparsity: pybamm.JacobianSparsity):
+        """
+        Size of the node and the structural sparsity of its Jacobian with respect to
+        the state vector, from its children's.
+
+        Parameters
+        ----------
+        sparsity : :class:`pybamm.JacobianSparsity`
+            Gives the children's sizes and patterns.
+
+        Returns
+        -------
+        size : int
+        pattern : :class:`scipy.sparse.csr_matrix` or None
+            Boolean pattern of shape ``(size, n_states)``, or None for no
+            dependence on the states.
+
+        Raises
+        ------
+        NotImplementedError
+            If the node has children and no rule.
+        """
+        if not self.children:
+            return int(self.size), None
+        raise NotImplementedError(
+            f"No Jacobian sparsity rule for symbol of type '{type(self).__name__}'"
+        )
+
     def _base_evaluate(
         self,
         t: float | None = None,

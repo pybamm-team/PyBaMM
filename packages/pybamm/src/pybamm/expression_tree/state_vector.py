@@ -342,6 +342,16 @@ class StateVector(StateVectorBase):
 
     __slots__ = ()
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        columns = np.concatenate([np.arange(s.start, s.stop) for s in self.y_slices])
+        size = len(columns)
+        pattern = csr_matrix(
+            (np.ones(size, dtype=bool), (np.arange(size), columns)),
+            shape=(size, sparsity.n_states),
+        )
+        return size, pattern
+
     def __init__(
         self,
         *y_slices: slice,

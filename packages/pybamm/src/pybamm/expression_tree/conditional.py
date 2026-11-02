@@ -22,6 +22,11 @@ class Conditional(pybamm.Symbol):
 
     __slots__ = ("_returns_scalar",)
 
+    def _jacobian_sparsity(self, sparsity):
+        """See :meth:`pybamm.Symbol._jacobian_sparsity()`."""
+        # The selector is piecewise constant, so only the branches contribute
+        return sparsity.union(self.branches)
+
     def __init__(self, selector: pybamm.Symbol, *branches: pybamm.Symbol):
         selector = pybamm.convert_to_symbol(selector)
         branch_symbols = [pybamm.convert_to_symbol(branch) for branch in branches]

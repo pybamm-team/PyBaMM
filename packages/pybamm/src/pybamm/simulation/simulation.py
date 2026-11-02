@@ -73,6 +73,7 @@ class Simulation(BaseSimulation):
         discretisation_kwargs=None,
         cache_esoh=True,
         experiment_model_mode="legacy",
+        preconditioner=None,
     ):
         super().__init__(
             model,
@@ -86,6 +87,7 @@ class Simulation(BaseSimulation):
             C_rate=C_rate,
             discretisation_kwargs=discretisation_kwargs,
             cache_esoh=cache_esoh,
+            preconditioner=preconditioner,
         )
 
         if experiment is not None:
@@ -657,12 +659,9 @@ class Simulation(BaseSimulation):
                     )
 
         for (previous_model, next_model), mapper in self.model_state_mappers.items():
-            ordered_compile_inputs = {
-                name: inputs.get(name, 0)
-                for name in sorted(ip.name for ip in previous_model.input_parameters)
-            }
             vars_for_processing = pybamm.BaseSolver._get_vars_for_processing(
-                previous_model, ordered_compile_inputs
+                previous_model,
+                pybamm.BaseSolver._mapper_inputs(previous_model, inputs),
             )
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
@@ -764,7 +763,10 @@ class Simulation(BaseSimulation):
         self._parameter_values.process_geometry(self._geometry)
         self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
         self._disc = pybamm.Discretisation(
-            self._mesh, self._spatial_methods, **self._discretisation_kwargs
+            self._mesh,
+            self._spatial_methods,
+            preconditioner=self._preconditioner,
+            **self._discretisation_kwargs,
         )
         self._discretise_experiment_models()
 
