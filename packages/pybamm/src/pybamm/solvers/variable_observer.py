@@ -123,6 +123,24 @@ class VariableObserver(ABC):
     ) -> dict[str, npt.NDArray[np.float64]]:
         """``{"all": (N, n_p), param: (N,)}`` forward sensitivities of the variable."""
 
+    def component(self, index: int, n_components: int) -> VariableObserver:
+        """The observer of one component of a vector field variable.
+
+        Parameters
+        ----------
+        index : int
+            The component to observe.
+        n_components : int
+            The number of components of the vector field.
+
+        Returns
+        -------
+        :class:`VariableObserver`
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} cannot observe vector field components."
+        )
+
 
 class CasadiObserver(VariableObserver):
     """Observation through serialised CasADi functions and the IDAKLU kernels.
@@ -196,6 +214,17 @@ class CasadiObserver(VariableObserver):
             t, ts, ys, yps, inputs, funcs, variable._shape(t)
         )
 
+    def component(self, index, n_components):
+        leaves = []
+        for leaf in self._leaves:
+            if isinstance(leaf, list):
+                leaves.append(leaf[index])
+            elif isinstance(leaf, pybamm.VectorField):
+                leaves.append(leaf.components[index])
+            else:
+                leaves.append(leaf)
+        return CasadiObserver(leaves)
+
     def sensitivities(self, variable):
         sensitivity_names = variable.sensitivity_names
         all_S_var = []
@@ -267,6 +296,72 @@ class CasadiObserver(VariableObserver):
                 S_var,
             )
         return pack_sensitivity_dict(S_var, sensitivity_names)
+
+
+class SampledObserver(VariableObserver):
+    """Observation of values the solver already sampled at the solution's times.
+
+    An ``output_variables`` solve keeps no state trajectory, so the samples are
+    the only values there are: observing reshapes them, and nothing is evaluated.
+
+    Parameters
+    ----------
+    leaves : list of :class:`casadi.Function`
+        The functions the samples were evaluated by, one per sub-solution.
+    samples : numpy.ndarray
+        Values of shape ``(n_t, n_entries)``, time-major as the solver returns them.
+    sensitivities : dict, optional
+        The samples' sensitivities as the solver returned them, ``{"all": (n_t *
+        n_entries, n_p), param: (n_t * n_entries,)}``. Default is no sensitivities.
+    """
+
+    def __init__(
+        self,
+        leaves: list,
+        samples: npt.NDArray[np.float64],
+        sensitivities: dict[str, npt.NDArray[np.float64]] | None = None,
+    ):
+        self._leaves = leaves
+        self._samples = np.asarray(samples)
+        self._sensitivities = sensitivities or {}
+
+    @property
+    def leaves(self) -> list:
+        return self._leaves
+
+    def observe_raw(self, variable):
+        # Inverse of the row layout ProcessedVariable.as_computed builds
+        shape = variable._shape(variable.t_pts)
+        return self._samples.T.reshape(shape, order="F")
+
+    def observe_hermite(self, variable, t):
+        raise NotImplementedError(
+            f"Variable {variable._name!r} was returned by the solver at the solution "
+            "times only, so it has no states to Hermite-interpolate between them."
+        )
+
+    def sensitivities(self, variable):
+        return self._sensitivities
+
+    def component(self, index, n_components):
+        # The solver returns a vector field's components one after another
+        n_entries = self._samples.shape[1] // n_components
+        rows = slice(index * n_entries, (index + 1) * n_entries)
+        leaves = []
+        for leaf in self._leaves:
+            args = leaf.mx_in()
+            leaves.append(casadi.Function(leaf.name(), args, [leaf(*args)[rows]]))
+        sensitivities = None
+        if self._sensitivities:
+            n_t = self._samples.shape[0]
+            all_sensitivities = self._sensitivities["all"]
+            n_params = all_sensitivities.shape[1]
+            component_sensitivities = all_sensitivities.reshape(n_t, -1, n_params)[
+                :, rows, :
+            ].reshape(-1, n_params)
+            names = [name for name in self._sensitivities if name != "all"]
+            sensitivities = pack_sensitivity_dict(component_sensitivities, names)
+        return SampledObserver(leaves, self._samples[:, rows], sensitivities)
 
 
 def as_observer(leaves: VariableObserver | list) -> VariableObserver:

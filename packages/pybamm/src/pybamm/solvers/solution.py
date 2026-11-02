@@ -1471,10 +1471,7 @@ class Solution(SolutionBase):
         new_sol.set_up_time = self.set_up_time
 
         # copy over variables which were derived at the solver stage
-        if self._variables and all(
-            isinstance(v, pybamm.ProcessedVariableComputed)
-            for v in self._variables.values()
-        ):
+        if self.variables_returned:
             new_sol._variables = self._variables.copy()
 
         return new_sol
