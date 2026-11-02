@@ -51,35 +51,67 @@ class BaseUnitTestLithiumIonHalfCell:
         self.check_well_posedness(options)
 
     def test_well_posed_constant_sei(self):
-        options = {"SEI": "constant"}
+        options = {
+            "SEI": "constant",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_reaction_limited_sei(self):
-        options = {"SEI": "reaction limited"}
+        options = {
+            "SEI": "reaction limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_asymmetric_reaction_limited_sei(self):
-        options = {"SEI": "reaction limited (asymmetric)"}
+        options = {
+            "SEI": "reaction limited (asymmetric)",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_solvent_diffusion_limited_sei(self):
-        options = {"SEI": "solvent-diffusion limited"}
+        options = {
+            "SEI": "solvent-diffusion limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_electron_migration_limited_sei(self):
-        options = {"SEI": "electron-migration limited"}
+        options = {
+            "SEI": "electron-migration limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_interstitial_diffusion_limited_sei(self):
-        options = {"SEI": "interstitial-diffusion limited"}
+        options = {
+            "SEI": "interstitial-diffusion limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_ec_reaction_limited_sei(self):
-        options = {"SEI": "ec reaction limited"}
+        options = {
+            "SEI": "ec reaction limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_asymmetric_ec_reaction_limited_sei(self):
-        options = {"SEI": "ec reaction limited (asymmetric)"}
+        options = {
+            "SEI": "ec reaction limited (asymmetric)",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_lumped_thermal(self):
@@ -91,7 +123,11 @@ class BaseUnitTestLithiumIonHalfCell:
         self.check_well_posedness(options)
 
     def test_incompatible_lumped_thermal_capacity_option(self):
-        options = {"thermal": "x-full", "use lumped thermal capacity": "true"}
+        options = {
+            "thermal": "x-full",
+            "use lumped thermal capacity": "true",
+            "cell geometry": "pouch",
+        }
         with pytest.raises(
             pybamm.OptionError,
             match=r"Lumped thermal capacity model only compatible with lumped thermal models",

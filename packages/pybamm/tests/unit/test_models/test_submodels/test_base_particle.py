@@ -24,6 +24,8 @@ class TestBaseParticle:
                 {
                     "particle phases": ("2", "1"),
                     "particle mechanics": (("swelling and cracking", "none"), "none"),
+                    "surface form": "algebraic",
+                    "stress-induced diffusion": (("true", "false"), "false"),
                 },
                 (True, False),
             ),
@@ -32,6 +34,7 @@ class TestBaseParticle:
                     "particle phases": ("2", "1"),
                     "particle mechanics": (("swelling only", "swelling only"), "none"),
                     "stress-induced diffusion": (("false", "true"), "false"),
+                    "surface form": "algebraic",
                 },
                 (False, True),
             ),

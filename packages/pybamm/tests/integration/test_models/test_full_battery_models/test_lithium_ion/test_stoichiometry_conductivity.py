@@ -81,7 +81,7 @@ class TestStoichiometryConductivity:
 
     def test_two_phase_composite(self):
         # two-phase electrode: the primary-phase surface stoichiometry feeds sigma
-        options = {"particle phases": ("2", "1")}
+        options = {"particle phases": ("2", "1"), "surface form": "algebraic"}
         values = pybamm.ParameterValues("Chen2020_composite")
         values_sto = values.copy()
         values_sto.update(

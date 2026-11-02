@@ -30,7 +30,8 @@ def param():
 class TestScikitFiniteElement2DSubMesh:
     def test_mesh_creation(self, param):
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 2}
+            include_particles=False,
+            options={"dimensionality": 2, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
 
@@ -69,7 +70,8 @@ class TestScikitFiniteElement2DSubMesh:
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 2}
+            include_particles=False,
+            options={"dimensionality": 2, "cell geometry": "pouch"},
         )
         with pytest.raises(KeyError):
             pybamm.Mesh(geometry, submesh_types, {})
@@ -136,7 +138,8 @@ class TestScikitFiniteElement2DSubMesh:
 
         # check error raised if tab not on boundary
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 2}
+            include_particles=False,
+            options={"dimensionality": 2, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
         with pytest.raises(pybamm.GeometryError):
@@ -172,14 +175,16 @@ class TestScikitFiniteElement2DSubMesh:
 
         # check mesh can be built
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 2}
+            include_particles=False,
+            options={"dimensionality": 2, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
         pybamm.Mesh(geometry, submesh_types, var_pts)
 
     def test_to_json(self, param):
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 2}
+            include_particles=False,
+            options={"dimensionality": 2, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
 
@@ -294,7 +299,8 @@ class TestScikitFiniteElement2DSubMesh:
 class TestScikitFiniteElementChebyshev2DSubMesh:
     def test_mesh_creation(self, param):
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 2}
+            include_particles=False,
+            options={"dimensionality": 2, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
 
@@ -351,7 +357,8 @@ class TestScikitFiniteElementChebyshev2DSubMesh:
 class TestScikitExponential2DSubMesh:
     def test_mesh_creation(self, param):
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 2}
+            include_particles=False,
+            options={"dimensionality": 2, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
 
@@ -414,7 +421,8 @@ class TestScikitExponential2DSubMesh:
 class TestScikitUser2DSubMesh:
     def test_mesh_creation(self, param):
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 2}
+            include_particles=False,
+            options={"dimensionality": 2, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
 

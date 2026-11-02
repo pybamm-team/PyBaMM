@@ -23,10 +23,18 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_2plus1D(self):
-        options = {"current collector": "potential pair", "dimensionality": 1}
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "cell geometry": "pouch",
+        }
         self.check_well_posedness(options)
 
-        options = {"current collector": "potential pair", "dimensionality": 2}
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "cell geometry": "pouch",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_lumped_thermal_model_1D(self):
@@ -38,7 +46,7 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_x_full_thermal_model(self):
-        options = {"thermal": "x-full"}
+        options = {"thermal": "x-full", "cell geometry": "pouch"}
         self.check_well_posedness(options)
 
     def test_well_posed_lumped_thermal_1plus1D(self):
@@ -46,6 +54,7 @@ class BaseUnitTestLithiumIon:
             "current collector": "potential pair",
             "dimensionality": 1,
             "thermal": "lumped",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -54,6 +63,7 @@ class BaseUnitTestLithiumIon:
             "current collector": "potential pair",
             "dimensionality": 2,
             "thermal": "lumped",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -62,7 +72,11 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_incompatible_lumped_thermal_capacity_option(self):
-        options = {"thermal": "x-full", "use lumped thermal capacity": "true"}
+        options = {
+            "thermal": "x-full",
+            "use lumped thermal capacity": "true",
+            "cell geometry": "pouch",
+        }
         with pytest.raises(
             pybamm.OptionError,
             match=r"Lumped thermal capacity model only compatible with lumped thermal models",
@@ -74,6 +88,7 @@ class BaseUnitTestLithiumIon:
             "current collector": "potential pair",
             "dimensionality": 1,
             "thermal": "x-lumped",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -82,6 +97,7 @@ class BaseUnitTestLithiumIon:
             "current collector": "potential pair",
             "dimensionality": 2,
             "thermal": "x-lumped",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -98,6 +114,7 @@ class BaseUnitTestLithiumIon:
             "current collector": "potential pair",
             "dimensionality": 1,
             "heat of mixing": "true",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -105,6 +122,7 @@ class BaseUnitTestLithiumIon:
             "current collector": "potential pair",
             "dimensionality": 2,
             "heat of mixing": "true",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -116,6 +134,7 @@ class BaseUnitTestLithiumIon:
         options = {
             "thermal": "x-full",
             "heat of mixing": "true",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -125,6 +144,7 @@ class BaseUnitTestLithiumIon:
             "dimensionality": 1,
             "thermal": "lumped",
             "heat of mixing": "true",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -134,6 +154,7 @@ class BaseUnitTestLithiumIon:
             "dimensionality": 2,
             "thermal": "lumped",
             "heat of mixing": "true",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -143,6 +164,7 @@ class BaseUnitTestLithiumIon:
             "dimensionality": 1,
             "thermal": "x-lumped",
             "heat of mixing": "true",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -152,6 +174,7 @@ class BaseUnitTestLithiumIon:
             "dimensionality": 2,
             "thermal": "x-lumped",
             "heat of mixing": "true",
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -191,27 +214,51 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_negative(self):
-        options = {"loss of active material": ("stress-driven", "none")}
+        options = {
+            "loss of active material": ("stress-driven", "none"),
+            "particle mechanics": ("swelling only", "none"),
+            "stress-induced diffusion": ("true", "false"),
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_positive(self):
-        options = {"loss of active material": ("none", "stress-driven")}
+        options = {
+            "loss of active material": ("none", "stress-driven"),
+            "particle mechanics": ("none", "swelling only"),
+            "stress-induced diffusion": ("false", "true"),
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_both(self):
-        options = {"loss of active material": "stress-driven"}
+        options = {
+            "loss of active material": "stress-driven",
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_asymmetric_negative(self):
-        options = {"loss of active material": ("asymmetric stress-driven", "none")}
+        options = {
+            "loss of active material": ("asymmetric stress-driven", "none"),
+            "particle mechanics": ("swelling only", "none"),
+            "stress-induced diffusion": ("true", "false"),
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_asymmetric_positive(self):
-        options = {"loss of active material": ("none", "asymmetric stress-driven")}
+        options = {
+            "loss of active material": ("none", "asymmetric stress-driven"),
+            "particle mechanics": ("none", "swelling only"),
+            "stress-induced diffusion": ("false", "true"),
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_asymmetric_both(self):
-        options = {"loss of active material": "asymmetric stress-driven"}
+        options = {
+            "loss of active material": "asymmetric stress-driven",
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_reaction(self):
@@ -219,23 +266,41 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_reaction(self):
-        options = {"loss of active material": "stress and reaction-driven"}
+        options = {
+            "loss of active material": "stress and reaction-driven",
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_reaction_asymmetric_negative(self):
         options = {
-            "loss of active material": ("asymmetric stress and reaction-driven", "none")
+            "loss of active material": (
+                "asymmetric stress and reaction-driven",
+                "none",
+            ),
+            "particle mechanics": ("swelling only", "none"),
+            "stress-induced diffusion": ("true", "false"),
         }
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_reaction_asymmetric_positive(self):
         options = {
-            "loss of active material": ("none", "asymmetric stress and reaction-driven")
+            "loss of active material": (
+                "none",
+                "asymmetric stress and reaction-driven",
+            ),
+            "particle mechanics": ("none", "swelling only"),
+            "stress-induced diffusion": ("false", "true"),
         }
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_reaction_asymmetric_both(self):
-        options = {"loss of active material": "asymmetric stress and reaction-driven"}
+        options = {
+            "loss of active material": "asymmetric stress and reaction-driven",
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_current_negative(self):
@@ -271,15 +336,27 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_sei_constant(self):
-        options = {"SEI": "constant"}
+        options = {
+            "SEI": "constant",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_sei_reaction_limited(self):
-        options = {"SEI": "reaction limited"}
+        options = {
+            "SEI": "reaction limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_asymmetric_sei_reaction_limited(self):
-        options = {"SEI": "reaction limited (asymmetric)"}
+        options = {
+            "SEI": "reaction limited (asymmetric)",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_sei_reaction_limited_average_film_resistance(self):
@@ -297,21 +374,35 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_sei_solvent_diffusion_limited(self):
-        options = {"SEI": "solvent-diffusion limited"}
+        options = {
+            "SEI": "solvent-diffusion limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_sei_electron_migration_limited(self):
-        options = {"SEI": "electron-migration limited"}
+        options = {
+            "SEI": "electron-migration limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_sei_interstitial_diffusion_limited(self):
-        options = {"SEI": "interstitial-diffusion limited"}
+        options = {
+            "SEI": "interstitial-diffusion limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_sei_ec_reaction_limited(self):
         options = {
             "SEI": "ec reaction limited",
             "SEI porosity change": "true",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
@@ -319,35 +410,53 @@ class BaseUnitTestLithiumIon:
         options = {
             "SEI": "ec reaction limited (asymmetric)",
             "SEI porosity change": "true",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
     def test_well_posed_sei_VonKolzenberg2020_model(self):
         options = {
             "SEI": "VonKolzenberg2020",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
     def test_well_posed_sei_tunnelling_limited(self):
         options = {
             "SEI": "tunnelling limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
     def test_well_posed_mechanics_negative_cracking(self):
-        options = {"particle mechanics": ("swelling and cracking", "none")}
+        options = {
+            "particle mechanics": ("swelling and cracking", "none"),
+            "stress-induced diffusion": ("true", "false"),
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_mechanics_positive_cracking(self):
-        options = {"particle mechanics": ("none", "swelling and cracking")}
+        options = {
+            "particle mechanics": ("none", "swelling and cracking"),
+            "stress-induced diffusion": ("false", "true"),
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_mechanics_both_cracking(self):
-        options = {"particle mechanics": "swelling and cracking"}
+        options = {
+            "particle mechanics": "swelling and cracking",
+            "stress-induced diffusion": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_mechanics_both_swelling_only(self):
-        options = {"particle mechanics": "swelling only"}
+        options = {
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_mechanics_stress_induced_diffusion(self):
@@ -369,6 +478,9 @@ class BaseUnitTestLithiumIon:
             "SEI": "reaction limited",
             "SEI on cracks": "true",
             "particle mechanics": "swelling and cracking",
+            "SEI film resistance": "distributed",
+            "stress-induced diffusion": "true",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
@@ -377,6 +489,9 @@ class BaseUnitTestLithiumIon:
             "SEI": "solvent-diffusion limited",
             "SEI on cracks": "true",
             "particle mechanics": "swelling and cracking",
+            "SEI film resistance": "distributed",
+            "stress-induced diffusion": "true",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
@@ -385,6 +500,9 @@ class BaseUnitTestLithiumIon:
             "SEI": "electron-migration limited",
             "SEI on cracks": "true",
             "particle mechanics": "swelling and cracking",
+            "SEI film resistance": "distributed",
+            "stress-induced diffusion": "true",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
@@ -393,6 +511,9 @@ class BaseUnitTestLithiumIon:
             "SEI": "interstitial-diffusion limited",
             "SEI on cracks": "true",
             "particle mechanics": "swelling and cracking",
+            "SEI film resistance": "distributed",
+            "stress-induced diffusion": "true",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
@@ -402,6 +523,9 @@ class BaseUnitTestLithiumIon:
             "SEI porosity change": "true",
             "SEI on cracks": "true",
             "particle mechanics": "swelling and cracking",
+            "SEI film resistance": "distributed",
+            "stress-induced diffusion": "true",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
@@ -414,7 +538,11 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_partially_reversible_plating(self):
-        options = {"lithium plating": "partially reversible"}
+        options = {
+            "lithium plating": "partially reversible",
+            "SEI": "constant",
+            "SEI film resistance": "none",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_reversible_plating_with_porosity(self):
@@ -435,6 +563,8 @@ class BaseUnitTestLithiumIon:
         options = {
             "lithium plating": "partially reversible",
             "lithium plating porosity change": "true",
+            "SEI": "constant",
+            "SEI film resistance": "none",
         }
         self.check_well_posedness(options)
 
@@ -497,6 +627,7 @@ class BaseUnitTestLithiumIon:
             "current collector": "potential pair",
             "dimensionality": 1,
             "operating mode": external_circuit_function,
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
@@ -516,25 +647,36 @@ class BaseUnitTestLithiumIon:
             "current collector": "potential pair",
             "dimensionality": 2,
             "operating mode": external_circuit_function,
+            "cell geometry": "pouch",
         }
         self.check_well_posedness(options)
 
     def test_well_posed_particle_phases(self):
-        options = {"particle phases": "2"}
+        options = {"particle phases": "2", "surface form": "algebraic"}
         self.check_well_posedness(options)
 
-        options = {"particle phases": ("2", "1")}
+        options = {"particle phases": ("2", "1"), "surface form": "algebraic"}
         self.check_well_posedness(options)
 
-        options = {"particle phases": ("1", "2")}
+        options = {"particle phases": ("1", "2"), "surface form": "algebraic"}
         self.check_well_posedness(options)
 
     def test_well_posed_particle_phases_thermal(self):
-        options = {"particle phases": "2", "thermal": "lumped"}
+        options = {
+            "particle phases": "2",
+            "thermal": "lumped",
+            "surface form": "algebraic",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_particle_phases_sei(self):
-        options = {"particle phases": "2", "SEI": "ec reaction limited"}
+        options = {
+            "particle phases": "2",
+            "SEI": "ec reaction limited",
+            "SEI film resistance": "distributed",
+            "surface form": "algebraic",
+            "total interfacial current density as a state": "true",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_current_sigmoid_ocp(self):
@@ -578,6 +720,7 @@ class BaseUnitTestLithiumIon:
             "particle size": "distribution",
             "particle mechanics": "swelling and cracking",
             "surface form": "algebraic",
+            "stress-induced diffusion": "true",
         }
         self.check_well_posedness(options)
 
@@ -586,6 +729,7 @@ class BaseUnitTestLithiumIon:
             "particle size": "distribution",
             "particle mechanics": "swelling only",
             "surface form": "algebraic",
+            "stress-induced diffusion": "true",
         }
         self.check_well_posedness(options)
 
@@ -675,6 +819,7 @@ class BaseUnitTestLithiumIon:
                 "current sigmoid",
             ),
             "open-circuit potential": (("current sigmoid", "single"), "single"),
+            "surface form": "algebraic",
         }
         self.check_well_posedness(options)
 
@@ -683,6 +828,7 @@ class BaseUnitTestLithiumIon:
             "particle phases": ("2", "1"),
             "diffusivity": (("current sigmoid", "current sigmoid"), "current sigmoid"),
             "open-circuit potential": (("current sigmoid", "single"), "single"),
+            "surface form": "algebraic",
         }
         self.check_well_posedness(options)
 
@@ -694,6 +840,9 @@ class BaseUnitTestLithiumIon:
             "SEI porosity change": "true",
             "lithium plating": ("reversible", "none"),
             "open-circuit potential": (("current sigmoid", "single"), "single"),
+            "SEI film resistance": "distributed",
+            "surface form": "algebraic",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
         # phases have different degradation
@@ -703,6 +852,9 @@ class BaseUnitTestLithiumIon:
             "SEI porosity change": "true",
             "lithium plating": (("reversible", "irreversible"), "none"),
             "open-circuit potential": (("current sigmoid", "single"), "single"),
+            "SEI film resistance": "distributed",
+            "surface form": "algebraic",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
         # one of the phases has no degradation
@@ -710,6 +862,9 @@ class BaseUnitTestLithiumIon:
             "particle phases": ("2", "1"),
             "SEI": (("none", "solvent-diffusion limited"), "none"),
             "lithium plating": (("none", "irreversible"), "none"),
+            "SEI film resistance": "distributed",
+            "surface form": "algebraic",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
@@ -720,6 +875,9 @@ class BaseUnitTestLithiumIon:
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "SEI": "solvent-diffusion limited",
             "loss of active material": "reaction-driven",
+            "SEI film resistance": "distributed",
+            "surface form": "algebraic",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
@@ -727,6 +885,9 @@ class BaseUnitTestLithiumIon:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "loss of active material": "stress-driven",
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+            "surface form": "algebraic",
         }
         self.check_well_posedness(options)
 

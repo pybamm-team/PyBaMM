@@ -34,7 +34,7 @@ class TestPlotThermalComponents:
             assert ax_out[1] == ax[1]
 
     def test_not_implemented(self):
-        model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
+        model = pybamm.lithium_ion.SPM({"thermal": "x-full", "cell geometry": "pouch"})
         sim = pybamm.Simulation(model)
         sol = sim.solve([0, 3600])
         with pytest.raises(NotImplementedError):

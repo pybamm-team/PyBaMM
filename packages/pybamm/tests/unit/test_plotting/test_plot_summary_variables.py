@@ -5,7 +5,13 @@ import pybamm
 
 class TestPlotSummaryVariables:
     def test_plot(self):
-        model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
+        model = pybamm.lithium_ion.SPM(
+            {
+                "SEI": "ec reaction limited",
+                "SEI film resistance": "distributed",
+                "total interfacial current density as a state": "true",
+            }
+        )
         parameter_values = pybamm.ParameterValues("Mohtat2020")
         experiment = pybamm.Experiment(
             [

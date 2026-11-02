@@ -308,12 +308,42 @@ class TestBaseModelToConfig:
         assert type(loaded) is type(model)
         assert dict(loaded.options) == dict(model.options)
 
+    def test_to_config_builtin_includes_pybamm_version(self):
+        """Built-in config records the version that validated its options."""
+        config = pybamm.lithium_ion.SPM().to_config()
+        assert config["pybamm_version"] == pybamm.__version__
+
+    @pytest.mark.parametrize(
+        ("version", "loads"), [("26.10.1.1", True), (None, True), ("26.11.0.0", False)]
+    )
+    def test_from_config_uses_saved_option_rules(self, version, loads):
+        """Full saved configs retain the option rules from their version."""
+        config = pybamm.lithium_ion.SPM(
+            {
+                "particle mechanics": ("swelling only", "none"),
+                "stress-induced diffusion": ("true", "false"),
+            }
+        ).to_config()
+        config["options"]["stress-induced diffusion"] = "true"
+        if version is None:
+            config.pop("pybamm_version", None)
+        else:
+            config["pybamm_version"] = version
+
+        if loads:
+            loaded = pybamm.BaseModel.from_config(config)
+            assert loaded.options.positive["stress-induced diffusion"] == "true"
+        else:
+            with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
+                pybamm.BaseModel.from_config(config)
+
     def test_from_config_builtin_with_tuple_options_round_trip(self):
         """Options containing tuples survive JSON round-trip."""
         model = pybamm.lithium_ion.SPM(
             options={
                 "current collector": "potential pair",
                 "dimensionality": 1,
+                "cell geometry": "pouch",
             }
         )
         config = model.to_config()
@@ -325,7 +355,9 @@ class TestBaseModelToConfig:
 
     def test_from_config_builtin_with_actual_tuple_valued_options_round_trip(self):
         """Tuple-valued options (e.g. particle phases) survive JSON round-trip."""
-        model = pybamm.lithium_ion.DFN(options={"particle phases": ("2", "1")})
+        model = pybamm.lithium_ion.DFN(
+            options={"particle phases": ("2", "1"), "surface form": "algebraic"}
+        )
         config = model.to_config()
         # Simulate JSON round-trip (tuples become lists)
         config = json.loads(json.dumps(config))
@@ -537,7 +569,10 @@ class TestSavedOptionsVersion:
 
     # 26.9 stored this default for one-electrode mechanics
     LEGACY_STRESS = "true"
-    OPTIONS = {"particle mechanics": ("swelling only", "none")}
+    OPTIONS = {
+        "particle mechanics": ("swelling only", "none"),
+        "stress-induced diffusion": ("true", "false"),
+    }
 
     def _as_saved(self, options):
         options = json.loads(json.dumps(dict(options)))
@@ -604,6 +639,7 @@ class TestSavedOptionsVersion:
         options = {
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "surface form": "algebraic",
         }
         config = json.loads(
             json.dumps(pybamm.lithium_ion.SPM(options, build=False).to_config())

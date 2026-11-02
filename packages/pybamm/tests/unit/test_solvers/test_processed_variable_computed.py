@@ -121,7 +121,11 @@ _OUTPUT_VARIABLE_MODELS = {
     ),
     "SPMe 2+1D": (
         lambda: pybamm.lithium_ion.SPMe(
-            {"current collector": "potential pair", "dimensionality": 2}
+            {
+                "current collector": "potential pair",
+                "dimensionality": 2,
+                "cell geometry": "pouch",
+            }
         ),
         lambda: pybamm.ParameterValues("Marquis2019"),
         # y and z differ, so swapping them changes the layout

@@ -14,6 +14,7 @@
 - `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
 - The `evaluation_array` argument of `StateVector` and `StateVectorDot` is deprecated and ignored; drop the argument. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
+- Battery-model options set from another option because they were not given now emit `pybamm.OptionDefaultDeprecationWarning`, naming the options; removal no earlier than `27.1.0.0`. To migrate, pass the named options with the same values. ([#5818](https://github.com/pybamm-team/PyBaMM/pull/5818))
 
 ## Features
 
@@ -56,6 +57,7 @@
 - `MPM` no longer cites `Marquis2019` (#5800) and accepts `"particle size": ("distribution", "distribution")`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Models declare `fixed_options` and `default_options`, checked in one place and inherited, so an `SPM` subclass gets `"x-average side reactions": "true"`. Conflicting values raise an `OptionError` naming the model. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Particle mechanics submodels read `"particle size"` per electrode, so a one-electrode size distribution gets the size-distribution stress and crack equations there. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Saved battery models and complete built-in configs written before the per-electrode option checks keep their original validation rules when loaded. ([#5818](https://github.com/pybamm-team/PyBaMM/pull/5818))
 
 ## Optimizations
 

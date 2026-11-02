@@ -9,7 +9,10 @@ class TestParameterValuesWithModel:
     def test_parameter_values_with_model(self, subtests):
         param_to_model = {
             "Ai2020": pybamm.lithium_ion.DFN(
-                {"particle mechanics": "swelling and cracking"}
+                {
+                    "particle mechanics": "swelling and cracking",
+                    "stress-induced diffusion": "true",
+                }
             ),
             "Bonkile2024": pybamm.lithium_ion.DFN(
                 {
@@ -25,6 +28,10 @@ class TestParameterValuesWithModel:
                         "swelling only",
                     ),
                     "loss of active material": "stress-driven",
+                    "surface form": "algebraic",
+                    "SEI film resistance": "distributed",
+                    "total interfacial current density as a state": "true",
+                    "stress-induced diffusion": "true",
                 }
             ),
             "Chen2020": pybamm.lithium_ion.DFN(),
@@ -32,6 +39,7 @@ class TestParameterValuesWithModel:
                 {
                     "particle phases": ("2", "1"),
                     "open-circuit potential": (("single", "current sigmoid"), "single"),
+                    "surface form": "algebraic",
                 }
             ),
             "Ecker2015": pybamm.lithium_ion.DFN(),
@@ -44,6 +52,8 @@ class TestParameterValuesWithModel:
                 {
                     "SEI": "solvent-diffusion limited",
                     "lithium plating": "partially reversible",
+                    "SEI film resistance": "distributed",
+                    "total interfacial current density as a state": "true",
                 }
             ),
             "OKane2022_graphite_SiOx_halfcell": pybamm.lithium_ion.DFN(
@@ -51,6 +61,8 @@ class TestParameterValuesWithModel:
                     "working electrode": "positive",
                     "SEI": "solvent-diffusion limited",
                     "lithium plating": "partially reversible",
+                    "SEI film resistance": "distributed",
+                    "total interfacial current density as a state": "true",
                 }
             ),
             "ORegan2022": pybamm.lithium_ion.DFN(),

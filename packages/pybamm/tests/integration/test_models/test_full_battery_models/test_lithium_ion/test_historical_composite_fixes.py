@@ -67,7 +67,11 @@ class TestParticleSizeDistributionFixes:
         incorrectly using the primary PSD bounds.
         """
         options = pybamm.BatteryModelOptions(
-            {"particle phases": ("2", "1"), "particle size": "distribution"}
+            {
+                "particle phases": ("2", "1"),
+                "particle size": "distribution",
+                "surface form": "algebraic",
+            }
         )
         param = self._get_psd_composite_params()
 
@@ -87,7 +91,11 @@ class TestParticleSizeDistributionFixes:
         assert R_max_primary != pytest.approx(R_max_secondary, rel=0.01)
 
         model = pybamm.lithium_ion.DFN(
-            {"particle phases": ("2", "1"), "particle size": "distribution"}
+            {
+                "particle phases": ("2", "1"),
+                "particle size": "distribution",
+                "surface form": "algebraic",
+            }
         )
         sim = pybamm.Simulation(model, parameter_values=param)
         sol = sim.solve([0, 600])
@@ -165,7 +173,12 @@ class TestCompositeSwellingFixes:
         Also verifies stress variables exist for both phases.
         """
         model = pybamm.lithium_ion.DFN(
-            {"particle phases": ("2", "1"), "particle mechanics": "swelling only"}
+            {
+                "particle phases": ("2", "1"),
+                "particle mechanics": "swelling only",
+                "stress-induced diffusion": "true",
+                "surface form": "algebraic",
+            }
         )
         param = self._get_swelling_composite_params()
         sim = pybamm.Simulation(model, parameter_values=param)

@@ -23,7 +23,7 @@ class BasicDFNComposite(BaseModel):
     """
 
     def __init__(self, name="Composite graphite/silicon Doyle-Fuller-Newman model"):
-        options = {"particle phases": ("2", "1")}
+        options = {"particle phases": ("2", "1"), "surface form": "algebraic"}
         super().__init__(options, name)
         pybamm.citations.register("Ai2022")
         # `param` is a class containing all the relevant parameters and functions for

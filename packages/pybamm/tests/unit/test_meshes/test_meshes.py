@@ -105,7 +105,9 @@ class TestMesh:
             pybamm.Mesh(geometry, submesh_types, {})
 
         var_pts = {"x_n": 10, "x_s": 10, "x_p": 12}
-        geometry = pybamm.battery_geometry(options={"dimensionality": 1})
+        geometry = pybamm.battery_geometry(
+            options={"dimensionality": 1, "cell geometry": "pouch"}
+        )
         with pytest.raises(KeyError, match=r"Points not given"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -502,7 +504,8 @@ class TestMesh:
         )
 
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 1}
+            include_particles=False,
+            options={"dimensionality": 1, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
 
@@ -538,7 +541,8 @@ class TestMesh:
         )
 
         geometry = pybamm.battery_geometry(
-            include_particles=False, options={"dimensionality": 1}
+            include_particles=False,
+            options={"dimensionality": 1, "cell geometry": "pouch"},
         )
         param.process_geometry(geometry)
 

@@ -39,7 +39,7 @@ class TestLOQS:
 
     @pytest.mark.parametrize(
         "options",
-        [{"thermal": "lumped"}, {"thermal": "x-full"}],
+        [{"thermal": "lumped"}, {"thermal": "x-full", "cell geometry": "pouch"}],
         ids=["lumped", "x_full"],
     )
     def test_thermal(self, options):
@@ -50,11 +50,16 @@ class TestLOQS:
     @pytest.mark.parametrize(
         "options",
         [
-            {"current collector": "potential pair", "dimensionality": 1},
+            {
+                "current collector": "potential pair",
+                "dimensionality": 1,
+                "cell geometry": "pouch",
+            },
             {
                 "current collector": "potential pair",
                 "dimensionality": 1,
                 "convection": "full transverse",
+                "cell geometry": "pouch",
             },
         ],
         ids=["basic_1plus1D", "1plus1D_with_convection"],

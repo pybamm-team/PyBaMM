@@ -41,6 +41,7 @@ class TestCompareBasicModels:
             {
                 "particle phases": ("2", "1"),
                 "open-circuit potential": (("single", "current sigmoid"), "single"),
+                "surface form": "algebraic",
             }
         )
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
