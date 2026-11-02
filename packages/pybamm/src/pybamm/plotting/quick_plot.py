@@ -68,8 +68,10 @@ class QuickPlot:
     labels : list of str, optional
         Labels for the different models. Defaults to model names
     colors : list of str, optional
-        The colors to loop over when plotting. Defaults to None, in which case the
-        default color loop defined by matplotlib style sheet or rcParams is used.
+        The colors to loop over when plotting. Defaults to
+        ["r", "b", "k", "g", "m", "c"], or to the colors of matplotlib's color cycle
+        (``axes.prop_cycle``) if it differs from matplotlib's default, e.g. when set
+        by a style sheet or rcParams.
     linestyles : list of str, optional
         The linestyles to loop over when plotting. Defaults to ["-", ":", "--", "-."]
     shading : str, optional
@@ -129,6 +131,15 @@ class QuickPlot:
         # Set colors, linestyles, figsize, axis limits
         # call LoopList to make sure list index never runs out
         if colors is None:
+            matplotlib = import_optional_dependency("matplotlib")
+            prop_cycle = matplotlib.rcParams["axes.prop_cycle"]
+            try:
+                customized = prop_cycle != matplotlib.rcParamsDefault["axes.prop_cycle"]
+            except ValueError:
+                # comparing colors given as NumPy arrays, e.g. from a colormap, raises
+                customized = True
+            if customized:
+                colors = prop_cycle.by_key().get("color")
             self.colors = LoopList(colors or ["r", "b", "k", "g", "m", "c"])
         else:
             self.colors = LoopList(colors)

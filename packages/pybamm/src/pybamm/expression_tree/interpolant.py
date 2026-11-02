@@ -15,11 +15,6 @@ from scipy import interpolate
 import pybamm
 
 
-def _is_uniform_grid(x: npt.NDArray[np.float64]) -> bool:
-    # Try seeing if the grid was computed using np.linspace
-    return bool(np.array_equal(x, np.linspace(x[0], x[-1], len(x))))
-
-
 class Interpolant(pybamm.Function):
     """
     Interpolate data in 1D, 2D, or 3D. Interpolation in 3D requires the input data to be
@@ -298,7 +293,8 @@ class Interpolant(pybamm.Function):
             v = self.y.flatten()
         else:
             v = self.y.ravel(order="F")
-        lookup_modes = ["exact" if _is_uniform_grid(xi) else "binary" for xi in self.x]
+        # CasADi's "exact" lookup can pick a neighbouring segment beside a knot
+        lookup_modes = ["binary"] * len(self.x)
         result = casadi.MX.interpn_linear(
             self.x, v, converted_children, {"lookup_mode": lookup_modes}
         )
@@ -344,7 +340,6 @@ class Interpolant(pybamm.Function):
 
         n = len(x_np) - 1
         h = np.diff(x_np)
-        uniform = _is_uniform_grid(x_np)
         is_vector_valued = y_np.ndim > 1
         y_2d = y_np if is_vector_valued else y_np[:, np.newaxis]
         d_2d = d_np if d_np.ndim > 1 else d_np[:, np.newaxis]
@@ -352,11 +347,7 @@ class Interpolant(pybamm.Function):
 
         # Precompute Hermite cubic coefficients per interval, pre-divided by h^k.
         # p(dx) = c0 + c1*dx + c2*dx² + c3*dx³,  dx = x - x_lo
-        # For non-uniform grids x_lo is stored as a 5th table entry;
-        # for uniform grids x_lo is computed from the index via scalar arithmetic.
-        stride = 4
-        if not uniform:
-            stride += 1
+        stride = 5
         coeffs = np.empty((n, stride, m))
 
         y0 = y_2d[:-1]  # (n, m)
@@ -369,8 +360,7 @@ class Interpolant(pybamm.Function):
         coeffs[:, 1] = hd0 * inv_h
         coeffs[:, 2] = (-3 * y0 - 2 * hd0 + 3 * y1 - hd1) * inv_h**2
         coeffs[:, 3] = (2 * y0 + hd0 - 2 * y1 + hd1) * inv_h**3
-        if not uniform:
-            coeffs[:, 4, :] = x_np[:-1, np.newaxis]
+        coeffs[:, 4, :] = x_np[:-1, np.newaxis]
 
         # Honour _num_derivatives (#5582): since dx = x - x_lo, d/dx == d/d(dx),
         # so differentiating just shifts/scales the coeffs (x_lo row untouched).
@@ -385,16 +375,12 @@ class Interpolant(pybamm.Function):
 
         # 1. Single interval index lookup (clamp handles extrapolation)
         x = converted_children[0]
-        lookup_mode = "exact" if uniform else "binary"
-        idx = casadi.low(casadi.MX(x_np), x, {"lookup_mode": lookup_mode})
+        idx = casadi.low(casadi.MX(x_np), x, {"lookup_mode": "binary"})
         idx = casadi.fmin(casadi.fmax(idx, 0), n - 1)
         base = idx * stride
 
         # 2. Compute dx = x - x_lo
-        if uniform:
-            dx = x - (x_np[0] + idx * h[0])
-        else:
-            dx = x - coeffs_flat[base + 4, 0]
+        dx = x - coeffs_flat[base + 4, 0]
 
         # 3. Coefficient lookup and Horner evaluation
         c0 = coeffs_flat[base, :]
