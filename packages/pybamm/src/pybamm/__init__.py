@@ -248,6 +248,8 @@ from .plotting.plot_3d_cross_section import plot_3d_cross_section
 from .plotting.plot_3d_heatmap import plot_3d_heatmap
 from .plotting.plot_vtk import VTKQuickPlot
 from .plotting.nyquist_plot import nyquist_plot
+from .plotting.bode_plot import bode_plot
+from .plotting.eis_plot import eis_plot
 
 # Simulation
 from .simulation import BaseSimulation, Simulation, EISSimulation, load_sim, is_notebook
