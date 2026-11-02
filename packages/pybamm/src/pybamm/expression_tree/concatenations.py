@@ -695,22 +695,18 @@ def simplified_domain_concatenation(
     # Create the DomainConcatenation to read domain and child domain
     concat = DomainConcatenation(children, mesh, copy_this=copy_this)
     # Simplify Concatenation of StateVectors to a single StateVector
-    # The sum of the evalation arrays of the StateVectors must be exactly 1
+    # The StateVectors must cover their combined span exactly once
     if all(isinstance(child, pybamm.StateVector) for child in children):
         sv_children: list[pybamm.StateVector] = children  # type: ignore[assignment]
-        longest_eval_array = len(sv_children[-1]._evaluation_array)
-        eval_arrays = {}
-        for child in sv_children:
-            eval_arrays[child] = np.concatenate(
-                [
-                    child.evaluation_array,
-                    np.zeros(longest_eval_array - len(child.evaluation_array)),
-                ]
-            )
         first_start = sv_children[0].y_slices[0].start
         last_stop = sv_children[-1].y_slices[-1].stop
-        if all(
-            sum(array for array in eval_arrays.values())[first_start:last_stop] == 1
+        ranges = sorted(
+            (y_slice.start or 0, y_slice.stop)
+            for child in sv_children
+            for y_slice in child.y_slices
+        )
+        if pybamm.expression_tree.state_vector.ranges_tile(
+            ranges, first_start, last_stop
         ):
             return pybamm.StateVector(
                 slice(first_start, last_stop), domains=concat._domains

@@ -278,7 +278,7 @@ class Latexify:
             else:
                 return eqn_list
 
-        elif self.filename.endswith(".tex"):  # pragma: no cover
+        elif self.filename.endswith(".tex"):
             return sympy.preview(eqn_new_line, outputTexFile=self.filename)
 
         elif self.filename is not None:
@@ -303,7 +303,7 @@ class Latexify:
                     )
 
                 # When equations are too huge, set output resolution to default
-                except RuntimeError:  # pragma: no cover
+                except RuntimeError:
                     warnings.warn(
                         "RuntimeError - Setting the output resolution to default",
                         stacklevel=2,
