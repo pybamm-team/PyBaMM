@@ -107,6 +107,12 @@ class TestSummaryVariables:
         with pytest.raises(KeyError, match=r"Variable 'c' is not a summary variable"):
             sum_vars["c"]
 
+    def test_esoh_variables_need_esoh_solver(self):
+        sum_vars, _ = self.create_sum_vars()
+
+        with pytest.raises(pybamm.SolverError, match=r"need an eSOH solver"):
+            sum_vars._get_esoh_variables()
+
     def test_summary_vars_all_variables(self):
         # no esoh
         sum_vars, _ = self.create_sum_vars()

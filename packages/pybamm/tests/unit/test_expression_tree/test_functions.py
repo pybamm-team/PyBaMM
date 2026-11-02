@@ -3,15 +3,14 @@
 #
 
 import itertools
+from decimal import Decimal, localcontext
 
-import casadi
 import numpy as np
 import pytest
 import sympy
 from scipy import special
 
 import pybamm
-from pybamm.expression_tree.functions import _is_constant_value
 from tests import (
     function_test,
     multi_var_function_test,
@@ -298,8 +297,49 @@ class TestFunction:
             result = result.toarray()
         assert np.isfinite(result).all()
 
+    def test_reg_power_half_is_within_its_rounding_bound(self):
+        # Nine roundings (x/scale, x*x, delta^2, +, sqrt, sqrt, /, sqrt(scale), *) bound
+        # the relative error by (6 - w/2) u, w = x^2 / (x^2 + delta^2) and u = 2^-53.
+        delta, scale = pybamm.settings.tolerances["reg_power"], 33133.0
+        base = scale * np.geomspace(1e-12, 2.0, 3000)
+        y = pybamm.StateVector(slice(0, base.size))
+        values = pybamm.reg_power(y, 0.5, scale=scale).evaluate(y=base).ravel()
+        unit_roundoff = Decimal(2) ** -53
+        with localcontext() as context:
+            context.prec = 60
+            delta_sq = Decimal(delta) ** 2
+            for b, value in zip(base, values, strict=True):
+                x = Decimal(b) / Decimal(scale)
+                exact = x / (x * x + delta_sq).sqrt().sqrt() * Decimal(scale).sqrt()
+                assert abs(Decimal(value) - exact) <= 6 * unit_roundoff * exact, b
+
 
 class TestSpecificFunctions:
+    @pytest.mark.parametrize("perform_simplifications", [True, False])
+    def test_a_copy_keeps_the_function_s_class_and_settings(
+        self, perform_simplifications
+    ):
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
+        functions = [
+            pybamm.Exp(a),
+            pybamm.Tanh(a),
+            pybamm.Arcsinh2(a, a, eps=1e-3),
+            pybamm.RegPower(a, 0.5, delta=1e-2),
+        ]
+        for function in functions:
+            new_children = [b, *function.children[1:]]
+            new_copy = function.create_copy(new_children, perform_simplifications)
+
+            assert type(new_copy) is type(function)
+            assert new_copy.children[0] == b
+        assert new_copy.delta == functions[-1].delta
+        y = np.array([0.3, 0.6])
+        arcsinh2 = functions[2].create_copy(perform_simplifications=False)
+        np.testing.assert_allclose(
+            arcsinh2.evaluate(y=y), functions[2].evaluate(y=y), rtol=1e-15
+        )
+
     def test_to_json(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.cos(a)
@@ -424,26 +464,3 @@ class TestNonObjectFunctions:
         assert fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}) < fun.evaluate(
             inputs={"x": -1, "mu": 0, "sigma": 2}
         )
-
-
-class TestIsConstantValue:
-    def test_all_branches(self):
-
-        # casadi.MX with size > 2 -> False
-        large_mx = casadi.MX.sym("x", 10)
-        assert not _is_constant_value(large_mx, 0)
-
-        # numpy array
-        assert _is_constant_value(np.array([1.0, 1.0]), 1.0)
-        assert not _is_constant_value(np.array([1.0, 2.0]), 1.0)
-
-        # scalar
-        assert _is_constant_value(0.5, 0.5)
-        assert not _is_constant_value(0.5, 1.0)
-
-        # exception branch - use object that raises on comparison
-        class BadCompare:
-            def __eq__(self, other):
-                raise TypeError("can't compare")
-
-        assert not _is_constant_value(BadCompare(), 0)

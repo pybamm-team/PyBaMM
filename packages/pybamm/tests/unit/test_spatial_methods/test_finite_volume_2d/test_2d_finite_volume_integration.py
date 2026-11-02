@@ -256,7 +256,7 @@ class TestFiniteVolumeIntegration:
         }
         k = pybamm.VectorField(pybamm.Scalar(1 + 1e-5), pybamm.Scalar(1 + 1e-5))
         disc.bcs = bcs
-        symbol = pybamm.Magnitude(k * pybamm.Gradient(var) / pybamm.Scalar(-5), "tb")
+        symbol = pybamm.Component(k * pybamm.Gradient(var) / pybamm.Scalar(-5), 1)
         boundary_integral_left = pybamm.BoundaryIntegral(symbol, region="bottom")
         # Fix this test
         boundary_integral_left_disc = disc.process_symbol(boundary_integral_left)

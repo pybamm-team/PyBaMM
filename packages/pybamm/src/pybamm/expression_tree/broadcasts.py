@@ -39,6 +39,8 @@ class Broadcast(pybamm.SpatialOperator):
     """
 
     __slots__ = ("broadcast_domain", "broadcast_type")
+    broadcast_domain: list[str]
+    broadcast_type: str
 
     def __init__(
         self,
@@ -80,6 +82,8 @@ class Broadcast(pybamm.SpatialOperator):
 
     def _unary_new_copy(self, child: pybamm.Symbol, perform_simplifications=True):
         """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
+        # Concrete subclasses take (child, broadcast_domain), not the base's domains
+        # pyrefly: ignore[bad-argument-type]
         return self.__class__(child, self.broadcast_domain)
 
 
@@ -539,15 +543,15 @@ class FullBroadcast(Broadcast):
 
         if isinstance(auxiliary_domains, str):
             auxiliary_domains = {"secondary": auxiliary_domains}
-        broadcast_domains = {
+        domain_lists = {
             level: _domain_list(names)
             for level, names in self._read_domain_or_domains(
                 broadcast_domain, auxiliary_domains, broadcast_domains
             ).items()
         }
         # perform some basic checks and set attributes
-        domains = self.check_and_set_domains(child, broadcast_domains)
-        self.broadcast_domain = broadcast_domains["primary"]
+        domains = self.check_and_set_domains(child, domain_lists)
+        self.broadcast_domain = domain_lists["primary"]
         self.broadcast_type = "full to nodes"
         super().__init__(child, domains, name=name)
 

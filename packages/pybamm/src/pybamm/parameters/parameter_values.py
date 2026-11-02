@@ -805,6 +805,7 @@ class ParameterValues:
         inplace: bool = True,
         options=None,
         inputs=None,
+        differentiable: bool | list[str] = False,
     ):
         """
         Set the initial state of the battery.
@@ -825,6 +826,10 @@ class ParameterValues:
             Model options. Default is None.
         inputs : dict, optional
             Input parameters. Default is None.
+        differentiable : bool or list of str, optional
+            If True, or a list of input names, set the initial state as an expression
+            in the input parameters that carries its first derivative with respect to
+            them, see :func:`pybamm.lithium_ion.set_initial_state`. Default is False.
 
         Returns
         -------
@@ -838,6 +843,8 @@ class ParameterValues:
         >>> isinstance(result, pybamm.ParameterValues)
         True
         """
+        # Only chemistries that support it accept the keyword
+        kwargs = {"differentiable": differentiable} if differentiable else {}
         return self._set_initial_state(
             initial_value,
             self,
@@ -846,6 +853,7 @@ class ParameterValues:
             inplace=inplace,
             options=options,
             inputs=inputs,
+            **kwargs,
         )
 
     def set_initial_stoichiometry_half_cell(
@@ -1688,7 +1696,7 @@ def deserialize_parameter_value(value: Any) -> Any:
 
 
 def convert_parameter_values_to_json(
-    parameter_values: Mapping[str, Any], filename: str | None = None
+    parameter_values: ParameterValues | Mapping[str, Any], filename: str | None = None
 ) -> dict:
     """
     Convert a mapping of parameter values to a JSON-serializable dictionary.

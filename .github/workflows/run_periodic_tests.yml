@@ -65,8 +65,12 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install gfortran gcc graphviz pandoc libosmesa6 libegl1
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install graphviz pandoc libosmesa6 libegl1
+
+      # One leg is enough to run the latexify test that renders through real LaTeX.
+      - name: Install TeXLive for Linux
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        run: sudo apt-get install --no-install-recommends texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-15-intel' || matrix.os == 'macos-latest'
@@ -76,11 +80,9 @@ jobs:
           HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
-        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz libomp
-          brew reinstall gcc
+          brew install graphviz
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -100,10 +102,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
 
       - name: Install nox
         run: uv tool install nox
@@ -151,7 +154,6 @@ jobs:
     uses: $/.github/workflows/_nox.yml
     with:
       sessions: examples
-      texlive: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
