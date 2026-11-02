@@ -3,9 +3,9 @@
 #
 
 import os
-import pickle  # nosec B403 - used in tests with trusted input
+import pickle
 import platform
-import subprocess  # nosec
+import subprocess
 import sys
 from io import StringIO
 
@@ -66,6 +66,13 @@ class TestBaseModel:
         assert isinstance(model.initial_conditions[c0], pybamm.Scalar)
         assert model.initial_conditions[c0].value == 34
 
+        # update accepts iterable pairs as well as mappings
+        d0 = pybamm.Symbol("d0")
+        model.initial_conditions.update([(d0, 5)])
+        assert model.initial_conditions[d0].value == 5
+        with pytest.raises(TypeError, match="does not accept keyword arguments"):
+            model.initial_conditions.update(d0=5)
+
         # Variable in initial conditions should fail
         with pytest.raises(
             TypeError, match=r"Initial conditions cannot contain 'Variable' objects"
@@ -100,6 +107,13 @@ class TestBaseModel:
         assert model.boundary_conditions[c0]["right"][0].value == 4
         assert model.boundary_conditions[c0]["left"][1] == "Dirichlet"
         assert model.boundary_conditions[c0]["right"][1] == "Dirichlet"
+
+        # update accepts iterable pairs as well as mappings
+        model.boundary_conditions.update(
+            [(c0, {"left": (1, "Neumann"), "right": (2, "Neumann")})]
+        )
+        assert model.boundary_conditions[c0]["left"][0].value == 1
+        assert model.boundary_conditions[c0]["right"][1] == "Neumann"
 
         # Check bad bc type
         bad_bcs = {c0: {"left": (-2, "bad type"), "right": (4, "bad type")}}
@@ -831,7 +845,7 @@ class TestBaseModel:
         # Compile
         subprocess.run(
             ["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"], check=True
-        )  # nosec
+        )
 
         # Read the generated functions
         x0_fn = casadi.external("x0", "./test.so")
@@ -1826,7 +1840,7 @@ class TestBaseModel:
         data = pickle.dumps(model)
         monkeypatch.undo()
 
-        restored = pickle.loads(data)  # nosec B301
+        restored = pickle.loads(data)
         assert restored.convert_to_format == "python"
         assert "convert_to_format" not in vars(restored)
         solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])

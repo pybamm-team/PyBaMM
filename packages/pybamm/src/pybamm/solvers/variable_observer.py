@@ -33,8 +33,8 @@ class SegmentSelector:
 
     def __init__(self, all_ts: Sequence[npt.NDArray[np.float64]]):
         self.indices = np.where([ti.size > 0 for ti in all_ts])[0]
-        self._starts = [all_ts[idx][0] for idx in self.indices]
-        self._ends = [all_ts[idx][-1] for idx in self.indices]
+        self._starts = [all_ts[int(idx)][0] for idx in self.indices]
+        self._ends = [all_ts[int(idx)][-1] for idx in self.indices]
 
     def select(
         self, t: npt.NDArray[np.float64], full_range: bool
@@ -71,7 +71,7 @@ class VariableObserver(ABC):
     """
 
     #: Derived caches: built on demand, never pickled (see __getstate__).
-    _selector = None
+    _selector: SegmentSelector | None = None
     _selector_ts = None
     _serialised = None
 
@@ -98,10 +98,12 @@ class VariableObserver(ABC):
         See :meth:`SegmentSelector.select`.
         """
         # An observer can be shared across solutions, so key on their time arrays
-        if self._selector_ts is not variable.all_ts:
-            self._selector = SegmentSelector(variable.all_ts)
+        selector = self._selector
+        if selector is None or self._selector_ts is not variable.all_ts:
+            selector = SegmentSelector(variable.all_ts)
+            self._selector = selector
             self._selector_ts = variable.all_ts
-        return self._selector.select(t, full_range)
+        return selector.select(t, full_range)
 
     @abstractmethod
     def observe_raw(

@@ -190,6 +190,8 @@ class EISSimulation(BaseSimulation):
         voltage, current = self._output_jacobian @ x
         return -voltage / current
 
+    # EIS solves in the frequency domain, so it takes frequencies, not t_eval
+    # pyrefly: ignore[bad-override]
     def solve(self, frequencies, inputs=None, initial_soc=None):
         """Compute impedance at the given frequencies.
 

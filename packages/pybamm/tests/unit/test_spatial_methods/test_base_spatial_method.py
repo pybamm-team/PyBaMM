@@ -31,7 +31,7 @@ class TestSpatialMethod:
         with pytest.raises(NotImplementedError):
             spatial_method.gradient_squared(None, None, None)
         with pytest.raises(NotImplementedError):
-            spatial_method.integral(None, None, None)
+            spatial_method.integral(None, None, None, None)
         with pytest.raises(NotImplementedError):
             spatial_method.indefinite_integral(None, None, None)
         with pytest.raises(NotImplementedError):

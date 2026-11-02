@@ -35,8 +35,8 @@ StandaloneAlgebraicSystem::StandaloneAlgebraicSystem(
 }
 
 StandaloneAlgebraicSystem::StandaloneAlgebraicSystem(
-  casadi::Function res_fn,
-  casadi::Function jac_fn,
+  const casadi::Function &res_fn,
+  const casadi::Function &jac_fn,
   bool use_sparse,
   sunrealtype klu_pivot_tolerance)
   : StandaloneAlgebraicSystem(
@@ -189,8 +189,8 @@ void StandaloneAlgebraicSystem::BuildDenseResources() {
 // ────────────────────── StandaloneNewtonSolver ──────────────────────
 
 StandaloneNewtonSolver::StandaloneNewtonSolver(
-  casadi::Function residual_fn,
-  casadi::Function jacobian_fn,
+  const casadi::Function &residual_fn,
+  const casadi::Function &jacobian_fn,
   const std::vector<sunrealtype>& atol,
   sunrealtype rtol,
   sunrealtype step_tol,
