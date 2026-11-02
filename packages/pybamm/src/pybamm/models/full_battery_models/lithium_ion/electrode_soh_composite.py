@@ -41,7 +41,11 @@ def _get_primary_only_options(
     Examples
     --------
     >>> opts = _get_primary_only_options(
-    ...     {"open-circuit potential": (("single", "current sigmoid"), "single")}
+    ...     {
+    ...         "particle phases": ("2", "1"),
+    ...         "surface form": "algebraic",
+    ...         "open-circuit potential": (("single", "current sigmoid"), "single"),
+    ...     }
     ... )
     >>> opts["open-circuit potential"]
     ('single', 'single')

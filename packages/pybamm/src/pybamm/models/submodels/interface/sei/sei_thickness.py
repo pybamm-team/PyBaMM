@@ -39,7 +39,7 @@ class SEIThickness(BaseModel):
         domain, Domain = self.domain_Domain
         phase_param = self.phase_param
         reaction_name = self.reaction_name
-        SEI_option = getattr(self.options, domain)["SEI"]
+        SEI_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
         crack_option = getattr(self.options, domain)["SEI on cracks"]
         if self.options["working electrode"] != "both" and domain == "negative":
             crack_option = "false"  # required if SEI on cracks is used for half-cells
@@ -85,10 +85,12 @@ class SEIThickness(BaseModel):
         # Thickness variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
             # if SEI on cracks is false, skip over roughness to avoid division by zero
-            if crack_option == "false":
+            if crack_option == "false" or SEI_option in ["none", "constant"]:
                 L_sei = c_sei * c_to_L
             else:
-                roughness = variables[f"{Domain} electrode roughness ratio"]
+                roughness = variables[
+                    f"{Domain} {self.phase_name}electrode roughness ratio"
+                ]
                 L_sei = c_sei * c_to_L / (roughness - 1)  # SEI on cracks thickness
             if self.size_distribution:
                 L_sei_sav = pybamm.size_average(L_sei)

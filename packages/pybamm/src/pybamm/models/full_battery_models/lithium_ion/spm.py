@@ -20,39 +20,37 @@ class SPM(BaseModel):
 
     """
 
+    fixed_options = {"x-average side reactions": "true"}
+
+    def _dependent_default_options(self, supplied):
+        # the explicit-current closure needs invertible kinetics and a single size
+        if "surface form" not in supplied and (
+            "intercalation kinetics" in supplied
+            or "distribution" in supplied.get("particle size", "")
+        ):
+            return {"surface form": "algebraic"}
+        return {}
+
     def __init__(self, options=None, name="Single Particle Model", build=True):
         # For degradation models we use the "x-average", note that for side reactions
         # this is set by "x-average side reactions"
         self.x_average = True
 
-        # Use 'algebraic' surface form when the explicit-current closure is
-        # unavailable: non-default kinetics have no inverse form, and
-        # particle-size distributions require a surface formulation.
-        options = options or {}
-        if options.get("surface form") is None and (
-            options.get("intercalation kinetics") is not None
-            or "distribution" in options.get("particle size", "")
-        ):
-            options["surface form"] = "algebraic"
-
-        # Set "x-average side reactions" to "true" if the model is SPM
-        x_average_side_reactions = options.get("x-average side reactions")
-        if x_average_side_reactions is None and self.__class__ in [
-            pybamm.lithium_ion.SPM,
-            pybamm.lithium_ion.MPM,
-        ]:
-            options["x-average side reactions"] = "true"
-
         super().__init__(options, name)
 
         self.set_submodels(build)
 
-        if self.__class__ != "MPM":
+        if not isinstance(self, pybamm.lithium_ion.MPM):
             pybamm.citations.register("Marquis2019")
 
-        if (
-            self.options["SEI"] not in ["none", "constant", ("constant", "none")]
-            or self.options["lithium plating"] != "none"
+        if any(
+            getattr(getattr(self.options, domain), phase)[option] not in values
+            for option, values in [
+                ("SEI", ("none", "constant")),
+                ("lithium plating", ("none",)),
+            ]
+            for domain, phases in self.options.phases.items()
+            for phase in phases
         ):
             pybamm.citations.register("BrosaPlanella2022")
 

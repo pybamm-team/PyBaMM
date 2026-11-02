@@ -74,8 +74,16 @@ class TestMPM:
         with pytest.raises(pybamm.OptionError):
             pybamm.lithium_ion.MPM(options)
 
+    def test_particle_size_tuple(self):
+        model = pybamm.lithium_ion.MPM(
+            {"particle size": ("distribution", "distribution")}, build=False
+        )
+        assert model.options["particle size"] == ("distribution", "distribution")
+        with pytest.raises(pybamm.OptionError, match="particle size"):
+            pybamm.lithium_ion.MPM({"particle size": ("single", "distribution")})
+
     def test_nonspherical_particle_not_implemented(self):
-        options = {"particle shape": "user"}
+        options = {"particle shape": "no particles"}
         with pytest.raises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 

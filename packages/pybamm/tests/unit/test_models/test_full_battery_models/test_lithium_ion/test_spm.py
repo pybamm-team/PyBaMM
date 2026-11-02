@@ -37,7 +37,10 @@ class TestSPM(BaseUnitTestLithiumIon):
 
         # Check model with distributed side reactions throws an error
         options["x-average side reactions"] = "false"
-        with pytest.raises(pybamm.OptionError, match=r"cannot be 'false' for SPM"):
+        with pytest.raises(
+            pybamm.OptionError,
+            match=r"SPM requires 'x-average side reactions' to be 'true'",
+        ):
             pybamm.lithium_ion.SPM(options)
 
     def test_distribution_options(self):

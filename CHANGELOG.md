@@ -3,6 +3,11 @@
 ## Breaking changes
 
 - `StateVector` and `StateVectorDot` raise `ShapeError` for stepped, negative, overlapping or out-of-order slices; pass sorted, disjoint, non-negative slices. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
+- `model.options["SEI"]`, `["SEI on cracks"]` and `["lithium plating"]` report the value as given; a scalar still applies to the negative electrode only. To migrate, read per-electrode values via `model.options.negative` / `.positive`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- `"stress-induced diffusion": "true"` with particle mechanics on only one electrode raises an `OptionError`. To migrate, pass a per-electrode tuple. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Conflicting values for a model's required options (e.g. lead-acid `"particle shape"`, lithium-metal DFN `"working electrode"`, `Yang2017` SEI and plating, non-default `BasicDFNHalfCell` options) raise an `OptionError`. To migrate, drop the conflicting option. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- A `(primary, secondary)` tuple on an electrode with one particle phase, including a half cell's unused negative entry, raises an `OptionError`. To migrate, give one value there or set `"particle phases"` to `"2"`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Without `"particle mechanics"`, a per-electrode `"loss of active material"` tuple sets mechanics per electrode, e.g. `("stress-driven", "none")` gives `("swelling only", "none")`. To migrate, pass `"particle mechanics"` explicitly. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 
 ## Deprecated
 
@@ -36,6 +41,21 @@
 - `RegPower` now evaluates the same operations in `evaluate` and CasADi, taking a literal exponent of 0.5 or 2 as square roots, so they agree bitwise; CasADi used a `hypot` form. With `delta=0`, `evaluate` and the Jacobian use `base ** exponent`, as CasADi did. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - CasADi linear and `pchip` interpolants on a uniform grid now find a point's segment by binary search. The `"exact"` lookup could pick the neighbouring segment at or one ulp beside a knot, giving the Jacobian that segment's slope. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - `QuickPlot`, and so `Simulation.plot`, now uses matplotlib's color cycle (`axes.prop_cycle`) for default colors when a style sheet or rcParams changes it; otherwise it keeps its red, blue, black, green, magenta and cyan colors. ([#5953](https://github.com/pybamm-team/PyBaMM/pull/5953))
+- Battery-model options are resolved and validated per electrode and phase by one resolver, and invalid tuple shapes report the option and electrode/phase path. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Partially reversible plating with `"SEI": "none"` raises an `OptionError` at construction, not a `ZeroDivisionError` during parameter processing (#5709). ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- `"particle phases": ("1", "1")` is single phase and no longer switches on the surface form or interfacial-current state (#5680, #4910). ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Defaults derived from SEI, plating, cracking, LAM and mechanics options are set per electrode, so stress-induced diffusion only follows mechanics (#4943, #5807). ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Model constructors and `BatteryModelOptions` no longer change the options dict passed to them (#5801). ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- A stress-driven `"loss of active material"` on an electrode with `"particle mechanics": "none"` always raises an `OptionError` at construction. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Partially reversible plating on the positive electrode now defaults that electrode's `"SEI"` to `"constant"`, as for the negative electrode. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- The `BrosaPlanella2022` citation, lead-acid option checks and half-cell lithium-metal counter electrodes read `"SEI"`, `"lithium plating"`, `"open-circuit potential"` and `"intercalation kinetics"` per electrode or phase. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Models saved before 26.11 by `save_model`, `to_json` or `to_config` load with the option checks of their version. `to_config` records `pybamm_version`, and `from_config` restores nested per-phase tuples. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Multi-phase electrodes are checked per electrode, so a tuple of Fickian particles is accepted. `Yang2017` keeps the other options it is given and honours `build=`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Options unsupported with particle-size distributions now raise when only one electrode has a distribution, instead of failing during the build; polynomial profiles are rejected only on that electrode (#3303). ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- MSMR open-circuit potential, particle and kinetics must agree on each electrode and phase, half cells included. A malformed value for a model's fixed option raises `OptionError`, not `IndexError`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- `MPM` no longer cites `Marquis2019` (#5800) and accepts `"particle size": ("distribution", "distribution")`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Models declare `fixed_options` and `default_options`, checked in one place and inherited, so an `SPM` subclass gets `"x-average side reactions": "true"`. Conflicting values raise an `OptionError` naming the model. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- Particle mechanics submodels read `"particle size"` per electrode, so a one-electrode size distribution gets the size-distribution stress and crack equations there. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 
 ## Optimizations
 
