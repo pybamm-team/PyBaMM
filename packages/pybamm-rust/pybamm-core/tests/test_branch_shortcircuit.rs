@@ -1,5 +1,6 @@
 //! Only-active-branch execution, asserted from the executed instruction count.
 
+use pybamm_core::adjoint::AdjointTape;
 use pybamm_core::arena::{Arena, NodeId};
 use pybamm_core::eval::{CompiledExpr, TangentInputs};
 use pybamm_core::ir::{Instruction, TypedIr};
@@ -721,4 +722,189 @@ fn pinned_layout_short_circuits_and_stays_ssa() {
         assert_eq!(executed, 4 + len);
         assert_eq!(out[0].to_bits(), expected_conditional(0.3, sel).to_bits());
     }
+}
+
+#[test]
+fn reverse_pass_skips_inactive_branch_blocks() {
+    let mut arena = Arena::new();
+    let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
+    let sel = arena.alloc(Node::InputParameter {
+        name: "s".to_string(),
+        index: 0,
+        offset: 0,
+        width: 1,
+    });
+    let b1 = arena.alloc(Node::Sin(y));
+    // `Tanh`, not `Exp`: iterated `exp` overflows, making the gradient check vacuous.
+    let mut b2 = y;
+    for _ in 0..20 {
+        b2 = arena.alloc(Node::Tanh(b2));
+    }
+    let cond = arena.alloc(Node::Conditional {
+        selector: sel,
+        branches: vec![b1, b2],
+    });
+
+    let tape = AdjointTape::new(DagRef::new(&arena, cond), 1);
+    let mut scratch = vec![0.0; tape.scratch_len()];
+    let mut bar = vec![0.0; tape.scratch_len()];
+    let mut grad = vec![0.0; 1];
+
+    let walked_1 = tape.assemble(&mut scratch, &mut bar, &mut grad, 0.0, &[0.3], &[], &[1.0]);
+    let g1 = grad[0];
+    let walked_2 = tape.assemble(&mut scratch, &mut bar, &mut grad, 0.0, &[0.3], &[], &[2.0]);
+    let g2 = grad[0];
+
+    assert!(
+        walked_1 < walked_2,
+        "branch 1 backward walk ({walked_1}) should be shorter than branch 2 ({walked_2})"
+    );
+    assert!((g1 - 0.3_f64.cos()).abs() < 1e-12);
+    let mut expected = 1.0_f64;
+    let mut v = 0.3_f64;
+    for _ in 0..20 {
+        v = v.tanh();
+        expected *= v.mul_add(-v, 1.0);
+    }
+    assert!(
+        (g2 - expected).abs() / expected < 1e-9,
+        "got {g2}, want {expected}"
+    );
+}
+
+/// The backward walk crosses two span ends and must resolve each independently.
+#[test]
+fn reverse_pass_skips_blocks_of_two_sibling_conditionals() {
+    const DEPTHS_A: [usize; 2] = [1, 3];
+    const DEPTHS_B: [usize; 2] = [2, 5];
+
+    let mut arena = Arena::new();
+    let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
+    let sel_a = arena.alloc(Node::InputParameter {
+        name: "a".to_string(),
+        index: 0,
+        offset: 0,
+        width: 1,
+    });
+    let sel_b = arena.alloc(Node::InputParameter {
+        name: "b".to_string(),
+        index: 1,
+        offset: 1,
+        width: 1,
+    });
+    let chain = |arena: &mut Arena, depth: usize, tanh: bool| {
+        let mut node = y;
+        for _ in 0..depth {
+            node = arena.alloc(if tanh {
+                Node::Tanh(node)
+            } else {
+                Node::Sin(node)
+            });
+        }
+        node
+    };
+    let a_branches = DEPTHS_A.map(|d| chain(&mut arena, d, false)).to_vec();
+    let b_branches = DEPTHS_B.map(|d| chain(&mut arena, d, true)).to_vec();
+    let cond_a = arena.alloc(Node::Conditional {
+        selector: sel_a,
+        branches: a_branches,
+    });
+    let cond_b = arena.alloc(Node::Conditional {
+        selector: sel_b,
+        branches: b_branches,
+    });
+    let root = arena.alloc(Node::Add(cond_a, cond_b));
+
+    let tape = AdjointTape::new(DagRef::new(&arena, root), 1);
+    let mut scratch = vec![0.0; tape.scratch_len()];
+    let mut bar = vec![0.0; tape.scratch_len()];
+    let mut grad = vec![0.0; 1];
+    // y + two selectors + two Conditionals + Add + two Dispatches.
+    let common = 8;
+    let y0 = 0.3_f64;
+
+    let d_chain = |depth: usize, tanh: bool| {
+        let mut derivative = 1.0_f64;
+        let mut v = y0;
+        for _ in 0..depth {
+            if tanh {
+                v = v.tanh();
+                derivative *= v.mul_add(-v, 1.0);
+            } else {
+                derivative *= v.cos();
+                v = v.sin();
+            }
+        }
+        derivative
+    };
+
+    for (a_index, sel_a_val) in [(None, 0.0_f64), (Some(0), 1.0), (Some(1), 2.0)] {
+        for (b_index, sel_b_val) in [(None, 0.0_f64), (Some(0), 1.0), (Some(1), 2.0)] {
+            let walked = tape.assemble(
+                &mut scratch,
+                &mut bar,
+                &mut grad,
+                0.0,
+                &[y0],
+                &[],
+                &[sel_a_val, sel_b_val],
+            );
+            let a_cost = a_index.map_or(0, |i| DEPTHS_A[i]);
+            let b_cost = b_index.map_or(0, |i| DEPTHS_B[i]);
+            assert_eq!(
+                walked,
+                common + a_cost + b_cost,
+                "selectors ({sel_a_val}, {sel_b_val}) walked {walked}"
+            );
+
+            let expected = a_index.map_or(0.0, |i| d_chain(DEPTHS_A[i], false))
+                + b_index.map_or(0.0, |i| d_chain(DEPTHS_B[i], true));
+            assert!(
+                (grad[0] - expected).abs() < 1e-12,
+                "selectors ({sel_a_val}, {sel_b_val}): got {}, want {expected}",
+                grad[0]
+            );
+        }
+    }
+}
+
+#[test]
+fn reverse_pass_on_unmatched_selectors_walks_no_block() {
+    let mut arena = Arena::new();
+    let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
+    let sel = arena.alloc(Node::InputParameter {
+        name: "s".to_string(),
+        index: 0,
+        offset: 0,
+        width: 1,
+    });
+    let b1 = arena.alloc(Node::Sin(y));
+    let b2 = arena.alloc(Node::Cos(y));
+    let cond = arena.alloc(Node::Conditional {
+        selector: sel,
+        branches: vec![b1, b2],
+    });
+    let tape = AdjointTape::new(DagRef::new(&arena, cond), 1);
+    let mut scratch = vec![0.0; tape.scratch_len()];
+    let mut bar = vec![0.0; tape.scratch_len()];
+    let mut grad = vec![9.0; 1];
+
+    for sel_val in [0.0_f64, 0.5, 1.5, 2.5, -1.0, f64::NAN, f64::INFINITY] {
+        let walked = tape.assemble(
+            &mut scratch,
+            &mut bar,
+            &mut grad,
+            0.0,
+            &[0.3],
+            &[],
+            &[sel_val],
+        );
+        // y + selector + Conditional + Dispatch, and neither one-instruction block.
+        assert_eq!(walked, 4, "selector {sel_val} walked a branch block");
+        assert_eq!(grad, vec![0.0], "selector {sel_val}");
+    }
+
+    let matched = tape.assemble(&mut scratch, &mut bar, &mut grad, 0.0, &[0.3], &[], &[1.0]);
+    assert_eq!(matched, 5);
+    assert!((grad[0] - 0.3_f64.cos()).abs() < 1e-12);
 }

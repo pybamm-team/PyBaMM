@@ -17,6 +17,11 @@ tape_index! {
 }
 
 index_newtype! {
+    /// Position in a model's `sens_param_indices`, which resolves to a [`ParamIdx`].
+    SensIdx(usize)
+}
+
+index_newtype! {
     /// Length of the packed `inputs` slice: the sum of every parameter's width.
     #[cfg_attr(feature = "serialize", derive(serde::Serialize, serde::Deserialize))]
     PackedWidth(usize)
