@@ -47,10 +47,7 @@ SetupOptions::SetupOptions(py::dict &py_opts)
 
     using_sparse_matrix = true;
     using_banded_matrix = false;
-    if (jacobian == "sparse")
-    {
-    }
-    else if (jacobian == "banded") {
+    if (jacobian == "banded") {
         using_banded_matrix = true;
         using_sparse_matrix = false;
     }
@@ -58,10 +55,7 @@ SetupOptions::SetupOptions(py::dict &py_opts)
     {
         using_sparse_matrix = false;
     }
-    else if (jacobian == "matrix-free")
-    {
-    }
-    else
+    else if (jacobian != "sparse" && jacobian != "matrix-free")
     {
         throw std::domain_error(
             "Unknown jacobian type \""s + jacobian +
@@ -69,18 +63,14 @@ SetupOptions::SetupOptions(py::dict &py_opts)
         );
     }
 
-    using_iterative_solver = false;
-    if (linear_solver == "SUNLinSol_Dense" && (jacobian == "dense" || jacobian == "none"))
+    const bool direct_solver_fits_jacobian =
+        (linear_solver == "SUNLinSol_Dense" && (jacobian == "dense" || jacobian == "none")) ||
+        ((linear_solver == "SUNLinSol_KLU" ||
+          linear_solver == "SUNLinSol_cuSolverSp_batchQR") && jacobian == "sparse") ||
+        (linear_solver == "SUNLinSol_Band" && jacobian == "banded");
+    if (direct_solver_fits_jacobian)
     {
-    }
-    else if (linear_solver == "SUNLinSol_KLU" && jacobian == "sparse")
-    {
-    }
-    else if (linear_solver == "SUNLinSol_cuSolverSp_batchQR" && jacobian == "sparse")
-    {
-    }
-    else if (linear_solver == "SUNLinSol_Band" && jacobian == "banded")
-    {
+        using_iterative_solver = false;
     }
     else if (jacobian == "banded") {
         throw std::domain_error(

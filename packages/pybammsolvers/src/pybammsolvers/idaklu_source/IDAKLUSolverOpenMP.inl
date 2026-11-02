@@ -9,9 +9,9 @@
 
 template <class ExprSet>
 IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
-  np_array atol_np_input,
+  const np_array &atol_np_input,
   double rel_tol,
-  np_array rhs_alg_id_input,
+  const np_array &rhs_alg_id_input,
   int number_of_parameters_input,
   int number_of_events_input,
   int jac_times_cjmass_nnz_input,
@@ -305,7 +305,8 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
       IDASensFree(ida_mem);
   }
 
-  CheckErrors(SUNLinSolFree(LS), "SUNLinSolFree");
+  // Unchecked: a destructor that throws terminates the process
+  SUNLinSolFree(LS);
 
   SUNMatDestroy(J);
   N_VDestroy(avtol);

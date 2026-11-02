@@ -520,6 +520,9 @@ class TestSimulationExperiment:
 
             if experiment_model_mode == "legacy":
                 assert (model_0, model_1) in sim.model_state_mappers
+                # step() only uses the mapper function, not its jacobian
+                _, jacobian, _ = sim._compiled_model_state_mappers[(model_0, model_1)]
+                assert jacobian is None
             else:
                 assert len(sim.model_state_mappers.values()) == 0
 
@@ -1564,6 +1567,87 @@ class TestSimulationExperiment:
         sens = np.asarray(sensitivities[diffusivity_name])
         assert np.all(np.isfinite(sens))
         assert np.any(sens != 0)
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_resolve_with_changed_sensitivities(self, experiment_model_mode):
+        # The usual finite-difference check pattern: solve with, then without
+        name = "Negative particle diffusivity [m2.s-1]"
+        param = pybamm.ParameterValues("Chen2020")
+        param.update({name: "[input]"})
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=param,
+            experiment=pybamm.Experiment(
+                ["Discharge at 1C for 1 minute", "Rest for 1 minute"],
+                period="20 seconds",
+            ),
+            experiment_model_mode=experiment_model_mode,
+        )
+        inputs = {name: 3.3e-14}
+
+        first = sim.solve(inputs=inputs, calculate_sensitivities=True)
+        without = sim.solve(inputs=inputs, calculate_sensitivities=False)
+        again = sim.solve(inputs=inputs, calculate_sensitivities=[name])
+
+        # Error control differs with sensitivities, so only to the solver tolerance
+        t = first.t
+        np.testing.assert_allclose(
+            without["Voltage [V]"](t), first["Voltage [V]"](t), rtol=1e-4
+        )
+        assert not without.has_sensitivities()
+        np.testing.assert_allclose(
+            again["Voltage [V]"].sensitivities[name],
+            first["Voltage [V]"].sensitivities[name],
+            rtol=1e-8,
+        )
+
+    @pytest.mark.parametrize(
+        "starting_sensitivities, next_sensitivities",
+        [(["a", "b"], ["a"]), (["a"], False), (False, ["a"])],
+        ids=["fewer", "none", "more"],
+    )
+    def test_starting_solution_rejects_changed_sensitivities(
+        self, starting_sensitivities, next_sensitivities
+    ):
+        # The result joins the starting solution's sensitivities to the steps'
+        names = {
+            "a": "Negative particle diffusivity [m2.s-1]",
+            "b": "Positive particle diffusivity [m2.s-1]",
+        }
+        param = pybamm.ParameterValues("Chen2020")
+        param.update({name: "[input]" for name in names.values()})
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            parameter_values=param,
+            experiment=pybamm.Experiment(
+                ["Discharge at 1C for 1 minute"], period="20 seconds"
+            ),
+        )
+        inputs = {names["a"]: 3.3e-14, names["b"]: 4e-15}
+
+        def sensitivities(keys):
+            return keys and [names[key] for key in keys]
+
+        starting_solution = sim.solve(
+            inputs=inputs,
+            calculate_sensitivities=sensitivities(starting_sensitivities),
+        )
+        with pytest.raises(pybamm.SolverError, match=r"same 'calculate_sensitivities'"):
+            sim.solve(
+                inputs=inputs,
+                starting_solution=starting_solution,
+                calculate_sensitivities=sensitivities(next_sensitivities),
+            )
+
+        solution = sim.solve(
+            inputs=inputs,
+            starting_solution=starting_solution,
+            calculate_sensitivities=sensitivities(starting_sensitivities),
+        )
+        assert solution.t[-1] == pytest.approx(120)
+        if starting_sensitivities:
+            voltage = solution["Voltage [V]"]
+            assert voltage.sensitivities[names["a"]].shape == solution.t.shape
 
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T

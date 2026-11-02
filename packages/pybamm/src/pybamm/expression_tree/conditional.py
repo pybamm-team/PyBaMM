@@ -24,17 +24,17 @@ class Conditional(pybamm.Symbol):
 
     def __init__(self, selector: pybamm.Symbol, *branches: pybamm.Symbol):
         selector = pybamm.convert_to_symbol(selector)
-        branches = [pybamm.convert_to_symbol(branch) for branch in branches]
-        if not branches:
+        branch_symbols = [pybamm.convert_to_symbol(branch) for branch in branches]
+        if not branch_symbols:
             raise ValueError("Conditional requires at least one branch child")
         if selector.shape_for_testing != ():
             raise ValueError("Conditional selector must evaluate to a scalar")
 
-        domains = self._combine_children_domains(branches)
-        first_shape = branches[0].shape_for_testing
-        first_size = branches[0].size_for_testing
+        domains = self._combine_children_domains(branch_symbols)
+        first_shape = branch_symbols[0].shape_for_testing
+        first_size = branch_symbols[0].size_for_testing
         returns_scalar = first_size == 1
-        for branch in branches[1:]:
+        for branch in branch_symbols[1:]:
             compatible_shape = (
                 branch.size_for_testing == 1
                 if returns_scalar
@@ -47,7 +47,9 @@ class Conditional(pybamm.Symbol):
                 )
 
         self._returns_scalar = returns_scalar
-        super().__init__("conditional", children=[selector, *branches], domains=domains)
+        super().__init__(
+            "conditional", children=[selector, *branch_symbols], domains=domains
+        )
 
     @classmethod
     def _from_json(cls, snippet: dict):

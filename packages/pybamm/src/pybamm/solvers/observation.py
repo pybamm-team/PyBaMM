@@ -258,7 +258,7 @@ class OutputAssembly:
             )
             solution._variables[name] = variable
 
-    def _checked_rows(self, data):
+    def _checked_rows(self, data: npt.ArrayLike) -> np.ndarray:
         """``data`` as a ``(n_t, n_rows)`` array, or a complaint about its width."""
         array = np.asarray(data)
         if array.ndim != 2 or array.shape[1] != self.n_rows:
@@ -269,7 +269,12 @@ class OutputAssembly:
             )
         return array
 
-    def _checked_sensitivities(self, sensitivities, n_timesteps, sensitivity_names):
+    def _checked_sensitivities(
+        self,
+        sensitivities: npt.ArrayLike,
+        n_timesteps: int,
+        sensitivity_names: Sequence[str],
+    ) -> np.ndarray:
         """``sensitivities`` as a ``(n_t, n_rows, n_p)`` array, or a complaint."""
         array = np.asarray(sensitivities)
         expected = (n_timesteps, self.n_rows, len(sensitivity_names))

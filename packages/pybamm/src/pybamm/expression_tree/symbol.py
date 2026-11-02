@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import numbers
 import warnings
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -503,7 +503,7 @@ class Symbol:
     _id_excluded_fields: tuple[str, ...] = ()
 
     @property
-    def leaves(self) -> list[Symbol]:
+    def leaves(self) -> Sequence[Symbol]:
         """The symbols this node directly depends on: children first, then the
         other symbol-valued fields (e.g. a variable's scale and bounds)."""
         return pybamm.expression_tree.tree_util.leaves_of(self)
@@ -824,7 +824,9 @@ class Symbol:
         identity-bearing static fields and leaf ids. Not overridable."""
         tree_util = pybamm.expression_tree.tree_util
         leaves = tree_util.leaves_of(self)
-        stack = [(self, leaves, iter(leaves))]
+        stack: list[tuple[Symbol, Sequence[Symbol], Iterator[Symbol]]] = [
+            (self, leaves, iter(leaves))
+        ]
         while stack:
             node, leaves, remaining = stack[-1]
             for leaf in remaining:
@@ -837,7 +839,8 @@ class Symbol:
                     tree_util.identity_key(node, [leaf.id for leaf in leaves])
                 )
                 stack.pop()
-        return self._id
+        # self is the stack's last node, so the loop has just set its id
+        return cast(int, self._id)
 
     scale = legacy_property(
         "_scale",
@@ -1061,7 +1064,7 @@ class Symbol:
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(other, self, True)
 
-    def __neg__(self) -> pybamm.Negate:
+    def __neg__(self) -> pybamm.Symbol:
         """return a :class:`Negate` object."""
         if isinstance(self, pybamm.Negate):
             # Double negative is a positive
@@ -1456,7 +1459,9 @@ class Symbol:
             for child in self._children
         ]
 
-    def _children_for_copying(self, children: list[Symbol] | None = None) -> Symbol:
+    def _children_for_copying(
+        self, children: list[Symbol] | None = None
+    ) -> list[Symbol]:
         """
         Gets existing children for a symbol being copied if they aren't provided.
         """
@@ -1528,9 +1533,7 @@ class Symbol:
         except ValueError:
             unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
             state_vectors_in_node = unpacker.unpack_symbol(self)
-            min_y_size = max(
-                max(len(x._evaluation_array) for x in state_vectors_in_node), 1
-            )
+            min_y_size = max(max(x.last_point for x in state_vectors_in_node), 1)
             # Pick a y that won't cause RuntimeWarnings
             y = np.nan * np.ones((min_y_size, 1))
             evaluated_self = self.evaluate(0, y, y, inputs="shape test")

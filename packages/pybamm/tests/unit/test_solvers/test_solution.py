@@ -5,8 +5,8 @@ import copyreg
 import io
 import json
 import logging
-import pickle  # nosec B403 - used in tests with trusted input
-import subprocess  # nosec B404 - used in tests with trusted input
+import pickle
+import subprocess
 import sys
 from unittest import mock
 
@@ -36,7 +36,7 @@ class _PicklerBeforeVariableObservers(pickle.Pickler):
 def _round_trip_before_variable_observers(obj):
     buffer = io.BytesIO()
     _PicklerBeforeVariableObservers(buffer, pickle.HIGHEST_PROTOCOL).dump(obj)
-    return pickle.loads(buffer.getvalue())  # nosec B301
+    return pickle.loads(buffer.getvalue())
 
 
 class TestSolution:
@@ -975,7 +975,7 @@ class TestSolution:
         t = np.linspace(0, 1)
         solution = pybamm.Solution(t, np.tile(t, (2, 1)), pybamm.BaseModel(), {})
         first_state = solution.first_state
-        loaded = pickle.loads(pickle.dumps(solution))  # nosec B301
+        loaded = pickle.loads(pickle.dumps(solution))
         np.testing.assert_array_equal(loaded.t, t)
         np.testing.assert_array_equal(loaded.first_state.y, first_state.y)
 
@@ -1166,14 +1166,13 @@ class TestSolution:
             "src = sim.solution\n" + observe
         )
         load_code = f"import pybamm\nsrc = pybamm.load({pkl_literal})\n" + observe
-        # nosec B603 - sys.executable + literal code constructed in this test
-        save_result = subprocess.run(  # nosec B603
+        save_result = subprocess.run(
             [sys.executable, "-c", save_code],
             check=True,
             capture_output=True,
             text=True,
         )
-        load_result = subprocess.run(  # nosec B603
+        load_result = subprocess.run(
             [sys.executable, "-c", load_code],
             check=True,
             capture_output=True,
@@ -2398,7 +2397,7 @@ class TestSolutionSolverStatistics:
     def test_statistics_survive_pickling(self):
         statistics = pybamm.SolverStatistics(1, 2, 3, 4, 5)
         solution = self._solution(0, statistics)
-        assert pickle.loads(pickle.dumps(solution)).solver_statistics == statistics  # nosec B301
+        assert pickle.loads(pickle.dumps(solution)).solver_statistics == statistics
 
     def test_solution_pickled_before_slots_loads(self, caplog):
         solution = self._solution(0, pybamm.SolverStatistics(1, 2, 3, 4, 5))
@@ -2421,7 +2420,7 @@ class TestSolutionSolverStatistics:
                 return object.__new__, (pybamm.Solution,), state
 
         with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
-            loaded = pickle.loads(pickle.dumps(PreSlotsPickle()))  # nosec B301
+            loaded = pickle.loads(pickle.dumps(PreSlotsPickle()))
         assert "Dropped attributes ['label']" in caplog.text
         assert not hasattr(loaded, "label")
         assert loaded.solver_statistics is None

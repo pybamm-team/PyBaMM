@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import re
-import subprocess  # nosec B404 - runs this interpreter on a fixed script
+import subprocess
 import sys
 import textwrap
 import warnings
@@ -264,7 +264,7 @@ class TestIDAKLUSolver:
             print(json.dumps([float(np.squeeze(s["u"](1.0))) for s in solutions]))
             """
         )
-        result = subprocess.run(  # nosec B603 - fixed arguments, no shell
+        result = subprocess.run(
             [sys.executable, "-c", script],
             env={**os.environ, "OMP_THREAD_LIMIT": "2"},
             capture_output=True,

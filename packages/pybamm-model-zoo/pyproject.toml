@@ -30,8 +30,8 @@ classifiers = [
 ]
 dependencies = [
     # Every model's floor: a model that needs a newer PyBaMM raises it. `cite` lets
-    # `pybamm.print_citations()` credit the zoo models' authors.
-    "pybamm[cite]>=26.10.1",
+    # `pybamm.print_citations()` credit the zoo models' authors; `plot` lets examples plot.
+    "pybamm[cite,plot]>=26.10.1",
     "packaging>=23.0",
     "tomli>=2.0.1; python_version < '3.11'",
 ]
