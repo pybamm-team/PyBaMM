@@ -98,13 +98,20 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
                 else:
                     # Multiple children - pass as list
                     input_vars = "[" + ", ".join(c.name for c in child.children) + "]"
+                # A derivative interpolant keeps the original data, so the source
+                # must carry the derivative order to evaluate the same function
+                derivatives = (
+                    f", _num_derivatives={child._num_derivatives}"
+                    if child._num_derivatives
+                    else ""
+                )
                 # Build the full Interpolant constructor call
                 # Set _print_name directly to bypass prettify_print_name which
                 # mangles the output for LaTeX display
                 child._print_name = (
                     f"pybamm.Interpolant([{x_arrays}], {y_array}, {input_vars}, "
                     f'name="{child.name}", interpolator="{child.interpolator}", '
-                    f"extrapolate={child.extrapolate})"
+                    f"extrapolate={child.extrapolate}{derivatives})"
                 )
             elif isinstance(child, pybamm.FunctionParameter):
                 # Replace FunctionParameter with a constructor call

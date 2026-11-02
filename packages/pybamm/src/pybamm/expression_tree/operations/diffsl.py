@@ -1265,6 +1265,12 @@ def _interpolant_to_diffeq(
     inner axis at each outer breakpoint, then linearly blend those along the
     outer axis (until DiffSL gains an ``interp2d``).
     """
+    if equation._num_derivatives:
+        # interp1d interpolates the table values, so it would silently export the
+        # interpolant itself instead of its derivative
+        raise NotImplementedError(
+            "DiffSL export of a differentiated Interpolant not implemented"
+        )
     args = [
         _equation_to_diffeq(
             child,

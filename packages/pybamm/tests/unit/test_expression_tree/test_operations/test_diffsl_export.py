@@ -694,3 +694,18 @@ class TestDiffSLExport:
         pybamm.Discretisation().process_model(model)
         with pytest.raises(NotImplementedError, match="3D Interpolant"):
             pybamm.DiffSLExport(model).to_diffeq(outputs=["a"])
+
+    @pytest.mark.parametrize("interpolator", ["linear", "cubic"])
+    def test_interpolant_derivative_not_supported(self, interpolator):
+        # interp1d would interpolate the table values, not their derivative, so
+        # export raises rather than exporting the wrong function.
+        x = np.linspace(0.0, 1.0, 6)
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        interp = pybamm.Interpolant(x, x**2, y, name="U", interpolator=interpolator)
+        model.rhs = {y: -interp.diff(y)}
+        model.initial_conditions = {y: pybamm.Scalar(0.5)}
+        model.variables = {"y": y}
+        pybamm.Discretisation().process_model(model)
+        with pytest.raises(NotImplementedError, match="differentiated Interpolant"):
+            pybamm.DiffSLExport(model).to_diffeq(outputs=["y"])
