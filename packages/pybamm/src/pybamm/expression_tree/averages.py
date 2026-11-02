@@ -9,20 +9,31 @@ from typing import ClassVar, cast
 import pybamm
 
 
+def _varying_domains(node: pybamm.Symbol) -> list[str]:
+    """Domains over which ``node`` itself introduces variation, beyond any
+    variation inherited from its children.
+    """
+    if not node.children:
+        return [dom for doms in node._domains.values() for dom in doms]
+    if isinstance(node, pybamm.Concatenation):
+        return node._domains["primary"]
+    if isinstance(node, pybamm.BaseIndefiniteIntegral):
+        return [dom for var in node.integration_variable for dom in var.domain]
+    return []
+
+
 def _is_independent_of(
     symbol: pybamm.Symbol, domain_matches: Callable[[str], bool]
 ) -> bool:
-    """True if no leaf or concatenation in ``symbol`` has any domain (primary or
-    auxiliary) that ``domain_matches`` matches. Other nodes are skipped, so a
-    broadcast of an independent child is itself independent.
+    """True if no node of ``symbol`` introduces variation over a domain that
+    ``domain_matches`` matches. A broadcast of an independent child is itself
+    independent.
     """
-    for node in symbol.pre_order():
-        # a concatenation varies between subdomains even if its children do not
-        if (not node.children or isinstance(node, pybamm.Concatenation)) and any(
-            domain_matches(dom) for doms in node._domains.values() for dom in doms
-        ):
-            return False
-    return True
+    return not any(
+        domain_matches(dom)
+        for node in symbol.pre_order()
+        for dom in _varying_domains(node)
+    )
 
 
 class _BaseAverage(pybamm.Integral):
