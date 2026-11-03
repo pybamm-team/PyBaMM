@@ -18,6 +18,7 @@
 ## Bug fixes
 
 - `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
+- Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))
 - A battery model loaded with `Serialise.load_custom_model` keeps its saved geometry, mesh points, submesh types and spatial methods when its own class can't be imported. Before, the built-in ancestor's defaults silently replaced them. ([#5995](https://github.com/pybamm-team/PyBaMM/pull/5995))
 - `from pybamm.models.submodels.interface.kinetics import *` no longer raises an `AttributeError` ([#5970](https://github.com/pybamm-team/PyBaMM/pull/5970))
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
@@ -39,6 +40,8 @@
 - `RegPower` now evaluates the same operations in `evaluate` and CasADi, taking a literal exponent of 0.5 or 2 as square roots, so they agree bitwise; CasADi used a `hypot` form. With `delta=0`, `evaluate` and the Jacobian use `base ** exponent`, as CasADi did. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - CasADi linear and `pchip` interpolants on a uniform grid now find a point's segment by binary search. The `"exact"` lookup could pick the neighbouring segment at or one ulp beside a knot, giving the Jacobian that segment's slope. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - `QuickPlot`, and so `Simulation.plot`, now uses matplotlib's color cycle (`axes.prop_cycle`) for default colors when a style sheet or rcParams changes it; otherwise it keeps its red, blue, black, green, magenta and cyan colors. ([#5953](https://github.com/pybamm-team/PyBaMM/pull/5953))
+- The heat of mixing now sums over every particle phase, so `"heat of mixing": "true"` works with `"particle phases": "2"` instead of raising a `ModelError`. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
+- The heat of mixing now uses the particle's effective diffusivity, so it conserves energy with `"current sigmoid"` diffusivity or stress-induced diffusion, and a uniform particle profile builds again. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 
 ## Optimizations
 
