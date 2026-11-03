@@ -17,6 +17,7 @@
 
 ## Bug fixes
 
+- `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
 - Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))
 - A battery model loaded with `Serialise.load_custom_model` keeps its saved geometry, mesh points, submesh types and spatial methods when its own class can't be imported. Before, the built-in ancestor's defaults silently replaced them. ([#5995](https://github.com/pybamm-team/PyBaMM/pull/5995))
 - `from pybamm.models.submodels.interface.kinetics import *` no longer raises an `AttributeError` ([#5970](https://github.com/pybamm-team/PyBaMM/pull/5970))
