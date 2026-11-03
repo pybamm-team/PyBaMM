@@ -821,6 +821,22 @@ class TestElectrodeSOHHalfCell:
             assert 0 <= result["x"] <= 1
             assert 0 <= result["x_2"] <= 1
 
+    @pytest.mark.parametrize(
+        ("soc", "ocv_key"),
+        [
+            (0.0, "Open-circuit voltage at 0% SOC [V]"),
+            (1.0, "Open-circuit voltage at 100% SOC [V]"),
+        ],
+    )
+    def test_composite_positive_half_cell_soc_limits(self, soc, ocv_key):
+        params, options = self._get_params_and_options_composite_half_cell()
+        param = pybamm.LithiumIonParameters(options)
+        result = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+            soc, params, param=param, options=options
+        )
+        ocv = params.evaluate(param.p.prim.U(result["x"], param.T_ref))
+        assert ocv == pytest.approx(params[ocv_key], abs=1e-4)
+
     def test_composite_half_cell_min_max_stoichiometries(self):
         """Test that get_min_max_stoichiometries works with composite half-cell"""
         params, options = self._get_params_and_options_composite_half_cell()

@@ -366,7 +366,7 @@ def _composite_soc_equations(x, x_2, soc, limits, param, options, direction):
     return {
         x: param.p.prim.U(x, T_ref, lithiation_primary)
         - param.p.sec.U(x_2, T_ref, lithiation_secondary),
-        x_2: (Q_now - Q_min) / (Q_max - Q_min) - soc,
+        x_2: (Q_max - Q_now) / (Q_max - Q_min) - soc,
     }
 
 

@@ -17,6 +17,7 @@
 
 ## Bug fixes
 
+- `get_initial_stoichiometry_half_cell` no longer inverts the SOC for a composite positive half cell, so SOC 1 now gives the 100% SOC stoichiometry. ([#6020](https://github.com/pybamm-team/PyBaMM/pull/6020))
 - Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))
 - A battery model loaded with `Serialise.load_custom_model` keeps its saved geometry, mesh points, submesh types and spatial methods when its own class can't be imported. Before, the built-in ancestor's defaults silently replaced them. ([#5995](https://github.com/pybamm-team/PyBaMM/pull/5995))
 - `from pybamm.models.submodels.interface.kinetics import *` no longer raises an `AttributeError` ([#5970](https://github.com/pybamm-team/PyBaMM/pull/5970))
