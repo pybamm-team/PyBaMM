@@ -6,6 +6,7 @@ import multiprocessing as mp
 import numbers
 import platform
 import warnings
+from typing import cast
 
 import casadi
 import numpy as np
@@ -13,6 +14,7 @@ import numpy.typing as npt
 
 import pybamm
 from pybamm import ParameterValues
+from pybamm.expression_tree.array import to_casadi_dm
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm.expression_tree.input_parameter import DUMMY_INPUT_PARAMETER_VALUE
 from pybamm.models.base_model import ModelSolutionObservability
@@ -61,6 +63,9 @@ class BaseSolver:
         post-processing queries a non-endpoint time within a step.
         Default is False.
     """
+
+    #: Whether the solver uses the jacobian of the rhs on its own
+    uses_rhs_jacobian = True
 
     def __init__(
         self,
@@ -278,7 +283,10 @@ class BaseSolver:
         # Process rhs, algebraic, residual and event expressions
         # and wrap in callables
         rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(
-            model.concatenated_rhs, "RHS", vars_for_processing
+            model.concatenated_rhs,
+            "RHS",
+            vars_for_processing,
+            use_jacobian=model.use_jacobian and self.uses_rhs_jacobian,
         )
 
         algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
@@ -350,7 +358,7 @@ class BaseSolver:
                 if model.is_standard_form_dae:
                     explicit_rhs = rhs_eval
                 else:
-                    M_ode = casadi.DM(
+                    M_ode = to_casadi_dm(
                         model.mass_matrix.entries[: model.len_rhs, : model.len_rhs]
                     )
                     explicit_rhs = casadi.solve(M_ode, rhs_eval)
@@ -408,7 +416,10 @@ class BaseSolver:
 
         stacked = model.uses_stacked_inputs
         model.y0_list = []
-        model.y0S_list = [] if model.jacp_initial_conditions_eval is not None else None
+        y0S_list = []
+        model.y0S_list = (
+            y0S_list if model.jacp_initial_conditions_eval is not None else None
+        )
         for ipts in inputs:
             if stacked:
                 inputs_y0_ics = stack_inputs(ipts)
@@ -432,7 +443,7 @@ class BaseSolver:
                         for key, value in ipts.items()
                     }
 
-                model.y0S_list.append(
+                y0S_list.append(
                     model.jacp_initial_conditions_eval(time, y_zero, inputs_jacp_ics)
                 )
 
@@ -589,7 +600,7 @@ class BaseSolver:
             )
 
         # Find all the constant time-based discontinuities
-        t_discon_symbols = []
+        t_discon_symbols: list[tuple[pybamm.Symbol, pybamm.Symbol]] = []
         # Periods of `t mod period` that restart the solver, expanded at each solve,
         # with their evaluators
         discontinuity_periods = []
@@ -789,6 +800,7 @@ class BaseSolver:
             y0s.append(s.all_ys[0])
         return y0s
 
+    @staticmethod
     def _solve_process_calculate_sensitivities_arg(
         inputs: dict, model: pybamm.BaseModel, calculate_sensitivities: list[str] | bool
     ):
@@ -1193,7 +1205,7 @@ class BaseSolver:
         """
         old_y0_list = model.y0_list
         old_y0S_list = model.y0S_list
-        solutions = [None] * len(inputs_list)
+        solutions: list[pybamm.Solution | None] = [None] * len(inputs_list)
         # Indices of the input sets that reached the end of every segment so far
         running = list(range(len(inputs_list)))
         for start_index, end_index in zip(start_indices, end_indices, strict=True):
@@ -1217,10 +1229,10 @@ class BaseSolver:
             solve_time = timer.time()
             for i, new_solution in zip(running, new_solutions, strict=True):
                 new_solution.solve_time = solve_time
-                if solutions[i] is None:
-                    solutions[i] = new_solution
-                else:
-                    solutions[i] = solutions[i] + new_solution
+                previous = solutions[i]
+                solutions[i] = (
+                    new_solution if previous is None else previous + new_solution
+                )
 
             # A set that stopped on an event or failed is not restarted
             restarts = [
@@ -1248,7 +1260,8 @@ class BaseSolver:
 
         model.y0_list = old_y0_list
         model.y0S_list = old_y0S_list
-        return solutions
+        # The first segment solves every input set
+        return cast(list[pybamm.Solution], solutions)
 
     @staticmethod
     def filter_discontinuities(t_discon: list, t_eval: list) -> np.ndarray:
@@ -2251,7 +2264,12 @@ def stack_inputs(inputs_dict: dict) -> casadi.DM:
     :class:`casadi.DM`
         Column vector of the input values, with zero rows for an empty dict.
     """
-    return casadi.vertcat(*inputs_dict.values())
+    if not inputs_dict:
+        return casadi.DM.zeros(0, 1)
+    stacked = np.concatenate(
+        [np.asarray(value, dtype=float).reshape(-1) for value in inputs_dict.values()]
+    )
+    return to_casadi_dm(stacked)
 
 
 def process(

@@ -4,6 +4,8 @@ VectorField class - a rank-1 tensor field with N components.
 
 from __future__ import annotations
 
+from typing import cast
+
 import casadi
 
 import pybamm
@@ -70,7 +72,10 @@ class VectorField(TensorField):
             *(component.with_meshes(mesh, domains) for component in self.components),
             disc_state_vector=self.disc_state_vector,
         )
-        return super(VectorField, with_components).with_meshes(mesh, domains)
+        # Attaching meshes rebuilds the same class
+        return cast(
+            VectorField, super(VectorField, with_components).with_meshes(mesh, domains)
+        )
 
     @property
     def n_components(self) -> int:

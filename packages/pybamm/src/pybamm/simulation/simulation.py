@@ -745,7 +745,14 @@ class Simulation(BaseSimulation):
         experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
-            self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
+            self.set_initial_state(
+                initial_soc,
+                direction=direction,
+                inputs=inputs,
+                calculate_sensitivities=(solve_kwargs or {}).get(
+                    "calculate_sensitivities", False
+                ),
+            )
 
         if self._built_experiment_model is not None or self.steps_to_built_models:
             if self._needs_ic_rebuild:
@@ -769,6 +776,8 @@ class Simulation(BaseSimulation):
         )
         self._needs_ic_rebuild = False
 
+    # Experiment arguments stay between the base ones for positional callers
+    # pyrefly: ignore[bad-override]
     def solve(
         self,
         t_eval=None,

@@ -1,7 +1,6 @@
 __all__ = [
     "algebraic_solver",
     "base_solver",
-    "c_solvers",
     "casadi_algebraic_solver",
     "casadi_solver",
     "composite_solver",

@@ -30,11 +30,14 @@ select = [
     "A",
     "U",
     "SLF",
+    "S",
 ]
 ignore = [
     "E501", # Line length check conflicted with the formatter
     "B018", # Useless expression checks were a problem for notebooks
     "B905", # Requires zip to have explict strict flag. Enable in the future
+    "S603", # Flags every subprocess call; S602/S604/S605 still catch shell use
+    "S607", # Partial executable paths (`git`, `make`) are fine in dev scripts
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -43,6 +46,9 @@ unfixable = []
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[lint.per-file-ignores]
+"tests/*" = ["S"]
 
 [format]
 # Like Black, use double quotes for strings.
