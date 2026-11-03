@@ -17,6 +17,7 @@
 
 ## Bug fixes
 
+- Released `pybammsolvers` v0.12.0, with the solver functions `pybamm` calls since #5994, and `pybamm` now requires it. Before, `pybamm` from source with `pybammsolvers` 0.11.1 from PyPI failed at its first solve. ([#6028](https://github.com/pybamm-team/PyBaMM/pull/6028))
 - Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))
 - A battery model loaded with `Serialise.load_custom_model` keeps its saved geometry, mesh points, submesh types and spatial methods when its own class can't be imported. Before, the built-in ancestor's defaults silently replaced them. ([#5995](https://github.com/pybamm-team/PyBaMM/pull/5995))
 - `from pybamm.models.submodels.interface.kinetics import *` no longer raises an `AttributeError` ([#5970](https://github.com/pybamm-team/PyBaMM/pull/5970))
