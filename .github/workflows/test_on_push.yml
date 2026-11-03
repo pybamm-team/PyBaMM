@@ -8,6 +8,8 @@ on:
   push:
     branches:
       - main
+  # Merge-queue runs test everything, like pushes to main.
+  merge_group:
 
 
 permissions: {}
@@ -38,11 +40,11 @@ jobs:
       docs: ${{ steps.filter.outputs.docs }}
       model_zoo: ${{ steps.filter.outputs.model_zoo }}
       # Routing decisions, resolved once here rather than repeated in every job's `if`.
-      run_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
-      run_docs_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
+      run_tests: ${{ github.event_name != 'pull_request' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
+      run_docs_tests: ${{ github.event_name != 'pull_request' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
       # A core change runs the zoo too, so an upstream regression shows up here
       # rather than in a contributor's next pull request.
-      run_zoo_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.model_zoo == 'true' }}
+      run_zoo_tests: ${{ github.event_name != 'pull_request' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.model_zoo == 'true' }}
       # Solver-wheel platforms each scenario's downstream jobs actually consume.
       platforms: ${{ steps.route.outputs.platforms }}
       macos_runners: ${{ steps.route.outputs.macos_runners }}
@@ -52,6 +54,7 @@ jobs:
           persist-credentials: false
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
+        if: github.event_name != 'merge_group'
         with:
           filters: |
             solver:
@@ -91,7 +94,7 @@ jobs:
           if [ "$SOLVER" = true ]; then
             platforms='["linux", "windows"]'
             macos='["macos-15-intel", "macos-latest"]'
-          elif [ "$EVENT" = push ] || [ "$PYBAMM" = true ]; then
+          elif [ "$EVENT" != pull_request ] || [ "$PYBAMM" = true ]; then
             platforms='["linux", "windows"]'
             macos='["macos-latest"]'
           else
@@ -228,7 +231,7 @@ jobs:
   #  Guards both the bootstrap and the clean-clone dev experience.
   from_source_smoke:
     needs: changes
-    if: ${{ github.event_name == 'push' || needs.changes.outputs.solver == 'true' }}
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.solver == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
