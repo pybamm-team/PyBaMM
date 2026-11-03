@@ -135,6 +135,8 @@ IDAKLUSolverGroup *create_casadi_solver_group(
       mass_action,
       sens,
       events,
+      alg_res,
+      alg_jac,
       var_fcns,
       dvar_dy_fcns,
       dvar_dp_fcns);
