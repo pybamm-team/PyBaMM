@@ -164,6 +164,10 @@ def _build_electrolyte_functions(values):
                 electrolyte_diffusivity_Landesfeind2019,
                 **{f"p{i}": coefficients[f"p{i}"] for i in range(1, 5)},
             )
+        else:
+            raise pybamm.ModelError(
+                f"Unknown func_type '{func_type}' for parameter '{name}'"
+            )
 
 
 def _build_exchange_current_densities(values):
@@ -178,9 +182,9 @@ def _build_exchange_current_densities(values):
             exchange_current_density,
             reference_value=pybamm.constants.F.value
             * values.pop(f"{prefix}reaction rate constant [mol.m-2.s-1]"),
-            activation_energy=values[
+            activation_energy=values.pop(
                 f"{prefix}reaction rate constant activation energy [J.mol-1]"
-            ],
+            ),
             reference_temperature=values["Reference temperature [K]"],
             pre_multiplier=values.pop(key),
         )
