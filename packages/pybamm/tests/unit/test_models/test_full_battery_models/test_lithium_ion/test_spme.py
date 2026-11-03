@@ -1,6 +1,7 @@
 #
 # Tests for the lithium-ion SPMe model
 #
+import numpy as np
 import pytest
 
 import pybamm
@@ -32,6 +33,20 @@ class TestSPMe(BaseUnitTestLithiumIon):
         model = pybamm.lithium_ion.SPMe()
         c_e_av = model.variables["X-averaged electrolyte concentration [mol.m-3]"]
         assert not isinstance(c_e_av, pybamm.Variable)
+
+    def test_c_e_av_at_rest_equals_initial_concentration(self):
+        for surf in ["false", "algebraic", "differential"]:
+            model = pybamm.lithium_ion.SPMe({"surface form": surf})
+            parameter_values = model.default_parameter_values
+            parameter_values["Current function [A]"] = 0
+            sim = pybamm.Simulation(model, parameter_values=parameter_values)
+            solution = sim.solve([0, 10])
+            c_e_av = solution["X-averaged electrolyte concentration [mol.m-3]"]
+            np.testing.assert_allclose(
+                c_e_av(solution.t),
+                parameter_values["Initial concentration in electrolyte [mol.m-3]"],
+                rtol=1e-8,
+            )
 
     def test_surface_form_macinnes_variable(self):
         for surf in ["algebraic", "differential"]:
