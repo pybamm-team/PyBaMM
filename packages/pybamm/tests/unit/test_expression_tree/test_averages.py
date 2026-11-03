@@ -240,6 +240,48 @@ class TestUnaryOperators:
         xavg_nodes = [n for n in quot.pre_order() if isinstance(n, pybamm.XAverage)]
         assert len(xavg_nodes) == 1
 
+    def test_x_average_does_not_split_on_piecewise_constant_concatenation(self):
+        # e.g. a porosity concatenation after parameter substitution
+        eps = pybamm.concatenation(
+            pybamm.PrimaryBroadcast(pybamm.Scalar(0.3), "negative electrode"),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(1.0), "separator"),
+            pybamm.PrimaryBroadcast(pybamm.Scalar(0.3), "positive electrode"),
+        )
+        assert not XAverage.symbol_is_constant(eps)
+
+        eps_c = pybamm.concatenation(
+            pybamm.Variable("eps_c_n", domain="negative electrode"),
+            pybamm.Variable("eps_c_s", domain="separator"),
+            pybamm.Variable("eps_c_p", domain="positive electrode"),
+        )
+        out = pybamm.x_average(eps_c / eps)
+        assert out == pybamm.XAverage(eps_c / eps)
+        assert pybamm.x_average(eps * eps_c) == pybamm.XAverage(eps * eps_c)
+
+        # only the primary domains of a concatenation vary
+        eps_cc = pybamm.concatenation(
+            *(
+                pybamm.FullBroadcast(pybamm.Scalar(value), domain, "current collector")
+                for value, domain in [
+                    (0.3, "negative electrode"),
+                    (1.0, "separator"),
+                    (0.3, "positive electrode"),
+                ]
+            )
+        )
+        assert not XAverage.symbol_is_constant(eps_cc)
+        assert pybamm.ZAverage.symbol_is_constant(eps_cc)
+
+    def test_indefinite_integral_is_not_x_constant(self):
+        x_n = pybamm.standard_spatial_vars.x_n
+        one = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "negative electrode")
+        for integral in [
+            pybamm.IndefiniteIntegral(one, x_n),
+            pybamm.BackwardIndefiniteIntegral(one, x_n),
+        ]:
+            assert not XAverage.symbol_is_constant(integral)
+            assert pybamm.ZAverage.symbol_is_constant(integral)
+
     def test_x_average_factors_out_compound_x_constant(self):
         f = pybamm.Variable("f", domain="negative electrode")
         out = pybamm.x_average(2 * pybamm.t * f)
