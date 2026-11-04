@@ -13,6 +13,7 @@ from scipy import special
 import pybamm
 from tests import (
     function_test,
+    get_discretisation_for_testing,
     multi_var_function_test,
 )
 
@@ -425,6 +426,29 @@ class TestSpecificFunctions:
         fun = pybamm_func(a)
         assert isinstance(fun, pybamm.Function)
         assert fun.evaluate(y=y_test) == expected
+
+    @pytest.mark.parametrize("pybamm_func", [pybamm.max, pybamm.min])
+    def test_min_max_have_no_domains(self, pybamm_func):
+        var = pybamm.Variable(
+            "var",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        fun = pybamm_func(var)
+        assert all(domain == [] for domain in fun.domains.values())
+        assert not fun.evaluates_on_edges("primary")
+        assert fun.evaluate_for_shape().shape == (1, 1)
+
+        # the reduced value combines with symbols on any domain
+        broad = pybamm.PrimaryBroadcast(1, "positive electrode")
+        assert (fun + broad).domain == ["positive electrode"]
+
+        # a discretised reduction carries no mesh, so it is processed as 0D
+        disc = get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        fun_disc = disc.process_symbol(fun)
+        assert fun_disc.domain == []
+        assert fun_disc.mesh is None
 
 
 class TestNonObjectFunctions:
