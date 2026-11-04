@@ -10,7 +10,7 @@ license-files = ["LICENSE.txt"]
 description = "Community- and partner-contributed battery models for PyBaMM"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
-requires-python = ">=3.10, <3.16"
+requires-python = ">=3.11, <3.16"
 readme = { file = "README.md", content-type = "text/markdown" }
 keywords = ["battery", "electrochemistry", "lithium-ion", "modelling", "pybamm", "simulation"]
 classifiers = [
@@ -20,7 +20,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -33,7 +32,6 @@ dependencies = [
     # `pybamm.print_citations()` credit the zoo models' authors; `plot` lets examples plot.
     "pybamm[cite,plot]>=26.10.1",
     "packaging>=23.0",
-    "tomli>=2.0.1; python_version < '3.11'",
 ]
 
 [project.urls]
