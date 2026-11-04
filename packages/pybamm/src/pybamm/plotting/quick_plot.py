@@ -60,11 +60,14 @@ class QuickPlot:
 
     Parameters
     ----------
-    solutions: (iter of) :class:`pybamm.Solution` or :class:`pybamm.Simulation`
+    solutions : (iter of) :class:`pybamm.Solution` or :class:`pybamm.Simulation`
         The numerical solution(s) for the model(s), or the simulation object(s)
         containing the solution(s).
-    output_variables : list of str, optional
-        List of variables to plot
+    output_variables : list of (str or list of str), optional
+        Variables to plot, with one subplot per entry. An entry that is a list plots
+        those variables on the same subplot, so they must share a domain, e.g.
+        ``["var 1", ["var 2", "var 3"]]`` makes two subplots. Defaults to the model's
+        ``default_quick_plot_variables``.
     labels : list of str, optional
         Labels for the different models. Defaults to model names
     colors : list of str, optional
@@ -85,18 +88,21 @@ class QuickPlot:
         Format for the time output ("hours", "minutes", or "seconds")
     spatial_unit : str, optional
         Format for the spatial axes ("m", "mm", or "um")
-    variable_limits : str or dict of str, optional
+    variable_limits : str or dict, optional
         How to set the axis limits (for 0D or 1D variables) or colorbar limits (for 2D
         variables). Options are:
-    n_t_linear: int, optional
+
+        - "fixed" (default): keep all axes fixed so that all data is visible
+        - "tight": make axes tight to plot at each time
+        - dictionary: fine-grain control for each variable, can be either "fixed" or \
+        "tight" or a specific tuple (lower, upper). Keys are variable names, or \
+        tuples of names for variables on the same subplot. Variables not in the \
+        dictionary use "fixed".
+
+    n_t_linear : int, optional
         The number of linearly spaced time points added to the t axis for each sub-solution.
         Note: this is only used if the solution has hermite interpolation enabled
         and no ``t_additive`` times, which are added instead.
-
-        - "fixed" (default): keep all axes fixes so that all data is visible
-        - "tight": make axes tight to plot at each time
-        - dictionary: fine-grain control for each variable, can be either "fixed" or \
-        "tight" or a specific tuple (lower, upper).
 
     """
 
