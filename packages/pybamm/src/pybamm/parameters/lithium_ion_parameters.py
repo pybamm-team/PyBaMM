@@ -661,7 +661,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             post_processor=regulariser,
         )
 
-    def k0_coupled_ion_electron_transfer(self, T):
+    def k0_coupled_ion_electron_transfer(self, T: pybamm.Symbol) -> pybamm.Symbol:
         """Coupled ion-electron transfer rate constant [A.m-2]"""
         Domain = self.domain.capitalize()
         inputs = {"Temperature [K]": T}
