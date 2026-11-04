@@ -247,7 +247,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # them is accurate to upsampling_tolerance times the variable's
                 # scale (1 if it has none). The variable is the voltage, or the
                 # current in voltage-controlled experiment steps. For example, 1e-3
-                # gives a linear-interpolation voltage error of about 1 mV. The
+                # gives a linear-interpolation voltage error of about 1 mV. Set a
+                # model's `upsampling_variable` to upsample another variable. The
                 # times go to `Solution.t_additive` (and `Solution.t`) when Hermite
                 # data is stored and sensitivities are off; otherwise they are
                 # saved as full solution points. Ignored with t_interp.
@@ -790,7 +791,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
         empty = casadi.Function("empty_upsampling", [], [])
         name = getattr(model, "upsampling_variable", "Voltage [V]")
-        if self._options["upsampling_tolerance"] is None or name not in model.variables:
+        if self._options["upsampling_tolerance"] is None:
+            return empty
+        if name not in model.variables:
+            pybamm.logger.warning(
+                f"upsampling_tolerance is set but model '{model.name}' has no "
+                f"'{name}' variable, so no points are added. Set the model's "
+                "`upsampling_variable` to the name of a scalar variable."
+            )
             return empty
         variable = model.variables[name]
         if model.is_algebraic_state(variable):

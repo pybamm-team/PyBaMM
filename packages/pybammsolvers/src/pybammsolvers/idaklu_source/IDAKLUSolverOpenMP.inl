@@ -678,13 +678,13 @@ void IDAKLUSolverOpenMP<ExprSet>::UpsampleStep(
   if (upsample_to_t_additive_) {
     t_additive_.insert(t_additive_.end(), upsample_times_.begin(), upsample_times_.end());
   } else if (!upsample_times_.empty()) {
-    // No Hermite data is stored here, so only the states are needed
+    // Hermite data is stored here only with sensitivities, which need its yp
     for (sunrealtype const t_m : upsample_times_) {
-      GetSolutionStates(t_m);
+      save_hermite ? GetSolutionFull(t_m) : GetSolutionStates(t_m);
       SavePoint(t_m, /*extend_arrays=*/true, /*is_breakpoint=*/false);
     }
     // Saving a midpoint loaded its state, so reload t_b
-    GetSolutionStates(t_b);
+    save_hermite ? GetSolutionFull(t_b) : GetSolutionStates(t_b);
   }
   upsample_f_prev_ = f_b;
   upsample_f_prev_valid_ = true;
@@ -709,12 +709,12 @@ void IDAKLUSolverOpenMP<ExprSet>::RefineUpsampleInterval(
   sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b
 ) {
   // Split the worst interval first; the cap only guards against discontinuities
-  constexpr size_t max_points_per_interval = 100;
+  constexpr size_t max_points_per_step = 100;
   upsample_heap_.clear();
   upsample_times_.clear();
   PushUpsampleInterval(t_a, f_a, t_b, f_b);
   while (!upsample_heap_.empty() &&
-         upsample_times_.size() < max_points_per_interval) {
+         upsample_times_.size() < max_points_per_step) {
     std::pop_heap(upsample_heap_.begin(), upsample_heap_.end());
     UpsampleInterval const worst = upsample_heap_.back();
     upsample_heap_.pop_back();

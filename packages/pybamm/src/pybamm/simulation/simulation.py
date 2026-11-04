@@ -267,6 +267,25 @@ class Simulation(BaseSimulation):
 
         return []
 
+    def _add_unified_upsampling_variable(
+        self, new_model, variables, unique_steps, padding_rest_step
+    ):
+        # Upsample each step's own output by selecting it with the step index input.
+        # An algebraic state is resolved by the integrator, so its branch is constant.
+        upsampling_steps = list(unique_steps)
+        if padding_rest_step is not None:
+            upsampling_steps.append(padding_rest_step)
+        upsampling_branches = []
+        for step in upsampling_steps:
+            variable = variables[step.upsampling_variable]
+            if new_model.is_algebraic_state(variable):
+                variable = pybamm.Scalar(0)
+            upsampling_branches.append(variable)
+        new_model.variables[self._UPSAMPLING_VARIABLE] = pybamm.Conditional(
+            pybamm.InputParameter(self._STEP_INDEX_INPUT), *upsampling_branches
+        )
+        new_model.upsampling_variable = self._UPSAMPLING_VARIABLE
+
     def _set_up_unified_experiment_model(self, parameter_values):
         self._experiment_uses_unified_model = True
 
@@ -328,6 +347,7 @@ class Simulation(BaseSimulation):
         # experiment step index input; collapsible steps read their target from the
         # shared per-step value input instead of baking it.
         step_control_builders = [control_builder(step) for step in unique_steps]
+        padding_rest_step = None
         if self._experiment_includes_padding_rest:
             padding_rest_step = pybamm.step.Rest(duration=1)
             step_control_builders.append(padding_rest_step.get_control_residual)
@@ -351,21 +371,10 @@ class Simulation(BaseSimulation):
         # (in-place parameter processing and discretisation) through to solver.process.
         new_model.switching_control_variables = {var.name for var in submodel.algebraic}
 
-        # Upsample each step's own output by selecting it with the step index input.
-        # An algebraic state is resolved by the integrator, so its branch is constant.
-        upsampling_steps = list(unique_steps)
-        if self._experiment_includes_padding_rest:
-            upsampling_steps.append(padding_rest_step)
-        upsampling_branches = []
-        for step in upsampling_steps:
-            variable = variables[step.upsampling_variable]
-            if new_model.is_algebraic_state(variable):
-                variable = pybamm.Scalar(0)
-            upsampling_branches.append(variable)
-        new_model.variables[self._UPSAMPLING_VARIABLE] = pybamm.Conditional(
-            pybamm.InputParameter(self._STEP_INDEX_INPUT), *upsampling_branches
-        )
-        new_model.upsampling_variable = self._UPSAMPLING_VARIABLE
+        if getattr(self._solver, "options", {}).get("upsampling_tolerance") is not None:
+            self._add_unified_upsampling_variable(
+                new_model, variables, unique_steps, padding_rest_step
+            )
 
         # Combine each step's local termination expression into one experiment event,
         # selecting the active branch with the step index input.

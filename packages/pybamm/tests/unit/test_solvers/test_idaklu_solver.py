@@ -2834,12 +2834,12 @@ class TestUpsampling:
         inputs = {"Current function [A]": 5}
         options = {"upsampling_tolerance": 1e-4}
 
-        def solve(options, t_interp=None, output_variables=None):
+        def solve(options, t_interp=None, output_variables=None, **solver_kwargs):
             sim = pybamm.Simulation(
                 pybamm.lithium_ion.SPM(),
                 parameter_values=parameter_values,
                 solver=pybamm.IDAKLUSolver(
-                    options=options, output_variables=output_variables
+                    options=options, output_variables=output_variables, **solver_kwargs
                 ),
             )
             return sim.solve(
@@ -2855,6 +2855,16 @@ class TestUpsampling:
         upsampled = solve(options)
         assert upsampled.t_additive is None
         assert upsampled.t.size > baseline.t.size
+        # The added points store their own derivatives, so Hermite interpolation
+        # between them is as accurate as without upsampling
+        exact = solve({}, rtol=1e-10, atol=1e-12)["Voltage [V]"]
+        t_mid = 0.5 * (upsampled.t[:-1] + upsampled.t[1:])
+        errors = [
+            np.max(np.abs(solution["Voltage [V]"](t_mid) - exact(t_mid)))
+            for solution in [baseline, upsampled]
+        ]
+        assert errors[1] < 1.1 * errors[0]
+
         reference = solve({}, t_interp=upsampled.t)
         outputs_only = solve(options, output_variables=["Voltage [V]"])
         np.testing.assert_array_equal(outputs_only.t, upsampled.t)
@@ -2877,7 +2887,7 @@ class TestUpsampling:
         with pytest.raises(pybamm.SolverError, match="needs a scalar variable"):
             sim.solve([0, 600])
 
-    def test_skips_algebraic_and_missing_variables(self):
+    def test_skips_algebraic_and_missing_variables(self, caplog):
         experiment = pybamm.Experiment(
             ["Charge at 1C until 4.1 V", "Hold at 4.1 V for 10 minutes"]
         )
@@ -2892,7 +2902,9 @@ class TestUpsampling:
         model = sim._get_built_experiment_model(charge)
         assert solver._upsampling_fcn(model, {}).n_out() == 1
         model.upsampling_variable = "Not a variable"
-        assert solver._upsampling_fcn(model, {}).n_out() == 0
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            assert solver._upsampling_fcn(model, {}).n_out() == 0
+        assert "no 'Not a variable' variable" in caplog.text
 
         # In a voltage hold the current is an algebraic state
         solver = sim._get_built_experiment_solver(hold)
@@ -2937,16 +2949,19 @@ class TestUpsampling:
         experiment = pybamm.Experiment(
             ["Discharge at 1C until 3.0 V", "Hold at 3.0 V for 10 minutes"]
         )
-        solutions = []
-        for tolerance in [None, 1e-4]:
-            sim = pybamm.Simulation(
+        sims = [
+            pybamm.Simulation(
                 pybamm.lithium_ion.SPM(),
                 experiment=experiment,
                 solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": tolerance}),
                 experiment_model_mode=mode,
             )
-            solutions.append(sim.solve())
-        models = [sim._get_built_experiment_model(step) for step in experiment.steps]
+            for tolerance in [None, 1e-4]
+        ]
+        solutions = [sim.solve() for sim in sims]
+        models = [
+            sims[1]._get_built_experiment_model(step) for step in experiment.steps
+        ]
         if mode == "legacy":
             assert [model.upsampling_variable for model in models] == [
                 "Voltage [V]",
@@ -2959,6 +2974,9 @@ class TestUpsampling:
             assert isinstance(
                 model.variables["Experiment upsampling variable"], pybamm.Conditional
             )
+            # Without upsampling the model gets no extra variable
+            off_model = sims[0]._get_built_experiment_model(experiment.steps[0])
+            assert "Experiment upsampling variable" not in off_model.variables
         assert solutions[0].t_additive is None
         np.testing.assert_array_equal(
             np.concatenate(solutions[1].all_ts), solutions[0].t
