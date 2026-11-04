@@ -685,9 +685,6 @@ class TestElectrodeSOHHalfCell:
                 "Primary: Positive electrode active material volume fraction": params[
                     "Primary: Negative electrode active material volume fraction"
                 ],
-                "Primary: Positive electrode density [kg.m-3]": params[
-                    "Primary: Negative electrode density [kg.m-3]"
-                ],
                 "Primary: Positive electrode OCP entropic change [V.K-1]": params[
                     "Primary: Negative electrode OCP entropic change [V.K-1]"
                 ],
@@ -714,9 +711,6 @@ class TestElectrodeSOHHalfCell:
                 ],
                 "Secondary: Positive electrode active material volume fraction": params[
                     "Secondary: Negative electrode active material volume fraction"
-                ],
-                "Secondary: Positive electrode density [kg.m-3]": params[
-                    "Secondary: Negative electrode density [kg.m-3]"
                 ],
                 "Secondary: Positive electrode OCP entropic change [V.K-1]": params[
                     "Secondary: Negative electrode OCP entropic change [V.K-1]"

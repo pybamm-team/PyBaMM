@@ -367,9 +367,6 @@ class TestSimulation:
                         "Primary: Negative electrode exchange-current density [A.m-2]"
                     ]
                 ),
-                "Primary: Positive electrode density [kg.m-3]": (
-                    param["Primary: Negative electrode density [kg.m-3]"]
-                ),
                 "Primary: Positive electrode OCP entropic change [V.K-1]": (
                     param["Primary: Negative electrode OCP entropic change [V.K-1]"]
                 ),
@@ -408,9 +405,6 @@ class TestSimulation:
                     param[
                         "Secondary: Negative electrode exchange-current density [A.m-2]"
                     ]
-                ),
-                "Secondary: Positive electrode density [kg.m-3]": (
-                    param["Secondary: Negative electrode density [kg.m-3]"]
                 ),
                 "Secondary: Positive electrode OCP entropic change [V.K-1]": (
                     param["Secondary: Negative electrode OCP entropic change [V.K-1]"]

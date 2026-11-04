@@ -46,6 +46,7 @@
 - `QuickPlot`, and so `Simulation.plot`, now uses matplotlib's color cycle (`axes.prop_cycle`) for default colors when a style sheet or rcParams changes it; otherwise it keeps its red, blue, black, green, magenta and cyan colors. ([#5953](https://github.com/pybamm-team/PyBaMM/pull/5953))
 - The heat of mixing now sums over every particle phase, so `"heat of mixing": "true"` works with `"particle phases": "2"` instead of raising a `ModelError`. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - The heat of mixing now uses the particle's effective diffusivity, so it conserves energy with `"current sigmoid"` diffusivity or stress-induced diffusion, and a uniform particle profile builds again. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
+- `Chen2020_composite` and `Bonkile2024` now run with thermal models: they give one `"Negative electrode density [kg.m-3]"` instead of per-phase densities, which raised a `KeyError`. ([#5934](https://github.com/pybamm-team/PyBaMM/pull/5934))
 
 ## Optimizations
 
