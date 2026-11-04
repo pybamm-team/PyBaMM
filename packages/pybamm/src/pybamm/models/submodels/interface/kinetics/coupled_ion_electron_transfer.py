@@ -17,9 +17,9 @@ class CoupledIonElectronTransfer(BaseKinetics):
     integral of :footcite:t:`Zeng2014`. In units of :math:`RT/F`,
 
     .. math::
-        j = k_0 \\sqrt{\\pi\\lambda}\\,\\mathrm{erfc}\\left(\\frac{\\lambda - \\sqrt{1 + \\sqrt{\\lambda} + \\eta_f^2}}{2\\sqrt{\\lambda}}\\right) \\left[\\frac{\\theta}{1 + e^{-\\eta_f}} - \\frac{\\tilde{c}_e (1 - \\theta)}{1 + e^{\\eta_f}}\\right],
+        j = k_0 \\sqrt{\\pi\\lambda}\\,\\mathrm{erfc}\\left(\\frac{\\lambda - \\sqrt{1 + \\sqrt{\\lambda} + \\eta_f^2}}{2\\sqrt{\\lambda}}\\right) (1 - \\theta) \\left[\\frac{\\theta}{1 + e^{-\\eta_f}} - \\frac{\\tilde{c}_e}{1 + e^{\\eta_f}}\\right],
 
-    where :math:`\\eta_f = \\eta_r + \\ln(\\tilde{c}_e (1 - \\theta) / \\theta)`,
+    where :math:`\\eta_f = \\eta_r + \\ln(\\tilde{c}_e / \\theta)`,
     :math:`\\theta = c_{s,surf}/c_{max}` and :math:`\\tilde{c}_e = c_e/c_{e,init}`.
     Not available for a lithium metal electrode, which has no host lattice.
 
@@ -63,21 +63,29 @@ class CoupledIonElectronTransfer(BaseKinetics):
         pybamm.citations.register("Fraggedakis2021")
         pybamm.citations.register("Zeng2014")
 
-    def _get_exchange_current_density(self, variables):
-        c_e, c_s_surf, T = self._get_intercalation_concentrations(variables)
-        phase_param = self.phase_param
-        tol_c_s = pybamm.settings.tolerances["j0__c_s"]
-        tol_c_e = pybamm.settings.tolerances["j0__c_e"]
+    def get_coupled_variables(self, variables):
+        # The rate law needs the concentrations, but BaseKinetics only passes j0
+        # and the overpotential to _get_kinetics
+        self._concentrations = self._get_surface_fractions(variables)
+        return super().get_coupled_variables(variables)
+
+    def _get_surface_fractions(self, variables):
+        """Return the surface stoichiometry and relative electrolyte concentration,
+        floored so the logarithm in the formal overpotential stays finite."""
+        c_e, c_s_surf, _ = self._get_intercalation_concentrations(variables)
+        tol = pybamm.settings.tolerances["ciet__c"]
         stoichiometry = pybamm.maximum(
-            pybamm.minimum(c_s_surf / phase_param.c_max, 1 - tol_c_s), tol_c_s
+            pybamm.minimum(c_s_surf / self.phase_param.c_max, 1 - tol), tol
         )
-        relative_c_e = pybamm.maximum(c_e, tol_c_e) / phase_param.c_e_init
+        relative_c_e = pybamm.maximum(c_e / self.phase_param.c_e_init, tol)
+        return stoichiometry, relative_c_e
 
-        # Kept for the rate law, which only receives j0 and the overpotential
-        self._stoichiometry = stoichiometry
-        self._relative_c_e = relative_c_e
+    def _get_exchange_current_density(self, variables):
+        stoichiometry, relative_c_e = self._get_surface_fractions(variables)
+        _, _, T = self._get_intercalation_concentrations(variables)
 
-        # Linear-response slope, so j ~ j0 F eta_r / RT as for Butler-Volmer
+        # Linear-response slope, so j ~ j0 F eta_r / RT as for one-electron
+        # Butler-Volmer
         F_RT = self.param.F / (self.param.R * T)
         eta_f_equilibrium = self._formal_shift(stoichiometry, relative_c_e)
         return (
@@ -89,7 +97,7 @@ class CoupledIonElectronTransfer(BaseKinetics):
 
     @staticmethod
     def _formal_shift(stoichiometry, relative_c_e):
-        return pybamm.log(relative_c_e * (1 - stoichiometry) / stoichiometry)
+        return pybamm.log(relative_c_e / stoichiometry)
 
     @staticmethod
     def _fermi(x):
@@ -104,20 +112,19 @@ class CoupledIonElectronTransfer(BaseKinetics):
         arg = (lambda_T - pybamm.sqrt(a + eta_f**2)) / (2 * pybamm.sqrt(lambda_T))
         return k0 * pybamm.sqrt(np.pi * lambda_T) * pybamm.erfc(arg)
 
-    def _match_domains(self, symbol, eta_r):
-        domain = self.domain
-        if symbol.secondary_domain == [
-            "current collector"
-        ] and eta_r.secondary_domain == [f"{domain} electrode"]:
-            symbol = pybamm.SecondaryBroadcast(symbol, [f"{domain} electrode"])
-        return symbol
-
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        stoichiometry = self._match_domains(self._stoichiometry, eta_r)
-        relative_c_e = self._match_domains(self._relative_c_e, eta_r)
+        stoichiometry, relative_c_e = (
+            self._broadcast_to_eta_r_domain(c, eta_r) for c in self._concentrations
+        )
 
         F_RT = self.param.F / (self.param.R * T)
         eta_f = F_RT * eta_r + self._formal_shift(stoichiometry, relative_c_e)
         oxidation = stoichiometry * self._fermi(eta_f)
-        reduction = relative_c_e * (1 - stoichiometry) * self._fermi(-eta_f)
-        return u * self._rate_factor(eta_f, F_RT, T) * (oxidation - reduction)
+        reduction = relative_c_e * self._fermi(-eta_f)
+        # The transition state excludes a lattice site, so both directions need one
+        return (
+            u
+            * self._rate_factor(eta_f, F_RT, T)
+            * (1 - stoichiometry)
+            * (oxidation - reduction)
+        )

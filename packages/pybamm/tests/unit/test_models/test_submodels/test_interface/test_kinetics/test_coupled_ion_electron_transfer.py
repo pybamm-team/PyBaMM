@@ -25,11 +25,14 @@ def mhc_rate(eta):
 
 
 def expected_current(eta_r, stoichiometry, relative_c_e):
+    """Fraggedakis et al. (2021): k0 (1 - c) [c k_ox(eta_f) - c+ k_red(eta_f)]."""
     F_RT = pybamm.constants.F.value / (pybamm.constants.R.value * T)
-    eta_f = F_RT * eta_r + np.log(relative_c_e * (1 - stoichiometry) / stoichiometry)
-    oxidation = stoichiometry * mhc_rate(eta_f)
-    reduction = relative_c_e * (1 - stoichiometry) * mhc_rate(-eta_f)
-    return RATE_CONSTANT * (oxidation - reduction)
+    eta_f = F_RT * eta_r + np.log(relative_c_e / stoichiometry)
+    return (
+        RATE_CONSTANT
+        * (1 - stoichiometry)
+        * (stoichiometry * mhc_rate(eta_f) - relative_c_e * mhc_rate(-eta_f))
+    )
 
 
 class TestCoupledIonElectronTransfer:
@@ -50,6 +53,7 @@ class TestCoupledIonElectronTransfer:
                 stoichiometry * C_MAX
             ),
         }
+        submodel._concentrations = submodel._get_surface_fractions(variables)
         j0 = submodel._get_exchange_current_density(variables)
         j = submodel._get_kinetics(
             j0, pybamm.Scalar(1), pybamm.Scalar(eta_r), pybamm.Scalar(T), 1
@@ -77,7 +81,7 @@ class TestCoupledIonElectronTransfer:
         assert j == pytest.approx(0, abs=1e-12)
 
     @pytest.mark.parametrize("eta_r", [-0.4, -0.2, -0.02, 0.02, 0.2, 0.4])
-    @pytest.mark.parametrize("stoichiometry", [0.1, 0.6])
+    @pytest.mark.parametrize("stoichiometry", [0.1, 0.6, 0.95])
     def test_current_matches_marcus_integral(self, eta_r, stoichiometry):
         # The Zeng asymptotic form is within 5% of the integral at this lambda
         _, j = self.get_current(eta_r, stoichiometry, 1.2)
@@ -92,10 +96,22 @@ class TestCoupledIonElectronTransfer:
         stoichiometry, relative_c_e = 0.3, 0.8
         _, j_oxidation = self.get_current(5.0, stoichiometry, relative_c_e)
         _, j_reduction = self.get_current(-5.0, stoichiometry, relative_c_e)
-        np.testing.assert_allclose(j_oxidation, plateau * stoichiometry, rtol=1e-6)
+        # Both directions scale with the vacancy fraction
+        np.testing.assert_allclose(
+            j_oxidation, plateau * stoichiometry * (1 - stoichiometry), rtol=1e-6
+        )
         np.testing.assert_allclose(
             j_reduction, -plateau * relative_c_e * (1 - stoichiometry), rtol=1e-6
         )
+
+    @pytest.mark.parametrize(
+        "stoichiometry, relative_c_e", [(0, 1), (1, 1), (0.5, 0), (0, 0)]
+    )
+    def test_current_finite_at_concentration_limits(self, stoichiometry, relative_c_e):
+        for eta_r in [-0.2, 0.0, 0.2]:
+            j0, j = self.get_current(eta_r, stoichiometry, relative_c_e)
+            assert np.isfinite(j0)
+            assert np.isfinite(j)
 
     @pytest.mark.parametrize("stoichiometry", [0.2, 0.8])
     def test_exchange_current_is_linear_response(self, stoichiometry):
@@ -151,5 +167,5 @@ class TestCoupledIonElectronTransfer:
         eta_r = pybamm.PrimaryBroadcast(
             pybamm.Variable("eta", domain="negative electrode"), "negative particle"
         )
-        matched = submodel._match_domains(x_averaged, eta_r)
+        matched = submodel._broadcast_to_eta_r_domain(x_averaged, eta_r)
         assert matched.secondary_domain == ["negative electrode"]
