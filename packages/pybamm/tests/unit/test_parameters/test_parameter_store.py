@@ -205,6 +205,10 @@ class TestParameterCategory:
         assert ParameterCategory.POSITIVE_ELECTRODE.value == "positive electrode"
         assert ParameterCategory.THERMAL.value == "thermal"
 
+    def test_categories_are_strings(self):
+        assert ParameterCategory.THERMAL == "thermal"
+        assert str(ParameterCategory.THERMAL) == "thermal"
+
 
 class TestListByCategory:
     """Test the list_by_category method."""
