@@ -50,7 +50,7 @@
 
 ## Optimizations
 
-- Pushes to `main` no longer re-run the test suite when the same commit passed the merge queue. They rebuild the solver wheels that pull requests restore from cache and upload the Codecov baseline, while unvalidated pushes fall back to the full suite. ([#6027](https://github.com/pybamm-team/PyBaMM/pull/6027))
+- Pushes to `main` skip the test suite when the commit already passed the merge queue, and only rebuild the cached solver wheels and upload the Codecov baseline. Other pushes still run the full suite. ([#6027](https://github.com/pybamm-team/PyBaMM/pull/6027))
 - Read the Docs pull request builds drop `linkcheck` and the unpublished PDF, install the released solver wheel instead of compiling it, and are skipped when nothing the docs render changed, saving about 14 of 20 minutes. ([#5986](https://github.com/pybamm-team/PyBaMM/pull/5986))
 - Pull request CI no longer installs TeXLive, or the compilers and OpenBLAS that the prebuilt solver wheels make redundant. The latexify test mocks `sympy.preview` and runs everywhere. TeXLive downloads took 12–50 minutes in 6 of 15 runs. ([#5985](https://github.com/pybamm-team/PyBaMM/pull/5985))
 - Faster model build and `IDAKLUSolver` set-up for large models. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
