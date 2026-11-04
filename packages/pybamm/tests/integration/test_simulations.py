@@ -7,7 +7,7 @@ import pybamm
 
 class TestSimulationPickleRoundtrip:
     """Verify that pickling a Simulation and re-solving produces
-    bit-exact identical raw solver output (sol.t, sol.y, sol.yp)."""
+    bit-exact identical raw solver output (sol.t, sol.all_ys, sol.all_yps)."""
 
     @pytest.mark.parametrize("param_set", ["Chen2020", "Ai2020", "Marquis2019"])
     @pytest.mark.parametrize("initial_soc", [None, 0.5, "3.5 V"])
