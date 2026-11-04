@@ -6,7 +6,7 @@ import numbers
 import warnings
 from collections import OrderedDict
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 from itertools import chain
 from pathlib import Path
 from typing import Any, TypeVar, cast
@@ -23,7 +23,16 @@ from pybamm.models.symbol_processor import SymbolProcessor
 _SymbolT = TypeVar("_SymbolT", bound="pybamm.Symbol")
 
 
-class ModelSolutionObservability(str, Enum):
+def _prefer_restored(override: property, attribute: str) -> property:
+    """Wrap ``override`` so it returns ``attribute`` on the instance when set."""
+
+    def getter(self):
+        return getattr(self, attribute, None) or override.fget(self)
+
+    return property(getter, override.fset, override.fdel, override.__doc__)
+
+
+class ModelSolutionObservability(StrEnum):
     """
     Enum to specify the observability states for a PyBaMM model's solution.
 
@@ -97,6 +106,20 @@ class BaseModel:
 
     _DEFAULT_CONVERT_TO_FORMAT = "casadi"
     _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax")
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Serialise restores a saved discretisation onto ``_default_*`` when the
+        # saved class can't be imported; it must win over an ancestor's override
+        for name in (
+            "default_geometry",
+            "default_var_pts",
+            "default_submesh_types",
+            "default_spatial_methods",
+        ):
+            override = cls.__dict__.get(name)
+            if isinstance(override, property):
+                setattr(cls, name, _prefer_restored(override, f"_{name}"))
 
     # Set by discretisation, deserialisation and BaseSolver.set_up. Evaluators are
     # CasADi functions or pybamm.EvaluatorPython/EvaluatorJax, by convert_to_format.
@@ -2219,9 +2242,8 @@ class BaseModel:
             with open(filename, "w") as f:
                 json.dump(data, f, indent=2, default=Serialise._json_encoder)
         except OSError as file_err:
-            raise OSError(
-                f"Failed to write {label} to file '{filename}': {file_err}"
-            ) from file_err
+            file_err.add_note(f"Failed to write {label} to file '{filename}'")
+            raise
 
     @staticmethod
     def _find_builtin_module(model_class):
