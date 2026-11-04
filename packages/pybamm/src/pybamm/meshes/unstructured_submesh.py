@@ -1,5 +1,5 @@
 import hashlib
-from enum import Enum
+from enum import StrEnum
 
 import numpy as np
 
@@ -17,11 +17,11 @@ _CONTAINS_POINTS_INFLATION = 1e-9
 _CONTAINS_POINTS_CACHE_SIZE = 8
 
 
-class ElementType(str, Enum):
+class ElementType(StrEnum):
     """Element types supported by :class:`UnstructuredSubMesh`.
 
-    The ``str`` mixin keeps plain strings (``element_type="quad"``)
-    working everywhere an ``ElementType`` is expected.
+    Members are strings, so plain strings (``element_type="quad"``)
+    work everywhere an ``ElementType`` is expected.
     """
 
     TRIANGLE = "triangle"
