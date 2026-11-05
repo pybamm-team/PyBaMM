@@ -1244,6 +1244,10 @@ class BoundaryCellValue(BoundaryOperator):
         Which side to take the boundary value on ("left" or "right")
     """
 
+    __slots__ = ()
+
+    _json_extra_fields = ("side",)
+
     def __init__(self, child, side):
         super().__init__("boundary cell value", child, side)
 
@@ -1271,6 +1275,10 @@ class BoundaryCellLength(BoundaryOperator):
     side : str
         Which side to take the boundary value on ("left" or "right")
     """
+
+    __slots__ = ()
+
+    _json_extra_fields = ("side",)
 
     def __init__(self, child, side):
         super().__init__("boundary cell length", child, side)

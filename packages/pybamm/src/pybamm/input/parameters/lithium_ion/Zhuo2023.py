@@ -394,7 +394,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 34257.0,
-        "Negative electrode diffusivity [m2.s-1]": sic_18650_diffusivity_Zhuo2023,
+        "Negative particle diffusivity [m2.s-1]": sic_18650_diffusivity_Zhuo2023,
         "Negative electrode OCP [V]": sic_18650_ocp_Zhuo2023,
         "Negative electrode porosity": 0.216,
         "Negative electrode active material volume fraction": 0.694,
@@ -412,7 +412,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 0.17,
         "Maximum concentration in positive electrode [mol.m-3]": 49340.0,
-        "Positive electrode diffusivity [m2.s-1]": nmc811_18650_diffusivity_Zhuo2023,
+        "Positive particle diffusivity [m2.s-1]": nmc811_18650_diffusivity_Zhuo2023,
         "Positive electrode OCP [V]": nmc811_18650_ocp_Zhuo2023,
         "Positive electrode porosity": 0.171,
         "Positive electrode active material volume fraction": 0.745,

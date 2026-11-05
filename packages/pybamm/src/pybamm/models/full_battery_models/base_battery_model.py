@@ -473,6 +473,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "particle phases": "1",
             "particle shape": "spherical",
             "particle size": "single",
+            "PE degradation": "none",
             "SEI": "none",
             "SEI film resistance": "none",
             "SEI on cracks": "false",

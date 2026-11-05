@@ -572,6 +572,20 @@ def _boundary_mesh_size_branch(
     return st.builds(pybamm.BoundaryMeshSize, _any_domain_leaves(), _SIDES)
 
 
+def _boundary_cell_value_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.BoundaryCellValue]:
+    """BoundaryCellValue(child, side) — child must have a non-empty domain."""
+    return st.builds(pybamm.BoundaryCellValue, _any_domain_leaves(), _SIDES)
+
+
+def _boundary_cell_length_branch(
+    _child_strategy: st.SearchStrategy[pybamm.Symbol],
+) -> st.SearchStrategy[pybamm.BoundaryCellLength]:
+    """BoundaryCellLength(child, side) — child must have a non-empty domain."""
+    return st.builds(pybamm.BoundaryCellLength, _any_domain_leaves(), _SIDES)
+
+
 def _boundary_integral_branch(
     _child_strategy: st.SearchStrategy[pybamm.Symbol],
 ) -> st.SearchStrategy[pybamm.BoundaryIntegral]:
@@ -983,6 +997,8 @@ _STRATEGIES.update(
         pybamm.BackwardIndefiniteIntegral: _backward_indefinite_integral_branch,
         pybamm.BoundaryGradient: _boundary_gradient_branch,
         pybamm.BoundaryMeshSize: _boundary_mesh_size_branch,
+        pybamm.BoundaryCellValue: _boundary_cell_value_branch,
+        pybamm.BoundaryCellLength: _boundary_cell_length_branch,
         pybamm.BoundaryIntegral: _boundary_integral_branch,
         pybamm.OneDimensionalIntegral: _one_dimensional_integral_branch,
         pybamm.ExplicitTimeIntegral: _explicit_time_integral_branch,
