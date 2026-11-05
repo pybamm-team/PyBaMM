@@ -55,12 +55,11 @@
 - `"heat of mixing": "true"` now works with `"particle": "quadratic profile"` or `"quartic profile"`, using their closed-form flux instead of failing to discretise with a `ShapeError`. ([#5935](https://github.com/pybamm-team/PyBaMM/pull/5935))
 - Irreversible heating now includes the resistive loss across the SEI film when `"SEI film resistance"` is `"distributed"` or `"average"`, so it reaches `"Total heating [W]"` and the cell temperature. ([#5841](https://github.com/pybamm-team/PyBaMM/pull/5841))
 - Irreversible heating now includes the heat from SEI growth, SEI on cracks and lithium plating side reactions, so their electrical losses reach `"Total heating [W]"` and the cell temperature. ([#5875](https://github.com/pybamm-team/PyBaMM/pull/5875))
-- Sensitivity and geometry inputs are validated with clear errors. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
-  - `calculate_sensitivities` with a name that is not an input parameter of the model raises a `SolverError` listing the model's inputs, instead of a `KeyError`.
-  - `calculate_sensitivities=True` logs supplied inputs that the model does not use. With an `Experiment`, it skips inputs that some step models lack, where it used to raise a `KeyError`, and a list naming such an input raises a `SolverError` before solving.
-  - Sensitivities with respect to a vector-valued input raise a `SolverError`, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols".
-  - Input-dependent geometry limits on a submesh that needs numbers, such as the default `Uniform1DSubMesh`, raise a `GeometryError` that points to `pybamm.SymbolicUniform1DSubMesh`, instead of an `IndexError`. Input-dependent tab positions raise a `GeometryError` instead of a `KeyError`.
-  - `output_variables` with `/` in their names, such as `"Entropic change [V/K]"`, or with names that differ only in punctuation now work, including with the `compile` option.
+- `calculate_sensitivities` with a name that is not an input parameter of the model raises a `SolverError` listing the model's inputs, instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `calculate_sensitivities=True` logs supplied inputs the model does not use and, with an `Experiment`, skips inputs that some step models lack instead of raising a `KeyError`. A list naming such an input raises a `SolverError` before solving. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Sensitivities with respect to a vector-valued input raise a `SolverError`, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols". ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Input-dependent geometry limits on a submesh that needs numbers, such as the default `Uniform1DSubMesh`, raise a `GeometryError` pointing to `pybamm.SymbolicUniform1DSubMesh` instead of an `IndexError`, and input-dependent tab positions raise one instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `output_variables` with `/` in their names, such as `"Entropic change [V/K]"`, or with names that differ only in punctuation now work, including with the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Optimizations
 
