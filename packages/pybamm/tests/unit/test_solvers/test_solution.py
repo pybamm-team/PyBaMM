@@ -448,6 +448,324 @@ class TestSolution:
             joined["2u"].sensitivities["a"], 2 * expected, atol=1e-6
         )
 
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    @pytest.mark.parametrize(
+        "calculate_sensitivities",
+        [(False, True), (True, False)],
+    )
+    def test_join_mixed_sensitivities(self, join, calculate_sensitivities):
+        """Joining mixed sensitivities must discard them and warn."""
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a}
+        model.initial_conditions = {u: a}
+        model.variables = {"u": u}
+
+        solver = pybamm.IDAKLUSolver()
+        time_segments = ([0, 0.5, 1], [1, 2, 3])
+
+        solutions = [
+            solver.solve(
+                model,
+                [times[0], times[-1]],
+                t_interp=np.array(times),
+                inputs={"a": 1.0},
+                calculate_sensitivities=enabled,
+            )
+            for times, enabled in zip(
+                time_segments, calculate_sensitivities, strict=True
+            )
+        ]
+
+        assert [s.has_sensitivities() for s in solutions] == list(
+            calculate_sensitivities
+        )
+
+        # Mock the logger to verify that the user is warned.
+        with mock.patch.object(pybamm.logger, "warning") as warning:
+            if join == "add":
+                joined = solutions[0] + solutions[1]
+            else:
+                joined = pybamm.Solution.from_sub_solutions(solutions)
+
+        # The joined solution must retain its time points.
+        np.testing.assert_allclose(joined.t, [0, 0.5, 1, 2, 3])
+        # Incomplete sensitivity information must be discarded.
+        assert not joined.has_sensitivities()
+        assert joined.sensitivities == {}
+        assert not joined.first_state.has_sensitivities()
+        assert not joined.last_state.has_sensitivities()
+        with pytest.raises(ValueError, match="Cannot compute sensitivities"):
+            _ = joined["u"].sensitivities
+        # The original solutions must not be modified.
+        assert [s.has_sensitivities() for s in solutions] == list(
+            calculate_sensitivities
+        )
+        warning.assert_called_once()
+        assert "sensitivities" in warning.call_args.args[0].lower()
+
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    @pytest.mark.parametrize(
+        "calculate_sensitivities",
+        [
+            (True, False, True),
+            (False, True, False),
+            (True, True, False),
+        ],
+    )
+    def test_join_multiple_mixed_sensitivities(self, join, calculate_sensitivities):
+        """Joining multiple segments must not retain partial sensitivities."""
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a}
+        model.initial_conditions = {u: a}
+        model.variables = {"u": u}
+        solver = pybamm.IDAKLUSolver()
+        segments = [
+            solver.solve(
+                model,
+                [i, i + 1],
+                t_interp=np.array([i, i + 0.5, i + 1]),
+                inputs={"a": 1.0},
+                calculate_sensitivities=enabled,
+            )
+            for i, enabled in enumerate(calculate_sensitivities)
+        ]
+        with mock.patch.object(pybamm.logger, "warning") as warning:
+            if join == "add":
+                joined = segments[0] + segments[1] + segments[2]
+            else:
+                joined = pybamm.Solution.from_sub_solutions(segments)
+        np.testing.assert_allclose(joined.t, np.linspace(0, 3, 7))
+        assert not joined.has_sensitivities()
+        assert joined.sensitivities == {}
+        assert not joined.first_state.has_sensitivities()
+        assert not joined.last_state.has_sensitivities()
+        with pytest.raises(ValueError, match="Cannot compute sensitivities"):
+            _ = joined["u"].sensitivities
+        assert [s.has_sensitivities() for s in segments] == list(
+            calculate_sensitivities
+        )
+        assert warning.call_count >= 1
+
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    @pytest.mark.parametrize(
+        "calculate_sensitivities",
+        [(False, True), (True, False)],
+    )
+    def test_join_mixed_sensitivities_output_variables(
+        self, join, calculate_sensitivities
+    ):
+        """Mixed sensitivities must be discarded for output-only solves."""
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        model.rhs = {u: a}
+        model.initial_conditions = {u: a}
+        model.variables = {"u": u}
+        solver = pybamm.IDAKLUSolver(output_variables=["u"])
+        solutions = [
+            solver.solve(
+                model,
+                [start, start + 1],
+                t_interp=np.array([start, start + 0.5, start + 1]),
+                inputs={"a": 1.0},
+                calculate_sensitivities=enabled,
+            )
+            for start, enabled in zip((0, 1), calculate_sensitivities, strict=True)
+        ]
+        assert all(s.variables_returned for s in solutions)
+        with mock.patch.object(pybamm.logger, "warning") as warning:
+            if join == "add":
+                joined = solutions[0] + solutions[1]
+            else:
+                joined = pybamm.Solution.from_sub_solutions(solutions)
+        np.testing.assert_allclose(joined.t, [0, 0.5, 1, 1.5, 2])
+        # Solution-level sensitivities must be discarded.
+        assert not joined.has_sensitivities()
+        assert joined.sensitivities == {}
+        # First and last states must also be consistent.
+        assert not joined.first_state.has_sensitivities()
+        assert not joined.last_state.has_sensitivities()
+        # The output variable must not expose partial sensitivities.
+        assert joined["u"].sensitivities == {}
+        # Joining must not change the original solutions.
+        assert [s.has_sensitivities() for s in solutions] == list(
+            calculate_sensitivities
+        )
+        warning.assert_called_once()
+
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    @pytest.mark.parametrize("output_variables", [None, ["u"]])
+    def test_join_different_sensitivity_parameters(self, join, output_variables):
+        """Joining different sensitivity parameters must discard them."""
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        model.rhs = {u: a + b}
+        model.initial_conditions = {u: 1}
+        model.variables = {"u": u}
+
+        solutions = [
+            pybamm.IDAKLUSolver(output_variables=output_variables).solve(
+                model,
+                [start, start + 1],
+                t_interp=np.array([start, start + 0.5, start + 1]),
+                inputs={"a": 1.0, "b": 2.0},
+                calculate_sensitivities=[parameter],
+            )
+            for start, parameter in [(0, "a"), (1, "b")]
+        ]
+
+        assert [s.sensitivity_names for s in solutions] == [["a"], ["b"]]
+
+        with mock.patch.object(pybamm.logger, "warning") as warning:
+            if join == "add":
+                joined = solutions[0] + solutions[1]
+            else:
+                joined = pybamm.Solution.from_sub_solutions(solutions)
+
+        np.testing.assert_allclose(joined.t, [0, 0.5, 1, 1.5, 2])
+
+        assert not joined.has_sensitivities()
+        assert joined.sensitivities == {}
+
+        if output_variables is None:
+            with pytest.raises(ValueError, match="Cannot compute sensitivities"):
+                _ = joined["u"].sensitivities
+        else:
+            assert joined["u"].sensitivities == {}
+
+        assert [s.sensitivity_names for s in solutions] == [["a"], ["b"]]
+        warning.assert_called_once()
+
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    @pytest.mark.parametrize(
+        "calculate_sensitivities",
+        [(False, True), (True, False)],
+    )
+    def test_join_mixed_time_integral_sensitivities(
+        self, join, calculate_sensitivities
+    ):
+        """Computed time integrals must discard incomplete sensitivities."""
+        model = pybamm.BaseModel()
+        y = pybamm.Variable("y")
+        a = pybamm.InputParameter("a")
+
+        model.rhs = {y: 0 * y}
+        model.initial_conditions = {y: 1}
+        model.variables["integral"] = pybamm.ExplicitTimeIntegral(
+            a * y, pybamm.Scalar(1)
+        )
+
+        solver = pybamm.IDAKLUSolver(output_variables=["integral"])
+
+        solutions = [
+            solver.solve(
+                model,
+                [start, start + 1],
+                t_interp=np.linspace(start, start + 1, 5),
+                inputs={"a": 2.0},
+                calculate_sensitivities=enabled,
+            )
+            for start, enabled in zip((0, 1), calculate_sensitivities, strict=True)
+        ]
+
+        assert all(s.variables_returned for s in solutions)
+        assert [s.has_sensitivities() for s in solutions] == list(
+            calculate_sensitivities
+        )
+
+        with mock.patch.object(pybamm.logger, "warning") as warning:
+            if join == "add":
+                joined = solutions[0] + solutions[1]
+            else:
+                joined = pybamm.Solution.from_sub_solutions(solutions)
+
+        # Numerical integration must still work after joining.
+        np.testing.assert_allclose(joined["integral"].entries, [5.0], rtol=1e-6)
+
+        # Partial sensitivities must not survive the join.
+        assert not joined.has_sensitivities()
+        assert joined.sensitivities == {}
+        assert joined["integral"].sensitivities == {}
+
+        # Original solutions must remain unchanged.
+        assert [s.has_sensitivities() for s in solutions] == list(
+            calculate_sensitivities
+        )
+
+        warning.assert_called_once()
+
+    @pytest.mark.parametrize("join", ["add", "from_sub_solutions"])
+    def test_join_different_sensitivity_parameter_order(self, join):
+        """Joining sensitivities in different column orders must discard them."""
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: pybamm.Scalar(0)}
+        model.initial_conditions = {u: pybamm.Scalar(1)}
+        model.variables = {"u": u}
+
+        # Construct distinct derivative columns for a and b.
+        sens_a = np.ones((3, 1))
+        sens_b = 2 * np.ones((3, 1))
+
+        first = pybamm.Solution(
+            np.array([0, 0.5, 1]),
+            np.ones((1, 3)),
+            model,
+            {"a": 1.0, "b": 2.0},
+            all_sensitivities={
+                "a": sens_a,
+                "b": sens_b,
+                "all": np.hstack((sens_a, sens_b)),
+            },
+        )
+
+        second = pybamm.Solution(
+            np.array([1, 1.5, 2]),
+            np.ones((1, 3)),
+            model,
+            {"a": 1.0, "b": 2.0},
+            all_sensitivities={
+                "b": sens_b,
+                "a": sens_a,
+                "all": np.hstack((sens_b, sens_a)),
+            },
+        )
+
+        # Both have the same parameters, but in a different order.
+        assert first.sensitivity_names == ["a", "b"]
+        assert second.sensitivity_names == ["b", "a"]
+        assert set(first.sensitivity_names) == set(second.sensitivity_names)
+
+        with mock.patch.object(pybamm.logger, "warning") as warning:
+            if join == "add":
+                joined = first + second
+            else:
+                joined = pybamm.Solution.from_sub_solutions([first, second])
+
+        # The numerical solution must still join correctly.
+        np.testing.assert_allclose(joined.t, [0, 0.5, 1, 1.5, 2])
+        np.testing.assert_allclose(joined.y, np.ones((1, 5)))
+
+        # Incompatible sensitivity column orders must be discarded.
+        assert not joined.has_sensitivities()
+        assert joined.sensitivities == {}
+        assert not joined.first_state.has_sensitivities()
+        assert not joined.last_state.has_sensitivities()
+
+        # Joining must not change either original solution.
+        assert first.sensitivity_names == ["a", "b"]
+        assert second.sensitivity_names == ["b", "a"]
+        assert first.has_sensitivities()
+        assert second.has_sensitivities()
+
+        warning.assert_called_once()
+
     def test_add_validates_only_boundary(self):
         # __add__ must validate only the joined region, not re-scan the whole
         # accumulation (that re-scan was the O(N^2) source).
