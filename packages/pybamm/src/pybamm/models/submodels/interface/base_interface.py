@@ -49,6 +49,65 @@ class BaseInterface(pybamm.BaseSubModel):
         domain_options = getattr(self.options, domain)
         self.size_distribution = domain_options["particle size"] == "distribution"
 
+    def _get_intercalation_concentrations(self, variables):
+        """
+        Get the electrolyte concentration, particle surface concentration and
+        temperature seen by the main intercalation reaction.
+
+        Parameters
+        ----------
+        variables : dict
+            The variables in the full model.
+
+        Returns
+        -------
+        c_e, c_s_surf, T : :class:`pybamm.Symbol`
+            Electrolyte concentration, particle surface concentration and
+            temperature, on matching domains.
+        """
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+        c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
+        T = variables[f"{Domain} electrode temperature [K]"]
+
+        # For "particle-size distribution" submodels, take distribution version
+        # of c_s_surf that depends on particle size.
+        if self.size_distribution:
+            c_s_surf = variables[
+                f"{Domain} {phase_name}particle surface "
+                "concentration distribution [mol.m-3]"
+            ]
+            # If all variables were broadcast (in "x"), take only the orphans,
+            # then re-broadcast c_e
+            if (
+                isinstance(c_s_surf, pybamm.Broadcast)
+                and isinstance(c_e, pybamm.Broadcast)
+                and isinstance(T, pybamm.Broadcast)
+            ):
+                c_s_surf = c_s_surf.orphans[0]
+                c_e = c_e.orphans[0]
+                T = T.orphans[0]
+
+                # as c_e must now be a scalar, re-broadcast to "current collector"
+                c_e = pybamm.PrimaryBroadcast(c_e, ["current collector"])
+            # broadcast c_e, T onto "particle size"
+            c_e = pybamm.PrimaryBroadcast(c_e, [f"{domain} {phase_name}particle size"])
+            T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
+        else:
+            c_s_surf = variables[
+                f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
+            ]
+            # If all variables were broadcast, take only the orphans
+            if (
+                isinstance(c_s_surf, pybamm.Broadcast)
+                and isinstance(c_e, pybamm.Broadcast)
+                and isinstance(T, pybamm.Broadcast)
+            ):
+                c_s_surf = c_s_surf.orphans[0]
+                c_e = c_e.orphans[0]
+                T = T.orphans[0]
+        return c_e, c_s_surf, T
+
     def _get_exchange_current_density(self, variables):
         """
         A private function to obtain the exchange current density
@@ -65,54 +124,13 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
         domain_options = getattr(self.options, domain)
 
         c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
         T = variables[f"{Domain} electrode temperature [K]"]
 
         if self.reaction == "lithium-ion main":
-            # For "particle-size distribution" submodels, take distribution version
-            # of c_s_surf that depends on particle size.
-            domain_options = getattr(self.options, domain)
-            if domain_options["particle size"] == "distribution":
-                c_s_surf = variables[
-                    f"{Domain} {phase_name}particle surface "
-                    "concentration distribution [mol.m-3]"
-                ]
-                # If all variables were broadcast (in "x"), take only the orphans,
-                # then re-broadcast c_e
-                if (
-                    isinstance(c_s_surf, pybamm.Broadcast)
-                    and isinstance(c_e, pybamm.Broadcast)
-                    and isinstance(T, pybamm.Broadcast)
-                ):
-                    c_s_surf = c_s_surf.orphans[0]
-                    c_e = c_e.orphans[0]
-                    T = T.orphans[0]
-
-                    # as c_e must now be a scalar, re-broadcast to
-                    # "current collector"
-                    c_e = pybamm.PrimaryBroadcast(c_e, ["current collector"])
-                # broadcast c_e, T onto "particle size"
-                c_e = pybamm.PrimaryBroadcast(
-                    c_e, [f"{domain} {phase_name}particle size"]
-                )
-                T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
-
-            else:
-                c_s_surf = variables[
-                    f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
-                ]
-                # If all variables were broadcast, take only the orphans
-                if (
-                    isinstance(c_s_surf, pybamm.Broadcast)
-                    and isinstance(c_e, pybamm.Broadcast)
-                    and isinstance(T, pybamm.Broadcast)
-                ):
-                    c_s_surf = c_s_surf.orphans[0]
-                    c_e = c_e.orphans[0]
-                    T = T.orphans[0]
+            c_e, c_s_surf, T = self._get_intercalation_concentrations(variables)
             # Get main reaction exchange-current density (may have empirical hysteresis)
             j0_option = getattr(domain_options, self.phase)["exchange-current density"]
             if j0_option == "single":
