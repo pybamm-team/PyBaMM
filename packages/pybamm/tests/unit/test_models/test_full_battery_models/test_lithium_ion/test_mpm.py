@@ -56,12 +56,14 @@ class TestMPM:
 
         radius = pybamm.lithium_ion.MPM().default_parameter_values[name]
         sensitivity = solve(radius, True)["Voltage [V]"].sensitivities[name].ravel()
-        h = 1e-4 * radius
+        # Smaller steps amplify solver error, larger ones add truncation error
+        h = 1e-3 * radius
         voltage_plus = solve(radius + h, False)["Voltage [V]"](t_interp)
         voltage_minus = solve(radius - h, False)["Voltage [V]"](t_interp)
         finite_difference = (voltage_plus - voltage_minus) / (2 * h)
-        assert np.max(np.abs(finite_difference)) > 1e2
-        np.testing.assert_allclose(sensitivity, finite_difference, rtol=1e-4, atol=1e-1)
+        # Larger particles lower the voltage, so a zero reference can't pass
+        np.testing.assert_array_less(radius * finite_difference, -1e-3)
+        np.testing.assert_allclose(sensitivity, finite_difference, rtol=2e-5)
 
     def test_lumped_thermal_model_1D(self):
         options = {"thermal": "lumped"}
