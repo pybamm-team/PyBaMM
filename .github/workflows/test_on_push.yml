@@ -8,6 +8,8 @@ on:
   push:
     branches:
       - main
+  # Merge-queue runs test everything, like pushes to main.
+  merge_group:
 
 
 permissions: {}
@@ -38,11 +40,11 @@ jobs:
       docs: ${{ steps.filter.outputs.docs }}
       model_zoo: ${{ steps.filter.outputs.model_zoo }}
       # Routing decisions, resolved once here rather than repeated in every job's `if`.
-      run_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
-      run_docs_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
+      run_tests: ${{ github.event_name != 'pull_request' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
+      run_docs_tests: ${{ github.event_name != 'pull_request' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
       # A core change runs the zoo too, so an upstream regression shows up here
       # rather than in a contributor's next pull request.
-      run_zoo_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.model_zoo == 'true' }}
+      run_zoo_tests: ${{ github.event_name != 'pull_request' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.model_zoo == 'true' }}
       # Solver-wheel platforms each scenario's downstream jobs actually consume.
       platforms: ${{ steps.route.outputs.platforms }}
       macos_runners: ${{ steps.route.outputs.macos_runners }}
@@ -52,6 +54,7 @@ jobs:
           persist-credentials: false
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
+        if: github.event_name != 'merge_group'
         with:
           filters: |
             solver:
@@ -91,7 +94,7 @@ jobs:
           if [ "$SOLVER" = true ]; then
             platforms='["linux", "windows"]'
             macos='["macos-15-intel", "macos-latest"]'
-          elif [ "$EVENT" = push ] || [ "$PYBAMM" = true ]; then
+          elif [ "$EVENT" != pull_request ] || [ "$PYBAMM" = true ]; then
             platforms='["linux", "windows"]'
             macos='["macos-latest"]'
           else
@@ -121,11 +124,11 @@ jobs:
             "+refs/heads/$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
 
       - name: Setup Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.12
 
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: "latest"
           enable-cache: true
@@ -174,14 +177,13 @@ jobs:
     with:
       sessions: unit
       legs: >-
-        [{"os": "ubuntu-latest", "python": "3.10"},
-         {"os": "ubuntu-latest", "python": "3.11"},
+        [{"os": "ubuntu-latest", "python": "3.11"},
          {"os": "ubuntu-latest", "python": "3.12"},
          {"os": "ubuntu-latest", "python": "3.14"},
          {"os": "ubuntu-latest", "python": "3.15"},
-         {"os": "ubuntu-24.04-arm", "python": "3.10"},
+         {"os": "ubuntu-24.04-arm", "python": "3.11"},
          {"os": "ubuntu-24.04-arm", "python": "3.15"},
-         {"os": "macos-latest", "python": "3.10"},
+         {"os": "macos-latest", "python": "3.11"},
          {"os": "macos-latest", "python": "3.15"}]
 
   # Advisory: reports red on failure but is deliberately absent from ci_gate's
@@ -196,7 +198,7 @@ jobs:
     with:
       sessions: unit
       legs: >-
-        [{"os": "windows-latest", "python": "3.10"},
+        [{"os": "windows-latest", "python": "3.11"},
          {"os": "windows-latest", "python": "3.15"}]
 
   run_coverage:
@@ -228,7 +230,7 @@ jobs:
   #  Guards both the bootstrap and the clean-clone dev experience.
   from_source_smoke:
     needs: changes
-    if: ${{ github.event_name == 'push' || needs.changes.outputs.solver == 'true' }}
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.solver == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -247,11 +249,11 @@ jobs:
           sudo apt-get install -y gfortran gcc make cmake libopenblas-dev
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: "latest"
           enable-cache: true

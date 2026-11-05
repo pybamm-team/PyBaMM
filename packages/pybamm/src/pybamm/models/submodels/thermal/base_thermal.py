@@ -404,25 +404,23 @@ class BaseThermal(pybamm.BaseSubModel):
         N = a / (4 * np.pi * R**2)
         # the diffusivity the particle flux actually uses, including any current
         # sigmoid or stress-induced diffusion, so the dissipation matches the flux
-        if self.x_average:
-            c = variables[
-                f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-            ]
-            T = variables[f"X-averaged {domain} electrode temperature [K]"]
-            D = variables[
-                f"X-averaged {domain} {phase_name}particle effective "
-                "diffusivity [m2.s-1]"
-            ]
-        else:
-            c = variables[f"{Domain} {phase_name}particle concentration [mol.m-3]"]
-            T = variables[f"{Domain} electrode temperature [K]"]
-            D = variables[
-                f"{Domain} {phase_name}particle effective diffusivity [m2.s-1]"
-            ]
+        prefix = f"X-averaged {domain}" if self.x_average else Domain
+        c = variables[f"{prefix} {phase_name}particle concentration [mol.m-3]"]
+        T = variables[f"{prefix} electrode temperature [K]"]
+        D = variables[f"{prefix} {phase_name}particle effective diffusivity [m2.s-1]"]
         T_part = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
-        dc_dr2 = pybamm.inner(pybamm.grad(c), pybamm.grad(c))
-        dUeq = phase_param.U(c / phase_param.c_max, T_part).diff(c)
-        integrand_r = D * dc_dr2 * dUeq
+        U_eq = phase_param.U(c / phase_param.c_max, T_part)
+        if phase_options["particle"] in ["quadratic profile", "quartic profile"]:
+            # c is a polynomial in r on the nodes, so D (dc/dr)^2 dU/dc = -N dU/dr
+            # with the closed-form flux N; a finite-volume gradient doesn't apply
+            N_s = variables[f"{prefix} {phase_name}particle flux [mol.m-2.s-1]"]
+            r = pybamm.SpatialVariable(
+                f"r_{domain[0]}", domains=c.domains, coord_sys="spherical polar"
+            )
+            integrand_r = -N_s * U_eq.diff(r)
+        else:
+            dc_dr2 = pybamm.inner(pybamm.grad(c), pybamm.grad(c))
+            integrand_r = D * dc_dr2 * U_eq.diff(c)
         integration_variable_r = [
             pybamm.SpatialVariable("r", domain=integrand_r.domain)
         ]
