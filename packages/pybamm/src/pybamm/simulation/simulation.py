@@ -607,6 +607,51 @@ class Simulation(BaseSimulation):
             )
             self.experiment_unique_steps_to_model[self._PADDING_REST_KEY] = new_model
 
+    def _shared_sensitivity_inputs(
+        self, names: list[str], skip_missing: bool
+    ) -> list[str]:
+        """
+        Return the names that are input parameters of every built experiment model.
+
+        Parameters
+        ----------
+        names : list of str
+            The input names to calculate sensitivities with respect to.
+        skip_missing : bool
+            Whether to log and drop the names that some model lacks, rather than
+            raise.
+
+        Returns
+        -------
+        list of str
+            The names, in the given order, that every model has.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If ``skip_missing`` is False and a model lacks one of the names.
+        """
+        shared_inputs = set.intersection(
+            *(
+                {ip.name for ip in model.input_parameters}
+                for model in self.steps_to_built_models.values()
+            )
+        )
+        missing = [name for name in names if name not in shared_inputs]
+        if not missing:
+            return names
+        if not skip_missing:
+            raise pybamm.SolverError(
+                f"calculate_sensitivities names {missing} are not input parameters "
+                "of every experiment step model. Pass calculate_sensitivities=True "
+                "to calculate sensitivities for only the inputs they all have."
+            )
+        pybamm.logger.warning(
+            f"Inputs {missing} are not input parameters of every experiment "
+            "step model, so no sensitivities are calculated for them."
+        )
+        return [name for name in names if name in shared_inputs]
+
     def _get_built_models(self):
         """Return list of built models that need IC recomputation."""
         models = super()._get_built_models()
@@ -849,16 +894,31 @@ class Simulation(BaseSimulation):
 
         # Take sensitivities only w.r.t. user inputs, not the control inputs the
         # experiment injects per step.
-        if "calculate_sensitivities" in kwargs:
-            requested = kwargs["calculate_sensitivities"]
-            if requested is True:
-                kwargs["calculate_sensitivities"] = list((inputs or {}).keys())
-            elif isinstance(requested, list):
-                kwargs["calculate_sensitivities"] = [
-                    name
-                    for name in requested
-                    if name not in self._INTERNAL_EXPERIMENT_INPUTS
-                ]
+        requested = kwargs.get("calculate_sensitivities")
+        all_input_sensitivities = requested is True
+        if all_input_sensitivities:
+            requested = list(inputs)
+        if isinstance(requested, list):
+            kwargs["calculate_sensitivities"] = [
+                name
+                for name in requested
+                if name not in self._INTERNAL_EXPERIMENT_INPUTS
+            ]
+
+        # Drop the prior solution before build/integration.
+        self._solution = starting_solution
+
+        self.build_for_experiment(
+            initial_soc=initial_soc,
+            direction=direction,
+            inputs=inputs,
+            solve_kwargs=kwargs,
+        )
+        if kwargs.get("calculate_sensitivities"):
+            # A step failing on a missing input would end the experiment early
+            kwargs["calculate_sensitivities"] = self._shared_sensitivity_inputs(
+                kwargs["calculate_sensitivities"], skip_missing=all_input_sensitivities
+            )
 
         # The result joins the starting solution's sensitivities to the steps'
         if isinstance(starting_solution, pybamm.Solution):
@@ -870,16 +930,6 @@ class Simulation(BaseSimulation):
                     f"{starting_names} with sensitivities for {requested_names}. "
                     "Solve with the same 'calculate_sensitivities' as it."
                 )
-
-        # Drop the prior solution before build/integration.
-        self._solution = starting_solution
-
-        self.build_for_experiment(
-            initial_soc=initial_soc,
-            direction=direction,
-            inputs=inputs,
-            solve_kwargs=kwargs,
-        )
         if t_eval is not None:
             pybamm.logger.warning(
                 "Ignoring t_eval as solution times are specified by the experiment"

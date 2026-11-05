@@ -6,6 +6,8 @@
 - Dropped support for Python 3.10, which reaches end of life in October 2026. `pybamm` and `pybammsolvers` now require Python 3.11 or newer, and `pybamm` no longer depends on `typing-extensions`. Python 3.10 users can stay on PyBaMM 26.10. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - `pybamm.ModelSolutionObservability` and `pybamm.parameters.ParameterCategory` are now `enum.StrEnum`s, so `str()` and f-strings of a member give its value instead of `<Enum>.<NAME>`. `ParameterCategory` members now also compare equal to their string values. Use `.name` for a member's name. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - A failed write in `BaseModel.to_json` or `BaseModel.to_config` now re-raises the original `OSError` subclass (e.g. `PermissionError`) instead of a plain `OSError`. The file path is in the exception's `__notes__`, not its message. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
+- `get_size_distribution_parameters`, which sets the `MPM` defaults, now sets the size distribution and minimum and maximum radii as expressions of the particle radius parameter, so they follow changes such as `"[input]"`. Pass `R_n_av` and `R_p_av` to keep numbers. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- A custom `SubMesh` subclass given input-dependent limits now raises a `GeometryError` unless it sets `supports_symbolic_limits = True`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Deprecated
 
@@ -47,6 +49,11 @@
 - The heat of mixing now sums over every particle phase, so `"heat of mixing": "true"` works with `"particle phases": "2"` instead of raising a `ModelError`. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - The heat of mixing now uses the particle's effective diffusivity, so it conserves energy with `"current sigmoid"` diffusivity or stress-induced diffusion, and a uniform particle profile builds again. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - `"heat of mixing": "true"` now works with `"particle": "quadratic profile"` or `"quartic profile"`, using their closed-form flux instead of failing to discretise with a `ShapeError`. ([#5935](https://github.com/pybamm-team/PyBaMM/pull/5935))
+- `calculate_sensitivities` with a name that is not an input parameter of the model raises a `SolverError` listing the model's inputs, instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `calculate_sensitivities=True` logs supplied inputs the model does not use and, with an `Experiment`, skips inputs that some step models lack instead of raising a `KeyError`. A list naming such an input raises a `SolverError` before solving. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Sensitivities with respect to a vector-valued input raise a `SolverError`, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols". ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Input-dependent geometry limits on a submesh that needs numbers, such as the default `Uniform1DSubMesh`, raise a `GeometryError` pointing to `pybamm.SymbolicUniform1DSubMesh` instead of an `IndexError`, and input-dependent tab positions raise one instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `output_variables` with `/` in their names, such as `"Entropic change [V/K]"`, or with names that differ only in punctuation now work, including with the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Optimizations
 
