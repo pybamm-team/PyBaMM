@@ -1061,20 +1061,17 @@ class BaseSolver:
             Number of processes to use when solving for more than one set of input
             parameters. Defaults to value returned by "os.cpu_count()".
         calculate_sensitivities : list of str or bool, optional
-            Whether the solver calculates sensitivities with respect to input parameters.
-            Defaults to False. If True, sensitivities are calculated for every input
-            parameter of the model. A list must name input parameters of the model.
-            Only scalar inputs are supported. The columns of ``sensitivities["all"]``
-            follow ``Solution.sensitivity_names``, which is sorted. **Limitations**:
-            sensitivities are not calculated up to numerical tolerances so are not
-            guaranteed to be within the tolerances set by the solver, please raise an
-            issue if you require this functionality. Also, when using this feature with
-            `pybamm.Experiment`, the sensitivities do not take into account the movement
-            of step-transitions wrt input parameters, so do not use this feature if the
-            timings of your experimental protocol change rapidly with respect to your
-            input parameters.
-            Likewise, they do not include the movement of a discontinuity whose time
-            depends on an input.
+            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
+            True means every input parameter of the model, skipping supplied inputs
+            the model does not use. Only scalar inputs are supported, and the columns
+            of ``sensitivities["all"]`` follow the sorted ``Solution.sensitivity_names``.
+            If only a subset of sensitivities are required, can also pass a
+            list of input parameter names.  **Limitations**: sensitivities are not calculated up to numerical tolerances
+            so are not guaranteed to be within the tolerances set by the solver, please raise an issue if you
+            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
+            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
+            if the timings of your experimental protocol change rapidly with respect to your input parameters.
+            Likewise, they do not include the movement of a discontinuity whose time depends on an input.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -1844,20 +1841,17 @@ class BaseSolver:
         save : bool, optional
             Save solution with all previous timesteps. Defaults to True.
         calculate_sensitivities : list of str or bool, optional
-            Whether the solver calculates sensitivities with respect to input parameters.
-            Defaults to False. If True, sensitivities are calculated for every input
-            parameter of the model. A list must name input parameters of the model.
-            Only scalar inputs are supported. The columns of ``sensitivities["all"]``
-            follow ``Solution.sensitivity_names``, which is sorted. **Limitations**:
-            sensitivities are not calculated up to numerical tolerances so are not
-            guaranteed to be within the tolerances set by the solver, please raise an
-            issue if you require this functionality. Also, when using this feature with
-            `pybamm.Experiment`, the sensitivities do not take into account the movement
-            of step-transitions wrt input parameters, so do not use this feature if the
-            timings of your experimental protocol change rapidly with respect to your
-            input parameters.
-            Likewise, they do not include the movement of a discontinuity whose time
-            depends on an input.
+            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
+            True means every input parameter of the model, skipping supplied inputs
+            the model does not use. Only scalar inputs are supported, and the columns
+            of ``sensitivities["all"]`` follow the sorted ``Solution.sensitivity_names``.
+            If only a subset of sensitivities are required, can also pass a
+            list of input parameter names. **Limitations**: sensitivities are not calculated up to numerical tolerances
+            so are not guaranteed to be within the tolerances set by the solver, please raise an issue if you
+            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
+            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
+            if the timings of your experimental protocol change rapidly with respect to your input parameters.
+            Likewise, they do not include the movement of a discontinuity whose time depends on an input.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).

@@ -607,73 +607,50 @@ class Simulation(BaseSimulation):
             )
             self.experiment_unique_steps_to_model[self._PADDING_REST_KEY] = new_model
 
-    def _experiment_sensitivity_inputs(self, inputs: dict | None) -> list[str]:
+    def _shared_sensitivity_inputs(
+        self, names: list[str], skip_missing: bool
+    ) -> list[str]:
         """
-        Return the user inputs that every experiment model has, logging the others.
-
-        Parameters
-        ----------
-        inputs : dict or None
-            The user-supplied inputs.
-
-        Returns
-        -------
-        list of str
-            The input names, in the order they were supplied.
-        """
-        shared_inputs = self._experiment_shared_inputs()
-        names = [
-            name
-            for name in (inputs or {})
-            if name not in self._INTERNAL_EXPERIMENT_INPUTS
-        ]
-        dropped = [name for name in names if name not in shared_inputs]
-        if dropped:
-            pybamm.logger.warning(
-                f"Inputs {dropped} are not input parameters of every experiment "
-                "step model, so no sensitivities are calculated for them."
-            )
-        return [name for name in names if name in shared_inputs]
-
-    def _experiment_shared_inputs(self) -> set[str]:
-        """
-        Return the names of the input parameters that every experiment model has.
-
-        Returns
-        -------
-        set of str
-            The shared input parameter names.
-        """
-        if self._built_experiment_model is not None:
-            models = [self._built_experiment_model]
-        else:
-            models = list(self.steps_to_built_models.values())
-        return set.intersection(
-            *({ip.name for ip in model.input_parameters} for model in models)
-        )
-
-    def _check_experiment_sensitivity_names(self, names: list[str]) -> None:
-        """
-        Check that every experiment model has each named input parameter.
+        Return the names that are input parameters of every built experiment model.
 
         Parameters
         ----------
         names : list of str
-            The ``calculate_sensitivities`` names.
+            The input names to calculate sensitivities with respect to.
+        skip_missing : bool
+            Whether to log and drop the names that some model lacks, rather than
+            raise.
+
+        Returns
+        -------
+        list of str
+            The names, in the given order, that every model has.
 
         Raises
         ------
         :class:`pybamm.SolverError`
-            If an experiment model lacks one of the inputs.
+            If ``skip_missing`` is False and a model lacks one of the names.
         """
-        shared_inputs = self._experiment_shared_inputs()
+        shared_inputs = set.intersection(
+            *(
+                {ip.name for ip in model.input_parameters}
+                for model in self.steps_to_built_models.values()
+            )
+        )
         missing = [name for name in names if name not in shared_inputs]
-        if missing:
+        if not missing:
+            return names
+        if not skip_missing:
             raise pybamm.SolverError(
                 f"calculate_sensitivities names {missing} are not input parameters "
                 "of every experiment step model. Pass calculate_sensitivities=True "
                 "to calculate sensitivities for only the inputs they all have."
             )
+        pybamm.logger.warning(
+            f"Inputs {missing} are not input parameters of every experiment "
+            "step model, so no sensitivities are calculated for them."
+        )
+        return [name for name in names if name in shared_inputs]
 
     def _get_built_models(self):
         """Return list of built models that need IC recomputation."""
@@ -917,11 +894,14 @@ class Simulation(BaseSimulation):
 
         # Take sensitivities only w.r.t. user inputs, not the control inputs the
         # experiment injects per step.
-        requested_sensitivities = kwargs.get("calculate_sensitivities")
-        if isinstance(requested_sensitivities, list):
+        requested = kwargs.get("calculate_sensitivities")
+        all_input_sensitivities = requested is True
+        if all_input_sensitivities:
+            requested = list(inputs)
+        if isinstance(requested, list):
             kwargs["calculate_sensitivities"] = [
                 name
-                for name in requested_sensitivities
+                for name in requested
                 if name not in self._INTERNAL_EXPERIMENT_INPUTS
             ]
 
@@ -934,13 +914,11 @@ class Simulation(BaseSimulation):
             inputs=inputs,
             solve_kwargs=kwargs,
         )
-        if requested_sensitivities is True:
-            kwargs["calculate_sensitivities"] = self._experiment_sensitivity_inputs(
-                inputs
-            )
-        elif isinstance(requested_sensitivities, list):
+        if kwargs.get("calculate_sensitivities"):
             # A step failing on a missing input would end the experiment early
-            self._check_experiment_sensitivity_names(kwargs["calculate_sensitivities"])
+            kwargs["calculate_sensitivities"] = self._shared_sensitivity_inputs(
+                kwargs["calculate_sensitivities"], skip_missing=all_input_sensitivities
+            )
 
         # The result joins the starting solution's sensitivities to the steps'
         if isinstance(starting_solution, pybamm.Solution):
