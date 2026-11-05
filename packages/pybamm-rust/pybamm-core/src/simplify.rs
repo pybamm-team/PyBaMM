@@ -14,9 +14,14 @@
 //! assert_eq!(simplified, x);
 //! ```
 
+use std::hash::Hasher;
+
+use rustc_hash::{FxHashMap, FxHasher};
+
 use crate::arena::{Arena, Dag, DagRef, NodeId, NodeMap};
-use crate::ir::{BinaryOp, UnaryOp};
-use crate::node::{ArrayData, Node, Shape};
+use crate::ir::{BinaryOp, UnaryOp, node_width};
+use crate::node::{ArrayData, Node, Shape, structural_hash, structurally_identical};
+use crate::zero_propagate::zero_propagate;
 
 /// Constant-fold and apply algebraic identities, as `CasADi`'s SX simplifies on the fly.
 ///
@@ -36,7 +41,7 @@ pub fn simplify(arena: &mut Arena, root: NodeId) -> NodeId {
 
 /// Exact literal match, so tiny nonzero coefficients (e.g. 1e-17) are never treated as 0 or 1.
 fn is_scalar(arena: &Arena, id: NodeId, value: f64) -> bool {
-    arena.get(id).as_scalar() == Some(value)
+    arena[id].as_scalar() == Some(value)
 }
 
 fn is_zero(arena: &Arena, id: NodeId) -> bool {
@@ -51,7 +56,7 @@ fn is_neg_one(arena: &Arena, id: NodeId) -> bool {
     is_scalar(arena, id, -1.0)
 }
 
-/// [`node_width`](crate::ir::node_width) of a node, memoized via `lens`.
+/// [`node_width`] of a node, memoized via `lens`.
 ///
 /// Walks with an explicit stack, so graph depth is bounded by the heap.
 pub fn node_len(arena: &Arena, id: NodeId, lens: &mut NodeMap<usize>) -> usize {
@@ -65,7 +70,7 @@ pub fn node_len(arena: &Arena, id: NodeId, lens: &mut NodeMap<usize>) -> usize {
             continue;
         }
         let n_pending = pending.len();
-        let len = crate::ir::node_width(arena, arena.get(top), |child| {
+        let len = node_width(arena, &arena[top], |child| {
             lens.get(child).copied().unwrap_or_else(|| {
                 pending.push(child);
                 0
@@ -90,7 +95,7 @@ fn simplify_node(
     lens: &mut NodeMap<usize>,
 ) -> NodeId {
     let s = |child: NodeId| simplified.rebuilt(child);
-    let rewritten = match *arena.get(id) {
+    let rewritten = match arena[id] {
         Node::Add(lhs, rhs) => simplify_add(arena, s(lhs), s(rhs)),
         Node::Sub(lhs, rhs) => simplify_sub(arena, s(lhs), s(rhs), lens),
         Node::Mul(lhs, rhs) => simplify_mul(arena, s(lhs), s(rhs), lens),
@@ -119,8 +124,7 @@ fn simplify_node(
         Node::Ceiling(child) => fold_unary(arena, s(child), UnaryOp::Ceiling),
 
         Node::ReduceArgSelect { basis, .. }
-            if is_zero(arena, s(basis))
-                || matches!(arena.get(s(basis)), Node::ZeroVector { .. }) =>
+            if is_zero(arena, s(basis)) || matches!(&arena[s(basis)], Node::ZeroVector { .. }) =>
         {
             Some(arena.alloc(Node::Scalar(0.0)))
         },
@@ -157,7 +161,7 @@ fn simplify_node(
 
 /// `id` itself when no child changed, else a copy of it over the simplified children.
 fn reuse_or_rebuild(arena: &mut Arena, id: NodeId, simplified: &NodeMap<NodeId>) -> NodeId {
-    let node = arena.get(id);
+    let node = &arena[id];
     let mut changed = false;
     node.for_each_child(|child| changed |= simplified.rebuilt(child) != child);
     if !changed {
@@ -169,13 +173,13 @@ fn reuse_or_rebuild(arena: &mut Arena, id: NodeId, simplified: &NodeMap<NodeId>)
 
 /// `const op const -> const`, valued exactly as evaluation would.
 fn fold_binary(arena: &mut Arena, lhs: NodeId, rhs: NodeId, op: BinaryOp) -> Option<NodeId> {
-    let (a, b) = (arena.get(lhs).as_scalar()?, arena.get(rhs).as_scalar()?);
+    let (a, b) = (arena[lhs].as_scalar()?, arena[rhs].as_scalar()?);
     Some(arena.alloc(Node::Scalar(op.apply(a, b))))
 }
 
 /// `op(const) -> const`, valued exactly as evaluation would.
 fn fold_unary(arena: &mut Arena, child: NodeId, op: UnaryOp) -> Option<NodeId> {
-    let v = arena.get(child).as_scalar()?;
+    let v = arena[child].as_scalar()?;
     Some(arena.alloc(Node::Scalar(op.apply(v))))
 }
 
@@ -302,7 +306,7 @@ fn simplify_pow(
         return Some(base);
     }
 
-    let e = arena.get(exp).as_scalar()?;
+    let e = arena[exp].as_scalar()?;
     let len = node_len(arena, base, lens);
     lower_constant_pow(arena, base, e, len)
 }
@@ -348,7 +352,7 @@ fn simplify_neg(arena: &mut Arena, child: NodeId) -> Option<NodeId> {
         return Some(negated);
     }
 
-    match *arena.get(child) {
+    match arena[child] {
         Node::Neg(inner) => Some(inner),
         _ => None,
     }
@@ -359,12 +363,6 @@ fn simplify_neg(arena: &mut Arena, child: NodeId) -> Option<NodeId> {
 /// The output is laid out in [`dce`]'s order, so a `dce` after it is the identity.
 #[must_use]
 pub fn cse(dag: DagRef<'_>) -> Dag {
-    use rustc_hash::FxHashMap;
-    use rustc_hash::FxHasher;
-    use std::hash::Hasher;
-
-    use crate::node::{structural_hash, structurally_identical};
-
     let (arena, root) = (dag.arena(), dag.root());
     let mut new_arena = Arena::new();
     let mut old_to_new: NodeMap<NodeId> = NodeMap::new(arena.len());
@@ -373,7 +371,7 @@ pub fn cse(dag: DagRef<'_>) -> Dag {
     let mut older_with_hash: Vec<Option<NodeId>> = Vec::new();
 
     for old_id in arena.topological_order(root) {
-        let remapped = arena.get(old_id).map_children(|c| old_to_new.rebuilt(c));
+        let remapped = arena[old_id].map_children(|c| old_to_new.rebuilt(c));
         let mut hasher = FxHasher::default();
         structural_hash(&remapped, &mut hasher);
         let hash = hasher.finish();
@@ -381,7 +379,7 @@ pub fn cse(dag: DagRef<'_>) -> Dag {
         let canonical = std::iter::successors(newest_with_hash.get(&hash).copied(), |id| {
             older_with_hash[id.index()]
         })
-        .find(|&existing| structurally_identical(new_arena.get(existing), &remapped));
+        .find(|&existing| structurally_identical(&new_arena[existing], &remapped));
         let new_id = canonical.unwrap_or_else(|| {
             let new_id = new_arena.alloc(remapped);
             older_with_hash.push(newest_with_hash.insert(hash, new_id));
@@ -398,8 +396,6 @@ pub fn cse(dag: DagRef<'_>) -> Dag {
 /// The result is dead-code free: CSE keeps only what the root reaches.
 #[must_use]
 pub fn simplify_pipeline(mut dag: Dag) -> Dag {
-    use crate::zero_propagate::zero_propagate;
-
     dag.rewrite_in_place(simplify);
     let propagated = zero_propagate(dag.as_ref());
     // The largest of the three arenas, so free it before `cse` builds its own.
@@ -415,7 +411,7 @@ pub fn dce(dag: DagRef<'_>) -> Dag {
     let mut old_to_new: NodeMap<NodeId> = NodeMap::new(arena.len());
 
     for old_id in arena.topological_order(root) {
-        let copy = arena.get(old_id).map_children(|c| old_to_new.rebuilt(c));
+        let copy = arena[old_id].map_children(|c| old_to_new.rebuilt(c));
         old_to_new.insert(old_id, new_arena.alloc(copy));
     }
 
@@ -425,12 +421,11 @@ pub fn dce(dag: DagRef<'_>) -> Dag {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::node::Node;
+    use crate::eval::CompiledExpr;
+    use crate::ir::infer_sizes;
 
     #[test]
     fn simplify_pipeline_matches_manual_pass_order() {
-        use crate::zero_propagate::zero_propagate;
-
         let mut arena = Arena::new();
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
         let s = arena.alloc(Node::Sin(y0));
@@ -450,8 +445,8 @@ mod tests {
         assert_eq!(simplified.arena().len(), pruned.arena().len());
         assert_eq!(simplified.root(), pruned.root());
         assert_eq!(
-            simplified.arena().get(simplified.root()),
-            pruned.arena().get(pruned.root())
+            &simplified.arena()[simplified.root()],
+            &pruned.arena()[pruned.root()]
         );
     }
 
@@ -483,11 +478,11 @@ mod tests {
             "duplicates merged, dead node dropped"
         );
         let out = shared.arena();
-        let Node::Concat(parts) = out.get(shared.root()) else {
+        let Node::Concat(parts) = &out[shared.root()] else {
             panic!("the concat must survive")
         };
         let (&Node::Add(scaled, sin), &Node::Sub(scaled_twin, sin_twin)) =
-            (out.get(parts[0]), out.get(parts[1]))
+            (&out[parts[0]], &out[parts[1]])
         else {
             panic!("the Add and the Sub must stay apart")
         };
@@ -522,13 +517,13 @@ mod tests {
         });
         let ratio = arena.alloc(Node::Div(cond, cond));
 
-        let lowered = crate::ir::infer_sizes(&arena, &arena.topological_order(ratio));
+        let lowered = infer_sizes(&arena, &arena.topological_order(ratio));
         let mut lens = NodeMap::new(arena.len());
         assert_eq!(node_len(&arena, cond, &mut lens), lowered[cond.index()]);
 
         let simplified = simplify(&mut arena, ratio);
         assert!(
-            matches!(arena.get(simplified), Node::Div(..)),
+            matches!(&arena[simplified], Node::Div(..)),
             "a zero-width x / x is not the scalar 1"
         );
     }
@@ -546,7 +541,7 @@ mod tests {
 
         let mut root = simplify(&mut arena, id);
         for _ in 0..DEEP {
-            let Node::Sin(child) = *arena.get(root) else {
+            let Node::Sin(child) = arena[root] else {
                 panic!("every `* 1` must fold away, leaving the sines")
             };
             root = child;
@@ -561,7 +556,7 @@ mod tests {
         let exp = arena.alloc(Node::Scalar(e));
         let expr = arena.alloc(Node::Pow(x, exp));
         let simplified = simplify(&mut arena, expr);
-        let compiled = crate::eval::CompiledExpr::new(DagRef::new(&arena, simplified));
+        let compiled = CompiledExpr::new(DagRef::new(&arena, simplified));
         let mut scratch = vec![0.0; compiled.scratch_len()];
         move |y| compiled.eval(&mut scratch, 0.0, &[y], &[], &[])[0]
     }
@@ -569,7 +564,7 @@ mod tests {
     /// `id` rendered infix, with the leaf `x` as `x`.
     fn render(arena: &Arena, id: NodeId, x: NodeId) -> String {
         let r = |child: NodeId| render(arena, child, x);
-        match arena.get(id) {
+        match &arena[id] {
             _ if id == x => "x".to_string(),
             Node::Scalar(v) => v.to_string(),
             Node::Array(ones) => format!("{:?}", ones.data),
@@ -741,10 +736,10 @@ mod tests {
             let expr = arena.alloc(op(lhs, rhs));
             let simplified = simplify(&mut arena, expr);
             assert_eq!(
-                arena.get(simplified),
+                &arena[simplified],
                 &Node::Scalar(expected),
                 "{:?}",
-                arena.get(expr)
+                &arena[expr]
             );
         }
 
@@ -764,8 +759,8 @@ mod tests {
             let operand = arena.alloc(Node::Scalar(x));
             let expr = arena.alloc(node(operand));
             let simplified = simplify(&mut arena, expr);
-            let label = format!("{:?}", arena.get(expr));
-            let &Node::Scalar(folded) = arena.get(simplified) else {
+            let label = format!("{:?}", &arena[expr]);
+            let &Node::Scalar(folded) = &arena[simplified] else {
                 panic!("{label} must fold to a scalar")
             };
             assert_eq!(
@@ -821,7 +816,7 @@ mod tests {
 
         let simplified = simplify(&mut arena, expr);
 
-        match arena.get(simplified) {
+        match &arena[simplified] {
             Node::Index { child, start, end } => {
                 assert_eq!(*child, x);
                 assert_eq!(*start, 0);
@@ -842,7 +837,7 @@ mod tests {
 
         let simplified = simplify(&mut arena, expr);
 
-        match arena.get(simplified) {
+        match &arena[simplified] {
             Node::Concat(children) => {
                 assert_eq!(children.len(), 2);
                 assert_eq!(children[0], x);
@@ -862,7 +857,7 @@ mod tests {
 
         let simplified = simplify(&mut arena, expr);
 
-        match arena.get(simplified) {
+        match &arena[simplified] {
             Node::Add(l, r) => {
                 assert_eq!(*l, x);
                 assert_eq!(*r, x);
@@ -898,15 +893,15 @@ mod tests {
 
         let simplified = simplify(&mut arena, root);
 
-        let Node::Concat(children) = arena.get(simplified) else {
+        let Node::Concat(children) = &arena[simplified] else {
             panic!("the concat must survive")
         };
         let (&Node::Mul(_, folded_left), &Node::Mul(folded_right, _)) =
-            (arena.get(children[0]), arena.get(children[1]))
+            (&arena[children[0]], &arena[children[1]])
         else {
             panic!("both products must survive")
         };
-        assert_eq!(arena.get(folded_left), &Node::Scalar(5.0));
+        assert_eq!(&arena[folded_left], &Node::Scalar(5.0));
         assert_eq!(folded_left, folded_right, "one fold, shared by both users");
     }
 
@@ -950,9 +945,6 @@ mod tests {
     /// Regression: `FxHash` cancels paired sign flips, and `==` equates `0.0` with `-0.0`.
     #[test]
     fn cse_keeps_arrays_that_differ_only_in_signed_zeros() {
-        use crate::eval::CompiledExpr;
-        use crate::node::{ArrayData, Shape};
-
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 3 });
         let one = arena.alloc(Node::Scalar(1.0));
@@ -998,21 +990,21 @@ mod tests {
 
         let out = pruned.arena();
         assert_eq!(out.len(), arena.len() - 2, "only the unreachable nodes go");
-        let &Node::Abs(abs_child) = out.get(pruned.root()) else {
+        let &Node::Abs(abs_child) = &out[pruned.root()] else {
             panic!("expected Abs")
         };
-        let &Node::Neg(neg_child) = out.get(abs_child) else {
+        let &Node::Neg(neg_child) = &out[abs_child] else {
             panic!("expected Neg")
         };
-        let &Node::Mul(l, r) = out.get(neg_child) else {
+        let &Node::Mul(l, r) = &out[neg_child] else {
             panic!("expected Mul")
         };
         assert_eq!(l, r, "both operands reference the same Add node");
-        let &Node::Add(state, constant) = out.get(l) else {
+        let &Node::Add(state, constant) = &out[l] else {
             panic!("expected Add")
         };
-        assert_eq!(out.get(state), &Node::StateVector { start: 0, end: 1 });
-        assert_eq!(out.get(constant), &Node::Scalar(1.0));
+        assert_eq!(&out[state], &Node::StateVector { start: 0, end: 1 });
+        assert_eq!(&out[constant], &Node::Scalar(1.0));
     }
 
     #[test]
@@ -1030,7 +1022,7 @@ mod tests {
                 is_max: true,
             });
             let simplified = simplify(&mut arena, node);
-            match arena.get(simplified) {
+            match &arena[simplified] {
                 Node::Scalar(v) => assert!(v.abs() < f64::EPSILON),
                 other => panic!("expected Scalar(0.0), got {other:?}"),
             }

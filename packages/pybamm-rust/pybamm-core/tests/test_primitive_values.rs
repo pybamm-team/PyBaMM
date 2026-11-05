@@ -117,9 +117,8 @@ fn binary(op: BinaryOp) -> (BinaryNode, BinaryFn) {
         BinaryOp::Hypot => (Node::Hypot, f64::hypot),
         BinaryOp::EqualHeaviside => (Node::EqualHeaviside, |x, y| f64::from(u8::from(x <= y))),
         BinaryOp::NotEqualHeaviside => (Node::NotEqualHeaviside, |x, y| f64::from(u8::from(x < y))),
-        BinaryOp::Equality => (Node::Equality, |x, y| {
-            f64::from(u8::from(libm::fabs(x - y) < 1e-14))
-        }),
+        #[allow(clippy::float_cmp)]
+        BinaryOp::Equality => (Node::Equality, |x, y| f64::from(u8::from(x == y))),
     }
 }
 
@@ -280,7 +279,7 @@ fn eval_two_lanes(arena: &Arena, root: NodeId, y: &[f64], lane_two: &[f64]) -> [
 /// The literal `simplify` folds `root` to, if it folds.
 fn folded(arena: &mut Arena, root: NodeId) -> Option<f64> {
     let simplified = simplify(arena, root);
-    match *arena.get(simplified) {
+    match arena[simplified] {
         Node::Scalar(v) => Some(v),
         _ => None,
     }

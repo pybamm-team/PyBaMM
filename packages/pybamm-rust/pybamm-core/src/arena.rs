@@ -80,12 +80,6 @@ impl Arena {
         id
     }
 
-    /// Borrow a node.
-    #[inline]
-    pub fn get(&self, id: NodeId) -> &Node {
-        &self.nodes[id.index()]
-    }
-
     /// Nodes allocated so far, reachable or not.
     pub const fn len(&self) -> usize {
         self.nodes.len()
@@ -122,7 +116,7 @@ impl Arena {
                         continue;
                     }
                     stack.push(TopoFrame::Visit(id));
-                    self.get(id).for_each_child(|c| {
+                    self[id].for_each_child(|c| {
                         if !visited[c.index()] {
                             stack.push(TopoFrame::Pending(c));
                         }
@@ -215,9 +209,10 @@ impl Dag {
         self.root
     }
 
-    /// Append to the DAG and move the root onto the appended node.
+    /// Run `rewrite` on the DAG and make the node it returns the root.
     ///
-    /// Panics if `rewrite` returns a root outside the arena it leaves behind.
+    /// `rewrite` may append nodes; the root it returns may be one of them or an existing node.
+    /// Panics if that root lies outside the arena `rewrite` leaves behind.
     pub fn rewrite_in_place(&mut self, rewrite: impl FnOnce(&mut Arena, NodeId) -> NodeId) {
         let root = rewrite(&mut self.arena, self.root);
         assert!(
@@ -276,7 +271,10 @@ pub struct ReadExtents {
 }
 
 impl ReadExtents {
-    /// Scan the nodes `root` reaches; tangent leaves read no input and are not counted.
+    /// Scan the nodes `root` reaches.
+    ///
+    /// Tangent leaves read the seeds `dy` and `dp`, not `y`, `y_dot` or the inputs, so they are
+    /// not counted.
     pub fn scan(arena: &Arena, root: NodeId) -> Self {
         // Children precede parents, so one descending sweep marks everything `root` reaches.
         let mut reached = vec![false; root.index() + 1];
@@ -341,7 +339,7 @@ impl Index<NodeId> for Arena {
 
     #[inline]
     fn index(&self, id: NodeId) -> &Node {
-        self.get(id)
+        &self.nodes[id.index()]
     }
 }
 
@@ -401,7 +399,7 @@ mod tests {
     fn test_alloc_and_get() {
         let mut arena = Arena::new();
         let id = arena.alloc(Node::Scalar(42.5));
-        match arena.get(id) {
+        match &arena[id] {
             Node::Scalar(v) => assert!((*v - 42.5).abs() < f64::EPSILON),
             _ => panic!("expected Scalar"),
         }

@@ -148,29 +148,28 @@ fn overlaps(indices: &[usize], start: usize, end: usize) -> bool {
 /// Whether `id` is a literal, so its derivative is identically zero.
 fn is_literal(arena: &Arena, id: NodeId) -> bool {
     matches!(
-        arena.get(id),
+        &arena[id],
         Node::Scalar(_) | Node::Array(_) | Node::ZeroVector { .. }
     )
 }
 
 /// Whether `id` is a zero [`Node::zero`] builds, so a product with it can be skipped.
 fn is_literal_zero(arena: &Arena, id: NodeId) -> bool {
-    match arena.get(id) {
+    match &arena[id] {
         Node::Scalar(v) => v.to_bits() == 0.0_f64.to_bits(),
         Node::ZeroVector { .. } => true,
         _ => false,
     }
 }
 
-/// `d(a^b)/db`: `a^b * ln(a)` where `a > 0` and 0 elsewhere.
+/// `d(a^b)/db` given `pow`, the node `a^b`: `a^b * ln(a)` where `a > 0` and 0 elsewhere.
 ///
 /// `ln` reads `max(a, smallest subnormal)`, so the gated-off product is a finite zero, not
 /// `0 * -inf`; for `a > 0` the gate and the `max` are exact, so the value is `a^b * ln(a)`.
-fn exponent_partial(arena: &mut Arena, base: NodeId, exp: NodeId) -> NodeId {
+fn exponent_partial(arena: &mut Arena, base: NodeId, pow: NodeId) -> NodeId {
     let zero = arena.alloc(Node::Scalar(0.0));
     let positive = arena.alloc(Node::NotEqualHeaviside(zero, base));
-    let a_pow_b = arena.alloc(Node::Pow(base, exp));
-    let gated = arena.alloc(Node::Mul(positive, a_pow_b));
+    let gated = arena.alloc(Node::Mul(positive, pow));
     let tiny = arena.alloc(Node::Scalar(f64::from_bits(1)));
     let log_argument = arena.alloc(Node::Maximum(base, tiny));
     let log_a = arena.alloc(Node::Log(log_argument));
@@ -195,7 +194,7 @@ impl Differentiator<'_> {
         let (mode, state_filter) = (self.mode, self.state_filter);
         let width = self.widths[id.index()];
 
-        let result = match *arena.get(id) {
+        let result = match arena[id] {
             Node::StateVector { start, end }
                 if mode == DiffTarget::States
                     && state_filter.is_none_or(|filter| overlaps(filter, start, end)) =>
@@ -269,6 +268,11 @@ impl Differentiator<'_> {
                 arena.alloc(Node::Div(numer, b_sq))
             },
 
+            // `x^0` is constant, so its tangent is zero even where `0 * x^-1` is not.
+            Node::Pow(_, exp) if arena[exp].as_scalar() == Some(0.0) => {
+                arena.alloc(Node::zero(width))
+            },
+
             // Partials times tangents; a constant exponent skips the `ln` term, which a
             // zero base would turn into `0 * -inf` for every seed.
             Node::Pow(base, exp) => {
@@ -278,7 +282,7 @@ impl Differentiator<'_> {
                 } else {
                     Some(self.ready([exp])?[0])
                 };
-                let exp_minus_1 = if let Some(n) = arena.get(exp).as_scalar() {
+                let exp_minus_1 = if let Some(n) = arena[exp].as_scalar() {
                     arena.alloc(Node::Scalar(n - 1.0))
                 } else {
                     let one = arena.alloc(Node::Scalar(1.0));
@@ -289,7 +293,7 @@ impl Differentiator<'_> {
                 let base_term = arena.alloc(Node::Mul(d_base, da));
                 db.filter(|&db| !is_literal_zero(arena, db))
                     .map_or(base_term, |db| {
-                        let d_exp = exponent_partial(arena, base, exp);
+                        let d_exp = exponent_partial(arena, base, id);
                         let exp_term = arena.alloc(Node::Mul(d_exp, db));
                         arena.alloc(Node::Add(base_term, exp_term))
                     })
@@ -309,15 +313,13 @@ impl Differentiator<'_> {
             Node::Sqrt(a) => {
                 let [da] = self.ready([a])?;
                 let two = arena.alloc(Node::Scalar(2.0));
-                let sqrt_a = arena.alloc(Node::Sqrt(a));
-                let two_sqrt_a = arena.alloc(Node::Mul(two, sqrt_a));
+                let two_sqrt_a = arena.alloc(Node::Mul(two, id));
                 arena.alloc(Node::Div(da, two_sqrt_a))
             },
 
             Node::Exp(a) => {
                 let [da] = self.ready([a])?;
-                let exp_a = arena.alloc(Node::Exp(a));
-                arena.alloc(Node::Mul(exp_a, da))
+                arena.alloc(Node::Mul(id, da))
             },
 
             Node::Log(a) => {
@@ -340,10 +342,9 @@ impl Differentiator<'_> {
 
             Node::Tanh(a) => {
                 let [da] = self.ready([a])?;
-                let tanh_a = arena.alloc(Node::Tanh(a));
                 let one = arena.alloc(Node::Scalar(1.0));
                 let two = arena.alloc(Node::Scalar(2.0));
-                let tanh_sq = arena.alloc(Node::Pow(tanh_a, two));
+                let tanh_sq = arena.alloc(Node::Pow(id, two));
                 let one_minus_tanh_sq = arena.alloc(Node::Sub(one, tanh_sq));
                 arena.alloc(Node::Mul(one_minus_tanh_sq, da))
             },
@@ -391,17 +392,11 @@ impl Differentiator<'_> {
                 arena.alloc(Node::Mul(coeff, da))
             },
 
-            Node::Minimum(a, b) => {
-                // Subgradient: the (a <= b) indicator picks da.
+            // Subgradient: `da` wherever `a` is the result, ties included; a NaN operand is
+            // never the result, as `minimumNumber` and `maximumNumber` return the other one.
+            Node::Minimum(a, b) | Node::Maximum(a, b) => {
                 let [da, db] = self.ready([a, b])?;
-                let selector = arena.alloc(Node::EqualHeaviside(a, b));
-                blend_tangents(arena, selector, da, db)
-            },
-
-            Node::Maximum(a, b) => {
-                // EqualHeaviside(b, a) is (a >= b).
-                let [da, db] = self.ready([a, b])?;
-                let selector = arena.alloc(Node::EqualHeaviside(b, a));
+                let selector = arena.alloc(Node::Equality(a, id));
                 blend_tangents(arena, selector, da, db)
             },
 
@@ -434,8 +429,7 @@ impl Differentiator<'_> {
                 let a_da = arena.alloc(Node::Mul(a, da));
                 let b_db = arena.alloc(Node::Mul(b, db));
                 let numer = arena.alloc(Node::Add(a_da, b_db));
-                let hypot_ab = arena.alloc(Node::Hypot(a, b));
-                arena.alloc(Node::Div(numer, hypot_ab))
+                arena.alloc(Node::Div(numer, id))
             },
 
             Node::MatMul(a, b) => {
@@ -479,7 +473,7 @@ impl Differentiator<'_> {
             Node::InterpolantNd { .. } => {
                 let (mut axis, mut sum) = self.unpark_sum(id);
                 loop {
-                    let Node::InterpolantNd { data, children } = arena.get(id) else {
+                    let Node::InterpolantNd { data, children } = &arena[id] else {
                         unreachable!("matched as an `InterpolantNd` above")
                     };
                     let Some(&child) = children.get(axis) else {
@@ -537,10 +531,14 @@ impl Differentiator<'_> {
 
 #[cfg(test)]
 mod tests {
+    use std::f64::consts::{FRAC_2_SQRT_PI, FRAC_PI_4};
+
     use super::*;
     use crate::arena::DagRef;
     use crate::eval::{CompiledExpr, TangentInputs};
-    use crate::node::InterpolantData;
+    use crate::node::{
+        ArrayData, CsrData, CubicInterpolantData, InterpolantData, NdInterpolantData, Shape,
+    };
     use crate::simplify::{cse, dce, simplify};
     use crate::zero_propagate::zero_propagate;
 
@@ -616,6 +614,49 @@ mod tests {
     }
 
     #[test]
+    fn a_zero_literal_exponent_has_a_zero_tangent_before_simplification() {
+        // `0 * x^-1` is NaN at a zero base, so the rule must not form it.
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
+        let zero = arena.alloc(Node::Scalar(0.0));
+        let root = arena.alloc(Node::Pow(y, zero));
+        let tangent = tangent_wrt_states(&mut arena, root);
+        let compiled = CompiledExpr::new(DagRef::new(&arena, tangent));
+        let mut scratch = vec![0.0; compiled.scratch_len()];
+        let seed = TangentInputs {
+            dy: Some(&[1.0, 1.0]),
+            dp: None,
+        };
+        let got = compiled.eval_with_tangent(&mut scratch, 0.0, &[0.0, 2.0], &[], &[], &seed);
+        assert_eq!(got, [0.0, 0.0]);
+    }
+
+    #[test]
+    fn min_and_max_differentiate_the_operand_they_return_beside_a_nan() {
+        type Build = fn(NodeId, NodeId) -> Node;
+        let ops: [(&str, Build); 2] = [("minimum", Node::Minimum), ("maximum", Node::Maximum)];
+        for (label, op) in ops {
+            for state_first in [true, false] {
+                let mut arena = Arena::new();
+                let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
+                let nan = arena.alloc(Node::Scalar(f64::NAN));
+                let node = if state_first { op(y, nan) } else { op(nan, y) };
+                let root = arena.alloc(node);
+                let got = forward_gradient(&arena, root, &[0.5], &[]);
+                assert_eq!(got, [1.0], "{label}, state first: {state_first}");
+            }
+        }
+
+        // Element by element: the NaN entry returns the state, the 0 entry the literal.
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
+        let literal = ArrayData::try_new(vec![f64::NAN, 0.0], Shape::vector(2));
+        let literal = arena.alloc(Node::Array(Box::new(literal.expect("valid array"))));
+        let root = arena.alloc(Node::Minimum(y, literal));
+        assert_eq!(jvp(&arena, root, &[0.5, 0.5], &[], &[1.0, 1.0]), [1.0, 0.0]);
+    }
+
+    #[test]
     fn test_jvp_width_vector_plus_scalar_param() {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 3 });
@@ -680,11 +721,10 @@ mod tests {
 
     #[test]
     fn test_jvp_width_zero_dfdy_keeps_length() {
-        use crate::node::ArrayData;
         let mut arena = Arena::new();
         let cv = arena.alloc(Node::Array(Box::new(ArrayData {
             data: vec![1.0, 2.0, 3.0],
-            shape: crate::node::Shape::vector(3),
+            shape: Shape::vector(3),
         })));
         let p = arena.alloc(Node::InputParameter {
             name: "a".into(),
@@ -711,11 +751,10 @@ mod tests {
 
     #[test]
     fn test_jvp_width_concat_collapsed_child_offset() {
-        use crate::node::ArrayData;
         let mut arena = Arena::new();
         let cv = arena.alloc(Node::Array(Box::new(ArrayData {
             data: vec![1.0, 2.0],
-            shape: crate::node::Shape::vector(2),
+            shape: Shape::vector(2),
         })));
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
         let root = arena.alloc(Node::Concat(vec![cv, y0]));
@@ -733,11 +772,10 @@ mod tests {
 
     #[test]
     fn test_jvp_width_concat_empty_child_offset() {
-        use crate::node::ArrayData;
         let mut arena = Arena::new();
         let empty = arena.alloc(Node::Array(Box::new(ArrayData {
             data: vec![],
-            shape: crate::node::Shape::vector(0),
+            shape: Shape::vector(0),
         })));
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
         let one = arena.alloc(Node::Scalar(1.0));
@@ -768,7 +806,6 @@ mod tests {
 
     #[test]
     fn differentiates_a_deep_chain() {
-        use crate::node::NdInterpolantData;
         // Cycles a one-child rule, a two-child rule and the axis-by-axis N-D rule.
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
@@ -788,13 +825,13 @@ mod tests {
 
         let mut tangent = tangent_wrt_states(&mut arena, id);
         for level in (0..DEEP).rev() {
-            tangent = match (level % 3, arena.get(tangent)) {
+            tangent = match (level % 3, &arena[tangent]) {
                 (0, &Node::Mul(_, inner)) => inner,
-                (1, &Node::Add(_, product)) => match *arena.get(product) {
+                (1, &Node::Add(_, product)) => match arena[product] {
                     Node::Mul(inner, _) => inner,
                     ref other => panic!("level {level}: expected da * b, got {other:?}"),
                 },
-                (2, &Node::Add(first_axis, _)) => match *arena.get(first_axis) {
+                (2, &Node::Add(first_axis, _)) => match arena[first_axis] {
                     Node::Mul(_, inner) => inner,
                     ref other => panic!("level {level}: expected a partial term, got {other:?}"),
                 },
@@ -802,17 +839,13 @@ mod tests {
             };
         }
         assert!(matches!(
-            arena.get(tangent),
+            &arena[tangent],
             Node::TangentStateVector { start: 0, end: 1 }
         ));
     }
 
     #[test]
     fn single_state_rules_match_their_closed_forms() {
-        use std::f64::consts::{FRAC_2_SQRT_PI, FRAC_PI_4};
-
-        use crate::node::CubicInterpolantData;
-
         type Build = fn(&mut Arena, NodeId) -> NodeId;
         fn pow(arena: &mut Arena, x: NodeId, exponent: f64) -> NodeId {
             let exponent = arena.alloc(Node::Scalar(exponent));
@@ -930,8 +963,6 @@ mod tests {
 
     #[test]
     fn two_state_rules_match_their_closed_forms() {
-        use crate::node::NdInterpolantData;
-
         type Build = fn(&mut Arena, NodeId, NodeId) -> NodeId;
         fn interpolant(arena: &mut Arena, x: NodeId, y: NodeId, data: NdInterpolantData) -> NodeId {
             arena.alloc(Node::InterpolantNd {
@@ -1032,8 +1063,6 @@ mod tests {
 
     #[test]
     fn vector_rules_route_each_element() {
-        use crate::node::{CsrData, Shape};
-
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 3 });
         let max = arena.alloc(Node::MaxReduce(y));
@@ -1119,7 +1148,6 @@ mod tests {
     #[test]
     #[allow(clippy::float_cmp)]
     fn modulo_tangent_keeps_a_scalar_dividends_broadcast_width() {
-        use crate::node::{ArrayData, CsrData, Shape};
         // y0 mod [2, 3, 5] is three wide; summing it through a matrix needs all three rows.
         let mut arena = Arena::new();
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
@@ -1186,15 +1214,13 @@ mod tests {
 
         let topo = arena.topological_order(deriv);
         for &nid in &topo {
-            if let Node::TangentStateVector { start, .. } = *arena.get(nid) {
+            if let Node::TangentStateVector { start, .. } = arena[nid] {
                 assert_ne!(start, 0, "Should not differentiate w.r.t. x0");
             }
         }
         assert!(
-            topo.iter().any(|&nid| matches!(
-                arena.get(nid),
-                Node::TangentStateVector { start: 1, end: 2 }
-            )),
+            topo.iter()
+                .any(|&nid| matches!(&arena[nid], Node::TangentStateVector { start: 1, end: 2 })),
             "Should contain TangentStateVector for x1"
         );
     }

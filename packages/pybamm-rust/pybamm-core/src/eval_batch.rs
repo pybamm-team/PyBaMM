@@ -7,9 +7,9 @@
 use crate::accumulate::{Accumulate, Product, dispatch};
 use crate::branch_regions::active_branch;
 use crate::eval::{
-    CompiledExpr, arg_reduce, csr_rows, interp_cubic_1d, interp_cubic_1d_deriv, interp_linear_1d,
-    interp_linear_1d_deriv, interp_nd_lanes, max_reduce, min_reduce, split_read_write,
-    split_two_read_write, unary_apply, with_binary_op, with_unary_op, zip_apply,
+    CompiledExpr, arg_reduce, check_scratch, csr_rows, interp_cubic_1d, interp_cubic_1d_deriv,
+    interp_linear_1d, interp_linear_1d_deriv, interp_nd_lanes, max_reduce, min_reduce,
+    split_read_write, split_two_read_write, unary_apply, with_binary_op, with_unary_op, zip_apply,
 };
 use crate::ir::{BroadcastKind, ConstPool, Instruction, Slot};
 use crate::node::CsrData;
@@ -385,7 +385,9 @@ impl CompiledExpr {
     /// `l` at `e*k + l`), bitwise identical to `k` [`eval`](Self::eval) calls.
     ///
     /// # Panics
-    /// If `k` is zero or `y_cols` does not hold exactly `n_states * k` values.
+    /// If `k` is zero, `ts` holds fewer than `k` times, `y_cols` does not hold exactly
+    /// `n_states * k` values, or `scratch` is shorter than `k` times
+    /// [`scratch_len`](CompiledExpr::scratch_len).
     pub fn eval_batch<'s>(
         &self,
         scratch: &'s mut [f64],
@@ -402,11 +404,11 @@ impl CompiledExpr {
             n_states * k,
             "eval_batch needs n_states = {n_states} values for each of {k} lanes"
         );
-        debug_assert!(ts.len() >= k, "ts must have at least k time values");
-        debug_assert!(
-            scratch.len() >= ir.buffer_size() * k,
-            "scratch too small for k lanes"
+        assert!(
+            ts.len() >= k,
+            "eval_batch needs a time for each of {k} lanes"
         );
+        check_scratch(scratch.len(), ir.buffer_size() * k);
         let lanes = BatchInputs {
             k,
             ts,

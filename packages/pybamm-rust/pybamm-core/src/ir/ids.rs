@@ -128,8 +128,18 @@ pool_index! {
 }
 
 pool_index! {
-    /// Index into one of the [`Slot`](super::Slot) side tables; the instruction fixes which.
-    SlotTableIdx
+    /// Index into [`ConstPool::concat_sources`](super::ConstPool::concat_sources).
+    ConcatSourceIdx
+}
+
+pool_index! {
+    /// Index into [`ConstPool::interp_nd_sources`](super::ConstPool::interp_nd_sources).
+    InterpSourceIdx
+}
+
+pool_index! {
+    /// Index into [`ConstPool::branch_offsets`](super::ConstPool::branch_offsets).
+    BranchOffsetIdx
 }
 
 pool_index! {
