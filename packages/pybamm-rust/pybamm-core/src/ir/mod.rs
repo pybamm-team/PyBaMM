@@ -3,15 +3,17 @@
 
 pub mod ids;
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use crate::arena::{Arena, DagRef, NodeId};
 use crate::branch_regions::{
     RegionGroup, privatise_conditionals, region_owners, schedule_regions,
     schedule_regions_partitioned,
 };
 use crate::ir::ids::{
-    ArrayIdx, Axis, BlockSpan, BlockSpanIdx, BufSlot, Cols, CsrIdx, CubicInterpolantIdx,
-    EntryCount, InputOffset, InstructionCount, InterpolantIdx, NdInterpolantIdx, Rows, SlotOffset,
-    SlotTableIdx, StateIdx, Width,
+    ArrayIdx, Axis, BlockSpan, BlockSpanIdx, BranchOffsetIdx, BufSlot, Cols, ConcatSourceIdx,
+    CsrIdx, CubicInterpolantIdx, EntryCount, InputOffset, InstructionCount, InterpSourceIdx,
+    InterpolantIdx, NdInterpolantIdx, Rows, SlotOffset, StateIdx, Width,
 };
 use crate::node::{CsrData, CubicInterpolantData, InterpolantData, NdInterpolantData, Node};
 use crate::params::ParamIdx;
@@ -244,7 +246,7 @@ pub enum Instruction {
     },
     /// Concatenate `sources_len` slot ranges into `dst`.
     Concat {
-        sources_idx: SlotTableIdx,
+        sources_idx: ConcatSourceIdx,
         sources_len: EntryCount,
         dst: BufSlot,
     },
@@ -293,14 +295,14 @@ pub enum Instruction {
     /// N-D tensor-product interpolation.
     InterpNd {
         interp_idx: NdInterpolantIdx,
-        sources_idx: SlotTableIdx,
+        sources_idx: InterpSourceIdx,
         dst: BufSlot,
         len: Width,
     },
     /// N-D tensor-product interpolation partial derivative along `axis`.
     InterpNdPartial {
         interp_idx: NdInterpolantIdx,
-        sources_idx: SlotTableIdx,
+        sources_idx: InterpSourceIdx,
         axis: Axis,
         dst: BufSlot,
         len: Width,
@@ -308,7 +310,7 @@ pub enum Instruction {
     /// Piecewise conditional: select branches by `selector` value.
     Conditional {
         selector: BufSlot,
-        branches_idx: SlotTableIdx,
+        branches_idx: BranchOffsetIdx,
         branches_len: EntryCount,
         dst: BufSlot,
         out_len: Width,
@@ -325,8 +327,8 @@ pub enum Instruction {
     },
 }
 
-// The interpreter streams the tape; keep each instruction to 24 bytes.
-const _: () = assert!(size_of::<Instruction>() == 24);
+// The interpreter streams the tape; keep each instruction within 24 bytes.
+const _: () = assert!(size_of::<Instruction>() <= 24);
 
 /// Side tables an instruction addresses by index instead of carrying inline.
 #[derive(Debug, Default, Clone)]
@@ -334,24 +336,16 @@ pub struct ConstPool {
     /// Flattened array data; `array_offsets[i]` gives the start of array `i`.
     pub array_data: Vec<f64>,
     pub array_offsets: Vec<usize>,
-
     pub csr_data: Vec<CsrData>,
-
     pub interpolants: Vec<InterpolantData>,
-
     pub cubic_interpolants: Vec<CubicInterpolantData>,
-
     pub nd_interpolants: Vec<NdInterpolantData>,
-
     /// Concat source windows, one per operand.
     pub concat_sources: Vec<Slot>,
-
     /// Conditional branch windows, one per branch.
     pub branch_offsets: Vec<Slot>,
-
     /// `Dispatch` branch blocks, in instruction space.
     pub branch_blocks: Vec<BlockSpan>,
-
     /// N-D interpolant child windows, one per input axis.
     pub interp_nd_sources: Vec<Slot>,
 }
@@ -414,11 +408,8 @@ pub struct SplitEvalInfo {
 #[derive(Debug, Clone)]
 pub struct TypedIr {
     instructions: Vec<Instruction>,
-
     root_slot: Slot,
-
     buffer_size: usize,
-
     consts: ConstPool,
 }
 
@@ -533,6 +524,7 @@ impl IRBuilder {
         }
     }
 
+    /// Lower the DAG at `root` into one tape whose slots are recycled after their last use.
     fn build(arena: &Arena, root: NodeId) -> TypedIr {
         Self::build_scheduled(arena, root, |sizes, order| {
             assign_slots(arena, sizes, order, &[root])
@@ -561,6 +553,11 @@ impl IRBuilder {
         builder.finish(root, buffer_size)
     }
 
+    /// Lower a tangent DAG into a primal section followed by a tangent section.
+    ///
+    /// Nodes that read no seed form the primal section. Its slots sit below
+    /// [`SplitEvalInfo::primal_buffer_size`], where the tangent section never writes, so one
+    /// primal pass serves any number of tangent sweeps.
     fn build_split_eval(arena: &Arena, root: NodeId) -> (TypedIr, SplitEvalInfo) {
         let eval_order = arena.topological_order(root);
         let sizes = infer_sizes(arena, &eval_order);
@@ -669,7 +666,7 @@ impl IRBuilder {
     ///
     /// Block lengths count instructions, not nodes, since `Node::SparseMatrix` emits none.
     fn emit_dispatch(&mut self, arena: &Arena, group: &RegionGroup, nodes: &[NodeId]) {
-        let Node::Conditional { selector, .. } = arena.get(group.cond) else {
+        let Node::Conditional { selector, .. } = &arena[group.cond] else {
             unreachable!("a region group is always anchored on a Conditional")
         };
         let selector_slot = self.slot_for(*selector).offset;
@@ -927,7 +924,7 @@ impl IRBuilder {
                 len: out_len,
             },
             Node::Concat(children) => {
-                let sources_idx = SlotTableIdx::of_next(&self.consts.concat_sources);
+                let sources_idx = ConcatSourceIdx::of_next(&self.consts.concat_sources);
                 for c in children {
                     let slot = self.slot_for(*c);
                     self.consts.concat_sources.push(slot);
@@ -996,7 +993,7 @@ impl IRBuilder {
             },
             Node::InterpolantNd { data, children } => {
                 let interp_idx = self.consts.add_nd_interpolant(data);
-                let sources_idx = SlotTableIdx::of_next(&self.consts.interp_nd_sources);
+                let sources_idx = InterpSourceIdx::of_next(&self.consts.interp_nd_sources);
                 for c in children {
                     let slot = self.slot_for(*c);
                     self.consts.interp_nd_sources.push(slot);
@@ -1014,7 +1011,7 @@ impl IRBuilder {
                 axis,
             } => {
                 let interp_idx = self.consts.add_nd_interpolant(data);
-                let sources_idx = SlotTableIdx::of_next(&self.consts.interp_nd_sources);
+                let sources_idx = InterpSourceIdx::of_next(&self.consts.interp_nd_sources);
                 for c in children {
                     let slot = self.slot_for(*c);
                     self.consts.interp_nd_sources.push(slot);
@@ -1029,7 +1026,7 @@ impl IRBuilder {
             },
 
             Node::Conditional { selector, branches } => {
-                let branches_idx = SlotTableIdx::of_next(&self.consts.branch_offsets);
+                let branches_idx = BranchOffsetIdx::of_next(&self.consts.branch_offsets);
                 for b in branches {
                     let slot = self.slot_for(*b);
                     self.consts.branch_offsets.push(slot);
@@ -1406,7 +1403,7 @@ pub(crate) fn node_width(
         | Node::EqualHeaviside(a, b)
         | Node::NotEqualHeaviside(a, b)
         | Node::Equality(a, b) => width_of(*a).max(width_of(*b)),
-        Node::MatMul(a, b) => match arena.get(*a) {
+        Node::MatMul(a, b) => match &arena[*a] {
             Node::SparseMatrix(csr) => csr.shape.rows,
             Node::Array(arr) => arr.shape.rows,
             _ => width_of(*b),
@@ -1631,7 +1628,7 @@ fn classify_tangent_nodes(arena: &Arena, eval_order: &[NodeId]) -> Vec<bool> {
     let mut is_tangent = vec![false; arena.len()];
 
     for &nid in eval_order {
-        let node = arena.get(nid);
+        let node = &arena[nid];
         let tainted = match node {
             Node::TangentStateVector { .. } | Node::TangentParameter { .. } => true,
             _ => {
@@ -1654,9 +1651,7 @@ fn classify_tangent_nodes(arena: &Arena, eval_order: &[NodeId]) -> Vec<bool> {
 fn last_use_positions(arena: &Arena, order: &[NodeId], roots: &[NodeId]) -> Vec<usize> {
     let mut last_use = vec![0_usize; arena.len()];
     for (pos, &node_id) in order.iter().enumerate() {
-        arena
-            .get(node_id)
-            .for_each_child(|c| last_use[c.index()] = pos);
+        arena[node_id].for_each_child(|c| last_use[c.index()] = pos);
     }
     for &r in roots {
         last_use[r.index()] = usize::MAX;
@@ -1691,8 +1686,6 @@ fn assign_slots_configured(
     last_use: &[usize],
     initial_high_water: usize,
 ) -> (Vec<(usize, usize)>, usize) {
-    use std::collections::{BTreeMap, BTreeSet};
-
     let n = sizes.len();
     let mut slots = vec![(0_usize, 0_usize); n];
 
@@ -2098,8 +2091,6 @@ mod tests {
 
     #[test]
     fn test_ir_interpolant() {
-        use crate::node::InterpolantData;
-
         let mut arena = Arena::new();
         let x = arena.alloc(Node::Scalar(1.5));
         let interp = arena.alloc(Node::Interpolant1DLinear {
@@ -2119,8 +2110,6 @@ mod tests {
 
     #[test]
     fn slope_lookups_lower_against_the_value_pool() {
-        use crate::node::InterpolantData;
-
         let values = InterpolantData::try_new(vec![0.0, 1.0, 3.0], vec![0.0, 10.0, 40.0])
             .expect("valid interpolant");
         let mut arena = Arena::new();
@@ -2237,7 +2226,7 @@ mod tests {
                 offsets.push(dst.offset_usize());
             }
         }
-        let unique: std::collections::BTreeSet<usize> = offsets.iter().copied().collect();
+        let unique: BTreeSet<usize> = offsets.iter().copied().collect();
         assert_eq!(unique.len(), offsets.len(), "pinned layout reused a slot");
     }
 

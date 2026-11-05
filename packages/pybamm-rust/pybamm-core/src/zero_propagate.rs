@@ -16,7 +16,7 @@ struct ShapeInfo {
 }
 
 fn infer_shape(arena: &Arena, id: NodeId, shapes: &[ShapeInfo]) -> ShapeInfo {
-    let node = arena.get(id);
+    let node = &arena[id];
     let is_zero = |child: &NodeId| shapes[child.index()].all_zero;
     let all_zero = match node {
         Node::Scalar(v) => *v == 0.0,
@@ -111,7 +111,7 @@ pub fn zero_propagate(dag: DagRef<'_>) -> Dag {
 
     for old_id in order {
         let shape = shapes[old_id.index()];
-        let node = arena.get(old_id);
+        let node = &arena[old_id];
         let new_id = match *node {
             _ if shape.all_zero => new_arena.alloc(Node::zero(shape.len)),
             Node::Add(a, b) if absorbed(a, b) => old_to_new.rebuilt(b),
@@ -128,8 +128,10 @@ pub fn zero_propagate(dag: DagRef<'_>) -> Dag {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::eval::CompiledExpr;
+    use crate::eval::{CompiledExpr, TangentInputs};
     use crate::node::{ArrayData, CsrData, Shape};
+    use crate::simplify::simplify_pipeline;
+    use crate::tangent::{tangent_wrt_params, tangent_wrt_states};
 
     fn array(data: Vec<f64>, shape: Shape) -> Node {
         Node::Array(Box::new(
@@ -164,7 +166,7 @@ mod tests {
             let mut arena = Arena::new();
             let id = arena.alloc(node);
             let expected = ShapeInfo { len, all_zero };
-            assert_eq!(shape_of(&arena, id), expected, "{:?}", arena.get(id));
+            assert_eq!(shape_of(&arena, id), expected, "{:?}", &arena[id]);
         }
     }
 
@@ -199,12 +201,7 @@ mod tests {
         ];
         for (node, all_zero) in cases {
             let id = arena.alloc(node);
-            assert_eq!(
-                shape_of(&arena, id).all_zero,
-                all_zero,
-                "{:?}",
-                arena.get(id)
-            );
+            assert_eq!(shape_of(&arena, id).all_zero, all_zero, "{:?}", &arena[id]);
         }
     }
 
@@ -227,7 +224,7 @@ mod tests {
         let rebuilt = |arena: &mut Arena, node| {
             let root = arena.alloc(node);
             let folded = zero_propagate(DagRef::new(arena, root));
-            folded.arena().get(folded.root()).clone()
+            folded.arena()[folded.root()].clone()
         };
 
         let y_alone = rebuilt(&mut arena, Node::Add(zero_times_x, y));
@@ -243,9 +240,6 @@ mod tests {
 
     #[test]
     fn test_zero_propagate_preserves_tiny_nonzero_derivative_coefficients() {
-        use crate::eval::TangentInputs;
-        use crate::tangent::tangent_wrt_states;
-
         let mut arena = Arena::new();
         let coeff = arena.alloc(array(vec![1.0e-17, -2.0e-17], Shape::vector(2)));
         let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
@@ -296,16 +290,13 @@ mod tests {
         let root = arena.alloc(Node::Add(product, y));
 
         let folded = zero_propagate(DagRef::new(&arena, root));
-        assert_eq!(folded.arena().get(folded.root()), arena.get(y));
+        assert_eq!(&folded.arena()[folded.root()], &arena[y]);
         assert_eq!(eval(folded.as_ref(), &[0.5, -1.5]), [0.5, -1.5]);
     }
 
     /// The motivating case: a parameter tangent of an input-free quotient is `0 / x`.
     #[test]
     fn a_parameter_tangent_of_an_input_free_quotient_folds_away() {
-        use crate::simplify::simplify_pipeline;
-        use crate::tangent::tangent_wrt_params;
-
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 3 });
         let log = arena.alloc(Node::Log(y));
@@ -338,10 +329,7 @@ mod tests {
 
         let folded = zero_propagate(DagRef::new(&arena, expr));
 
-        assert_eq!(
-            folded.arena().get(folded.root()),
-            &Node::ZeroVector { len: 3 }
-        );
+        assert_eq!(&folded.arena()[folded.root()], &Node::ZeroVector { len: 3 });
     }
 
     #[test]
@@ -362,7 +350,7 @@ mod tests {
             let a = eval(DagRef::new(&arena, root), &[0.0])[0];
             let b = eval(zero_propagate(DagRef::new(&arena, root)).as_ref(), &[0.0])[0];
 
-            let label = format!("{:?}", arena.get(root));
+            let label = format!("{:?}", &arena[root]);
             assert_eq!(a, b, "{label}: values must be equal");
             assert!(a == 0.0 && b == 0.0, "{label}: both must be zero");
             // The sign is not guaranteed; pin it so a contract change fails here.

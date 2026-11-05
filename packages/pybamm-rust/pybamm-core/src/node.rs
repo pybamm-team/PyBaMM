@@ -3,6 +3,8 @@
 //! Nodes are not shape-checked on construction; [`validate`](crate::validate)
 //! reports what lowering will reject.
 
+use std::hash::{Hash, Hasher};
+
 use crate::arena::NodeId;
 use crate::error::CoreError;
 
@@ -715,8 +717,7 @@ impl Node {
     }
 }
 
-fn hash_nd_interpolant_data<H: std::hash::Hasher>(data: &NdInterpolantData, hasher: &mut H) {
-    use std::hash::Hash;
+fn hash_nd_interpolant_data<H: Hasher>(data: &NdInterpolantData, hasher: &mut H) {
     data.order.hash(hasher);
     for knots in &data.breakpoints {
         knots.len().hash(hasher);
@@ -733,8 +734,7 @@ fn hash_nd_interpolant_data<H: std::hash::Hasher>(data: &NdInterpolantData, hash
 ///
 /// Pairs with [`structurally_identical`]: identical nodes hash equally, but distinct ones
 /// may collide, e.g. payloads differing in an even number of zero signs.
-pub(crate) fn structural_hash<H: std::hash::Hasher>(node: &Node, hasher: &mut H) {
-    use std::hash::Hash;
+pub(crate) fn structural_hash<H: Hasher>(node: &Node, hasher: &mut H) {
     std::mem::discriminant(node).hash(hasher);
     match node {
         Node::Scalar(v) => v.to_bits().hash(hasher),
@@ -887,6 +887,8 @@ const _: () = {
 
 #[cfg(test)]
 mod tests {
+    use rustc_hash::FxHasher;
+
     use super::*;
     use crate::arena::Arena;
 
@@ -1065,9 +1067,6 @@ mod tests {
 
     #[test]
     fn test_structural_hash_distinguishes_payload_only_differences() {
-        use rustc_hash::FxHasher;
-        use std::hash::Hasher;
-
         let s1 = Node::StateVector { start: 0, end: 5 };
         let s2 = Node::StateVector { start: 1, end: 6 };
 

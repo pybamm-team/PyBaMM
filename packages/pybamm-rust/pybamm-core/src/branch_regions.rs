@@ -77,7 +77,7 @@ fn has_multi_branch_conditional(arena: &Arena) -> bool {
 /// A deeply nested conditional degraded to `Common` also qualifies, but its runs are empty.
 #[must_use]
 fn is_conditional_blockable(arena: &Arena, owners: &[Ownership], cond: NodeId) -> bool {
-    matches!(arena.get(cond), Node::Conditional { branches, .. } if branches.len() >= 2)
+    matches!(&arena[cond], Node::Conditional { branches, .. } if branches.len() >= 2)
         && owners[cond.index()] == Ownership::Common
 }
 
@@ -93,7 +93,7 @@ pub fn owner_sets(arena: &Arena, eval_order: &[NodeId]) -> Vec<Ownership> {
 
     for &id in eval_order.iter().rev() {
         let label = owners[id.index()].clone();
-        match arena.get(id) {
+        match &arena[id] {
             Node::Conditional { selector, branches } if branches.len() >= 2 => {
                 owners[selector.index()].join(&Ownership::Common);
                 for (i, &b) in branches.iter().enumerate() {
@@ -117,7 +117,7 @@ pub fn owner_sets(arena: &Arena, eval_order: &[NodeId]) -> Vec<Ownership> {
 fn close_full_branch_coverage(arena: &Arena, owners: &mut [Ownership]) {
     for owner in owners.iter_mut() {
         if let Ownership::Branches { cond, indices } = owner
-            && let Node::Conditional { branches, .. } = arena.get(*cond)
+            && let Node::Conditional { branches, .. } = &arena[*cond]
             && indices.len() >= branches.len()
         {
             *owner = Ownership::Common;
@@ -136,7 +136,7 @@ fn force_nested_conditionals_common(
     let mut nested = vec![false; arena.len()];
     let mut any_nested = false;
     for &id in eval_order {
-        if matches!(arena.get(id), Node::Conditional { branches, .. } if branches.len() >= 2)
+        if matches!(&arena[id], Node::Conditional { branches, .. } if branches.len() >= 2)
             && owners[id.index()] != Ownership::Common
         {
             nested[id.index()] = true;
@@ -205,7 +205,7 @@ pub fn privatise_conditionals(dag: DagRef<'_>) -> Option<Dag> {
     let mut per_branch: Vec<Vec<(usize, NodeId)>> = vec![Vec::new(); arena.len()];
 
     for &id in &eval_order {
-        let node = arena.get(id);
+        let node = &arena[id];
         match privatisable(id) {
             None => {
                 let remapped =
@@ -315,7 +315,7 @@ pub fn schedule_regions_partitioned(
     let mut run_of: Vec<Option<usize>> = vec![None; arena.len()];
     let mut runs: Vec<(NodeId, Vec<Vec<NodeId>>)> = Vec::new();
     for &id in base_order {
-        if let Node::Conditional { selector, branches } = arena.get(id)
+        if let Node::Conditional { selector, branches } = &arena[id]
             && is_conditional_blockable(arena, owners, id)
             && (in_partition[id.index()] || in_partition[selector.index()])
         {
@@ -654,17 +654,17 @@ mod tests {
         let order = private.arena().topological_order(private.root());
         let n_sqrt = order
             .iter()
-            .filter(|&&id| matches!(private.arena().get(id), Node::Sqrt(_)))
+            .filter(|&&id| matches!(&private.arena()[id], Node::Sqrt(_)))
             .count();
         let n_exp = order
             .iter()
-            .filter(|&&id| matches!(private.arena().get(id), Node::Exp(_)))
+            .filter(|&&id| matches!(&private.arena()[id], Node::Exp(_)))
             .count();
         assert_eq!((n_sqrt, n_exp), (2, 2));
 
         let owners = owner_sets(private.arena(), &order);
         for &id in &order {
-            if matches!(private.arena().get(id), Node::Sqrt(_) | Node::Exp(_)) {
+            if matches!(&private.arena()[id], Node::Sqrt(_) | Node::Exp(_)) {
                 assert!(
                     sole_owner(&owners[id.index()]).is_some(),
                     "cone node {id:?} is still shared after privatisation"
@@ -731,7 +731,7 @@ mod tests {
         let before = CompiledExpr::from_ir(TypedIr::from_dag_raw(DagRef::new(&arena, cond)));
         let private =
             privatise_conditionals(DagRef::new(&arena, cond)).expect("the aliased slot privatises");
-        let Node::Conditional { branches, .. } = private.arena().get(private.root()) else {
+        let Node::Conditional { branches, .. } = &private.arena()[private.root()] else {
             panic!("the root is still the conditional")
         };
         assert_ne!(
@@ -917,11 +917,11 @@ mod tests {
         let new_order = private.arena().topological_order(private.root());
         let n_sqrt = new_order
             .iter()
-            .filter(|&&id| matches!(private.arena().get(id), Node::Sqrt(_)))
+            .filter(|&&id| matches!(&private.arena()[id], Node::Sqrt(_)))
             .count();
         let n_exp = new_order
             .iter()
-            .filter(|&&id| matches!(private.arena().get(id), Node::Exp(_)))
+            .filter(|&&id| matches!(&private.arena()[id], Node::Exp(_)))
             .count();
         assert_eq!(
             (n_sqrt, n_exp),
@@ -930,7 +930,7 @@ mod tests {
         );
         let n_aliased_scalar = new_order
             .iter()
-            .filter(|&&id| matches!(private.arena().get(id), Node::Scalar(v) if v.to_bits() == 1.0_f64.to_bits()))
+            .filter(|&&id| matches!(&private.arena()[id], Node::Scalar(v) if v.to_bits() == 1.0_f64.to_bits()))
             .count();
         assert_eq!(
             n_aliased_scalar, 2,

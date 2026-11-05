@@ -4,13 +4,14 @@
 //! accumulates in the scalar sweep's order, so results are bitwise identical.
 
 use crate::accumulate::{Accumulate, Product, dispatch};
+use crate::branch_regions::active_branch;
 use crate::eval::{
-    SplitCompiledExpr, csr_rows, split_read_write, split_two_read_write, unary_apply,
-    with_binary_op, with_unary_op,
+    SplitCompiledExpr, check_scratch, csr_rows, split_read_write, split_two_read_write,
+    unary_apply, with_binary_op, with_unary_op,
 };
 use crate::eval_batch::broadcast_lanes;
 use crate::ir::ids::BufSlot;
-use crate::ir::{BinaryOp, BroadcastKind, ConstPool, Instruction, TypedIr, UnaryOp};
+use crate::ir::{BinaryOp, BroadcastKind, ConstPool, Instruction, SplitEvalInfo, TypedIr, UnaryOp};
 use crate::node::CsrData;
 
 #[derive(Clone, Copy)]
@@ -31,18 +32,21 @@ const fn operand<const K: usize>(offset: usize, primal_len: usize) -> Operand {
 
 /// Whether every instruction in the tangent section has a batched form.
 ///
-/// Only a `Concat` may read nothing but primal slots; any other reader of only primal
-/// slots would be seed-independent, so a tape holding one sweeps scalar instead.
-pub fn is_batchable(expr: &SplitCompiledExpr) -> bool {
-    let split = expr.split_info();
+/// Only a `Concat` or a `Conditional` may read nothing but primal slots; any other reader of
+/// only primal slots would be seed-independent, so a tape holding one sweeps scalar instead.
+/// Branch selectors must be primal, so every lane takes the same branch.
+pub(crate) fn section_is_batchable(ir: &TypedIr, split: SplitEvalInfo) -> bool {
     let tangent = |slot: BufSlot| slot.index() >= split.primal_buffer_size;
-    expr.ir().instructions()[split.primal_end..]
+    ir.instructions()[split.primal_end..]
         .iter()
         .all(|instr| match *instr {
             Instruction::LoadTangentState { .. } | Instruction::Concat { .. } => true,
             Instruction::Unary { src, .. } | Instruction::Index { src, .. } => tangent(src),
             Instruction::MatMul { vec_src, .. } => tangent(vec_src),
             Instruction::Binary { a, b, .. } => tangent(a) || tangent(b),
+            Instruction::Conditional { selector, .. } | Instruction::Dispatch { selector, .. } => {
+                !tangent(selector)
+            },
             _ => false,
         })
 }
@@ -68,15 +72,24 @@ pub const fn tangent_scratch_len(expr: &SplitCompiledExpr, lanes: usize) -> usiz
 /// Run the tangent section of `expr` for `lanes` seed vectors at once.
 ///
 /// `primal` holds the primal section's values; `seeds` is `(n_states, lanes)` lane-minor and
-/// the result `(out_len, lanes)` lane-minor. `lanes` must be 8 or 4, and [`is_batchable`] must
-/// hold.
-pub fn run_tangent_batch<'t>(
+/// the result `(out_len, lanes)` lane-minor.
+///
+/// # Panics
+/// If `lanes` is not 8 or 4, `expr` is not batchable, `primal` is shorter than the primal
+/// section or `tan` shorter than [`tangent_scratch_len`].
+pub(crate) fn run_tangent_batch<'t>(
     expr: &SplitCompiledExpr,
     lanes: usize,
     primal: &[f64],
     tan: &'t mut [f64],
     seeds: &[f64],
 ) -> &'t [f64] {
+    assert!(
+        expr.is_batchable(),
+        "the tangent section has an instruction with no batched form"
+    );
+    check_scratch(primal.len(), expr.split_info().primal_buffer_size);
+    check_scratch(tan.len(), tangent_scratch_len(expr, lanes));
     match lanes {
         8 => sweep::<8>(expr, primal, tan, seeds),
         4 => sweep::<4>(expr, primal, tan, seeds),
@@ -92,13 +105,8 @@ fn sweep<'t, const K: usize>(
 ) -> &'t [f64] {
     let (ir, split) = (expr.ir(), expr.split_info());
     let primal_len = split.primal_buffer_size;
-    let consts = ir.consts();
-
-    for instr in &ir.instructions()[split.primal_end..] {
-        if !writes_nothing(instr, consts) {
-            exec::<K>(*instr, primal, tan, seeds, primal_len, consts);
-        }
-    }
+    let instructions = &ir.instructions()[split.primal_end..];
+    run_block::<K>(instructions, primal, tan, seeds, primal_len, ir.consts());
 
     let root = ir.root_slot();
     if root_is_primal(ir, primal_len) {
@@ -108,6 +116,42 @@ fn sweep<'t, const K: usize>(
     }
     let base = (root.offset_usize() - primal_len) * K;
     &tan[base..base + root.len_usize() * K]
+}
+
+/// Run `instructions` lane by lane, entering only the active block of each `Dispatch`.
+///
+/// Selectors are primal, so the branch taken is the scalar sweep's, for every lane.
+fn run_block<const K: usize>(
+    instructions: &[Instruction],
+    primal: &[f64],
+    tan: &mut [f64],
+    seeds: &[f64],
+    primal_len: usize,
+    consts: &ConstPool,
+) {
+    let mut pc = 0;
+    while pc < instructions.len() {
+        match instructions[pc] {
+            Instruction::Dispatch {
+                selector,
+                blocks_idx,
+                blocks_len,
+                span_len,
+            } => {
+                if let Some(active) = active_branch(primal[selector.index()], blocks_len.index()) {
+                    let block = consts.branch_blocks[blocks_idx.index() + active].bounds(pc);
+                    run_block::<K>(&instructions[block], primal, tan, seeds, primal_len, consts);
+                }
+                pc += span_len.index();
+            },
+            instr => {
+                if !writes_nothing(&instr, consts) {
+                    exec::<K>(instr, primal, tan, seeds, primal_len, consts);
+                }
+                pc += 1;
+            },
+        }
+    }
 }
 
 /// Whether `instr` writes no element: its zero-width slot sits at offset 0, in the primal region.
@@ -125,6 +169,7 @@ fn writes_nothing(instr: &Instruction, consts: &ConstPool) -> bool {
             .iter()
             .all(|slot| slot.len_usize() == 0),
         Instruction::MatMul { csr_idx, .. } => consts.csr_data[csr_idx.index()].shape.rows == 0,
+        Instruction::Conditional { out_len, .. } => out_len.index() == 0,
         _ => false,
     }
 }
@@ -216,7 +261,29 @@ fn exec<const K: usize>(
             dispatch(CsrTangents::<K> { csr, x, out });
         },
 
-        other => unreachable!("instruction {other:?} is not batchable; check is_batchable first"),
+        Instruction::Conditional {
+            selector,
+            branches_idx,
+            branches_len,
+            dst,
+            out_len,
+        } => {
+            let (dst, len) = (tangent_base::<K>(dst.index(), primal_len), out_len.index());
+            match active_branch(primal[selector.index()], branches_len.index()) {
+                Some(i) => {
+                    let slot = consts.branch_offsets[branches_idx.index() + i];
+                    match operand::<K>(slot.offset_usize(), primal_len) {
+                        Operand::Tangent(src) => tan.copy_within(src..src + len * K, dst),
+                        Operand::Primal(src) => {
+                            broadcast_lanes(&mut tan[dst..], K, &primal[src..src + len]);
+                        },
+                    }
+                },
+                None => tan[dst..dst + len * K].fill(0.0),
+            }
+        },
+
+        other => unreachable!("instruction {other:?} has no batched form"),
     }
 }
 
@@ -252,7 +319,7 @@ impl<const K: usize> Product for CsrTangents<'_, K> {
 fn tangent_base<const K: usize>(offset: usize, primal_len: usize) -> usize {
     debug_assert!(
         offset >= primal_len,
-        "is_batchable admits only tangent slots here"
+        "a batchable section reads only tangent slots here"
     );
     (offset - primal_len) * K
 }
@@ -327,7 +394,7 @@ fn binary<const K: usize, F: Fn(f64, f64) -> f64>(
                 }
             },
             (Operand::Primal(_), Operand::Primal(_)) => {
-                unreachable!("is_batchable admits no binary over two primal operands")
+                unreachable!("a batchable section has no binary over two primal operands")
             },
         }
         tan[dst..][..K].copy_from_slice(&out);
@@ -380,7 +447,7 @@ fn binary<const K: usize, F: Fn(f64, f64) -> f64>(
             }
         },
         (Operand::Primal(_), Operand::Primal(_)) => {
-            unreachable!("is_batchable admits no binary over two primal operands")
+            unreachable!("a batchable section has no binary over two primal operands")
         },
     }
 }

@@ -6,8 +6,11 @@ use common::cases::{
 };
 use common::numeric_eq::assert_bitwise_eq;
 use proptest::prelude::*;
-use pybamm_core::tangent_batch::{is_batchable, run_tangent_batch, tangent_scratch_len};
-use pybamm_core::{Arena, DagRef, Node, SplitCompiledExpr, TangentInputs, tangent_wrt_states};
+use pybamm_core::ir::Instruction;
+use pybamm_core::tangent_batch::tangent_scratch_len;
+use pybamm_core::{
+    Arena, ArrayData, DagRef, Node, Shape, SplitCompiledExpr, TangentInputs, tangent_wrt_states,
+};
 
 /// A batched tangent sweep reproduces its scalar sweeps bit for bit, at every lane count.
 fn check_batched_matches_scalar(case: &TangentCase) {
@@ -20,10 +23,9 @@ fn check_lanes(case: &TangentCase, lanes: usize) {
     let mut arena = case.arena.clone();
     let tangent_root = tangent_wrt_states(&mut arena, case.root);
     let compiled = SplitCompiledExpr::compile(DagRef::new(&arena, tangent_root));
-    if !is_batchable(&compiled) {
+    if !compiled.is_batchable() {
         return;
     }
-    let primal_len = compiled.split_info().primal_buffer_size;
     let n_states = case.y.len();
 
     // Fill every lane, reusing the case's seeds rescaled, so no lane rides along as zeros.
@@ -61,8 +63,7 @@ fn check_lanes(case: &TangentCase, lanes: usize) {
 
     // Scalar sweeps write only tangent slots, so the primal region is still this point's.
     let mut tan = vec![0.0; tangent_scratch_len(&compiled, lanes)];
-    let primal = &scratch[..primal_len];
-    let batched = run_tangent_batch(&compiled, lanes, primal, &mut tan, &lane_seeds);
+    let batched = cache.eval_tangent_batch(lanes, &mut tan, &lane_seeds);
 
     for (lane, want) in scalar.iter().enumerate() {
         let got: Vec<f64> = (0..want.len()).map(|e| batched[e * lanes + lane]).collect();
@@ -109,10 +110,65 @@ fn zero_width_tangent_nodes_sweep_batched() {
     let tangent_root = tangent_wrt_states(&mut tangent_arena, case.root);
     let compiled = SplitCompiledExpr::compile(DagRef::new(&tangent_arena, tangent_root));
     assert!(
-        is_batchable(&compiled),
+        compiled.is_batchable(),
         "the case must take the batched sweep"
     );
     check_batched_matches_scalar(&case);
+}
+
+/// Short-circuited branches sweep batched, each lane taking the branch the scalar sweep takes;
+/// the literal branch's tangent is primal, and out-of-range selectors pick no branch.
+#[test]
+fn dispatched_conditional_tangents_sweep_batched() {
+    let mut arena = Arena::new();
+    let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
+    let sel = arena.alloc(Node::InputParameter {
+        name: "s".to_string(),
+        index: 0,
+        offset: 0,
+        width: 1,
+    });
+    let mut sines = y;
+    for _ in 0..3 {
+        sines = arena.alloc(Node::Sin(sines));
+    }
+    let mut exps = y;
+    for _ in 0..4 {
+        exps = arena.alloc(Node::Exp(exps));
+    }
+    let literal = ArrayData::try_new(vec![2.0, -3.0], Shape::vector(2)).expect("valid array");
+    let literal = arena.alloc(Node::Array(Box::new(literal)));
+    let root = arena.alloc(Node::Conditional {
+        selector: sel,
+        branches: vec![sines, exps, literal],
+    });
+
+    let mut tangent_arena = arena.clone();
+    let tangent_root = tangent_wrt_states(&mut tangent_arena, root);
+    let compiled = SplitCompiledExpr::compile(DagRef::new(&tangent_arena, tangent_root));
+    let split = compiled.split_info();
+    assert!(
+        compiled.ir().instructions()[split.primal_end..]
+            .iter()
+            .any(|instr| matches!(instr, Instruction::Dispatch { .. })),
+        "the tangent section must short-circuit its branches"
+    );
+    assert!(
+        compiled.is_batchable(),
+        "the case must take the batched sweep"
+    );
+
+    for selector in [1.0, 2.0, 3.0, 0.0, 4.0, f64::NAN] {
+        let case = TangentCase {
+            arena: arena.clone(),
+            root,
+            y: vec![0.3, -0.2],
+            seeds: vec![vec![1.0, 0.0], vec![0.0, 1.0], vec![0.5, -2.0]],
+            n_states: 2,
+            inputs: vec![selector],
+        };
+        check_batched_matches_scalar(&case);
+    }
 }
 
 proptest! {

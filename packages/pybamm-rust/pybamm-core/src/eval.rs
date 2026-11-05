@@ -6,11 +6,12 @@
 use crate::accumulate::{Accumulate, Product, dispatch};
 use crate::arena::DagRef;
 use crate::branch_regions::active_branch;
-use crate::ir::ids::{NdInterpolantIdx, SlotTableIdx};
+use crate::ir::ids::{InterpSourceIdx, NdInterpolantIdx};
 use crate::ir::{
     BinaryOp, BroadcastKind, ConstPool, Instruction, Slot, SplitEvalInfo, TypedIr, UnaryOp,
 };
 use crate::node::{CsrData, InterpolantData, NdInterpolantData};
+use crate::tangent_batch;
 
 /// `match $op`, expanding `$body` in each arm with `$f` bound to that arm's function.
 ///
@@ -51,9 +52,7 @@ macro_rules! with_binary_op {
             $crate::ir::BinaryOp::NotEqualHeaviside => {
                 |x: f64, y: f64| if x < y { 1.0 } else { 0.0 }
             },
-            $crate::ir::BinaryOp::Equality => |x: f64, y: f64| {
-                if (x - y).abs() < $crate::eval::EQUALITY_EPS { 1.0 } else { 0.0 }
-            },
+            $crate::ir::BinaryOp::Equality => $crate::eval::equality,
         })
     };
 }
@@ -256,7 +255,7 @@ pub(crate) fn interp_nd_lanes(
     k: usize,
     consts: &ConstPool,
     interp_idx: NdInterpolantIdx,
-    sources_idx: SlotTableIdx,
+    sources_idx: InterpSourceIdx,
     axis: Option<usize>,
     out: Slot,
 ) {
@@ -331,8 +330,20 @@ fn tensor_horner_partial(
     acc
 }
 
-/// Tolerance `BinaryOp::Equality` compares within.
-pub(crate) const EQUALITY_EPS: f64 = 1e-14;
+/// Panic unless a scratch buffer of `len` values covers the `needed` a tape writes.
+#[track_caller]
+pub(crate) fn check_scratch(len: usize, needed: usize) {
+    assert!(
+        len >= needed,
+        "scratch holds {len} values; this tape needs {needed}"
+    );
+}
+
+/// `1` where `x == y`, else `0`: exact, as pybamm's `Equality` evaluates.
+#[allow(clippy::float_cmp)]
+pub(crate) fn equality(x: f64, y: f64) -> f64 {
+    if x == y { 1.0 } else { 0.0 }
+}
 
 /// `x^y` by the platform's `pow`, except exponents `0`, `1`, `2` and `-1`, which take `1`,
 /// `x`, `x*x` and `1/x`.
@@ -973,8 +984,10 @@ impl CompiledExpr {
         self.ir.output_len()
     }
 
-    /// Evaluate the expression into `scratch` (length `>= scratch_len()`),
-    /// returning the slice holding the root result.
+    /// Evaluate the expression into `scratch`, returning the slice holding the root result.
+    ///
+    /// # Panics
+    /// If `scratch` is shorter than [`scratch_len`](Self::scratch_len).
     pub fn eval<'s>(
         &self,
         scratch: &'s mut [f64],
@@ -1022,6 +1035,7 @@ impl CompiledExpr {
         inputs: &[f64],
         tangent: Option<&TangentInputs<'_>>,
     ) -> (usize, &'s [f64]) {
+        check_scratch(scratch.len(), self.scratch_len());
         let instructions = self.ir.instructions();
         let skipped = eval_instructions(
             scratch,
@@ -1066,16 +1080,26 @@ impl CompiledExpr {
 pub struct SplitCompiledExpr {
     expr: CompiledExpr,
     split: SplitEvalInfo,
+    /// Whether every tangent-section instruction has a batched form.
+    batchable: bool,
 }
 
 impl SplitCompiledExpr {
     /// Lower and compile `dag` with primal and tangent instructions partitioned.
     pub fn compile(dag: DagRef<'_>) -> Self {
         let (ir, split) = TypedIr::from_dag_split_eval(dag);
+        let batchable = tangent_batch::section_is_batchable(&ir, split);
         Self {
             expr: CompiledExpr::from_ir(ir),
             split,
+            batchable,
         }
+    }
+
+    /// Whether [`PrimalCache::eval_tangent_batch`] can sweep this tape.
+    #[inline]
+    pub const fn is_batchable(&self) -> bool {
+        self.batchable
     }
 
     /// The whole tape, primal section first.
@@ -1112,6 +1136,9 @@ impl SplitCompiledExpr {
 
     /// Evaluate the primal section into `scratch`, returning the [`PrimalCache`] that
     /// runs the tangent sweep on the same buffer.
+    ///
+    /// # Panics
+    /// If `scratch` is shorter than [`scratch_len`](Self::scratch_len).
     pub fn eval_primal<'a>(
         &'a self,
         scratch: &'a mut [f64],
@@ -1120,6 +1147,7 @@ impl SplitCompiledExpr {
         y_dot: &[f64],
         inputs: &[f64],
     ) -> PrimalCache<'a> {
+        check_scratch(scratch.len(), self.scratch_len());
         eval_instructions(
             scratch,
             &self.ir().instructions()[..self.split.primal_end],
@@ -1158,6 +1186,24 @@ impl PrimalCache<'_> {
             EvalContext::tangent_only(tangent),
         );
         &self.scratch[ir.root_slot().bounds()]
+    }
+
+    /// Evaluate the tangent section for `lanes` seed vectors at once on the cached primal region.
+    ///
+    /// `seeds` is `(n_states, lanes)` lane-minor and the result `(out_len, lanes)` lane-minor,
+    /// each lane bitwise equal to an [`eval_tangent`](Self::eval_tangent) call.
+    ///
+    /// # Panics
+    /// If `lanes` is not 8 or 4, the tape is not
+    /// [`is_batchable`](SplitCompiledExpr::is_batchable), or `tangent` is shorter than
+    /// [`tangent_scratch_len`](tangent_batch::tangent_scratch_len).
+    pub fn eval_tangent_batch<'t>(
+        &self,
+        lanes: usize,
+        tangent: &'t mut [f64],
+        seeds: &[f64],
+    ) -> &'t [f64] {
+        tangent_batch::run_tangent_batch(self.expr, lanes, self.scratch, tangent, seeds)
     }
 }
 
@@ -1261,7 +1307,6 @@ mod tests {
 
     #[test]
     fn size_check() {
-        use std::mem::size_of;
         // Guard hot per-node types against accidental bloat.
         assert_eq!(size_of::<BufSlot>(), 4);
         assert_eq!(size_of::<Width>(), 4);
