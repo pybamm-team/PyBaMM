@@ -6,6 +6,8 @@
 - Dropped support for Python 3.10, which reaches end of life in October 2026. `pybamm` and `pybammsolvers` now require Python 3.11 or newer, and `pybamm` no longer depends on `typing-extensions`. Python 3.10 users can stay on PyBaMM 26.10. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - `pybamm.ModelSolutionObservability` and `pybamm.parameters.ParameterCategory` are now `enum.StrEnum`s, so `str()` and f-strings of a member give its value instead of `<Enum>.<NAME>`. `ParameterCategory` members now also compare equal to their string values. Use `.name` for a member's name. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - A failed write in `BaseModel.to_json` or `BaseModel.to_config` now re-raises the original `OSError` subclass (e.g. `PermissionError`) instead of a plain `OSError`. The file path is in the exception's `__notes__`, not its message. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
+- `get_size_distribution_parameters`, which sets the `MPM` defaults, now sets the size distribution and minimum and maximum radii as expressions of the particle radius parameter, so they follow changes such as `"[input]"`. Pass `R_n_av` and `R_p_av` to keep numbers. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- A custom `SubMesh` subclass given input-dependent limits now raises a `GeometryError` unless it sets `supports_symbolic_limits = True`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Deprecated
 
@@ -20,8 +22,6 @@
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 - Added `pybamm.bode_plot` and `pybamm.eis_plot`, which overlays labelled spectra. `EISSimulation.plot()` now shows Nyquist and Bode plots instead of failing. ([#5989](https://github.com/pybamm-team/PyBaMM/pull/5989))
 - When every sub-solver of `CompositeSolver` fails, their errors are chained to the raised `SolverError` as an `ExceptionGroup`, so each failure's traceback is kept. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
-- `get_size_distribution_parameters`, which sets the `MPM` default parameters, now sets the size distribution and minimum and maximum radii as expressions of the particle radius parameter, so they follow changes to it, such as `"[input]"`. Pass `R_n_av` and `R_p_av` to keep numbers. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
-- A custom `SubMesh` subclass given input-dependent limits now raises a `GeometryError` unless it sets `supports_symbolic_limits = True`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Bug fixes
 
