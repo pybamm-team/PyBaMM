@@ -1,0 +1,6 @@
+[submodule "sundials"]
+    path = packages/pybammsolvers/sundials
+    url = https://github.com/LLNL/sundials.git
+[submodule "SuiteSparse"]
+    path = packages/pybammsolvers/SuiteSparse
+    url = https://github.com/DrTimothyAldenDavis/SuiteSparse.git

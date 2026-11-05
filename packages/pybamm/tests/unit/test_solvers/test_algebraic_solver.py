@@ -1,0 +1,367 @@
+#
+# Tests for the Algebraic Solver class
+#
+
+import numpy as np
+import pytest
+from scipy import optimize
+
+import pybamm
+from tests import get_discretisation_for_testing
+
+
+class TestAlgebraicSolver:
+    def test_algebraic_solver_init(self):
+        solver = pybamm.AlgebraicSolver(
+            method="hybr", tol=1e-4, extra_options={"maxfev": 100}
+        )
+        assert solver.method == "hybr"
+        assert solver.extra_options == {"xtol": 1e-12, "gtol": 1e-12, "maxfev": 100}
+        assert solver.tol == 1e-4
+
+        solver.method = "krylov"
+        assert solver.method == "krylov"
+        solver.tol = 1e-5
+        assert solver.tol == 1e-5
+
+    def test_wrong_solver(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: var}
+        model.algebraic = {var: var - 1}
+
+        # test errors
+        solver = pybamm.AlgebraicSolver()
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"Cannot use algebraic solver to solve model with time derivatives",
+        ):
+            solver.solve(model)
+
+    def test_simple_root_find(self):
+        # Simple system: a single algebraic equation
+        class Model(pybamm.BaseModel):
+            y0_list = [np.array([2])]
+            y0S_list = None
+            rhs = {}
+            jac_algebraic_eval = None
+            len_rhs_and_alg = 1
+
+            def __init__(self):
+                super().__init__()
+                self.convert_to_format = "python"
+
+            def algebraic_eval(self, t, y, inputs):
+                return y + 2
+
+        # Try passing extra options to solver
+        solver = pybamm.AlgebraicSolver(extra_options={"maxiter": 100})
+        model = Model()
+        solutions = solver._integrate(model, np.array([0]))
+        np.testing.assert_array_equal(solutions[0].y, -2)
+
+    def test_root_find_fail(self):
+        class Model(pybamm.BaseModel):
+            y0_list = [np.array([2])]
+            y0S_list = None
+            rhs = {}
+            jac_algebraic_eval = None
+            len_rhs_and_alg = 1
+
+            def __init__(self):
+                super().__init__()
+                self.convert_to_format = "python"
+
+            def algebraic_eval(self, t, y, inputs):
+                # algebraic equation has no real root
+                return y**2 + 1
+
+        model = Model()
+
+        solver = pybamm.AlgebraicSolver(method="hybr")
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"Could not find acceptable solution",
+        ):
+            solver._integrate(model, np.array([0]))
+
+        solver = pybamm.AlgebraicSolver()
+        with pytest.raises(
+            pybamm.SolverError,
+            match=r"Could not find acceptable solution",
+        ):
+            solver._integrate(model, np.array([0]))
+
+    def test_with_jacobian(self):
+        A = np.array([[4, 3], [1, -1]])
+        b = np.array([0, 7])
+
+        class Model(pybamm.BaseModel):
+            y0_list = [np.zeros(2)]
+            y0S_list = None
+            rhs = {}
+            len_rhs_and_alg = 2
+
+            def __init__(self):
+                super().__init__()
+                self.convert_to_format = "python"
+
+            def algebraic_eval(self, t, y, inputs):
+                return A @ y - b
+
+            def jac_algebraic_eval(self, t, y, inputs):
+                return A
+
+        model = Model()
+        sol = np.array([3, -4])[:, np.newaxis]
+
+        solver = pybamm.AlgebraicSolver()
+        solutions = solver._integrate(model, np.array([0]))
+        np.testing.assert_allclose(solutions[0].y, sol, rtol=1e-7, atol=1e-6)
+
+    def test_model_solver(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.algebraic = {var1: var1 - 3, var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(4)}
+        model.variables = {"var1": var1, "var2": var2}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        sol = np.concatenate((np.ones(100) * 3, np.ones(100) * 6))[:, np.newaxis]
+
+        # Solve
+        solver = pybamm.AlgebraicSolver()
+        solution = solver.solve(model)
+        np.testing.assert_array_equal(
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
+            sol[:100],
+        )
+        np.testing.assert_array_equal(
+            model.get_processed_variable("var2").evaluate(t=None, y=solution.y),
+            sol[100:],
+        )
+
+        # Test without Jacobian
+        model.use_jacobian = False
+        solver.models_set_up = set()
+        solution_no_jac = solver.solve(model)
+        np.testing.assert_array_equal(
+            model.get_processed_variable("var1").evaluate(t=None, y=solution_no_jac.y),
+            sol[:100],
+        )
+        np.testing.assert_array_equal(
+            model.get_processed_variable("var2").evaluate(t=None, y=solution_no_jac.y),
+            sol[100:],
+        )
+
+    def test_model_solver_least_squares(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.algebraic = {var1: var1 - 3, var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(4)}
+        model.variables = {"var1": var1, "var2": var2}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        sol = np.concatenate((np.ones(100) * 3, np.ones(100) * 6))[:, np.newaxis]
+
+        # Solve
+        solver = pybamm.AlgebraicSolver("lsq")
+        solution = solver.solve(model)
+        np.testing.assert_allclose(
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
+            sol[:100],
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            model.get_processed_variable("var2").evaluate(t=None, y=solution.y),
+            sol[100:],
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+        # Test without jacobian and with a different method
+        model.use_jacobian = False
+        solver = pybamm.AlgebraicSolver("lsq__trf")
+        solution_no_jac = solver.solve(model)
+        np.testing.assert_allclose(
+            model.get_processed_variable("var1").evaluate(t=None, y=solution_no_jac.y),
+            sol[:100],
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            model.get_processed_variable("var2").evaluate(t=None, y=solution_no_jac.y),
+            sol[100:],
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+    def test_model_solver_minimize(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.algebraic = {var1: var1 - 3, var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(4)}
+        model.variables = {"var1": var1, "var2": var2}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        sol = np.concatenate((np.ones(100) * 3, np.ones(100) * 6))[:, np.newaxis]
+
+        # Solve
+        solver = pybamm.AlgebraicSolver("minimize", tol=1e-8)
+        solution = solver.solve(model)
+        np.testing.assert_allclose(
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
+            sol[:100],
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            model.get_processed_variable("var2").evaluate(t=None, y=solution.y),
+            sol[100:],
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+        # Test without jacobian and with a different method
+        model.use_jacobian = False
+        solver = pybamm.AlgebraicSolver("minimize__BFGS")
+        solution_no_jac = solver.solve(model)
+        np.testing.assert_allclose(
+            model.get_processed_variable("var1").evaluate(t=None, y=solution_no_jac.y),
+            sol[:100],
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            model.get_processed_variable("var2").evaluate(t=None, y=solution_no_jac.y),
+            sol[100:],
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+    @pytest.mark.parametrize("convert_to_format", ["python", "casadi"])
+    def test_minimize_gradient_matches_finite_differences(
+        self, convert_to_format, monkeypatch
+    ):
+        model = pybamm.BaseModel()
+        model.convert_to_format = convert_to_format
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.algebraic = {var1: var1 + 2 * var2 - 3, var2: 3 * var1 - 4 * var2 + 1}
+        model.initial_conditions = {var1: pybamm.Scalar(5), var2: pybamm.Scalar(-2)}
+        pybamm.Discretisation().process_model(model)
+
+        gradients = []
+        minimize = optimize.minimize
+
+        def recording_minimize(fun, x0, jac=None, **kwargs):
+            gradients.append((jac(x0), optimize.approx_fprime(x0, fun, 1e-7)))
+            return minimize(fun, x0, jac=jac, **kwargs)
+
+        monkeypatch.setattr(optimize, "minimize", recording_minimize)
+        pybamm.AlgebraicSolver("minimize", tol=1e-8).solve(model)
+
+        # 2 J^T f at the initial guess, where f = (-2, 24)
+        gradient, finite_difference = gradients[0]
+        np.testing.assert_allclose(gradient, [140, -200])
+        np.testing.assert_allclose(gradient, finite_difference, rtol=1e-5)
+
+    def test_model_solver_least_squares_with_bounds(self):
+        # Note: we need a better test case to test this functionality properly
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1", bounds=(0, 10))
+        model.algebraic = {var1: pybamm.sin(var1) + 1}
+        model.initial_conditions = {var1: pybamm.Scalar(3)}
+        model.variables = {"var1": var1}
+
+        # Solve
+        solver = pybamm.AlgebraicSolver("lsq", tol=1e-5)
+        solution = solver.solve(model)
+        np.testing.assert_allclose(
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
+            3 * np.pi / 2,
+            rtol=1e-3,
+            atol=1e-2,
+        )
+
+    def test_model_solver_minimize_with_bounds(self):
+        # Note: we need a better test case to test this functionality properly
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1", bounds=(0, 10))
+        model.algebraic = {var1: pybamm.sin(var1) + 1}
+        model.initial_conditions = {var1: pybamm.Scalar(3)}
+        model.variables = {"var1": var1}
+
+        # Solve
+        solver = pybamm.AlgebraicSolver("minimize", tol=1e-16)
+        solution = solver.solve(model)
+        np.testing.assert_allclose(
+            model.get_processed_variable("var1").evaluate(t=None, y=solution.y),
+            3 * np.pi / 2,
+            rtol=1e-5,
+            atol=1e-4,
+        )
+
+    def test_model_solver_with_time(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.algebraic = {var1: var1 - 3 * pybamm.t, var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(4)}
+        model.variables = {"var1": var1, "var2": var2}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        t_eval = np.linspace(0, 1)
+        solver = pybamm.AlgebraicSolver()
+        solution = solver.solve(model, t_eval)
+
+        sol = np.vstack((3 * t_eval, 6 * t_eval))
+        np.testing.assert_array_equal(solution.y, sol)
+        np.testing.assert_array_equal(
+            model.get_processed_variable("var1")
+            .evaluate(t=t_eval, y=solution.y)
+            .flatten(),
+            sol[0, :],
+        )
+        np.testing.assert_array_equal(
+            model.get_processed_variable("var2")
+            .evaluate(t=t_eval, y=solution.y)
+            .flatten(),
+            sol[1, :],
+        )
+
+    def test_solve_with_input(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var + pybamm.InputParameter("value")}
+        model.initial_conditions = {var: 2}
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.AlgebraicSolver()
+        solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"value": 7})
+        np.testing.assert_array_equal(solution.y, -7)

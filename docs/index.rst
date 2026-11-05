@@ -16,12 +16,13 @@ PyBaMM documentation
    User Guide <source/user_guide/index>
    source/api/index
    source/examples/index
+   Model Zoo <source/model_zoo/index>
    Contributing <source/user_guide/contributing>
 
 **Version**: |version|
 
 **Useful links**:
-`Project Home Page <https://www.pybamm.org>`_ |
+`Project Home Page <https://pybamm.org/>`_ |
 `Installation <source/user_guide/installation/index.rst>`_ |
 `Source Repository <https://github.com/pybamm-team/pybamm>`_ |
 `Issue Tracker <https://github.com/pybamm-team/pybamm/issues>`_ |

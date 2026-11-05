@@ -1,0 +1,824 @@
+#
+# Processed Variable Computed class
+#
+from __future__ import annotations
+
+from functools import cached_property
+
+import numpy as np
+import xarray as xr
+from scipy.integrate import cumulative_trapezoid
+
+import pybamm
+
+from .base_processed_variable import BaseProcessedVariable
+
+
+class ProcessedVariableComputed(BaseProcessedVariable):
+    """
+    An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
+    returns the (interpolated) value of the base variable at that t and x.
+
+    The 'Computed' variant of ProcessedVariable deals with variables that have
+    been derived at solve time (see the 'output_variables' solver option),
+    where the full state-vector is not itself propagated and returned.
+
+    Parameters
+    ----------
+    base_variables : list of :class:`pybamm.Symbol`
+        A list of base variables with a method `evaluate(t,y)`, each entry of which
+        returns the value of that variable for that particular sub-solution.
+        A Solution can be comprised of sub-solutions which are the solutions of
+        different models.
+        Note that this can be any kind of node in the expression tree, not
+        just a :class:`pybamm.Variable`.
+        When evaluated, returns an array of size (m,n)
+    base_variables_casadi : list of :class:`casadi.Function`
+        A list of casadi functions. When evaluated, returns the same thing as
+        `base_Variable.evaluate` (but more efficiently).
+    base_variable_data : list of :numpy:array
+        A list of numpy arrays, the returned evaluations.
+    solution : :class:`pybamm.Solution`
+        The solution object to be used to create the processed variables
+    warn : bool, optional
+        Whether to raise warnings when trying to evaluate time and length scales.
+        Default is True.
+    time_indep : bool, optional
+        Whether the variable is time-independent. Default is False. Used for
+        time integral or sum variables
+    time_integral : :class:`pybamm.ProcessedVariableTimeIntegral`, optional
+        The time integral or sum whose value the variable holds. Setting it makes
+        the variable time-independent.
+    """
+
+    # Defaults for a variable pickled before __init__ set these
+    time_integral = None
+    _unjoinable = False
+    _xr_interp_args = None
+
+    def __init__(
+        self,
+        base_variables,
+        base_variables_casadi,
+        base_variables_data,
+        solution,
+        cumtrapz_ic=None,
+        time_indep=False,
+        time_integral=None,
+    ):
+        self.base_variables = base_variables
+        self.base_variables_casadi = base_variables_casadi
+        self.base_variables_data = base_variables_data
+
+        self.all_ts = solution.all_ts
+        self.all_ys = solution.all_ys
+        self.all_inputs = solution.all_inputs
+        self.all_inputs_stacked = solution.all_inputs_stacked
+
+        self.mesh = base_variables[0].mesh
+        self.domain = base_variables[0].domain
+        self.domains = base_variables[0].domains
+        self.cumtrapz_ic = cumtrapz_ic
+        self.time_integral = time_integral
+        self.time_indep = time_indep or time_integral is not None
+
+        # Sensitivity starts off uninitialized, only set when called
+        self._sensitivities = None
+        self.solution_sensitivities = solution.sensitivities
+        # Set by a join that has no value; reading the variable then raises
+        self._unjoinable = False
+
+        # Store time
+        self.t_pts = solution.t
+
+        # Evaluate base variable at initial time
+        self.base_eval_shape = self.base_variables[0].shape
+        self.base_eval_size = self.base_variables[0].size
+        self.unroll_params = {}
+
+        # initialise_* runs lazily on first read of `entries` / `_xr_data_array`.
+        self._initialised = False
+        # Built on first interpolation: it costs more than evaluating a small variable
+        self._xr_interp_args = None
+        self._xr_data_array_cache = None
+        self._initialise_method, self.dimensions = self._resolve_initialise_method()
+
+    def _resolve_initialise_method(self):
+        """Return (initialise_* method, dimensions) for this variable's shape."""
+        base_var = self.base_variables[0]
+        if (
+            self.mesh
+            and "current collector" in self.domain
+            and isinstance(self.mesh, pybamm.ScikitSubMesh2D)
+        ):
+            return self.initialise_2D_scikit_fem, 2
+        if hasattr(base_var, "secondary_mesh") and (
+            "current collector" in base_var.domains["secondary"]
+            and isinstance(base_var.secondary_mesh, pybamm.ScikitSubMesh2D)
+        ):
+            return self.initialise_3D_scikit_fem, 3
+
+        if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
+            method = (
+                self.initialise_time_independent
+                if self.time_indep
+                else self.initialise_0D
+            )
+            return method, 0
+
+        n = self.mesh.npts
+        base_shape = self.base_eval_shape[0]
+        if base_shape in [n, n + 1]:
+            return self.initialise_1D, 1
+
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_pts = base_var.secondary_mesh.nodes
+        if self.base_eval_size // len(second_dim_pts) in [
+            len(first_dim_nodes),
+            len(first_dim_edges),
+        ]:
+            return self.initialise_2D, 2
+
+        tertiary_pts = base_var.tertiary_mesh.nodes
+        if self.base_eval_size // (len(second_dim_pts) * len(tertiary_pts)) in [
+            len(first_dim_nodes),
+            len(first_dim_edges),
+        ]:
+            return self.initialise_3D, 3
+
+        raise NotImplementedError(f"Shape not recognized for {base_var}")
+
+    def _materialise(self):
+        # Not thread-safe: concurrent first reads may run initialise twice.
+        # Instances are constructed and read on the same thread in the standard
+        # solve flow, so callers parallelising reads must serialise them.
+        self._raise_if_unjoinable()
+        if not self._initialised:
+            self._initialise_method()
+            self._initialised = True
+
+    @property
+    def entries(self):
+        self._materialise()
+        return self._entries
+
+    @property
+    def _xr_data_array(self):
+        self._materialise()
+        if self._xr_data_array_cache is None and self._xr_interp_args is not None:
+            data, coords = self._xr_interp_args
+            self._xr_data_array_cache = xr.DataArray(data, coords=coords)
+            self._xr_interp_args = None
+        return self._xr_data_array_cache
+
+    @cached_property
+    def _t_pts_increasing(self) -> bool:
+        # np.interp needs strictly increasing sample times; xarray rejects repeats
+        return bool(np.all(np.diff(self.t_pts) > 0))
+
+    def as_computed(self) -> ProcessedVariableComputed:
+        return self
+
+    def add_sensitivity(self, param, data):
+        # Flat, like the sensitivities of a full state-vector ProcessedVariable
+        self._sensitivities[param] = self.unroll(data).flatten()
+
+    def _concatenate(self, realdata=None):
+        # Each segment holds every entry of each of its time points, time-major
+        if realdata is None:
+            realdata = self.base_variables_data
+        return np.concatenate(realdata, axis=0)
+
+    def unroll_0D(self, realdata=None):
+        return self._concatenate(realdata).flatten()
+
+    def unroll_1D(self, realdata=None):
+        len_space = self.base_eval_shape[0]
+        return (
+            self._concatenate(realdata)
+            .reshape((len(self.t_pts), len_space))
+            .transpose()
+        )
+
+    def unroll_2D(self, realdata=None, n_dim1=None, n_dim2=None, axis_swaps=None):
+        # initialise settings on first run
+        if axis_swaps is None:
+            axis_swaps = []
+        if not self.unroll_params:
+            self.unroll_params["n_dim1"] = n_dim1
+            self.unroll_params["n_dim2"] = n_dim2
+            self.unroll_params["axis_swaps"] = axis_swaps
+        # use stored settings on subsequent runs
+        if not n_dim1:
+            n_dim1 = self.unroll_params["n_dim1"]
+            n_dim2 = self.unroll_params["n_dim2"]
+            axis_swaps = self.unroll_params["axis_swaps"]
+        entries = self._concatenate(realdata).reshape((len(self.t_pts), n_dim1, n_dim2))
+        for a, b in axis_swaps:
+            entries = np.moveaxis(entries, a, b)
+        return entries
+
+    def unroll_3D(
+        self, realdata=None, n_dim1=None, n_dim2=None, n_dim3=None, axis_swaps=None
+    ):
+        if axis_swaps is None:
+            axis_swaps = []
+        if not self.unroll_params:
+            self.unroll_params["n_dim1"] = n_dim1
+            self.unroll_params["n_dim2"] = n_dim2
+            self.unroll_params["n_dim3"] = n_dim3
+            self.unroll_params["axis_swaps"] = axis_swaps
+        if n_dim1 is None:
+            n_dim1 = self.unroll_params["n_dim1"]
+            n_dim2 = self.unroll_params["n_dim2"]
+            n_dim3 = self.unroll_params["n_dim3"]
+            axis_swaps = self.unroll_params["axis_swaps"]
+        # time-major (n_t, output), like unroll_1D/2D
+        entries = self._concatenate(realdata).reshape(
+            (len(self.t_pts), n_dim1, n_dim2, n_dim3)
+        )
+        for a, b in axis_swaps:
+            entries = np.moveaxis(entries, a, b)
+        return entries
+
+    def unroll(self, realdata=None):
+        if self.dimensions == 0:
+            return self.unroll_0D(realdata=realdata)
+        elif self.dimensions == 1:
+            return self.unroll_1D(realdata=realdata)
+        elif self.dimensions == 2:
+            return self.unroll_2D(realdata=realdata)
+        elif self.dimensions == 3:
+            return self.unroll_3D(realdata=realdata)
+        else:
+            raise NotImplementedError(f"Unsupported data dimension: {self.dimensions}")
+
+    def initialise_time_independent(self):
+        self._entries = self.unroll_0D()
+        self._xr_interp_args = None
+
+    def initialise_0D(self):
+        entries = self.unroll_0D()
+
+        if self.cumtrapz_ic is not None:
+            entries = cumulative_trapezoid(
+                entries, self.t_pts, initial=float(self.cumtrapz_ic)
+            )
+
+        # set up interpolation
+        self._xr_interp_args = (entries, [("t", self.t_pts)])
+
+        self._entries = entries
+
+    def initialise_1D(self):
+        entries = self.unroll_1D()
+
+        # Get node and edge values
+        nodes = self.mesh.nodes
+        edges = self.mesh.edges
+        if entries.shape[0] == len(nodes):
+            space = nodes
+        elif entries.shape[0] == len(edges):
+            space = edges
+
+        # add points outside domain for extrapolation to boundaries
+        extrap_space_left = np.array([2 * space[0] - space[1]])
+        extrap_space_right = np.array([2 * space[-1] - space[-2]])
+        space = np.concatenate([extrap_space_left, space, extrap_space_right])
+        extrap_entries_left = 2 * entries[0] - entries[1]
+        extrap_entries_right = 2 * entries[-1] - entries[-2]
+        entries_for_interp = np.vstack(
+            [extrap_entries_left, entries, extrap_entries_right]
+        )
+
+        # assign attributes for reference (either x_sol or r_sol)
+        self._entries = entries
+        if self.domain[0].endswith("particle"):
+            self.first_dimension = "r"
+            self.r_sol = space
+        elif self.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]:
+            self.first_dimension = "x"
+            self.x_sol = space
+        elif self.domain == ["current collector"]:
+            self.first_dimension = "z"
+            self.z_sol = space
+        elif self.domain[0].endswith("particle size"):
+            self.first_dimension = "R"
+            self.R_sol = space
+        else:
+            self.first_dimension = "x"
+            self.x_sol = space
+
+        # assign attributes for reference
+        pts_for_interp = space
+        self.internal_boundaries = self.mesh.internal_boundaries
+
+        # Set first_dim_pts to edges for nicer plotting
+        self.first_dim_pts = edges
+
+        # set up interpolation
+        self._xr_interp_args = (
+            entries_for_interp,
+            [(self.first_dimension, pts_for_interp), ("t", self.t_pts)],
+        )
+
+    def initialise_2D(self):
+        """
+        Initialise a 2D object that depends on x and r, x and z, x and R, or R and r.
+        """
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
+        second_dim_edges = self.base_variables[0].secondary_mesh.edges
+        if self.base_eval_size // len(second_dim_nodes) == len(first_dim_nodes):
+            first_dim_pts = first_dim_nodes
+        elif self.base_eval_size // len(second_dim_nodes) == len(first_dim_edges):
+            first_dim_pts = first_dim_edges
+
+        second_dim_pts = second_dim_nodes
+        first_dim_size = len(first_dim_pts)
+        second_dim_size = len(second_dim_pts)
+
+        entries = self.unroll_2D(
+            realdata=None,
+            n_dim1=second_dim_size,
+            n_dim2=first_dim_size,
+            axis_swaps=[(0, 2), (0, 1)],
+        )
+
+        # add points outside first dimension domain for extrapolation to
+        # boundaries
+        extrap_space_first_dim_left = np.array(
+            [2 * first_dim_pts[0] - first_dim_pts[1]]
+        )
+        extrap_space_first_dim_right = np.array(
+            [2 * first_dim_pts[-1] - first_dim_pts[-2]]
+        )
+        first_dim_pts = np.concatenate(
+            [extrap_space_first_dim_left, first_dim_pts, extrap_space_first_dim_right]
+        )
+        extrap_entries_left = np.expand_dims(2 * entries[0] - entries[1], axis=0)
+        extrap_entries_right = np.expand_dims(2 * entries[-1] - entries[-2], axis=0)
+        entries_for_interp = np.concatenate(
+            [extrap_entries_left, entries, extrap_entries_right], axis=0
+        )
+
+        # add points outside second dimension domain for extrapolation to
+        # boundaries
+        extrap_space_second_dim_left = np.array(
+            [2 * second_dim_pts[0] - second_dim_pts[1]]
+        )
+        extrap_space_second_dim_right = np.array(
+            [2 * second_dim_pts[-1] - second_dim_pts[-2]]
+        )
+        second_dim_pts = np.concatenate(
+            [
+                extrap_space_second_dim_left,
+                second_dim_pts,
+                extrap_space_second_dim_right,
+            ]
+        )
+        extrap_entries_second_dim_left = np.expand_dims(
+            2 * entries_for_interp[:, 0, :] - entries_for_interp[:, 1, :], axis=1
+        )
+        extrap_entries_second_dim_right = np.expand_dims(
+            2 * entries_for_interp[:, -1, :] - entries_for_interp[:, -2, :], axis=1
+        )
+        entries_for_interp = np.concatenate(
+            [
+                extrap_entries_second_dim_left,
+                entries_for_interp,
+                extrap_entries_second_dim_right,
+            ],
+            axis=1,
+        )
+
+        # Process r-x, x-z, r-R, R-x, or R-z
+        if self.domain[0].endswith("particle") and self.domains["secondary"][
+            0
+        ].endswith("electrode"):
+            self.first_dimension = "r"
+            self.second_dimension = "x"
+            self.r_sol = first_dim_pts
+            self.x_sol = second_dim_pts
+        elif self.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and self.domains["secondary"] == ["current collector"]:
+            self.first_dimension = "x"
+            self.second_dimension = "z"
+            self.x_sol = first_dim_pts
+            self.z_sol = second_dim_pts
+        elif self.domain[0].endswith("particle") and self.domains["secondary"][
+            0
+        ].endswith("particle size"):
+            self.first_dimension = "r"
+            self.second_dimension = "R"
+            self.r_sol = first_dim_pts
+            self.R_sol = second_dim_pts
+        elif self.domain[0].endswith("particle size") and self.domains["secondary"][
+            0
+        ].endswith("electrode"):
+            self.first_dimension = "R"
+            self.second_dimension = "x"
+            self.R_sol = first_dim_pts
+            self.x_sol = second_dim_pts
+        elif self.domain[0].endswith("particle size") and self.domains["secondary"] == [
+            "current collector"
+        ]:
+            self.first_dimension = "R"
+            self.second_dimension = "z"
+            self.R_sol = first_dim_pts
+            self.z_sol = second_dim_pts
+        else:  # pragma: no cover
+            raise pybamm.DomainError(
+                f"Cannot process 2D object with domains '{self.domains}'."
+            )
+
+        # assign attributes for reference
+        self._entries = entries
+        first_dim_pts_for_interp = first_dim_pts
+        second_dim_pts_for_interp = second_dim_pts
+
+        # Set pts to edges for nicer plotting
+        self.first_dim_pts = first_dim_edges
+        self.second_dim_pts = second_dim_edges
+
+        # set up interpolation
+        self._xr_interp_args = (
+            entries_for_interp,
+            {
+                self.first_dimension: first_dim_pts_for_interp,
+                self.second_dimension: second_dim_pts_for_interp,
+                "t": self.t_pts,
+            },
+        )
+
+    def initialise_2D_scikit_fem(self):
+        y_sol = self.mesh.edges["y"]
+        len_y = len(y_sol)
+        z_sol = self.mesh.edges["z"]
+        len_z = len(z_sol)
+        entries = self.unroll_2D(
+            realdata=None,
+            n_dim1=len_y,
+            n_dim2=len_z,
+            axis_swaps=[(0, 2)],
+        )
+
+        # assign attributes for reference
+        self._entries = entries
+        self.y_sol = y_sol
+        self.z_sol = z_sol
+        self.first_dimension = "y"
+        self.second_dimension = "z"
+        self.first_dim_pts = y_sol
+        self.second_dim_pts = z_sol
+
+        # set up interpolation
+        self._xr_interp_args = (
+            entries,
+            {"y": y_sol, "z": z_sol, "t": self.t_pts},
+        )
+
+    def initialise_3D(self):
+        """
+        Initialise a 3D object that depends on x, r, and R.
+        """
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
+        second_dim_edges = self.base_variables[0].secondary_mesh.edges
+        third_dim_nodes = self.base_variables[0].tertiary_mesh.nodes
+        third_dim_edges = self.base_variables[0].tertiary_mesh.edges
+        if self.base_eval_size // (len(second_dim_nodes) * len(third_dim_nodes)) == len(
+            first_dim_nodes
+        ):
+            first_dim_pts = first_dim_nodes
+        elif self.base_eval_size // (
+            len(second_dim_nodes) * len(third_dim_nodes)
+        ) == len(first_dim_edges):
+            first_dim_pts = first_dim_edges
+
+        second_dim_pts = second_dim_nodes
+        third_dim_pts = third_dim_nodes
+
+        first_dim_size = len(first_dim_pts)
+        second_dim_size = len(second_dim_pts)
+        third_dim_size = len(third_dim_pts)
+
+        entries = self.unroll_3D(
+            realdata=None,
+            n_dim1=third_dim_size,
+            n_dim2=second_dim_size,
+            n_dim3=first_dim_size,
+            axis_swaps=[(0, 3), (0, 2), (0, 1)],
+        )
+
+        # add points outside first dimension domain for extrapolation to
+        # boundaries
+        extrap_space_first_dim_left = np.array(
+            [2 * first_dim_pts[0] - first_dim_pts[1]]
+        )
+        extrap_space_first_dim_right = np.array(
+            [2 * first_dim_pts[-1] - first_dim_pts[-2]]
+        )
+        first_dim_pts = np.concatenate(
+            [extrap_space_first_dim_left, first_dim_pts, extrap_space_first_dim_right]
+        )
+        extrap_entries_left = np.expand_dims(2 * entries[0] - entries[1], axis=0)
+        extrap_entries_right = np.expand_dims(2 * entries[-1] - entries[-2], axis=0)
+        entries_for_interp = np.concatenate(
+            [extrap_entries_left, entries, extrap_entries_right], axis=0
+        )
+
+        # add points outside second dimension domain for extrapolation to
+        # boundaries
+        extrap_space_second_dim_left = np.array(
+            [2 * second_dim_pts[0] - second_dim_pts[1]]
+        )
+        extrap_space_second_dim_right = np.array(
+            [2 * second_dim_pts[-1] - second_dim_pts[-2]]
+        )
+        second_dim_pts = np.concatenate(
+            [
+                extrap_space_second_dim_left,
+                second_dim_pts,
+                extrap_space_second_dim_right,
+            ]
+        )
+        extrap_entries_second_dim_left = np.expand_dims(
+            2 * entries_for_interp[:, 0, :] - entries_for_interp[:, 1, :], axis=1
+        )
+        extrap_entries_second_dim_right = np.expand_dims(
+            2 * entries_for_interp[:, -1, :] - entries_for_interp[:, -2, :], axis=1
+        )
+        entries_for_interp = np.concatenate(
+            [
+                extrap_entries_second_dim_left,
+                entries_for_interp,
+                extrap_entries_second_dim_right,
+            ],
+            axis=1,
+        )
+
+        # add points outside tertiary dimension domain for extrapolation to
+        # boundaries
+        extrap_space_third_dim_left = np.array(
+            [2 * third_dim_pts[0] - third_dim_pts[1]]
+        )
+        extrap_space_third_dim_right = np.array(
+            [2 * third_dim_pts[-1] - third_dim_pts[-2]]
+        )
+        third_dim_pts = np.concatenate(
+            [
+                extrap_space_third_dim_left,
+                third_dim_pts,
+                extrap_space_third_dim_right,
+            ]
+        )
+        extrap_entries_third_dim_left = np.expand_dims(
+            2 * entries_for_interp[:, :, 0] - entries_for_interp[:, :, 1], axis=2
+        )
+        extrap_entries_third_dim_right = np.expand_dims(
+            2 * entries_for_interp[:, :, -1] - entries_for_interp[:, :, -2], axis=2
+        )
+        entries_for_interp = np.concatenate(
+            [
+                extrap_entries_third_dim_left,
+                entries_for_interp,
+                extrap_entries_third_dim_right,
+            ],
+            axis=2,
+        )
+
+        # Process r-R-x only
+        if (
+            self.domain[0].endswith("particle")
+            and self.domains["secondary"][0].endswith("particle size")
+            and self.domains["tertiary"][0].endswith("electrode")
+        ):
+            self.first_dimension = "r"
+            self.second_dimension = "R"
+            self.third_dimension = "x"
+            self.r_sol = first_dim_pts
+            self.R_sol = second_dim_pts
+            self.x_sol = third_dim_pts
+        else:  # pragma: no cover
+            raise pybamm.DomainError(
+                f"Cannot process 3D object with domains '{self.domains}'."
+            )
+
+        # assign attributes for reference
+        self._entries = entries
+        first_dim_pts_for_interp = first_dim_pts
+        second_dim_pts_for_interp = second_dim_pts
+        third_dim_pts_for_interp = third_dim_pts
+
+        # Set pts to edges for nicer plotting
+        self.first_dim_pts = first_dim_edges
+        self.second_dim_pts = second_dim_edges
+        self.third_dim_pts = third_dim_edges
+
+        # set up interpolation
+        self._xr_interp_args = (
+            entries_for_interp,
+            {
+                self.first_dimension: first_dim_pts_for_interp,
+                self.second_dimension: second_dim_pts_for_interp,
+                self.third_dimension: third_dim_pts_for_interp,
+                "t": self.t_pts,
+            },
+        )
+
+    def initialise_3D_scikit_fem(self):
+        x_nodes = self.mesh.nodes
+        x_edges = self.mesh.edges
+        y_sol = self.base_variables[0].secondary_mesh.edges["y"]
+        z_sol = self.base_variables[0].secondary_mesh.edges["z"]
+        if self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_nodes):
+            x_sol = x_nodes
+        elif self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_edges):
+            x_sol = x_edges
+
+        len_x = len(x_sol)
+        len_y = len(y_sol)
+        len_z = len(z_sol)
+        # x varies fastest, then the current-collector nodes, which run z-fastest
+        entries = self.unroll_3D(
+            realdata=None,
+            n_dim1=len_y,
+            n_dim2=len_z,
+            n_dim3=len_x,
+            axis_swaps=[(0, 3), (2, 0)],
+        )
+
+        # assign attributes for reference
+        self._entries = entries
+        self.x_sol = x_sol
+        self.y_sol = y_sol
+        self.z_sol = z_sol
+        self.first_dimension = "x"
+        self.second_dimension = "y"
+        self.third_dimension = "z"
+        self.first_dim_pts = x_sol
+        self.second_dim_pts = y_sol
+        self.third_dim_pts = z_sol
+
+        # set up interpolation
+        self._xr_interp_args = (
+            entries,
+            {"x": x_sol, "y": y_sol, "z": z_sol, "t": self.t_pts},
+        )
+
+    def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None):
+        """
+        Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
+        using interpolation
+        """
+        if self.time_indep:
+            return self.entries
+        if (
+            self.dimensions == 0
+            and t is not None
+            and np.ndim(t) <= 1
+            and all(arg is None for arg in (x, r, y, z, R))
+            and self._t_pts_increasing
+        ):
+            # Same values as xr.interp, far cheaper; N-D t keeps the xarray route
+            values = np.interp(t, self.t_pts, self.entries, left=np.nan, right=np.nan)
+            return np.asarray(values)
+        kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
+        # Remove any None arguments
+        kwargs = {key: value for key, value in kwargs.items() if value is not None}
+        # Use xarray interpolation, return numpy array
+        return self._xr_data_array.interp(**kwargs).values
+
+    @property
+    def data(self):
+        """Same as entries, but different name"""
+        return self.entries
+
+    @property
+    def sensitivities(self):
+        """
+        Returns a dictionary of sensitivities for each input parameter.
+        The keys are the input parameters, and the value is a matrix of size
+        (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
+        points, and n_p is the size of the input parameter
+        """
+        self._raise_if_unjoinable()
+        # No sensitivities if there are no inputs
+        if len(self.all_inputs[0]) == 0:
+            return {}
+        return self._sensitivities
+
+    def _concat(
+        self, other: pybamm.ProcessedVariableComputed, new_sol: pybamm.Solution
+    ) -> pybamm.ProcessedVariableComputed:
+        """
+        Returns a new ProcessedVariableComputed object holding the data from this
+        object followed by the data from other. A first time point of other that
+        repeats the last time point of this object is dropped, and an
+        ``ExplicitTimeIntegral`` becomes the sum of the integrals over each, so
+        a gap between them adds nothing. Any other time integral gives a
+        variable that raises ``NotImplementedError`` when read.
+
+        Parameters
+        ----------
+        other : :class:`pybamm.ProcessedVariableComputed`
+            The other ProcessedVariableComputed object to append to this one
+        new_sol : :class:`pybamm.Solution`
+            The new solution object to be used to create the processed variables
+        """
+        # Solution.__add__ drops other's first time point when it repeats self's last
+        n_repeated = int(other.t_pts[0] == self.t_pts[-1])
+        joins_time_integrals = self.time_indep or other.time_indep
+        unjoinable = (
+            self._unjoinable
+            or other._unjoinable
+            or (joins_time_integrals and not self._time_integrals_joinable(other))
+        )
+
+        if unjoinable:
+            # Raise on read rather than here, so the rest of the solution still joins
+            base_variables_data = self.base_variables_data + other.base_variables_data
+            sensitivities = None
+        elif joins_time_integrals:
+            base_variables_data, sensitivities = self._join_time_integral(other)
+        else:
+            base_variables_data, sensitivities = self._join_samples(other, n_repeated)
+
+        new_var = self.__class__(
+            self.base_variables + other.base_variables,
+            self.base_variables_casadi + other.base_variables_casadi,
+            base_variables_data,
+            new_sol,
+            time_indep=joins_time_integrals,
+            time_integral=self.time_integral,
+        )
+        # Not new_sol.t: from_sub_solutions passes the final solution to every join
+        new_var.t_pts = np.concatenate((self.t_pts, other.t_pts[n_repeated:]))
+        new_var._sensitivities = sensitivities
+        new_var._unjoinable = unjoinable
+        return new_var
+
+    def _join_samples(self, other, n_repeated):
+        """
+        Return the data and sensitivities of this variable's time points followed
+        by other's, leaving out other's first ``n_repeated`` time points.
+        """
+        # Data and sensitivities are time-major, so the repeat is their first rows
+        first_data, *later_data = other.base_variables_data
+        base_variables_data = [
+            *self.base_variables_data,
+            first_data[n_repeated:],
+            *later_data,
+        ]
+        other_sensitivities = other.sensitivities or {}
+        sensitivities = {}
+        for k, value in (self.sensitivities or {}).items():
+            later = other_sensitivities[k]
+            rows_repeated = n_repeated * len(later) // len(other.t_pts)
+            sensitivities[k] = np.concatenate((value, later[rows_repeated:]))
+        return base_variables_data, sensitivities
+
+    def _join_time_integral(self, other):
+        """
+        Return the data and sensitivities of the time integral over this
+        variable's segments plus the one over other's.
+        """
+        other_sensitivities = other.sensitivities or {}
+        sensitivities = {
+            k: value + other_sensitivities[k]
+            for k, value in (self.sensitivities or {}).items()
+        }
+        # other's integral starts again from its initial condition
+        initial_condition = float(other.time_integral.initial_condition)
+        return [self.entries + other.entries - initial_condition], sensitivities
+
+    def _time_integrals_joinable(self, other):
+        """Return whether this variable and other are joinable time integrals."""
+        # Every segment samples its end points, so a DiscreteTimeSum would count the
+        # boundary twice; a function of an integral cannot be split across segments
+        return all(
+            time_integral is not None
+            and time_integral.method == "continuous"
+            and time_integral.post_sum_node is None
+            for time_integral in (self.time_integral, other.time_integral)
+        )
+
+    def _raise_if_unjoinable(self):
+        if self._unjoinable:
+            raise NotImplementedError(
+                "This variable joins solution segments (multi-step experiments or "
+                "solution addition), which only an ExplicitTimeIntegral output "
+                "variable supports; a DiscreteTimeSum or an expression of a time "
+                "integral has no value over the joined segments."
+            )

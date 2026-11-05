@@ -1,0 +1,138 @@
+#ifndef PYBAMM_IDAKLU_SOLUTION_DATA_HPP
+#define PYBAMM_IDAKLU_SOLUTION_DATA_HPP
+
+#include <vector>
+#include "common.hpp"
+#include "Solution.hpp"
+
+namespace {
+// Helper: wrap a vector as a numpy array (zero-copy via capsule)
+// MUST be called with GIL held!
+inline np_array vector_to_numpy(std::vector<sunrealtype>&& vec) {
+    auto* holder = new std::vector<sunrealtype>(std::move(vec));
+    py::capsule capsule(holder, [](void* v) {
+        delete reinterpret_cast<std::vector<sunrealtype>*>(v);
+    });
+    return np_array(holder->size(), holder->data(), capsule);
+}
+
+// Helper: wrap a vector as a 2D numpy array (zero-copy via capsule)
+// MUST be called with GIL held!
+inline np_array vector_to_numpy_2d(std::vector<sunrealtype>&& vec,
+                                    ptrdiff_t d0, ptrdiff_t d1) {
+    auto* holder = new std::vector<sunrealtype>(std::move(vec));
+    py::capsule capsule(holder, [](void* v) {
+        delete reinterpret_cast<std::vector<sunrealtype>*>(v);
+    });
+    return np_array(std::vector<ptrdiff_t>{d0, d1}, holder->data(), capsule);
+}
+
+// Helper: wrap a vector as a 3D numpy array (zero-copy via capsule)
+// MUST be called with GIL held!
+inline np_array vector_to_numpy_3d(std::vector<sunrealtype>&& vec,
+                                    ptrdiff_t d0, ptrdiff_t d1, ptrdiff_t d2) {
+    auto* holder = new std::vector<sunrealtype>(std::move(vec));
+    py::capsule capsule(holder, [](void* v) {
+        delete reinterpret_cast<std::vector<sunrealtype>*>(v);
+    });
+    return np_array(std::vector<ptrdiff_t>{d0, d1, d2}, holder->data(), capsule);
+}
+} // anonymous namespace
+
+/**
+ * @brief SolutionData class - holds raw C++ vectors from solve().
+ * Numpy arrays are created only in generate_solution() when GIL is held.
+ */
+class SolutionData
+{
+  public:
+    SolutionData() = default;
+
+    SolutionData(
+      int flag,
+      std::vector<sunrealtype>&& t,
+      std::vector<sunrealtype>&& y,
+      std::vector<sunrealtype>&& yp,
+      std::vector<sunrealtype>&& yS,
+      std::vector<sunrealtype>&& ypS,
+      std::vector<sunrealtype>&& yinit,
+      std::vector<sunrealtype>&& yterm,
+      std::vector<sunrealtype>&& yS_init,
+      std::vector<sunrealtype>&& yS_term,
+      ptrdiff_t arg_sens0,
+      ptrdiff_t arg_sens1,
+      ptrdiff_t arg_sens2,
+      bool save_hermite,
+      const IDAKLUStats &stats)
+      : flag(flag),
+        t_vec(std::move(t)),
+        y_vec(std::move(y)),
+        yp_vec(std::move(yp)),
+        yS_vec(std::move(yS)),
+        ypS_vec(std::move(ypS)),
+        yinit_vec(std::move(yinit)),
+        yterm_vec(std::move(yterm)),
+        yS_init_vec(std::move(yS_init)),
+        yS_term_vec(std::move(yS_term)),
+        arg_sens0(arg_sens0),
+        arg_sens1(arg_sens1),
+        arg_sens2(arg_sens2),
+        save_hermite(save_hermite),
+        stats(stats)
+    {}
+
+    ~SolutionData() = default;
+    SolutionData(const SolutionData&) = delete;
+    SolutionData& operator=(const SolutionData&) = delete;
+    SolutionData(SolutionData&&) noexcept = default;
+    SolutionData& operator=(SolutionData&&) noexcept = default;
+
+    /**
+     * @brief The IDA return flag, negative if the integration failed.
+     */
+    int get_flag() const { return flag; }
+
+    /**
+     * @brief Convert raw vectors to numpy arrays and create Solution.
+     * MUST be called with GIL held (i.e., in serial section).
+     */
+    Solution generate_solution() {
+      // One row of states per parameter, present only in outputs-only mode
+      const ptrdiff_t n_states = static_cast<ptrdiff_t>(yinit_vec.size());
+      const ptrdiff_t n_state_sens =
+          n_states > 0 ? static_cast<ptrdiff_t>(yS_init_vec.size()) / n_states : 0;
+      return Solution(
+        flag,
+        vector_to_numpy(std::move(t_vec)),
+        vector_to_numpy(std::move(y_vec)),
+        vector_to_numpy(std::move(yp_vec)),
+        vector_to_numpy_3d(std::move(yS_vec), arg_sens0, arg_sens1, arg_sens2),
+        vector_to_numpy_3d(std::move(ypS_vec),
+                           save_hermite ? arg_sens0 : 0, arg_sens1, arg_sens2),
+        vector_to_numpy(std::move(yinit_vec)),
+        vector_to_numpy(std::move(yterm_vec)),
+        vector_to_numpy_2d(std::move(yS_init_vec), n_state_sens, n_states),
+        vector_to_numpy_2d(std::move(yS_term_vec), n_state_sens, n_states),
+        stats
+      );
+    }
+
+private:
+    int flag = 0;
+    std::vector<sunrealtype> t_vec;
+    std::vector<sunrealtype> y_vec;
+    std::vector<sunrealtype> yp_vec;
+    std::vector<sunrealtype> yS_vec;
+    std::vector<sunrealtype> ypS_vec;
+    std::vector<sunrealtype> yinit_vec;
+    std::vector<sunrealtype> yterm_vec;
+    std::vector<sunrealtype> yS_init_vec;
+    std::vector<sunrealtype> yS_term_vec;
+    ptrdiff_t arg_sens0 = 0;
+    ptrdiff_t arg_sens1 = 0;
+    ptrdiff_t arg_sens2 = 0;
+    bool save_hermite = false;
+    IDAKLUStats stats;
+};
+
+#endif // PYBAMM_IDAKLU_SOLUTION_DATA_HPP

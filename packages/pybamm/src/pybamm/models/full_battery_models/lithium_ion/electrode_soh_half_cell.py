@@ -1,0 +1,416 @@
+#
+# A model to calculate electrode-specific SOH, adapted to a half-cell
+#
+import warnings
+
+import pybamm
+
+from .electrode_soh import get_esoh_default_solver
+from .util import check_if_composite, get_initial_ocp, get_lithiation_delithiation
+
+
+class ElectrodeSOHHalfCell(pybamm.BaseModel):
+    """
+    Model to calculate electrode-specific SOH for a half-cell, adapted from
+    :footcite:t:`Mohtat2019`.
+    This model is mainly for internal use, to calculate summary variables in a
+    simulation.
+
+    .. math::
+        V_{max} = U_w(x_{100}),
+    .. math::
+        V_{min} = U_w(x_{0}),
+    .. math::
+        x_0 = x_{100} - \\frac{C}{C_w}.
+
+    Subscript w indicates working electrode and subscript c indicates counter electrode.
+
+    """
+
+    def __init__(self, name="ElectrodeSOH model", direction=None, options=None):
+        pybamm.citations.register("Mohtat2019")
+        super().__init__(name)
+        options = options or {"working electrode": "positive"}
+        param = pybamm.LithiumIonParameters(options)
+        is_composite = check_if_composite(options, "positive")
+
+        # Primary phase
+        x_100 = pybamm.Variable("x_100", bounds=(0, 1))
+        x_0 = pybamm.Variable("x_0", bounds=(0, 1))
+        Q_w = pybamm.InputParameter("Q_w")
+        T_ref = param.T_ref
+        U_w = param.p.prim.U
+        lith_delith_primary = get_lithiation_delithiation(
+            direction, "positive", options, phase="primary"
+        )
+
+        # Secondary phase
+        Q_2 = pybamm.Scalar(0)
+        if is_composite:
+            x_100_2 = pybamm.Variable("x_100_2", bounds=(0, 1))
+            x_0_2 = pybamm.Variable("x_0_2", bounds=(0, 1))
+            Q_w_2 = pybamm.InputParameter("Q_w_2")
+            U_w_2 = param.p.sec.U
+            Q_2 = Q_w_2 * (x_0_2 - x_100_2)
+            lith_delith_secondary = get_lithiation_delithiation(
+                direction, "positive", options, phase="secondary"
+            )
+
+        Q_1 = Q_w * (x_0 - x_100)
+        Q = Q_1 + Q_2
+
+        V_max = param.ocp_soc_100
+        V_min = param.ocp_soc_0
+
+        self.algebraic = {
+            x_100: U_w(x_100, T_ref, lith_delith_primary) - V_max,
+            x_0: U_w(x_0, T_ref, lith_delith_primary) - V_min,
+        }
+        self.initial_conditions = {x_100: 0.8, x_0: 0.2}
+        if is_composite:
+            self.algebraic[x_100_2] = (
+                U_w_2(x_100_2, T_ref, lith_delith_secondary) - V_max
+            )
+            self.algebraic[x_0_2] = U_w_2(x_0_2, T_ref, lith_delith_secondary) - V_min
+            self.initial_conditions[x_100_2] = 0.8
+            self.initial_conditions[x_0_2] = 0.2
+
+        self.variables = {
+            "x_100": x_100,
+            "x_0": x_0,
+            "Q": Q,
+            "Uw(x_100)": U_w(x_100, T_ref, lith_delith_primary),
+            "Uw(x_0)": U_w(x_0, T_ref, lith_delith_primary),
+            "Q_w": Q_w,
+        }
+        if is_composite:
+            self.variables.update(
+                {
+                    "x_100_2": x_100_2,
+                    "x_0_2": x_0_2,
+                    "Q_w_2": Q_w_2,
+                    "Uw(x_100_2)": U_w_2(x_100_2, T_ref, lith_delith_secondary),
+                    "Uw(x_0_2)": U_w_2(x_0_2, T_ref, lith_delith_secondary),
+                }
+            )
+
+    @property
+    def default_solver(self):
+        return get_esoh_default_solver(tol=1e-7)
+
+
+def get_initial_stoichiometry_half_cell(
+    initial_value,
+    parameter_values,
+    param=None,
+    options=None,
+    tol=1e-6,
+    inputs=None,
+    direction=None,
+    esoh_sim=None,
+    **kwargs,
+):
+    """
+    Calculate initial stoichiometry to start off the simulation at a particular
+    state of charge, given voltage limits, open-circuit potential, etc defined by
+    parameter_values
+
+    Parameters
+    ----------
+    initial_value : float
+        Target initial value.
+        If integer, interpreted as SOC, must be between 0 and 1.
+        If string e.g. "4 V", interpreted as voltage,
+        must be between V_min and V_max.
+    parameter_values : pybamm.ParameterValues
+        The parameter values to use in the calculation
+    param : :class:`pybamm.LithiumIonParameters`, optional
+        The symbolic parameter set to use for the simulation.
+        If not provided, the default parameter set will be used.
+    tol : float, optional
+        The tolerance for the solver used to compute the initial stoichiometries.
+        Default is 1e-6.
+    inputs : dict, optional
+        A dictionary of input parameters passed to the model.
+    esoh_sim : :class:`pybamm.Simulation`, optional
+        A pre-built simulation wrapping an :class:`ElectrodeSOHHalfCell` model
+        to reuse across calls. If not provided, a new one is created.
+
+    Returns
+    -------
+    x
+        The initial stoichiometry that give the desired initial state of charge
+    """
+    details = _solve_initial_stoichiometry_half_cell(
+        initial_value,
+        parameter_values,
+        options=options,
+        tol=tol,
+        inputs=inputs,
+        direction=direction,
+        esoh_sim=esoh_sim,
+    )
+    return {key: details[key] for key in ["x", "x_2"] if key in details}
+
+
+def _solve_initial_stoichiometry_half_cell(
+    initial_value,
+    parameter_values,
+    options=None,
+    tol=1e-6,
+    inputs=None,
+    direction=None,
+    esoh_sim=None,
+):
+    """
+    Solve for the initial stoichiometry of a half-cell, keeping the intermediate
+    values.
+
+    Parameters
+    ----------
+    initial_value : float or str
+        Target initial SOC, or voltage as a string ending in "V".
+    parameter_values : pybamm.ParameterValues
+        The parameter values to use in the calculation.
+    options : dict, optional
+        A dictionary of options to be passed to the parameters.
+    tol : float, optional
+        The tolerance for the solvers. Default is 1e-6.
+    inputs : dict, optional
+        A dictionary of input parameters passed to the model.
+    direction : str, optional
+        The OCV branch to use. Can be "charge" or "discharge".
+    esoh_sim : :class:`pybamm.Simulation`, optional
+        A pre-built simulation wrapping an :class:`ElectrodeSOHHalfCell` model.
+
+    Returns
+    -------
+    dict
+        The stoichiometry limits ("x_0", "x_100", ...) and the initial
+        stoichiometries ("x", and "x_2" for a composite electrode).
+    """
+    param = pybamm.LithiumIonParameters(options)
+    x_dict = get_min_max_stoichiometries(
+        parameter_values,
+        inputs=inputs,
+        direction=direction,
+        options=options,
+        esoh_sim=esoh_sim,
+    )
+    x_0, x_100 = x_dict["x_0"], x_dict["x_100"]
+    is_composite = check_if_composite(options, "positive")
+    if is_composite:
+        x_0_2, x_100_2 = x_dict["x_0_2"], x_dict["x_100_2"]
+
+    if isinstance(initial_value, str) and initial_value.endswith("V"):
+        V_init = float(initial_value[:-1])
+        V_min = parameter_values.evaluate(param.voltage_low_cut, inputs=inputs)
+        V_max = parameter_values.evaluate(param.voltage_high_cut, inputs=inputs)
+
+        if not V_min - tol <= V_init <= V_max + tol:
+            warnings.warn(
+                message=f"Initial voltage {V_init}V is outside the voltage limits "
+                f"({V_min}, {V_max})",
+                category=UserWarning,
+                stacklevel=2,
+            )
+        # Solve simple model for initial soc based on target voltage
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x")
+        x_2 = pybamm.Variable("x_2") if is_composite else None
+        model.algebraic = _initial_voltage_equations(
+            x, x_2, V_init, param, options, direction
+        )
+        # initial guess for x linearly interpolates between 0 and 1
+        # based on V linearly interpolating between V_max and V_min
+        soc_initial_guess = (V_init - V_min) / (V_max - V_min)
+        model.initial_conditions = {
+            var: 1 - soc_initial_guess for var in model.algebraic
+        }
+        model.variables = {var.name: var for var in model.algebraic}
+        parameter_values.process_model(model)
+        solver = get_esoh_default_solver(tol=tol)
+        sol = solver.solve(model, [0], inputs=inputs)
+        x = sol["x"].data[0]
+        if is_composite:
+            x_2 = sol["x_2"].data[0]
+    elif isinstance(initial_value, int | float):
+        if initial_value > 1:
+            warnings.warn(
+                message=f"Initial SoC {initial_value} is greater than 1",
+                category=UserWarning,
+                stacklevel=2,
+            )
+        elif initial_value < 0:
+            warnings.warn(
+                message=f"Initial SoC {initial_value} is less than 0",
+                category=UserWarning,
+                stacklevel=2,
+            )
+        if not is_composite:
+            x = x_0 + initial_value * (x_100 - x_0)
+        else:
+            model = pybamm.BaseModel()
+            x = pybamm.Variable("x")
+            x_2 = pybamm.Variable("x_2")
+            model.algebraic = _composite_soc_equations(
+                x,
+                x_2,
+                initial_value,
+                (x_0, x_100, x_0_2, x_100_2),
+                param,
+                options,
+                direction,
+            )
+            model.initial_conditions[x] = x_0 + initial_value * (x_100 - x_0)
+            model.initial_conditions[x_2] = x_0_2 + initial_value * (x_100_2 - x_0_2)
+            model.variables = {"x": x, "x_2": x_2}
+            parameter_values.process_model(model)
+            solver = get_esoh_default_solver(tol=tol)
+            sol = solver.solve(model, [0], inputs=inputs)
+            x = sol["x"].data[0]
+            x_2 = sol["x_2"].data[0]
+    else:
+        raise ValueError(
+            "Invalid initial value. Expected a float (for SoC, "
+            "1.0 for 100%) or a string ending in 'V' (for voltage), got "
+            f"{initial_value!r} of type {type(initial_value).__name__}"
+        )
+    ret_dict = {**x_dict, "x": x}
+    if is_composite:
+        ret_dict["x_2"] = x_2
+    return ret_dict
+
+
+def _initial_voltage_equations(x, x_2, V_init, param, options, direction):
+    """
+    Equations for the working electrode stoichiometries at which the open-circuit
+    potential is ``V_init``.
+
+    Parameters
+    ----------
+    x : :class:`pybamm.Variable`
+        The primary phase stoichiometry.
+    x_2 : :class:`pybamm.Variable` or None
+        The secondary phase stoichiometry, or None if there is one phase.
+    V_init : float
+        The open-circuit potential [V].
+    param : :class:`pybamm.LithiumIonParameters`
+        The symbolic parameter set.
+    options : dict-like
+        Model options.
+    direction : str or None
+        The OCP branch to use. Can be "charge" or "discharge".
+
+    Returns
+    -------
+    dict
+        The residual of each stoichiometry.
+    """
+    T_init = param.T_init
+    equations = {
+        x: get_initial_ocp(
+            param.p.prim, x, T_init, direction, "positive", options, "primary"
+        )
+        - V_init
+    }
+    if x_2 is not None:
+        equations[x_2] = (
+            get_initial_ocp(
+                param.p.sec, x_2, T_init, direction, "positive", options, "secondary"
+            )
+            - V_init
+        )
+    return equations
+
+
+def _composite_soc_equations(x, x_2, soc, limits, param, options, direction):
+    """
+    Equations for the stoichiometries of the two working electrode phases at an SOC,
+    with the phases in equilibrium.
+
+    Parameters
+    ----------
+    x, x_2 : :class:`pybamm.Variable`
+        The primary and secondary phase stoichiometries.
+    soc : float or :class:`pybamm.Symbol`
+        The SOC.
+    limits : tuple
+        The stoichiometry limits x_0, x_100, x_0_2 and x_100_2.
+    param : :class:`pybamm.LithiumIonParameters`
+        The symbolic parameter set.
+    options : dict-like
+        Model options.
+    direction : str or None
+        The OCP branch to use. Can be "charge" or "discharge".
+
+    Returns
+    -------
+    dict
+        The residual of each stoichiometry.
+    """
+    x_0, x_100, x_0_2, x_100_2 = limits
+    Q_w = param.p.prim.Q_init
+    Q_w_2 = param.p.sec.Q_init
+    Q_min = x_100 * Q_w + x_100_2 * Q_w_2
+    Q_max = x_0 * Q_w + x_0_2 * Q_w_2
+    Q_now = Q_w * x + Q_w_2 * x_2
+    # SOC 0 and 1 are defined at the reference temperature
+    T_ref = param.T_ref
+    lithiation_primary = get_lithiation_delithiation(
+        direction, "positive", options, phase="primary"
+    )
+    lithiation_secondary = get_lithiation_delithiation(
+        direction, "positive", options, phase="secondary"
+    )
+    return {
+        x: param.p.prim.U(x, T_ref, lithiation_primary)
+        - param.p.sec.U(x_2, T_ref, lithiation_secondary),
+        x_2: (Q_now - Q_min) / (Q_max - Q_min) - soc,
+    }
+
+
+def get_min_max_stoichiometries(
+    parameter_values, options=None, inputs=None, direction=None, esoh_sim=None
+):
+    """
+    Get the minimum and maximum stoichiometries from the parameter values
+
+    Parameters
+    ----------
+    parameter_values : pybamm.ParameterValues
+        The parameter values to use in the calculation
+    options : dict, optional
+        A dictionary of options to be passed to the parameters, see
+        :class:`pybamm.BatteryModelOptions`.
+        If None, the default is used: {"working electrode": "positive"}
+    esoh_sim : :class:`pybamm.Simulation`, optional
+        A pre-built simulation wrapping an :class:`ElectrodeSOHHalfCell` model
+        to reuse across calls. If not provided, a new one is created.
+    """
+    inputs = inputs or {}
+    if options is None:
+        options = {"working electrode": "positive"}
+    param = pybamm.LithiumIonParameters(options)
+    is_composite = check_if_composite(options, "positive")
+    if is_composite:
+        Q_w = parameter_values.evaluate(param.p.prim.Q_init, inputs=inputs)
+        Q_w_2 = parameter_values.evaluate(param.p.sec.Q_init, inputs=inputs)
+        Q_inputs = {"Q_w": Q_w, "Q_w_2": Q_w_2}
+    else:
+        Q_w = parameter_values.evaluate(param.p.prim.Q_init, inputs=inputs)
+        Q_inputs = {"Q_w": Q_w}
+    all_inputs = {**inputs, **Q_inputs}
+    if esoh_sim is None:
+        esoh_model = pybamm.lithium_ion.ElectrodeSOHHalfCell(
+            "ElectrodeSOH", direction=direction, options=options
+        )
+        esoh_sim = pybamm.Simulation(esoh_model, parameter_values=parameter_values)
+    esoh_sol = esoh_sim.solve([0], inputs=all_inputs)
+    x_0, x_100 = esoh_sol["x_0"].data[0], esoh_sol["x_100"].data[0]
+    if is_composite:
+        x_0_2, x_100_2 = esoh_sol["x_0_2"].data[0], esoh_sol["x_100_2"].data[0]
+        ret_dict = {"x_0": x_0, "x_100": x_100, "x_0_2": x_0_2, "x_100_2": x_100_2}
+    else:
+        ret_dict = {"x_0": x_0, "x_100": x_100}
+    return ret_dict

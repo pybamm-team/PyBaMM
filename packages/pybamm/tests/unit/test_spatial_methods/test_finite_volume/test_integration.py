@@ -1,0 +1,886 @@
+#
+# Tests for integration using Finite Volume method
+#
+
+import numpy as np
+import pytest
+
+import pybamm
+from tests import (
+    assert_constant_matrix_factors,
+    assert_symbolic_mesh_matches_numeric,
+    get_1p1d_mesh_for_testing,
+    get_cylindrical_mesh_for_testing,
+    get_cylindrical_mesh_for_testing_symbolic,
+    get_mesh_for_testing,
+    get_mesh_for_testing_symbolic,
+    get_spherical_mesh_for_testing_symbolic,
+    get_symbolic_length_discretisation_for_testing,
+)
+
+
+class TestFiniteVolumeIntegration:
+    def test_definite_integral(self):
+        # create discretisation
+        mesh = get_mesh_for_testing(xpts=200, rpts=200)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        # lengths
+        ln = mesh["negative electrode"].edges[-1]
+        ls = mesh["separator"].edges[-1] - ln
+        lp = 1 - (ln + ls)
+
+        # macroscale variable
+        var = pybamm.Variable("var", domain=["negative electrode", "separator"])
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        integral_eqn = pybamm.Integral(var, x)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        submesh = mesh[("negative electrode", "separator")]
+
+        constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
+        assert integral_eqn_disc.evaluate(None, constant_y) == ln + ls
+        linear_y = submesh.nodes
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, linear_y),
+            (ln + ls) ** 2 / 2,
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        cos_y = np.cos(submesh.nodes[:, np.newaxis])
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, cos_y),
+            np.sin(ln + ls),
+            rtol=1e-5,
+            atol=1e-4,
+        )
+
+        # domain not starting at zero
+        var = pybamm.Variable("var", domain=["separator", "positive electrode"])
+        x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
+        integral_eqn = pybamm.Integral(var, x)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        submesh = mesh[("separator", "positive electrode")]
+
+        constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
+        assert integral_eqn_disc.evaluate(None, constant_y) == ls + lp
+        linear_y = submesh.nodes
+        assert integral_eqn_disc.evaluate(None, linear_y)[0][0] == pytest.approx(
+            (1 - (ln) ** 2) / 2
+        )
+        cos_y = np.cos(submesh.nodes[:, np.newaxis])
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, cos_y),
+            np.sin(1) - np.sin(ln),
+            rtol=1e-5,
+            atol=1e-4,
+        )
+
+        # microscale variable
+        var = pybamm.Variable("var", domain=["negative particle"])
+        r = pybamm.SpatialVariable("r", ["negative particle"])
+        integral_eqn = pybamm.Integral(var, r)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+
+        constant_y = np.ones_like(mesh["negative particle"].nodes[:, np.newaxis])
+        r_end = mesh["negative particle"].edges[-1]
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, constant_y),
+            4 * np.pi * r_end**3 / 3,
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        linear_y = mesh["negative particle"].nodes
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, linear_y),
+            np.pi * r_end**4,
+            rtol=1e-5,
+            atol=1e-4,
+        )
+        one_over_y = 1 / mesh["negative particle"].nodes
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, one_over_y),
+            2 * np.pi * r_end**2,
+            rtol=1e-4,
+            atol=1e-3,
+        )
+
+        # cylindrical coordinates
+        mesh = get_cylindrical_mesh_for_testing(rcellpts=200)
+        spatial_methods = {"current collector": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain=["current collector"])
+        r = pybamm.SpatialVariable("r", ["current collector"])
+        integral_eqn = pybamm.Integral(var, r)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        pts = mesh["current collector"].nodes
+        r0 = mesh["current collector"].edges[0]
+
+        constant_y = np.ones_like(pts[:, np.newaxis])
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, constant_y),
+            np.pi * (1 - r0**2),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        linear_y = pts
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, linear_y),
+            2 * np.pi / 3 * (1 - r0**3),
+            rtol=1e-5,
+            atol=1e-4,
+        )
+        one_over_y = 1 / pts
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, one_over_y),
+            2 * np.pi * (1 - r0),
+            rtol=1e-4,
+            atol=1e-3,
+        )
+
+        # test failure for secondary dimension column form
+        finite_volume = pybamm.FiniteVolume()
+        finite_volume.build(mesh)
+        with pytest.raises(
+            NotImplementedError,
+            match=r"Integral in secondary vector only implemented in 'row' form",
+        ):
+            finite_volume.definite_integral_matrix(var, "column", "secondary")
+
+    def test_definite_integral_symbolic_mesh(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="domain")
+        x = pybamm.SpatialVariable("x", "domain")
+        integral_eqn = pybamm.Integral(var, x)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        const_y = np.ones_like(mesh["domain"].nodes[:, np.newaxis])
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, const_y), 2.0, rtol=1e-5, atol=1e-4
+        )
+
+        mesh = get_cylindrical_mesh_for_testing_symbolic()
+        spatial_methods = {"cylindrical domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="cylindrical domain")
+        r = pybamm.SpatialVariable(
+            "r", "cylindrical domain", coord_sys="cylindrical polar"
+        )
+        integral_eqn = pybamm.Integral(var, r)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        const_y = np.ones_like(mesh["cylindrical domain"].nodes[:, np.newaxis])
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, const_y),
+            2 * np.pi * 2.0,
+            rtol=1e-5,
+            atol=1e-4,
+        )
+
+        mesh = get_spherical_mesh_for_testing_symbolic()
+        spatial_methods = {"spherical domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="spherical domain")
+        r = pybamm.SpatialVariable("r", "spherical domain", coord_sys="spherical polar")
+        integral_eqn = pybamm.Integral(var, r)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        const_y = np.ones_like(mesh["spherical domain"].nodes[:, np.newaxis])
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, const_y),
+            4 * np.pi * 2.0**3 / 3,
+            rtol=1e-5,
+            atol=1e-4,
+        )
+
+    @pytest.mark.parametrize(
+        "coord_sys", ["cartesian", "cylindrical polar", "spherical polar"]
+    )
+    def test_definite_integral_symbolic_length_with_secondary_domain(self, coord_sys):
+        auxiliary_domains = {"secondary": "electrode"}
+        c = pybamm.Variable("c", "particle", auxiliary_domains=auxiliary_domains)
+        r = pybamm.SpatialVariable(
+            "r", ["particle"], auxiliary_domains=auxiliary_domains, coord_sys=coord_sys
+        )
+        x = pybamm.SpatialVariable("x", ["electrode"], coord_sys="cartesian")
+        expressions = [pybamm.Integral(c, r), pybamm.Integral(c, x)]
+        column = pybamm.DefiniteIntegralVector(c, vector_type="column")
+
+        def discretise(radius, length):
+            disc = get_symbolic_length_discretisation_for_testing(
+                radius, electrode_length=length, coord_sys=coord_sys
+            )
+            disc.set_variable_slices([c])
+            return [disc.process_symbol(expr) for expr in [*expressions, column]]
+
+        *symbolic, symbolic_column = discretise(
+            pybamm.InputParameter("R"), pybamm.InputParameter("L")
+        )
+        *numeric, numeric_column = discretise(pybamm.Scalar(2), pybamm.Scalar(3))
+        inputs = {"R": 2, "L": 3}
+        y = np.linspace(0, 1, 18)[:, np.newaxis] ** 2
+        for symbolic_expr, numeric_expr in zip(symbolic, numeric, strict=True):
+            assert_symbolic_mesh_matches_numeric(symbolic_expr, numeric_expr, y, inputs)
+        assert_constant_matrix_factors(symbolic_column)
+        np.testing.assert_allclose(
+            symbolic_column.evaluate(inputs=inputs).toarray(),
+            numeric_column.evaluate().toarray(),
+            rtol=1e-12,
+            atol=1e-12,
+        )
+
+    def test_integral_secondary_tertiary_domain(self):
+        # create discretisation
+        mesh = get_1p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+            "current collector": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        # lengths
+        ln = mesh["negative electrode"].edges[-1]
+        ls = mesh["separator"].edges[-1] - ln
+        lc = mesh["current collector"].edges[-1]
+        lp = 1 - (ln + ls)
+
+        var = pybamm.Variable(
+            "var",
+            domain="positive particle",
+            auxiliary_domains={
+                "secondary": "positive electrode",
+                "tertiary": "current collector",
+            },
+        )
+        x = pybamm.SpatialVariable("x", "positive electrode")
+        z = pybamm.SpatialVariable("z", "current collector")
+        integral_eqn = pybamm.Integral(var, x)
+        integral_eqn_tertiary = pybamm.Integral(var, z)
+        disc.set_variable_slices([var])
+        integral_eqn_disc_secondary = disc.process_symbol(integral_eqn)
+        integral_eqn_disc_tertiary = disc.process_symbol(integral_eqn_tertiary)
+
+        submesh = mesh["positive particle"]
+        constant_y = np.ones(
+            (
+                submesh.npts
+                * mesh["positive electrode"].npts
+                * mesh["current collector"].npts,
+                1,
+            )
+        )
+        # Test with constant y
+        np.testing.assert_allclose(
+            integral_eqn_disc_secondary.evaluate(None, constant_y),
+            lp * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            integral_eqn_disc_tertiary.evaluate(None, constant_y),
+            lc * np.ones((submesh.npts * mesh["positive electrode"].npts, 1)),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        # Test with linear
+        linear_in_x = np.tile(
+            np.repeat(mesh["positive electrode"].nodes, submesh.npts),
+            mesh["current collector"].npts,
+        )
+        np.testing.assert_allclose(
+            integral_eqn_disc_secondary.evaluate(None, linear_in_x),
+            (1 - (ln + ls) ** 2)
+            / 2
+            * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        linear_in_r = np.tile(
+            submesh.nodes,
+            mesh["positive electrode"].npts * mesh["current collector"].npts,
+        )
+        np.testing.assert_allclose(
+            integral_eqn_disc_secondary.evaluate(None, linear_in_r).flatten(),
+            lp * np.tile(submesh.nodes, mesh["current collector"].npts),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        cos_y = np.cos(linear_in_x)
+        np.testing.assert_allclose(
+            integral_eqn_disc_secondary.evaluate(None, cos_y),
+            (np.sin(1) - np.sin(ln + ls))
+            * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
+            rtol=1e-5,
+            atol=1e-4,
+        )
+        # test tertiary integration with linear function in y
+        linear_in_z = np.repeat(
+            mesh["current collector"].nodes,
+            submesh.npts * mesh["positive electrode"].npts,
+        )
+        np.testing.assert_allclose(
+            integral_eqn_disc_tertiary.evaluate(None, linear_in_z),
+            (lc**2 / 2) * np.ones((submesh.npts * mesh["positive electrode"].npts, 1)),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+    def test_integral_primary_then_secondary_same_result(self):
+        # Test that integrating in r then in x gives the same result as integrating in
+        # x then in r
+        # create discretisation
+        mesh = get_1p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+            "current collector": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable(
+            "var",
+            domain="positive particle",
+            auxiliary_domains={
+                "secondary": "positive electrode",
+                "tertiary": "current collector",
+            },
+        )
+        x = pybamm.SpatialVariable("x", "positive electrode")
+        r = pybamm.SpatialVariable("r", "positive particle")
+        integral_eqn_x_then_r = pybamm.Integral(pybamm.Integral(var, x), r)
+        integral_eqn_r_then_x = pybamm.Integral(pybamm.Integral(var, r), x)
+
+        # discretise
+        disc.set_variable_slices([var])
+        integral_eqn_x_then_r_disc = disc.process_symbol(integral_eqn_x_then_r)
+        integral_eqn_r_then_x_disc = disc.process_symbol(integral_eqn_r_then_x)
+
+        # test
+        submesh = mesh["positive particle"]
+        cos_y = np.cos(
+            np.tile(
+                submesh.nodes,
+                mesh["positive electrode"].npts * mesh["current collector"].npts,
+            )
+        )
+        np.testing.assert_allclose(
+            integral_eqn_x_then_r_disc.evaluate(None, cos_y),
+            integral_eqn_r_then_x_disc.evaluate(None, cos_y),
+            rtol=1e-5,
+            atol=1e-4,
+        )
+
+    def test_integral_secondary_domain_on_edges_in_primary_domain(self):
+        # create discretisation
+        mesh = get_1p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+            "current collector": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        # lengths
+        ln = mesh["negative electrode"].edges[-1]
+        ls = mesh["separator"].edges[-1] - ln
+        lp = 1 - (ln + ls)
+
+        r_edge = pybamm.SpatialVariableEdge(
+            "r_p",
+            domain="positive particle",
+            auxiliary_domains={
+                "secondary": "positive electrode",
+                "tertiary": "current collector",
+            },
+        )
+
+        x = pybamm.SpatialVariable("x", "positive electrode")
+        integral_eqn = pybamm.Integral(r_edge, x)
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+
+        submesh = mesh["positive particle"]
+        r_end = submesh.edges[-1]
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate().flatten(),
+            lp
+            * r_end
+            * np.tile(
+                np.linspace(0, 1, submesh.npts + 1), mesh["current collector"].npts
+            ),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+    def test_definite_integral_vector(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="negative electrode")
+        disc.set_variable_slices([var])
+
+        # row (default)
+        vec = pybamm.DefiniteIntegralVector(var)
+        vec_disc = disc.process_symbol(vec)
+        assert vec_disc.shape[0] == 1
+        assert vec_disc.shape[1] == mesh["negative electrode"].npts
+
+        # column
+        vec = pybamm.DefiniteIntegralVector(var, vector_type="column")
+        vec_disc = disc.process_symbol(vec)
+        assert vec_disc.shape[0] == mesh["negative electrode"].npts
+        assert vec_disc.shape[1] == 1
+
+    def test_indefinite_integral(self):
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # input a phi, take grad, then integrate to recover phi approximation
+        # (need to test this way as check evaluated on edges using if has grad
+        # and no div)
+        phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
+        i = pybamm.grad(phi)  # create test current (variable on edges)
+
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        int_grad_phi = pybamm.IndefiniteIntegral(i, x)
+        disc.set_variable_slices([phi])  # i is not a fundamental variable
+        # Set boundary conditions (required for shape but don't matter)
+        disc.bcs = {
+            phi: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        int_grad_phi_disc = disc.process_symbol(int_grad_phi)
+        left_boundary_value = pybamm.BoundaryValue(int_grad_phi, "left")
+        left_boundary_value_disc = disc.process_symbol(left_boundary_value)
+
+        submesh = mesh[("negative electrode", "separator")]
+
+        # constant case
+        phi_exact = np.ones((submesh.npts, 1))
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        phi_approx += 1  # add constant of integration
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        assert left_boundary_value_disc.evaluate(y=phi_exact) == 0
+        # linear case
+        phi_exact = submesh.nodes[:, np.newaxis]
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-17, atol=1e-16
+        )
+
+        # sine case
+        phi_exact = np.sin(submesh.nodes[:, np.newaxis])
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-17, atol=1e-16
+        )
+
+        # --------------------------------------------------------------------
+        # region which doesn't start at zero
+        phi = pybamm.Variable("phi", domain=["separator", "positive electrode"])
+        i = pybamm.grad(phi)  # create test current (variable on edges)
+        x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
+        int_grad_phi = pybamm.IndefiniteIntegral(i, x)
+        disc.set_variable_slices([phi])  # i is not a fundamental variable
+        disc.bcs = {
+            phi: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        int_grad_phi_disc = disc.process_symbol(int_grad_phi)
+        left_boundary_value = pybamm.BoundaryValue(int_grad_phi, "left")
+        left_boundary_value_disc = disc.process_symbol(left_boundary_value)
+        submesh = mesh[("separator", "positive electrode")]
+
+        # constant case
+        phi_exact = np.ones((submesh.npts, 1))
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        phi_approx += 1  # add constant of integration
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        assert left_boundary_value_disc.evaluate(y=phi_exact) == 0
+
+        # linear case
+        phi_exact = submesh.nodes[:, np.newaxis] - submesh.edges[0]
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-7, atol=1e-6
+        )
+
+        # sine case
+        phi_exact = np.sin(submesh.nodes[:, np.newaxis] - submesh.edges[0])
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-7, atol=1e-6
+        )
+
+        # --------------------------------------------------------------------
+        # indefinite integral of a spatial variable
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        x_edge = pybamm.SpatialVariableEdge("x", ["negative electrode", "separator"])
+        int_x = pybamm.IndefiniteIntegral(x, x)
+        int_x_edge = pybamm.IndefiniteIntegral(x_edge, x)
+
+        x_disc = disc.process_symbol(x)
+        x_edge_disc = disc.process_symbol(x_edge)
+        int_x_disc = disc.process_symbol(int_x)
+        int_x_edge_disc = disc.process_symbol(int_x_edge)
+
+        np.testing.assert_almost_equal(
+            int_x_disc.evaluate(), x_edge_disc.evaluate() ** 2 / 2
+        )
+        np.testing.assert_almost_equal(
+            int_x_edge_disc.evaluate(), x_disc.evaluate() ** 2 / 2, decimal=4
+        )
+
+        # --------------------------------------------------------------------
+        # micrsoscale case
+        c = pybamm.Variable("c", domain=["negative particle"])
+        N = pybamm.grad(c)  # create test flux (variable on edges)
+        r_n = pybamm.SpatialVariable("r_n", ["negative particle"])
+        c_integral = pybamm.IndefiniteIntegral(N, r_n)
+        disc.set_variable_slices([c])  # N is not a fundamental variable
+        disc.bcs = {
+            c: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+
+        c_integral_disc = disc.process_symbol(c_integral)
+        left_boundary_value = pybamm.BoundaryValue(c_integral, "left")
+        left_boundary_value_disc = disc.process_symbol(left_boundary_value)
+        submesh = mesh["negative particle"]
+
+        # constant case
+        c_exact = np.ones((submesh.npts, 1))
+        c_approx = c_integral_disc.evaluate(None, c_exact)
+        c_approx += 1  # add constant of integration
+        np.testing.assert_allclose(c_exact, c_approx, rtol=1e-7, atol=1e-6)
+        assert left_boundary_value_disc.evaluate(y=c_exact) == 0
+
+        # linear case
+        c_exact = submesh.nodes[:, np.newaxis]
+        c_approx = c_integral_disc.evaluate(None, c_exact)
+        np.testing.assert_allclose(c_exact, c_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=c_exact), 0, rtol=1e-7, atol=1e-6
+        )
+
+        # sine case
+        c_exact = np.sin(submesh.nodes[:, np.newaxis])
+        c_approx = c_integral_disc.evaluate(None, c_exact)
+        np.testing.assert_allclose(c_exact, c_approx, rtol=1e-4, atol=1e-3)
+        np.testing.assert_allclose(
+            left_boundary_value_disc.evaluate(y=c_exact), 0, rtol=1e-7, atol=1e-6
+        )
+
+    def test_backward_indefinite_integral(self):
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # --------------------------------------------------------------------
+        # region which doesn't start at zero
+        phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
+        i = pybamm.grad(phi)  # create test current (variable on edges)
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        int_grad_phi = pybamm.BackwardIndefiniteIntegral(i, x)
+        disc.set_variable_slices([phi])  # i is not a fundamental variable
+        disc.bcs = {
+            phi: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        int_grad_phi_disc = disc.process_symbol(int_grad_phi)
+        right_boundary_value = pybamm.BoundaryValue(int_grad_phi, "right")
+        right_boundary_value_disc = disc.process_symbol(right_boundary_value)
+        submesh = mesh[("negative electrode", "separator")]
+
+        # Test that the backward_integral(grad(phi)) = -phi
+        # constant case
+        phi_exact = np.ones((submesh.npts, 1))
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        phi_approx += 1  # add constant of integration
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+        assert right_boundary_value_disc.evaluate(y=phi_exact) == 0
+
+        # linear case
+        phi_exact = submesh.nodes - submesh.edges[-1]
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact).flatten()
+        np.testing.assert_allclose(phi_exact, -phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            right_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-7, atol=1e-6
+        )
+
+        # sine case
+        phi_exact = np.sin(submesh.nodes - submesh.edges[-1])
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact).flatten()
+        np.testing.assert_allclose(phi_exact, -phi_approx, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            right_boundary_value_disc.evaluate(y=phi_exact), 0, rtol=1e-7, atol=1e-6
+        )
+
+    def test_indefinite_integral_of_broadcasted_to_cell_edges(self):
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # make a variable 'phi' and a vector 'i' which is broadcast onto edges
+        # the integral of this should then be put onto the nodes
+        phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
+        i = pybamm.PrimaryBroadcastToEdges(1, phi.domain)
+        x = pybamm.SpatialVariable("x", phi.domain)
+        disc.set_variable_slices([phi])
+        submesh = mesh[("negative electrode", "separator")]
+        x_end = submesh.edges[-1]
+
+        # take indefinite integral
+        int_phi = pybamm.IndefiniteIntegral(i * phi, x)
+        # take integral again
+        int_int_phi = pybamm.Integral(int_phi, x)
+        int_int_phi_disc = disc.process_symbol(int_int_phi)
+
+        # constant case
+        phi_exact = np.ones_like(submesh.nodes)
+        phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_allclose(x_end**2 / 2, phi_approx, rtol=1e-7, atol=1e-6)
+
+        # linear case
+        phi_exact = submesh.nodes[:, np.newaxis]
+        phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_allclose(x_end**3 / 6, phi_approx, rtol=1e-5, atol=1e-4)
+
+    def test_indefinite_integral_on_edges_symbolic(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # make a variable 'phi' and a vector 'i' which is broadcast onto edges
+        # the integral of this should then be put onto the nodes
+        phi = pybamm.Variable("phi", domain=["domain"])
+        i = pybamm.PrimaryBroadcastToEdges(1, phi.domain)
+        x = pybamm.SpatialVariable("x", phi.domain)
+        disc.set_variable_slices([phi])
+        submesh = mesh["domain"]
+        x_end = submesh.edges[-1] * submesh.length + submesh.min
+
+        # take indefinite integral
+        int_phi = pybamm.IndefiniteIntegral(i * phi, x)
+        # take integral again
+        int_int_phi = pybamm.Integral(int_phi, x)
+        int_int_phi_disc = disc.process_symbol(int_int_phi)
+
+        # constant case
+        phi_exact = np.ones_like(submesh.nodes)
+        phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_allclose(x_end**2 / 2, phi_approx, rtol=1e-7, atol=1e-6)
+
+    @pytest.mark.parametrize(
+        "integral", [pybamm.IndefiniteIntegral, pybamm.BackwardIndefiniteIntegral]
+    )
+    def test_indefinite_integral_symbolic_length_with_secondary_domain(self, integral):
+        auxiliary_domains = {"secondary": "electrode"}
+        c = pybamm.Variable("c", "particle", auxiliary_domains=auxiliary_domains)
+        r = pybamm.SpatialVariable(
+            "r",
+            ["particle"],
+            auxiliary_domains=auxiliary_domains,
+            coord_sys="cartesian",
+        )
+        # integrands on the nodes and on the edges
+        expressions = [integral(c, r), integral(pybamm.grad(c), r)]
+
+        def discretise(radius):
+            disc = get_symbolic_length_discretisation_for_testing(
+                radius, coord_sys="cartesian"
+            )
+            disc.set_variable_slices([c])
+            disc.bcs = {
+                c: {
+                    "left": (pybamm.Scalar(1), "Neumann"),
+                    "right": (pybamm.Scalar(2), "Neumann"),
+                }
+            }
+            return [disc.process_symbol(expr) for expr in expressions]
+
+        y = np.linspace(0, 1, 18)[:, np.newaxis] ** 2
+        for symbolic, numeric in zip(
+            discretise(pybamm.InputParameter("R")),
+            discretise(pybamm.Scalar(2)),
+            strict=True,
+        ):
+            assert_symbolic_mesh_matches_numeric(symbolic, numeric, y, {"R": 2})
+
+    def test_indefinite_integral_on_nodes(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+
+        int_phi = pybamm.IndefiniteIntegral(phi, x)
+        disc.set_variable_slices([phi])
+        int_phi_disc = disc.process_symbol(int_phi)
+
+        submesh = mesh[("negative electrode", "separator")]
+
+        # constant case
+        phi_exact = np.ones((submesh.npts, 1))
+        int_phi_exact = submesh.edges
+        int_phi_approx = int_phi_disc.evaluate(None, phi_exact).flatten()
+        np.testing.assert_allclose(int_phi_exact, int_phi_approx, rtol=1e-7, atol=1e-6)
+        # linear case
+        phi_exact = submesh.nodes
+        int_phi_exact = submesh.edges**2 / 2
+        int_phi_approx = int_phi_disc.evaluate(None, phi_exact).flatten()
+        np.testing.assert_allclose(int_phi_exact, int_phi_approx, rtol=1e-7, atol=1e-6)
+        # cos case
+        phi_exact = np.cos(submesh.nodes)
+        int_phi_exact = np.sin(submesh.edges)
+        int_phi_approx = int_phi_disc.evaluate(None, phi_exact).flatten()
+        np.testing.assert_allclose(int_phi_exact, int_phi_approx, rtol=1e-6, atol=1e-5)
+
+        # microscale case should fail
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        c = pybamm.Variable("c", domain=["negative particle"])
+        r = pybamm.SpatialVariable("r", ["negative particle"])
+
+        int_c = pybamm.IndefiniteIntegral(c, r)
+        disc.set_variable_slices([c])
+        with pytest.raises(
+            NotImplementedError,
+            match=r"Indefinite integral on a spherical polar domain is not implemented",
+        ):
+            disc.process_symbol(int_c)
+
+    def test_indefinite_integral_on_nodes_symbolic(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        phi = pybamm.Variable("phi", domain=["domain"])
+        x = pybamm.SpatialVariable("x", ["domain"])
+        int_phi = pybamm.IndefiniteIntegral(phi, x)
+        disc.set_variable_slices([phi])
+        int_phi_disc = disc.process_symbol(int_phi)
+
+        submesh = mesh["domain"]
+        constant_y = np.ones((submesh.npts, 1))
+        phi_exact = submesh.edges * submesh.length + submesh.min
+        phi_approx = int_phi_disc.evaluate(None, constant_y).flatten()
+        np.testing.assert_allclose(phi_exact, phi_approx, rtol=1e-7, atol=1e-6)
+
+    def test_backward_indefinite_integral_on_nodes(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+
+        back_int_phi = pybamm.BackwardIndefiniteIntegral(phi, x)
+        disc.set_variable_slices([phi])
+        back_int_phi_disc = disc.process_symbol(back_int_phi)
+
+        submesh = mesh[("negative electrode", "separator")]
+        edges = submesh.edges
+
+        # constant case
+        phi_exact = np.ones((submesh.npts, 1))
+        back_int_phi_exact = edges[-1] - edges
+        back_int_phi_approx = back_int_phi_disc.evaluate(None, phi_exact).flatten()
+        np.testing.assert_allclose(
+            back_int_phi_exact, back_int_phi_approx, rtol=1e-7, atol=1e-6
+        )
+        # linear case
+        phi_exact = submesh.nodes
+        back_int_phi_exact = edges[-1] ** 2 / 2 - edges**2 / 2
+        back_int_phi_approx = back_int_phi_disc.evaluate(None, phi_exact).flatten()
+        np.testing.assert_allclose(
+            back_int_phi_exact, back_int_phi_approx, rtol=1e-7, atol=1e-6
+        )
+        # cos case
+        phi_exact = np.cos(submesh.nodes)
+        back_int_phi_exact = np.sin(edges[-1]) - np.sin(edges)
+        back_int_phi_approx = back_int_phi_disc.evaluate(None, phi_exact).flatten()
+        np.testing.assert_allclose(
+            back_int_phi_exact, back_int_phi_approx, rtol=1e-6, atol=1e-5
+        )
+
+    def test_forward_plus_backward_integral(self):
+        # Test that forward integral + backward integral = integral
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # On nodes
+        phi = pybamm.Variable("phi", domain=["separator", "positive electrode"])
+        x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
+
+        disc.set_variable_slices([phi])
+
+        full_int_phi = pybamm.PrimaryBroadcastToEdges(
+            pybamm.Integral(phi, x), ["separator", "positive electrode"]
+        )
+        full_int_phi_disc = disc.process_symbol(full_int_phi)
+        int_plus_back_int_phi = pybamm.IndefiniteIntegral(
+            phi, x
+        ) + pybamm.BackwardIndefiniteIntegral(phi, x)
+        int_plus_back_int_phi_disc = disc.process_symbol(int_plus_back_int_phi)
+
+        submesh = mesh[("separator", "positive electrode")]
+
+        # test
+        for phi_exact in [
+            np.ones((submesh.npts, 1)),
+            submesh.nodes,
+            np.cos(submesh.nodes),
+        ]:
+            np.testing.assert_allclose(
+                full_int_phi_disc.evaluate(y=phi_exact).flatten(),
+                int_plus_back_int_phi_disc.evaluate(y=phi_exact).flatten(),
+                rtol=1e-7,
+                atol=1e-6,
+            )

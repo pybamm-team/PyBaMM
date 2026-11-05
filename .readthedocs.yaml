@@ -12,36 +12,61 @@ formats:
   - epub
   - htmlzip
 
+# This entry makes Read the Docs install uv, create the venv and export UV_PYTHON and
+# UV_PROJECT_ENVIRONMENT; build.jobs.install replaces its `uv sync`.
+python:
+  install:
+    - method: uv
+      command: sync
+
 # Set the version of Python and other tools you might need
 build:
-  # Install Graphviz to build SVG files
+  # graphviz builds SVG files; gfortran and libopenblas build the solver from source.
   apt_packages:
     - "graphviz"
+    - "gfortran"
+    - "libopenblas-dev"
   os: ubuntu-22.04
   tools:
     python: "3.14"
   jobs:
-    pre_create_environment:
-      - asdf plugin add uv
-      - asdf install uv latest
-      - asdf global uv latest
-    create_environment:
-      - uv venv "${READTHEDOCS_VIRTUALENV_PATH}"
-    install:
-      - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --group docs --extra all
-    pre_build:
-      - python -m sphinx -b linkcheck -D linkcheck_timeout=20 docs/ ./linkcheck_output
-    # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
     post_checkout:
+      # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
       - git fetch --unshallow
-    # Altered PDF build and upload job
-    # This also runs on PR builds, but does not upload the PDF
+      # Exit code 183 cancels a pull request build that changes nothing the docs render or include.
+      - |
+        if [ "$READTHEDOCS_VERSION_TYPE" = external ] && git diff --quiet origin/main...HEAD -- \
+            docs/ packages/pybamm/src/ packages/pybamm/pyproject.toml packages/pybamm-model-zoo/ \
+            CONTRIBUTING.md RELEASE.md pyproject.toml uv.lock .readthedocs.yaml; then
+          exit 183
+        fi
+    install:
+      # Pull requests try the solver's PyPI wheel; production builds compile the checkout.
+      # No single quotes in build.jobs: Read the Docs wraps each command in sh -c '...'.
+      - |
+        # `all` names the PyBaMM extra, not `--all-extras`
+        flags="--frozen --no-default-groups --group docs --extra all"
+        if [ "$READTHEDOCS_VERSION_TYPE" = external ]; then
+          version=$(uv version --package pybammsolvers --short)
+          if uv sync $flags --no-install-package pybammsolvers \
+              && uv pip install --no-deps --only-binary pybammsolvers "pybammsolvers==$version"; then
+            exit 0
+          fi
+        fi
+        git submodule update --init --recursive
+        # The solver builds without isolation and rebuilds on import, so it needs the dev group toolchain
+        uv sync $flags --group dev
+    # Altered PDF build and upload job, skipped on pull requests, which never publish it
     post_build:
-      - mkdir --parents $READTHEDOCS_OUTPUT/pdf/
-      # Generate LaTeX files in docs/build/ and doctrees in docs/_build/doctrees, skipping notebooks
-      - python -m sphinx -T -E -b latex -d docs/_build/doctrees -D language=en docs docs/build/
-      - cd docs/build/ && cat latexmkrc
-      # Map non-zero exit codes to zero
-      - cd docs/build/ && latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode || true
-      - test -f docs/build/pybamm.pdf && echo "pybamm.pdf exists. Copying source file to $READTHEDOCS_OUTPUT/pdf/."
-      - cp "docs/build/pybamm.pdf" $READTHEDOCS_OUTPUT/pdf/
+      - |
+        if [ "$READTHEDOCS_VERSION_TYPE" != external ]; then
+          set -e
+          mkdir --parents "$READTHEDOCS_OUTPUT/pdf/"
+          # LaTeX files in docs/build/ and doctrees in docs/_build/doctrees, skipping notebooks
+          python -m sphinx -T -E -b latex -d docs/_build/doctrees -D language=en docs docs/build/
+          cat docs/build/latexmkrc
+          # latexmk errors are tolerated as long as it still writes the PDF
+          (cd docs/build/ && latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=pybamm -interaction=nonstopmode) || true
+          test -f docs/build/pybamm.pdf && echo "pybamm.pdf exists. Copying source file to $READTHEDOCS_OUTPUT/pdf/."
+          cp docs/build/pybamm.pdf "$READTHEDOCS_OUTPUT/pdf/"
+        fi

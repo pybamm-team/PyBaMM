@@ -6,7 +6,7 @@ Fixes # (issue)
 
 ## Type of change
 
-Please add a line in the relevant section of [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md) to document the change (include PR #)
+Add an entry under `# [Unreleased]` in [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/main/CHANGELOG.md), in one of `## Breaking changes`, `## Deprecated`, `## Features`, or `## Bug fixes` (include PR number; breaking and deprecation entries need a one-line migration note). Internal-only PRs — refactor, docs, CI, tests — can skip this. See [RELEASE.md](https://github.com/pybamm-team/PyBaMM/blob/main/RELEASE.md) for the full policy.
 
 # Important checks:
 
@@ -16,3 +16,4 @@ Please confirm the following before marking the PR as ready for review:
 - The documentation builds: `nox -s doctests`
 - Code is commented for hard-to-understand areas
 - Tests added that prove fix is effective or that feature works
+- If you are adding or changing a model in the zoo, you have read the [policy](https://github.com/pybamm-team/PyBaMM/blob/main/packages/pybamm-model-zoo/POLICY.md).

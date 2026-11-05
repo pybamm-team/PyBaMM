@@ -33,12 +33,18 @@ pybamm.dynamic_plot(
             "Average negative secondary particle concentration",
         ],
         [
-            "X-averaged negative electrode primary volumetric "
-            "interfacial current density [A.m-3]",
-            "X-averaged negative electrode secondary volumetric "
-            "interfacial current density [A.m-3]",
-            "X-averaged negative electrode volumetric "
-            "interfacial current density [A.m-3]",
+            (
+                "X-averaged negative electrode primary volumetric "
+                "interfacial current density [A.m-3]"
+            ),
+            (
+                "X-averaged negative electrode secondary volumetric "
+                "interfacial current density [A.m-3]"
+            ),
+            (
+                "X-averaged negative electrode volumetric "
+                "interfacial current density [A.m-3]"
+            ),
         ],
         "X-averaged negative electrode primary open-circuit potential [V]",
         "X-averaged negative electrode secondary open-circuit potential [V]",

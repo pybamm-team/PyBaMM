@@ -49,8 +49,10 @@ pb.dynamic_plot(
         "Negative SEI concentration [mol.m-3]",
         "X-averaged negative SEI concentration [mol.m-3]",
         "X-averaged negative SEI thickness [m]",
-        "Sum of x-averaged negative electrode volumetric "
-        "interfacial current densities [A.m-3]",
+        (
+            "Sum of x-averaged negative electrode volumetric "
+            "interfacial current densities [A.m-3]"
+        ),
         "Loss of lithium inventory [%]",
         ["Total lithium lost [mol]", "Loss of lithium to negative SEI [mol]"],
     ],

@@ -1,0 +1,86 @@
+name: clang-tidy
+
+on:
+  pull_request:
+    paths:
+      - "packages/pybammsolvers/**"
+      - ".github/workflows/clang_tidy.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/pybammsolvers/**"
+      - ".github/workflows/clang_tidy.yml"
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clang_tidy:
+    name: clang-tidy (solver)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: "recursive"
+          persist-credentials: false
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran gcc make cmake libopenblas-dev
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: 3.13
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "latest"
+          enable-cache: true
+
+      # The editable build writes the compile_commands.json clang-tidy reads.
+      - name: Build the solver from source
+        run: uv sync --frozen --group dev
+
+      # The build is GCC's, and clang ships no omp.h, so GCC's is searched last
+      # for SuiteSparse's `#include <omp.h>` under -fopenmp.
+      - name: Run clang-tidy
+        run: |
+          uv tool install clang-tidy==22.1.8
+          db=$(dirname packages/pybammsolvers/build/*/compile_commands.json)
+          jq -r '.[].file' "$db/compile_commands.json" \
+            | xargs -P "$(nproc)" -n 1 "$(uv tool dir --bin)/clang-tidy" -p "$db" --quiet \
+                --extra-arg=-idirafter"$(gcc -print-file-name=include)" \
+            | tee clang-tidy.txt
+
+      # Paths are made repo-relative and `..`-free so alerts map onto files.
+      - name: Convert to SARIF
+        env:
+          SARIF_URL: https://github.com/psastras/sarif-rs/releases/download/clang-tidy-sarif-v0.8.0/clang-tidy-sarif-x86_64-unknown-linux-gnu
+          SARIF_SHA256: 7198518c1d01830cf368c5f924df5ac177ce5ada4f6f54bcc4a1dd8841d07202
+        run: |
+          curl -fsSL "$SARIF_URL" -o "$RUNNER_TEMP/clang-tidy-sarif"
+          echo "$SARIF_SHA256  $RUNNER_TEMP/clang-tidy-sarif" | sha256sum --check --strict
+          chmod +x "$RUNNER_TEMP/clang-tidy-sarif"
+          "$RUNNER_TEMP/clang-tidy-sarif" -i clang-tidy.txt \
+            | jq --arg root "$GITHUB_WORKSPACE/" '
+                def norm: if test("/[^/]+/\\.\\./") then sub("/[^/]+/\\.\\./"; "/") | norm else . end;
+                (.runs[].results[] | (.locations, .relatedLocations)[]?.physicalLocation.artifactLocation.uri)
+                  |= (ltrimstr($root) | norm)' \
+            > clang-tidy.sarif
+
+      - uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          sarif_file: clang-tidy.sarif
+          category: clang-tidy
