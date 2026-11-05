@@ -15,6 +15,7 @@
 
 ## Features
 
+- Added the `MolicelP45B_AboutEnergy2026` parameter set for the Molicel INR21700-P45B cell (NCA / graphite-SiOx composite), loaded from the paper's BPX file. Use it with the DFN, two negative particle phases, silicon-phase hysteresis and contact resistance. Requires `bpx`. ([#5914](https://github.com/pybamm-team/PyBaMM/pull/5914))
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 - Added `pybamm.bode_plot` and `pybamm.eis_plot`, which overlays labelled spectra. `EISSimulation.plot()` now shows Nyquist and Bode plots instead of failing. ([#5989](https://github.com/pybamm-team/PyBaMM/pull/5989))
 - When every sub-solver of `CompositeSolver` fails, their errors are chained to the raised `SolverError` as an `ExceptionGroup`, so each failure's traceback is kept. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
