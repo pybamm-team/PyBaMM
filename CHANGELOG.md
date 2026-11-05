@@ -21,6 +21,7 @@
 
 ## Bug fixes
 
+- `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
 - Released `pybammsolvers` v0.12.0, with the solver functions `pybamm` calls since #5994, and `pybamm` now requires it. Before, `pybamm` from source with `pybammsolvers` 0.11.1 from PyPI failed at its first solve. ([#6028](https://github.com/pybamm-team/PyBaMM/pull/6028))
 - Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))
 - A battery model loaded with `Serialise.load_custom_model` keeps its saved geometry, mesh points, submesh types and spatial methods when its own class can't be imported. Before, the built-in ancestor's defaults silently replaced them. ([#5995](https://github.com/pybamm-team/PyBaMM/pull/5995))

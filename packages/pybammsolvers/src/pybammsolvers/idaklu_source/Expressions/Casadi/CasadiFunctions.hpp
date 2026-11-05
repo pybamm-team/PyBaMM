@@ -15,6 +15,8 @@ struct SerializedCasadiFunctions {
   std::string mass_action;
   std::string sens;
   std::string events;
+  std::string alg_res;
+  std::string alg_jac;
   std::vector<std::string> var_fcns;
   std::vector<std::string> dvar_dy_fcns;
   std::vector<std::string> dvar_dp_fcns;
@@ -27,6 +29,8 @@ SerializedCasadiFunctions serialize_casadi_functions(
   const casadi::Function &mass_action,
   const casadi::Function &sens,
   const casadi::Function &events,
+  const casadi::Function &alg_res,
+  const casadi::Function &alg_jac,
   const std::vector<casadi::Function*>& var_fcns,
   const std::vector<casadi::Function*>& dvar_dy_fcns,
   const std::vector<casadi::Function*>& dvar_dp_fcns
@@ -136,8 +140,14 @@ public:
       events,
       setup_opts.num_solvers > 1,
       serialized_fcns != nullptr ? &serialized_fcns->events : nullptr),
-    alg_res_casadi_(alg_res_fn),
-    alg_jac_casadi_(alg_jac_fn),
+    alg_res_casadi_(
+      alg_res_fn,
+      setup_opts.num_solvers > 1,
+      serialized_fcns != nullptr ? &serialized_fcns->alg_res : nullptr),
+    alg_jac_casadi_(
+      alg_jac_fn,
+      setup_opts.num_solvers > 1,
+      serialized_fcns != nullptr ? &serialized_fcns->alg_jac : nullptr),
     ExpressionSet<CasadiFunction>(
       static_cast<Expression*>(&rhs_alg_casadi),
       static_cast<Expression*>(&jac_times_cjmass_casadi),
