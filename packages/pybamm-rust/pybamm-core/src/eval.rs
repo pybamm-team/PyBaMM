@@ -427,17 +427,10 @@ pub(crate) fn split_read_write(
     dst: usize,
     dst_len: usize,
 ) -> (&[f64], &mut [f64]) {
-    debug_assert!(
-        src + src_len <= dst || dst + dst_len <= src,
-        "read and write windows overlap (src={src}+{src_len}, dst={dst}+{dst_len})"
-    );
-    if dst < src {
-        let (left, right) = buf.split_at_mut(src);
-        (&right[..src_len], &mut left[dst..dst + dst_len])
-    } else {
-        let (left, right) = buf.split_at_mut(dst);
-        (&left[src..src + src_len], &mut right[..dst_len])
-    }
+    let [read, write] = buf
+        .get_disjoint_mut([src..src + src_len, dst..dst + dst_len])
+        .expect("read and write windows are in bounds and disjoint");
+    (read, write)
 }
 
 /// Split `buf` into read windows `a`, `b` and a write window `dst`, each `(start, len)`.
