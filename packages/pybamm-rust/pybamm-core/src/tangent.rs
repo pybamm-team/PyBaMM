@@ -162,6 +162,9 @@ fn is_literal_zero(arena: &Arena, id: NodeId) -> bool {
     }
 }
 
+/// The smallest positive subnormal, which the rules below substitute for an exact zero.
+pub(crate) const SMALLEST_SUBNORMAL: f64 = f64::from_bits(1);
+
 /// `d(a^b)/db` given `pow`, the node `a^b`: `a^b * ln(a)` where `a > 0` and 0 elsewhere.
 ///
 /// `ln` reads `max(a, smallest subnormal)`, so the gated-off product is a finite zero, not
@@ -170,10 +173,48 @@ fn exponent_partial(arena: &mut Arena, base: NodeId, pow: NodeId) -> NodeId {
     let zero = arena.alloc(Node::Scalar(0.0));
     let positive = arena.alloc(Node::NotEqualHeaviside(zero, base));
     let gated = arena.alloc(Node::Mul(positive, pow));
-    let tiny = arena.alloc(Node::Scalar(f64::from_bits(1)));
+    let tiny = arena.alloc(Node::Scalar(SMALLEST_SUBNORMAL));
     let log_argument = arena.alloc(Node::Maximum(base, tiny));
     let log_a = arena.alloc(Node::Log(log_argument));
     arena.alloc(Node::Mul(gated, log_a))
+}
+
+/// `d` with an exact zero raised to the smallest subnormal, as a tangent's denominator.
+///
+/// A zero tangent over it stays zero where `d` is zero, instead of `0 / 0`, and one above
+/// 1e-15 in magnitude still overflows to ±inf. Elsewhere the sum is exact, NaN included.
+fn nonzero_denominator(arena: &mut Arena, d: NodeId) -> NodeId {
+    let zero = arena.alloc(Node::Scalar(0.0));
+    let is_zero = arena.alloc(Node::Equality(d, zero));
+    let tiny = arena.alloc(Node::Scalar(SMALLEST_SUBNORMAL));
+    let lift = arena.alloc(Node::Mul(is_zero, tiny));
+    arena.alloc(Node::Add(d, lift))
+}
+
+/// `exp * base^(exp - 1) * da`, the base's share of `d(base^exp)`.
+///
+/// An exponent below 1 makes the partial infinite at a zero base, where the product is
+/// `0 * inf` for a zero `da`; such exponents, and any that is not a literal, take
+/// `exp * da / base^(1 - exp)` over a [`nonzero_denominator`] instead.
+fn base_tangent(arena: &mut Arena, base: NodeId, exp: NodeId, da: NodeId) -> NodeId {
+    let literal = arena[exp].as_scalar();
+    if let Some(e) = literal.filter(|&e| e >= 1.0) {
+        let exp_minus_1 = arena.alloc(Node::Scalar(e - 1.0));
+        let pow_nm1 = arena.alloc(Node::Pow(base, exp_minus_1));
+        let d_base = arena.alloc(Node::Mul(exp, pow_nm1));
+        return arena.alloc(Node::Mul(d_base, da));
+    }
+    let one_minus_exp = if let Some(e) = literal {
+        arena.alloc(Node::Scalar(1.0 - e))
+    } else {
+        let one = arena.alloc(Node::Scalar(1.0));
+        arena.alloc(Node::Sub(one, exp))
+    };
+    let pow = arena.alloc(Node::Pow(base, one_minus_exp));
+    let denominator = nonzero_denominator(arena, pow);
+    // On the numerator: dividing the guarded denominator by `|exp| >= 2` rounds it back to 0.
+    let numerator = arena.alloc(Node::Mul(exp, da));
+    arena.alloc(Node::Div(numerator, denominator))
 }
 
 /// `selector * da + (1 - selector) * db`, the subgradient `Minimum` and `Maximum` share.
@@ -282,15 +323,7 @@ impl Differentiator<'_> {
                 } else {
                     Some(self.ready([exp])?[0])
                 };
-                let exp_minus_1 = if let Some(n) = arena[exp].as_scalar() {
-                    arena.alloc(Node::Scalar(n - 1.0))
-                } else {
-                    let one = arena.alloc(Node::Scalar(1.0));
-                    arena.alloc(Node::Sub(exp, one))
-                };
-                let pow_nm1 = arena.alloc(Node::Pow(base, exp_minus_1));
-                let d_base = arena.alloc(Node::Mul(exp, pow_nm1));
-                let base_term = arena.alloc(Node::Mul(d_base, da));
+                let base_term = base_tangent(arena, base, exp, da);
                 db.filter(|&db| !is_literal_zero(arena, db))
                     .map_or(base_term, |db| {
                         let d_exp = exponent_partial(arena, base, id);
@@ -314,7 +347,8 @@ impl Differentiator<'_> {
                 let [da] = self.ready([a])?;
                 let two = arena.alloc(Node::Scalar(2.0));
                 let two_sqrt_a = arena.alloc(Node::Mul(two, id));
-                arena.alloc(Node::Div(da, two_sqrt_a))
+                let denominator = nonzero_denominator(arena, two_sqrt_a);
+                arena.alloc(Node::Div(da, denominator))
             },
 
             Node::Exp(a) => {
@@ -429,7 +463,9 @@ impl Differentiator<'_> {
                 let a_da = arena.alloc(Node::Mul(a, da));
                 let b_db = arena.alloc(Node::Mul(b, db));
                 let numer = arena.alloc(Node::Add(a_da, b_db));
-                arena.alloc(Node::Div(numer, id))
+                // The numerator is zero at the origin, so the tangent is 0 there, as `abs`'s is.
+                let denominator = nonzero_denominator(arena, id);
+                arena.alloc(Node::Div(numer, denominator))
             },
 
             Node::MatMul(a, b) => {
@@ -629,6 +665,63 @@ mod tests {
         };
         let got = compiled.eval_with_tangent(&mut scratch, 0.0, &[0.0, 2.0], &[], &[], &seed);
         assert_eq!(got, [0.0, 0.0]);
+    }
+
+    #[test]
+    fn a_zero_tangent_stays_zero_where_a_partial_is_infinite() {
+        // `f + y1` at y0 = y2 = 0, as CasADi's `jacobian` gives it; each was NaN in every column.
+        enum F {
+            Sqrt,
+            Hypot,
+            Literal(f64),
+            Input(f64),
+        }
+        let cases = [
+            (F::Sqrt, [f64::INFINITY, 1.0, 0.0]),
+            // Its own columns are 0 at the origin, as `abs`'s are; CasADi gives NaN.
+            (F::Hypot, [0.0, 1.0, 0.0]),
+            (F::Literal(0.5), [f64::INFINITY, 1.0, 0.0]),
+            (F::Literal(2.0), [0.0, 1.0, 0.0]),
+            (F::Literal(-1.0), [f64::NEG_INFINITY, 1.0, 0.0]),
+            (F::Input(0.5), [f64::INFINITY, 1.0, 0.0]),
+            (F::Input(0.0), [0.0, 1.0, 0.0]),
+            (F::Input(-1.0), [f64::NEG_INFINITY, 1.0, 0.0]),
+            (F::Input(-2.0), [f64::NEG_INFINITY, 1.0, 0.0]),
+        ];
+        for (f, expected) in cases {
+            let mut arena = Arena::new();
+            let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
+            let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
+            let y2 = arena.alloc(Node::StateVector { start: 2, end: 3 });
+            let (singular, inputs) = match f {
+                F::Sqrt => (arena.alloc(Node::Sqrt(y0)), vec![]),
+                F::Hypot => (arena.alloc(Node::Hypot(y0, y2)), vec![]),
+                F::Literal(e) => {
+                    let e = arena.alloc(Node::Scalar(e));
+                    (arena.alloc(Node::Pow(y0, e)), vec![])
+                },
+                F::Input(p) => {
+                    let e = arena.alloc(Node::InputParameter {
+                        name: "p".into(),
+                        index: 0,
+                        offset: 0,
+                        width: 1,
+                    });
+                    (arena.alloc(Node::Pow(y0, e)), vec![p])
+                },
+            };
+            let root = arena.alloc(Node::Add(singular, y1));
+            let got = forward_gradient(&arena, root, &[0.0, 1.0, 0.0], &inputs);
+            assert_eq!(got, expected, "{:?}", arena[singular]);
+        }
+    }
+
+    #[test]
+    fn a_negative_square_root_still_has_a_nan_tangent() {
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let root = arena.alloc(Node::Sqrt(y));
+        assert!(forward_gradient(&arena, root, &[-1.0], &[])[0].is_nan());
     }
 
     #[test]
