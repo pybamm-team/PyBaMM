@@ -27,6 +27,7 @@
 
 ## Bug fixes
 
+- A voltage termination without `>` or `<` on a step that is neither a charge nor a discharge, such as `"Rest for 1 hour or until 3.5 V"`, now warns that it is ignored instead of being dropped silently. ([#6032](https://github.com/pybamm-team/PyBaMM/issues/6032), [#6033](https://github.com/pybamm-team/PyBaMM/pull/6033))
 - An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
 - `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
 - Released `pybammsolvers` v0.12.0, with the solver functions `pybamm` calls since #5994, and `pybamm` now requires it. Before, `pybamm` from source with `pybammsolvers` 0.11.1 from PyPI failed at its first solve. ([#6028](https://github.com/pybamm-team/PyBaMM/pull/6028))
