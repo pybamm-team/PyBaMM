@@ -118,6 +118,7 @@ class BaseSimulation:
         self._esoh_fingerprint = None
         self._initial_state_input_names = None
         self._initial_soc_solver = None
+        self._initial_soc_solver_key = None
         self._mesh = None
         self._disc = None
         self._solution = None
@@ -308,10 +309,9 @@ class BaseSimulation:
             )
         return overlap
 
-    def _create_esoh_solver(self, direction, initial_soc):
+    def _create_esoh_solver(self, direction, initial_soc, pv):
         """Create the appropriate eSOH solver/sim for this model type."""
         options = self._model.options
-        pv = self._unprocessed_parameter_values
         param = self._model.param
 
         if options.get("open-circuit potential") == "MSMR" or (
@@ -425,10 +425,28 @@ class BaseSimulation:
         options = self._model.options
 
         if self._cache_esoh:
-            if self._initial_soc_solver is None:
+            # The solver is processed with the initial hysteresis states that
+            # `set_initial_state` starts from, so it is rebuilt when they change
+            from pybamm.models.full_battery_models.lithium_ion.initial_state import (
+                _set_hysteresis_branches,
+            )
+
+            esoh_pv = self._unprocessed_parameter_values.copy()
+            _set_hysteresis_branches(esoh_pv, direction, options)
+            key = (
+                direction,
+                isinstance(initial_soc, str) and initial_soc.strip().endswith("V"),
+                tuple(
+                    (name, esoh_pv[name])
+                    for name in esoh_pv
+                    if "Initial hysteresis state" in name
+                ),
+            )
+            if self._initial_soc_solver is None or key != self._initial_soc_solver_key:
                 self._initial_soc_solver = self._create_esoh_solver(
-                    direction, initial_soc
+                    direction, initial_soc, esoh_pv
                 )
+                self._initial_soc_solver_key = key
             self._parameter_values = pybamm.lithium_ion.set_initial_state(
                 initial_soc,
                 self._unprocessed_parameter_values,
