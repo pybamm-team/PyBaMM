@@ -3,16 +3,16 @@
 //! Primal slots are shared across lanes and tangent slots are lane-minor; each lane
 //! accumulates in the scalar sweep's order, so results are bitwise identical.
 
-use crate::accumulate::{Accumulate, Product, dispatch};
+use crate::accumulate::dispatch;
 use crate::branch_regions::active_branch;
 use crate::eval::{
-    SplitCompiledExpr, check_scratch, csr_rows, split_read_write, split_two_read_write,
-    unary_apply, with_binary_op, with_unary_op,
+    SplitCompiledExpr, check_scratch, split_read_write, split_two_read_write, unary_apply,
+    with_binary_op, with_unary_op,
 };
 use crate::eval_batch::broadcast_lanes;
 use crate::ir::ids::BufSlot;
 use crate::ir::{BinaryOp, BroadcastKind, ConstPool, Instruction, SplitEvalInfo, TypedIr, UnaryOp};
-use crate::node::CsrData;
+use crate::products::CsrTangentLanesProduct;
 
 /// Lane counts the batched sweep is instantiated for, widest first.
 const SUPPORTED_LANES: [usize; 2] = [8, 4];
@@ -387,7 +387,7 @@ fn exec<const K: usize>(
                 tangent_base::<K>(dst.index(), primal_len),
                 csr.shape.rows * K,
             );
-            dispatch(CsrTangents::<K> { csr, x, out });
+            dispatch(CsrTangentLanesProduct::<K> { csr, x, out });
         },
 
         Instruction::Conditional {
@@ -413,33 +413,6 @@ fn exec<const K: usize>(
         },
 
         other => unreachable!("instruction {other:?} has no batched form"),
-    }
-}
-
-/// `out = A @ x` for `K` tangent directions, each accumulated as the scalar `CsrProduct` does.
-struct CsrTangents<'a, const K: usize> {
-    csr: &'a CsrData,
-    x: &'a [f64],
-    out: &'a mut [f64],
-}
-
-impl<const K: usize> Product for CsrTangents<'_, K> {
-    type Output = ();
-
-    // Must inline into `dispatch`'s FMA-enabled wrapper.
-    #[allow(clippy::inline_always)]
-    #[inline(always)]
-    fn run<A: Accumulate>(self) {
-        let Self { csr, x, out } = self;
-        for (out, (cols, vals)) in out.as_chunks_mut::<K>().0.iter_mut().zip(csr_rows(csr)) {
-            let mut acc = [0.0_f64; K];
-            for (&col, &value) in cols.iter().zip(vals) {
-                for (a, &v) in acc.iter_mut().zip(&x[col * K..][..K]) {
-                    *a = A::mul_acc(*a, value, v);
-                }
-            }
-            out.copy_from_slice(&acc);
-        }
     }
 }
 

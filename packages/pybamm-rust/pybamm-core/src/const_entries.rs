@@ -9,7 +9,7 @@ use crate::accumulate::mul_acc;
 use crate::arena::{Arena, NodeId, NodeMap};
 use crate::ir::infer_sizes;
 use crate::node::Node;
-use crate::sparsity::SparsityPattern;
+use crate::sparsity::CsrPattern;
 
 /// Coefficients per element beyond which the element is abandoned and swept.
 ///
@@ -316,7 +316,7 @@ fn union_seeds<'a>(
 pub fn classify_constant_entries(
     arena: &Arena,
     tangent_root: NodeId,
-    pattern: &SparsityPattern,
+    pattern: &CsrPattern,
 ) -> (Vec<bool>, Vec<(usize, f64)>) {
     let rows = classify_rows(arena, tangent_root, pattern.nrows());
 
@@ -747,7 +747,7 @@ mod tests {
         root: NodeId,
         n_rows: usize,
         n_states: usize,
-    ) -> (SparsityPattern, Vec<bool>, Vec<(usize, f64)>) {
+    ) -> (CsrPattern, Vec<bool>, Vec<(usize, f64)>) {
         let mut tangent = Dag::new(arena.clone(), root);
         tangent.rewrite_in_place(tangent_wrt_states);
         let tangent = simplify_pipeline(tangent);
@@ -758,7 +758,7 @@ mod tests {
     }
 
     fn constant_map(
-        pattern: &SparsityPattern,
+        pattern: &CsrPattern,
         entries: &[(usize, f64)],
     ) -> std::collections::HashMap<(usize, usize), f64> {
         let rows = pattern.entry_rows();

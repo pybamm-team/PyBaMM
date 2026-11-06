@@ -27,6 +27,7 @@ mod newtype;
 pub mod node;
 mod observable;
 mod params;
+mod products;
 mod row_extract;
 mod simplify;
 #[cfg(feature = "serialize")]
@@ -52,6 +53,6 @@ pub use row_extract::{ScalarRowBlock, extract_scalar_rows};
 pub use simplify::{cse, dce, simplify, simplify_pipeline};
 #[cfg(feature = "serialize")]
 pub use snapshot::DagSnapshot;
-pub use sparsity::{SparsityPattern, detect_sparsity_per_output};
+pub use sparsity::{CsrPattern, detect_sparsity_per_output};
 pub use tangent::{DiffTarget, tangent_wrt_params, tangent_wrt_states};
 pub use zero_propagate::zero_propagate;

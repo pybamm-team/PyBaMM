@@ -22,7 +22,7 @@ use crate::jacobian::{CscPattern, JacobianData, JacobianLayout, JacobianScratch,
 use crate::node::CsrData;
 use crate::observable::{ObservableScratch, ObservableSet};
 use crate::params::{PackedWidth, ParamIdx, ParamRegistry, resolve_input_width};
-use crate::sparsity::SparsityPattern;
+use crate::sparsity::CsrPattern;
 
 pub use algebraic::AlgebraicBlock;
 use algebraic::AlgebraicScratch;
@@ -139,7 +139,7 @@ pub struct CompiledModel {
     jac: Arc<JacobianData>,
     mass_matrix: CsrData,
     mass_kind: MassKind,
-    sparsity: SparsityPattern,
+    sparsity: CsrPattern,
     csc_sparsity: CscPattern,
     n_states: usize,
     /// Declared length of the `inputs` slice, which may exceed what the expression reads.
@@ -184,8 +184,9 @@ impl CompiledModel {
                 n_states,
             });
         }
-        // Up front, so a mass row that repeats or reorders columns fails before the Jacobian build.
-        let mass_sparsity = SparsityPattern::try_from(&mass_matrix)?;
+        // Up front, so a mass row whose column indices repeat or are unsorted fails before the
+        // Jacobian build; the CSR/CSC slot maps need them strictly ascending.
+        let mass_sparsity = CsrPattern::try_from(&mass_matrix)?;
         // Compiled raw: a ULP-shifting `simplify` fold stalls IDA's Newton.
         let primal_ir = TypedIr::from_dag(DagRef::new(arena, rhs));
         let n_outputs = primal_ir.output_len();
@@ -203,7 +204,7 @@ impl CompiledModel {
         let mut sparsity = jac.sparsity().clone();
         sparsity.merge_with(&mass_sparsity);
 
-        let csc_sparsity = CscPattern::from_csr(&sparsity);
+        let csc_sparsity = CscPattern::from(&sparsity);
 
         let mass_to_csc_map = csc_sparsity.slots_of(&mass_sparsity);
         let jac_layout = jac.layout_in(&csc_sparsity);
@@ -352,7 +353,7 @@ impl CompiledModel {
 
     /// CSR pattern of the assembled Jacobian `df/dy - cj*M` (union of both patterns).
     #[inline]
-    pub const fn sparsity(&self) -> &SparsityPattern {
+    pub const fn sparsity(&self) -> &CsrPattern {
         &self.sparsity
     }
 

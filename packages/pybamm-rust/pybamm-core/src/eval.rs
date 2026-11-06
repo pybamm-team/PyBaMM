@@ -3,14 +3,15 @@
 // The op helpers must inline as one chain into the interpreter loop.
 #![allow(clippy::inline_always)]
 
-use crate::accumulate::{Accumulate, Product, dispatch};
+use crate::accumulate::dispatch;
 use crate::arena::DagRef;
 use crate::branch_regions::active_branch;
 use crate::ir::ids::{InterpSourceIdx, NdInterpolantIdx};
 use crate::ir::{
     BinaryOp, BroadcastKind, ConstPool, Instruction, Slot, SplitEvalInfo, TypedIr, UnaryOp,
 };
-use crate::node::{CsrData, InterpolantData, NdInterpolantData};
+use crate::node::{InterpolantData, NdInterpolantData};
+use crate::products::{CsrProduct, DenseProduct};
 use crate::tangent_batch;
 
 /// `match $op`, expanding `$body` in each arm with `$f` bound to that arm's function.
@@ -460,76 +461,6 @@ pub(crate) fn split_two_read_write(
         }
     };
     (read(a), read(b), dst_s)
-}
-
-/// `out = A @ x` for a CSR `A`, each row summed from `0.0` in stored order.
-pub(crate) struct CsrProduct<'a> {
-    pub(crate) csr: &'a CsrData,
-    pub(crate) x: &'a [f64],
-    pub(crate) out: &'a mut [f64],
-}
-
-impl Product for CsrProduct<'_> {
-    type Output = ();
-
-    #[inline(always)]
-    fn run<A: Accumulate>(self) {
-        for (o, (cols, vals)) in self.out.iter_mut().zip(csr_rows(self.csr)) {
-            let mut sum = 0.0;
-            for (&col, &val) in cols.iter().zip(vals) {
-                sum = A::mul_acc(sum, val, self.x[col]);
-            }
-            *o = sum;
-        }
-    }
-}
-
-/// `buf[dst..] = M @ buf[vec..]` for the row-major `rows x cols` matrix at `buf[mat..]`.
-struct DenseProduct<'a> {
-    buf: &'a mut [f64],
-    mat: usize,
-    vec: usize,
-    dst: usize,
-    rows: usize,
-    cols: usize,
-}
-
-impl Product for DenseProduct<'_> {
-    type Output = ();
-
-    #[inline(always)]
-    fn run<A: Accumulate>(self) {
-        let Self {
-            buf,
-            mat,
-            vec,
-            dst,
-            rows,
-            cols,
-        } = self;
-        for row in 0..rows {
-            let mat_row = &buf[mat + row * cols..][..cols];
-            let mut sum = 0.0;
-            for (&m, &v) in mat_row.iter().zip(&buf[vec..vec + cols]) {
-                sum = A::mul_acc(sum, m, v);
-            }
-            buf[dst + row] = sum;
-        }
-    }
-}
-
-/// Each row of `csr` as its stored `(columns, values)`, in row order.
-///
-/// The one row walk behind every sparse product; `CsrData::try_new` guarantees the splits fit.
-#[inline(always)]
-pub(crate) fn csr_rows(csr: &CsrData) -> impl Iterator<Item = (&[usize], &[f64])> {
-    let (mut cols, mut vals) = (&csr.indices[..], &csr.data[..]);
-    csr.indptr.windows(2).map(move |w| {
-        let (row_cols, rest_cols) = cols.split_at(w[1] - w[0]);
-        let (row_vals, rest_vals) = vals.split_at(w[1] - w[0]);
-        (cols, vals) = (rest_cols, rest_vals);
-        (row_cols, row_vals)
-    })
 }
 
 /// Apply a binary operation with broadcasting.

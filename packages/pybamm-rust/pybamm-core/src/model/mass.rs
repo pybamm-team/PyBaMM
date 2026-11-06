@@ -140,7 +140,7 @@ impl CompiledModel {
             },
             MassKind::General => {
                 for (row, (r_i, &f_i)) in rows.enumerate() {
-                    *r_i = csr_row_dot(&self.mass_matrix, row, yp) - f_i;
+                    *r_i = self.mass_matrix.row_dot(row, yp) - f_i;
                 }
             },
         }
@@ -157,7 +157,7 @@ impl CompiledModel {
                     *mv_i = if algebraic { 0.0 } else { x_i };
                 }
             },
-            MassKind::General => csr_matvec(&self.mass_matrix, x, mv),
+            MassKind::General => self.mass_matrix.matvec(x, mv),
         }
     }
 
@@ -172,25 +172,6 @@ impl CompiledModel {
     }
 }
 
-/// CSR matrix-vector product: y = A @ x
-#[inline]
-fn csr_matvec(csr: &CsrData, x: &[f64], y: &mut [f64]) {
-    for (row, y_row) in y[..csr.shape.rows].iter_mut().enumerate() {
-        *y_row = csr_row_dot(csr, row, x);
-    }
-}
-
-/// `A[row, :] @ x`, accumulated from `0.0` in stored order.
-#[inline]
-fn csr_row_dot(csr: &CsrData, row: usize, x: &[f64]) -> f64 {
-    let span = csr.indptr[row]..csr.indptr[row + 1];
-    let mut sum = 0.0;
-    for (&value, &col) in csr.data[span.clone()].iter().zip(&csr.indices[span]) {
-        sum += value * x[col];
-    }
-    sum
-}
-
 #[cfg(test)]
 mod tests {
     use super::super::test_fixtures::{
@@ -200,35 +181,6 @@ mod tests {
     use super::*;
     use crate::arena::Arena;
     use crate::node::{Node, Shape};
-
-    #[test]
-    fn csr_matvec_takes_each_rows_dot_product() {
-        // diag(2, 3), then [[1, 2, 0], [3, 4, 5], [0, 6, 7]].
-        let cases = [
-            (vec![0, 1, 2], vec![0, 1], vec![2.0, 3.0], vec![2.0, 6.0]),
-            (
-                vec![0, 2, 5, 7],
-                vec![0, 1, 0, 1, 2, 1, 2],
-                vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
-                vec![5.0, 26.0, 33.0],
-            ),
-        ];
-        for (indptr, indices, data, expected) in cases {
-            let n = expected.len();
-            let csr = CsrData {
-                shape: Shape::matrix(n, n),
-                indptr,
-                indices,
-                data,
-            };
-            let x: Vec<f64> = (1..=n).map(|i| i as f64).collect();
-            let mut y = vec![0.0; n];
-            csr_matvec(&csr, &x, &mut y);
-            for (got, want) in y.iter().zip(&expected) {
-                assert!((got - want).abs() < 1e-14, "got {y:?}, want {expected:?}");
-            }
-        }
-    }
 
     #[test]
     fn the_residual_is_m_yp_minus_f() {
