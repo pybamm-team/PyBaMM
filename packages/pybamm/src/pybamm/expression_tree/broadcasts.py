@@ -153,17 +153,14 @@ class PrimaryBroadcast(Broadcast):
                 """Primary broadcast from current collector domain must be to electrode
                 or separator or particle (core or shell) or particle size domains"""
             )
-        elif (
-            child._domains["primary"][0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ] and not (
-                "particle" in broadcast_domain[0]
-                or "core" in broadcast_domain[0]
-                or "shell" in broadcast_domain[0]
-            )
+        elif child._domains["primary"][0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and not (
+            "particle" in broadcast_domain[0]
+            or "core" in broadcast_domain[0]
+            or "shell" in broadcast_domain[0]
         ):
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle

@@ -35,7 +35,6 @@ sim = pybamm.Simulation(
     model,
     experiment=experiment,
     parameter_values=param,
-    # solver=pybamm.CasadiSolver("fast with events"),
 )
 # %%
 solution = sim.solve(calc_esoh=False)
