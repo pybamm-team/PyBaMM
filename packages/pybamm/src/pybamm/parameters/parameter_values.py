@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Iterator, Mapping
 from pathlib import Path
 from pprint import pformat
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 from warnings import warn
 
 import numpy as np
@@ -125,7 +125,7 @@ class ParameterValues:
     @classmethod
     def create_from_bpx(
         cls, filename: str | Path, target_soc: float | None = None
-    ) -> ParameterValues:
+    ) -> Self:
         """
         Create ParameterValues from a BPX file.
 
@@ -171,7 +171,7 @@ class ParameterValues:
     @classmethod
     def create_from_bpx_obj(
         cls, bpx_obj: dict, target_soc: float | None = None
-    ) -> ParameterValues:
+    ) -> Self:
         """
         Create ParameterValues from a BPX dictionary object.
 
@@ -225,7 +225,7 @@ class ParameterValues:
         )
 
     @classmethod
-    def _create_from_bpx(cls, bpx, target_soc: float | None) -> ParameterValues:
+    def _create_from_bpx(cls, bpx, target_soc: float | None) -> Self:
         """Internal method to create ParameterValues from a parsed BPX object."""
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
@@ -805,6 +805,7 @@ class ParameterValues:
         inplace: bool = True,
         options=None,
         inputs=None,
+        differentiable: bool | list[str] = False,
     ):
         """
         Set the initial state of the battery.
@@ -825,6 +826,10 @@ class ParameterValues:
             Model options. Default is None.
         inputs : dict, optional
             Input parameters. Default is None.
+        differentiable : bool or list of str, optional
+            If True, or a list of input names, set the initial state as an expression
+            in the input parameters that carries its first derivative with respect to
+            them, see :func:`pybamm.lithium_ion.set_initial_state`. Default is False.
 
         Returns
         -------
@@ -838,6 +843,8 @@ class ParameterValues:
         >>> isinstance(result, pybamm.ParameterValues)
         True
         """
+        # Only chemistries that support it accept the keyword
+        kwargs = {"differentiable": differentiable} if differentiable else {}
         return self._set_initial_state(
             initial_value,
             self,
@@ -846,6 +853,7 @@ class ParameterValues:
             inplace=inplace,
             options=options,
             inputs=inputs,
+            **kwargs,
         )
 
     def set_initial_stoichiometry_half_cell(
@@ -1688,7 +1696,7 @@ def deserialize_parameter_value(value: Any) -> Any:
 
 
 def convert_parameter_values_to_json(
-    parameter_values: Mapping[str, Any], filename: str | None = None
+    parameter_values: ParameterValues | Mapping[str, Any], filename: str | None = None
 ) -> dict:
     """
     Convert a mapping of parameter values to a JSON-serializable dictionary.

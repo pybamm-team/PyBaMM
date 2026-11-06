@@ -8,6 +8,10 @@ import pybamm
 
 
 class TestFiniteVolume2D:
+    def test_deprecated(self):
+        with pytest.warns(DeprecationWarning, match=r"FiniteVolume2D is deprecated"):
+            pybamm.FiniteVolume2D()
+
     def test_node_to_edge_to_node(self, mesh_2d):
         # Create discretisation
         mesh = mesh_2d
@@ -309,13 +313,18 @@ class TestFiniteVolume2D:
             eqn_disc.evaluate(None, LR.flatten())
             eqn_disc.evaluate(None, TB.flatten())
 
-        for eqn in [
-            var * pybamm.Magnitude(pybamm.grad(var), "lr"),
-            pybamm.Magnitude(pybamm.grad(var), "lr") * var,
-        ]:
-            eqn_disc = disc.process_symbol(eqn)
-            eqn_disc.evaluate(None, LR.flatten())
-            eqn_disc.evaluate(None, TB.flatten())
+        for index in [0, 1]:
+            component = pybamm.Component(pybamm.grad(var), index)
+            edge_shape = disc.process_symbol(component).shape
+            for eqn in [
+                var * component,
+                component * var,
+                var * (2 * component),
+            ]:
+                eqn_disc = disc.process_symbol(eqn)
+                assert eqn_disc.shape == edge_shape
+                eqn_disc.evaluate(None, LR.flatten())
+                eqn_disc.evaluate(None, TB.flatten())
 
     def test_upwind_downwind_2d(self, mesh_2d):
         """
@@ -1121,6 +1130,36 @@ class TestFiniteVolume2D:
 
         roundtripped = pickle.loads(pickle.dumps(grad_disc))
         np.testing.assert_array_equal(roundtripped.lr_field.evaluate(None, y), expected)
+
+    def test_edge_direction(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        grad_var = pybamm.grad(var)
+        edge_direction = pybamm.FiniteVolume2D._edge_direction
+
+        assert edge_direction(pybamm.Component(grad_var, 0)) == "lr"
+        assert edge_direction(pybamm.Component(grad_var, 1)) == "tb"
+        with pytest.warns(DeprecationWarning, match="Magnitude is deprecated"):
+            magnitude = pybamm.Magnitude(grad_var, "tb")
+        assert edge_direction(magnitude) == "tb"
+        for index in [2, -1]:
+            with pytest.raises(
+                pybamm.DiscretisationError, match=r"not a 2D lr/tb direction"
+            ):
+                edge_direction(pybamm.Component(grad_var, index))
+
+    def test_edge_direction_of_compound_operands(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        grad_var = pybamm.grad(var)
+        edge_direction = pybamm.FiniteVolume2D._edge_direction
+
+        assert edge_direction(2 * pybamm.Component(grad_var, 0)) == "lr"
+        assert edge_direction(pybamm.NodeToEdge2D(var, "tb") + 1) == "tb"
+        with pytest.raises(
+            pybamm.DiscretisationError, match=r"single lr/tb edge direction"
+        ):
+            edge_direction(pybamm.Norm(grad_var))
 
     def test_delta_function(self, mesh_2d):
         # Create discretisation

@@ -7,7 +7,7 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.17.1"
+    rev: "v0.17.3"
     hooks:
       - id: ruff-check
         args: [--fix, --show-fixes]
@@ -65,14 +65,13 @@ repos:
         name: Report comment slop on changed lines
         entry: python .github/scripts/check_comment_slop.py
         language: python
-        additional_dependencies: ["comment-slop==0.1.0"]
+        additional_dependencies: ["comment-slop==0.3.0"]
         require_serial: true
 
       - id: model-zoo-docs
         name: Regenerate model zoo docs pages and badges from the manifests
         entry: python packages/pybamm-model-zoo/scripts/generate.py
         language: python
-        additional_dependencies: ["tomli; python_version < '3.11'"]
         files: ^(packages/pybamm-model-zoo/(src/pybamm_model_zoo/.*|scripts/generate\.py|status\.json|badges/.*)|docs/source/model_zoo/.*)$
         pass_filenames: false
 

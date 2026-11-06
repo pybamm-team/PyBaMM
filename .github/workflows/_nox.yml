@@ -33,11 +33,6 @@ on:
         default: 1
         required: false
         type: number
-      texlive:
-        description: "Install TeXLive on Linux, for sessions that render model equations with latexify."
-        default: false
-        required: false
-        type: boolean
       upload_coverage:
         description: "Upload coverage.xml to Codecov after the sessions finish."
         default: false
@@ -88,22 +83,12 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
         if: startsWith(matrix.leg.os, 'ubuntu')
         with:
-          packages: gfortran gcc graphviz pandoc libosmesa6 libegl1
+          packages: graphviz pandoc libosmesa6 libegl1
           execute_install_scripts: true
 
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS for Linux
+      - name: Register graphviz plugins
         if: startsWith(matrix.leg.os, 'ubuntu')
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install libopenblas-dev
-
-      # Opt-in and uncached, so kept minimal: sympy.preview needs the standalone class
-      # (texlive-latex-extra) and dvipng
-      - name: Install TeXLive for Linux
-        if: ${{ startsWith(matrix.leg.os, 'ubuntu') && inputs.texlive }}
-        run: sudo apt-get install --no-install-recommends texlive-latex-extra dvipng
+        run: sudo dot -c
 
       - name: Install macOS system dependencies
         if: startsWith(matrix.leg.os, 'macos')
@@ -113,11 +98,9 @@ jobs:
           HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
-        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz libomp
-          brew reinstall gcc
+          brew install graphviz
 
       - name: Install Windows system dependencies
         if: startsWith(matrix.leg.os, 'windows')
@@ -126,21 +109,24 @@ jobs:
       # VTK save_gif needs OSMesa on headless Windows runners (osmesa.dll on PATH).
       - name: Setup headless OpenGL on Windows
         if: startsWith(matrix.leg.os, 'windows')
-        uses: pyvista/setup-headless-display-action@c103a2ff45650d38cb71684b5dc6cdfeb9442c79 # v5.1.0
+        uses: pyvista/setup-headless-display-action@10e6efb97af3cd1523828f0e22c39f0e4567f3e4 # v5.2.0
         with:
           pyvista: "false"
           mesa3d-release: "24.3.0"
           install-mesa3d-offscreen: "true"
 
       - name: Set up Python ${{ matrix.leg.python }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.leg.python }}
 
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: "latest"
           enable-cache: true
+          # Unpruned per-PR uv caches overflow the 10 GB limit and evict solver wheels.
+          prune-cache: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install nox
         run: uv tool install nox
