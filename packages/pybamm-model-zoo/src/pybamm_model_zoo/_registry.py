@@ -14,7 +14,7 @@ from __future__ import annotations
 import importlib
 import keyword
 import re
-import sys
+import tomllib
 import warnings
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
@@ -23,11 +23,6 @@ from typing import Any
 
 from pybamm_model_zoo._exceptions import ManifestError, ModelUnavailableError
 from pybamm_model_zoo._paths import PACKAGE_ROOT
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 MANIFEST_NAME = "model.toml"
 ENTRY_POINT_GROUP = "pybamm_zoo_models"

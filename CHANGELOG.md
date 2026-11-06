@@ -3,6 +3,9 @@
 ## Breaking changes
 
 - `StateVector` and `StateVectorDot` raise `ShapeError` for stepped, negative, overlapping or out-of-order slices; pass sorted, disjoint, non-negative slices. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
+- Dropped support for Python 3.10, which reaches end of life in October 2026. `pybamm` and `pybammsolvers` now require Python 3.11 or newer, and `pybamm` no longer depends on `typing-extensions`. Python 3.10 users can stay on PyBaMM 26.10. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
+- `pybamm.ModelSolutionObservability` and `pybamm.parameters.ParameterCategory` are now `enum.StrEnum`s, so `str()` and f-strings of a member give its value instead of `<Enum>.<NAME>`. `ParameterCategory` members now also compare equal to their string values. Use `.name` for a member's name. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
+- A failed write in `BaseModel.to_json` or `BaseModel.to_config` now re-raises the original `OSError` subclass (e.g. `PermissionError`) instead of a plain `OSError`. The file path is in the exception's `__notes__`, not its message. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 
 ## Deprecated
 
@@ -12,12 +15,19 @@
 
 ## Features
 
-- `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6001](https://github.com/pybamm-team/PyBaMM/issues/6001), [#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
+- `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
+- Added `"coupled ion-electron transfer"` as an `"intercalation kinetics"` option, following Fraggedakis et al. (2021). It uses the existing reorganization energy and a new temperature-dependent `"... electrode coupled ion-electron transfer rate constant [A.m-2]"` per electrode, and its current saturates at large overpotential. ([#5993](https://github.com/pybamm-team/PyBaMM/pull/5993))
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
+- Added `pybamm.bode_plot` and `pybamm.eis_plot`, which overlays labelled spectra. `EISSimulation.plot()` now shows Nyquist and Bode plots instead of failing. ([#5989](https://github.com/pybamm-team/PyBaMM/pull/5989))
+- When every sub-solver of `CompositeSolver` fails, their errors are chained to the raised `SolverError` as an `ExceptionGroup`, so each failure's traceback is kept. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 
 ## Bug fixes
 
-- `Discretisation(resolve_coupled_variables=True)` now resolves a `pybamm.CoupledVariable` used in a boundary condition, which used to raise a `DiscretisationError`. It also no longer rewrites the equations of the model it is given when `inplace=False`. ([#6001](https://github.com/pybamm-team/PyBaMM/issues/6001), [#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
+- `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
+- Released `pybammsolvers` v0.12.0, with the solver functions `pybamm` calls since #5994, and `pybamm` now requires it. Before, `pybamm` from source with `pybammsolvers` 0.11.1 from PyPI failed at its first solve. ([#6028](https://github.com/pybamm-team/PyBaMM/pull/6028))
+- Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))
+- `Discretisation(resolve_coupled_variables=True)` now resolves a `pybamm.CoupledVariable` used in a boundary condition, which used to raise a `DiscretisationError`. It also no longer rewrites the equations of the model it is given when `inplace=False`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
+- A battery model loaded with `Serialise.load_custom_model` keeps its saved geometry, mesh points, submesh types and spatial methods when its own class can't be imported. Before, the built-in ancestor's defaults silently replaced them. ([#5995](https://github.com/pybamm-team/PyBaMM/pull/5995))
 - `from pybamm.models.submodels.interface.kinetics import *` no longer raises an `AttributeError` ([#5970](https://github.com/pybamm-team/PyBaMM/pull/5970))
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
 - `IDAKLUSolver.jaxify` now returns correct derivatives at any requested time. Before, it dropped negative tangents and scalar-time cotangents, and read sensitivities from the wrong solver step, or from the nearest `t_eval` point at off-grid times. ([#5916](https://github.com/pybamm-team/PyBaMM/pull/5916))
@@ -38,9 +48,15 @@
 - `RegPower` now evaluates the same operations in `evaluate` and CasADi, taking a literal exponent of 0.5 or 2 as square roots, so they agree bitwise; CasADi used a `hypot` form. With `delta=0`, `evaluate` and the Jacobian use `base ** exponent`, as CasADi did. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - CasADi linear and `pchip` interpolants on a uniform grid now find a point's segment by binary search. The `"exact"` lookup could pick the neighbouring segment at or one ulp beside a knot, giving the Jacobian that segment's slope. ([#5955](https://github.com/pybamm-team/PyBaMM/pull/5955))
 - `QuickPlot`, and so `Simulation.plot`, now uses matplotlib's color cycle (`axes.prop_cycle`) for default colors when a style sheet or rcParams changes it; otherwise it keeps its red, blue, black, green, magenta and cyan colors. ([#5953](https://github.com/pybamm-team/PyBaMM/pull/5953))
+- The heat of mixing now sums over every particle phase, so `"heat of mixing": "true"` works with `"particle phases": "2"` instead of raising a `ModelError`. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
+- The heat of mixing now uses the particle's effective diffusivity, so it conserves energy with `"current sigmoid"` diffusivity or stress-induced diffusion, and a uniform particle profile builds again. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
+- `"heat of mixing": "true"` now works with `"particle": "quadratic profile"` or `"quartic profile"`, using their closed-form flux instead of failing to discretise with a `ShapeError`. ([#5935](https://github.com/pybamm-team/PyBaMM/pull/5935))
+- Irreversible heating now includes the resistive loss across the SEI film when `"SEI film resistance"` is `"distributed"` or `"average"`, so it reaches `"Total heating [W]"` and the cell temperature. ([#5841](https://github.com/pybamm-team/PyBaMM/pull/5841))
+- Irreversible heating now includes the heat from SEI growth, SEI on cracks and lithium plating side reactions, so their electrical losses reach `"Total heating [W]"` and the cell temperature. ([#5875](https://github.com/pybamm-team/PyBaMM/pull/5875))
 
 ## Optimizations
 
+- Pushes to `main` skip the test suite when the commit already passed the merge queue, and only rebuild the cached solver wheels and upload the Codecov baseline. Other pushes still run the full suite. ([#6027](https://github.com/pybamm-team/PyBaMM/pull/6027))
 - Read the Docs pull request builds drop `linkcheck` and the unpublished PDF, install the released solver wheel instead of compiling it, and are skipped when nothing the docs render changed, saving about 14 of 20 minutes. ([#5986](https://github.com/pybamm-team/PyBaMM/pull/5986))
 - Pull request CI no longer installs TeXLive, or the compilers and OpenBLAS that the prebuilt solver wheels make redundant. The latexify test mocks `sympy.preview` and runs everywhere. TeXLive downloads took 12–50 minutes in 6 of 15 runs. ([#5985](https://github.com/pybamm-team/PyBaMM/pull/5985))
 - Faster model build and `IDAKLUSolver` set-up for large models. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
@@ -74,6 +90,7 @@
 - `Ai2020`'s electrolyte diffusivity now converts the Valoen and Reimers (2005) fit from cm2/s to m2/s. It was 1e4 times too large, so DFN simulations with Ai2020 had almost no electrolyte concentration gradient. ([#5887](https://github.com/pybamm-team/PyBaMM/issues/5887), [#5888](https://github.com/pybamm-team/PyBaMM/pull/5888))
 - `Chayambuka2022`'s NVPF (positive electrode) diffusivity is now looked up at the solid concentration, `sto * c_max`, instead of `sto` times the initial electrolyte concentration, which made it 20 to 50 times too large. ([#5885](https://github.com/pybamm-team/PyBaMM/issues/5885), [#5889](https://github.com/pybamm-team/PyBaMM/pull/5889))
 - Fixed the 1+1D and 2+1D potential pair current collector models ignoring `"Number of electrodes connected in parallel to make a cell"`. The tab boundary condition now uses the current through one electrode pair instead of the whole cell current. ([#5826](https://github.com/pybamm-team/PyBaMM/pull/5826))
+- `pybamm.max` and `pybamm.min` now return a symbol with no domains, since they reduce their child to a single value. Previously they kept the child's domains, so reading a variable such as `"Maximum negative particle surface stoichiometry"` from a 2+1D model raised `UnboundLocalError`. ([#5894](https://github.com/pybamm-team/PyBaMM/pull/5894))
 
 # [v26.10.0.0](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.0.0) - 2026-10-09
 

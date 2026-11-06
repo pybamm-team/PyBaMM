@@ -9,7 +9,7 @@ casadi::Function clone_casadi_function(
   bool deep_copy,
   const std::string *serialized)
 {
-  if (!deep_copy) {
+  if (!deep_copy || f.is_null()) {
     return f;
   }
   if (serialized != nullptr) {
@@ -27,6 +27,8 @@ SerializedCasadiFunctions serialize_casadi_functions(
   const casadi::Function &mass_action,
   const casadi::Function &sens,
   const casadi::Function &events,
+  const casadi::Function &alg_res,
+  const casadi::Function &alg_jac,
   const std::vector<casadi::Function*>& var_fcns,
   const std::vector<casadi::Function*>& dvar_dy_fcns,
   const std::vector<casadi::Function*>& dvar_dp_fcns)
@@ -38,6 +40,9 @@ SerializedCasadiFunctions serialize_casadi_functions(
   serialized.mass_action = mass_action.serialize();
   serialized.sens = sens.serialize();
   serialized.events = events.serialize();
+  // A null function cannot be serialized; clone_casadi_function passes it through.
+  if (!alg_res.is_null()) serialized.alg_res = alg_res.serialize();
+  if (!alg_jac.is_null()) serialized.alg_jac = alg_jac.serialize();
 
   serialized.var_fcns.reserve(var_fcns.size());
   for (const auto *var : var_fcns) {
