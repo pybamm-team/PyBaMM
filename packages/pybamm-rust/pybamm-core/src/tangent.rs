@@ -179,9 +179,9 @@ fn exponent_partial(arena: &mut Arena, base: NodeId, pow: NodeId) -> NodeId {
     arena.alloc(Node::Mul(gated, log_a))
 }
 
-/// `d` with an exact zero raised to the smallest subnormal, as a tangent's denominator.
+/// `d` with an exact zero raised to the smallest subnormal, as a denominator.
 ///
-/// A zero tangent over it stays zero where `d` is zero, instead of `0 / 0`, and one above
+/// A zero numerator over it stays zero where `d` is zero, instead of `0 / 0`, and one above
 /// 1e-15 in magnitude still overflows to ±inf. Elsewhere the sum is exact, NaN included.
 fn nonzero_denominator(arena: &mut Arena, d: NodeId) -> NodeId {
     let zero = arena.alloc(Node::Scalar(0.0));
@@ -301,14 +301,13 @@ impl Differentiator<'_> {
                 arena.alloc(Node::Add(a_db, da_b))
             },
 
+            // `(da - (a / b) db) / b` overflows only where `a / b` does, unlike squaring `b`;
+            // masked, so a zero `db` drops an overflowed quotient rather than meeting `0 * inf`.
             Node::Div(a, b) => {
                 let [da, db] = self.ready([a, b])?;
-                let da_b = arena.alloc(Node::Mul(da, b));
-                let a_db = arena.alloc(Node::Mul(a, db));
-                let numer = arena.alloc(Node::Sub(da_b, a_db));
-                let two = arena.alloc(Node::Scalar(2.0));
-                let b_sq = arena.alloc(Node::Pow(b, two));
-                arena.alloc(Node::Div(numer, b_sq))
+                let quotient_db = arena.alloc(Node::MaskedMul(db, id));
+                let numer = arena.alloc(Node::Sub(da, quotient_db));
+                arena.alloc(Node::Div(numer, b))
             },
 
             // Masked on both terms, so a zero mask still drops the tangent of whatever it masks.
@@ -405,14 +404,12 @@ impl Differentiator<'_> {
                 arena.alloc(Node::Mul(sinh_a, da))
             },
 
+            // `hypot(1, a)` is `sqrt(1 + a^2)` without squaring `a`, which overflows past 1e154.
             Node::Arcsinh(a) => {
                 let [da] = self.ready([a])?;
                 let one = arena.alloc(Node::Scalar(1.0));
-                let two = arena.alloc(Node::Scalar(2.0));
-                let a_sq = arena.alloc(Node::Pow(a, two));
-                let one_plus_a_sq = arena.alloc(Node::Add(one, a_sq));
-                let sqrt_denom = arena.alloc(Node::Sqrt(one_plus_a_sq));
-                arena.alloc(Node::Div(da, sqrt_denom))
+                let denominator = arena.alloc(Node::Hypot(one, a));
+                arena.alloc(Node::Div(da, denominator))
             },
 
             Node::Arctan(a) => {
@@ -468,14 +465,16 @@ impl Differentiator<'_> {
                 })
             },
 
+            // Each leg over the hypotenuse is at most 1, so no product overflows, and is 0 at the
+            // origin, so the tangent is 0 there, as `abs`'s is.
             Node::Hypot(a, b) => {
                 let [da, db] = self.ready([a, b])?;
-                let a_da = arena.alloc(Node::Mul(a, da));
-                let b_db = arena.alloc(Node::Mul(b, db));
-                let numer = arena.alloc(Node::Add(a_da, b_db));
-                // The numerator is zero at the origin, so the tangent is 0 there, as `abs`'s is.
                 let denominator = nonzero_denominator(arena, id);
-                arena.alloc(Node::Div(numer, denominator))
+                let a_share = arena.alloc(Node::Div(a, denominator));
+                let b_share = arena.alloc(Node::Div(b, denominator));
+                let a_term = arena.alloc(Node::Mul(a_share, da));
+                let b_term = arena.alloc(Node::Mul(b_share, db));
+                arena.alloc(Node::Add(a_term, b_term))
             },
 
             Node::MatMul(a, b) => {
@@ -1224,6 +1223,56 @@ mod tests {
                     "{label} at {y:?}: expected {expected}, got {got}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn rules_keep_the_range_of_a_primal_that_does_not_overflow() {
+        // Each tangent is representable; squaring an operand took the first three to 0 or inf.
+        type Build = fn(&mut Arena, NodeId, NodeId) -> NodeId;
+        /// Label, root, states, seed and the closed-form tangent.
+        type Case = (&'static str, Build, [f64; 2], [f64; 2], f64);
+        let cases: [Case; 4] = [
+            (
+                "arcsinh",
+                |a, x, _| a.alloc(Node::Arcsinh(x)),
+                [1e200, 0.0],
+                [1.0, 0.0],
+                1e-200,
+            ),
+            (
+                "hypot",
+                |a, x, y| a.alloc(Node::Hypot(x, y)),
+                [1e308, 1e308],
+                [1.0, 1.0],
+                std::f64::consts::SQRT_2,
+            ),
+            (
+                "quotient",
+                |a, x, y| a.alloc(Node::Div(x, y)),
+                [1.0, 1e200],
+                [1.0, 0.0],
+                1e-200,
+            ),
+            // The quotient overflows, but a fixed divisor leaves `da / b` finite.
+            (
+                "quotient past overflow",
+                |a, x, y| a.alloc(Node::Div(x, y)),
+                [1e300, 1e-10],
+                [1.0, 0.0],
+                1e10,
+            ),
+        ];
+        for (label, build, y, dy, expected) in cases {
+            let mut arena = Arena::new();
+            let x0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
+            let x1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
+            let root = build(&mut arena, x0, x1);
+            let got = jvp(&arena, root, &y, &[], &dy)[0];
+            assert!(
+                (got - expected).abs() <= 1e-15 * expected,
+                "{label} at {y:?}: expected {expected}, got {got}"
+            );
         }
     }
 
