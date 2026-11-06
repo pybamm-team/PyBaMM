@@ -493,10 +493,14 @@ impl JacobianData {
         retain_outside_rows(&sparsity, &skip_rows, &mut constant_csr_entries);
 
         let jvp_expr = Arc::new(SplitCompiledExpr::compile(tangent.as_ref()));
-        // Masking is only pruning: nothing reads a split row's sweep output.
+        // Masking is only pruning: assembly reads only swept entries, so a split or wholly
+        // constant row's sweep output goes unread.
+        let unswept_rows: Vec<usize> = (0..sparsity.nrows())
+            .filter(|&row| !swept_entries[sparsity.row_span(row)].contains(&true))
+            .collect();
         let unmasked_root = tangent.root();
         tangent.rewrite_in_place(|diff_arena, root| {
-            mask_scalar_rows(diff_arena, root, &skip_rows).unwrap_or(root)
+            mask_rows(diff_arena, root, &unswept_rows).unwrap_or(root)
         });
         let assembly_jvp_expr = if tangent.root() == unmasked_root {
             Arc::clone(&jvp_expr)
@@ -730,7 +734,7 @@ impl JacobianData {
         &self.jvp_expr
     }
 
-    /// The tape colored assembly walks, with split dense rows' outputs masked off.
+    /// The tape colored assembly walks, with every row that has no swept entry masked off.
     #[inline]
     pub const fn assembly_tape(&self) -> &Arc<SplitCompiledExpr> {
         &self.assembly_jvp_expr
@@ -1243,12 +1247,12 @@ fn detect_dense_rows(row_widths: &[usize]) -> Vec<usize> {
     wide
 }
 
-/// Replace selected scalar output rows with zeros while preserving output width.
+/// Zero each leaf of the root's `Concat` tree whose every row is in `rows`, preserving output
+/// width; a leaf with only some of its rows there is kept whole.
 ///
-/// `None` when `rows` is not strictly ascending, names a row past the root, or names a row
-/// that is not a whole width-1 leaf of the root's `Concat` tree. Walks nested `Concat`s with
-/// an explicit stack, so their depth is bounded by the heap.
-fn mask_scalar_rows(arena: &mut Arena, root: NodeId, rows: &[usize]) -> Option<NodeId> {
+/// `None` when `rows` is not strictly ascending or names a row past the root. Walks nested
+/// `Concat`s with an explicit stack, so their depth is bounded by the heap.
+fn mask_rows(arena: &mut Arena, root: NodeId, rows: &[usize]) -> Option<NodeId> {
     if rows.is_empty() {
         return Some(root);
     }
@@ -1265,15 +1269,23 @@ fn mask_scalar_rows(arena: &mut Arena, root: NodeId, rows: &[usize]) -> Option<N
                 finished = Some(id);
             } else if let Node::Concat(children) = &arena[id] {
                 open.push(MaskFrame {
+                    id,
                     masked: Vec::with_capacity(children.len()),
                     children: children.clone(),
                     rows,
                     offset: 0,
                 });
-            } else if rows == [0] && widths.of(arena, id) == 1 {
-                finished = Some(arena.alloc(Node::Scalar(0.0)));
             } else {
-                return None;
+                let len = widths.of(arena, id);
+                if rows.last().is_some_and(|&row| row >= len) {
+                    return None;
+                }
+                // `rows` ascend strictly within `0..len`, so `len` of them cover the leaf.
+                finished = Some(if rows.len() == len {
+                    arena.alloc(Node::zero(len))
+                } else {
+                    id
+                });
             }
         }
         let Some(frame) = open.last_mut() else {
@@ -1297,13 +1309,19 @@ fn mask_scalar_rows(arena: &mut Arena, root: NodeId, rows: &[usize]) -> Option<N
             if frame.rows.iter().any(|&row| row >= frame.offset) {
                 return None;
             }
-            finished = Some(arena.alloc(Node::Concat(frame.masked)));
+            // Unchanged children keep the original node, so nothing zeroed means no new tape.
+            finished = Some(if frame.masked == frame.children {
+                frame.id
+            } else {
+                arena.alloc(Node::Concat(frame.masked))
+            });
         }
     }
 }
 
-/// A `Concat` part-way through [`mask_scalar_rows`], its children masked in order.
+/// A `Concat` part-way through [`mask_rows`], its children masked in order.
 struct MaskFrame {
+    id: NodeId,
     children: Vec<NodeId>,
     /// Rows to zero, relative to this `Concat`'s output.
     rows: Vec<usize>,
@@ -2142,7 +2160,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn mask_scalar_rows_handles_a_deep_concat_nesting() {
+    fn mask_rows_handles_a_deep_concat_nesting() {
         const DEEP: usize = 200_000;
         let mut arena = Arena::new();
         let mut id = arena.alloc(Node::StateVector { start: 0, end: 1 });
@@ -2150,7 +2168,7 @@ pub(crate) mod tests {
             id = arena.alloc(Node::Concat(vec![id]));
         }
 
-        let mut masked = mask_scalar_rows(&mut arena, id, &[0]).expect("a scalar row");
+        let mut masked = mask_rows(&mut arena, id, &[0]).expect("a scalar row");
         let mut depth = 0;
         while let Node::Concat(children) = &arena[masked] {
             masked = children[0];
@@ -2161,7 +2179,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn mask_scalar_rows_preserves_nested_output_shape() {
+    fn mask_rows_preserves_nested_output_shape() {
         let mut arena = Arena::new();
         let a = arena.alloc(Node::StateVector { start: 0, end: 2 });
         let b = arena.alloc(Node::StateVector { start: 2, end: 3 });
@@ -2169,7 +2187,7 @@ pub(crate) mod tests {
         let inner = arena.alloc(Node::Concat(vec![a, b]));
         let root = arena.alloc(Node::Concat(vec![inner, c]));
 
-        let masked = mask_scalar_rows(&mut arena, root, &[2, 3]).expect("scalar rows");
+        let masked = mask_rows(&mut arena, root, &[2, 3]).expect("scalar rows");
         let ir = TypedIr::from_dag(DagRef::new(&arena, masked));
         let expr = CompiledExpr::from_ir(ir);
         let mut scratch = vec![0.0; expr.scratch_len()];
@@ -2178,25 +2196,47 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn mask_scalar_rows_rejects_vector_interior_and_unsorted_rows() {
+    fn mask_rows_zeroes_whole_leaves_and_keeps_partial_ones() {
         let mut arena = Arena::new();
-        let vector = arena.alloc(Node::StateVector { start: 0, end: 3 });
-        assert!(mask_scalar_rows(&mut arena, vector, &[1]).is_none());
-        assert!(mask_scalar_rows(&mut arena, vector, &[2, 1]).is_none());
+        let a = arena.alloc(Node::StateVector { start: 0, end: 2 });
+        let b = arena.alloc(Node::StateVector { start: 2, end: 5 });
+        let root = arena.alloc(Node::Concat(vec![a, b]));
+
+        // Both of `a`'s rows go; only one of `b`'s, so `b` stays whole.
+        let masked = mask_rows(&mut arena, root, &[0, 1, 3]).expect("rows inside the root");
+        let ir = TypedIr::from_dag(DagRef::new(&arena, masked));
+        let expr = CompiledExpr::from_ir(ir);
+        let mut scratch = vec![0.0; expr.scratch_len()];
+        let result = expr.eval(&mut scratch, 0.0, &[1.0, 2.0, 3.0, 4.0, 5.0], &[], &[]);
+        assert_eq!(result, &[0.0, 0.0, 3.0, 4.0, 5.0]);
+
+        // Nothing whole to zero: the root itself comes back, so no tape is recompiled.
+        assert_eq!(mask_rows(&mut arena, root, &[3]), Some(root));
     }
 
     #[test]
-    fn dense_rows_are_pruned_only_from_assembly_jvp() {
+    fn mask_rows_rejects_unsorted_rows_and_rows_past_the_root() {
+        let mut arena = Arena::new();
+        let vector = arena.alloc(Node::StateVector { start: 0, end: 3 });
+        assert!(mask_rows(&mut arena, vector, &[2, 1]).is_none());
+        assert!(mask_rows(&mut arena, vector, &[3]).is_none());
+        let root = arena.alloc(Node::Concat(vec![vector]));
+        assert!(mask_rows(&mut arena, root, &[1, 3]).is_none());
+    }
+
+    #[test]
+    fn unswept_rows_are_pruned_only_from_assembly_jvp() {
         let mut arena = Arena::new();
         let n = 20;
         let y = arena.alloc(Node::StateVector { start: 0, end: n });
         let square = arena.alloc(Node::Mul(y, y));
         let ones = ones_row(&mut arena, n);
         let dense = arena.alloc(Node::MatMul(ones, square));
+        // Odd rows `y_i^2` are swept; even rows `y_i` have a constant derivative.
         let mut rows = vec![dense];
         for i in 1..n {
             rows.push(arena.alloc(Node::Index {
-                child: y,
+                child: if i % 2 == 1 { square } else { y },
                 start: i,
                 end: i + 1,
             }));
@@ -2204,10 +2244,13 @@ pub(crate) mod tests {
         let root = arena.alloc(Node::Concat(rows));
         let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n, n);
         assert_eq!(jac.n_dense_rows(), 1);
+        // Pruned rows become zero loads in the primal section, run once per point.
+        let swept_len = |tape: &SplitCompiledExpr| {
+            tape.ir().instructions().len() - tape.split_info().primal_end
+        };
         assert!(
-            jac.assembly_tape().ir().instructions().len()
-                < jac.action_tape().ir().instructions().len(),
-            "dense-row pruning must shorten the raw assembly tape"
+            swept_len(jac.assembly_tape()) < swept_len(jac.action_tape()),
+            "pruning must shorten the tangent section every sweep runs"
         );
 
         let values: Vec<f64> = (1..=n).map(|value| value as f64).collect();
@@ -2233,13 +2276,11 @@ pub(crate) mod tests {
 
         let expected_dense = 2.0 * values.iter().sum::<f64>();
         assert_eq!(full[0].to_bits(), expected_dense.to_bits());
-        assert_eq!(assembly[0].to_bits(), 0.0f64.to_bits());
-        assert!(
-            assembly[1..]
-                .iter()
-                .zip(&full[1..])
-                .all(|(&left, &right)| left.to_bits() == right.to_bits())
-        );
+        for (row, (&pruned, &kept)) in assembly.iter().zip(&full).enumerate() {
+            // The split row and the constant rows read nothing from the sweep.
+            let want = if row % 2 == 1 { kept } else { 0.0 };
+            assert_eq!(pruned.to_bits(), want.to_bits(), "row {row}");
+        }
     }
 
     #[test]
