@@ -3,7 +3,7 @@
 //! A parameter's *registration index* and its *packed offset* into `inputs`
 //! diverge once any input is vector-valued, so each is its own type.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::arena::Arena;
 use crate::error::CoreError;
@@ -58,8 +58,10 @@ impl ParamSlot {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ParamRegistry {
     by_name: HashMap<String, ParamIdx>,
-    /// Indexed by [`ParamIdx`]; `None` at an index naming no parameter.
-    entries: Vec<Option<ParamEntry>>,
+    /// Sparse, so an index a rewrite strands far above the rest costs nothing.
+    entries: BTreeMap<ParamIdx, ParamEntry>,
+    /// One past the highest index registered or reserved.
+    index_extent: usize,
     packed_width: PackedWidth,
 }
 
@@ -79,7 +81,8 @@ impl ParamRegistry {
     pub fn new() -> Self {
         Self {
             by_name: HashMap::new(),
-            entries: Vec::new(),
+            entries: BTreeMap::new(),
+            index_extent: 0,
             packed_width: PackedWidth::new(0),
         }
     }
@@ -106,7 +109,7 @@ impl ParamRegistry {
             return Ok((index, slot));
         }
         let slot = ParamSlot::try_new(name, self.packed_width.get(), width)?;
-        let index = ParamIdx::from_usize(self.entries.len());
+        let index = param_index(self.index_extent)?;
         self.insert(index, name, slot);
         self.packed_width = PackedWidth::new(self.packed_width.get() + width);
         Ok((index, slot))
@@ -115,20 +118,9 @@ impl ParamRegistry {
     /// Recover the registry an arena's nodes describe.
     ///
     /// Whole-arena, so a parameter only an output or event reads stays registered.
-    /// Conflicting or overlapping slots are refused; holes below the arena's length are
-    /// tolerated, and an index at or past it is refused before anything is allocated.
+    /// Conflicting or overlapping slots are refused; holes in the index space, such as a
+    /// rewrite leaves, are not.
     pub fn from_arena(arena: &Arena) -> Result<Self, CoreError> {
-        // Each registration allocates a node, so a wider index can only come from forged bytes.
-        let in_range = |index: usize| {
-            if index < arena.len() {
-                Ok(index)
-            } else {
-                Err(CoreError::ParamIndexRange {
-                    index,
-                    n_nodes: arena.len(),
-                })
-            }
-        };
         let mut registry = Self::new();
         for node in arena.nodes() {
             match node {
@@ -137,8 +129,8 @@ impl ParamRegistry {
                     index,
                     offset,
                     width,
-                } => registry.absorb(name, in_range(*index)?, *offset, *width)?,
-                Node::TangentParameter { index } => registry.reserve(in_range(*index)?),
+                } => registry.absorb(name, param_index(*index)?, *offset, *width)?,
+                Node::TangentParameter { index } => registry.reserve(param_index(*index)?),
                 _ => {},
             }
         }
@@ -162,12 +154,7 @@ impl ParamRegistry {
     pub fn registered(&self) -> impl Iterator<Item = (ParamIdx, &str, ParamSlot)> {
         self.entries
             .iter()
-            .enumerate()
-            .filter_map(|(index, entry)| {
-                entry
-                    .as_ref()
-                    .map(|entry| (ParamIdx::from_usize(index), entry.name.as_str(), entry.slot))
-            })
+            .map(|(&index, entry)| (index, entry.name.as_str(), entry.slot))
     }
 
     /// Registered names in registration order.
@@ -177,12 +164,12 @@ impl ParamRegistry {
 
     /// One past the highest registration index; not the registered count.
     pub const fn index_extent(&self) -> usize {
-        self.entries.len()
+        self.index_extent
     }
 
     /// How many indices actually carry a packed slot.
     pub fn n_registered(&self) -> usize {
-        self.entries.iter().flatten().count()
+        self.entries.len()
     }
 
     /// Length of the packed `inputs` slice these parameters need.
@@ -191,30 +178,27 @@ impl ParamRegistry {
     }
 
     fn entry(&self, idx: ParamIdx) -> Option<&ParamEntry> {
-        self.entries.get(idx.index())?.as_ref()
+        self.entries.get(&idx)
     }
 
     /// Widen the index space so `index` is addressable, naming no parameter.
-    fn reserve(&mut self, index: usize) {
-        if self.entries.len() <= index {
-            self.entries.resize(index + 1, None);
-        }
+    fn reserve(&mut self, index: ParamIdx) {
+        self.index_extent = self.index_extent.max(index.index() + 1);
     }
 
     /// Take in one `InputParameter` node's fields, checking them against earlier nodes.
     fn absorb(
         &mut self,
         name: &str,
-        index: usize,
+        index: ParamIdx,
         offset: usize,
         width: usize,
     ) -> Result<(), CoreError> {
         let slot = ParamSlot::try_new(name, offset, width)?;
-        self.reserve(index);
-        if let Some(existing) = self.entries[index].as_ref() {
+        if let Some(existing) = self.entries.get(&index) {
             if existing.name != name || existing.slot != slot {
                 return Err(CoreError::ParamSlotConflict {
-                    index,
+                    index: index.index(),
                     name: name.to_string(),
                     offset,
                     width,
@@ -228,21 +212,24 @@ impl ParamRegistry {
         if let Some(&other_index) = self.by_name.get(name) {
             return Err(CoreError::ParamNameConflict {
                 name: name.to_string(),
-                index,
+                index: index.index(),
                 other_index: other_index.index(),
             });
         }
-        self.insert(ParamIdx::from_usize(index), name, slot);
+        self.insert(index, name, slot);
         Ok(())
     }
 
     /// Record `name` at `index`, widening the index space to reach it.
     fn insert(&mut self, index: ParamIdx, name: &str, slot: ParamSlot) {
-        self.reserve(index.index());
-        self.entries[index.index()] = Some(ParamEntry {
-            name: name.to_string(),
-            slot,
-        });
+        self.reserve(index);
+        self.entries.insert(
+            index,
+            ParamEntry {
+                name: name.to_string(),
+                slot,
+            },
+        );
         self.by_name.insert(name.to_string(), index);
     }
 
@@ -273,6 +260,14 @@ impl ParamRegistry {
             previous = Some((name, slot));
         }
         Ok(PackedWidth::new(extent))
+    }
+}
+
+/// `index` as a [`ParamIdx`], refused unless the index space it opens, `index + 1`, fits `u32`.
+fn param_index(index: usize) -> Result<ParamIdx, CoreError> {
+    match u32::try_from(index) {
+        Ok(raw) if raw < u32::MAX => Ok(ParamIdx::new(raw)),
+        _ => Err(CoreError::ParamIndexRange { index }),
     }
 }
 
@@ -450,30 +445,56 @@ mod tests {
     }
 
     #[test]
-    fn an_index_past_the_arena_is_an_error_not_an_allocation() {
-        for index in [5, usize::MAX] {
-            let tangent = Node::TangentParameter { index };
+    fn indices_a_rewrite_strands_past_the_arena_are_recovered() {
+        // What `dce` leaves of a graph that registered six inputs but reads only the third.
+        let mut arena = Arena::new();
+        let _ = arena.alloc(Node::InputParameter {
+            name: "c".to_string(),
+            index: 2,
+            offset: 2,
+            width: 1,
+        });
+        let _ = arena.alloc(Node::TangentParameter { index: 5 });
+
+        let registry = registry_of(&arena);
+        assert_eq!(registry.index_extent(), 6);
+        assert_eq!(registry.names(), ["c"]);
+        assert_eq!(
+            registry.slot(ParamIdx::new(2)).unwrap().offset,
+            InputOffset::new(2)
+        );
+        assert_eq!(registry.packed_width(), PackedWidth::new(3));
+    }
+
+    #[test]
+    fn an_index_whose_extent_passes_u32_max_is_an_error_not_a_panic() {
+        let index = u32::MAX as usize;
+        for index in [index, usize::MAX] {
             let input = Node::InputParameter {
                 name: "k".to_string(),
                 index,
                 offset: 0,
                 width: 1,
             };
-            for node in [tangent, input] {
+            for node in [Node::TangentParameter { index }, input] {
                 let mut arena = Arena::new();
-                let _ = arena.alloc(Node::InputParameter {
-                    name: "p".to_string(),
-                    index: 0,
-                    offset: 1,
-                    width: 1,
-                });
                 let _ = arena.alloc(node);
                 assert!(matches!(
                     ParamRegistry::from_arena(&arena),
-                    Err(CoreError::ParamIndexRange { index: got, n_nodes: 2 }) if got == index
+                    Err(CoreError::ParamIndexRange { index: got }) if got == index
                 ));
             }
         }
+
+        // The last index allocates nothing for the ones below it, and leaves none to register.
+        let mut arena = Arena::new();
+        let _ = arena.alloc(Node::TangentParameter { index: index - 1 });
+        let mut registry = registry_of(&arena);
+        assert_eq!(registry.index_extent(), index);
+        assert!(matches!(
+            registry.register("next", 1),
+            Err(CoreError::ParamIndexRange { index: got }) if got == index
+        ));
     }
 
     #[test]

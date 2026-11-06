@@ -97,9 +97,9 @@ pub enum CoreError {
         width: usize,
     },
 
-    /// A parameter node's registration index reached past its arena, which no registration yields.
-    #[error("input parameter index {index} is out of range for an arena of {n_nodes} nodes")]
-    ParamIndexRange { index: usize, n_nodes: usize },
+    /// A parameter's registration index opens an index space wider than `u32` holds.
+    #[error("input parameter index {index} leaves no room below u32::MAX")]
+    ParamIndexRange { index: usize },
 
     #[error("invalid CSR matrix: {0}")]
     Csr(String),
