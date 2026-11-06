@@ -49,6 +49,8 @@
 - The heat of mixing now sums over every particle phase, so `"heat of mixing": "true"` works with `"particle phases": "2"` instead of raising a `ModelError`. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - The heat of mixing now uses the particle's effective diffusivity, so it conserves energy with `"current sigmoid"` diffusivity or stress-induced diffusion, and a uniform particle profile builds again. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - `"heat of mixing": "true"` now works with `"particle": "quadratic profile"` or `"quartic profile"`, using their closed-form flux instead of failing to discretise with a `ShapeError`. ([#5935](https://github.com/pybamm-team/PyBaMM/pull/5935))
+- Irreversible heating now includes the resistive loss across the SEI film when `"SEI film resistance"` is `"distributed"` or `"average"`, so it reaches `"Total heating [W]"` and the cell temperature. ([#5841](https://github.com/pybamm-team/PyBaMM/pull/5841))
+- Irreversible heating now includes the heat from SEI growth, SEI on cracks and lithium plating side reactions, so their electrical losses reach `"Total heating [W]"` and the cell temperature. ([#5875](https://github.com/pybamm-team/PyBaMM/pull/5875))
 
 ## Optimizations
 
