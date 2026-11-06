@@ -164,8 +164,8 @@ class FuzzyDict(dict):
                 msg = "The 'keys' list cannot contain only empty or whitespace strings"
                 raise ValueError(msg)
 
-            original_keys = keys
-            search_keys = [k.strip().lower() for k in keys if k.strip()]
+            original_keys = [k for k in keys if k.strip()]
+            search_keys = [k.strip().lower() for k in original_keys]
 
         known_keys = list(self.keys())
         # Check for exact matches where all search keys appear together in a key
@@ -187,9 +187,7 @@ class FuzzyDict(dict):
                     exact_matches.append(key)
 
         if exact_matches:
-            print(
-                f"Results for '{' '.join(k for k in original_keys if k.strip())}': {exact_matches}"
-            )
+            print(f"Results for '{' '.join(original_keys)}': {exact_matches}")
             if print_values:
                 for match in exact_matches:
                     print(f"{match} -> {self[match]}")
