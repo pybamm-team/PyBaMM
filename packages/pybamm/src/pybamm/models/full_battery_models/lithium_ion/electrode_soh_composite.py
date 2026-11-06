@@ -10,6 +10,7 @@ import pybamm
 
 from .electrode_soh import _ElectrodeSOH, get_esoh_default_solver
 from .util import (
+    _default_initial_hysteresis_states,
     check_if_composite,
     get_equilibrium_direction,
     get_initial_ocp,
@@ -899,8 +900,8 @@ def get_initial_stoichiometries_composite(
     direction : str, optional
         The OCV branch to use for initial stoichiometries. Can be "charge" or
         "discharge". Only affects x_init/y_init, not equilibrium values. If None,
-        a hysteresis phase is on the OCP at its "Initial hysteresis state", which
-        must then be set.
+        a hysteresis phase is on the OCP at its "Initial hysteresis state" (0 if
+        unset).
     param : pybamm.LithiumIonParameters, optional
         Parameter object
     options : dict, optional
@@ -929,6 +930,7 @@ def get_initial_stoichiometries_composite(
     """
     inputs = inputs or {}
     param = param or pybamm.LithiumIonParameters(options)
+    parameter_values = _default_initial_hysteresis_states(parameter_values, options)
 
     if known_value != "cyclable lithium capacity":
         raise ValueError(

@@ -6,7 +6,12 @@ import warnings
 import pybamm
 
 from .electrode_soh import get_esoh_default_solver
-from .util import check_if_composite, get_initial_ocp, get_lithiation_delithiation
+from .util import (
+    _default_initial_hysteresis_states,
+    check_if_composite,
+    get_initial_ocp,
+    get_lithiation_delithiation,
+)
 
 
 class ElectrodeSOHHalfCell(pybamm.BaseModel):
@@ -143,7 +148,7 @@ def get_initial_stoichiometry_half_cell(
     """
     details = _solve_initial_stoichiometry_half_cell(
         initial_value,
-        parameter_values,
+        _default_initial_hysteresis_states(parameter_values, options),
         options=options,
         tol=tol,
         inputs=inputs,

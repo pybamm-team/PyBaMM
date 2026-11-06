@@ -607,6 +607,23 @@ class TestElectrodeSOHComposite:
                 results[f"x_100_{phase}"], abs=1e-6
             )
 
+    @pytest.mark.parametrize("initial_value", [0.5, "3.7 V"])
+    def test_composite_initial_hysteresis_state_defaults_to_zero(self, initial_value):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            initial_value, parameter_values, options=options
+        )
+        expected, _, _ = self._composite_soc_hysteresis(initial_value, 0)
+        for key in ["x_init_1", "x_init_2", "y_init_1"]:
+            assert results[key] == pytest.approx(expected[key])
+        # The caller's parameter values are left as they were
+        name = "Secondary: Initial hysteresis state in negative electrode"
+        assert name not in parameter_values
+
 
 class TestElectrodeSOHMSMR:
     def test_known_solution(self, options):
@@ -974,7 +991,8 @@ class TestElectrodeSOHHalfCell:
         U_init = parameter_values.evaluate(U(pybamm.Scalar(result["x"])))
         assert U_init + 0.05 * h0 == pytest.approx(3.9)
 
-    @pytest.mark.parametrize("h0", [-1, 1])
+    # None leaves the initial hysteresis state unset, so it starts at 0
+    @pytest.mark.parametrize("h0", [-1, None, 1])
     def test_composite_soc_split_on_initial_hysteresis_state(self, h0):
         params, options = self._get_params_and_options_composite_half_cell()
         options["open-circuit potential"] = (
@@ -990,10 +1008,13 @@ class TestElectrodeSOHHalfCell:
                 "Secondary: Positive electrode delithiation OCP [V]": lambda sto: (
                     U(sto) + 0.05
                 ),
-                "Secondary: Initial hysteresis state in positive electrode": h0,
             },
             check_already_exists=False,
         )
+        if h0 is None:
+            h0 = 0
+        else:
+            params["Secondary: Initial hysteresis state in positive electrode"] = h0
         param = pybamm.LithiumIonParameters(options)
 
         result = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
