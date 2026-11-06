@@ -739,7 +739,7 @@ mod tests {
                 &arena[simplified],
                 &Node::Scalar(expected),
                 "{:?}",
-                &arena[expr]
+                arena[expr]
             );
         }
 
@@ -759,7 +759,7 @@ mod tests {
             let operand = arena.alloc(Node::Scalar(x));
             let expr = arena.alloc(node(operand));
             let simplified = simplify(&mut arena, expr);
-            let label = format!("{:?}", &arena[expr]);
+            let label = format!("{:?}", arena[expr]);
             let &Node::Scalar(folded) = &arena[simplified] else {
                 panic!("{label} must fold to a scalar")
             };

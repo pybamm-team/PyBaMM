@@ -166,7 +166,7 @@ mod tests {
             let mut arena = Arena::new();
             let id = arena.alloc(node);
             let expected = ShapeInfo { len, all_zero };
-            assert_eq!(shape_of(&arena, id), expected, "{:?}", &arena[id]);
+            assert_eq!(shape_of(&arena, id), expected, "{:?}", arena[id]);
         }
     }
 
@@ -201,7 +201,7 @@ mod tests {
         ];
         for (node, all_zero) in cases {
             let id = arena.alloc(node);
-            assert_eq!(shape_of(&arena, id).all_zero, all_zero, "{:?}", &arena[id]);
+            assert_eq!(shape_of(&arena, id).all_zero, all_zero, "{:?}", arena[id]);
         }
     }
 
@@ -350,7 +350,7 @@ mod tests {
             let a = eval(DagRef::new(&arena, root), &[0.0])[0];
             let b = eval(zero_propagate(DagRef::new(&arena, root)).as_ref(), &[0.0])[0];
 
-            let label = format!("{:?}", &arena[root]);
+            let label = format!("{:?}", arena[root]);
             assert_eq!(a, b, "{label}: values must be equal");
             assert!(a == 0.0 && b == 0.0, "{label}: both must be zero");
             // The sign is not guaranteed; pin it so a contract change fails here.
