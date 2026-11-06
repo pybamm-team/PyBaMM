@@ -18,7 +18,7 @@ use pybamm_core::{
 fn check_pattern_covers_every_sweep(arena: &Arena, root: NodeId, y: &[f64], inputs: &[f64]) {
     let n_states = y.len();
     let n_rows = CompiledExpr::new(DagRef::new(arena, root)).output_len();
-    let pattern = detect_sparsity_per_output(arena, root, n_rows, n_states);
+    let pattern = detect_sparsity_per_output(DagRef::new(arena, root), n_rows, n_states);
 
     let mut tangent_arena = arena.clone();
     let tangent_root = tangent_wrt_states(&mut tangent_arena, root);

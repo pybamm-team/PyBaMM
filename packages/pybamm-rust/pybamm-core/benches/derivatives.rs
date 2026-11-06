@@ -8,7 +8,7 @@ use std::sync::Arc;
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use pybamm_core::ffi::{pybamm_rust_jac_action_batch, pybamm_rust_output_sens_project};
 use pybamm_core::{
-    Arena, CompiledModel, CompiledModelOptions, CsrData, DagSnapshot, InterpolantData,
+    Arena, CompiledModel, CompiledModelOptions, CsrData, DagRef, DagSnapshot, InterpolantData,
     JacobianData, JacobianScratch, ModelEvaluator, Node, NodeId, ObservableKind, PackedWidth,
     ParamIdx, Shape,
 };
@@ -88,8 +88,7 @@ fn sensitivity_evaluator(snap: &DagSnapshot, edge: bool) -> (ModelEvaluator, usi
         .map(|i| ParamIdx::new(u32::try_from(i).expect("few parameters")))
         .collect();
     let mut model = CompiledModel::new(
-        &arena,
-        rhs,
+        DagRef::new(&arena, rhs),
         helpers::identity_mass_matrix(n),
         n,
         PackedWidth::new(N_SENS),
@@ -195,10 +194,10 @@ fn bench_dense_block(c: &mut Criterion) {
             let n_rows = n + 16;
             let y: Vec<f64> = (0..n).map(|i| 0.5 + i as f64 / n as f64).collect();
             group.bench_with_input(BenchmarkId::new(format!("build_{label}"), n), &n, |b, _| {
-                b.iter(|| JacobianData::new_wrt_states(&arena, root, n_rows, n));
+                b.iter(|| JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n));
             });
 
-            let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n);
+            let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n);
             let layout = jac.layout();
             let mut scratch = JacobianScratch::new(&jac);
             let mut out = vec![0.0; layout.n_slots()];
@@ -261,7 +260,7 @@ fn bench_colour_sweep(c: &mut Criterion) {
     for n in [20, 200, 2000] {
         for (k, below, above) in [(3, 1, 1), (5, 2, 2), (6, 2, 3), (7, 3, 3)] {
             let (arena, root) = band(n, below, above);
-            let jac = JacobianData::new_wrt_states(&arena, root, n - below - above, n);
+            let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n - below - above, n);
             assert_eq!(jac.n_colors(), k, "the band must need {k} colours");
             let layout = jac.layout();
             let mut scratch = JacobianScratch::new(&jac);
@@ -295,8 +294,7 @@ fn bench_jac_action_batch(c: &mut Criterion) {
         let snap = DagSnapshot::from_bytes(fixture.bytes).expect("fixture decodes");
         let n = snap.n_states;
         let model = CompiledModel::new(
-            snap.dag().arena(),
-            snap.dag().root(),
+            snap.dag(),
             helpers::identity_mass_matrix(n),
             n,
             PackedWidth::new(0),

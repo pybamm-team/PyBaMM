@@ -63,8 +63,7 @@ pub fn compile_fixture(snap: &pybamm_core::DagSnapshot) -> pybamm_core::Compiled
         .clone()
         .unwrap_or_else(|| identity_mass_matrix(snap.n_states));
     pybamm_core::CompiledModel::new(
-        snap.dag().arena(),
-        snap.dag().root(),
+        snap.dag(),
         mass,
         snap.n_states,
         snap.packed_input_width,

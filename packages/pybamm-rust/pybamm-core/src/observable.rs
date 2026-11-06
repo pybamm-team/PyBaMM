@@ -55,24 +55,23 @@ struct ObservableTangents {
 }
 
 impl ObservableTangents {
-    /// Both tangent tapes of `root`, the whole family's root.
-    fn compile(arena: &Arena, root: NodeId) -> Self {
-        let jac = compile_tangent(arena, root, tangent_wrt_states);
+    /// Both tangent tapes of `family`, whose root is the whole family's.
+    fn compile(family: DagRef<'_>) -> Self {
+        let jac = compile_tangent(family, tangent_wrt_states);
         Self {
-            sens: compile_tangent(arena, root, tangent_wrt_params),
+            sens: compile_tangent(family, tangent_wrt_params),
             jac_lanes: LanePlan::new(&jac),
             jac,
         }
     }
 }
 
-/// Compile the simplified `differentiate` graph of `node`.
+/// Compile the simplified `differentiate` graph of `dag`.
 fn compile_tangent(
-    arena: &Arena,
-    node: NodeId,
+    dag: DagRef<'_>,
     differentiate: fn(&mut Arena, NodeId) -> NodeId,
 ) -> SplitCompiledExpr {
-    let tangent = simplify_pipeline(tangent_dag(arena, node, differentiate));
+    let tangent = simplify_pipeline(tangent_dag(dag, differentiate));
     SplitCompiledExpr::compile(tangent.as_ref())
 }
 
@@ -114,7 +113,7 @@ impl ObservableSet {
             total_len: items.iter().map(|expr| expr.output_len()).sum(),
             tangents: family
                 .filter(|_| with_tangents)
-                .map(|root| ObservableTangents::compile(arena, root)),
+                .map(|root| ObservableTangents::compile(DagRef::new(arena, root))),
             items,
             fused,
         }
@@ -655,8 +654,12 @@ mod tests {
                     .iter()
                     .map(|&root| {
                         let len = CompiledExpr::new(DagRef::new(arena, root)).output_len();
-                        let sens = compile_tangent(arena, root, tangent_wrt_params);
-                        (sens, compile_tangent(arena, root, tangent_wrt_states), len)
+                        let sens = compile_tangent(DagRef::new(arena, root), tangent_wrt_params);
+                        (
+                            sens,
+                            compile_tangent(DagRef::new(arena, root), tangent_wrt_states),
+                            len,
+                        )
                     })
                     .collect(),
             )

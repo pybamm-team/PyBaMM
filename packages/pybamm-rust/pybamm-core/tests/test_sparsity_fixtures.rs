@@ -19,12 +19,7 @@ fn compute_pattern(bytes: &[u8]) -> (usize, usize, Vec<usize>, Vec<usize>) {
     let snap = DagSnapshot::from_bytes(bytes).expect("fixture decodes");
     let ir = TypedIr::from_dag(snap.dag());
     let n_outputs = ir.output_len();
-    let p = detect_sparsity_per_output(
-        snap.dag().arena(),
-        snap.dag().root(),
-        n_outputs,
-        snap.n_states,
-    );
+    let p = detect_sparsity_per_output(snap.dag(), n_outputs, snap.n_states);
     (
         p.nrows(),
         p.ncols(),
@@ -81,12 +76,7 @@ fn jacobian_counts_match_the_pinned_table() {
         };
         let snap = DagSnapshot::from_bytes(bytes).expect("fixture decodes");
         let n_outputs = TypedIr::from_dag(snap.dag()).output_len();
-        let jac = JacobianData::new_wrt_states(
-            snap.dag().arena(),
-            snap.dag().root(),
-            n_outputs,
-            snap.n_states,
-        );
+        let jac = JacobianData::new_wrt_states(snap.dag(), n_outputs, snap.n_states);
         assert_eq!(
             jac.constant_csr_entries().len(),
             constants,

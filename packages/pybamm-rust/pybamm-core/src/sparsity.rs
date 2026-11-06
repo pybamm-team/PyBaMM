@@ -7,7 +7,7 @@
 use std::ops::Range;
 use std::rc::Rc;
 
-use crate::arena::{Arena, NodeId, NodeMap, ReadExtents};
+use crate::arena::{Arena, DagRef, NodeId, NodeMap, ReadExtents};
 use crate::error::CoreError;
 use crate::ir::infer_sizes;
 use crate::node::{CsrData, Node};
@@ -550,14 +550,14 @@ fn combine_binary_deps(a: &ElementDeps, b: &ElementDeps) -> ElementDeps {
 
 /// Detect the sparsity pattern, tracking each output element's dependencies separately.
 ///
-/// Panics, as lowering would, if `root`'s graph breaks a width rule or is not
-/// `n_outputs` wide, and if `root` reads a state at or past `n_states`.
+/// Panics, as lowering would, if `dag` breaks a width rule or is not `n_outputs` wide, and if
+/// it reads a state at or past `n_states`.
 pub fn detect_sparsity_per_output(
-    arena: &Arena,
-    root: NodeId,
+    dag: DagRef<'_>,
     n_outputs: usize,
     n_states: usize,
 ) -> CsrPattern {
+    let (arena, root) = (dag.arena(), dag.root());
     let extent = ReadExtents::scan(arena, root).y;
     assert!(
         extent <= n_states,
@@ -635,7 +635,7 @@ pub mod tests {
         let mut arena = Arena::new();
         let y = scalar_states(&mut arena, 3);
         let expr = arena.alloc(Node::Concat(y));
-        let pattern = detect_sparsity_per_output(&arena, expr, 3, 3);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), 3, 3);
         assert_eq!(rows(&pattern), [[0].as_slice(), &[1], &[2]]);
         assert_eq!(color_columns(&pattern).n_colors(), 1);
     }
@@ -644,7 +644,7 @@ pub mod tests {
     fn test_per_output_sparsity_identity_passthrough() {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 4 });
-        let pattern = detect_sparsity_per_output(&arena, y, 4, 4);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, y), 4, 4);
         assert_eq!(rows(&pattern), [[0].as_slice(), &[1], &[2], &[3]]);
         assert_eq!(color_columns(&pattern).n_colors(), 1);
     }
@@ -665,7 +665,7 @@ pub mod tests {
             })
             .collect();
         let expr = arena.alloc(Node::Concat(f));
-        let pattern = detect_sparsity_per_output(&arena, expr, n, n);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), n, n);
         let rows = rows(&pattern);
         assert_eq!(rows[..3], [[0, 1].as_slice(), &[0, 1, 2], &[1, 2, 3]]);
         assert_eq!(rows[n - 1], [n - 2, n - 1]);
@@ -682,7 +682,7 @@ pub mod tests {
             .map(|yi| arena.alloc(Node::Mul(yi, c)))
             .collect();
         let expr = arena.alloc(Node::Concat(f));
-        let pattern = detect_sparsity_per_output(&arena, expr, 3, 3);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), 3, 3);
         assert_eq!(rows(&pattern), [[0].as_slice(), &[1], &[2]]);
     }
 
@@ -694,7 +694,7 @@ pub mod tests {
         let f1 = arena.alloc(Node::Sin(y[1]));
         let f2 = arena.alloc(Node::Log(y[2]));
         let expr = arena.alloc(Node::Concat(vec![f0, f1, f2]));
-        let pattern = detect_sparsity_per_output(&arena, expr, 3, 3);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), 3, 3);
         assert_eq!(rows(&pattern), [[0].as_slice(), &[1], &[2]]);
     }
 
@@ -707,7 +707,7 @@ pub mod tests {
             start: 1,
             end: 3,
         });
-        let pattern = detect_sparsity_per_output(&arena, expr, 2, 4);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), 2, 4);
         assert_eq!(rows(&pattern), [[1].as_slice(), &[2]]);
     }
 
@@ -716,7 +716,7 @@ pub mod tests {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 3 });
         let expr = arena.alloc(Node::MaxReduce(y));
-        let pattern = detect_sparsity_per_output(&arena, expr, 1, 3);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), 1, 3);
         assert_eq!(rows(&pattern), [[0, 1, 2].as_slice()]);
     }
 
@@ -732,7 +732,7 @@ pub mod tests {
         let mat = arena.alloc(Node::SparseMatrix(Box::new(csr)));
         let y = arena.alloc(Node::StateVector { start: 0, end: 3 });
         let expr = arena.alloc(Node::MatMul(mat, y));
-        let pattern = detect_sparsity_per_output(&arena, expr, 3, 3);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), 3, 3);
         assert_eq!(rows(&pattern), [[0, 1].as_slice(), &[0, 1, 2], &[1, 2]]);
         assert!(color_columns(&pattern).n_colors() <= 3);
     }
@@ -742,7 +742,7 @@ pub mod tests {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 3 });
         let expr = arena.alloc(Node::Add(y, y));
-        let pattern = detect_sparsity_per_output(&arena, expr, 3, 3);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), 3, 3);
         assert_eq!(rows(&pattern), [[0].as_slice(), &[1], &[2]]);
     }
 
@@ -753,7 +753,7 @@ pub mod tests {
         let f0 = arena.alloc(Node::Add(y[0], y[1]));
         let f1 = arena.alloc(Node::Add(y[1], y[2]));
         let expr = arena.alloc(Node::Concat(vec![f0, f1]));
-        let pattern = detect_sparsity_per_output(&arena, expr, 2, 3);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), 2, 3);
         assert_eq!(rows(&pattern), [[0, 1].as_slice(), &[1, 2]]);
         assert!(color_columns(&pattern).n_colors() <= 2);
     }
@@ -765,7 +765,7 @@ pub mod tests {
             .map(|v| arena.alloc(Node::Scalar(v)))
             .to_vec();
         let expr = arena.alloc(Node::Concat(c));
-        let pattern = detect_sparsity_per_output(&arena, expr, 3, 3);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), 3, 3);
         assert_eq!(pattern.indptr, [0, 0, 0, 0]);
     }
 
@@ -816,7 +816,7 @@ pub mod tests {
         let first = arena.alloc(Node::Sin(shared));
         let second = arena.alloc(Node::Add(shared, first));
         let expr = arena.alloc(Node::Add(first, second));
-        let pattern = detect_sparsity_per_output(&arena, expr, 3, 3);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, expr), 3, 3);
         assert_eq!(pattern.indptr, vec![0, 1, 2, 3]);
         assert_eq!(pattern.indices, vec![0, 1, 2]);
     }
@@ -844,7 +844,7 @@ pub mod tests {
             start: 1,
             end: 2,
         });
-        let pattern = detect_sparsity_per_output(&arena, middle, 1, 2);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, middle), 1, 2);
         assert_eq!(rows(&pattern), [[0].as_slice()], "p[1] * y0 depends on y0");
     }
 
@@ -857,7 +857,7 @@ pub mod tests {
             start: 2,
             end: 4,
         });
-        let pattern = detect_sparsity_per_output(&arena, tail, 2, 2);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, tail), 2, 2);
         assert_eq!(rows(&pattern), [[0].as_slice(), &[1]]);
     }
 
@@ -884,7 +884,7 @@ pub mod tests {
             selector,
             branches: vec![sin, cos],
         });
-        let pattern = detect_sparsity_per_output(&arena, root, n, n);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, root), n, n);
         assert_eq!(pattern.nnz(), n);
         assert_eq!(color_columns(&pattern).n_colors(), 1);
     }
@@ -914,7 +914,7 @@ pub mod tests {
             let sin = arena.alloc(Node::Sin(y));
             let step = arena.alloc(factor(y0, half, &table));
             let root = arena.alloc(Node::Mul(sin, step));
-            let pattern = detect_sparsity_per_output(&arena, root, n, n);
+            let pattern = detect_sparsity_per_output(DagRef::new(&arena, root), n, n);
             assert_eq!(pattern.nnz(), n, "{:?}", arena[step]);
         }
     }
@@ -924,7 +924,7 @@ pub mod tests {
     fn a_misdeclared_output_width_is_refused() {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
-        let _ = detect_sparsity_per_output(&arena, y, 3, 2);
+        let _ = detect_sparsity_per_output(DagRef::new(&arena, y), 3, 2);
     }
 
     #[test]
@@ -936,7 +936,7 @@ pub mod tests {
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
         let concat = arena.alloc(Node::Concat(vec![y, y0]));
         let root = arena.alloc(Node::Add(concat, y));
-        let _ = detect_sparsity_per_output(&arena, root, 3, 2);
+        let _ = detect_sparsity_per_output(DagRef::new(&arena, root), 3, 2);
     }
 
     #[test]
@@ -948,7 +948,7 @@ pub mod tests {
             current = arena.alloc(Node::Sin(current));
             current = arena.alloc(Node::Neg(current));
         }
-        let pattern = detect_sparsity_per_output(&arena, current, 1, 1);
+        let pattern = detect_sparsity_per_output(DagRef::new(&arena, current), 1, 1);
         assert_eq!(rows(&pattern), [[0].as_slice()]);
     }
 

@@ -118,9 +118,8 @@ fn check_constants_match_the_tape(case: &Case) -> usize {
     let mut tangent = Dag::new(case.arena.clone(), case.root);
     tangent.rewrite_in_place(tangent_wrt_states);
     let simplified = simplify_pipeline(tangent);
-    let pattern = detect_sparsity_per_output(&case.arena, case.root, n_rows, n_states);
-    let (varying, entries) =
-        classify_constant_entries(simplified.arena(), simplified.root(), &pattern);
+    let pattern = detect_sparsity_per_output(DagRef::new(&case.arena, case.root), n_rows, n_states);
+    let (varying, entries) = classify_constant_entries(simplified.as_ref(), &pattern);
 
     assert_eq!(
         varying.iter().filter(|&&v| v).count() + entries.len(),
@@ -153,9 +152,12 @@ fn check_constants_match_the_tape(case: &Case) -> usize {
 fn check_split_assembly_matches_unsplit(case: &Case) {
     let n_states = case.y.len();
     let n_rows = CompiledExpr::new(DagRef::new(&case.arena, case.root)).output_len();
-    let split = JacobianData::new_wrt_states(&case.arena, case.root, n_rows, n_states);
-    let reference =
-        JacobianData::new_wrt_states_sweeping_constants(&case.arena, case.root, n_rows, n_states);
+    let split = JacobianData::new_wrt_states(DagRef::new(&case.arena, case.root), n_rows, n_states);
+    let reference = JacobianData::new_wrt_states_sweeping_constants(
+        DagRef::new(&case.arena, case.root),
+        n_rows,
+        n_states,
+    );
 
     let buffers = |jac: &JacobianData| {
         (

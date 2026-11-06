@@ -119,7 +119,7 @@ fn check_jacobian_matches_fd(case: &TangentCase) {
     } = case;
     let primal = CompiledExpr::new(DagRef::new(arena, *root));
     let n_rows = primal.output_len();
-    let jac = JacobianData::new_wrt_states(arena, *root, n_rows, *n_states);
+    let jac = JacobianData::new_wrt_states(DagRef::new(arena, *root), n_rows, *n_states);
 
     let layout = jac.layout();
     let mut scratch = JacobianScratch::new(&jac);
@@ -235,7 +235,7 @@ proptest! {
 
         let primal = CompiledExpr::new(DagRef::new(&arena, grafted));
         let n_rows = primal.output_len();
-        let jac = JacobianData::new_wrt_params(&arena, grafted, n_rows, 2);
+        let jac = JacobianData::new_wrt_params(DagRef::new(&arena, grafted), n_rows, 2);
 
         let p = [1.7, -0.3];
         let layout = jac.layout();

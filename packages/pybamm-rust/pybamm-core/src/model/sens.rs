@@ -1,6 +1,6 @@
 //! Forward sensitivities: the shared `df/dp` tape and its columns.
 
-use crate::arena::{Arena, NodeId};
+use crate::arena::DagRef;
 use crate::error::CoreError;
 use crate::eval::{SplitCompiledExpr, TangentInputs};
 use crate::jacobian::tangent_dag;
@@ -71,8 +71,7 @@ impl CompiledModel {
     /// Each index must name a registered width-1 parameter; any other slot is not one column.
     pub(super) fn compile_sensitivities(
         &mut self,
-        arena: &Arena,
-        rhs: NodeId,
+        rhs: DagRef<'_>,
         sens_param_indices: &[ParamIdx],
     ) -> Result<(), CoreError> {
         if sens_param_indices.is_empty() {
@@ -97,7 +96,7 @@ impl CompiledModel {
             }
         }
 
-        let df_dp = simplify_pipeline(tangent_dag(arena, rhs, tangent_wrt_params));
+        let df_dp = simplify_pipeline(tangent_dag(rhs, tangent_wrt_params));
         self.sens_expr = Some(SplitCompiledExpr::compile(df_dp.as_ref()));
         self.sens_param_indices = sens_param_indices.to_vec();
         Ok(())
@@ -173,6 +172,7 @@ mod tests {
         input,
     };
     use super::*;
+    use crate::arena::Arena;
     use crate::model::CompiledModelOptions;
     use crate::node::Node;
     use crate::params::PackedWidth;
@@ -230,8 +230,7 @@ mod tests {
             algebraic: None,
         };
         let err = CompiledModel::new(
-            &arena,
-            rhs,
+            DagRef::new(&arena, rhs),
             identity_mass_matrix(2),
             2,
             PackedWidth::new(4),
@@ -265,8 +264,7 @@ mod tests {
                 algebraic: None,
             };
             let err = CompiledModel::new(
-                &arena,
-                rhs,
+                DagRef::new(&arena, rhs),
                 identity_mass_matrix(2),
                 2,
                 PackedWidth::new(width + 1),
@@ -292,8 +290,7 @@ mod tests {
             algebraic: None,
         };
         let err = CompiledModel::new(
-            &arena,
-            rhs,
+            DagRef::new(&arena, rhs),
             identity_mass_matrix(1),
             1,
             PackedWidth::new(1),

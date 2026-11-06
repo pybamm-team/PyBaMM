@@ -58,8 +58,7 @@ fn check(name: &str, bytes: &[u8]) {
         .clone()
         .unwrap_or_else(|| identity_mass(snap.n_states));
     let model = CompiledModel::new(
-        snap.dag().arena(),
-        snap.dag().root(),
+        snap.dag(),
         mass,
         snap.n_states,
         snap.packed_input_width,

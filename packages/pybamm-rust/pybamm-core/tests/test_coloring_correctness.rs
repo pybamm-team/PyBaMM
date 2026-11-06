@@ -128,7 +128,7 @@ fn test_dense_block_splits_every_row_and_matches_the_unsplit_build() {
     let (arena, root, n_states) =
         build_dense_block_expr(n, width, |arena, y| arena.alloc(Node::Mul(y, y)));
     let n_rows = CompiledExpr::new(DagRef::new(&arena, root)).output_len();
-    let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n_states);
+    let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n_states);
 
     assert_eq!(jac.n_dense_rows(), width, "the whole plateau must split");
     assert_eq!(jac.n_candidate_rows(), width);
@@ -140,7 +140,8 @@ fn test_dense_block_splits_every_row_and_matches_the_unsplit_build() {
 
     // A full-column subset builds the same derivative with splitting off.
     let all: Vec<usize> = (0..n_states).collect();
-    let reference = JacobianData::new_wrt_state_subset(&arena, root, n_rows, n_states, &all);
+    let reference =
+        JacobianData::new_wrt_state_subset(DagRef::new(&arena, root), n_rows, n_states, &all);
     assert_eq!(reference.n_dense_rows(), 0);
     assert!(reference.n_colors() > jac.n_colors());
 
@@ -175,7 +176,7 @@ fn test_a_dense_block_through_an_interpolant_splits() {
     });
 
     let n_rows = CompiledExpr::new(DagRef::new(&arena, root)).output_len();
-    let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n_states);
+    let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n_states);
     assert_eq!(jac.n_dense_rows(), width, "the whole plateau must split");
     assert_eq!(jac.n_candidate_rows(), width);
 
@@ -207,7 +208,7 @@ fn test_dense_array_rows_with_zero_coefficients_match_fd() {
     )));
     let block = arena.alloc(Node::MatMul(matrix, squared));
     let root = arena.alloc(Node::Concat(vec![diagonal, block]));
-    let jac = JacobianData::new_wrt_states(&arena, root, n + 2, n);
+    let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n + 2, n);
     assert_eq!(jac.n_dense_rows(), 2, "both dense rows must split");
 
     let y: Vec<f64> = (0..n).map(|i| (i as f64).mul_add(0.1, 0.3).sin()).collect();
@@ -219,7 +220,7 @@ fn test_dense_row_split_matches_fd() {
     let n = 30;
     let (arena, root, n_states) = build_dense_row_expr(n);
     let n_rows = CompiledExpr::new(DagRef::new(&arena, root)).output_len();
-    let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n_states);
+    let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n_states);
 
     assert_eq!(jac.n_dense_rows(), 1, "dense row must be split out");
     assert!(
@@ -258,7 +259,7 @@ fn test_dense_conditional_ignores_invalid_inactive_branch() {
         selector,
         branches: vec![active, inactive],
     });
-    let jac = JacobianData::new_wrt_states(&arena, root, 1, n);
+    let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), 1, n);
     assert_eq!(jac.n_dense_rows(), 1, "dense row must use reverse AD");
 
     fd_check_jacobian_data(&arena, root, &jac, &vec![-1.0; n]);
@@ -269,7 +270,7 @@ fn test_dense_row_inside_a_vector_block_still_splits() {
     let n = 30;
     let (arena, root, n_states) = build_dense_row_vector_block_expr(n);
     let n_rows = CompiledExpr::new(DagRef::new(&arena, root)).output_len();
-    let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n_states);
+    let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n_states);
 
     assert_eq!(jac.n_dense_rows(), 1, "vector-block dense row must split");
     assert!(jac.dense_row_indices().eq([n]));
@@ -334,7 +335,7 @@ fn test_two_dense_rows_match_fd() {
     }
     let root = arena.alloc(Node::Concat(rows));
     let n_rows = CompiledExpr::new(DagRef::new(&arena, root)).output_len();
-    let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n);
+    let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n);
     assert_eq!(jac.n_dense_rows(), 1, "only the nonlinear row is split out");
     assert_eq!(jac.dense_row_indices().next(), Some(0));
     let row1 = jac.sparsity().row_span(1);
@@ -350,7 +351,8 @@ fn test_two_dense_rows_match_fd() {
     let yv: Vec<f64> = (0..n).map(|i| (i as f64).mul_add(0.1, 0.3)).collect();
     fd_check_jacobian_data(&arena, root, &jac, &yv);
 
-    let reference = JacobianData::new_wrt_states_sweeping_constants(&arena, root, n_rows, n);
+    let reference =
+        JacobianData::new_wrt_states_sweeping_constants(DagRef::new(&arena, root), n_rows, n);
     assert_eq!(reference.n_dense_rows(), 2);
     fd_check_jacobian_data(&arena, root, &reference, &yv);
 }

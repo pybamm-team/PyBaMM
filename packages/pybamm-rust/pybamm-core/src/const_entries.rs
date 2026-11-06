@@ -6,7 +6,7 @@
 use std::cmp::Ordering;
 
 use crate::accumulate::mul_acc;
-use crate::arena::{Arena, NodeId, NodeMap};
+use crate::arena::{Arena, DagRef, NodeId, NodeMap};
 use crate::ir::infer_sizes;
 use crate::node::Node;
 use crate::sparsity::CsrPattern;
@@ -307,18 +307,17 @@ fn union_seeds<'a>(
     true
 }
 
-/// Classify every entry of `pattern` against a tangent expression.
+/// Classify every entry of `pattern` against the tangent expression `tangent`.
 ///
 /// Returns a per-CSR-entry mask of the ones a sweep must still produce, and
-/// `(csr_idx, value)` for the rest. `tangent_root` must be the *simplified*
-/// tangent, so a folded value follows the tape's operator order.
+/// `(csr_idx, value)` for the rest. `tangent` must be *simplified*, so a folded value
+/// follows the tape's operator order.
 #[must_use]
 pub fn classify_constant_entries(
-    arena: &Arena,
-    tangent_root: NodeId,
+    tangent: DagRef<'_>,
     pattern: &CsrPattern,
 ) -> (Vec<bool>, Vec<(usize, f64)>) {
-    let rows = classify_rows(arena, tangent_root, pattern.nrows());
+    let rows = classify_rows(tangent, pattern.nrows());
 
     let mut varying = vec![false; pattern.nnz()];
     let mut constants = Vec::new();
@@ -348,12 +347,12 @@ pub fn classify_constant_entries(
     (varying, constants)
 }
 
-/// Seed coefficients of each of `n_rows` output rows, never broadcast.
-/// Classify each of the `n_rows` rows of `tangent_root`.
+/// Seed coefficients of each of `tangent`'s `n_rows` output rows, never broadcast.
 ///
 /// # Panics
-/// If `tangent_root` is not `n_rows` wide.
-fn classify_rows(arena: &Arena, tangent_root: NodeId, n_rows: usize) -> Coeffs {
+/// If `tangent` is not `n_rows` wide.
+fn classify_rows(tangent: DagRef<'_>, n_rows: usize) -> Coeffs {
+    let (arena, tangent_root) = (tangent.arena(), tangent.root());
     let order = arena.topological_order(tangent_root);
     let sizes = infer_sizes(arena, &order);
     let width = sizes[tangent_root.index()];
@@ -751,9 +750,8 @@ mod tests {
         let mut tangent = Dag::new(arena.clone(), root);
         tangent.rewrite_in_place(tangent_wrt_states);
         let tangent = simplify_pipeline(tangent);
-        let pattern = detect_sparsity_per_output(arena, root, n_rows, n_states);
-        let (varying, entries) =
-            classify_constant_entries(tangent.arena(), tangent.root(), &pattern);
+        let pattern = detect_sparsity_per_output(DagRef::new(arena, root), n_rows, n_states);
+        let (varying, entries) = classify_constant_entries(tangent.as_ref(), &pattern);
         (pattern, varying, entries)
     }
 
@@ -893,8 +891,8 @@ mod tests {
         let mut tangent = Dag::new(arena.clone(), root);
         tangent.rewrite_in_place(tangent_wrt_states);
         let tangent = simplify_pipeline(tangent);
-        let pattern = detect_sparsity_per_output(arena, root, n, n);
-        let (_, entries) = classify_constant_entries(tangent.arena(), tangent.root(), &pattern);
+        let pattern = detect_sparsity_per_output(DagRef::new(arena, root), n, n);
+        let (_, entries) = classify_constant_entries(tangent.as_ref(), &pattern);
 
         let expr = SplitCompiledExpr::compile(tangent.as_ref());
         let mut scratch = vec![0.0; expr.scratch_len()];

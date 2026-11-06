@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::arena::{Arena, NodeId};
+use crate::arena::{Arena, DagRef, NodeId};
 use crate::error::CoreError;
 use crate::eval::CompiledExpr;
 use crate::observable::{ObservableKind, ObservableScratch, ObservableSet, seed_param_tangent};
@@ -40,7 +40,7 @@ impl CompiledModel {
         roots: &[NodeId],
     ) -> Result<(), CoreError> {
         for &root in roots {
-            verify_state_extent(arena, root, self.n_states)?;
+            verify_state_extent(DagRef::new(arena, root), self.n_states)?;
         }
         // Whole-arena, as for the rhs; a parameter registered since the build widens `dp`.
         let registry = ParamRegistry::from_arena(arena)?;
