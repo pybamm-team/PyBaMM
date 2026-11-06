@@ -5,7 +5,7 @@ pub mod ids;
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::arena::{Arena, DagRef, NodeId};
+use crate::arena::{Arena, DagRef, NodeId, NodeMap};
 use crate::branch_regions::{
     RegionGroup, privatise_conditionals, region_owners, schedule_regions,
     schedule_regions_partitioned,
@@ -1158,7 +1158,7 @@ pub enum GraphError {
 /// A node kind only the rewrite passes build is invalid here: the reads a forged tangent
 /// load makes are not part of the extents callers check their buffers against.
 pub fn validate(arena: &Arena, root: NodeId) -> Result<(), GraphError> {
-    let mut sizes = vec![0_usize; arena.len()];
+    let mut widths = NodeWidths::new(arena.len());
     let mut invalid = None;
     for node_id in arena.topological_order(root) {
         let node = &arena[node_id];
@@ -1171,13 +1171,11 @@ pub fn validate(arena: &Arena, root: NodeId) -> Result<(), GraphError> {
             )));
         }
         // Widths are meaningless past an invalid node, but a later unsupported one still wins.
-        if invalid.is_none() {
-            let width = caller_buildable(node_id, node)
-                .and_then(|()| checked_width(arena, node_id, node, &sizes));
-            match width {
-                Ok(width) => sizes[node_id.index()] = width,
-                Err(message) => invalid = Some(message),
-            }
+        if invalid.is_none()
+            && let Err(message) = caller_buildable(node_id, node)
+                .and_then(|()| checked_width(arena, node_id, node, &mut widths))
+        {
+            invalid = Some(message);
         }
     }
     invalid.map_or(Ok(()), |message| Err(GraphError::Invalid(message)))
@@ -1201,11 +1199,11 @@ fn caller_buildable(node_id: NodeId, node: &Node) -> Result<(), String> {
 }
 
 fn infer_sizes_checked(arena: &Arena, eval_order: &[NodeId]) -> Result<Vec<usize>, String> {
-    let mut sizes = vec![0usize; arena.len()];
+    let mut widths = NodeWidths::new(arena.len());
     for &node_id in eval_order {
-        sizes[node_id.index()] = checked_width(arena, node_id, &arena[node_id], &sizes)?;
+        checked_width(arena, node_id, &arena[node_id], &mut widths)?;
     }
-    Ok(sizes)
+    Ok(widths.into_sizes())
 }
 
 /// `node`'s width, once its relationships hold and it fits the tape's `u32` indices.
@@ -1213,10 +1211,10 @@ fn checked_width(
     arena: &Arena,
     node_id: NodeId,
     node: &Node,
-    sizes: &[usize],
+    widths: &mut NodeWidths,
 ) -> Result<usize, String> {
-    check_widths(arena, node_id, node, sizes)?;
-    let width = node_width(arena, node, |child| sizes[child.index()]);
+    check_widths(arena, node_id, node, widths)?;
+    let width = widths.measure(arena, node_id);
     if u32::try_from(width).is_err() {
         return Err(format!(
             "node {node_id:?} has width {width}, past the tape's u32 index range"
@@ -1225,14 +1223,14 @@ fn checked_width(
     Ok(width)
 }
 
-/// The first width relationship `node` breaks, given its children's `sizes`.
+/// The first width relationship `node` breaks, given its children's measured `widths`.
 fn check_widths(
     arena: &Arena,
     node_id: NodeId,
     node: &Node,
-    sizes: &[usize],
+    widths: &NodeWidths,
 ) -> Result<(), String> {
-    let width = |id: &NodeId| sizes[id.index()];
+    let width = |id: &NodeId| widths.measured(*id);
     match node {
         Node::StateVector { start, end }
         | Node::StateVectorDot { start, end }
@@ -1371,11 +1369,7 @@ fn check_widths(
 /// `node`'s output width from its children's: the one rule lowering and every rewrite share.
 ///
 /// Assumes the relationships [`validate`] checks, e.g. a non-inverted extent.
-pub(crate) fn node_width(
-    arena: &Arena,
-    node: &Node,
-    mut width_of: impl FnMut(NodeId) -> usize,
-) -> usize {
+fn node_width(arena: &Arena, node: &Node, mut width_of: impl FnMut(NodeId) -> usize) -> usize {
     match node {
         Node::Scalar(_)
         | Node::Time
@@ -1434,6 +1428,71 @@ pub(crate) fn node_width(
         | Node::Conditional {
             branches: children, ..
         } => children.iter().map(|&c| width_of(c)).max().unwrap_or(1),
+    }
+}
+
+/// Each node's [`node_width`], memoized.
+///
+/// A topological walk [`measure`](Self::measure)s each node from its children's widths;
+/// [`of`](Self::of) serves any other order, and an arena that grows between measurements.
+#[derive(Clone, Debug)]
+pub(crate) struct NodeWidths(NodeMap<usize>);
+
+impl NodeWidths {
+    /// Widths for an arena of `arena_len` nodes, none yet measured.
+    pub(crate) fn new(arena_len: usize) -> Self {
+        Self(NodeMap::new(arena_len))
+    }
+
+    /// Measure `id`, whose children are already measured.
+    pub(crate) fn measure(&mut self, arena: &Arena, id: NodeId) -> usize {
+        let width = node_width(arena, &arena[id], |child| self.measured(child));
+        self.0.insert(id, width);
+        width
+    }
+
+    /// `id`'s width, first measuring its unmeasured descendants on an explicit stack, so graph
+    /// depth is bounded by the heap.
+    pub(crate) fn of(&mut self, arena: &Arena, id: NodeId) -> usize {
+        if let Some(&width) = self.0.get(id) {
+            return width;
+        }
+        let mut pending = vec![id];
+        while let Some(&top) = pending.last() {
+            if self.0.contains_key(top) {
+                pending.pop();
+                continue;
+            }
+            let n_pending = pending.len();
+            let width = node_width(arena, &arena[top], |child| {
+                self.0.get(child).copied().unwrap_or_else(|| {
+                    pending.push(child);
+                    0
+                })
+            });
+            // Valid only if every child it read was already measured.
+            if pending.len() == n_pending {
+                pending.pop();
+                self.0.insert(top, width);
+            }
+        }
+        self.measured(id)
+    }
+
+    /// `id`'s width, which must already be measured.
+    fn measured(&self, id: NodeId) -> usize {
+        *self
+            .0
+            .get(id)
+            .expect("children are measured before their parents")
+    }
+
+    /// Every width in [`NodeId`] order, `0` for a node never measured.
+    fn into_sizes(self) -> Vec<usize> {
+        self.0
+            .into_entries()
+            .map(|width| width.unwrap_or(0))
+            .collect()
     }
 }
 
@@ -2148,6 +2207,40 @@ mod tests {
         assert_eq!(interp_idx, InterpolantIdx::new(0));
         assert_eq!(pool.interpolants[0].x_data, vec![0.0, 1.0]);
         assert_eq!(pool.interpolants[0].slopes, vec![10.0]);
+    }
+
+    /// Deeper than a recursive walk survives on a 2 MiB test-thread stack.
+    const DEEP: usize = 200_000;
+
+    #[test]
+    fn node_widths_measure_a_deep_chain_on_the_heap() {
+        let mut arena = Arena::new();
+        let mut id = arena.alloc(Node::StateVector { start: 0, end: 3 });
+        for _ in 0..DEEP {
+            id = arena.alloc(Node::Sin(id));
+        }
+        assert_eq!(NodeWidths::new(arena.len()).of(&arena, id), 3);
+    }
+
+    #[test]
+    #[should_panic(expected = "children are measured before their parents")]
+    fn infer_sizes_refuses_an_order_missing_a_child() {
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
+        let sin = arena.alloc(Node::Sin(y));
+        let _ = infer_sizes(&arena, &[sin]);
+    }
+
+    #[test]
+    fn node_widths_measure_nodes_allocated_after_they_were_created() {
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
+        let mut widths = NodeWidths::new(arena.len());
+        assert_eq!(widths.of(&arena, y), 2);
+
+        let cat = arena.alloc(Node::Concat(vec![y, y]));
+        assert_eq!(widths.of(&arena, cat), 4);
+        assert_eq!(widths.into_sizes(), [2, 4]);
     }
 
     #[test]
