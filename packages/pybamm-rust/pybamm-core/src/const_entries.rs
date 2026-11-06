@@ -11,11 +11,6 @@ use crate::ir::infer_sizes;
 use crate::node::Node;
 use crate::sparsity::CsrPattern;
 
-/// Coefficients per element beyond which the element is abandoned and swept.
-///
-/// Bounds compile time and memory on a near-dense linear model.
-const MAX_CONSTANT_DEGREE: usize = 64;
-
 /// One seed's coefficient in one element of the tangent expression.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Coeff {
@@ -89,7 +84,7 @@ impl Coeffs {
         }
     }
 
-    /// Close one element, recording it incomplete when over the degree cap.
+    /// Close one element; an incomplete one keeps no coefficients.
     fn push(&mut self, coeffs: &[Coeff], complete: bool) {
         self.entries.extend_from_slice(coeffs);
         self.close(complete);
@@ -97,12 +92,10 @@ impl Coeffs {
 
     /// Close the element appended to `entries` since the last one, as [`Self::push`] does.
     fn close(&mut self, complete: bool) {
-        let start = self.offsets[self.offsets.len() - 1];
-        let keep = complete && self.entries.len() - start <= MAX_CONSTANT_DEGREE;
-        if !keep {
-            self.entries.truncate(start);
+        if !complete {
+            self.entries.truncate(self.offsets[self.offsets.len() - 1]);
         }
-        self.complete.push(keep);
+        self.complete.push(complete);
         self.offsets.push(self.entries.len());
     }
 
@@ -300,9 +293,6 @@ fn union_seeds<'a>(
         out.clear();
         merge_unknown(acc, element.coeffs, out);
         std::mem::swap(acc, out);
-        if acc.len() > MAX_CONSTANT_DEGREE {
-            return false;
-        }
     }
     true
 }
@@ -518,9 +508,6 @@ fn matmul_row(
         out.clear();
         merge_scaled(acc, element.coeffs, value, out);
         std::mem::swap(acc, out);
-        if acc.len() > MAX_CONSTANT_DEGREE {
-            return false;
-        }
     }
     true
 }
@@ -960,23 +947,25 @@ mod tests {
     }
 
     #[test]
-    fn wide_linear_rows_hit_the_degree_cap() {
-        let n = MAX_CONSTANT_DEGREE + 8;
+    fn a_wide_linear_row_folds_to_constants() {
+        // Wider than any colouring would want to sweep: every entry is known at compile time.
+        let n = 200;
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: n });
-        let ones = arena.alloc(Node::SparseMatrix(Box::new(
+        let row = arena.alloc(Node::SparseMatrix(Box::new(
             CsrData::try_new(
                 vec![0, n],
                 (0..n).collect(),
-                vec![1.0; n],
+                (0..n).map(|col| col as f64).collect(),
                 Shape::matrix(1, n),
             )
             .expect("valid row matrix"),
         )));
-        let root = arena.alloc(Node::MatMul(ones, y));
+        let root = arena.alloc(Node::MatMul(row, y));
 
         let (_, varying, entries) = classify_states(&arena, root, 1, n);
-        assert!(varying.iter().all(|&v| v));
-        assert_eq!(entries, []);
+        assert!(varying.iter().all(|&v| !v));
+        let want: Vec<(usize, f64)> = (0..n).map(|col| (col, col as f64)).collect();
+        assert_eq!(entries, want);
     }
 }
