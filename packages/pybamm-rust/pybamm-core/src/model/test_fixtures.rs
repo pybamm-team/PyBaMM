@@ -1,7 +1,7 @@
 //! Model builders and dense-matrix helpers shared by the model's test modules.
 
 use super::{AlgebraicBlockSpec, CompiledModel, CompiledModelOptions};
-use crate::arena::{Arena, NodeId};
+use crate::arena::{Arena, DagRef, NodeId};
 use crate::error::CoreError;
 use crate::node::{CsrData, Node, Shape};
 use crate::observable::ObservableKind;
@@ -17,8 +17,7 @@ pub fn compile_with(
     options: CompiledModelOptions<'_>,
 ) -> CompiledModel {
     CompiledModel::new(
-        arena,
-        rhs,
+        DagRef::new(arena, rhs),
         mass,
         n_states,
         PackedWidth::new(input_width),
@@ -153,8 +152,7 @@ pub fn try_compile(
     input_width: usize,
 ) -> Result<CompiledModel, CoreError> {
     CompiledModel::new(
-        arena,
-        rhs,
+        DagRef::new(arena, rhs),
         mass,
         n_states,
         PackedWidth::new(input_width),

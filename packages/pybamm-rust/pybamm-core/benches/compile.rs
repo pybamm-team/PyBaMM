@@ -131,8 +131,7 @@ fn bench_model_compile(c: &mut Criterion) {
                 let root = build_coupled(&mut arena, n);
                 let mass = identity_mass_matrix(n);
                 CompiledModel::new(
-                    black_box(&arena),
-                    root,
+                    black_box(DagRef::new(&arena, root)),
                     mass,
                     n,
                     PackedWidth::new(0),

@@ -14,7 +14,7 @@ pub(crate) mod test_fixtures;
 
 use std::sync::Arc;
 
-use crate::arena::{Arena, DagRef, NodeId, ReadExtents, resolve_state_count};
+use crate::arena::{DagRef, NodeId, ReadExtents, resolve_state_count};
 use crate::error::CoreError;
 use crate::eval::{CompiledExpr, SplitCompiledExpr};
 use crate::ir::TypedIr;
@@ -168,14 +168,13 @@ impl CompiledModel {
     /// Refuses declared sizes below what the graph reads, a mass matrix that is not a canonical
     /// `n_states x n_states` CSR, and sensitivity or algebraic specs the model cannot honour.
     pub fn new(
-        arena: &Arena,
-        rhs: NodeId,
+        rhs: DagRef<'_>,
         mass_matrix: CsrData,
         n_states: usize,
         input_width: PackedWidth,
         options: CompiledModelOptions<'_>,
     ) -> Result<Self, CoreError> {
-        let params = verify_widths(arena, rhs, n_states, input_width)?;
+        let params = verify_widths(rhs, n_states, input_width)?;
         let mass_shape = mass_matrix.shape();
         if mass_shape.rows != n_states || mass_shape.cols != n_states {
             return Err(CoreError::MassMatrixShape {
@@ -188,7 +187,7 @@ impl CompiledModel {
         // Jacobian build; the CSR/CSC slot maps need them strictly ascending.
         let mass_sparsity = CsrPattern::try_from(&mass_matrix)?;
         // Compiled raw: a ULP-shifting `simplify` fold stalls IDA's Newton.
-        let primal_ir = TypedIr::from_dag(DagRef::new(arena, rhs));
+        let primal_ir = TypedIr::from_dag(rhs);
         let n_outputs = primal_ir.output_len();
         if n_outputs != n_states {
             return Err(CoreError::ResidualLength {
@@ -197,9 +196,7 @@ impl CompiledModel {
             });
         }
 
-        let jac = Arc::new(JacobianData::new_wrt_states(
-            arena, rhs, n_outputs, n_states,
-        ));
+        let jac = Arc::new(JacobianData::new_wrt_states(rhs, n_outputs, n_states));
 
         let mut sparsity = jac.sparsity().clone();
         sparsity.merge_with(&mass_sparsity);
@@ -235,9 +232,9 @@ impl CompiledModel {
             events: ObservableSet::default(),
             algebraic: None,
         };
-        model.compile_sensitivities(arena, rhs, options.sensitivities)?;
+        model.compile_sensitivities(rhs, options.sensitivities)?;
         if let Some(spec) = options.algebraic {
-            model.compile_algebraic_block(arena, spec)?;
+            model.compile_algebraic_block(rhs.arena(), spec)?;
         }
         Ok(model)
     }
@@ -453,9 +450,9 @@ pub(crate) fn check_len(name: &str, len: usize, needed: usize) {
 
 /// Refuse an expression that reads `y_dot`, or more of `y` than `n_states` declares.
 ///
-/// Scans only what `node` reaches, so discarded wider expressions in the arena are ignored.
-fn verify_state_extent(arena: &Arena, node: NodeId, n_states: usize) -> Result<(), CoreError> {
-    let extents = ReadExtents::scan(arena, node);
+/// Scans only what `dag`'s root reaches, so discarded wider expressions in the arena are ignored.
+fn verify_state_extent(dag: DagRef<'_>, n_states: usize) -> Result<(), CoreError> {
+    let extents = ReadExtents::scan(dag.arena(), dag.root());
     if extents.y_dot.is_some() {
         return Err(CoreError::StateDotRead);
     }
@@ -465,13 +462,12 @@ fn verify_state_extent(arena: &Arena, node: NodeId, n_states: usize) -> Result<(
 
 /// Refuse declared widths below what the graph reads, returning the arena's parameters.
 fn verify_widths(
-    arena: &Arena,
-    rhs: NodeId,
+    rhs: DagRef<'_>,
     n_states: usize,
     input_width: PackedWidth,
 ) -> Result<ParamRegistry, CoreError> {
-    verify_state_extent(arena, rhs, n_states)?;
-    let registry = ParamRegistry::from_arena(arena)?;
+    verify_state_extent(rhs, n_states)?;
+    let registry = ParamRegistry::from_arena(rhs.arena())?;
     resolve_input_width(Some(input_width), registry.packed_width())?;
     Ok(registry)
 }
@@ -496,6 +492,7 @@ mod tests {
         less_cj_on_the_diagonal, try_compile,
     };
     use super::*;
+    use crate::arena::Arena;
     use crate::jacobian::tests::banded_nonlinear;
     use crate::node::{Node, Shape};
 

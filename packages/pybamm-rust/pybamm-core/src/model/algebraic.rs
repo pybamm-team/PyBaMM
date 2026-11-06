@@ -115,9 +115,10 @@ impl CompiledModel {
             residual: algebraic,
             variable_indices,
         } = spec;
-        verify_state_extent(arena, algebraic, self.n_states)?;
+        let algebraic = DagRef::new(arena, algebraic);
+        verify_state_extent(algebraic, self.n_states)?;
         self.verify_algebraic_indices(variable_indices)?;
-        let algebraic_dag = simplify_pipeline(dce(DagRef::new(arena, algebraic)));
+        let algebraic_dag = simplify_pipeline(dce(algebraic));
         let algebraic_ir = TypedIr::from_dag(algebraic_dag.as_ref());
         let n_rows = algebraic_ir.output_len();
         if n_rows != variable_indices.len() {
@@ -129,7 +130,6 @@ impl CompiledModel {
         let residual = Arc::new(CompiledExpr::from_ir(algebraic_ir));
 
         let jac = Arc::new(JacobianData::new_wrt_state_subset(
-            arena,
             algebraic,
             n_rows,
             self.n_states,
@@ -275,8 +275,7 @@ mod tests {
         let wide = arena.alloc(Node::StateVector { start: 0, end: 8 });
 
         let err = CompiledModel::new(
-            &arena,
-            rhs,
+            DagRef::new(&arena, rhs),
             identity_mass_matrix(2),
             2,
             PackedWidth::new(0),
@@ -297,8 +296,7 @@ mod tests {
 
         let build = |indices: &[usize]| {
             CompiledModel::new(
-                &arena,
-                rhs,
+                DagRef::new(&arena, rhs),
                 all_algebraic_mass_matrix(2),
                 2,
                 PackedWidth::new(0),
@@ -338,8 +336,7 @@ mod tests {
         let rhs = arena.alloc(Node::Neg(y));
 
         let err = CompiledModel::new(
-            &arena,
-            rhs,
+            DagRef::new(&arena, rhs),
             all_algebraic_mass_matrix(2),
             2,
             PackedWidth::new(0),
@@ -373,8 +370,7 @@ mod tests {
         };
         let build = |block: NodeId, indices: &[usize]| {
             CompiledModel::new(
-                &arena,
-                rhs,
+                DagRef::new(&arena, rhs),
                 mass.clone(),
                 2,
                 PackedWidth::new(0),

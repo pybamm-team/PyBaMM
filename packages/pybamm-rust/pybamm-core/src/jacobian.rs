@@ -19,15 +19,14 @@ use crate::sparsity::{CsrPattern, detect_sparsity_per_output, transpose};
 use crate::tangent::{DiffTarget, tangent_wrt_params, tangent_wrt_states, tangent_wrt_subset};
 use crate::tangent_batch::{self, LanePlan, MAX_LANES};
 
-/// `differentiate`'s graph of `root`, built over only the nodes `root` reaches.
+/// `differentiate`'s graph of `dag`, built over only the nodes its root reaches.
 ///
 /// Copying the reachable subgraph, not the whole arena, compiles to the same tapes.
 pub(crate) fn tangent_dag(
-    arena: &Arena,
-    root: NodeId,
+    dag: DagRef<'_>,
     differentiate: impl FnOnce(&mut Arena, NodeId) -> NodeId,
 ) -> Dag {
-    let mut tangent = dce(DagRef::new(arena, root));
+    let mut tangent = dce(dag);
     tangent.rewrite_in_place(differentiate);
     tangent
 }
@@ -360,32 +359,29 @@ pub struct JacobianData {
 
 impl JacobianData {
     /// `df/dy` over the full state vector, with dense-row splitting.
-    pub fn new_wrt_states(arena: &Arena, root: NodeId, n_rows: usize, n_states: usize) -> Self {
-        Self::new_wrt_states_inner(arena, root, n_rows, n_states, true)
+    pub fn new_wrt_states(dag: DagRef<'_>, n_rows: usize, n_states: usize) -> Self {
+        Self::new_wrt_states_inner(dag, n_rows, n_states, true)
     }
 
     /// As [`Self::new_wrt_states`], but sweeping every entry, constants included.
     pub fn new_wrt_states_sweeping_constants(
-        arena: &Arena,
-        root: NodeId,
+        dag: DagRef<'_>,
         n_rows: usize,
         n_states: usize,
     ) -> Self {
-        Self::new_wrt_states_inner(arena, root, n_rows, n_states, false)
+        Self::new_wrt_states_inner(dag, n_rows, n_states, false)
     }
 
     fn new_wrt_states_inner(
-        arena: &Arena,
-        root: NodeId,
+        dag: DagRef<'_>,
         n_rows: usize,
         n_states: usize,
         split_constants: bool,
     ) -> Self {
-        let tangent = tangent_dag(arena, root, tangent_wrt_states);
-        let sparsity = detect_sparsity_per_output(arena, root, n_rows, n_states);
+        let tangent = tangent_dag(dag, tangent_wrt_states);
+        let sparsity = detect_sparsity_per_output(dag, n_rows, n_states);
         Self::finish_with_options(
-            arena,
-            root,
+            dag,
             tangent,
             sparsity,
             DiffTarget::States,
@@ -401,15 +397,15 @@ impl JacobianData {
     /// `df/dp` over the full parameter vector, with the sparsity taken as dense.
     ///
     /// # Panics
-    /// If `root` is not `n_rows` wide.
-    pub fn new_wrt_params(arena: &Arena, root: NodeId, n_rows: usize, n_params: usize) -> Self {
+    /// If `dag` is not `n_rows` wide.
+    pub fn new_wrt_params(dag: DagRef<'_>, n_rows: usize, n_params: usize) -> Self {
+        let (arena, root) = (dag.arena(), dag.root());
         let width = infer_sizes(arena, &arena.topological_order(root))[root.index()];
         assert_eq!(width, n_rows, "the root is {width} wide, not {n_rows}");
-        let tangent = tangent_dag(arena, root, tangent_wrt_params);
+        let tangent = tangent_dag(dag, tangent_wrt_params);
         let sparsity = CsrPattern::dense(n_rows, n_params);
         Self::finish_with_options(
-            arena,
-            root,
+            dag,
             tangent,
             sparsity,
             DiffTarget::Params,
@@ -428,8 +424,7 @@ impl JacobianData {
     /// If `subset` is not strictly ascending, as the CSR/CSC column maps rely on, or names a
     /// state at or past `n_states`.
     pub fn new_wrt_state_subset(
-        arena: &Arena,
-        root: NodeId,
+        dag: DagRef<'_>,
         n_rows: usize,
         n_states: usize,
         subset: &[usize],
@@ -442,13 +437,12 @@ impl JacobianData {
             subset.last().is_none_or(|&last| last < n_states),
             "subset names a state past n_states = {n_states}"
         );
-        let tangent = tangent_dag(arena, root, |diff_arena, root| {
+        let tangent = tangent_dag(dag, |diff_arena, root| {
             tangent_wrt_subset(diff_arena, root, subset)
         });
-        let full = detect_sparsity_per_output(arena, root, n_rows, n_states);
+        let full = detect_sparsity_per_output(dag, n_rows, n_states);
         Self::finish_with_options(
-            arena,
-            root,
+            dag,
             tangent,
             restrict_columns(&full, subset),
             DiffTarget::States,
@@ -465,11 +459,9 @@ impl JacobianData {
 
     /// Assemble the artifact.
     ///
-    /// `arena`/`root` are the original primal graph, which dense-row splitting extracts from.
-    #[allow(clippy::too_many_arguments)]
+    /// `primal` is the original graph, which dense-row splitting extracts from.
     fn finish_with_options(
-        arena: &Arena,
-        root: NodeId,
+        primal: DagRef<'_>,
         tangent: Dag,
         sparsity: CsrPattern,
         wrt: DiffTarget,
@@ -483,7 +475,7 @@ impl JacobianData {
 
         // Classify on the simplified tape, so folds follow the sweep's operator order.
         let (swept, mut constant_csr_entries) = if options.split_constants {
-            classify_constant_entries(tangent.arena(), tangent.root(), &sparsity)
+            classify_constant_entries(tangent.as_ref(), &sparsity)
         } else {
             (vec![true; sparsity.nnz()], Vec::new())
         };
@@ -493,7 +485,7 @@ impl JacobianData {
             swept: swept_entries,
             dense_rows,
             n_candidate_rows,
-        } = Self::decide_coloring(arena, root, &sparsity, swept, options.split_dense_rows);
+        } = Self::decide_coloring(primal, &sparsity, swept, options.split_dense_rows);
         let skip_rows: Vec<usize> = dense_rows
             .iter()
             .flat_map(|split| split.rows.iter().copied())
@@ -537,8 +529,7 @@ impl JacobianData {
     ///
     /// An adopted split returns `swept` with the split rows' entries cleared.
     fn decide_coloring(
-        arena: &Arena,
-        root: NodeId,
+        primal: DagRef<'_>,
         sparsity: &CsrPattern,
         swept: Vec<bool>,
         split_dense_rows: bool,
@@ -586,7 +577,7 @@ impl JacobianData {
         let dense_rows = candidates
             .chunks(ROWS_PER_TAPE)
             .map(|group| {
-                let block = extract_scalar_rows(DagRef::new(arena, root), group);
+                let block = extract_scalar_rows(primal, group);
                 let tape = AdjointTape::new(block.dag.as_ref(), sparsity.ncols());
                 AdjointDenseRows::new(block.rows, tape)
             })
@@ -1434,7 +1425,7 @@ pub(crate) mod tests {
         let (n, w) = (64, 3);
         let (arena, root) = banded_nonlinear(n, w);
         let n_rows = CompiledExpr::new(DagRef::new(&arena, root)).output_len();
-        let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n);
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n);
         assert_batched_matches_scalar(&jac, &batching_probe_states(n));
     }
 
@@ -1445,7 +1436,7 @@ pub(crate) mod tests {
         let (n, w) = (64, 3);
         let (arena, root) = banded_nonlinear(n, w);
         let n_rows = CompiledExpr::new(DagRef::new(&arena, root)).output_len();
-        let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n);
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n);
         let y = batching_probe_states(n);
         let mut scratch = JacobianScratch::new(&jac);
         assert!(scratch.lane_width() > 1, "the fixture must batch");
@@ -1459,7 +1450,7 @@ pub(crate) mod tests {
         let (n, w) = (64, 3);
         let (arena, root) = banded_nonlinear(n, w);
         let n_rows = CompiledExpr::new(DagRef::new(&arena, root)).output_len();
-        let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n);
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n);
         assert_eq!(
             jac.action_lanes.widest(),
             MAX_LANES,
@@ -1556,7 +1547,7 @@ pub(crate) mod tests {
     fn lane_plans_follow_the_tapes_shape() {
         let plans = |arena: &Arena, root: NodeId, n: usize| {
             let n_rows = CompiledExpr::new(DagRef::new(arena, root)).output_len();
-            let jac = JacobianData::new_wrt_states(arena, root, n_rows, n);
+            let jac = JacobianData::new_wrt_states(DagRef::new(arena, root), n_rows, n);
             (jac.n_colors(), jac.lane_width(), jac.action_lanes.widest())
         };
         // Short scalar rows are dispatch-bound: three colours take one part-empty 4-lane walk.
@@ -1582,7 +1573,8 @@ pub(crate) mod tests {
             let snapshot = DagSnapshot::from_bytes(bytes).expect("fixture decodes");
             let (arena, root) = (snapshot.dag().arena(), snapshot.dag().root());
             let n_rows = CompiledExpr::new(DagRef::new(arena, root)).output_len();
-            let jac = JacobianData::new_wrt_states(arena, root, n_rows, snapshot.n_states);
+            let jac =
+                JacobianData::new_wrt_states(DagRef::new(arena, root), n_rows, snapshot.n_states);
             assert_eq!(jac.lane_width(), colours_per_walk);
             assert_eq!(jac.action_lanes.widest(), MAX_LANES);
         }
@@ -1681,7 +1673,7 @@ pub(crate) mod tests {
         let (n, w) = (32, 2);
         let (arena, root) = banded_nonlinear(n, w);
         let n_rows = CompiledExpr::new(DagRef::new(&arena, root)).output_len();
-        let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n);
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n);
 
         // Make every merged row wider, so no slot number survives by luck.
         let extra = CsrPattern::dense(n_rows, n);
@@ -1744,7 +1736,7 @@ pub(crate) mod tests {
         let dense = arena.alloc(Node::Add(sum, root_of_sign));
         let diagonal = arena.alloc(Node::Sin(y));
         let root = arena.alloc(Node::Concat(vec![dense, diagonal]));
-        let jac = JacobianData::new_wrt_states(&arena, root, n + 1, n);
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n + 1, n);
         assert_eq!(jac.n_dense_rows(), 1);
 
         let mut merged = jac.sparsity().clone();
@@ -1769,11 +1761,11 @@ pub(crate) mod tests {
         // Same rows, more colours: a release build once scattered this silently.
         let (n, w) = (32, 2);
         let (banded, banded_root) = banded_nonlinear(n, w);
-        let wide = JacobianData::new_wrt_states(&banded, banded_root, n, n);
+        let wide = JacobianData::new_wrt_states(DagRef::new(&banded, banded_root), n, n);
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: n });
         let root = arena.alloc(Node::Sin(y));
-        let diagonal = JacobianData::new_wrt_states(&arena, root, n, n);
+        let diagonal = JacobianData::new_wrt_states(DagRef::new(&arena, root), n, n);
         assert!(wide.n_colors() > diagonal.n_colors());
 
         let mut out = vec![0.0; wide.layout().n_slots()];
@@ -1810,7 +1802,7 @@ pub(crate) mod tests {
                 let mut whole = Dag::new(arena.clone(), root);
                 whole.rewrite_in_place(differentiate);
                 assert_eq!(
-                    compile(tangent_dag(arena, root, differentiate)),
+                    compile(tangent_dag(DagRef::new(arena, root), differentiate)),
                     compile(whole),
                 );
             }
@@ -1863,12 +1855,12 @@ pub(crate) mod tests {
         let (arena, root) = banded_nonlinear(n, w);
         let n_rows = CompiledExpr::new(DagRef::new(&arena, root)).output_len();
         let subset: Vec<usize> = (0..n).collect();
-        let jac = JacobianData::new_wrt_state_subset(&arena, root, n_rows, n, &subset);
+        let jac = JacobianData::new_wrt_state_subset(DagRef::new(&arena, root), n_rows, n, &subset);
         let y = batching_probe_states(n);
         assert_batched_matches_scalar(&jac, &y);
 
         let subset_values = assemble_with(&jac, &mut JacobianScratch::new(&jac), &y);
-        let full = JacobianData::new_wrt_states(&arena, root, n_rows, n);
+        let full = JacobianData::new_wrt_states(DagRef::new(&arena, root), n_rows, n);
         let reference = assemble_with(&full, &mut JacobianScratch::new(&full), &y);
         assert_eq!(
             jac.csc().entries().collect::<Vec<_>>(),
@@ -1886,7 +1878,7 @@ pub(crate) mod tests {
     fn jacobian_wrt_states_matches_analytic() {
         let mut arena = Arena::new();
         let root = toy(&mut arena);
-        let jac = JacobianData::new_wrt_states(&arena, root, 2, 2);
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), 2, 2);
         let (y, p) = ([0.5, 2.0], [3.0, 4.0]);
         let dense = assemble_full(&jac, 0.0, &y, &p);
         // df0/dy = [y1, y0]; df1/dy = [cos(y0)*p1, 0]
@@ -1900,7 +1892,7 @@ pub(crate) mod tests {
     fn jacobian_wrt_params_matches_analytic() {
         let mut arena = Arena::new();
         let root = toy(&mut arena);
-        let jac = JacobianData::new_wrt_params(&arena, root, 2, 2);
+        let jac = JacobianData::new_wrt_params(DagRef::new(&arena, root), 2, 2);
         let (y, p) = ([0.5, 2.0], [3.0, 4.0]);
         let dense = assemble_full(&jac, 0.0, &y, &p);
         // df0/dp = [1, 0]; df1/dp = [0, sin(y0)]
@@ -1916,7 +1908,7 @@ pub(crate) mod tests {
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
         let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
         let root = arena.alloc(Node::Mul(y0, y1));
-        let jac = JacobianData::new_wrt_states(&arena, root, 1, 2);
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), 1, 2);
         assert_eq!((jac.n_rows(), jac.n_cols()), (1, 2));
     }
 
@@ -1930,7 +1922,7 @@ pub(crate) mod tests {
         let prod = arena.alloc(Node::Mul(y0, y2));
         let root = arena.alloc(Node::Add(prod, y1));
 
-        let jac = JacobianData::new_wrt_state_subset(&arena, root, 1, 3, &[0, 2]);
+        let jac = JacobianData::new_wrt_state_subset(DagRef::new(&arena, root), 1, 3, &[0, 2]);
 
         assert_eq!((jac.n_rows(), jac.n_cols()), (1, 2));
         assert_eq!(jac.seed_dim, 3);
@@ -1969,7 +1961,7 @@ pub(crate) mod tests {
         let r1 = arena.alloc(Node::Mul(y0, p0));
         let root = arena.alloc(Node::Concat(vec![r0, r1]));
 
-        let jac = JacobianData::new_wrt_params(&arena, root, 2, 1);
+        let jac = JacobianData::new_wrt_params(DagRef::new(&arena, root), 2, 1);
         let dense = assemble_full(&jac, 0.0, &[3.0, 5.0], &[7.0]);
         assert!(
             dense[0][0].abs() < 1e-12,
@@ -1994,7 +1986,7 @@ pub(crate) mod tests {
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
         let root = arena.alloc(Node::Concat(vec![cv, y0]));
 
-        let jac = JacobianData::new_wrt_states(&arena, root, 3, 1);
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), 3, 1);
         let dense = assemble_full(&jac, 0.0, &[9.0], &[]);
         assert!(
             dense[0][0].abs() < 1e-12,
@@ -2029,7 +2021,7 @@ pub(crate) mod tests {
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
         let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
         let root = arena.alloc(Node::Add(y0, y1));
-        let _ = JacobianData::new_wrt_state_subset(&arena, root, 1, 2, &[1, 0]);
+        let _ = JacobianData::new_wrt_state_subset(DagRef::new(&arena, root), 1, 2, &[1, 0]);
     }
 
     fn make_pattern_with_dense_row(ncols: usize, nrows: usize) -> CsrPattern {
@@ -2210,7 +2202,7 @@ pub(crate) mod tests {
             }));
         }
         let root = arena.alloc(Node::Concat(rows));
-        let jac = JacobianData::new_wrt_states(&arena, root, n, n);
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), n, n);
         assert_eq!(jac.n_dense_rows(), 1);
         assert!(
             jac.assembly_tape().ir().instructions().len()
@@ -2262,9 +2254,9 @@ pub(crate) mod tests {
         let ones = ones_row(&mut arena, n);
         let row = arena.alloc(Node::MatMul(ones, remainders));
         let root = arena.alloc(Node::Concat(vec![diagonal, row]));
-        let reverse = JacobianData::new_wrt_states(&arena, root, n + 1, n);
+        let reverse = JacobianData::new_wrt_states(DagRef::new(&arena, root), n + 1, n);
         let all: Vec<usize> = (0..n).collect();
-        let swept = JacobianData::new_wrt_state_subset(&arena, root, n + 1, n, &all);
+        let swept = JacobianData::new_wrt_state_subset(DagRef::new(&arena, root), n + 1, n, &all);
         assert_eq!((reverse.n_dense_rows(), swept.n_dense_rows()), (1, 0));
 
         let mut y = vec![0.1; n];
@@ -2283,7 +2275,7 @@ pub(crate) mod tests {
     fn an_unmasked_build_shares_its_two_tapes() {
         let mut arena = Arena::new();
         let root = toy(&mut arena);
-        let jac = JacobianData::new_wrt_states(&arena, root, 2, 2);
+        let jac = JacobianData::new_wrt_states(DagRef::new(&arena, root), 2, 2);
         assert!(Arc::ptr_eq(jac.action_tape(), jac.assembly_tape()));
     }
 }

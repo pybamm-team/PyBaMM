@@ -167,8 +167,7 @@ fn bench_jacobian_assembly(c: &mut Criterion) {
         let root = build_coupled(&mut arena, n);
         let mass = identity_mass_matrix(n);
         let model = CompiledModel::new(
-            &arena,
-            root,
+            DagRef::new(&arena, root),
             mass,
             n,
             PackedWidth::new(0),

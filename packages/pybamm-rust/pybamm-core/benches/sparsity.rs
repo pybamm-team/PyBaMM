@@ -21,8 +21,7 @@ fn bench_detect_sparsity(c: &mut Criterion) {
             |b, _| {
                 b.iter(|| {
                     detect_sparsity_per_output(
-                        black_box(snap.dag().arena()),
-                        black_box(snap.dag().root()),
+                        black_box(snap.dag()),
                         black_box(n_outputs),
                         black_box(snap.n_states),
                     )
