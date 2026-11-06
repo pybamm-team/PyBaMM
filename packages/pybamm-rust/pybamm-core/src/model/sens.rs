@@ -8,6 +8,7 @@ use crate::observable::seed_param_tangent;
 use crate::params::ParamIdx;
 use crate::simplify::simplify_pipeline;
 use crate::tangent::tangent_wrt_params;
+use crate::tangent_batch::{LanePlan, unit_param_columns};
 
 use super::{CompiledModel, FOREIGN_WORKSPACE, Workspace, check_len};
 
@@ -20,12 +21,16 @@ struct SensModel<'a> {
     scratch: &'a mut [f64],
     /// The parameter seed vector, in registration space.
     dp: &'a mut [f64],
+    /// How the columns walk `expr`, and the buffers of its batched walks.
+    lanes: LanePlan,
+    tangent_lanes: &'a mut [f64],
+    seed_lanes: &'a mut Vec<f64>,
     #[cfg(test)]
     primal_passes: &'a mut usize,
 }
 
 impl SensModel<'_> {
-    /// Every column at one point, sharing a single primal pass.
+    /// Every column at one point, sharing a single primal pass and batched by `lanes`.
     ///
     /// Column `i` lands in `output[i * stride..]`; `output` must hold one stride per column.
     fn all_columns(self, t: f64, y: &[f64], inputs: &[f64], stride: usize, output: &mut [f64]) {
@@ -40,15 +45,16 @@ impl SensModel<'_> {
             *self.primal_passes += 1;
         }
         let mut primal = self.expr.eval_primal(self.scratch, t, y, &[], inputs);
-        for (&param, column) in self.columns.iter().zip(output.chunks_mut(stride)) {
-            self.dp.fill(0.0);
-            self.dp[param.index()] = 1.0;
-            let result = primal.eval_tangent(&TangentInputs {
-                dy: None,
-                dp: Some(self.dp),
-            });
-            column[..result.len()].copy_from_slice(result);
-        }
+        unit_param_columns(
+            &mut primal,
+            self.lanes,
+            self.columns,
+            self.dp,
+            self.tangent_lanes,
+            self.seed_lanes,
+            stride,
+            output,
+        );
     }
 
     /// `df/dp @ v`, where `v[i]` weighs sensitivity column `i`.
@@ -97,7 +103,9 @@ impl CompiledModel {
         }
 
         let df_dp = simplify_pipeline(tangent_dag(rhs, tangent_wrt_params));
-        self.sens_expr = Some(SplitCompiledExpr::compile(df_dp.as_ref()));
+        let sens_expr = SplitCompiledExpr::compile(df_dp.as_ref());
+        self.sens_lanes = LanePlan::new(&sens_expr);
+        self.sens_expr = Some(sens_expr);
         self.sens_param_indices = sens_param_indices.to_vec();
         Ok(())
     }
@@ -125,6 +133,9 @@ impl CompiledModel {
             columns: &self.sens_param_indices,
             scratch: ws.sens_scratch.as_mut().expect(FOREIGN_WORKSPACE),
             dp: &mut ws.sens_dp_buffer,
+            lanes: self.sens_lanes,
+            tangent_lanes: &mut ws.sens_tangent_lanes,
+            seed_lanes: &mut ws.sens_seed_lanes,
             #[cfg(test)]
             primal_passes: &mut ws.sens_primal_passes,
         }

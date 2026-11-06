@@ -24,6 +24,7 @@ use crate::observable::{ObservableScratch, ObservableSet};
 use crate::params::{PackedWidth, ParamIdx, ParamRegistry, resolve_input_width};
 use crate::simplify::{dce, simplify_pipeline};
 use crate::sparsity::CsrPattern;
+use crate::tangent_batch::{self, LanePlan};
 
 pub use algebraic::AlgebraicBlock;
 use algebraic::AlgebraicScratch;
@@ -91,6 +92,10 @@ pub struct Workspace {
     event_scratch: ObservableScratch,
     algebraic: Option<AlgebraicScratch>,
     sens_dp_buffer: Vec<f64>,
+    /// Lane-minor tangent region of the batched `df/dp` walks; empty when they never batch.
+    sens_tangent_lanes: Vec<f64>,
+    /// Lane-minor `df/dp` seeds, grown on demand.
+    sens_seed_lanes: Vec<f64>,
     #[cfg(test)]
     pub(crate) sens_primal_passes: usize,
 }
@@ -110,6 +115,8 @@ impl Workspace {
             scratch.poison(value);
         }
         self.sens_dp_buffer.fill(value);
+        self.sens_tangent_lanes.fill(value);
+        crate::jacobian::poison_grown(&mut self.sens_seed_lanes, value);
     }
 }
 
@@ -154,6 +161,8 @@ pub struct CompiledModel {
     mass_to_csc_map: Vec<usize>,
     state_kinds: StateKinds,
     sens_expr: Option<SplitCompiledExpr>,
+    /// How `df/dp`'s columns walk `sens_expr`.
+    sens_lanes: LanePlan,
     /// Registration index of each sensitivity column, in column order.
     sens_param_indices: Vec<ParamIdx>,
     /// Output variables H(t, y; p) and their tangent tapes.
@@ -235,6 +244,7 @@ impl CompiledModel {
             mass_to_csc_map,
             state_kinds,
             sens_expr: None,
+            sens_lanes: LanePlan::SCALAR,
             sens_param_indices: Vec::new(),
             outputs: ObservableSet::default(),
             events: ObservableSet::default(),
@@ -264,6 +274,14 @@ impl CompiledModel {
             algebraic: self.algebraic.as_ref().map(AlgebraicScratch::new),
             // `dp` is indexed by `ParamIdx`: registration extent, not packed width.
             sens_dp_buffer: vec![0.0; self.param_extent.max(1)],
+            sens_tangent_lanes: self
+                .sens_expr
+                .as_ref()
+                .filter(|_| self.sens_lanes.widest() > 1)
+                .map_or_else(Vec::new, |expr| {
+                    vec![0.0; tangent_batch::tangent_scratch_len(expr, self.sens_lanes.widest())]
+                }),
+            sens_seed_lanes: Vec::new(),
             #[cfg(test)]
             sens_primal_passes: 0,
         }

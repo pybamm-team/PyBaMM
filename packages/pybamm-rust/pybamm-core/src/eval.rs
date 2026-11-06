@@ -1130,8 +1130,9 @@ impl PrimalCache<'_> {
 
     /// Evaluate the tangent section for `lanes` seed vectors at once on the cached primal region.
     ///
-    /// `seeds` is `(n_states, lanes)` lane-minor and the result `(out_len, lanes)` lane-minor,
-    /// each lane bitwise equal to an [`eval_tangent`](Self::eval_tangent) call.
+    /// `seeds` is `(n_seeds, lanes)` lane-minor, seed `i` being state `i` on a `dy` tape and
+    /// parameter index `i` on a `dp` tape. The result is `(out_len, lanes)` lane-minor, each lane
+    /// bitwise equal to an [`eval_tangent`](Self::eval_tangent) call.
     ///
     /// # Panics
     /// If `lanes` is not 8 or 4, the tape is not
