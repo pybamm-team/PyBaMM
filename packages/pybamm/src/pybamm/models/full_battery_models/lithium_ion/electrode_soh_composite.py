@@ -900,7 +900,9 @@ def get_initial_stoichiometries_composite(
         Parameter values for the simulation
     direction : str, optional
         The OCV branch to use for initial stoichiometries. Can be "charge" or
-        "discharge". Only affects x_init/y_init, not equilibrium values.
+        "discharge". Only affects x_init/y_init, not equilibrium values. If None,
+        a hysteresis phase is on the OCP at its "Initial hysteresis state", which
+        must then be set.
     param : pybamm.LithiumIonParameters, optional
         Parameter object
     options : dict, optional

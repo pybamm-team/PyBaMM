@@ -1213,8 +1213,55 @@ class TestSimulation:
         # The phases start in equilibrium, so no current flows between them at rest
         V = sol["Voltage [V]"].entries
         assert V[-1] == pytest.approx(V[0], abs=1e-5)
+
+    @pytest.mark.parametrize("cache_esoh", [True, False])
+    def test_initial_soc_composite_hysteresis_state_unset(self, cache_esoh):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        }
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Negative particle lithiation hysteresis decay rate": 10,
+                "Secondary: Negative particle delithiation hysteresis decay rate": 10,
+            },
+            check_already_exists=False,
+        )
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=cache_esoh)
+
+        sol = sim.solve([0, 1], initial_soc=0.5)
+
         h = sol["X-averaged negative electrode secondary hysteresis state"]
-        assert h(3600) == pytest.approx(h0)
+        assert h(0) == pytest.approx(0)
+
+    def test_cache_esoh_composite_initial_hysteresis_state_change(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        }
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        name = "Secondary: Initial hysteresis state in negative electrode"
+        param.update(
+            {
+                "Secondary: Negative particle lithiation hysteresis decay rate": 10,
+                "Secondary: Negative particle delithiation hysteresis decay rate": 10,
+                name: -1,
+                "Current function [A]": 0,
+            },
+            check_already_exists=False,
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve([0, 1], initial_soc=0.5)
+
+        param.update({name: 1})
+        sol = sim.solve([0, 3600], initial_soc=0.5)
+
+        # The split is solved again on the new initial hysteresis state
+        V = sol["Voltage [V]"].entries
+        assert V[-1] == pytest.approx(V[0], abs=1e-5)
 
     @pytest.mark.parametrize("cache_esoh", [True, False])
     @pytest.mark.parametrize("h0", [-1, 0.5])
