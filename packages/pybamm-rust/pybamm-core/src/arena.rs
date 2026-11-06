@@ -378,6 +378,12 @@ impl<T> NodeMap<T> {
     pub(crate) fn contains_key(&self, id: NodeId) -> bool {
         self.slots.get(id.index()).is_some_and(Option::is_some)
     }
+
+    /// Every entry in [`NodeId`] order, `None` where unset.
+    #[inline]
+    pub(crate) fn into_entries(self) -> impl Iterator<Item = Option<T>> {
+        self.slots.into_iter()
+    }
 }
 
 impl NodeMap<NodeId> {

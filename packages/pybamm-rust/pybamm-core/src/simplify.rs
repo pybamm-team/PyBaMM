@@ -19,7 +19,7 @@ use std::hash::Hasher;
 use rustc_hash::{FxHashMap, FxHasher};
 
 use crate::arena::{Arena, Dag, DagRef, NodeId, NodeMap};
-use crate::ir::{BinaryOp, UnaryOp, node_width};
+use crate::ir::{BinaryOp, NodeWidths, UnaryOp};
 use crate::node::{ArrayData, Node, Shape, structural_hash, structurally_identical};
 use crate::zero_propagate::zero_propagate;
 
@@ -31,9 +31,9 @@ use crate::zero_propagate::zero_propagate;
 #[must_use]
 pub fn simplify(arena: &mut Arena, root: NodeId) -> NodeId {
     let mut simplified: NodeMap<NodeId> = NodeMap::new(arena.len());
-    let mut lens: NodeMap<usize> = NodeMap::new(arena.len());
+    let mut widths = NodeWidths::new(arena.len());
     for id in arena.topological_order(root) {
-        let result = simplify_node(arena, id, &simplified, &mut lens);
+        let result = simplify_node(arena, id, &simplified, &mut widths);
         simplified.insert(id, result);
     }
     simplified.rebuilt(root)
@@ -56,35 +56,6 @@ fn is_neg_one(arena: &Arena, id: NodeId) -> bool {
     is_scalar(arena, id, -1.0)
 }
 
-/// [`node_width`] of a node, memoized via `lens`.
-///
-/// Walks with an explicit stack, so graph depth is bounded by the heap.
-pub fn node_len(arena: &Arena, id: NodeId, lens: &mut NodeMap<usize>) -> usize {
-    if let Some(&len) = lens.get(id) {
-        return len;
-    }
-    let mut pending = vec![id];
-    while let Some(&top) = pending.last() {
-        if lens.contains_key(top) {
-            pending.pop();
-            continue;
-        }
-        let n_pending = pending.len();
-        let len = node_width(arena, &arena[top], |child| {
-            lens.get(child).copied().unwrap_or_else(|| {
-                pending.push(child);
-                0
-            })
-        });
-        // Valid only if every child it read was already measured.
-        if pending.len() == n_pending {
-            pending.pop();
-            lens.insert(top, len);
-        }
-    }
-    *lens.get(id).expect("the walk ends with `id` measured")
-}
-
 /// Simplify `id`, whose children are already simplified in `simplified`.
 ///
 /// A node no rule rewrites is reused, or copied over its simplified children.
@@ -92,15 +63,15 @@ fn simplify_node(
     arena: &mut Arena,
     id: NodeId,
     simplified: &NodeMap<NodeId>,
-    lens: &mut NodeMap<usize>,
+    widths: &mut NodeWidths,
 ) -> NodeId {
     let s = |child: NodeId| simplified.rebuilt(child);
     let rewritten = match arena[id] {
         Node::Add(lhs, rhs) => simplify_add(arena, s(lhs), s(rhs)),
-        Node::Sub(lhs, rhs) => simplify_sub(arena, s(lhs), s(rhs), lens),
-        Node::Mul(lhs, rhs) => simplify_mul(arena, s(lhs), s(rhs), lens),
-        Node::Div(lhs, rhs) => simplify_div(arena, s(lhs), s(rhs), lens),
-        Node::Pow(base, exp) => simplify_pow(arena, s(base), s(exp), lens),
+        Node::Sub(lhs, rhs) => simplify_sub(arena, s(lhs), s(rhs), widths),
+        Node::Mul(lhs, rhs) => simplify_mul(arena, s(lhs), s(rhs), widths),
+        Node::Div(lhs, rhs) => simplify_div(arena, s(lhs), s(rhs), widths),
+        Node::Pow(base, exp) => simplify_pow(arena, s(base), s(exp), widths),
         Node::Minimum(lhs, rhs) => fold_binary(arena, s(lhs), s(rhs), BinaryOp::Minimum),
         Node::Maximum(lhs, rhs) => fold_binary(arena, s(lhs), s(rhs), BinaryOp::Maximum),
         Node::Modulo(lhs, rhs) => fold_binary(arena, s(lhs), s(rhs), BinaryOp::Modulo),
@@ -205,7 +176,7 @@ fn simplify_sub(
     arena: &mut Arena,
     lhs: NodeId,
     rhs: NodeId,
-    lens: &mut NodeMap<usize>,
+    widths: &mut NodeWidths,
 ) -> Option<NodeId> {
     if let Some(difference) = fold_binary(arena, lhs, rhs, BinaryOp::Sub) {
         return Some(difference);
@@ -220,7 +191,7 @@ fn simplify_sub(
     }
 
     if lhs == rhs {
-        let len = node_len(arena, lhs, lens);
+        let len = widths.of(arena, lhs);
         return Some(arena.alloc(Node::zero(len)));
     }
 
@@ -232,7 +203,7 @@ fn simplify_mul(
     arena: &mut Arena,
     lhs: NodeId,
     rhs: NodeId,
-    lens: &mut NodeMap<usize>,
+    widths: &mut NodeWidths,
 ) -> Option<NodeId> {
     if let Some(product) = fold_binary(arena, lhs, rhs, BinaryOp::Mul) {
         return Some(product);
@@ -255,7 +226,7 @@ fn simplify_mul(
     }
 
     if is_zero(arena, lhs) || is_zero(arena, rhs) {
-        let len = node_len(arena, lhs, lens).max(node_len(arena, rhs, lens));
+        let len = widths.of(arena, lhs).max(widths.of(arena, rhs));
         return Some(arena.alloc(Node::zero(len)));
     }
 
@@ -267,7 +238,7 @@ fn simplify_div(
     arena: &mut Arena,
     lhs: NodeId,
     rhs: NodeId,
-    lens: &mut NodeMap<usize>,
+    widths: &mut NodeWidths,
 ) -> Option<NodeId> {
     if let Some(quotient) = fold_binary(arena, lhs, rhs, BinaryOp::Div) {
         return Some(quotient);
@@ -278,12 +249,12 @@ fn simplify_div(
     }
 
     if is_zero(arena, lhs) {
-        let len = node_len(arena, rhs, lens);
+        let len = widths.of(arena, rhs);
         return Some(arena.alloc(Node::zero(len)));
     }
 
     // Scalar only: a vector x / x is a ones vector.
-    if lhs == rhs && node_len(arena, lhs, lens) == 1 {
+    if lhs == rhs && widths.of(arena, lhs) == 1 {
         return Some(arena.alloc(Node::Scalar(1.0)));
     }
 
@@ -295,19 +266,19 @@ fn simplify_pow(
     arena: &mut Arena,
     base: NodeId,
     exp: NodeId,
-    lens: &mut NodeMap<usize>,
+    widths: &mut NodeWidths,
 ) -> Option<NodeId> {
     if let Some(power) = fold_binary(arena, base, exp, BinaryOp::Pow) {
         return Some(power);
     }
 
     // Scalar only: 1^x broadcasts to the exponent's length.
-    if is_one(arena, base) && node_len(arena, exp, lens) == 1 {
+    if is_one(arena, base) && widths.of(arena, exp) == 1 {
         return Some(base);
     }
 
     let e = arena[exp].as_scalar()?;
-    let len = node_len(arena, base, lens);
+    let len = widths.of(arena, base);
     lower_constant_pow(arena, base, e, len)
 }
 
@@ -496,17 +467,6 @@ mod tests {
     const DEEP: usize = 200_000;
 
     #[test]
-    fn node_len_handles_a_deep_chain() {
-        let mut arena = Arena::new();
-        let mut id = arena.alloc(Node::StateVector { start: 0, end: 3 });
-        for _ in 0..DEEP {
-            id = arena.alloc(Node::Sin(id));
-        }
-        let mut lens = NodeMap::new(arena.len());
-        assert_eq!(node_len(&arena, id, &mut lens), 3);
-    }
-
-    #[test]
     fn a_zero_width_conditional_measures_zero_as_lowering_does() {
         let mut arena = Arena::new();
         let selector = arena.alloc(Node::Scalar(1.0));
@@ -518,8 +478,8 @@ mod tests {
         let ratio = arena.alloc(Node::Div(cond, cond));
 
         let lowered = infer_sizes(&arena, &arena.topological_order(ratio));
-        let mut lens = NodeMap::new(arena.len());
-        assert_eq!(node_len(&arena, cond, &mut lens), lowered[cond.index()]);
+        let mut widths = NodeWidths::new(arena.len());
+        assert_eq!(widths.of(&arena, cond), lowered[cond.index()]);
 
         let simplified = simplify(&mut arena, ratio);
         assert!(

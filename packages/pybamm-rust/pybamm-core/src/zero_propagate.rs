@@ -5,7 +5,7 @@
 //! input is finite. At a `0 * inf` or `0 / 0` it yields zero where the input yields NaN.
 
 use crate::arena::{Arena, Dag, DagRef, NodeId, NodeMap};
-use crate::ir::node_width;
+use crate::ir::NodeWidths;
 use crate::node::Node;
 
 /// A node's output length, and whether its value is proved identically zero.
@@ -15,7 +15,12 @@ struct ShapeInfo {
     all_zero: bool,
 }
 
-fn infer_shape(arena: &Arena, id: NodeId, shapes: &[ShapeInfo]) -> ShapeInfo {
+fn infer_shape(
+    arena: &Arena,
+    id: NodeId,
+    shapes: &[ShapeInfo],
+    widths: &mut NodeWidths,
+) -> ShapeInfo {
     let node = &arena[id];
     let is_zero = |child: &NodeId| shapes[child.index()].all_zero;
     let all_zero = match node {
@@ -76,8 +81,10 @@ fn infer_shape(arena: &Arena, id: NodeId, shapes: &[ShapeInfo]) -> ShapeInfo {
         | Node::InterpolantNd { .. }
         | Node::InterpolantNdPartial { .. } => false,
     };
-    let len = node_width(arena, node, |child| shapes[child.index()].len);
-    ShapeInfo { len, all_zero }
+    ShapeInfo {
+        len: widths.measure(arena, id),
+        all_zero,
+    }
 }
 
 /// Shape of every node in `order`, indexed by `NodeId`.
@@ -87,8 +94,9 @@ fn analyze_shapes(arena: &Arena, order: &[NodeId]) -> Vec<ShapeInfo> {
         all_zero: false,
     };
     let mut shapes = vec![unvisited; arena.len()];
+    let mut widths = NodeWidths::new(arena.len());
     for &id in order {
-        shapes[id.index()] = infer_shape(arena, id, &shapes);
+        shapes[id.index()] = infer_shape(arena, id, &shapes, &mut widths);
     }
     shapes
 }
