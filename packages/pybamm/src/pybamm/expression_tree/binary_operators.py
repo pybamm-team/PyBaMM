@@ -79,9 +79,9 @@ class BinaryOperator(pybamm.Symbol):
 
     name : str
         name of the node
-    left : :class:`Symbol` or :class:`Number`
+    left_child : :class:`Symbol` or :class:`Number`
         lhs child node (converted to :class:`Scalar` if Number)
-    right : :class:`Symbol` or :class:`Number`
+    right_child : :class:`Symbol` or :class:`Number`
         rhs child node (converted to :class:`Scalar` if Number)
     """
 
