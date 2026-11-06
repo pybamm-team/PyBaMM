@@ -53,6 +53,7 @@ macro_rules! with_binary_op {
                 |x: f64, y: f64| if x < y { 1.0 } else { 0.0 }
             },
             $crate::ir::BinaryOp::Equality => $crate::eval::equality,
+            $crate::ir::BinaryOp::MaskedMul => $crate::eval::masked_mul,
         })
     };
 }
@@ -343,6 +344,12 @@ pub(crate) fn check_scratch(len: usize, needed: usize) {
 #[allow(clippy::float_cmp)]
 pub(crate) fn equality(x: f64, y: f64) -> f64 {
     if x == y { 1.0 } else { 0.0 }
+}
+
+/// `mask * value`, but `0` wherever `mask` is zero, even against an infinite or NaN `value`.
+#[inline(always)]
+pub(crate) fn masked_mul(mask: f64, value: f64) -> f64 {
+    if mask == 0.0 { 0.0 } else { mask * value }
 }
 
 /// `x^y` by the platform's `pow`, except exponents `0`, `1`, `2` and `-1`, which take `1`,

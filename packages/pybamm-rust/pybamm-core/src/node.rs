@@ -542,6 +542,8 @@ pub enum Node {
         children: Vec<NodeId>,
         axis: u32,
     },
+    /// `mask * value`, but zero wherever `mask` is, even against an infinite or NaN `value`.
+    MaskedMul(NodeId, NodeId),
 }
 
 /// Hand each child of `$node` to `$visit`, in declaration order.
@@ -573,7 +575,8 @@ macro_rules! visit_children {
             | Node::Hypot(l, r)
             | Node::EqualHeaviside(l, r)
             | Node::NotEqualHeaviside(l, r)
-            | Node::Equality(l, r) => {
+            | Node::Equality(l, r)
+            | Node::MaskedMul(l, r) => {
                 $visit(l);
                 $visit(r);
             },
@@ -814,6 +817,7 @@ pub(crate) fn structural_hash<H: Hasher>(node: &Node, hasher: &mut H) {
         | Node::EqualHeaviside(_, _)
         | Node::NotEqualHeaviside(_, _)
         | Node::Equality(_, _)
+        | Node::MaskedMul(_, _)
         | Node::Neg(_)
         | Node::Abs(_)
         | Node::Sqrt(_)

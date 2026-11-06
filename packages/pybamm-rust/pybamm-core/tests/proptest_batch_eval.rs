@@ -119,6 +119,7 @@ fn all_binary_ops_match_scalar() {
         BinaryOp::EqualHeaviside,
         BinaryOp::NotEqualHeaviside,
         BinaryOp::Equality,
+        BinaryOp::MaskedMul,
     ];
     let k = 7;
     let ts: Vec<f64> = (0..k).map(|l| l as f64 * 0.3).collect();
@@ -502,6 +503,7 @@ fn alloc_binary(arena: &mut Arena, op: BinaryOp, a: NodeId, b: NodeId) -> NodeId
         BinaryOp::EqualHeaviside => Node::EqualHeaviside(a, b),
         BinaryOp::NotEqualHeaviside => Node::NotEqualHeaviside(a, b),
         BinaryOp::Equality => Node::Equality(a, b),
+        BinaryOp::MaskedMul => Node::MaskedMul(a, b),
     })
 }
 
