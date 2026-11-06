@@ -36,7 +36,7 @@ const UNARY_OPS: [UnaryOp; 16] = [
     UnaryOp::Ceiling,
 ];
 
-const BINARY_OPS: [BinaryOp; 12] = [
+const BINARY_OPS: [BinaryOp; 13] = [
     BinaryOp::Add,
     BinaryOp::Sub,
     BinaryOp::Mul,
@@ -49,6 +49,7 @@ const BINARY_OPS: [BinaryOp; 12] = [
     BinaryOp::EqualHeaviside,
     BinaryOp::NotEqualHeaviside,
     BinaryOp::Equality,
+    BinaryOp::MaskedMul,
 ];
 
 /// `pow` as the tapes define it: the platform's, but `1`, `x`, `x*x` and `1/x` for the
@@ -119,6 +120,7 @@ fn binary(op: BinaryOp) -> (BinaryNode, BinaryFn) {
         BinaryOp::NotEqualHeaviside => (Node::NotEqualHeaviside, |x, y| f64::from(u8::from(x < y))),
         #[allow(clippy::float_cmp)]
         BinaryOp::Equality => (Node::Equality, |x, y| f64::from(u8::from(x == y))),
+        BinaryOp::MaskedMul => (Node::MaskedMul, |x, y| if x == 0.0 { 0.0 } else { x * y }),
     }
 }
 

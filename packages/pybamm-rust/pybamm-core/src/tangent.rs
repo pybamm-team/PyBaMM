@@ -217,12 +217,14 @@ fn base_tangent(arena: &mut Arena, base: NodeId, exp: NodeId, da: NodeId) -> Nod
     arena.alloc(Node::Div(numerator, denominator))
 }
 
-/// `selector * da + (1 - selector) * db`, the subgradient `Minimum` and `Maximum` share.
+/// `da` where `selector` is 1, else `db`: the subgradient `Minimum` and `Maximum` share.
+///
+/// Masked, so an infinite or NaN tangent of the operand not taken is dropped, not `0 * inf`.
 fn blend_tangents(arena: &mut Arena, selector: NodeId, da: NodeId, db: NodeId) -> NodeId {
     let one = arena.alloc(Node::Scalar(1.0));
     let one_minus_sel = arena.alloc(Node::Sub(one, selector));
-    let sel_da = arena.alloc(Node::Mul(selector, da));
-    let not_sel_db = arena.alloc(Node::Mul(one_minus_sel, db));
+    let sel_da = arena.alloc(Node::MaskedMul(selector, da));
+    let not_sel_db = arena.alloc(Node::MaskedMul(one_minus_sel, db));
     arena.alloc(Node::Add(sel_da, not_sel_db))
 }
 
@@ -307,6 +309,14 @@ impl Differentiator<'_> {
                 let two = arena.alloc(Node::Scalar(2.0));
                 let b_sq = arena.alloc(Node::Pow(b, two));
                 arena.alloc(Node::Div(numer, b_sq))
+            },
+
+            // Masked on both terms, so a zero mask still drops the tangent of whatever it masks.
+            Node::MaskedMul(mask, value) => {
+                let [d_mask, d_value] = self.ready([mask, value])?;
+                let mask_term = arena.alloc(Node::MaskedMul(d_mask, value));
+                let value_term = arena.alloc(Node::MaskedMul(mask, d_value));
+                arena.alloc(Node::Add(mask_term, value_term))
             },
 
             // `x^0` is constant, so its tangent is zero even where `0 * x^-1` is not.
@@ -747,6 +757,69 @@ mod tests {
         let literal = arena.alloc(Node::Array(Box::new(literal.expect("valid array"))));
         let root = arena.alloc(Node::Minimum(y, literal));
         assert_eq!(jvp(&arena, root, &[0.5, 0.5], &[], &[1.0, 1.0]), [1.0, 0.0]);
+    }
+
+    #[test]
+    fn min_and_max_drop_a_non_finite_tangent_of_the_operand_they_do_not_return() {
+        // `op(y0, sqrt(y1))`: the square root's tangent is inf at y1 = 0 and NaN below it.
+        type Build = fn(NodeId, NodeId) -> Node;
+        let cases: [(&str, Build, [f64; 2], [f64; 2]); 4] = [
+            ("maximum", Node::Maximum, [1.0, 0.0], [1.0, 0.0]),
+            ("maximum", Node::Maximum, [1.0, -1.0], [1.0, 0.0]),
+            ("minimum", Node::Minimum, [-1.0, 0.0], [1.0, 0.0]),
+            // Returned, the infinite tangent still flows.
+            ("maximum", Node::Maximum, [-1.0, 0.0], [0.0, f64::INFINITY]),
+        ];
+        for (label, op, y, expected) in cases {
+            let mut arena = Arena::new();
+            let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
+            let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
+            let sqrt_y1 = arena.alloc(Node::Sqrt(y1));
+            let root = arena.alloc(op(y0, sqrt_y1));
+            let got = forward_gradient(&arena, root, &y, &[]);
+            assert_eq!(got, expected, "{label} at {y:?}");
+        }
+    }
+
+    #[test]
+    fn masked_rules_differentiate_again_to_the_hessian() {
+        // `dy^T H dy` for dy = [1, 1], from differentiating the first tangent once more.
+        type Build = fn(&mut Arena, NodeId, NodeId) -> NodeId;
+        let cases: [(&str, Build, [f64; 2], f64); 2] = [
+            // H = [[0, -1/y1^2], [-1/y1^2, 2 y0/y1^3]].
+            (
+                "quotient",
+                |a, x, y| a.alloc(Node::Div(x, y)),
+                [1.0, 2.0],
+                -0.25,
+            ),
+            // Returns y0^2, whose H is [[2, 0], [0, 0]].
+            (
+                "maximum",
+                |a, x, y| {
+                    let square = a.alloc(Node::Mul(x, x));
+                    a.alloc(Node::Maximum(square, y))
+                },
+                [2.0, 1.0],
+                2.0,
+            ),
+        ];
+        for (label, build, y, expected) in cases {
+            let mut arena = Arena::new();
+            let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
+            let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
+            let root = build(&mut arena, y0, y1);
+            let first = tangent_wrt_states(&mut arena, root);
+            let second = tangent_wrt_states(&mut arena, first);
+            let compiled = CompiledExpr::new(DagRef::new(&arena, second));
+            let mut scratch = vec![0.0; compiled.scratch_len()];
+            let seed = TangentInputs {
+                dy: Some(&[1.0, 1.0]),
+                dp: None,
+            };
+            let got = compiled.eval_with_tangent(&mut scratch, 0.0, &y, &[], &[], &seed);
+            assert_eq!(got, [expected], "{label} at {y:?}");
+        }
     }
 
     #[test]

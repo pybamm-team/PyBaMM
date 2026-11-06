@@ -29,7 +29,7 @@ fn infer_shape(
         Node::Array(arr) => arr.data.iter().all(|&v| v == 0.0),
 
         Node::Add(a, b) | Node::Sub(a, b) => is_zero(a) && is_zero(b),
-        Node::Mul(a, b) | Node::MatMul(a, b) => is_zero(a) || is_zero(b),
+        Node::Mul(a, b) | Node::MatMul(a, b) | Node::MaskedMul(a, b) => is_zero(a) || is_zero(b),
         Node::Div(a, _) => is_zero(a),
 
         Node::Neg(c)

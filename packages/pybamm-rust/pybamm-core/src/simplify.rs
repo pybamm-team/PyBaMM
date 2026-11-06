@@ -76,6 +76,7 @@ fn simplify_node(
         Node::Maximum(lhs, rhs) => fold_binary(arena, s(lhs), s(rhs), BinaryOp::Maximum),
         Node::Modulo(lhs, rhs) => fold_binary(arena, s(lhs), s(rhs), BinaryOp::Modulo),
         Node::Hypot(lhs, rhs) => fold_binary(arena, s(lhs), s(rhs), BinaryOp::Hypot),
+        Node::MaskedMul(mask, value) => simplify_masked_mul(arena, s(mask), s(value), widths),
 
         Node::Neg(child) => simplify_neg(arena, s(child)),
         Node::Abs(child) => fold_unary(arena, s(child), UnaryOp::Abs),
@@ -227,6 +228,31 @@ fn simplify_mul(
 
     if is_zero(arena, lhs) || is_zero(arena, rhs) {
         let len = widths.of(arena, lhs).max(widths.of(arena, rhs));
+        return Some(arena.alloc(Node::zero(len)));
+    }
+
+    None
+}
+
+/// Masked products `0 * x -> 0`, `1 * x -> x`, `x * 0 -> 0`, `const * const -> const`.
+///
+/// The first two are exact, as the mask's zero wins over an infinite or NaN `x`.
+fn simplify_masked_mul(
+    arena: &mut Arena,
+    mask: NodeId,
+    value: NodeId,
+    widths: &mut NodeWidths,
+) -> Option<NodeId> {
+    if let Some(product) = fold_binary(arena, mask, value, BinaryOp::MaskedMul) {
+        return Some(product);
+    }
+
+    if is_one(arena, mask) {
+        return Some(value);
+    }
+
+    if is_zero(arena, mask) || is_zero(arena, value) {
+        let len = widths.of(arena, mask).max(widths.of(arena, value));
         return Some(arena.alloc(Node::zero(len)));
     }
 
@@ -986,6 +1012,28 @@ mod tests {
                 Node::Scalar(v) => assert!(v.abs() < f64::EPSILON),
                 other => panic!("expected Scalar(0.0), got {other:?}"),
             }
+        }
+    }
+
+    #[test]
+    fn a_masked_product_folds_its_identities() {
+        let mut arena = Arena::new();
+        let x = arena.alloc(Node::StateVector { start: 0, end: 3 });
+        let zero = arena.alloc(Node::Scalar(0.0));
+        let one = arena.alloc(Node::Scalar(1.0));
+        let zero_mask = arena.alloc(Node::MaskedMul(zero, x));
+        let unit_mask = arena.alloc(Node::MaskedMul(one, x));
+        let zero_value = arena.alloc(Node::MaskedMul(x, zero));
+
+        assert_eq!(simplify(&mut arena, unit_mask), x);
+        for masked in [zero_mask, zero_value] {
+            let simplified = simplify(&mut arena, masked);
+            assert_eq!(
+                arena[simplified],
+                Node::ZeroVector { len: 3 },
+                "{:?}",
+                arena[masked]
+            );
         }
     }
 }

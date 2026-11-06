@@ -124,6 +124,8 @@ pub enum BinaryOp {
     NotEqualHeaviside,
     /// `|a - b| < 1e-14`, a tolerance test rather than an exact comparison.
     Equality,
+    /// `a * b`, but zero wherever `a` is, even against an infinite or NaN `b`.
+    MaskedMul,
 }
 
 /// Element-wise unary `f64` function, without domain guards.
@@ -867,6 +869,7 @@ impl IRBuilder {
                 self.emit_binary(BinaryOp::NotEqualHeaviside, *a, *b, dst, out_len)
             },
             Node::Equality(a, b) => self.emit_binary(BinaryOp::Equality, *a, *b, dst, out_len),
+            Node::MaskedMul(a, b) => self.emit_binary(BinaryOp::MaskedMul, *a, *b, dst, out_len),
 
             Node::Neg(a) => self.emit_unary(UnaryOp::Neg, *a, dst, out_len),
             Node::Abs(a) => self.emit_unary(UnaryOp::Abs, *a, dst, out_len),
@@ -1191,6 +1194,7 @@ fn caller_buildable(node_id: NodeId, node: &Node) -> Result<(), String> {
         Node::Interpolant1DLinearDeriv { .. } => "Interpolant1DLinearDeriv",
         Node::Interpolant1DCubicDeriv { .. } => "Interpolant1DCubicDeriv",
         Node::InterpolantNdPartial { .. } => "InterpolantNdPartial",
+        Node::MaskedMul(..) => "MaskedMul",
         _ => return Ok(()),
     };
     Err(format!(
@@ -1277,6 +1281,7 @@ fn check_widths(
         | Node::EqualHeaviside(a, b)
         | Node::NotEqualHeaviside(a, b)
         | Node::Equality(a, b)
+        | Node::MaskedMul(a, b)
             if !broadcast_widths_compatible(width(a), width(b)) =>
         {
             Err(format!(
@@ -1396,7 +1401,8 @@ fn node_width(arena: &Arena, node: &Node, mut width_of: impl FnMut(NodeId) -> us
         | Node::Hypot(a, b)
         | Node::EqualHeaviside(a, b)
         | Node::NotEqualHeaviside(a, b)
-        | Node::Equality(a, b) => width_of(*a).max(width_of(*b)),
+        | Node::Equality(a, b)
+        | Node::MaskedMul(a, b) => width_of(*a).max(width_of(*b)),
         Node::MatMul(a, b) => match &arena[*a] {
             Node::SparseMatrix(csr) => csr.shape.rows,
             Node::Array(arr) => arr.shape.rows,
@@ -2122,6 +2128,7 @@ mod tests {
                     axis: 0,
                 },
             ),
+            ("MaskedMul", Node::MaskedMul(y, x)),
         ] {
             let internal = arena.alloc(node);
             let root = arena.alloc(Node::Neg(internal));
