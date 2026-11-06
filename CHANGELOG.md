@@ -15,6 +15,8 @@
 
 ## Features
 
+- `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
+- Added `"coupled ion-electron transfer"` as an `"intercalation kinetics"` option, following Fraggedakis et al. (2021). It uses the existing reorganization energy and a new temperature-dependent `"... electrode coupled ion-electron transfer rate constant [A.m-2]"` per electrode, and its current saturates at large overpotential. ([#5993](https://github.com/pybamm-team/PyBaMM/pull/5993))
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
 - Added `pybamm.bode_plot` and `pybamm.eis_plot`, which overlays labelled spectra. `EISSimulation.plot()` now shows Nyquist and Bode plots instead of failing. ([#5989](https://github.com/pybamm-team/PyBaMM/pull/5989))
 - When every sub-solver of `CompositeSolver` fails, their errors are chained to the raised `SolverError` as an `ExceptionGroup`, so each failure's traceback is kept. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
@@ -22,8 +24,10 @@
 ## Bug fixes
 
 - `FuzzyDict.search` with blank entries in a list of terms, such as `search(["", "Electrolyte", "Potenteel"])`, now labels each result with the right term and searches every term. ([#6019](https://github.com/pybamm-team/PyBaMM/pull/6019))
+- `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
 - Released `pybammsolvers` v0.12.0, with the solver functions `pybamm` calls since #5994, and `pybamm` now requires it. Before, `pybamm` from source with `pybammsolvers` 0.11.1 from PyPI failed at its first solve. ([#6028](https://github.com/pybamm-team/PyBaMM/pull/6028))
 - Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))
+- `Discretisation(resolve_coupled_variables=True)` now resolves a `pybamm.CoupledVariable` used in a boundary condition, which used to raise a `DiscretisationError`. It also no longer rewrites the equations of the model it is given when `inplace=False`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
 - A battery model loaded with `Serialise.load_custom_model` keeps its saved geometry, mesh points, submesh types and spatial methods when its own class can't be imported. Before, the built-in ancestor's defaults silently replaced them. ([#5995](https://github.com/pybamm-team/PyBaMM/pull/5995))
 - `from pybamm.models.submodels.interface.kinetics import *` no longer raises an `AttributeError` ([#5970](https://github.com/pybamm-team/PyBaMM/pull/5970))
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
@@ -48,9 +52,12 @@
 - The heat of mixing now sums over every particle phase, so `"heat of mixing": "true"` works with `"particle phases": "2"` instead of raising a `ModelError`. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - The heat of mixing now uses the particle's effective diffusivity, so it conserves energy with `"current sigmoid"` diffusivity or stress-induced diffusion, and a uniform particle profile builds again. ([#5769](https://github.com/pybamm-team/PyBaMM/pull/5769))
 - `"heat of mixing": "true"` now works with `"particle": "quadratic profile"` or `"quartic profile"`, using their closed-form flux instead of failing to discretise with a `ShapeError`. ([#5935](https://github.com/pybamm-team/PyBaMM/pull/5935))
+- Irreversible heating now includes the resistive loss across the SEI film when `"SEI film resistance"` is `"distributed"` or `"average"`, so it reaches `"Total heating [W]"` and the cell temperature. ([#5841](https://github.com/pybamm-team/PyBaMM/pull/5841))
+- Irreversible heating now includes the heat from SEI growth, SEI on cracks and lithium plating side reactions, so their electrical losses reach `"Total heating [W]"` and the cell temperature. ([#5875](https://github.com/pybamm-team/PyBaMM/pull/5875))
 
 ## Optimizations
 
+- Pushes to `main` skip the test suite when the commit already passed the merge queue, and only rebuild the cached solver wheels and upload the Codecov baseline. Other pushes still run the full suite. ([#6027](https://github.com/pybamm-team/PyBaMM/pull/6027))
 - Read the Docs pull request builds drop `linkcheck` and the unpublished PDF, install the released solver wheel instead of compiling it, and are skipped when nothing the docs render changed, saving about 14 of 20 minutes. ([#5986](https://github.com/pybamm-team/PyBaMM/pull/5986))
 - Pull request CI no longer installs TeXLive, or the compilers and OpenBLAS that the prebuilt solver wheels make redundant. The latexify test mocks `sympy.preview` and runs everywhere. TeXLive downloads took 12–50 minutes in 6 of 15 runs. ([#5985](https://github.com/pybamm-team/PyBaMM/pull/5985))
 - Faster model build and `IDAKLUSolver` set-up for large models. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
