@@ -1,6 +1,7 @@
 #
 # Test the experiment steps
 #
+import warnings
 from datetime import datetime
 
 import numpy as np
@@ -368,6 +369,30 @@ class TestExperimentSteps:
         termination_gt_4_1_oo = pybamm.step.step_termination.Voltage() > 4.1
         assert termination_lt_4_1_oo == termination_lt_4_1
         assert termination_gt_4_1_oo == termination_gt_4_1
+
+    def test_voltage_termination_without_direction_warns(self):
+        # Rest and voltage-controlled steps have no charge or discharge direction, so
+        # a voltage termination without an operator gives no event
+        for step_string in [
+            "Rest for 1 hour or until 3.5 V",
+            "Hold at 4.1 V until 4.2 V",
+        ]:
+            with pytest.warns(UserWarning, match=r"voltage termination at .* ignored"):
+                step = pybamm.step.string(step_string)
+            variables = {"Battery voltage [V]": 4.0}
+            assert step.get_termination_events(variables) == []
+
+        # An operator, or a charge or discharge direction, gives the event its sign
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            for step_string in [
+                "Rest for 1 hour or until > 3.5 V",
+                "Hold at 4.1 V until < 4.2 V",
+                "Discharge at 1 A until 3 V",
+                "Charge at 1 A until 4.2 V",
+            ]:
+                step = pybamm.step.string(step_string)
+                assert len(step.get_termination_events(variables)) == 1
 
     def test_symbolic_termination_expression_helpers(self):
         single_termination_step = pybamm.step.current(
