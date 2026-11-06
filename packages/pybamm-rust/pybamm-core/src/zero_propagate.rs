@@ -27,6 +27,7 @@ fn infer_shape(
         Node::Scalar(v) => *v == 0.0,
         Node::ZeroVector { .. } => true,
         Node::Array(arr) => arr.data.iter().all(|&v| v == 0.0),
+        Node::SparseMatrix(csr) => csr.data.iter().all(|&v| v == 0.0),
 
         Node::Add(a, b) | Node::Sub(a, b) => is_zero(a) && is_zero(b),
         Node::Mul(a, b) | Node::MatMul(a, b) | Node::MaskedMul(a, b) => is_zero(a) || is_zero(b),
@@ -59,7 +60,6 @@ fn infer_shape(
         | Node::Exp(_)
         | Node::Cos(_)
         | Node::Cosh(_)
-        | Node::SparseMatrix(_)
         | Node::StateVector { .. }
         | Node::StateVectorDot { .. }
         | Node::TangentStateVector { .. }
@@ -287,19 +287,35 @@ mod tests {
     }
 
     /// Regression: an all-zero dense matrix used to fold to a `ZeroVector` and stay a
-    /// `MatMul` operand, which lowering rejects; now the product folds with it.
+    /// `MatMul` operand, which lowering rejects; now the product folds with it, in any storage.
     #[test]
     fn a_zero_matrix_literal_folds_its_product() {
-        let mut arena = Arena::new();
-        let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
-        let sin_y = arena.alloc(Node::Sin(y));
-        let matrix = arena.alloc(array(vec![0.0; 4], Shape::matrix(2, 2)));
-        let product = arena.alloc(Node::MatMul(matrix, sin_y));
-        let root = arena.alloc(Node::Add(product, y));
+        let csr = |indices: Vec<usize>, data: Vec<f64>, indptr| {
+            let csr = CsrData::try_new(indptr, indices, data, Shape::matrix(2, 2));
+            Node::SparseMatrix(Box::new(csr.expect("a valid matrix")))
+        };
+        let matrices = [
+            array(vec![0.0; 4], Shape::matrix(2, 2)),
+            csr(vec![], vec![], vec![0, 0, 0]),
+            csr(vec![1, 0], vec![0.0, -0.0], vec![0, 1, 2]),
+        ];
+        for matrix in matrices {
+            let mut arena = Arena::new();
+            let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
+            let sin_y = arena.alloc(Node::Sin(y));
+            let matrix = arena.alloc(matrix);
+            let product = arena.alloc(Node::MatMul(matrix, sin_y));
+            let root = arena.alloc(Node::Add(product, y));
 
-        let folded = zero_propagate(DagRef::new(&arena, root));
-        assert_eq!(&folded.arena()[folded.root()], &arena[y]);
-        assert_eq!(eval(folded.as_ref(), &[0.5, -1.5]), [0.5, -1.5]);
+            let folded = zero_propagate(DagRef::new(&arena, root));
+            assert_eq!(
+                &folded.arena()[folded.root()],
+                &arena[y],
+                "{:?}",
+                arena[matrix]
+            );
+            assert_eq!(eval(folded.as_ref(), &[0.5, -1.5]), [0.5, -1.5]);
+        }
     }
 
     /// The motivating case: a parameter tangent of an input-free quotient is `0 / x`.
