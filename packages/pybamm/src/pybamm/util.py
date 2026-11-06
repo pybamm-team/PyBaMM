@@ -418,7 +418,7 @@ def import_optional_dependency(module_name, attribute=None):
         raise ModuleNotFoundError(err_msg) from error
 
 
-def is_flux_boundary_condition(bc_type):
+def _is_flux_boundary_condition(bc_type):
     return (
         isinstance(bc_type, tuple)
         and bc_type[0] == "Flux"

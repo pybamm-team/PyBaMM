@@ -577,7 +577,7 @@ class ParameterSubstitutor:
                 pybamm.logger.verbose(
                     f"Processing parameters for {variable!r} ({side} bc)"
                 )
-                if pybamm.is_flux_boundary_condition(typ):
+                if pybamm._is_flux_boundary_condition(typ):
                     # Flux boundary conditions are specified as a tuple ("Flux", symbol)
                     typ = (typ[0], self.process_symbol(typ[1]))
                 new_boundary_conditions[processed_variable][side] = (
