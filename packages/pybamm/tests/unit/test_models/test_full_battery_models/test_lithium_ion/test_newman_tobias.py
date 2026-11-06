@@ -49,6 +49,10 @@ class TestNewmanTobias(BaseUnitTestLithiumIon):
         pass  # skip this test
 
     @pytest.mark.skip(reason="Test currently not implemented")
+    def test_well_posed_kinetics_coupled_ion_electron_transfer_composite(self):
+        pass  # skip this test
+
+    @pytest.mark.skip(reason="Test currently not implemented")
     def test_well_posed_sei_VonKolzenberg2020_model(self):
         pass  # skip this test
 
