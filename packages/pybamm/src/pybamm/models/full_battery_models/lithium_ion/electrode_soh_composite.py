@@ -485,17 +485,15 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         else:
             raise ValueError("Invalid initialization method")
 
+        # SOC 0 and 1 are defined at the reference temperature. The phases start in
+        # equilibrium on the OCP the model starts on, so the split depends on the
+        # initial hysteresis state
+        T = param.T_init if initialization_method == "voltage" else param.T_ref
+
         def U(phase_param, sto, electrode, phase):
-            if initialization_method == "voltage":
-                return get_initial_ocp(
-                    phase_param, sto, param.T_init, direction, electrode, options, phase
-                )
-            # SOC is a reference quantity, so the split does not depend on the
-            # initial hysteresis state
-            lithiation = get_lithiation_delithiation(
-                direction, electrode, options, phase
+            return get_initial_ocp(
+                phase_param, sto, T, direction, electrode, options, phase
             )
-            return phase_param.U(sto, param.T_ref, lithiation)
 
         if is_positive_composite:
             y_init_2 = variables["y_init_2"]

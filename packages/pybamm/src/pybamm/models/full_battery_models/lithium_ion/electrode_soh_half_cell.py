@@ -355,17 +355,17 @@ def _composite_soc_equations(x, x_2, soc, limits, param, options, direction):
     Q_min = x_100 * Q_w + x_100_2 * Q_w_2
     Q_max = x_0 * Q_w + x_0_2 * Q_w_2
     Q_now = Q_w * x + Q_w_2 * x_2
-    # SOC 0 and 1 are defined at the reference temperature
+    # SOC 0 and 1 are defined at the reference temperature. The phases start in
+    # equilibrium on the OCP the model starts on, so the split depends on the initial
+    # hysteresis state
     T_ref = param.T_ref
-    lithiation_primary = get_lithiation_delithiation(
-        direction, "positive", options, phase="primary"
-    )
-    lithiation_secondary = get_lithiation_delithiation(
-        direction, "positive", options, phase="secondary"
-    )
     return {
-        x: param.p.prim.U(x, T_ref, lithiation_primary)
-        - param.p.sec.U(x_2, T_ref, lithiation_secondary),
+        x: get_initial_ocp(
+            param.p.prim, x, T_ref, direction, "positive", options, "primary"
+        )
+        - get_initial_ocp(
+            param.p.sec, x_2, T_ref, direction, "positive", options, "secondary"
+        ),
         x_2: (Q_now - Q_min) / (Q_max - Q_min) - soc,
     }
 

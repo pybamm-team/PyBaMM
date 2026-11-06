@@ -75,9 +75,10 @@ def set_initial_state(
         Parameters and their corresponding values.
     direction : str, optional
         "charge" or "discharge" starts each hysteresis electrode on that OCP branch.
-        If None, a voltage is solved on the OCP at the initial hysteresis state (0
-        if unset). A spatially varying initial hysteresis state is evaluated at the
-        electrode midpoint, so the initial voltage is then approximate.
+        If None, a voltage, and the split of a composite electrode between its
+        phases, are solved on the OCP at the initial hysteresis state (0 if unset).
+        A spatially varying initial hysteresis state is evaluated at the electrode
+        midpoint, so the initial state is then approximate.
     param : :class:`pybamm.LithiumIonParameters`, optional
         The symbolic parameter set to use for the simulation.
         If not provided, the default parameter set will be used.

@@ -1189,6 +1189,33 @@ class TestSimulation:
         assert h(0) == pytest.approx(h0)
         assert sol["Voltage [V]"](0) == pytest.approx(3.9, abs=1e-4)
 
+    @pytest.mark.parametrize("h0", [-1, 1])
+    def test_initial_soc_starts_composite_at_rest(self, h0):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        }
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Negative particle lithiation hysteresis decay rate": 10,
+                "Secondary: Negative particle delithiation hysteresis decay rate": 10,
+                "Secondary: Initial hysteresis state in negative electrode": h0,
+                "Current function [A]": 0,
+            },
+            check_already_exists=False,
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        sol = sim.solve([0, 3600], initial_soc=0.5)
+
+        # The phases start in equilibrium, so no current flows between them at rest
+        V = sol["Voltage [V]"].entries
+        assert V[-1] == pytest.approx(V[0], abs=1e-5)
+        h = sol["X-averaged negative electrode secondary hysteresis state"]
+        assert h(3600) == pytest.approx(h0)
+
     @pytest.mark.parametrize("cache_esoh", [True, False])
     @pytest.mark.parametrize("h0", [-1, 0.5])
     def test_initial_voltage_keeps_initial_hysteresis_state(self, h0, cache_esoh):

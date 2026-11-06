@@ -22,6 +22,7 @@
 
 ## Bug fixes
 
+- With a one-state hysteresis phase in a composite electrode, starting a simulation from an SOC now splits the lithium between the phases so they are in equilibrium on the OCP at the initial hysteresis state. Before, the split used `"... electrode OCP [V]"` whatever the initial hysteresis state, so the phases started out of equilibrium: the voltage jumped at the start and drifted during a rest. Voltage starts already did this ([#5928](https://github.com/pybamm-team/PyBaMM/pull/5928)). ([#PRNUM](https://github.com/pybamm-team/PyBaMM/pull/PRNUM))
 - `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
 - Released `pybammsolvers` v0.12.0, with the solver functions `pybamm` calls since #5994, and `pybamm` now requires it. Before, `pybamm` from source with `pybammsolvers` 0.11.1 from PyPI failed at its first solve. ([#6028](https://github.com/pybamm-team/PyBaMM/pull/6028))
 - Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))
