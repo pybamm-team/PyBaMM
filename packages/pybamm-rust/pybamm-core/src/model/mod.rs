@@ -22,6 +22,7 @@ use crate::jacobian::{CscPattern, JacobianData, JacobianLayout, JacobianScratch,
 use crate::node::CsrData;
 use crate::observable::{ObservableScratch, ObservableSet};
 use crate::params::{PackedWidth, ParamIdx, ParamRegistry, resolve_input_width};
+use crate::simplify::{dce, simplify_pipeline};
 use crate::sparsity::CsrPattern;
 
 pub use algebraic::AlgebraicBlock;
@@ -165,6 +166,9 @@ pub struct CompiledModel {
 impl CompiledModel {
     /// Compile `M y' = f(t, y; p)` with `rhs` as `f`, plus what `options` asks for.
     ///
+    /// `rhs` is simplified once, and the residual, its Jacobian and `df/dp` all derive from that
+    /// graph, so they agree with each other.
+    ///
     /// Refuses declared sizes below what the graph reads, a mass matrix that is not a canonical
     /// `n_states x n_states` CSR, and sensitivity or algebraic specs the model cannot honour.
     pub fn new(
@@ -186,8 +190,8 @@ impl CompiledModel {
         // Up front, so a mass row whose column indices repeat or are unsorted fails before the
         // Jacobian build; the CSR/CSC slot maps need them strictly ascending.
         let mass_sparsity = CsrPattern::try_from(&mass_matrix)?;
-        // Compiled raw: a ULP-shifting `simplify` fold stalls IDA's Newton.
-        let primal_ir = TypedIr::from_dag(rhs);
+        let simplified = simplify_pipeline(dce(rhs));
+        let primal_ir = TypedIr::from_dag(simplified.as_ref());
         let n_outputs = primal_ir.output_len();
         if n_outputs != n_states {
             return Err(CoreError::ResidualLength {
@@ -196,7 +200,11 @@ impl CompiledModel {
             });
         }
 
-        let jac = Arc::new(JacobianData::new_wrt_states(rhs, n_outputs, n_states));
+        let jac = Arc::new(JacobianData::new_wrt_states(
+            simplified.as_ref(),
+            n_outputs,
+            n_states,
+        ));
 
         let mut sparsity = jac.sparsity().clone();
         sparsity.merge_with(&mass_sparsity);
@@ -232,7 +240,7 @@ impl CompiledModel {
             events: ObservableSet::default(),
             algebraic: None,
         };
-        model.compile_sensitivities(rhs, options.sensitivities)?;
+        model.compile_sensitivities(simplified.as_ref(), options.sensitivities)?;
         if let Some(spec) = options.algebraic {
             model.compile_algebraic_block(rhs.arena(), spec)?;
         }
@@ -495,6 +503,25 @@ mod tests {
     use crate::arena::Arena;
     use crate::jacobian::tests::banded_nonlinear;
     use crate::node::{Node, Shape};
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn the_residual_and_its_jacobian_both_follow_the_simplified_rhs() {
+        // `y0 - y0` simplifies to zero, as CasADi's SX does; unsimplified it is NaN at y0 = inf.
+        let mut arena = Arena::new();
+        let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
+        let cancelled = arena.alloc(Node::Sub(y0, y0));
+        let rhs = arena.alloc(Node::Concat(vec![cancelled, y1]));
+        let model = compile(&arena, rhs, identity_mass_matrix(2), 2, 0);
+
+        let y = [f64::INFINITY, 3.0];
+        let mut ws = model.create_workspace();
+        let mut f = [f64::NAN; 2];
+        model.eval_rhs(&mut ws, 0.0, &y, &[], &mut f);
+        assert_eq!(f, [0.0, 3.0]);
+        assert_eq!(assemble_dense_no_mass(&model, &y), [[0.0, 0.0], [0.0, 1.0]]);
+    }
 
     #[test]
     fn data_workspace_roundtrip_eval_rhs() {

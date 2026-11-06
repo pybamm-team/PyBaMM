@@ -1,5 +1,5 @@
-//! The residual tape `CompiledModel::new` compiles must be bit-identical to a
-//! direct evaluation of the DAG
+//! `CompiledModel::new` simplifies the rhs before compiling it; on real models that must move
+//! no bits against a direct evaluation of the unsimplified DAG.
 
 #![cfg(feature = "serialize")]
 
@@ -87,8 +87,8 @@ fn check(name: &str, bytes: &[u8]) {
                 got.to_bits(),
                 want_i.to_bits(),
                 "{name} trial {trial}: residual bit mismatch at output {i}: \
-                 compiled {got} vs raw-DAG {want_i}. The rhs compile path has \
-                 gained a pass that moves bits; see the guard in CompiledModel::new."
+                 compiled {got} vs raw-DAG {want_i}. `simplify` has gained a \
+                 rewrite that moves bits on a real model."
             );
         }
     }

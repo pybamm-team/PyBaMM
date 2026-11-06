@@ -130,7 +130,7 @@ impl CompiledModel {
         let residual = Arc::new(CompiledExpr::from_ir(algebraic_ir));
 
         let jac = Arc::new(JacobianData::new_wrt_state_subset(
-            algebraic,
+            algebraic_dag.as_ref(),
             n_rows,
             self.n_states,
             variable_indices,
