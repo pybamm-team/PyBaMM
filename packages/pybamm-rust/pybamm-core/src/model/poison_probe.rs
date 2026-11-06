@@ -93,7 +93,8 @@ fn entry_points<'a>(model: &'a CompiledModel, y: &'a [f64], inputs: &'a [f64]) -
         entries.add(format!("eval_observables {kind:?}"), len, move |ws, out| {
             model.eval_observables(ws, kind, T, y, inputs, out);
         });
-        if k > 0 {
+        // Events carry no tangents.
+        if k > 0 && kind == ObservableKind::Outputs {
             entries.add(
                 format!("observable_sens_action {kind:?}"),
                 len,

@@ -40,8 +40,9 @@ fn seed_param_tangent_unit(dp: &mut [f64], sens_params: &[ParamIdx], column: Sen
     dp[sens_params[column.get()].index()] = 1.0;
 }
 
-/// Panic message for a tangent action on observables compiled without sensitivities.
-const NO_TANGENTS: &str = "observable tangents are compiled only with sensitivities";
+/// Panic message for a tangent action on observables compiled without tangents.
+const NO_TANGENTS: &str =
+    "observable tangents are compiled only for outputs, and only with sensitivities";
 
 /// A family's derivative tapes, each split so one primal pass serves every direction.
 #[derive(Debug)]
@@ -903,7 +904,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "compiled only with sensitivities")]
+    #[should_panic(expected = "only with sensitivities")]
     fn a_tangent_action_without_tangent_tapes_is_refused() {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 2 });

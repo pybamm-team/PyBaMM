@@ -54,7 +54,9 @@ impl CompiledModel {
                 index: index.index(),
             });
         }
-        let set = ObservableSet::compile(arena, roots, self.has_sensitivities());
+        // Output sensitivities need `dH/dy` and `dH/dp`; events only locate roots, so they get none.
+        let with_tangents = kind == ObservableKind::Outputs && self.has_sensitivities();
+        let set = ObservableSet::compile(arena, roots, with_tangents);
         self.param_extent = self.param_extent.max(registry.index_extent());
         match kind {
             ObservableKind::Outputs => self.outputs = set,
@@ -146,7 +148,9 @@ impl CompiledModel {
     /// Compute `dH/dp · v` over every observable of `kind`, where `v[i]` weighs sensitivity
     /// column `i`.
     ///
-    /// Panics on a model compiled without sensitivities, whose observables carry no tangents.
+    /// # Panics
+    /// Unless `kind` is [`ObservableKind::Outputs`] on a model compiled with sensitivities;
+    /// nothing else carries tangents.
     #[allow(clippy::too_many_arguments)]
     pub fn observable_sens_action(
         &self,
@@ -169,7 +173,9 @@ impl CompiledModel {
 
     /// Compute dH/dy · v over every observable of `kind`, into `output`.
     ///
-    /// Panics on a model compiled without sensitivities, whose observables carry no tangents.
+    /// # Panics
+    /// Unless `kind` is [`ObservableKind::Outputs`] on a model compiled with sensitivities;
+    /// nothing else carries tangents.
     #[allow(clippy::too_many_arguments)]
     pub fn observable_jac_action(
         &self,
@@ -611,9 +617,25 @@ mod tests {
     }
 
     #[test]
-    fn output_and_event_actions_match_finite_differences() {
+    fn output_actions_match_finite_differences() {
         check_observable_actions_against_finite_differences(ObservableKind::Outputs);
-        check_observable_actions_against_finite_differences(ObservableKind::Events);
+    }
+
+    #[test]
+    #[should_panic(expected = "observable tangents are compiled only for outputs")]
+    fn events_carry_no_tangents_even_with_sensitivities() {
+        let model = build_test_model_with_observable_and_sens(ObservableKind::Events, 1.0);
+        let mut ws = model.create_workspace();
+        let mut out = [0.0; 1];
+        model.observable_jac_action(
+            &mut ws,
+            ObservableKind::Events,
+            0.3,
+            &[3.0; 2],
+            &[2.0],
+            &[1.0, 0.0],
+            &mut out,
+        );
     }
 
     #[test]
@@ -726,7 +748,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "compiled only with sensitivities")]
+    #[should_panic(expected = "only with sensitivities")]
     fn observables_skip_their_tangent_tapes_without_sensitivities() {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 2 });

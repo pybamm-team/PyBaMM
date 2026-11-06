@@ -247,7 +247,7 @@ impl CompiledModel {
         Ok(model)
     }
 
-    /// Whether `df/dp` was compiled, and with it every observable's tangent tapes.
+    /// Whether `df/dp` was compiled, and with it the outputs' tangent tapes.
     #[inline]
     const fn has_sensitivities(&self) -> bool {
         self.sens_expr.is_some()
