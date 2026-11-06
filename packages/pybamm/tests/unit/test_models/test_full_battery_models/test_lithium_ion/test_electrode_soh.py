@@ -201,6 +201,27 @@ class TestElectrodeSOH:
         ):
             esoh_solver.solve(inputs)
 
+    def test_options_as_dict(self):
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
+        options = {"SEI": "reaction limited"}
+        model_options = pybamm.BatteryModelOptions(options)
+
+        expected = pybamm.lithium_ion.get_min_max_stoichiometries(
+            parameter_values, options=model_options
+        )
+        stoichiometries = pybamm.lithium_ion.get_min_max_stoichiometries(
+            parameter_values, options=options
+        )
+        assert stoichiometries == pytest.approx(expected)
+
+        expected = pybamm.lithium_ion.get_initial_stoichiometries(
+            0.5, parameter_values, options=model_options
+        )
+        stoichiometries = pybamm.lithium_ion.get_initial_stoichiometries(
+            0.5, parameter_values, options=options
+        )
+        assert stoichiometries == pytest.approx(expected)
+
 
 class TestElectrodeSOHHysteresis:
     """The eSOH model must equilibrate 100% SOC on the charge branch and 0% SOC on
