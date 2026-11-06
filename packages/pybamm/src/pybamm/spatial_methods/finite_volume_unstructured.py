@@ -123,9 +123,10 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
 
         Boundary faces whose centroids coincide within
         :func:`pybamm.meshes.unstructured_submesh._geometric_tolerance`
-        (``tol_factor`` of the smallest element edge) are paired.  Returns
-        ``(a_idx, b_idx, matched)`` where ``matched`` is True iff at least
-        one pair was found.
+        (``tol_factor`` of the smallest element edge) are paired, unless the
+        meshes have different dimensions or lie in different coordinate
+        planes (``coordinate_axes``).  Returns ``(a_idx, b_idx, matched)``
+        where ``matched`` is True iff the meshes share at least one face.
         """
         a_idx = (
             np.concatenate(list(a_mesh.boundary_faces.values()))
@@ -137,14 +138,19 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
             if b_mesh.boundary_faces
             else np.array([], dtype=int)
         )
+        from pybamm.meshes.unstructured_submesh import (
+            _geometric_tolerance,
+            _share_coordinate_frame,
+        )
+
         if (
             len(a_idx) == 0
             or len(b_idx) == 0
-            # meshes of different spatial dimension can never share an interface
-            or a_mesh.face_centroids.shape[1] != b_mesh.face_centroids.shape[1]
+            # e.g. x-z electrodes and a y-z collector: coincident 2-column
+            # centroids are different points in space
+            or not _share_coordinate_frame(a_mesh, b_mesh)
         ):
             return np.array([], dtype=int), np.array([], dtype=int), False
-        from pybamm.meshes.unstructured_submesh import _geometric_tolerance
 
         a_c = a_mesh.face_centroids[a_idx]
         b_c = b_mesh.face_centroids[b_idx]
