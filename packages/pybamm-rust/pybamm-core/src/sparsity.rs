@@ -124,14 +124,14 @@ pub fn transpose(
 /// ascend below `ncols`. Every constructor upholds this, so merges, transposes and
 /// slot lookups need not re-check it.
 #[derive(Debug, Clone)]
-pub struct SparsityPattern {
+pub struct CsrPattern {
     nrows: usize,
     ncols: usize,
     indptr: Vec<usize>,
     indices: Vec<usize>,
 }
 
-impl SparsityPattern {
+impl CsrPattern {
     /// Build a pattern from CSR parts, validating every structural invariant.
     pub(crate) fn try_new(
         nrows: usize,
@@ -256,8 +256,9 @@ impl SparsityPattern {
     }
 }
 
-/// The structure of a caller-supplied matrix, refused if a row repeats or reorders columns.
-impl TryFrom<&CsrData> for SparsityPattern {
+/// The structure of a caller-supplied matrix, refused if a row's column indices repeat or are
+/// unsorted.
+impl TryFrom<&CsrData> for CsrPattern {
     type Error = CoreError;
 
     fn try_from(csr: &CsrData) -> Result<Self, CoreError> {
@@ -271,7 +272,7 @@ impl TryFrom<&CsrData> for SparsityPattern {
     }
 }
 
-/// Check the [`SparsityPattern`] invariants on raw CSR parts.
+/// Check the [`CsrPattern`] invariants on raw CSR parts.
 fn check_csr_parts(
     nrows: usize,
     ncols: usize,
@@ -556,7 +557,7 @@ pub fn detect_sparsity_per_output(
     root: NodeId,
     n_outputs: usize,
     n_states: usize,
-) -> SparsityPattern {
+) -> CsrPattern {
     let extent = ReadExtents::scan(arena, root).y;
     assert!(
         extent <= n_states,
@@ -590,7 +591,7 @@ pub fn detect_sparsity_per_output(
             |rows| (rows.indptr, rows.indices),
         ),
     };
-    SparsityPattern::new_unchecked(n_outputs, n_states, indptr, indices)
+    CsrPattern::new_unchecked(n_outputs, n_states, indptr, indices)
 }
 
 #[cfg(test)]
@@ -600,18 +601,18 @@ pub mod tests {
     use crate::node::{InterpolantData, Shape};
 
     /// A pattern whose row `r` holds the columns `rows[r]`, which must ascend.
-    pub fn pattern_from_rows(ncols: usize, rows: &[Vec<usize>]) -> SparsityPattern {
+    pub fn pattern_from_rows(ncols: usize, rows: &[Vec<usize>]) -> CsrPattern {
         let mut indptr = vec![0];
         let mut indices = Vec::new();
         for row in rows {
             indices.extend_from_slice(row);
             indptr.push(indices.len());
         }
-        SparsityPattern::try_new(rows.len(), ncols, indptr, indices).expect("a valid pattern")
+        CsrPattern::try_new(rows.len(), ncols, indptr, indices).expect("a valid pattern")
     }
 
     /// Each row's columns.
-    fn rows(pattern: &SparsityPattern) -> Vec<&[usize]> {
+    fn rows(pattern: &CsrPattern) -> Vec<&[usize]> {
         (0..pattern.nrows)
             .map(|row| &pattern.indices[pattern.row_span(row)])
             .collect()
@@ -953,7 +954,7 @@ pub mod tests {
 
     #[test]
     fn dense_pattern_has_all_entries() {
-        let p = SparsityPattern::dense(2, 3);
+        let p = CsrPattern::dense(2, 3);
         assert_eq!(p.nrows, 2);
         assert_eq!(p.ncols, 3);
         assert_eq!(p.indptr, vec![0, 3, 6]);
@@ -963,12 +964,12 @@ pub mod tests {
 
     #[test]
     fn dense_pattern_zero_cols_is_empty() {
-        let p = SparsityPattern::dense(2, 0);
+        let p = CsrPattern::dense(2, 0);
         assert_eq!(p.indptr, vec![0, 0, 0]);
         assert_eq!(p.nnz(), 0);
     }
 
-    fn make_row_filter_fixture() -> SparsityPattern {
+    fn make_row_filter_fixture() -> CsrPattern {
         pattern_from_rows(3, &[vec![0], vec![0, 1, 2], vec![2]])
     }
 
@@ -993,7 +994,7 @@ pub mod tests {
         assert_eq!(pattern.row_widths(), vec![1, 3, 1]);
     }
 
-    fn csr_error(result: Result<SparsityPattern, CoreError>) -> String {
+    fn csr_error(result: Result<CsrPattern, CoreError>) -> String {
         match result {
             Err(CoreError::Csr(message)) => message,
             Err(other) => panic!("expected a CSR error, got {other}"),
@@ -1023,13 +1024,13 @@ pub mod tests {
             ("column index 3 out of range", 1, vec![0, 2], vec![0, 3]),
         ];
         for (expected, nrows, indptr, indices) in cases {
-            let message = csr_error(SparsityPattern::try_new(nrows, 3, indptr, indices));
+            let message = csr_error(CsrPattern::try_new(nrows, 3, indptr, indices));
             assert!(
                 message.contains(expected),
                 "{expected:?} not in {message:?}"
             );
         }
-        let pattern = SparsityPattern::try_new(2, 3, vec![0, 2, 2], vec![0, 2]).expect("valid");
+        let pattern = CsrPattern::try_new(2, 3, vec![0, 2, 2], vec![0, 2]).expect("valid");
         assert_eq!(pattern.row_span(0), 0..2);
     }
 
@@ -1039,9 +1040,9 @@ pub mod tests {
             CsrData::try_new(vec![0, 2, 3], indices, vec![1.0; 3], Shape::matrix(2, 2))
                 .expect("structurally valid CSR")
         };
-        let message = csr_error(SparsityPattern::try_from(&csr(vec![1, 0, 1])));
+        let message = csr_error(CsrPattern::try_from(&csr(vec![1, 0, 1])));
         assert!(message.contains("row 0"), "{message}");
-        let pattern = SparsityPattern::try_from(&csr(vec![0, 1, 1])).expect("ascending rows");
+        let pattern = CsrPattern::try_from(&csr(vec![0, 1, 1])).expect("ascending rows");
         assert_eq!(
             (pattern.indptr(), pattern.indices()),
             (&[0, 2, 3][..], &[0, 1, 1][..])
@@ -1052,6 +1053,6 @@ pub mod tests {
     #[cfg(debug_assertions)]
     #[should_panic(expected = "broke its invariants")]
     fn new_unchecked_rechecks_in_debug_builds() {
-        let _ = SparsityPattern::new_unchecked(1, 2, vec![0, 2], vec![1, 1]);
+        let _ = CsrPattern::new_unchecked(1, 2, vec![0, 2], vec![1, 1]);
     }
 }

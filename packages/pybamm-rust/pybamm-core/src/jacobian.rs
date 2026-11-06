@@ -15,7 +15,7 @@ use crate::ir::{NodeWidths, infer_sizes};
 use crate::node::Node;
 use crate::row_extract::extract_scalar_rows;
 use crate::simplify::{dce, simplify_pipeline};
-use crate::sparsity::{SparsityPattern, detect_sparsity_per_output, transpose};
+use crate::sparsity::{CsrPattern, detect_sparsity_per_output, transpose};
 use crate::tangent::{DiffTarget, tangent_wrt_params, tangent_wrt_states, tangent_wrt_subset};
 use crate::tangent_batch::{self, LanePlan, MAX_LANES};
 
@@ -34,7 +34,7 @@ pub(crate) fn tangent_dag(
 
 /// CSC sparsity pattern, the ordering KLU expects.
 ///
-/// Only ever a transposed [`SparsityPattern`], so each column's rows strictly ascend below
+/// Only ever a transposed [`CsrPattern`], so each column's rows strictly ascend below
 /// `nrows`, as KLU and faer's checked constructor require.
 #[derive(Debug, Clone)]
 pub struct CscPattern {
@@ -44,8 +44,8 @@ pub struct CscPattern {
     rowind: Vec<usize>,
 }
 
-impl CscPattern {
-    pub(crate) fn from_csr(csr: &SparsityPattern) -> Self {
+impl From<&CsrPattern> for CscPattern {
+    fn from(csr: &CsrPattern) -> Self {
         let (colptr, entries) = transpose(csr.ncols(), csr.indptr(), csr.indices());
         Self {
             nrows: csr.nrows(),
@@ -54,7 +54,9 @@ impl CscPattern {
             rowind: entries.iter().map(|&(row, _)| row).collect(),
         }
     }
+}
 
+impl CscPattern {
     #[inline]
     pub const fn nrows(&self) -> usize {
         self.nrows
@@ -95,7 +97,7 @@ impl CscPattern {
     }
 
     /// Slot of every entry of `csr`, which must be a sub-pattern of this one.
-    pub(crate) fn slots_of(&self, csr: &SparsityPattern) -> Vec<usize> {
+    pub(crate) fn slots_of(&self, csr: &CsrPattern) -> Vec<usize> {
         RowSlots::new(self).slots_of(csr)
     }
 }
@@ -117,7 +119,7 @@ impl RowSlots {
     }
 
     /// Slot of every entry of `csr`, which must be a sub-pattern of this one.
-    fn slots_of(&self, csr: &SparsityPattern) -> Vec<usize> {
+    fn slots_of(&self, csr: &CsrPattern) -> Vec<usize> {
         let mut slots = Vec::with_capacity(csr.nnz());
         for (row, span) in csr.indptr().windows(2).enumerate() {
             let candidates = self.row(row);
@@ -331,7 +333,7 @@ struct ColoringDecision {
 pub struct JacobianData {
     jvp_expr: Arc<SplitCompiledExpr>,
     assembly_jvp_expr: Arc<SplitCompiledExpr>,
-    sparsity: SparsityPattern,
+    sparsity: CsrPattern,
     csc: CscPattern,
     coloring: ColumnColoring,
     wrt: DiffTarget,
@@ -404,7 +406,7 @@ impl JacobianData {
         let width = infer_sizes(arena, &arena.topological_order(root))[root.index()];
         assert_eq!(width, n_rows, "the root is {width} wide, not {n_rows}");
         let tangent = tangent_dag(arena, root, tangent_wrt_params);
-        let sparsity = SparsityPattern::dense(n_rows, n_params);
+        let sparsity = CsrPattern::dense(n_rows, n_params);
         Self::finish_with_options(
             arena,
             root,
@@ -469,7 +471,7 @@ impl JacobianData {
         arena: &Arena,
         root: NodeId,
         tangent: Dag,
-        sparsity: SparsityPattern,
+        sparsity: CsrPattern,
         wrt: DiffTarget,
         col_to_global: Vec<usize>,
         seed_dim: usize,
@@ -477,7 +479,7 @@ impl JacobianData {
     ) -> Self {
         let mut tangent = simplify_pipeline(tangent);
 
-        let csc = CscPattern::from_csr(&sparsity);
+        let csc = CscPattern::from(&sparsity);
 
         // Classify on the simplified tape, so folds follow the sweep's operator order.
         let (swept, mut constant_csr_entries) = if options.split_constants {
@@ -537,7 +539,7 @@ impl JacobianData {
     fn decide_coloring(
         arena: &Arena,
         root: NodeId,
-        sparsity: &SparsityPattern,
+        sparsity: &CsrPattern,
         swept: Vec<bool>,
         split_dense_rows: bool,
     ) -> ColoringDecision {
@@ -673,7 +675,7 @@ impl JacobianData {
 
     /// CSR pattern of the derivative alone: no mass term, no `cj`, pure `df/d·`.
     #[inline]
-    pub const fn sparsity(&self) -> &SparsityPattern {
+    pub const fn sparsity(&self) -> &CsrPattern {
         &self.sparsity
     }
 
@@ -1161,7 +1163,7 @@ impl JvpAt<'_> {
 /// Unswept entries must stay out: a split row would alias same-colour sums, and
 /// a constant entry's sweep value is polluted by design.
 fn build_color_scatter_entries(
-    sparsity: &SparsityPattern,
+    sparsity: &CsrPattern,
     csr_to_slot: &[usize],
     coloring: &ColumnColoring,
     swept: &[bool],
@@ -1181,7 +1183,7 @@ fn build_color_scatter_entries(
 }
 
 /// Keep only the entries outside `rows`, which their own tapes fill wholesale.
-fn retain_outside_rows(pattern: &SparsityPattern, rows: &[usize], entries: &mut Vec<(usize, f64)>) {
+fn retain_outside_rows(pattern: &CsrPattern, rows: &[usize], entries: &mut Vec<(usize, f64)>) {
     if rows.is_empty() || entries.is_empty() {
         return;
     }
@@ -1195,7 +1197,7 @@ fn retain_outside_rows(pattern: &SparsityPattern, rows: &[usize], entries: &mut 
 /// `pattern` restricted to the columns in `subset`, renumbered to their positions there.
 ///
 /// `subset` must ascend, so renumbered columns still ascend within each row.
-fn restrict_columns(pattern: &SparsityPattern, subset: &[usize]) -> SparsityPattern {
+fn restrict_columns(pattern: &CsrPattern, subset: &[usize]) -> CsrPattern {
     let mut global_to_local = vec![None; pattern.ncols()];
     for (local, &global) in subset.iter().enumerate() {
         global_to_local[global] = Some(local);
@@ -1210,7 +1212,7 @@ fn restrict_columns(pattern: &SparsityPattern, subset: &[usize]) -> SparsityPatt
         indices.extend(kept);
         indptr.push(indices.len());
     }
-    SparsityPattern::new_unchecked(pattern.nrows(), subset.len(), indptr, indices)
+    CsrPattern::new_unchecked(pattern.nrows(), subset.len(), indptr, indices)
 }
 
 /// Minimum row width to split out; max row nnz is the coloring's lower bound.
@@ -1682,10 +1684,10 @@ pub(crate) mod tests {
         let jac = JacobianData::new_wrt_states(&arena, root, n_rows, n);
 
         // Make every merged row wider, so no slot number survives by luck.
-        let extra = SparsityPattern::dense(n_rows, n);
+        let extra = CsrPattern::dense(n_rows, n);
         let mut merged = jac.sparsity().clone();
         merged.merge_with(&extra);
-        let merged_csc = CscPattern::from_csr(&merged);
+        let merged_csc = CscPattern::from(&merged);
         let merged_layout = jac.layout_in(&merged_csc);
 
         let y: Vec<f64> = (0..n).map(|i| (i as f64).mul_add(0.041, 0.23)).collect();
@@ -1746,8 +1748,8 @@ pub(crate) mod tests {
         assert_eq!(jac.n_dense_rows(), 1);
 
         let mut merged = jac.sparsity().clone();
-        merged.merge_with(&SparsityPattern::dense(n + 1, n));
-        let merged_csc = CscPattern::from_csr(&merged);
+        merged.merge_with(&CsrPattern::dense(n + 1, n));
+        let merged_csc = CscPattern::from(&merged);
         let layout = jac.layout_in(&merged_csc);
         let mut y_values = vec![0.5; n];
         y_values[n - 1] = 0.0;
@@ -1818,19 +1820,19 @@ pub(crate) mod tests {
     #[test]
     fn a_csc_pattern_transposes_its_csr() {
         // Entries at (0,0), (1,1), (2,1), (2,2).
-        let csc = CscPattern::from_csr(&pattern_from_rows(3, &[vec![0], vec![1], vec![1, 2]]));
+        let csc = CscPattern::from(&pattern_from_rows(3, &[vec![0], vec![1], vec![1, 2]]));
         assert_eq!((csc.nrows(), csc.ncols(), csc.nnz()), (3, 3, 4));
         assert_eq!(csc.colptr(), [0, 1, 3, 4]);
         assert_eq!(csc.rowind(), [0, 1, 2, 2]);
 
-        let diagonal = CscPattern::from_csr(&pattern_from_rows(3, &[vec![0], vec![1], vec![2]]));
+        let diagonal = CscPattern::from(&pattern_from_rows(3, &[vec![0], vec![1], vec![2]]));
         assert_eq!(diagonal.colptr(), [0, 1, 2, 3]);
         assert_eq!(diagonal.rowind(), [0, 1, 2]);
     }
 
     #[test]
     fn csc_entries_skip_empty_columns() {
-        let csc = CscPattern::from_csr(&pattern_from_rows(4, &[vec![1, 3], vec![], vec![1, 2]]));
+        let csc = CscPattern::from(&pattern_from_rows(4, &[vec![1, 3], vec![], vec![1, 2]]));
         let entries = csc.entries();
         assert_eq!(entries.len(), 4);
         assert_eq!(
@@ -1841,7 +1843,7 @@ pub(crate) mod tests {
 
     #[test]
     fn slots_of_finds_a_sub_pattern_in_a_wider_csc() {
-        let buffer = CscPattern::from_csr(&SparsityPattern::dense(2, 3));
+        let buffer = CscPattern::from(&CsrPattern::dense(2, 3));
         let sub = pattern_from_rows(3, &[vec![1], vec![0, 2]]);
         assert_eq!(buffer.slots_of(&sub), vec![2, 1, 5]);
     }
@@ -1851,7 +1853,7 @@ pub(crate) mod tests {
     fn slots_of_rejects_an_entry_the_csc_lacks() {
         let diagonal = pattern_from_rows(2, &[vec![0], vec![1]]);
         let sub = pattern_from_rows(2, &[vec![1], vec![]]);
-        let _ = CscPattern::from_csr(&diagonal).slots_of(&sub);
+        let _ = CscPattern::from(&diagonal).slots_of(&sub);
     }
 
     #[test]
@@ -2030,7 +2032,7 @@ pub(crate) mod tests {
         let _ = JacobianData::new_wrt_state_subset(&arena, root, 1, 2, &[1, 0]);
     }
 
-    fn make_pattern_with_dense_row(ncols: usize, nrows: usize) -> SparsityPattern {
+    fn make_pattern_with_dense_row(ncols: usize, nrows: usize) -> CsrPattern {
         let rows: Vec<Vec<usize>> = (0..nrows)
             .map(|row| {
                 if row == 0 {
@@ -2043,11 +2045,11 @@ pub(crate) mod tests {
         pattern_from_rows(ncols, &rows)
     }
 
-    fn make_diagonal_pattern_local(n: usize) -> SparsityPattern {
+    fn make_diagonal_pattern_local(n: usize) -> CsrPattern {
         pattern_from_rows(n, &(0..n).map(|row| vec![row]).collect::<Vec<_>>())
     }
 
-    fn make_pattern_with_n_dense_rows(ncols: usize, n_dense: usize) -> SparsityPattern {
+    fn make_pattern_with_n_dense_rows(ncols: usize, n_dense: usize) -> CsrPattern {
         let rows: Vec<Vec<usize>> = (0..ncols)
             .map(|row| {
                 if row < n_dense {

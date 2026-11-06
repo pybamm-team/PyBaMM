@@ -6,24 +6,24 @@ use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 use std::ops::Index;
 
-use crate::sparsity::{SparsityPattern, transpose};
+use crate::sparsity::{CsrPattern, transpose};
 
 /// A column no sweep produces, so it never receives a color.
 pub const UNSEEDED: usize = usize::MAX;
 
-/// One flag per CSR entry of a [`SparsityPattern`].
+/// One flag per CSR entry of a [`CsrPattern`].
 ///
 /// Typed apart from `ColumnMask` because the two can have equal lengths and swap silently.
 #[derive(Clone, Copy, Debug)]
 pub struct EntryMask<'a>(&'a [bool]);
 
-/// One flag per column of a [`SparsityPattern`].
+/// One flag per column of a [`CsrPattern`].
 #[derive(Clone, Copy, Debug)]
 struct ColumnMask<'a>(&'a [bool]);
 
 impl<'a> EntryMask<'a> {
     /// Wrap one flag per stored entry of `pattern`.
-    pub fn new(pattern: &SparsityPattern, flags: &'a [bool]) -> Self {
+    pub fn new(pattern: &CsrPattern, flags: &'a [bool]) -> Self {
         assert_eq!(
             flags.len(),
             pattern.nnz(),
@@ -46,7 +46,7 @@ impl<'a> EntryMask<'a> {
 }
 
 impl<'a> ColumnMask<'a> {
-    fn new(pattern: &SparsityPattern, flags: &'a [bool]) -> Self {
+    fn new(pattern: &CsrPattern, flags: &'a [bool]) -> Self {
         assert_eq!(
             flags.len(),
             pattern.ncols(),
@@ -122,7 +122,7 @@ struct ColumnAdjacency {
 ///
 /// In a row, a swept column conflicts with every other seeded column; two unswept ones never do.
 fn build_column_adjacency_masked(
-    pattern: &SparsityPattern,
+    pattern: &CsrPattern,
     swept: EntryMask<'_>,
     seeded: ColumnMask<'_>,
 ) -> ColumnAdjacency {
@@ -169,7 +169,7 @@ fn build_column_adjacency_masked(
 
 /// Every entry swept and every column seeded, empty ones too: the unmasked colouring.
 #[cfg(test)]
-pub fn color_columns(pattern: &SparsityPattern) -> ColumnColoring {
+pub fn color_columns(pattern: &CsrPattern) -> ColumnColoring {
     let all_entries = vec![true; pattern.nnz()];
     let all_columns = vec![true; pattern.ncols()];
     color_with_seeds(
@@ -183,7 +183,7 @@ pub fn color_columns(pattern: &SparsityPattern) -> ColumnColoring {
 ///
 /// Ties break by higher degree, then lower index, so the result is deterministic. A column
 /// with no swept entry gets [`UNSEEDED`] in `colors`.
-pub fn color_columns_masked(pattern: &SparsityPattern, swept: EntryMask<'_>) -> ColumnColoring {
+pub fn color_columns_masked(pattern: &CsrPattern, swept: EntryMask<'_>) -> ColumnColoring {
     let mut seeded = vec![false; pattern.ncols()];
     for (&col, &is_swept) in pattern.indices().iter().zip(swept.as_slice()) {
         if is_swept {
@@ -207,7 +207,7 @@ fn insert_sorted(set: &mut [usize], len: &mut usize, value: usize) -> bool {
 
 /// DSATUR over the seeded columns, with `swept` deciding which entries conflict.
 fn color_with_seeds(
-    pattern: &SparsityPattern,
+    pattern: &CsrPattern,
     swept: EntryMask<'_>,
     seeded: ColumnMask<'_>,
 ) -> ColumnColoring {
@@ -288,15 +288,15 @@ mod tests {
     use crate::sparsity::tests::pattern_from_rows;
     use std::collections::HashSet;
 
-    fn make_dense_pattern(nrows: usize, ncols: usize) -> SparsityPattern {
-        SparsityPattern::dense(nrows, ncols)
+    fn make_dense_pattern(nrows: usize, ncols: usize) -> CsrPattern {
+        CsrPattern::dense(nrows, ncols)
     }
 
-    fn make_diagonal_pattern(n: usize) -> SparsityPattern {
+    fn make_diagonal_pattern(n: usize) -> CsrPattern {
         pattern_from_rows(n, &(0..n).map(|i| vec![i]).collect::<Vec<_>>())
     }
 
-    fn make_tridiagonal_pattern(n: usize) -> SparsityPattern {
+    fn make_tridiagonal_pattern(n: usize) -> CsrPattern {
         let rows: Vec<Vec<usize>> = (0..n)
             .map(|row| (row.saturating_sub(1)..(row + 2).min(n)).collect())
             .collect();
@@ -353,12 +353,12 @@ mod tests {
         }
     }
 
-    fn assert_valid_coloring(pattern: &SparsityPattern, coloring: &ColumnColoring) {
+    fn assert_valid_coloring(pattern: &CsrPattern, coloring: &ColumnColoring) {
         assert_valid_masked_coloring(pattern, &vec![true; pattern.nnz()], coloring);
     }
 
     fn assert_valid_masked_coloring(
-        pattern: &SparsityPattern,
+        pattern: &CsrPattern,
         swept: &[bool],
         coloring: &ColumnColoring,
     ) {
@@ -381,7 +381,7 @@ mod tests {
     }
 
     /// One matrix row per edge, so the column graph is exactly `edges`.
-    fn make_graph_from_edges(ncols: usize, edges: &[(usize, usize)]) -> SparsityPattern {
+    fn make_graph_from_edges(ncols: usize, edges: &[(usize, usize)]) -> CsrPattern {
         let rows: Vec<Vec<usize>> = edges
             .iter()
             .map(|&(i, j)| {
@@ -392,7 +392,7 @@ mod tests {
         pattern_from_rows(ncols, &rows)
     }
 
-    fn make_bidiagonal_pattern(n: usize) -> SparsityPattern {
+    fn make_bidiagonal_pattern(n: usize) -> CsrPattern {
         pattern_from_rows(
             n,
             &(0..n - 1).map(|row| vec![row, row + 1]).collect::<Vec<_>>(),
@@ -455,7 +455,7 @@ mod tests {
 
     /// Brute-force restatement of the adjacency edge rule.
     fn reference_adjacency(
-        pattern: &SparsityPattern,
+        pattern: &CsrPattern,
         swept: &[bool],
         seeded: &[bool],
     ) -> Vec<Vec<usize>> {
@@ -491,7 +491,7 @@ mod tests {
             .collect()
     }
 
-    fn assert_matches_reference(pattern: &SparsityPattern, swept: &[bool], seeded: &[bool]) {
+    fn assert_matches_reference(pattern: &CsrPattern, swept: &[bool], seeded: &[bool]) {
         let adj = build_column_adjacency_masked(
             pattern,
             EntryMask::new(pattern, swept),
@@ -565,8 +565,8 @@ mod tests {
     #[test]
     fn masked_coloring_beats_the_full_rule_on_a_mixed_row() {
         // Column 1 is constant wherever it appears, so the masked rule leaves it unseeded.
-        let pattern = SparsityPattern::try_new(2, 3, vec![0, 3, 4], vec![0, 1, 2, 0])
-            .expect("a valid pattern");
+        let pattern =
+            CsrPattern::try_new(2, 3, vec![0, 3, 4], vec![0, 1, 2, 0]).expect("a valid pattern");
         let swept = vec![true, false, true, true];
         assert_eq!(color_columns(&pattern).n_colors(), 3);
         let coloring = color_columns_masked(&pattern, EntryMask::new(&pattern, &swept));

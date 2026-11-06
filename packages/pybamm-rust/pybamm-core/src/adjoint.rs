@@ -5,15 +5,15 @@
 
 use std::ops::Range;
 
-use crate::accumulate::{Accumulate, Product, dispatch};
+use crate::accumulate::dispatch;
 use crate::arena::DagRef;
 use crate::branch_regions::active_branch;
 use crate::eval::{
-    CompiledExpr, NdCell, arg_reduce, check_scratch, csr_rows, equality, interp_cubic_1d_deriv,
+    CompiledExpr, NdCell, arg_reduce, check_scratch, equality, interp_cubic_1d_deriv,
     interp_linear_1d_deriv, nd_coords, nd_source_offset, sign, split_read_write,
 };
 use crate::ir::{BinaryOp, BroadcastKind, ConstPool, Instruction, TypedIr, UnaryOp};
-use crate::node::CsrData;
+use crate::products::{CsrTransposedProduct, DenseTransposedProduct};
 use crate::tangent::SMALLEST_SUBNORMAL;
 
 /// Adjoint (reverse-mode AD) tape for one expression, one seeded backward pass per row.
@@ -676,7 +676,7 @@ fn backward_instruction(
                 vec_src.index(),
                 mat.shape.cols,
             );
-            dispatch(CsrTransposed {
+            dispatch(CsrTransposedProduct {
                 csr: mat,
                 bar_dst,
                 bar_vec,
@@ -690,7 +690,7 @@ fn backward_instruction(
             dst,
         } => {
             // A is row-major; bar_vec += Aᵀ @ bar_dst.
-            dispatch(DenseTransposed {
+            dispatch(DenseTransposedProduct {
                 scratch,
                 bar,
                 mat: mat_src.index(),
@@ -782,76 +782,6 @@ fn backward_instruction(
         },
 
         Instruction::Dispatch { .. } => unreachable!("handled via the span table"),
-    }
-}
-
-/// `bar_vec += Aᵀ @ bar_dst` for a CSR `A`, skipping rows with no adjoint.
-struct CsrTransposed<'a> {
-    csr: &'a CsrData,
-    bar_dst: &'a [f64],
-    bar_vec: &'a mut [f64],
-}
-
-impl Product for CsrTransposed<'_> {
-    type Output = ();
-
-    // Must inline into `dispatch`'s FMA-enabled wrapper.
-    #[allow(clippy::inline_always)]
-    #[inline(always)]
-    fn run<A: Accumulate>(self) {
-        let Self {
-            csr,
-            bar_dst,
-            bar_vec,
-        } = self;
-        for (&bd, (cols, vals)) in bar_dst.iter().zip(csr_rows(csr)) {
-            if bd == 0.0 {
-                continue;
-            }
-            for (&col, &value) in cols.iter().zip(vals) {
-                bar_vec[col] = A::mul_acc(bar_vec[col], value, bd);
-            }
-        }
-    }
-}
-
-/// `bar[vec..] += Mᵀ @ bar[dst..]` for the row-major `rows x cols` matrix at `scratch[mat..]`.
-struct DenseTransposed<'a> {
-    scratch: &'a [f64],
-    bar: &'a mut [f64],
-    mat: usize,
-    vec: usize,
-    dst: usize,
-    rows: usize,
-    cols: usize,
-}
-
-impl Product for DenseTransposed<'_> {
-    type Output = ();
-
-    // Must inline into `dispatch`'s FMA-enabled wrapper.
-    #[allow(clippy::inline_always)]
-    #[inline(always)]
-    fn run<A: Accumulate>(self) {
-        let Self {
-            scratch,
-            bar,
-            mat,
-            vec,
-            dst,
-            rows,
-            cols,
-        } = self;
-        for row in 0..rows {
-            let bd = bar[dst + row];
-            if bd == 0.0 {
-                continue;
-            }
-            let base = mat + row * cols;
-            for j in 0..cols {
-                bar[vec + j] = A::mul_acc(bar[vec + j], scratch[base + j], bd);
-            }
-        }
     }
 }
 
