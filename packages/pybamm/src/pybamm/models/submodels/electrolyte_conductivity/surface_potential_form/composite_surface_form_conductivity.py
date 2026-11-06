@@ -43,6 +43,7 @@ class BaseModel(Composite):
                 delta_phi_av
             )
         )
+        variables.update(self._get_sei_film_variables(x_average=True))
         return variables
 
     def get_coupled_variables(self, variables):
@@ -69,6 +70,9 @@ class BaseModel(Composite):
         delta_phi_init = self.domain_param.prim.U_init
 
         self.initial_conditions[delta_phi] = delta_phi_init
+        self.initial_conditions.update(
+            self._get_sei_film_initial_conditions(variables, x_average=True)
+        )
 
     def set_boundary_conditions(self, variables):
         if self.domain == "negative":
@@ -124,7 +128,9 @@ class CompositeDifferential(BaseModel):
 
         C_dl = self.domain_param.C_dl(T)
 
-        self.rhs[delta_phi] = 1 / (a * C_dl) * (sum_a_j_av - sum_a_j)
+        d_eta_sei = self._set_sei_film_rhs(variables, sum_a_j_av / a, x_average=True)
+        # delta_phi = double-layer voltage - SEI film overpotential
+        self.rhs[delta_phi] = 1 / (a * C_dl) * (sum_a_j_av - sum_a_j) - d_eta_sei
 
 
 class CompositeAlgebraic(BaseModel):
