@@ -3,6 +3,7 @@ from __future__ import annotations
 import numbers
 from datetime import datetime
 from enum import StrEnum
+from warnings import warn
 
 import numpy as np
 
@@ -201,6 +202,24 @@ class BaseStep:
         ):
             direction = self.value_based_charge_or_discharge()
         self.direction = direction
+
+        # A voltage termination without an operator takes its sign from the step
+        # direction, so without a charge or discharge direction it is ignored
+        for term in self.termination:
+            if (
+                isinstance(term, pybamm.step.VoltageTermination)
+                and term.operator is None
+                and self.direction not in ["charge", "discharge"]
+            ):
+                warn(
+                    f"The voltage termination at {term.value} V is ignored because "
+                    "this step is neither a charge nor a discharge, so it is not "
+                    "known whether the voltage should rise or fall to it. Add an "
+                    f"operator, e.g. 'until > {term.value} V' or "
+                    f"'until < {term.value} V'.",
+                    UserWarning,
+                    stacklevel=2,
+                )
 
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
