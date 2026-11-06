@@ -511,11 +511,14 @@ struct IRBuilder {
     consts: ConstPool,
     /// The buffer window of each `NodeId` in the arena.
     slots: Vec<Slot>,
+    /// The pool entry of each `SparseMatrix` node, shared by every product that reads it.
+    csr_of_matrix: NodeMap<CsrIdx>,
 }
 
 impl IRBuilder {
     /// A builder over the `(offset, len)` windows slot assignment produced.
     fn new(slots: Vec<(usize, usize)>, n_nodes: usize) -> Self {
+        let arena_len = slots.len();
         Self {
             instructions: Vec::with_capacity(n_nodes),
             consts: ConstPool::new(),
@@ -523,6 +526,7 @@ impl IRBuilder {
                 .into_iter()
                 .map(|(offset, len)| Slot::from_usize(offset, len))
                 .collect(),
+            csr_of_matrix: NodeMap::new(arena_len),
         }
     }
 
@@ -941,7 +945,13 @@ impl IRBuilder {
 
             Node::MatMul(a, b) => match &arena[*a] {
                 Node::SparseMatrix(csr) => {
-                    let csr_idx = self.consts.add_csr(csr);
+                    let csr_idx = if let Some(&shared) = self.csr_of_matrix.get(*a) {
+                        shared
+                    } else {
+                        let added = self.consts.add_csr(csr);
+                        self.csr_of_matrix.insert(*a, added);
+                        added
+                    };
                     Instruction::MatMul {
                         csr_idx,
                         vec_src: self.slot_for(*b).offset,
@@ -2153,6 +2163,45 @@ mod tests {
         let matmul = arena.alloc(Node::MatMul(a, v));
         let ir = TypedIr::from_dag(DagRef::new(&arena, matmul));
         assert_eq!(ir.output_len(), 2);
+    }
+
+    #[test]
+    fn products_of_one_matrix_share_its_pool_entry() {
+        // `A @ y + A @ sin(y)` and its tangent, which reads `A` once more.
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
+        let csr = CsrData::try_new(
+            vec![0, 1, 2],
+            vec![1, 0],
+            vec![2.0, 3.0],
+            Shape::matrix(2, 2),
+        );
+        let matrix = arena.alloc(Node::SparseMatrix(Box::new(csr.expect("valid matrix"))));
+        let sin_y = arena.alloc(Node::Sin(y));
+        let first = arena.alloc(Node::MatMul(matrix, y));
+        let second = arena.alloc(Node::MatMul(matrix, sin_y));
+        let sum = arena.alloc(Node::Add(first, second));
+        let tangent = crate::tangent::tangent_wrt_states(&mut arena, sum);
+        let root = arena.alloc(Node::Concat(vec![sum, tangent]));
+
+        let compiled = CompiledExpr::new(DagRef::new(&arena, root));
+        assert_eq!(compiled.ir().consts().csr_data.len(), 1);
+
+        let mut scratch = vec![0.0; compiled.scratch_len()];
+        let seed = crate::eval::TangentInputs {
+            dy: Some(&[1.0, 0.0]),
+            dp: None,
+        };
+        let got = compiled.eval_with_tangent(&mut scratch, 0.0, &[0.5, 1.0], &[], &[], &seed);
+        let expected = [
+            2.0 + 2.0 * 1.0_f64.sin(),
+            1.5 + 3.0 * 0.5_f64.sin(),
+            0.0,
+            3.0 + 3.0 * 0.5_f64.cos(),
+        ];
+        for (got, expected) in got.iter().zip(expected) {
+            assert!((got - expected).abs() < 1e-15, "{got} != {expected}");
+        }
     }
 
     #[test]
