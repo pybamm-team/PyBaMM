@@ -355,9 +355,7 @@ def _composite_soc_equations(x, x_2, soc, limits, param, options, direction):
     Q_min = x_100 * Q_w + x_100_2 * Q_w_2
     Q_max = x_0 * Q_w + x_0_2 * Q_w_2
     Q_now = Q_w * x + Q_w_2 * x_2
-    # SOC 0 and 1 are defined at the reference temperature. The phases start in
-    # equilibrium on the OCP the model starts on, so the split depends on the initial
-    # hysteresis state
+    # SOC 0 and 1 are defined at the reference temperature
     T_ref = param.T_ref
     return {
         x: get_initial_ocp(

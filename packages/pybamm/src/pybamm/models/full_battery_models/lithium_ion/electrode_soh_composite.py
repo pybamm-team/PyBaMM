@@ -485,9 +485,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         else:
             raise ValueError("Invalid initialization method")
 
-        # SOC 0 and 1 are defined at the reference temperature. The phases start in
-        # equilibrium on the OCP the model starts on, so the split depends on the
-        # initial hysteresis state
+        # SOC 0 and 1 are defined at the reference temperature
         T = param.T_init if initialization_method == "voltage" else param.T_ref
 
         def U(phase_param, sto, electrode, phase):
