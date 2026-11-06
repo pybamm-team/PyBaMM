@@ -6,10 +6,10 @@ use crate::arena::{Arena, DagRef, NodeId};
 use crate::eval::{CompiledExpr, SplitCompiledExpr, TangentInputs};
 use crate::jacobian::tangent_dag;
 use crate::node::Node;
-use crate::params::{ParamIdx, SensIdx};
+use crate::params::ParamIdx;
 use crate::simplify::simplify_pipeline;
 use crate::tangent::{tangent_wrt_params, tangent_wrt_states};
-use crate::tangent_batch::{self, LanePlan};
+use crate::tangent_batch::{self, LanePlan, unit_param_columns};
 
 /// Which family of observables a caller means.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,12 +34,6 @@ pub fn seed_param_tangent(dp: &mut [f64], sens_params: &[ParamIdx], v: &[f64]) {
     }
 }
 
-/// Seed the unit tangent for sensitivity column `column`.
-fn seed_param_tangent_unit(dp: &mut [f64], sens_params: &[ParamIdx], column: SensIdx) {
-    dp.fill(0.0);
-    dp[sens_params[column.get()].index()] = 1.0;
-}
-
 /// Panic message for a tangent action on observables compiled without tangents.
 const NO_TANGENTS: &str =
     "observable tangents are compiled only for outputs, and only with sensitivities";
@@ -51,6 +45,8 @@ struct ObservableTangents {
     sens: SplitCompiledExpr,
     /// `dH/dy`.
     jac: SplitCompiledExpr,
+    /// How unit parameter seeds walk `sens`.
+    sens_lanes: LanePlan,
     /// How sensitivity directions walk `jac`.
     jac_lanes: LanePlan,
 }
@@ -58,10 +54,14 @@ struct ObservableTangents {
 impl ObservableTangents {
     /// Both tangent tapes of `family`, whose root is the whole family's.
     fn compile(family: DagRef<'_>) -> Self {
-        let jac = compile_tangent(family, tangent_wrt_states);
+        let (sens, jac) = (
+            compile_tangent(family, tangent_wrt_params),
+            compile_tangent(family, tangent_wrt_states),
+        );
         Self {
-            sens: compile_tangent(family, tangent_wrt_params),
+            sens_lanes: LanePlan::new(&sens),
             jac_lanes: LanePlan::new(&jac),
+            sens,
             jac,
         }
     }
@@ -169,13 +169,19 @@ impl ObservableSet {
             .chain(tangents.flat_map(|t| [t.sens.scratch_len(), t.jac.scratch_len()]))
             .max()
             .unwrap_or(0);
-        let batched = self.tangents.as_ref().filter(|t| t.jac_lanes.widest() > 1);
+        // Both tapes' batched walks share one region, sized for the larger.
+        let tangent_lanes_len = self.tangents.as_ref().map_or(0, |t| {
+            [(&t.sens, t.sens_lanes), (&t.jac, t.jac_lanes)]
+                .into_iter()
+                .filter(|(_, plan)| plan.widest() > 1)
+                .map(|(tape, plan)| tangent_batch::tangent_scratch_len(tape, plan.widest()))
+                .max()
+                .unwrap_or(0)
+        });
         ObservableScratch {
             tape: vec![0.0; tape_len],
             batch: Vec::new(),
-            tangent_lanes: batched.map_or_else(Vec::new, |t| {
-                vec![0.0; tangent_batch::tangent_scratch_len(&t.jac, t.jac_lanes.widest())]
-            }),
+            tangent_lanes: vec![0.0; tangent_lanes_len],
             seed_lanes: Vec::new(),
         }
     }
@@ -322,6 +328,7 @@ impl ObservableSet {
         let ObservableTangents {
             sens,
             jac,
+            sens_lanes,
             jac_lanes,
         } = self.tangents();
         let ObservableScratch {
@@ -333,14 +340,16 @@ impl ObservableSet {
         let columns = &mut out[..n_sens * n_out];
 
         let mut primal = sens.eval_primal(tape, t, y, &[], inputs);
-        for (k, column) in columns.chunks_exact_mut(n_out).enumerate() {
-            seed_param_tangent_unit(dp, sens_params, SensIdx::new(k));
-            let tangent = TangentInputs {
-                dy: None,
-                dp: Some(dp),
-            };
-            column.copy_from_slice(primal.eval_tangent(&tangent));
-        }
+        unit_param_columns(
+            &mut primal,
+            *sens_lanes,
+            sens_params,
+            dp,
+            tangent_lanes,
+            seed_lanes,
+            n_out,
+            columns,
+        );
 
         let mut primal = jac.eval_primal(tape, t, y, &[], inputs);
         let mut k = 0;
@@ -410,9 +419,10 @@ pub struct ObservableScratch {
     tape: Vec<f64>,
     /// Lane-scaled buffer for [`ObservableSet::eval_batch`], grown on demand.
     batch: Vec<f64>,
-    /// Lane-minor tangent region of the batched `dH/dy` walks; empty when they never batch.
+    /// Lane-minor tangent region of the batched `dH/dp` and `dH/dy` walks; empty when neither
+    /// batches.
     tangent_lanes: Vec<f64>,
-    /// Lane-minor `dH/dy` seeds, grown on demand.
+    /// Lane-minor `dH/dp` and `dH/dy` seeds, grown on demand.
     seed_lanes: Vec<f64>,
 }
 
@@ -705,8 +715,9 @@ mod tests {
                 let mut tape = vec![0.0; sens.scratch_len().max(jac.scratch_len())];
                 let rows = |k: usize| k * n_out + offset..k * n_out + offset + len;
                 let mut primal = sens.eval_primal(&mut tape, 0.5, y, &[], inputs);
-                for k in 0..sens_params.len() {
-                    seed_param_tangent_unit(&mut dp, sens_params, SensIdx::new(k));
+                for (k, param) in sens_params.iter().enumerate() {
+                    dp.fill(0.0);
+                    dp[param.index()] = 1.0;
                     let tangent = TangentInputs {
                         dy: None,
                         dp: Some(&dp),

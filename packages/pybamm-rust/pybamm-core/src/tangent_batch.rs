@@ -6,12 +6,13 @@
 use crate::accumulate::dispatch;
 use crate::branch_regions::active_branch;
 use crate::eval::{
-    SplitCompiledExpr, check_scratch, split_read_write, split_two_read_write, unary_apply,
-    with_binary_op, with_unary_op,
+    PrimalCache, SplitCompiledExpr, TangentInputs, check_scratch, split_read_write,
+    split_two_read_write, unary_apply, with_binary_op, with_unary_op,
 };
 use crate::eval_batch::broadcast_lanes;
 use crate::ir::ids::BufSlot;
 use crate::ir::{BinaryOp, BroadcastKind, ConstPool, Instruction, SplitEvalInfo, TypedIr, UnaryOp};
+use crate::params::ParamIdx;
 use crate::products::CsrTangentLanesProduct;
 
 /// Lane counts the batched sweep is instantiated for, widest first.
@@ -120,6 +121,7 @@ fn walk_costs(expr: &SplitCompiledExpr) -> (usize, [usize; 2]) {
             | Instruction::Unary { len, .. }
             | Instruction::Index { len, .. }
             | Instruction::Conditional { out_len: len, .. } => (len.index(), 0),
+            Instruction::LoadTangentParameter { .. } => (1, 0),
             Instruction::Concat {
                 sources_idx,
                 sources_len,
@@ -163,21 +165,29 @@ const fn operand<const K: usize>(offset: usize, primal_len: usize) -> Operand {
 ///
 /// Only a `Concat` or a `Conditional` may read nothing but primal slots; any other reader of
 /// only primal slots would be seed-independent, so a tape holding one sweeps scalar instead.
-/// Branch selectors must be primal, so every lane takes the same branch.
+/// Branch selectors must be primal, so every lane takes the same branch. A tape seeds either
+/// states or parameters, never both, so one seed array serves every load.
 pub(crate) fn section_is_batchable(ir: &TypedIr, split: SplitEvalInfo) -> bool {
     let tangent = |slot: BufSlot| slot.index() >= split.primal_buffer_size;
-    ir.instructions()[split.primal_end..]
-        .iter()
-        .all(|instr| match *instr {
-            Instruction::LoadTangentState { .. } | Instruction::Concat { .. } => true,
-            Instruction::Unary { src, .. } | Instruction::Index { src, .. } => tangent(src),
-            Instruction::MatMul { vec_src, .. } => tangent(vec_src),
-            Instruction::Binary { a, b, .. } => tangent(a) || tangent(b),
-            Instruction::Conditional { selector, .. } | Instruction::Dispatch { selector, .. } => {
-                !tangent(selector)
-            },
-            _ => false,
-        })
+    let section = &ir.instructions()[split.primal_end..];
+    let seeds = |is_load: fn(&Instruction) -> bool| section.iter().any(is_load);
+    if seeds(|i| matches!(i, Instruction::LoadTangentState { .. }))
+        && seeds(|i| matches!(i, Instruction::LoadTangentParameter { .. }))
+    {
+        return false;
+    }
+    section.iter().all(|instr| match *instr {
+        Instruction::LoadTangentState { .. }
+        | Instruction::LoadTangentParameter { .. }
+        | Instruction::Concat { .. } => true,
+        Instruction::Unary { src, .. } | Instruction::Index { src, .. } => tangent(src),
+        Instruction::MatMul { vec_src, .. } => tangent(vec_src),
+        Instruction::Binary { a, b, .. } => tangent(a) || tangent(b),
+        Instruction::Conditional { selector, .. } | Instruction::Dispatch { selector, .. } => {
+            !tangent(selector)
+        },
+        _ => false,
+    })
 }
 
 /// Whether the root is primal, i.e. the tangent folded to a seed-independent constant.
@@ -200,8 +210,9 @@ pub const fn tangent_scratch_len(expr: &SplitCompiledExpr, lanes: usize) -> usiz
 
 /// Run the tangent section of `expr` for `lanes` seed vectors at once.
 ///
-/// `primal` holds the primal section's values; `seeds` is `(n_states, lanes)` lane-minor and
-/// the result `(out_len, lanes)` lane-minor.
+/// `primal` holds the primal section's values; `seeds` is `(n_seeds, lanes)` lane-minor, seed
+/// `i` being state `i` on a `dy` tape and parameter index `i` on a `dp` tape, and the result is
+/// `(out_len, lanes)` lane-minor.
 ///
 /// # Panics
 /// If `lanes` is not 8 or 4, `expr` is not batchable, `primal` is shorter than the primal
@@ -316,6 +327,10 @@ fn exec<const K: usize>(
             let dst = tangent_base::<K>(dst.index(), primal_len);
             let len = width.index() * K;
             tan[dst..dst + len].copy_from_slice(&seeds[start.index() * K..][..len]);
+        },
+        Instruction::LoadTangentParameter { index, dst } => {
+            let dst = tangent_base::<K>(dst.index(), primal_len);
+            tan[dst..dst + K].copy_from_slice(&seeds[index.index() * K..][..K]);
         },
 
         Instruction::Index {
@@ -554,9 +569,159 @@ fn binary<const K: usize, F: Fn(f64, f64) -> f64>(
     }
 }
 
+/// Write the tangent of each unit parameter seed `params[i]` into `out[i * stride..]`.
+///
+/// Walks as many seeds at once as `plan` says, each column bitwise what a scalar sweep of
+/// `primal` writes. `dp` is the scalar seed buffer; `tangent_lanes` must fit `plan`'s widest walk.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn unit_param_columns(
+    primal: &mut PrimalCache<'_>,
+    plan: LanePlan,
+    params: &[ParamIdx],
+    dp: &mut [f64],
+    tangent_lanes: &mut [f64],
+    seed_lanes: &mut Vec<f64>,
+    stride: usize,
+    out: &mut [f64],
+) {
+    let mut k = 0;
+    while k < params.len() {
+        let lanes = plan.lanes(params.len() - k);
+        if lanes == 1 {
+            dp.fill(0.0);
+            dp[params[k].index()] = 1.0;
+            let tangent = TangentInputs {
+                dy: None,
+                dp: Some(dp),
+            };
+            let result = primal.eval_tangent(&tangent);
+            out[k * stride..][..result.len()].copy_from_slice(result);
+            k += 1;
+            continue;
+        }
+        // Surplus lanes of a part-empty walk keep zero seeds, and nothing reads them.
+        let carried = lanes.min(params.len() - k);
+        seed_lanes.clear();
+        seed_lanes.resize(dp.len() * lanes, 0.0);
+        for (lane, param) in params[k..k + carried].iter().enumerate() {
+            seed_lanes[param.index() * lanes + lane] = 1.0;
+        }
+        let result = primal.eval_tangent_batch(lanes, tangent_lanes, seed_lanes);
+        for lane in 0..carried {
+            let lane_values = result.iter().skip(lane).step_by(lanes);
+            for (dst, &value) in out[(k + lane) * stride..].iter_mut().zip(lane_values) {
+                *dst = value;
+            }
+        }
+        k += carried;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arena::{Arena, DagRef, NodeId};
+    use crate::jacobian::tangent_dag;
+    use crate::node::Node;
+    use crate::simplify::simplify_pipeline;
+    use crate::tangent::{tangent_wrt_params, tangent_wrt_states};
+
+    /// `[sum_i p_i * y0, sum_i exp(p_i * y1), p0 * sin(p1 * y0)]` over `n_params` parameters.
+    fn parametric_rhs(arena: &mut Arena, n_params: usize) -> NodeId {
+        let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
+        let params: Vec<NodeId> = (0..n_params)
+            .map(|i| {
+                arena.alloc(Node::InputParameter {
+                    name: format!("p{i}"),
+                    index: i,
+                    offset: i,
+                    width: 1,
+                })
+            })
+            .collect();
+        let (mut linear, mut exponential) = (Vec::new(), Vec::new());
+        for &p in &params {
+            linear.push(arena.alloc(Node::Mul(p, y0)));
+            let scaled = arena.alloc(Node::Mul(p, y1));
+            exponential.push(arena.alloc(Node::Exp(scaled)));
+        }
+        let sum = |arena: &mut Arena, terms: Vec<NodeId>| {
+            terms
+                .into_iter()
+                .reduce(|acc, term| arena.alloc(Node::Add(acc, term)))
+                .expect("at least one parameter")
+        };
+        let first = sum(arena, linear);
+        let second = sum(arena, exponential);
+        let inner = arena.alloc(Node::Mul(params[1], y0));
+        let sine = arena.alloc(Node::Sin(inner));
+        let third = arena.alloc(Node::Mul(params[0], sine));
+        arena.alloc(Node::Concat(vec![first, second, third]))
+    }
+
+    #[test]
+    fn batched_parameter_columns_match_scalar_sweeps_bit_for_bit() {
+        let n_params = 11;
+        let mut arena = Arena::new();
+        let root = parametric_rhs(&mut arena, n_params);
+        let tangent = simplify_pipeline(tangent_dag(DagRef::new(&arena, root), tangent_wrt_params));
+        let expr = SplitCompiledExpr::compile(tangent.as_ref());
+        assert!(expr.is_batchable(), "a dp tape batches");
+
+        let (y, inputs) = (
+            [0.3, -1.7],
+            (0..n_params).map(|i| 0.1 * i as f64).collect::<Vec<_>>(),
+        );
+        // Every second parameter, out of order, as sensitivity columns can be.
+        let params: Vec<ParamIdx> = (0..11_u32).rev().step_by(2).map(ParamIdx::new).collect();
+        let n_out = 3;
+        let mut tape = vec![0.0; expr.scratch_len()];
+        let mut dp = vec![0.0; n_params];
+
+        let mut want = vec![0.0; params.len() * n_out];
+        let mut primal = expr.eval_primal(&mut tape, 0.0, &y, &[], &inputs);
+        for (column, param) in want.chunks_exact_mut(n_out).zip(&params) {
+            dp.fill(0.0);
+            dp[param.index()] = 1.0;
+            let tangent = TangentInputs {
+                dy: None,
+                dp: Some(&dp),
+            };
+            column.copy_from_slice(primal.eval_tangent(&tangent));
+        }
+
+        // Dispatch-bound costs: six columns walk as one part-empty 8-lane block.
+        let plan = LanePlan::from_costs(100, [Some(260), Some(230)]);
+        assert_eq!(walks(plan, params.len()), [8]);
+        let mut tangent_lanes = vec![0.0; tangent_scratch_len(&expr, plan.widest())];
+        let mut seed_lanes = Vec::new();
+        let mut got = vec![f64::NAN; params.len() * n_out];
+        let mut primal = expr.eval_primal(&mut tape, 0.0, &y, &[], &inputs);
+        unit_param_columns(
+            &mut primal,
+            plan,
+            &params,
+            &mut dp,
+            &mut tangent_lanes,
+            &mut seed_lanes,
+            n_out,
+            &mut got,
+        );
+        let bits = |values: &[f64]| values.iter().map(|v| v.to_bits()).collect::<Vec<_>>();
+        assert_eq!(bits(&got), bits(&want));
+    }
+
+    #[test]
+    fn a_tape_seeding_states_and_parameters_does_not_batch() {
+        let mut arena = Arena::new();
+        let root = parametric_rhs(&mut arena, 2);
+        let by_states = tangent_wrt_states(&mut arena, root);
+        let by_params = tangent_wrt_params(&mut arena, root);
+        let both = arena.alloc(Node::Add(by_states, by_params));
+        let expr = SplitCompiledExpr::compile(DagRef::new(&arena, both));
+        assert!(!expr.is_batchable());
+    }
 
     /// The lanes of each walk that `seeds` seeds take under `plan`.
     fn walks(plan: LanePlan, seeds: usize) -> Vec<usize> {
