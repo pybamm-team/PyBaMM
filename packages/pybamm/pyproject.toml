@@ -9,7 +9,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
-requires-python = ">=3.10, <3.16"
+requires-python = ">=3.11, <3.16"
 readme = { file = "README.md", content-type = "text/markdown" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -19,7 +19,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -35,7 +34,6 @@ dependencies = [
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
     "sympy>=1.12",
-    "typing-extensions>=4.16.0",
     "pandas>=1.5.0",
     "pooch>=1.8.1",
     "posthog",
@@ -66,7 +64,7 @@ pydiffsol = ["pydiffsol>=0.6.2"]
 bpx = ["bpx>=1.1.1,<1.2.0"]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
-jax = ["jax>=0.7.0, <0.12.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+jax = ["jax>=0.7.0, <0.12.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 # Unstructured-mesh visualization (pillow writes GIFs). 9.3.1 is the first VTK whose
 # numpy_support works with NumPy 2; no VTK has cp315 wheels yet, so 3.15 skips it
 vtk = ["vtk>=9.3.1; python_version < '3.15'", "pillow"]
@@ -119,9 +117,7 @@ dev = [
     # For testing Jupyter notebooks
     "nbmake",
     # ipykernel 7.4 fixes execute requests lost on the shell socket (ipykernel#1529)
-    "ipykernel>=7.4.0; python_version >= '3.11'",
-    # To access the metadata for python packages
-    "importlib-metadata; python_version < '3.10'",
+    "ipykernel>=7.4.0",
     { include-group = "bench" },
 ]
 

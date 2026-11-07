@@ -223,6 +223,86 @@ class TestThermal:
             # overpotential magnitude) is larger than the constant case
             np.testing.assert_array_less(np.abs(dphi_const[1:]), np.abs(dphi_fn[1:]))
 
+    @pytest.mark.parametrize(
+        "model, options, parameter_set, current",
+        [
+            (
+                pybamm.lithium_ion.SPMe,
+                {"SEI film resistance": "distributed"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.SPMe,
+                {"SEI film resistance": "average"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.DFN,
+                {"SEI film resistance": "distributed"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.MPM,
+                {"SEI film resistance": "distributed"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.SPMe,
+                {"working electrode": "positive", "SEI film resistance": "distributed"},
+                "Xu2019",
+                2.4e-3,
+            ),
+        ],
+    )
+    def test_sei_film_heating(self, model, options, parameter_set, current):
+        # With the temperature held at ambient, the extra heat generated when the SEI
+        # film resistance is switched on must match the extra electrical energy lost
+        parameter_values = pybamm.ParameterValues(parameter_set)
+        # Xu2019 has no current collector or thermal parameters, so take them from
+        # Chen2020
+        chen2020 = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {k: chen2020[k] for k in chen2020 if k not in parameter_values},
+            check_already_exists=False,
+        )
+        if model is pybamm.lithium_ion.MPM:
+            parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        parameter_values.update(
+            {
+                "Current function [A]": current,
+                "Initial SEI thickness [m]": 5e-8,
+                "Total heat transfer coefficient [W.m-2.K-1]": 1e6,
+            }
+        )
+        t = np.linspace(0, 600, 61)
+
+        voltage, heating = {}, {}
+        for film in ["none", options["SEI film resistance"]]:
+            sim = pybamm.Simulation(
+                model(
+                    {
+                        **options,
+                        "SEI": "constant",
+                        "SEI film resistance": film,
+                        "thermal": "lumped",
+                    }
+                ),
+                parameter_values=parameter_values,
+            )
+            sol = sim.solve([0, 600])
+            voltage[film] = sol["Voltage [V]"](t)
+            heating[film] = sol["Total heating [W]"](t)
+
+        film = options["SEI film resistance"]
+        electrical_loss = np.trapezoid(current * (voltage["none"] - voltage[film]), t)
+        extra_heat = np.trapezoid(heating[film] - heating["none"], t)
+        assert electrical_loss > 0
+        np.testing.assert_allclose(extra_heat, electrical_loss, rtol=1e-2)
+
     @pytest.mark.parametrize("composite", [False, True], ids=["one-phase", "composite"])
     def test_heat_of_mixing_energy_balance(self, composite):
         """
@@ -350,3 +430,30 @@ class TestThermal:
         np.testing.assert_allclose(released, work + heat, rtol=0, atol=5e-3 * heat)
         # without the heat of mixing the balance fails, so the check has teeth
         assert abs(released - (work + heat - heat_of_mixing)) > 0.2 * heat
+
+    @pytest.mark.parametrize(
+        "model_class", [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN]
+    )
+    @pytest.mark.parametrize(
+        "particle, rtol", [("quadratic profile", 0.15), ("quartic profile", 0.05)]
+    )
+    def test_heat_of_mixing_polynomial_profile(self, model_class, particle, rtol):
+        # The polynomial profiles approximate Fickian diffusion, so once the initial
+        # transient has passed their heat of mixing should be close to it
+        t = np.linspace(600, 3000, 25)
+        heat_of_mixing = {}
+        for option in ["Fickian diffusion", particle]:
+            model = model_class(
+                {"particle": option, "thermal": "lumped", "heat of mixing": "true"}
+            )
+            solution = pybamm.Simulation(
+                model, parameter_values=pybamm.ParameterValues("Chen2020")
+            ).solve([0, 3000])
+            heat_of_mixing[option] = solution["Heat of mixing [W]"](t)
+
+        assert np.all(heat_of_mixing[particle] > 0)
+        np.testing.assert_allclose(
+            np.mean(heat_of_mixing[particle]),
+            np.mean(heat_of_mixing["Fickian diffusion"]),
+            rtol=rtol,
+        )
