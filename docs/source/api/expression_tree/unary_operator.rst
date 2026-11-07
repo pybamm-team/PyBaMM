@@ -58,6 +58,12 @@ Unary Operators
 .. autoclass:: pybamm.BoundaryValue
   :members:
 
+.. autoclass:: pybamm.BoundaryCellValue
+  :members:
+
+.. autoclass:: pybamm.BoundaryCellLength
+  :members:
+
 .. autoclass:: pybamm.BoundaryGradient
   :members:
 
@@ -100,6 +106,10 @@ Unary Operators
 .. autofunction:: pybamm.yz_average
 
 .. autofunction:: pybamm.boundary_value
+
+.. autofunction:: pybamm.boundary_cell_value
+
+.. autofunction:: pybamm.boundary_cell_length
 
 .. autofunction:: pybamm.smooth_absolute_value
 

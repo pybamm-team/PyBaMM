@@ -16,6 +16,11 @@ class TestNewmanTobias(BaseUnitTestLithiumIon):
         with pytest.raises(pybamm.OptionError, match=r"electrolyte conductivity"):
             pybamm.lithium_ion.NewmanTobias(options)
 
+    def test_well_posed_pe_phase_transition(self):
+        # NewmanTobias overrides set_particle_submodel; this exercises the
+        # PE-degradation skip branch in that override.
+        self.check_well_posedness({"PE degradation": "phase transition"})
+
     @pytest.mark.skip(reason="Test currently not implemented")
     def test_well_posed_particle_phases(self):
         pass  # skip this test

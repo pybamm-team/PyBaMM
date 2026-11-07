@@ -48,6 +48,14 @@ class TestSPM(BaseUnitTestLithiumIon):
         options = {"surface form": "algebraic", "particle size": "distribution"}
         self.check_well_posedness(options)
 
+    def test_well_posed_pe_phase_transition(self):
+        # PE degradation = "phase transition" replaces the positive Fickian
+        # particle submodel with the core-shell phase-transition submodel and
+        # routes the inverse Butler-Volmer kinetics through the PE shell hook.
+        # (Option-conflict and default-meshing tests are model-class-agnostic
+        # and live in test_base_battery_model.py.)
+        self.check_well_posedness({"PE degradation": "phase transition"})
+
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
         new_model = model.new_copy()
