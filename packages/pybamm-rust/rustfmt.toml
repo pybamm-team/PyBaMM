@@ -1,0 +1,14 @@
+edition = "2024"
+
+max_width = 100
+use_small_heuristics = "Default"
+tab_spaces = 4
+newline_style = "Auto"
+
+reorder_imports = true
+reorder_modules = true
+
+use_field_init_shorthand = true
+use_try_shorthand = true
+
+match_block_trailing_comma = true
