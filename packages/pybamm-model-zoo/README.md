@@ -211,7 +211,8 @@ Short by design — the contract suite does the rest.
 - [ ] Dependencies declared only as a `zoo-<slug>` extra, using PyBaMM's own
       extras where they exist.
 - [ ] At least one test pins a physical result.
+- [ ] The model is clearly documented, either by citing a relevant article or in a clear `README.md`.
 - [ ] The example script runs.
-- [ ] The citation resolves and is registered on instantiation.
+- [ ] The citation (if available) resolves and is registered on instantiation.
 - [ ] `.github/CODEOWNERS` line added.
 - [ ] `CHANGELOG.md` entry in this package.
