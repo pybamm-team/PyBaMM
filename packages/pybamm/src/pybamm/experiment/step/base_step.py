@@ -472,7 +472,10 @@ class BaseStep:
         return events
 
     def get_combined_termination_expression(self, variables):
-        events = self.get_termination_events(variables)
+        return self._combine_termination_events(self.get_termination_events(variables))
+
+    @staticmethod
+    def _combine_termination_events(events):
         if not events:
             return pybamm.Scalar(1)
 
