@@ -11,6 +11,7 @@ from scipy.sparse import block_diag, csr_matrix
 
 import pybamm
 from pybamm.models.base_model import ModelSolutionObservability
+from pybamm.util import _is_flux_boundary_condition
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -631,10 +632,7 @@ class Discretisation:
 
         for key, bcs in model.boundary_conditions.items():
             for side, bc in bcs.items():
-                if (
-                    pybamm._is_flux_boundary_condition(bc[1])
-                    and bc[1][1] not in div_children
-                ):
+                if _is_flux_boundary_condition(bc[1]) and bc[1][1] not in div_children:
                     raise pybamm.ModelError(
                         f"There is no matching flux for the flux boundary condition for"
                         f" '{key.name}' with boundary '{side}'. The boundary condition cannot be applied."

@@ -15,6 +15,7 @@ from scipy.sparse import (
 )
 
 import pybamm
+from pybamm.util import _is_flux_boundary_condition
 
 
 class FiniteVolume(pybamm.SpatialMethod):
@@ -191,7 +192,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             if bc[1] not in [
                 "Dirichlet",
                 "Neumann",
-            ] and not pybamm._is_flux_boundary_condition(bc[1]):
+            ] and not _is_flux_boundary_condition(bc[1]):
                 raise pybamm.ModelError(
                     f"boundary condition must be Dirichlet, Neumann or ('Flux', pybamm.Symbol), not '{bc[1]}'"
                 )
@@ -199,9 +200,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         dirichlet_type_bc = [side for side, bc in bcs.items() if bc[1] == "Dirichlet"]
         neumann_type_bc = [side for side, bc in bcs.items() if bc[1] == "Neumann"]
         flux_type_bc = [
-            side
-            for side, bc in bcs.items()
-            if pybamm._is_flux_boundary_condition(bc[1])
+            side for side, bc in bcs.items() if _is_flux_boundary_condition(bc[1])
         ]
 
         # Add Dirichlet boundary conditions, if defined
@@ -1105,7 +1104,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             # Search all boundary conditions to see if this symbol appears as a flux
             for key_id in boundary_conditions:
                 for bc in boundary_conditions[key_id].values():
-                    if pybamm._is_flux_boundary_condition(bc[1]) and bc[1][1] == symbol:
+                    if _is_flux_boundary_condition(bc[1]) and bc[1][1] == symbol:
                         discretised_symbol = self._add_flux_values(
                             symbol, discretised_symbol, boundary_conditions[key_id]
                         )
@@ -1149,7 +1148,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Add any values from flux boundary conditions to the bcs vector
-        if pybamm._is_flux_boundary_condition(lbc_type) and lbc_value != 0:
+        if _is_flux_boundary_condition(lbc_type) and lbc_value != 0:
             lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n, 1))
             lbc_matrix = self._block_diagonal(lbc_sub_matrix, second_dim_repeats)
             if lbc_value.evaluates_to_number():
@@ -1159,7 +1158,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
         else:
             lbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
-        if pybamm._is_flux_boundary_condition(rbc_type) and rbc_value != 0:
+        if _is_flux_boundary_condition(rbc_type) and rbc_value != 0:
             rbc_sub_matrix = coo_matrix(([1.0], ([n - 1], [0])), shape=(n, 1))
             rbc_matrix = self._block_diagonal(rbc_sub_matrix, second_dim_repeats)
             if rbc_value.evaluates_to_number():
@@ -1178,9 +1177,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Make matrix which makes "gaps" in the discretised symbol into which
         # the known flux values will be added
         diag_entries = np.ones(n, dtype=np.float64)
-        if pybamm._is_flux_boundary_condition(lbc_type):
+        if _is_flux_boundary_condition(lbc_type):
             diag_entries[0] = 0
-        if pybamm._is_flux_boundary_condition(rbc_type):
+        if _is_flux_boundary_condition(rbc_type):
             diag_entries[n - 1] = 0
         sub_matrix = diags(diag_entries, shape=(n, n), dtype=np.float64)
 

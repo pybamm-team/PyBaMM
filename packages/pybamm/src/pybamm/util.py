@@ -419,6 +419,10 @@ def import_optional_dependency(module_name, attribute=None):
 
 
 def _is_flux_boundary_condition(bc_type):
+    """
+    Check if a boundary condition is a flux boundary condition.
+    Retruns True if bc_type is a tuple of the form ("Flux", pybamm.Symbol), False otherwise.
+    """
     return (
         isinstance(bc_type, tuple)
         and bc_type[0] == "Flux"
