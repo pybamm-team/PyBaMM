@@ -2891,13 +2891,20 @@ class TestUpsampling:
         np.testing.assert_array_equal(upsampled.t, expected)
         assert upsampled["Voltage [V]"].entries.shape == expected.shape
 
-        # Reduction upsamples its own spline: every midpoint is within tolerance
-        # Reducing a finished solution keeps its added times
+        # Reducing a finished solution keeps its added times and the knots it
+        # removes, so `t` is unchanged
         solver = pybamm.IDAKLUSolver()
+        post_reduced = solver.reduce_solution(upsampled)
+        post_stored = np.concatenate(post_reduced.all_ts)
+        assert post_stored.size < stored.size
         np.testing.assert_array_equal(
-            solver.reduce_solution(upsampled).t_additive, t_additive
+            post_reduced.t_additive,
+            np.union1d(t_additive, np.setdiff1d(stored, post_stored)),
         )
+        np.testing.assert_array_equal(post_reduced.t, upsampled.t)
+        assert solver.reduce_solution(baseline).t_additive is None
 
+        # Reduction upsamples its own spline: every midpoint is within tolerance
         reduced = self._solve(options | {"hermite_reduction_factor": 2.0})
         reduced_stored = np.concatenate(reduced.all_ts)
         assert reduced_stored.size < stored.size

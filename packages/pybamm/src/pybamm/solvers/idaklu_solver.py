@@ -261,10 +261,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Output upsampling (None = off). Adds times inside each solver step
                 # until linear interpolation of one scalar output variable between
                 # them is accurate to upsampling_tolerance times the variable's
-                # scale (1 if it has none). The variable is the voltage, or the
-                # current in voltage-controlled experiment steps. For example, 1e-3
-                # gives a linear-interpolation voltage error of about 1 mV. Set a
-                # model's `upsampling_variable` to upsample another variable. The
+                # scale (1 if it has none). The variable is the voltage. An
+                # algebraic variable, such as the current in a voltage-controlled
+                # experiment step, adds no points: the integrator's error test
+                # already resolves it. For example, 1e-3 gives a linear-
+                # interpolation voltage error of about 1 mV. Set a model's
+                # `upsampling_variable` to upsample another variable. The
                 # times go to `Solution.t_additive` (and `Solution.t`) when Hermite
                 # data is stored and sensitivities are off; otherwise they are
                 # saved as full solution points. Ignored with t_interp.
@@ -1339,6 +1341,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             new_ys.append(np.asarray(red_ys[i]).reshape(K, N).T)
             new_yps.append(np.asarray(red_yps[i]).reshape(K, N).T)
 
+        # The added times were chosen against the original knots, so keep the
+        # removed ones; `Solution.t` is then unchanged by the reduction
+        t_additive = solution.t_additive
+        if t_additive is not None:
+            removed = np.setdiff1d(np.concatenate(all_ts), np.concatenate(new_ts))
+            t_additive = np.union1d(t_additive, removed)
+
         new_sol = pybamm.Solution(
             all_ts=new_ts,
             all_ys=new_ys,
@@ -1352,7 +1361,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             all_t_evals=solution.all_t_evals,
             variables_returned=solution.variables_returned,
             options=solution.user_options,
-            t_additive=solution.t_additive,
+            t_additive=t_additive,
         )
 
         # Propagate metadata from the original solution
