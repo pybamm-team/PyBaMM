@@ -199,7 +199,6 @@ public:
   sunrealtype *y_val_ = nullptr;
   sunrealtype *yp_val_ = nullptr;
   vector<sunrealtype *> yS_val_;
-  vector<sunrealtype *> ypS_val_;
   // State at t0 after consistent initialization, for save_outputs_only
   std::vector<sunrealtype> y_init_;
   // Its sensitivities, (number_of_parameters, number_of_states) row-major
@@ -501,9 +500,9 @@ public:
   SolutionData BuildSolutionData(int retval);
 
   /**
-   * Trims the arrays to the steps actually taken, and transposes them into the
-   * numpy layout unless save_outputs_only already wrote them that way.
-   * @brief Hand the sensitivity arrays over in numpy layout
+   * Trims yS to the steps actually taken, and transposes it into the numpy
+   * layout unless save_outputs_only already wrote it that way.
+   * @brief Hand the sensitivities over in numpy layout
    */
   void ReorderSensitivities(std::vector<sunrealtype> &yS_out);
 

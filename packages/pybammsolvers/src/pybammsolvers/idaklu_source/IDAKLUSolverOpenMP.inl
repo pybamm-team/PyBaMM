@@ -446,7 +446,8 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     t_prev = t_val;
     retval = Step(tf_perturbed, t_val);
     GetSolutionStates(t_val);
-    if (save_hermite) {
+    // A failed first step after a restart leaves no derivative to read back
+    if (save_hermite && retval >= 0) {
       GetSolutionDerivatives(t_val);
     }
 
@@ -582,13 +583,12 @@ void IDAKLUSolverOpenMP<ExprSet>::SetupInitialState(
   y_val_ = N_VGetArrayPointer(yy);
   yp_val_ = N_VGetArrayPointer(yyp);
   yS_val_.resize(number_of_parameters);
-  ypS_val_.resize(number_of_parameters);
   for (int p = 0; p < number_of_parameters; p++) {
     yS_val_[p] = N_VGetArrayPointer(yyS[p]);
-    ypS_val_[p] = N_VGetArrayPointer(yypS[p]);
+    sunrealtype *ypS_val = N_VGetArrayPointer(yypS[p]);
     for (int i = 0; i < number_of_states; i++) {
       yS_val_[p][i] = y0[i + (p + 1) * number_of_states];
-      ypS_val_[p][i] = yp0[i + (p + 1) * number_of_states];
+      ypS_val[i] = yp0[i + (p + 1) * number_of_states];
     }
   }
 
@@ -633,10 +633,6 @@ void IDAKLUSolverOpenMP<ExprSet>::GetSolutionStates(sunrealtype t) {
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::GetSolutionDerivatives(sunrealtype t) {
   CheckErrors(IDAGetDky(ida_mem, t, 1, yyp), "IDAGetDky");
-  if (sensitivity) {
-    // Not returned, but the guess IDASensReInit starts from at a breakpoint
-    CheckErrors(IDAGetSensDky(ida_mem, t, 1, yypS), "IDAGetSensDky");
-  }
 }
 
 template <class ExprSet>
@@ -815,6 +811,10 @@ void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   // Save stats before reinitializing (reinit resets IDA counters)
   SaveStats();
 
+  // Not stored per step, so fetched here as the guess IDASensReInit starts from
+  if (sensitivity) {
+    CheckErrors(IDAGetSensDky(ida_mem, t_val, 1, yypS), "IDAGetSensDky");
+  }
   // Reinitialize the solver to deal with the discontinuity at t = t_val
   ReinitializeIntegrator(t_val);
   // Algebraic states can jump here, so the next step starts afresh

@@ -204,10 +204,18 @@ class TestIDAKLUSolver:
             solver.solve(model, np.linspace(0, 1, 10), inputs=inputs_list)
         assert re.findall(r"input set (\d+): ", str(error.value)) == ["1", "3"]
 
-    def test_a_single_input_set_failure_is_named(self):
-        model = get_broken_input_model()
-        with pytest.raises(pybamm.SolverError, match=r"^input set 0: "):
-            pybamm.IDAKLUSolver().solve(model, [0, 1], inputs={"k": -1.0})
+    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
+    def test_a_single_input_set_failure_is_named(self, calculate_sensitivities):
+        # The first step's own error, not IDA_BAD_K from reading back that step
+        with pytest.raises(
+            pybamm.SolverError, match=r"^input set 0: IDASolve at t0: IDA_REP_RES_ERR"
+        ):
+            pybamm.IDAKLUSolver().solve(
+                get_broken_input_model(),
+                [0, 1],
+                inputs={"k": -1.0},
+                calculate_sensitivities=calculate_sensitivities,
+            )
 
     def test_every_input_set_failing_part_way_is_named(self):
         solver = pybamm.IDAKLUSolver(options={"num_threads": 4})
@@ -3212,33 +3220,37 @@ class TestIDAKLUNonFiniteResiduals:
                 calculate_sensitivities=calculate_sensitivities,
             )
 
-    def test_an_infinite_sensitivity_residual_fails(self):
-        # d sqrt(p) / dp is infinite at p = 0, though the residual is not
+    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
+    def test_a_failing_step_after_a_breakpoint_reports_its_own_error(
+        self, calculate_sensitivities
+    ):
+        # Smooth up to the breakpoint at t = 0.5 and NaN after it, where the
+        # restarted solver has no step to read back the derivatives of
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
-        model.rhs = {u: pybamm.sqrt(pybamm.InputParameter("p"))}
+        c = pybamm.InputParameter("c")
+        model.rhs = {u: -2 * u + c * pybamm.log(0.5 - pybamm.t)}
         model.initial_conditions = {u: 1}
         model.variables = {"u": u}
         pybamm.Discretisation().process_model(model)
 
-        with pytest.raises(pybamm.SolverError, match=r"IDA_REP_SRES_ERR"):
+        with pytest.raises(pybamm.SolverError, match=r"^input set 0: IDA_REP_RES_ERR"):
             pybamm.IDAKLUSolver().solve(
-                model, [0, 1], inputs={"p": 0.0}, calculate_sensitivities=True
+                model,
+                np.linspace(0, 1, 5),
+                inputs={"c": 0.0},
+                calculate_sensitivities=calculate_sensitivities,
             )
 
-    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
-    def test_a_failing_first_step_reports_its_own_error(self, calculate_sensitivities):
-        # Reading back a step that was never taken fails with IDA_BAD_K instead
-        with pytest.raises(pybamm.SolverError) as error:
+    def test_an_infinite_sensitivity_residual_fails(self):
+        # d sqrt(k) / dk is infinite at k = 0, though the residual is not
+        with pytest.raises(pybamm.SolverError, match=r"IDA_REP_SRES_ERR"):
             pybamm.IDAKLUSolver().solve(
                 get_broken_input_model(),
                 [0, 1],
-                inputs={"k": -1.0},
-                calculate_sensitivities=calculate_sensitivities,
+                inputs={"k": 0.0},
+                calculate_sensitivities=True,
             )
-        message = str(error.value)
-        assert message.startswith("input set 0: IDASolve at t0: IDA_REP_RES_ERR")
-        assert "IDA_BAD_K" not in message
 
 
 class TestIDAKLUFullNewtonIterativeLinearSolver:
@@ -3332,6 +3344,16 @@ class TestIDAKLUSensitivityErrorControl:
         """``du/dp`` of :meth:`_forced_model` at ``p = 0``."""
         return (np.sin(2 * t) / 10 - 2 * np.cos(2 * t) + 2 * np.exp(-t / 10)) / 4.01
 
+    @staticmethod
+    def _solver(output_variables=None, **options):
+        """An ``IDAKLUSolver`` at tight tolerances with sensitivity error control."""
+        return pybamm.IDAKLUSolver(
+            rtol=1e-6,
+            atol=1e-6,
+            output_variables=output_variables,
+            options={"sensitivity_error_control": True, **options},
+        )
+
     def test_defaults_to_off(self):
         assert pybamm.IDAKLUSolver().options["sensitivity_error_control"] is False
 
@@ -3344,14 +3366,8 @@ class TestIDAKLUSensitivityErrorControl:
     # Breakpoints reinitialise the sensitivities, in the staggered corrector too
     @pytest.mark.parametrize("t_eval", [[0, 20], np.array([0, 7, 13, 20])])
     def test_sensitivities_meet_the_tolerances(self, t_eval, output_variables):
-        solver = pybamm.IDAKLUSolver(
-            rtol=1e-6,
-            atol=1e-6,
-            output_variables=output_variables,
-            options={"sensitivity_error_control": True},
-        )
         t = np.linspace(0, 20, 101)
-        solution = solver.solve(
+        solution = self._solver(output_variables).solve(
             self._forced_model(),
             t_eval,
             inputs={"p": 0.0},
@@ -3366,11 +3382,8 @@ class TestIDAKLUSensitivityErrorControl:
 
     def test_dae_sensitivities_meet_the_tolerances(self):
         b = 3.0
-        solver = pybamm.IDAKLUSolver(
-            rtol=1e-6, atol=1e-6, options={"sensitivity_error_control": True}
-        )
         t = np.linspace(0, 20, 101)
-        solution = solver.solve(
+        solution = self._solver().solve(
             self._forced_model(algebraic=True),
             [0, 20],
             inputs={"p": 0.0, "b": b},
@@ -3387,13 +3400,7 @@ class TestIDAKLUSensitivityErrorControl:
 
     @pytest.mark.parametrize("output_variables", [None, ["u"]])
     def test_stays_on_after_a_restart(self, output_variables):
-        solver = pybamm.IDAKLUSolver(
-            rtol=1e-6,
-            atol=1e-6,
-            output_variables=output_variables,
-            options={"sensitivity_error_control": True},
-        )
-        solution = solver.solve(
+        solution = self._solver(output_variables).solve(
             self._forced_model(switch=True),
             [0, 20],
             inputs={"p": 0.0, "t_switch": 7.0},
@@ -3410,14 +3417,7 @@ class TestIDAKLUSensitivityErrorControl:
 
     def test_max_nonlinear_iterations_caps_the_sensitivity_corrector(self):
         def number_of_steps(max_nonlinear_iterations):
-            solver = pybamm.IDAKLUSolver(
-                rtol=1e-6,
-                atol=1e-6,
-                options={
-                    "sensitivity_error_control": True,
-                    "max_nonlinear_iterations": max_nonlinear_iterations,
-                },
-            )
+            solver = self._solver(max_nonlinear_iterations=max_nonlinear_iterations)
             solution = solver.solve(
                 self._forced_model(),
                 [0, 20],
