@@ -76,9 +76,9 @@ class TestFluxBoundaryConditions:
             gradient_symbol.evaluate(y=y_test), evaluated_flux_bc[1:-1], atol=1e-12
         )
 
-    @pytest.mark.parametrize("no_simplification", [True, False])
-    def test_process_model_with_flux_bc(self, no_simplification):
+    def _setup_model(self, no_simplification):
         model = pybamm.BaseModel()
+        # model variables
         u = pybamm.Variable("u", domain="domain")
         D = pybamm.Parameter("D")
         u0 = pybamm.Parameter("u0")
@@ -98,7 +98,11 @@ class TestFluxBoundaryConditions:
                 "right": (pybamm.Scalar(3), ("Flux", N)),
             }
         }
+        return model, params
 
+    @pytest.mark.parametrize("no_simplification", [True, False])
+    def test_process_model_with_flux_bc(self, no_simplification):
+        model, params = self._setup_model(no_simplification)
         params.process_model(model)
         processed_u = next(iter(model.rhs))
         divergence = (
@@ -118,3 +122,25 @@ class TestFluxBoundaryConditions:
                 else model.boundary_conditions[processed_u][side][1][1]
                 is not processed_flux
             )
+
+    @pytest.mark.parametrize("delayed", [True, False])
+    def test_discretisation_with_nonmatching_flux(self, delayed):
+        model, params = self._setup_model(False)
+        geometry = pybamm.Geometry(
+            {"domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        )
+        params.process_model(model)
+        params.process_geometry(geometry)
+
+        submesh_types = {"domain": pybamm.Uniform1DSubMesh}
+        var_pts = {"x": 20}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        with pytest.raises(
+            pybamm.ModelError,
+            match="There is no matching flux for the flux boundary condition for",
+        ):
+            disc.process_model(model, delayed_variable_processing=delayed)

@@ -1109,7 +1109,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         discretised_symbol = self._add_flux_values(
                             symbol, discretised_symbol, boundary_conditions[key_id]
                         )
-                    break
+                        break
         return discretised_symbol
 
     def _add_flux_values(self, symbol, processed_symbol, bcs):

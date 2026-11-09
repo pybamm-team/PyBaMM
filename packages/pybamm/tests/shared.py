@@ -13,6 +13,8 @@ import pybamm
 
 class DummyDiscretisationClass:
     boundary_conditions = None
+    rhs = {}
+    algebraic = {}
 
 
 class SpatialMethodForTesting(pybamm.SpatialMethod):
