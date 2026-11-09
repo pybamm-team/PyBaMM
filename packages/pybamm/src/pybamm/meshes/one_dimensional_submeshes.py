@@ -106,6 +106,8 @@ class SubMesh1D(SubMesh):
 
 
 class SymbolicUniform1DSubMesh(SubMesh1D):
+    supports_symbolic_limits = True
+
     def __init__(self, lims, npts, tabs=None):
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         coord_sys = spatial_var.coord_sys
