@@ -701,9 +701,15 @@ class TestSolution:
         t = np.linspace(0, 1)
         y = np.tile(t, (2, 1))
         solution = pybamm.Solution(t, y, pybamm.BaseModel(), {}, all_yps=2 * y)
-        with pytest.warns(DeprecationWarning, match=r"`Solution\.y` is deprecated"):
+        with pytest.warns(
+            DeprecationWarning,
+            match=r"`Solution\.y` is deprecated and will be removed in 27\.2",
+        ):
             np.testing.assert_array_equal(solution.y, y)
-        with pytest.warns(DeprecationWarning, match=r"`Solution\.yp` is deprecated"):
+        with pytest.warns(
+            DeprecationWarning,
+            match=r"`Solution\.yp` is deprecated and will be removed in 27\.2",
+        ):
             np.testing.assert_array_equal(solution.yp, 2 * y)
 
     def test_t_additive(self):

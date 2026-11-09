@@ -638,7 +638,7 @@ class Solution(SolutionBase):
     def y(self):
         """The stored states, concatenated (deprecated)."""
         warnings.warn(
-            "`Solution.y` is deprecated and will be removed in a future release; "
+            "`Solution.y` is deprecated and will be removed in 27.2; "
             "it holds only the stored states, which need not match `Solution.t`. "
             "Use `solution[name]` for variables, or `all_ys` for the raw states.",
             DeprecationWarning,
@@ -652,7 +652,7 @@ class Solution(SolutionBase):
     def yp(self):
         """The stored state time derivatives, concatenated (deprecated)."""
         warnings.warn(
-            "`Solution.yp` is deprecated and will be removed in a future release; "
+            "`Solution.yp` is deprecated and will be removed in 27.2; "
             "it holds only the stored states, which need not match `Solution.t`. "
             "Use `all_yps` for the raw state derivatives.",
             DeprecationWarning,
