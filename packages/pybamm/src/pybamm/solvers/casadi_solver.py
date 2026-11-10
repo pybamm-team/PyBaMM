@@ -81,6 +81,8 @@ class CasadiSolver(pybamm.BaseSolver):
         None leaves the number of integrators unbound. Default is 100.
     """
 
+    uses_rhs_jacobian = False
+
     def __init__(
         self,
         mode="safe",
