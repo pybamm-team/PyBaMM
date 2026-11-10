@@ -237,9 +237,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Set the Positive Electrode (PE) degradation submodel to be used.
                 Options are:
 
-                - "none": : no action taken
+                - "none": no action taken
                 - "phase transition": :class:`pybamm.pe_degradation.PhaseTransition`, \
-                    this submodel (core-shell) will replace the particle fickian submodel
+                    this core-shell submodel replaces the positive particle submodel
             * "SEI" : str
                 Set the SEI submodel to be used. Options are:
 

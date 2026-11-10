@@ -1,37 +1,25 @@
 #
-# Base class for the core-shell model for Positive Electrode (NMC811)
-# phase transition cased degradation, based on paper
-#    Mingzhao Zhuo, Gregory Offer, Monica Marinescu, "Degradation model of
-#    high-nickel positive electrodes: Effects of loss of active material and
-#    cyclable lithium on capacity fade", Journal of Power Sources,
-#    556 (2023): 232461. doi: 10.1016/j.jpowsour.2022.232461.
+# Base class for the core-shell positive electrode degradation model
 #
 import pybamm
 
 
 class BasePhaseTransition(pybamm.BaseSubModel):
     """
-    Base class for the core-shell degradation model for Positive Electrode.
+    Base class for the core-shell positive electrode degradation model of
+    :footcite:t:`Zhuo2023`.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
-    domain : str, optional
-        The domain of the model (default is "Positive")
-    options: dict
+    domain : str
+        The domain of the model, which must be "positive"
+    options : dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-
-    References
-    ----------
-    .. [1] Mingzhao Zhuo, Gregory Offer, Monica Marinescu, "Degradation model of
-           high-nickel positive electrodes: Effects of loss of active material
-           and cyclable lithium on capacity fade", Journal of Power Sources},
-           556 (2023): 232461.
-           doi: 10.1016/j.jpowsour.2022.232461.
     """
 
     def __init__(self, param, domain, options, phase="primary"):
@@ -41,10 +29,27 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         self, c_c, c_o, s_nd, c_c_xav=None, c_o_xav=None, s_nd_av=None
     ):
         """
-        Provide the lithium concentration in the core,
-        oxygen concentration in the shell, and
-        core-shell phase boundary location
-        as arguments.
+        Get the standard variables of the core, the shell and the phase boundary.
+
+        Parameters
+        ----------
+        c_c : :class:`pybamm.Symbol`
+            Lithium concentration in the core [mol.m-3]
+        c_o : :class:`pybamm.Symbol`
+            Oxygen concentration in the shell [mol.m-3]
+        s_nd : :class:`pybamm.Symbol`
+            Core-shell phase boundary location, normalised by the particle radius
+        c_c_xav : :class:`pybamm.Symbol`, optional
+            X-averaged lithium concentration in the core. Computed if not given.
+        c_o_xav : :class:`pybamm.Symbol`, optional
+            X-averaged oxygen concentration in the shell. Computed if not given.
+        s_nd_av : :class:`pybamm.Symbol`, optional
+            X-averaged phase boundary location. Computed if not given.
+
+        Returns
+        -------
+        dict
+            The standard variables, keyed by name.
         """
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
@@ -111,7 +116,7 @@ class BasePhaseTransition(pybamm.BaseSubModel):
             "lithium concentration [mol.m-3]": c_c_av,
             f"{Domain} {phase_name}core surface "
             "lithium concentration [mol.m-3]": c_c_surf,
-            f"X-averaged {domain} {phase_name}core surface"
+            f"X-averaged {domain} {phase_name}core surface "
             "lithium concentration [mol.m-3]": c_c_surf_av,
             f"{Domain} {phase_name}core outer boundary "
             "lithium concentration [mol.m-3]": c_c_outer,
@@ -165,7 +170,7 @@ class BasePhaseTransition(pybamm.BaseSubModel):
             "oxygen concentration [mol.m-3]": c_o_inner_av,
             f"{Domain} {phase_name}shell surface "
             "oxygen concentration [mol.m-3]": c_o_surf,
-            f"X-averaged {domain} {phase_name}shell surface"
+            f"X-averaged {domain} {phase_name}shell surface "
             "oxygen concentration [mol.m-3]": c_o_surf_av,
             # Core-shell phase boundary
             f"{Domain} {phase_name}particle moving phase boundary location": s_nd,
@@ -246,6 +251,26 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         )
 
     def _r_average_shell(self, symbol, s_nd):
+        """
+        Volume-weighted r-average over the shell.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The symbol to average, defined on a shell domain
+        s_nd : :class:`pybamm.Symbol`
+            Core-shell phase boundary location, normalised by the particle radius
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            The r-averaged symbol
+
+        Raises
+        ------
+        :class:`pybamm.DomainError`
+            If the primary domain of ``symbol`` is not a shell domain.
+        """
         if symbol.domain != [] and symbol.domain[0].endswith("shell"):
             # need to inherit the secondary domains for the multiplication with
             # s_nd with primary domain of 'positive electrode'

@@ -8,27 +8,30 @@ from .base_phase_transition import BasePhaseTransition
 
 class PhaseTransition(BasePhaseTransition):
     """
-    Class for positive electrode degradation mechanism of progressive phase
-    transition from layer structure to spinel/rocksalt structure,
-    especially for NMC811 materials
-    aka core-shell model considering
-    lithium diffusion in the core,
-    oxygen diffusion in the shell, and
-    core-shell boundary moving
+    Core-shell model of the progressive phase transition in high-nickel positive
+    electrodes from layered to spinel/rocksalt structure, following
+    :footcite:t:`Zhuo2023`. It solves lithium diffusion in the core, oxygen diffusion
+    in the shell, and the motion of the core-shell boundary.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
-    domain : str, optional
-        The domain of the model (default is "Positive")
-    options: dict
+    domain : str
+        The domain of the model, which must be "positive"
+    options : dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
         Phase of the particle (default is "primary")
-    x_average : bool
+    x_average : bool, optional
         Whether the particle concentration is averaged over the x-direction
+        (default is False)
+
+    Raises
+    ------
+    :class:`pybamm.DomainError`
+        If ``domain`` is not "positive".
     """
 
     def __init__(self, param, domain, options, phase="primary", x_average=False):

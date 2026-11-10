@@ -100,10 +100,21 @@ class BaseInverseKinetics(BaseInterface):
         )
 
     def _get_pe_shell_potential_drop(self, j_tot, variables):
-        # Subclasses override this when their model adds a PE shell-layer
-        # potential drop (see InverseButlerVolmer). The default no-op is
-        # never reached in normal flow, but exists so that any future
-        # inverse-kinetics subclass without an override gets a safe zero.
+        """
+        Get the positive electrode shell potential drop, which is zero by default.
+
+        Parameters
+        ----------
+        j_tot : :class:`pybamm.Symbol`
+            Total interfacial current density [A.m-2]
+        variables : dict
+            The model variables, which subclasses may update in place
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            The potential drop [V]
+        """
         return pybamm.Scalar(0)  # pragma: no cover
 
 

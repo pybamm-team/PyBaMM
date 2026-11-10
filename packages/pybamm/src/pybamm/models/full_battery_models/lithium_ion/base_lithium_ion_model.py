@@ -331,8 +331,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 )
 
     def set_pe_degradation_submodel(self):
-        # set_particle_submodel skips the positive electrode when this option
-        # is on, so we register the PE phase-transition submodels directly.
+        """Register the positive electrode phase-transition submodels, if enabled."""
         if self.options["PE degradation"] != "phase transition":
             return
 

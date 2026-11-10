@@ -33,7 +33,22 @@ class InverseButlerVolmer(BaseInverseKinetics):
         )
 
     def _get_pe_shell_potential_drop(self, j_tot, variables):
-        # Phase-transformed shell layer in positive electrode particle
+        """
+        Get the potential drop across the phase-transformed positive electrode shell.
+
+        Parameters
+        ----------
+        j_tot : :class:`pybamm.Symbol`
+            Total interfacial current density [A.m-2]
+        variables : dict
+            The model variables, updated in place with the shell overpotential
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            The potential drop [V], which is zero unless the domain is positive and
+            the "PE degradation" option is "phase transition".
+        """
         domain = self.domain
         if domain != "positive" or (
             self.options["PE degradation"] != "phase transition"

@@ -431,6 +431,19 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_pe_shell_overpotential_variables(self, eta_shell):
+        """
+        Get the standard variables of the positive electrode shell overpotential.
+
+        Parameters
+        ----------
+        eta_shell : :class:`pybamm.Symbol`
+            Potential drop across the shell layer [V]
+
+        Returns
+        -------
+        dict
+            The shell overpotential variables, keyed by name.
+        """
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 

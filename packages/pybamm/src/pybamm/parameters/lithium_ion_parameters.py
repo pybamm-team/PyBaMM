@@ -721,8 +721,19 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def D_o(self, c_o, T):
         """
-        Dimensional diffusivity in positive core.
-        Is defined as a function of dimensional oxygen concentration (mol/m3)
+        Oxygen diffusivity in the positive electrode shell [m2.s-1].
+
+        Parameters
+        ----------
+        c_o : :class:`pybamm.Symbol`
+            Oxygen concentration in the shell [mol.m-3]
+        T : :class:`pybamm.Symbol`
+            Temperature [K]
+
+        Returns
+        -------
+        :class:`pybamm.FunctionParameter`
+            The oxygen diffusivity
         """
         Domain = self.domain.capitalize()
         inputs = {

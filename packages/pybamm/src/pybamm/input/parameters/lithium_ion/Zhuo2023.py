@@ -32,21 +32,73 @@ nmc811_18650_dUdT_Zhuo2023_data = pybamm.parameters.process_1D_data(
 
 
 def sic_18650_ocp_Zhuo2023(sto):
+    """
+    SiC open-circuit potential.
+
+    Parameters
+    ----------
+    sto : :class:`pybamm.Symbol`
+        Stoichiometry
+
+    Returns
+    -------
+    :class:`pybamm.Interpolant`
+        Open-circuit potential [V]
+    """
     name, (x, y) = sic_18650_ocp_Zhuo2023_data
     return pybamm.Interpolant(x, y, sto, name=name)
 
 
 def sic_18650_dUdT_Zhuo2023(sto):
+    """
+    SiC entropic change of the open-circuit potential.
+
+    Parameters
+    ----------
+    sto : :class:`pybamm.Symbol`
+        Stoichiometry
+
+    Returns
+    -------
+    :class:`pybamm.Interpolant`
+        Entropic change [V.K-1]
+    """
     name, (x, y) = sic_18650_dUdT_Zhuo2023_data
     return pybamm.Interpolant(x, y, sto, name=name)
 
 
 def nmc811_18650_ocp_Zhuo2023(sto):
+    """
+    NMC811 open-circuit potential.
+
+    Parameters
+    ----------
+    sto : :class:`pybamm.Symbol`
+        Stoichiometry
+
+    Returns
+    -------
+    :class:`pybamm.Interpolant`
+        Open-circuit potential [V]
+    """
     name, (x, y) = nmc811_18650_ocp_Zhuo2023_data
     return pybamm.Interpolant(x, y, sto, name=name)
 
 
 def nmc811_18650_dUdT_Zhuo2023(sto):
+    """
+    NMC811 entropic change of the open-circuit potential.
+
+    Parameters
+    ----------
+    sto : :class:`pybamm.Symbol`
+        Stoichiometry
+
+    Returns
+    -------
+    :class:`pybamm.Interpolant`
+        Entropic change [V.K-1]
+    """
     name, (x, y) = nmc811_18650_dUdT_Zhuo2023_data
     return pybamm.Interpolant(x, y, sto, name=name)
 
@@ -126,7 +178,7 @@ def nmc811_18650_electrolyte_exchange_current_density_Zhuo2023(
 
 def sic_18650_diffusivity_Zhuo2023(c_s, T):
     """
-    SiC diffusivity as a function of temperature.
+    SiC diffusivity [m2.s-1] as a function of temperature.
 
     References
     ----------
@@ -145,7 +197,7 @@ def sic_18650_diffusivity_Zhuo2023(c_s, T):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Solid diffusivity
+        Solid diffusivity [m2.s-1]
     """
 
     D_ref = 1.0e-14
@@ -159,7 +211,7 @@ def sic_18650_diffusivity_Zhuo2023(c_s, T):
 
 def nmc811_18650_diffusivity_Zhuo2023(c_s, T):
     """
-    NMC811 diffusivity as a function of temperature.
+    NMC811 diffusivity [m2.s-1] as a function of temperature.
 
     References
     ----------
@@ -178,7 +230,7 @@ def nmc811_18650_diffusivity_Zhuo2023(c_s, T):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Solid diffusivity
+        Solid diffusivity [m2.s-1]
     """
 
     D_ref = 1.0e-14
@@ -213,7 +265,7 @@ def electrolyte_diffusivity_Capiglia1999(c_e, T):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Solid diffusivity
+        Electrolyte diffusivity [m2.s-1]
     """
 
     D_c_e = 5.34e-10 * np.exp(-0.65 * c_e / 1000)
@@ -246,7 +298,7 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Solid conductivity
+        Electrolyte conductivity [S.m-1]
     """
 
     sigma_e = (
@@ -264,35 +316,21 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
 
 def initial_oxygen_concentration(r_sh_nd, x):
     """
-     Initial oxygen concentration profile.
+    Initial oxygen concentration profile in the positive electrode shell, from
+    :footcite:t:`Ghosh2021` and :footcite:t:`Zhuo2023`.
 
-     References
-     ----------
-     .. [1] Ghosh, Abir, et al. "A Shrinking-Core Model for the Degradation of
-     High-Nickel Cathodes (NMC811) in Li-Ion Batteries: Passivation Layer Growth
-     and Oxygen Evolution." Journal of The Electrochemical Society,
-     168(2) (2021): 020509.
-     .. [2] Mingzhao Zhuo, Gregory Offer, Monica Marinescu, "Degradation model of
-    high-nickel positive electrodes: Effects of loss of active material and
-    cyclable lithium on capacity fade", Journal of Power Sources},
-    556 (2023): 232461. doi: 10.1016/j.jpowsour.2022.232461.
+    Parameters
+    ----------
+    r_sh_nd : :class:`pybamm.Symbol`
+        Dimensionless shell coordinate, from 0 at the core-shell boundary to 1 at the
+        particle surface
+    x : :class:`pybamm.Symbol`
+        Through-cell distance [m]
 
-     Parameters
-     ----------
-     r_sh_nd: :class:`pybamm.SpatialVariable`
-         r_sh / R_typ, Dimensionless spatial variable (cartesian) in changed 1D domain,
-         varying from 0 to 1
-
-     # R_typ: :class:`pybamm.FunctionParameter`
-     #     The typical particle radius in the middle of the electrode
-
-     x: :class:`pybamm.SpatialVariable`
-         through-cell distance (x) [m]
-
-     Returns
-     -------
-     :class:`pybamm.Symbol`
-         Initial concentration
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Initial oxygen concentration [mol.m-3]
     """
 
     c_o_ini_ref = 15219.321

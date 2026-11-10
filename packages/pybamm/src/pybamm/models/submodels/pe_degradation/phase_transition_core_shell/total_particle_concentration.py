@@ -8,16 +8,16 @@ from .base_phase_transition import BasePhaseTransition
 
 class TotalConcentration(BasePhaseTransition):
     """
-    Class to calculate total lithium concentrations in the core of
-    Positive Electrode
+    Total lithium in the core of the positive electrode particles in the core-shell
+    model of :footcite:t:`Zhuo2023`.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
-    domain : str, optional
-        The domain of the model (default is "Positive")
-    options: dict
+    domain : str
+        The domain of the model, which must be "positive"
+    options : dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
     phase : str, optional
