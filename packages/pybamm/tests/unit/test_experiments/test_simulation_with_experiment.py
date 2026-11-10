@@ -1956,6 +1956,27 @@ class TestSimulationExperiment:
         # all but the last value should be above the termination condition
         np.testing.assert_array_less(5.04, C[:-1])
 
+    def test_run_experiment_rejects_infeasible_esoh_capacity(self):
+        experiment = pybamm.Experiment(
+            ["Rest for 10 seconds"] * 2, termination="2.3Ah capacity"
+        )
+        parameters = pybamm.ParameterValues("Ai2020")
+        parameters.update(
+            {
+                "Lower voltage cut-off [V]": 0,
+                "Upper voltage cut-off [V]": 6,
+                "Open-circuit voltage at 0% SOC [V]": 0,
+                "Open-circuit voltage at 100% SOC [V]": 6,
+            }
+        )
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            parameter_values=parameters,
+        )
+        with pytest.raises(ValueError, match=r"target maximum voltage, 6\.0000V"):
+            simulation.solve()
+
     def test_run_experiment_with_pbar(self):
         # The only thing to test here is for errors.
         experiment = pybamm.Experiment(

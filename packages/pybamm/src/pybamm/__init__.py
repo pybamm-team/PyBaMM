@@ -231,6 +231,12 @@ from .solvers.idaklu_jax import IDAKLUJax
 from .solvers.idaklu_solver import IDAKLUSolver
 from .solvers.nonlinear_solver import NonlinearSolver
 
+# Private solver names used by BaseSolver.from_config
+from .models.full_battery_models.lithium_ion.electrode_soh_algebraic_solver import (
+    _ElectrodeSOHAlgebraicSolver as _ElectrodeSOHAlgebraicSolver,
+    _ElectrodeSOHSimulationSolver as _ElectrodeSOHSimulationSolver,
+)
+
 # Experiments
 from .experiment.experiment import Experiment
 from . import experiment

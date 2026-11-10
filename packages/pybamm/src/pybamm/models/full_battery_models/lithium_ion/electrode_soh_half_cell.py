@@ -5,7 +5,7 @@ import warnings
 
 import pybamm
 
-from .electrode_soh import get_esoh_default_solver
+from .electrode_soh import _solve_esoh_simulation, get_esoh_default_solver
 from .util import check_if_composite, get_initial_ocp, get_lithiation_delithiation
 
 
@@ -406,7 +406,7 @@ def get_min_max_stoichiometries(
             "ElectrodeSOH", direction=direction, options=options
         )
         esoh_sim = pybamm.Simulation(esoh_model, parameter_values=parameter_values)
-    esoh_sol = esoh_sim.solve([0], inputs=all_inputs)
+    esoh_sol = _solve_esoh_simulation(esoh_sim, all_inputs, tol=1e-7)
     x_0, x_100 = esoh_sol["x_0"].data[0], esoh_sol["x_100"].data[0]
     if is_composite:
         x_0_2, x_100_2 = esoh_sol["x_0_2"].data[0], esoh_sol["x_100_2"].data[0]
