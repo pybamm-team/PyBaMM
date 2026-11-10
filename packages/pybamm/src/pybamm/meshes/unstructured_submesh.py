@@ -1,4 +1,5 @@
-from enum import Enum
+import hashlib
+from enum import StrEnum
 
 import numpy as np
 
@@ -6,12 +7,21 @@ import pybamm
 
 from .meshes import MeshGenerator, SubMesh
 
+# (query points x boundary triangles) pairs evaluated per chunk in contains_points_3d;
+# each pair carries ~10 float64 temporaries, so this keeps a chunk under ~20 MB
+_CONTAINS_POINTS_CHUNK_PAIRS = 200_000
+# boundary inflation, as a fraction of the mesh span, that puts surface points
+# strictly inside: exactly on the surface the solid-angle sign is round-off
+_CONTAINS_POINTS_INFLATION = 1e-9
+# containment masks remembered per mesh, keyed by the query-point array
+_CONTAINS_POINTS_CACHE_SIZE = 8
 
-class ElementType(str, Enum):
+
+class ElementType(StrEnum):
     """Element types supported by :class:`UnstructuredSubMesh`.
 
-    The ``str`` mixin keeps plain strings (``element_type="quad"``)
-    working everywhere an ``ElementType`` is expected.
+    Members are strings, so plain strings (``element_type="quad"``)
+    work everywhere an ``ElementType`` is expected.
     """
 
     TRIANGLE = "triangle"
@@ -97,13 +107,16 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_cell_geometry(self):
-        verts = self.vertices[self.elements]  # (n_cells, n_verts, d)
+        # Contiguous (n_cells, d) array per local vertex
+        verts = [
+            self.vertices[self.elements[:, i]] for i in range(self.elements.shape[1])
+        ]
         # Vertex mean is the exact centroid for simplices (triangles, tets);
         # quads and hexes overwrite it with the true area/volume centroid.
-        self.cell_centroids = verts.mean(axis=1)
+        self.cell_centroids = np.mean(verts, axis=0)
 
         if self.element_type == ElementType.TRIANGLE:
-            v0, v1, v2 = verts[:, 0], verts[:, 1], verts[:, 2]
+            v0, v1, v2 = verts
             cross = (v1[:, 0] - v0[:, 0]) * (v2[:, 1] - v0[:, 1]) - (
                 v1[:, 1] - v0[:, 1]
             ) * (v2[:, 0] - v0[:, 0])
@@ -111,8 +124,8 @@ class UnstructuredSubMesh(SubMesh):
         elif self.element_type == ElementType.QUAD:
             # Shoelace formula for arbitrary simple quadrilaterals
             # Vertices ordered: v0, v1, v2, v3 (counterclockwise or clockwise)
-            x = verts[:, :, 0]  # (n_cells, 4)
-            y = verts[:, :, 1]  # (n_cells, 4)
+            x = np.column_stack([v[:, 0] for v in verts])  # (n_cells, 4)
+            y = np.column_stack([v[:, 1] for v in verts])  # (n_cells, 4)
             # shoelace: sum_i (x_i * y_{i+1} - x_{i+1} * y_i)
             x_next = np.roll(x, -1, axis=1)
             y_next = np.roll(y, -1, axis=1)
@@ -125,7 +138,7 @@ class UnstructuredSubMesh(SubMesh):
             cy = np.sum((y + y_next) * cross, axis=1) / (6.0 * signed_area)
             self.cell_centroids = np.column_stack([cx, cy])
         elif self.element_type == ElementType.TETRAHEDRON:
-            v0, v1, v2, v3 = verts[:, 0], verts[:, 1], verts[:, 2], verts[:, 3]
+            v0, v1, v2, v3 = verts
             d1 = v1 - v0
             d2 = v2 - v0
             d3 = v3 - v0
@@ -136,20 +149,18 @@ class UnstructuredSubMesh(SubMesh):
             )
             self.cell_volumes = np.abs(det) / 6.0
         elif self.element_type == ElementType.HEXAHEDRON:
-            # 5-tet decomposition, exact only for planar-faced hexes (warped
-            # faces are rejected in _compute_face_geometry). Tet volumes are
-            # summed signed so a degenerate or inverted cell cannot cancel
-            # into a plausible positive volume.
-            t = verts[:, self._HEX_TETS]  # (n_cells, 5, 4, d)
-            d1 = t[:, :, 1] - t[:, :, 0]
-            d2 = t[:, :, 2] - t[:, :, 0]
-            d3 = t[:, :, 3] - t[:, :, 0]
-            tet_vols = np.einsum("ijk,ijk->ij", d1, np.cross(d2, d3)) / 6.0
-            vol = tet_vols.sum(axis=1)
+            # 5-tet split, exact for planar-faced hexes; signed sum so an
+            # inverted cell cannot cancel into a plausible positive volume
+            vol = np.zeros(len(self.elements))
+            moment = np.zeros((len(self.elements), 3))
+            for tet in self._HEX_TETS:
+                p0, p1, p2, p3 = (verts[i] for i in tet)
+                tet_vol = _dot(p1 - p0, _cross(p2 - p0, p3 - p0)) / 6.0
+                vol += tet_vol
+                # Volume-weighted tet centroids: exact for planar-faced hexes
+                # such as frusta, where the vertex mean is not
+                moment += tet_vol[:, None] * (p0 + p1 + p2 + p3) / 4.0
             self.cell_volumes = np.abs(vol)
-            # Volume-weighted tet centroids: exact for planar-faced hexes
-            # such as frusta, where the vertex mean is not
-            moment = np.einsum("ij,ijk->ik", tet_vols, t.mean(axis=2))
             safe_vol = np.where(vol == 0.0, 1.0, vol)
             nonzero = (vol != 0.0)[:, None]
             self.cell_centroids = np.where(
@@ -168,7 +179,6 @@ class UnstructuredSubMesh(SubMesh):
             n_verts_per_face = self.dimension
 
         elems = self.elements
-        n_cells = len(elems)
 
         # Build all faces at once using local face definitions
         if self.element_type == ElementType.QUAD:
@@ -183,18 +193,10 @@ class UnstructuredSubMesh(SubMesh):
         n_fpc = len(local)
 
         all_faces = elems[:, local].reshape(-1, n_verts_per_face)
-        cell_ids = np.repeat(np.arange(n_cells), n_fpc)
 
-        # Canonical keys: sort vertex indices within each face
-        sorted_faces = np.sort(all_faces, axis=1)
-
-        # Find unique faces and which are shared (internal) vs single (boundary)
-        _, inverse, counts = np.unique(
-            sorted_faces, axis=0, return_inverse=True, return_counts=True
-        )
-        # numpy 2.0.0 (the declared floor) returns inverse with shape (n, 1);
-        # 2.0.1+ returns (n,). Flatten so masks below stay 1-D everywhere.
-        inverse = inverse.reshape(-1)
+        # Canonical keys: sort vertex indices within each face, then group
+        # duplicates; shared faces are internal, single faces boundary
+        order, counts = _group_rows(np.sort(all_faces, axis=1))
 
         # A manifold mesh shares each face between at most two cells. A count of
         # three or more means overlapping or non-conforming elements; such faces
@@ -206,28 +208,18 @@ class UnstructuredSubMesh(SubMesh):
                 "elements in the input mesh."
             )
 
-        is_internal = counts[inverse] == 2
-        is_boundary = counts[inverse] == 1
+        # The grouping is stable, so each internal face's two rows are adjacent
+        # with the lower-numbered (owner) cell first
+        internal_rows = order[counts == 2]
+        owner_rows = internal_rows[0::2]
+        internal_owner = owner_rows // n_fpc
+        internal_neighbor = internal_rows[1::2] // n_fpc
+        internal_face_verts = all_faces[owner_rows]
 
-        # For internal faces, we need owner/neighbor pairs.
-        # Group by unique face index; first occurrence is owner, second is neighbor.
-        internal_mask = is_internal
-        int_inv = inverse[internal_mask]
-        int_cells = cell_ids[internal_mask]
-        int_faces_raw = all_faces[internal_mask]
-
-        # Sort by unique-face-id to pair them up: [owner0, neighbor0, owner1, neighbor1, ...]
-        order = np.argsort(int_inv, kind="stable")
-        int_cells_sorted = int_cells[order]
-        int_faces_sorted = int_faces_raw[order]
-
-        internal_owner = int_cells_sorted[0::2]
-        internal_neighbor = int_cells_sorted[1::2]
-        internal_face_verts = int_faces_sorted[0::2]
-
-        # Boundary faces
-        bnd_face_verts = all_faces[is_boundary]
-        bnd_owners = cell_ids[is_boundary]
+        # Boundary faces keep their original (cell-major) order
+        boundary_rows = np.sort(order[counts == 1])
+        bnd_face_verts = all_faces[boundary_rows]
+        bnd_owners = boundary_rows // n_fpc
 
         n_internal = len(internal_owner)
         n_boundary = len(bnd_owners)
@@ -262,32 +254,30 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_face_geometry(self):
-        face_verts = self.vertices[self.faces]
-
-        self.face_centroids = face_verts.mean(axis=1)
+        # Contiguous (n_faces, d) array per local vertex
+        face_verts = [
+            self.vertices[self.faces[:, i]] for i in range(self.faces.shape[1])
+        ]
+        self.face_centroids = np.mean(face_verts, axis=0)
 
         if self.dimension == 2:
-            v0, v1 = face_verts[:, 0], face_verts[:, 1]
+            v0, v1 = face_verts
             edge = v1 - v0
             self.face_areas = np.linalg.norm(edge, axis=1)
             normals = np.column_stack([edge[:, 1], -edge[:, 0]])
         elif self.element_type == ElementType.HEXAHEDRON:
             # Face = quad: 4 vertices. Area via cross product of diagonals.
-            v0 = face_verts[:, 0]
-            v1 = face_verts[:, 1]
-            v2 = face_verts[:, 2]
-            v3 = face_verts[:, 3]
+            v0, v1, v2, v3 = face_verts
 
             # Quad areas, normals, and the 5-tet cell volumes are only
             # well-defined when all four vertices of a face are coplanar,
             # so warped (non-planar) faces are rejected outright.
-            plane_normal = np.cross(v1 - v0, v2 - v0)
-            plane_norm = np.linalg.norm(plane_normal, axis=1)
+            plane_normal = _cross(v1 - v0, v2 - v0)
+            plane_norm = np.sqrt(_dot(plane_normal, plane_normal))
             safe_norm = np.where(plane_norm < 1e-30, 1.0, plane_norm)
-            offset = np.abs(
-                np.einsum("ij,ij->i", v3 - v0, plane_normal / safe_norm[:, None])
-            )
-            diag_len = np.linalg.norm(v2 - v0, axis=1)
+            n_hat = plane_normal / safe_norm[:, None]
+            offset = np.abs(_dot(v3 - v0, n_hat))
+            diag_len = np.sqrt(_dot(v2 - v0, v2 - v0))
             warped = offset > 1e-8 * np.maximum(diag_len, 1e-30)
             if warped.any():
                 raise pybamm.GeometryError(
@@ -299,17 +289,16 @@ class UnstructuredSubMesh(SubMesh):
 
             diag1 = v2 - v0
             diag2 = v3 - v1
-            cross = np.cross(diag1, diag2)
-            self.face_areas = 0.5 * np.linalg.norm(cross, axis=1)
+            cross = _cross(diag1, diag2)
+            self.face_areas = 0.5 * np.sqrt(_dot(cross, cross))
             normals = cross
 
             # Area-weighted centroid over the (0,1,2)/(0,2,3) triangle split:
             # exact for planar non-parallelogram quads (e.g. trapezoids),
             # where the vertex mean is not. Signed areas taken along the face
             # normal keep non-convex planar quads exact too.
-            n_hat = plane_normal / safe_norm[:, None]
-            area1 = 0.5 * np.einsum("ij,ij->i", np.cross(v1 - v0, v2 - v0), n_hat)
-            area2 = 0.5 * np.einsum("ij,ij->i", np.cross(v2 - v0, v3 - v0), n_hat)
+            area1 = 0.5 * _dot(plane_normal, n_hat)
+            area2 = 0.5 * _dot(_cross(v2 - v0, v3 - v0), n_hat)
             total = area1 + area2
             safe_total = np.where(np.abs(total) < 1e-30, 1.0, total)
             weighted = (
@@ -319,7 +308,7 @@ class UnstructuredSubMesh(SubMesh):
             self.face_centroids[nonzero] = weighted[nonzero]
         else:
             # Face = triangle: 3 vertices
-            v0, v1, v2 = face_verts[:, 0], face_verts[:, 1], face_verts[:, 2]
+            v0, v1, v2 = face_verts
             cross = np.cross(v1 - v0, v2 - v0)
             self.face_areas = 0.5 * np.linalg.norm(cross, axis=1)
             normals = cross
@@ -551,6 +540,47 @@ class UnstructuredSubMesh(SubMesh):
                 if mirror.get("other_mesh") is self:
                     mirror["right_cells"] = permuted
 
+    def contains_points(self, query_pts):
+        """Boolean mask of ``query_pts`` lying inside the domain.
+
+        In 2D the boundary loops are cached on the mesh and containment uses
+        the even-odd rule, so holes are excluded, disconnected components
+        kept, and on-boundary points count as inside.  In 3D this is
+        :meth:`contains_points_3d`.  Returns ``None`` for a 2D mesh without
+        boundary edges.
+        """
+        query_pts = np.ascontiguousarray(query_pts, dtype=np.float64)
+        # plotting asks about the same display grid every frame: remember the mask
+        cache = self.__dict__.setdefault("_contains_points_cache", {})
+        cache_key = (
+            query_pts.shape,
+            hashlib.sha1(query_pts.tobytes(), usedforsecurity=False).digest(),
+        )
+        if cache_key in cache:
+            return cache[cache_key].copy()
+
+        if self.dimension == 3:
+            inside = self.contains_points_3d(query_pts)
+        else:
+            if not hasattr(self, "_cached_boundary_loops"):
+                self._cached_boundary_loops = self.boundary_loops()
+            loops = self._cached_boundary_loops
+            if loops is None or len(loops) == 0:
+                return None
+            radius = 1e-9 * max(
+                np.ptp(self.vertices, axis=0).max(), np.finfo(float).tiny
+            )
+            containment_count = sum(
+                path.contains_points(query_pts[:, :2], radius=radius).astype(int)
+                for path in loops
+            )
+            inside = (containment_count % 2) == 1
+
+        if len(cache) >= _CONTAINS_POINTS_CACHE_SIZE:
+            del cache[next(iter(cache))]
+        cache[cache_key] = inside.copy()
+        return inside
+
     def boundary_loops(self):
         """Return boundary loops as a list of ``matplotlib.path.Path`` (2D only).
 
@@ -622,8 +652,10 @@ class UnstructuredSubMesh(SubMesh):
 
         Uses the generalized winding number (Van Oosterom--Strackee signed
         solid angle sum over all boundary triangles).  Points inside the
-        domain return ``True``; points outside or inside internal cavities
-        return ``False``.
+        domain or on its surface return ``True``; points outside or inside
+        internal cavities return ``False``.  The boundary is inflated by
+        ``1e-9`` of the mesh span, so points that close outside it also count
+        as inside.
         """
         query_pts = np.asarray(query_pts, dtype=np.float64)
         bnd_start = self._boundary_face_start
@@ -644,43 +676,57 @@ class UnstructuredSubMesh(SubMesh):
                 f"contains_points_3d: unsupported face with {n_vpf} vertices"
             )
 
-        v0 = self.vertices[tri_idx[:, 0]]
-        v1 = self.vertices[tri_idx[:, 1]]
-        v2 = self.vertices[tri_idx[:, 2]]
-
+        vertices = self.vertices
         # Ensure consistent CCW orientation from outside (matching outward normals)
-        cross = np.cross(v1 - v0, v2 - v0)
+        cross = np.cross(
+            vertices[tri_idx[:, 1]] - vertices[tri_idx[:, 0]],
+            vertices[tri_idx[:, 2]] - vertices[tri_idx[:, 0]],
+        )
         flip = np.sum(cross * tri_normals, axis=1) < 0
-        v1_fixed = v1.copy()
-        v2_fixed = v2.copy()
-        v1_fixed[flip] = v2[flip]
-        v2_fixed[flip] = v1[flip]
+        tri_idx = tri_idx.copy()
+        tri_idx[flip, 1], tri_idx[flip, 2] = tri_idx[flip, 2], tri_idx[flip, 1]
+
+        # move each boundary vertex outward along its mean face normal; the
+        # surface stays closed, so the winding number stays exactly 0 or 4*pi
+        unit_normals = tri_normals / np.linalg.norm(tri_normals, axis=1)[:, None]
+        vertex_normals = np.zeros_like(vertices)
+        np.add.at(vertex_normals, tri_idx.ravel(), np.repeat(unit_normals, 3, axis=0))
+        lengths = np.linalg.norm(vertex_normals, axis=1)
+        vertex_normals[lengths > 0] /= lengths[lengths > 0, None]
+        span = np.ptp(vertices, axis=0).max()
+        vertices = vertices + _CONTAINS_POINTS_INFLATION * span * vertex_normals
+
+        v0 = vertices[tri_idx[:, 0]]
+        v1_fixed = vertices[tri_idx[:, 1]]
+        v2_fixed = vertices[tri_idx[:, 2]]
 
         n_query = len(query_pts)
         winding = np.zeros(n_query)
 
-        # Loop over query points (usually few), vectorised over the many
-        # boundary triangles — the reverse nesting costs O(n_triangles)
-        # per point regardless of how few points are asked about.
-        for i in range(n_query):
-            a = v0 - query_pts[i]
-            b = v1_fixed - query_pts[i]
-            c = v2_fixed - query_pts[i]
+        # vectorise over (points x triangles) in chunks so the temporaries stay
+        # bounded however many points are asked about
+        chunk = max(1, _CONTAINS_POINTS_CHUNK_PAIRS // max(len(v0), 1))
+        for start in range(0, n_query, chunk):
+            q = query_pts[start : start + chunk, np.newaxis, :]
+            a = v0[np.newaxis] - q
+            b = v1_fixed[np.newaxis] - q
+            c = v2_fixed[np.newaxis] - q
 
-            an = np.linalg.norm(a, axis=1)
-            bn = np.linalg.norm(b, axis=1)
-            cn = np.linalg.norm(c, axis=1)
+            an = np.linalg.norm(a, axis=2)
+            bn = np.linalg.norm(b, axis=2)
+            cn = np.linalg.norm(c, axis=2)
 
-            num = np.einsum("ij,ij->i", a, np.cross(b, c))
+            num = np.einsum("ijk,ijk->ij", a, np.cross(b, c))
             den = (
                 an * bn * cn
-                + np.einsum("ij,ij->i", a, b) * cn
-                + np.einsum("ij,ij->i", a, c) * bn
-                + np.einsum("ij,ij->i", b, c) * an
+                + np.einsum("ijk,ijk->ij", a, b) * cn
+                + np.einsum("ijk,ijk->ij", a, c) * bn
+                + np.einsum("ijk,ijk->ij", b, c) * an
             )
 
-            winding[i] = 2.0 * np.arctan2(num, den).sum()
+            winding[start : start + chunk] = 2.0 * np.arctan2(num, den).sum(axis=1)
 
+        # exterior points sum to 0 and interior ones (surface included) to 4*pi
         return winding > 2.0 * np.pi
 
 
@@ -1159,8 +1205,8 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
     Returns
     -------
     dict
-        Keys: ``"left_cells"``, ``"right_cells"``, ``"face_areas"``,
-        ``"cell_distances"``.
+        Keys: ``"left_cells"``, ``"right_cells"``, ``"left_faces"``,
+        ``"right_faces"``, ``"face_areas"``, ``"cell_distances"``.
     """
     left_bnd = left_mesh.boundary_faces.get("right", np.array([], dtype=int))
     right_bnd = right_mesh.boundary_faces.get("left", np.array([], dtype=int))
@@ -1211,9 +1257,12 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
     right_cell_centroids = right_mesh.cell_centroids[right_cells]
     cell_distances = np.linalg.norm(right_cell_centroids - left_cell_centroids, axis=1)
 
+    right_faces = right_bnd[right_indices]
     result = {
         "left_cells": left_cells,
         "right_cells": right_cells,
+        "left_faces": left_bnd,
+        "right_faces": right_faces,
         "face_areas": face_areas,
         "cell_distances": cell_distances,
         "other_mesh": right_mesh,
@@ -1225,6 +1274,8 @@ def compute_interface_data(left_mesh, right_mesh, left_name=None, right_name=Non
         right_mesh.interface_data[left_name] = {
             "left_cells": right_cells,
             "right_cells": left_cells,
+            "left_faces": right_faces,
+            "right_faces": left_bnd,
             "face_areas": face_areas,
             "cell_distances": cell_distances,
             "other_mesh": left_mesh,
@@ -1459,3 +1510,39 @@ def _hex_to_tet(x_edges, y_edges, z_edges):
     elements = hex_verts[:, kuhn_tets].reshape(-1, 4)
 
     return nodes, elements
+
+
+def _cross(a, b):
+    """Row-wise cross product of two ``(n, 3)`` arrays, faster than ``np.cross``."""
+    a0, a1, a2 = a[:, 0], a[:, 1], a[:, 2]
+    b0, b1, b2 = b[:, 0], b[:, 1], b[:, 2]
+    return np.column_stack([a1 * b2 - a2 * b1, a2 * b0 - a0 * b2, a0 * b1 - a1 * b0])
+
+
+def _dot(a, b):
+    """Row-wise dot product of two ``(n, d)`` arrays."""
+    return np.einsum("ij,ij->i", a, b)
+
+
+def _group_rows(rows):
+    """
+    Stably sort the rows of a 2D array so equal rows are adjacent, and count them.
+
+    Parameters
+    ----------
+    rows : numpy.ndarray
+        2D array whose rows are compared.
+
+    Returns
+    -------
+    order : numpy.ndarray
+        Row indices in lexicographic order, ties kept in input order.
+    counts : numpy.ndarray
+        Multiplicity of the row at each position of ``order``.
+    """
+    order = np.lexsort(rows.T[::-1])
+    sorted_rows = rows[order]
+    starts_group = np.ones(len(rows), dtype=bool)
+    starts_group[1:] = (sorted_rows[1:] != sorted_rows[:-1]).any(axis=1)
+    group = np.cumsum(starts_group) - 1
+    return order, np.bincount(group)[group]

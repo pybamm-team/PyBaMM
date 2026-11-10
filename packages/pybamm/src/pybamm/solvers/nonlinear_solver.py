@@ -1,3 +1,4 @@
+import logging
 import warnings
 
 import casadi
@@ -6,9 +7,15 @@ from pybammsolvers import idaklu
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import flatten_inputs
+from pybamm.solvers.idaklu_solver import (
+    _check_klu_pivot_tolerance,
+    casadi_to_idaklu_function,
+)
 
 _DEFAULT_OPTIONS = {
     "compile": False,
+    "klu_pivot_tolerance": 0.1,
 }
 
 
@@ -61,9 +68,13 @@ class NonlinearSolver(pybamm.BaseSolver):
     on_failure : str, optional
         Behaviour on convergence failure (default "error").
     options : dict, optional
-        Solver options. Currently supports ``compile`` (bool, default False)
-        for ahead-of-time compilation of CasADi residual/Jacobian.
+        Solver options. Supports ``compile`` (bool, default False) for
+        ahead-of-time compilation of CasADi residual/Jacobian, and
+        ``klu_pivot_tolerance`` (float in (0, 1], default 0.1), the KLU threshold
+        partial pivoting tolerance.
     """
+
+    uses_rhs_jacobian = False
 
     def __init__(
         self,
@@ -89,7 +100,10 @@ class NonlinearSolver(pybamm.BaseSolver):
         self.on_failure = on_failure or "error"
         self._algebraic_solver = True
         self._user_options = options or {}
-        self._options = _DEFAULT_OPTIONS | self._user_options
+        self._options = self._overlay_options(
+            _DEFAULT_OPTIONS, self._user_options, solver_name="Nonlinear"
+        )
+        _check_klu_pivot_tolerance(self._options["klu_pivot_tolerance"])
 
     @staticmethod
     def _check_tolerance(value):
@@ -177,8 +191,8 @@ class NonlinearSolver(pybamm.BaseSolver):
 
     def _build_newton_solver(self, res_fn, jac_fn, len_alg):
         _setup = idaklu.StandaloneNewtonSolver(
-            residual=idaklu.generate_function(res_fn.serialize()),
-            jacobian=idaklu.generate_function(jac_fn.serialize()),
+            residual=casadi_to_idaklu_function(res_fn),
+            jacobian=casadi_to_idaklu_function(jac_fn),
             atol=np.full(len_alg, float(self.atol)).tolist(),
             rtol=float(self.rtol),
             step_tol=float(self.step_tol),
@@ -186,6 +200,7 @@ class NonlinearSolver(pybamm.BaseSolver):
             max_backtracks=int(self.max_backtracks),
             eps_newt=float(self.eps_newt),
             use_sparse=bool(self.use_sparse),
+            klu_pivot_tolerance=float(self._options["klu_pivot_tolerance"]),
         )
         return _NonlinearSolverSetup(_setup)
 
@@ -195,11 +210,7 @@ class NonlinearSolver(pybamm.BaseSolver):
         root_solver = self.get_root_solver(model, inputs_dict, t_eval)
         len_rhs = model.len_rhs
 
-        inputs_flat = (
-            np.concatenate([np.atleast_1d(v).ravel() for v in inputs_dict.values()])
-            if inputs_dict
-            else np.empty(0)
-        )
+        inputs_flat = flatten_inputs(inputs_dict)
 
         y0_np = np.asarray(y0).ravel()
         y0_diff = y0_np[:len_rhs]
@@ -209,8 +220,14 @@ class NonlinearSolver(pybamm.BaseSolver):
         )
         t_eval_np = np.ascontiguousarray(t_eval, dtype=np.float64)
 
+        logger = (
+            pybamm.logger.debug if pybamm.logger.isEnabledFor(logging.DEBUG) else None
+        )
+
         timer = pybamm.Timer()
-        success, y_alg_mat = root_solver.solve_batch(t_eval_np, y0_alg, p_vec)
+        success, y_alg_mat = root_solver.solve_batch(
+            t_eval_np, y0_alg, p_vec, logger=logger
+        )
         integration_time = timer.time()
 
         self._check_success(success, y_alg_mat)

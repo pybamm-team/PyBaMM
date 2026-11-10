@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numbers
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 import numpy as np
 
@@ -11,7 +11,7 @@ import pybamm
 from .step_termination import _read_termination
 
 
-class ControlKind(str, Enum):
+class ControlKind(StrEnum):
     """The control-law shape of a step (the quantity its residual fixes)."""
 
     CURRENT = "current"
@@ -684,13 +684,19 @@ def _convert_time_to_seconds(time_and_units):
             "time units must be 'seconds', 'minutes' or 'hours'. "
             f"For example: {_examples}"
         )
+    # Strings like "-5 minutes" must fail like the number -300 does
+    if time_in_seconds <= 0:
+        raise ValueError("time must be positive")
     return time_in_seconds
 
 
 def _convert_temperature_to_kelvin(temperature_and_units):
     """Convert a temperature in Celsius or Kelvin to a temperature in Kelvin"""
     # If the temperature is a number, assume it is in Kelvin
-    if isinstance(temperature_and_units, int | float) or temperature_and_units is None:
+    if (
+        isinstance(temperature_and_units, numbers.Number)
+        or temperature_and_units is None
+    ):
         return temperature_and_units
 
     # Split number and units

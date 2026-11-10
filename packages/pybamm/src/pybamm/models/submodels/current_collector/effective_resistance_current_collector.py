@@ -230,13 +230,14 @@ class EffectiveResistance(BaseEffectiveResistance):
         # Process resistances
         R_cn = solution["Negative current collector resistance [Ohm]"]
         R_cp = solution["Positive current collector resistance [Ohm]"]
-        R_cc = solution["Effective current collector resistance [Ohm]"]
+        # R_cc is time-independent and only solved at a single time
+        R_cc = solution["Effective current collector resistance [Ohm]"](solution.t[0])
 
         # Create callable combination of ProcessedVariable objects for potentials
         # and voltage
         def V(t):
             "Account for effective current collector resistance"
-            return V_av(t) - I_av(t) * R_cc(t)
+            return V_av(t) - I_av(t) * R_cc
 
         def phi_s_cn(t, z, y=None):
             return R_cn(y=y, z=z) * I_av(t=t)
@@ -354,12 +355,12 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         f_p = solution["Unit solution in positive current collector"]
 
         # Get effective resistance
-        R_cc = solution["Effective current collector resistance [Ohm]"]
+        R_cc = solution["Effective current collector resistance [Ohm]"](solution.t[0])
 
         # Create callable combination of ProcessedVariable objects for potentials
         def V(t):
             "Account for effective current collector resistance"
-            return V_av(t) - I_av(t) * R_cc(t)
+            return V_av(t) - I_av(t) * R_cc
 
         def phi_s_cn(t, y, z):
             return -(I_av(t=t) / L_cn / sigma_cn) * f_n(y=y, z=z)

@@ -14,8 +14,21 @@ SetupOptions::SetupOptions(py::dict &py_opts)
       num_threads(py_opts["num_threads"].cast<int>()),
       num_solvers(py_opts["num_solvers"].cast<int>()),
       linear_solver(py_opts["linear_solver"].cast<std::string>()),
-      linsol_max_iterations(py_opts["linsol_max_iterations"].cast<int>())
+      linsol_max_iterations(py_opts["linsol_max_iterations"].cast<int>()),
+      // Optional so an older PyBaMM, which does not pass it, keeps working
+      klu_pivot_tolerance(
+          py_opts.contains("klu_pivot_tolerance")
+              ? py_opts["klu_pivot_tolerance"].cast<double>()
+              : 0.1)
 {
+    if (!(klu_pivot_tolerance > 0.0 && klu_pivot_tolerance <= 1.0))
+    {
+        throw std::domain_error(
+            "klu_pivot_tolerance must be in (0, 1], got " +
+            std::to_string(klu_pivot_tolerance)
+        );
+    }
+
     if (num_solvers > num_threads)
     {
         throw std::domain_error(
@@ -34,10 +47,7 @@ SetupOptions::SetupOptions(py::dict &py_opts)
 
     using_sparse_matrix = true;
     using_banded_matrix = false;
-    if (jacobian == "sparse")
-    {
-    }
-    else if (jacobian == "banded") {
+    if (jacobian == "banded") {
         using_banded_matrix = true;
         using_sparse_matrix = false;
     }
@@ -45,10 +55,7 @@ SetupOptions::SetupOptions(py::dict &py_opts)
     {
         using_sparse_matrix = false;
     }
-    else if (jacobian == "matrix-free")
-    {
-    }
-    else
+    else if (jacobian != "sparse" && jacobian != "matrix-free")
     {
         throw std::domain_error(
             "Unknown jacobian type \""s + jacobian +
@@ -56,18 +63,14 @@ SetupOptions::SetupOptions(py::dict &py_opts)
         );
     }
 
-    using_iterative_solver = false;
-    if (linear_solver == "SUNLinSol_Dense" && (jacobian == "dense" || jacobian == "none"))
+    const bool direct_solver_fits_jacobian =
+        (linear_solver == "SUNLinSol_Dense" && (jacobian == "dense" || jacobian == "none")) ||
+        ((linear_solver == "SUNLinSol_KLU" ||
+          linear_solver == "SUNLinSol_cuSolverSp_batchQR") && jacobian == "sparse") ||
+        (linear_solver == "SUNLinSol_Band" && jacobian == "banded");
+    if (direct_solver_fits_jacobian)
     {
-    }
-    else if (linear_solver == "SUNLinSol_KLU" && jacobian == "sparse")
-    {
-    }
-    else if (linear_solver == "SUNLinSol_cuSolverSp_batchQR" && jacobian == "sparse")
-    {
-    }
-    else if (linear_solver == "SUNLinSol_Band" && jacobian == "banded")
-    {
+        using_iterative_solver = false;
     }
     else if (jacobian == "banded") {
         throw std::domain_error(

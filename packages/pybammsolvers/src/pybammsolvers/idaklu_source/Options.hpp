@@ -19,6 +19,7 @@ struct SetupOptions {
   // IDALS linear solver interface
   std::string linear_solver; // klu, lapack, spbcg
   int linsol_max_iterations;
+  double klu_pivot_tolerance;
   explicit SetupOptions(py::dict &py_opts);
 };
 

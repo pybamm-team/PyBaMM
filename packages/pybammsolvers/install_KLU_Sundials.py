@@ -64,7 +64,7 @@ def build_solvers():
                 " -DSUITESPARSE_DEMOS=OFF -DSUITESPARSE_USE_FORTRAN=OFF"
             )
 
-            subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
+            subprocess.run(make_cmd, cwd=build_dir, env=env, check=True)
             subprocess.run(install_cmd, cwd=build_dir, check=True)
 
     def install_sundials():

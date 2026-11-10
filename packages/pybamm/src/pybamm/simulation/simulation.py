@@ -607,6 +607,51 @@ class Simulation(BaseSimulation):
             )
             self.experiment_unique_steps_to_model[self._PADDING_REST_KEY] = new_model
 
+    def _shared_sensitivity_inputs(
+        self, names: list[str], skip_missing: bool
+    ) -> list[str]:
+        """
+        Return the names that are input parameters of every built experiment model.
+
+        Parameters
+        ----------
+        names : list of str
+            The input names to calculate sensitivities with respect to.
+        skip_missing : bool
+            Whether to log and drop the names that some model lacks, rather than
+            raise.
+
+        Returns
+        -------
+        list of str
+            The names, in the given order, that every model has.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If ``skip_missing`` is False and a model lacks one of the names.
+        """
+        shared_inputs = set.intersection(
+            *(
+                {ip.name for ip in model.input_parameters}
+                for model in self.steps_to_built_models.values()
+            )
+        )
+        missing = [name for name in names if name not in shared_inputs]
+        if not missing:
+            return names
+        if not skip_missing:
+            raise pybamm.SolverError(
+                f"calculate_sensitivities names {missing} are not input parameters "
+                "of every experiment step model. Pass calculate_sensitivities=True "
+                "to calculate sensitivities for only the inputs they all have."
+            )
+        pybamm.logger.warning(
+            f"Inputs {missing} are not input parameters of every experiment "
+            "step model, so no sensitivities are calculated for them."
+        )
+        return [name for name in names if name in shared_inputs]
+
     def _get_built_models(self):
         """Return list of built models that need IC recomputation."""
         models = super()._get_built_models()
@@ -666,7 +711,10 @@ class Simulation(BaseSimulation):
             )
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
-            f, jac, jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
+            # step() maps sensitivities by forward-mode AD of f, not with jacobians
+            f, jac, jacp, _jac_action = process(
+                mapper, "mapper", vars_for_processing, use_jacobian=False
+            )
             self._compiled_model_state_mappers[(previous_model, next_model)] = (
                 f,
                 jac,
@@ -742,7 +790,14 @@ class Simulation(BaseSimulation):
         experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
-            self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
+            self.set_initial_state(
+                initial_soc,
+                direction=direction,
+                inputs=inputs,
+                calculate_sensitivities=(solve_kwargs or {}).get(
+                    "calculate_sensitivities", False
+                ),
+            )
 
         if self._built_experiment_model is not None or self.steps_to_built_models:
             if self._needs_ic_rebuild:
@@ -766,6 +821,8 @@ class Simulation(BaseSimulation):
         )
         self._needs_ic_rebuild = False
 
+    # Experiment arguments stay between the base ones for positional callers
+    # pyrefly: ignore[bad-override]
     def solve(
         self,
         t_eval=None,
@@ -793,7 +850,8 @@ class Simulation(BaseSimulation):
             cycle in the list is saved. The first cycle (cycle 1) is always saved.
         starting_solution : :class:`pybamm.Solution`
             The solution to start stepping from. If None (default), then self._solution
-            is used. Must be None if not using an experiment.
+            is used. Must be None if not using an experiment, and otherwise have
+            sensitivities for the inputs in `calculate_sensitivities` only.
         showprogress : bool, optional
             Whether to show a progress bar for cycling. If true, shows a progress bar
             for cycles. Has no effect when not used with an experiment.
@@ -836,16 +894,16 @@ class Simulation(BaseSimulation):
 
         # Take sensitivities only w.r.t. user inputs, not the control inputs the
         # experiment injects per step.
-        if "calculate_sensitivities" in kwargs:
-            requested = kwargs["calculate_sensitivities"]
-            if requested is True:
-                kwargs["calculate_sensitivities"] = list((inputs or {}).keys())
-            elif isinstance(requested, list):
-                kwargs["calculate_sensitivities"] = [
-                    name
-                    for name in requested
-                    if name not in self._INTERNAL_EXPERIMENT_INPUTS
-                ]
+        requested = kwargs.get("calculate_sensitivities")
+        all_input_sensitivities = requested is True
+        if all_input_sensitivities:
+            requested = list(inputs)
+        if isinstance(requested, list):
+            kwargs["calculate_sensitivities"] = [
+                name
+                for name in requested
+                if name not in self._INTERNAL_EXPERIMENT_INPUTS
+            ]
 
         # Drop the prior solution before build/integration.
         self._solution = starting_solution
@@ -856,6 +914,22 @@ class Simulation(BaseSimulation):
             inputs=inputs,
             solve_kwargs=kwargs,
         )
+        if kwargs.get("calculate_sensitivities"):
+            # A step failing on a missing input would end the experiment early
+            kwargs["calculate_sensitivities"] = self._shared_sensitivity_inputs(
+                kwargs["calculate_sensitivities"], skip_missing=all_input_sensitivities
+            )
+
+        # The result joins the starting solution's sensitivities to the steps'
+        if isinstance(starting_solution, pybamm.Solution):
+            starting_names = sorted(starting_solution.sensitivity_names)
+            requested_names = sorted(kwargs.get("calculate_sensitivities") or [])
+            if starting_names != requested_names:
+                raise pybamm.SolverError(
+                    f"Cannot continue a starting_solution with sensitivities for "
+                    f"{starting_names} with sensitivities for {requested_names}. "
+                    "Solve with the same 'calculate_sensitivities' as it."
+                )
         if t_eval is not None:
             pybamm.logger.warning(
                 "Ignoring t_eval as solution times are specified by the experiment"
@@ -987,6 +1061,9 @@ class Simulation(BaseSimulation):
         # Track running termination (real cycles + skipped steps), applied to the
         # folded solution below to match the old left-fold's final termination.
         last_termination = None
+        # Solver work of the cycles left out of the fold, totalled so their
+        # solutions can be freed; None once one of them has no statistics
+        discarded_cycle_statistics = pybamm.SolverStatistics()
 
         for cycle_num, cycle_length in enumerate(
             cycle_lengths,
@@ -1172,6 +1249,16 @@ class Simulation(BaseSimulation):
                 cross_cycle_segments.append(cycle_solution)
                 if not isinstance(cycle_solution, pybamm.EmptySolution):
                     last_termination = cycle_solution.termination
+            elif (
+                isinstance(cycle_solution, pybamm.Solution)
+                and discarded_cycle_statistics is not None
+            ):
+                statistics = cycle_solution.solver_statistics
+                discarded_cycle_statistics = (
+                    None
+                    if statistics is None
+                    else discarded_cycle_statistics + statistics
+                )
 
             if steps:
                 if all(
@@ -1242,6 +1329,13 @@ class Simulation(BaseSimulation):
             self._solution = pybamm.Solution.from_sub_solutions(cross_cycle_segments)
             if last_termination is not None:
                 self._solution.termination = last_termination
+            if isinstance(self._solution, pybamm.Solution):
+                statistics = self._solution.solver_statistics
+                self._solution.solver_statistics = (
+                    None
+                    if statistics is None or discarded_cycle_statistics is None
+                    else statistics + discarded_cycle_statistics
+                )
 
         if self._solution is not None and len(all_cycle_solutions) > 0:
             self._solution.cycles = all_cycle_solutions

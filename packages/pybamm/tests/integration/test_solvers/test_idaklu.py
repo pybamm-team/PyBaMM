@@ -223,7 +223,7 @@ class TestIDAKLUSolver:
             sols.append(sol)
             summary_vars.append(sol.summary_variables)
 
-        # check computed variables are propegated sucessfully
+        # check computed variables are propagated successfully
         np.testing.assert_array_equal(
             sols[0]["Pressure [Pa]"].data, sols[1]["Pressure [Pa]"].data
         )

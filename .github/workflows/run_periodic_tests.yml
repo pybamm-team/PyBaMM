@@ -25,11 +25,12 @@ jobs:
   # Build the solver wheels once (like test_on_push.yml) and download them per
   # job; otherwise every nox/uv sync would compile the solver from source and fail.
   build_solver:
+    name: Solver wheels
     # Pass contents:read to the reusable workflow (top-level permissions are {},
     # so its checkout would otherwise get no token scope).
     permissions:
       contents: read
-    uses: ./.github/workflows/_build_solver_wheels.yml
+    uses: $/.github/workflows/_build_solver_wheels.yml
     with:
       cache_wheels: true
       build_sdist: false
@@ -42,11 +43,15 @@ jobs:
 
     strategy:
       fail-fast: false
-      # Full sweep: every OS x Python. Complements test_on_push.yml's sparse PR matrix;
-      # keep the Python list in sync with it.
+      # Full desktop sweep plus unit-test/cache coverage for the ARM endpoints.
       matrix:
         os: [ ubuntu-latest, macos-15-intel, macos-latest, windows-latest ]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+        include:
+          - os: ubuntu-24.04-arm
+            python-version: "3.11"
+          - os: ubuntu-24.04-arm
+            python-version: "3.15"
     name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     env:
@@ -61,11 +66,15 @@ jobs:
           persist-credentials: false
 
       - name: Install Linux system dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install gfortran gcc graphviz pandoc
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install graphviz pandoc libosmesa6 libegl1
+
+      # One leg is enough to run the latexify test that renders through real LaTeX.
+      - name: Install TeXLive for Linux
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        run: sudo apt-get install --no-install-recommends texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-15-intel' || matrix.os == 'macos-latest'
@@ -75,33 +84,41 @@ jobs:
           HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
-        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz libomp
-          brew reinstall gcc
+          brew install graphviz
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
         run: winget install --id Graphviz.Graphviz --exact --accept-source-agreements --accept-package-agreements
 
+      # VTK save_gif needs OSMesa on headless Windows runners (osmesa.dll on PATH).
+      - name: Setup headless OpenGL on Windows
+        if: matrix.os == 'windows-latest'
+        uses: pyvista/setup-headless-display-action@10e6efb97af3cd1523828f0e22c39f0e4567f3e4 # v5.2.0
+        with:
+          pyvista: "false"
+          mesa3d-release: "24.3.0"
+          install-mesa3d-offscreen: "true"
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
 
       - name: Install nox
         run: uv tool install nox
 
       - name: Download in-repo solver wheels
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ matrix.os == 'ubuntu-latest' && 'wheels_manylinux' || matrix.os == 'windows-latest' && 'wheels_windows' || format('wheels_{0}', matrix.os) }}
+          name: ${{ matrix.os == 'ubuntu-latest' && 'wheels_manylinux' || matrix.os == 'ubuntu-24.04-arm' && 'wheels_manylinux_aarch64' || matrix.os == 'windows-latest' && 'wheels_windows' || format('wheels_{0}', matrix.os) }}
           path: solver-wheels
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
@@ -114,20 +131,21 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+        if: matrix.os != 'ubuntu-24.04-arm'
         run: nox -s integration
 
   run_doctests:
     needs: build_solver
+    name: Doctests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Doctests
       sessions: "doctests docs"
       # Full clone: the docs build's sphinx_last_updated_by_git needs the history.
       fetch_depth: 0
@@ -135,20 +153,20 @@ jobs:
 
   run_example_tests:
     needs: build_solver
+    name: Example notebooks
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Example notebooks
       sessions: examples
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
     needs: build_solver
+    name: Example scripts
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Example scripts
       sessions: scripts
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'

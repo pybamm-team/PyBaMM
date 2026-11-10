@@ -163,7 +163,9 @@ class TestTensorField:
         a, b, c, d = [pybamm.Scalar(i) for i in range(4)]
         t = TensorField([[a, b], [c, d]])
         for child in t.children:
-            child._evaluates_on_edges = lambda _: True
+            child._saved_evaluates_on_edges = dict.fromkeys(
+                pybamm.expression_tree.symbol.DOMAIN_LEVELS, True
+            )
         assert t.evaluates_on_edges("primary") is True
 
 
@@ -211,8 +213,12 @@ class TestVectorFieldInheritance:
     def test_vectorfield_evaluates_on_edges_all_true(self):
         """VectorField evaluates_on_edges returns True when all on edges."""
         vf = pybamm.VectorField(pybamm.Scalar(1), pybamm.Scalar(2))
-        vf.lr_field._evaluates_on_edges = lambda _: True
-        vf.tb_field._evaluates_on_edges = lambda _: True
+        vf.lr_field._saved_evaluates_on_edges = dict.fromkeys(
+            pybamm.expression_tree.symbol.DOMAIN_LEVELS, True
+        )
+        vf.tb_field._saved_evaluates_on_edges = dict.fromkeys(
+            pybamm.expression_tree.symbol.DOMAIN_LEVELS, True
+        )
         assert vf.evaluates_on_edges("primary") is True
 
     def test_vectorfield_to_casadi(self):

@@ -205,6 +205,11 @@ if (${USE_PYTHON_CASADI})
                 "${SuiteSparse_ROOT}/lib64"
             )
         endif()
+        # An editable install loads idaklu from the build tree, which has no
+        # ../casadi, so it also searches the environment's CasADi directory
+        if (SKBUILD_STATE STREQUAL "editable")
+            list(APPEND IDAKLU_INSTALL_RPATH "${CASADI_LIB_DIR}")
+        endif()
         set_target_properties(idaklu PROPERTIES
             INSTALL_RPATH "${IDAKLU_INSTALL_RPATH}"
             BUILD_WITH_INSTALL_RPATH TRUE
@@ -229,6 +234,12 @@ else ()
         target_link_libraries(idaklu PRIVATE casadi)
     endif()
 endif ()
+
+if (USE_PYTHON_CASADI)
+    # The extension links the Python casadi package's library, so it can share
+    # casadi::Function objects with Python instead of serialising them
+    target_compile_definitions(idaklu PRIVATE PYBAMM_SHARED_CASADI=1)
+endif()
 
 # Match idaklu's libstdc++ std::string ABI to the linked libcasadi (GNU only;
 # no-op for MSVC and macOS/libc++). CasADi's PyPI casadi-config.cmake forces

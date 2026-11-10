@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import pytest
 
@@ -168,6 +170,32 @@ class TestBaseSimulationPickle:
         # Experiment defaults should be restored
         assert loaded.model_state_mappers == {}
         assert loaded._compiled_model_state_mappers == {}
+
+    def test_simulation_pickled_with_public_convert_to_format(self, monkeypatch):
+        # Pickles written before convert_to_format became a property store it
+        # in each model's instance dict under the public name.
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        sim.build()
+
+        def public_name_state(self):
+            state = self.__dict__.copy()
+            state["convert_to_format"] = state.pop("_convert_to_format")
+            return state
+
+        monkeypatch.setattr(
+            pybamm.BaseModel, "__getstate__", public_name_state, raising=False
+        )
+        data = pickle.dumps(sim)
+        monkeypatch.undo()
+
+        loaded = pickle.loads(data)
+        assert loaded.built_model.convert_to_format == "casadi"
+        solution = loaded.solve([0, 100])
+        np.testing.assert_allclose(
+            solution["Voltage [V]"](100.0),
+            sim.solve([0, 100])["Voltage [V]"](100.0),
+            rtol=1e-6,
+        )
 
 
 class TestBaseSimulationProperties:
