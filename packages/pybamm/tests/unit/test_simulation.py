@@ -1211,8 +1211,8 @@ class TestSimulation:
         sol = sim.solve([0, 3600], initial_soc=0.5)
 
         # The phases start in equilibrium, so no current flows between them at rest
-        V = sol["Voltage [V]"].entries
-        assert V[-1] == pytest.approx(V[0], abs=1e-5)
+        V = sol["Voltage [V]"]
+        assert V(3600) == pytest.approx(V(0), abs=1e-5)
 
     @pytest.mark.parametrize("cache_esoh", [True, False])
     def test_initial_soc_composite_hysteresis_state_unset(self, cache_esoh):
@@ -1260,8 +1260,23 @@ class TestSimulation:
         sol = sim.solve([0, 3600], initial_soc=0.5)
 
         # The split is solved again on the new initial hysteresis state
-        V = sol["Voltage [V]"].entries
-        assert V[-1] == pytest.approx(V[0], abs=1e-5)
+        V = sol["Voltage [V]"]
+        assert V(3600) == pytest.approx(V(0), abs=1e-5)
+
+    def test_cache_esoh_parameter_change_in_place(self):
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve([0, 1], initial_soc=0.5)
+
+        name = "Initial concentration in positive electrode [mol.m-3]"
+        param.update({name: 0.9 * param[name]})
+        sol = sim.solve([0, 1], initial_soc=0.5)
+
+        fresh = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), parameter_values=param.copy()
+        ).solve([0, 1], initial_soc=0.5)
+        assert sol["Voltage [V]"](0) == pytest.approx(fresh["Voltage [V]"](0))
 
     @pytest.mark.parametrize("cache_esoh", [True, False])
     @pytest.mark.parametrize("h0", [-1, 0.5])

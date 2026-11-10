@@ -425,8 +425,8 @@ class BaseSimulation:
         options = self._model.options
 
         if self._cache_esoh:
-            # The solver is processed with the initial hysteresis states that
-            # `set_initial_state` starts from, so it is rebuilt when they change
+            # The solver holds a copy of the parameter values, so rebuild it when
+            # they or the initial hysteresis states change
             from pybamm.models.full_battery_models.lithium_ion.initial_state import (
                 _set_hysteresis_branches,
             )
@@ -434,6 +434,7 @@ class BaseSimulation:
             esoh_pv = self._unprocessed_parameter_values.copy()
             _set_hysteresis_branches(esoh_pv, direction, options)
             key = (
+                pv_fp,
                 direction,
                 isinstance(initial_soc, str) and initial_soc.strip().endswith("V"),
                 tuple(
