@@ -643,6 +643,17 @@ class TestQuickPlot:
         quick_plot.slider_update(1)
         pybamm.close_plots()
 
+    def test_t_additive_time_points(self):
+        solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-4})
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), solver=solver)
+        solution = sim.solve([0, 3600])
+        quick_plot = pybamm.QuickPlot(solution, ["Voltage [V]"])
+        np.testing.assert_allclose(
+            quick_plot.ts_seconds[0],
+            np.union1d(solution.t, solution.t_additive),
+            rtol=1e-14,
+        )
+
 
 class TestQuickPlotAxes:
     def test_quick_plot_axes(self):
