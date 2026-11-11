@@ -2,6 +2,7 @@
 
 #include "Expressions/Expressions.hpp"
 #include "sundials_functions.hpp"
+#include <algorithm>
 #include <vector>
 #include "common.hpp"
 #include "SolutionData.hpp"
@@ -9,9 +10,9 @@
 
 template <class ExprSet>
 IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
-  np_array atol_np_input,
+  const np_array &atol_np_input,
   double rel_tol,
-  np_array rhs_alg_id_input,
+  const np_array &rhs_alg_id_input,
   int number_of_parameters_input,
   int number_of_events_input,
   int jac_times_cjmass_nnz_input,
@@ -305,7 +306,8 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
       IDASensFree(ida_mem);
   }
 
-  CheckErrors(SUNLinSolFree(LS), "SUNLinSolFree");
+  // Unchecked: a destructor that throws terminates the process
+  SUNLinSolFree(LS);
 
   SUNMatDestroy(J);
   N_VDestroy(avtol);
@@ -330,14 +332,12 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   const sunrealtype *y0,
   const sunrealtype *yp0,
   const sunrealtype *inputs,
+  const sunrealtype *pbar,
   bool save_adaptive_steps,
-  bool save_interp_steps,
-  py::object logger
+  bool save_interp_steps
 )
 {
   DEBUG("IDAKLUSolver::solve");
-
-  log_ = SolverLog(std::move(logger));
 
   // Store solve parameters as member state
   save_adaptive_steps_ = save_adaptive_steps;
@@ -347,7 +347,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   // setup
   InitializeSolveStorage(number_of_evals, t_interp.size());
-  SetupInitialState(t_eval, y0, yp0, inputs);
+  SetupInitialState(t_eval, y0, yp0, inputs, pbar);
 
   sunrealtype t0 = t_eval.front();
   sunrealtype tf = t_eval.back();
@@ -420,6 +420,10 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     }
 
     if (hit_adaptive || hit_teval || hit_event || hit_final_time) {
+      // With knot reduction, upsampling waits for the final knots
+      if (use_upsampling_ && !use_knot_reduction_) {
+        UpsampleStep(t_prev, t_val);
+      }
       bool is_breakpoint = (hit_teval || hit_event) && !final_step;
       SavePoint(t_val, /*extend_arrays=*/hit_adaptive, is_breakpoint);
     }
@@ -465,6 +469,18 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
     !sensitivity
   );
 
+  use_upsampling_ = (
+    std::isfinite(solver_opts.upsampling_tolerance) &&
+    save_adaptive_steps_ &&
+    functions->upsampling_fcn != nullptr &&
+    functions->upsampling_fcn->nnz_out() > 0
+  );
+  // Sensitivities can't be interpolated at unsaved times, so they need the states
+  upsample_to_t_additive_ = use_upsampling_ && save_hermite && !sensitivity;
+  upsample_f_prev_valid_ = false;
+  t_additive_.clear();
+  upsample_knot_ = -1;
+
   length_of_return_vector = ReturnVectorLength();
   i_save_ = 0;
 
@@ -498,6 +514,9 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
     res.resize(max_res_size);
     res_dvar_dy.resize(max_res_dvar_dy);
     res_dvar_dp.resize(max_res_dvar_dp);
+    if (sensitivity) {
+      dvar_dp_dense.resize(number_of_parameters);
+    }
   }
 
   // Create knot reducer if active
@@ -515,13 +534,25 @@ void IDAKLUSolverOpenMP<ExprSet>::SetupInitialState(
   const std::vector<sunrealtype> &t_eval,
   const sunrealtype *y0,
   const sunrealtype *yp0,
-  const sunrealtype *inputs
+  const sunrealtype *inputs,
+  const sunrealtype *pbar
 ) {
   DEBUG("IDAKLUSolver::SetupInitialState");
 
   // Set inputs
   for (size_t i = 0; i < functions->inputs.size(); i++) {
     functions->inputs[i] = inputs[i];
+  }
+
+  // Sanitised once per solve, then re-applied unchanged after each reinit.
+  // IDAS rejects a zero pbar, and a zero parameter has no scale of its own.
+  sens_scales_.clear();
+  if (sensitivity && pbar != nullptr) {
+    sens_scales_.reserve(number_of_parameters);
+    for (int i = 0; i < number_of_parameters; i++) {
+      sunrealtype const scale = std::abs(pbar[i]);
+      sens_scales_.push_back((std::isfinite(scale) && scale > 0.0) ? scale : 1.0);
+    }
   }
 
   // Setup SUNDIALS vector pointers (member state)
@@ -587,11 +618,29 @@ void IDAKLUSolverOpenMP<ExprSet>::GetSolutionDerivatives(sunrealtype t) {
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::StoreInitialPoint(sunrealtype t0) {
   DEBUG("IDAKLUSolver::StoreInitialPoint");
+  if (save_outputs_only) {
+    y_init_.assign(y_val_, y_val_ + number_of_states);
+    CopyStateSensitivities(yS_init_);
+  }
   // First point: always a breakpoint (must be kept)
   if (use_knot_reduction_) {
     knot_reducer->ProcessPoint(t0, y_val_, yp_val_, /*is_breakpoint=*/true);
   } else {
     SetStep(t0);
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::CopyStateSensitivities(
+  std::vector<sunrealtype> &out
+) const {
+  out.clear();
+  if (!sensitivity) {
+    return;
+  }
+  out.reserve(size_t(number_of_parameters) * number_of_states);
+  for (int p = 0; p < number_of_parameters; ++p) {
+    out.insert(out.end(), yS_val_[p], yS_val_[p] + number_of_states);
   }
 }
 
@@ -615,6 +664,115 @@ void IDAKLUSolverOpenMP<ExprSet>::SavePoint(
 }
 
 template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::UpsampleStep(
+  sunrealtype t_a, sunrealtype t_b
+) {
+  DEBUG("IDAKLUSolver::UpsampleStep");
+  // The state at t_b is already loaded, so it is evaluated once and reused
+  sunrealtype const f_b = EvaluateUpsampleOutput(t_b, y_val_);
+  if (!upsample_f_prev_valid_) {
+    upsample_f_prev_ = EvaluateUpsampleOutputAt(t_a);
+  }
+
+  RefineUpsampleInterval(t_a, upsample_f_prev_, t_b, f_b);
+  if (upsample_to_t_additive_) {
+    t_additive_.insert(t_additive_.end(), upsample_times_.begin(), upsample_times_.end());
+  } else if (!upsample_times_.empty()) {
+    // Hermite data is stored here only with sensitivities, which need its yp
+    for (sunrealtype const t_m : upsample_times_) {
+      save_hermite ? GetSolutionFull(t_m) : GetSolutionStates(t_m);
+      SavePoint(t_m, /*extend_arrays=*/true, /*is_breakpoint=*/false);
+    }
+    // Saving a midpoint loaded its state, so reload t_b
+    save_hermite ? GetSolutionFull(t_b) : GetSolutionStates(t_b);
+  }
+  upsample_f_prev_ = f_b;
+  upsample_f_prev_valid_ = true;
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::UpsampleReducedKnots() {
+  DEBUG("IDAKLUSolver::UpsampleReducedKnots");
+  sunrealtype f_b = EvaluateUpsampleOutput(t[0], &y[0]);
+  for (int k = 0; k + 1 < number_of_timesteps; ++k) {
+    sunrealtype const f_a = f_b;
+    f_b = EvaluateUpsampleOutput(t[k + 1], &y[(k + 1) * number_of_states]);
+    upsample_knot_ = k;
+    RefineUpsampleInterval(t[k], f_a, t[k + 1], f_b);
+    t_additive_.insert(t_additive_.end(), upsample_times_.begin(), upsample_times_.end());
+  }
+  upsample_knot_ = -1;
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::RefineUpsampleInterval(
+  sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b
+) {
+  // Split the worst interval first; the cap only guards against discontinuities
+  constexpr size_t max_points_per_step = 100;
+  upsample_heap_.clear();
+  upsample_times_.clear();
+  PushUpsampleInterval(t_a, f_a, t_b, f_b);
+  while (!upsample_heap_.empty() &&
+         upsample_times_.size() < max_points_per_step) {
+    std::pop_heap(upsample_heap_.begin(), upsample_heap_.end());
+    UpsampleInterval const worst = upsample_heap_.back();
+    upsample_heap_.pop_back();
+    upsample_times_.push_back(worst.t_m);
+    PushUpsampleInterval(worst.t_a, worst.f_a, worst.t_m, worst.f_m);
+    PushUpsampleInterval(worst.t_m, worst.f_m, worst.t_b, worst.f_b);
+  }
+  std::sort(upsample_times_.begin(), upsample_times_.end());
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::PushUpsampleInterval(
+  sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b
+) {
+  sunrealtype const t_m = 0.5 * (t_a + t_b);
+  sunrealtype const f_m = EvaluateUpsampleOutputAt(t_m);
+  sunrealtype const error = std::abs(0.5 * (f_a + f_b) - f_m);
+  if (error > solver_opts.upsampling_tolerance) {
+    upsample_heap_.push_back({error, t_a, f_a, t_m, f_m, t_b, f_b});
+    std::push_heap(upsample_heap_.begin(), upsample_heap_.end());
+  }
+}
+
+template <class ExprSet>
+sunrealtype IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutput(
+  sunrealtype t, sunrealtype *y
+) {
+  sunrealtype out;
+  (*functions->upsampling_fcn)({&t, y, functions->inputs.data()}, {&out});
+  return out;
+}
+
+template <class ExprSet>
+sunrealtype IDAKLUSolverOpenMP<ExprSet>::EvaluateUpsampleOutputAt(sunrealtype t_query) {
+  sunrealtype *y_t = N_VGetArrayPointer(y_cache);
+  if (upsample_knot_ < 0) {
+    CheckErrors(IDAGetDky(ida_mem, t_query, 0, y_cache), "IDAGetDky");
+    return EvaluateUpsampleOutput(t_query, y_t);
+  }
+  // Cubic Hermite on the final knots, as the solution interpolates them
+  int const k = upsample_knot_;
+  sunrealtype const h = t[k + 1] - t[k];
+  sunrealtype const s = (t_query - t[k]) / h;
+  sunrealtype const h00 = (1 + 2 * s) * (1 - s) * (1 - s);
+  sunrealtype const h10 = s * (1 - s) * (1 - s) * h;
+  sunrealtype const h01 = s * s * (3 - 2 * s);
+  sunrealtype const h11 = s * s * (s - 1) * h;
+  sunrealtype const *y_a = &y[k * number_of_states];
+  sunrealtype const *y_b = y_a + number_of_states;
+  sunrealtype const *yp_a = &yp[k * number_of_states];
+  sunrealtype const *yp_b = yp_a + number_of_states;
+  for (int j = 0; j < number_of_states; ++j) {
+    y_t[j] = h00 * y_a[j] + h10 * yp_a[j] + h01 * y_b[j] + h11 * yp_b[j];
+  }
+  return EvaluateUpsampleOutput(t_query, y_t);
+}
+
+template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   sunrealtype t_val,
   const std::vector<sunrealtype> &t_eval,
@@ -630,13 +788,13 @@ void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   i_eval++;
   t_eval_next = t_eval[i_eval];
   CheckErrors(IDASetStopTime(ida_mem, t_eval_next), "IDASetStopTime");
-  if (solver_opts.print_stats) {
-    // Save stats before reinitializing (reinit resets IDA counters)
-    SaveStats();
-  }
+  // Save stats before reinitializing (reinit resets IDA counters)
+  SaveStats();
 
   // Reinitialize the solver to deal with the discontinuity at t = t_val
   ReinitializeIntegrator(t_val);
+  // Algebraic states can jump here, so the next step starts afresh
+  upsample_f_prev_valid_ = false;
   ConsistentInitialization(t_val, t_eval_next, IDA_YA_YDP_INIT);
   log_.log_consistent_init(t_val);
 
@@ -648,15 +806,18 @@ template <class ExprSet>
 SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
   DEBUG("IDAKLUSolver::BuildSolutionData");
 
+  SaveStats();
   if (solver_opts.print_stats) {
-    SaveStats();
-    PrintStats(accumulated_stats);
+    CaptureStats();
   }
 
   // Finalize output arrays
   if (use_knot_reduction_) {
     knot_reducer->Finalize();
     number_of_timesteps = knot_reducer->GetOutputCount();
+    if (upsample_to_t_additive_) {
+      UpsampleReducedKnots();
+    }
   } else {
     number_of_timesteps = i_save_;
     t.resize(number_of_timesteps);
@@ -677,10 +838,12 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     ReorderSensitivities(yS_reordered, ypS_reordered);
   }
 
-  // Final state slice (for outputs_only mode)
+  // Final state slice and its sensitivities (for outputs_only mode)
   std::vector<sunrealtype> yterm_vec;
+  std::vector<sunrealtype> yS_term_vec;
   if (save_outputs_only) {
     yterm_vec.assign(y_val_, y_val_ + number_of_states);
+    CopyStateSensitivities(yS_term_vec);
   }
 
   return SolutionData(
@@ -688,13 +851,18 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     std::move(t),
     std::move(y),
     save_hermite ? std::move(yp) : std::vector<sunrealtype>(),
+    std::move(t_additive_),
     std::move(yS_reordered),
     std::move(ypS_reordered),
+    std::move(y_init_),
     std::move(yterm_vec),
+    std::move(yS_init_),
+    std::move(yS_term_vec),
     arg_sens0,
     arg_sens1,
     arg_sens2,
-    save_hermite
+    save_hermite,
+    accumulated_stats
   );
 }
 
@@ -705,9 +873,18 @@ void IDAKLUSolverOpenMP<ExprSet>::ReorderSensitivities(
 ) {
   DEBUG("IDAKLUSolver::ReorderSensitivities");
 
+  if (save_outputs_only) {
+    // Already written in the final (n_timesteps, stride, n_params) layout, so
+    // only the trim to the steps actually taken is needed. ypS stays empty
+    // because save_hermite is always false in outputs-only mode.
+    yS.resize(
+      size_t(number_of_timesteps) * number_of_parameters * length_of_return_vector);
+    yS_out = std::move(yS);
+    return;
+  }
+
   // Sensitivities are stored during solve as yS[(i * n_params + p) * stride + j].
-  // Python expects (n_params, n_timesteps, stride) for !save_outputs_only
-  // or (n_timesteps, stride, n_params) for save_outputs_only.
+  // Python expects (n_params, n_timesteps, stride).
   size_t const nt = number_of_timesteps;
   size_t const np = number_of_parameters;
   size_t const stride = length_of_return_vector;
@@ -719,9 +896,7 @@ void IDAKLUSolverOpenMP<ExprSet>::ReorderSensitivities(
     for (size_t p = 0; p < np; ++p) {
       for (size_t j = 0; j < stride; ++j) {
         size_t src = (i * np + p) * stride + j;
-        size_t dst = save_outputs_only
-          ? (i * stride + j) * np + p        // (i, j, p) layout
-          : (p * nt + i) * stride + j;       // (p, i, j) layout
+        size_t dst = (p * nt + i) * stride + j;       // (p, i, j) layout
         yS_out[dst] = yS[src];
       }
     }
@@ -736,14 +911,18 @@ void IDAKLUSolverOpenMP<ExprSet>::ReorderSensitivities(
       for (size_t p = 0; p < np; ++p) {
         for (size_t j = 0; j < ns; ++j) {
           size_t src = (i * np + p) * ns + j;
-          size_t dst = save_outputs_only
-            ? (i * ns + j) * np + p           // (i, j, p) layout
-            : (p * nt + i) * ns + j;          // (p, i, j) layout
+          size_t dst = (p * nt + i) * ns + j;          // (p, i, j) layout
           ypS_out[dst] = ypS[src];
         }
       }
     }
   }
+
+  // Release the append-layout source buffers now that the transposed data
+  // lives in yS_out/ypS_out; avoids holding two full-size copies per solver.
+  // Swap rather than assign an empty list, which would keep the capacity.
+  std::vector<sunrealtype>().swap(yS);
+  std::vector<sunrealtype>().swap(ypS);
 }
 
 template <class ExprSet>
@@ -769,7 +948,18 @@ void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const sunrealtype& t_va
   CheckErrors(IDAReInit(ida_mem, t_val, yy, yyp), "IDAReInit");
   if (sensitivity) {
     CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, yypS), "IDASensReInit");
+    ApplySensitivityScales();
   }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::ApplySensitivityScales() {
+  if (sens_scales_.empty()) {
+    return;
+  }
+  CheckErrors(
+    IDASetSensParams(ida_mem, nullptr, sens_scales_.data(), nullptr),
+    "IDASetSensParams");
 }
 
 template <class ExprSet>
@@ -973,8 +1163,8 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
 ) {
   DEBUG("IDAKLUSolver::SetStepOutputSensitivities");
 
-  // FLAT STORAGE: yS[(i * n_params + p) * stride + j]
-  // Base offset for this timestep
+  // Written straight in the numpy layout (n_timesteps, stride, n_params), so
+  // that ReorderSensitivities has no transpose to do at the end of the solve
   size_t yS_base = i_save_ * number_of_parameters * length_of_return_vector;
 
   // Running index over the flattened outputs
@@ -1003,12 +1193,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
     const auto& dvar_dp_row = dvar_dp->get_row();
     const auto& dvar_dp_col = dvar_dp->get_col();
 
-    // Temporary dense vector to hold doutput_row/dp_k for each parameter
-    vector<sunrealtype> dvar_dp_dense(number_of_parameters, 0.0);
-
     // Loop over each scalar component (row) of the output function
     for (size_t row = 0; row < n_rows; ++row, ++global_out_idx) {
-      // Dense dvar_row/dp_k vector (reset to zero)
+      // Dense dvar_row/dp_k vector (member buffer, reset to zero)
       std::fill(dvar_dp_dense.begin(), dvar_dp_dense.end(), 0.0);
 
       // Fill in dvar_row/dp_k from sparse structure
@@ -1030,8 +1217,8 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
           }
         }
 
-        // FLAT STORAGE: yS[yS_base + paramk * stride + global_out_idx]
-        yS[yS_base + paramk * length_of_return_vector + global_out_idx] = sens;
+        // FLAT STORAGE (final layout (i, j, p)): yS[(i * stride + out) * n_params + p]
+        yS[yS_base + global_out_idx * number_of_parameters + paramk] = sens;
       }
     }
   }
@@ -1084,10 +1271,9 @@ void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int const & flag, const char* cont
 }
 
 template <class ExprSet>
-IDAKLUStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
-  IDAKLUStats stats;
-  int klast, kcur;
-  sunrealtype hinused, hlast, hcur, tcur;
+PendingStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
+  PendingStats out;
+  IDAKLUStats& stats = out.stats;
 
   CheckErrors(IDAGetIntegratorStats(
     ida_mem,
@@ -1095,12 +1281,12 @@ IDAKLUStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
     &stats.nrevals,
     &stats.nlinsetups,
     &stats.netfails,
-    &klast,
-    &kcur,
-    &hinused,
-    &hlast,
-    &hcur,
-    &tcur
+    &out.klast,
+    &out.kcur,
+    &out.hinused,
+    &out.hlast,
+    &out.hcur,
+    &out.tcur
   ), "IDAGetIntegratorStats");
 
   CheckErrors(IDAGetNonlinSolvStats(ida_mem, &stats.nniters, &stats.nncfails), "IDAGetNonlinSolvStats");
@@ -1109,37 +1295,55 @@ IDAKLUStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
   if (setup_opts.using_iterative_solver) {
     CheckErrors(IDAGetNumLinIters(ida_mem, &stats.nliters), "IDAGetNumLinIters");
     CheckErrors(IDAGetNumLinConvFails(ida_mem, &stats.nlcfails), "IDAGetNumLinConvFails");
+  }
+  // Without IDABBDPrecInit, IDA's preconditioner data is the user data, which
+  // this call would misread as the BBD preconditioner's.
+  if (setup_opts.preconditioner != "none") {
     CheckErrors(IDABBDPrecGetNumGfnEvals(ida_mem, &stats.ngevalsBBDP), "IDABBDPrecGetNumGfnEvals");
   }
 
-  return stats;
+  return out;
 }
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SaveStats() {
-  accumulated_stats += GetStats();
+  latest_stats_ = GetStats();
+  accumulated_stats += latest_stats_.stats;
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::PrintStats(const IDAKLUStats& stats) {
-  // Get current point-in-time values from IDA (these are not accumulated)
-  long nsteps_unused, nrevals_unused, nlinsetups_unused, netfails_unused;
-  int klast, kcur;
-  sunrealtype hinused, hlast, hcur, tcur;
+void IDAKLUSolverOpenMP<ExprSet>::flush_log() {
+  log_.flush();
+  for (const auto& pending : pending_stats_) {
+    PrintStats(pending);
+  }
+  pending_stats_.clear();
+}
 
-  CheckErrors(IDAGetIntegratorStats(
-    ida_mem,
-    &nsteps_unused,
-    &nrevals_unused,
-    &nlinsetups_unused,
-    &netfails_unused,
-    &klast,
-    &kcur,
-    &hinused,
-    &hlast,
-    &hcur,
-    &tcur
-  ), "IDAGetIntegratorStats");
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::CaptureStats() {
+  // The point-in-time half comes from the SaveStats() that just ran; only the
+  // counters accumulate across reinitializations
+  PendingStats pending = latest_stats_;
+  pending.stats = accumulated_stats;
+
+  if (log_.on_gil_thread()) {
+    PrintStats(pending);
+  } else {
+    pending_stats_.push_back(pending);
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::PrintStats(const PendingStats& pending) {
+  // Printing can happen mid-solve, so a failing stdout must not fail the solve
+  SolverLog::guarded([&] { WriteStats(pending); },
+                     "pybammsolvers IDAKLUSolverOpenMP::PrintStats");
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::WriteStats(const PendingStats& pending) {
+  const IDAKLUStats& stats = pending.stats;
 
   py::print("Solver Stats:");
   py::print("\tNumber of steps =", stats.nsteps);
@@ -1148,12 +1352,12 @@ void IDAKLUSolverOpenMP<ExprSet>::PrintStats(const IDAKLUStats& stats) {
             stats.ngevalsBBDP);
   py::print("\tNumber of linear solver setup calls =", stats.nlinsetups);
   py::print("\tNumber of error test failures =", stats.netfails);
-  py::print("\tMethod order used on last step =", klast);
-  py::print("\tMethod order used on next step =", kcur);
-  py::print("\tInitial step size =", hinused);
-  py::print("\tStep size on last step =", hlast);
-  py::print("\tStep size on next step =", hcur);
-  py::print("\tCurrent internal time reached =", tcur);
+  py::print("\tMethod order used on last step =", pending.klast);
+  py::print("\tMethod order used on next step =", pending.kcur);
+  py::print("\tInitial step size =", pending.hinused);
+  py::print("\tStep size on last step =", pending.hlast);
+  py::print("\tStep size on next step =", pending.hcur);
+  py::print("\tCurrent internal time reached =", pending.tcur);
   py::print("\tNumber of nonlinear iterations performed =", stats.nniters);
   py::print("\tNumber of nonlinear convergence failures =", stats.nncfails);
   py::print("\tNumber of Jacobian evaluations =", stats.njevals);

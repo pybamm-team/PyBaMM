@@ -1,0 +1,23 @@
+[model]
+slug = "${slug}"
+name = "${ModelName}"
+title = "TODO: one line naming the physics this model adds"
+summary = "TODO: one sentence on what it does and when to prefer it."
+class = "pybamm_model_zoo.${slug}:${ModelName}"
+tier = "${tier}"
+added = "${added}"
+license = "BSD-3-Clause"
+
+[[model.maintainers]]
+name = "${Author}"
+github = "${github}"
+
+[model.citation]
+key = "${CitationKey}"
+
+[model.tests]
+# Omit parameter_set to use the model's own default_parameter_values, which is
+# where a model with extra parameters should supply their defaults.
+solve_time = 3600
+key_variables = ["Voltage [V]"]
+skip_contract = []

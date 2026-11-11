@@ -1,7 +1,7 @@
 #
 # Tests for the base lead acid model class
 #
-import os
+import contextlib
 
 import pytest
 
@@ -20,11 +20,9 @@ class TestBaseLithiumIonModel:
 
         # change path and try again
 
-        cwd = os.getcwd()
-        os.chdir("..")
-        model = pybamm.lithium_ion.BaseModel()
-        assert model.default_parameter_values["Reference temperature [K]"] == 298.15
-        os.chdir(cwd)
+        with contextlib.chdir(".."):
+            model = pybamm.lithium_ion.BaseModel()
+            assert model.default_parameter_values["Reference temperature [K]"] == 298.15
 
     def test_insert_reference_electrode(self):
         model = pybamm.lithium_ion.SPM()
@@ -80,4 +78,27 @@ class TestBaseLithiumIonModel:
         )
         assert (
             "Negative electrode primary phase capacity [A.h]" in model.summary_variables
+        )
+
+    def test_per_phase_particle_mechanics(self):
+        model = pybamm.lithium_ion.DFN(
+            options={
+                "particle phases": ("2", "1"),
+                "particle mechanics": (
+                    ("swelling and cracking", "swelling only"),
+                    "none",
+                ),
+            }
+        )
+        assert isinstance(
+            model.submodels["negative primaryparticle mechanics"],
+            pybamm.particle_mechanics.CrackPropagation,
+        )
+        assert isinstance(
+            model.submodels["negative secondaryparticle mechanics"],
+            pybamm.particle_mechanics.SwellingOnly,
+        )
+        assert isinstance(
+            model.submodels["positive primaryparticle mechanics"],
+            pybamm.particle_mechanics.NoMechanics,
         )

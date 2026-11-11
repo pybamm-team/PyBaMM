@@ -22,6 +22,7 @@ class Settings:
         "j0__c_e": 0,  # dimensionless
         "j0__c_s": 0,  # dimensionless
         "j0__c_Li": 0,  # dimensionless
+        "ciet__c": 1e-8,  # dimensionless
         "macinnes__c_e": 1e-15,  # dimensionless
         # Regularisation functions
         "reg_arcsinh2": 1e-16,

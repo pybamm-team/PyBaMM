@@ -29,6 +29,11 @@ class TestInputParameter:
         ):
             a.evaluate(inputs={"a": 5})
 
+    def test_expected_size_changes_id(self):
+        a = pybamm.InputParameter("a", expected_size=10)
+        assert a != pybamm.InputParameter("a", expected_size=20)
+        assert a == pybamm.InputParameter("a", expected_size=10)
+
     def test_evaluate_for_shape(self):
         a = pybamm.InputParameter("a")
         assert np.isnan(a.evaluate_for_shape())

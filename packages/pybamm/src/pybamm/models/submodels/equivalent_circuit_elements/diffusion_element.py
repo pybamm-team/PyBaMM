@@ -71,7 +71,7 @@ class DiffusionElement(pybamm.BaseSubModel):
         z = variables["Distributed SoC"]
         soc = variables["SoC"]
         z_surf = pybamm.surf(z)
-        eta_diffusion = -(self.param.ocv(z_surf) - self.param.ocv(soc))
+        eta_diffusion = self.param.ocv(z_surf) - self.param.ocv(soc)
 
         variables.update(
             {

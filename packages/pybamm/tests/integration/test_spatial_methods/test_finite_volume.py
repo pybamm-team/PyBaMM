@@ -2,9 +2,11 @@
 # Test for the operator class
 #
 import numpy as np
+import pytest
 
 import pybamm
 from tests import (
+    assert_constant_matrix_factors,
     get_cylindrical_mesh_for_testing,
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
@@ -401,3 +403,69 @@ class TestUpwindDownwind:
             rtol=1e-3,
             atol=1e-1,
         )
+
+
+class TestFiniteVolumeSymbolicMesh:
+    @pytest.mark.parametrize(
+        "model_class", [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN]
+    )
+    def test_input_particle_radius(self, model_class):
+        radii = {
+            "Negative particle radius [m]": 5.86e-6,
+            "Positive particle radius [m]": 5.22e-6,
+        }
+
+        def build(symbolic):
+            model = model_class()
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            submesh_types = model.default_submesh_types
+            if symbolic:
+                parameter_values.update({name: "[input]" for name in radii})
+                for domain in ["negative particle", "positive particle"]:
+                    submesh_types[domain] = pybamm.SymbolicUniform1DSubMesh
+            else:
+                parameter_values.update(radii)
+            simulation = pybamm.Simulation(
+                model, parameter_values=parameter_values, submesh_types=submesh_types
+            )
+            simulation.build()
+            return simulation
+
+        model = build(symbolic=True).built_model
+        for expression in [
+            *model.rhs.values(),
+            *model.algebraic.values(),
+            *model.initial_conditions.values(),
+            *(model.get_processed_variable(name) for name in model.variable_names()),
+        ]:
+            assert_constant_matrix_factors(expression)
+
+        # the Python evaluator and pybamm's Jacobian serve the "python" format
+        evaluations = []
+        for symbolic, inputs in [(True, radii), (False, {})]:
+            model = build(symbolic).built_model
+            model.convert_to_format = "python"
+            pybamm.BaseSolver().set_up(model, inputs)
+            y0 = model.y0
+            evaluations.append(
+                (
+                    model.rhs_algebraic_eval(0, y0, inputs),
+                    model.jac_rhs_algebraic_eval(0, y0, inputs).toarray(),
+                )
+            )
+        for symbolic_value, numeric_value in zip(*evaluations, strict=True):
+            np.testing.assert_allclose(
+                symbolic_value, numeric_value, rtol=1e-10, atol=1e-10
+            )
+
+        t = np.linspace(0, 1800, 20)
+        solution = build(symbolic=True).solve([0, 1800], inputs=radii)
+        reference = build(symbolic=False).solve([0, 1800])
+        for name in [
+            "Voltage [V]",
+            "Negative electrode volume-averaged concentration [mol.m-3]",
+            "Positive electrode volume-averaged concentration [mol.m-3]",
+        ]:
+            np.testing.assert_allclose(
+                solution[name](t), reference[name](t), rtol=1e-8, atol=0
+            )

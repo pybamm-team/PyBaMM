@@ -30,7 +30,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'exchange-current density': 'single' (possible: ['single', 'current sigmoid'])
 'heat of mixing': 'false' (possible: ['false', 'true'])
 'hydrolysis': 'false' (possible: ['false', 'true'])
-'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey', 'MSMR'])
+'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey', 'coupled ion-electron transfer', 'MSMR'])
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'partially reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
@@ -721,3 +721,49 @@ class TestVaasNormalization:
         """When VAAS is false and surface form not set, surface form stays false."""
         options = pybamm.BatteryModelOptions({"voltage as a state": "false"})
         assert options["surface form"] == "false"
+
+
+def repeated_words(name):
+    """Return the repeated run in `name`, e.g. "a b a b" in "a b a b c", else None."""
+    words = name.split()
+    for length in range(1, len(words) // 2 + 1):
+        for start in range(len(words) - 2 * length + 1):
+            run = words[start : start + length]
+            if run == words[start + length : start + 2 * length]:
+                return " ".join(run * 2)
+    return None
+
+
+class TestVariableNames:
+    @pytest.mark.parametrize(
+        ("model_class", "options"),
+        [
+            (pybamm.lithium_ion.SPM, {}),
+            (pybamm.lithium_ion.SPMe, {}),
+            (pybamm.lithium_ion.DFN, {}),
+            (pybamm.lithium_ion.MPM, {}),
+            (pybamm.lithium_ion.NewmanTobias, {}),
+            (pybamm.lithium_ion.DFN, {"working electrode": "positive"}),
+            (
+                pybamm.lithium_ion.DFN,
+                {
+                    "particle phases": ("2", "1"),
+                    "thermal": "x-full",
+                    "SEI": "solvent-diffusion limited",
+                    "lithium plating": "reversible",
+                    "particle mechanics": "swelling and cracking",
+                },
+            ),
+            (pybamm.lead_acid.Full, {}),
+            (pybamm.lead_acid.LOQS, {}),
+        ],
+    )
+    def test_no_repeated_words(self, model_class, options):
+        # catches names built from a duplicated implicit string concatenation
+        model = model_class(options)
+        duplicated = {
+            name: repeated_words(name)
+            for name in model.variables
+            if repeated_words(name)
+        }
+        assert duplicated == {}

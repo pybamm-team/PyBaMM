@@ -33,6 +33,22 @@ class TestSymbolUnpacker:
         unpacked = unpacker_param.unpack_symbol(a + b)
         assert unpacked == {b}
 
+    def test_unpack_variable_metadata(self):
+        scale = pybamm.Parameter("scale")
+        reference = pybamm.Parameter("reference")
+        lower_bound = pybamm.Parameter("lower bound")
+        upper_bound = pybamm.Parameter("upper bound")
+        variable = pybamm.Variable(
+            "variable",
+            scale=scale,
+            reference=reference,
+            bounds=(lower_bound, upper_bound),
+        )
+
+        unpacked = pybamm.SymbolUnpacker(pybamm.Parameter).unpack_symbol(variable)
+
+        assert unpacked == {scale, reference, lower_bound, upper_bound}
+
     def test_unpack_list_of_symbols(self):
         a = pybamm.Scalar(1)
         b = pybamm.Parameter("b")

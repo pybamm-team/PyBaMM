@@ -202,6 +202,89 @@ class TestElectrodeSOH:
             esoh_solver.solve(inputs)
 
 
+class TestElectrodeSOHHysteresis:
+    """The eSOH model must equilibrate 100% SOC on the charge branch and 0% SOC on
+    the discharge branch, which requires the model options to reach `_ElectrodeSOH`."""
+
+    options = pybamm.BatteryModelOptions(
+        {"open-circuit potential": ("current sigmoid", "current sigmoid")}
+    )
+
+    @staticmethod
+    def _hysteresis_parameter_values():
+        """Chen2020 with OCP branches offset by +/- 50 mV from equilibrium."""
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        updates = {}
+        for electrode in ["Negative", "Positive"]:
+            U_eq = parameter_values[f"{electrode} electrode OCP [V]"]
+            updates[f"{electrode} electrode lithiation OCP [V]"] = (
+                lambda sto, U_eq=U_eq: U_eq(sto) - 0.05
+            )
+            updates[f"{electrode} electrode delithiation OCP [V]"] = (
+                lambda sto, U_eq=U_eq: U_eq(sto) + 0.05
+            )
+        parameter_values.update(updates, check_already_exists=False)
+        return parameter_values
+
+    def test_ocp_branches_in_model(self):
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            self._hysteresis_parameter_values(), options=self.options
+        )
+        model = esoh_solver._get_electrode_soh_sims_full(None).model
+        branches = {
+            var.name: sorted(
+                {node.name for node in eqn.pre_order() if node.name.endswith("OCP [V]")}
+            )
+            for var, eqn in model.algebraic.items()
+        }
+        assert branches == {
+            "x_100": [
+                "Negative electrode lithiation OCP [V]",
+                "Positive electrode delithiation OCP [V]",
+            ],
+            "x_0": [
+                "Negative electrode delithiation OCP [V]",
+                "Positive electrode lithiation OCP [V]",
+            ],
+        }
+
+    def test_solution_lies_on_hysteresis_branches(self):
+        parameter_values = self._hysteresis_parameter_values()
+        param = pybamm.LithiumIonParameters(self.options)
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, param=param, options=self.options
+        )
+        sol = esoh_solver.solve(
+            {
+                "Q_n": parameter_values.evaluate(param.n.Q_init),
+                "Q_p": parameter_values.evaluate(param.p.Q_init),
+                "Q_Li": parameter_values.evaluate(param.Q_Li_particles_init),
+            }
+        )
+
+        T_ref = parameter_values["Reference temperature [K]"]
+
+        def ocv(x, y, negative_branch, positive_branch):
+            return parameter_values.evaluate(
+                param.p.prim.U(y, T_ref, positive_branch)
+                - param.n.prim.U(x, T_ref, negative_branch)
+            )
+
+        V_max = parameter_values["Open-circuit voltage at 100% SOC [V]"]
+        V_min = parameter_values["Open-circuit voltage at 0% SOC [V]"]
+        x_100, y_100, x_0, y_0 = sol["x_100"], sol["y_100"], sol["x_0"], sol["y_0"]
+
+        assert ocv(x_100, y_100, "lithiation", "delithiation") == pytest.approx(
+            V_max, abs=1e-6
+        )
+        assert ocv(x_0, y_0, "delithiation", "lithiation") == pytest.approx(
+            V_min, abs=1e-6
+        )
+        # the equilibrium branch is 100 mV away, so it cannot also satisfy the limits
+        assert ocv(x_100, y_100, None, None) == pytest.approx(V_max - 0.1, abs=1e-6)
+        assert ocv(x_0, y_0, None, None) == pytest.approx(V_min + 0.1, abs=1e-6)
+
+
 class TestElectrodeSOHComposite:
     @staticmethod
     def _check_phases_equal(results, xy, soc):
@@ -468,6 +551,78 @@ class TestElectrodeSOHComposite:
                     assert 0 <= results[key] <= 1, (
                         f"Stoichiometry {key} out of bounds: {results[key]}"
                     )
+
+    @staticmethod
+    def _composite_soc_hysteresis(initial_value, h0):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        parameter_values.update(
+            {"Secondary: Initial hysteresis state in negative electrode": h0}
+        )
+        results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            initial_value, parameter_values, options=options
+        )
+        return results, parameter_values, pybamm.LithiumIonParameters(options)
+
+    def test_composite_soc_split_on_initial_hysteresis_state(self):
+        totals = []
+        for h0 in [-1, 0, 1]:
+            results, parameter_values, param = self._composite_soc_hysteresis(0.5, h0)
+            x_1, x_2 = results["x_init_1"], results["x_init_2"]
+            # The phases start in equilibrium on the OCP at h0
+            U_1 = param.n.prim.U(x_1, param.T_ref)
+            U_2 = (1 + h0) / 2 * param.n.sec.U(x_2, param.T_ref, "delithiation") + (
+                1 - h0
+            ) / 2 * param.n.sec.U(x_2, param.T_ref, "lithiation")
+            assert parameter_values.evaluate(U_1 - U_2) == pytest.approx(0, abs=1e-6)
+            # The SOC sets the total lithium, whatever h0 is
+            Q_1 = parameter_values.evaluate(param.n.prim.Q_init)
+            Q_2 = parameter_values.evaluate(param.n.sec.Q_init)
+            totals.append((Q_1 * x_1 + Q_2 * x_2, results["y_init_1"], x_2))
+        for total, y, _ in totals[1:]:
+            assert total == pytest.approx(totals[0][0])
+            assert y == pytest.approx(totals[0][1])
+        # ... but not how it is split between the phases
+        assert totals[0][2] < totals[1][2] < totals[2][2]
+
+    @pytest.mark.parametrize("h0", [-1, 1])
+    def test_composite_soc_start_matches_voltage_start(self, h0):
+        soc_results, parameter_values, param = self._composite_soc_hysteresis(0.5, h0)
+        V = parameter_values.evaluate(
+            param.p.prim.U(soc_results["y_init_1"], param.T_init)
+            - param.n.prim.U(soc_results["x_init_1"], param.T_init)
+        ).item()
+        voltage_results, _, _ = self._composite_soc_hysteresis(f"{V} V", h0)
+        for key in ["x_init_1", "x_init_2", "y_init_1"]:
+            assert voltage_results[key] == pytest.approx(soc_results[key], abs=1e-6)
+
+    def test_composite_soc_limit_on_initial_hysteresis_state(self):
+        # 100% SOC is reached by charging (h = -1)
+        results, _, _ = self._composite_soc_hysteresis(1.0, -1)
+        for phase in ["1", "2"]:
+            assert results[f"x_init_{phase}"] == pytest.approx(
+                results[f"x_100_{phase}"], abs=1e-6
+            )
+
+    @pytest.mark.parametrize("initial_value", [0.5, "3.7 V"])
+    def test_composite_initial_hysteresis_state_defaults_to_zero(self, initial_value):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        results = pybamm.lithium_ion.get_initial_stoichiometries_composite(
+            initial_value, parameter_values, options=options
+        )
+        expected, _, _ = self._composite_soc_hysteresis(initial_value, 0)
+        for key in ["x_init_1", "x_init_2", "y_init_1"]:
+            assert results[key] == pytest.approx(expected[key])
+        # The caller's parameter values are left as they were
+        name = "Secondary: Initial hysteresis state in negative electrode"
+        assert name not in parameter_values
 
 
 class TestElectrodeSOHMSMR:
@@ -812,6 +967,65 @@ class TestElectrodeSOHHalfCell:
                 "invalid", params, param=param, options=options
             )
 
+    @pytest.mark.parametrize("h0", [-1, 0.5])
+    def test_initial_voltage_hysteresis_state(self, h0):
+        options = {
+            "working electrode": "positive",
+            "open-circuit potential": "one-state hysteresis",
+        }
+        parameter_values = pybamm.ParameterValues("Xu2019")
+        U = parameter_values["Positive electrode OCP [V]"]
+        parameter_values.update(
+            {
+                "Positive electrode lithiation OCP [V]": lambda sto: U(sto) - 0.05,
+                "Positive electrode delithiation OCP [V]": lambda sto: U(sto) + 0.05,
+                "Initial hysteresis state in positive electrode": h0,
+            }
+        )
+
+        result = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+            "3.9 V", parameter_values, options=options
+        )
+
+        # The OCP at h0 is U + 0.05 * h0
+        U_init = parameter_values.evaluate(U(pybamm.Scalar(result["x"])))
+        assert U_init + 0.05 * h0 == pytest.approx(3.9)
+
+    # None leaves the initial hysteresis state unset, so it starts at 0
+    @pytest.mark.parametrize("h0", [-1, None, 1])
+    def test_composite_soc_split_on_initial_hysteresis_state(self, h0):
+        params, options = self._get_params_and_options_composite_half_cell()
+        options["open-circuit potential"] = (
+            "single",
+            ("single", "one-state hysteresis"),
+        )
+        U = params["Secondary: Positive electrode OCP [V]"]
+        params.update(
+            {
+                "Secondary: Positive electrode lithiation OCP [V]": lambda sto: (
+                    U(sto) - 0.05
+                ),
+                "Secondary: Positive electrode delithiation OCP [V]": lambda sto: (
+                    U(sto) + 0.05
+                ),
+            },
+            check_already_exists=False,
+        )
+        if h0 is None:
+            h0 = 0
+        else:
+            params["Secondary: Initial hysteresis state in positive electrode"] = h0
+        param = pybamm.LithiumIonParameters(options)
+
+        result = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+            0.5, params, options=options
+        )
+
+        # The phases start in equilibrium on the OCP at h0, which is U + 0.05 * h0
+        U_1 = params.evaluate(param.p.prim.U(pybamm.Scalar(result["x"]), param.T_ref))
+        U_2 = params.evaluate(U(pybamm.Scalar(result["x_2"])))
+        assert U_1 == pytest.approx(U_2 + 0.05 * h0, abs=1e-6)
+
 
 class TestCalculateTheoreticalEnergy:
     def test_efficiency(self, options):
@@ -830,6 +1044,24 @@ class TestCalculateTheoreticalEnergy:
         assert discharge_energy < theoretical_energy
         assert 0 < discharge_energy
         assert 0 < theoretical_energy
+
+    def test_repeated_solves_do_not_grow_parameter_cache(self):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        param = pybamm.LithiumIonParameters()
+        inputs = {
+            "Q_n": parameter_values.evaluate(param.n.Q_init),
+            "Q_p": parameter_values.evaluate(param.p.Q_init),
+            "V_min": 2.5,
+            "V_max": 4.2,
+        }
+        Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values)
+
+        cache_sizes = []
+        for i in range(3):
+            esoh_solver.solve({**inputs, "Q_Li": Q_Li * (1 - 1e-6 * i)})
+            cache_sizes.append(len(parameter_values._processor.cache))
+        assert cache_sizes[1] == cache_sizes[2]
 
 
 class TestGetInitialSOC:
@@ -1018,6 +1250,31 @@ class TestGetInitialOCP:
             "4 V", parameter_values, param=param, direction=None
         )
         assert Up - Un == pytest.approx(4)
+
+    @pytest.mark.parametrize("h0", [-1, 0.5])
+    def test_get_initial_ocp_hysteresis_state(self, h0):
+        options = {"open-circuit potential": ("one-state hysteresis", "single")}
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        U = parameter_values["Negative electrode OCP [V]"]
+        parameter_values.update(
+            {
+                "Negative electrode lithiation OCP [V]": lambda sto: U(sto) - 0.05,
+                "Negative electrode delithiation OCP [V]": lambda sto: U(sto) + 0.05,
+                "Initial hysteresis state in negative electrode": h0,
+            }
+        )
+
+        x, _ = pybamm.lithium_ion.get_initial_stoichiometries(
+            "3.9 V", parameter_values, options=options
+        )
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            "3.9 V", parameter_values, options=options
+        )
+
+        # The OCP at h0 is U + 0.05 * h0
+        U_init = parameter_values.evaluate(U(pybamm.Scalar(x)))
+        assert Un == pytest.approx(U_init + 0.05 * h0)
+        assert Up - Un == pytest.approx(3.9)
 
     def test_min_max_ocp(self):
         param = pybamm.LithiumIonParameters()

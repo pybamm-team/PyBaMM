@@ -1,0 +1,2 @@
+# The fixtures are gzipped pickles; un-ignore them from the root *.gz rule.
+!*.pkl.gz

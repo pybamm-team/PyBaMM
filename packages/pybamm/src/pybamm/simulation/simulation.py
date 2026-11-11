@@ -40,6 +40,7 @@ class Simulation(BaseSimulation):
     _PADDING_REST_KEY = "Rest for padding"
     _STEP_INDEX_INPUT = "Experiment step index"
     _STEP_VALUE_INPUT = "Experiment step value"
+    _UPSAMPLING_VARIABLE = "Experiment upsampling variable"
     _TERMINATION_TIME = "experiment time limit reached"
     _TERMINATION_VOLTAGE = "experiment voltage limit reached"
     _TERMINATION_CAPACITY = "experiment capacity limit reached"
@@ -266,6 +267,25 @@ class Simulation(BaseSimulation):
 
         return []
 
+    def _add_unified_upsampling_variable(
+        self, new_model, variables, unique_steps, padding_rest_step
+    ):
+        # Upsample each step's own output by selecting it with the step index input.
+        # An algebraic state is resolved by the integrator, so its branch is constant.
+        upsampling_steps = list(unique_steps)
+        if padding_rest_step is not None:
+            upsampling_steps.append(padding_rest_step)
+        upsampling_branches = []
+        for step in upsampling_steps:
+            variable = variables[step.upsampling_variable]
+            if new_model.is_algebraic_state(variable):
+                variable = pybamm.Scalar(0)
+            upsampling_branches.append(variable)
+        new_model.variables[self._UPSAMPLING_VARIABLE] = pybamm.Conditional(
+            pybamm.InputParameter(self._STEP_INDEX_INPUT), *upsampling_branches
+        )
+        new_model.upsampling_variable = self._UPSAMPLING_VARIABLE
+
     def _set_up_unified_experiment_model(self, parameter_values):
         self._experiment_uses_unified_model = True
 
@@ -327,6 +347,7 @@ class Simulation(BaseSimulation):
         # experiment step index input; collapsible steps read their target from the
         # shared per-step value input instead of baking it.
         step_control_builders = [control_builder(step) for step in unique_steps]
+        padding_rest_step = None
         if self._experiment_includes_padding_rest:
             padding_rest_step = pybamm.step.Rest(duration=1)
             step_control_builders.append(padding_rest_step.get_control_residual)
@@ -349,6 +370,11 @@ class Simulation(BaseSimulation):
         # BaseModel.build_casadi_jacobian. The attribute rides this same model object
         # (in-place parameter processing and discretisation) through to solver.process.
         new_model.switching_control_variables = {var.name for var in submodel.algebraic}
+
+        if getattr(self._solver, "options", {}).get("upsampling_tolerance") is not None:
+            self._add_unified_upsampling_variable(
+                new_model, variables, unique_steps, padding_rest_step
+            )
 
         # Combine each step's local termination expression into one experiment event,
         # selecting the active branch with the step index input.
@@ -474,7 +500,7 @@ class Simulation(BaseSimulation):
             y = (
                 step_solution.y_event
                 if step_solution.y_event is not None
-                else step_solution.y[:, -1]
+                else step_solution.all_ys[-1][:, -1]
             )
 
             try:
@@ -607,6 +633,51 @@ class Simulation(BaseSimulation):
             )
             self.experiment_unique_steps_to_model[self._PADDING_REST_KEY] = new_model
 
+    def _shared_sensitivity_inputs(
+        self, names: list[str], skip_missing: bool
+    ) -> list[str]:
+        """
+        Return the names that are input parameters of every built experiment model.
+
+        Parameters
+        ----------
+        names : list of str
+            The input names to calculate sensitivities with respect to.
+        skip_missing : bool
+            Whether to log and drop the names that some model lacks, rather than
+            raise.
+
+        Returns
+        -------
+        list of str
+            The names, in the given order, that every model has.
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If ``skip_missing`` is False and a model lacks one of the names.
+        """
+        shared_inputs = set.intersection(
+            *(
+                {ip.name for ip in model.input_parameters}
+                for model in self.steps_to_built_models.values()
+            )
+        )
+        missing = [name for name in names if name not in shared_inputs]
+        if not missing:
+            return names
+        if not skip_missing:
+            raise pybamm.SolverError(
+                f"calculate_sensitivities names {missing} are not input parameters "
+                "of every experiment step model. Pass calculate_sensitivities=True "
+                "to calculate sensitivities for only the inputs they all have."
+            )
+        pybamm.logger.warning(
+            f"Inputs {missing} are not input parameters of every experiment "
+            "step model, so no sensitivities are calculated for them."
+        )
+        return [name for name in names if name in shared_inputs]
+
     def _get_built_models(self):
         """Return list of built models that need IC recomputation."""
         models = super()._get_built_models()
@@ -666,7 +737,10 @@ class Simulation(BaseSimulation):
             )
             if not hasattr(previous_model, "calculate_sensitivities"):
                 previous_model.calculate_sensitivities = []
-            f, jac, jacp, _jac_action = process(mapper, "mapper", vars_for_processing)
+            # step() maps sensitivities by forward-mode AD of f, not with jacobians
+            f, jac, jacp, _jac_action = process(
+                mapper, "mapper", vars_for_processing, use_jacobian=False
+            )
             self._compiled_model_state_mappers[(previous_model, next_model)] = (
                 f,
                 jac,
@@ -742,7 +816,14 @@ class Simulation(BaseSimulation):
         experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
-            self.set_initial_state(initial_soc, direction=direction, inputs=inputs)
+            self.set_initial_state(
+                initial_soc,
+                direction=direction,
+                inputs=inputs,
+                calculate_sensitivities=(solve_kwargs or {}).get(
+                    "calculate_sensitivities", False
+                ),
+            )
 
         if self._built_experiment_model is not None or self.steps_to_built_models:
             if self._needs_ic_rebuild:
@@ -766,6 +847,8 @@ class Simulation(BaseSimulation):
         )
         self._needs_ic_rebuild = False
 
+    # Experiment arguments stay between the base ones for positional callers
+    # pyrefly: ignore[bad-override]
     def solve(
         self,
         t_eval=None,
@@ -793,7 +876,8 @@ class Simulation(BaseSimulation):
             cycle in the list is saved. The first cycle (cycle 1) is always saved.
         starting_solution : :class:`pybamm.Solution`
             The solution to start stepping from. If None (default), then self._solution
-            is used. Must be None if not using an experiment.
+            is used. Must be None if not using an experiment, and otherwise have
+            sensitivities for the inputs in `calculate_sensitivities` only.
         showprogress : bool, optional
             Whether to show a progress bar for cycling. If true, shows a progress bar
             for cycles. Has no effect when not used with an experiment.
@@ -836,16 +920,16 @@ class Simulation(BaseSimulation):
 
         # Take sensitivities only w.r.t. user inputs, not the control inputs the
         # experiment injects per step.
-        if "calculate_sensitivities" in kwargs:
-            requested = kwargs["calculate_sensitivities"]
-            if requested is True:
-                kwargs["calculate_sensitivities"] = list((inputs or {}).keys())
-            elif isinstance(requested, list):
-                kwargs["calculate_sensitivities"] = [
-                    name
-                    for name in requested
-                    if name not in self._INTERNAL_EXPERIMENT_INPUTS
-                ]
+        requested = kwargs.get("calculate_sensitivities")
+        all_input_sensitivities = requested is True
+        if all_input_sensitivities:
+            requested = list(inputs)
+        if isinstance(requested, list):
+            kwargs["calculate_sensitivities"] = [
+                name
+                for name in requested
+                if name not in self._INTERNAL_EXPERIMENT_INPUTS
+            ]
 
         # Drop the prior solution before build/integration.
         self._solution = starting_solution
@@ -856,6 +940,22 @@ class Simulation(BaseSimulation):
             inputs=inputs,
             solve_kwargs=kwargs,
         )
+        if kwargs.get("calculate_sensitivities"):
+            # A step failing on a missing input would end the experiment early
+            kwargs["calculate_sensitivities"] = self._shared_sensitivity_inputs(
+                kwargs["calculate_sensitivities"], skip_missing=all_input_sensitivities
+            )
+
+        # The result joins the starting solution's sensitivities to the steps'
+        if isinstance(starting_solution, pybamm.Solution):
+            starting_names = sorted(starting_solution.sensitivity_names)
+            requested_names = sorted(kwargs.get("calculate_sensitivities") or [])
+            if starting_names != requested_names:
+                raise pybamm.SolverError(
+                    f"Cannot continue a starting_solution with sensitivities for "
+                    f"{starting_names} with sensitivities for {requested_names}. "
+                    "Solve with the same 'calculate_sensitivities' as it."
+                )
         if t_eval is not None:
             pybamm.logger.warning(
                 "Ignoring t_eval as solution times are specified by the experiment"
@@ -987,6 +1087,9 @@ class Simulation(BaseSimulation):
         # Track running termination (real cycles + skipped steps), applied to the
         # folded solution below to match the old left-fold's final termination.
         last_termination = None
+        # Solver work of the cycles left out of the fold, totalled so their
+        # solutions can be freed; None once one of them has no statistics
+        discarded_cycle_statistics = pybamm.SolverStatistics()
 
         for cycle_num, cycle_length in enumerate(
             cycle_lengths,
@@ -1172,6 +1275,16 @@ class Simulation(BaseSimulation):
                 cross_cycle_segments.append(cycle_solution)
                 if not isinstance(cycle_solution, pybamm.EmptySolution):
                     last_termination = cycle_solution.termination
+            elif (
+                isinstance(cycle_solution, pybamm.Solution)
+                and discarded_cycle_statistics is not None
+            ):
+                statistics = cycle_solution.solver_statistics
+                discarded_cycle_statistics = (
+                    None
+                    if statistics is None
+                    else discarded_cycle_statistics + statistics
+                )
 
             if steps:
                 if all(
@@ -1242,6 +1355,13 @@ class Simulation(BaseSimulation):
             self._solution = pybamm.Solution.from_sub_solutions(cross_cycle_segments)
             if last_termination is not None:
                 self._solution.termination = last_termination
+            if isinstance(self._solution, pybamm.Solution):
+                statistics = self._solution.solver_statistics
+                self._solution.solver_statistics = (
+                    None
+                    if statistics is None or discarded_cycle_statistics is None
+                    else statistics + discarded_cycle_statistics
+                )
 
         if self._solution is not None and len(all_cycle_solutions) > 0:
             self._solution.cycles = all_cycle_solutions

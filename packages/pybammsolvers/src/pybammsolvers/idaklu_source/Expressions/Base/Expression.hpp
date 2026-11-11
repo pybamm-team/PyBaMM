@@ -13,6 +13,11 @@ public:  // method declarations
   Expression() = default;
 
   /**
+   * @brief Virtual destructor (required for safe polymorphic deletion via base pointer)
+   */
+  virtual ~Expression() = default;
+
+  /**
    * @brief Evaluation operator (for use after setting input and output data references)
    */
   virtual void operator()() = 0;
@@ -56,12 +61,12 @@ public:  // data members
   /**
    * @brief Vector of pointers to the input data
    */
-  std::vector<const double *> m_arg;  // cppcheck-suppress unusedStructMember
+  std::vector<const double *> m_arg;
 
   /**
    * @brief Vector of pointers to the output data
    */
-  std::vector<double *> m_res;  // cppcheck-suppress unusedStructMember
+  std::vector<double *> m_res;
 };
 
 #endif // PYBAMM_EXPRESSION_HPP

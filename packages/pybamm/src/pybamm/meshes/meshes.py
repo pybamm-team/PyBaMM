@@ -134,6 +134,7 @@ class Mesh(dict):
         self.submesh_pts = submesh_pts
 
         # evaluate any expressions in geometry
+        input_dependent_domains = {}
         for domain in geometry:
             for spatial_variable, spatial_limits in geometry[domain].items():
                 # process tab information if using 1 or 2D current collectors
@@ -141,7 +142,15 @@ class Mesh(dict):
                     for tab, position_info in spatial_limits.items():
                         for position_size, sym in position_info.items():
                             if isinstance(sym, pybamm.Symbol):
-                                sym_eval = sym.evaluate()
+                                try:
+                                    sym_eval = sym.evaluate()
+                                except KeyError as error:
+                                    raise pybamm.GeometryError(
+                                        f"Tab {position_size} for '{tab}' in domain "
+                                        f"'{domain}' depends on input parameter(s) "
+                                        f"{self._input_names(sym)}, which is not "
+                                        "supported."
+                                    ) from error
                                 geometry[domain]["tabs"][tab][position_size] = sym_eval
                 else:
                     for lim, sym in spatial_limits.items():
@@ -149,7 +158,11 @@ class Mesh(dict):
                             try:
                                 sym_eval = sym.evaluate()
                             except KeyError:
+                                # Input-dependent limits stay symbolic
                                 sym_eval = sym
+                                input_dependent_domains.setdefault(
+                                    domain, set()
+                                ).update(self._input_names(sym))
                             except NotImplementedError as error:
                                 if sym.has_symbol_of_classes(pybamm.Parameter):
                                     raise pybamm.DiscretisationError(
@@ -164,14 +177,48 @@ class Mesh(dict):
                             sym_eval = sym
                         geometry[domain][spatial_variable][lim] = sym_eval
 
+        self._check_symbolic_limits_supported(input_dependent_domains, submesh_types)
+
         # Create submeshes
         self.base_domains = []
         for domain in geometry:
             self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
             self.base_domains.append(domain)
 
+        # compute interface data for unstructured meshes
+        self._compute_unstructured_interfaces()
+
         # add ghost meshes
         self.add_ghost_meshes()
+
+    @staticmethod
+    def _input_names(symbol: pybamm.Symbol) -> list[str]:
+        """Return the sorted names of the input parameters in ``symbol``."""
+        return sorted(
+            {s.name for s in symbol.pre_order() if isinstance(s, pybamm.InputParameter)}
+        )
+
+    @staticmethod
+    def _check_symbolic_limits_supported(
+        input_dependent_domains: dict[str, set[str]], submesh_types: dict
+    ) -> None:
+        """Raise a GeometryError if a submesh needs numerical limits but has inputs."""
+        unsupported = []
+        for domain, input_names in input_dependent_domains.items():
+            submesh_type = submesh_types[domain].submesh_type
+            if not submesh_type.supports_symbolic_limits:
+                unsupported.append(
+                    f"'{domain}' ({submesh_type.__name__}) depends on "
+                    f"{sorted(input_names)}"
+                )
+        if unsupported:
+            raise pybamm.GeometryError(
+                "Geometry limits depend on input parameters, but the submesh types "
+                f"need numerical limits: {'; '.join(unsupported)}. Use "
+                "pybamm.SymbolicUniform1DSubMesh for these domains, or set "
+                "supports_symbolic_limits = True on a custom SubMesh that accepts "
+                "symbolic limits."
+            )
 
     def __getitem__(self, domains):
         if isinstance(domains, str):
@@ -214,6 +261,8 @@ class Mesh(dict):
                 raise pybamm.GeometryError(
                     "Cannot combine submeshes of different dimensions"
                 )
+            elif isinstance(self[submeshnames[i]], pybamm.UnstructuredSubMesh):
+                pass
             elif self[submeshnames[i]].dimension == 2:
                 if "left" in submeshnames[i] or "right" in submeshnames[i + 1]:
                     # Make sure that the lr edges are aligned
@@ -264,7 +313,11 @@ class Mesh(dict):
                 )
 
         coord_sys = self[submeshnames[0]].coord_sys
-        if self[submeshnames[0]].dimension == 1:
+        if isinstance(self[submeshnames[0]], pybamm.UnstructuredSubMesh):
+            return pybamm.UnstructuredSubMesh.combine(
+                [self[name] for name in submeshnames]
+            )
+        elif self[submeshnames[0]].dimension == 1:
             combined_submesh_edges = np.concatenate(
                 [self[submeshnames[0]].edges]
                 + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
@@ -349,6 +402,58 @@ class Mesh(dict):
                 submesh.internal_boundaries.append(self[submeshname].edges_lr[0] + min)
         return submesh
 
+    def _compute_unstructured_interfaces(self):
+        """
+        For adjacent domains backed by :class:`UnstructuredSubMesh`, compute
+        and store interface coupling data.
+
+        Adjacency is derived from the geometry, not from the order domains
+        appear in the geometry dict: two domains abut when the plane of one's
+        ``"right"`` boundary faces coincides with the other's ``"left"``.
+        """
+        unstructured_domains = [
+            d
+            for d in self.base_domains
+            if isinstance(self[d], pybamm.UnstructuredSubMesh)
+        ]
+        for left_name in unstructured_domains:
+            left_mesh = self[left_name]
+            if "right" not in left_mesh.boundary_faces:
+                continue
+            right_x = left_mesh.face_centroids[
+                left_mesh.boundary_faces["right"], 0
+            ].mean()
+            for right_name in unstructured_domains:
+                if right_name == left_name:
+                    continue
+                right_mesh = self[right_name]
+                if "left" not in right_mesh.boundary_faces:
+                    continue
+                left_x = right_mesh.face_centroids[
+                    right_mesh.boundary_faces["left"], 0
+                ].mean()
+                from pybamm.meshes.unstructured_submesh import _geometric_tolerance
+
+                if abs(right_x - left_x) > _geometric_tolerance(
+                    [left_mesh, right_mesh]
+                ):
+                    continue
+                try:
+                    pybamm.compute_interface_data(
+                        left_mesh,
+                        right_mesh,
+                        left_name=left_name,
+                        right_name=right_name,
+                    )
+                except pybamm.GeometryError as error:
+                    # No exception during Mesh.__init__: the model may never
+                    # couple these domains. But a skipped interface carries no
+                    # flux, so it must be visible rather than silent.
+                    pybamm.logger.warning(
+                        f"No interface coupling between {left_name!r} and "
+                        f"{right_name!r}: {error}"
+                    )
+
     def add_ghost_meshes(self):
         """
         Create meshes for potential ghost nodes on either side of each submesh, using
@@ -365,7 +470,8 @@ class Mesh(dict):
                     submesh,
                     pybamm.SubMesh0D
                     | pybamm.ScikitSubMesh2D
-                    | pybamm.ScikitFemSubMesh3D,
+                    | pybamm.ScikitFemSubMesh3D
+                    | pybamm.UnstructuredSubMesh,
                 )
             )
         ]
@@ -431,8 +537,11 @@ class SubMesh:
     """
     Base submesh class.
     Contains the position of the nodes, the number of mesh points, and
-    (optionally) information about the tab locations.
+    (optionally) information about the tab locations. Subclasses that accept limits
+    depending on input parameters set ``supports_symbolic_limits = True``.
     """
+
+    supports_symbolic_limits = False
 
     # Construction inputs re-derived from edges/coord_sys on decode, so the coverage
     # guard waives them. Inherited by all SubMesh subclasses. `tabs` is excluded: it

@@ -3,9 +3,12 @@
 #
 
 import numpy as np
+import pytest
 
 import pybamm
 from tests import (
+    assert_constant_matrix_factors,
+    assert_symbolic_mesh_matches_numeric,
     get_1p1d_mesh_for_testing,
     get_cylindrical_mesh_for_testing,
     get_cylindrical_mesh_for_testing_symbolic,
@@ -14,6 +17,7 @@ from tests import (
     get_mesh_for_testing_symbolic_concatenation,
     get_p2d_mesh_for_testing,
     get_spherical_mesh_for_testing_symbolic,
+    get_symbolic_length_discretisation_for_testing,
 )
 
 
@@ -868,3 +872,161 @@ class TestFiniteVolumeGradDiv:
         div_eval = div_eqn_disc.evaluate(None, linear_y)
         div_eval = np.reshape(div_eval, [30, 1])
         np.testing.assert_allclose(div_eval, np.zeros([30, 1]), rtol=1e-7, atol=1e-6)
+
+    @pytest.mark.parametrize(
+        "coord_sys", ["cartesian", "cylindrical polar", "spherical polar"]
+    )
+    @pytest.mark.parametrize("right_bc", ["Neumann", "Dirichlet"])
+    def test_symbolic_length_mesh_with_secondary_domain(self, coord_sys, right_bc):
+        auxiliary_domains = {"secondary": "electrode"}
+        c = pybamm.Variable("c", "particle", auxiliary_domains=auxiliary_domains)
+        r = pybamm.SpatialVariable(
+            "r", ["particle"], auxiliary_domains=auxiliary_domains, coord_sys=coord_sys
+        )
+        r_edge = pybamm.SpatialVariableEdge(
+            "r", ["particle"], auxiliary_domains=auxiliary_domains, coord_sys=coord_sys
+        )
+        expressions = [
+            pybamm.grad(c),
+            pybamm.div(pybamm.grad(c)),
+            # a node-valued factor of a gradient takes the harmonic mean
+            pybamm.div((1 + c**2) * pybamm.grad(c)),
+            r,
+            r_edge,
+        ]
+
+        def discretise(radius):
+            disc = get_symbolic_length_discretisation_for_testing(
+                radius, coord_sys=coord_sys
+            )
+            disc.set_variable_slices([c])
+            disc.bcs = {
+                c: {
+                    "left": (pybamm.Scalar(1), "Neumann"),
+                    "right": (pybamm.Scalar(2), right_bc),
+                }
+            }
+            discretised = [disc.process_symbol(expr) for expr in expressions]
+            method = disc.spatial_methods["particle"]
+            discretised.append(method.edge_to_node(discretised[0], "harmonic"))
+            return discretised
+
+        y = 1 + np.linspace(0, 1, 18)[:, np.newaxis] ** 2
+        for symbolic, numeric in zip(
+            discretise(pybamm.InputParameter("R")),
+            discretise(pybamm.Scalar(2)),
+            strict=True,
+        ):
+            assert_symbolic_mesh_matches_numeric(symbolic, numeric, y, {"R": 2})
+
+    @pytest.mark.parametrize(
+        "coord_sys", ["cartesian", "cylindrical polar", "spherical polar"]
+    )
+    def test_symbolic_length_mesh_public_matrices(self, coord_sys):
+        domains = {"primary": ["particle"], "secondary": ["electrode"]}
+
+        def matrices(radius):
+            disc = get_symbolic_length_discretisation_for_testing(
+                radius, coord_sys=coord_sys
+            )
+            method = disc.spatial_methods["particle"]
+            return [
+                method.gradient_matrix(["particle"], domains),
+                method.divergence_matrix(domains),
+            ]
+
+        for symbolic, numeric in zip(
+            matrices(pybamm.InputParameter("R")),
+            matrices(pybamm.Scalar(2)),
+            strict=True,
+        ):
+            assert not symbolic.is_constant()
+            np.testing.assert_allclose(
+                symbolic.evaluate(inputs={"R": 2}).toarray(),
+                numeric.evaluate().toarray(),
+                rtol=1e-12,
+                atol=1e-12,
+            )
+
+    @pytest.mark.parametrize(
+        "radius, inputs",
+        [(pybamm.Scalar(2), {}), (pybamm.InputParameter("R"), {"R": 2})],
+        ids=["numeric", "symbolic"],
+    )
+    def test_overridden_public_matrices(self, radius, inputs):
+        class ScaledFiniteVolume(pybamm.FiniteVolume):
+            def gradient_matrix(self, domain, domains):
+                return 2 * super().gradient_matrix(domain, domains)
+
+            def divergence_matrix(self, domains):
+                return 3 * super().divergence_matrix(domains)
+
+        c = pybamm.Variable(
+            "c", "particle", auxiliary_domains={"secondary": "electrode"}
+        )
+        y = np.linspace(0, 1, 18)[:, np.newaxis] ** 2
+
+        def evaluate(spatial_method):
+            disc = get_symbolic_length_discretisation_for_testing(
+                radius, spatial_method=spatial_method
+            )
+            disc.set_variable_slices([c])
+            disc.bcs = {
+                c: {
+                    "left": (pybamm.Scalar(0), "Neumann"),
+                    "right": (pybamm.Scalar(0), "Neumann"),
+                }
+            }
+            return [
+                disc.process_symbol(expr).evaluate(0, y, inputs=inputs)
+                for expr in (pybamm.grad(c), pybamm.div(pybamm.grad(c)))
+            ]
+
+        grad, div = evaluate(pybamm.FiniteVolume())
+        scaled_grad, scaled_div = evaluate(ScaledFiniteVolume())
+        np.testing.assert_allclose(scaled_grad, 2 * grad, rtol=1e-12, atol=1e-12)
+        np.testing.assert_allclose(scaled_div, 6 * div, rtol=1e-12, atol=1e-12)
+
+    def test_repeat_vector(self):
+        vector = pybamm.InputParameter("a") * pybamm.Vector(np.array([1.0, 2.0]))
+        assert pybamm.FiniteVolume._repeat_vector(vector, 1) is vector
+        repeated = pybamm.FiniteVolume._repeat_vector(vector, 3)
+        assert_constant_matrix_factors(repeated)
+        np.testing.assert_array_equal(
+            repeated.evaluate(inputs={"a": 2}).ravel(), np.tile([2.0, 4.0], 3)
+        )
+        constant = pybamm.FiniteVolume._repeat_vector(
+            pybamm.Vector(np.array([1.0, 2.0])), 3
+        )
+        assert isinstance(constant, pybamm.Vector)
+        np.testing.assert_array_equal(constant.entries.ravel(), np.tile([1.0, 2.0], 3))
+
+    def test_apply_matrix(self):
+        stencil = pybamm.Matrix(np.array([[1.0, 2.0], [3.0, 4.0]]))
+        a = pybamm.InputParameter("a")
+        column = a * pybamm.Vector(np.array([1.0, 2.0]))
+        vector = pybamm.StateVector(slice(0, 2))
+        y = np.array([[5.0], [6.0]])
+        values = stencil.entries
+        cases = [
+            (column, (values * [[2.0], [4.0]]) @ y),
+            (pybamm.Transpose(column), (values * [[2.0, 4.0]]) @ y),
+            (a * pybamm.Matrix(np.array([[1.0, 2.0]])), (values * [[2.0, 4.0]]) @ y),
+            (a, 2 * values @ y),
+        ]
+        for scale, expected in cases:
+            matrix = pybamm.FiniteVolume._scaled_matrix(stencil, scale)
+            product = pybamm.FiniteVolume._apply_matrix(matrix, vector)
+            assert_constant_matrix_factors(product)
+            np.testing.assert_allclose(
+                product.evaluate(y=y, inputs={"a": 2}), expected, rtol=1e-15
+            )
+
+        # a constant scaling folds into the matrix, and any other matrix multiplies
+        # as it is
+        constant = pybamm.FiniteVolume._scaled_matrix(stencil, pybamm.Scalar(2))
+        assert isinstance(constant, pybamm.Matrix)
+        full = pybamm.Multiplication(stencil, a * pybamm.Matrix(np.ones((2, 2))))
+        product = pybamm.FiniteVolume._apply_matrix(full, vector)
+        assert isinstance(product, pybamm.MatrixMultiplication)
+        assert product.left == full

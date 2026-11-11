@@ -2,12 +2,12 @@ name: PyBaMM
 
 on:
   pull_request:
-  # Run on pushes to main as well, primarily to warm the solver-wheel cache
-  # (keyed on the solver source hash) so PyBaMM-only PRs get a cache hit instead
-  # of rebuilding the solver. Also gives a post-merge health signal for main.
+  # Queue-validated pushes only refresh shared caches and the Codecov baseline;
+  # unvalidated pushes fall back to the full suite.
   push:
     branches:
       - main
+  merge_group:
 
 
 permissions: {}
@@ -30,15 +30,21 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       pull-requests: read
       contents: read
     outputs:
       solver: ${{ steps.filter.outputs.solver }}
       pybamm: ${{ steps.filter.outputs.pybamm }}
       docs: ${{ steps.filter.outputs.docs }}
+      model_zoo: ${{ steps.filter.outputs.model_zoo }}
+      full_push: ${{ github.event_name == 'push' && steps.queue.outputs.validated != 'true' }}
       # Routing decisions, resolved once here rather than repeated in every job's `if`.
-      run_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
-      run_docs_tests: ${{ github.event_name == 'push' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
+      run_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
+      run_docs_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
+      # A core change runs the zoo too, so an upstream regression shows up here
+      # rather than in a contributor's next pull request.
+      run_zoo_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.model_zoo == 'true' }}
       # Solver-wheel platforms each scenario's downstream jobs actually consume.
       platforms: ${{ steps.route.outputs.platforms }}
       macos_runners: ${{ steps.route.outputs.macos_runners }}
@@ -46,8 +52,45 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+
+      - name: Check this SHA passed the merge queue
+        id: queue
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          validated=false
+          if run_ids=$(gh api --method GET \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/test_on_push.yml/runs" \
+            -f event=merge_group \
+            -f head_sha="$GITHUB_SHA" \
+            -F per_page=10 \
+            --jq '.workflow_runs[].id'); then
+            for run_id in $run_ids; do
+              if gate_count=$(gh api --method GET \
+                "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" \
+                -f filter=latest \
+                -F per_page=100 \
+                --jq '[.jobs[] | select(.name == "CI gate" and .conclusion == "success")] | length'); then
+                if [ "$gate_count" -gt 0 ]; then
+                  validated=true
+                  break
+                fi
+              else
+                echo "::warning::Could not inspect merge-queue run $run_id."
+              fi
+            done
+          else
+            echo "::warning::Could not query merge-queue runs."
+          fi
+          if [ "$validated" != true ]; then
+            echo "::notice::No successful merge-queue gate found; running the full suite."
+          fi
+          echo "validated=$validated" >> "$GITHUB_OUTPUT"
+
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
+        if: github.event_name == 'pull_request'
         with:
           filters: |
             solver:
@@ -65,6 +108,16 @@ jobs:
               - '.github/workflows/_nox.yml'
             docs:
               - 'docs/**'
+            model_zoo:
+              - 'packages/pybamm-model-zoo/**'
+              - '.github/workflows/test_on_push.yml'
+              # Ownership is a contract check, so dropping an owner line has to
+              # run the check that would have caught it.
+              - '.github/CODEOWNERS'
+              # The weekly job consumes the matrix and the docs generator, and
+              # nothing else validates it on a pull request.
+              - '.github/workflows/model_zoo_status.yml'
+              - 'docs/source/model_zoo/**'
 
       # Map "what changed" to the solver wheels to build: solver PRs validate every
       # platform; pybamm/push need the sparse matrix's runners; docs-only needs Linux.
@@ -77,7 +130,7 @@ jobs:
           if [ "$SOLVER" = true ]; then
             platforms='["linux", "windows"]'
             macos='["macos-15-intel", "macos-latest"]'
-          elif [ "$EVENT" = push ] || [ "$PYBAMM" = true ]; then
+          elif [ "$EVENT" != pull_request ] || [ "$PYBAMM" = true ]; then
             platforms='["linux", "windows"]'
             macos='["macos-latest"]'
           else
@@ -90,6 +143,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   style:
+    needs: changes
+    if: ${{ github.event_name != 'push' || needs.changes.outputs.full_push == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -97,15 +152,26 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # comment-slop compares against the PR base, which the
+      # shallow checkout lacks, and it fails rather than scanning nothing.
+      - name: Fetch the pull request base branch
+        if: github.base_ref != ''
+        run: |
+          git fetch --depth=1 origin \
+            "+refs/heads/$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
+
       - name: Setup Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.12
 
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check style
         run: uvx pre-commit run -a
@@ -121,13 +187,14 @@ jobs:
   # old standalone unit/integration workflows.
   build_solver:
     needs: changes
-    if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.run_docs_tests == 'true' || needs.changes.outputs.run_zoo_tests == 'true' }}
+    name: Solver wheels
     # Pass contents:read down to the called workflow (this workflow's top-level
     # permissions are {}, so the reusable workflow's checkout would otherwise
     # get no token scope).
     permissions:
       contents: read
-    uses: ./.github/workflows/_build_solver_wheels.yml
+    uses: $/.github/workflows/_build_solver_wheels.yml
     with:
       cache_wheels: true
       build_sdist: false
@@ -141,47 +208,47 @@ jobs:
   run_unit_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Tests
       sessions: unit
       legs: >-
-        [{"os": "ubuntu-latest", "python": "3.10"},
-         {"os": "ubuntu-latest", "python": "3.11"},
+        [{"os": "ubuntu-latest", "python": "3.11"},
          {"os": "ubuntu-latest", "python": "3.12"},
          {"os": "ubuntu-latest", "python": "3.14"},
-         {"os": "ubuntu-24.04-arm", "python": "3.10"},
-         {"os": "ubuntu-24.04-arm", "python": "3.14"},
-         {"os": "macos-latest", "python": "3.10"},
-         {"os": "macos-latest", "python": "3.14"}]
+         {"os": "ubuntu-latest", "python": "3.15"},
+         {"os": "ubuntu-24.04-arm", "python": "3.11"},
+         {"os": "ubuntu-24.04-arm", "python": "3.15"},
+         {"os": "macos-latest", "python": "3.11"},
+         {"os": "macos-latest", "python": "3.15"}]
 
   # Advisory: reports red on failure but is deliberately absent from ci_gate's
   # needs, so a flaky Windows run never blocks a merge.
   run_unit_tests_advisory:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Tests
       sessions: unit
       legs: >-
-        [{"os": "windows-latest", "python": "3.10"},
-         {"os": "windows-latest", "python": "3.14"}]
+        [{"os": "windows-latest", "python": "3.11"},
+         {"os": "windows-latest", "python": "3.15"}]
 
   run_coverage:
     needs: [changes, build_solver]
-    if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.run_tests == 'true' }}
+    name: Coverage
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
-      job_name: Coverage
       sessions: coverage
       upload_coverage: true
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
@@ -189,11 +256,11 @@ jobs:
   run_integration_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Integration tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Integration tests
       sessions: integration
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
@@ -201,7 +268,7 @@ jobs:
   #  Guards both the bootstrap and the clean-clone dev experience.
   from_source_smoke:
     needs: changes
-    if: ${{ github.event_name == 'push' || needs.changes.outputs.solver == 'true' }}
+    if: ${{ github.event_name == 'merge_group' || needs.changes.outputs.full_push == 'true' || needs.changes.outputs.solver == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -220,14 +287,16 @@ jobs:
           sudo apt-get install -y gfortran gcc make cmake libopenblas-dev
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "latest"
           enable-cache: true
+          prune-cache: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       - name: From-source uv sync (auto-bootstraps SUNDIALS) + IDAKLU smoke
         run: |
@@ -237,11 +306,11 @@ jobs:
   run_doctests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
+    name: Doctests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Doctests
       sessions: "doctests docs"
       # Full clone: the docs build's sphinx_last_updated_by_git needs the history.
       fetch_depth: 0
@@ -250,35 +319,73 @@ jobs:
   run_example_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
+    name: Example notebooks
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Example notebooks
       sessions: examples
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Example scripts
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Example scripts
       sessions: scripts
+      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+
+  run_type_check:
+    needs: [changes, build_solver]
+    if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Type check
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: type-check
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_memory_tests:
     needs: [changes, build_solver]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    name: Memory tests
     permissions:
       contents: read
-    uses: ./.github/workflows/_nox.yml
+    uses: $/.github/workflows/_nox.yml
     with:
-      job_name: Memory tests
       sessions: memory
-      texlive: false
+      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+
+  # The `core` tier: models the maintainers have adopted, so a failure blocks a
+  # merge exactly as a core test failure would.
+  run_zoo_gating:
+    needs: [changes, build_solver]
+    if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
+    name: Model zoo (core tier)
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: zoo-gating
+      timeout_minutes: 30
+      legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
+
+  # Advisory like run_unit_tests_advisory above: `community` reports red without
+  # blocking. The gate above covers `core`, so this runs only what it does not.
+  run_zoo_tests_advisory:
+    needs: [changes, build_solver]
+    if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
+    name: Model zoo
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: zoo-community
+      timeout_minutes: 60
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   # Single required check for branch protection. Green when every gated job either
@@ -296,7 +403,9 @@ jobs:
       - run_doctests
       - run_example_tests
       - run_scripts_tests
+      - run_type_check
       - run_memory_tests
+      - run_zoo_gating
     runs-on: ubuntu-latest
     permissions: {}
     name: CI gate
