@@ -28,6 +28,7 @@
 ## Bug fixes
 
 - Electrode state-of-health solvers now reject candidates that do not satisfy the equations. An infeasible voltage window raises a detailed error during capacity-based experiment termination. ([#6037](https://github.com/pybamm-team/PyBaMM/pull/6037))
+- An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
 - `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
 - Released `pybammsolvers` v0.12.0, with the solver functions `pybamm` calls since #5994, and `pybamm` now requires it. Before, `pybamm` from source with `pybammsolvers` 0.11.1 from PyPI failed at its first solve. ([#6028](https://github.com/pybamm-team/PyBaMM/pull/6028))
 - Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))
@@ -42,6 +43,7 @@
   - `jax.vmap` over tangent directions returns one result per direction, and over time shares one solve.
   - Times outside the solution, and derivatives with respect to time, give NaN rather than an error or a wrong value.
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
+- `name in pybamm.parameter_sets` (or `pybamm.dispatch.models`) no longer builds the set or model, so `ParameterValues(name)` builds it once and the check no longer raises for a missing optional dependency. `parameter_sets.items()` and `.values()` skip such sets. ([#5871](https://github.com/pybamm-team/PyBaMM/pull/5871))
 - Solver restarts now start from the right state and sensitivities. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
   - After a discontinuity whose time depends on an input, such as `pybamm.t > pybamm.InputParameter("t_switch")`, `IDAKLUSolver.solve` restarts from the end of the previous segment rather than from the initial conditions. `step()`, and so each experiment step, now stops at such discontinuities as `solve()` does.
   - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.

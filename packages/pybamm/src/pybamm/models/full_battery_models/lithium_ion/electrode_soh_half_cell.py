@@ -6,7 +6,12 @@ import warnings
 import pybamm
 
 from .electrode_soh import _solve_esoh_simulation, get_esoh_default_solver
-from .util import check_if_composite, get_initial_ocp, get_lithiation_delithiation
+from .util import (
+    _default_initial_hysteresis_states,
+    check_if_composite,
+    get_initial_ocp,
+    get_lithiation_delithiation,
+)
 
 
 class ElectrodeSOHHalfCell(pybamm.BaseModel):
@@ -143,7 +148,7 @@ def get_initial_stoichiometry_half_cell(
     """
     details = _solve_initial_stoichiometry_half_cell(
         initial_value,
-        parameter_values,
+        _default_initial_hysteresis_states(parameter_values, options),
         options=options,
         tol=tol,
         inputs=inputs,
@@ -357,15 +362,13 @@ def _composite_soc_equations(x, x_2, soc, limits, param, options, direction):
     Q_now = Q_w * x + Q_w_2 * x_2
     # SOC 0 and 1 are defined at the reference temperature
     T_ref = param.T_ref
-    lithiation_primary = get_lithiation_delithiation(
-        direction, "positive", options, phase="primary"
-    )
-    lithiation_secondary = get_lithiation_delithiation(
-        direction, "positive", options, phase="secondary"
-    )
     return {
-        x: param.p.prim.U(x, T_ref, lithiation_primary)
-        - param.p.sec.U(x_2, T_ref, lithiation_secondary),
+        x: get_initial_ocp(
+            param.p.prim, x, T_ref, direction, "positive", options, "primary"
+        )
+        - get_initial_ocp(
+            param.p.sec, x_2, T_ref, direction, "positive", options, "secondary"
+        ),
         x_2: (Q_now - Q_min) / (Q_max - Q_min) - soc,
     }
 
