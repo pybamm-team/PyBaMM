@@ -3,7 +3,7 @@
             "BPX": "1.1",
             "Model": "DFN",
             "Title": "Parameterisation of Molicel P45B 4.5 Ah NCA|graphite-SiOx cylindrical cell.",
-            "Description": "Molicel P45B 4.5 Ah NCA|graphite-SiOx cylindrical cell. Parameterisation by About:Energy Limited (aboutenergy.io), May 2026."
+            "Description": "Molicel P45B 4.5 Ah NCA|graphite-SiOx cylindrical cell. Parameterisation by About:Energy Limited (aboutenergy.io), May 2026 (doi.org/10.1149/1945-7111/aea1c1). Electrolyte parameters are derived from functional forms reported by Landesfeind and Gasteiger (doi.org/10.1149/2.0571912jes). For clarification on user-defined parameters please reference https://github.com/About-Energy-OpenSource/AEPyBaMM."
       },
       "Parameterisation": {
             "Cell": {
