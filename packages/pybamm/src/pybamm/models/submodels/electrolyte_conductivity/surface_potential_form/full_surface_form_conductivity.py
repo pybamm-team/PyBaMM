@@ -184,19 +184,8 @@ class BaseModel(BaseElectrolyteConductivity):
         Domain = self.domain.capitalize()
 
         if self.domain == "separator":
-            # Register outer-edge BCs on the concatenated electrolyte
-            # potential `phi_e`. `Discretisation.set_internal_boundary_conditions`
-            # only splits a Concatenation key's BCs into per-orphan
-            # entries when the Concatenation itself appears as a BC key,
-            # which is what makes `grad(phi_e_<domain>)` evaluate on
-            # full edges instead of internal edges only. The separator
-            # submodel is the one submodel of this electrolyte conductivity
-            # family that is always instantiated (full-cell and half-cell
-            # alike), so this is the right place to register the BC --
-            # registering it in the negative branch instead silently
-            # dropped the BC in the half-cell case (planar negative
-            # skips the negative submodel) and broke the Ohmic-heating
-            # term in the thermal model. See #5414.
+            # Set here because the separator submodel exists in half-cells too;
+            # grad(phi_e) needs these BCs to discretise on the outer edges
             phi_e = variables["Electrolyte potential [V]"]
             if self.options.electrode_types["negative"] == "planar":
                 phi_e_ref = variables[
@@ -205,9 +194,7 @@ class BaseModel(BaseElectrolyteConductivity):
                 lbc = (phi_e_ref, "Dirichlet")
             else:
                 lbc = (pybamm.Scalar(0), "Neumann")
-            # Use `update` rather than assignment so the `c_e_s` Neumann
-            # BCs that `get_coupled_variables` puts on `self.boundary_conditions`
-            # earlier in the submodel's lifecycle are preserved.
+            # update, not assign, to keep the c_e BCs set in get_coupled_variables
             self.boundary_conditions.update(
                 {phi_e: {"left": lbc, "right": (pybamm.Scalar(0), "Neumann")}}
             )
