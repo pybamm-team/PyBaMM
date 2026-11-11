@@ -174,6 +174,15 @@ class BaseUnitTestLithiumIon:
         options = {"particle": "quartic profile"}
         self.check_well_posedness(options)
 
+    def test_well_posed_particle_polynomial_hom(self):
+        for particle in ["quadratic profile", "quartic profile"]:
+            options = {
+                "particle": particle,
+                "thermal": "lumped",
+                "heat of mixing": "true",
+            }
+            self.check_well_posedness(options)
+
     def test_well_posed_particle_mixed(self):
         options = {"particle": ("Fickian diffusion", "quartic profile")}
         self.check_well_posedness(options)
@@ -268,6 +277,25 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_kinetics_mhc(self):
         options = {"intercalation kinetics": "Marcus-Hush-Chidsey"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_coupled_ion_electron_transfer(self):
+        options = {"intercalation kinetics": "coupled ion-electron transfer"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_coupled_ion_electron_transfer_psd(self):
+        options = {
+            "intercalation kinetics": "coupled ion-electron transfer",
+            "particle size": "distribution",
+            "surface form": "algebraic",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_coupled_ion_electron_transfer_composite(self):
+        options = {
+            "intercalation kinetics": "coupled ion-electron transfer",
+            "particle phases": ("2", "1"),
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_sei_constant(self):
@@ -369,6 +397,19 @@ class BaseUnitTestLithiumIon:
             "SEI": "reaction limited",
             "SEI on cracks": "true",
             "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_side_reactions_lumped_thermal(self):
+        options = {
+            "SEI": "reaction limited",
+            "SEI on cracks": "true",
+            "particle mechanics": "swelling and cracking",
+            "lithium plating": "reversible",
+            "thermal": "lumped",
+            "SEI film resistance": "distributed",
+            "stress-induced diffusion": "true",
+            "total interfacial current density as a state": "true",
         }
         self.check_well_posedness(options)
 
