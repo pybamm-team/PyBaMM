@@ -371,6 +371,8 @@ class TestExperimentSteps:
         assert termination_gt_4_1_oo == termination_gt_4_1
 
     def test_voltage_termination_without_direction_warns(self):
+        variables = {"Battery voltage [V]": 4.0}
+
         # Rest and voltage-controlled steps have no charge or discharge direction, so
         # a voltage termination without an operator gives no event
         for step_string in [
@@ -379,19 +381,28 @@ class TestExperimentSteps:
         ]:
             with pytest.warns(UserWarning, match=r"voltage termination at .* ignored"):
                 step = pybamm.step.string(step_string)
-            variables = {"Battery voltage [V]": 4.0}
             assert step.get_termination_events(variables) == []
+
+        # The warning points at the caller, not at PyBaMM's step classes
+        with pytest.warns(UserWarning, match=r"voltage termination") as record:
+            step = pybamm.step.rest(3600, termination="3.5V")
+        assert record[0].filename == __file__
+
+        # Copying the step for an experiment does not warn a second time
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pybamm.Experiment([step])
 
         # An operator, or a charge or discharge direction, gives the event its sign
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            for step_string in [
-                "Rest for 1 hour or until > 3.5 V",
-                "Hold at 4.1 V until < 4.2 V",
-                "Discharge at 1 A until 3 V",
-                "Charge at 1 A until 4.2 V",
+            for step in [
+                pybamm.step.string("Rest for 1 hour or until > 3.5 V"),
+                pybamm.step.string("Hold at 4.1 V until < 4.2 V"),
+                pybamm.step.string("Discharge at 1 A until 3 V"),
+                pybamm.step.string("Charge at 1 A until 4.2 V"),
+                pybamm.step.voltage(4.1, termination="4.2V", direction="charge"),
             ]:
-                step = pybamm.step.string(step_string)
                 assert len(step.get_termination_events(variables)) == 1
 
     def test_symbolic_termination_expression_helpers(self):
