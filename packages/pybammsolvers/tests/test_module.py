@@ -71,15 +71,6 @@ class TestPackageStructure:
         assert callable(idaklu_module.generate_function)
         assert callable(idaklu_module.create_idaklu_jax)
 
-    def test_solution_holds_no_sensitivity_derivatives(self, idaklu_module):
-        """
-        Verify the solution does not carry the time derivatives of the
-        sensitivities, which no consumer reads and which would cost
-        n_params * n_steps * n_states values per solve.
-        """
-        assert hasattr(idaklu_module.solution, "yS")
-        assert not hasattr(idaklu_module.solution, "ypS")
-
     @pytest.mark.parametrize(
         ("flag", "name"),
         [

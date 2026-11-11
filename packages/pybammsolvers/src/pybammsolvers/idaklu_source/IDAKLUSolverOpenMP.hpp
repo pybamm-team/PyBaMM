@@ -107,12 +107,14 @@ public:
   //   y[i][j]        -> y[i * stride_y + j]      where stride_y = length_of_return_vector
   //   yp[i][j]       -> yp[i * stride_yp + j]    where stride_yp = number_of_states
   //   yS[i][p][j]    -> yS[(i * n_params + p) * stride_y + j]
+  //   ypS[i][p][j]   -> ypS[(i * n_params + p) * stride_yp + j]
   vector<sunrealtype> t;   // [n_timesteps]
   vector<sunrealtype> y;   // [n_timesteps * length_of_return_vector]  (flat)
   vector<sunrealtype> yp;  // [n_timesteps * number_of_states]         (flat)
   // In save_outputs_only mode yS instead uses the final numpy layout,
   // yS[(i * stride_y + j) * n_params + p], so no transpose is needed at the end
   vector<sunrealtype> yS;  // [n_timesteps * n_params * length_of_return_vector] (flat)
+  vector<sunrealtype> ypS; // [n_timesteps * n_params * number_of_states]        (flat)
   SetupOptions const setup_opts;
   SolverOptions const solver_opts;
   IDAKLUStats accumulated_stats;  // Accumulated stats across reinitializations
@@ -176,6 +178,7 @@ public:
   std::vector<int> rootsfound_;
 
   // ── Solve-duration state (valid only during solve()) ──
+  bool save_hermite_sensitivities_ = false;
   bool use_knot_reduction_ = false;
   bool use_upsampling_ = false;
   // Upsampled times go to t_additive, not the states
@@ -199,6 +202,7 @@ public:
   sunrealtype *y_val_ = nullptr;
   sunrealtype *yp_val_ = nullptr;
   vector<sunrealtype *> yS_val_;
+  vector<sunrealtype *> ypS_val_;
   // State at t0 after consistent initialization, for save_outputs_only
   std::vector<sunrealtype> y_init_;
   // Its sensitivities, (number_of_parameters, number_of_states) row-major
@@ -500,11 +504,14 @@ public:
   SolutionData BuildSolutionData(int retval);
 
   /**
-   * Trims yS to the steps actually taken, and transposes it into the numpy
-   * layout unless save_outputs_only already wrote it that way.
-   * @brief Hand the sensitivities over in numpy layout
+   * Trims the arrays to the steps actually taken, and transposes them into the
+   * numpy layout unless save_outputs_only already wrote them that way.
+   * @brief Hand the sensitivity arrays over in numpy layout
    */
-  void ReorderSensitivities(std::vector<sunrealtype> &yS_out);
+  void ReorderSensitivities(
+    std::vector<sunrealtype> &yS_out,
+    std::vector<sunrealtype> &ypS_out
+  );
 
   /**
    * @brief Emit buffered log and statistics output (GIL held, serial section)
@@ -512,12 +519,12 @@ public:
   void flush_log() override;
 
   /**
-   * @brief Set the step values (uses member state y_val_, yp_val_, yS_val_, i_save_)
+   * @brief Set the step values (uses member state y_val_, yp_val_, yS_val_, ypS_val_, i_save_)
    */
   void SetStep(sunrealtype &tval);
 
   /**
-   * @brief Save interpolated step values (uses member state for y/yp/yS/i_save)
+   * @brief Save interpolated step values (uses member state for y/yp/yS/ypS/i_save)
    */
   void SaveInterpPoints(
     int &i_interp,
@@ -552,6 +559,11 @@ public:
    * @brief Save Hermite interpolation derivatives at the requested time
    */
   void SetStepHermite(sunrealtype &tval);
+
+  /**
+   * @brief Save Hermite interpolation sensitivity derivatives at the requested time
+   */
+  void SetStepHermiteSensitivities(sunrealtype &tval);
 
 };
 

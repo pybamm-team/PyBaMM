@@ -44,6 +44,8 @@ struct SolverOptions {
   // Include the forward sensitivities in IDAS's local error test
   bool sensitivity_error_control;
   bool hermite_interpolation;
+  // Also store the sensitivities' time derivatives (ypS) with the Hermite data
+  bool hermite_sensitivities;
   // IDA initial conditions calculation
   bool calc_ic;
   bool init_all_y_ic;

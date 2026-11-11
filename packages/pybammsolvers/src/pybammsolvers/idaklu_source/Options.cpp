@@ -192,6 +192,12 @@ SolverOptions::SolverOptions(py::dict &py_opts)
         sensitivity_error_control = py_opts["sensitivity_error_control"].cast<bool>();
     }
 
+    // Off by default, as ypS doubles the stored sensitivities
+    hermite_sensitivities = false;
+    if (py_opts.contains("hermite_sensitivities")) {
+        hermite_sensitivities = py_opts["hermite_sensitivities"].cast<bool>();
+    }
+
     // Knot reduction multiplier (1.0 = no reduction, >1.0 = active)
     hermite_reduction_factor = 1.0;
     if (py_opts.contains("hermite_reduction_factor")) {

@@ -2,7 +2,7 @@
 
 ## Breaking changes
 
-- The next `pybammsolvers` release removes `ypS`, the time derivatives of the sensitivities, from the `solution` of its IDAKLU solver. `pybamm` never read it. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
+- The next `pybammsolvers` release leaves `ypS`, the time derivatives of the sensitivities, empty in its IDAKLU solver's `solution` unless its new `"hermite_sensitivities"` option is set. `pybamm` never read it. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 - `StateVector` and `StateVectorDot` raise `ShapeError` for stepped, negative, overlapping or out-of-order slices; pass sorted, disjoint, non-negative slices. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
 - Dropped support for Python 3.10, which reaches end of life in October 2026. `pybamm` and `pybammsolvers` now require Python 3.11 or newer, and `pybamm` no longer depends on `typing-extensions`. Python 3.10 users can stay on PyBaMM 26.10. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - `pybamm.ModelSolutionObservability` and `pybamm.parameters.ParameterCategory` are now `enum.StrEnum`s, so `str()` and f-strings of a member give its value instead of `<Enum>.<NAME>`. `ParameterCategory` members now also compare equal to their string values. Use `.name` for a member's name. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
@@ -77,7 +77,7 @@
 - Pull request CI no longer installs TeXLive, or the compilers and OpenBLAS that the prebuilt solver wheels make redundant. The latexify test mocks `sympy.preview` and runs everywhere. TeXLive downloads took 12–50 minutes in 6 of 15 runs. ([#5985](https://github.com/pybamm-team/PyBaMM/pull/5985))
 - Faster model build and `IDAKLUSolver` set-up for large models. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
 - Experiments with a different model per step no longer compile Jacobians of the state mappers between models, which were unused. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
-- The next `pybammsolvers` release no longer stores the time derivatives of the sensitivities. With Hermite interpolation, a DFN solve with 3 sensitivities over 3200 steps peaks 237 MB lower, at 294 MB above its starting memory instead of 531 MB. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
+- The next `pybammsolvers` release stores the sensitivities' time derivatives only on request. With Hermite interpolation, a DFN solve with 3 sensitivities over 3200 steps peaks 237 MB lower, at 294 MB above its starting memory instead of 531 MB. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 
 # [v26.10.1.1](https://github.com/pybamm-team/PyBaMM/tree/pybamm-v26.10.1.1) - 2026-10-19
 

@@ -487,6 +487,9 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
     save_adaptive_steps_ &&
     !save_outputs_only
   );
+  save_hermite_sensitivities_ = (
+    solver_opts.hermite_sensitivities && save_hermite && sensitivity
+  );
 
   use_knot_reduction_ = (
     solver_opts.hermite_reduction_factor > 1.0 &&
@@ -521,6 +524,7 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
   if (save_hermite)  init_vec(yp, est * number_of_states);
   if (sensitivity) {
     init_vec(yS, est * number_of_parameters * length_of_return_vector);
+    if (save_hermite_sensitivities_)  init_vec(ypS, est * number_of_parameters * number_of_states);
   }
 
   // Allocate scratch buffers for save_outputs_only mode
@@ -583,12 +587,13 @@ void IDAKLUSolverOpenMP<ExprSet>::SetupInitialState(
   y_val_ = N_VGetArrayPointer(yy);
   yp_val_ = N_VGetArrayPointer(yyp);
   yS_val_.resize(number_of_parameters);
+  ypS_val_.resize(number_of_parameters);
   for (int p = 0; p < number_of_parameters; p++) {
     yS_val_[p] = N_VGetArrayPointer(yyS[p]);
-    sunrealtype *ypS_val = N_VGetArrayPointer(yypS[p]);
+    ypS_val_[p] = N_VGetArrayPointer(yypS[p]);
     for (int i = 0; i < number_of_states; i++) {
       yS_val_[p][i] = y0[i + (p + 1) * number_of_states];
-      ypS_val[i] = yp0[i + (p + 1) * number_of_states];
+      ypS_val_[p][i] = yp0[i + (p + 1) * number_of_states];
     }
   }
 
@@ -633,6 +638,9 @@ void IDAKLUSolverOpenMP<ExprSet>::GetSolutionStates(sunrealtype t) {
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::GetSolutionDerivatives(sunrealtype t) {
   CheckErrors(IDAGetDky(ida_mem, t, 1, yyp), "IDAGetDky");
+  if (save_hermite_sensitivities_) {
+    CheckErrors(IDAGetSensDky(ida_mem, t, 1, yypS), "IDAGetSensDky");
+  }
 }
 
 template <class ExprSet>
@@ -811,7 +819,7 @@ void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   // Save stats before reinitializing (reinit resets IDA counters)
   SaveStats();
 
-  // Not stored per step, so fetched here as the guess IDASensReInit starts from
+  // The guess IDASensReInit starts from; fetched per step only for hermite_sensitivities
   if (sensitivity) {
     CheckErrors(IDAGetSensDky(ida_mem, t_val, 1, yypS), "IDAGetSensDky");
   }
@@ -857,9 +865,9 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
   auto const arg_sens2 = (save_outputs_only ? number_of_parameters : length_of_return_vector);
 
   // Reorder sensitivities from [i][p][j] to expected numpy layout
-  std::vector<sunrealtype> yS_reordered;
+  std::vector<sunrealtype> yS_reordered, ypS_reordered;
   if (sensitivity) {
-    ReorderSensitivities(yS_reordered);
+    ReorderSensitivities(yS_reordered, ypS_reordered);
   }
 
   // Final state slice and its sensitivities (for outputs_only mode)
@@ -877,6 +885,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     save_hermite ? std::move(yp) : std::vector<sunrealtype>(),
     std::move(t_additive_),
     std::move(yS_reordered),
+    std::move(ypS_reordered),
     std::move(y_init_),
     std::move(yterm_vec),
     std::move(yS_init_),
@@ -890,13 +899,15 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::ReorderSensitivities(
-  std::vector<sunrealtype> &yS_out
+  std::vector<sunrealtype> &yS_out,
+  std::vector<sunrealtype> &ypS_out
 ) {
   DEBUG("IDAKLUSolver::ReorderSensitivities");
 
   if (save_outputs_only) {
     // Already written in the final (n_timesteps, stride, n_params) layout, so
-    // only the trim to the steps actually taken is needed
+    // only the trim to the steps actually taken is needed. ypS stays empty
+    // because save_hermite is always false in outputs-only mode.
     yS.resize(
       size_t(number_of_timesteps) * number_of_parameters * length_of_return_vector);
     yS_out = std::move(yS);
@@ -922,9 +933,27 @@ void IDAKLUSolverOpenMP<ExprSet>::ReorderSensitivities(
     }
   }
 
-  // Release the append-layout buffer now that yS_out holds the transpose;
-  // swapping, unlike assigning an empty list, also frees its capacity
+  if (save_hermite_sensitivities_) {
+    size_t const ns = number_of_states;
+    ypS.resize(nt * np * ns);
+    ypS_out.resize(nt * np * ns);
+
+    for (size_t i = 0; i < nt; ++i) {
+      for (size_t p = 0; p < np; ++p) {
+        for (size_t j = 0; j < ns; ++j) {
+          size_t src = (i * np + p) * ns + j;
+          size_t dst = (p * nt + i) * ns + j;          // (p, i, j) layout
+          ypS_out[dst] = ypS[src];
+        }
+      }
+    }
+  }
+
+  // Release the append-layout source buffers now that the transposed data
+  // lives in yS_out/ypS_out; avoids holding two full-size copies per solver.
+  // Swap rather than assign an empty list, which would keep the capacity.
   std::vector<sunrealtype>().swap(yS);
+  std::vector<sunrealtype>().swap(ypS);
 }
 
 template <class ExprSet>
@@ -938,6 +967,9 @@ void IDAKLUSolverOpenMP<ExprSet>::ExtendAdaptiveArrays() {
   }
   if (save_hermite) {
     yp.resize(yp.size() + number_of_states, 0.0);
+    if (save_hermite_sensitivities_) {
+      ypS.resize(ypS.size() + number_of_parameters * number_of_states, 0.0);
+    }
   }
 }
 
@@ -1057,7 +1089,7 @@ void IDAKLUSolverOpenMP<ExprSet>::RecoverYp(const sunrealtype& t_val) {
   for (int i : alg_state_->alg_idx) yp_val[i] = SUN_RCONST(0.0);
 }
 
-// Step storage methods (use member state: y_val_, yp_val_, yS_val_, i_save_)
+// Step storage methods (use member state: y_val_, yp_val_, yS_val_, ypS_val_, i_save_)
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStep(
   sunrealtype &tval
@@ -1239,6 +1271,24 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepHermite(
 
   sunrealtype* yp_dest = &yp[i_save_ * number_of_states];
   std::copy(yp_val_, yp_val_ + number_of_states, yp_dest);
+
+  if (save_hermite_sensitivities_) {
+    SetStepHermiteSensitivities(tval);
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::SetStepHermiteSensitivities(
+  sunrealtype &tval
+) {
+  DEBUG("IDAKLUSolver::SetStepHermiteSensitivities");
+
+  // FLAT STORAGE: ypS[(i * n_params + p) * stride + j]
+  size_t base = i_save_ * number_of_parameters * number_of_states;
+  for (size_t p = 0; p < number_of_parameters; ++p) {
+    sunrealtype* dest = &ypS[base + p * number_of_states];
+    std::copy(ypS_val_[p], ypS_val_[p] + number_of_states, dest);
+  }
 }
 
 // Algebraic IC solver construction and helpers (extracted for readability)
