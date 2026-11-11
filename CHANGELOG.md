@@ -18,6 +18,7 @@
 
 ## Features
 
+- Added the `MolicelP45B_AboutEnergy2026` parameter set for the Molicel INR21700-P45B cell (NCA / graphite-SiOx composite), loaded from the paper's BPX file. Use it with the DFN, two negative particle phases, silicon-phase hysteresis and contact resistance. Requires `bpx`. ([#5914](https://github.com/pybamm-team/PyBaMM/pull/5914))
 - Added the `IDAKLUSolver` option `upsampling_tolerance`, which adds times within each step until linear interpolation of the voltage is within tolerance (voltage-controlled steps add none). They go in `Solution.t_additive` and `Solution.t`. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
 - `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
 - Added `"coupled ion-electron transfer"` as an `"intercalation kinetics"` option, following Fraggedakis et al. (2021). It uses the existing reorganization energy and a new temperature-dependent `"... electrode coupled ion-electron transfer rate constant [A.m-2]"` per electrode, and its current saturates at large overpotential. ([#5993](https://github.com/pybamm-team/PyBaMM/pull/5993))
