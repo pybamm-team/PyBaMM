@@ -261,7 +261,8 @@ class BaseThermal(pybamm.BaseSubModel):
             Q_hys_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_hys_p
         )
 
-        # Contact resistance heating, spread uniformly over the electrode stack
+        # The contact resistance lumps unresolved series resistances, so its heat has
+        # no location and is spread uniformly over the electrode stack
         if self.options["contact resistance"] == "true":
             I = variables["Current [A]"]
             T_vol_av = variables["Volume-averaged cell temperature [K]"]
