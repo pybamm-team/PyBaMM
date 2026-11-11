@@ -49,6 +49,24 @@ def _set_hysteresis_branch(parameter_values, electrode, direction, options, phas
     return parameter_values
 
 
+def _set_hysteresis_branches(parameter_values, direction, options):
+    """Set the initial hysteresis state of each hysteresis phase, in place, as
+    :func:`set_initial_state` starts it. Returns whether any phase has hysteresis."""
+    has_hysteresis = False
+    for electrode in ["negative", "positive"]:
+        if check_if_composite(options, electrode):
+            phases = ["primary", "secondary"]
+        else:
+            phases = [None]
+        for phase in phases:
+            if _has_hysteresis(electrode, options, phase):
+                has_hysteresis = True
+                _set_hysteresis_branch(
+                    parameter_values, electrode, direction, options, phase
+                )
+    return has_hysteresis
+
+
 def set_initial_state(
     initial_value,
     parameter_values,
@@ -75,9 +93,10 @@ def set_initial_state(
         Parameters and their corresponding values.
     direction : str, optional
         "charge" or "discharge" starts each hysteresis electrode on that OCP branch.
-        If None, a voltage is solved on the OCP at the initial hysteresis state (0
-        if unset). A spatially varying initial hysteresis state is evaluated at the
-        electrode midpoint, so the initial voltage is then approximate.
+        If None, a voltage, and the split of a composite electrode between its
+        phases, are solved on the OCP at the initial hysteresis state (0 if unset).
+        A spatially varying initial hysteresis state is evaluated at the electrode
+        midpoint, so the initial state is then approximate.
     param : :class:`pybamm.LithiumIonParameters`, optional
         The symbolic parameter set to use for the simulation.
         If not provided, the default parameter set will be used.
@@ -118,21 +137,7 @@ def set_initial_state(
     parameter_values = parameter_values if inplace else parameter_values.copy()
     param = param or pybamm.LithiumIonParameters(options)
 
-    has_hysteresis = False
-    for electrode in ["negative", "positive"]:
-        if check_if_composite(options, electrode):
-            for phase in ["primary", "secondary"]:
-                if _has_hysteresis(electrode, options, phase):
-                    has_hysteresis = True
-                    parameter_values = _set_hysteresis_branch(
-                        parameter_values, electrode, direction, options, phase
-                    )
-        else:
-            if _has_hysteresis(electrode, options):
-                has_hysteresis = True
-                parameter_values = _set_hysteresis_branch(
-                    parameter_values, electrode, direction, options
-                )
+    has_hysteresis = _set_hysteresis_branches(parameter_values, direction, options)
 
     solution = _solve_initial_state(
         initial_value,
@@ -146,7 +151,7 @@ def set_initial_state(
         esoh_solver=esoh_solver,
     )
     if differentiable:
-        # The hysteresis states set above enter a voltage start's OCP; otherwise the
+        # The hysteresis states set above enter the initial OCP; otherwise the
         # original values keep their processing cache across calls
         initial_state = _linearise_initial_state(
             solution,
