@@ -2,6 +2,8 @@ import importlib.metadata
 import textwrap
 from collections.abc import Callable, Mapping
 
+import pybamm
+
 
 class EntryPoint(Mapping):
     """
@@ -85,8 +87,25 @@ class EntryPoint(Mapping):
             pass
         return entry_point
 
+    def __contains__(self, key) -> bool:
+        return key in self._all_entries
+
     def __iter__(self):
         return self._all_entries.__iter__()
+
+    def items(self):
+        """Yield ``(name, value)`` pairs, skipping entries whose optional
+        dependencies are not installed."""
+        for key in self:
+            try:
+                yield key, self[key]
+            except ModuleNotFoundError as error:
+                pybamm.logger.info(f"Skipping '{key}': {error}")
+
+    def values(self):
+        """Yield values, skipping entries whose optional dependencies are not
+        installed."""
+        yield from (value for _, value in self.items())
 
     def __len__(self) -> int:
         return len(self._all_entries)
