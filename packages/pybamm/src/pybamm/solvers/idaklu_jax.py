@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import numbers
 import threading
 import warnings
 from functools import lru_cache
@@ -16,7 +15,6 @@ logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 
 if pybamm.has_jax():
     import jax
-    from jax import lax
 
     try:
         from jax import ffi
@@ -25,7 +23,6 @@ if pybamm.has_jax():
     from jax import numpy as jnp
     from jax._src.interpreters.mlir import custom_call
     from jax.interpreters import ad, batching, mlir
-    from jax.tree_util import tree_flatten
 
     # Handle JAX version compatibility for Primitive location
     try:
@@ -34,10 +31,17 @@ if pybamm.has_jax():
         from jax.extend.core import Primitive
 
 
+def _row_major_layout(shape) -> tuple[int, ...]:
+    """Return the row-major (C-order) layout of an array with the given shape"""
+    return tuple(range(len(shape) - 1, -1, -1))
+
+
 class IDAKLUJax:
     """JAX wrapper for IDAKLU solver
 
-    Objects of this class should be created via an IDAKLUSolver object.
+    Objects of this class should be created via an IDAKLUSolver object. Values
+    and derivatives are evaluated exactly at the requested times. Times outside
+    the solution, and derivatives with respect to time, evaluate to NaN.
 
     Log information is available for this module via the named
     'pybamm.solvers.idaklu_jax' logger.
@@ -164,10 +168,7 @@ class IDAKLUJax:
             index = self.jax_output_variables.index(varname)
             if out.ndim == 0:
                 return out  # pragma: no cover
-            elif out.ndim == 1:
-                return out[index]
-            else:
-                return out[:, index]
+            return out[..., index]
 
         # If the jaxified expression is not a function, return a slice
         if not callable(f):
@@ -175,7 +176,7 @@ class IDAKLUJax:
 
         # Otherwise, return a function that slices the output
         def f_isolated(*args, **kwargs):
-            return slice_out(self.jaxify_f(*args, **kwargs))
+            return slice_out(f(*args, **kwargs))
 
         return f_isolated
 
@@ -251,10 +252,7 @@ class IDAKLUJax:
             )
             if out.ndim == 0:
                 return out  # pragma: no cover
-            elif out.ndim == 1:
-                return out[index]
-            else:
-                return out[:, index]
+            return out[..., index]
 
         # If the jaxified expression is not a function, return a slice
         if not callable(f):
@@ -262,7 +260,7 @@ class IDAKLUJax:
 
         # Otherwise, return a function that slices the output
         def f_isolated(*args, **kwargs):
-            return slice_out(self.jaxify_f(*args, **kwargs))
+            return slice_out(f(*args, **kwargs))
 
         return f_isolated
 
@@ -272,7 +270,7 @@ class IDAKLUJax:
         inputs: dict | None = None,
         output_variables: list[str] | None = None,
     ):
-        """Helper function to compute the gradient of a jaxified expression
+        """Helper function to evaluate a jaxified expression
 
         Returns a numeric (np.ndarray) object (not a JAX expression).
         Parameters are inferred from the base object, but can be overridden.
@@ -357,51 +355,67 @@ class IDAKLUJax:
             return solver.solve(model, t_hashable, *args, **kwargs)
 
     def _jaxify_solve(self, t, invar, *inputs_values):
-        """Solve the model using the IDAKLU solver
+        """Solve the model and evaluate the outputs or their sensitivities at ``t``
 
-        This method is called by the JAX primitive definition and caches the last solve
-        fo reuse.
+        The requested times are added to the solver's interpolation times, so the
+        values and sensitivities are both exact at ``t``. The last solve is cached.
+
+        Parameters
+        ----------
+        t : float | np.ndarray
+            Time sample(s), of any shape
+        invar : str | int | None
+            Name or index of the input to differentiate with respect to, or None
+            to return the output values
+        *inputs_values : float
+            Input values, ordered as ``self.jax_input_names``
+
+        Returns
+        -------
+        np.ndarray
+            Array of shape ``(*t.shape, len(self.jax_output_variables))``, which is
+            NaN at times outside the solution
         """
-        # Reconstruct dictionary of inputs
-        d = self._hashabledict()
-        if self.jax_inputs is not None:
-            # Use hashable dictionaries for caching the solve
-            for key, value in zip(self.jax_inputs.keys(), inputs_values, strict=False):
-                d[key] = value
-        # Solver
+        t = np.asarray(t, dtype=np.float64)
+        t_flat = t.reshape(-1)
+        inputs = self._hashabledict(
+            zip(
+                self.jax_input_names,
+                (np.asarray(value, dtype=np.float64).item() for value in inputs_values),
+                strict=True,
+            )
+        )
+        t_eval = np.asarray(self.jax_t_eval, dtype=np.float64)
+        in_range = t_flat[(t_flat >= t_eval[0]) & (t_flat <= t_eval[-1])]
+        t_interp = np.union1d(np.asarray(self.jax_t_interp, dtype=np.float64), in_range)
         logger.debug("_jaxify_solve:")
         logger.debug(f"  t_eval: {self.jax_t_eval}")
-        logger.debug(f"  t_interp: {self.jax_t_interp}")
+        logger.debug(f"  t_interp: {t_interp}")
         logger.debug(f"  t: {t}")
         logger.debug(f"  invar: {invar}")
-        logger.debug(f"  inputs: {dict(d)}")
-        logger.debug(f"  calculate_sensitivities: {invar is not None}")
+        logger.debug(f"  inputs: {dict(inputs)}")
         sim = IDAKLUJax._cached_solve(
             self.solver,
             self.jax_model,
             tuple(self.jax_t_eval),
-            inputs=self._hashabledict(d),
+            inputs=inputs,
             calculate_sensitivities=self.jax_calculate_sensitivities,
-            t_interp=tuple(self.jax_t_interp),
+            t_interp=tuple(t_interp),
         )
-        if invar is not None:
-            if isinstance(invar, numbers.Number):
-                invar = list(self.jax_inputs.keys())[invar]
-            # Provide vector support for time
-            if t.ndim == 0:
-                t = np.array([t])
-            tk = [np.argmin(abs(self.jax_t_eval - tp)) for tp in t]
-            out = jnp.array(
-                [
-                    jnp.array(sim[outvar].sensitivities[invar][tk])
-                    for outvar in self.jax_output_variables
-                ]
-            ).squeeze()
-            return out.T
+        # The solver stores every interpolation time exactly, so match rows exactly
+        rows = np.minimum(np.searchsorted(sim.t, t_flat), sim.t.size - 1)
+        found = sim.t[rows] == t_flat
+        if invar is None:
+            columns = [sim[outvar].data for outvar in self.jax_output_variables]
         else:
-            return jnp.array(
-                [np.array(sim[outvar](t)) for outvar in self.jax_output_variables]
-            ).T
+            if not isinstance(invar, str):
+                invar = self.jax_input_names[int(invar)]
+            columns = [
+                sim[outvar].sensitivities[invar] for outvar in self.jax_output_variables
+            ]
+        out = np.stack([np.asarray(c).reshape(-1)[rows] for c in columns], axis=-1)
+        out[~found] = np.nan
+        return out.reshape(*t.shape, len(self.jax_output_variables))
 
     def _jax_solve_array_inputs(self, t, inputs_array):
         """Wrapper for _jax_solve used by IDAKLU callback
@@ -424,10 +438,7 @@ class IDAKLUJax:
         logger.info("jax_solve")
         logger.debug(f"  t: {type(t)}, {t}")
         logger.debug(f"  inputs: {type(inputs)}, {inputs}")
-        # Returns a jax array
-        out = self._jaxify_solve(t, None, *inputs)
-        # Convert to numpy array
-        return np.array(out)
+        return self._jaxify_solve(t, None, *inputs)
 
     def _jax_jvp_impl(
         self,
@@ -436,28 +447,21 @@ class IDAKLUJax:
         """JVP implementation used by f_jvp bind"""
         primals = args[: len(args) // 2]
         tangents = args[len(args) // 2 :]
-        t = primals[0]
+        t = np.asarray(primals[0], dtype=np.float64)
         inputs = primals[1:]
-        inputs_t = tangents[1:]
+        t_dot = np.asarray(tangents[0])
+        inputs_dot = tangents[1:]
 
-        if t.ndim == 0:
-            y_dot = jnp.zeros_like(t)
-        else:
-            # This permits direct vector indexing with time for jacfwd
-            y_dot = jnp.zeros((len(t), len(self.jax_output_variables)))
-        for index, value in enumerate(inputs_t):
-            # Skipping zero values greatly improves performance
-            if value > 0.0:
-                invar = list(self.jax_inputs.keys())[index]
-                js = self._jaxify_solve(t, invar, *inputs)
-                if js.ndim == 0:
-                    js = jnp.array([js])
-                if js.ndim == 1 and t.ndim > 0:
-                    # This permits direct vector indexing with time
-                    js = js.reshape((t.shape[0], -1))
-                y_dot += value * js
-
-        return np.array(y_dot)
+        y_dot = np.zeros((*t.shape, len(self.jax_output_variables)))
+        for invar, value in zip(self.jax_input_names, inputs_dot, strict=True):
+            value = np.asarray(value, dtype=np.float64)
+            # Skipping exact zeros avoids needless sensitivity evaluations
+            if not np.any(value):
+                continue
+            y_dot += value * self._jaxify_solve(t, invar, *inputs)
+        # Time derivatives are unavailable, so flag them rather than return zero
+        y_dot[np.broadcast_to(t_dot != 0, t.shape)] = np.nan
+        return y_dot
 
     def _jax_jvp_impl_array_inputs(
         self,
@@ -489,33 +493,13 @@ class IDAKLUJax:
         t = primals[0]
         inputs = primals[1:]
 
-        if not isinstance(invar, (int, str)):
-            invar = int(invar)
-        if not isinstance(t, (np.ndarray, jnp.ndarray)):
-            t = np.asarray(t)
-
-        if t.ndim == 0 or (t.ndim == 1 and t.shape[0] == 1):
-            # scalar time input
-            logger.debug("scalar time")
-            y_dot = jnp.zeros_like(t)
-            js = self._jaxify_solve(t, invar, *inputs)
-            if js.ndim == 0:
-                js = jnp.array([js])
-            for index, value in enumerate(y_bar):
-                if value > 0.0:
-                    y_dot += value * js[index]
-        else:
-            logger.debug("vector time")
-            # vector time input
-            js = self._jaxify_solve(t, invar, *inputs)
-            if len(self.jax_output_variables) == 1 and len(t) > 1:
-                js = np.array([js]).T
-            y_dot = jnp.zeros(())
-            for ix, y_outvar in enumerate(y_bar.T):
-                y_dot += jnp.dot(y_outvar, js[:, ix])
-        logger.debug(f"_jax_vjp_impl [exit]: {type(y_dot)}, {y_dot}, {y_dot.shape}")
-        y_dot = np.array(y_dot)
-        return y_dot
+        sensitivities = self._jaxify_solve(t, invar, *inputs)
+        y_bar = np.reshape(np.asarray(y_bar, dtype=np.float64), sensitivities.shape)
+        # Zero cotangents are skipped so that unavailable (NaN) times stay masked
+        mask = y_bar != 0
+        out = np.array(np.sum(y_bar[mask] * sensitivities[mask]))
+        logger.debug(f"_jax_vjp_impl [exit]: {out}")
+        return out
 
     def _jax_vjp_impl_array_inputs(
         self,
@@ -575,8 +559,8 @@ class IDAKLUJax:
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
         t_interp : None, list or ndarray, optional
-            The times (in seconds) at which to interpolate the solution. Defaults to None.
-            Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
+            Extra times (in seconds) to store in every solve, so that calls at those
+            times share one cached solve. Defaults to None.
         """
         if self.jaxpr is not None:
             warnings.warn(
@@ -606,6 +590,9 @@ class IDAKLUJax:
         """JAXify the model and solver"""
 
         self.jax_model = model
+        # Compiled functions read these names at run time, so they must not depend
+        # on the inputs a trace of f sees
+        self.jax_input_names = sorted({p.name for p in model.input_parameters})
         self.jax_t_eval = t_eval
         if t_interp is None:
             t_interp = np.empty(0)
@@ -643,9 +630,22 @@ class IDAKLUJax:
                          {'Current function [A]': 0.222, 'Separator porosity': 0.3}
             """
             logger.info("f")
-            flatargs, _treedef = tree_flatten((t, inputs))
+            inputs = {} if inputs is None else inputs
+            missing = [name for name in self.jax_input_names if name not in inputs]
+            if missing:
+                raise pybamm.SolverError(f"No value provided for input: {missing}")
+            # Look up by name, as dict flattening order depends on the dict type
+            values = [inputs[name] for name in self.jax_input_names]
+            if any(np.size(value) != 1 for value in values):
+                raise pybamm.SolverError("IDAKLUJax only supports scalar inputs")
+            # The solver reads each input as one float64, and JAX restores the
+            # original shape and dtype of their cotangents
+            values = [
+                jnp.reshape(jnp.asarray(value, dtype=jnp.float64), ())
+                for value in values
+            ]
             self.jax_inputs = inputs
-            out = f_p.bind(*flatargs)
+            out = f_p.bind(t, *values)
             return out
 
         self.jaxify_f = f
@@ -654,7 +654,7 @@ class IDAKLUJax:
         def f_impl(t, *inputs):
             """Concrete implementation of Primitive (used for non-jitted evaluation)"""
             logger.info("f_impl")
-            term_v = self._jaxify_solve(t, None, *inputs)
+            term_v = jnp.asarray(self._jaxify_solve(t, None, *inputs))
             logger.debug(f"f_impl [exit]: {type(term_v)}, {term_v}")
             return term_v
 
@@ -676,8 +676,8 @@ class IDAKLUJax:
             t = args[0]
             inputs = args[1:]
             if batch_axes[0] is not None and all(b is None for b in batch_axes[1:]):
-                # Temporal batching
-                return jnp.stack([f_p.bind(tp, *inputs) for tp in t]), 0
+                # Temporal batching: one bind over all times shares a single solve
+                return f_p.bind(jnp.moveaxis(t, batch_axes[0], 0), *inputs), 0
             else:
                 raise NotImplementedError(
                     f"jaxify: batching not implemented for batch_axes = {batch_axes}"
@@ -705,18 +705,15 @@ class IDAKLUJax:
 
             dtype_t = mlir.ir.RankedTensorType(t.type)
             dims_t = dtype_t.shape
-            layout_t = tuple(range(len(dims_t) - 1, -1, -1))
+            layout_t = _row_major_layout(dims_t)
             size_t = np.prod(dims_t).astype(np.int64)
 
-            input_aval = ctx.avals_in[1]
-            dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
-            dims_input = dtype_input.shape
-            layout_input = tuple(range(len(dims_input) - 1, -1, -1))
+            layout_inputs = [_row_major_layout(aval.shape) for aval in ctx.avals_in[1:]]
 
             y_aval = ctx.avals_out[0]
             dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
             dims_out = dtype_out.shape
-            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
+            layout_out = _row_major_layout(dims_out)
 
             results = custom_call(
                 op_name,
@@ -742,7 +739,7 @@ class IDAKLUJax:
                     (),  # 'vars'
                     (),  # number of inputs
                     layout_t,  # t
-                    *([layout_input] * len(inputs)),  # inputs
+                    *layout_inputs,  # inputs
                 ],
                 result_layouts=[layout_out],
             )
@@ -762,7 +759,7 @@ class IDAKLUJax:
 
             # Deal with Zero tangents
             def make_zero(prim, tan):
-                return lax.zeros_like_array(prim) if type(tan) is ad.Zero else tan
+                return jnp.zeros_like(prim) if type(tan) is ad.Zero else tan
 
             zero_mapped_tangents = tuple(
                 make_zero(pt[0], pt[1]) for pt in zip(primals, tangents, strict=False)
@@ -789,55 +786,55 @@ class IDAKLUJax:
         def f_jvp_batch(args, batch_axes):
             """Batch rule for JVP primitive"""
             logger.info("f_jvp_batch")
-            primals = args[: len(args) // 2]
-            tangents = args[len(args) // 2 :]
-            batch_primals = batch_axes[: len(batch_axes) // 2]
-            batch_tangents = batch_axes[len(batch_axes) // 2 :]
+            n_args = len(args) // 2
+            t, *inputs = args[:n_args]
+            t_dot, *inputs_dot = args[n_args:]
+            t_axis, *inputs_axes = batch_axes[:n_args]
+            t_dot_axis, *inputs_dot_axes = batch_axes[n_args:]
 
-            if (
-                batch_primals[0] is not None
-                and all(b is None for b in batch_primals[1:])
-                and all(b is None for b in batch_tangents)
-            ):
-                # Temporal batching (primals) only
-                t = primals[0]
-                inputs = primals[1:]
-                return (
-                    jnp.stack([f_jvp_p.bind(tp, *inputs, *tangents) for tp in t]),
-                    0,
-                )
-            elif (
-                batch_tangents[0] is not None
-                and all(b is None for b in batch_tangents[1:])
-                and all(b is None for b in batch_primals)
-            ):
-                # Batch over derivates wrt time
-                raise NotImplementedError(
-                    "Taking the derivative with respect to time is not supported"
-                )
-            elif (
-                batch_tangents[0] is None
-                and any(b is not None for b in batch_tangents[1:])
-                and all(b is None for b in batch_primals)
-            ):
-                # Batch over (some combination of) inputs
-                batch_axis_indices = [
-                    i for i, b in enumerate(batch_tangents) if b is not None
-                ]
-                out = []
-                for i in range(len(batch_axis_indices)):
-                    tangents_item = list(tangents)
-                    for k in range(len(batch_axis_indices)):
-                        tangents_item[batch_axis_indices[k]] = tangents[
-                            batch_axis_indices[k]
-                        ][i]
-                    out.append(f_jvp_p.bind(*primals, *tangents_item))
-                return jnp.stack(out), 0
-            else:
+            if any(b is not None for b in inputs_axes):
                 raise NotImplementedError(
                     "f_jvp_batch: batching not implemented for batch_axes = "
                     f"{batch_axes}"
                 )  # pragma: no cover
+            if t_axis is not None:
+                t = jnp.moveaxis(t, t_axis, 0)
+            time_mask = None
+            if t_dot_axis is not None:
+                # Time derivatives are unavailable, so they are flagged as NaN below
+                time_mask = jnp.moveaxis(t_dot, t_dot_axis, 0) != 0
+                t_dot = jnp.zeros_like(t)
+            elif t_axis is not None:
+                t_dot = jnp.broadcast_to(t_dot, t.shape)
+
+            if all(b is None for b in inputs_dot_axes):
+                # Temporal batching: one bind over all times shares a single solve
+                y_dot = f_jvp_p.bind(t, *inputs, t_dot, *inputs_dot)
+            else:
+                # The JVP is linear in the tangents, so combine per-input sensitivities
+                zeros = [jnp.zeros_like(x) for x in inputs]
+                y_dot = f_jvp_p.bind(t, *inputs, t_dot, *zeros)
+                if t_axis is None:
+                    y_dot = y_dot[None]
+                for index, (x_dot, axis) in enumerate(
+                    zip(inputs_dot, inputs_dot_axes, strict=True)
+                ):
+                    one_hot = [
+                        jnp.ones_like(x) if k == index else zero
+                        for k, (x, zero) in enumerate(zip(inputs, zeros, strict=True))
+                    ]
+                    sensitivity = f_jvp_p.bind(t, *inputs, jnp.zeros_like(t), *one_hot)
+                    if t_axis is None:
+                        sensitivity = sensitivity[None]
+                    if axis is not None:
+                        x_dot = jnp.moveaxis(x_dot, axis, 0)
+                        x_dot = x_dot.reshape(
+                            x_dot.shape + (1,) * (sensitivity.ndim - x_dot.ndim)
+                        )
+                    y_dot = y_dot + x_dot * sensitivity
+            if time_mask is not None:
+                y_dot = jnp.where(time_mask[..., None], jnp.nan, y_dot)
+            return y_dot, 0
 
         batching.primitive_batchers[f_jvp_p] = f_jvp_batch
 
@@ -861,21 +858,21 @@ class IDAKLUJax:
             # corresponding to how each of the inputs derives that output, e.g.
             #   (..., dout/din1, dout/din2)
             logger.info("f_jvp_transpose")
-            primals = args[: len(args) // 2]
+            n_args = len(args) // 2
+            primals = args[:n_args]
+            t_dot, *inputs_dot = args[n_args:]
 
-            tangents_out = []
-            for invar in self.jax_inputs:
-                js = f_vjp(y_bar, invar, *primals)
-                tangents_out.append(js)
-
-            out = (
-                None,
-                *([None] * len(tangents_out)),  # primals
-                None,
-                *tangents_out,  # tangents
-            )
+            t_bar = None
+            if ad.is_undefined_primal(t_dot):
+                # Time derivatives are unavailable, so flag them rather than return zero
+                t_bar = jnp.where(jnp.any(y_bar != 0, axis=-1), jnp.nan, 0.0)
+            # Tangent operands are ordered as self.jax_input_names
+            inputs_bar = [
+                f_vjp(y_bar, index, *primals) if ad.is_undefined_primal(x_dot) else None
+                for index, x_dot in enumerate(inputs_dot)
+            ]
             logger.debug("<- f_jvp_transpose")
-            return out
+            return (*([None] * n_args), t_bar, *inputs_bar)
 
         ad.primitive_transposes[f_jvp_p] = f_jvp_transpose
 
@@ -903,20 +900,22 @@ class IDAKLUJax:
 
             dtype_t = mlir.ir.RankedTensorType(t_primal.type)
             dims_t = dtype_t.shape
-            layout_t_primal = tuple(range(len(dims_t) - 1, -1, -1))
+            layout_t_primal = _row_major_layout(dims_t)
             layout_t_tangent = layout_t_primal
             size_t = np.prod(dims_t).astype(np.int64)
 
-            input_aval = ctx.avals_in[1]
-            dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
-            dims_input = dtype_input.shape
-            layout_inputs_primals = tuple(range(len(dims_input) - 1, -1, -1))
-            layout_inputs_tangents = layout_inputs_primals
+            n_primals = len(primals)
+            layout_inputs_primals = [
+                _row_major_layout(aval.shape) for aval in ctx.avals_in[1:n_primals]
+            ]
+            layout_inputs_tangents = [
+                _row_major_layout(aval.shape) for aval in ctx.avals_in[n_primals + 1 :]
+            ]
 
             y_aval = ctx.avals_out[0]
             dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
             dims_out = dtype_out.shape
-            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
+            layout_out = _row_major_layout(dims_out)
 
             results = custom_call(
                 op_name,
@@ -944,9 +943,9 @@ class IDAKLUJax:
                     (),  # 'vars'
                     (),  # number of inputs
                     layout_t_primal,  # 't'
-                    *([layout_inputs_primals] * len(inputs_primals)),  # inputs
+                    *layout_inputs_primals,  # inputs
                     layout_t_tangent,  # 't'
-                    *([layout_inputs_tangents] * len(inputs_tangents)),  # inputs
+                    *layout_inputs_tangents,  # inputs
                 ],
                 result_layouts=[layout_out],
             )
@@ -966,8 +965,6 @@ class IDAKLUJax:
             """Main wrapper for the VJP function"""
             logger.info("f_vjp")
             logger.debug(f"  y_bar: {y_bar}, {type(y_bar)}, {y_bar.shape}")
-            if isinstance(invar, str):
-                invar = list(self.jax_inputs.keys()).index(invar)
             return f_vjp_p.bind(y_bar, invar, *primals)
 
         @f_vjp_p.def_impl
@@ -980,33 +977,38 @@ class IDAKLUJax:
         def f_vjp_abstract_eval(*args):
             """Abstract evaluation of VJP primitive"""
             logger.info("f_vjp_abstract_eval")
-            primals = args[: len(args) // 2]
-            t = primals[0]
-            out = jax.core.ShapedArray((), t.dtype)
+            y_bar = args[0]
+            out = jax.core.ShapedArray((), y_bar.dtype)
             logger.debug("<- f_vjp_abstract_eval")
             return out
 
         def f_vjp_batch(args, batch_axes):
             """Batch rule for VJP primitive"""
             logger.info("f_vjp_p_batch")
-            y_bars, invar, t, *inputs = args
-
-            if batch_axes[0] is not None and all(b is None for b in batch_axes[1:]):
-                # Batch over y_bar
-                out = [f_vjp(yb, invar, t, *inputs) for yb in y_bars]
-                return jnp.stack(out), 0
-            elif (
-                batch_axes[2] is not None
-                and all(b is None for b in batch_axes[:2])
-                and all(b is None for b in batch_axes[3:])
-            ):
-                # Batch over time
-                out = [f_vjp(y_bars, invar, yt, *inputs) for yt in t]
-                return jnp.stack(out), 0
-            else:
+            y_bar, invar, t, *inputs = args
+            y_bar_axis, invar_axis, t_axis, *inputs_axes = batch_axes
+            if invar_axis is not None or any(b is not None for b in inputs_axes):
                 raise pybamm.SolverError(
                     f"Batch mode not supported for batch_axes = {batch_axes}"
                 )  # pragma: no cover
+
+            # One bind over all times returns the sensitivities from a single solve
+            one_hot = [
+                jnp.where(invar == index, jnp.ones_like(x), jnp.zeros_like(x))
+                for index, x in enumerate(inputs)
+            ]
+            if t_axis is not None:
+                t = jnp.moveaxis(t, t_axis, 0)
+            sensitivities = f_jvp_p.bind(t, *inputs, jnp.zeros_like(t), *one_hot)
+            if t_axis is None:
+                sensitivities = sensitivities[None]
+            if y_bar_axis is None:
+                y_bar = y_bar[None]
+            else:
+                y_bar = jnp.moveaxis(y_bar, y_bar_axis, 0)
+            # Zero cotangents are skipped so that unavailable (NaN) times stay masked
+            product = jnp.where(y_bar != 0, y_bar * sensitivities, 0.0)
+            return jnp.sum(product, axis=tuple(range(1, product.ndim))), 0
 
         batching.primitive_batchers[f_vjp_p] = f_vjp_batch
 
@@ -1031,27 +1033,31 @@ class IDAKLUJax:
             dtype_y_bar = mlir.ir.RankedTensorType.get(y_bar_aval.shape, op_dtype)
             dims_y_bar = dtype_y_bar.shape
             logger.debug(f"  y_bar shape: {dims_y_bar}")
-            layout_y_bar = tuple(range(len(dims_y_bar) - 1, -1, -1))
+            layout_y_bar = _row_major_layout(dims_y_bar)
+            # The callback takes y_bar as 2D, so collapse any leading time dimensions
+            if len(dims_y_bar) > 1:
+                y_bar_s0, y_bar_s1 = int(np.prod(dims_y_bar[:-1])), dims_y_bar[-1]
+            else:
+                y_bar_s0, y_bar_s1 = dims_y_bar[0], -1
 
             invar_aval = ctx.avals_in[1]
             dtype_invar = mlir.ir.RankedTensorType.get(invar_aval.shape, op_dtype)
             dims_invar = dtype_invar.shape
-            layout_invar = tuple(range(len(dims_invar) - 1, -1, -1))
+            layout_invar = _row_major_layout(dims_invar)
 
             dtype_t = mlir.ir.RankedTensorType(t_primal.type)
             dims_t = dtype_t.shape
-            layout_t_primal = tuple(range(len(dims_t) - 1, -1, -1))
+            layout_t_primal = _row_major_layout(dims_t)
             size_t = np.prod(dims_t).astype(np.int64)
 
-            input_aval = ctx.avals_in[3]
-            dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
-            dims_input = dtype_input.shape
-            layout_inputs_primals = tuple(range(len(dims_input) - 1, -1, -1))
+            layout_inputs_primals = [
+                _row_major_layout(aval.shape) for aval in ctx.avals_in[3:]
+            ]
 
             y_aval = ctx.avals_out[0]
             dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
             dims_out = dtype_out.shape
-            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
+            layout_out = _row_major_layout(dims_out)
 
             results = custom_call(
                 op_name,
@@ -1063,15 +1069,9 @@ class IDAKLUJax:
                         np.int64(self.idaklu_jax_obj.get_index())
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(
-                        np.int64(len(self.jax_inputs))
-                    ),  # number of inputs
-                    mlir.ir_constant(np.int64(dims_y_bar[0])),  # 'y_bar' shape[0]
-                    mlir.ir_constant(
-                        np.int64(  # 'y_bar' shape[1]
-                            dims_y_bar[1] if len(dims_y_bar) > 1 else -1
-                        )
-                    ),  # 'y_bar' argument
+                    mlir.ir_constant(np.int64(len(inputs_primals))),  # number of inputs
+                    mlir.ir_constant(np.int64(y_bar_s0)),  # 'y_bar' shape[0]
+                    mlir.ir_constant(np.int64(y_bar_s1)),  # 'y_bar' shape[1]
                     y_bar,  # 'y_bar'
                     invar,  # 'invar'
                     t_primal,  # 't'
@@ -1087,7 +1087,7 @@ class IDAKLUJax:
                     layout_y_bar,  # 'y_bar'
                     layout_invar,  # 'invar'
                     layout_t_primal,  # 't'
-                    *([layout_inputs_primals] * len(inputs_primals)),  # inputs
+                    *layout_inputs_primals,  # inputs
                 ],
                 result_layouts=[layout_out],
             )

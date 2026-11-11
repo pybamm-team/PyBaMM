@@ -7,9 +7,8 @@ are read from the contract registry, so a new check cannot quietly skip the
 template.
 """
 
-import re
 import shutil
-import subprocess  # nosec B404 - runs the repo's own ruff over a rendered template
+import subprocess
 import sys
 
 import pytest
@@ -113,14 +112,6 @@ class TestTokenValidation:
     def test_a_soft_keyword_is_still_a_usable_name(self, soft_keyword):
         assert self.tokens(slug=soft_keyword, name=soft_keyword)["slug"] == soft_keyword
 
-    def test_the_default_floor_pins_the_minor_release(self):
-        """A bare major would let a model claim releases predating its own APIs."""
-        requires = _template.default_pybamm_requires()
-        assert re.fullmatch(r">=\d+\.\d+", requires), requires
-
-    def test_an_explicit_specifier_wins_over_the_default(self):
-        assert self.tokens(pybamm_requires=">=26.4")["pybamm_requires"] == ">=26.4"
-
 
 class TestRenderedStyle:
     """A rendered template must also pass the repository's style job.
@@ -135,7 +126,7 @@ class TestRenderedStyle:
         "command", [("check", "--no-cache"), ("format", "--check", "--no-cache")]
     )
     def test_rendered_python_is_style_clean(self, rendered, command):
-        result = subprocess.run(  # nosec B603 B607 - literal argv, no external input
+        result = subprocess.run(
             [
                 "ruff",
                 *command,

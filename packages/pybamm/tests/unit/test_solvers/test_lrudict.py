@@ -75,3 +75,4 @@ class TestLRUDict:
         with pytest.raises(KeyError):
             _ = d["b"]  # checks getitem()
         assert d.get("b") is None  # checks get()
+        assert d.get("b", value) == value

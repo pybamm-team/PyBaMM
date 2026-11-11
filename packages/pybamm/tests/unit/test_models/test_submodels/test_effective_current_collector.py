@@ -69,8 +69,8 @@ class TestEffectiveResistancePostProcess:
         V = solution_1D["Voltage [V]"]
         I = solution_1D["Total current density [A.m-2]"]
 
-        # Test potential can be constructed and evaluated without raising error
-        # for each current collector model
+        # Test potentials can be constructed and evaluated, and are finite away from
+        # the time the current collector problem was solved at
         for model in models[1:]:
             solution = model.default_solver.solve(model)
             variables = model.post_process(solution, param, V, I)
@@ -79,9 +79,10 @@ class TestEffectiveResistancePostProcess:
             )
             for var, processed_var in variables.items():
                 if "Voltage [V]" in var:
-                    processed_var(t=solution_1D.t[5])
+                    value = processed_var(t=solution_1D.t[5])
                 else:
                     if model.options["dimensionality"] == 1:
-                        processed_var(t=solution_1D.t[5], z=pts)
+                        value = processed_var(t=solution_1D.t[5], z=pts)
                     else:
-                        processed_var(t=solution_1D.t[5], y=pts, z=pts)
+                        value = processed_var(t=solution_1D.t[5], y=pts, z=pts)
+                assert np.all(np.isfinite(value))

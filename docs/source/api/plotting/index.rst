@@ -12,3 +12,4 @@ Plotting
   plot_3d_heatmap
   plot_vtk
   unstructured_plot_grid
+  eis_plots

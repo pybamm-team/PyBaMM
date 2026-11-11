@@ -21,7 +21,6 @@ __all__ = [
     'geometric_parameters',
     'lead_acid_parameters',
     'lithium_ion_parameters',
-    'parameter_sets',
     'parameter_values',
     'process_parameter_data',
     'size_distribution_parameters',

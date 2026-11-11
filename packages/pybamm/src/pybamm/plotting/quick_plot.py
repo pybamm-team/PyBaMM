@@ -68,8 +68,10 @@ class QuickPlot:
     labels : list of str, optional
         Labels for the different models. Defaults to model names
     colors : list of str, optional
-        The colors to loop over when plotting. Defaults to None, in which case the
-        default color loop defined by matplotlib style sheet or rcParams is used.
+        The colors to loop over when plotting. Defaults to
+        ["r", "b", "k", "g", "m", "c"], or to the colors of matplotlib's color cycle
+        (``axes.prop_cycle``) if it differs from matplotlib's default, e.g. when set
+        by a style sheet or rcParams.
     linestyles : list of str, optional
         The linestyles to loop over when plotting. Defaults to ["-", ":", "--", "-."]
     shading : str, optional
@@ -88,7 +90,8 @@ class QuickPlot:
         variables). Options are:
     n_t_linear: int, optional
         The number of linearly spaced time points added to the t axis for each sub-solution.
-        Note: this is only used if the solution has hermite interpolation enabled.
+        Note: this is only used if the solution has hermite interpolation enabled
+        and no ``t_additive`` times, which are added instead.
 
         - "fixed" (default): keep all axes fixes so that all data is visible
         - "tight": make axes tight to plot at each time
@@ -129,6 +132,15 @@ class QuickPlot:
         # Set colors, linestyles, figsize, axis limits
         # call LoopList to make sure list index never runs out
         if colors is None:
+            matplotlib = import_optional_dependency("matplotlib")
+            prop_cycle = matplotlib.rcParams["axes.prop_cycle"]
+            try:
+                customized = prop_cycle != matplotlib.rcParamsDefault["axes.prop_cycle"]
+            except ValueError:
+                # comparing colors given as NumPy arrays, e.g. from a colormap, raises
+                customized = True
+            if customized:
+                colors = prop_cycle.by_key().get("color")
             self.colors = LoopList(colors or ["r", "b", "k", "g", "m", "c"])
         else:
             self.colors = LoopList(colors)
@@ -181,7 +193,9 @@ class QuickPlot:
         hermite_interp = all(sol.hermite_interpolation for sol in solutions)
 
         def t_sample(sol):
-            if hermite_interp and n_t_linear > 2:
+            if sol.t_additive is not None:
+                t_plot = sol.t
+            elif hermite_interp and n_t_linear > 2:
                 # Linearly spaced time points
                 t_linspace = np.linspace(sol.t[0], sol.t[-1], n_t_linear + 2)[1:-1]
                 t_plot = np.union1d(sol.t, t_linspace)

@@ -6,7 +6,6 @@ column to this matrix automatically, and adding a check to
 """
 
 import re
-from pathlib import Path
 
 import pytest
 import yaml
@@ -46,10 +45,9 @@ def test_contract(entry, check):
     if entry.error is not None and check.name != "manifest":
         # Nothing else has inputs to check, so 'manifest' carries the one failure.
         pytest.skip(f"{entry.slug}: manifest did not parse")
-    if check.needs_model and (missing := contract.missing_dependencies(entry)):
+    if check.needs_model and (missing := entry.missing_dependencies()):
         pytest.skip(
-            f"{entry.slug}: extra '{entry.dependencies.extra}' is not installed "
-            f"(missing {missing})"
+            f"{entry.slug}: extra '{entry.extra}' is not installed (missing {missing})"
         )
     check.run(entry)
 
@@ -78,7 +76,6 @@ title = "A title"
 summary = "A summary."
 class = "pybamm_model_zoo.a_model:AModel"
 tier = "core"
-pybamm_requires = ">=26.0"
 added = "2026-01-01"
 license = "BSD-3-Clause"
 
@@ -154,43 +151,6 @@ class TestTheManifestCheckCannotBeWaived:
             test_contract(entry, contract.CHECKS["solve"])
 
 
-class TestDependencyAgreement:
-    """A manifest and the extra behind it, held to each other in both directions."""
-
-    def check(self, tmp_path, packages, extra_items):
-        entry = ModelEntry(
-            slug="a_model",
-            name="AModel",
-            path=tmp_path,
-            raw={
-                "model": {
-                    "dependencies": {"extra": "zoo-a-model", "packages": packages}
-                }
-            },
-        )
-        contract._check_requirements_agree(
-            entry, tmp_path / "pyproject.toml", extra_items
-        )
-
-    def test_matching_requirements_pass(self, tmp_path):
-        self.check(tmp_path, ["scikit-fem>=12.0.2"], ["scikit-fem>=12.0.2"])
-
-    def test_a_package_the_extra_omits_is_caught(self, tmp_path):
-        with pytest.raises(AssertionError, match=r"is missing \['scikit-fem'\]"):
-            self.check(tmp_path, ["scikit-fem>=12.0.2"], [])
-
-    def test_a_package_the_manifest_omits_is_caught(self, tmp_path):
-        with pytest.raises(AssertionError, match=r"does not declare \['scikit-fem'\]"):
-            self.check(tmp_path, [], ["scikit-fem>=12.0.2"])
-
-    def test_a_disagreeing_constraint_is_caught(self, tmp_path):
-        with pytest.raises(AssertionError, match=r"declared differently"):
-            self.check(tmp_path, ["scikit-fem>=13"], ["scikit-fem>=12.0.2"])
-
-    def test_names_are_compared_canonically(self, tmp_path):
-        self.check(tmp_path, ["Scikit_FEM>=12.0.2"], ["scikit-fem>=12.0.2"])
-
-
 class TestInTreeLicense:
     """In-tree models share the zoo's BSD-3-Clause license; collections do not."""
 
@@ -208,38 +168,18 @@ class TestInTreeLicense:
         assert not contract.CHECKS["license"].waivable
 
 
-class TestMissingDependencies:
-    """What counts as "not installed", which gates the import/build/solve checks."""
+class TestModelExtras:
+    """The zoo's extras, which no per-model check sees all of."""
 
-    def entry(self, packages):
-        return ModelEntry(
-            slug="a_model",
-            name="AModel",
-            path=Path("a_model"),
-            raw={"model": {"dependencies": {"packages": packages}}},
-        )
+    def test_every_model_extra_belongs_to_a_model(self):
+        """A renamed or removed model would otherwise leave an extra behind."""
+        extras = set(contract.zoo_extras()) - {"zoo-all"}
+        models = {entry.extra for entry in zoo.all_entries() if not entry.external}
+        assert not extras - models, f"no model owns {sorted(extras - models)}"
 
-    def test_an_absent_package_is_missing(self):
-        assert contract.missing_dependencies(
-            self.entry(["definitely-not-installed-xyz"])
-        ) == ["definitely-not-installed-xyz"]
-
-    def test_an_installed_package_is_not_missing(self):
-        assert contract.missing_dependencies(self.entry(["packaging>=23.0"])) == []
-
-    def test_a_requirement_whose_marker_is_false_is_not_missing(self):
-        """Otherwise a platform-specific dependency skips the checks everywhere else."""
-        assert (
-            contract.missing_dependencies(
-                self.entry(['definitely-not-installed-xyz; python_version < "3.0"'])
-            )
-            == []
-        )
-
-    def test_a_requirement_whose_marker_is_true_is_still_checked(self):
-        assert contract.missing_dependencies(
-            self.entry(['definitely-not-installed-xyz; python_version >= "3.0"'])
-        ) == ['definitely-not-installed-xyz; python_version >= "3.0"']
+    def test_zoo_all_installs_only_model_extras(self):
+        extras = contract.zoo_extras()
+        assert contract.aggregated_extras(extras) <= set(extras) - {"zoo-all"}
 
 
 class TestDocsHookWatchesWhatItRegenerates:

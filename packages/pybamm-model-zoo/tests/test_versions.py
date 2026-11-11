@@ -1,24 +1,13 @@
-"""Release ordering and the per-model compatibility window."""
-
-from pathlib import Path
+"""Release ordering and the zoo's compatibility window."""
 
 import pytest
+from packaging.requirements import Requirement
 
-from pybamm_model_zoo import _versions
-from pybamm_model_zoo._exceptions import ManifestError
-from pybamm_model_zoo._registry import ModelEntry
+from pybamm_model_zoo import _paths, _versions
+from pybamm_model_zoo._exceptions import ZooError
+from pybamm_model_zoo._registry import read_manifest
 
 RELEASES = ["25.12.0", "26.0.0", "26.5.0", "26.7.1", "26.8.0"]
-
-
-def entry(pybamm_requires):
-    return ModelEntry(
-        slug="a_model",
-        name="AModel",
-        path=Path("a_model"),
-        raw={"model": {"pybamm_requires": pybamm_requires}},
-        external=False,
-    )
 
 
 class TestSortedReleases:
@@ -35,33 +24,40 @@ class TestSortedReleases:
         ) == ["26.8.0"]
 
 
-class TestWindowFor:
-    def test_takes_the_newest_releases_a_model_admits(self):
-        assert _versions.window_for(entry(">=26.0"), RELEASES, 2) == [
+class TestWindow:
+    def test_keeps_the_oldest_admitted_and_the_newest(self):
+        assert _versions.window(RELEASES, ">=26.0", 2) == [
+            "26.0.0",
             "26.7.1",
             "26.8.0",
         ]
 
-    def test_an_upper_bound_keeps_the_releases_below_it(self):
-        """The bug this guards: filtering after the window leaves no cells at all."""
-        assert _versions.window_for(entry(">=26.0,<26.7"), RELEASES, 2) == [
-            "26.0.0",
-            "26.5.0",
-        ]
+    def test_an_oldest_already_among_the_newest_is_not_repeated(self):
+        assert _versions.window(RELEASES, ">=26.7", 2) == ["26.7.1", "26.8.0"]
 
-    def test_a_window_wider_than_the_admitted_set_is_not_padded(self):
-        assert _versions.window_for(entry("<26.0"), RELEASES, 3) == ["25.12.0"]
+    def test_no_newest_still_tests_the_floor(self):
+        """`--releases 0` keeps the floor; `[-0:]` would have kept every release."""
+        assert _versions.window(RELEASES, ">=26.0", 0) == ["26.0.0"]
 
-    def test_a_model_admitting_nothing_released_gets_no_cells(self):
-        assert _versions.window_for(entry(">=99.0"), RELEASES, 2) == []
-
-    def test_no_window_means_no_releases(self):
-        """`--releases 0` says main only; `[-0:]` would have said every release."""
-        assert _versions.window_for(entry(">=26.0"), RELEASES, 0) == []
+    def test_a_floor_nothing_released_meets_gets_no_cells(self):
+        assert _versions.window(RELEASES, ">=99.0", 2) == []
 
     def test_an_empty_specifier_admits_everything(self):
-        assert _versions.window_for(entry(""), RELEASES, 1) == ["26.8.0"]
+        assert _versions.window(RELEASES, "", 1) == ["25.12.0", "26.8.0"]
 
-    def test_a_malformed_specifier_is_reported_against_the_manifest(self):
-        with pytest.raises(ManifestError, match=r"not a valid specifier"):
-            _versions.window_for(entry("=>26.0"), RELEASES, 1)
+
+class TestPybammSpecifier:
+    def test_is_the_zoo_pybamm_dependency(self):
+        dependencies = read_manifest(_paths.ZOO_PYPROJECT)["project"]["dependencies"]
+        pybamm = next(
+            Requirement(item)
+            for item in dependencies
+            if Requirement(item).name == "pybamm"
+        )
+        assert _versions.pybamm_specifier() == str(pybamm.specifier)
+
+    def test_a_pyproject_without_pybamm_is_reported(self, tmp_path):
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text('[project]\ndependencies = ["packaging>=23.0"]\n')
+        with pytest.raises(ZooError, match=r"no pybamm dependency"):
+            _versions.pybamm_specifier(pyproject)

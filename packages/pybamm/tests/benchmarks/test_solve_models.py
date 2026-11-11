@@ -1,5 +1,6 @@
+import logging
+
 import numpy as np
-import numpy.typing as npt
 import pytest
 
 import pybamm
@@ -8,14 +9,21 @@ pytestmark = pytest.mark.time_bench
 
 _PARAMS = [
     "Marquis2019",
-    "ORegan2022",
-    "NCA_Kim2011",  # Not DFN
-    "Prada2013",
-    "Ai2020",  # DFN only
-    "Ramadass2004",
     "Chen2020",
-    "Ecker2015",
+    "ORegan2022",
+    *(
+        pytest.param(parameters, marks=pytest.mark.slow_bench)
+        for parameters in [
+            "NCA_Kim2011",
+            "Prada2013",
+            "Ai2020",
+            "Ramadass2004",
+            "Ecker2015",
+        ]
+    ),
 ]
+
+_T_MAX = 4000.0
 
 
 def _build_and_discretise(model_class, parameters):
@@ -45,51 +53,39 @@ def _build_and_discretise(model_class, parameters):
     return model
 
 
-def _t_eval_and_interp(
-    solver: pybamm.BaseSolver, tmax: float
-) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64] | None]:
-    if solver.supports_interp:
-        return np.array([0.0, tmax]), None
-    return np.linspace(0, tmax, 500), None
+def _assert_discharged(solution):
+    assert solution.termination in ("final time", "event: Minimum voltage [V]")
+    assert solution.t[-1] > 0.5 * _T_MAX
+
+
+def _assert_compiled(caplog):
+    # Compile silently falls back without a C compiler
+    failures = [r for r in caplog.records if "Failed to compile" in r.getMessage()]
+    assert not failures, failures[0].getMessage()
+
+
+def _benchmark_warm_solve(benchmark, model_class, parameters):
+    solver = pybamm.IDAKLUSolver()
+    model = _build_and_discretise(model_class, parameters)
+    t_eval = np.array([0.0, _T_MAX])
+    solver.solve(model, t_eval=t_eval)
+    solution = benchmark(solver.solve, model, t_eval=t_eval)
+    _assert_discharged(solution)
 
 
 @pytest.mark.parametrize("parameters", _PARAMS)
-@pytest.mark.parametrize("solve_first", [False, True])
-def test_solve_spm(benchmark, solve_first, parameters):
-    if parameters == "Ai2020":
-        pytest.skip("Ai2020 parameters not implemented for SPM")
-    solver = pybamm.IDAKLUSolver()
-    model = _build_and_discretise(pybamm.lithium_ion.SPM, parameters)
-    t_eval, t_interp = _t_eval_and_interp(solver, 4000.0)
-    if solve_first:
-        solver.solve(model, t_eval=t_eval, t_interp=t_interp)
-    benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
+def test_solve_spm(benchmark, parameters):
+    _benchmark_warm_solve(benchmark, pybamm.lithium_ion.SPM, parameters)
 
 
 @pytest.mark.parametrize("parameters", _PARAMS)
-@pytest.mark.parametrize("solve_first", [False, True])
-def test_solve_spme(benchmark, solve_first, parameters):
-    if parameters == "Ai2020":
-        pytest.skip("Ai2020 parameters not implemented for SPMe")
-    solver = pybamm.IDAKLUSolver()
-    model = _build_and_discretise(pybamm.lithium_ion.SPMe, parameters)
-    t_eval, t_interp = _t_eval_and_interp(solver, 4000.0)
-    if solve_first:
-        solver.solve(model, t_eval=t_eval, t_interp=t_interp)
-    benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
+def test_solve_spme(benchmark, parameters):
+    _benchmark_warm_solve(benchmark, pybamm.lithium_ion.SPMe, parameters)
 
 
 @pytest.mark.parametrize("parameters", _PARAMS)
-@pytest.mark.parametrize("solve_first", [False, True])
-def test_solve_dfn(benchmark, solve_first, parameters):
-    if parameters == "NCA_Kim2011":
-        pytest.skip("NCA_Kim2011 parameters not implemented for DFN")
-    solver = pybamm.IDAKLUSolver()
-    model = _build_and_discretise(pybamm.lithium_ion.DFN, parameters)
-    t_eval, t_interp = _t_eval_and_interp(solver, 4000.0)
-    if solve_first:
-        solver.solve(model, t_eval=t_eval, t_interp=t_interp)
-    benchmark(solver.solve, model, t_eval=t_eval, t_interp=t_interp)
+def test_solve_dfn(benchmark, parameters):
+    _benchmark_warm_solve(benchmark, pybamm.lithium_ion.DFN, parameters)
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +99,7 @@ def test_solve_dfn(benchmark, solve_first, parameters):
     ids=["spm", "spme", "dfn"],
 )
 @pytest.mark.parametrize("compile_model", [False, True], ids=["no-compile", "compile"])
-def test_repeated_solve(benchmark, model_class, compile_model):
+def test_repeated_solve(benchmark, caplog, model_class, compile_model):
     sim = pybamm.Simulation(
         model_class(),
         solver=pybamm.IDAKLUSolver(options={"compile": compile_model}),
@@ -111,8 +107,11 @@ def test_repeated_solve(benchmark, model_class, compile_model):
     t_eval = [0.0, 3600.0]
     t_interp = np.linspace(t_eval[0], t_eval[-1], 10000)
     # Warm the casadi/AOT caches and the voltage observer before timing.
-    sol = sim.solve(t_eval, t_interp=t_interp)
-    _ = sol["Voltage [V]"].data  # warm caches
+    with caplog.at_level(logging.WARNING):
+        sol = sim.solve(t_eval, t_interp=t_interp)
+        _ = sol["Voltage [V]"].data  # warm caches
+    if compile_model:
+        _assert_compiled(caplog)
 
     benchmark(sim.solve, t_eval, t_interp=t_interp)
 
@@ -123,7 +122,7 @@ def test_repeated_solve(benchmark, model_class, compile_model):
     ids=["spm", "spme", "dfn"],
 )
 @pytest.mark.parametrize("compile_model", [False, True], ids=["no-compile", "compile"])
-def test_voltage_observe(benchmark, model_class, compile_model):
+def test_voltage_observe(benchmark, caplog, model_class, compile_model):
     sim = pybamm.Simulation(
         model_class(),
         solver=pybamm.IDAKLUSolver(options={"compile": compile_model}),
@@ -131,8 +130,11 @@ def test_voltage_observe(benchmark, model_class, compile_model):
     t_eval = [0.0, 3600.0]
     t_interp = np.linspace(t_eval[0], t_eval[-1], 10000)
     # Warm the casadi/AOT caches and the voltage observer before timing.
-    sol = sim.solve(t_eval, t_interp=t_interp)
-    _ = sol["Voltage [V]"].data  # warm caches
+    with caplog.at_level(logging.WARNING):
+        sol = sim.solve(t_eval, t_interp=t_interp)
+        _ = sol["Voltage [V]"].data  # warm caches
+    if compile_model:
+        _assert_compiled(caplog)
 
     def run():
         sol._variables.clear()

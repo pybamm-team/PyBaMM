@@ -13,7 +13,8 @@ from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
-from pybamm.solvers.base_solver import flatten_inputs, stack_inputs
+from pybamm.expression_tree.array import to_casadi_dm
+from pybamm.solvers.base_solver import flatten_inputs, process, stack_inputs
 from pybamm.solvers.observation import OutputAssembly
 
 _UNSET = object()
@@ -74,6 +75,21 @@ def _sensitivity_scales(inputs_dict: dict, sensitivity_names: list[str]) -> np.n
 # integrator has located one or more root function zeros.
 _IDA_ROOT_RETURN = 2
 
+
+def casadi_to_idaklu_function(fn: casadi.Function):
+    """
+    Hand a casadi.Function to pybammsolvers.
+
+    When pybammsolvers links the Python casadi package's library, the C++ side
+    shares the function directly; otherwise it is serialised and rebuilt.
+    """
+    if idaklu.shares_python_casadi:
+        # SWIG's address attribute is not in casadi's stubs
+        # pyrefly: ignore[missing-attribute]
+        return idaklu.shared_function(int(fn.this))
+    return idaklu.generate_function(fn.serialize())
+
+
 # Function entries staged in ``_setup`` while building the C++ solver
 # group; popped after construction (C++ owns them via shared_ptr).
 _SETUP_FCN_KEYS = (
@@ -85,6 +101,7 @@ _SETUP_FCN_KEYS = (
     "rootfn",
     "alg_res",
     "alg_jac",
+    "upsampling_fcn",
 )
 _SETUP_FCN_LIST_KEYS = (
     "var_idaklu_fcns",
@@ -103,6 +120,14 @@ _REBUILDABLE_STATE_KEYS = (
     "computed_dvar_dp_fcns",
     "_time_integral_vars",
 )
+
+
+def _check_klu_pivot_tolerance(value):
+    """Raise a :class:`pybamm.SolverError` unless ``value`` is in (0, 1]."""
+    if isinstance(value, bool) or not isinstance(value, numbers.Real):
+        raise pybamm.SolverError("klu_pivot_tolerance must be a real number")
+    if not 0 < value <= 1:
+        raise pybamm.SolverError(f"klu_pivot_tolerance must be in (0, 1], got {value}")
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
@@ -182,6 +207,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "precon_half_bandwidth_keep": 5,
                 # For iterative linear solvers, max number of iterations
                 "linsol_max_iterations": 5,
+                # For the KLU linear solver, threshold partial pivoting tolerance
+                # in (0, 1]: a pivot is accepted if it is at least this fraction
+                # of the largest entry in its column (1.0 is full partial pivoting)
+                "klu_pivot_tolerance": 0.1,
                 # Ratio between linear and nonlinear tolerances
                 "epsilon_linear_tolerance": 0.05,
                 # Increment factor used in DQ Jacobian-vector product approximation
@@ -229,6 +258,19 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # only active if `hermite_interpolation` is True and sensitivities
                 # are disabled.
                 "hermite_reduction_factor": 1.0,
+                # Output upsampling (None = off). Adds times inside each solver step
+                # until linear interpolation of one scalar output variable between
+                # them is accurate to upsampling_tolerance times the variable's
+                # scale (1 if it has none). The variable is the voltage. An
+                # algebraic variable, such as the current in a voltage-controlled
+                # experiment step, adds no points: the integrator's error test
+                # already resolves it. For example, 1e-3 gives a linear-
+                # interpolation voltage error of about 1 mV. Set a model's
+                # `upsampling_variable` to upsample another variable. The
+                # times go to `Solution.t_additive` (and `Solution.t`) when Hermite
+                # data is stored and sensitivities are off; otherwise they are
+                # saved as full solution points. Ignored with t_interp.
+                "upsampling_tolerance": None,
                 ## Initial conditions calculation
                 # Positive constant in the Newton iteration convergence test within the
                 # initial condition calculation
@@ -279,6 +321,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
 
     """
+
+    uses_rhs_jacobian = False
 
     class StateID(IntEnum):
         ALGEBRAIC = 0
@@ -341,6 +385,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "num_solvers": num_solvers,
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 5,
+            "klu_pivot_tolerance": 0.1,
             "epsilon_linear_tolerance": 0.05,
             "increment_factor": 1.0,
             "linear_solution_scaling": True,
@@ -357,6 +402,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "suppress_algebraic_error": False,
             "hermite_interpolation": True,
             "hermite_reduction_factor": 1.0,
+            "upsampling_tolerance": None,
             "nonlinear_convergence_coefficient_ic": 0.0033,
             "max_num_steps_ic": 50,
             "max_num_jacobians_ic": 40,
@@ -394,8 +440,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
             if hermite_reduction_factor < 1.0:
                 raise pybamm.SolverError("hermite_reduction_factor must be >= 1.0.")
 
+        upsampling_tolerance = options["upsampling_tolerance"]
+        if upsampling_tolerance is not None and not upsampling_tolerance > 0.0:
+            raise pybamm.SolverError("upsampling_tolerance must be None or > 0.")
+
         if not isinstance(options["compile"], bool):
             raise pybamm.SolverError("compile must be a bool")
+
+        _check_klu_pivot_tolerance(options["klu_pivot_tolerance"])
 
     def _check_atol_type(
         self, atol: float | list | tuple | np.ndarray, model: pybamm.BaseModel
@@ -518,10 +570,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 p_casadi[name] = casadi.MX.sym(name, value.shape[0])
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
-        jac_times_cjmass_expression = (
-            model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked)
-            - cj_casadi * mass_matrix
-        )
+        jac_times_cjmass_expression = model.jac_rhs_algebraic_eval(
+            t_casadi, y_casadi, p_casadi_stacked
+        ) - cj_casadi * to_casadi_dm(mass_matrix)
         if self._options["jacobian"] == "dense":
             jac_times_cjmass_expression = casadi.densify(jac_times_cjmass_expression)
 
@@ -554,7 +605,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 np.zeros(model.len_alg),
             )
         else:
-            mass_action_expression = casadi.densify(casadi.DM(mass_matrix) @ v_casadi)
+            mass_action_expression = casadi.densify(
+                to_casadi_dm(mass_matrix) @ v_casadi
+            )
 
         # also need the action of the mass matrix on a vector
         mass_action = casadi.Function(
@@ -627,6 +680,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 stacklevel=2,
             )
 
+        upsampling_fcn = self._upsampling_fcn(model, inputs_dict)
+
         # Collect all casadi functions for AOT compilation. With compile=True,
         # all functions are bundled into a single shared library via one gcc
         # invocation; each serialized Function then points at its entry point.
@@ -643,6 +698,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     rootfn,
                     alg_res_fn,
                     jac_alg_fn,
+                    upsampling_fcn,
                 ),
                 strict=True,
             )
@@ -656,9 +712,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if self._options["compile"]:
             compiled = aot_compile(list(fns.values()))
             fns = dict(zip(fns.keys(), compiled, strict=True))
-
-        def to_idaklu(fn):
-            return idaklu.generate_function(fn.serialize())
 
         self._setup = {
             "number_of_states": len(y0),
@@ -687,20 +740,23 @@ class IDAKLUSolver(pybamm.BaseSolver):
         }
 
         for name in _SETUP_FCN_KEYS:
-            self._setup[name] = to_idaklu(fns[name])
+            self._setup[name] = casadi_to_idaklu_function(fns[name])
 
         # The idaklu-bound Function isn't callable from Python; keep the
         # original for the closest_event_idx lookup in _post_process_solution.
         self._setup["rootfn_casadi"] = fns["rootfn"]
+        self._setup["upsampling"] = fns["upsampling_fcn"].n_out() > 0
 
         for key in self.output_variables:
-            self._setup["var_idaklu_fcns"].append(to_idaklu(fns[f"var:{key}"]))
+            self._setup["var_idaklu_fcns"].append(
+                casadi_to_idaklu_function(fns[f"var:{key}"])
+            )
             if has_sens:
                 self._setup["dvar_dy_idaklu_fcns"].append(
-                    to_idaklu(fns[f"dvar_dy:{key}"])
+                    casadi_to_idaklu_function(fns[f"dvar_dy:{key}"])
                 )
                 self._setup["dvar_dp_idaklu_fcns"].append(
-                    to_idaklu(fns[f"dvar_dp:{key}"])
+                    casadi_to_idaklu_function(fns[f"dvar_dp:{key}"])
                 )
 
         self._setup["solver"] = idaklu.create_casadi_solver_group(
@@ -728,6 +784,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options=self._options,
             alg_res=self._setup["alg_res"],
             alg_jac=self._setup["alg_jac"],
+            upsampling_fcn=self._setup["upsampling_fcn"],
         )
 
         # C++ solver group now owns each casadi::Function via shared_ptr;
@@ -745,6 +802,42 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return base_set_up_return
 
+    def _upsampling_fcn(self, model, inputs_dict):
+        """``g(t, y, p)``: the model's scalar ``upsampling_variable`` divided
+        by its scale, or by 1 if it has none.
+
+        Empty if upsampling is off, or the variable is missing or an algebraic
+        state, which the integrator's error test already resolves.
+        """
+        empty = casadi.Function("empty_upsampling", [], [])
+        name = getattr(model, "upsampling_variable", "Voltage [V]")
+        if self._options["upsampling_tolerance"] is None:
+            return empty
+        if name not in model.variables:
+            pybamm.logger.warning(
+                f"upsampling_tolerance is set but model '{model.name}' has no "
+                f"'{name}' variable, so no points are added. Set the model's "
+                "`upsampling_variable` to the name of a scalar variable."
+            )
+            return empty
+        variable = model.variables[name]
+        if model.is_algebraic_state(variable):
+            return empty
+        scale = getattr(variable, "scale", None)
+        if not (isinstance(scale, pybamm.Symbol) and scale.is_constant()):
+            scale = 1
+        upsampling_fcn = process(
+            model.get_processed_variable_or_event(name) / scale,
+            pybamm.BaseSolver._wrangle_name(name),
+            self._get_vars_for_processing(model, inputs_dict),
+            use_jacobian=False,
+        )[0]
+        if upsampling_fcn.numel_out() != 1:
+            raise pybamm.SolverError(
+                f"upsampling_tolerance needs a scalar variable, got '{name}'"
+            )
+        return upsampling_fcn
+
     def __getstate__(self):
         # Drop the rebuildable state (C++ solver + casadi.Function graphs)
         # so the next solve() rebuilds from the model rather than shipping
@@ -756,6 +849,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
     def __setstate__(self, d):
         self.__dict__.update(d)
+        # Pickles from older versions lack newer options
+        self._options = self._combine_options(self._options)
         # Restore the empty defaults BaseSolver.__init__ would set, so the
         # solver reads as "not yet set up" until the next solve().
         self._model_set_up = {}
@@ -926,6 +1021,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # backend as the integration.
         solution_options = {"compile": self._options["compile"]}
 
+        # Without Hermite data or with sensitivities, the points went into the states
+        t_additive = None
+        if (
+            yp is not None
+            and self._setup["upsampling"]
+            and number_of_sensitivity_parameters == 0
+        ):
+            t_additive = sol.t_additive
+
         newsol = pybamm.Solution(
             t,
             np.transpose(y_out),
@@ -939,6 +1043,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             all_t_evals=t_eval,
             variables_returned=bool(save_outputs_only),
             options=solution_options,
+            t_additive=t_additive,
         )
 
         # Set closest_event_idx so BaseSolver.get_termination_reason doesn't
@@ -1138,8 +1243,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
         t_interp : None, list or ndarray, optional
-            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
-            which returns the adaptive time-stepping times.
+            Extra times (in seconds) to store in every solve, so that calls at those
+            times share one cached solve. Defaults to `None`.
         """
         obj = pybamm.IDAKLUJax(
             self,  # IDAKLU solver instance
@@ -1236,6 +1341,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             new_ys.append(np.asarray(red_ys[i]).reshape(K, N).T)
             new_yps.append(np.asarray(red_yps[i]).reshape(K, N).T)
 
+        # The added times were chosen against the original knots, so keep the
+        # removed ones; `Solution.t` is then unchanged by the reduction
+        t_additive = solution.t_additive
+        if t_additive is not None:
+            removed = np.setdiff1d(np.concatenate(all_ts), np.concatenate(new_ts))
+            t_additive = np.union1d(t_additive, removed)
+
         new_sol = pybamm.Solution(
             all_ts=new_ts,
             all_ys=new_ys,
@@ -1249,6 +1361,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             all_t_evals=solution.all_t_evals,
             variables_returned=solution.variables_returned,
             options=solution.user_options,
+            t_additive=t_additive,
         )
 
         # Propagate metadata from the original solution
