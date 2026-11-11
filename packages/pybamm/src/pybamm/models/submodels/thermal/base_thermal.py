@@ -146,8 +146,13 @@ class BaseThermal(pybamm.BaseSubModel):
                 f"Positive electrode {phase}volumetric interfacial current density [A.m-3]"
             ]
             eta_r_p = variables[f"Positive electrode {phase}reaction overpotential [V]"]
-            # Irreversible electrochemical heating
-            Q_rxn_p += a_j_p * eta_r_p
+            eta_sei_p = variables[
+                f"Positive electrode {phase}SEI film overpotential [V]"
+            ]
+            # Irreversible heating. eta_r is the kinetic overpotential net of the
+            # film drop, so eta_r - eta_sei adds the resistive loss in the SEI film
+            Q_rxn_p += a_j_p * (eta_r_p - eta_sei_p)
+            Q_rxn_p += self._side_reaction_heating(variables, "positive", phase)
             # Reversible electrochemical heating
             dUdT_p = variables[f"Positive electrode {phase}entropic change [V.K-1]"]
             Q_rev_p += a_j_p * T_p * dUdT_p
@@ -176,10 +181,21 @@ class BaseThermal(pybamm.BaseSubModel):
             ocp_options = (ocp_options,) * len(phase_names)
 
         if self.options.electrode_types["negative"] == "planar":
-            i_n = variables["Lithium metal total interfacial current density [A.m-2]"]
+            # The total current splits between lithium plating and SEI growth
+            j_pl = variables["Lithium metal plating current density [A.m-2]"]
             eta_r_n = variables["Lithium metal interface reaction overpotential [V]"]
+            eta_sei_n = variables["Negative electrode SEI film overpotential [V]"]
+            Q_rxn_n = j_pl * (eta_r_n - eta_sei_n)
+            if self.options.negative["SEI"] not in ["none", "constant"]:
+                j_sei = variables[
+                    "Negative electrode SEI interfacial current density [A.m-2]"
+                ]
+                delta_phi_n = variables[
+                    "Lithium metal interface surface potential difference [V]"
+                ]
+                Q_rxn_n += j_sei * (delta_phi_n - self.param.n.prim.U_sei)
             Q_rxn_n = pybamm.PrimaryBroadcast(
-                i_n * eta_r_n / self.param.n.L,
+                Q_rxn_n / self.param.n.L,
                 ["negative electrode"],
                 "current collector",
             )
@@ -199,8 +215,13 @@ class BaseThermal(pybamm.BaseSubModel):
                 eta_r_n = variables[
                     f"Negative electrode {phase}reaction overpotential [V]"
                 ]
-                # Irreversible electrochemical heating
-                Q_rxn_n += a_j_n * eta_r_n
+                eta_sei_n = variables[
+                    f"Negative electrode {phase}SEI film overpotential [V]"
+                ]
+                # Irreversible heating. eta_r is the kinetic overpotential net of the
+                # film drop, so eta_r - eta_sei adds the resistive loss in the SEI film
+                Q_rxn_n += a_j_n * (eta_r_n - eta_sei_n)
+                Q_rxn_n += self._side_reaction_heating(variables, "negative", phase)
                 # Reversible electrochemical heating
                 dUdT_n = variables[f"Negative electrode {phase}entropic change [V.K-1]"]
                 Q_rev_n += a_j_n * T_n * dUdT_n
@@ -383,6 +404,35 @@ class BaseThermal(pybamm.BaseSubModel):
                 Q_s_cp = self.param.p.sigma_cc * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
 
+    def _side_reaction_heating(self, variables, domain, phase_name):
+        """
+        Irreversible heating from SEI growth and lithium plating in a porous
+        electrode, as each side-reaction current times ``delta_phi - U`` for that
+        reaction, which includes any SEI film drop.
+        """
+        Domain = domain.capitalize()
+        phase = phase_name.strip() or "primary"
+        domain_options = getattr(self.options, domain)
+        phase_options = getattr(domain_options, phase)
+        delta_phi = variables[f"{Domain} electrode surface potential difference [V]"]
+        prefix = f"{Domain} electrode {phase_name}"
+        suffix = "volumetric interfacial current density [A.m-3]"
+
+        Q = 0
+        if phase_options["SEI"] not in ["none", "constant"]:
+            U_sei = self.param.domain_params[domain].phase_params[phase].U_sei
+            reactions = ["SEI"]
+            if domain_options["SEI on cracks"] == "true":
+                reactions.append("SEI on cracks")
+            for reaction in reactions:
+                a_j_sei = variables[f"{prefix}{reaction} {suffix}"]
+                Q += a_j_sei * (delta_phi - U_sei)
+        if phase_options["lithium plating"] != "none":
+            # Lithium plating has zero open-circuit potential
+            a_j_pl = variables[f"{prefix}lithium plating {suffix}"]
+            Q += a_j_pl * delta_phi
+        return Q
+
     def _phase_heat_of_mixing(self, variables, domain, phase_name, phase_param):
         """
         Compute the heat of mixing source term for a single particle phase.
@@ -404,25 +454,23 @@ class BaseThermal(pybamm.BaseSubModel):
         N = a / (4 * np.pi * R**2)
         # the diffusivity the particle flux actually uses, including any current
         # sigmoid or stress-induced diffusion, so the dissipation matches the flux
-        if self.x_average:
-            c = variables[
-                f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-            ]
-            T = variables[f"X-averaged {domain} electrode temperature [K]"]
-            D = variables[
-                f"X-averaged {domain} {phase_name}particle effective "
-                "diffusivity [m2.s-1]"
-            ]
-        else:
-            c = variables[f"{Domain} {phase_name}particle concentration [mol.m-3]"]
-            T = variables[f"{Domain} electrode temperature [K]"]
-            D = variables[
-                f"{Domain} {phase_name}particle effective diffusivity [m2.s-1]"
-            ]
+        prefix = f"X-averaged {domain}" if self.x_average else Domain
+        c = variables[f"{prefix} {phase_name}particle concentration [mol.m-3]"]
+        T = variables[f"{prefix} electrode temperature [K]"]
+        D = variables[f"{prefix} {phase_name}particle effective diffusivity [m2.s-1]"]
         T_part = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
-        dc_dr2 = pybamm.inner(pybamm.grad(c), pybamm.grad(c))
-        dUeq = phase_param.U(c / phase_param.c_max, T_part).diff(c)
-        integrand_r = D * dc_dr2 * dUeq
+        U_eq = phase_param.U(c / phase_param.c_max, T_part)
+        if phase_options["particle"] in ["quadratic profile", "quartic profile"]:
+            # c is a polynomial in r on the nodes, so D (dc/dr)^2 dU/dc = -N dU/dr
+            # with the closed-form flux N; a finite-volume gradient doesn't apply
+            N_s = variables[f"{prefix} {phase_name}particle flux [mol.m-2.s-1]"]
+            r = pybamm.SpatialVariable(
+                f"r_{domain[0]}", domains=c.domains, coord_sys="spherical polar"
+            )
+            integrand_r = -N_s * U_eq.diff(r)
+        else:
+            dc_dr2 = pybamm.inner(pybamm.grad(c), pybamm.grad(c))
+            integrand_r = D * dc_dr2 * U_eq.diff(c)
         integration_variable_r = [
             pybamm.SpatialVariable("r", domain=integrand_r.domain)
         ]

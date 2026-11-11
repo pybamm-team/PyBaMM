@@ -2,13 +2,11 @@ name: PyBaMM
 
 on:
   pull_request:
-  # Run on pushes to main as well, primarily to warm the solver-wheel cache
-  # (keyed on the solver source hash) so PyBaMM-only PRs get a cache hit instead
-  # of rebuilding the solver. Also gives a post-merge health signal for main.
+  # Queue-validated pushes only refresh shared caches and the Codecov baseline;
+  # unvalidated pushes fall back to the full suite.
   push:
     branches:
       - main
-  # Merge-queue runs test everything, like pushes to main.
   merge_group:
 
 
@@ -32,6 +30,7 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       pull-requests: read
       contents: read
     outputs:
@@ -39,12 +38,13 @@ jobs:
       pybamm: ${{ steps.filter.outputs.pybamm }}
       docs: ${{ steps.filter.outputs.docs }}
       model_zoo: ${{ steps.filter.outputs.model_zoo }}
+      full_push: ${{ github.event_name == 'push' && steps.queue.outputs.validated != 'true' }}
       # Routing decisions, resolved once here rather than repeated in every job's `if`.
-      run_tests: ${{ github.event_name != 'pull_request' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
-      run_docs_tests: ${{ github.event_name != 'pull_request' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
+      run_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
+      run_docs_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
       # A core change runs the zoo too, so an upstream regression shows up here
       # rather than in a contributor's next pull request.
-      run_zoo_tests: ${{ github.event_name != 'pull_request' || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.model_zoo == 'true' }}
+      run_zoo_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.model_zoo == 'true' }}
       # Solver-wheel platforms each scenario's downstream jobs actually consume.
       platforms: ${{ steps.route.outputs.platforms }}
       macos_runners: ${{ steps.route.outputs.macos_runners }}
@@ -52,9 +52,45 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Check this SHA passed the merge queue
+        id: queue
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          validated=false
+          if run_ids=$(gh api --method GET \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/test_on_push.yml/runs" \
+            -f event=merge_group \
+            -f head_sha="$GITHUB_SHA" \
+            -F per_page=10 \
+            --jq '.workflow_runs[].id'); then
+            for run_id in $run_ids; do
+              if gate_count=$(gh api --method GET \
+                "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" \
+                -f filter=latest \
+                -F per_page=100 \
+                --jq '[.jobs[] | select(.name == "CI gate" and .conclusion == "success")] | length'); then
+                if [ "$gate_count" -gt 0 ]; then
+                  validated=true
+                  break
+                fi
+              else
+                echo "::warning::Could not inspect merge-queue run $run_id."
+              fi
+            done
+          else
+            echo "::warning::Could not query merge-queue runs."
+          fi
+          if [ "$validated" != true ]; then
+            echo "::notice::No successful merge-queue gate found; running the full suite."
+          fi
+          echo "validated=$validated" >> "$GITHUB_OUTPUT"
+
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
-        if: github.event_name != 'merge_group'
+        if: github.event_name == 'pull_request'
         with:
           filters: |
             solver:
@@ -107,6 +143,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   style:
+    needs: changes
+    if: ${{ github.event_name != 'push' || needs.changes.outputs.full_push == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -128,7 +166,7 @@ jobs:
         with:
           python-version: 3.12
 
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "latest"
           enable-cache: true
@@ -149,7 +187,7 @@ jobs:
   # old standalone unit/integration workflows.
   build_solver:
     needs: changes
-    if: ${{ needs.changes.outputs.run_docs_tests == 'true' || needs.changes.outputs.run_zoo_tests == 'true' }}
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.run_docs_tests == 'true' || needs.changes.outputs.run_zoo_tests == 'true' }}
     name: Solver wheels
     # Pass contents:read down to the called workflow (this workflow's top-level
     # permissions are {}, so the reusable workflow's checkout would otherwise
@@ -203,7 +241,7 @@ jobs:
 
   run_coverage:
     needs: [changes, build_solver]
-    if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.run_tests == 'true' }}
     name: Coverage
     permissions:
       contents: read
@@ -230,7 +268,7 @@ jobs:
   #  Guards both the bootstrap and the clean-clone dev experience.
   from_source_smoke:
     needs: changes
-    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.solver == 'true' }}
+    if: ${{ github.event_name == 'merge_group' || needs.changes.outputs.full_push == 'true' || needs.changes.outputs.solver == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -253,7 +291,7 @@ jobs:
         with:
           python-version: 3.13
 
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "latest"
           enable-cache: true
