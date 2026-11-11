@@ -79,8 +79,6 @@ class Lumped(BaseThermal):
 
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        # "Volume-averaged total heating [W.m-3]" already includes contact
-        # resistance heating (added in BaseThermal)
         Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
         Q_cool_vol_av = variables["Surface total cooling [W.m-3]"]
         rho_c_p_eff_av = variables[

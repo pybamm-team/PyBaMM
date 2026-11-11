@@ -512,6 +512,9 @@ class TestThermal:
             sol = sim.solve([0, t_end])
             heating[R] = sol["Total heating [W]"](t)
             current[R] = sol["Current [A]"](t)
+            np.testing.assert_allclose(
+                sol["Contact resistance heating [W]"](t), current[R] ** 2 * R
+            )
 
         extra_heat = np.trapezoid(heating[R_c] - heating[0], t)
         expected = np.trapezoid(current[R_c] ** 2 * R_c, t)
