@@ -178,6 +178,7 @@ public:
   std::vector<int> rootsfound_;
 
   // ── Solve-duration state (valid only during solve()) ──
+  bool save_hermite_sensitivities_ = false;
   bool use_knot_reduction_ = false;
   bool use_upsampling_ = false;
   // Upsampled times go to t_additive, not the states
@@ -251,6 +252,14 @@ public:
 
 
   /**
+   * @brief Take one IDASolve step towards tout, rejecting non-finite residuals
+   * @param tout The time IDASolve integrates towards
+   * @param t_val Set to the time reached
+   * @return The IDASolve return flag
+   */
+  int Step(sunrealtype tout, sunrealtype &t_val);
+
+  /**
    * @brief Concrete implementation of initialization method
    */
   void Initialize() override;
@@ -319,6 +328,12 @@ public:
   void ReinitializeIntegrator(const sunrealtype& t_val);
 
   /**
+   * @brief The IDAS sensitivity corrector: IDA_STAGGERED with sensitivity
+   * error control, else IDA_SIMULTANEOUS
+   */
+  int SensitivityMethod() const;
+
+  /**
    * @brief Hand IDAS the per-parameter scales held in sens_scales_.
    *
    * Must run after every IDASensInit/IDASensReInit, both of which reset pbar
@@ -361,6 +376,8 @@ public:
   /**
    * @brief Build the algebraic Newton solver for consistent initial conditions.
    * Only built when mass matrix has zeros in algebraic rows (standard-form).
+   * Not built for a full-system solve with an iterative linear solver, which
+   * leaves the initial conditions to IDACalcIC.
    */
   void BuildAlgebraicSolver(const sunrealtype* id_val);
 
