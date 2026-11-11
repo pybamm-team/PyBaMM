@@ -194,7 +194,6 @@ class BaseModel(BaseElectrolyteConductivity):
                 lbc = (phi_e_ref, "Dirichlet")
             else:
                 lbc = (pybamm.Scalar(0), "Neumann")
-            # update, not assign, to keep the c_e BCs set in get_coupled_variables
             self.boundary_conditions.update(
                 {phi_e: {"left": lbc, "right": (pybamm.Scalar(0), "Neumann")}}
             )
