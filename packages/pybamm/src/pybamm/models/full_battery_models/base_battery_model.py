@@ -729,9 +729,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "Positive Electrode phase transition submodel only implemented for "
                     "particles of single size, i.e, no distribution."
                 )
-            # Two-phase positive electrode is not yet supported. Tuple form for
-            # 'particle phases' is (negative, positive), so we reject anything
-            # whose positive entry is not "1".
+            # A tuple of 'particle phases' is (negative, positive)
             particle_phases = options["particle phases"]
             positive_phases = (
                 particle_phases
@@ -743,6 +741,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "Positive Electrode phase transition submodel is currently "
                     "only implemented for a single-phase positive electrode "
                     "('particle phases' must be '1' for the positive electrode)."
+                )
+            if options["working electrode"] != "both":
+                raise pybamm.OptionError(
+                    "Positive Electrode phase transition submodel is only "
+                    "implemented for full cells ('working electrode' must be 'both')."
                 )
 
         # If "SEI film resistance" is not "none" and there are multiple phases

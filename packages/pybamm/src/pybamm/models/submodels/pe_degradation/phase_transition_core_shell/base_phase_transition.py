@@ -70,8 +70,6 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         # solve for
         if c_c_xav is None:
             c_c_xav = pybamm.x_average(c_c)
-        # c_c_rav = self._r_average_core(c_c)
-        # the r_average can also be calculated from normal RAverage
         c_c_rav = pybamm.r_average(c_c)
         c_c_av = pybamm.x_average(c_c_rav)
 
@@ -194,61 +192,12 @@ class BasePhaseTransition(pybamm.BaseSubModel):
             # the shell is considered as LAM
             "Loss of active material due to PE phase transition": lam_pe,
             "X-averaged loss of active material due to PE phase transition": lam_pe_av,
-            # ---------------------------------------------------------------------
-            # We need to supply a variable to
-            # submodel 'positive interface' (set_interfacial_submodel)
-            # for voltage calculation
+            # Read by the interface and open-circuit potential submodels
             f"{Domain} {phase_name}particle surface concentration [mol.m-3]": c_c_surf,
-            # For submodel 'positive primary open-circuit potential'
-            # f"{Domain} {phase_name}core surface lithium stoichiometry"
             f"{Domain} {phase_name}particle surface stoichiometry": c_c_surf / c_scale,
-            # ---------------------------------------------------------------------
         }
 
         return variables
-
-    def _r_average_core(self, symbol):
-        """Reference (unused) implementation of the volume-weighted r-average
-        over the spherical core, kept here for didactic purposes.
-
-        By definition, for a quantity ``phi`` defined on a spherical core of
-        physical radius R_core = R_nd * s_nd::
-
-            <phi>_core = (1 / V_core) * integral_0^R_core phi(r) * 4*pi*r^2 dr
-                       where V_core = (4/3) * pi * R_core^3
-
-        Re-parameterising to the dimensionless coordinate r_co = r / R_core
-        in [0, 1]::
-
-            <phi>_core = (integral_0^1 phi * r_co^2 dr_co)
-                       / (integral_0^1 r_co^2 dr_co)
-
-        The factors of 4*pi and R_core^3 cancel between numerator and
-        denominator, leaving an integral that depends only on r_co. PyBaMM's
-        ``Integral`` over a SpatialVariable with coord_sys="spherical polar"
-        applies the r^2 Jacobian automatically, so the r-average over the
-        core can be written as
-
-            return pybamm.Integral(symbol, r_co) / pybamm.Integral(v, r_co)
-
-        which is exactly what ``pybamm.r_average`` does for any spherical
-        particle domain. The standard flow therefore uses
-        ``pybamm.r_average(symbol)`` and this method is never invoked.
-        """
-        # Equivalent by-definition implementation, retained as commentary:
-        #
-        # if symbol.domain != [] and symbol.domain[0].endswith("core"):
-        #     r_co = pybamm.SpatialVariable("r_co", symbol.domain)
-        #     v = pybamm.ones_like(symbol)
-        #     return pybamm.Integral(symbol, r_co) / pybamm.Integral(v, r_co)
-        # else:
-        #     raise pybamm.DomainError(
-        #         "Domain must include 'core' for the core-shell model."
-        #     )
-        raise NotImplementedError(  # pragma: no cover
-            "_r_average_core is a reference (unused) implementation kept for "
-            "didactic purposes. Use pybamm.r_average(symbol) instead."
-        )
 
     def _r_average_shell(self, symbol, s_nd):
         """
@@ -277,11 +226,7 @@ class BasePhaseTransition(pybamm.BaseSubModel):
             r_sh = pybamm.SpatialVariable("r_sh", domains=symbol.domains)
             v = pybamm.ones_like(symbol)
             R_typ = self.phase_param.R_typ
-            # exact coefficient
-            # coeff = 4 * np.pi * (R_nd ** 3) * (1 - s_nd) * (
-            #     ((1 - s_nd) * r_sh + s_nd * R_typ)**2
-            # )
-            # simplified by removing constants for the integral
+            # Constant factors of the volume element cancel in the ratio
             coeff = ((1 - s_nd) * r_sh + s_nd * R_typ) ** 2
             return pybamm.Integral(coeff * symbol, r_sh) / pybamm.Integral(
                 coeff * v, r_sh

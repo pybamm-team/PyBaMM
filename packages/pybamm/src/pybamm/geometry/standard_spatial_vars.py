@@ -222,11 +222,8 @@ R_p_edge = pybamm.SpatialVariableEdge(
     coord_sys="cartesian",
 )
 
-# Spatial variables for the core and shell phases in the core-shell model
-# for PE phase transition caused degradation
-# the core domain (0, s) and shell domain (s, R) have been mapped to (0, R_typ)
-# core variable  r_co = r / s * R_typ, r goes from 0 to s
-# shell variable r_sh = (r - s) / (R - s) * R_typ, r goes from s to R
+# Core (0, s) and shell (s, R) both map onto (0, R_typ):
+# r_co = r / s * R_typ and r_sh = (r - s) / (R - s) * R_typ
 r_co = pybamm.SpatialVariable(
     "r_co",
     domain=["positive core"],

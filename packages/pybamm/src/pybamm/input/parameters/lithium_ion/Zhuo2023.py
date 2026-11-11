@@ -341,18 +341,9 @@ def initial_oxygen_concentration(r_sh_nd, x):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for an INR18650-MJ1 cell, LG Chem, from the paper
-    :footcite:t:`Zhuo2023` and references therein.
-
-    SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`Ploehn2004`,
-    :footcite:t:`Single2018`, :footcite:t:`Safari2008`, and
-    :footcite:t:`Yang2017`
-
-    .. note::
-        This parameter set does not claim to be representative of the true parameter
-        values. Instead these are parameter values that were used to fit SEI models to
-        observed experimental data in the referenced papers.
+    Parameters for an LG Chem INR18650-MJ1 cell from :footcite:t:`Zhuo2023`, with
+    example SEI parameters from :footcite:t:`Ramadass2004`, :footcite:t:`Ploehn2004`,
+    :footcite:t:`Single2018`, :footcite:t:`Safari2008` and :footcite:t:`Yang2017`.
     """
 
     return {
@@ -420,12 +411,7 @@ def get_parameter_values():
         "Positive current collector specific heat capacity [J.kg-1.K-1]": 897.0,
         "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
-        # # PE 49340*0.72*0.745*4.7227e-6*96487/3600 NE 34257*0.85*0.694*6.1852e-6*96487/3600
-        # total cyclable lithium in PE
-        # 49340 * (0.942 - 0.222) * 0.745 * 1.23 * 5.8e-2 * 66.2e-6 = 0.1250
-        # total cyclable lithium in NE
-        # 34257 * (0.852 - 0.002) * 0.694 * 1.23 * 5.8e-2 * 86.7e-6 = 0.1250
-        # capacity 0.125 * 96487 / 3600
+        # Each electrode holds 0.125 mol of cyclable lithium, i.e. 3.35 A.h
         "Nominal cell capacity [A.h]": 3.35,
         "Current function [A]": 3.35,
         "Contact resistance [Ohm]": 0,
@@ -471,13 +457,11 @@ def get_parameter_values():
         "Separator density [kg.m-3]": 397.0,
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.16,
-        # electrolyte
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.4,
         "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Capiglia1999,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Capiglia1999,
-        # experiment
         "Reference temperature [K]": 298.15,
         # "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Ambient temperature [K]": 298.15,
@@ -492,6 +476,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]"
         "": 46478.28,  # 0.942 * c_max_p
         "Initial temperature [K]": 298.15,
-        # citations
         "citations": ["Zhuo2023"],
     }

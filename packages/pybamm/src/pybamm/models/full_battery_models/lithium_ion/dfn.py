@@ -52,11 +52,7 @@ class DFN(BaseModel):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "planar":
                 continue
-            # PE phase-transition replaces the positive particle submodel; let
-            # set_pe_degradation_submodel handle that domain directly.
-            # Note: the following skipping can be deliberately disabled for DFN to preserve
-            # in-place overwrite (vs. fresh insert) and avoid IDA convergence issue
-            # on long DFN simulations.
+            # set_pe_degradation_submodel sets the positive particle submodel instead
             if (
                 domain == "positive"
                 and self.options["PE degradation"] == "phase transition"

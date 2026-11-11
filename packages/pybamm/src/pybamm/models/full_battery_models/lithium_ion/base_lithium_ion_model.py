@@ -198,7 +198,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         # LLI of cyclable lithium
         if self.options["PE degradation"] == "phase transition":
             for domain in domains:
-                Domain = domain.capitalize()
                 self.variables[f"Total cyclable lithium in {domain} [mol]"] = sum(
                     self.variables[
                         f"Total cyclable lithium in {phase} phase in {domain} [mol]"

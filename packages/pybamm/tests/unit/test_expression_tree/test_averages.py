@@ -59,9 +59,7 @@ class TestUnaryOperators:
         )
         assert average_broad_a == average_broad_a_simp
 
-        # Test x_average with positive core and shell as primary domains.
-        # The symbol must also live on the positive electrode (secondary)
-        # for x-averaging to be meaningful.
+        # Core and shell symbols average over the positive electrode
         for primary in [["positive core"], ["positive shell"]]:
             a = pybamm.Symbol(
                 "a",

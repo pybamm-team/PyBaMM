@@ -85,9 +85,6 @@ class TestInverseButlerVolmerPeShellHook:
         assert variables == {}
 
     def test_phase_transition_returns_nonzero_and_updates_variables(self):
-        # On the positive electrode with PE phase transition on, returns a
-        # non-trivial eta_shell expression and registers PE shell overpotential
-        # variables.
         options = pybamm.BatteryModelOptions({"PE degradation": "phase transition"})
         param = pybamm.LithiumIonParameters(options)
         sub = pybamm.kinetics.InverseButlerVolmer(

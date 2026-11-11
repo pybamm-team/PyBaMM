@@ -501,9 +501,6 @@ class TestBaseBatteryModel:
             )
 
     def test_pe_phase_transition_option_conflicts(self):
-        # Cross-option compatibility checks for the PE phase-transition option,
-        # implemented in BatteryModelOptions.__init__. Tested via
-        # pybamm.BaseBatteryModel since the checks are model-class-agnostic.
         with pytest.raises(pybamm.OptionError, match=r"total interfacial current"):
             pybamm.BaseBatteryModel(
                 {
@@ -518,9 +515,14 @@ class TestBaseBatteryModel:
                     "particle size": "distribution",
                 }
             )
-        # Two phases on the positive electrode is not yet supported. Both the
-        # global "2" form and the per-electrode tuple "(neg, pos) = (_, 2)"
-        # form must be rejected.
+        with pytest.raises(pybamm.OptionError, match=r"full cells"):
+            pybamm.BaseBatteryModel(
+                {
+                    "PE degradation": "phase transition",
+                    "working electrode": "positive",
+                }
+            )
+        # Two positive phases are rejected, given globally or per electrode
         with pytest.raises(pybamm.OptionError, match=r"single-phase positive"):
             pybamm.BaseBatteryModel(
                 {

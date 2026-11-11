@@ -193,9 +193,7 @@ class PhaseTransition(BasePhaseTransition):
             T_c = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}core"])
             T_o = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}shell"])
 
-            # R_nd = 1 assumes the typical particle radius (R value at electrode middle point)
-            # represents all particles, as adopted in particle.FickianDiffusion
-            # submodel for x_average=True (SPM mode).
+            # As in particle.FickianDiffusion, x-averaged particles have the typical radius
             R_nd = 1
 
             j = variables[
@@ -241,13 +239,8 @@ class PhaseTransition(BasePhaseTransition):
         D_c = pybamm.surf(phase_param.D(c_c, T_c))
         D_o = pybamm.boundary_value(phase_param.D_o(c_o, T_o), "left")
 
-        # Derived variable values at the moving phase boundary
-        # from applied boundary conditions of mass conservation
-        # The boundary conditions for the lithium and oxygen diffusion equations
-        # are of Robin type, and thus the boundary values are first calculated for
-        # later enforcement in the manner of Neumann-like bc
-        # Note they are not extrapolated from cell central variable values
-        # lithium concentration at the moving phase boundary
+        # Solve the Robin conditions at the moving boundary for its concentrations,
+        # which are then imposed as Neumann conditions
         c_c_b = (
             c_c_N
             - dx_core
@@ -293,9 +286,6 @@ class PhaseTransition(BasePhaseTransition):
         return variables
 
     def set_rhs(self, variables):
-        # Single-phase positive electrode is enforced by the option-compatibility
-        # guard in BatteryModelOptions.__init__, so we can use the single-phase
-        # spatial variables (r_co, r_sh) directly.
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         phase_param = self.phase_param
@@ -339,8 +329,7 @@ class PhaseTransition(BasePhaseTransition):
             T_c = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}core"])
             T_o = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}shell"])
 
-            # R_nd = 1 assumes the typical particle radius (R value at electrode middle point)
-            # represents all particles, as adopted in fickian submodel for SPM
+            # As in particle.FickianDiffusion, x-averaged particles have the typical radius
             R_nd = 1
             s_nd_dot = variables[
                 f"X-averaged time derivative of {domain} {phase_name}particle "
@@ -355,10 +344,7 @@ class PhaseTransition(BasePhaseTransition):
         self.rhs[c_c] = pybamm.inner(r_co * s_nd_dot / s_nd, pybamm.grad(c_c)) + 1 / (
             R_nd**2
         ) / (s_nd**2) * pybamm.div(D_c * pybamm.grad(c_c))
-        # div((r_sh * (1 - s_nd) + s_nd * R_typ)**2 * D_o * pybamm.grad(c_o))
-        # will lead to rounding errors
-        # (D_o * pybamm.grad(c_o)) must be bracketed to avoid the rounding errors
-        # or first define N_o to be called later, as did below
+        # Forming the flux first avoids rounding errors in the divergence
         N_o = -D_o * pybamm.grad(c_o)
         self.rhs[c_o] = pybamm.inner(
             (R_typ - r_sh) / (1 - s_nd) * s_nd_dot, pybamm.grad(c_o)

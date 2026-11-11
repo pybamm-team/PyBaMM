@@ -1,16 +1,8 @@
 """
-This tutorial runs the core-shell model for phase transition caused PE
-(NMC811) degradation, based on the paper
--- Mingzhao Zhuo, Gregory Offer, Monica Marinescu, "Degradation model of
-   high-nickel positive electrodes: Effects of loss of active material and
-   cyclable lithium on capacity fade", Journal of Power Sources,
-   556 (2023): 232461. doi: 10.1016/j.jpowsour.2022.232461.
-The following scripts reproduce the results presented in Figs. 5, 7, 9 etc.
-c_s: Trapped lithium concentration in the shell [mol.m-3]
-rho: Positive electrode shell resistivity [Ohm.m]
-Fig. 5: c_s = 14802, rho = 0
-Fig. 7: c_s = 20000, rho = 0
-Fig. 9: c_s = 20000, rho = 1e6
+Cycle the core-shell positive electrode degradation model of Zhuo et al. (2023),
+doi: 10.1016/j.jpowsour.2022.232461. Figs. 5, 7 and 9 of the paper use a trapped
+lithium concentration c_s and shell resistivity rho of (14802, 0), (20000, 0) and
+(20000, 1e6).
 """
 
 import pybamm
@@ -54,11 +46,5 @@ output_variables = [
         "X-averaged positive core surface lithium concentration",
         "X-averaged negative particle surface concentration",
     ],
-    # "Current [A]",
-    # "Terminal voltage [V]",
-    # "X-averaged negative particle concentration [mol.m-3]",
-    # "X-averaged positive core lithium concentration [mol.m-3]",
-    # "X-averaged positive shell oxygen concentration [mol.m-3]",
-    # "LLI [%]",
 ]
 sim.plot(output_variables, time_unit="hours")

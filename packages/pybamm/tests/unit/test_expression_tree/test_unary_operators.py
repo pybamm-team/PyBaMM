@@ -673,9 +673,6 @@ class TestUnaryOperators:
             pybamm.boundary_value(symbol_on_edges, "right")
 
     def test_boundary_cell_value_and_length(self):
-        # The two helpers produce typed operators with the right side and child.
-        # They are used by the PE phase-transition submodel to enforce Robin
-        # boundary conditions at the moving core-shell boundary.
         a = pybamm.Symbol("a", domain=["negative electrode"])
 
         for side in ("left", "right"):
@@ -689,9 +686,7 @@ class TestUnaryOperators:
             assert cl.side == side
             assert cl.child == a
 
-        # _unary_new_copy round-trips through the convenience function with
-        # both perform_simplifications=True (default, via convenience helper)
-        # and perform_simplifications=False (direct constructor).
+        # Copy with and without perform_simplifications
         cv = pybamm.boundary_cell_value(a, "right")
         cv_copy = cv._unary_new_copy(a)
         assert isinstance(cv_copy, pybamm.BoundaryCellValue)

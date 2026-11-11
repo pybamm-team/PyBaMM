@@ -67,9 +67,7 @@ class TestZhuo2023:
         assert "Zhuo2023" in param["citations"]
 
     def test_process_model_with_phase_transition_dfn(self):
-        # SPM coverage lives in test_parameters_with_default_models.py; this
-        # adds the DFN counterpart that exercises the base_kinetics PE-shell
-        # branch rather than the inverse Butler-Volmer hook.
+        # DFN uses the forward kinetics shell term, which SPM does not
         model = pybamm.lithium_ion.DFN({"PE degradation": "phase transition"})
         param = pybamm.ParameterValues("Zhuo2023")
         param.process_model(model)
