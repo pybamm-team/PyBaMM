@@ -68,8 +68,7 @@ def string(text, **kwargs):
         if " for " in termination:
             raise ValueError(
                 "The duration must come before 'until', e.g. "
-                "'Charge at 1 C for 1 hour or until 4.2 V'. "
-                f"For example: {_examples}"
+                "'Charge at 1 C for 1 hour or until 4.2 V'."
             )
         # sometimes we use "or until" instead of "until", so remove "or"
         text = text.replace(" or", "")

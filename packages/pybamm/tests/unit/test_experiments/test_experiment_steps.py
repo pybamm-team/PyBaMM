@@ -282,17 +282,18 @@ class TestExperimentSteps:
             pybamm.step.string("Charge at 1 C until 4.2 V for 1 hour")
 
     @pytest.mark.parametrize(
-        "text",
+        ("text", "value"),
         [
-            "Discharge at 1 A for 1 hour  ",
-            "  Discharge at 1 A for 1 hour",
-            "Discharge at 1 A  for 1 hour",
-            "Discharge at 1 A for 1 hour\n",
+            ("Discharge at 1 A for 1 hour  ", 1),
+            ("  Discharge at 1 A for 1 hour", 1),
+            ("Discharge at 1 A  for 1 hour", 1),
+            ("Discharge at 1 A for 1 hour\n", 1),
+            ("  Rest for 1 hour", 0),
         ],
     )
-    def test_step_string_extra_whitespace(self, text):
+    def test_step_string_extra_whitespace(self, text, value):
         step = pybamm.step.string(text)
-        assert step.value == 1
+        assert step.value == value
         assert step.duration == 3600
         assert step.description == text
 
