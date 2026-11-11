@@ -8,7 +8,13 @@
 # Kept small for Bencher's bandwidth quota, with source last to reuse cached layers.
 
 # Pinned by digest (Dependabot bumps it)
-FROM python:3.13-slim-bookworm@sha256:2325bb286ec344af3e5898cc224b5844e2707ac6e26b1632516fd3edc84a5e26 AS base
+FROM python:3.13-slim-bookworm@sha256:a1165e272e578941b84abc79e4ab38a0305cd12803a5c4247979ac7655f4d641 AS python
+
+# Flattened into one layer: Bencher's runner can't extract a layer that re-ships
+# a hard link from a lower one, as the Python layer does when it upgrades perl-base
+FROM scratch AS base
+COPY --from=python / /
+ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # libgomp is the OpenMP runtime the IDAKLU solver links against; the manylinux
 # wheel bundles everything else. gcc is needed at *run* time: the solver's

@@ -70,26 +70,23 @@ struct PendingStats {
 template <class ExprSet>
 class IDAKLUSolverOpenMP : public IDAKLUSolver
 {
-  // NB: cppcheck-suppress unusedStructMember is used because codacy reports
-  //     these members as unused even though they are important in child
-  //     classes, but are passed by variadic arguments (and are therefore unnamed)
 public:
   void *ida_mem = nullptr;
   np_array atol_np;
   np_array rhs_alg_id;
-  int const number_of_states;  // cppcheck-suppress unusedStructMember
-  int const number_of_parameters;  // cppcheck-suppress unusedStructMember
-  int const number_of_events;  // cppcheck-suppress unusedStructMember
+  int const number_of_states;
+  int const number_of_parameters;
+  int const number_of_events;
   int number_of_timesteps;
-  int precon_type;  // cppcheck-suppress unusedStructMember
+  int precon_type;
   N_Vector yy, yyp, y_cache, avtol;  // y, y', y cache vector, and absolute tolerance
-  N_Vector *yyS;  // cppcheck-suppress unusedStructMember
-  N_Vector *yypS;  // cppcheck-suppress unusedStructMember
+  N_Vector *yyS;
+  N_Vector *yypS;
   N_Vector id;              // rhs_alg_id
   sunrealtype rtol;
-  int const jac_times_cjmass_nnz;  // cppcheck-suppress unusedStructMember
-  int const jac_bandwidth_lower;  // cppcheck-suppress unusedStructMember
-  int const jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
+  int const jac_times_cjmass_nnz;
+  int const jac_bandwidth_lower;
+  int const jac_bandwidth_upper;
   SUNMatrix J;
   SUNLinearSolver LS = nullptr;
   std::unique_ptr<ExprSet> functions;
@@ -98,11 +95,11 @@ public:
   vector<sunrealtype> res_dvar_dp;
   // Reused scratch for sparse->dense output sensitivity scatter (outputs-only mode)
   vector<sunrealtype> dvar_dp_dense;
-  bool const sensitivity;  // cppcheck-suppress unusedStructMember
-  bool const save_outputs_only; // cppcheck-suppress unusedStructMember
-  bool save_hermite;  // cppcheck-suppress unusedStructMember
-  bool is_ODE;  // cppcheck-suppress unusedStructMember
-  int length_of_return_vector;  // cppcheck-suppress unusedStructMember
+  bool const sensitivity;
+  bool const save_outputs_only;
+  bool save_hermite;
+  bool is_ODE;
+  int length_of_return_vector;
 
   // Arrays are stored flat (contiguous) for cache efficiency and zero-copy
   // to numpy. Indexing uses strides:
@@ -182,6 +179,22 @@ public:
 
   // ── Solve-duration state (valid only during solve()) ──
   bool use_knot_reduction_ = false;
+  bool use_upsampling_ = false;
+  // Upsampled times go to t_additive, not the states
+  bool upsample_to_t_additive_ = false;
+  std::vector<sunrealtype> t_additive_;
+  // Knot interval whose Hermite spline EvaluateUpsampleOutputAt uses (-1: IDA's)
+  int upsample_knot_ = -1;
+  // An interval of the step being upsampled, ordered by its midpoint error
+  struct UpsampleInterval {
+    sunrealtype error, t_a, f_a, t_m, f_m, t_b, f_b;
+    bool operator<(UpsampleInterval const &other) const { return error < other.error; }
+  };
+  std::vector<UpsampleInterval> upsample_heap_;
+  std::vector<sunrealtype> upsample_times_;
+  // upsampling_fcn at the previous step end, reused as the next step start
+  sunrealtype upsample_f_prev_ = 0.0;
+  bool upsample_f_prev_valid_ = false;
   bool save_adaptive_steps_ = false;
   bool save_interp_steps_ = false;
   int i_save_ = 0;
@@ -204,9 +217,9 @@ public:
    * @brief Constructor
    */
   IDAKLUSolverOpenMP(
-    np_array atol_np,
+    const np_array &atol_np,
     double rel_tol,
-    np_array rhs_alg_id,
+    const np_array &rhs_alg_id,
     int number_of_parameters,
     int number_of_events,
     int jac_times_cjmass_nnz,
@@ -419,6 +432,43 @@ public:
    * @brief Save a solution point (delegates to Hermite knot reduction or direct save path)
    */
   void SavePoint(sunrealtype t_val, bool extend_arrays, bool is_breakpoint);
+
+  /**
+   * @brief Add points inside the last step [t_a, t_b] until linear interpolation
+   * of the upsampled output resolves it
+   */
+  void UpsampleStep(sunrealtype t_a, sunrealtype t_b);
+
+  /**
+   * @brief Add points between the reduced knots until linear interpolation of
+   * the upsampled output on their Hermite spline resolves it
+   */
+  void UpsampleReducedKnots();
+
+  /**
+   * @brief Split [t_a, t_b], worst midpoint first, into upsample_times_
+   */
+  void RefineUpsampleInterval(
+    sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b);
+
+  /**
+   * @brief Queue [t_a, t_b] for splitting if linear interpolation of the output
+   * misses its midpoint by more than upsampling_tolerance
+   */
+  void PushUpsampleInterval(
+    sunrealtype t_a, sunrealtype f_a, sunrealtype t_b, sunrealtype f_b);
+
+  /**
+   * @brief Evaluate upsampling_fcn at t from the states y
+   */
+  sunrealtype EvaluateUpsampleOutput(sunrealtype t, sunrealtype *y);
+
+  /**
+   * @brief Evaluate upsampling_fcn at t_query on the integrator's interpolant, or
+   * on knot interval upsample_knot_'s Hermite spline, using y_cache so the
+   * current state in yy is left untouched
+   */
+  sunrealtype EvaluateUpsampleOutputAt(sunrealtype t_query);
 
   /**
    * @brief Handle a breakpoint at t_eval: finalize interval, reinitialize

@@ -45,7 +45,8 @@ class TestSpatialMethodToConfig:
             "extrapolation": {
                 "order": {"gradient": "linear", "value": "quadratic"},
                 "use bcs": True,
-            }
+            },
+            "harmonic flux coefficients": True,
         }
         method = pybamm.FiniteVolume(options=custom_options)
         restored = pybamm.SpatialMethod.from_config(method.to_config())

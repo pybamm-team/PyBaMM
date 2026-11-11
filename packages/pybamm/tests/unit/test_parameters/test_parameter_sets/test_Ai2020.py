@@ -1,6 +1,7 @@
 #
 # Tests for Ai (2020) Enertech parameter set loads
 #
+import numpy as np
 import pytest
 
 import pybamm
@@ -39,9 +40,24 @@ class TestAi2020:
                 -1.1033e-4,
             ),
             "Negative electrode volume change": ([sto], 5.1921e-2),
+            "Electrolyte diffusivity [m2.s-1]": ([1e3, T], 3.2227e-10),
+            "Electrolyte conductivity [S.m-1]": ([1e3, T], 1.1943),
         }
 
         for name, value in fun_test.items():
             assert param.evaluate(param[name](*value[0])) == pytest.approx(
-                value[1], abs=0.0001
+                value[1], rel=1e-3, abs=0
+            )
+
+    def test_electrolyte_diffusivity(self):
+        # Same Valoen and Reimers (2005) fit as Xu2019, which already converts to m2/s
+        ai2020 = pybamm.ParameterValues("Ai2020")
+        xu2019 = pybamm.ParameterValues("Xu2019")
+        name = "Electrolyte diffusivity [m2.s-1]"
+        for c_e, T in [(1000, 298.15), (500, 318.15), (1500, 278.15)]:
+            inputs = [pybamm.Scalar(c_e), pybamm.Scalar(T)]
+            np.testing.assert_allclose(
+                ai2020.evaluate(ai2020[name](*inputs)),
+                xu2019.evaluate(xu2019[name](*inputs)),
+                rtol=1e-12,
             )

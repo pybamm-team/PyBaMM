@@ -29,15 +29,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--github", required=True, help="maintainer's GitHub handle")
     parser.add_argument("--tier", default="community", choices=TIERS)
     parser.add_argument(
-        "--pybamm-requires",
-        default=None,
-        metavar="SPECIFIER",
-        help=(
-            "the PyBaMM versions this model supports, e.g. '>=26.8'; defaults to a "
-            "floor of the installed release"
-        ),
-    )
-    parser.add_argument(
         "--dry-run", action="store_true", help="report what would be written"
     )
     return parser.parse_args(argv)
@@ -63,7 +54,6 @@ def main(argv: list[str] | None = None) -> int:
         author=args.author,
         github=args.github,
         tier=args.tier,
-        pybamm_requires=args.pybamm_requires,
     )
     destination = PACKAGE_ROOT / args.slug
     if args.dry_run:
@@ -87,9 +77,11 @@ def main(argv: list[str] | None = None) -> int:
         "CITATION.bib.\n"
         "  2. Put your physics in model.py, and a test that pins a physical\n"
         "     result in tests/.\n"
-        "  3. If your model needs third-party packages, add a\n"
+        "  3. If your model needs other packages, add a\n"
         f"     '{values['extra']}' extra to\n"
         "     packages/pybamm-model-zoo/pyproject.toml and list it in 'zoo-all'.\n"
+        "     For PyBaMM's own optional features, depend on its extra, e.g.\n"
+        "     'pybamm[fem]', not the packages behind it.\n"
         "  4. uv run python packages/pybamm-model-zoo/scripts/generate.py\n"
         f"  5. nox -s zoo -- --zoo-model={args.slug}\n"
         "  6. Add a CHANGELOG.md bullet in packages/pybamm-model-zoo/."

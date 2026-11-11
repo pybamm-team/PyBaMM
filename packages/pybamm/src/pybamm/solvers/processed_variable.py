@@ -168,7 +168,15 @@ class ProcessedVariable(BaseProcessedVariable):
         t = self.t_pts
         return self._observe_postfix(self._observe_raw(), t)
 
+    @property
+    def has_t_additive(self) -> bool:
+        """Whether ``t_pts`` includes times without stored states."""
+        return len(self.t_pts) != sum(len(t) for t in self.all_ts)
+
     def _observe_raw(self):
+        # Hermite interpolation fills in the times without stored states
+        if self.has_t_additive:
+            return self._observe_hermite(self.t_pts)
         return self._observer.observe_raw(self)
 
     def _observe_hermite(self, t):
@@ -346,7 +354,7 @@ class ProcessedVariable(BaseProcessedVariable):
 
         if observe_raw:
             t_observe = self.t_pts
-        elif not isinstance(t, np.ndarray):
+        elif not isinstance(t, np.ndarray) or t.ndim == 0:
             if not isinstance(t, list):
                 t = [t]
             t_observe = np.array(t)
@@ -1591,13 +1599,6 @@ def process_variable(name: str, base_variables, *args, **kwargs):
             return ProcessedVariableVectorFieldUnstructuredFVM(
                 name, base_variables, *args, **kwargs
             )
-        # Scalar reductions (e.g. Max/Min) keep the spatial domain but
-        # evaluate to a single value, so they are 0D in space. A one-cell
-        # mesh is also size 1, hence the cell-count check takes precedence.
-        if base_eval_size != mesh.npts and (
-            len(base_eval_shape) == 0 or base_eval_shape[0] == 1
-        ):
-            return ProcessedVariable0D(name, base_variables, *args, **kwargs)
         return ProcessedVariableUnstructuredFVM(name, base_variables, *args, **kwargs)
 
     # check variable shape

@@ -1,6 +1,6 @@
 """Tests for solution observation and variable observers."""
 
-import pickle  # nosec B403 - used in tests with trusted input
+import pickle
 from itertools import pairwise
 from types import SimpleNamespace
 from unittest import mock
@@ -32,7 +32,7 @@ def _split(solution, *boundaries):
     return [
         pybamm.Solution(
             solution.t[start:end],
-            solution.y[:, start:end],
+            solution.all_ys[0][:, start:end],
             model,
             {},
             all_yps=solution.all_yps[0][:, start:end],
@@ -103,7 +103,7 @@ class TestObserverCache:
         model = _decay_model(2)
         del model._observer_cache
 
-        restored = pickle.loads(pickle.dumps(model))  # nosec B301
+        restored = pickle.loads(pickle.dumps(model))
 
         assert restored._observer_cache is None
         solution = pybamm.IDAKLUSolver().solve(restored, [0, 1])
@@ -228,7 +228,7 @@ class TestCasadiObserverCaches:
         assert observer._serialised is not None
         assert observer._selector is not None
 
-        restored = pickle.loads(pickle.dumps(observer))  # nosec B301
+        restored = pickle.loads(pickle.dumps(observer))
 
         for cache in ("_selector", "_selector_ts", "_serialised"):
             assert cache not in restored.__dict__

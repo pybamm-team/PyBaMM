@@ -5,7 +5,6 @@ import runpy
 import pytest
 
 import pybamm_model_zoo as zoo
-from pybamm_model_zoo.testing import contract
 
 
 def run_example(script):
@@ -30,7 +29,7 @@ class TestExamples:
     @pytest.mark.zoo_examples
     @pytest.mark.parametrize(("entry", "script"), example_scripts())
     def test_example_script(self, entry, script):
-        if missing := contract.missing_dependencies(entry):
+        if missing := entry.missing_dependencies():
             pytest.skip(f"{entry.slug}: missing {missing}")
         run_example(script)
 

@@ -406,7 +406,7 @@ class TestProcessedVariable:
             y_sol.reshape(processed_var.entries.shape),
         )
 
-        var_edges_tb = pybamm.Magnitude(pybamm.grad(var), "tb")
+        var_edges_tb = pybamm.Component(pybamm.grad(var), 1)
         disc.bcs = {
             var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
@@ -434,7 +434,7 @@ class TestProcessedVariable:
             ),
         )
 
-        var_edges_lr = pybamm.Magnitude(pybamm.grad(var), "lr")
+        var_edges_lr = pybamm.Component(pybamm.grad(var), 0)
         disc.bcs = {
             var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
@@ -687,6 +687,11 @@ class TestProcessedVariable:
         # scalar
         np.testing.assert_allclose(processed_var(0.5), 2.5, rtol=1e-7, atol=1e-6)
         np.testing.assert_allclose(processed_var(0.7), 3.5, rtol=1e-7, atol=1e-6)
+        # JAX hands the IDAKLU-JAX primitives a scalar time as a 0-d array
+        assert processed_var(np.array(0.5)).shape == ()
+        np.testing.assert_allclose(
+            processed_var(np.array(0.5)), 2.5, rtol=1e-7, atol=1e-6
+        )
 
         eqn_casadi = to_casadi(eqn, y_sol)
         processed_eqn = pybamm.process_variable(
@@ -2379,26 +2384,6 @@ class TestProcessedVariableUnstructuredFVM:
         # merging across solution segments is not supported: clear error
         with pytest.raises(NotImplementedError, match="merged across"):
             pv.update(pv, solution)
-
-    def test_scalar_reduction_routes_to_0d(self):
-        # Max/Min of a spatial variable keep the domain (and hence the
-        # unstructured mesh) but evaluate to one value: 0D in space
-        geometry, submesh, _, _, var_disc = self._make_setup(dim=2, n=3)
-        max_disc = pybamm.Max(var_disc)
-        max_disc = max_disc.with_mesh(submesh)
-        t_sol = np.array([0.0, 1.0])
-        y_sol = np.arange(submesh.npts)[:, np.newaxis] * (1 + t_sol)[np.newaxis, :]
-        var_casadi = to_casadi(max_disc, y_sol)
-        model = pybamm.BaseModel()
-        model._geometry = geometry
-        solution = pybamm.Solution(t_sol, y_sol, model, {})
-        pv = pybamm.process_variable("max u", [max_disc], [var_casadi], solution)
-        from pybamm.solvers.processed_variable import ProcessedVariable0D
-
-        assert isinstance(pv, ProcessedVariable0D)
-        np.testing.assert_allclose(
-            pv(t_sol), (submesh.npts - 1) * (1 + t_sol), rtol=1e-12
-        )
 
     def test_single_cell_mesh_variable_stays_spatial(self):
         # a one-cell mesh also evaluates to size 1, but it is a genuine

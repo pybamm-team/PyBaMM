@@ -1,4 +1,4 @@
-import pickle  # nosec B403 - used in tests with trusted input
+import pickle
 
 import numpy as np
 import pytest
@@ -68,7 +68,9 @@ class TestBaseSimulationSolveBuild:
         model.initial_conditions = {v: 1}
         sim = pybamm.BaseSimulation(model)
         sol = sim.solve([0, 1])
-        np.testing.assert_allclose(sol.y[0], np.exp(-sol.t), rtol=1e-4, atol=1e-4)
+        np.testing.assert_allclose(
+            sol.all_ys[0][0], np.exp(-sol.t), rtol=1e-4, atol=1e-4
+        )
 
     def test_base_solve_with_crate(self):
         model = pybamm.lithium_ion.SPM()
@@ -188,7 +190,7 @@ class TestBaseSimulationPickle:
         data = pickle.dumps(sim)
         monkeypatch.undo()
 
-        loaded = pickle.loads(data)  # nosec B301
+        loaded = pickle.loads(data)
         assert loaded.built_model.convert_to_format == "casadi"
         solution = loaded.solve([0, 100])
         np.testing.assert_allclose(

@@ -19,6 +19,7 @@ struct SetupOptions {
   // IDALS linear solver interface
   std::string linear_solver; // klu, lapack, spbcg
   int linsol_max_iterations;
+  double klu_pivot_tolerance;
   explicit SetupOptions(py::dict &py_opts);
 };
 
@@ -58,6 +59,8 @@ struct SolverOptions {
   sunrealtype t_no_progress;
   // Knot reduction (streaming spline compression)
   double hermite_reduction_factor;  // >= 1.0; total error budget is M * solver_tol (threshold = N*(M-1)^2)
+  // Split steps until upsampling_fcn is linear to within it; +inf (None) is off
+  double upsampling_tolerance;
   // Newton solver for algebraic initial conditions
   double newton_step_tol;
   std::string newton_mode;  // "auto" or "full"
