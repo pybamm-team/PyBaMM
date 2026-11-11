@@ -142,17 +142,17 @@ class TestIDAKLUSolver:
         np.testing.assert_allclose(solution.t[-1], 2.0, rtol=1e-7, atol=1e-6)
 
         # test that final value is the event value
-        np.testing.assert_allclose(solution.y[0, -1], 0.2, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(solution.all_ys[0][0, -1], 0.2, rtol=1e-7, atol=1e-6)
 
         # test that y[1] remains constant
         np.testing.assert_allclose(
-            solution.y[1, :], np.ones(solution.t.shape), rtol=1e-7, atol=1e-6
+            solution.all_ys[0][1, :], np.ones(solution.t.shape), rtol=1e-7, atol=1e-6
         )
 
         # test that y[0] = to true solution
         true_solution = 0.1 * solution.t
         np.testing.assert_allclose(
-            solution.y[0, :], true_solution, rtol=1e-7, atol=1e-6
+            solution.all_ys[0][0, :], true_solution, rtol=1e-7, atol=1e-6
         )
 
     def test_multiple_inputs(self):
@@ -190,7 +190,7 @@ class TestIDAKLUSolver:
                 print("checking solution", inputs, solution.all_inputs)
                 np.testing.assert_array_equal(solution.t, t_interp)
                 np.testing.assert_allclose(
-                    solution.y[0],
+                    solution.all_ys[0][0],
                     2 * np.exp(-inputs["rate"] * solution.t),
                     atol=1e-4,
                     rtol=1e-4,
@@ -301,7 +301,7 @@ class TestIDAKLUSolver:
             t_interp,
         )
         np.testing.assert_allclose(
-            solution.y[0],
+            solution.all_ys[0][0],
             np.exp(0.1 * solution.t),
             rtol=1e-6,
             atol=1e-5,
@@ -321,7 +321,7 @@ class TestIDAKLUSolver:
         solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
         np.testing.assert_array_equal(solution.t, t_interp)
         np.testing.assert_allclose(
-            solution.y[0],
+            solution.all_ys[0][0],
             np.exp(0.1 * solution.t),
             rtol=1e-6,
             atol=1e-5,
@@ -337,7 +337,7 @@ class TestIDAKLUSolver:
         solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
         assert len(solution.t) < len(t_interp)
         np.testing.assert_allclose(
-            solution.y[0],
+            solution.all_ys[0][0],
             np.exp(0.1 * solution.t),
             rtol=1e-6,
             atol=1e-5,
@@ -364,18 +364,18 @@ class TestIDAKLUSolver:
         )
         t_eval = np.array([0, 5])
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(solution.y[0, :-1], 1.5)
-        np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
+        np.testing.assert_array_less(solution.all_ys[0][0, :-1], 1.5)
+        np.testing.assert_array_less(solution.all_ys[0][-1, :-1], 2.5)
         np.testing.assert_equal(solution.t_event[0], solution.t[-1])
-        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.all_ys[0][:, -1])
         np.testing.assert_allclose(
-            solution.y[0],
+            solution.all_ys[0][0],
             np.exp(0.1 * solution.t),
             rtol=1e-6,
             atol=1e-5,
         )
         np.testing.assert_allclose(
-            solution.y[-1],
+            solution.all_ys[0][-1],
             2 * np.exp(0.1 * solution.t),
             rtol=1e-6,
             atol=1e-5,
@@ -413,7 +413,7 @@ class TestIDAKLUSolver:
 
         # test that y[3] remains constant
         np.testing.assert_allclose(
-            sol.y[3],
+            sol.all_ys[0][3],
             np.ones(sol.t.shape),
             rtol=1e-7,
             atol=1e-6,
@@ -422,7 +422,7 @@ class TestIDAKLUSolver:
         # test that y[0] = to true solution
         true_solution = a_value * sol.t
         np.testing.assert_allclose(
-            sol.y[0],
+            sol.all_ys[0][0],
             true_solution,
             rtol=1e-7,
             atol=1e-6,
@@ -431,7 +431,7 @@ class TestIDAKLUSolver:
         # test that y[1:3] = to true solution
         true_solution = b_value * sol.t
         np.testing.assert_allclose(
-            sol.y[1:3],
+            sol.all_ys[0][1:3],
             true_solution,
             rtol=1e-7,
             atol=1e-6,
@@ -594,7 +594,7 @@ class TestIDAKLUSolver:
 
         # test that y[1] remains constant
         np.testing.assert_allclose(
-            sol.y[1, :],
+            sol.all_ys[0][1, :],
             np.ones(sol.t.shape),
             rtol=1e-7,
             atol=1e-6,
@@ -603,7 +603,7 @@ class TestIDAKLUSolver:
         # test that y[0] = to true solution
         true_solution = a_value * sol.t
         np.testing.assert_allclose(
-            sol.y[0, :],
+            sol.all_ys[0][0, :],
             true_solution,
             rtol=1e-7,
             atol=1e-6,
@@ -624,7 +624,7 @@ class TestIDAKLUSolver:
 
         # test that y[1] remains constant
         np.testing.assert_allclose(
-            sol.y[1, :],
+            sol.all_ys[0][1, :],
             np.ones(sol.t.shape),
             rtol=1e-7,
             atol=1e-6,
@@ -633,7 +633,7 @@ class TestIDAKLUSolver:
         # test that y[0] = to true solution
         true_solution = a_value * sol.t
         np.testing.assert_allclose(
-            sol.y[0, :],
+            sol.all_ys[0][0, :],
             true_solution,
             rtol=1e-7,
             atol=1e-6,
@@ -650,7 +650,7 @@ class TestIDAKLUSolver:
         sol_neg = solver.solve(
             model, t_eval, inputs={"a": a_value - 0.5 * h}, t_interp=t_interp
         )
-        dyda_fd = (sol_plus.y - sol_neg.y) / h
+        dyda_fd = (sol_plus.all_ys[0] - sol_neg.all_ys[0]) / h
         dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
         np.testing.assert_allclose(
@@ -692,7 +692,7 @@ class TestIDAKLUSolver:
 
         # u(t0) = 0, v(t0) = 1 (corrected from v=2 by Newton IC solver)
         np.testing.assert_allclose(
-            sol.y[:, 0],
+            sol.all_ys[0][:, 0],
             [0, 1],
             rtol=1e-7,
             atol=1e-6,
@@ -734,7 +734,7 @@ class TestIDAKLUSolver:
 
         # test that y[1] remains constant
         np.testing.assert_allclose(
-            sol.y[1, :],
+            sol.all_ys[0][1, :],
             np.ones(sol.t.shape),
             rtol=1e-7,
             atol=1e-6,
@@ -743,7 +743,7 @@ class TestIDAKLUSolver:
         # test that y[0] = to true solution
         true_solution = a_value * sol.t
         np.testing.assert_allclose(
-            sol.y[0, :],
+            sol.all_ys[0][0, :],
             true_solution,
             rtol=1e-7,
             atol=1e-6,
@@ -767,8 +767,10 @@ class TestIDAKLUSolver:
             inputs={"a": a_value - 0.5 * h, "b": b_value},
             t_interp=t_interp,
         )
-        max_index = min(sol_plus.y.shape[1], sol_neg.y.shape[1]) - 1
-        dyda_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
+        max_index = min(sol_plus.all_ys[0].shape[1], sol_neg.all_ys[0].shape[1]) - 1
+        dyda_fd = (
+            sol_plus.all_ys[0][:, :max_index] - sol_neg.all_ys[0][:, :max_index]
+        ) / h
         dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
         np.testing.assert_allclose(
@@ -790,8 +792,10 @@ class TestIDAKLUSolver:
             inputs={"a": a_value, "b": b_value - 0.5 * h},
             t_interp=t_interp,
         )
-        max_index = min(sol_plus.y.shape[1], sol_neg.y.shape[1]) - 1
-        dydb_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
+        max_index = min(sol_plus.all_ys[0].shape[1], sol_neg.all_ys[0].shape[1]) - 1
+        dydb_fd = (
+            sol_plus.all_ys[0][:, :max_index] - sol_neg.all_ys[0][:, :max_index]
+        ) / h
         dydb_fd = dydb_fd.transpose().reshape(-1, 1)
 
         np.testing.assert_allclose(
@@ -864,12 +868,12 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
         t_eval = [0, 1]
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solution.y, -1)
+        np.testing.assert_array_equal(solution.all_ys[0], -1)
 
         # change initial_conditions and re-solve (to test if ics_only works)
         model.concatenated_initial_conditions = pybamm.Vector(np.array([[1]]))
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solution.y, -1)
+        np.testing.assert_array_equal(solution.all_ys[0], -1)
 
     def test_banded(self):
         model = pybamm.lithium_ion.SPM()
@@ -894,7 +898,9 @@ class TestIDAKLUSolver:
         solver_banded = pybamm.IDAKLUSolver(options=options)
         soln_banded = solver_banded.solve(model, t_eval, t_interp=t_interp)
 
-        np.testing.assert_allclose(soln.y, soln_banded.y, rtol=1e-6, atol=1e-5)
+        np.testing.assert_allclose(
+            soln.all_ys[0], soln_banded.all_ys[0], rtol=1e-6, atol=1e-5
+        )
 
     @pytest.mark.parametrize(
         ("num_threads", "n_inputs"),
@@ -1128,7 +1134,9 @@ class TestIDAKLUSolver:
 
             if works:
                 soln = solver.solve(model, t_eval, t_interp=t_interp)
-                np.testing.assert_allclose(soln.y, soln_base.y, rtol=1e-5, atol=1e-4)
+                np.testing.assert_allclose(
+                    soln.all_ys[0], soln_base.all_ys[0], rtol=1e-5, atol=1e-4
+                )
             else:
                 with pytest.raises(ValueError):
                     _ = solver.solve(model, t_eval, t_interp=t_interp)
@@ -1186,12 +1194,14 @@ class TestIDAKLUSolver:
             solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
             soln = solver.solve(model, t_eval)
             # Hermite upsample y
-            itp = CubicHermiteSpline(soln.t, soln.y, soln.yp, axis=1)
+            itp = CubicHermiteSpline(soln.t, soln.all_ys[0], soln.all_yps[0], axis=1)
             y_upsampled = itp(t_interp)
 
             # Asserts
             assert all(v == solver.options[k] for k, v in options.items())
-            np.testing.assert_allclose(y_upsampled, soln_base.y, rtol=1e-5, atol=1e-4)
+            np.testing.assert_allclose(
+                y_upsampled, soln_base.all_ys[0], rtol=1e-5, atol=1e-4
+            )
 
         options_fail = {
             "max_order_bdf": -1,
@@ -1798,8 +1808,8 @@ class TestIDAKLUSolver:
         t_interp = np.linspace(t_eval[0], t_eval[-1], 100)
         solution = solver.solve(model, t_eval, t_interp=t_interp)
         np.testing.assert_array_equal(solution.t, t_interp)
-        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
-        np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.all_ys[0][0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.all_ys[0][-1], 2 * np.exp(0.1 * solution.t))
 
     def test_multiple_initial_conditions_single_variable(self):
         model = pybamm.BaseModel()
@@ -2673,7 +2683,9 @@ class TestIDAKLUAtol:
         expected = pybamm.IDAKLUSolver(atol=np.array([1e-3, 1e-9])).solve(model, t_eval)
         solution = pybamm.IDAKLUSolver(atol=sequence([1e-3, 1e-9])).solve(model, t_eval)
         assert solution.solver_statistics == expected.solver_statistics
-        np.testing.assert_allclose(solution.y, expected.y, rtol=1e-12, atol=0)
+        np.testing.assert_allclose(
+            solution.all_ys[0], expected.all_ys[0], rtol=1e-12, atol=0
+        )
 
     def test_per_state_atol_survives_a_config_round_trip(self):
         model = self._two_state_model()
@@ -2859,3 +2871,266 @@ class TestIDAKLUSolverStatistics:
         stats = solution.solver_statistics
         assert stats.number_of_steps > 0
         assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
+
+
+class TestUpsampling:
+    @staticmethod
+    def _solve(options=None, **solver_kwargs):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values["Current function [A]"] = 10
+        solver = pybamm.IDAKLUSolver(options=options, **solver_kwargs)
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), parameter_values=parameter_values, solver=solver
+        )
+        return sim.solve([0, 3600])
+
+    def test_t_additive(self):
+        baseline = self._solve()
+        assert baseline.t_additive is None
+
+        options = {"upsampling_tolerance": 1e-4}
+        upsampled = self._solve(options)
+        # The added times leave the stored states untouched
+        stored = np.concatenate(upsampled.all_ts)
+        np.testing.assert_array_equal(stored, baseline.t)
+        assert upsampled.all_ys[0].shape == baseline.all_ys[0].shape
+        t_additive = upsampled.t_additive
+        assert t_additive.size > 0
+        assert np.all(np.diff(t_additive) > 0)
+        assert not np.any(np.isin(t_additive, stored))
+        # t and the variables' entries cover both
+        expected = np.union1d(stored, t_additive)
+        np.testing.assert_array_equal(upsampled.t, expected)
+        assert upsampled["Voltage [V]"].entries.shape == expected.shape
+
+        # Reducing a finished solution keeps its added times and the knots it
+        # removes, so `t` is unchanged
+        solver = pybamm.IDAKLUSolver()
+        post_reduced = solver.reduce_solution(upsampled)
+        post_stored = np.concatenate(post_reduced.all_ts)
+        assert post_stored.size < stored.size
+        np.testing.assert_array_equal(
+            post_reduced.t_additive,
+            np.union1d(t_additive, np.setdiff1d(stored, post_stored)),
+        )
+        np.testing.assert_array_equal(post_reduced.t, upsampled.t)
+        assert solver.reduce_solution(baseline).t_additive is None
+
+        # Reduction upsamples its own spline: every midpoint is within tolerance
+        reduced = self._solve(options | {"hermite_reduction_factor": 2.0})
+        reduced_stored = np.concatenate(reduced.all_ts)
+        assert reduced_stored.size < stored.size
+        assert not np.any(np.isin(reduced.t_additive, reduced_stored))
+        voltage = reduced["Voltage [V]"]
+        t_mid = 0.5 * (reduced.t[:-1] + reduced.t[1:])
+        linear = 0.5 * (voltage.entries[:-1] + voltage.entries[1:])
+        assert np.max(np.abs(linear - voltage(t_mid))) <= 1.0001e-4
+
+        # Without Hermite data the added times are saved into the solution
+        no_hermite = self._solve(options | {"hermite_interpolation": False})
+        outputs_only = self._solve(options, output_variables=["Voltage [V]"])
+        for solution in [no_hermite, outputs_only]:
+            assert solution.t_additive is None
+            np.testing.assert_array_equal(solution.t, expected)
+        # The Hermite interpolant matches IDA's own one to within tolerance
+        np.testing.assert_allclose(
+            outputs_only["Voltage [V]"].entries,
+            upsampled["Voltage [V]"].entries,
+            rtol=1e-5,
+        )
+
+    def test_resolves_voltage_linear_interpolant(self):
+        reference = self._solve(rtol=1e-10, atol=1e-12)
+        errors = []
+        for tolerance in [None, 1e-3, 1e-4]:
+            solution = self._solve({"upsampling_tolerance": tolerance})
+            t = solution.t
+            if solution.t_additive is not None:
+                t = np.union1d(t, solution.t_additive)
+            voltage = solution["Voltage [V]"](t)
+            t_mid = 0.5 * (t[:-1] + t[1:])
+            linear = 0.5 * (voltage[:-1] + voltage[1:])
+            errors.append(np.max(np.abs(linear - reference["Voltage [V]"](t_mid))))
+        assert errors[0] > 1e-2
+        assert errors[1] < 1.5e-3
+        assert errors[2] < 1.5e-4
+
+    def test_scale(self):
+        model = pybamm.BaseModel()
+        x = pybamm.Variable("x", scale=10)
+        model.rhs = {x: -x}
+        model.initial_conditions = {x: 20}
+        model.variables = {"x": x, "2x": 2 * x}
+        model.upsampling_variable = "x"
+        solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3})
+        solver.solve(model, [0, 1])
+        upsampling_fcn = solver._upsampling_fcn(model, {})
+        y0 = model.concatenated_initial_conditions.evaluate()
+        np.testing.assert_allclose(float(upsampling_fcn(0, y0, [])), 2.0)
+
+        # A variable without a scale is used as is
+        model.upsampling_variable = "2x"
+        upsampling_fcn = solver._upsampling_fcn(model, {})
+        np.testing.assert_allclose(float(upsampling_fcn(0, y0, [])), 40.0)
+
+    def test_sensitivities(self):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values["Current function [A]"] = "[input]"
+        inputs = {"Current function [A]": 5}
+        options = {"upsampling_tolerance": 1e-4}
+
+        def solve(options, t_interp=None, output_variables=None, **solver_kwargs):
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                solver=pybamm.IDAKLUSolver(
+                    options=options, output_variables=output_variables, **solver_kwargs
+                ),
+            )
+            return sim.solve(
+                [0, 3600],
+                inputs=inputs,
+                calculate_sensitivities=True,
+                t_interp=t_interp,
+            )
+
+        # With sensitivities the added points are saved into the solution, carrying
+        # the integrator's own interpolated sensitivities
+        baseline = solve({})
+        upsampled = solve(options)
+        assert upsampled.t_additive is None
+        assert upsampled.t.size > baseline.t.size
+        # The added points store their own derivatives, so Hermite interpolation
+        # between them is as accurate as without upsampling
+        exact = solve({}, rtol=1e-10, atol=1e-12)["Voltage [V]"]
+        t_mid = 0.5 * (upsampled.t[:-1] + upsampled.t[1:])
+        errors = [
+            np.max(np.abs(solution["Voltage [V]"](t_mid) - exact(t_mid)))
+            for solution in [baseline, upsampled]
+        ]
+        assert errors[1] < 1.1 * errors[0]
+
+        reference = solve({}, t_interp=upsampled.t)
+        outputs_only = solve(options, output_variables=["Voltage [V]"])
+        np.testing.assert_array_equal(outputs_only.t, upsampled.t)
+        for solution in [upsampled, outputs_only]:
+            np.testing.assert_allclose(
+                solution["Voltage [V]"].sensitivities["Current function [A]"],
+                reference["Voltage [V]"].sensitivities["Current function [A]"],
+                rtol=1e-10,
+                atol=1e-12,
+            )
+
+    def test_option_errors(self):
+        for tolerance in [0.0, -1e-3]:
+            with pytest.raises(pybamm.SolverError, match=r"must be None or > 0"):
+                pybamm.IDAKLUSolver(options={"upsampling_tolerance": tolerance})
+        model = pybamm.lithium_ion.SPM()
+        model.upsampling_variable = "Negative particle concentration [mol.m-3]"
+        solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3})
+        sim = pybamm.Simulation(model, solver=solver)
+        with pytest.raises(pybamm.SolverError, match="needs a scalar variable"):
+            sim.solve([0, 600])
+
+    def test_skips_algebraic_and_missing_variables(self, caplog):
+        experiment = pybamm.Experiment(
+            ["Charge at 1C until 4.1 V", "Hold at 4.1 V for 10 minutes"]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3}),
+        )
+        sim.solve()
+        charge, hold = experiment.steps
+        solver = sim._get_built_experiment_solver(charge)
+        model = sim._get_built_experiment_model(charge)
+        assert solver._upsampling_fcn(model, {}).n_out() == 1
+        model.upsampling_variable = "Not a variable"
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            assert solver._upsampling_fcn(model, {}).n_out() == 0
+        assert "no 'Not a variable' variable" in caplog.text
+
+        # In a voltage hold the current is an algebraic state
+        solver = sim._get_built_experiment_solver(hold)
+        model = sim._get_built_experiment_model(hold)
+        assert model.upsampling_variable == "Current [A]"
+        assert solver._upsampling_fcn(model, {}).n_out() == 0
+
+    def test_t_additive_survives_saving_and_joining(self, tmp_path):
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 1C until 3.5 V", "Rest for 10 minutes"),
+                "Charge at 1C until 4 V",
+            ]
+        )
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            experiment=experiment,
+            solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-4}),
+        )
+        solution = sim.solve()
+        t_additive = solution.t_additive
+        assert t_additive.size > 0
+        sim.save(tmp_path / "sim.pkl")
+        solution.save(tmp_path / "solution.pkl")
+        for other in [
+            solution.copy(),
+            pybamm.load(tmp_path / "solution.pkl"),
+            pybamm.load_sim(tmp_path / "sim.pkl").solution,
+            pybamm.Solution.from_sub_solutions(solution.sub_solutions),
+            solution.cycles[0] + solution.cycles[1],
+        ]:
+            np.testing.assert_array_equal(other.t_additive, t_additive)
+            np.testing.assert_array_equal(other.t, solution.t)
+        # The cycles and steps split the added times between them
+        steps = [step for cycle in solution.cycles for step in cycle.steps]
+        np.testing.assert_array_equal(
+            np.concatenate([step.t_additive for step in steps]), t_additive
+        )
+
+    @pytest.mark.parametrize("mode", ["legacy", "unified"])
+    def test_experiment_sets_variable_at_build(self, mode):
+        experiment = pybamm.Experiment(
+            ["Discharge at 1C until 3.0 V", "Hold at 3.0 V for 10 minutes"]
+        )
+        sims = [
+            pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                experiment=experiment,
+                solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": tolerance}),
+                experiment_model_mode=mode,
+            )
+            for tolerance in [None, 1e-4]
+        ]
+        solutions = [sim.solve() for sim in sims]
+        models = [
+            sims[1]._get_built_experiment_model(step) for step in experiment.steps
+        ]
+        if mode == "legacy":
+            assert [model.upsampling_variable for model in models] == [
+                "Voltage [V]",
+                "Current [A]",
+            ]
+        else:
+            # One model serves every step, so it selects the step's output
+            model = models[0]
+            assert model.upsampling_variable == "Experiment upsampling variable"
+            assert isinstance(
+                model.variables["Experiment upsampling variable"], pybamm.Conditional
+            )
+            # Without upsampling the model gets no extra variable
+            off_model = sims[0]._get_built_experiment_model(experiment.steps[0])
+            assert "Experiment upsampling variable" not in off_model.variables
+        assert solutions[0].t_additive is None
+        np.testing.assert_array_equal(
+            np.concatenate(solutions[1].all_ts), solutions[0].t
+        )
+        discharge, hold = solutions[1].cycles
+        assert discharge.t_additive.size > 0
+        # The hold's current is an algebraic state, so it is not upsampled
+        if mode == "legacy":
+            assert hold.t_additive is None
+        else:
+            assert hold.t_additive.size == 0
+        np.testing.assert_array_equal(discharge.t_additive, solutions[1].t_additive)
