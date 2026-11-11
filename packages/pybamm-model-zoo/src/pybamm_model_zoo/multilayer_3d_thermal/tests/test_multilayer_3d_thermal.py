@@ -796,7 +796,8 @@ class TestPhysics:
 
         def stack(options):
             model = MultiLayer3DThermalSPM(2, options=options)
-            parameter_values = cooled(model)
+            # Hold the stack at ambient so the contact heat does not shift the voltage
+            parameter_values = cooled(model, h=1e6)
             parameter_values["Contact resistance [Ohm]"] = resistance
             return solve(model, parameter_values, 600)
 
