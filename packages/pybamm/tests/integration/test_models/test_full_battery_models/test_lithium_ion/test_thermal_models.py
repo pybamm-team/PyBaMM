@@ -476,9 +476,7 @@ class TestThermal:
         ],
     )
     def test_contact_resistance_energy_balance(self, thermal, extra_options):
-        # With the temperature held at ambient, the extra "Total heating [W]"
-        # when the contact resistance is switched on must equal the electrical
-        # energy dissipated in the contact resistance
+        # At ambient temperature, the extra heat must equal the I^2 R_c dissipation
         R_c = 0.05
         t_end = 600
         t = np.linspace(0, t_end, 61)
