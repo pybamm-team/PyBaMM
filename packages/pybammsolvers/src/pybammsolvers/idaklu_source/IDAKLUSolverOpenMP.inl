@@ -466,12 +466,19 @@ int IDAKLUSolverOpenMP<ExprSet>::Step(sunrealtype tout, sunrealtype &t_val) {
   // point by itself, where a recoverable failure would abandon the search
   struct RejectNonfinite {
     bool &reject;
-    explicit RejectNonfinite(bool &flag) : reject(flag) { reject = true; }
+    RejectNonfinite(bool &flag, bool on) : reject(flag) { reject = on; }
     // Also cleared if a callback throws, so the next IDACalcIC never rejects
     ~RejectNonfinite() { reject = false; }
     RejectNonfinite(const RejectNonfinite &) = delete;
     RejectNonfinite &operator=(const RejectNonfinite &) = delete;
-  } const guard(functions->reject_nonfinite);
+  };
+  // Only the simultaneous corrector's norm drops a NaN state; the staggered one
+  // retries a failed residual at a converged state without restoring the step
+  RejectNonfinite const residual(functions->reject_nonfinite_residual,
+                                 sensitivity && SensitivityMethod() == IDA_SIMULTANEOUS);
+  // IDAS's sensitivity norm drops a NaN for any parameter after the first
+  RejectNonfinite const sensitivities(functions->reject_nonfinite_sensitivities,
+                                      sensitivity);
   return IDASolve(ida_mem, tout, &t_val, yy, yyp, IDA_ONE_STEP);
 }
 
@@ -819,8 +826,8 @@ void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   // Save stats before reinitializing (reinit resets IDA counters)
   SaveStats();
 
-  // The guess IDASensReInit starts from; fetched per step only for hermite_sensitivities
-  if (sensitivity) {
+  // The guess IDASensReInit starts from, unless hermite_sensitivities fetched it
+  if (sensitivity && !save_hermite_sensitivities_) {
     CheckErrors(IDAGetSensDky(ida_mem, t_val, 1, yypS), "IDAGetSensDky");
   }
   // Reinitialize the solver to deal with the discontinuity at t = t_val
