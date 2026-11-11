@@ -184,6 +184,19 @@ class BaseModel(BaseElectrolyteConductivity):
         Domain = self.domain.capitalize()
 
         if self.domain == "separator":
+            # Set here because the separator submodel exists in half-cells too;
+            # grad(phi_e) needs these BCs to discretise on the outer edges
+            phi_e = variables["Electrolyte potential [V]"]
+            if self.options.electrode_types["negative"] == "planar":
+                phi_e_ref = variables[
+                    "Lithium metal interface electrolyte potential [V]"
+                ]
+                lbc = (phi_e_ref, "Dirichlet")
+            else:
+                lbc = (pybamm.Scalar(0), "Neumann")
+            self.boundary_conditions.update(
+                {phi_e: {"left": lbc, "right": (pybamm.Scalar(0), "Neumann")}}
+            )
             return
 
         c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
@@ -208,17 +221,6 @@ class BaseModel(BaseElectrolyteConductivity):
             delta_phi: {"left": lbc, "right": rbc},
             c_e: {"left": lbc_c_e, "right": rbc_c_e},
         }
-
-        if self.domain == "negative":
-            phi_e = variables["Electrolyte potential [V]"]
-            self.boundary_conditions.update(
-                {
-                    phi_e: {
-                        "left": (pybamm.Scalar(0), "Neumann"),
-                        "right": (pybamm.Scalar(0), "Neumann"),
-                    }
-                }
-            )
 
 
 class FullAlgebraic(BaseModel):

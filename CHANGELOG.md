@@ -65,6 +65,7 @@
 - The lumped thermal model now discretises with 1+1D (and 2+1D) current collectors: the surface temperature used in the cooling term is averaged over the current collector(s) instead of varying over it. ([#5891](https://github.com/pybamm-team/PyBaMM/pull/5891))
 - `calculate_sensitivities=True` logs supplied inputs the model does not use and, with an `Experiment`, skips inputs that some step models lack instead of raising a `KeyError`. A list naming such an input raises a `SolverError` before solving. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 - Sensitivities with respect to a vector-valued input raise a `SolverError`, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols". ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Half-cell models with `"surface form"` and a non-isothermal `"thermal"` option now build, instead of failing with a `ShapeError`. ([#5540](https://github.com/pybamm-team/PyBaMM/pull/5540))
 - Input-dependent geometry limits on a submesh that needs numbers, such as the default `Uniform1DSubMesh`, raise a `GeometryError` pointing to `pybamm.SymbolicUniform1DSubMesh` instead of an `IndexError`, and input-dependent tab positions raise one instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 - `output_variables` with `/` in their names, such as `"Entropic change [V/K]"`, or with names that differ only in punctuation now work, including with the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
