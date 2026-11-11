@@ -63,7 +63,6 @@ class SolutionData
       ptrdiff_t arg_sens0,
       ptrdiff_t arg_sens1,
       ptrdiff_t arg_sens2,
-      bool save_hermite,
       const IDAKLUStats &stats)
       : flag(flag),
         t_vec(std::move(t)),
@@ -79,7 +78,6 @@ class SolutionData
         arg_sens0(arg_sens0),
         arg_sens1(arg_sens1),
         arg_sens2(arg_sens2),
-        save_hermite(save_hermite),
         stats(stats)
     {}
 
@@ -111,7 +109,7 @@ class SolutionData
         vector_to_numpy(std::move(t_additive_vec)),
         vector_to_numpy_3d(std::move(yS_vec), arg_sens0, arg_sens1, arg_sens2),
         vector_to_numpy_3d(std::move(ypS_vec),
-                           save_hermite ? arg_sens0 : 0, arg_sens1, arg_sens2),
+                           ypS_vec.empty() ? 0 : arg_sens0, arg_sens1, arg_sens2),
         vector_to_numpy(std::move(yinit_vec)),
         vector_to_numpy(std::move(yterm_vec)),
         vector_to_numpy_2d(std::move(yS_init_vec), n_state_sens, n_states),
@@ -135,7 +133,6 @@ private:
     ptrdiff_t arg_sens0 = 0;
     ptrdiff_t arg_sens1 = 0;
     ptrdiff_t arg_sens2 = 0;
-    bool save_hermite = false;
     IDAKLUStats stats;
 };
 
