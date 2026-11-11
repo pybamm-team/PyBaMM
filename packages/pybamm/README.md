@@ -133,7 +133,7 @@ PyBaMM is available as a conda package through the conda-forge channel.
 conda install -c conda-forge pybamm-base
 # for all extra dependencies except jax
 conda install -c conda-forge pybamm
-# optionally install jax >=0.7.0, <0.9.0 on python >=3.11
+# optionally install jax >=0.7.0, <0.9.0
 conda install -c conda-forge "jax>=0.7.0,<0.9.0"
 ```
 

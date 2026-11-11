@@ -5,6 +5,7 @@ Kinetics
 
   base_kinetics
   butler_volmer
+  coupled_ion_electron_transfer
   diffusion_limited
   linear
   marcus
