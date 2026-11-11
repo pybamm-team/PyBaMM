@@ -905,9 +905,14 @@ int IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   // Save stats before reinitializing (reinit resets IDA counters)
   SaveStats();
 
-  // The guess IDASensReInit starts from, unless hermite_sensitivities fetched it
+  // The guess IDASensReInit starts from, unless hermite_sensitivities fetched it.
+  // With no step since a restart, yypS still holds that restart's values.
   if (sensitivity && !save_hermite_sensitivities_) {
-    CheckErrors(IDAGetSensDky(ida_mem, t_val, 1, yypS), "IDAGetSensDky");
+    int k_last = 0;
+    CheckErrors(IDAGetLastOrder(ida_mem, &k_last), "IDAGetLastOrder");
+    if (k_last > 0) {
+      CheckErrors(IDAGetSensDky(ida_mem, t_val, 1, yypS), "IDAGetSensDky");
+    }
   }
   // Algebraic states can jump here, so the next step starts afresh
   upsample_f_prev_valid_ = false;
