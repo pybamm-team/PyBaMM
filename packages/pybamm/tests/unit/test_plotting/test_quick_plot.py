@@ -341,6 +341,54 @@ class TestQuickPlot:
 
         pybamm.close_plots()
 
+    def test_capacity_x_axis(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        model.rhs = {a: pybamm.Scalar(0.2)}
+        model.initial_conditions = {a: pybamm.Scalar(0)}
+        # capacity differs from time, so evaluating at capacity would change "a"
+        model.variables = {"a": a, "Discharge capacity [A.h]": 3 * a}
+        solution = pybamm.IDAKLUSolver().solve(model, np.linspace(0, 2, 100))
+
+        quick_plot = pybamm.QuickPlot([solution, solution], ["a"], x_axis="capacity")
+        assert quick_plot.x_axis == "capacity"
+        assert quick_plot.x_label == "Discharge capacity [A.h]"
+        np.testing.assert_allclose(
+            quick_plot.axis_limits[("a",)][:2], [0, 1.2], rtol=1e-7, atol=1e-6
+        )
+
+        quick_plot.plot(1)
+        t_plot = quick_plot.ts_seconds[0]
+        line = quick_plot.plots[("a",)][0][0]
+        np.testing.assert_allclose(line.get_xdata(), 0.6 * t_plot, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(line.get_ydata(), 0.2 * t_plot, rtol=1e-7, atol=1e-6)
+        assert quick_plot.axes[0].get_xlabel() == "Discharge capacity [A.h]"
+        np.testing.assert_allclose(
+            quick_plot.time_lines[("a",)].get_xdata(), [0.6, 0.6], rtol=1e-7, atol=1e-6
+        )
+
+        # the slider still controls time; the time line moves along capacity
+        quick_plot.dynamic_plot(show_plot=False)
+        assert quick_plot.slider.label.get_text() == "Time [s]"
+        quick_plot.slider_update(1.5)
+        np.testing.assert_allclose(
+            quick_plot.time_lines[("a",)].get_xdata(), [0.9], rtol=1e-7, atol=1e-6
+        )
+        # times past the end of the solution are clipped
+        quick_plot.slider_update(5)
+        np.testing.assert_allclose(
+            quick_plot.time_lines[("a",)].get_xdata(), [1.2], rtol=1e-7, atol=1e-6
+        )
+
+        quick_plot = pybamm.QuickPlot(solution, ["a"])
+        assert quick_plot.x_axis == "time"
+        assert quick_plot.x_label == "Time [s]"
+
+        with pytest.raises(ValueError, match=r"x_axis 'bad axis' not recognized"):
+            pybamm.QuickPlot(solution, ["a"], x_axis="bad axis")
+
+        pybamm.close_plots()
+
     def test_spm_simulation(self, tmp_path):
         # SPM
         model = pybamm.lithium_ion.SPM()

@@ -97,6 +97,10 @@ class QuickPlot:
         - "tight": make axes tight to plot at each time
         - dictionary: fine-grain control for each variable, can be either "fixed" or \
         "tight" or a specific tuple (lower, upper).
+    x_axis : str, optional
+        The x-axis of 0D plots, "time" (default) or "capacity". With "capacity",
+        variables are plotted against "Discharge capacity [A.h]" and the dashed line
+        marks the discharge capacity of the first solution at the plotted time.
 
     """
 
@@ -114,6 +118,7 @@ class QuickPlot:
         spatial_unit="um",
         variable_limits="fixed",
         n_t_linear=100,
+        x_axis="time",
     ):
         solutions = self.preprocess_solutions(solutions)
 
@@ -233,6 +238,25 @@ class QuickPlot:
         self.time_scaling_factor = time_scaling_factor
         self.min_t_unscaled = min_t
         self.max_t_unscaled = max_t
+
+        # x-axis of 0D plots; variables are always evaluated at the sampled times
+        if x_axis == "time":
+            self.x_label = f"Time [{self.time_unit}]"
+            self.x_values = [t / time_scaling_factor for t in ts_seconds]
+        elif x_axis == "capacity":
+            self.x_label = "Discharge capacity [A.h]"
+            capacities = [
+                solution["Discharge capacity [A.h]"] for solution in solutions
+            ]
+            self.x_values = [
+                capacity(t) for capacity, t in zip(capacities, ts_seconds, strict=True)
+            ]
+            self._time_line_capacity = capacities[0]
+        else:
+            raise ValueError(f"x_axis '{x_axis}' not recognized")
+        self.x_axis = x_axis
+        self.x_min = min(np.nanmin(x) for x in self.x_values)
+        self.x_max = max(np.nanmax(x) for x in self.x_values)
 
         # Prepare dictionary of variables
         # output_variables is a list of strings or lists, e.g.
@@ -481,8 +505,8 @@ class QuickPlot:
         self.axis_limits = {}
         for key, variable_lists in self.variables.items():
             if variable_lists[0][0].dimensions == 0:
-                x_min = self.min_t
-                x_max = self.max_t
+                x_min = self.x_min
+                x_max = self.x_max
             elif variable_lists[0][0].dimensions == 1:
                 x_min = self.first_spatial_variable[key][0]
                 x_max = self.first_spatial_variable[key][-1]
@@ -610,7 +634,7 @@ class QuickPlot:
             # Set labels for the first subplot only (avoid repetition)
             if variable_lists[0][0].dimensions == 0:
                 # 0D plot: plot as a function of time, indicating time t with a line
-                ax.set_xlabel(f"Time [{self.time_unit}]")
+                ax.set_xlabel(self.x_label)
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         if len(variable_list) == 1:
@@ -620,10 +644,9 @@ class QuickPlot:
                             # multiple variables -> use linestyle to differentiate
                             # variables (color differentiates models)
                             linestyle = self.linestyles[j]
-                        full_t = self.ts_seconds[i]
                         (self.plots[key][i][j],) = ax.plot(
-                            full_t / self.time_scaling_factor,
-                            variable(full_t),
+                            self.x_values[i],
+                            variable(self.ts_seconds[i]),
                             color=self.colors[i],
                             linestyle=linestyle,
                         )
@@ -631,8 +654,9 @@ class QuickPlot:
                     solution_handles.append(self.plots[key][i][0])
                 y_min, y_max = ax.get_ylim()
                 ax.set_ylim(y_min, y_max)
+                time_line_x = self._time_line_position(t)
                 (self.time_lines[key],) = ax.plot(
-                    [t, t],
+                    [time_line_x, time_line_x],
                     [y_min, y_max],
                     "k--",
                     lw=1.5,
@@ -883,10 +907,11 @@ class QuickPlot:
         time_in_seconds = np.clip(
             time_in_seconds, self.min_t_unscaled, self.max_t_unscaled
         )
+        time_line_x = self._time_line_position(t)
         for k, (key, plot) in enumerate(self.plots.items()):
             ax = self.axes[k]
             if self.variables[key][0][0].dimensions == 0:
-                self.time_lines[key].set_xdata([t])
+                self.time_lines[key].set_xdata([time_line_x])
             elif self.variables[key][0][0].dimensions == 1:
                 var_min = np.inf
                 var_max = -np.inf
@@ -980,6 +1005,15 @@ class QuickPlot:
             frames=number_of_images,
         )
         ani.save(output_filename, dpi=300)
+
+    def _time_line_position(self, t):
+        """Return the x-axis position of the 0D time line at time t (in time units)."""
+        if self.x_axis == "time":
+            return t
+        t_in_seconds = np.clip(
+            t * self.time_scaling_factor, self.min_t_unscaled, self.max_t_unscaled
+        )
+        return float(np.squeeze(self._time_line_capacity(np.atleast_1d(t_in_seconds))))
 
     @property
     def min_t(self):
