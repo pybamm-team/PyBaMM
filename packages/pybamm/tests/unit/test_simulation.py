@@ -7,7 +7,7 @@ from scipy.integrate import trapezoid
 
 import pybamm
 from pybamm.solvers.base_solver import BaseSolver
-from tests import no_internet_connection
+from tests import concatenated_states, no_internet_connection
 
 
 class TestSimulation:
@@ -18,7 +18,9 @@ class TestSimulation:
         model.initial_conditions = {v: 1}
         sim = pybamm.Simulation(model)
         sol = sim.solve([0, 1])
-        np.testing.assert_allclose(sol.y[0], np.exp(-sol.t), rtol=1e-4, atol=1e-4)
+        np.testing.assert_allclose(
+            sol.all_ys[0][0], np.exp(-sol.t), rtol=1e-4, atol=1e-4
+        )
 
     def test_solve(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -173,7 +175,7 @@ class TestSimulation:
         sim = pybamm.Simulation(model)
 
         sim.step(dt)  # 1 step stores first 12 points
-        assert sim.solution.y[0, :].size == 12
+        assert sim.solution.all_ys[0][0, :].size == 12
         np.testing.assert_allclose(
             [sim.solution.t[0], sim.solution.t[-1]],
             np.array([0, dt]),
@@ -183,7 +185,7 @@ class TestSimulation:
         saved_sol = sim.solution
 
         sim.step(dt)  # automatically append the next step
-        assert sim.solution.y[0, :].size == 24
+        assert concatenated_states(sim.solution.all_ys)[0, :].size == 24
         np.testing.assert_allclose(
             [sim.solution.t[0], sim.solution.t[-1]],
             np.array([0, 2 * dt]),
@@ -192,7 +194,7 @@ class TestSimulation:
         )
 
         sim.step(dt, save=False)  # now only store the two end step points
-        assert sim.solution.y[0, :].size == 12
+        assert sim.solution.all_ys[0][0, :].size == 12
         np.testing.assert_allclose(
             [sim.solution.t[0], sim.solution.t[-1]],
             np.array([2 * dt + 1e-9, 3 * dt]),
@@ -201,7 +203,7 @@ class TestSimulation:
         )
         # Start from saved solution
         sim.step(dt, starting_solution=saved_sol)
-        assert sim.solution.y[0, :].size == 24
+        assert concatenated_states(sim.solution.all_ys)[0, :].size == 24
         np.testing.assert_allclose(
             [sim.solution.t[0], sim.solution.t[-1]],
             np.array([0, 2 * dt]),
@@ -661,7 +663,7 @@ class TestSimulation:
             dt, inputs={"Current function [A]": 1}
         )  # 1 step stores first 12 points
         assert sim.solution.t.size == 12
-        assert sim.solution.y[0, :].size == 12
+        assert sim.solution.all_ys[0][0, :].size == 12
         assert sim.solution.t[0] == 0
         assert sim.solution.t[-1] == dt
         np.testing.assert_array_equal(
@@ -670,7 +672,7 @@ class TestSimulation:
         sim.step(
             dt, inputs={"Current function [A]": 2}
         )  # automatically append the next step
-        assert sim.solution.y[0, :].size == 24
+        assert concatenated_states(sim.solution.all_ys)[0, :].size == 24
         np.testing.assert_allclose(
             [sim.solution.t[0], sim.solution.t[-1]],
             np.array([0, 2 * dt]),
@@ -1042,6 +1044,48 @@ class TestSimulation:
         sim = pybamm.Simulation(model=model, parameter_values=parameter_values)
         sim.solve(t_eval=t_eval, inputs=inputs)
 
+    def test_geometry_input_sensitivities_need_symbolic_submesh(self):
+        name = "Negative electrode thickness [m]"
+        value = pybamm.ParameterValues("Chen2020")[name]
+        t_interp = np.linspace(0, 600, 11)
+
+        def solve(submesh_types, thickness, calculate_sensitivities):
+            parameter_values = pybamm.ParameterValues("Chen2020")
+            parameter_values.update({name: "[input]"})
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                submesh_types=submesh_types,
+                solver=pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12),
+            )
+            return sim.solve(
+                [0, 600],
+                inputs={name: thickness},
+                calculate_sensitivities=calculate_sensitivities,
+                t_interp=t_interp,
+            )
+
+        submesh_types = pybamm.lithium_ion.SPM().default_submesh_types
+        with pytest.raises(
+            pybamm.GeometryError,
+            match=r"'negative electrode' \(Uniform1DSubMesh\) depends on "
+            r"\['Negative electrode thickness \[m\]'\].*SymbolicUniform1DSubMesh",
+        ):
+            solve(submesh_types, value, True)
+
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            submesh_types[domain] = pybamm.SymbolicUniform1DSubMesh
+        sensitivity = solve(submesh_types, value, True)["Voltage [V]"].sensitivities
+        h = 1e-4 * value
+        voltage_plus = solve(submesh_types, value + h, False)["Voltage [V]"]
+        voltage_minus = solve(submesh_types, value - h, False)["Voltage [V]"]
+        np.testing.assert_allclose(
+            sensitivity[name].ravel(),
+            (voltage_plus(t_interp) - voltage_minus(t_interp)) / (2 * h),
+            rtol=1e-5,
+            atol=1e-3,
+        )
+
     def test_simulation_cannot_force_calc_esoh(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
@@ -1188,6 +1232,95 @@ class TestSimulation:
         h = sol["X-averaged negative electrode secondary hysteresis state"]
         assert h(0) == pytest.approx(h0)
         assert sol["Voltage [V]"](0) == pytest.approx(3.9, abs=1e-4)
+
+    @pytest.mark.parametrize("h0", [-1, 1])
+    def test_initial_soc_starts_composite_at_rest(self, h0):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        }
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Negative particle lithiation hysteresis decay rate": 10,
+                "Secondary: Negative particle delithiation hysteresis decay rate": 10,
+                "Secondary: Initial hysteresis state in negative electrode": h0,
+                "Current function [A]": 0,
+            },
+            check_already_exists=False,
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        sol = sim.solve([0, 3600], initial_soc=0.5)
+
+        # The phases start in equilibrium, so no current flows between them at rest
+        V = sol["Voltage [V]"]
+        assert V(3600) == pytest.approx(V(0), abs=1e-5)
+
+    @pytest.mark.parametrize("cache_esoh", [True, False])
+    def test_initial_soc_composite_hysteresis_state_unset(self, cache_esoh):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        }
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        param.update(
+            {
+                "Secondary: Negative particle lithiation hysteresis decay rate": 10,
+                "Secondary: Negative particle delithiation hysteresis decay rate": 10,
+            },
+            check_already_exists=False,
+        )
+        sim = pybamm.Simulation(model, parameter_values=param, cache_esoh=cache_esoh)
+
+        sol = sim.solve([0, 1], initial_soc=0.5)
+
+        h = sol["X-averaged negative electrode secondary hysteresis state"]
+        assert h(0) == pytest.approx(0)
+
+    def test_cache_esoh_composite_initial_hysteresis_state_change(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "one-state hysteresis"), "single"),
+        }
+        model = pybamm.lithium_ion.SPM(options=options)
+        param = pybamm.ParameterValues("Chen2020_composite")
+        name = "Secondary: Initial hysteresis state in negative electrode"
+        param.update(
+            {
+                "Secondary: Negative particle lithiation hysteresis decay rate": 10,
+                "Secondary: Negative particle delithiation hysteresis decay rate": 10,
+                name: -1,
+                "Current function [A]": 0,
+            },
+            check_already_exists=False,
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve([0, 1], initial_soc=0.5)
+
+        param.update({name: 1})
+        sol = sim.solve([0, 3600], initial_soc=0.5)
+
+        # The split is solved again on the new initial hysteresis state
+        V = sol["Voltage [V]"]
+        assert V(3600) == pytest.approx(V(0), abs=1e-5)
+
+    def test_cache_esoh_parameter_change_in_place(self):
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve([0, 1], initial_soc=0.5)
+
+        name = "Initial concentration in positive electrode [mol.m-3]"
+        param.update({name: 0.9 * param[name]})
+        sol = sim.solve([0, 1], initial_soc=0.5)
+
+        fresh = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), parameter_values=param.copy()
+        ).solve([0, 1], initial_soc=0.5)
+        assert sol["Voltage [V]"](0) == pytest.approx(fresh["Voltage [V]"](0))
 
     @pytest.mark.parametrize("cache_esoh", [True, False])
     @pytest.mark.parametrize("h0", [-1, 0.5])

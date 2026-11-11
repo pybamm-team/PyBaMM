@@ -6,16 +6,20 @@
 - Dropped support for Python 3.10, which reaches end of life in October 2026. `pybamm` and `pybammsolvers` now require Python 3.11 or newer, and `pybamm` no longer depends on `typing-extensions`. Python 3.10 users can stay on PyBaMM 26.10. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - `pybamm.ModelSolutionObservability` and `pybamm.parameters.ParameterCategory` are now `enum.StrEnum`s, so `str()` and f-strings of a member give its value instead of `<Enum>.<NAME>`. `ParameterCategory` members now also compare equal to their string values. Use `.name` for a member's name. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - A failed write in `BaseModel.to_json` or `BaseModel.to_config` now re-raises the original `OSError` subclass (e.g. `PermissionError`) instead of a plain `OSError`. The file path is in the exception's `__notes__`, not its message. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
+- `get_size_distribution_parameters` sets the size distribution and minimum/maximum radii as `pybamm.Symbol`s of the particle radius, so they follow `"[input]"` but `float(param[...])` fails. Use `param.evaluate(pybamm.Parameter(...))`, or pass `R_n_av` and `R_p_av`, for numbers. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- A custom `SubMesh` subclass given input-dependent limits now raises a `GeometryError` unless it sets `supports_symbolic_limits = True`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Deprecated
 
 - `FiniteVolume2D` is deprecated in favour of `FiniteVolumeUnstructured` and raises a `DeprecationWarning` when created. Remaining gaps before removal are tracked in [#5938](https://github.com/pybamm-team/PyBaMM/issues/5938). ([#5939](https://github.com/pybamm-team/PyBaMM/pull/5939))
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
 - The `evaluation_array` argument of `StateVector` and `StateVectorDot` is deprecated and ignored; drop the argument. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
+- `Solution.y` and `Solution.yp` are deprecated and will be removed in 27.2: they hold only the stored states, which need not match `Solution.t`. Use `solution[name]` for variables, or `all_ys` and `all_yps` for the raw states. ([#6005](https://github.com/pybamm-team/PyBaMM/pull/6005))
 
 ## Features
 
 - `pybamm.QuickPlot` takes `x_axis="capacity"` to plot 0D variables against `"Discharge capacity [A.h]"` instead of time. The slider still sets the time, and the dashed line marks the first solution's discharge capacity at that time. ([#6035](https://github.com/pybamm-team/PyBaMM/pull/6035))
+- Added the `IDAKLUSolver` option `upsampling_tolerance`, which adds times within each step until linear interpolation of the voltage is within tolerance (voltage-controlled steps add none). They go in `Solution.t_additive` and `Solution.t`. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
 - `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
 - Added `"coupled ion-electron transfer"` as an `"intercalation kinetics"` option, following Fraggedakis et al. (2021). It uses the existing reorganization energy and a new temperature-dependent `"... electrode coupled ion-electron transfer rate constant [A.m-2]"` per electrode, and its current saturates at large overpotential. ([#5993](https://github.com/pybamm-team/PyBaMM/pull/5993))
 - Replaced Codacy with open checks that also run locally. Ruff's `flake8-bandit` (`S`) rules replace Bandit, and CodeQL scans the Python and C++ code. `nox -s type-check` runs Pyrefly over `pybamm`, which now type-checks cleanly, and a new type error fails CI. clang-tidy reports solver findings to code scanning as an advisory check. ([#5974](https://github.com/pybamm-team/PyBaMM/pull/5974))
@@ -24,6 +28,7 @@
 
 ## Bug fixes
 
+- An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
 - `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
 - Released `pybammsolvers` v0.12.0, with the solver functions `pybamm` calls since #5994, and `pybamm` now requires it. Before, `pybamm` from source with `pybammsolvers` 0.11.1 from PyPI failed at its first solve. ([#6028](https://github.com/pybamm-team/PyBaMM/pull/6028))
 - Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))
@@ -38,6 +43,7 @@
   - `jax.vmap` over tangent directions returns one result per direction, and over time shares one solve.
   - Times outside the solution, and derivatives with respect to time, give NaN rather than an error or a wrong value.
 - `pybamm` now installs on Python 3.15. `pybammsolvers` 0.11.0 declared `requires-python <3.15` and shipped no cp315 wheels, so `pybamm`'s solver requirement could not be met there. Released `pybammsolvers` v0.11.1, which allows Python 3.15 and ships cp315 wheels. ([#5909](https://github.com/pybamm-team/PyBaMM/pull/5909))
+- `name in pybamm.parameter_sets` (or `pybamm.dispatch.models`) no longer builds the set or model, so `ParameterValues(name)` builds it once and the check no longer raises for a missing optional dependency. `parameter_sets.items()` and `.values()` skip such sets. ([#5871](https://github.com/pybamm-team/PyBaMM/pull/5871))
 - Solver restarts now start from the right state and sensitivities. ([#5918](https://github.com/pybamm-team/PyBaMM/pull/5918))
   - After a discontinuity whose time depends on an input, such as `pybamm.t > pybamm.InputParameter("t_switch")`, `IDAKLUSolver.solve` restarts from the end of the previous segment rather than from the initial conditions. `step()`, and so each experiment step, now stops at such discontinuities as `solve()` does.
   - The solver stops at every reset of `pybamm.Modulo(pybamm.t, period)`, also with an input-dependent period, and restarts just after each reset rather than one float before about half of them, which failed with `IDA_BAD_K`. Input-dependent switch times and periods are evaluated with CasADi, as the equations are, and an invalid period raises a `SolverError`.
@@ -54,6 +60,11 @@
 - `"heat of mixing": "true"` now works with `"particle": "quadratic profile"` or `"quartic profile"`, using their closed-form flux instead of failing to discretise with a `ShapeError`. ([#5935](https://github.com/pybamm-team/PyBaMM/pull/5935))
 - Irreversible heating now includes the resistive loss across the SEI film when `"SEI film resistance"` is `"distributed"` or `"average"`, so it reaches `"Total heating [W]"` and the cell temperature. ([#5841](https://github.com/pybamm-team/PyBaMM/pull/5841))
 - Irreversible heating now includes the heat from SEI growth, SEI on cracks and lithium plating side reactions, so their electrical losses reach `"Total heating [W]"` and the cell temperature. ([#5875](https://github.com/pybamm-team/PyBaMM/pull/5875))
+- `calculate_sensitivities` with a name that is not an input parameter of the model raises a `SolverError` listing the model's inputs, instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `calculate_sensitivities=True` logs supplied inputs the model does not use and, with an `Experiment`, skips inputs that some step models lack instead of raising a `KeyError`. A list naming such an input raises a `SolverError` before solving. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Sensitivities with respect to a vector-valued input raise a `SolverError`, instead of failing in `IDAKLUSolver` with "y0 has wrong number of cols". ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Input-dependent geometry limits on a submesh that needs numbers, such as the default `Uniform1DSubMesh`, raise a `GeometryError` pointing to `pybamm.SymbolicUniform1DSubMesh` instead of an `IndexError`, and input-dependent tab positions raise one instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `output_variables` with `/` in their names, such as `"Entropic change [V/K]"`, or with names that differ only in punctuation now work, including with the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 
 ## Optimizations
 
