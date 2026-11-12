@@ -1,8 +1,8 @@
-//! Matrix products, each a [`Product`] that [`dispatch`](crate::accumulate::dispatch) runs
-//! fused or unfused.
+//! Matrix products: the [`Product`]s that [`dispatch`](crate::accumulate::dispatch) runs fused
+//! or unfused, and the unfused row products on [`CsrData`].
 //!
-//! Every sparse product walks its rows through [`CsrData::rows`], so the scalar, lane-batched
-//! and transposed forms sum in the same stored order.
+//! Each sparse [`Product`] walks its rows through [`CsrData::rows`], and [`CsrData::row_dot`]
+//! reads one row's stored span, so every form sums a row in the same stored order.
 
 // Products must inline into `pulp`'s feature-enabled wrapper to compile as FMA instructions.
 #![allow(clippy::inline_always)]
@@ -13,7 +13,7 @@ use crate::node::CsrData;
 impl CsrData {
     /// Each row as its stored `(columns, values)`, in row order.
     ///
-    /// The one row walk behind every sparse product; [`CsrData::try_new`] guarantees the splits
+    /// The row walk behind every sparse [`Product`]; [`CsrData::try_new`] guarantees the splits
     /// fit.
     #[inline(always)]
     pub(crate) fn rows(&self) -> impl Iterator<Item = (&[usize], &[f64])> {
