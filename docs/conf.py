@@ -69,6 +69,9 @@ extensions = [
     "sphinx_gallery.load_style",
 ]
 
+# $...$ and $$...$$ maths in Markdown pages, as in the example notebooks
+myst_enable_extensions = ["dollarmath", "amsmath"]
+
 
 napoleon_use_rtype = True
 napoleon_google_docstring = False
