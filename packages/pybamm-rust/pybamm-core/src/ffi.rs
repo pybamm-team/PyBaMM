@@ -1048,7 +1048,7 @@ mod tests {
         let root = build(&mut arena, y);
         let mut model = compile(&arena, y, identity_mass_matrix(2), 2, 0);
         model
-            .set_observables(kind, &mut arena, &[root])
+            .set_observables(kind, &arena, &[root])
             .expect("a valid observable");
         evaluator(model)
     }

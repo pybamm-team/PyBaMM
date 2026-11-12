@@ -187,7 +187,7 @@ pub fn build_trailing_param_sens_model() -> (CompiledModel, [f64; 2]) {
         &[ParamIdx::new(1)],
     );
     model
-        .set_observables(ObservableKind::Outputs, &mut arena, &[out_node])
+        .set_observables(ObservableKind::Outputs, &arena, &[out_node])
         .expect("a valid output");
     (model, [3.0, 4.0])
 }

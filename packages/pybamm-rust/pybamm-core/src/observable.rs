@@ -5,9 +5,8 @@ use std::sync::Arc;
 use crate::arena::{Arena, DagRef, NodeId};
 use crate::eval::{CompiledExpr, SplitCompiledExpr, TangentInputs};
 use crate::jacobian::tangent_dag;
-use crate::node::Node;
 use crate::params::ParamIdx;
-use crate::simplify::simplify_pipeline;
+use crate::simplify::{simplify_family, simplify_pipeline};
 use crate::tangent::{tangent_wrt_params, tangent_wrt_states};
 use crate::tangent_batch::{self, LanePlan, unit_param_columns};
 
@@ -94,29 +93,23 @@ impl ObservableSet {
     /// Compile each of `roots`, fuse two or more, and differentiate the family when
     /// `with_tangents`.
     ///
-    /// The family root is a `Concat` of the roots, which this allocates in `arena`, so shared
-    /// subexpressions evaluate once in the primal and in both tangent tapes.
-    pub fn compile(arena: &mut Arena, roots: &[NodeId], with_tangents: bool) -> Self {
-        let items: Vec<Arc<CompiledExpr>> = roots
+    /// The roots of `arena` are simplified together once, and every tape derives from that
+    /// family graph, so they agree with each other. Shared subexpressions are simplified once,
+    /// and evaluate once in the fused primal and in both tangent tapes.
+    pub fn compile(arena: &Arena, roots: &[NodeId], with_tangents: bool) -> Self {
+        if roots.is_empty() {
+            return Self::default();
+        }
+        let (family, members) = simplify_family(arena, roots);
+        let items: Vec<Arc<CompiledExpr>> = members
             .iter()
-            .map(|&root| Arc::new(CompiledExpr::new(DagRef::new(arena, root))))
+            .map(|&member| Arc::new(CompiledExpr::new(DagRef::new(family.arena(), member))))
             .collect();
-        let (family, fused) = match roots {
-            [] => (None, None),
-            &[root] => (Some(root), None),
-            _ => {
-                let concat = arena.alloc(Node::Concat(roots.to_vec()));
-                let fused = CompiledExpr::new(DagRef::new(arena, concat));
-                (Some(concat), Some(fused))
-            },
-        };
         Self {
             total_len: items.iter().map(|expr| expr.output_len()).sum(),
-            tangents: family
-                .filter(|_| with_tangents)
-                .map(|root| ObservableTangents::compile(DagRef::new(arena, root))),
+            fused: (items.len() > 1).then(|| CompiledExpr::new(family.as_ref())),
+            tangents: with_tangents.then(|| ObservableTangents::compile(family.as_ref())),
             items,
-            fused,
         }
     }
 
@@ -441,6 +434,7 @@ impl ObservableScratch {
 mod tests {
     use super::*;
     use crate::node::Node;
+    use crate::simplify::dce;
     #[cfg(feature = "serialize")]
     use crate::snapshot::DagSnapshot;
 
@@ -475,7 +469,7 @@ mod tests {
         let one = arena.alloc(Node::Scalar(1.0));
         let second = arena.alloc(Node::Sub(product, one));
 
-        let set = ObservableSet::compile(&mut arena, &[first, second], true);
+        let set = ObservableSet::compile(&arena, &[first, second], true);
         (arena, set)
     }
 
@@ -520,10 +514,33 @@ mod tests {
     fn a_lone_observable_fuses_nothing() {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
-        let n_nodes = arena.len();
-        let set = ObservableSet::compile(&mut arena, &[y], false);
+        let set = ObservableSet::compile(&arena, &[y], false);
         assert!(set.fused_expr().is_none());
-        assert_eq!(arena.len(), n_nodes);
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn every_tape_follows_the_simplified_graph() {
+        // `y0 - y0` simplifies to zero, as in the rhs; unsimplified it is NaN at y0 = inf.
+        let mut arena = Arena::new();
+        let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let y1 = arena.alloc(Node::StateVector { start: 1, end: 2 });
+        let cancelled = arena.alloc(Node::Sub(y0, y0));
+        let set = ObservableSet::compile(&arena, &[cancelled, y1], true);
+        let mut scratch = set.create_scratch();
+        let y = [f64::INFINITY, 3.0];
+
+        let per_item: Vec<f64> = set
+            .exprs()
+            .map(|expr| expr.eval(&mut scratch.tape, 0.0, &y, &[], &[])[0])
+            .collect();
+        assert_eq!(per_item, [0.0, 3.0]);
+        let mut fused = [f64::NAN; 2];
+        set.eval_all(&mut scratch, 0.0, &y, &[], &mut fused);
+        assert_eq!(fused, [0.0, 3.0]);
+        let mut jac = [f64::NAN; 2];
+        set.jac_action(&mut scratch, 0.0, &y, &[], &[1.0, 1.0], &mut jac);
+        assert_eq!(jac, [0.0, 1.0]);
     }
 
     #[test]
@@ -617,7 +634,7 @@ mod tests {
         let qy = arena.alloc(Node::Mul(q, y));
         let exp_qy = arena.alloc(Node::Exp(qy));
         let second = arena.alloc(Node::Add(exp_qy, py));
-        let set = ObservableSet::compile(&mut arena, &[first, second], true);
+        let set = ObservableSet::compile(&arena, &[first, second], true);
 
         let mut scratch = set.create_scratch();
         let n_out = set.total_len();
@@ -655,7 +672,7 @@ mod tests {
         }
     }
 
-    /// The tangent tapes a family once compiled per item, each with its item's length.
+    /// The tangent tapes of each item simplified on its own, each with its item's length.
     struct PerItemTapes(Vec<(SplitCompiledExpr, SplitCompiledExpr, usize)>);
 
     impl PerItemTapes {
@@ -664,12 +681,12 @@ mod tests {
                 roots
                     .iter()
                     .map(|&root| {
-                        let len = CompiledExpr::new(DagRef::new(arena, root)).output_len();
-                        let sens = compile_tangent(DagRef::new(arena, root), tangent_wrt_params);
+                        let simplified = simplify_pipeline(dce(DagRef::new(arena, root)));
+                        let item = simplified.as_ref();
                         (
-                            sens,
-                            compile_tangent(DagRef::new(arena, root), tangent_wrt_states),
-                            len,
+                            compile_tangent(item, tangent_wrt_params),
+                            compile_tangent(item, tangent_wrt_states),
+                            CompiledExpr::new(item).output_len(),
                         )
                     })
                     .collect(),
@@ -744,7 +761,7 @@ mod tests {
     /// The family's one tangent-tape pair reproduces per-item tapes bit for bit, its batched
     /// `dH/dy` walks included, on a scratch left dirty by earlier calls.
     fn assert_family_matches_per_item_tapes(
-        arena: &mut Arena,
+        arena: &Arena,
         roots: &[NodeId],
         y: &[f64],
         inputs: &[f64],
@@ -846,7 +863,7 @@ mod tests {
         let roots = [total, scaled_middle, slice, product, zero, hypot];
 
         let y_values: Vec<f64> = (0..n).map(|i| 0.3f64.mul_add(i as f64, -0.7)).collect();
-        assert_family_matches_per_item_tapes(&mut arena, &roots, &y_values, &[0.8, -1.3, 2.1]);
+        assert_family_matches_per_item_tapes(&arena, &roots, &y_values, &[0.8, -1.3, 2.1]);
     }
 
     /// Each real fixture's rhs `f` under four parameters, with outputs sharing its cone.
@@ -900,7 +917,7 @@ mod tests {
             let y: Vec<f64> = (0..n)
                 .map(|i| 0.01f64.mul_add(i as f64 / n as f64, 0.5))
                 .collect();
-            assert_family_matches_per_item_tapes(&mut arena, &roots, &y, &[0.3, 0.4, 0.5, 0.6]);
+            assert_family_matches_per_item_tapes(&arena, &roots, &y, &[0.3, 0.4, 0.5, 0.6]);
         }
     }
 
@@ -908,8 +925,8 @@ mod tests {
     fn tangent_tapes_compile_only_when_asked_for() {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
-        let without = ObservableSet::compile(&mut arena, &[y], false);
-        let with = ObservableSet::compile(&mut arena, &[y], true);
+        let without = ObservableSet::compile(&arena, &[y], false);
+        let with = ObservableSet::compile(&arena, &[y], true);
         assert!(without.tangents.is_none());
         assert!(with.tangents.is_some());
     }
@@ -919,7 +936,7 @@ mod tests {
     fn a_tangent_action_without_tangent_tapes_is_refused() {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
-        let set = ObservableSet::compile(&mut arena, &[y], false);
+        let set = ObservableSet::compile(&arena, &[y], false);
         let mut out = [0.0; 2];
         set.jac_action(
             &mut set.create_scratch(),

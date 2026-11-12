@@ -100,7 +100,7 @@ fn sensitivity_evaluator(snap: &DagSnapshot, edge: bool) -> (ModelEvaluator, usi
     .expect("a valid fixture");
     let roots = outputs(&mut arena, rhs, &params, n, edge);
     model
-        .set_observables(ObservableKind::Outputs, &mut arena, &roots)
+        .set_observables(ObservableKind::Outputs, &arena, &roots)
         .expect("valid outputs");
     let n_out = model.total_output_len();
     (ModelEvaluator::from_compiled(Arc::new(model)), n_out)

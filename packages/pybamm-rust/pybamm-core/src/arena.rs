@@ -98,11 +98,26 @@ impl Arena {
 
     /// Nodes reachable from `root`, children before parents and each visited once.
     pub fn topological_order(&self, root: NodeId) -> Vec<NodeId> {
+        self.topological_order_of([root])
+    }
+
+    pub(crate) fn topological_order_with(&self, root: NodeId, also: &[NodeId]) -> Vec<NodeId> {
+        self.topological_order_of(std::iter::once(root).chain(also.iter().copied()))
+    }
+
+    /// Nodes reachable from any of `roots`, children before parents and each visited once.
+    ///
+    /// Each root's unvisited nodes follow the earlier roots'.
+    pub(crate) fn topological_order_of(
+        &self,
+        roots: impl IntoIterator<Item = NodeId>,
+    ) -> Vec<NodeId> {
         let n = self.len();
         let mut visited = vec![false; n];
         let mut order = Vec::with_capacity(n);
         let mut stack: Vec<TopoFrame> = Vec::with_capacity(n);
-        stack.push(TopoFrame::Pending(root));
+        stack.extend(roots.into_iter().map(TopoFrame::Pending));
+        stack.reverse();
         while let Some(frame) = stack.pop() {
             match frame {
                 // Pushed once per node: any other `Pending(id)` sits below this frame, since one
@@ -430,6 +445,13 @@ impl NodeMap<NodeId> {
             .get(id)
             .expect("children are rebuilt before their parents")
     }
+
+    /// Move each of `ids` to its [`rebuilt`](Self::rebuilt) counterpart.
+    pub(crate) fn remap(&self, ids: &mut [NodeId]) {
+        for id in ids {
+            *id = self.rebuilt(*id);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -497,6 +519,20 @@ mod tests {
         assert_eq!(order.len(), 2);
         assert!(order.contains(&a));
         assert!(order.contains(&neg_a));
+    }
+
+    #[test]
+    fn a_multi_root_order_visits_each_shared_node_once() {
+        let mut arena = Arena::new();
+        let a = arena.alloc(Node::Scalar(1.0));
+        let neg_a = arena.alloc(Node::Neg(a));
+        let _unreachable = arena.alloc(Node::Time);
+        let abs_a = arena.alloc(Node::Abs(a));
+
+        assert_eq!(
+            arena.topological_order_of([neg_a, abs_a, a]),
+            [a, neg_a, abs_a]
+        );
     }
 
     #[test]

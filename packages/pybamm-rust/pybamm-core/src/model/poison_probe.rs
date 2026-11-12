@@ -241,10 +241,10 @@ fn batched_output_sensitivities_ignore_a_poisoned_workspace() {
     let half = arena.alloc(Node::Scalar(0.5));
     let crossing = arena.alloc(Node::Sub(y0, half));
     model
-        .set_observables(ObservableKind::Outputs, &mut arena, &[scaled, sin, shifted])
+        .set_observables(ObservableKind::Outputs, &arena, &[scaled, sin, shifted])
         .expect("valid outputs");
     model
-        .set_observables(ObservableKind::Events, &mut arena, &[crossing])
+        .set_observables(ObservableKind::Events, &arena, &[crossing])
         .expect("a valid event");
     assert!(
         model.observables(ObservableKind::Outputs).widest_jac_walk() > 1,
@@ -283,10 +283,10 @@ fn a_dae_with_every_artifact_ignores_a_poisoned_workspace() {
     let half = arena.alloc(Node::Scalar(0.5));
     let crossing = arena.alloc(Node::Sub(y0, half));
     model
-        .set_observables(ObservableKind::Outputs, &mut arena, &[output, scaled, y])
+        .set_observables(ObservableKind::Outputs, &arena, &[output, scaled, y])
         .expect("valid outputs");
     model
-        .set_observables(ObservableKind::Events, &mut arena, &[crossing, output])
+        .set_observables(ObservableKind::Events, &arena, &[crossing, output])
         .expect("valid events");
     assert_poison_changes_nothing("every artifact", &model, &[0.4, 1.3, -0.8], &[2.5]);
 }
