@@ -45,6 +45,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'particle size': 'single' (possible: ['single', 'distribution'])
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'reaction limited (asymmetric)', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited', 'ec reaction limited (asymmetric)', 'VonKolzenberg2020', 'tunnelling limited'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
+'SEI film capacitance': 'false' (possible: ['false', 'true'])
 'SEI on cracks': 'false' (possible: ['false', 'true'])
 'SEI porosity change': 'false' (possible: ['false', 'true'])
 'stress-induced diffusion': 'true' (possible: ['false', 'true'])
@@ -251,6 +252,17 @@ class TestBaseBatteryModel:
             pybamm.BaseBatteryModel({"SEI": "bad sei"})
         with pytest.raises(pybamm.OptionError, match=r"SEI film resistance"):
             pybamm.BaseBatteryModel({"SEI film resistance": "bad SEI film resistance"})
+        with pytest.raises(pybamm.OptionError, match=r"SEI film capacitance"):
+            pybamm.BaseBatteryModel({"SEI": "constant", "SEI film capacitance": "true"})
+        with pytest.raises(pybamm.OptionError, match=r"SEI film capacitance"):
+            pybamm.BaseBatteryModel(
+                {
+                    "SEI": "constant",
+                    "surface form": "differential",
+                    "SEI film capacitance": "true",
+                    "working electrode": "positive",
+                }
+            )
         with pytest.raises(pybamm.OptionError, match=r"SEI porosity change"):
             pybamm.BaseBatteryModel({"SEI porosity change": "bad SEI porosity change"})
         # changing defaults based on other options

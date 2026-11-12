@@ -21,6 +21,93 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     def __init__(self, param, domain=None, options=None):
         super().__init__(param, domain, options=options)
 
+    def _has_sei_film_capacitance(self):
+        """Whether this domain has an SEI film capacitance state."""
+        return (
+            self.domain in ["negative", "positive"]
+            and self.options["SEI film capacitance"] == "true"
+            and getattr(self.options, self.domain)["SEI"] != "none"
+        )
+
+    def _get_sei_film_variables(self, x_average):
+        """
+        Create the SEI film overpotential state, either x-averaged or distributed.
+
+        Parameters
+        ----------
+        x_average : bool
+            Whether the state is x-averaged.
+
+        Returns
+        -------
+        variables : dict
+            The SEI film overpotential variables.
+        """
+        if not self._has_sei_film_capacitance():
+            return {}
+        pybamm.citations.register("Meyers2000")
+        domain, Domain = self.domain_Domain
+        name = "electrode SEI film overpotential variable [V]"
+        if x_average:
+            eta_sei_av = pybamm.Variable(
+                f"X-averaged {domain} {name}", domain="current collector"
+            )
+            eta_sei = pybamm.PrimaryBroadcast(eta_sei_av, f"{domain} electrode")
+        else:
+            eta_sei = pybamm.Variable(
+                f"{Domain} {name}",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            eta_sei_av = pybamm.x_average(eta_sei)
+        return {f"{Domain} {name}": eta_sei, f"X-averaged {domain} {name}": eta_sei_av}
+
+    def _get_sei_film_state(self, variables, x_average):
+        """Get the SEI film overpotential state from the variables."""
+        domain, Domain = self.domain_Domain
+        prefix = f"X-averaged {domain}" if x_average else Domain
+        return variables[f"{prefix} electrode SEI film overpotential variable [V]"]
+
+    def _set_sei_film_rhs(self, variables, j_total, x_average):
+        """
+        Set the rhs of the SEI film overpotential, for a film (resistance in parallel
+        with capacitance) in series with the double layer.
+
+        Parameters
+        ----------
+        variables : dict
+            The model variables.
+        j_total : :class:`pybamm.Symbol`
+            Total current density crossing the interface [A.m-2].
+        x_average : bool
+            Whether the state is x-averaged.
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            The rate of change of the SEI film overpotential [V.s-1], or zero if the
+            film has no capacitance.
+        """
+        if not self._has_sei_film_capacitance():
+            return pybamm.Scalar(0)
+        domain, Domain = self.domain_Domain
+        prefix = f"X-averaged {domain}" if x_average else Domain
+        eta_sei = self._get_sei_film_state(variables, x_average)
+        L_sei = variables[f"{prefix} SEI thickness [m]"]
+        phase_param = self.domain_param.prim
+        R_film = phase_param.R_sei * L_sei
+        C_film = phase_param.epsilon_sei * pybamm.constants.epsilon_0 / L_sei
+        # Neglects dC_film/dt from SEI growth, which is slow relative to tau_film
+        d_eta_sei = -(j_total + eta_sei / R_film) / C_film
+        self.rhs[eta_sei] = d_eta_sei
+        return d_eta_sei
+
+    def _get_sei_film_initial_conditions(self, variables, x_average):
+        """Zero initial SEI film overpotential, if the film has a capacitance."""
+        if not self._has_sei_film_capacitance():
+            return {}
+        return {self._get_sei_film_state(variables, x_average): pybamm.Scalar(0)}
+
     def _get_standard_potential_variables(self, phi_e_dict):
         """
         A private function to obtain the standard variables which
