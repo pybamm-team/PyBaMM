@@ -209,6 +209,8 @@ fn bench_real_models_with_observables(c: &mut Criterion) {
 
     for fixture in helpers::FIXTURES {
         let snap = DagSnapshot::from_bytes(fixture.bytes).expect("fixture decodes");
+        // The observables extend a clone of the snapshot's arena, whose root reaches none of
+        // them, so the snapshot compiles the same model.
         let mut arena = snap.dag().arena().clone();
         let root = snap.dag().root();
         let n = snap.n_states;
@@ -232,22 +234,16 @@ fn bench_real_models_with_observables(c: &mut Criterion) {
             BenchmarkId::new("outputs_and_events", fixture.name),
             &fixture.name,
             |b, _| {
-                b.iter_batched(
-                    || arena.clone(),
-                    |mut arena| {
-                        // The observables extend a clone of the snapshot's arena, whose root
-                        // reaches none of them, so the snapshot compiles the same model.
-                        let mut model = helpers::compile_fixture(black_box(&snap));
-                        model
-                            .set_observables(ObservableKind::Outputs, &mut arena, &rows)
-                            .expect("valid outputs");
-                        model
-                            .set_observables(ObservableKind::Events, &mut arena, &events)
-                            .expect("valid events");
-                        model
-                    },
-                    criterion::BatchSize::LargeInput,
-                );
+                b.iter_with_large_drop(|| {
+                    let mut model = helpers::compile_fixture(black_box(&snap));
+                    model
+                        .set_observables(ObservableKind::Outputs, &arena, &rows)
+                        .expect("valid outputs");
+                    model
+                        .set_observables(ObservableKind::Events, &arena, &events)
+                        .expect("valid events");
+                    model
+                });
             },
         );
     }

@@ -30,13 +30,14 @@ impl Workspace {
 impl CompiledModel {
     /// Compile `roots` as this model's observables of `kind`, replacing any set before.
     ///
-    /// Every root is checked against the declared states and inputs before any compiles. Two or
-    /// more also fuse into one tape, so shared subexpressions run once; that allocates a `Concat`
-    /// in `arena`.
+    /// Every root is checked against the declared states and inputs before any compiles. The
+    /// roots are simplified together once, and their tapes and tangents derive from that graph,
+    /// so they agree with each other. Two or more also fuse into one tape, so shared
+    /// subexpressions run once.
     pub fn set_observables(
         &mut self,
         kind: ObservableKind,
-        arena: &mut Arena,
+        arena: &Arena,
         roots: &[NodeId],
     ) -> Result<(), CoreError> {
         for &root in roots {
@@ -240,7 +241,7 @@ mod tests {
 
         let mut model = compile(&arena, rhs, identity_mass_matrix(2), 2, 0);
         let err = model
-            .set_observables(ObservableKind::Outputs, &mut arena, &[narrow, wide])
+            .set_observables(ObservableKind::Outputs, &arena, &[narrow, wide])
             .expect_err("an output past n_states must be refused");
         assert!(
             matches!(
@@ -254,10 +255,10 @@ mod tests {
         );
         assert_eq!(model.n_outputs(), 0, "no root of a refused set compiles");
 
-        let events = model.set_observables(ObservableKind::Events, &mut arena, &[wide]);
+        let events = model.set_observables(ObservableKind::Events, &arena, &[wide]);
         assert!(events.is_err());
         model
-            .set_observables(ObservableKind::Outputs, &mut arena, &[narrow])
+            .set_observables(ObservableKind::Outputs, &arena, &[narrow])
             .expect("an output inside n_states is accepted");
         assert_eq!(model.n_outputs(), 1);
     }
@@ -304,7 +305,7 @@ mod tests {
         assert_eq!((model.n_outputs(), model.n_events()), (0, 0));
         assert_eq!((model.total_output_len(), model.total_event_len()), (0, 0));
         model
-            .set_observables(ObservableKind::Outputs, &mut arena, &[var0])
+            .set_observables(ObservableKind::Outputs, &arena, &[var0])
             .expect("a valid output");
 
         assert_eq!(model.n_outputs(), 1);
@@ -340,7 +341,7 @@ mod tests {
             &[ParamIdx::new(0)],
         );
         model
-            .set_observables(ObservableKind::Outputs, &mut arena, &[y0])
+            .set_observables(ObservableKind::Outputs, &arena, &[y0])
             .expect("a valid output");
 
         assert_eq!(model.n_sens_params(), 1);
@@ -381,7 +382,7 @@ mod tests {
 
         let mut model = compile(&arena, y_full, identity_mass_matrix(2), 2, 0);
         model
-            .set_observables(ObservableKind::Events, &mut arena, &[event0])
+            .set_observables(ObservableKind::Events, &arena, &[event0])
             .expect("a valid event");
         assert_eq!(model.n_events(), 1);
         assert_eq!(model.total_event_len(), 1);
@@ -395,7 +396,7 @@ mod tests {
         }
 
         model
-            .set_observables(events, &mut arena, &[event0, event1])
+            .set_observables(events, &arena, &[event0, event1])
             .expect("valid events");
         assert_eq!((model.n_events(), model.total_event_len()), (2, 2));
         let mut ws = model.create_workspace();
@@ -417,10 +418,10 @@ mod tests {
 
         let mut model = compile(&arena, y_full, identity_mass_matrix(2), 2, 0);
         model
-            .set_observables(ObservableKind::Outputs, &mut arena, &[output_expr])
+            .set_observables(ObservableKind::Outputs, &arena, &[output_expr])
             .expect("a valid output");
         model
-            .set_observables(ObservableKind::Events, &mut arena, &[event_expr])
+            .set_observables(ObservableKind::Events, &arena, &[event_expr])
             .expect("a valid event");
 
         assert_eq!(model.n_outputs(), 1);
@@ -460,7 +461,7 @@ mod tests {
         let mut model = compile(&arena, y_full, identity_mass_matrix(2), 2, 0);
         for kind in [ObservableKind::Outputs, ObservableKind::Events] {
             model
-                .set_observables(kind, &mut arena, &[first, second])
+                .set_observables(kind, &arena, &[first, second])
                 .expect("valid observables");
             assert!(model.observables(kind).fused_expr().is_some());
         }
@@ -507,9 +508,8 @@ mod tests {
         let event0 = arena.alloc(Node::Sub(y0, half));
 
         let mut model = compile(&arena, y_full, identity_mass_matrix(2), 2, 0);
-        let n_nodes = arena.len();
         model
-            .set_observables(ObservableKind::Events, &mut arena, &[event0])
+            .set_observables(ObservableKind::Events, &arena, &[event0])
             .expect("a valid event");
 
         assert!(
@@ -517,11 +517,6 @@ mod tests {
                 .observables(ObservableKind::Events)
                 .fused_expr()
                 .is_none()
-        );
-        assert_eq!(
-            arena.len(),
-            n_nodes,
-            "nothing to fuse, so nothing allocated"
         );
     }
 
@@ -541,7 +536,7 @@ mod tests {
         let output = foreign.alloc(Node::Mul(k, y));
 
         let err = model
-            .set_observables(ObservableKind::Outputs, &mut foreign, &[output])
+            .set_observables(ObservableKind::Outputs, &foreign, &[output])
             .expect_err("the observable reads k from another packed slot");
         assert!(
             matches!(err, CoreError::ObservableParamSlot { index: 0 }),
@@ -575,7 +570,7 @@ mod tests {
             &[ParamIdx::new(0)],
         );
         model
-            .set_observables(kind, &mut arena, &[observable])
+            .set_observables(kind, &arena, &[observable])
             .expect("a valid observable");
         model
     }
@@ -687,7 +682,7 @@ mod tests {
         let late = input(&mut arena, "late", 1, 1, 1);
         let observable = arena.alloc(Node::Mul(late, y));
         let err = model
-            .set_observables(ObservableKind::Outputs, &mut arena, &[observable])
+            .set_observables(ObservableKind::Outputs, &arena, &[observable])
             .expect_err("an input past n_inputs must be refused");
         assert!(
             matches!(
@@ -700,7 +695,7 @@ mod tests {
             "unexpected error: {err}"
         );
         assert_eq!(model.n_outputs(), 0, "the rejected output was not compiled");
-        let events = model.set_observables(ObservableKind::Events, &mut arena, &[observable]);
+        let events = model.set_observables(ObservableKind::Events, &arena, &[observable]);
         assert!(events.is_err());
     }
 
@@ -724,7 +719,7 @@ mod tests {
         let y0 = element(&mut arena, y, 0);
         let output = arena.alloc(Node::Mul(late, y0));
         model
-            .set_observables(ObservableKind::Outputs, &mut arena, &[output])
+            .set_observables(ObservableKind::Outputs, &arena, &[output])
             .expect("an input inside n_inputs is accepted");
 
         let mut ws = model.create_workspace();
@@ -754,7 +749,7 @@ mod tests {
         let y = arena.alloc(Node::StateVector { start: 0, end: 2 });
         let mut model = compile(&arena, y, identity_mass_matrix(2), 2, 0);
         model
-            .set_observables(ObservableKind::Outputs, &mut arena, &[y])
+            .set_observables(ObservableKind::Outputs, &arena, &[y])
             .expect("a valid output");
 
         let mut out = [0.0; 2];
