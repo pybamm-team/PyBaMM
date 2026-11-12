@@ -103,8 +103,10 @@ def string(text, **kwargs):
             )
         # extract units (type) and convert value to float
         typ, value = _convert_electric(value_string)
-        # Make current positive for discharge and negative for charge
-        value *= sign
+        # Make current positive for discharge and negative for charge. A voltage has
+        # no direction, so "Charge at 4 V" holds at 4 V like "Hold at 4 V"
+        if typ != "voltage":
+            value *= sign
 
         # Use the appropriate step class
         step_class = {

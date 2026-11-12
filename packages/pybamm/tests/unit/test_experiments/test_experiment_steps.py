@@ -195,6 +195,15 @@ class TestExperimentSteps:
         with pytest.raises(ValueError, match=r"Temperature must be"):
             pybamm.step.string("Discharge at 1C for 1 hour at 298.15oC")
 
+    @pytest.mark.parametrize(
+        "text", ["Charge at 4 V until 5 mA", "Discharge at 4 V for 1 hour"]
+    )
+    def test_step_string_voltage_ignores_direction(self, text):
+        # A voltage has no direction, so "Charge at" must not negate it
+        step = pybamm.step.string(text)
+        assert isinstance(step, pybamm.step.Voltage)
+        assert step.value == 4
+
     def test_drive_cycle(self):
         # Import drive cycle from file
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
