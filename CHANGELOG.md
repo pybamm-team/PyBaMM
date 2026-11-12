@@ -30,6 +30,7 @@
 ## Bug fixes
 
 - An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
+- `FuzzyDict.search` with blank entries in a list of terms, such as `search(["", "Electrolyte", "Potenteel"])`, now labels each result with the right term and searches every term. ([#6019](https://github.com/pybamm-team/PyBaMM/pull/6019))
 - `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
 - Released `pybammsolvers` v0.12.0, with the solver functions `pybamm` calls since #5994, and `pybamm` now requires it. Before, `pybamm` from source with `pybammsolvers` 0.11.1 from PyPI failed at its first solve. ([#6028](https://github.com/pybamm-team/PyBaMM/pull/6028))
 - Fixed `pybamm.x_average` treating piecewise-constant concatenations as x-independent, which skewed the x-averaged electrolyte concentration. ([#6023](https://github.com/pybamm-team/PyBaMM/pull/6023))

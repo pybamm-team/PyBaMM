@@ -156,7 +156,7 @@ class FuzzyDict(dict):
             if not keys.strip():
                 msg = "The search term cannot be an empty or whitespace-only string"
                 raise ValueError(msg)
-            original_keys = [keys]
+            original_keys = [keys.strip()]
             search_keys = [keys.strip().lower()]
 
         elif isinstance(keys, list):
@@ -164,8 +164,8 @@ class FuzzyDict(dict):
                 msg = "The 'keys' list cannot contain only empty or whitespace strings"
                 raise ValueError(msg)
 
-            original_keys = keys
-            search_keys = [k.strip().lower() for k in keys if k.strip()]
+            original_keys = [k.strip() for k in keys if k.strip()]
+            search_keys = [k.lower() for k in original_keys]
 
         known_keys = list(self.keys())
         # Check for exact matches where all search keys appear together in a key
@@ -187,16 +187,14 @@ class FuzzyDict(dict):
                     exact_matches.append(key)
 
         if exact_matches:
-            print(
-                f"Results for '{' '.join(k for k in original_keys if k.strip())}': {exact_matches}"
-            )
+            print(f"Results for '{' '.join(original_keys)}': {exact_matches}")
             if print_values:
                 for match in exact_matches:
                     print(f"{match} -> {self[match]}")
             return
 
         # If no exact matches, iterate over search keys individually
-        for original_key, search_key in zip(original_keys, search_keys, strict=False):
+        for original_key, search_key in zip(original_keys, search_keys, strict=True):
             exact_key_matches, partial_matches = self._find_matches(
                 search_key, known_keys, min_similarity
             )
