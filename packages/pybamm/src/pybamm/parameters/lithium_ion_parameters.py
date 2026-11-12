@@ -520,8 +520,8 @@ class ParticleLithiumIonParameters(BaseParameters):
             {"Through-cell distance (x) [m]": x},
         )
 
-        ocp_option = getattr(self.options, self.phase)["open-circuit potential"]
-        if ocp_option in (
+        phase_ocp_option = getattr(self.options, self.phase)["open-circuit potential"]
+        if phase_ocp_option in (
             "one-state hysteresis",
             "one-state differential capacity hysteresis",
         ):
@@ -531,7 +531,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             U_lith = self.U(self.sto_init_av, main.T_init, "lithiation")
             U_delith = self.U(self.sto_init_av, main.T_init, "delithiation")
             self.U_init = (1 + h_init_av) / 2 * U_delith + (1 - h_init_av) / 2 * U_lith
-        elif ocp_option != "MSMR":
+        elif self.options["open-circuit potential"] != "MSMR":
             self.U_init = self.U(self.sto_init_av, main.T_init)
 
         # Electrode loading and capacity

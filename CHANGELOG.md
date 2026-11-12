@@ -29,7 +29,7 @@
 
 ## Bug fixes
 
-- A one-state hysteresis model now sets its initial electrode and electrolyte potentials from the OCP at the initial hysteresis state, not the equilibrium OCP. Before, an equilibrium OCP that disagreed with the lithiation and delithiation branches could stop the model starting, e.g. with `IDA_BAD_K` or a non-positive `Maximum voltage [V]` event at high SOC. ([#XXXX](https://github.com/pybamm-team/PyBaMM/pull/XXXX))
+- A one-state hysteresis model now sets its initial electrode and electrolyte potentials from the OCP at the initial hysteresis state, not the equilibrium OCP. Before, an equilibrium OCP that disagreed with the lithiation and delithiation branches could stop the model starting, e.g. with `IDA_BAD_K` or a non-positive `Maximum voltage [V]` event at high SOC. ([#6042](https://github.com/pybamm-team/PyBaMM/pull/6042))
 - An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
 - `pybamm.parameter_sets` and `pybamm.dispatch.models` now list names in sorted order. Before, the order depended on which installed package was found first. ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
 - `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
