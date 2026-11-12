@@ -492,6 +492,9 @@ class ElectrodeSOHSolver:
         try:
             sol = self._solve_full(inputs, ics, direction)
         except pybamm.SolverError:
+            if self.known_value == "cell capacity":
+                self._check_esoh_feasible(inputs, direction)
+                raise
             # just in case solving one by one works better
             try:
                 sol = self._solve_split(inputs, ics, direction)
@@ -621,6 +624,7 @@ class ElectrodeSOHSolver:
         return sol
 
     def _solve_split(self, inputs, ics, direction):
+        inputs = inputs.copy()
         x100_sim, x0_sim = self._get_electrode_soh_sims_split(direction)
         x100_sim.build()
         x100_sim.built_model.set_initial_conditions_from(ics, inputs=inputs)
@@ -1449,12 +1453,30 @@ def _get_msmr_potential_model(parameter_values, param):
     return model
 
 
+def _solve_esoh_simulation(simulation, inputs, tol):
+    from pybamm.models.full_battery_models.lithium_ion.electrode_soh_algebraic_solver import (
+        _get_esoh_simulation_solver,
+    )
+
+    # Validate the result before Simulation stores it.
+    solver = _get_esoh_simulation_solver(simulation.solver, tol)
+    return simulation.solve([0], inputs=inputs, solver=solver)
+
+
 def get_esoh_default_solver(tol: float = 1e-6) -> pybamm.CompositeSolver:
+    from pybamm.models.full_battery_models.lithium_ion.electrode_soh_algebraic_solver import (
+        _ElectrodeSOHAlgebraicSolver,
+        _ElectrodeSOHSimulationSolver,
+    )
+
+    newton_solver = pybamm.NonlinearSolver(
+        atol=tol, rtol=0, step_tol=0, max_backtracks=100
+    )
     return pybamm.CompositeSolver(
         [
-            pybamm.NonlinearSolver(atol=tol, rtol=0, step_tol=0, max_backtracks=100),
-            pybamm.AlgebraicSolver(tol=tol),
-            pybamm.AlgebraicSolver(method="lsq", tol=tol),
-            pybamm.AlgebraicSolver(method="minimize", tol=tol),
+            _ElectrodeSOHSimulationSolver(newton_solver, tol),
+            _ElectrodeSOHSimulationSolver(pybamm.AlgebraicSolver(tol=tol), tol),
+            _ElectrodeSOHAlgebraicSolver(method="lsq", tol=tol),
+            _ElectrodeSOHAlgebraicSolver(method="minimize", tol=tol),
         ]
     )

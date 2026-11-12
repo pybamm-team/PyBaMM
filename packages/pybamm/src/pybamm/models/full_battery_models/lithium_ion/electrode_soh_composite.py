@@ -8,7 +8,11 @@ from typing import Any
 
 import pybamm
 
-from .electrode_soh import _ElectrodeSOH, get_esoh_default_solver
+from .electrode_soh import (
+    _ElectrodeSOH,
+    _solve_esoh_simulation,
+    get_esoh_default_solver,
+)
 from .util import (
     _default_initial_hysteresis_states,
     check_if_composite,
@@ -857,7 +861,7 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
             esoh_sim.built_model.set_initial_conditions_from(
                 initial_conditions, inputs=all_inputs
             )
-        sol = esoh_sim.solve([0], inputs=all_inputs)
+        sol = _solve_esoh_simulation(esoh_sim, all_inputs, tol)
 
         return {var: sol[var].entries[0] for var in sol.all_models[0].variables}
 
