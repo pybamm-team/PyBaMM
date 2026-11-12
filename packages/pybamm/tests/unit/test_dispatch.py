@@ -1,10 +1,32 @@
 #
 # Test dispatching mechanism in entry points
 #
+import importlib.metadata
+
+import pytest
+
 import pybamm
 
 
 class TestDispatch:
+    def test_get_entries_sorted(self, monkeypatch):
+        """Test that entry points are sorted by name, whatever order they are found in"""
+        names = ["Zeta2030", "Alpha2020", "Mu2025"]
+        entries = [
+            importlib.metadata.EntryPoint(name, f"package:{name}", "test_group")
+            for name in names
+        ]
+        monkeypatch.setattr(importlib.metadata, "entry_points", lambda group: entries)
+        found = pybamm.dispatch.entry_points.EntryPoint.get_entries("test_group")
+        assert [entry.name for entry in found] == sorted(names)
+
+    @pytest.mark.parametrize(
+        "entry_points", [pybamm.parameter_sets, pybamm.dispatch.models]
+    )
+    def test_listed_in_sorted_order(self, entry_points):
+        """Test that parameter sets and models are listed in sorted order"""
+        assert list(entry_points) == sorted(entry_points)
+
     def test_model_loads_through_entry_points(self):
         """Test that a model loaded through Model() function is actually functional"""
         # Load model with build=False to avoid full initialization for faster testing
