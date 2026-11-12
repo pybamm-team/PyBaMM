@@ -64,7 +64,7 @@ pub struct JacobianStats {
 /// The algebraic sub-block to compile alongside the right-hand side.
 #[derive(Debug, Clone, Copy)]
 pub struct AlgebraicBlockSpec<'a> {
-    /// The algebraic residual `g(t, y)`.
+    /// The algebraic residual `g(t, y)`, a node of the rhs's arena.
     pub residual: NodeId,
     /// Global state indices `g` solves for: strictly ascending, each one algebraic.
     pub variable_indices: &'a [usize],
@@ -251,8 +251,12 @@ impl CompiledModel {
             algebraic: None,
         };
         model.compile_sensitivities(simplified.as_ref(), options.sensitivities)?;
-        if let Some(spec) = options.algebraic {
-            model.compile_algebraic_block(rhs.arena(), spec)?;
+        if let Some(AlgebraicBlockSpec {
+            residual,
+            variable_indices,
+        }) = options.algebraic
+        {
+            model.compile_algebraic_block(DagRef::new(rhs.arena(), residual), variable_indices)?;
         }
         Ok(model)
     }
