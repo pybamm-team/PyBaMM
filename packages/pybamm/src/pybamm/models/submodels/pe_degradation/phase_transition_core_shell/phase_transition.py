@@ -157,7 +157,6 @@ class PhaseTransition(BasePhaseTransition):
             ]
 
             # variable values at the moving core-shell phase boundary
-            # this is extrapolated from nodal values at cell centre
             c_o_inner = variables[
                 f"{Domain} {phase_name}shell inner boundary "
                 "oxygen concentration [mol.m-3]"
@@ -166,15 +165,6 @@ class PhaseTransition(BasePhaseTransition):
                 f"{Domain} {phase_name}core outer boundary "
                 "lithium concentration [mol.m-3]"
             ]
-
-            c_c_N = variables[
-                f"{Domain} {phase_name}core surface cell lithium concentration [mol.m-3]"
-            ]
-            c_o_1 = variables[
-                f"{Domain} {phase_name}shell inner cell oxygen concentration [mol.m-3]"
-            ]
-            dx_core = variables[f"{Domain} {phase_name}core surface cell length [m]"]
-            dx_shell = variables[f"{Domain} {phase_name}shell inner cell length [m]"]
         else:
             # independent variables
             c_c = variables[
@@ -202,7 +192,6 @@ class PhaseTransition(BasePhaseTransition):
             ]
 
             # variable values at the moving core-shell phase boundary
-            # this is extrapolated from nodal values at cell centre
             c_o_inner = variables[
                 f"X-averaged {domain} {phase_name}shell inner boundary "
                 "oxygen concentration [mol.m-3]"
@@ -210,21 +199,6 @@ class PhaseTransition(BasePhaseTransition):
             c_c_outer = variables[
                 f"X-averaged {domain} {phase_name}core outer boundary "
                 "lithium concentration [mol.m-3]"
-            ]
-
-            c_c_N = variables[
-                f"X-averaged {domain} {phase_name}core surface cell "
-                "lithium concentration [mol.m-3]"
-            ]
-            c_o_1 = variables[
-                f"X-averaged {domain} {phase_name}shell inner cell "
-                "oxygen concentration [mol.m-3]"
-            ]
-            dx_core = variables[
-                f"X-averaged {domain} {phase_name}core surface cell length [m]"
-            ]
-            dx_shell = variables[
-                f"X-averaged {domain} {phase_name}shell inner cell length [m]"
             ]
 
         # time rate of moving phase boundary
@@ -239,25 +213,17 @@ class PhaseTransition(BasePhaseTransition):
         D_c = pybamm.surf(phase_param.D(c_c, T_c))
         D_o = pybamm.boundary_value(phase_param.D_o(c_o, T_o), "left")
 
-        # Solve the Robin conditions at the moving boundary for its concentrations,
-        # which are then imposed as Neumann conditions
-        c_c_b = (
-            c_c_N
-            - dx_core
+        # Robin conditions from mass conservation at the moving phase boundary
+        c_c_b = c_c_outer
+        c_o_b = c_o_inner
+        rbc_c_c = (
+            -(
+                R_nd / s_nd * j / param.F
+                + R_nd**2 * R_typ * s_nd * s_nd_dot * (c_c_b - c_trap)
+            )
             / D_c
-            * (R_nd / s_nd * j / param.F - (R_nd**2) * R_typ * s_nd * s_nd_dot * c_trap)
-        ) / (1 + dx_core / D_c * (R_nd**2) * R_typ * s_nd * s_nd_dot)
-
-        # oxygen concentration at the moving phase boundary
-        c_o_b = (
-            c_o_1
-            - dx_shell / D_o * (R_nd**2) * R_typ * (1 - s_nd) * s_nd_dot * c_o_core
-        ) / (1 - dx_shell / D_o * (R_nd**2) * R_typ * (1 - s_nd) * s_nd_dot)
-
-        # boundary conditions for lithium diffusion in the core
-        rbc_c_c = (c_c_b - c_c_N) / dx_core
-        # boundary conditions for oxygen diffusion in the shell
-        lbc_c_o = (c_o_1 - c_o_b) / dx_shell
+        )
+        lbc_c_o = R_nd**2 * R_typ * (1 - s_nd) * s_nd_dot * (c_o_core - c_o_b) / D_o
 
         if self.x_average is True:
             s_nd_dot = pybamm.PrimaryBroadcast(s_nd_dot, [f"{domain} electrode"])

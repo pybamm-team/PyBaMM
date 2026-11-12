@@ -81,21 +81,6 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         if s_nd_av is None:
             s_nd_av = pybamm.x_average(s_nd)
 
-        # concentration nodal value at outermost cell
-        c_c_N = pybamm.boundary_cell_value(c_c, "right")
-        c_c_N_av = pybamm.x_average(c_c_N)
-
-        # concentration nodal value at innermost cell
-        c_o_1 = pybamm.boundary_cell_value(c_o, "left")
-        c_o_1_av = pybamm.x_average(c_o_1)
-
-        # boundary cell length: node to the edge (half cell length)
-        dx_core = pybamm.boundary_cell_length(c_c, "right")
-        dx_core_av = pybamm.x_average(dx_core)
-
-        dx_shell = pybamm.boundary_cell_length(c_o, "left")
-        dx_shell_av = pybamm.x_average(dx_shell)
-
         # Definition of loss of active material in Positive Electrode
         # that is, the fraction of shell phase
         lam_pe = pybamm.Scalar(1) - s_nd**3
@@ -174,20 +159,6 @@ class BasePhaseTransition(pybamm.BaseSubModel):
             f"{Domain} {phase_name}particle moving phase boundary location": s_nd,
             f"X-averaged {domain} {phase_name}particle "
             "moving phase boundary location": s_nd_av,
-            # Boundary cell values
-            f"{Domain} {phase_name}core surface cell "
-            "lithium concentration [mol.m-3]": c_c_N,
-            f"X-averaged {domain} {phase_name}core surface cell "
-            "lithium concentration [mol.m-3]": c_c_N_av,
-            f"{Domain} {phase_name}shell inner cell "
-            "oxygen concentration [mol.m-3]": c_o_1,
-            f"X-averaged {domain} {phase_name}shell inner cell "
-            "oxygen concentration [mol.m-3]": c_o_1_av,
-            # Boundary half cell length (central node to edge)
-            f"{Domain} {phase_name}core surface cell length [m]": dx_core,
-            f"X-averaged {domain} {phase_name}core surface cell length [m]": dx_core_av,
-            f"{Domain} {phase_name}shell inner cell length [m]": dx_shell,
-            f"X-averaged {domain} {phase_name}shell inner cell length [m]": dx_shell_av,
             # Loss of active material (LAM) due to progressing of s
             # the shell is considered as LAM
             "Loss of active material due to PE phase transition": lam_pe,

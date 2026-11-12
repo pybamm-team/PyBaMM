@@ -573,28 +573,6 @@ class TestFiniteVolume:
         assert c_s_n_surf_disc.domain == ["negative electrode"]
         assert c_s_p_surf_disc.domain == ["positive electrode"]
 
-    def test_boundary_cell_value_and_length(self):
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-
-        var = pybamm.Variable("var", domain=["negative electrode"])
-        disc.set_variable_slices([var])
-
-        n = mesh["negative electrode"].npts
-        y = np.arange(1, n + 1, dtype=float).reshape(n, 1)
-
-        bcv_left = disc.process_symbol(pybamm.BoundaryCellValue(var, "left"))
-        bcv_right = disc.process_symbol(pybamm.BoundaryCellValue(var, "right"))
-        np.testing.assert_allclose(bcv_left.evaluate(y=y), [[y[0, 0]]])
-        np.testing.assert_allclose(bcv_right.evaluate(y=y), [[y[-1, 0]]])
-
-        # The half-length depends on the mesh, so only finiteness is checked
-        bcl_left = disc.process_symbol(pybamm.BoundaryCellLength(var, "left"))
-        bcl_right = disc.process_symbol(pybamm.BoundaryCellLength(var, "right"))
-        assert np.isfinite(bcl_left.evaluate()).all()
-        assert np.isfinite(bcl_right.evaluate()).all()
-
     def test_delta_function(self):
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
