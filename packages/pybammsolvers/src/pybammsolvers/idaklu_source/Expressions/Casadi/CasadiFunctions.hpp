@@ -17,6 +17,7 @@ struct SerializedCasadiFunctions {
   std::string events;
   std::string alg_res;
   std::string alg_jac;
+  std::string upsampling;
   std::vector<std::string> var_fcns;
   std::vector<std::string> dvar_dy_fcns;
   std::vector<std::string> dvar_dp_fcns;
@@ -31,6 +32,7 @@ SerializedCasadiFunctions serialize_casadi_functions(
   const casadi::Function &events,
   const casadi::Function &alg_res,
   const casadi::Function &alg_jac,
+  const casadi::Function &upsampling,
   const std::vector<casadi::Function*>& var_fcns,
   const std::vector<casadi::Function*>& dvar_dy_fcns,
   const std::vector<casadi::Function*>& dvar_dp_fcns
@@ -114,7 +116,8 @@ public:
     const SetupOptions& setup_opts,
     const SerializedCasadiFunctions *serialized_fcns = nullptr,
     const BaseFunctionType &alg_res_fn = BaseFunctionType(),
-    const BaseFunctionType &alg_jac_fn = BaseFunctionType()
+    const BaseFunctionType &alg_jac_fn = BaseFunctionType(),
+    const BaseFunctionType &upsampling_fn = BaseFunctionType()
   ) :
     rhs_alg_casadi(
       rhs_alg,
@@ -148,6 +151,10 @@ public:
       alg_jac_fn,
       setup_opts.num_solvers > 1,
       serialized_fcns != nullptr ? &serialized_fcns->alg_jac : nullptr),
+    upsampling_casadi_(
+      upsampling_fn,
+      setup_opts.num_solvers > 1,
+      serialized_fcns != nullptr ? &serialized_fcns->upsampling : nullptr),
     ExpressionSet<CasadiFunction>(
       static_cast<Expression*>(&rhs_alg_casadi),
       static_cast<Expression*>(&jac_times_cjmass_casadi),
@@ -168,6 +175,7 @@ public:
   {
     this->alg_res = static_cast<Expression*>(&alg_res_casadi_);
     this->alg_jac = static_cast<Expression*>(&alg_jac_casadi_);
+    this->upsampling_fcn = static_cast<Expression*>(&upsampling_casadi_);
     // NOTE: You must allocate ALL std::vector elements before taking references
     const bool deep_copy = setup_opts.num_solvers > 1;
     if (serialized_fcns != nullptr) {
@@ -232,6 +240,7 @@ public:
   CasadiFunction events_casadi;
   CasadiFunction alg_res_casadi_;
   CasadiFunction alg_jac_casadi_;
+  CasadiFunction upsampling_casadi_;
 
   std::vector<CasadiFunction> var_fcns_casadi;
   std::vector<CasadiFunction> dvar_dy_fcns_casadi;

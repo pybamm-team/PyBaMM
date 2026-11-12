@@ -380,6 +380,58 @@ class TestExponentialDecaySolver:
             np.testing.assert_allclose(sol.y, expected, rtol=1e-5, atol=1e-8)
 
 
+class TestHermiteSensitivities:
+    """The sensitivities' time derivatives, stored only on request."""
+
+    pytestmark = pytest.mark.integration
+
+    @pytest.fixture
+    def solve(
+        self, idaklu_module, exponential_decay_model, exponential_decay_solver_factory
+    ):
+        def solve(**solver_options):
+            solver_data = exponential_decay_solver_factory(
+                idaklu_module,
+                exponential_decay_model,
+                num_threads=1,
+                num_solvers=1,
+                decay_constants=[exponential_decay_model["k"]],
+                sensitivity=True,
+                output_variables=False,
+                solver_options=solver_options,
+            )
+            return solver_data["solver"].solve(
+                np.array([0.0, 5.0]),
+                np.array([]),
+                solver_data["y0"],
+                solver_data["yp0"],
+                solver_data["inputs"],
+            )[0]
+
+        return solve
+
+    @pytest.mark.parametrize(
+        "solver_options",
+        [{}, {"hermite_sensitivities": True, "hermite_interpolation": False}],
+        ids=["by_default", "without_hermite_data"],
+    )
+    def test_not_stored(self, solve, solver_options):
+        sol = solve(**solver_options)
+
+        assert sol.yS.shape == (1, len(sol.t), 1)
+        assert sol.ypS.size == 0
+
+    def test_match_the_exact_derivative(self, solve, exponential_decay_model):
+        sol = solve(hermite_sensitivities=True)
+
+        k, y0 = exponential_decay_model["k"], exponential_decay_model["y0"]
+        # dy/dk = -t y0 exp(-k t), whose time derivative is (k t - 1) y0 exp(-k t)
+        exact = (k * sol.t - 1) * y0 * np.exp(-k * sol.t)
+        assert sol.ypS.shape == sol.yS.shape
+        # As for yp, the value at t0 is read back from IDAS's first-order first step
+        np.testing.assert_allclose(sol.ypS[0, :, 0], exact, rtol=1e-3)
+
+
 class TestSensitivityScales:
     """The optional ``pbar`` argument carrying IDAS's sensitivity scales."""
 
