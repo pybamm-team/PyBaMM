@@ -42,7 +42,7 @@ class BaseModel(BaseElectrode):
     def set_boundary_conditions(self, variables):
         Domain = self.domain.capitalize()
 
-        if self.options.electrode_types["negative"] == "planar":
+        if self.options.electrode_types[self.domain] == "planar":
             return
 
         if self.domain == "negative":

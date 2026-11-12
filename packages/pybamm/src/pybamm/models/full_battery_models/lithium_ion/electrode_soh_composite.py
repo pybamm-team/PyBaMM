@@ -10,6 +10,7 @@ import pybamm
 
 from .electrode_soh import _ElectrodeSOH, get_esoh_default_solver
 from .util import (
+    _default_initial_hysteresis_states,
     check_if_composite,
     get_equilibrium_direction,
     get_initial_ocp,
@@ -485,17 +486,13 @@ class ElectrodeSOHComposite(pybamm.BaseModel):
         else:
             raise ValueError("Invalid initialization method")
 
+        # SOC 0 and 1 are defined at the reference temperature
+        T = param.T_init if initialization_method == "voltage" else param.T_ref
+
         def U(phase_param, sto, electrode, phase):
-            if initialization_method == "voltage":
-                return get_initial_ocp(
-                    phase_param, sto, param.T_init, direction, electrode, options, phase
-                )
-            # SOC is a reference quantity, so the split does not depend on the
-            # initial hysteresis state
-            lithiation = get_lithiation_delithiation(
-                direction, electrode, options, phase
+            return get_initial_ocp(
+                phase_param, sto, T, direction, electrode, options, phase
             )
-            return phase_param.U(sto, param.T_ref, lithiation)
 
         if is_positive_composite:
             y_init_2 = variables["y_init_2"]
@@ -902,7 +899,9 @@ def get_initial_stoichiometries_composite(
         Parameter values for the simulation
     direction : str, optional
         The OCV branch to use for initial stoichiometries. Can be "charge" or
-        "discharge". Only affects x_init/y_init, not equilibrium values.
+        "discharge". Only affects x_init/y_init, not equilibrium values. If None,
+        a hysteresis phase is on the OCP at its "Initial hysteresis state" (0 if
+        unset).
     param : pybamm.LithiumIonParameters, optional
         Parameter object
     options : dict, optional
@@ -931,6 +930,7 @@ def get_initial_stoichiometries_composite(
     """
     inputs = inputs or {}
     param = param or pybamm.LithiumIonParameters(options)
+    parameter_values = _default_initial_hysteresis_states(parameter_values, options)
 
     if known_value != "cyclable lithium capacity":
         raise ValueError(
