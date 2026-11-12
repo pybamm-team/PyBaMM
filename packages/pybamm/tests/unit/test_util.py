@@ -279,6 +279,21 @@ class TestSearch:
             )
             assert fake_out.getvalue() == out
 
+        # Labels show each term without its surrounding whitespace
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search([" Electrolyte", "Potenteel "])
+            out = (
+                "Exact matches for 'Electrolyte': ['Electrolyte concentration']\n"
+                "No exact matches found for 'Potenteel'. Best matches are: ['Electrode potential']\n"
+            )
+            assert fake_out.getvalue() == out
+
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(" Electrolyte ")
+            assert fake_out.getvalue() == (
+                "Results for 'Electrolyte': ['Electrolyte concentration']\n"
+            )
+
         # Test invalid input type
         with pytest.raises(
             TypeError,
