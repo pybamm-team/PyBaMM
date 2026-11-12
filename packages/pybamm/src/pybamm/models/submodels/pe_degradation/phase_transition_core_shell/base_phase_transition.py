@@ -1,0 +1,208 @@
+#
+# Base class for the core-shell positive electrode degradation model
+#
+import pybamm
+
+
+class BasePhaseTransition(pybamm.BaseSubModel):
+    """
+    Base class for the core-shell positive electrode degradation model of
+    :footcite:t:`Zhuo2023`.
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+    domain : str
+        The domain of the model, which must be "positive"
+    options : dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
+    phase : str, optional
+        Phase of the particle (default is "primary")
+    """
+
+    def __init__(self, param, domain, options, phase="primary"):
+        super().__init__(param, domain, options=options, phase=phase)
+
+    def _get_standard_concentration_variables(
+        self, c_c, c_o, s_nd, c_c_xav=None, c_o_xav=None, s_nd_av=None
+    ):
+        """
+        Get the standard variables of the core, the shell and the phase boundary.
+
+        Parameters
+        ----------
+        c_c : :class:`pybamm.Symbol`
+            Lithium concentration in the core [mol.m-3]
+        c_o : :class:`pybamm.Symbol`
+            Oxygen concentration in the shell [mol.m-3]
+        s_nd : :class:`pybamm.Symbol`
+            Core-shell phase boundary location, normalised by the particle radius
+        c_c_xav : :class:`pybamm.Symbol`, optional
+            X-averaged lithium concentration in the core. Computed if not given.
+        c_o_xav : :class:`pybamm.Symbol`, optional
+            X-averaged oxygen concentration in the shell. Computed if not given.
+        s_nd_av : :class:`pybamm.Symbol`, optional
+            X-averaged phase boundary location. Computed if not given.
+
+        Returns
+        -------
+        dict
+            The standard variables, keyed by name.
+        """
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+
+        # Get outer (surface) and inner boundary concentration if not provided
+        # as fundamental variable to solve for
+        c_c_surf = pybamm.surf(c_c)
+        c_c_surf_av = pybamm.x_average(c_c_surf)
+        c_c_outer = c_c_surf
+        c_c_outer_av = c_c_surf_av
+
+        c_o_surf = pybamm.surf(c_o)  # i.e., c_o_outer
+        c_o_surf_av = pybamm.x_average(c_o_surf)
+        c_o_inner = pybamm.boundary_value(c_o, "left")
+        c_o_inner_av = pybamm.x_average(c_o_inner)
+
+        # Get average concentration(s) if not provided as fundamental variable to
+        # solve for
+        if c_c_xav is None:
+            c_c_xav = pybamm.x_average(c_c)
+        c_c_rav = pybamm.r_average(c_c)
+        c_c_av = pybamm.x_average(c_c_rav)
+
+        if c_o_xav is None:
+            c_o_xav = pybamm.x_average(c_o)
+        c_o_rav = self._r_average_shell(c_o, s_nd)
+        c_o_av = pybamm.x_average(c_o_rav)
+
+        if s_nd_av is None:
+            s_nd_av = pybamm.x_average(s_nd)
+
+        # Definition of loss of active material in Positive Electrode
+        # that is, the fraction of shell phase
+        lam_pe = pybamm.Scalar(1) - s_nd**3
+        lam_pe_av = pybamm.x_average(lam_pe)
+
+        c_scale = self.phase_param.c_max
+
+        variables = {
+            # Dimensional lithium concentration in the core
+            f"{Domain} {phase_name}core lithium concentration [mol.m-3]": c_c,
+            f"X-averaged {domain} {phase_name}core "
+            "lithium concentration [mol.m-3]": c_c_xav,
+            f"R-averaged {domain} {phase_name}core "
+            "lithium concentration [mol.m-3]": c_c_rav,
+            f"Average {domain} {phase_name}core "
+            "lithium concentration [mol.m-3]": c_c_av,
+            f"{Domain} {phase_name}core surface "
+            "lithium concentration [mol.m-3]": c_c_surf,
+            f"X-averaged {domain} {phase_name}core surface "
+            "lithium concentration [mol.m-3]": c_c_surf_av,
+            f"{Domain} {phase_name}core outer boundary "
+            "lithium concentration [mol.m-3]": c_c_outer,
+            f"X-averaged {domain} {phase_name}core outer boundary "
+            "lithium concentration [mol.m-3]": c_c_outer_av,
+            f"Minimum {domain} {phase_name}core concentration [mol.m-3]": pybamm.min(
+                c_c
+            ),
+            f"Maximum {domain} {phase_name}core concentration [mol.m-3]": pybamm.max(
+                c_c
+            ),
+            f"Minimum {domain} {phase_name}core "
+            "surface concentration [mol.m-3]": pybamm.min(c_c_surf),
+            f"Maximum {domain} {phase_name}core "
+            "surface concentration [mol.m-3]": pybamm.max(c_c_surf),
+            # Dimensionless concentration
+            f"{Domain} {phase_name}core lithium concentration": c_c / c_scale,
+            f"X-averaged {domain} {phase_name}core lithium concentration": c_c_xav
+            / c_scale,
+            f"R-averaged {domain} {phase_name}core lithium concentration": c_c_rav
+            / c_scale,
+            f"Average {domain} {phase_name}core lithium concentration": c_c_av
+            / c_scale,
+            f"{Domain} {phase_name}core surface lithium concentration": c_c_surf
+            / c_scale,
+            f"X-averaged {domain} {phase_name}core "
+            "surface lithium concentration": c_c_surf_av / c_scale,
+            # Stoichiometry (equivalent to dimensionless concentration)
+            f"{Domain} {phase_name}core lithium stoichiometry": c_c / c_scale,
+            f"X-averaged {domain} {phase_name}core lithium stoichiometry": c_c_xav
+            / c_scale,
+            f"R-averaged {domain} {phase_name}core lithium stoichiometry": c_c_rav
+            / c_scale,
+            f"Average {domain} {phase_name}core lithium stoichiometry": c_c_av
+            / c_scale,
+            f"{Domain} {phase_name}core surface lithium stoichiometry": c_c_surf
+            / c_scale,
+            f"X-averaged {domain} {phase_name}core "
+            "surface lithium stoichiometry": c_c_surf_av / c_scale,
+            # Dimensional oxygen concentration in the shell
+            f"{Domain} {phase_name}shell oxygen concentration [mol.m-3]": c_o,
+            f"X-averaged {domain} {phase_name}shell "
+            "oxygen concentration [mol.m-3]": c_o_xav,
+            f"R-averaged {domain} {phase_name}shell "
+            "oxygen concentration [mol.m-3]": c_o_rav,
+            f"Average {domain} {phase_name}shell "
+            "oxygen concentration [mol.m-3]": c_o_av,
+            f"{Domain} {phase_name}shell inner boundary "
+            "oxygen concentration [mol.m-3]": c_o_inner,
+            f"X-averaged {domain} {phase_name}shell inner boundary "
+            "oxygen concentration [mol.m-3]": c_o_inner_av,
+            f"{Domain} {phase_name}shell surface "
+            "oxygen concentration [mol.m-3]": c_o_surf,
+            f"X-averaged {domain} {phase_name}shell surface "
+            "oxygen concentration [mol.m-3]": c_o_surf_av,
+            # Core-shell phase boundary
+            f"{Domain} {phase_name}particle moving phase boundary location": s_nd,
+            f"X-averaged {domain} {phase_name}particle "
+            "moving phase boundary location": s_nd_av,
+            # Loss of active material (LAM) due to progressing of s
+            # the shell is considered as LAM
+            "Loss of active material due to PE phase transition": lam_pe,
+            "X-averaged loss of active material due to PE phase transition": lam_pe_av,
+            # Read by the interface and open-circuit potential submodels
+            f"{Domain} {phase_name}particle surface concentration [mol.m-3]": c_c_surf,
+            f"{Domain} {phase_name}particle surface stoichiometry": c_c_surf / c_scale,
+        }
+
+        return variables
+
+    def _r_average_shell(self, symbol, s_nd):
+        """
+        Volume-weighted r-average over the shell.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The symbol to average, defined on a shell domain
+        s_nd : :class:`pybamm.Symbol`
+            Core-shell phase boundary location, normalised by the particle radius
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            The r-averaged symbol
+
+        Raises
+        ------
+        :class:`pybamm.DomainError`
+            If the primary domain of ``symbol`` is not a shell domain.
+        """
+        if symbol.domain != [] and symbol.domain[0].endswith("shell"):
+            # need to inherit the secondary domains for the multiplication with
+            # s_nd with primary domain of 'positive electrode'
+            r_sh = pybamm.SpatialVariable("r_sh", domains=symbol.domains)
+            v = pybamm.ones_like(symbol)
+            R_typ = self.phase_param.R_typ
+            # Constant factors of the volume element cancel in the ratio
+            coeff = ((1 - s_nd) * r_sh + s_nd * R_typ) ** 2
+            return pybamm.Integral(coeff * symbol, r_sh) / pybamm.Integral(
+                coeff * v, r_sh
+            )
+        else:
+            raise pybamm.DomainError(
+                "Domain must include 'shell' for the core-shell model."
+            )

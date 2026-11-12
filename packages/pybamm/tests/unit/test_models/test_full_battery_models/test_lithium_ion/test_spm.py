@@ -48,6 +48,9 @@ class TestSPM(BaseUnitTestLithiumIon):
         options = {"surface form": "algebraic", "particle size": "distribution"}
         self.check_well_posedness(options)
 
+    def test_well_posed_pe_phase_transition(self):
+        self.check_well_posedness({"PE degradation": "phase transition"})
+
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
         new_model = model.new_copy()

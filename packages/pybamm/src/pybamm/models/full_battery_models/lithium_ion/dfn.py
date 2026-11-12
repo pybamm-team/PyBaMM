@@ -52,6 +52,13 @@ class DFN(BaseModel):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "planar":
                 continue
+            # set_pe_degradation_submodel sets the positive particle submodel instead
+            if (
+                domain == "positive"
+                and self.options["PE degradation"] == "phase transition"
+            ):
+                continue
+
             particle = getattr(self.options, domain)["particle"]
             for phase in self.options.phases[domain]:
                 if particle == "Fickian diffusion":
