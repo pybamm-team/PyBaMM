@@ -2,14 +2,14 @@
 
 use std::sync::Arc;
 
-use crate::arena::{Arena, DagRef};
+use crate::arena::DagRef;
 use crate::error::CoreError;
 use crate::eval::CompiledExpr;
 use crate::ir::TypedIr;
 use crate::jacobian::{JacobianData, JacobianScratch};
 use crate::simplify::{dce, simplify_pipeline};
 
-use super::{AlgebraicBlockSpec, CompiledModel, FOREIGN_WORKSPACE, Workspace, verify_state_extent};
+use super::{CompiledModel, FOREIGN_WORKSPACE, Workspace, verify_state_extent};
 
 /// The compiled algebraic residual `g(t, y)` and `dg/dy_alg`, for consistent initialisation.
 #[derive(Debug)]
@@ -103,39 +103,36 @@ impl AlgebraicScratch {
 }
 
 impl CompiledModel {
-    /// Compile the algebraic residual and its Jacobian over the algebraic columns.
+    /// Compile `residual` and its Jacobian over the `variable_indices` columns.
     ///
-    /// The block must be square: the Newton drivers factorise `dg/dy_alg` as `n_alg x n_alg`.
+    /// `residual` is simplified once, and its tape and Jacobian derive from that graph. The block
+    /// must be square: the Newton drivers factorise `dg/dy_alg` as `n_alg x n_alg`.
     pub(super) fn compile_algebraic_block(
         &mut self,
-        arena: &Arena,
-        spec: AlgebraicBlockSpec<'_>,
+        residual: DagRef<'_>,
+        variable_indices: &[usize],
     ) -> Result<(), CoreError> {
-        let AlgebraicBlockSpec {
-            residual: algebraic,
-            variable_indices,
-        } = spec;
-        let algebraic = DagRef::new(arena, algebraic);
-        verify_state_extent(algebraic, self.n_states)?;
+        verify_state_extent(residual, self.n_states)?;
         self.verify_algebraic_indices(variable_indices)?;
-        let algebraic_dag = simplify_pipeline(dce(algebraic));
-        let algebraic_ir = TypedIr::from_dag(algebraic_dag.as_ref());
-        let n_rows = algebraic_ir.output_len();
+        let simplified = simplify_pipeline(dce(residual));
+        let residual_ir = TypedIr::from_dag(simplified.as_ref());
+        let n_rows = residual_ir.output_len();
         if n_rows != variable_indices.len() {
             return Err(CoreError::AlgebraicBlockNotSquare {
                 rows: n_rows,
                 columns: variable_indices.len(),
             });
         }
-        let residual = Arc::new(CompiledExpr::from_ir(algebraic_ir));
-
         let jac = Arc::new(JacobianData::new_wrt_state_subset(
-            algebraic_dag.as_ref(),
+            simplified.as_ref(),
             n_rows,
             self.n_states,
             variable_indices,
         ));
-        self.algebraic = Some(AlgebraicBlock { residual, jac });
+        self.algebraic = Some(AlgebraicBlock {
+            residual: Arc::new(CompiledExpr::from_ir(residual_ir)),
+            jac,
+        });
         Ok(())
     }
 
@@ -175,7 +172,7 @@ mod tests {
         element, identity_mass_matrix, input, split_algebraic_model,
     };
     use super::*;
-    use crate::arena::NodeId;
+    use crate::arena::{Arena, NodeId};
     use crate::jacobian::tests::banded_nonlinear;
     use crate::model::CompiledModelOptions;
     use crate::node::{CsrData, Node, Shape};
