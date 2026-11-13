@@ -29,7 +29,7 @@
 
 ## Bug fixes
 
-- `latexify` no longer produces invalid LaTeX ("Double superscript") for the boundary value or boundary gradient of an expression that already has a superscript, such as a Bruggeman-corrected porosity in the DFN model. ([#5151](https://github.com/pybamm-team/PyBaMM/issues/5151))
+- `latexify` no longer produces invalid LaTeX ("Double superscript") for the boundary value or boundary gradient of an expression that already has a superscript, such as a Bruggeman-corrected porosity in the DFN model. ([#6043](https://github.com/pybamm-team/PyBaMM/pull/6043))
 - An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
 - `pybamm.parameter_sets` and `pybamm.dispatch.models` now list names in sorted order. Before, the order depended on which installed package was found first. ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
 - `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))
