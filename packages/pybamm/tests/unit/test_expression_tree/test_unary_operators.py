@@ -850,6 +850,15 @@ class TestUnaryOperators:
         grad_json["children"] = [grad.children[0]]
         assert pybamm.Gradient._from_json(grad_json) == grad
 
+        # Test that the no_simplification flag is restored correctly
+        div = pybamm.Divergence(grad)
+        div_json = div.to_json()
+        div_json["children"] = [grad]
+        div_json.pop("no_simplification")
+        restored_div = pybamm.Divergence._from_json(div_json)
+        assert restored_div == div
+        assert restored_div.no_simplification is False
+
         # ExplicitTimeIntegral
         param = pybamm.Parameter("param")
         ic = pybamm.Scalar(1)

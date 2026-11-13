@@ -416,3 +416,15 @@ def import_optional_dependency(module_name, attribute=None):
     except ModuleNotFoundError as error:
         # Raise an ModuleNotFoundError if the module or attribute is not available
         raise ModuleNotFoundError(err_msg) from error
+
+
+def _is_flux_boundary_condition(bc_type):
+    """
+    Check if a boundary condition is a flux boundary condition.
+    Retruns True if bc_type is a tuple of the form ("Flux", pybamm.Symbol), False otherwise.
+    """
+    return (
+        isinstance(bc_type, tuple)
+        and bc_type[0] == "Flux"
+        and isinstance(bc_type[1], pybamm.Symbol)
+    )

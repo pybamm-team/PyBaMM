@@ -11,6 +11,7 @@ from scipy.sparse import block_diag, csr_matrix
 
 import pybamm
 from pybamm.models.base_model import ModelSolutionObservability
+from pybamm.util import _is_flux_boundary_condition
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -609,6 +610,35 @@ class Discretisation:
 
         return processed_initial_conditions, processed_concatenated_initial_conditions
 
+    def _check_valid_flux_bcs(self, model):
+        """Check that all flux boundary conditions have a matching div(flux) expression in the model.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            Model to check. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If a flux boundary condition does not have a matching div(flux) expression in the model.
+        """
+        div_children = []
+        for equation in itertools.chain(model.rhs.values(), model.algebraic.values()):
+            for symbol in equation.pre_order():
+                if isinstance(symbol, pybamm.Divergence):
+                    div_children.append(symbol.child)
+
+        for key, bcs in model.boundary_conditions.items():
+            for side, bc in bcs.items():
+                if _is_flux_boundary_condition(bc[1]) and bc[1][1] not in div_children:
+                    raise pybamm.ModelError(
+                        f"There is no matching flux for the flux boundary condition for"
+                        f" '{key.name}' with boundary '{side}'. The boundary condition cannot be applied."
+                        " Check the flux symbol and use div(flux, no_simplification=True)."
+                    )
+
     def process_boundary_conditions(self, model):
         """Discretise model boundary_conditions, also converting keys to ids
 
@@ -624,7 +654,7 @@ class Discretisation:
             Dictionary of processed boundary conditions
 
         """
-
+        self._check_valid_flux_bcs(model)
         processed_bcs = {}
 
         # process and set pybamm.variables first incase required

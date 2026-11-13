@@ -8,6 +8,7 @@ import numpy as np
 
 import pybamm
 from pybamm.models.base_model import ModelSolutionObservability
+from pybamm.util import _is_flux_boundary_condition
 
 if TYPE_CHECKING:
     from pybamm.type_definitions import Numeric
@@ -577,6 +578,9 @@ class ParameterSubstitutor:
                 pybamm.logger.verbose(
                     f"Processing parameters for {variable!r} ({side} bc)"
                 )
+                if _is_flux_boundary_condition(typ):
+                    # Flux boundary conditions are specified as a tuple ("Flux", symbol)
+                    typ = (typ[0], self.process_symbol(typ[1]))
                 new_boundary_conditions[processed_variable][side] = (
                     self.process_symbol(bc),
                     typ,

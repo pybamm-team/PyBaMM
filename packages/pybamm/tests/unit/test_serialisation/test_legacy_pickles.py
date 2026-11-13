@@ -12,6 +12,7 @@ import pathlib
 import pickle
 
 import numpy as np
+import pytest
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import convert_symbol_to_json
@@ -25,7 +26,15 @@ def _load(name):
 
 
 class TestLegacyPickles:
-    def test_every_symbol_class_loads(self):
+    @pytest.fixture
+    def new_properties(self):
+        """
+        Return a dict of new properties added to symbol classes since the pre-slot release.
+        The keys are the class names, and the values are dicts of property names and their default values.
+        """
+        return {"Divergence": {"no_simplification": False}}
+
+    def test_every_symbol_class_loads(self, new_properties):
         cases = _load("symbols.pkl.gz")
         assert len(cases) > 50
         for (class_name, _), case in cases.items():
@@ -34,8 +43,15 @@ class TestLegacyPickles:
             assert {k: list(v) for k, v in symbol.domains.items()} == case["domains"]
             assert str(symbol) == case["str"]
             assert pybamm.replace(symbol, {}) is symbol
+            # Check that any new properties added to the class are set to their default values
+            new_props = new_properties.get(class_name, {})
+            json_dict = convert_symbol_to_json(symbol)
+            for prop, value in new_props.items():
+                assert getattr(symbol, prop) == value
+                assert json_dict.get(prop) == value
+                json_dict.pop(prop, None)  # remove the new property from the json dict
             # the whole tree, entries included, exactly as the pre-slot release wrote it
-            assert json.dumps(convert_symbol_to_json(symbol)) == case["json"]
+            assert json.dumps(json_dict) == case["json"]
 
     def test_saved_simulation_solves_identically(self):
         sim = _load("spm_simulation.pkl.gz")

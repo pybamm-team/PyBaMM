@@ -19,6 +19,7 @@ import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.models.event import EventType
 from pybamm.models.symbol_processor import SymbolProcessor
+from pybamm.util import _is_flux_boundary_condition
 
 _SymbolT = TypeVar("_SymbolT", bound="pybamm.Symbol")
 
@@ -2711,9 +2712,12 @@ class BoundaryConditionsDict(dict):
                     eqn, typ = bc
                     boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
                 # Check types
-                if bc[1] not in ["Dirichlet", "Neumann"]:
+                if bc[1] not in [
+                    "Dirichlet",
+                    "Neumann",
+                ] and not _is_flux_boundary_condition(bc[1]):
                     raise pybamm.ModelError(
-                        f"boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'"
+                        f"boundary condition types must be Dirichlet, Neumann or ('Flux', pybamm.Symbol), not '{bc[1]}'"
                     )
 
         return boundary_conditions
