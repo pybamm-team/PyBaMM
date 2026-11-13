@@ -204,15 +204,12 @@ class TestIDAKLUSolver:
             solver.solve(model, np.linspace(0, 1, 10), inputs=inputs_list)
         assert re.findall(r"input set (\d+): ", str(error.value)) == ["1", "3"]
 
-    # Without sensitivities, IDAS's Newton test fails on a NaN residual itself
-    @pytest.mark.parametrize(
-        ("calculate_sensitivities", "flag"),
-        [(False, "IDA_CONV_FAIL"), (True, "IDA_REP_RES_ERR")],
-    )
-    def test_a_single_input_set_failure_is_named(self, calculate_sensitivities, flag):
-        # The first step's own error, not IDA_BAD_K from reading back that step
+    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
+    def test_a_single_input_set_failure_is_named(self, calculate_sensitivities):
+        # The first step's own error, not IDA_BAD_K from reading back that step.
+        # IDAS's Newton test fails on a NaN residual itself
         with pytest.raises(
-            pybamm.SolverError, match=rf"^input set 0: IDASolve at t0: {flag}"
+            pybamm.SolverError, match=r"^input set 0: IDASolve at t0: IDA_CONV_FAIL"
         ):
             pybamm.IDAKLUSolver().solve(
                 get_broken_input_model(),
@@ -3182,8 +3179,8 @@ class TestIDAKLUNonFiniteResiduals:
         return model
 
     def test_a_nan_iterate_is_rejected_with_sensitivities(self):
-        # The sensitivity corrector's convergence norm drops NaN, so only the
-        # residual check stops a NaN state being accepted here
+        # IDAS's simultaneous sensitivity corrector accepted a NaN state here, as
+        # its convergence norm drops NaN
         model = self._square_root_decay_model()
         t_eval = np.linspace(0, 5, 6)
         inputs = {"a": 10.0, "b": 1e-3}
@@ -3239,13 +3236,9 @@ class TestIDAKLUNonFiniteResiduals:
                 calculate_sensitivities=calculate_sensitivities,
             )
 
-    # Without sensitivities, IDAS's Newton test fails on a NaN residual itself
-    @pytest.mark.parametrize(
-        ("calculate_sensitivities", "flag"),
-        [(False, "IDA_CONV_FAIL"), (True, "IDA_REP_RES_ERR")],
-    )
+    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
     def test_a_failing_step_after_a_breakpoint_reports_its_own_error(
-        self, calculate_sensitivities, flag
+        self, calculate_sensitivities
     ):
         # Smooth up to the breakpoint at t = 0.5 and NaN after it, where the
         # restarted solver has no step to read back the derivatives of
@@ -3257,7 +3250,8 @@ class TestIDAKLUNonFiniteResiduals:
         model.variables = {"u": u}
         pybamm.Discretisation().process_model(model)
 
-        with pytest.raises(pybamm.SolverError, match=rf"^input set 0: {flag}"):
+        # IDAS's Newton test fails on a NaN residual itself
+        with pytest.raises(pybamm.SolverError, match=r"^input set 0: IDA_CONV_FAIL"):
             pybamm.IDAKLUSolver().solve(
                 model,
                 np.linspace(0, 1, 5),

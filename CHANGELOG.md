@@ -29,6 +29,7 @@
 
 ## Bug fixes
 
+- `IDAKLUSolver` solves forward sensitivities with IDAS's staggered corrector instead of the simultaneous one, so sensitivity solves at tight tolerances no longer fail with `IDA_CONV_FAIL`. ([#6045](https://github.com/pybamm-team/PyBaMM/pull/6045))
 - An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
 - `pybamm.parameter_sets` and `pybamm.dispatch.models` now list names in sorted order. Before, the order depended on which installed package was found first. ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
 - `IDAKLUSolver` with `num_threads > 1` no longer fails with `invalid vector subscript` or crashes on Windows. Each solver thread now copies the algebraic initial-condition functions instead of sharing them. ([#6026](https://github.com/pybamm-team/PyBaMM/pull/6026))

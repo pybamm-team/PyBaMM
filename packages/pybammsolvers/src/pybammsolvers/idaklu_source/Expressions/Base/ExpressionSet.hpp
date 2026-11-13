@@ -81,7 +81,6 @@ public:
 
   // While set, a residual or sensitivity residual with a NaN or inf entry
   // returns a recoverable failure
-  bool reject_nonfinite_residual = false;  // cppcheck-suppress unusedStructMember
   bool reject_nonfinite_sensitivities = false;  // cppcheck-suppress unusedStructMember
 
   virtual sunrealtype *get_tmp_state_vector() = 0;

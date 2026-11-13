@@ -328,12 +328,6 @@ public:
   void ReinitializeIntegrator(const sunrealtype& t_val);
 
   /**
-   * @brief The IDAS sensitivity corrector: IDA_STAGGERED with sensitivity
-   * error control, else IDA_SIMULTANEOUS
-   */
-  int SensitivityMethod() const;
-
-  /**
    * @brief Hand IDAS the per-parameter scales held in sens_scales_.
    *
    * Must run after every IDASensInit/IDASensReInit, both of which reset pbar

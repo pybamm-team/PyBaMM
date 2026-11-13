@@ -35,12 +35,6 @@ int residual_eval(sunrealtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void 
   DEBUG_VECTORn(rr, 100);
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
-
-  // A recoverable failure makes IDAS cut the step; with simultaneous sensitivities
-  // its corrector norm drops NaN, so a NaN iterate would otherwise be accepted
-  if (p_python_functions->reject_nonfinite_residual && !all_finite(ns, NV_DATA(rr))) {
-    return 1;
-  }
   return 0;
 }
 
