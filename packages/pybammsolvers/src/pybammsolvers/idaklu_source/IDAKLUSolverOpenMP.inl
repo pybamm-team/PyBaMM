@@ -157,7 +157,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetSolverOptions() {
 
   // Maximum number of nonlinear solver iterations at one step
   CheckErrors(IDASetMaxNonlinIters(ida_mem, solver_opts.max_nonlinear_iterations), "IDASetMaxNonlinIters");
-  if (sensitivity && SensitivityMethod() == IDA_STAGGERED) {
+  if (sensitivity) {
     // The staggered corrector solves the sensitivities with a solver of its own
     CheckErrors(IDASetSensMaxNonlinIters(ida_mem, solver_opts.max_nonlinear_iterations),
                 "IDASetSensMaxNonlinIters");
@@ -268,7 +268,10 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   }
 
   if (sensitivity) {
-    CheckErrors(IDASensInit(ida_mem, number_of_parameters, SensitivityMethod(),
+    // The staggered corrector converges the states before the sensitivities.
+    // The simultaneous one's block-diagonal Newton matrix fails at tight
+    // tolerances, and IDAS only applies the sensitivity error test in this one
+    CheckErrors(IDASensInit(ida_mem, number_of_parameters, IDA_STAGGERED,
       sensitivities_eval<ExprSet>, yyS, yypS), "IDASensInit");
     CheckErrors(IDASensEEtolerances(ida_mem), "IDASensEEtolerances");
     // Set once: IDASensReInit leaves it as it is
@@ -472,10 +475,6 @@ int IDAKLUSolverOpenMP<ExprSet>::Step(sunrealtype tout, sunrealtype &t_val) {
     RejectNonfinite(const RejectNonfinite &) = delete;
     RejectNonfinite &operator=(const RejectNonfinite &) = delete;
   };
-  // Only the simultaneous corrector's norm drops a NaN state; the staggered one
-  // retries a failed residual at a converged state without restoring the step
-  RejectNonfinite const residual(functions->reject_nonfinite_residual,
-                                 sensitivity && SensitivityMethod() == IDA_SIMULTANEOUS);
   // IDAS's sensitivity norm drops a NaN for any parameter after the first
   RejectNonfinite const sensitivities(functions->reject_nonfinite_sensitivities,
                                       sensitivity);
@@ -985,16 +984,9 @@ void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const sunrealtype& t_va
   DEBUG("IDAKLUSolver::ReinitializeIntegrator");
   CheckErrors(IDAReInit(ida_mem, t_val, yy, yyp), "IDAReInit");
   if (sensitivity) {
-    CheckErrors(IDASensReInit(ida_mem, SensitivityMethod(), yyS, yypS), "IDASensReInit");
+    CheckErrors(IDASensReInit(ida_mem, IDA_STAGGERED, yyS, yypS), "IDASensReInit");
     ApplySensitivityScales();
   }
-}
-
-template <class ExprSet>
-int IDAKLUSolverOpenMP<ExprSet>::SensitivityMethod() const {
-  // IDAS only applies the sensitivity error test in its staggered corrector;
-  // the simultaneous one, faster per step, leaves them to its Newton test
-  return solver_opts.sensitivity_error_control ? IDA_STAGGERED : IDA_SIMULTANEOUS;
 }
 
 template <class ExprSet>
