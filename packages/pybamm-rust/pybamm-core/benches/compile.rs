@@ -1,6 +1,8 @@
 mod helpers;
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use std::hint::black_box;
+
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use helpers::{build_coupled, identity_mass_matrix, slot_stats};
 use pybamm_core::{
     Arena, CompiledModel, CompiledModelOptions, DagRef, Node, NodeId, PackedWidth, TypedIr,

@@ -3,9 +3,10 @@
 
 mod helpers;
 
+use std::hint::black_box;
 use std::sync::Arc;
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use pybamm_core::ffi::{pybamm_rust_jac_action_batch, pybamm_rust_output_sens_project};
 use pybamm_core::{
     Arena, CompiledModel, CompiledModelOptions, CsrData, DagRef, DagSnapshot, InterpolantData,
