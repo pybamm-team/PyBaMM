@@ -2,7 +2,9 @@
 
 mod helpers;
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use std::hint::black_box;
+
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use helpers::identity_mass_matrix;
 use pybamm_core::solver::solve::{InputSet, PreparedSolver, SolveRequest};
 use pybamm_core::{
