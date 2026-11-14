@@ -105,7 +105,8 @@ fn pool_for_with(
 
 /// The cached pools as `{thread_count: pool identity}`, for tests.
 #[pyfunction]
-pub fn _pool_ids(py: Python<'_>) -> PyResult<Py<PyDict>> {
+#[pyo3(name = "_pool_ids")]
+pub fn pool_ids(py: Python<'_>) -> PyResult<Py<PyDict>> {
     let dict = PyDict::new(py);
     // Integer keys run no Python, so `set_item` cannot re-enter `pool_for` under the lock.
     for (threads, pool) in &lock_cache().pools {
