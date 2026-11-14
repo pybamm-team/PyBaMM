@@ -21,7 +21,7 @@ pulp = "0.22"
 proptest = "1"
 
 [features]
-serialize = ["serde", "bincode"]
+serialize = ["dep:serde", "dep:bincode"]
 
 [lints]
 workspace = true
