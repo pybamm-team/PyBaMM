@@ -363,8 +363,9 @@ impl CompiledModel {
 
     /// Rebuild from the retained graph, roots and mass CSR (pickle protocol).
     #[staticmethod]
+    #[pyo3(name = "_rebuild")]
     #[allow(clippy::too_many_arguments)]
-    fn _rebuild(
+    fn rebuild(
         py: Python<'_>,
         graph: Py<ExprGraph>,
         rhs_root: u32,
@@ -684,15 +685,14 @@ impl CompiledModel {
     }
 
     /// CSR `(indptr, indices)` of `df/dy` merged with the mass pattern.
-    #[allow(clippy::type_complexity)]
     fn sparsity_pattern<'py>(
         &self,
         py: Python<'py>,
-    ) -> PyResult<(Bound<'py, PyArray1<usize>>, Bound<'py, PyArray1<usize>>)> {
+    ) -> (Bound<'py, PyArray1<usize>>, Bound<'py, PyArray1<usize>>) {
         let pattern = self.compiled.sparsity();
         let indptr = PyArray1::from_vec(py, pattern.indptr().to_vec());
         let indices = PyArray1::from_vec(py, pattern.indices().to_vec());
-        Ok((indptr, indices))
+        (indptr, indices)
     }
 
     /// Number of colors in the Jacobian coloring, reduced when dense rows are split out.
@@ -779,15 +779,14 @@ impl CompiledModel {
     }
 
     /// Get the CSC sparsity pattern as `(colptr, rowind)`.
-    #[allow(clippy::type_complexity)]
     fn csc_sparsity_pattern<'py>(
         &self,
         py: Python<'py>,
-    ) -> PyResult<(Bound<'py, PyArray1<usize>>, Bound<'py, PyArray1<usize>>)> {
+    ) -> (Bound<'py, PyArray1<usize>>, Bound<'py, PyArray1<usize>>) {
         let csc = self.compiled.csc_sparsity();
         let colptr = PyArray1::from_vec(py, csc.colptr().to_vec());
         let rowind = PyArray1::from_vec(py, csc.rowind().to_vec());
-        Ok((colptr, rowind))
+        (colptr, rowind)
     }
 
     /// `n` independent evaluators over this model's tape, one per parallel solver.
