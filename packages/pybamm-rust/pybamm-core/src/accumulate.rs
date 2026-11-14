@@ -12,10 +12,10 @@ pub trait Accumulate {
 }
 
 /// `acc + a * b` with a single rounding.
-pub enum Fused {}
+pub struct Fused;
 
 /// `acc + a * b` with the product and the sum each rounded.
-pub enum Unfused {}
+pub struct Unfused;
 
 impl Accumulate for Fused {
     #[inline(always)]

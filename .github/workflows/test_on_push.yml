@@ -214,8 +214,8 @@ jobs:
       # Pinned, as each Rust release adds pedantic and nursery lints that `-D warnings` fails on.
       - name: Install the pinned Rust toolchain
         run: |
-          rustup toolchain install 1.99.1 --profile minimal --component clippy,rustfmt --no-self-update
-          rustup default 1.99.1
+          rustup toolchain install 1.100.0 --profile minimal --component clippy,rustfmt --no-self-update
+          rustup default 1.100.0
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           workspaces: packages/pybamm-rust
