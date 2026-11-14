@@ -55,8 +55,7 @@ pub fn default_solver_options(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
 
 /// BDF solver statistics exposed to Python.
 #[derive(Debug, Clone)]
-// Output-only type: opt out of the automatic `FromPyObject` derive.
-#[pyclass(get_all, skip_from_py_object, module = "pybamm.rust")]
+#[pyclass(get_all, module = "pybamm.rust")]
 pub struct SolverStatistics {
     number_of_steps: usize,
     number_of_linear_solver_setups: usize,

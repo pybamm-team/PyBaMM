@@ -34,7 +34,7 @@ fn core_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_class::<solver::SolverStatistics>()?;
         m.add_class::<solver::SolveOutcome>()?;
         m.add_function(wrap_pyfunction!(solver::default_solver_options, m)?)?;
-        m.add_function(wrap_pyfunction!(rayon_pool::_pool_ids, m)?)?;
+        m.add_function(wrap_pyfunction!(rayon_pool::pool_ids, m)?)?;
     }
 
     Ok(())
