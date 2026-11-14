@@ -754,7 +754,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn linear_row_folds_to_exact_coefficients() {
         let mut arena = Arena::new();
         let y0 = arena.alloc(Node::StateVector { start: 0, end: 1 });
@@ -773,7 +772,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn array_factor_scales_each_element() {
         let mut arena = Arena::new();
         let y = arena.alloc(Node::StateVector { start: 0, end: 3 });
@@ -791,7 +789,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn sparse_matmul_folds_matrix_entries() {
         let n = 4;
         let mut arena = Arena::new();
@@ -854,7 +851,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn structurally_present_but_absent_entries_classify_as_zero() {
         // `0 * y0` keeps `y0` in the pattern but differentiates to nothing.
         let mut arena = Arena::new();

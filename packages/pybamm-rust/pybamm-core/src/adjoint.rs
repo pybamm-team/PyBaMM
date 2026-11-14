@@ -194,7 +194,6 @@ impl AdjointTape {
 ///
 /// `x^0` is constant, so its adjoint is zero even where `0 * x^-1` is not, as forward mode
 /// takes it. Pinned slots are written once, so a slot a zero literal loads stays zero.
-#[allow(clippy::float_cmp)]
 fn inert_instructions(ir: &TypedIr) -> Vec<bool> {
     let mut zero_literal = vec![false; ir.buffer_size()];
     for instr in ir.instructions() {

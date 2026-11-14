@@ -250,7 +250,6 @@ mod tests {
     use crate::node::{CsrData, Shape};
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn matvec_takes_each_rows_dot_product() {
         // diag(2, 3), then [[1, 2, 0], [3, 4, 5], [0, 6, 7]].
         let cases = [
