@@ -1755,17 +1755,17 @@ mod tests {
                 let v = (-a * t).exp();
                 let got = &result.y[j * result.n_rows..(j + 1) * result.n_rows];
                 assert!(
-                    (got[0] - v).abs() < 1e-5,
+                    (got[0] - v).abs() < 2e-6,
                     "v({t}) = {} but expected {v}",
                     got[0]
                 );
-                assert!((got[1] - sign * v).abs() < 1e-5, "z({t}) = {}", got[1]);
+                assert!((got[1] - sign * v).abs() < 2e-6, "z({t}) = {}", got[1]);
                 if let Some(sens) = &result.sensitivities {
                     let dv_da = -t * v;
                     let got = &sens[0][j * result.n_rows..(j + 1) * result.n_rows];
-                    assert!((got[0] - dv_da).abs() < 1e-5, "dv/da({t}) = {}", got[0]);
+                    assert!((got[0] - dv_da).abs() < 5e-6, "dv/da({t}) = {}", got[0]);
                     assert!(
-                        (got[1] - sign * dv_da).abs() < 1e-5,
+                        (got[1] - sign * dv_da).abs() < 5e-6,
                         "dz/da({t}) = {}",
                         got[1]
                     );
@@ -1801,8 +1801,8 @@ mod tests {
             );
             assert_eq!(result.t, times[..4]);
             let event_state = result.y_event.expect("event state");
-            assert!((event_state[0] - (-0.05_f64).exp()).abs() < 1e-6);
-            assert!((event_state[1] + (-0.05_f64).exp()).abs() < 1e-6);
+            assert!((event_state[0] - (-0.05_f64).exp()).abs() < 2e-9);
+            assert!((event_state[1] + (-0.05_f64).exp()).abs() < 2e-9);
         }
     }
 
@@ -1828,8 +1828,8 @@ mod tests {
             let yp = result.yp.expect("yp requested");
             let root = &yp[3 * result.n_rows..];
             let v = (-a * above).exp();
-            assert!((root[0] + a * v).abs() < 1e-6, "dv/dt = {}", root[0]);
-            assert!((root[1] - a * v).abs() < 1e-6, "dz/dt = {}", root[1]);
+            assert!((root[0] + a * v).abs() < 2e-10, "dv/dt = {}", root[0]);
+            assert!((root[1] - a * v).abs() < 2e-10, "dz/dt = {}", root[1]);
         }
     }
 
@@ -1894,12 +1894,12 @@ mod tests {
                     .solve(request, InputSet::new(&[1.0, 1.0], &[a]))
                     .expect("a switch at the final time must not stall the solve");
                 let end = &result.y[3 * result.n_rows..];
-                assert!((end[0] - v).abs() < 1e-6, "v = {}, {request:?}", end[0]);
-                assert!((end[1] + v).abs() < 1e-6, "z = {}, {request:?}", end[1]);
+                assert!((end[0] - v).abs() < 2e-9, "v = {}, {request:?}", end[0]);
+                assert!((end[1] + v).abs() < 2e-9, "z = {}, {request:?}", end[1]);
                 if let Some(blocks) = &result.sensitivities {
                     // dz/da = -dv/da = t v on the new branch.
                     let dz_da = blocks[0][3 * result.n_rows + 1];
-                    assert!((dz_da - 0.5 * v).abs() < 1e-5, "dz/da = {dz_da}");
+                    assert!((dz_da - 0.5 * v).abs() < 1e-8, "dz/da = {dz_da}");
                 }
             }
         }
@@ -1945,7 +1945,7 @@ mod tests {
         let z = result.y[j * result.n_rows + 1];
         let expected = (-a).exp() + 3.0;
         assert!(
-            (z - expected).abs() < 1e-5,
+            (z - expected).abs() < 5e-7,
             "z(1) = {z} but expected {expected}"
         );
     }
@@ -1984,12 +1984,12 @@ mod tests {
             .expect("solve");
 
         assert!(
-            (result.y_start[1] - 1.0).abs() < 1e-5,
+            (result.y_start[1] - 1.0).abs() < 2e-6,
             "z(0) = {}",
             result.y_start[1]
         );
         let yp = result.yp.expect("yp requested");
-        assert!((yp[0] + 1.0).abs() < 1e-9, "dy/dt(0) = {}", yp[0]);
+        assert_eq!(yp[0], -1.0, "dy/dt(0)");
         assert!((yp[1] + 0.5).abs() < 1e-6, "dz/dt(0) = {}", yp[1]);
     }
 
@@ -2146,7 +2146,7 @@ mod tests {
                 .solve(request, InputSet::new(&[1.0, 0.0], &[1.0]))
                 .expect("solve");
             let yp = result.yp.expect("yp requested");
-            assert!((yp[1] - 1.0).abs() < 1e-12, "dz/dt(0) = {}", yp[1]);
+            assert_eq!(yp[1], 1.0, "dz/dt(0)");
         }
     }
 
@@ -2175,7 +2175,7 @@ mod tests {
                 for row in 0..result.n_rows {
                     let got = yp[j * result.n_rows + row];
                     assert!(
-                        (got - expected).abs() <= 1e-6 * expected.abs(),
+                        (got - expected).abs() <= 2e-8 * expected.abs(),
                         "yp[{row}, {j}] = {got} but -a*y = {expected}, {request:?}",
                     );
                 }
@@ -2194,12 +2194,8 @@ mod tests {
             let result = prepared
                 .solve(request, InputSet::new(&y0, &inputs))
                 .expect("solve");
-            assert!((result.y_start[0] - 1.0).abs() < 1e-12);
-            assert!(
-                (result.y_start[1] - 1.0).abs() < 1e-6,
-                "z(0) = {}",
-                result.y_start[1]
-            );
+            assert_eq!(result.y_start[0], 1.0);
+            assert_eq!(result.y_start[1], 1.0, "z(0)");
         }
     }
 
@@ -2307,8 +2303,8 @@ mod tests {
             )
             .expect("solve");
         let yp = result.yp.expect("yp requested");
-        assert!((yp[0] + 0.25).abs() < 1e-15, "dy0/dt(0) = {}", yp[0]);
-        assert!((yp[1] + 0.5).abs() < 1e-15, "dy1/dt(0) = {}", yp[1]);
+        assert_eq!(yp[0], -0.25, "dy0/dt(0)");
+        assert_eq!(yp[1], -0.5, "dy1/dt(0)");
     }
 
     #[test]
@@ -2338,10 +2334,9 @@ mod tests {
             (stale - expected).abs() > 1e-14,
             "fixture is vacuous: dy was already exact before the restart",
         );
-        assert!(
-            (state.dy[0] - expected).abs() <= 1e-13 * expected.abs(),
-            "dy = {} after the restart but f(t, y) = {expected}",
-            state.dy[0],
+        assert_eq!(
+            state.dy[0], expected,
+            "dy after the restart against f(t, y)"
         );
     }
 
@@ -2636,7 +2631,7 @@ mod tests {
         for row in 0..outcome.n_rows {
             let fd = (plus.y[last + row] - minus.y[last + row]) / (2.0 * h);
             let got = blocks(&outcome)[0][last + row];
-            assert!((got - fd).abs() < 1e-4, "row {row}: got {got}, fd {fd}");
+            assert!((got - fd).abs() < 2e-7, "row {row}: got {got}, fd {fd}");
         }
         outcome
     }
@@ -2802,8 +2797,9 @@ mod tests {
                 let Termination::Event { t: t_event, .. } = outcome.termination else {
                     panic!("{label}: the event should have fired");
                 };
-                assert!(
-                    (t_event - outcome.t[outcome.t.len() - 1]).abs() < 1e-12,
+                assert_eq!(
+                    t_event,
+                    outcome.t[outcome.t.len() - 1],
                     "{label}: the trajectory should end at the root"
                 );
                 let y_event = outcome.y_event.as_ref().expect("y_event missing");
@@ -2891,18 +2887,18 @@ mod tests {
             let expected_out = 2.0 * (-t).exp();
             let expected_sens = -2.0 * t * (-t).exp();
             assert!(
-                (out - expected_out).abs() < 1e-6,
+                (out - expected_out).abs() < 2e-10,
                 "t={t}: out={out}, want {expected_out}"
             );
             assert!(
-                (sens - expected_sens).abs() < 1e-4,
+                (sens - expected_sens).abs() < 1e-9,
                 "t={t}: d(out)/da={sens}, want {expected_sens}"
             );
         }
         let y_event = r.y_event.expect("terminal state missing");
         assert_eq!(y_event.len(), 1);
         assert!(
-            (y_event[0] - (-0.5f64).exp()).abs() < 1e-6,
+            (y_event[0] - (-0.5f64).exp()).abs() < 1e-10,
             "terminal state {} diverges from exp(-0.5)",
             y_event[0]
         );
@@ -2919,7 +2915,7 @@ mod tests {
         let Termination::Event { t: t_event, .. } = r.termination else {
             panic!("expected event termination");
         };
-        assert!((t_event - 2.5f64.ln()).abs() < 1e-6, "t_event = {t_event}");
+        assert!((t_event - 2.5f64.ln()).abs() < 5e-9, "t_event = {t_event}");
         let drained = t_eval.iter().filter(|&&t| t <= t_event).count();
         assert_eq!(
             r.t.len(),
@@ -2932,9 +2928,9 @@ mod tests {
         }
         assert_eq!(r.t[drained], t_event, "last column is not the root time");
         let y_root = r.y[drained];
-        assert!((y_root - 0.4).abs() < 1e-6, "y at the root={y_root}");
+        assert!((y_root - 0.4).abs() < 5e-14, "y at the root={y_root}");
         let y_event = r.y_event.expect("y_event missing");
-        assert!((y_event[0] - 0.4).abs() < 1e-6, "y_event={}", y_event[0]);
+        assert!((y_event[0] - 0.4).abs() < 5e-14, "y_event={}", y_event[0]);
     }
 
     #[test]
@@ -2964,7 +2960,7 @@ mod tests {
                 panic!("y0 = {y0}: an event should have fired");
             };
             assert_eq!(index, 1, "y0 = {y0}");
-            assert!((t - t_root).abs() < 1e-8, "y0 = {y0}: t = {t}");
+            assert!((t - t_root).abs() < 5e-9, "y0 = {y0}: t = {t}");
         }
     }
 
@@ -3042,7 +3038,7 @@ mod tests {
         let yp = r.yp.expect("yp requested");
         let root = r.t.len() - 1;
         assert!(
-            (yp[root] - (-0.4)).abs() < 1e-6,
+            (yp[root] - (-0.4)).abs() < 2e-9,
             "yp at the y = 0.4 root is {}, want -0.4",
             yp[root],
         );
@@ -3067,22 +3063,22 @@ mod tests {
         };
         let ln2p5 = 2.5f64.ln();
         assert!(
-            (t_event - ln2p5).abs() < 1e-6,
+            (t_event - ln2p5).abs() < 2e-9,
             "t_event={t_event}, want {ln2p5}"
         );
         assert_eq!(blocks(&r)[0].len(), r.t.len());
         let y_event = r.y_event.as_deref().expect("y_event missing");
         assert!(
-            (y_event[0] - 0.4).abs() < 1e-6,
+            (y_event[0] - 0.4).abs() < 5e-14,
             "y_event={}, expected state 0.4",
             y_event[0]
         );
         let out_last = r.y[r.t.len() - 1];
-        assert!((out_last - 0.8).abs() < 1e-6, "out at root={out_last}");
+        assert!((out_last - 0.8).abs() < 5e-14, "out at root={out_last}");
         let sens_last = blocks(&r)[0][r.t.len() - 1];
         let expected = -2.0 * t_event * 0.4;
         assert!(
-            (sens_last - expected).abs() < 1e-4,
+            (sens_last - expected).abs() < 1e-8,
             "d(out)/da at root={sens_last}, want {expected}"
         );
 
@@ -3090,10 +3086,10 @@ mod tests {
         let end = r.y_event_sens.as_deref().expect("y_event_sens missing");
         assert_eq!((start.len(), start[0].len()), (1, 1));
         assert_eq!((end.len(), end[0].len()), (1, 1));
-        assert!(start[0][0].abs() < 1e-12, "dy/da at start={}", start[0][0]);
+        assert_eq!(start[0][0], 0.0, "dy/da at start");
         let expected = -t_event * 0.4;
         assert!(
-            (end[0][0] - expected).abs() < 1e-4,
+            (end[0][0] - expected).abs() < 5e-9,
             "dy/da at root={}, want {expected}",
             end[0][0]
         );
@@ -3120,7 +3116,7 @@ mod tests {
             if let Some(end) = r.y_event_sens.as_deref() {
                 let expected = -0.5 * (-0.5f64).exp();
                 assert!(
-                    (end[0][0] - expected).abs() < 1e-6,
+                    (end[0][0] - expected).abs() < 5e-10,
                     "dy/da at t=0.5 is {}, want {expected}",
                     end[0][0]
                 );
@@ -3254,15 +3250,11 @@ mod tests {
             .expect("factor rejected");
         let sens_atol = prepared.sens_atol();
         assert!(
-            (sens_atol[0] / 1e-11 - 1.0).abs() < 1e-12,
+            (sens_atol[0] / 1e-11 - 1.0).abs() < 2e-15,
             "differential row was not tightened: {}",
             sens_atol[0]
         );
-        assert!(
-            (sens_atol[1] / 1e-8 - 1.0).abs() < 1e-12,
-            "algebraic row must keep the state atol: {}",
-            sens_atol[1]
-        );
+        assert_eq!(sens_atol[1], 1e-8, "algebraic row must keep the state atol");
     }
 
     #[test]
@@ -3375,7 +3367,7 @@ mod tests {
             .expect("the relaxed retry must succeed");
         assert!(outcome.statistics.sens_error_control_relaxed);
         for (&t, &y) in t_eval.iter().zip(&outcome.y) {
-            assert!((y - (-t).exp()).abs() < 1e-6, "y({t}) = {y}");
+            assert!((y - (-t).exp()).abs() < 2e-7, "y({t}) = {y}");
         }
         // Out of error control, the sensitivity is still integrated, not dropped.
         let s_end = blocks(&outcome)[0][t_eval.len() - 1];
