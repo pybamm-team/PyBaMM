@@ -717,6 +717,8 @@ pub unsafe extern "C" fn pybamm_rust_events_eval(
 }
 
 #[cfg(test)]
+// Each test owns the pointers it passes, so its setup is the safety argument.
+#[allow(clippy::undocumented_unsafe_blocks)]
 mod tests {
     use super::*;
     use std::sync::Arc;
