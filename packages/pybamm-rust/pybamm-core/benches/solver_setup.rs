@@ -3,7 +3,9 @@
 
 mod helpers;
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use std::hint::black_box;
+
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use helpers::{FIXTURES, compile_fixture, fixture_state};
 use pybamm_core::DagSnapshot;
 use pybamm_core::solver::solve::{InputSet, PreparedSolver, SolveRequest};
