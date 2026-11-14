@@ -743,7 +743,6 @@ impl CompiledModel {
 
     /// Get the number of non-zeros in the Jacobian.
     #[getter]
-    #[allow(clippy::missing_const_for_fn)] // PyO3 getters can't be const
     fn nnz(&self) -> usize {
         self.compiled.nnz()
     }
