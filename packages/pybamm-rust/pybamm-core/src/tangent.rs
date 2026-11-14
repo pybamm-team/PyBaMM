@@ -1443,7 +1443,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn time_partial_uses_the_active_conditional_branch() {
         let mut arena = Arena::new();
         let time = arena.alloc(Node::Time);
@@ -1468,7 +1467,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn time_partial_uses_the_interpolant_slope_on_each_side_of_a_knot() {
         let mut arena = Arena::new();
         let time = arena.alloc(Node::Time);

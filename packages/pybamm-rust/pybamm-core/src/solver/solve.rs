@@ -802,7 +802,10 @@ impl<'p> Recorder<'p> {
                 t
             },
         };
-        #[allow(clippy::float_cmp)] // the column is read at exactly the held time
+        #[expect(
+            clippy::float_cmp,
+            reason = "the column is read at exactly the held time"
+        )]
         if let (Some(dy), Some((_, held))) = (
             self.dy.as_mut(),
             self.held_dy.take_if(|(t_held, _)| *t_held == t),
@@ -1670,6 +1673,7 @@ mod tests {
     use crate::solver::test_fixtures::{
         decay, decay_with_output_and_event, differential_then_algebraic_mass,
     };
+    use crate::test_support::{bits, block_bits};
 
     /// `dy/dt = -a * y` and `0 = y - z`, with sensitivities wrt `a`.
     fn build_small_dae_with_param() -> CompiledModel {
@@ -1831,7 +1835,6 @@ mod tests {
 
     #[test]
     // The termination is reported at the time of the column already filed.
-    #[allow(clippy::float_cmp)]
     fn an_event_violated_by_a_restart_in_place_adds_no_column() {
         // 0.5 is no corner bracket, so the restart stays at the time the last segment ended.
         let prepared = build_decay_param_output_event().with_store_yp(true);
@@ -1992,7 +1995,6 @@ mod tests {
 
     #[test]
     // The same held derivative fills both columns, bit for bit.
-    #[allow(clippy::float_cmp)]
     fn a_single_column_solve_stores_the_consistent_derivative_too() {
         let prepared = PreparedSolver::new(build_nonlinear_dae(), 1e-6, &[1e-6, 1e-6])
             .expect("prepare")
@@ -2004,10 +2006,10 @@ mod tests {
         let single = prepared
             .solve(SolveRequest::new(&[0.0]), set)
             .expect("a one-point span must solve");
-        assert_eq!(single.y, single.y_start);
+        assert_eq!(bits(&single.y), bits(&single.y_start));
         assert_eq!(
-            single.yp.expect("yp requested"),
-            full.yp.expect("yp requested")[..2]
+            bits(&single.yp.expect("yp requested")),
+            bits(&full.yp.expect("yp requested")[..2])
         );
     }
 
@@ -2046,7 +2048,6 @@ mod tests {
 
     #[test]
     // Bit-identical is the property under test.
-    #[allow(clippy::float_cmp)]
     fn the_cached_algebraic_block_factors_as_a_fresh_triplet_build_does() {
         let prepared = PreparedSolver::new(build_coupled_dae(), 1e-8, &[1e-8; 4])
             .expect("prepare")
@@ -2084,12 +2085,15 @@ mod tests {
             block
                 .solve_in_place(&values, got.as_mut(), Par::Seq)
                 .expect("lu");
-            assert_eq!(got, expected, "t = {t}");
+            assert_eq!(
+                bits(got.col_as_slice(0)),
+                bits(expected.col_as_slice(0)),
+                "t = {t}"
+            );
         }
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn the_time_derivative_follows_the_simplified_rhs() {
         // `sqrt(t) / sqrt(t) * t` simplifies to `t`; differentiated unsimplified, it is NaN at 0.
         let mut arena = Arena::new();
@@ -2381,7 +2385,6 @@ mod tests {
 
     #[test]
     // Every column is the untouched start state.
-    #[allow(clippy::float_cmp)]
     fn a_span_that_never_leaves_t0_reports_every_column_at_the_start() {
         let prepared = build_decay_param_output_event().with_store_yp(true);
         for t_eval in [&[0.0][..], &[0.0, 0.0]] {
@@ -2397,8 +2400,11 @@ mod tests {
                     .expect("a span of zero length must not be an error");
                 assert_eq!(result.t, t_eval, "{request:?}");
                 assert_eq!(result.termination, Termination::Completed);
-                let expected = if request.outputs { 2.0 } else { 1.0 };
-                assert!(result.y.iter().all(|&y| y == expected), "{request:?}");
+                let expected: f64 = if request.outputs { 2.0 } else { 1.0 };
+                assert!(
+                    result.y.iter().all(|y| y.to_bits() == expected.to_bits()),
+                    "{request:?}"
+                );
                 if let Some(blocks) = &result.sensitivities {
                     assert!(blocks[0].iter().all(|&s| s == 0.0), "{request:?}");
                 }
@@ -2814,7 +2820,6 @@ mod tests {
 
     #[test]
     // Bit-identical is the property under test.
-    #[allow(clippy::float_cmp)]
     fn a_row_space_change_leaves_the_termination_fields_untouched() {
         let prepared = build_two_state_three_output_with_sens();
         let t_eval: Vec<f64> = (0..=40).map(|i| f64::from(i) * 0.05).collect();
@@ -2827,10 +2832,13 @@ mod tests {
             .solve(SolveRequest::new(&t_eval).with_outputs(), set)
             .expect("output solve failed");
 
-        assert_eq!(states.t, outputs.t);
+        assert_eq!(bits(&states.t), bits(&outputs.t));
         assert_eq!(states.t.len(), outputs.t.len());
         assert_eq!(states.termination, outputs.termination);
-        assert_eq!(states.y_event, outputs.y_event);
+        assert_eq!(
+            states.y_event.as_deref().map(bits),
+            outputs.y_event.as_deref().map(bits)
+        );
         assert_eq!(
             states.statistics.solver.number_of_steps,
             outputs.statistics.solver.number_of_steps
@@ -2839,7 +2847,6 @@ mod tests {
 
     #[test]
     // Bit-identical is the property under test: doubling is exact.
-    #[allow(clippy::float_cmp)]
     fn an_outputs_request_keeps_every_column_across_batch_windows() {
         // Two full windows and a partial one, ending before the event at t = ln 2.5.
         let prepared = build_decay_param_output_event();
@@ -2857,7 +2864,7 @@ mod tests {
         assert_eq!(outputs.termination, Termination::Completed);
         assert_eq!(outputs.t, t_eval);
         let doubled: Vec<f64> = states.y.iter().map(|y| 2.0 * y).collect();
-        assert_eq!(outputs.y, doubled);
+        assert_eq!(bits(&outputs.y), bits(&doubled));
     }
 
     #[test]
@@ -2902,7 +2909,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)] // exact equality is the point: columns keep their times
     fn solve_event_reports_grid_times_then_the_root() {
         let prepared = build_decay_param_output_event();
         let t_eval: Vec<f64> = (0..=20).map(|i| f64::from(i) * 0.1).collect();
@@ -3347,7 +3353,6 @@ mod tests {
 
     #[test]
     // Bit-identical is the property under test.
-    #[allow(clippy::float_cmp)]
     fn a_sensitivity_too_sharp_for_error_control_is_retried_without_it() {
         let t_eval: Vec<f64> = (0..=10).map(|i| f64::from(i) * 0.1).collect();
         let set = InputSet::new(&[1.0], &[0.0]);
@@ -3382,10 +3387,16 @@ mod tests {
 
         // The retry starts from the failed attempt's IC, yet is a relaxed solve from scratch.
         let relaxed = relaxed_from_scratch(&prepared, &t_eval, set);
-        assert_eq!(outcome.t, relaxed.t);
-        assert_eq!(outcome.y, relaxed.y);
-        assert_eq!(outcome.sensitivities, relaxed.sensitivities);
-        assert_eq!(outcome.y_start_sens, relaxed.y_start_sens);
+        assert_eq!(bits(&outcome.t), bits(&relaxed.t));
+        assert_eq!(bits(&outcome.y), bits(&relaxed.y));
+        assert_eq!(
+            outcome.sensitivities.as_deref().map(block_bits),
+            relaxed.sensitivities.as_deref().map(block_bits)
+        );
+        assert_eq!(
+            outcome.y_start_sens.as_deref().map(block_bits),
+            relaxed.y_start_sens.as_deref().map(block_bits)
+        );
         assert_eq!(
             outcome.statistics.solver.number_of_steps,
             relaxed.statistics.solver.number_of_steps

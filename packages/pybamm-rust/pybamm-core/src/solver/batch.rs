@@ -29,6 +29,7 @@ impl PreparedSolver {
 mod tests {
     use super::*;
     use crate::solver::test_fixtures::decay_with_output_and_event;
+    use crate::test_support::{bits, block_bits};
 
     /// The event at `y = 0.4` exercises root-finding across sets.
     fn prepared() -> PreparedSolver {
@@ -60,21 +61,33 @@ mod tests {
     }
 
     // Bit-identical is the property under test.
-    #[allow(clippy::float_cmp)]
     fn assert_same_outcome(got: &SolveOutcome, want: &SolveOutcome, context: &str) {
-        assert_eq!(got.t, want.t, "{context}: times differ");
-        assert_eq!(got.y, want.y, "{context}: trajectories differ");
-        assert_eq!(got.n_rows, want.n_rows, "{context}: row counts differ");
-        assert_eq!(got.yp, want.yp, "{context}: yp differs");
+        assert_eq!(bits(&got.t), bits(&want.t), "{context}: times differ");
         assert_eq!(
-            got.sensitivities, want.sensitivities,
+            bits(&got.y),
+            bits(&want.y),
+            "{context}: trajectories differ"
+        );
+        assert_eq!(got.n_rows, want.n_rows, "{context}: row counts differ");
+        assert_eq!(
+            got.yp.as_deref().map(bits),
+            want.yp.as_deref().map(bits),
+            "{context}: yp differs"
+        );
+        assert_eq!(
+            got.sensitivities.as_deref().map(block_bits),
+            want.sensitivities.as_deref().map(block_bits),
             "{context}: sensitivities differ"
         );
         assert_eq!(
             got.termination, want.termination,
             "{context}: terminations differ"
         );
-        assert_eq!(got.y_event, want.y_event, "{context}: root states differ");
+        assert_eq!(
+            got.y_event.as_deref().map(bits),
+            want.y_event.as_deref().map(bits),
+            "{context}: root states differ"
+        );
         assert_eq!(
             got.statistics.solver.number_of_steps, want.statistics.solver.number_of_steps,
             "{context}: step counts differ",
