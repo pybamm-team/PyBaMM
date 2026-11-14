@@ -13,7 +13,8 @@ mod jacobian;
 mod scratch_pool;
 
 #[pymodule]
-fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
+#[pyo3(name = "_core")]
+fn core_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<expr::ExprGraph>()?;
     m.add_class::<expr::Expr>()?;
     m.add_class::<compiled_function::CompiledFunction>()?;
