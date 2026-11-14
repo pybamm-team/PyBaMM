@@ -327,6 +327,11 @@ class Interpolant(pybamm.Function):
             bspline = interpolate.RectBivariateSpline(self.x[0], self.x[1], self.y)
             [tx, ty, c] = bspline.tck
             [kx, ky] = bspline.degrees
+            # scipy stores the FITPACK coefficients row-major over (nx, ny)
+            # while CasADi's bspline expects them column-major (#4877)
+            nx = len(tx) - kx - 1
+            ny = len(ty) - ky - 1
+            c = np.asarray(c).reshape(nx, ny, order="C").flatten(order="F")
             f = casadi.Function.bspline(self.name, [tx, ty], c.tolist(), [kx, ky], 1)
             return f(casadi.hcat(converted_children).T).T
         else:
