@@ -1883,12 +1883,7 @@ pub(crate) mod tests {
             jac.csc().entries().collect::<Vec<_>>(),
             full.csc().entries().collect::<Vec<_>>()
         );
-        for (k, (&got, &want)) in subset_values.iter().zip(&reference).enumerate() {
-            assert!(
-                (got - want).abs() <= 1e-12 * want.abs().mul_add(1.0, 1.0),
-                "slot {k}: subset {got} vs full {want}"
-            );
-        }
+        assert_eq!(bits(&subset_values), bits(&reference));
     }
 
     #[test]
