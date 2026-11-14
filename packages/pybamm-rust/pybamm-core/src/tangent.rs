@@ -1338,7 +1338,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn a_zero_width_input_has_a_zero_width_tangent() {
         // A one-row tangent made `d[p, y0]/dp` two rows wide, its top row a spurious 1.
         let mut arena = Arena::new();
@@ -1361,7 +1360,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn modulo_tangent_keeps_a_scalar_dividends_broadcast_width() {
         // y0 mod [2, 3, 5] is three wide; summing it through a matrix needs all three rows.
         let mut arena = Arena::new();

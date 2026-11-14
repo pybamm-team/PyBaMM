@@ -341,7 +341,7 @@ pub(crate) fn check_scratch(len: usize, needed: usize) {
 }
 
 /// `1` where `x == y`, else `0`: exact, as pybamm's `Equality` evaluates.
-#[allow(clippy::float_cmp)]
+#[expect(clippy::float_cmp, reason = "`Equality` is IEEE 754 equality")]
 pub(crate) fn equality(x: f64, y: f64) -> f64 {
     if x == y { 1.0 } else { 0.0 }
 }
@@ -358,19 +358,14 @@ pub(crate) fn masked_mul(mask: f64, value: f64) -> f64 {
 /// Those forms round once from exact operands, so are correctly rounded where a platform
 /// `pow` need not be, and equal what `simplify` lowers the same constant exponents to. The
 /// model residual compiles unsimplified, so its squares reach this as `pow(x, 2)`.
-#[allow(clippy::float_cmp)]
 #[inline(always)]
 pub(crate) fn pow(x: f64, y: f64) -> f64 {
-    if y == 2.0 {
-        x * x
-    } else if y == 1.0 {
-        x
-    } else if y == -1.0 {
-        1.0 / x
-    } else if y == 0.0 {
-        1.0
-    } else {
-        x.powf(y)
+    match y {
+        2.0 => x * x,
+        1.0 => x,
+        -1.0 => 1.0 / x,
+        0.0 => 1.0,
+        _ => x.powf(y),
     }
 }
 
@@ -1595,7 +1590,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn a_repeated_knot_is_a_right_continuous_step() {
         // As `casadi.MX.interpn_linear` takes it: the knot belongs to the segment after it.
         let table = InterpolantData::try_new(vec![0.0, 1.0, 1.0, 2.0], vec![0.0, 1.0, 3.0, 5.0])

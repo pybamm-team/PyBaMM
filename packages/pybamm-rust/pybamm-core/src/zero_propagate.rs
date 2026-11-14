@@ -357,7 +357,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn zero_propagate_may_normalise_the_sign_of_zero() {
         // `-y + 0` and `0 - y` fold to `-y`; at y = 0 the unfolded sum and difference are +0.0.
         let builds: [fn(&mut Arena, NodeId, NodeId) -> Node; 2] = [

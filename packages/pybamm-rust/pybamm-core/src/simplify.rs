@@ -314,33 +314,30 @@ fn simplify_pow(
 /// operands, so equal a correctly rounded `pow` for every base, special values included, and
 /// the evaluator's `pow` takes the same forms. A chain such as `x*(x*x)` rounds twice, and
 /// `sqrt(x)` differs at `-0` and `-inf`.
-#[allow(clippy::float_cmp)]
 fn lower_constant_pow(arena: &mut Arena, base: NodeId, e: f64, len: usize) -> Option<NodeId> {
     // A zero-width base against the scalar exponent is invalid; `x * x` would make it valid.
     if len == 0 {
         return None;
     }
-    if e == 0.0 {
-        let ones = if len == 1 {
-            Node::Scalar(1.0)
-        } else {
-            let ones = ArrayData::try_new(vec![1.0; len], Shape::vector(len))
-                .expect("a vector's shape matches its length");
-            Node::Array(Box::new(ones))
-        };
-        return Some(arena.alloc(ones));
+    match e {
+        0.0 => {
+            let ones = if len == 1 {
+                Node::Scalar(1.0)
+            } else {
+                let ones = ArrayData::try_new(vec![1.0; len], Shape::vector(len))
+                    .expect("a vector's shape matches its length");
+                Node::Array(Box::new(ones))
+            };
+            Some(arena.alloc(ones))
+        },
+        1.0 => Some(base),
+        2.0 => Some(arena.alloc(Node::Mul(base, base))),
+        -1.0 => {
+            let one = arena.alloc(Node::Scalar(1.0));
+            Some(arena.alloc(Node::Div(one, base)))
+        },
+        _ => None,
     }
-    if e == 1.0 {
-        return Some(base);
-    }
-    if e == 2.0 {
-        return Some(arena.alloc(Node::Mul(base, base)));
-    }
-    if e == -1.0 {
-        let one = arena.alloc(Node::Scalar(1.0));
-        return Some(arena.alloc(Node::Div(one, base)));
-    }
-    None
 }
 
 /// `-const -> const`, `--x -> x`.

@@ -54,18 +54,13 @@ const BINARY_OPS: [BinaryOp; 13] = [
 
 /// `pow` as the tapes define it: the platform's, but `1`, `x`, `x*x` and `1/x` for the
 /// exponents `0`, `1`, `2` and `-1`.
-#[allow(clippy::float_cmp)]
 fn pow(x: f64, y: f64) -> f64 {
-    if y == 0.0 {
-        1.0
-    } else if y == 1.0 {
-        x
-    } else if y == 2.0 {
-        x * x
-    } else if y == -1.0 {
-        1.0 / x
-    } else {
-        x.powf(y)
+    match y {
+        0.0 => 1.0,
+        1.0 => x,
+        2.0 => x * x,
+        -1.0 => 1.0 / x,
+        _ => x.powf(y),
     }
 }
 
@@ -118,7 +113,7 @@ fn binary(op: BinaryOp) -> (BinaryNode, BinaryFn) {
         BinaryOp::Hypot => (Node::Hypot, f64::hypot),
         BinaryOp::EqualHeaviside => (Node::EqualHeaviside, |x, y| f64::from(u8::from(x <= y))),
         BinaryOp::NotEqualHeaviside => (Node::NotEqualHeaviside, |x, y| f64::from(u8::from(x < y))),
-        #[allow(clippy::float_cmp)]
+        #[expect(clippy::float_cmp, reason = "`Equality` is IEEE 754 equality")]
         BinaryOp::Equality => (Node::Equality, |x, y| f64::from(u8::from(x == y))),
         BinaryOp::MaskedMul => (Node::MaskedMul, |x, y| if x == 0.0 { 0.0 } else { x * y }),
     }
