@@ -147,6 +147,7 @@ impl CompiledModel {
     /// Compute `y = M @ x + beta * y` in place.
     ///
     /// When `beta == 0`, `y` is overwritten without being read, as in BLAS.
+    #[cfg(feature = "diffsol")]
     pub(crate) fn mass_gemv(&self, x: &[f64], beta: f64, y: &mut [f64]) {
         if beta == 0.0 {
             self.mass_action(x, y);
@@ -353,6 +354,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "diffsol")]
     fn mass_gemv_is_m_x_plus_beta_y_on_every_mass_kind() {
         let x = [3.0, -2.0];
         for mass in masses_of_every_kind() {
