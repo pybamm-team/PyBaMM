@@ -353,7 +353,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)] // exact equality is the point
     fn mass_gemv_is_m_x_plus_beta_y_on_every_mass_kind() {
         let x = [3.0, -2.0];
         for mass in masses_of_every_kind() {

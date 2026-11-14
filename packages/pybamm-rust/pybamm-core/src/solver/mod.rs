@@ -123,6 +123,7 @@ mod tests {
     use crate::model::{CompiledModel, Workspace};
     use crate::node::{CsrData, Node, Shape};
     use crate::params::ParamBinding;
+    use crate::test_support::bits;
     use diffsol::vector::faer_serial::FaerVec;
     use diffsol::{
         ConstantOp, Context, FaerContext, LinearOp, Matrix, NonLinearOp, NonLinearOpJacobian, Op,
@@ -207,7 +208,6 @@ mod tests {
 
     #[test]
     // Values are moved, never computed.
-    #[allow(clippy::float_cmp)]
     fn csr_mass_to_faer_moves_each_value_to_its_column() {
         // Row 1 lists its columns out of order; each CSC column still runs down the rows.
         let mass = CsrData {
@@ -247,7 +247,6 @@ mod tests {
 
     #[test]
     // Repeating an input set must repeat its trajectory bit for bit.
-    #[allow(clippy::float_cmp)]
     fn one_prepared_solver_keeps_its_solves_independent() {
         let t_eval: Vec<f64> = (0..=10).map(|i| f64::from(i) * 0.1).collect();
         let prepared = PreparedSolver::new(decay(), 1e-8, &[1e-10]).expect("prepare");
@@ -257,8 +256,8 @@ mod tests {
                 .expect("solve")
         });
 
-        assert_eq!(first.t, again.t);
-        assert_eq!(first.y, again.y);
+        assert_eq!(bits(&first.t), bits(&again.t));
+        assert_eq!(bits(&first.y), bits(&again.y));
         for (&t, &y) in scaled.t.iter().zip(&scaled.y) {
             let exact = 5.0 * (-t).exp();
             assert!((y - exact).abs() < 5e-6, "y({t}) = {y}, exact {exact}");
@@ -350,7 +349,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn rhs_jacobian_inplace_2state() {
         let fixture = OpFixture::new(build_2state_model());
         let rhs = fixture.rhs();
@@ -445,7 +443,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)] // the root is reported at the first requested time itself
     fn an_event_non_positive_at_the_start_ends_the_solve_there() {
         // The event starts below zero and stays there: no sign change for root finding.
         let t_eval: Vec<f64> = (0..=10).map(|i| f64::from(i) * 0.1).collect();

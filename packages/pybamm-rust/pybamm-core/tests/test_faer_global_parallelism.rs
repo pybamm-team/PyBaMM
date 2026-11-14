@@ -91,11 +91,19 @@ fn ode_with_a_non_diagonal_mass() -> CompiledModel {
 }
 
 // Bit-identical is the property under test.
-#[allow(clippy::float_cmp)]
 fn assert_same_trajectory(got: &SolveOutcome, want: &SolveOutcome, context: &str) {
-    assert_eq!(got.t, want.t, "{context}: times differ");
-    assert_eq!(got.y, want.y, "{context}: trajectories differ");
-    assert_eq!(got.yp, want.yp, "{context}: yp differs");
+    let bits = |values: &[f64]| values.iter().copied().map(f64::to_bits).collect::<Vec<_>>();
+    assert_eq!(bits(&got.t), bits(&want.t), "{context}: times differ");
+    assert_eq!(
+        bits(&got.y),
+        bits(&want.y),
+        "{context}: trajectories differ"
+    );
+    assert_eq!(
+        got.yp.as_deref().map(bits),
+        want.yp.as_deref().map(bits),
+        "{context}: yp differs"
+    );
 }
 
 #[test]
