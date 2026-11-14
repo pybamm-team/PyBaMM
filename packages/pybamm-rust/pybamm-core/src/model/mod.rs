@@ -527,7 +527,6 @@ mod tests {
     use crate::node::{Node, Shape};
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn the_residual_and_its_jacobian_both_follow_the_simplified_rhs() {
         // `y0 - y0` simplifies to zero, as CasADi's SX does; unsimplified it is NaN at y0 = inf.
         let mut arena = Arena::new();

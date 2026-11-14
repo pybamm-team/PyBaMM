@@ -1341,6 +1341,7 @@ pub(crate) mod tests {
     #[cfg(feature = "serialize")]
     use crate::snapshot::DagSnapshot;
     use crate::sparsity::tests::pattern_from_rows;
+    use crate::test_support::bits;
 
     /// f(y, p) = [y0*y1 + p0, sin(y0) * p1].
     fn toy(arena: &mut Arena) -> NodeId {
@@ -1426,12 +1427,11 @@ pub(crate) mod tests {
         out
     }
 
-    #[allow(clippy::float_cmp)]
     fn assert_batched_matches_scalar(jac: &JacobianData, y: &[f64]) {
         assert!(jac.lane_width() > 1, "the fixture must batch");
         let batched = assemble_with(jac, &mut JacobianScratch::new(jac), y);
         let scalar = assemble_with(jac, &mut JacobianScratch::scalar(jac), y);
-        assert_eq!(batched, scalar);
+        assert_eq!(bits(&batched), bits(&scalar));
     }
 
     fn batching_probe_states(n: usize) -> Vec<f64> {
@@ -1448,7 +1448,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn a_batched_sweep_recovers_from_seed_lanes_left_set() {
         // As if a sweep had unwound between seeding a block and undoing it.
         let (n, w) = (64, 3);
@@ -1460,7 +1459,7 @@ pub(crate) mod tests {
         assert!(scratch.lane_width() > 1, "the fixture must batch");
         let clean = assemble_with(&jac, &mut scratch, &y);
         scratch.seed_lanes.fill(1.0);
-        assert_eq!(assemble_with(&jac, &mut scratch, &y), clean);
+        assert_eq!(bits(&assemble_with(&jac, &mut scratch, &y)), bits(&clean));
     }
 
     /// A Jacobian whose actions batch at [`MAX_LANES`], with its state and row counts.
@@ -1478,7 +1477,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn batched_actions_match_one_whole_tape_action_each() {
         // 11 directions: one 8-wide batch, then a 4-wide batch with a spare lane.
         let (jac, n, n_rows) = batching_action_jac();
@@ -1502,7 +1500,7 @@ pub(crate) mod tests {
         for (direction, got) in directions.iter().zip(&batched) {
             let mut want = vec![0.0; n_rows];
             jac.action_into(&mut scratch, 0.5, &y, &[], &[], direction, &mut want);
-            assert_eq!(got, &want);
+            assert_eq!(bits(got), bits(&want));
         }
     }
 
@@ -1629,7 +1627,6 @@ pub(crate) mod tests {
     impl<I: Iterator> ExactSizeIterator for OverReported<I> {}
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn batched_actions_stop_when_the_directions_run_out_early() {
         // Claiming 8 but yielding 3 used to hang the batching loop.
         let (jac, n, n_rows) = batching_action_jac();
@@ -1651,7 +1648,7 @@ pub(crate) mod tests {
         for (direction, got) in directions.iter().zip(&batched) {
             let mut want = vec![0.0; n_rows];
             jac.action_into(&mut scratch, 0.5, &y, &[], &[], direction, &mut want);
-            assert_eq!(got, &want);
+            assert_eq!(bits(got), bits(&want));
         }
     }
 
@@ -1686,7 +1683,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn a_merged_layout_only_renumbers_the_slots() {
         let (n, w) = (32, 2);
         let (arena, root) = banded_nonlinear(n, w);
@@ -1721,7 +1717,11 @@ pub(crate) mod tests {
         for (slot, (row, col)) in merged_csc.entries().enumerate() {
             match own_by_entry.get(&(row, col)) {
                 Some(&value) => {
-                    assert_eq!(wide[slot], value, "entry ({row}, {col}) moved value");
+                    assert_eq!(
+                        wide[slot].to_bits(),
+                        value.to_bits(),
+                        "entry ({row}, {col}) moved value"
+                    );
                     covered += 1;
                 },
                 None => assert_eq!(wide[slot], 0.0, "slot ({row}, {col}) is not ours to write"),
@@ -1867,7 +1867,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn a_subset_build_batches_onto_the_same_values() {
         let (n, w) = (64, 3);
         let (arena, root) = banded_nonlinear(n, w);

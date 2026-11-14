@@ -15,7 +15,6 @@ pub struct StateKinds {
 impl StateKinds {
     /// Classify every state of a square CSR mass matrix.
     // Exact `== 0.0`: an epsilon would reclassify a stiff-but-real row.
-    #[allow(clippy::float_cmp)]
     pub(crate) fn from_mass_matrix(mass: &CsrData) -> Self {
         assert_eq!(
             mass.shape().rows,
@@ -69,7 +68,6 @@ pub enum MassKind {
 
 /// Classify a CSR mass matrix into the fastest applicable [`MassKind`].
 // Exact compares: an epsilon would misclassify a near-identity matrix as `Identity`.
-#[allow(clippy::float_cmp)]
 pub fn classify_mass_matrix(mass: &CsrData) -> MassKind {
     let n = mass.shape.rows;
     if n != mass.shape.cols {
@@ -89,14 +87,14 @@ pub fn classify_mass_matrix(mass: &CsrData) -> MassKind {
                 return MassKind::General;
             }
             let val = mass.data[start];
-            if val != 1.0 && val != 0.0 {
+            if !matches!(val, 0.0 | 1.0) {
                 return MassKind::General;
             }
         }
     }
 
     let nnz = mass.indptr[n];
-    if nnz == n && mass.data.iter().all(|&v| v == 1.0) {
+    if nnz == n && mass.data.iter().all(|&v| matches!(v, 1.0)) {
         return MassKind::Identity;
     }
 

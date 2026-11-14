@@ -148,7 +148,10 @@ fn check_constants_match_the_tape(case: &Case) -> usize {
     entries.len()
 }
 
-#[allow(clippy::float_cmp)]
+#[expect(
+    clippy::float_cmp,
+    reason = "split and unsplit assemblies must agree exactly"
+)]
 fn check_split_assembly_matches_unsplit(case: &Case) {
     let n_states = case.y.len();
     let n_rows = CompiledExpr::new(DagRef::new(&case.arena, case.root)).output_len();

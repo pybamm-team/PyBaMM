@@ -177,6 +177,7 @@ mod tests {
     use crate::model::CompiledModelOptions;
     use crate::node::{CsrData, Node, Shape};
     use crate::params::{PackedWidth, ParamIdx};
+    use crate::test_support::bits;
 
     /// Assemble `jac` directly, through its own canonical layout.
     fn assemble_through(
@@ -205,7 +206,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)] // exact equality is the point
     fn the_algebraic_block_inherits_lane_batching() {
         let (n, half_width) = (64usize, 3usize);
         let model = build_batched_algebraic_model(n, half_width);
@@ -223,11 +223,10 @@ mod tests {
         block.assemble_jacobian_into(&mut model.create_workspace(), 0.5, &y, &[], &mut batched);
 
         let scalar = assemble_through(jac, JacobianScratch::scalar(jac), 0.5, &y);
-        assert_eq!(batched, scalar);
+        assert_eq!(bits(&batched), bits(&scalar));
     }
 
     #[test]
-    #[allow(clippy::float_cmp)] // exact equality is the point
     fn the_algebraic_block_assembles_in_its_published_order() {
         let n = 24usize;
         let model = build_batched_algebraic_model(n, 2);
@@ -246,7 +245,7 @@ mod tests {
         );
 
         let through_artifact = assemble_through(jac, JacobianScratch::new(jac), 0.25, &y);
-        assert_eq!(through_block, through_artifact);
+        assert_eq!(bits(&through_block), bits(&through_artifact));
     }
 
     #[test]

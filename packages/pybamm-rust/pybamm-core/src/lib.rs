@@ -35,6 +35,8 @@ mod snapshot;
 mod sparsity;
 pub mod tangent;
 pub mod tangent_batch;
+#[cfg(test)]
+mod test_support;
 mod zero_propagate;
 
 pub use arena::{Arena, Dag, DagRef, NodeId, ReadExtents, resolve_state_count};

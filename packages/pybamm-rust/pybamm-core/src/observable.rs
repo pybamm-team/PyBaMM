@@ -519,7 +519,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
     fn every_tape_follows_the_simplified_graph() {
         // `y0 - y0` simplifies to zero, as in the rhs; unsimplified it is NaN at y0 = inf.
         let mut arena = Arena::new();
