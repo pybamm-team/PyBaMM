@@ -1,7 +1,7 @@
 //! ABI drift test: the C++ IDAKLU consumer resolves Rust FFI symbols by name via `dlsym`, so a
 //! signature change would be silent UB unless both sides are checked against each other here.
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs;
 
 use pybamm_core::ffi;
@@ -36,8 +36,8 @@ fn canon(raw: &str) -> String {
 }
 
 /// Parse the Rust `extern "C"` exports: symbol -> (arg canon types, return canon).
-fn parse_rust_exports(src: &str) -> HashMap<String, (Vec<String>, String)> {
-    let mut out = HashMap::new();
+fn parse_rust_exports(src: &str) -> BTreeMap<String, (Vec<String>, String)> {
+    let mut out = BTreeMap::new();
     let bytes = src.as_bytes();
     let needle = "extern \"C\" fn ";
     let mut cursor = 0;
@@ -111,7 +111,7 @@ fn stable_hash(bytes: &[u8]) -> u64 {
 }
 
 /// Order-independent fingerprint of the export set, as the `dlsym` contract is by name.
-fn compute_abi_hash(exports: &HashMap<String, (Vec<String>, String)>) -> u64 {
+fn compute_abi_hash(exports: &BTreeMap<String, (Vec<String>, String)>) -> u64 {
     let mut entries: Vec<String> = exports
         .iter()
         .map(|(name, (args, ret))| format!("{name}({})->{ret}", args.join(",")))
@@ -122,7 +122,7 @@ fn compute_abi_hash(exports: &HashMap<String, (Vec<String>, String)>) -> u64 {
 
 struct Consumer {
     define_version: u32,
-    typedefs: HashMap<String, (Vec<String>, String)>,
+    typedefs: BTreeMap<String, (Vec<String>, String)>,
     bindings: Vec<Binding>,
 }
 
@@ -165,7 +165,7 @@ fn parse_consumer(src: &str) -> Consumer {
         .expect("consumer header must `#define PYBAMM_RUST_ABI_VERSION N`");
 
     // `using NAME = RET (*)(ARGS);` — may span multiple physical lines.
-    let mut typedefs = HashMap::new();
+    let mut typedefs = BTreeMap::new();
     let mut rest = src;
     while let Some(p) = rest.find("using ") {
         let after = &rest[p + "using ".len()..];
@@ -287,7 +287,7 @@ fn c_consumer_matches_rust_exports() {
 fn status_codes_match_the_consumer_header() {
     let header = fs::read_to_string(CONSUMER_HEADER)
         .unwrap_or_else(|e| panic!("cannot read consumer header {CONSUMER_HEADER}: {e}"));
-    let defines: HashMap<&str, i32> = header
+    let defines: BTreeMap<&str, i32> = header
         .lines()
         .filter_map(|line| {
             let (name, value) = line.trim().strip_prefix("#define ")?.split_once(' ')?;
