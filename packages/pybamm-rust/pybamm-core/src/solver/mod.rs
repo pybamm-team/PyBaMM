@@ -238,7 +238,7 @@ mod tests {
             for (row, exact) in exact.into_iter().enumerate() {
                 let got = result.y[j * result.n_rows + row];
                 assert!(
-                    (got - exact).abs() < 1e-6,
+                    (got - exact).abs() < 1e-7,
                     "y{row}({t}) = {got}, exact {exact}"
                 );
             }
@@ -260,7 +260,7 @@ mod tests {
         assert_eq!(bits(&first.y), bits(&again.y));
         for (&t, &y) in scaled.t.iter().zip(&scaled.y) {
             let exact = 5.0 * (-t).exp();
-            assert!((y - exact).abs() < 5e-6, "y({t}) = {y}, exact {exact}");
+            assert!((y - exact).abs() < 2e-7, "y({t}) = {y}, exact {exact}");
         }
     }
 
@@ -436,7 +436,7 @@ mod tests {
         assert_eq!(y_event.len(), 1);
         let full_last = full.y[(full.t.len() - 1) * full.n_rows];
         assert!(
-            (y_event[0] - full_last).abs() < 1e-8,
+            (y_event[0] - full_last).abs() < 1e-15,
             "terminal state {} diverges from full solve {full_last}",
             y_event[0]
         );
@@ -488,9 +488,9 @@ mod tests {
         for (j, &t) in r.t.iter().enumerate() {
             let y0 = r.y[j * r.n_rows];
             let y1 = r.y[j * r.n_rows + 1];
-            assert!((y0 - (-t).exp()).abs() < 1e-6, "t={t}: y0={y0}");
+            assert!((y0 - (-t).exp()).abs() < 5e-8, "t={t}: y0={y0}");
             assert!(
-                2.0f64.mul_add(-(-t).exp(), y1).abs() < 1e-6,
+                2.0f64.mul_add(-(-t).exp(), y1).abs() < 1e-7,
                 "t={t}: y1={y1} violates y1=2*y0"
             );
         }
