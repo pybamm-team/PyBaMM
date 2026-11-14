@@ -794,8 +794,11 @@ impl CompiledFunction {
     ///
     /// `n_states` is re-pinned exactly so a user-widened system round-trips.
     #[staticmethod]
-    #[pyo3(signature = (graph, root, name, n_states, output_names = None, output_lens = None))]
-    fn _rebuild(
+    #[pyo3(
+        name = "_rebuild",
+        signature = (graph, root, name, n_states, output_names = None, output_lens = None)
+    )]
+    fn rebuild(
         py: Python<'_>,
         graph: Py<ExprGraph>,
         root: u32,

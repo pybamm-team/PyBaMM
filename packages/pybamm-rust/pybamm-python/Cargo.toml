@@ -14,8 +14,8 @@ serialize = ["pybamm-core/serialize", "dep:bincode"]
 
 [dependencies]
 pybamm-core = { path = "../pybamm-core" }
-pyo3 = { version = "0.28" }
-numpy = "0.28"
+pyo3 = { version = "0.30" }
+numpy = "0.30"
 bincode = { version = "1", optional = true }
 
 [lints]
