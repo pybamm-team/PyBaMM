@@ -1,7 +1,9 @@
 import importlib
 import importlib.util
+import json
 import os
 import pkgutil
+import subprocess
 import sys
 from io import StringIO
 
@@ -154,6 +156,23 @@ class TestUtil:
             pytest.fail(
                 f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
             )
+
+    def test_import_defers_heavy_dependencies(self):
+        deferred = ["black", "pandas", "pooch", "posthog", "sympy", "xarray"]
+        code = (
+            "import json, sys, pybamm; "
+            f"print(json.dumps([m for m in {deferred!r} if m in sys.modules]))"
+        )
+        env = {**os.environ, "PYBAMM_DISABLE_TELEMETRY": "true"}
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        # An editable install's rebuild check can print before the result
+        assert json.loads(result.stdout.splitlines()[-1]) == []
 
     def test_package_all_names_exist(self):
         # `from package import *` raises for a name that is neither an attribute

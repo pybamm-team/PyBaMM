@@ -1,7 +1,5 @@
 import sys
 
-from posthog import Posthog
-
 import pybamm
 
 
@@ -17,6 +15,8 @@ class MockTelemetry:
 if pybamm.config.check_opt_out():
     _posthog = MockTelemetry()
 else:  # pragma: no cover
+    from posthog import Posthog
+
     _posthog = Posthog(
         # this is the public, write only API key, so it's ok to include it here
         project_api_key="phc_acTt7KxmvBsAxaE0NyRd5WfJyNxGvBq1U9HnlQSztmb",

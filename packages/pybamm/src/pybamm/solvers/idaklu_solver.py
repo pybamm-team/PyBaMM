@@ -9,7 +9,6 @@ import casadi
 import numpy as np
 from pybammsolvers import idaklu
 from scipy.sparse import csc_matrix
-from scipy.sparse.linalg import spsolve
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
@@ -1189,6 +1188,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # M^-1 is the identity matrix, so we can just use rhs
             ydot0[: model.len_rhs] = rhs0
         else:
+            from scipy.sparse.linalg import spsolve
+
             # M^-1 is not the identity matrix, so we need to use the mass matrix
             M_ode = model.mass_matrix.entries[: model.len_rhs, : model.len_rhs]
             ydot0[: model.len_rhs] = spsolve(M_ode, rhs0)

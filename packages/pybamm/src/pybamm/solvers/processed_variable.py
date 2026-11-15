@@ -2,7 +2,6 @@ import functools
 import warnings
 
 import numpy as np
-import xarray as xr
 
 import pybamm
 from pybamm.solvers.variable_observer import as_observer
@@ -310,6 +309,8 @@ class ProcessedVariable(BaseProcessedVariable):
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
+        import xarray as xr
+
         if observe_raw:
             if not self.xr_array_raw_initialized:
                 self._xr_array_raw = xr.DataArray(entries_for_interp, coords=coords)
