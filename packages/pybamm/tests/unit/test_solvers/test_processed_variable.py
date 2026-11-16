@@ -347,6 +347,20 @@ class TestProcessedVariable:
         with pytest.raises(ValueError, match=r"Cannot compute sensitivities"):
             print(processed_var.sensitivities)
 
+    def test_0D_call_at_repeated_solution_times(self):
+        # A repeated time, e.g. at a step boundary, keeps both stored values
+        t_sol = np.array([0.0, 0.5, 0.5, 1.0])
+        y_sol = np.array([[0.0, 1.0, 2.0, 3.0]])
+        var = pybamm.StateVector(slice(0, 1))
+        processed_var = pybamm.process_variable(
+            "test",
+            [var],
+            [to_casadi(var, y_sol)],
+            self._sol_default(t_sol, y_sol, model=pybamm.BaseModel()),
+        )
+        for t in [None, t_sol, list(t_sol)]:
+            np.testing.assert_array_equal(processed_var(t), y_sol[0])
+
     def test_0D_call_fill_value_below_the_first_time(self):
         # Only the first queried time must not be before the solution starts
         processed_var = self._build_0D_var()

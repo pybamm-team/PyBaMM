@@ -190,7 +190,8 @@ class ProcessedVariable(BaseProcessedVariable):
 
     def _interpolate_in_time(self, t, entries, observe_raw, fill_value):
         """
-        Interpolate the raw entries in time without xarray.
+        Interpolate the raw entries in time without xarray, where a subclass can.
+        This base version returns None, so xarray handles every query.
 
         Returns
         -------
