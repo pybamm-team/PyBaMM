@@ -229,7 +229,13 @@ class ProcessedVariable(BaseProcessedVariable):
         z=None,
         R=None,
         fill_value=np.nan,
+        **spatial_coordinates,
     ):
+        """
+        Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
+        using interpolation. A spatial coordinate with another name is passed by the
+        name of its :class:`pybamm.SpatialVariable`, e.g. ``s=0.5``.
+        """
         # Check to see if we are interpolating exactly onto the raw solution time points
         t_observe, observe_raw = self._check_observe_raw(t)
 
@@ -246,7 +252,9 @@ class ProcessedVariable(BaseProcessedVariable):
         if hermite_time_interp:
             entries = self.observe_and_interp(t_observe, fill_value)
 
-        spatial_interp = any(a is not None for a in [x, r, y, z, R])
+        spatial_interp = any(
+            a is not None for a in [x, r, y, z, R, *spatial_coordinates.values()]
+        )
 
         xr_interp = spatial_interp or not hermite_time_interp
 
@@ -274,6 +282,7 @@ class ProcessedVariable(BaseProcessedVariable):
                     z,
                     R,
                     fill_value,
+                    **spatial_coordinates,
                 )
             else:
                 processed_entries = entries_for_interp
@@ -305,10 +314,11 @@ class ProcessedVariable(BaseProcessedVariable):
         z=None,
         R=None,
         fill_value=None,
+        **spatial_coordinates,
     ):
         """
-        Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
-        using interpolation
+        Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z, R and/or
+        other named spatial coordinates), using interpolation
         """
         if observe_raw:
             if not self.xr_array_raw_initialized:
@@ -317,7 +327,7 @@ class ProcessedVariable(BaseProcessedVariable):
         else:
             xr_data_array = xr.DataArray(entries_for_interp, coords=coords)
 
-        kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
+        kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R, **spatial_coordinates}
 
         # Remove any None arguments
         kwargs = {key: value for key, value in kwargs.items() if value is not None}

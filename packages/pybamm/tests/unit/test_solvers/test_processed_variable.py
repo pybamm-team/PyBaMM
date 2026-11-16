@@ -845,6 +845,38 @@ class TestProcessedVariable:
         )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
+    def test_processed_var_1D_custom_spatial_variable(self, hermite_interp):
+        s = pybamm.SpatialVariable("s", domain="rod", coord_sys="cartesian")
+        var = pybamm.Variable("var", domain="rod")
+        geometry = {"rod": {s: {"min": 0, "max": 1}}}
+        mesh = pybamm.Mesh(geometry, {"rod": pybamm.Uniform1DSubMesh}, {s: 10})
+        disc = pybamm.Discretisation(mesh, {"rod": pybamm.FiniteVolume()})
+        disc.set_variable_slices([var])
+        s_sol = disc.process_symbol(s).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = s_sol[:, np.newaxis] * (5 * t_sol)
+        yp_sol = self._get_yps(y_sol, hermite_interp, values=5)
+        model = pybamm.BaseModel()
+        model._geometry = pybamm.Geometry(geometry)
+
+        processed_var = pybamm.process_variable(
+            "test",
+            [var_sol],
+            [to_casadi(var_sol, y_sol)],
+            self._sol_default(t_sol, y_sol, yp_sol, model=model),
+        )
+
+        np.testing.assert_allclose(
+            processed_var(t=t_sol, s=s_sol), y_sol, rtol=1e-7, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            processed_var(t=0.5, s=0.45), 2.5 * 0.45, rtol=1e-7, atol=1e-6
+        )
+        with pytest.raises(ValueError, match=r"Dimensions \{'q'\} do not exist"):
+            processed_var(t=0.5, q=0.45)
+
+    @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_var_1D_fixed_t_interpolation(self, hermite_interp):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
