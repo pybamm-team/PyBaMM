@@ -5,6 +5,7 @@ import importlib.metadata as importlib_metadata
 import re
 import socket
 
+import casadi
 import numpy as np
 from scipy.sparse import eye
 
@@ -622,3 +623,10 @@ def assert_symbolic_mesh_matches_numeric(
         numeric.jac(state).evaluate(0, y).toarray(),
         **tolerance,
     )
+
+
+def concatenated_states(states):
+    """Join a solution's per-segment ``all_ys`` or ``all_yps`` along time."""
+    if isinstance(states[0], casadi.DM | casadi.MX):
+        return casadi.horzcat(*states)
+    return np.hstack(states)

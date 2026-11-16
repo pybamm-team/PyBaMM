@@ -108,7 +108,7 @@ jobs:
       SUITE: ${{ matrix.suite }}
 
     steps:
-      - uses: bencherdev/bencher@f80847436d7157936b40525db4c2a1064124f04a # v0.6.13
+      - uses: bencherdev/bencher@7de3c69a85380826613050826b4bce062be2f07d # v0.6.16
 
       # Fewer rounds keep each sweep inside Bencher's 5 minute job limit
       - name: Track main branch benchmarks with Bencher
