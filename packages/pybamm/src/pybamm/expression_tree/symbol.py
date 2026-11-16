@@ -1493,7 +1493,7 @@ class Symbol:
     def _to_rust(
         self, graph: pybamm.rust.ExprGraph, rust_symbols: dict
     ) -> pybamm.rust.Expr:
-        raise TypeError(
+        raise NotImplementedError(
             f"Cannot convert symbol of type '{type(self).__name__}' to the Rust "
             "backend. Use a CasADi-backed model (set "
             "`model.convert_to_format = 'casadi'`) for models using "
