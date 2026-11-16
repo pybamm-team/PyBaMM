@@ -1,4 +1,5 @@
 import functools
+import numbers
 import warnings
 
 import numpy as np
@@ -187,6 +188,16 @@ class ProcessedVariable(BaseProcessedVariable):
     def _interp_setup(self, entries, t):
         raise NotImplementedError  # pragma: no cover
 
+    def _interpolate_in_time(self, t, entries, observe_raw, fill_value):
+        """
+        Interpolate the raw entries in time without xarray.
+
+        Returns
+        -------
+        numpy.ndarray or None
+            The values at ``t``, or None if only xarray handles this query.
+        """
+
     def _shape(self, t):
         raise NotImplementedError  # pragma: no cover
 
@@ -261,7 +272,14 @@ class ProcessedVariable(BaseProcessedVariable):
                     self._coords_raw,
                 )
 
-            if self.time_integral is None:
+            processed_entries = None
+            if self.time_integral is not None:
+                processed_entries = entries_for_interp
+            elif not spatial_interp:
+                processed_entries = self._interpolate_in_time(
+                    t, entries_for_interp, observe_raw, fill_value
+                )
+            if processed_entries is None:
                 processed_entries = self._xr_interpolate(
                     entries_for_interp,
                     coords,
@@ -274,8 +292,6 @@ class ProcessedVariable(BaseProcessedVariable):
                     R,
                     fill_value,
                 )
-            else:
-                processed_entries = entries_for_interp
         else:
             processed_entries = entries
 
@@ -520,6 +536,25 @@ class ProcessedVariable0D(ProcessedVariable):
         return self.time_integral.postfix(
             entries, self.t_pts, self.all_inputs_stacked[0]
         )
+
+    @functools.cached_property
+    def _t_pts_increasing(self) -> bool:
+        # np.interp needs strictly increasing sample times; xarray rejects repeats
+        return bool(np.all(np.diff(self.t_pts) > 0))
+
+    def _interpolate_in_time(self, t, entries, observe_raw, fill_value):
+        if observe_raw:
+            return entries.copy()
+        # A string fill such as "extrapolate" and N-D t keep the xarray route
+        if (
+            np.ndim(t) > 1
+            or not isinstance(fill_value, numbers.Real)
+            or not self._t_pts_increasing
+        ):
+            return None
+        # Same values as xr.interp, far cheaper
+        values = np.interp(t, self.t_pts, entries, left=fill_value, right=fill_value)
+        return np.asarray(values)
 
     def _interp_setup(self, entries, t):
         # save attributes for interpolation

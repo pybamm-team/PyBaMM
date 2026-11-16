@@ -83,6 +83,7 @@
 ## Optimizations
 
 - `import pybamm` is about six times faster, so importing and running a first DFN takes about a quarter of the time. Citations are parsed only when printed, and SymPy, xarray, pandas, Black, PostHog, pooch and most of SciPy load on first use. ([#6047](https://github.com/pybamm-team/PyBaMM/pull/6047))
+- Reading a 0D variable in time, e.g. `solution["Voltage [V]"](t)`, no longer goes through xarray: stored times return the stored values and other times use `np.interp`, about 250 times faster. ([#6047](https://github.com/pybamm-team/PyBaMM/pull/6047))
 - Pushes to `main` skip the test suite when the commit already passed the merge queue, and only rebuild the cached solver wheels and upload the Codecov baseline. Other pushes still run the full suite. ([#6027](https://github.com/pybamm-team/PyBaMM/pull/6027))
 - Read the Docs pull request builds drop `linkcheck` and the unpublished PDF, install the released solver wheel instead of compiling it, and are skipped when nothing the docs render changed, saving about 14 of 20 minutes. ([#5986](https://github.com/pybamm-team/PyBaMM/pull/5986))
 - Pull request CI no longer installs TeXLive, or the compilers and OpenBLAS that the prebuilt solver wheels make redundant. The latexify test mocks `sympy.preview` and runs everywhere. TeXLive downloads took 12–50 minutes in 6 of 15 runs. ([#5985](https://github.com/pybamm-team/PyBaMM/pull/5985))
