@@ -57,6 +57,10 @@ pub enum CoreError {
     #[error("the residual has {got} rows but n_states={n_states}")]
     ResidualLength { got: usize, n_states: usize },
 
+    /// A graph [`validate`](crate::validate) refuses, so it cannot be lowered.
+    #[error("cannot lower the expression graph: {0}")]
+    Graph(#[from] crate::ir::GraphError),
+
     /// The mass matrix was not `n_states x n_states`.
     #[error("the mass matrix is {rows}x{cols} but n_states={n_states}")]
     MassMatrixShape {
