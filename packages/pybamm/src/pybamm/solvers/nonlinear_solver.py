@@ -31,23 +31,19 @@ class _NonlinearSolverSetup:
         Number of algebraic variables the solver was built for.
     n_params : int
         Length of the stacked ``[y_diff; inputs]`` vector its functions read.
-    keepalive : object, optional
-        Owner of memory the solver borrows, such as a Rust ``EvaluatorPool``.
     """
 
-    __slots__ = ["_keepalive", "_n_alg", "_n_params", "_setup"]
+    __slots__ = ["_n_alg", "_n_params", "_setup"]
 
     def __init__(
         self,
         setup: idaklu.StandaloneNewtonSolver,
         n_alg: int,
         n_params: int,
-        keepalive=None,
     ):
         self._setup = setup
         self._n_alg = n_alg
         self._n_params = n_params
-        self._keepalive = keepalive  # EvaluatorPool backing the C++ raw ptr
 
     def __bool__(self):
         # Falsy after unpickling, so the caller rebuilds instead of using a dangling ptr
@@ -286,10 +282,9 @@ class NonlinearSolver(pybamm.BaseSolver):
                 f"block [0, {len_alg}); cannot localise for the Newton solver"
             )
 
-        # The C++ driver mutates its evaluator, so it needs the pool's exclusive handout
-        pool = rust_model.evaluator_pool(1)
+        # The C++ driver mutates its evaluator, so it takes the pool's exclusive handout
         _setup = idaklu.StandaloneNewtonSolver(
-            rust_model=pool.as_ptr(0),
+            rust_evaluators=rust_model.evaluator_pool(1),
             n_rhs=len_rhs,
             n_alg=len_alg,
             jac_rows=jac_rows,
@@ -303,9 +298,7 @@ class NonlinearSolver(pybamm.BaseSolver):
             use_sparse=bool(self.use_sparse),
             klu_pivot_tolerance=float(self._options["klu_pivot_tolerance"]),
         )
-        return _NonlinearSolverSetup(
-            _setup, len_alg, len_rhs + rust_model.n_inputs, keepalive=pool
-        )
+        return _NonlinearSolverSetup(_setup, len_alg, len_rhs + rust_model.n_inputs)
 
     def _build_newton_solver(self, res_fn, jac_fn, len_alg, n_params):
         _setup = idaklu.StandaloneNewtonSolver(
