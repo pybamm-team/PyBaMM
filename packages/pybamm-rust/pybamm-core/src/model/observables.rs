@@ -5,6 +5,7 @@ use std::sync::Arc;
 use crate::arena::{Arena, DagRef, NodeId};
 use crate::error::CoreError;
 use crate::eval::CompiledExpr;
+use crate::ir::validate;
 use crate::observable::{ObservableKind, ObservableScratch, ObservableSet, seed_param_tangent};
 use crate::params::{ParamRegistry, resolve_input_width};
 
@@ -30,16 +31,17 @@ impl Workspace {
 impl CompiledModel {
     /// Compile `roots` as this model's observables of `kind`, replacing any set before.
     ///
-    /// Every root is checked against the declared states and inputs before any compiles. The
-    /// roots are simplified together once, and their tapes and tangents derive from that graph,
-    /// so they agree with each other. Two or more also fuse into one tape, so shared
-    /// subexpressions run once.
+    /// Every root is validated and checked against the declared states and inputs before any
+    /// compiles. The roots are simplified together once, and their tapes and tangents derive
+    /// from that graph, so they agree with each other. Two or more also fuse into one tape, so
+    /// shared subexpressions run once.
     pub fn set_observables(
         &mut self,
         kind: ObservableKind,
         arena: &Arena,
         roots: &[NodeId],
     ) -> Result<(), CoreError> {
+        validate(arena, roots.iter().copied())?;
         for &root in roots {
             verify_state_extent(DagRef::new(arena, root), self.n_states)?;
         }
@@ -231,6 +233,26 @@ mod tests {
     use super::*;
     use crate::node::Node;
     use crate::params::ParamIdx;
+
+    #[test]
+    fn an_unsupported_observable_is_an_error_not_a_panic() {
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let rhs = arena.alloc(Node::Neg(y));
+        let unsupported = arena.alloc(Node::MatMul(y, y));
+
+        let mut model = compile(&arena, rhs, identity_mass_matrix(1), 1, 0);
+        for kind in [ObservableKind::Outputs, ObservableKind::Events] {
+            let err = model
+                .set_observables(kind, &arena, &[y, unsupported])
+                .expect_err("an unsupported observable must be refused, not lowered");
+            assert!(
+                matches!(err, CoreError::Graph(_)),
+                "unexpected error: {err}"
+            );
+        }
+        assert_eq!(model.n_outputs(), 0, "no root of a refused set compiles");
+    }
 
     #[test]
     fn an_output_past_the_declared_state_count_is_rejected() {

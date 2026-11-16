@@ -17,7 +17,7 @@ use std::sync::Arc;
 use crate::arena::{DagRef, NodeId, ReadExtents, resolve_state_count};
 use crate::error::CoreError;
 use crate::eval::{CompiledExpr, SplitCompiledExpr};
-use crate::ir::TypedIr;
+use crate::ir::{TypedIr, validate};
 use crate::jacobian::{CscPattern, JacobianData, JacobianLayout, JacobianScratch, JvpAt};
 use crate::node::CsrData;
 use crate::observable::{ObservableScratch, ObservableSet};
@@ -178,8 +178,9 @@ impl CompiledModel {
     /// `rhs` is simplified once, and the residual, its Jacobian and `df/dp` all derive from that
     /// graph, so they agree with each other.
     ///
-    /// Refuses declared sizes below what the graph reads, a mass matrix that is not a canonical
-    /// `n_states x n_states` CSR, and sensitivity or algebraic specs the model cannot honour.
+    /// Refuses a graph [`validate`] rejects, declared sizes below what the graph reads, a mass
+    /// matrix that is not a canonical `n_states x n_states` CSR, and sensitivity or algebraic
+    /// specs the model cannot honour.
     pub fn new(
         rhs: DagRef<'_>,
         mass_matrix: CsrData,
@@ -187,6 +188,8 @@ impl CompiledModel {
         input_width: PackedWidth,
         options: CompiledModelOptions<'_>,
     ) -> Result<Self, CoreError> {
+        let residual = options.algebraic.as_ref().map(|spec| spec.residual);
+        validate(rhs.arena(), std::iter::once(rhs.root()).chain(residual))?;
         let params = verify_widths(rhs, n_states, input_width)?;
         let mass_shape = mass_matrix.shape();
         if mass_shape.rows != n_states || mass_shape.cols != n_states {
@@ -517,12 +520,13 @@ impl std::fmt::Debug for CompiledModel {
 #[cfg(test)]
 mod tests {
     use super::test_fixtures::{
-        assemble_dense, assemble_dense_no_mass, assert_matrices_match, compile, dense_row_model,
-        doubling_model, element, finite_difference_jacobian, identity_mass_matrix, input,
-        less_cj_on_the_diagonal, try_compile,
+        algebraic_options, assemble_dense, assemble_dense_no_mass, assert_matrices_match, compile,
+        dense_row_model, doubling_model, element, finite_difference_jacobian, identity_mass_matrix,
+        input, less_cj_on_the_diagonal, try_compile,
     };
     use super::*;
     use crate::arena::Arena;
+    use crate::ir::GraphError;
     use crate::jacobian::tests::banded_nonlinear;
     use crate::node::{Node, Shape};
 
@@ -978,6 +982,45 @@ mod tests {
             ),
             "unexpected error: {err}"
         );
+    }
+
+    /// `y @ y`: lowering needs a constant left operand, so `validate` refuses it.
+    fn unsupported_matmul(arena: &mut Arena) -> NodeId {
+        let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        arena.alloc(Node::MatMul(y, y))
+    }
+
+    fn assert_unsupported(result: Result<CompiledModel, CoreError>) {
+        let err = result.expect_err("an unsupported graph must be refused, not lowered");
+        assert!(
+            matches!(&err, CoreError::Graph(GraphError::Unsupported(message))
+                if message.contains("constant matrix")),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn an_unsupported_rhs_is_an_error_not_a_panic() {
+        let mut arena = Arena::new();
+        let rhs = unsupported_matmul(&mut arena);
+        assert_unsupported(try_compile(&arena, rhs, identity_mass_matrix(1), 1, 0));
+    }
+
+    #[test]
+    fn an_unsupported_algebraic_residual_is_an_error_not_a_panic() {
+        let mut arena = Arena::new();
+        let rhs = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let residual = unsupported_matmul(&mut arena);
+        // State 0 is algebraic, so only the residual itself is wrong.
+        let zero_mass = CsrData::try_new(vec![0, 0], vec![], vec![], Shape::matrix(1, 1))
+            .expect("an all-zero CSR is valid");
+        assert_unsupported(CompiledModel::new(
+            DagRef::new(&arena, rhs),
+            zero_mass,
+            1,
+            PackedWidth::new(0),
+            algebraic_options(residual, &[0]),
+        ));
     }
 
     /// The merged CSC pattern needs each mass row's columns strictly ascending.
