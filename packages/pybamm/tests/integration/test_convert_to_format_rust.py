@@ -108,11 +108,44 @@ class TestRustNewton:
         solver = pybamm.NonlinearSolver()
         model = self._pure_algebraic_rust()
         setup = solver._set_up_root_solver_rust(model, {"a": 3.0})
-        assert bool(setup) is True and setup._keepalive is not None
+        assert bool(setup) is True
         restored = pickle.loads(pickle.dumps(setup))
         assert isinstance(restored, _NonlinearSolverSetup)
-        assert restored._setup is None and restored._keepalive is None
+        assert restored._setup is None
         assert bool(restored) is False
+
+    def test_rust_newton_solver_owns_its_evaluator_pool(self):
+        import gc
+
+        solver = pybamm.NonlinearSolver()
+        setup = solver._set_up_root_solver_rust(self._pure_algebraic_rust(), {"a": 3.0})
+        # Only the C++ solver still references the pool its evaluator lives in
+        gc.collect()
+        success, y = setup.solve_batch(
+            np.array([0.0]), np.array([3.0]), np.array([3.0])
+        )
+        assert success
+        # v^2 - 3v + 2 = 0 from v = 3 converges to the root at 2
+        np.testing.assert_allclose(y[:, 0], [2.0], rtol=1e-6)
+
+    def test_rust_newton_solver_refuses_a_bare_address(self):
+        from pybammsolvers import idaklu
+
+        with pytest.raises(AttributeError, match="as_ptr"):
+            idaklu.StandaloneNewtonSolver(
+                rust_evaluators=0xDEAD0,
+                n_rhs=0,
+                n_alg=1,
+                jac_rows=[0],
+                jac_cols=[0],
+                atol=[1e-8],
+                rtol=1e-8,
+                step_tol=1e-12,
+                max_iter=10,
+                max_backtracks=5,
+                eps_newt=1e-3,
+                use_sparse=False,
+            )
 
     def test_rust_newton_solver_resolves_after_pickle(self):
         import pickle

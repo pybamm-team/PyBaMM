@@ -178,10 +178,8 @@ class TestNonlinearSolverRust:
         lowering.state_residual(algebraic_only=True)
         lowering.algebraic_block()
         rust_model = lowering.compile()
-        pool = rust_model.evaluator_pool(1)
         jac_rows, jac_cols = rust_model.algebraic_jacobian_sparsity_pattern()
         kwargs = {
-            "rust_model": pool.as_ptr(0),
             "n_rhs": 0,
             "n_alg": 2,
             "jac_rows": np.asarray(jac_rows).tolist(),
@@ -195,10 +193,15 @@ class TestNonlinearSolverRust:
             "use_sparse": True,
         }
         assert (kwargs["jac_rows"], kwargs["jac_cols"]) == ([0, 1], [0, 1])
-        idaklu.StandaloneNewtonSolver(**kwargs)
+        # Each solver takes its own pool: an evaluator is handed out once
+        idaklu.StandaloneNewtonSolver(
+            rust_evaluators=rust_model.evaluator_pool(1), **kwargs
+        )
 
         with pytest.raises(ValueError, match=match):
-            idaklu.StandaloneNewtonSolver(**{**kwargs, **change})
+            idaklu.StandaloneNewtonSolver(
+                rust_evaluators=rust_model.evaluator_pool(1), **{**kwargs, **change}
+            )
 
     def test_matches_casadi_newton(self):
         def build():
