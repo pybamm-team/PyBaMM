@@ -122,7 +122,7 @@ pub enum BinaryOp {
     EqualHeaviside,
     /// `a < b`, the strict Heaviside: 0.0 when the operands are equal.
     NotEqualHeaviside,
-    /// `|a - b| < 1e-14`, a tolerance test rather than an exact comparison.
+    /// `a == b`, exact IEEE 754 equality, as pybamm's `Equality` evaluates.
     Equality,
     /// `a * b`, but zero wherever `a` is, even against an infinite or NaN `b`.
     MaskedMul,
