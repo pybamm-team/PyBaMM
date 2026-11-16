@@ -1384,7 +1384,7 @@ bool IDAKLUSolverOpenMP<ExprSet>::SensitivityConsistentInitialization(
 
 template <class ExprSet>
 bool IDAKLUSolverOpenMP<ExprSet>::MassMatrixIsIdentity() {
-  // Distinct irrational entries, so no other M maps the probe onto itself
+  // Only an M - I that maps this probe exactly to zero is mistaken for I
   std::vector<sunrealtype> probe(number_of_states);
   std::vector<sunrealtype> image(number_of_states);
   for (int i = 0; i < number_of_states; i++) {
