@@ -5,11 +5,11 @@ use numpy::{PyArray1, PyReadonlyArray1};
 use pyo3::prelude::*;
 
 use pybamm_core::{
-    Arena, ArrayData, CompiledExpr, CubicInterpolantData, DagRef, GraphError, InterpolantData,
+    Arena, ArrayData, CompiledExpr, CubicInterpolantData, DagRef, InterpolantData,
     NdInterpolantData, Node, NodeId, ParamRegistry, ReadExtents, Shape,
 };
 
-use crate::errors::core_err_to_py;
+use crate::errors::{core_err_to_py, graph_err_to_py};
 
 /// Wrapper type for the rust-core [`Arena`] struct
 #[pyclass(module = "pybamm.rust")]
@@ -150,17 +150,9 @@ fn check_read_extents(
     Ok(())
 }
 
-/// Validate that the graph rooted at `root` can be lowered safely.
-pub fn check_supported(arena: &Arena, root: NodeId) -> PyResult<()> {
-    pybamm_core::validate(arena, root).map_err(|err| match err {
-        GraphError::Unsupported(msg) => pyo3::exceptions::PyNotImplementedError::new_err(format!(
-            "Rust conversion does not support this expression: {msg}. Use a \
-             CasADi-backed model (set `model.convert_to_format = 'casadi'`)."
-        )),
-        GraphError::Invalid(msg) => {
-            pyo3::exceptions::PyValueError::new_err(format!("Invalid Rust expression graph: {msg}"))
-        },
-    })
+/// Validate that the graphs rooted at `roots` can be lowered safely, in one walk.
+pub fn check_supported(arena: &Arena, roots: impl IntoIterator<Item = NodeId>) -> PyResult<()> {
+    pybamm_core::validate(arena, roots).map_err(graph_err_to_py)
 }
 
 #[pymethods]
@@ -486,7 +478,7 @@ impl ExprGraph {
     ) -> PyResult<f64> {
         let node_id = expr.node_id_in(&slf)?;
         let g = Self::borrow_graph(&slf, py)?;
-        check_supported(&g.arena, node_id)?;
+        check_supported(&g.arena, [node_id])?;
         check_read_extents(
             &g.arena,
             node_id,
@@ -518,7 +510,7 @@ impl ExprGraph {
     ) -> PyResult<Bound<'py, PyArray1<f64>>> {
         let node_id = expr.node_id_in(&slf)?;
         let g = Self::borrow_graph(&slf, py)?;
-        check_supported(&g.arena, node_id)?;
+        check_supported(&g.arena, [node_id])?;
         let y_slice = y.as_slice()?;
         let y_dot_slice = y_dot.as_slice()?;
         check_read_extents(
@@ -547,7 +539,7 @@ impl ExprGraph {
         n_states: Option<usize>,
     ) -> PyResult<crate::compiled_function::CompiledFunction> {
         let node_id = expr.node_id_in(&slf)?;
-        check_supported(Self::borrow_graph(&slf, py)?.arena(), node_id)?;
+        check_supported(Self::borrow_graph(&slf, py)?.arena(), [node_id])?;
         crate::compiled_function::CompiledFunction::build(py, slf, node_id, name, n_states)
     }
 
@@ -573,12 +565,7 @@ impl ExprGraph {
                 "compile_outputs requires at least one output",
             ));
         }
-        {
-            let g = Self::borrow_graph(&slf, py)?;
-            for &id in &ids {
-                check_supported(g.arena(), id)?;
-            }
-        }
+        check_supported(Self::borrow_graph(&slf, py)?.arena(), ids.iter().copied())?;
         crate::compiled_function::CompiledFunction::build_outputs(
             py, slf, names, ids, name, n_states,
         )
