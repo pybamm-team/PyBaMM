@@ -12,7 +12,6 @@ import sys
 from unittest import mock
 
 import numpy as np
-import pandas as pd
 import pytest
 import scipy
 from scipy.io import loadmat
@@ -1149,9 +1148,15 @@ class TestSolution:
             assert csv_str.replace("\r", "") == f.read()
 
         # read csv
-        df = pd.read_csv(f"{test_stub}.csv")
-        np.testing.assert_allclose(df["c"], solution.data["c"], rtol=1e-7, atol=1e-6)
-        np.testing.assert_allclose(df["2c"], solution.data["2c"], rtol=1e-7, atol=1e-6)
+        with open(f"{test_stub}.csv") as f:
+            assert f.readline().rstrip() == "c,2c"
+        csv_data = np.loadtxt(f"{test_stub}.csv", delimiter=",", skiprows=1)
+        np.testing.assert_allclose(
+            csv_data[:, 0], solution.data["c"], rtol=1e-7, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            csv_data[:, 1], solution.data["2c"], rtol=1e-7, atol=1e-6
+        )
 
         # to json
         solution.save_data(f"{test_stub}.json", to_format="json")
