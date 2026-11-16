@@ -375,7 +375,9 @@ impl PreparedSolver {
                 .graph
                 .try_borrow(py)
                 .map_err(|_| PyValueError::new_err("PreparedSolver: graph borrow conflict"))?;
-            prepared = prepared.with_time_derivative(DagRef::new(graph.arena(), model.rhs_root));
+            prepared = prepared
+                .with_time_derivative(DagRef::new(graph.arena(), model.rhs_root))
+                .map_err(core_err_to_py)?;
         }
 
         Ok(Self { inner: prepared })
