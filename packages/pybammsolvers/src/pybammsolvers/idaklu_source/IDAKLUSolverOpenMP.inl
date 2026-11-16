@@ -73,14 +73,14 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   SetMatrix();
 
   // initialise solver
-  IDAInit(ida_mem, residual_eval<ExprSet>, 0, yy, yyp);
+  IDAInit(ida_mem, guarded_residual_eval<ExprSet>, 0, yy, yyp);
 
   // set tolerances
   rtol = SUN_RCONST(rel_tol);
   IDASVtolerances(ida_mem, rtol, avtol);
 
   // Set events
-  IDARootInit(ida_mem, number_of_events, events_eval<ExprSet>);
+  IDARootInit(ida_mem, number_of_events, guarded_events_eval<ExprSet>);
 
   // Set user data
   void *user_data = functions.get();
@@ -258,20 +258,20 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
     CheckErrors(IDABBDPrecInit(
       ida_mem, number_of_states, setup_opts.precon_half_bandwidth,
       setup_opts.precon_half_bandwidth, setup_opts.precon_half_bandwidth_keep,
-      setup_opts.precon_half_bandwidth_keep, 0.0, residual_eval_approx<ExprSet>, NULL), "IDABBDPrecInit");
+      setup_opts.precon_half_bandwidth_keep, 0.0, guarded_residual_eval_approx<ExprSet>, NULL), "IDABBDPrecInit");
   }
 
   if (setup_opts.jacobian == "matrix-free") {
-    CheckErrors(IDASetJacTimes(ida_mem, NULL, jtimes_eval<ExprSet>), "IDASetJacTimes");
+    CheckErrors(IDASetJacTimes(ida_mem, NULL, guarded_jtimes_eval<ExprSet>), "IDASetJacTimes");
   } else if (setup_opts.jacobian != "none") {
-    CheckErrors(IDASetJacFn(ida_mem, jacobian_eval<ExprSet>), "IDASetJacFn");
+    CheckErrors(IDASetJacFn(ida_mem, guarded_jacobian_eval<ExprSet>), "IDASetJacFn");
   }
 
   if (sensitivity) {
     // The simultaneous corrector fails at tight tolerances (#5999), and IDAS
     // only applies the sensitivity error test in the staggered one
     CheckErrors(IDASensInit(ida_mem, number_of_parameters, IDA_STAGGERED,
-      sensitivities_eval<ExprSet>, yyS, yypS), "IDASensInit");
+      guarded_sensitivities_eval<ExprSet>, yyS, yypS), "IDASensInit");
     CheckErrors(IDASensEEtolerances(ida_mem), "IDASensEEtolerances");
     // Set once: IDASensReInit leaves it as it is
     CheckErrors(IDASetSensErrCon(ida_mem, solver_opts.sensitivity_error_control),
@@ -367,6 +367,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   const int number_of_evals = t_eval.size();
 
   // setup
+  functions->callback_error = nullptr;
   InitializeSolveStorage(number_of_evals, t_interp.size());
   SetupInitialState(t_eval, y0, yp0, inputs, pbar);
 
@@ -405,6 +406,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   // Progress one step before the loop to ensure IDAGetDky works at t0 for dky = 1
   int n_steps = 0;
   int retval = Step(tf_perturbed, t_val);
+  RethrowCallbackError();
   // Before IDAGetDky, which fails on a step that was never taken
   CheckErrors(retval, "IDASolve at t0");
   GetSolutionFull(t0);
@@ -458,6 +460,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
     t_prev = t_val;
     retval = Step(tf_perturbed, t_val);
+    RethrowCallbackError();
     GetSolutionStates(t_val);
     // A failed first step after a restart leaves no derivative to read back
     if (save_hermite && retval >= 0) {
@@ -1104,12 +1107,20 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationDAE(
 }
 
 template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::RethrowCallbackError() {
+  if (std::exception_ptr error = std::exchange(functions->callback_error, nullptr)) {
+    std::rethrow_exception(error);
+  }
+}
+
+template <class ExprSet>
 bool IDAKLUSolverOpenMP<ExprSet>::CalcIC(
   const sunrealtype& t_val,
   const sunrealtype& t_next_perturbed,
   const int& icopt,
   const bool with_sensitivities) {
   const int flag = IDACalcIC(ida_mem, icopt, t_next_perturbed);
+  RethrowCallbackError();
   if (flag >= 0) {
     return true;
   }
