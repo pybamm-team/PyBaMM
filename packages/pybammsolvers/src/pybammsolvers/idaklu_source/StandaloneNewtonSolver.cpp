@@ -224,10 +224,16 @@ int checked_atol_width(const std::vector<sunrealtype>& atol, int n_alg) {
   return n_alg;
 }
 
+// `as_ptr` hands each evaluator out once, so this is called once per solver.
+void* first_evaluator(const py::object& rust_evaluators) {
+  return pybamm_rust_detail::model_from_address(
+    rust_evaluators.attr("as_ptr")(0).cast<std::uintptr_t>());
+}
+
 }  // namespace
 
 StandaloneNewtonSolver::StandaloneNewtonSolver(
-  std::uintptr_t rust_model_ptr,
+  py::object rust_evaluators,
   int n_rhs,
   int n_alg,
   const std::vector<expr_int>& jac_rows,
@@ -240,11 +246,12 @@ StandaloneNewtonSolver::StandaloneNewtonSolver(
   sunrealtype epsNewt,
   bool use_sparse,
   sunrealtype klu_pivot_tolerance)
-  : system_(
-      std::make_unique<RustNewtonResExpression>(
-        pybamm_rust_detail::model_from_address(rust_model_ptr), n_rhs, n_alg),
+  : rust_evaluators_(std::move(rust_evaluators)),
+    rust_model_(first_evaluator(rust_evaluators_)),
+    system_(
+      std::make_unique<RustNewtonResExpression>(rust_model_, n_rhs, n_alg),
       std::make_unique<RustNewtonJacExpression>(
-        pybamm_rust_detail::model_from_address(rust_model_ptr), n_rhs, n_alg,
+        rust_model_, n_rhs, n_alg,
         static_cast<int>(jac_rows.size()), jac_rows, jac_cols),
       checked_atol_width(atol, n_alg),
       use_sparse,

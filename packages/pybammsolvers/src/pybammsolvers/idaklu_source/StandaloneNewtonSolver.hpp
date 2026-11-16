@@ -99,9 +99,9 @@ public:
     bool use_sparse,
     sunrealtype klu_pivot_tolerance);
 
-  /** @brief Rust-backed constructor from an opaque Rust model handle. */
+  /** @brief Rust-backed constructor over evaluator 0 of `rust_evaluators`, kept alive here. */
   StandaloneNewtonSolver(
-    std::uintptr_t rust_model_ptr,
+    py::object rust_evaluators,
     int n_rhs,
     int n_alg,
     const std::vector<expr_int>& jac_rows,
@@ -140,6 +140,9 @@ public:
     py::object logger = py::none());
 
 private:
+  // Declared first, so it outlives the expressions that borrow its evaluator.
+  py::object rust_evaluators_;
+  void* rust_model_ = nullptr;
   SolverLog log_;
   StandaloneAlgebraicSystem system_;
   NonlinearSolver solver_;

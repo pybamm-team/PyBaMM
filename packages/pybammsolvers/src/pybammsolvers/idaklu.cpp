@@ -487,11 +487,11 @@ PYBIND11_MODULE(idaklu, m)
          py::arg("max_iter"), py::arg("max_backtracks"),
          py::arg("eps_newt"), py::arg("use_sparse"),
          py::arg("klu_pivot_tolerance") = 0.1)
-    .def(py::init<std::uintptr_t, int, int,
+    .def(py::init<py::object, int, int,
                   std::vector<expr_int>, std::vector<expr_int>,
                   std::vector<sunrealtype>, sunrealtype, sunrealtype,
                   int, int, sunrealtype, bool, sunrealtype>(),
-         py::arg("rust_model"), py::arg("n_rhs"), py::arg("n_alg"),
+         py::arg("rust_evaluators"), py::arg("n_rhs"), py::arg("n_alg"),
          py::arg("jac_rows"), py::arg("jac_cols"),
          py::arg("atol"), py::arg("rtol"), py::arg("step_tol"),
          py::arg("max_iter"), py::arg("max_backtracks"),
