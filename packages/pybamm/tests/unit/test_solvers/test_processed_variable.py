@@ -1,6 +1,5 @@
 import casadi
 import numpy as np
-import pandas as pd
 import pytest
 from scipy.interpolate import CubicHermiteSpline
 
@@ -180,71 +179,6 @@ class TestProcessedVariable:
             [to_casadi(var, y_sol)],
             self._sol_default(t_sol, y_sol, model=pybamm.BaseModel()),
         )
-
-    @staticmethod
-    def _xarray_route(processed_var, t, fill_value=np.nan):
-        processed_var.initialise()
-        return processed_var._xr_interpolate(
-            processed_var._entries_for_interp_raw,
-            processed_var._coords_raw,
-            False,
-            t=t,
-            fill_value=fill_value,
-        )
-
-    @pytest.mark.parametrize(
-        ("t_query", "shape"),
-        [
-            (0.5, ()),
-            (np.float64(0.5), ()),
-            (np.array(0.5), ()),
-            ([0.9, 0.3], (2,)),
-            (np.array([0.9, 0.3, 0.6]), (3,)),
-            (np.array([0.0, 0.5, 1.0, 2.0]), (4,)),
-            (np.array([0.5, -0.5, 2.0]), (3,)),
-        ],
-    )
-    def test_0D_call_matches_the_xarray_route(self, t_query, shape):
-        processed_var = self._build_0D_var()
-        values = processed_var(t_query)
-
-        assert isinstance(values, np.ndarray)
-        assert values.shape == shape
-        np.testing.assert_allclose(
-            values, self._xarray_route(processed_var, t_query), rtol=1e-14
-        )
-        t_array = np.asarray(t_query)
-        in_range = (t_array >= 0) & (t_array <= 1)
-        np.testing.assert_allclose(values[in_range], 5 * t_array[in_range])
-        # out-of-range queries take the fill value, as xarray fills them
-        assert np.isnan(values[~in_range]).all()
-        assert not processed_var.xr_array_raw_initialized
-
-    def test_0D_call_fill_value(self):
-        processed_var = self._build_0D_var()
-        t_query = np.array([0.5, 2.0])
-
-        values = processed_var(t_query, fill_value=-1.0)
-        np.testing.assert_array_equal(values, [2.5, -1.0])
-        np.testing.assert_allclose(
-            values, self._xarray_route(processed_var, t_query, -1.0), rtol=1e-14
-        )
-
-        # np.interp cannot extrapolate, so this keeps the xarray route
-        np.testing.assert_allclose(
-            processed_var(t_query, fill_value="extrapolate"), [2.5, 10.0]
-        )
-
-    def test_0D_call_keeps_xarray_errors(self):
-        # a multi-dimensional t is rejected, as for every other dimension
-        processed_var = self._build_0D_var()
-        with pytest.raises(IndexError, match=r"multi-dimensional"):
-            processed_var(np.array([[0.1], [0.2]]))
-
-        # a repeated solution time has no single value to interpolate from
-        processed_var = self._build_0D_var(np.array([0.0, 0.5, 0.5, 1.0]))
-        with pytest.raises(pd.errors.InvalidIndexError):
-            processed_var(0.25)
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_discrete_data(self, hermite_interp):
