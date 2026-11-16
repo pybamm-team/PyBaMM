@@ -5,7 +5,8 @@ use std::hint::black_box;
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use helpers::{build_coupled, identity_mass_matrix, slot_stats};
 use pybamm_core::{
-    Arena, CompiledModel, CompiledModelOptions, DagRef, Node, NodeId, PackedWidth, TypedIr,
+    Arena, CompiledModel, CompiledModelOptions, CsrData, DagRef, Node, NodeId, PackedWidth, Shape,
+    TypedIr,
 };
 #[cfg(feature = "serialize")]
 use pybamm_core::{DagSnapshot, ObservableKind, SplitCompiledExpr};
@@ -144,7 +145,43 @@ fn bench_model_compile(c: &mut Criterion) {
         });
     }
 
+    // One dense row, as an integral constraint gives: compile time must stay linear in its width.
+    for n in [10_000, 100_000] {
+        group.bench_with_input(BenchmarkId::new("dense_row", n), &n, |b, &n| {
+            b.iter(|| {
+                let mut arena = Arena::new();
+                let root = build_dense_row(&mut arena, n);
+                CompiledModel::new(
+                    black_box(DagRef::new(&arena, root)),
+                    identity_mass_matrix(n),
+                    n,
+                    PackedWidth::new(0),
+                    CompiledModelOptions::default(),
+                )
+                .expect("a valid fixture")
+            });
+        });
+    }
+
     group.finish();
+}
+
+/// `[w . y, sin(y[1..])]`: a dense constant row over every state beside a diagonal.
+fn build_dense_row(arena: &mut Arena, n: usize) -> NodeId {
+    let y = arena.alloc(Node::StateVector { start: 0, end: n });
+    let weights = arena.alloc(Node::SparseMatrix(Box::new(
+        CsrData::try_new(
+            vec![0, n],
+            (0..n).collect(),
+            (0..n).map(|j| (j as f64).mul_add(1e-3, 1.0)).collect(),
+            Shape::matrix(1, n),
+        )
+        .expect("a valid row"),
+    )));
+    let dense = arena.alloc(Node::MatMul(weights, y));
+    let rest = arena.alloc(Node::StateVector { start: 1, end: n });
+    let diagonal = arena.alloc(Node::Sin(rest));
+    arena.alloc(Node::Concat(vec![dense, diagonal]))
 }
 
 #[cfg(feature = "serialize")]

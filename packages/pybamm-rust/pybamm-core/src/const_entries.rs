@@ -187,12 +187,80 @@ impl NodeInfo {
     }
 }
 
-/// Merge buffers reused across nodes.
+/// Buffers reused across nodes.
 #[derive(Debug, Default)]
 struct Scratch {
-    out: Vec<Coeff>,
+    seeds: SeedAccumulator,
     acc: Vec<Coeff>,
     children: Vec<NodeId>,
+}
+
+/// Folds many elements' coefficients into one, indexed by seed.
+///
+/// Each seed folds its contributions in arrival order, as repeated sorted merges would, so values
+/// match bit for bit; the cost is linear in the contributions rather than in the running union.
+#[derive(Debug, Default)]
+struct SeedAccumulator {
+    /// Per seed, the coefficient folded since the last drain, or `None` if untouched.
+    slots: Vec<Option<Coeff>>,
+    /// Seeds touched since the last drain.
+    touched: Vec<usize>,
+}
+
+impl SeedAccumulator {
+    fn slot(&mut self, seed: usize) -> &mut Option<Coeff> {
+        if seed >= self.slots.len() {
+            self.slots.resize(seed + 1, None);
+        }
+        let slot = &mut self.slots[seed];
+        if slot.is_none() {
+            self.touched.push(seed);
+        }
+        slot
+    }
+
+    /// Fold in `factor * coeffs`, one `MatMul` column.
+    ///
+    /// A seed already present fuses its product as the tape's `mul_acc` does; a new one rounds
+    /// alone.
+    fn add_scaled(&mut self, coeffs: &[Coeff], factor: f64) {
+        for &coeff in coeffs {
+            let slot = self.slot(coeff.seed);
+            let folded = slot.map_or_else(
+                || coeff.map(|v| v * factor),
+                |sum| Coeff {
+                    seed: coeff.seed,
+                    value: sum
+                        .value
+                        .zip(coeff.value)
+                        .map(|(sum, v)| mul_acc(sum, factor, v)),
+                },
+            );
+            *slot = Some(folded);
+        }
+    }
+
+    /// Fold in the seeds of `coeffs`, every coefficient unresolved.
+    fn add_unknown(&mut self, coeffs: &[Coeff]) {
+        for &coeff in coeffs {
+            *self.slot(coeff.seed) = Some(Coeff::unknown(coeff.seed));
+        }
+    }
+
+    /// Write the folded coefficients to `out`, ascending by seed, and reset.
+    fn drain_into(&mut self, out: &mut Vec<Coeff>) {
+        out.clear();
+        self.touched.sort_unstable();
+        let slots = &mut self.slots;
+        out.extend(self.touched.drain(..).filter_map(|seed| slots[seed].take()));
+    }
+
+    /// Reset without reading, once an incomplete element ends the fold.
+    fn clear(&mut self) {
+        for seed in self.touched.drain(..) {
+            self.slots[seed] = None;
+        }
+    }
 }
 
 /// Append `map_a(a) + map_b(b)` to `out`, a sorted merge over seed indices.
@@ -236,38 +304,6 @@ fn merge_sum(a: &[Coeff], b: &[Coeff], subtract: bool, out: &mut Vec<Coeff>) {
     merge(a, b, out, |c| c, |c| if subtract { c.negated() } else { c });
 }
 
-/// Append `acc + factor * coeffs`, the accumulation one `MatMul` row performs, to `out`.
-///
-/// A seed already in `acc` fuses its product as the tape's `mul_acc` does; a new one rounds alone.
-fn merge_scaled(acc: &[Coeff], coeffs: &[Coeff], factor: f64, out: &mut Vec<Coeff>) {
-    let (mut i, mut j) = (0, 0);
-    while i < acc.len() && j < coeffs.len() {
-        match acc[i].seed.cmp(&coeffs[j].seed) {
-            Ordering::Less => {
-                out.push(acc[i]);
-                i += 1;
-            },
-            Ordering::Greater => {
-                out.push(coeffs[j].map(|v| v * factor));
-                j += 1;
-            },
-            Ordering::Equal => {
-                out.push(Coeff {
-                    seed: acc[i].seed,
-                    value: acc[i]
-                        .value
-                        .zip(coeffs[j].value)
-                        .map(|(sum, v)| mul_acc(sum, factor, v)),
-                });
-                i += 1;
-                j += 1;
-            },
-        }
-    }
-    out.extend_from_slice(&acc[i..]);
-    out.extend(coeffs[j..].iter().map(|c| c.map(|v| v * factor)));
-}
-
 /// Append the seeds of `a` and `b`, every coefficient unresolved, to `out`.
 fn merge_unknown(a: &[Coeff], b: &[Coeff], out: &mut Vec<Coeff>) {
     let unknown = |c: Coeff| Coeff::unknown(c.seed);
@@ -276,24 +312,21 @@ fn merge_unknown(a: &[Coeff], b: &[Coeff], out: &mut Vec<Coeff>) {
 
 /// Union the seeds of `elements` into `acc`, every coefficient unresolved.
 ///
-/// Returns false at the first incomplete element or once past the degree cap.
+/// Returns false at the first incomplete element.
 fn union_seeds<'a>(
     elements: impl Iterator<Item = Element<'a>>,
+    seeds: &mut SeedAccumulator,
     acc: &mut Vec<Coeff>,
-    out: &mut Vec<Coeff>,
 ) -> bool {
-    acc.clear();
     for element in elements {
         if !element.complete {
+            seeds.clear();
+            acc.clear();
             return false;
         }
-        if element.coeffs.is_empty() {
-            continue;
-        }
-        out.clear();
-        merge_unknown(acc, element.coeffs, out);
-        std::mem::swap(acc, out);
+        seeds.add_unknown(element.coeffs);
     }
+    seeds.drain_into(acc);
     true
 }
 
@@ -443,14 +476,14 @@ fn reduce_all(children: &[NodeId], info: &NodeMap<NodeInfo>, scratch: &mut Scrat
     if !any_seeded(children, info) {
         return NodeInfo::Primal;
     }
-    let Scratch { out, acc, .. } = scratch;
+    let Scratch { seeds, acc, .. } = scratch;
     let complete = union_seeds(
         children
             .iter()
             .map(|&c| child_info(info, c))
             .flat_map(|child| (0..child.n_elems()).map(move |i| child.elem(i))),
+        seeds,
         acc,
-        out,
     );
     let mut built = Coeffs::with_capacity(1, acc.len());
     built.push(acc, complete);
@@ -467,7 +500,11 @@ fn unknown_elementwise(
 ) -> NodeInfo {
     scratch.children.clear();
     node.for_each_child(|child| scratch.children.push(child));
-    let Scratch { out, acc, children } = scratch;
+    let Scratch {
+        seeds,
+        acc,
+        children,
+    } = scratch;
     if !any_seeded(children, info) {
         return NodeInfo::Primal;
     }
@@ -482,7 +519,7 @@ fn unknown_elementwise(
     let mut built = Coeffs::with_capacity(n_elems, widest.unwrap_or(0));
     for i in 0..n_elems {
         let elements = children.iter().map(|&c| child_info(info, c).elem(i));
-        let complete = union_seeds(elements, acc, out);
+        let complete = union_seeds(elements, seeds, acc);
         built.push(acc, complete);
     }
     NodeInfo::Seeded(built)
@@ -494,21 +531,18 @@ fn matmul_row(
     vector: &NodeInfo,
     scratch: &mut Scratch,
 ) -> bool {
-    let Scratch { out, acc, .. } = scratch;
-    acc.clear();
+    let Scratch { seeds, acc, .. } = scratch;
     for (col, value) in columns {
         let element = vector.elem(col);
         // A non-finite entry makes the tape's `value * 0.0` NaN where the fold drops it.
         if !element.complete || !value.is_finite() {
+            seeds.clear();
+            acc.clear();
             return false;
         }
-        if element.coeffs.is_empty() {
-            continue;
-        }
-        out.clear();
-        merge_scaled(acc, element.coeffs, value, out);
-        std::mem::swap(acc, out);
+        seeds.add_scaled(element.coeffs, value);
     }
+    seeds.drain_into(acc);
     true
 }
 
@@ -940,6 +974,45 @@ mod tests {
         let stacked = arena.alloc(Node::MatMul(inner, y));
         let root = arena.alloc(Node::MatMul(outer, stacked));
         assert_folds_match_the_tape(&arena, root, &[0.7]);
+    }
+
+    #[test]
+    fn a_dense_row_over_overlapping_columns_folds_as_the_tape_accumulates_it() {
+        // Each column of `inner @ y` mixes three seeds, out of seed order, so every seed of the
+        // dense row accumulates over several columns.
+        let n = 40;
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: n });
+        let (mut indptr, mut indices, mut data) = (vec![0], Vec::new(), Vec::new());
+        for row in 0..n {
+            let mut cols = vec![n - 1 - row, (row * 7 + 3) % n, row];
+            cols.sort_unstable();
+            cols.dedup();
+            for col in cols {
+                indices.push(col);
+                data.push(0.1f64.mul_add((row + col) as f64, 1.0) / 3.0);
+            }
+            indptr.push(indices.len());
+        }
+        let inner = arena.alloc(Node::SparseMatrix(Box::new(
+            CsrData::try_new(indptr, indices, data, Shape::matrix(n, n)).expect("valid matrix"),
+        )));
+        let outer = arena.alloc(Node::SparseMatrix(Box::new(
+            CsrData::try_new(
+                vec![0, n],
+                (0..n).collect(),
+                (0..n).map(|col| (col as f64 * 0.37).sin() + 1.1).collect(),
+                Shape::matrix(1, n),
+            )
+            .expect("valid row matrix"),
+        )));
+        let mixed = arena.alloc(Node::MatMul(inner, y));
+        let dense_row = arena.alloc(Node::MatMul(outer, mixed));
+        let rest = arena.alloc(Node::StateVector { start: 1, end: n });
+        let diagonal = arena.alloc(Node::Sin(rest));
+        let root = arena.alloc(Node::Concat(vec![dense_row, diagonal]));
+        let y_values: Vec<f64> = (0..n).map(|i| (i as f64).mul_add(0.05, -0.4)).collect();
+        assert_folds_match_the_tape(&arena, root, &y_values);
     }
 
     #[test]
