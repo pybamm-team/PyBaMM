@@ -952,6 +952,10 @@ pub struct CompiledExpr {
 
 impl CompiledExpr {
     /// Compile an expression DAG into a new `CompiledExpr`.
+    ///
+    /// # Panics
+    ///
+    /// On a graph [`validate`](crate::validate) refuses; check caller-built graphs with it first.
     pub fn new(dag: DagRef<'_>) -> Self {
         Self::from_ir(TypedIr::from_dag(dag))
     }
@@ -1081,6 +1085,10 @@ pub struct SplitCompiledExpr {
 
 impl SplitCompiledExpr {
     /// Lower and compile `dag` with primal and tangent instructions partitioned.
+    ///
+    /// # Panics
+    ///
+    /// On a graph [`validate`](crate::validate) refuses; check caller-built graphs with it first.
     pub fn compile(dag: DagRef<'_>) -> Self {
         let (ir, split) = TypedIr::from_dag_split_eval(dag);
         let batchable = tangent_batch::section_is_batchable(&ir, split);

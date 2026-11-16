@@ -417,6 +417,10 @@ pub struct TypedIr {
 
 impl TypedIr {
     /// Compile an expression DAG into the IR, privatising conditional branch cones first.
+    ///
+    /// # Panics
+    ///
+    /// On a graph [`validate`] refuses; check caller-built graphs with it first.
     pub fn from_dag(dag: DagRef<'_>) -> Self {
         Self::privatise_then(dag, IRBuilder::build)
     }
