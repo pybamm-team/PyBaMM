@@ -30,6 +30,7 @@ use super::{FaerSparsity, csc_to_faer_sparsity, csr_mass_to_faer_csc, lane, lane
 use crate::arena::DagRef;
 use crate::error::CoreError;
 use crate::eval::CompiledExpr;
+use crate::ir::validate;
 use crate::jacobian::CscPattern;
 use crate::model::{CompiledModel, ModelEvaluator, Workspace};
 use crate::node::{CsrData, Node};
@@ -376,10 +377,10 @@ impl PreparedSolver {
     /// Only compiled when there are algebraic states and `rhs` reads `t`. `rhs` is simplified
     /// first, as the model's residual is, and `dF/dt` derives from that graph.
     ///
-    /// # Panics
-    /// If the compiled `dF/dt` is not `n_states` wide, so `rhs` is not the model's root.
-    #[must_use]
-    pub fn with_time_derivative(mut self, rhs: DagRef<'_>) -> Self {
+    /// # Errors
+    /// [`CoreError::Graph`] if `rhs` fails [`validate`], and [`CoreError::ResidualLength`] if
+    /// `dF/dt` is not `n_states` wide, so `rhs` is not the model's root.
+    pub fn with_time_derivative(mut self, rhs: DagRef<'_>) -> Result<Self, CoreError> {
         let reads_time = || {
             let arena = rhs.arena();
             arena
@@ -388,19 +389,20 @@ impl PreparedSolver {
                 .any(|&id| matches!(&arena[id], Node::Time))
         };
         if self.compiled.state_kinds().n_algebraic() > 0 && reads_time() {
+            // The caller's graph, not the derivative, which holds rewrite-only node kinds.
+            validate(rhs.arena(), [rhs.root()])?;
             let mut derivative = simplify_pipeline(dce(rhs));
             derivative.rewrite_in_place(derivative_wrt_time);
             let expr = CompiledExpr::new(simplify_pipeline(derivative).as_ref());
-            assert_eq!(
-                expr.output_len(),
-                self.n_states(),
-                "dF/dt is {} wide, not n_states = {}",
-                expr.output_len(),
-                self.n_states()
-            );
+            if expr.output_len() != self.n_states() {
+                return Err(CoreError::ResidualLength {
+                    got: expr.output_len(),
+                    n_states: self.n_states(),
+                });
+            }
             self.time_derivative = Some(expr);
         }
-        self
+        Ok(self)
     }
 
     /// Whether a solve reporting `n_columns` columns stores `yp` alongside `y`.
@@ -2134,12 +2136,64 @@ mod tests {
         let model = compile(&arena, rhs, differential_then_algebraic_mass(), 2, 0);
         let prepared = PreparedSolver::new(model, 1e-8, &[1e-8, 1e-8])
             .expect("prepare")
-            .with_time_derivative(DagRef::new(&arena, rhs));
+            .with_time_derivative(DagRef::new(&arena, rhs))
+            .expect("the model's own rhs");
 
         let derivative = prepared.time_derivative.as_ref().expect("the rhs reads t");
         let mut scratch = vec![0.0; derivative.scratch_len()];
         let values = derivative.eval(&mut scratch, 0.0, &[1.0, 0.0], &[], &[]);
         assert_eq!(values, [0.0, -1.0]);
+    }
+
+    /// A prepared `dy/dt = -y` with `0 = z - t`, and `y`, `z` and `t` for building other roots.
+    fn time_dependent_dae(arena: &mut Arena) -> (PreparedSolver, [NodeId; 3]) {
+        let y = arena.alloc(Node::StateVector { start: 0, end: 1 });
+        let z = arena.alloc(Node::StateVector { start: 1, end: 2 });
+        let t = arena.alloc(Node::Time);
+        let decay = arena.alloc(Node::Neg(y));
+        let constraint = arena.alloc(Node::Sub(z, t));
+        let rhs = arena.alloc(Node::Concat(vec![decay, constraint]));
+        let model = compile(arena, rhs, differential_then_algebraic_mass(), 2, 0);
+        let prepared = PreparedSolver::new(model, 1e-8, &[1e-8, 1e-8]).expect("prepare");
+        (prepared, [y, z, t])
+    }
+
+    #[test]
+    fn a_time_derivative_of_an_unsupported_rhs_is_an_error_not_a_panic() {
+        let mut arena = Arena::new();
+        let (prepared, [y, z, t]) = time_dependent_dae(&mut arena);
+        let unsupported = arena.alloc(Node::MatMul(y, y));
+        let constraint = arena.alloc(Node::Sub(z, t));
+        let rhs = arena.alloc(Node::Concat(vec![unsupported, constraint]));
+
+        let err = prepared
+            .with_time_derivative(DagRef::new(&arena, rhs))
+            .expect_err("an unsupported rhs must be refused, not lowered");
+        assert!(
+            matches!(err, CoreError::Graph(_)),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn a_time_derivative_of_another_width_is_an_error_not_a_panic() {
+        let mut arena = Arena::new();
+        let (prepared, [_, z, t]) = time_dependent_dae(&mut arena);
+        let narrow = arena.alloc(Node::Sub(z, t));
+
+        let err = prepared
+            .with_time_derivative(DagRef::new(&arena, narrow))
+            .expect_err("a one-row rhs is not this two-state model's root");
+        assert!(
+            matches!(
+                err,
+                CoreError::ResidualLength {
+                    got: 1,
+                    n_states: 2
+                }
+            ),
+            "unexpected error: {err}"
+        );
     }
 
     #[test]
@@ -2160,7 +2214,8 @@ mod tests {
         let prepared = PreparedSolver::new(model, 1e-8, &[1e-8, 1e-8])
             .expect("prepare")
             .with_store_yp(true)
-            .with_time_derivative(DagRef::new(&arena, rhs));
+            .with_time_derivative(DagRef::new(&arena, rhs))
+            .expect("the model's own rhs");
         let t_eval = [0.0, 0.5, 1.0];
 
         for request in [
