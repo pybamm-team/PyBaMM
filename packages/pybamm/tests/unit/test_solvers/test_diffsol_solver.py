@@ -1176,3 +1176,50 @@ class TestNativeSolveRequest:
             np.testing.assert_array_equal(
                 result.yS[0], serial.yS[0], err_msg=f"set {i} sensitivities"
             )
+
+
+def _structurally_singular_prepared_solver():
+    """``dv/dt = -v`` with ``0 = v - 1``: ``z`` appears in no equation."""
+    from pybamm.rust import CompiledModel, ExprGraph, PreparedSolver
+
+    g = ExprGraph()
+    v = g.state_vector(0, 1)
+    rhs = g.concat([g.mul(g.scalar(-1.0), v), g.sub(v, g.scalar(1.0))])
+    model = CompiledModel.from_expr(
+        g,
+        rhs,
+        np.ones(1),  # diag(1, 0): v differential, z algebraic
+        np.array([0, 1, 1], dtype=np.int64),
+        np.zeros(1, dtype=np.int64),
+        n_inputs=0,
+        sens_param_indices=[],
+        output_exprs=[],
+        event_exprs=[],
+    )
+    return PreparedSolver(model, 1e-6, 1e-6)
+
+
+class TestNativeSolverPanics:
+    # z's empty column makes diffsol's sparse LU panic as it factorises
+    _T_EVAL = np.linspace(0.0, 1.0, 5)
+    _NO_STOPS = np.array([], dtype=np.float64)
+    _Y0 = np.array([1.0, 0.0])
+
+    def test_a_panic_raises_runtime_error(self):
+        solver = _structurally_singular_prepared_solver()
+        with pytest.raises(RuntimeError, match=r"panicked.*factorise"):
+            solver.solve(self._T_EVAL, self._NO_STOPS, self._Y0, np.array([]))
+
+    def test_panicking_sets_each_return_an_error_in_a_batch(self):
+        solver = _structurally_singular_prepared_solver()
+        results = solver.solve_batch(
+            self._T_EVAL,
+            self._NO_STOPS,
+            np.vstack([self._Y0, self._Y0]),
+            np.zeros((2, 0)),
+            2,
+        )
+        assert len(results) == 2
+        for result in results:
+            assert isinstance(result, RuntimeError)
+            assert "factorise" in str(result)
