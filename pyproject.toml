@@ -52,7 +52,7 @@ extend-select = [
     # "ICN",         # flake8-import-conventions
     # "ISC",         # flake8-implicit-str-concat
     # "PGH",         # pygrep-hooks
-    # "PIE",         # flake8-pie
+    "PIE", # flake8-pie
     # "PL",          # pylint
     # "PT",          # flake8-pytest-style
     # "PTH",         # flake8-use-pathlib
