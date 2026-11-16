@@ -190,7 +190,7 @@ class Function(pybamm.Symbol):
     def _rust_evaluate(
         self, graph: pybamm.rust.ExprGraph, *converted_children: pybamm.rust.Expr
     ) -> pybamm.rust.Expr:
-        raise TypeError(
+        raise NotImplementedError(
             f"Cannot convert function '{self.name}' of type "
             f"'{type(self).__name__}' to the Rust backend: generic Python "
             "callables cannot be lowered. Use a CasADi-backed model (set "
@@ -331,7 +331,7 @@ class SpecificFunction(Function):
     def _rust_evaluate(
         self, graph: pybamm.rust.ExprGraph, child: pybamm.rust.Expr
     ) -> pybamm.rust.Expr:
-        raise TypeError(
+        raise NotImplementedError(
             f"Cannot convert function '{self.name}' of type "
             f"'{type(self).__name__}' to the Rust backend: no native Rust "
             "implementation exists for this function. Use a CasADi-backed model "
