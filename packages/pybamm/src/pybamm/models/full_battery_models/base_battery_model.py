@@ -424,6 +424,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             return pybamm.kinetics.Marcus
         elif options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
             return pybamm.kinetics.MarcusHushChidsey
+        elif options["intercalation kinetics"] == "coupled ion-electron transfer":
+            return pybamm.kinetics.CoupledIonElectronTransfer
         elif options["intercalation kinetics"] == "MSMR":
             return pybamm.kinetics.MSMRButlerVolmer
 

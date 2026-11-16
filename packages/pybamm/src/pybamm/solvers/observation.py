@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from itertools import accumulate, pairwise
+from typing import Self
 
 import casadi
 import numpy as np
@@ -47,7 +48,7 @@ class ObserverCache:
             model._observer_cache = cls()
         return model._observer_cache
 
-    def copy(self) -> ObserverCache:
+    def copy(self) -> Self:
         """A cache that starts with these leaves and grows independently."""
         new = type(self)()
         new._casadi_leaves = self._casadi_leaves.copy()

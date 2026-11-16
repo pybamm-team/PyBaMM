@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal
 from warnings import warn
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
-class ParameterCategory(Enum):
+class ParameterCategory(StrEnum):
     """Categories for grouping battery parameters."""
 
     NEGATIVE_ELECTRODE = "negative electrode"
@@ -402,11 +402,7 @@ class ParameterStore:
         >>> store.list_by_category("negative electrode")
         ['Negative electrode thickness [m]']
         """
-        if isinstance(category, ParameterCategory):
-            category_str = category.value
-        else:
-            category_str = category.lower()
-
+        category_str = category.lower()
         return [key for key in self._data if _detect_category(key) == category_str]
 
     def categories(self) -> dict[str, list[str]]:

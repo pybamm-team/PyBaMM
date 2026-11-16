@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cmath>
+#include <limits>
 
 
 using namespace std::string_literals;
@@ -185,6 +186,18 @@ SolverOptions::SolverOptions(py::dict &py_opts)
         silence_sundials_errors = py_opts["silence_sundials_errors"].cast<bool>();
     }
 
+    // Off by default, as in IDAS: sensitivities then only enter the Newton test
+    sensitivity_error_control = false;
+    if (py_opts.contains("sensitivity_error_control")) {
+        sensitivity_error_control = py_opts["sensitivity_error_control"].cast<bool>();
+    }
+
+    // Off by default, as ypS doubles the stored sensitivities
+    hermite_sensitivities = false;
+    if (py_opts.contains("hermite_sensitivities")) {
+        hermite_sensitivities = py_opts["hermite_sensitivities"].cast<bool>();
+    }
+
     // Knot reduction multiplier (1.0 = no reduction, >1.0 = active)
     hermite_reduction_factor = 1.0;
     if (py_opts.contains("hermite_reduction_factor")) {
@@ -192,6 +205,17 @@ SolverOptions::SolverOptions(py::dict &py_opts)
         if (hermite_reduction_factor < 1.0) {
             throw std::domain_error(
                 "hermite_reduction_factor must be >= 1.0. Got " + std::to_string(hermite_reduction_factor)
+            );
+        }
+    }
+
+    // Output upsampling
+    upsampling_tolerance = std::numeric_limits<double>::infinity();
+    if (py_opts.contains("upsampling_tolerance") && !py_opts["upsampling_tolerance"].is_none()) {
+        upsampling_tolerance = py_opts["upsampling_tolerance"].cast<double>();
+        if (upsampling_tolerance <= 0.0) {
+            throw std::domain_error(
+                "upsampling_tolerance must be None or > 0. Got " + std::to_string(upsampling_tolerance)
             );
         }
     }

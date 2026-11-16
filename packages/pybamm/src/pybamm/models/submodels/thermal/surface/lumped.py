@@ -29,7 +29,7 @@ class Lumped(pybamm.BaseSubModel):
 
     def get_coupled_variables(self, variables):
         T_surf = variables["Surface temperature [K]"]
-        T_amb = variables["Ambient temperature [K]"]
+        T_amb = variables["Volume-averaged ambient temperature [K]"]
         R_env = pybamm.Parameter("Environment thermal resistance [K.W-1]")
         Q_cool_env = -(T_surf - T_amb) / R_env
         variables["Environment total cooling [W]"] = Q_cool_env

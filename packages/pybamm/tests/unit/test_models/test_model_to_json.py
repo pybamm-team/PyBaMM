@@ -12,7 +12,7 @@ import pybamm
 
 def _assert_solution_y_almost_equal(sol_orig, sol_loaded, key_output="Voltage [V]"):
     """Assert solution state vector has same shape and key output is almost equal."""
-    np.testing.assert_array_equal(sol_orig.y.shape, sol_loaded.y.shape)
+    np.testing.assert_array_equal(sol_orig.all_ys[0].shape, sol_loaded.all_ys[0].shape)
     v_orig = sol_orig[key_output].data
     v_loaded = sol_loaded[key_output].data
     np.testing.assert_allclose(v_orig, v_loaded, rtol=5e-3, atol=1e-4)
@@ -75,6 +75,21 @@ class TestBaseModelToJson:
         model = _minimal_custom_model()
         with pytest.raises(ValueError, match=r"must end with '\.json' extension"):
             model.to_json("model.txt")
+
+    def test_to_json_write_error_keeps_its_type(self, monkeypatch):
+        """A failed write re-raises the original OSError, noting the file."""
+        model = _minimal_custom_model()
+
+        def deny(*args, **kwargs):
+            raise PermissionError(13, "Permission denied")
+
+        monkeypatch.setattr("builtins.open", deny)
+        with pytest.raises(PermissionError) as exc_info:
+            model.to_json("model.json")
+        assert exc_info.value.errno == 13
+        assert exc_info.value.__notes__ == [
+            "Failed to write model JSON to file 'model.json'"
+        ]
 
     @pytest.mark.parametrize(
         "compress", [False, True], ids=["uncompressed", "compressed"]
