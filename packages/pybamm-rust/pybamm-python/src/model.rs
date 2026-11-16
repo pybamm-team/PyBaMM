@@ -237,15 +237,10 @@ impl CompiledModel {
         let g = graph.try_borrow(py).map_err(|_| {
             PyValueError::new_err("CompiledModel.build_from_parts: graph borrow conflict")
         })?;
-        let input_width = {
-            let roots = std::iter::once(rhs_root)
-                .chain(output_roots.iter().copied())
-                .chain(event_roots.iter().copied())
-                .chain(algebraic.as_ref().map(|&(root, _)| root));
-            g.check_supported(roots)?;
+        // `CompiledModel::new` and `set_observables` validate every root they lower.
+        let input_width =
             resolve_input_width(n_inputs.map(PackedWidth::new), g.params().packed_width())
-                .map_err(core_err_to_py)?
-        };
+                .map_err(core_err_to_py)?;
 
         let options = core_model::CompiledModelOptions {
             sensitivities: &sens_param_indices,
