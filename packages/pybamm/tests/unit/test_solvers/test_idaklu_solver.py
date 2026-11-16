@@ -3481,18 +3481,18 @@ def _coupled_dae(mass_scale=1.0, switch=None, scale_rhs=False):
     return model
 
 
-def _coupled_dae_solution(t, a, b, c=0.0, mass_scale=1.0, y0=1.0, t0=0.0):
+def _coupled_dae_solution(t, a, b, c=0.0, mass_scale=1.0, t0=0.0):
     """Closed-form ``(y, z)`` of :func:`_coupled_dae` with ``s(t) = [t > 0.5]``,
-    from ``y(t0) = y0`` with ``t0 <= 0.5``."""
+    from ``y(t0) = 1`` with ``t0 <= 0.5``."""
     rate = (b - a) / mass_scale
-    y_half = y0 * np.exp(rate * (0.5 - t0))
+    y_half = np.exp(rate * (0.5 - t0))
     after = t > 0.5
     shift = np.where(after, t - 0.5, 0.0)
     y = np.where(
         after,
         y_half * np.exp(rate * shift)
         + c / mass_scale / rate * (np.exp(rate * shift) - 1),
-        y0 * np.exp(rate * (t - t0)),
+        np.exp(rate * (t - t0)),
     )
     return {"y": y, "z": b * y + c * after}
 
@@ -3596,25 +3596,16 @@ class TestIDAKLUSensitivityInitialConditions:
         else:
             self._assert_matches(solution, _coupled_dae_solution, inputs)
 
-    @pytest.mark.parametrize("mass_scale", [1.0, 10.0])
-    def test_init_all_y_ic_sensitivities_follow_the_initial_states(self, mass_scale):
-        # IDA_Y_INIT fits y(0) to y'(0) = f(guess) = -a, so y(0) = a / (a - b)
-        inputs = {"a": 2.0, "b": 0.5}
-        solver = pybamm.IDAKLUSolver(
-            rtol=1e-10, atol=1e-12, options={"init_all_y_ic": True}
-        )
-        solution = solver.solve(
-            _coupled_dae(mass_scale),
-            [0, 1],
-            inputs=inputs,
-            calculate_sensitivities=True,
-            t_interp=np.linspace(0, 1, 6),
-        )
+    def test_init_all_y_ic_rejects_dae_sensitivities(self):
+        solver = pybamm.IDAKLUSolver(options={"init_all_y_ic": True})
 
-        def closed_form(t, a, b):
-            return _coupled_dae_solution(t, a, b, mass_scale=mass_scale, y0=a / (a - b))
-
-        self._assert_matches(solution, closed_form, inputs)
+        with pytest.raises(pybamm.SolverError, match=r"init_all_y_ic"):
+            solver.solve(
+                _coupled_dae(),
+                [0, 1],
+                inputs={"a": 2.0, "b": 0.5},
+                calculate_sensitivities=True,
+            )
 
     def test_init_all_y_ic_keeps_ode_sensitivities(self, decay_model):
         solver = pybamm.IDAKLUSolver(

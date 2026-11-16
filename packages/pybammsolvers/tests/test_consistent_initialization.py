@@ -23,29 +23,21 @@ def _jump_dae():
     return model
 
 
-@pytest.mark.parametrize("options", [{}, {"calc_ic": False}, {"init_all_y_ic": True}])
+@pytest.mark.parametrize("options", [{}, {"calc_ic": False}])
 def test_algebraic_sensitivities_at_t0_are_consistent(options):
-    """z(0) = b y(0) gives dz/dp(0) = b dy(0)/dp + y(0) db/dp, not the zero of
-    the guess z = 0.
-
-    IDA_Y_INIT fits y(0) = a / (a - b) to y'(0) = -a, so y(0) depends on a, b.
-    """
-    a, b = 2.0, 0.5
+    """z(0) = b y(0) with y(0) = 1 gives dz/db(0) = 1, not the zero of the
+    guess z = 0."""
     solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12, options=options)
     sol = solver.solve(
         _jump_dae(),
         [0, 1],
-        inputs={"a": a, "b": b, "c": 1.0},
+        inputs={"a": 2.0, "b": 0.5, "c": 1.0},
         calculate_sensitivities=True,
     )
 
-    if options.get("init_all_y_ic"):
-        y0, dy0_da, dy0_db = a / (a - b), -b / (a - b) ** 2, a / (a - b) ** 2
-    else:
-        y0, dy0_da, dy0_db = 1.0, 0.0, 0.0
     sensitivities = sol["z"].sensitivities
-    np.testing.assert_allclose(sensitivities["a"][0], b * dy0_da, atol=1e-10)
-    np.testing.assert_allclose(sensitivities["b"][0], y0 + b * dy0_db, rtol=1e-9)
+    np.testing.assert_allclose(sensitivities["a"][0], 0, atol=1e-10)
+    np.testing.assert_allclose(sensitivities["b"][0], 1, rtol=1e-9)
     np.testing.assert_allclose(sensitivities["c"][0], 0, atol=1e-12)
 
 
