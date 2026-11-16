@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from itertools import chain
+from typing import cast
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -273,7 +275,9 @@ class DiffSLExport:
         return tensor_name, new_line.join(lines) + new_line + "}"
 
     @staticmethod
-    def _tensor_block(tensor_name: str, entries: list[str], suffix: str = "i") -> str:
+    def _tensor_block(
+        tensor_name: str, entries: Sequence[str | int], suffix: str = "i"
+    ) -> str:
         new_line = "\n"
         lines = [f"{tensor_name}_{suffix} " + "{"]
         lines.extend(f"  {entry}," for entry in entries)
@@ -284,7 +288,7 @@ class DiffSLExport:
         symbol: pybamm.Symbol,
         symbol_to_tensor_name: dict[pybamm.Symbol, str],
         tensor_index: int,
-        y_slice_to_label: dict[tuple[int], str],
+        y_slice_to_label: dict[tuple[int, int], str],
         diffeq: dict[str, str],
         is_variable: bool = False,
         is_event: bool = False,
@@ -312,7 +316,7 @@ class DiffSLExport:
         symbol: pybamm.Conditional,
         symbol_to_tensor_name: dict[pybamm.Symbol, str],
         tensor_index: int,
-        y_slice_to_label: dict[tuple[int], str],
+        y_slice_to_label: dict[tuple[int, int], str],
         diffeq: dict[str, str],
         is_variable: bool = False,
         is_event: bool = False,
@@ -572,7 +576,7 @@ class DiffSLExport:
         eqn: pybamm.Symbol,
         symbol_to_tensor_name: dict[pybamm.Symbol, str],
         tensor_index: int,
-        y_slice_to_label: dict[tuple[int], str],
+        y_slice_to_label: dict[tuple[int, int], str],
         diffeq: dict[str, str],
         symbol_counts: dict[pybamm.Symbol, int],
         is_variable: bool = False,
@@ -761,7 +765,7 @@ class DiffSLExport:
             diffeq["in"] = new_line.join(lines) + new_line + "}"
 
         # extract constant vectors and matrices from model as tensors
-        symbol_to_tensor_name = {}
+        symbol_to_tensor_name: dict[pybamm.Symbol, str] = {}
         vectors = {}
         matrices = {}
         interpolants = {}
@@ -821,7 +825,7 @@ class DiffSLExport:
         input_lines = []
         lines = ["u_i {"]
         start_index = 0
-        y_slice_to_label = {}
+        y_slice_to_label: dict[tuple[int, int], str] = {}
         new_line = "\n"
         for i, ic in enumerate(initial_conditions):
             if isinstance(ic, pybamm.Vector):
@@ -1308,7 +1312,7 @@ def _interpolant_to_diffeq(
 
 def _equation_to_diffeq(
     equation: pybamm.Symbol,
-    y_slice_to_label: dict[tuple[int], str],
+    y_slice_to_label: dict[tuple[int, int], str],
     symbol_to_tensor_name: dict[pybamm.Symbol, str],
     float_precision: int = 20,
     transpose: bool = False,
@@ -1402,7 +1406,7 @@ def _equation_to_diffeq(
         if name == "_reg_power_evaluate":
             # Approximates |x|^a * sign(x) using:
             #  y = (x/scale) * ((x/scale)^2 + delta^2)^((a-1)/2) * scale^a
-            delta = equation.delta
+            delta = cast("pybamm.RegPower", equation).delta
             x = args[0]
             a = args[1]
             # Pre-compute the inner exponent (a-1)/2 at code-gen time when possible,
@@ -1421,7 +1425,7 @@ def _equation_to_diffeq(
             # Note: the sign(b) function treats sign(0) as 1 for numerical stability.
             a = args[0]
             b = args[1]
-            eps2 = equation.eps**2
+            eps2 = cast("pybamm.Arcsinh2", equation).eps ** 2
             return f"arcsinh({a} / (copysign(sqrt(pow({b}, 2) + {eps2:.{float_precision}g}), {b})))"
         else:
             # all the other functions have the same signature as in diffsl
@@ -1466,7 +1470,7 @@ def _equation_to_diffeq(
 
 def equation_to_diffeq(
     equation: pybamm.Symbol,
-    slice_to_label: dict[tuple[int], str],
+    slice_to_label: dict[tuple[int, int], str],
     symbol_to_tensor_name: dict[pybamm.Symbol, str],
     float_precision: int = 20,
     transpose: bool = False,

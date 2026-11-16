@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cmath>
+#include <limits>
 
 
 using namespace std::string_literals;
@@ -47,10 +48,7 @@ SetupOptions::SetupOptions(py::dict &py_opts)
 
     using_sparse_matrix = true;
     using_banded_matrix = false;
-    if (jacobian == "sparse")
-    {
-    }
-    else if (jacobian == "banded") {
+    if (jacobian == "banded") {
         using_banded_matrix = true;
         using_sparse_matrix = false;
     }
@@ -58,10 +56,7 @@ SetupOptions::SetupOptions(py::dict &py_opts)
     {
         using_sparse_matrix = false;
     }
-    else if (jacobian == "matrix-free")
-    {
-    }
-    else
+    else if (jacobian != "sparse" && jacobian != "matrix-free")
     {
         throw std::domain_error(
             "Unknown jacobian type \""s + jacobian +
@@ -69,18 +64,14 @@ SetupOptions::SetupOptions(py::dict &py_opts)
         );
     }
 
-    using_iterative_solver = false;
-    if (linear_solver == "SUNLinSol_Dense" && (jacobian == "dense" || jacobian == "none"))
+    const bool direct_solver_fits_jacobian =
+        (linear_solver == "SUNLinSol_Dense" && (jacobian == "dense" || jacobian == "none")) ||
+        ((linear_solver == "SUNLinSol_KLU" ||
+          linear_solver == "SUNLinSol_cuSolverSp_batchQR") && jacobian == "sparse") ||
+        (linear_solver == "SUNLinSol_Band" && jacobian == "banded");
+    if (direct_solver_fits_jacobian)
     {
-    }
-    else if (linear_solver == "SUNLinSol_KLU" && jacobian == "sparse")
-    {
-    }
-    else if (linear_solver == "SUNLinSol_cuSolverSp_batchQR" && jacobian == "sparse")
-    {
-    }
-    else if (linear_solver == "SUNLinSol_Band" && jacobian == "banded")
-    {
+        using_iterative_solver = false;
     }
     else if (jacobian == "banded") {
         throw std::domain_error(
@@ -195,6 +186,18 @@ SolverOptions::SolverOptions(py::dict &py_opts)
         silence_sundials_errors = py_opts["silence_sundials_errors"].cast<bool>();
     }
 
+    // Off by default, as in IDAS: sensitivities then only enter the Newton test
+    sensitivity_error_control = false;
+    if (py_opts.contains("sensitivity_error_control")) {
+        sensitivity_error_control = py_opts["sensitivity_error_control"].cast<bool>();
+    }
+
+    // Off by default, as ypS doubles the stored sensitivities
+    hermite_sensitivities = false;
+    if (py_opts.contains("hermite_sensitivities")) {
+        hermite_sensitivities = py_opts["hermite_sensitivities"].cast<bool>();
+    }
+
     // Knot reduction multiplier (1.0 = no reduction, >1.0 = active)
     hermite_reduction_factor = 1.0;
     if (py_opts.contains("hermite_reduction_factor")) {
@@ -202,6 +205,17 @@ SolverOptions::SolverOptions(py::dict &py_opts)
         if (hermite_reduction_factor < 1.0) {
             throw std::domain_error(
                 "hermite_reduction_factor must be >= 1.0. Got " + std::to_string(hermite_reduction_factor)
+            );
+        }
+    }
+
+    // Output upsampling
+    upsampling_tolerance = std::numeric_limits<double>::infinity();
+    if (py_opts.contains("upsampling_tolerance") && !py_opts["upsampling_tolerance"].is_none()) {
+        upsampling_tolerance = py_opts["upsampling_tolerance"].cast<double>();
+        if (upsampling_tolerance <= 0.0) {
+            throw std::domain_error(
+                "upsampling_tolerance must be None or > 0. Got " + std::to_string(upsampling_tolerance)
             );
         }
     }

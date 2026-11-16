@@ -9,7 +9,7 @@ casadi::Function clone_casadi_function(
   bool deep_copy,
   const std::string *serialized)
 {
-  if (!deep_copy) {
+  if (!deep_copy || f.is_null()) {
     return f;
   }
   if (serialized != nullptr) {
@@ -27,6 +27,9 @@ SerializedCasadiFunctions serialize_casadi_functions(
   const casadi::Function &mass_action,
   const casadi::Function &sens,
   const casadi::Function &events,
+  const casadi::Function &alg_res,
+  const casadi::Function &alg_jac,
+  const casadi::Function &upsampling,
   const std::vector<casadi::Function*>& var_fcns,
   const std::vector<casadi::Function*>& dvar_dy_fcns,
   const std::vector<casadi::Function*>& dvar_dp_fcns)
@@ -38,6 +41,10 @@ SerializedCasadiFunctions serialize_casadi_functions(
   serialized.mass_action = mass_action.serialize();
   serialized.sens = sens.serialize();
   serialized.events = events.serialize();
+  // A null function cannot be serialized; clone_casadi_function passes it through.
+  if (!alg_res.is_null()) serialized.alg_res = alg_res.serialize();
+  if (!alg_jac.is_null()) serialized.alg_jac = alg_jac.serialize();
+  if (!upsampling.is_null()) serialized.upsampling = upsampling.serialize();
 
   serialized.var_fcns.reserve(var_fcns.size());
   for (const auto *var : var_fcns) {
@@ -76,9 +83,9 @@ CasadiFunction::CasadiFunction(
   size_t sz_w;
   m_func.sz_work(sz_arg, sz_res, sz_iw, sz_w);
 
-  int nnz = (sz_res>0) ? m_func.nnz_out() : 0;  // cppcheck-suppress unreadVariable
   DEBUG("name = "<< m_func.name() << " arg = " << sz_arg << " res = "
-    << sz_res << " iw = " << sz_iw << " w = " << sz_w << " nnz = " << nnz);
+    << sz_res << " iw = " << sz_iw << " w = " << sz_w << " nnz = "
+    << ((sz_res>0) ? m_func.nnz_out() : 0));
 
   m_arg.resize(sz_arg, nullptr);
   m_res.resize(sz_res, nullptr);

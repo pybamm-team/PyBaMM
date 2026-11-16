@@ -61,12 +61,12 @@ public:  // data members
   /**
    * @brief Vector of pointers to the input data
    */
-  std::vector<const double *> m_arg;  // cppcheck-suppress unusedStructMember
+  std::vector<const double *> m_arg;
 
   /**
    * @brief Vector of pointers to the output data
    */
-  std::vector<double *> m_res;  // cppcheck-suppress unusedStructMember
+  std::vector<double *> m_res;
 };
 
 #endif // PYBAMM_EXPRESSION_HPP

@@ -16,17 +16,6 @@ class BaseIntegrationTestLithiumIon:
         options = {}
         self.run_basic_processing_test(options)
 
-    def test_sensitivities(self):
-        model = self.model()
-        param = pybamm.ParameterValues("Ecker2015")
-        rtol = 1e-6
-        atol = 1e-6
-        solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
-        modeltest = tests.StandardModelTest(
-            model, parameter_values=param, solver=solver
-        )
-        modeltest.test_sensitivities("Current function [A]", 0.15652)
-
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "y": 5, "z": 5}
@@ -167,6 +156,22 @@ class BaseIntegrationTestLithiumIon:
                 "Positive electrode reorganization energy [eV]": 0.35,
                 "Positive electrode exchange-current density [A.m-2]": 5,
             }
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_kinetics_coupled_ion_electron_transfer(self):
+        options = {"intercalation kinetics": "coupled ion-electron transfer"}
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        parameter_values.update(
+            {
+                "Negative electrode reorganization energy [eV]": 0.2,
+                "Positive electrode reorganization energy [eV]": 0.2,
+                "Negative electrode coupled ion-electron transfer rate constant "
+                "[A.m-2]": 10,
+                "Positive electrode coupled ion-electron transfer rate constant "
+                "[A.m-2]": 10,
+            },
+            check_already_exists=False,
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 

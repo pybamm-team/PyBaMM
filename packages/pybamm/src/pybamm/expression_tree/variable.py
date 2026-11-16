@@ -86,8 +86,8 @@ class VariableBase(pybamm.Symbol):
         domains: DomainsType = None,
         bounds: tuple[Numeric, Numeric] | None = None,
         print_name: str | None = None,
-        scale: Numeric | None = None,
-        reference: Numeric | None = None,
+        scale: Numeric | pybamm.Symbol | None = None,
+        reference: Numeric | pybamm.Symbol | None = None,
     ):
         if scale is None:
             scale = 1

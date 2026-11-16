@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import copy
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from operator import itemgetter
 from typing import Any
 
@@ -29,6 +29,7 @@ class Concatenation(pybamm.Symbol):
     """
 
     __slots__ = ("concatenation_function",)
+    concatenation_function: Callable[..., Any] | None
     _id_excluded_fields = ("concatenation_function",)
 
     # concat_fun is a numpy callable (np.concatenate / vstack), check_domain a
@@ -55,6 +56,7 @@ class Concatenation(pybamm.Symbol):
             )
         if name is None:
             name = "concatenation"
+        domains: dict[str, list[str] | str]
         if check_domain:
             domains = self._combine_children_domains(children)
         else:
@@ -129,8 +131,13 @@ class Concatenation(pybamm.Symbol):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
         if len(children_eval) == 0:
             return np.array([])
-        else:
-            return self.concatenation_function(children_eval)
+        if self.concatenation_function is None:
+            # Like an undiscretised Variable, so evaluate_ignoring_errors returns None
+            raise NotImplementedError(
+                f"{type(self).__name__} has no concatenation function until it is "
+                "discretised"
+            )
+        return self.concatenation_function(children_eval)
 
     def evaluate(
         self,
@@ -223,14 +230,14 @@ class NumpyConcatenation(Concatenation):
     __slots__ = ()
 
     def __init__(self, *children: pybamm.Symbol):
-        children = list(children)
         # Turn objects that evaluate to scalars to objects that evaluate to vectors,
         # so that we can concatenate them
-        for i, child in enumerate(children):
-            if child.evaluates_to_number():
-                children[i] = child * pybamm.Vector([1])
+        vector_children = [
+            child * pybamm.Vector([1]) if child.evaluates_to_number() else child
+            for child in children
+        ]
         super().__init__(
-            *children,
+            *vector_children,
             name="numpy_concatenation",
             check_domain=False,
             concat_fun=np.concatenate,
@@ -617,7 +624,7 @@ def intersect(s1: str, s2: str):
     # intersect is the longest such intercept
     if len(all_intersects) == 0:
         return ""
-    intersect = max(all_intersects, key=len)
+    intersect: str = max(all_intersects, key=len)
     # remove leading and trailing white space
     return intersect.lstrip().rstrip()
 
@@ -688,22 +695,18 @@ def simplified_domain_concatenation(
     # Create the DomainConcatenation to read domain and child domain
     concat = DomainConcatenation(children, mesh, copy_this=copy_this)
     # Simplify Concatenation of StateVectors to a single StateVector
-    # The sum of the evalation arrays of the StateVectors must be exactly 1
+    # The StateVectors must cover their combined span exactly once
     if all(isinstance(child, pybamm.StateVector) for child in children):
         sv_children: list[pybamm.StateVector] = children  # type: ignore[assignment]
-        longest_eval_array = len(sv_children[-1]._evaluation_array)
-        eval_arrays = {}
-        for child in sv_children:
-            eval_arrays[child] = np.concatenate(
-                [
-                    child.evaluation_array,
-                    np.zeros(longest_eval_array - len(child.evaluation_array)),
-                ]
-            )
         first_start = sv_children[0].y_slices[0].start
         last_stop = sv_children[-1].y_slices[-1].stop
-        if all(
-            sum(array for array in eval_arrays.values())[first_start:last_stop] == 1
+        ranges = sorted(
+            (y_slice.start or 0, y_slice.stop)
+            for child in sv_children
+            for y_slice in child.y_slices
+        )
+        if pybamm.expression_tree.state_vector.ranges_tile(
+            ranges, first_start, last_stop
         ):
             return pybamm.StateVector(
                 slice(first_start, last_stop), domains=concat._domains

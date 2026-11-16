@@ -6,7 +6,7 @@
 #  values itself since it does not have access to the full state vector
 #
 
-import pickle  # nosec B403 - used in tests with trusted input
+import pickle
 import typing
 from functools import cache
 
@@ -1010,7 +1010,7 @@ class TestProcessedVariableComputed:
         if read_before_pickling:
             # v26.9 built the DataArray on the first read
             variable._xr_data_array
-        loaded = pickle.loads(pickle.dumps(variable))  # nosec B301
+        loaded = pickle.loads(pickle.dumps(variable))
         # v26.9 pickled the variable without these attributes
         for name in ("time_integral", "_unjoinable", "_xr_interp_args"):
             delattr(loaded, name)
