@@ -400,7 +400,7 @@ public:
   bool NonlinearSolverInitialConditions(const sunrealtype& t_val);
 
   /**
-   * @brief Set yp_diff = M^-1 f(t, y) and zero the algebraic components of yp
+   * @brief Set yp = f(t, y), exact for M = I, and zero its algebraic components
    */
   void ConsistentInitializationODE(const sunrealtype& t_val);
 
