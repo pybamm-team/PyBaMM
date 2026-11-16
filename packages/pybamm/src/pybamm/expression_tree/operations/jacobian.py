@@ -75,9 +75,7 @@ class Jacobian:
             jac = symbol._unary_jac(child_jac)
 
         elif isinstance(symbol, pybamm.Function):
-            children_jacs: list[pybamm.Symbol | None] = [None] * len(symbol.children)
-            for i, child in enumerate(symbol.children):
-                children_jacs[i] = self.jac(child, variable)
+            children_jacs = [self.jac(child, variable) for child in symbol.children]
             # _function_jac defined in function class
             jac = symbol._function_jac(children_jacs)
 

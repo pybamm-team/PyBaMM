@@ -106,7 +106,7 @@ class Scalar(pybamm.Symbol):
                 f"Cannot create a copy of a scalar with new children: {new_children}"
             )
 
-    def is_constant(self) -> Literal[True]:
+    def is_constant(self) -> bool:
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
 
@@ -158,7 +158,7 @@ class Constant(Scalar):
     def __init__(self, value: Numeric, name: str):
         super().__init__(value, name)
 
-    def is_constant(self) -> Literal[True]:
+    def is_constant(self) -> Literal[False]:
         """
         The value is constant, but setting this to False makes sure we retain named constants
         in the expression tree. For example, `pybamm.constants.R + 2` should not be

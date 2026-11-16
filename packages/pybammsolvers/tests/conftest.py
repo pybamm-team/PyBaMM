@@ -92,12 +92,17 @@ def make_exponential_decay_solver(
     num_threads,
     num_solvers,
     decay_constants,
+    sensitivity=False,
+    output_variables=True,
+    solver_options=None,
 ):
     """
     Fixture providing a configured solver for exponential decay model.
 
     Sets up a complete IDAKLU solver instance with the exponential decay
-    ODE system ready to solve.
+    ODE system ready to solve. With ``sensitivity``, it also solves for the
+    sensitivity to the decay constant. Without ``output_variables``, it returns
+    the full state, with Hermite data unless ``solver_options`` turns it off.
     """
     # Skip tests using this fixture on macOS Intel
     if sys.platform == "darwin" and platform.machine() != "arm64":
@@ -112,7 +117,7 @@ def make_exponential_decay_solver(
     # Problem dimensions
     n_states = 1
     n_inputs = 1
-    n_sensitivity_params = 0
+    n_sensitivity_params = 1 if sensitivity else 0
 
     # Create symbolic variables
     t_sym = casadi.MX.sym("t")
@@ -155,11 +160,8 @@ def make_exponential_decay_solver(
 
     # Sensitivity equations
     if n_sensitivity_params > 0:
-        sens = casadi.Function(
-            "sens",
-            [t_sym, y_sym, p_sym],
-            [casadi.MX.zeros(n_states, n_sensitivity_params)],
-        )
+        # d(rhs)/dk for rhs = -k*y
+        sens = casadi.Function("sens", [t_sym, y_sym, p_sym], [-1.0 * y_sym])
     else:
         # Empty function for no sensitivities
         sens = casadi.Function("sens", [], [])
@@ -171,6 +173,7 @@ def make_exponential_decay_solver(
     # No algebraic equations for this pure ODE: provide empty functions
     alg_res = casadi.Function("empty_alg_res", [], [])
     alg_jac = casadi.Function("empty_alg_jac", [], [])
+    upsampling = casadi.Function("empty_upsampling", [], [])
 
     # DAE identifier (1 = differential, 0 = algebraic)
     # For ODE, all states are differential
@@ -182,10 +185,14 @@ def make_exponential_decay_solver(
 
     # Output variables (just return the state itself as a vector)
     var_fcn = casadi.Function("var", [t_sym, y_sym, p_sym], [y_sym])
-    var_fcns = [idaklu_module.generate_function(var_fcn.serialize())]
+    var_fcns = (
+        [idaklu_module.generate_function(var_fcn.serialize())]
+        if output_variables
+        else []
+    )
 
     # Sensitivities of output wrt states and params
-    if n_sensitivity_params > 0:
+    if output_variables and n_sensitivity_params > 0:
         dvar_dy_fcn = casadi.Function(
             "dvar_dy", [t_sym, y_sym, p_sym], [casadi.MX.ones(1, n_states)]
         )
@@ -210,6 +217,7 @@ def make_exponential_decay_solver(
     events_func = idaklu_module.generate_function(events.serialize())
     alg_res_func = idaklu_module.generate_function(alg_res.serialize())
     alg_jac_func = idaklu_module.generate_function(alg_jac.serialize())
+    upsampling_func = idaklu_module.generate_function(upsampling.serialize())
 
     # Solver options
     options = {
@@ -249,6 +257,7 @@ def make_exponential_decay_solver(
         "increment_factor": 1.0,
         "num_steps_no_progress": 100,
         "t_no_progress": 0.0,
+        **(solver_options or {}),
     }
 
     # Bandwidths (for banded solvers, not used with KLU)
@@ -281,6 +290,7 @@ def make_exponential_decay_solver(
         options,
         alg_res_func,
         alg_jac_func,
+        upsampling_func,
     )
 
     # Initial conditions need to be 2D: [number_of_groups, n_coeffs]
@@ -293,6 +303,9 @@ def make_exponential_decay_solver(
 
     yp0_2d = np.zeros((len(decay_constants), n_coeffs), dtype=np.float64)
     yp0_2d[:, 0] = -decay_constants * y0  # state derivative
+    if n_sensitivity_params > 0:
+        # dy/dk starts at 0, so its derivative -k * dy/dk - y starts at -y0
+        yp0_2d[:, 1] = -y0
 
     inputs_2d = decay_constants[:, np.newaxis]
 

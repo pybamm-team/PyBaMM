@@ -9,7 +9,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
-requires-python = ">=3.10, <3.16"
+requires-python = ">=3.11, <3.16"
 readme = { file = "README.md", content-type = "text/markdown" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -19,7 +19,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -28,14 +27,13 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pybammsolvers>=0.11.0,<0.12.0",
+    "pybammsolvers>=0.12.0,<0.13.0",
     "black",
     "numpy>=2.0.0",
     "scipy>=1.11.4,!=1.18.0", # 1.18.0 breaks pickling/deepcopy of interpolators, fixed in 1.18.1 (scipy#25489)
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
     "sympy>=1.12",
-    "typing-extensions>=4.16.0",
     "pandas>=1.5.0",
     "pooch>=1.8.1",
     "posthog",
@@ -66,7 +64,7 @@ pydiffsol = ["pydiffsol>=0.6.2"]
 bpx = ["bpx>=1.1.1,<1.2.0"]
 # Low-overhead progress bars
 tqdm = ["tqdm"]
-jax = ["jax>=0.7.0, <0.12.0; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+jax = ["jax>=0.7.0, <0.12.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 # Unstructured-mesh visualization (pillow writes GIFs). 9.3.1 is the first VTK whose
 # numpy_support works with NumPy 2; no VTK has cp315 wheels yet, so 3.15 skips it
 vtk = ["vtk>=9.3.1; python_version < '3.15'", "pillow"]
@@ -103,6 +101,7 @@ bench = [
     # For memory benchmarking (Linux/macOS only)
     "pytest-memray>=1.7.0; sys_platform != 'win32'",
 ]
+typecheck = ["pyrefly>=1.4.0"]
 dev = [
     # For working with pre-commit hooks
     "pre-commit",
@@ -118,9 +117,7 @@ dev = [
     # For testing Jupyter notebooks
     "nbmake",
     # ipykernel 7.4 fixes execute requests lost on the shell socket (ipykernel#1529)
-    "ipykernel>=7.4.0; python_version >= '3.11'",
-    # To access the metadata for python packages
-    "importlib-metadata; python_version < '3.10'",
+    "ipykernel>=7.4.0",
     { include-group = "bench" },
 ]
 
@@ -222,14 +219,25 @@ concurrency = ["multiprocessing"]
 disable_warnings = ["couldnt-parse", "module-not-measured"]
 
 
-[tool.mypy]
-ignore_missing_imports = true
-allow_redefinition = true
-disable_error_code = ["call-overload", "operator"]
+[tool.pyrefly]
+# mypy-like leniency: unannotated function bodies go unchecked
+preset = "legacy"
+project-includes = ["src/pybamm"]
+# Pinned to the CI type-check job's interpreter, so local runs match CI
+python-version = "3.13"
+python-platform = "linux"
+ignore-missing-imports = ["*"]
 
-[[tool.mypy.overrides]]
-module = [
-    "pybamm.models.base_model.*",
-    "pybamm.models.full_battery_models.base_battery_model.*",
-]
-disable_error_code = "attr-defined"
+# Carried over from the mypy config this replaces
+[tool.pyrefly.errors]
+no-matching-overload = "ignore"
+unsupported-operation = "ignore"
+redefinition = "ignore"
+
+[[tool.pyrefly.sub-config]]
+matches = "src/pybamm/models/base_model.py"
+errors = { missing-attribute = "ignore" }
+
+[[tool.pyrefly.sub-config]]
+matches = "src/pybamm/models/full_battery_models/base_battery_model.py"
+errors = { missing-attribute = "ignore" }
