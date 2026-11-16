@@ -4,6 +4,8 @@
 #include "IDAKLUSolver.hpp"
 #include "common.hpp"
 #include <cmath>
+#include <exception>
+#include <utility>
 #include <vector>
 #include <memory>  // For std::make_unique
 using std::vector;
@@ -385,6 +387,11 @@ public:
    * @brief Use the custom Newton IC solver; returns true on success.
    */
   bool NonlinearSolverInitialConditions(const sunrealtype& t_val);
+
+  /**
+   * @brief Rethrow, and clear, an exception a guarded IDA callback caught.
+   */
+  void RethrowCallbackError();
 
   /**
    * @brief Set a consistent initialization for ODEs

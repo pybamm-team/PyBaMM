@@ -4,6 +4,7 @@
 #include "Expression.hpp"
 #include "../../common.hpp"
 #include "../../Options.hpp"
+#include <exception>
 
 template <class T>
 class ExpressionSet
@@ -92,6 +93,9 @@ public:
   std::vector<bool> events_read_yp;
   // The IDA memory, for its step count
   void *ida_mem = nullptr;
+
+  // Caught by a guarded SUNDIALS callback, for the solver to rethrow once IDA returns
+  std::exception_ptr callback_error;
 
   virtual sunrealtype *get_tmp_state_vector() = 0;
   virtual sunrealtype *get_tmp_sparse_jacobian_data() = 0;

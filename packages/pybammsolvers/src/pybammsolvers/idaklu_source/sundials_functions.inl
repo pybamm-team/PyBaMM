@@ -409,3 +409,87 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
   // Recoverable, as in residual_eval: IDAS cuts the step
   return finite ? 0 : 1;
 }
+
+// IDA calls these through C frames, which a C++ exception must not unwind: the guarded
+// versions store it for the solver to rethrow once IDA returns, and fail the call instead.
+template<class T, class Body>
+int guard_callback(void *user_data, Body &&body) noexcept
+{
+  try {
+    return body();
+  } catch (...) {
+    auto &error = static_cast<T *>(user_data)->callback_error;
+    if (!error) {
+      error = std::current_exception();
+    }
+    return -1;
+  }
+}
+
+template<class T>
+int guarded_residual_eval(sunrealtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
+                          void *user_data)
+{
+  return guard_callback<T>(user_data, [&] {
+    return residual_eval<T>(tres, yy, yp, rr, user_data);
+  });
+}
+
+template<class T>
+int guarded_residual_eval_approx(sunindextype Nlocal, sunrealtype tt, N_Vector yy,
+                                 N_Vector yp, N_Vector gval, void *user_data)
+{
+  return guard_callback<T>(user_data, [&] {
+    return residual_eval_approx<T>(Nlocal, tt, yy, yp, gval, user_data);
+  });
+}
+
+template<class T>
+int guarded_jtimes_eval(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+                        N_Vector v, N_Vector Jv, sunrealtype cj, void *user_data,
+                        N_Vector tmp1, N_Vector tmp2)
+{
+  return guard_callback<T>(user_data, [&] {
+    return jtimes_eval<T>(tt, yy, yp, rr, v, Jv, cj, user_data, tmp1, tmp2);
+  });
+}
+
+template<class T>
+int guarded_jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
+                          N_Vector resvec, SUNMatrix JJ, void *user_data,
+                          N_Vector tempv1, N_Vector tempv2, N_Vector tempv3)
+{
+  return guard_callback<T>(user_data, [&] {
+    return jacobian_eval<T>(tt, cj, yy, yp, resvec, JJ, user_data, tempv1, tempv2, tempv3);
+  });
+}
+
+template<class T>
+int guarded_events_eval(sunrealtype t, N_Vector yy, N_Vector yp, sunrealtype *events_ptr,
+                        void *user_data)
+{
+  return guard_callback<T>(user_data, [&] {
+    return events_eval<T>(t, yy, yp, events_ptr, user_data);
+  });
+}
+
+template<class T>
+int guarded_events_with_derivatives_eval(sunrealtype t, N_Vector yy, N_Vector yp,
+                                         sunrealtype *events_ptr, void *user_data)
+{
+  return guard_callback<T>(user_data, [&] {
+    return events_with_derivatives_eval<T>(t, yy, yp, events_ptr, user_data);
+  });
+}
+
+template<class T>
+int guarded_sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
+                               N_Vector resval, N_Vector *yS, N_Vector *ypS,
+                               N_Vector *resvalS, void *user_data, N_Vector tmp1,
+                               N_Vector tmp2, N_Vector tmp3)
+{
+  return guard_callback<T>(user_data, [&] {
+    return sensitivities_eval<T>(Ns, t, yy, yp, resval, yS, ypS, resvalS, user_data,
+                                 tmp1, tmp2, tmp3);
+  });
+}
