@@ -58,8 +58,8 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
     yyS = N_VCloneVectorArray(number_of_parameters, yy);
     yypS = N_VCloneVectorArray(number_of_parameters, yyp);
     sens_res_ = N_VCloneVectorArray(number_of_parameters, yy);
+    ic_scratch_.resize(number_of_states);
   }
-  ic_scratch_.resize(number_of_states);
   // set initial values
   sunrealtype *atval = N_VGetArrayPointer(avtol);
   for (int i = 0; i < number_of_states; i++) {
@@ -301,8 +301,7 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   }
   len_alg_ = number_of_states - len_rhs_;
 
-  // Sensitivities reuse the algebraic sub-block even when calc_ic is off
-  if (len_alg_ > 0 && (solver_opts.calc_ic || sensitivity)) {
+  if (len_alg_ > 0 && solver_opts.calc_ic) {
     BuildAlgebraicSolver(id_val);
   }
 
@@ -1260,14 +1259,6 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationODE(
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::EvaluateSensitivityResiduals(
-  const sunrealtype& t_val) {
-  sensitivities_eval<ExprSet>(
-    number_of_parameters, t_val, yy, yyp, y_cache, yyS, yypS, sens_res_,
-    functions.get(), y_cache, y_cache, y_cache);
-}
-
-template <class ExprSet>
 bool IDAKLUSolverOpenMP<ExprSet>::SensitivityConsistentInitialization(
   const sunrealtype& t_val) {
   DEBUG("IDAKLUSolver::SensitivityConsistentInitialization");
@@ -1277,7 +1268,9 @@ bool IDAKLUSolverOpenMP<ExprSet>::SensitivityConsistentInitialization(
   for (int p = 0; p < number_of_parameters; p++) {
     N_VConst(SUN_RCONST(0.0), yypS[p]);
   }
-  EvaluateSensitivityResiduals(t_val);
+  sensitivities_eval<ExprSet>(
+    number_of_parameters, t_val, yy, yyp, y_cache, yyS, yypS, sens_res_,
+    functions.get(), y_cache, y_cache, y_cache);
 
   if (len_alg_ == 0 && mass_is_identity_) {
     for (int p = 0; p < number_of_parameters; p++) {
@@ -1286,32 +1279,7 @@ bool IDAKLUSolverOpenMP<ExprSet>::SensitivityConsistentInitialization(
     return true;
   }
 
-  if (mass_is_identity_ && alg_state_ &&
-      alg_state_->mode == AlgSolverState::Mode::SUBBLOCK) {
-    // Standard form: F_y,alg,alg ds_alg = r_alg, then s'_diff = r_diff
-    if (SetupAlgebraicJacobian(t_val) != 0) {
-      return false;
-    }
-    for (int p = 0; p < number_of_parameters; p++) {
-      const sunrealtype* res = N_VGetArrayPointer(sens_res_[p]);
-      if (SolveAlgebraicJacobian(res + len_rhs_, ic_scratch_.data()) != 0 ||
-          !all_finite(len_alg_, ic_scratch_.data())) {
-        return false;
-      }
-      sunrealtype* s_alg = N_VGetArrayPointer(yyS[p]) + len_rhs_;
-      for (int i = 0; i < len_alg_; i++) {
-        s_alg[i] -= ic_scratch_[i];
-      }
-    }
-    EvaluateSensitivityResiduals(t_val);
-    for (int p = 0; p < number_of_parameters; p++) {
-      std::memcpy(N_VGetArrayPointer(yypS[p]), N_VGetArrayPointer(sens_res_[p]),
-                  len_rhs_ * sizeof(sunrealtype));
-    }
-    return true;
-  }
-
-  // In general, [-M_diff | F_y,alg] (s'_diff, ds_alg) = -r
+  // [-M_diff | F_y,alg] (s'_diff, ds_alg) = -r
   if (SetupInitialConditionMatrix(t_val) != 0) {
     return false;
   }

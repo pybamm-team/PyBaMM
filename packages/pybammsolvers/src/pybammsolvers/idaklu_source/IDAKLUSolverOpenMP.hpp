@@ -129,7 +129,6 @@ public:
     SUNMatrix J = nullptr;
     N_Vector res_nvec = nullptr;
     N_Vector delta_nvec = nullptr;
-    bool use_sparse = false;
     int nnz = 0;
     std::vector<sunindextype> colptrs;
     std::vector<sunindextype> rowvals;
@@ -178,15 +177,15 @@ public:
    *
    * Its columns are the derivatives of the residual with respect to the
    * unknowns of the initial-condition problem, (y'_diff, y_alg). Built on
-   * first use, for models without an algebraic sub-block or with M != I.
+   * first use.
    */
   struct InitialConditionMatrix {
     SUNMatrix A = nullptr;
     SUNLinearSolver LS = nullptr;
     N_Vector rhs = nullptr;
     N_Vector solution = nullptr;
-    std::vector<sunrealtype> jac_at_cj0;
-    std::vector<sunrealtype> jac_at_cj1;
+    // -M on the jac_times_cjmass sparsity
+    std::vector<sunrealtype> minus_mass;
 
     ~InitialConditionMatrix() {
       if (LS) SUNLinSolFree(LS);
@@ -199,7 +198,7 @@ public:
 
   // Sensitivity residuals F_y s + F_p - M s', one vector per parameter
   N_Vector *sens_res_ = nullptr;
-  // Scratch of length number_of_states for the initial-condition linear solves
+  // Scratch of length number_of_states for the sensitivity initial conditions
   std::vector<sunrealtype> ic_scratch_;
   // Whether M is the identity on the differential rows and zero elsewhere
   bool mass_is_identity_ = true;
@@ -425,27 +424,10 @@ public:
   bool SensitivityConsistentInitialization(const sunrealtype& t_val);
 
   /**
-   * @brief Evaluate F_y s + F_p - M s' at the current state into sens_res_
-   */
-  void EvaluateSensitivityResiduals(const sunrealtype& t_val);
-
-  /**
    * @brief Whether the mass matrix is the identity on the differential rows
    * and zero on the algebraic rows
    */
   bool MassMatrixIsIdentity();
-
-  /**
-   * @brief Evaluate and factorise the algebraic sub-block Jacobian at (t, yy)
-   * @return Zero on success
-   */
-  int SetupAlgebraicJacobian(sunrealtype t);
-
-  /**
-   * @brief Solve with the factorised algebraic sub-block Jacobian
-   * @return Zero on success
-   */
-  int SolveAlgebraicJacobian(const sunrealtype* rhs, sunrealtype* solution);
 
   /**
    * @brief Build and factorise ic_matrix_ at (t, yy)
