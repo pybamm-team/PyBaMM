@@ -28,7 +28,7 @@ impl PreparedSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solver::test_fixtures::decay_with_output_and_event;
+    use crate::solver::test_fixtures::{decay_with_output_and_event, structurally_singular_dae};
     use crate::test_support::{bits, block_bits};
 
     /// The event at `y = 0.4` exercises root-finding across sets.
@@ -156,6 +156,25 @@ mod tests {
             let got = got.expect("set failed");
             assert!(got.sensitivities.is_some(), "set {i} dropped its blocks");
             assert_same_outcome(&got, want, &format!("sensitivity set {i}"));
+        }
+    }
+
+    #[test]
+    fn panicking_sets_each_return_an_error_instead_of_unwinding_the_batch() {
+        let solver =
+            PreparedSolver::new(structurally_singular_dae(), 1e-6, &[1e-6; 2]).expect("prepare");
+        let times = t_eval();
+        let y0 = [1.0, 0.0];
+        let sets = [InputSet::new(&y0, &[]), InputSet::new(&y0, &[])];
+
+        let batched = run_in_pool(2, || solver.solve_batch(SolveRequest::new(&times), &sets));
+
+        assert_eq!(batched.len(), 2);
+        for (i, result) in batched.into_iter().enumerate() {
+            assert!(
+                matches!(result, Err(CoreError::SolverPanic(_))),
+                "set {i} should return its panic as an error"
+            );
         }
     }
 

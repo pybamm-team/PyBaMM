@@ -506,7 +506,22 @@ impl PreparedSolver {
     }
 
     /// Integrate the model, returning whichever payloads `request` asked for.
+    ///
+    /// A panic inside diffsol or faer, such as a structurally singular matrix failing to
+    /// factorise, returns [`CoreError::SolverPanic`] rather than unwinding into the caller.
     pub fn solve(
+        &self,
+        request: SolveRequest<'_>,
+        set: InputSet<'_>,
+    ) -> Result<SolveOutcome, CoreError> {
+        // Unwind safe: `self` is immutable, and the solve drops every workspace it built.
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            self.solve_unguarded(request, set)
+        }))
+        .unwrap_or_else(|payload| Err(CoreError::SolverPanic(panic_message(payload.as_ref()))))
+    }
+
+    fn solve_unguarded(
         &self,
         request: SolveRequest<'_>,
         set: InputSet<'_>,
@@ -962,6 +977,15 @@ impl OutputSensBuffers {
     fn sens_columns(&self) -> std::slice::ChunksExact<'_, f64> {
         self.output_sens.chunks_exact(self.n_outputs)
     }
+}
+
+/// The message a panic was raised with, or a placeholder for a non-string payload.
+fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
+    payload
+        .downcast_ref::<&str>()
+        .map(|message| (*message).to_owned())
+        .or_else(|| payload.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "a panic with a non-string payload".to_owned())
 }
 
 /// Reject what IDAS rejects: a non-finite or negative tolerance, or a zero `rtol` and `atol` pair.
@@ -1672,6 +1696,7 @@ mod tests {
     use crate::params::ParamIdx;
     use crate::solver::test_fixtures::{
         decay, decay_with_output_and_event, differential_then_algebraic_mass,
+        structurally_singular_dae,
     };
     use crate::test_support::{bits, block_bits};
 
@@ -3427,5 +3452,20 @@ mod tests {
                 "{message}"
             );
         }
+    }
+
+    #[test]
+    fn a_panic_inside_diffsol_fails_the_solve_instead_of_unwinding() {
+        let prepared =
+            PreparedSolver::new(structurally_singular_dae(), 1e-6, &[1e-6; 2]).expect("prepare");
+        let err = prepared
+            .solve(
+                SolveRequest::new(&[0.0, 1.0]),
+                InputSet::new(&[1.0, 0.0], &[]),
+            )
+            .expect_err("a structurally singular iteration matrix cannot be factorised");
+
+        assert!(matches!(err, CoreError::SolverPanic(_)), "{err:?}");
+        assert!(err.to_string().contains("factorise"), "{err}");
     }
 }

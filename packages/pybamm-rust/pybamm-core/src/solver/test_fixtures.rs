@@ -50,3 +50,15 @@ pub fn decay_with_output_and_event() -> CompiledModel {
         .expect("a valid event");
     model
 }
+
+/// `dv/dt = -v` with `0 = v - 1`: `z` appears in no equation, so `M - cJ` has an empty column.
+pub fn structurally_singular_dae() -> CompiledModel {
+    let mut arena = Arena::new();
+    let v = arena.alloc(Node::StateVector { start: 0, end: 1 });
+    let neg = arena.alloc(Node::Scalar(-1.0));
+    let dvdt = arena.alloc(Node::Mul(neg, v));
+    let one = arena.alloc(Node::Scalar(1.0));
+    let constraint = arena.alloc(Node::Sub(v, one));
+    let rhs = arena.alloc(Node::Concat(vec![dvdt, constraint]));
+    compile(&arena, rhs, differential_then_algebraic_mass(), 2, 0)
+}

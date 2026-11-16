@@ -225,6 +225,10 @@ pub enum CoreError {
     )]
     SensRetryFailed { controlled: String, relaxed: String },
 
+    /// The integrator or its linear algebra panicked; the message is the panic's own.
+    #[error("the solver panicked: {0}")]
+    SolverPanic(String),
+
     #[error("invalid CSR matrix: {0}")]
     Csr(String),
 
