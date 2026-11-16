@@ -29,6 +29,7 @@
 
 ## Bug fixes
 
+- The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))
 - One-state hysteresis models now take their initial potentials from the OCP at the initial hysteresis state, not the equilibrium OCP, so an inconsistent equilibrium OCP no longer stops them starting. ([#6042](https://github.com/pybamm-team/PyBaMM/pull/6042))
 - An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
 - `pybamm.parameter_sets` and `pybamm.dispatch.models` now list names in sorted order. Before, the order depended on which installed package was found first. ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
