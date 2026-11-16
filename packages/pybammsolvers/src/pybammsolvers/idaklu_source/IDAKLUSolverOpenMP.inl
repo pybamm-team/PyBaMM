@@ -406,19 +406,20 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   no_progression.Initialize();
 
   int retval = IDA_SUCCESS;
-  bool save_restart_point = false;
+  // A solve that starts at a discontinuity has t_eval[1] within round-off of t0.
   // An event at t0 ends the solve there, before any restart
-  if (!init_event_triggered && within_roundoff(t0, t_eval_next)) {
+  bool const restart_at_t0 = !init_event_triggered && within_roundoff(t0, t_eval_next);
+  if (restart_at_t0) {
     // IDAS cannot step to t_eval[1], so t0 is stored as initialised
     StoreInitialPoint(t0);
     i_eval = 0;
     retval = RestartWithinRoundoff(t_val, t_eval, i_eval,
                                    i_interp, t_interp_next, t_interp);
-    if (retval >= 0 && i_eval < number_of_evals - 1) {
-      save_restart_point = true;
+    bool const at_end = i_eval == number_of_evals - 1;
+    if (retval >= 0 && !at_end) {
       retval = HandleBreakpoint(t_val, t_eval, i_eval, t_eval_next, no_progression);
     }
-    if (!save_restart_point || retval < 0) {
+    if (retval < 0 || at_end) {
       log_.log_integration_complete(0, t_val);
       return BuildSolutionData(retval);
     }
@@ -430,7 +431,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   t_prev = t_val;
   retval = init_event_triggered ? IDA_ROOT_RETURN : FirstStep(t_prev, tf_perturbed, t_val);
   if (retval == IDA_ROOT_RETURN && t_val == t_prev) {
-    if (save_restart_point) {
+    if (restart_at_t0) {
       // An event at the restart fired on the state FirstStep restored
       SavePoint(t_val, /*extend_arrays=*/false, /*is_breakpoint=*/false);
     } else {
@@ -441,26 +442,24 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   }
   // Before IDAGetDky, which fails on a step that was never taken
   CheckErrors(retval, "IDASolve at t0");
-  if (save_restart_point) {
+  if (restart_at_t0) {
     SaveRestartPoint(t_prev);
   } else {
     GetSolutionFull(t0);
+    StoreInitialPoint(t0);
   }
 
   log_.log_step(++n_steps, t_val);
 
   no_progression.AddDt(t_val - t_prev);
 
-  if (!save_restart_point) {
-    StoreInitialPoint(t0);
-  }
-  save_restart_point = false;
-
   // Reset the states and sensitivities at t = t_val
   GetSolutionFull(t_val);
 
   // main integration loop
   DEBUG("IDASolve");
+  // Whether the next step starts from a restart, whose point it then stores
+  bool save_restart_point = false;
   while (true) {
     if (retval < 0) {
       break;
