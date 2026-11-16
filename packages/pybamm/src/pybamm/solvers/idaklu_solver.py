@@ -296,7 +296,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Turn off linesearch
                 "linesearch_off_ic": False,
                 # How to calculate the initial conditions.
-                # "True": calculate all y0 given ydot0
+                # "True": calculate all y0 given ydot0 (not with DAE sensitivities)
                 # "False": calculate y_alg0 and ydot_diff0 given y_diff0
                 "init_all_y_ic": False,
                 # Internally calculate consistent initial conditions

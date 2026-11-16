@@ -434,13 +434,6 @@ public:
   bool SensitivityConsistentInitialization(const sunrealtype& t_val);
 
   /**
-   * @brief Set yypS to the derivative of yp = M^-1 f(y) at the current guess
-   *
-   * IDA_Y_INIT holds yp fixed, so this is the s' its sensitivities hold fixed.
-   */
-  void SensitivityDerivativesAtGuess(const sunrealtype& t_val);
-
-  /**
    * @brief Evaluate F_y s + F_p - M s' at the current state into sens_res_
    */
   void EvaluateSensitivityResiduals(const sunrealtype& t_val);

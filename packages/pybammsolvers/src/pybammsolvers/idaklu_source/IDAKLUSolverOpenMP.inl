@@ -755,6 +755,11 @@ void IDAKLUSolverOpenMP<ExprSet>::SetupInitialState(
   sunrealtype t_eval_next = t_eval[1];
   ReinitializeIntegrator(t0);
   int const init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
+  if (solver_opts.calc_ic && init_type == IDA_Y_INIT && sensitivity && !is_ODE) {
+    // IDA_Y_INIT refits every state, so dy0/dp no longer holds
+    throw std::invalid_argument(
+      "init_all_y_ic does not support sensitivities of a DAE");
+  }
   int flag = IDA_SUCCESS;
   if (solver_opts.calc_ic) {
     flag = ConsistentInitialization(t0, t_eval_next, init_type);
@@ -1271,52 +1276,11 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationDAE(
     return;
   }
 
-  // IDA_Y_INIT fits y to the fixed yp = M^-1 f(y0), so s must follow d(yp)/dp.
-  // Otherwise s is made consistent with the final states afterwards.
-  bool const with_sensitivities = sensitivity && icopt == IDA_Y_INIT;
-  if (with_sensitivities) {
-    SensitivityDerivativesAtGuess(t_val);
-  }
-  int const flag = CalcICWithIDAS(t_val, t_next, icopt, with_sensitivities);
+  // The sensitivities are made consistent with the final states afterwards
+  int const flag = CalcICWithIDAS(t_val, t_next, icopt, /*with_sensitivities=*/false);
   if (flag != IDA_SUCCESS) {
     // Keep the current states, as IDAS's first step may still correct them
     log_.log_calc_ic_failed(t_val, sundials_error_message(flag));
-  }
-}
-
-template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::SensitivityDerivativesAtGuess(
-  const sunrealtype& t_val) {
-  DEBUG("IDAKLUSolver::SensitivityDerivativesAtGuess");
-
-  // yp_diff = M^-1 f(y), so its derivative is M^-1 (F_y s + F_p) on those rows
-  for (int p = 0; p < number_of_parameters; p++) {
-    N_VConst(SUN_RCONST(0.0), yypS[p]);
-  }
-  EvaluateSensitivityResiduals(t_val);
-
-  const sunrealtype* id_val = N_VGetArrayPointer(id);
-  const bool solve_mass = !mass_is_identity_ && SetupInitialConditionMatrix(t_val) == 0;
-  for (int p = 0; p < number_of_parameters; p++) {
-    const sunrealtype* res = N_VGetArrayPointer(sens_res_[p]);
-    sunrealtype* sp = N_VGetArrayPointer(yypS[p]);
-    for (int i = 0; i < number_of_states; i++) {
-      ic_scratch_[i] = is_differential(id_val[i]) ? res[i] : SUN_RCONST(0.0);
-    }
-    if (solve_mass) {
-      // [-M_diff | F_y,alg] (u, 0) = -r_diff gives u = M^-1 r_diff
-      for (int i = 0; i < number_of_states; i++) {
-        ic_scratch_[i] = -ic_scratch_[i];
-      }
-      if (SolveInitialConditionMatrix(ic_scratch_.data()) != 0) {
-        continue;
-      }
-    }
-    for (int i = 0; i < number_of_states; i++) {
-      if (is_differential(id_val[i])) {
-        sp[i] = ic_scratch_[i];
-      }
-    }
   }
 }
 
