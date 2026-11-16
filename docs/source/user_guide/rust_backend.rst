@@ -126,8 +126,8 @@ The Rust backend supports the following expression types:
 - 1D ``linear``, ``cubic``, and ``pchip`` interpolation
 - 2D and 3D ``linear`` and ``cubic`` regular-grid interpolation
 
-A symbol the backend cannot convert raises an error naming the symbol at
-solver set-up, so an unsupported model fails loudly rather than
+A symbol the backend cannot convert raises ``NotImplementedError`` naming the
+symbol at solver set-up, so an unsupported model fails loudly rather than
 mis-evaluating.
 
 Adding new expression types
