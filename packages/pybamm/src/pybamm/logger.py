@@ -4,6 +4,8 @@ import logging
 def get_log_level_func(value):
     def func(self, message, *args, **kws):
         if self.isEnabledFor(value):
+            # Skip this wrapper's frame so records point at the caller
+            kws["stacklevel"] = kws.get("stacklevel", 1) + 1
             self._log(value, message, args, **kws)
 
     return func

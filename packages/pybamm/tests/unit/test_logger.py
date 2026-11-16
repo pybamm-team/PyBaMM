@@ -1,6 +1,8 @@
 #
 # Tests the logger class.
 #
+import logging
+
 import pytest
 
 import pybamm
@@ -30,6 +32,32 @@ class TestLogger:
 
         # reset
         pybamm.set_logging_level("WARNING")
+
+    def test_custom_levels_record_caller(self):
+        records = []
+        handler = logging.Handler()
+        handler.emit = records.append
+        logger = pybamm.logger
+        logger.addHandler(handler)
+        pybamm.set_logging_level("SPAM")
+        try:
+            logger.spam("spam")
+            logger.verbose("verbose")
+            logger.notice("notice")
+            logger.success("success")
+        finally:
+            logger.removeHandler(handler)
+            pybamm.set_logging_level("WARNING")
+
+        assert [record.levelname for record in records] == [
+            "SPAM",
+            "VERBOSE",
+            "NOTICE",
+            "SUCCESS",
+        ]
+        for record in records:
+            assert record.funcName == "test_custom_levels_record_caller"
+            assert record.module == "test_logger"
 
     def test_exceptions(self):
         with pytest.raises(ValueError):
