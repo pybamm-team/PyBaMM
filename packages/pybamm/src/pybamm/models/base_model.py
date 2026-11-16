@@ -2540,15 +2540,14 @@ class BaseModel:
             options = Serialise._convert_options(data.get("options", {}))
             if options and issubclass(model_cls, pybamm.BaseBatteryModel):
                 from pybamm.models.full_battery_models.battery_model_options import (
+                    UNVERSIONED_CONFIG_OPTIONS,
                     restore_saved_options,
                 )
 
                 version = data.get("pybamm_version")
                 # without a version, only a full to_config dump is a saved config;
                 # a partial one is hand-written and checked as given
-                if version is not None or set(pybamm.BatteryModelOptions({})) <= set(
-                    options
-                ):
+                if version is not None or UNVERSIONED_CONFIG_OPTIONS <= set(options):
                     options = restore_saved_options(options, version)
             model = model_cls(options=options) if options else model_cls()
             BaseModel.apply_builtin_overrides(model, data)

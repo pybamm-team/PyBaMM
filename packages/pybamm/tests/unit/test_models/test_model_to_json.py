@@ -597,6 +597,21 @@ class TestSavedOptionsVersion:
         with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
             pybamm.BaseModel.from_config(config)
 
+    def test_from_config_unversioned_dump_ignores_later_option_keys(self):
+        from pybamm.models.full_battery_models.battery_model_options import (
+            UNVERSIONED_CONFIG_OPTIONS,
+        )
+
+        config = pybamm.lithium_ion.SPM(self.OPTIONS).to_config()
+        del config["pybamm_version"]
+        config["options"] = {
+            key: value
+            for key, value in self._as_saved(config["options"]).items()
+            if key in UNVERSIONED_CONFIG_OPTIONS
+        }
+        loaded = pybamm.BaseModel.from_config(config)
+        assert loaded.options.positive["stress-induced diffusion"] == "true"
+
     def test_from_config_checks_partial_options_without_version(self):
         config = {
             "type": "SPM",

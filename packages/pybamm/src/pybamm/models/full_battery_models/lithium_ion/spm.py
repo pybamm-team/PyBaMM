@@ -44,7 +44,7 @@ class SPM(BaseModel):
             pybamm.citations.register("Marquis2019")
 
         if any(
-            getattr(getattr(self.options, domain), phase)[option] not in values
+            self.options.resolve(option, domain, phase) not in values
             for option, values in [
                 ("SEI", ("none", "constant")),
                 ("lithium plating", ("none",)),

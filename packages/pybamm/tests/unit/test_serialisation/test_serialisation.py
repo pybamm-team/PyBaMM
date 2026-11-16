@@ -863,7 +863,14 @@ class TestSerialise:
         assert type(loaded) is pybamm.BaseModel
 
     @pytest.mark.parametrize(
-        ("version", "loads"), [("26.10.1.1", True), (None, True), ("26.11.0.0", False)]
+        ("version", "loads"),
+        [
+            ("26.10.1.1", True),
+            ("24.5rc0", True),
+            (None, True),
+            ("26.11.0.0", False),
+            ("26.11rc0", False),
+        ],
     )
     def test_load_model_options_saved_before_per_electrode_checks(
         self, tmp_path, version, loads

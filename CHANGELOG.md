@@ -92,6 +92,7 @@
 - Multi-phase electrodes are checked per electrode, so a tuple of Fickian particles is accepted. `Yang2017` keeps the other options it is given and honours `build=`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Options unsupported with particle-size distributions now raise when only one electrode has a distribution, instead of failing during the build; polynomial profiles are rejected only on that electrode (#3303). ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - MSMR open-circuit potential, particle and kinetics must agree on each electrode and phase, half cells included. A malformed value for a model's fixed option raises `OptionError`, not `IndexError`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
+- `MSMR` honours `build=False` instead of always building. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - `MPM` no longer cites `Marquis2019` (#5800) and accepts `"particle size": ("distribution", "distribution")`. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Models declare `fixed_options` and `default_options`, checked in one place and inherited, so an `SPM` subclass gets `"x-average side reactions": "true"`. Conflicting values raise an `OptionError` naming the model. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
 - Particle mechanics submodels read `"particle size"` per electrode, so a one-electrode size distribution gets the size-distribution stress and crack equations there. ([#5816](https://github.com/pybamm-team/PyBaMM/pull/5816))
