@@ -812,7 +812,7 @@ impl CompiledFunction {
                 .try_borrow(py)
                 .map_err(|_| PyValueError::new_err("_rebuild: graph borrow conflict"))?;
             let root = g.checked_root(root)?;
-            crate::expr::check_supported(g.arena(), root)?;
+            crate::expr::check_supported(g.arena(), [root])?;
             root
         };
         let mut this = Self::build(py, graph, root, name, n_states)?;
