@@ -5,6 +5,7 @@ import copyreg
 import io
 import json
 import logging
+import os
 import pickle
 import subprocess
 import sys
@@ -17,7 +18,11 @@ import scipy
 from scipy.io import loadmat
 
 import pybamm
-from pybamm.solvers.solution import _DEFAULT_SOLUTION_OPTIONS, make_cycle_solution
+from pybamm.solvers.solution import (
+    _DEFAULT_SOLUTION_OPTIONS,
+    _write_csv,
+    make_cycle_solution,
+)
 from tests import concatenated_states, get_discretisation_for_testing
 
 
@@ -1176,6 +1181,40 @@ class TestSolution:
         assert solution.all_models[0].name == solution_load.all_models[0].name
         np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
         np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
+
+    def test_write_csv_format(self, tmp_path):
+        data = {
+            "Time [s]": np.array([0.0, 1e-7, 1e16]),
+            "a,b": np.array([np.nan, -0.0, np.inf]),
+            'say "hi"': np.array([1, 2, 3]),
+            "Cycle": np.float64(1.0),
+            "Z": np.array([1 + 2j, np.nan, 2 - 0.5j]),
+            "single": np.array([0.1, 0.25, 1 / 3], dtype=np.float32),
+        }
+        expected = os.linesep.join(
+            [
+                'Time [s],"a,b","say ""hi""",Cycle,Z,single',
+                "0.0,,1,1.0,(1+2j),0.1",
+                "1e-07,-0.0,2,1.0,,0.25",
+                "1e+16,inf,3,1.0,(2-0.5j),0.33333334",
+                "",
+            ]
+        )
+        assert _write_csv(data) == expected
+        path = tmp_path / "data.csv"
+        assert _write_csv(data, str(path)) is None
+        assert path.read_bytes() == expected.encode()
+
+        # a lone empty field is quoted, so its row is not blank
+        assert _write_csv({"a": np.array([np.nan])}) == os.linesep.join(["a", '""', ""])
+        assert _write_csv({}) == os.linesep
+
+        with pytest.raises(ValueError, match=r"same length"):
+            _write_csv({"a": np.arange(2.0), "b": np.arange(3.0)})
+        with pytest.raises(ValueError, match=r"1-dimensional"):
+            _write_csv({"a": np.ones((2, 2))})
+        with pytest.raises(ValueError, match=r"not a scalar"):
+            _write_csv({"a": 1.0})
 
     def test_get_data_cycles_steps(self):
         model = pybamm.BaseModel()

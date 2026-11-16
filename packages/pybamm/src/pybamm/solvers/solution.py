@@ -3,8 +3,11 @@ from __future__ import annotations
 #
 # Solution class
 #
+import csv
+import io
 import json
 import numbers
+import os
 import pickle
 import warnings
 from dataclasses import astuple, dataclass
@@ -31,6 +34,70 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         # won't be called since we only need to convert numpy arrays
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
+
+
+def _write_csv(data, filename=None):
+    """
+    Write columns of data as CSV, one header row of their names then one row per
+    entry, formatted as ``pandas.DataFrame(data).to_csv(index=False)`` formats them.
+
+    Parameters
+    ----------
+    data : dict
+        1D arrays of equal length by column name. A scalar is repeated down its
+        column.
+    filename : str, optional
+        The file to write. If None, the CSV is returned as a string.
+
+    Returns
+    -------
+    str or None
+        The CSV, if ``filename`` is None.
+
+    Raises
+    ------
+    ValueError
+        If a column is not 1D, the columns differ in length, or all are scalars.
+    """
+    columns = {name: np.asarray(values) for name, values in data.items()}
+    if any(values.ndim > 1 for values in columns.values()):
+        raise ValueError("Per-column arrays must each be 1-dimensional")
+    lengths = {len(values) for values in columns.values() if values.ndim == 1}
+    if len(lengths) > 1:
+        raise ValueError("All arrays must be of the same length")
+    if columns and not lengths:
+        raise ValueError("At least one column must be an array, not a scalar")
+    n_rows = lengths.pop() if lengths else 0
+
+    text_columns = []
+    for values in columns.values():
+        values = np.broadcast_to(values, (n_rows,))
+        # Python and numpy both write a float64 in its shortest round-trip form;
+        # Python is faster, but float32 and complex need numpy's own form
+        if values.dtype == np.float64 or values.dtype.kind in "biu":
+            column = values.tolist()
+        else:
+            column = values.astype(str).tolist()
+        if values.dtype.kind in "fc":
+            missing = np.isnan(values)
+            if missing.any():
+                column = [
+                    "" if is_nan else entry
+                    for entry, is_nan in zip(column, missing, strict=True)
+                ]
+        text_columns.append(column)
+
+    with (
+        io.StringIO()
+        if filename is None
+        else open(filename, "w", newline="", encoding="utf-8")
+    ) as file:
+        writer = csv.writer(file, lineterminator=os.linesep)
+        writer.writerow(columns)
+        writer.writerows(zip(*text_columns, strict=True))
+        if filename is None:
+            return file.getvalue()
+    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,9 +244,7 @@ class SolutionBase:
             data = {short_names.get(k, k): v for k, v in data.items()}
 
         if to_format == "csv":
-            import pandas as _pd
-
-            _pd.DataFrame(data).to_csv(filename, index=False)
+            _write_csv(data, filename)
         elif to_format == "json":
             with open(filename, "w") as f:
                 json.dump(data, f, cls=NumpyEncoder)
@@ -1241,10 +1306,7 @@ class Solution(SolutionBase):
                     raise ValueError(
                         f"only 0D variables can be saved to csv, but '{name}' is {var.ndim - 1}D"
                     )
-            import pandas as pd
-
-            df = pd.DataFrame(data)
-            return df.to_csv(filename, index=False)
+            return _write_csv(data, filename)
         elif to_format == "json":
             if filename is None:
                 return json.dumps(data, cls=NumpyEncoder)
