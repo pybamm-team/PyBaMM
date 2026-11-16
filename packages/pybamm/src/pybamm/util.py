@@ -367,9 +367,7 @@ class _DroppedObject:
     def __setitem__(self, key, value):
         pass
 
-    def append(self, item):
-        pass
-
+    # Unpickling fills a list subclass through extend whenever it exists
     def extend(self, items):
         pass
 

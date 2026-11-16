@@ -352,6 +352,15 @@ class TestProcessedVariableComputed:
         # out-of-range queries are NaN
         assert np.isnan(values[~in_range]).all()
 
+    def test_0D_call_checks_its_time_grid_once(self):
+        processed_var = self._build_0D_var()
+        processed_var(0.25)
+        _, grid = processed_var._interpolation_grid()
+        checked = grid._increasing["t"]
+        processed_var([0.5, 0.75])
+        assert processed_var._interpolation_grid()[1] is grid
+        assert grid._increasing["t"] is checked
+
     def test_0D_call_errors(self):
         processed_var = self._build_0D_var()
         with pytest.raises(ValueError, match=r"must be a scalar or 1D, not 2D"):

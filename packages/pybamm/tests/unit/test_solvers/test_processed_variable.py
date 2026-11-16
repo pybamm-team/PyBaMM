@@ -210,6 +210,15 @@ class TestProcessedVariable:
         # out-of-range queries take the fill value
         assert np.isnan(values[~in_range]).all()
 
+    def test_0D_call_checks_its_time_grid_once(self):
+        processed_var = self._build_0D_var()
+        processed_var(0.25)
+        grid = processed_var._grid_raw
+        checked = grid._increasing["t"]
+        processed_var([0.5, 0.75])
+        assert processed_var._grid_raw is grid
+        assert grid._increasing["t"] is checked
+
     def test_0D_call_fill_value(self):
         processed_var = self._build_0D_var()
         t_query = np.array([0.5, 2.0])

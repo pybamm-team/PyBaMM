@@ -160,25 +160,62 @@ class TestUtil:
                 f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
             )
 
+    @staticmethod
+    def _fake_module(monkeypatch, name, **objects):
+        """Register a stand-in module whose objects pickle under its name."""
+        module = types.ModuleType(name)
+        for attribute, obj in objects.items():
+            obj.__module__, obj.__qualname__ = name, attribute
+            setattr(module, attribute, obj)
+        monkeypatch.setitem(sys.modules, name, module)
+
     def test_load_drops_xarray_caches_of_older_files(self, tmp_path, monkeypatch):
-        # Solutions saved by 26.10 or earlier can cache xarray objects
-        xarray = types.ModuleType("xarray")
+        # Solutions saved by 26.10 or earlier can cache xarray and pandas objects,
+        # which pickle in each of these ways
+        class DataArray:  # rebuilt as an object, then its state set
+            def __init__(self, values, index, names, attrs):
+                self.values, self.index = values, index
+                self.names, self.attrs = names, attrs
 
-        class DataArray:
-            def __init__(self, values):
-                self.values = values
+        class Index:  # rebuilt by calling a function
+            def __init__(self, data):
+                self.data = data
 
-        DataArray.__module__, DataArray.__qualname__ = "xarray", "DataArray"
-        xarray.DataArray = DataArray
-        monkeypatch.setitem(sys.modules, "xarray", xarray)
+            def __reduce__(self):
+                return new_index, (type(self), {"data": self.data})
+
+        def new_index(cls, state):
+            return cls(**state)
+
+        class FrozenList(list):  # rebuilt, then extended
+            pass
+
+        class Attrs(dict):  # rebuilt, then its items set
+            pass
+
+        self._fake_module(monkeypatch, "xarray", DataArray=DataArray)
+        self._fake_module(
+            monkeypatch,
+            "pandas",
+            Index=Index,
+            new_index=new_index,
+            FrozenList=FrozenList,
+            Attrs=Attrs,
+        )
         solution = pybamm.Simulation(pybamm.lithium_ion.SPM()).solve([0, 60])
         voltage = solution["Voltage [V]"]
-        voltage._xr_array_raw = DataArray(voltage.entries)
+        voltage._xr_array_raw = DataArray(
+            voltage.entries,
+            Index(voltage.t_pts),
+            FrozenList(["t"]),
+            Attrs(units="V"),
+        )
         path = tmp_path / "solution.pkl"
         solution.save(path)
 
-        # Without xarray installed
+        # Without xarray or pandas installed
         monkeypatch.setitem(sys.modules, "xarray", None)
+        monkeypatch.setitem(sys.modules, "pandas", None)
         with pytest.raises(ImportError):
             pickle.loads(path.read_bytes())
         loaded = pybamm.load(path)["Voltage [V]"]
@@ -186,11 +223,11 @@ class TestUtil:
         assert "_xr_array_raw" not in vars(loaded)
 
         # Any other missing package still fails to load
-        other = types.ModuleType("some_missing_package")
-        other.DataArray = DataArray
-        DataArray.__module__ = "some_missing_package"
-        monkeypatch.setitem(sys.modules, "some_missing_package", other)
-        voltage._xr_array_raw = DataArray(voltage.entries)
+        class Other:
+            pass
+
+        self._fake_module(monkeypatch, "some_missing_package", Other=Other)
+        voltage._xr_array_raw = Other()
         solution.save(path)
         monkeypatch.setitem(sys.modules, "some_missing_package", None)
         with pytest.raises(ImportError):

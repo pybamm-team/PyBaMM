@@ -133,6 +133,21 @@ class TestInterpolateOnGrid:
         result = interpolate_on_grid(np.arange(4.0), {"t": grid}, {"t": [0.5, 2.5]})
         np.testing.assert_array_equal(result, [2.5, 0.5])
 
+    @pytest.mark.parametrize("flipped_axis", [0, 1])
+    def test_decreasing_grid_on_several_axes(self, flipped_axis):
+        values, coords = _bilinear_grid()
+        name = list(coords)[flipped_axis]
+        flipped_coords = {**coords, name: coords[name][::-1]}
+        flipped_values = np.flip(values, axis=flipped_axis)
+        x_points, t_points = np.array([0.5, 2.0, 3.0]), np.array([1.0, 4.5])
+
+        result = interpolate_on_grid(
+            flipped_values, flipped_coords, {"x": x_points, "t": t_points}
+        )
+        np.testing.assert_allclose(
+            result, _bilinear(x_points[:, np.newaxis], t_points), rtol=1e-14
+        )
+
     def test_single_point_grid(self):
         result = interpolate_on_grid(
             np.array([[1.0], [2.0]]),
@@ -152,8 +167,9 @@ class TestInterpolateOnGrid:
             interpolate_on_grid(values, coords, {"r": 1.0})
         with pytest.raises(ValueError, match=r"'t' must be a scalar or 1D, not 2D"):
             interpolate_on_grid(values, coords, {"t": [[1.0], [2.0]]})
-        with pytest.raises(ValueError, match=r"fill_value must be"):
-            interpolate_on_grid(values, coords, {"t": 1.0}, "nearest")
+        for fill_value in ["nearest", np.array("nearest"), object(), (1.0, 2.0, 3.0)]:
+            with pytest.raises(ValueError, match=r"fill_value must be"):
+                interpolate_on_grid(values, coords, {"t": 1.0}, fill_value)
 
         # a repeated grid point only matters along a queried axis
         repeated = {"x": coords["x"], "t": np.array([0.0, 2.0, 2.0, 5.0])}
