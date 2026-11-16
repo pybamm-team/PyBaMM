@@ -39,7 +39,7 @@ class TestCompositeSolver:
         composite = pybamm.CompositeSolver([solver1, solver2])
 
         solution = composite.solve(model)
-        np.testing.assert_allclose(solution.y, 3, rtol=1e-6)
+        np.testing.assert_allclose(solution.all_ys[0], 3, rtol=1e-6)
 
     def test_fallback_to_second_solver(self):
         # Create a model that the first solver will fail on
@@ -62,7 +62,7 @@ class TestCompositeSolver:
         composite = pybamm.CompositeSolver([failing_solver, working_solver])
 
         solution = composite.solve(model)
-        np.testing.assert_allclose(solution.y, 3, rtol=1e-6)
+        np.testing.assert_allclose(solution.all_ys[0], 3, rtol=1e-6)
 
     def test_all_solvers_fail(self):
         model = pybamm.BaseModel()
