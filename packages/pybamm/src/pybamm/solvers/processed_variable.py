@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 
 import pybamm
+from pybamm.solvers.grid_interpolation import interpolate_on_grid
 from pybamm.solvers.variable_observer import as_observer
 
 from .base_processed_variable import BaseProcessedVariable
@@ -106,7 +107,6 @@ class ProcessedVariable(BaseProcessedVariable):
         self.base_eval_shape = self.base_variables[0].shape
         self.base_eval_size = self.base_variables[0].size
 
-        self._xr_array_raw = None
         self._entries_raw = None
         self._entries_for_interp_raw = None
         self._coords_raw = None
@@ -117,6 +117,8 @@ class ProcessedVariable(BaseProcessedVariable):
         leaves = state.pop("base_variables_casadi", None)
         if "_observer" not in state:
             state["_observer"] = as_observer(leaves)
+        # Pickled by 26.10 or earlier, with an xarray cache this no longer reads
+        state.pop("_xr_array_raw", None)
         self.__dict__.update(state)
 
     @property
@@ -247,9 +249,9 @@ class ProcessedVariable(BaseProcessedVariable):
 
         spatial_interp = any(a is not None for a in [x, r, y, z, R])
 
-        xr_interp = spatial_interp or not hermite_time_interp
+        grid_interp = spatial_interp or not hermite_time_interp
 
-        if xr_interp:
+        if grid_interp:
             if hermite_time_interp:
                 # Already interpolated in time
                 t = None
@@ -261,17 +263,8 @@ class ProcessedVariable(BaseProcessedVariable):
                     self._coords_raw,
                 )
 
-            if self.time_integral is not None:
-                processed_entries = entries_for_interp
-            elif (
-                observe_raw
-                and not spatial_interp
-                and isinstance(self, ProcessedVariable0D)
-            ):
-                # The stored times need no interpolation, nor xarray's import
-                processed_entries = entries_for_interp.copy()
-            else:
-                processed_entries = self._xr_interpolate(
+            if self.time_integral is None:
+                processed_entries = self._interpolate(
                     entries_for_interp,
                     coords,
                     observe_raw,
@@ -283,10 +276,12 @@ class ProcessedVariable(BaseProcessedVariable):
                     R,
                     fill_value,
                 )
+            else:
+                processed_entries = entries_for_interp
         else:
             processed_entries = entries
 
-        # Only the Hermite route sorts t; the xarray route keeps the caller's order
+        # Only the Hermite route sorts t; the grid route keeps the caller's order
         if not is_sorted and hermite_time_interp:
             idxs_unsort = np.empty_like(idxs_sort)
             idxs_unsort[idxs_sort] = np.arange(len(t_observe))
@@ -299,7 +294,7 @@ class ProcessedVariable(BaseProcessedVariable):
 
         return processed_entries
 
-    def _xr_interpolate(
+    def _interpolate(
         self,
         entries_for_interp,
         coords,
@@ -314,26 +309,16 @@ class ProcessedVariable(BaseProcessedVariable):
     ):
         """
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
-        using interpolation
+        using linear interpolation
         """
-        import xarray as xr
+        queries = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
+        queries = {key: value for key, value in queries.items() if value is not None}
 
-        if observe_raw:
-            if not self.xr_array_raw_initialized:
-                self._xr_array_raw = xr.DataArray(entries_for_interp, coords=coords)
-            xr_data_array = self._xr_array_raw
-        else:
-            xr_data_array = xr.DataArray(entries_for_interp, coords=coords)
+        # The stored times need no interpolation; a scalar t still drops its axis
+        if observe_raw and np.ndim(t) == 1:
+            del queries["t"]
 
-        kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
-
-        # Remove any None arguments
-        kwargs = {key: value for key, value in kwargs.items() if value is not None}
-
-        # Use xarray interpolation, return numpy array
-        out = xr_data_array.interp(**kwargs, kwargs={"fill_value": fill_value}).values
-
-        return out
+        return interpolate_on_grid(entries_for_interp, coords, queries, fill_value)
 
     def _check_observe_raw(self, t):
         """
@@ -394,10 +379,6 @@ class ProcessedVariable(BaseProcessedVariable):
     @property
     def entries_raw_initialized(self):
         return self._entries_raw is not None
-
-    @property
-    def xr_array_raw_initialized(self):
-        return self._xr_array_raw is not None
 
     @property
     def sensitivities(self):

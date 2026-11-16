@@ -3,11 +3,10 @@
 #
 from __future__ import annotations
 
-from functools import cached_property
-
 import numpy as np
 
 import pybamm
+from pybamm.solvers.grid_interpolation import interpolate_on_grid
 
 from .base_processed_variable import BaseProcessedVariable
 
@@ -52,7 +51,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
     # Defaults for a variable pickled before __init__ set these
     time_integral = None
     _unjoinable = False
-    _xr_interp_args = None
+    _interp_args = None
 
     def __init__(
         self,
@@ -94,11 +93,10 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.base_eval_size = self.base_variables[0].size
         self.unroll_params = {}
 
-        # initialise_* runs lazily on first read of `entries` / `_xr_data_array`.
+        # initialise_* runs lazily on the first read of the data
         self._initialised = False
-        # Built on first interpolation: it costs more than evaluating a small variable
-        self._xr_interp_args = None
-        self._xr_data_array_cache = None
+        # The (values, coords) grid that initialise_* sets for interpolation
+        self._interp_args = None
         self._initialise_method, self.dimensions = self._resolve_initialise_method()
 
     def _resolve_initialise_method(self):
@@ -161,21 +159,13 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self._materialise()
         return self._entries
 
-    @property
-    def _xr_data_array(self):
+    def _interpolation_grid(self):
+        """Return the (values, coords) grid the variable interpolates on."""
         self._materialise()
-        if self._xr_data_array_cache is None and self._xr_interp_args is not None:
-            import xarray as xr
-
-            data, coords = self._xr_interp_args
-            self._xr_data_array_cache = xr.DataArray(data, coords=coords)
-            self._xr_interp_args = None
-        return self._xr_data_array_cache
-
-    @cached_property
-    def _t_pts_increasing(self) -> bool:
-        # np.interp needs strictly increasing sample times; xarray rejects repeats
-        return bool(np.all(np.diff(self.t_pts) > 0))
+        if self._interp_args is None:
+            # Pickled by 26.10 or earlier, which kept the grid elsewhere
+            self._initialise_method()
+        return self._interp_args
 
     def as_computed(self) -> ProcessedVariableComputed:
         return self
@@ -256,7 +246,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
 
     def initialise_time_independent(self):
         self._entries = self.unroll_0D()
-        self._xr_interp_args = None
+        self._interp_args = None
 
     def initialise_0D(self):
         from scipy.integrate import cumulative_trapezoid
@@ -269,7 +259,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             )
 
         # set up interpolation
-        self._xr_interp_args = (entries, [("t", self.t_pts)])
+        self._interp_args = (entries, {"t": self.t_pts})
 
         self._entries = entries
 
@@ -324,9 +314,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.first_dim_pts = edges
 
         # set up interpolation
-        self._xr_interp_args = (
+        self._interp_args = (
             entries_for_interp,
-            [(self.first_dimension, pts_for_interp), ("t", self.t_pts)],
+            {self.first_dimension: pts_for_interp, "t": self.t_pts},
         )
 
     def initialise_2D(self):
@@ -453,7 +443,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.second_dim_pts = second_dim_edges
 
         # set up interpolation
-        self._xr_interp_args = (
+        self._interp_args = (
             entries_for_interp,
             {
                 self.first_dimension: first_dim_pts_for_interp,
@@ -484,7 +474,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.second_dim_pts = z_sol
 
         # set up interpolation
-        self._xr_interp_args = (
+        self._interp_args = (
             entries,
             {"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
@@ -629,7 +619,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.third_dim_pts = third_dim_edges
 
         # set up interpolation
-        self._xr_interp_args = (
+        self._interp_args = (
             entries_for_interp,
             {
                 self.first_dimension: first_dim_pts_for_interp,
@@ -674,7 +664,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.third_dim_pts = z_sol
 
         # set up interpolation
-        self._xr_interp_args = (
+        self._interp_args = (
             entries,
             {"x": x_sol, "y": y_sol, "z": z_sol, "t": self.t_pts},
         )
@@ -686,21 +676,10 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         """
         if self.time_indep:
             return self.entries
-        if (
-            self.dimensions == 0
-            and t is not None
-            and np.ndim(t) <= 1
-            and all(arg is None for arg in (x, r, y, z, R))
-            and self._t_pts_increasing
-        ):
-            # Same values as xr.interp, far cheaper; N-D t keeps the xarray route
-            values = np.interp(t, self.t_pts, self.entries, left=np.nan, right=np.nan)
-            return np.asarray(values)
-        kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
-        # Remove any None arguments
-        kwargs = {key: value for key, value in kwargs.items() if value is not None}
-        # Use xarray interpolation, return numpy array
-        return self._xr_data_array.interp(**kwargs).values
+        queries = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
+        queries = {key: value for key, value in queries.items() if value is not None}
+        values, coords = self._interpolation_grid()
+        return interpolate_on_grid(values, coords, queries)
 
     @property
     def data(self):

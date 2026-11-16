@@ -261,7 +261,6 @@ Package                                                             Supported ve
 `NumPy <https://numpy.org>`__                                         Whatever recent versions work. >= 2.0.0
 `SciPy <https://docs.scipy.org/doc/scipy/>`__                         Whatever recent versions work. >= 1.11.4
 `CasADi <https://web.casadi.org/docs/>`__                             Whatever recent versions work (transitive via pybammsolvers)
-`Xarray <https://docs.xarray.dev/en/stable/>`__                       Whatever recent versions work. >= 2022.6.0
 `Anytree <https://anytree.readthedocs.io/en/stable/>`__               Whatever recent versions work. >= 2.8.0
 `SymPy <https://docs.sympy.org/latest/index.html>`__                  Whatever recent versions work. >= 1.12
 `pandas <https://pypi.org/project/pandas/>`__                         Whatever recent versions work. >= 1.5.0

@@ -158,7 +158,7 @@ class TestUtil:
             )
 
     def test_import_defers_heavy_dependencies(self):
-        deferred = ["black", "pandas", "pooch", "posthog", "sympy", "xarray"]
+        deferred = ["black", "pandas", "pooch", "posthog", "sympy"]
         code = (
             "import json, sys, pybamm; "
             f"print(json.dumps([m for m in {deferred!r} if m in sys.modules]))"
