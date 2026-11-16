@@ -268,9 +268,8 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   }
 
   if (sensitivity) {
-    // The staggered corrector converges the states before the sensitivities.
-    // The simultaneous one's block-diagonal Newton matrix fails at tight
-    // tolerances, and IDAS only applies the sensitivity error test in this one
+    // The simultaneous corrector fails at tight tolerances (#5999), and IDAS
+    // only applies the sensitivity error test in the staggered one
     CheckErrors(IDASensInit(ida_mem, number_of_parameters, IDA_STAGGERED,
       sensitivities_eval<ExprSet>, yyS, yypS), "IDASensInit");
     CheckErrors(IDASensEEtolerances(ida_mem), "IDASensEEtolerances");
