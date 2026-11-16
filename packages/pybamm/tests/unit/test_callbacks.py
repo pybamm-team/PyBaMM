@@ -1,5 +1,3 @@
-import os
-
 import pytest
 
 import pybamm
@@ -18,15 +16,9 @@ class DummyCallback(callbacks.Callback):
 
 class TestCallbacks:
     @pytest.fixture(autouse=True)
-    def tearDown(self):
-        # Remove any test log files that were created, even if the test fails
-        for logfile in ["test_callback.log", "test_callback_2.log"]:
-            if os.path.exists(logfile):
-                try:
-                    os.remove(logfile)
-                except PermissionError:
-                    # Just skip this if it doesn't work (Windows doesn't allow)
-                    pass
+    def run_in_tmp_path(self, tmp_path, monkeypatch):
+        # Parallel tests must not share log files
+        monkeypatch.chdir(tmp_path)
 
     def test_setup_callbacks(self):
         # No callbacks, LoggingCallback should be added
@@ -112,3 +104,30 @@ class TestCallbacks:
         callback.on_experiment_start(logs)
         with open("test_callback.log") as f:
             assert f.read() == ""
+
+    def test_logging_callbacks_have_separate_logfiles(self, tmp_path):
+        file_a, file_b = tmp_path / "a.log", tmp_path / "b.log"
+        pybamm.set_logging_level("NOTICE")
+        try:
+            callback_a = callbacks.LoggingCallback(str(file_a))
+            callbacks.LoggingCallback(str(file_b))
+            # A second callback on the same file must not duplicate lines
+            callbacks.LoggingCallback(str(file_a))
+            callback_a.on_cycle_start({"cycle number": (1, 2), "elapsed time": 0.1})
+        finally:
+            pybamm.set_logging_level("WARNING")
+
+        assert file_a.read_text().count("Cycle 1/2") == 1
+        assert not file_b.exists()
+        assert all(handler.stream is None for handler in callback_a.logger.handlers)
+
+    def test_logging_callback_keeps_start_message(self, tmp_path):
+        logfile = tmp_path / "start.log"
+        pybamm.set_logging_level("INFO")
+        try:
+            callback = callbacks.LoggingCallback(str(logfile))
+            callback.on_experiment_start({})
+        finally:
+            pybamm.set_logging_level("WARNING")
+
+        assert "Start running experiment" in logfile.read_text()
