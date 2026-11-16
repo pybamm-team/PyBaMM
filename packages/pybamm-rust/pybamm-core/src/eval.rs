@@ -357,8 +357,9 @@ pub(crate) fn masked_mul(mask: f64, value: f64) -> f64 {
 /// `x`, `x*x` and `1/x`.
 ///
 /// Those forms round once from exact operands, so are correctly rounded where a platform
-/// `pow` need not be, and equal what `simplify` lowers the same constant exponents to. The
-/// model residual compiles unsimplified, so its squares reach this as `pow(x, 2)`.
+/// `pow` need not be, and equal what `simplify` lowers the same constant exponents to. A
+/// `CompiledModel` compiles every tape from a simplified graph, so in one only an exponent known
+/// at run time, such as an input parameter, reaches this as `pow(x, 2)`.
 #[inline(always)]
 pub(crate) fn pow(x: f64, y: f64) -> f64 {
     match y {
