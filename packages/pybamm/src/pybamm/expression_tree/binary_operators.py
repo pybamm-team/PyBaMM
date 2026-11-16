@@ -271,7 +271,7 @@ class BinaryOperator(pybamm.Symbol):
         elif isinstance(self, Equality):
             return graph.equality(left, right)
         else:
-            raise TypeError(
+            raise NotImplementedError(
                 f"Cannot convert binary operator of type '{type(self).__name__}' "
                 "to the Rust backend. Use a CasADi-backed model (set "
                 "`model.convert_to_format = 'casadi'`) for models using "

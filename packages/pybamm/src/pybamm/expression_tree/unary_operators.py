@@ -164,7 +164,7 @@ class UnaryOperator(pybamm.Symbol):
             # Pass-through operators: actual computation happens in ProcessedVariable
             return child
         else:
-            raise TypeError(
+            raise NotImplementedError(
                 f"Cannot convert unary operator of type '{type(self).__name__}' "
                 "to the Rust backend. Use a CasADi-backed model (set "
                 "`model.convert_to_format = 'casadi'`) for models using "

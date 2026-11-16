@@ -1615,7 +1615,7 @@ class TestRustUnsupportedNodeErrors:
         from pybamm.rust import ExprGraph
 
         sym = pybamm.SpatialVariable("x", domain=["negative electrode"])
-        with pytest.raises(TypeError, match=r"convert_to_format") as exc:
+        with pytest.raises(NotImplementedError, match=r"convert_to_format") as exc:
             sym.to_rust(ExprGraph(), {})
         # The fix it suggests is a model setting, not a solver argument
         assert "evaluator=" not in str(exc.value)
@@ -1626,7 +1626,7 @@ class TestRustUnsupportedNodeErrors:
 
         sv = pybamm.StateVector(slice(0, 1))
         fun = pybamm.Function(np.sin, sv)
-        with pytest.raises(TypeError, match=r"convert_to_format"):
+        with pytest.raises(NotImplementedError, match=r"convert_to_format"):
             fun.to_rust(ExprGraph(), {})
 
     def test_specific_function_without_a_rust_form_message(self):
@@ -1634,7 +1634,7 @@ class TestRustUnsupportedNodeErrors:
         from pybamm.rust import ExprGraph
 
         fun = pybamm.SpecificFunction(np.abs, pybamm.StateVector(slice(0, 1)))
-        with pytest.raises(TypeError, match=r"no native Rust implementation"):
+        with pytest.raises(NotImplementedError, match=r"no native Rust implementation"):
             fun.to_rust(ExprGraph(), {})
 
     @pytest.mark.parametrize(
@@ -1667,7 +1667,7 @@ class TestRustUnsupportedNodeErrors:
                 pybamm.StateVector(slice(0, 3), domain="negative electrode")
             ),
         }
-        with pytest.raises(TypeError, match=rf"'{name}'.*convert_to_format"):
+        with pytest.raises(NotImplementedError, match=rf"'{name}'.*convert_to_format"):
             nodes[name].to_rust(ExprGraph(), {})
 
 
