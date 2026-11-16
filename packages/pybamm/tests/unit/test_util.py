@@ -2,11 +2,14 @@ import importlib
 import importlib.util
 import json
 import os
+import pickle
 import pkgutil
 import subprocess
 import sys
+import types
 from io import StringIO
 
+import numpy as np
 import pytest
 
 import pybamm
@@ -157,8 +160,44 @@ class TestUtil:
                 f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
             )
 
+    def test_load_drops_xarray_caches_of_older_files(self, tmp_path, monkeypatch):
+        # Solutions saved by 26.10 or earlier can cache xarray objects
+        xarray = types.ModuleType("xarray")
+
+        class DataArray:
+            def __init__(self, values):
+                self.values = values
+
+        DataArray.__module__, DataArray.__qualname__ = "xarray", "DataArray"
+        xarray.DataArray = DataArray
+        monkeypatch.setitem(sys.modules, "xarray", xarray)
+        solution = pybamm.Simulation(pybamm.lithium_ion.SPM()).solve([0, 60])
+        voltage = solution["Voltage [V]"]
+        voltage._xr_array_raw = DataArray(voltage.entries)
+        path = tmp_path / "solution.pkl"
+        solution.save(path)
+
+        # Without xarray installed
+        monkeypatch.setitem(sys.modules, "xarray", None)
+        with pytest.raises(ImportError):
+            pickle.loads(path.read_bytes())
+        loaded = pybamm.load(path)["Voltage [V]"]
+        np.testing.assert_array_equal(loaded(voltage.t_pts), voltage.entries)
+        assert "_xr_array_raw" not in vars(loaded)
+
+        # Any other missing package still fails to load
+        other = types.ModuleType("some_missing_package")
+        other.DataArray = DataArray
+        DataArray.__module__ = "some_missing_package"
+        monkeypatch.setitem(sys.modules, "some_missing_package", other)
+        voltage._xr_array_raw = DataArray(voltage.entries)
+        solution.save(path)
+        monkeypatch.setitem(sys.modules, "some_missing_package", None)
+        with pytest.raises(ImportError):
+            pybamm.load(path)
+
     def test_import_defers_heavy_dependencies(self):
-        deferred = ["black", "pandas", "pooch", "posthog", "sympy"]
+        deferred = ["black", "pandas", "pooch", "posthog", "sympy", "xarray"]
         code = (
             "import json, sys, pybamm; "
             f"print(json.dumps([m for m in {deferred!r} if m in sys.modules]))"

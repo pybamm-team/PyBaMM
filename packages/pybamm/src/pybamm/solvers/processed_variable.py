@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 
 import pybamm
-from pybamm.solvers.grid_interpolation import interpolate_on_grid
+from pybamm.solvers.grid_interpolation import RectilinearGrid
 from pybamm.solvers.variable_observer import as_observer
 
 from .base_processed_variable import BaseProcessedVariable
@@ -117,7 +117,7 @@ class ProcessedVariable(BaseProcessedVariable):
         leaves = state.pop("base_variables_casadi", None)
         if "_observer" not in state:
             state["_observer"] = as_observer(leaves)
-        # Pickled by 26.10 or earlier, with an xarray cache this no longer reads
+        # A variable pickled by 26.10 or earlier may hold an unused xarray cache
         state.pop("_xr_array_raw", None)
         self.__dict__.update(state)
 
@@ -256,18 +256,15 @@ class ProcessedVariable(BaseProcessedVariable):
                 # Already interpolated in time
                 t = None
                 entries_for_interp, coords = self._interp_setup(entries, t_observe)
+                grid = RectilinearGrid(coords)
             else:
                 self.initialise()
-                entries_for_interp, coords = (
-                    self._entries_for_interp_raw,
-                    self._coords_raw,
-                )
+                entries_for_interp, grid = self._entries_for_interp_raw, self._grid_raw
 
             if self.time_integral is None:
                 processed_entries = self._interpolate(
                     entries_for_interp,
-                    coords,
-                    observe_raw,
+                    grid,
                     t,
                     x,
                     r,
@@ -297,8 +294,7 @@ class ProcessedVariable(BaseProcessedVariable):
     def _interpolate(
         self,
         entries_for_interp,
-        coords,
-        observe_raw,
+        grid,
         t=None,
         x=None,
         r=None,
@@ -313,12 +309,13 @@ class ProcessedVariable(BaseProcessedVariable):
         """
         queries = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
         queries = {key: value for key, value in queries.items() if value is not None}
+        return grid.interpolate(entries_for_interp, queries, fill_value)
 
-        # The stored times need no interpolation; a scalar t still drops its axis
-        if observe_raw and np.ndim(t) == 1:
-            del queries["t"]
-
-        return interpolate_on_grid(entries_for_interp, coords, queries, fill_value)
+    @functools.cached_property
+    def _grid_raw(self):
+        """The grid of the raw entries, kept so each axis is checked only once."""
+        self.initialise()
+        return RectilinearGrid(self._coords_raw)
 
     def _check_observe_raw(self, t):
         """

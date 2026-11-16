@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
 
-from pybamm.solvers.grid_interpolation import interpolate_on_grid
+import pybamm
+from pybamm.solvers.grid_interpolation import RectilinearGrid, interpolate_on_grid
 
 
 def _bilinear_grid():
@@ -57,16 +58,8 @@ class TestInterpolateOnGrid:
         result = interpolate_on_grid(values, coords, {"x": x_query, "t": t_query})
         assert isinstance(result, np.ndarray)
         assert result.shape == shape
-        np.testing.assert_allclose(
-            result,
-            _bilinear(
-                np.asarray(x_query)[..., np.newaxis]
-                if np.ndim(t_query)
-                else np.asarray(x_query),
-                np.asarray(t_query),
-            ).reshape(shape),
-            rtol=1e-14,
-        )
+        expected = _bilinear(np.reshape(x_query, (-1, 1)), np.reshape(t_query, (1, -1)))
+        np.testing.assert_allclose(result, expected.reshape(shape), rtol=1e-14)
 
     def test_grid_points_return_stored_values(self):
         values, coords = _bilinear_grid()
@@ -87,6 +80,7 @@ class TestInterpolateOnGrid:
             (-1.0, [-1.0, 1.5, -1.0]),
             ((-1.0, -2.0), [-1.0, 1.5, -2.0]),
             ("extrapolate", [-2.0, 1.5, 5.0]),
+            (np.array(-1.0), [-1.0, 1.5, -1.0]),
         ],
     )
     def test_fill_value(self, fill_value, expected):
@@ -125,6 +119,15 @@ class TestInterpolateOnGrid:
         )
         np.testing.assert_array_equal(result, [0.5, 1.0, np.nan, np.nan, 3.0, 3.5])
 
+    def test_nan_beside_a_grid_point_keeps_its_stored_value(self):
+        # With a second axis, this takes the N-D route rather than np.interp
+        values = np.array([[0.0, 1.0, np.nan, 3.0], [0.0, 1.0, 2.0, np.inf]])
+        coords = {"x": np.array([0.0, 1.0]), "t": np.arange(4.0)}
+        result = interpolate_on_grid(values, coords, {"t": [1.0, 1.5, 2.0, 3.0]})
+        np.testing.assert_array_equal(
+            result, [[1.0, np.nan, np.nan, 3.0], [1.0, 1.5, 2.0, np.inf]]
+        )
+
     def test_decreasing_grid(self):
         grid = np.array([3.0, 2.0, 1.0, 0.0])
         result = interpolate_on_grid(np.arange(4.0), {"t": grid}, {"t": [0.5, 2.5]})
@@ -141,6 +144,10 @@ class TestInterpolateOnGrid:
 
     def test_errors(self):
         values, coords = _bilinear_grid()
+        with pytest.raises(
+            pybamm.ShapeError, match=r"shape \(3, 3\) do not match .* \(3, 4\)"
+        ):
+            interpolate_on_grid(values[:, :3], coords, {"t": 1.0})
         with pytest.raises(ValueError, match=r"Cannot interpolate in \['r'\]"):
             interpolate_on_grid(values, coords, {"r": 1.0})
         with pytest.raises(ValueError, match=r"'t' must be a scalar or 1D, not 2D"):
@@ -155,3 +162,18 @@ class TestInterpolateOnGrid:
         np.testing.assert_array_equal(
             interpolate_on_grid(values, repeated, {"x": 1.0}), values[1]
         )
+        # and the grid's own points need no interpolation
+        np.testing.assert_array_equal(
+            interpolate_on_grid(values, repeated, {"t": repeated["t"]}), values
+        )
+
+    def test_grid_checks_each_axis_once(self):
+        values, coords = _bilinear_grid()
+        grid = RectilinearGrid(coords)
+        first = grid.interpolate(values, {"t": [1.0, 2.5]})
+        checked = grid._increasing["t"]
+        np.testing.assert_array_equal(
+            grid.interpolate(values, {"t": [1.0, 2.5]}), first
+        )
+        assert grid._increasing["t"] is checked
+        assert "x" not in grid._increasing

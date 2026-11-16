@@ -9,9 +9,9 @@
 - A failed write in `BaseModel.to_json` or `BaseModel.to_config` now re-raises the original `OSError` subclass (e.g. `PermissionError`) instead of a plain `OSError`. The file path is in the exception's `__notes__`, not its message. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - `get_size_distribution_parameters` sets the size distribution and minimum/maximum radii as `pybamm.Symbol`s of the particle radius, so they follow `"[input]"` but `float(param[...])` fails. Use `param.evaluate(pybamm.Parameter(...))`, or pass `R_n_av` and `R_p_av`, for numbers. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 - A custom `SubMesh` subclass given input-dependent limits now raises a `GeometryError` unless it sets `supports_symbolic_limits = True`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
-- PyBaMM no longer depends on pandas. `save_data(to_format="csv")` writes the same bytes with the standard library; install `pybamm[examples]` for the example notebooks and scripts, which read data with pandas. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
-- PyBaMM no longer depends on xarray. `ProcessedVariable.xr_array_raw_initialized` is removed, and a bad interpolation query raises `ValueError` instead of an xarray or pandas error. A NaN value only affects interpolation next to it. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
 - `pybamm.sympy` and `pybamm.special`, accidental re-exports of the `sympy` and `scipy.special` modules, have been removed; import those modules directly. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
+- PyBaMM no longer depends on pandas. `save_data(to_format="csv")` writes the same CSV with the standard library; install `pybamm[examples]` for the example notebooks and scripts, which read data with pandas. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
+- PyBaMM no longer depends on xarray: `ProcessedVariable.xr_array_raw_initialized` is removed, bad interpolation queries raise `ValueError`, a NaN only affects interpolation next to it, and solutions saved by 26.10 or earlier load without xarray only through `pybamm.load`. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
 
 ## Deprecated
 
@@ -85,8 +85,8 @@
 
 ## Optimizations
 
-- `import pybamm` is about six times faster, so importing and running a first DFN takes about a quarter of the time. Citations are parsed only when printed, and SymPy, xarray, pandas, Black, PostHog, pooch and most of SciPy load on first use. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - Reading a 0D variable at its stored times, `var()` or `var(solution.t)`, returns the stored values without importing xarray or interpolating through it. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
+- `import pybamm` is about six times faster, so importing and running a first DFN takes about a quarter of the time. Citations are parsed only when printed, and SymPy, Black, PostHog, pooch and most of SciPy load on first use. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - Interpolating a variable in space or time no longer builds an xarray `DataArray`; interpolation is 1.3 to 200 times faster, with at most a third of the peak memory, from QuickPlot sliders to large resampling. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
 - Pushes to `main` skip the test suite when the commit already passed the merge queue, and only rebuild the cached solver wheels and upload the Codecov baseline. Other pushes still run the full suite. ([#6027](https://github.com/pybamm-team/PyBaMM/pull/6027))
 - Read the Docs pull request builds drop `linkcheck` and the unpublished PDF, install the released solver wheel instead of compiling it, and are skipped when nothing the docs render changed, saving about 14 of 20 minutes. ([#5986](https://github.com/pybamm-team/PyBaMM/pull/5986))

@@ -332,8 +332,46 @@ class TimerTime:
 def load(filename):
     """Load a saved object. Only load files you trust: unpickling can run code."""
     with open(filename, "rb") as f:
-        obj = pickle.load(f)  # noqa: S301 - documented trust requirement above
+        obj = _Unpickler(f).load()
     return obj
+
+
+class _Unpickler(pickle.Unpickler):
+    """
+    Unpickler that, when xarray or pandas is not installed, loads their objects
+    as :class:`_DroppedObject`. PyBaMM 26.10 and earlier cached such objects in
+    processed variables, which discard them on loading.
+    """
+
+    def find_class(self, module, name):
+        try:
+            return super().find_class(module, name)
+        except ImportError:
+            if module.partition(".")[0] in ("xarray", "pandas"):
+                return _DroppedObject
+            raise
+
+
+class _DroppedObject:
+    """Stands in for an object whose package is not installed, holding nothing."""
+
+    def __new__(cls, *args, **kwargs):
+        return super().__new__(cls)
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __setstate__(self, state):
+        pass
+
+    def __setitem__(self, key, value):
+        pass
+
+    def append(self, item):
+        pass
+
+    def extend(self, items):
+        pass
 
 
 def get_parameters_filepath(path):

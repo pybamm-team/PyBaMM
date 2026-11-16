@@ -1,10 +1,13 @@
 #
 # Tests for the Solution class
 #
+import bz2
 import copyreg
+import gzip
 import io
 import json
 import logging
+import lzma
 import os
 import pickle
 import subprocess
@@ -1220,6 +1223,29 @@ class TestSolution:
             _write_csv({"a": np.ones((2, 2))})
         with pytest.raises(ValueError, match=r"not a scalar"):
             _write_csv({"a": 1.0})
+
+    @pytest.mark.parametrize(
+        ("suffix", "opener"),
+        [
+            (".csv", open),
+            (".csv.gz", gzip.open),
+            (".csv.bz2", bz2.open),
+            (".csv.xz", lzma.open),
+        ],
+    )
+    def test_write_csv_compresses_by_extension(self, tmp_path, suffix, opener):
+        data = {"a": np.array([1.0, 2.0])}
+        path = tmp_path / f"data{suffix}"
+        _write_csv(data, path)
+        with opener(path, "rt", newline="", encoding="utf-8") as file:
+            assert file.read() == _write_csv(data)
+
+    def test_write_csv_to_a_text_file_and_object_columns(self):
+        # None in an object column is missing, like NaN
+        data = {"a": np.array([1.5, None, "x,y"], dtype=object)}
+        buffer = io.StringIO()
+        assert _write_csv(data, buffer) is None
+        assert buffer.getvalue() == os.linesep.join(["a", "1.5", '""', '"x,y"', ""])
 
     def test_get_data_cycles_steps(self):
         model = pybamm.BaseModel()

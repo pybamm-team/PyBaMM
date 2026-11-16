@@ -1001,6 +1001,18 @@ class TestProcessedVariableComputed:
             + ", ".join(sorted(set(methods) - covered_methods))
         )
 
+    def test_unpickling_drops_xarray_caches_of_older_versions(self):
+        variable = self._build_0D_var()
+        expected = variable(0.5)
+        # 26.10 or earlier pickled these, and no grid of its own
+        variable._xr_data_array_cache = ["stand-in for an xarray.DataArray"]
+        variable._xr_interp_args = None
+        del variable._interp_args
+        restored = pickle.loads(pickle.dumps(variable))
+        assert "_xr_data_array_cache" not in vars(restored)
+        assert "_xr_interp_args" not in vars(restored)
+        np.testing.assert_array_equal(restored(0.5), expected)
+
     @pytest.mark.parametrize("read_before_pickling", [False, True])
     def test_variable_pickled_by_v26_9_reads_and_joins(self, read_before_pickling):
         sim = pybamm.Simulation(

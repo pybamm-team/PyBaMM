@@ -6,7 +6,7 @@ from __future__ import annotations
 import numpy as np
 
 import pybamm
-from pybamm.solvers.grid_interpolation import interpolate_on_grid
+from pybamm.solvers.grid_interpolation import RectilinearGrid
 
 from .base_processed_variable import BaseProcessedVariable
 
@@ -160,12 +160,23 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         return self._entries
 
     def _interpolation_grid(self):
-        """Return the (values, coords) grid the variable interpolates on."""
+        """Return the values the variable interpolates and the grid they are on."""
         self._materialise()
         if self._interp_args is None:
-            # Pickled by 26.10 or earlier, which kept the grid elsewhere
+            # A variable pickled by 26.10 or earlier has no grid stored here
             self._initialise_method()
-        return self._interp_args
+        values, grid = self._interp_args
+        if not isinstance(grid, RectilinearGrid):
+            # Kept, so each axis is checked only once
+            grid = RectilinearGrid(grid)
+            self._interp_args = (values, grid)
+        return values, grid
+
+    def __setstate__(self, state):
+        # A variable pickled by 26.10 or earlier holds xarray caches this ignores
+        for name in ("_xr_data_array_cache", "_xr_interp_args"):
+            state.pop(name, None)
+        self.__dict__.update(state)
 
     def as_computed(self) -> ProcessedVariableComputed:
         return self
@@ -678,8 +689,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             return self.entries
         queries = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
         queries = {key: value for key, value in queries.items() if value is not None}
-        values, coords = self._interpolation_grid()
-        return interpolate_on_grid(values, coords, queries)
+        values, grid = self._interpolation_grid()
+        return grid.interpolate(values, queries)
 
     @property
     def data(self):

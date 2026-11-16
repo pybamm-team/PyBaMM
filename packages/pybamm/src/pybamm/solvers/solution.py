@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import math
 import numbers
 import os
 import pickle
@@ -36,18 +37,20 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
-def _write_csv(data, filename=None):
+def _write_csv(data: dict, filename=None) -> str | None:
     """
-    Write columns of data as CSV, one header row of their names then one row per
-    entry, formatted as ``pandas.DataFrame(data).to_csv(index=False)`` formats them.
+    Write columns of data as CSV: a header row of their names, then one row per
+    entry. Floats are written in their shortest round-trip form, a missing value
+    as an empty field, and names are quoted only where needed.
 
     Parameters
     ----------
     data : dict
         1D arrays of equal length by column name. A scalar is repeated down its
         column.
-    filename : str, optional
-        The file to write. If None, the CSV is returned as a string.
+    filename : str, path-like or text file, optional
+        The file to write, compressed if its name ends in ``.gz``, ``.bz2`` or
+        ``.xz``. If None, the CSV is returned as a string.
 
     Returns
     -------
@@ -74,30 +77,69 @@ def _write_csv(data, filename=None):
         values = np.broadcast_to(values, (n_rows,))
         # Python and numpy both write a float64 in its shortest round-trip form;
         # Python is faster, but float32 and complex need numpy's own form
-        if values.dtype == np.float64 or values.dtype.kind in "biu":
+        if values.dtype == np.float64 or values.dtype.kind in "biuO":
             column = values.tolist()
         else:
             column = values.astype(str).tolist()
-        if values.dtype.kind in "fc":
-            missing = np.isnan(values)
-            if missing.any():
-                column = [
-                    "" if is_nan else entry
-                    for entry, is_nan in zip(column, missing, strict=True)
-                ]
+        missing = _is_missing(values)
+        if missing.any():
+            column = [
+                "" if is_missing else entry
+                for entry, is_missing in zip(column, missing, strict=True)
+            ]
         text_columns.append(column)
 
-    with (
-        io.StringIO()
-        if filename is None
-        else open(filename, "w", newline="", encoding="utf-8")
-    ) as file:
+    def write(file):
         writer = csv.writer(file, lineterminator=os.linesep)
         writer.writerow(columns)
         writer.writerows(zip(*text_columns, strict=True))
-        if filename is None:
-            return file.getvalue()
+
+    if filename is None:
+        buffer = io.StringIO()
+        write(buffer)
+        return buffer.getvalue()
+    if hasattr(filename, "write"):
+        write(filename)
+        return None
+    with _open_for_text(filename) as file:
+        write(file)
     return None
+
+
+def _is_missing(values):
+    """Return where a 1D array holds NaN, or None in an object array."""
+    if values.dtype.kind in "fc":
+        return np.isnan(values)
+    if values.dtype.kind == "O":
+        return np.array(
+            [
+                entry is None or (isinstance(entry, float) and math.isnan(entry))
+                for entry in values.tolist()
+            ],
+            dtype=bool,
+        )
+    return np.zeros(values.shape, dtype=bool)
+
+
+def _open_for_text(filename):
+    """Open a file to write text to, compressed as its extension asks."""
+    suffix = os.path.splitext(os.fspath(filename))[1].lower()
+    if suffix == ".gz":
+        import gzip
+
+        opener = gzip.open
+    elif suffix == ".bz2":
+        import bz2
+
+        opener = bz2.open
+    elif suffix == ".xz":
+        import lzma
+
+        opener = lzma.open
+    else:
+        opener = open
+    mode = "w" if opener is open else "wt"
+    return opener(filename, mode, newline="", encoding="utf-8")
 
 
 @dataclass(frozen=True, slots=True)
