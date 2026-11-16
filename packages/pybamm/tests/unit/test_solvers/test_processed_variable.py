@@ -347,6 +347,12 @@ class TestProcessedVariable:
         with pytest.raises(ValueError, match=r"Cannot compute sensitivities"):
             print(processed_var.sensitivities)
 
+    def test_0D_call_fill_value_below_the_first_time(self):
+        # Only the first queried time must not be before the solution starts
+        processed_var = self._build_0D_var()
+        values = processed_var(np.array([0.5, -0.5, 2.0]), fill_value=-1.0)
+        np.testing.assert_array_equal(values, [2.5, -1.0, -1.0])
+
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_1D(self, hermite_interp):
         t = pybamm.t
