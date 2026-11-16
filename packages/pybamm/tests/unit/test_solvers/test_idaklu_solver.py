@@ -3793,13 +3793,12 @@ class TestIDAKLUSensitivityErrorControl:
         assert number_of_steps(1) > 2 * number_of_steps(40)
 
 
-def _coupled_dae(mass_scale=1.0, switch=None, scale_rhs=False):
+def _coupled_dae(mass_scale=1.0, switch=None):
     """Discretised ``m y' = -a y + z``, ``0 = z - b y - c s(t)``.
 
     ``m`` is ``mass_scale``, ``s`` is ``switch`` (zero if None), ``y(0) = 1``, and
     ``z(0) = 0`` is an inconsistent guess, so the algebraic sensitivities at t0
-    must be computed by the solver. With ``scale_rhs``, the mass matrix stays the
-    identity and the rhs is divided by ``m`` instead.
+    must be computed by the solver.
     """
     model = pybamm.BaseModel()
     y = pybamm.Variable("y")
@@ -3809,13 +3808,12 @@ def _coupled_dae(mass_scale=1.0, switch=None, scale_rhs=False):
     residual = z - b * y
     if switch is not None:
         residual = residual - pybamm.InputParameter("c") * switch
-    rhs = -a * y + z
-    model.rhs = {y: rhs / mass_scale if scale_rhs else rhs}
+    model.rhs = {y: -a * y + z}
     model.algebraic = {z: residual}
     model.initial_conditions = {y: 1, z: 0}
     model.variables = {"y": y, "z": z, "2z": 2 * z}
     pybamm.Discretisation().process_model(model)
-    if mass_scale != 1 and not scale_rhs:
+    if mass_scale != 1:
         model.mass_matrix = pybamm.Matrix(mass_scale * model.mass_matrix.entries)
     return model
 
@@ -3836,24 +3834,34 @@ def _coupled_dae_solution(t, a, b, c=0.0, mass_scale=1.0, t0=0.0):
     return {"y": y, "z": b * y + c * after}
 
 
-def _jump_ode(mass_scale=1.0, scale_rhs=False):
-    """Discretised ``m y' = -a y + c [t > 0.5]`` with ``y(0) = b``.
-
-    With ``scale_rhs``, the mass matrix stays the identity and the rhs is divided
-    by ``m`` instead.
-    """
+def _jump_ode(mass_scale=1.0):
+    """Discretised ``m y' = -a y + c [t > 0.5]`` with ``y(0) = b``, where ``m`` is
+    ``mass_scale``."""
     model = pybamm.BaseModel()
     y = pybamm.Variable("y")
     a = pybamm.InputParameter("a")
     c = pybamm.InputParameter("c")
-    rhs = -a * y + c * (pybamm.t > 0.5)
-    model.rhs = {y: rhs / mass_scale if scale_rhs else rhs}
+    model.rhs = {y: -a * y + c * (pybamm.t > 0.5)}
     model.initial_conditions = {y: pybamm.InputParameter("b")}
     model.variables = {"y": y}
     pybamm.Discretisation().process_model(model)
-    if mass_scale != 1 and not scale_rhs:
+    if mass_scale != 1:
         model.mass_matrix = pybamm.Matrix(mass_scale * model.mass_matrix.entries)
     return model
+
+
+def _jump_ode_solution(t, a, b, c, mass_scale=1.0):
+    """Closed-form ``y`` of :func:`_jump_ode`."""
+    rate = -a / mass_scale
+    after = t > 0.5
+    shift = np.where(after, t - 0.5, 0.0)
+    y_half = b * np.exp(rate * 0.5)
+    y = np.where(
+        after,
+        c / a + (y_half - c / a) * np.exp(rate * shift),
+        b * np.exp(rate * t),
+    )
+    return {"y": y}
 
 
 def _closed_form_sensitivities(closed_form, t, inputs, step=1e-6):
@@ -3982,39 +3990,20 @@ class TestIDAKLUSensitivityInitialConditions:
 
         self._assert_matches(solution, closed_form, self.inputs)
 
-    @pytest.mark.parametrize("calculate_sensitivities", [False, True])
-    @pytest.mark.parametrize("model_type", ["dae", "ode"])
-    def test_mass_matrix_takes_the_steps_of_the_scaled_rhs(
-        self, model_type, calculate_sensitivities
-    ):
-        # yp = M^-1 f at t0 and the jump, so M = 10 I steps as f / 10 does with M = I
-        def build(scale_rhs):
-            if model_type == "dae":
-                return _coupled_dae(10.0, pybamm.t > 0.5, scale_rhs=scale_rhs)
-            return _jump_ode(10.0, scale_rhs=scale_rhs)
-
-        mass, scaled = (
-            pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8).solve(
-                build(scale_rhs),
-                [0, 1],
-                inputs=self.inputs,
-                calculate_sensitivities=calculate_sensitivities,
-            )
-            for scale_rhs in [False, True]
+    @pytest.mark.parametrize("mass_scale", [1.0, 10.0])
+    def test_mass_matrix_ode_sensitivities_across_a_jump(self, mass_scale):
+        solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-12)
+        solution = solver.solve(
+            _jump_ode(mass_scale),
+            [0, 1],
+            inputs=self.inputs,
+            calculate_sensitivities=True,
         )
 
-        # yp = f instead costs 15-40% more steps; round-off may cost a few
-        steps = mass.solver_statistics.number_of_steps
-        assert steps <= 1.1 * scaled.solver_statistics.number_of_steps
-        np.testing.assert_allclose(mass["y"](mass.t), scaled["y"](mass.t), rtol=1e-10)
-        if calculate_sensitivities:
-            for name in self.inputs:
-                np.testing.assert_allclose(
-                    mass["y"].sensitivities[name],
-                    scaled["y"].sensitivities[name],
-                    rtol=1e-8,
-                    atol=1e-12,
-                )
+        def closed_form(t, a, b, c):
+            return _jump_ode_solution(t, a, b, c, mass_scale=mass_scale)
+
+        self._assert_matches(solution, closed_form, self.inputs)
 
     @pytest.mark.parametrize(
         "options", [{}, {"hermite_interpolation": False}, {"newton_mode": "full"}]

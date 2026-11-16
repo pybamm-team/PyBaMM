@@ -1317,9 +1317,13 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationODE(
   const sunrealtype& t_val) {
   DEBUG("IDAKLUSolver::ConsistentInitializationODE");
 
-  // The residual is res(t, y, yp) = f(t, y) - M yp, so M yp = res(t, y, 0) on
-  // the differential rows. This avoids an expensive call to IDACalcIC.
-  N_VConst(SUN_RCONST(0.0), y_cache);
+  // For ODEs where the mass matrix M = I, we can simplify the problem
+  // by analytically computing the yp values. If we take our implicit
+  // DAE system res(t,y,yp) = f(t,y) - I*yp, then yp = res(t,y,0). This
+  // avoids an expensive call to IDACalcIC.
+  sunrealtype *y_cache_val = N_VGetArrayPointer(y_cache);
+  std::memset(y_cache_val, 0, number_of_states * sizeof(sunrealtype));
+  // Overwrite yp
   residual_eval<ExprSet>(t_val, yy, y_cache, yyp, functions.get());
 
   // The algebraic rows hold the algebraic residual, not a derivative
@@ -1328,22 +1332,6 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationODE(
   for (int i = 0; i < number_of_states; i++) {
     if (is_algebraic(id_val[i])) {
       yp_val[i] = SUN_RCONST(0.0);
-    }
-  }
-  if (mass_is_identity_) {
-    return;
-  }
-
-  // [-M_diff | F_y,alg] (yp_diff, 0) = -f solves M yp = f
-  for (int i = 0; i < number_of_states; i++) {
-    ic_scratch_[i] = -yp_val[i];
-  }
-  if (SetupInitialConditionMatrix(t_val) == 0 &&
-      SolveInitialConditionMatrix(ic_scratch_.data()) == 0) {
-    for (int i = 0; i < number_of_states; i++) {
-      if (is_differential(id_val[i])) {
-        yp_val[i] = ic_scratch_[i];
-      }
     }
   }
 }
