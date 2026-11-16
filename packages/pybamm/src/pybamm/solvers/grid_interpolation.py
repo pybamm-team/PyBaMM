@@ -32,7 +32,8 @@ def interpolate_on_grid(
     fill_value : float, (float, float), "extrapolate" or None, optional
         The value outside the grid: one value for both sides, a
         ``(below, above)`` pair, or ``"extrapolate"`` to extend the end
-        intervals. None means NaN. Default is NaN.
+        intervals. None means NaN. A point outside the grid of several queried
+        coordinates takes the fill of the last of them. Default is NaN.
 
     Returns
     -------
@@ -56,7 +57,7 @@ def interpolate_on_grid(
         )
     below, above, extrapolate = _parse_fill_value(fill_value)
 
-    scalar_axes = []
+    axes = []
     for name, query in queries.items():
         points = np.asarray(query, dtype=np.float64)
         if points.ndim > 1:
@@ -65,21 +66,32 @@ def interpolate_on_grid(
                 f"not {points.ndim}D"
             )
         axis = names.index(name)
-        result = _interpolate_axis(
-            result,
-            np.asarray(coords[name], dtype=np.float64),
-            np.atleast_1d(points),
-            axis,
-            name,
-            below,
-            above,
-            extrapolate,
-        )
-        if points.ndim == 0:
-            scalar_axes.append(axis)
+        grid, order = _increasing_grid(coords[name], name)
+        axes.append((axis, grid, order, points))
 
+    if result.ndim == 1 and not extrapolate:
+        _, grid, order, points = axes[0]
+        if order is not None:
+            result = result[order]
+        return np.asarray(np.interp(points, grid, result, left=below, right=above))
+
+    # Shrink the data as early as possible, so later axes handle less of it
+    for axis, grid, order, points in sorted(
+        axes, key=lambda item: item[3].size / item[1].size
+    ):
+        if order is not None:
+            result = np.take(result, order, axis=axis)
+        result = _interpolate_axis(result, grid, np.atleast_1d(points), axis)
+
+    if not extrapolate:
+        for axis, grid, _, points in axes:
+            points = np.atleast_1d(points)
+            result[_along_axis(result.ndim, axis, points < grid[0])] = below
+            result[_along_axis(result.ndim, axis, points > grid[-1])] = above
+
+    scalar_axes = tuple(axis for axis, _, _, points in axes if points.ndim == 0)
     if scalar_axes:
-        result = result.squeeze(axis=tuple(scalar_axes))
+        result = result.squeeze(axis=scalar_axes)
     return result
 
 
@@ -101,53 +113,58 @@ def _parse_fill_value(fill_value: Any) -> tuple[float, float, bool]:
     )
 
 
+def _increasing_grid(
+    coord: npt.ArrayLike, name: str
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.intp] | None]:
+    """Return the grid in increasing order, and the order that sorts it if needed."""
+    grid = np.asarray(coord, dtype=np.float64)
+    if np.all(np.diff(grid) > 0):
+        return grid, None
+    order = np.argsort(grid, kind="stable")
+    grid = grid[order]
+    if np.any(np.diff(grid) == 0):
+        raise ValueError(f"Cannot interpolate in {name!r}: its grid repeats a point")
+    return grid, order
+
+
+def _along_axis(ndim: int, axis: int, mask: npt.NDArray[np.bool_]) -> tuple:
+    """Index the positions along ``axis`` where ``mask`` is True."""
+    index: list[Any] = [slice(None)] * ndim
+    index[axis] = np.flatnonzero(mask)
+    return tuple(index)
+
+
 def _interpolate_axis(
     values: npt.NDArray[np.float64],
     grid: npt.NDArray[np.float64],
     points: npt.NDArray[np.float64],
     axis: int,
-    name: str,
-    below: float,
-    above: float,
-    extrapolate: bool,
 ) -> npt.NDArray[np.float64]:
-    """Interpolate ``values`` along ``axis``, where it is sampled at ``grid``."""
-    if np.any(np.diff(grid) <= 0):
-        order = np.argsort(grid, kind="stable")
-        grid = grid[order]
-        values = np.take(values, order, axis=axis)
-        if np.any(np.diff(grid) == 0):
-            raise ValueError(
-                f"Cannot interpolate in {name!r}: its grid repeats a point"
-            )
-
-    if values.ndim == 1 and not extrapolate:
-        return np.interp(points, grid, values, left=below, right=above)
-
-    shape = [1] * values.ndim
-    shape[axis] = len(points)
-
+    """
+    Interpolate ``values`` along ``axis``, sampled at the increasing ``grid``,
+    extending the end intervals beyond it.
+    """
     if len(grid) == 1:
         # One point gives a constant, as np.interp gives it
         result = np.repeat(np.take(values, [0], axis=axis), len(points), axis=axis)
-        if not extrapolate:
-            result = np.where((points < grid[0]).reshape(shape), below, result)
-            result = np.where((points > grid[0]).reshape(shape), above, result)
-        return np.where(np.isnan(points).reshape(shape), np.nan, result)
+        result[_along_axis(values.ndim, axis, np.isnan(points))] = np.nan
+        return result
 
     # The interval each point falls in, chosen as np.interp chooses it
     lower = np.clip(np.searchsorted(grid, points, side="right") - 1, 0, len(grid) - 2)
-    grid_lower = grid[lower]
-    grid_upper = grid[lower + 1]
+    fraction = (points - grid[lower]) / (grid[lower + 1] - grid[lower])
+    shape = [1] * values.ndim
+    shape[axis] = len(points)
+    # In place, so a large result costs two arrays of its size, not several
     values_lower = np.take(values, lower, axis=axis)
-    values_upper = np.take(values, lower + 1, axis=axis)
-    slope = (values_upper - values_lower) / (grid_upper - grid_lower).reshape(shape)
-    result = slope * (points - grid_lower).reshape(shape) + values_lower
+    result = np.take(values, lower + 1, axis=axis)
+    result -= values_lower
+    result *= fraction.reshape(shape)
+    result += values_lower
 
     # Grid points take their stored value, as np.interp gives them
-    result = np.where((points == grid_lower).reshape(shape), values_lower, result)
-    result = np.where((points == grid_upper).reshape(shape), values_upper, result)
-    if not extrapolate:
-        result = np.where((points < grid[0]).reshape(shape), below, result)
-        result = np.where((points > grid[-1]).reshape(shape), above, result)
+    on_lower = _along_axis(values.ndim, axis, fraction == 0)
+    result[on_lower] = values_lower[on_lower]
+    on_upper = _along_axis(values.ndim, axis, fraction == 1)
+    result[on_upper] = np.take(values, lower[on_upper[axis]] + 1, axis=axis)
     return result

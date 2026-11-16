@@ -97,6 +97,26 @@ class TestInterpolateOnGrid:
         )
         np.testing.assert_array_equal(result, expected)
 
+    def test_fill_comes_from_the_last_queried_coordinate(self):
+        values, coords = _bilinear_grid()
+        # x = 5 is above its grid and t = -1 below its grid
+        fill = (-1.0, -2.0)
+        t_last = interpolate_on_grid(values, coords, {"x": 5.0, "t": -1.0}, fill)
+        x_last = interpolate_on_grid(values, coords, {"t": -1.0, "x": 5.0}, fill)
+        assert t_last == -1.0
+        assert x_last == -2.0
+
+    def test_query_order_does_not_change_values(self):
+        values, coords = _bilinear_grid()
+        x_points = np.linspace(0.0, 3.0, 50)
+        t_points = np.array([2.5])
+        x_first = interpolate_on_grid(values, coords, {"x": x_points, "t": t_points})
+        t_first = interpolate_on_grid(values, coords, {"t": t_points, "x": x_points})
+        np.testing.assert_array_equal(x_first, t_first)
+        np.testing.assert_allclose(
+            x_first, _bilinear(x_points[:, np.newaxis], t_points), rtol=1e-14
+        )
+
     def test_nan_only_reaches_its_own_intervals(self):
         grid = np.arange(5.0)
         values = np.array([0.0, 1.0, np.nan, 3.0, 4.0])
