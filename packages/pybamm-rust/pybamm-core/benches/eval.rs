@@ -4,12 +4,12 @@ use std::hint::black_box;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use helpers::{build_coupled, identity_mass_matrix};
-#[cfg(feature = "serialize")]
-use pybamm_core::DagSnapshot;
 use pybamm_core::{
     Arena, CompiledExpr, CompiledModel, CompiledModelOptions, DagRef, Node, NodeId, PackedWidth,
     SplitCompiledExpr, TangentInputs, simplify, tangent_wrt_states,
 };
+#[cfg(feature = "serialize")]
+use pybamm_core::{DagSnapshot, dce, simplify_pipeline};
 
 fn build_simple_expression(arena: &mut Arena, n_states: usize) -> NodeId {
     let y = arena.alloc(Node::StateVector {
@@ -204,8 +204,9 @@ fn bench_real_model_eval(c: &mut Criterion) {
 
     for fixture in helpers::FIXTURES {
         let snap = DagSnapshot::from_bytes(fixture.bytes).expect("fixture decodes");
-        // Unsimplified on purpose: `CompiledModel::new` skips the rhs simplify pass.
-        let compiled = CompiledExpr::new(snap.dag());
+        // Time the tape the solvers run: `CompiledModel::new` compiles the simplified rhs.
+        let rhs = simplify_pipeline(dce(snap.dag()));
+        let compiled = CompiledExpr::new(rhs.as_ref());
         let mut scratch = vec![0.0; compiled.scratch_len()];
         let (y, inputs) = helpers::fixture_state(snap.n_states, snap.packed_input_width.get());
 
