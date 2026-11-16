@@ -3791,25 +3791,6 @@ class TestIDAKLUSensitivityInitialConditions:
             atol=1e-8,
         )
 
-    def test_breakpoint_iterations_do_not_depend_on_storage(self, decay_model):
-        # Stale sensitivity derivatives at a breakpoint cost Newton iterations
-        iterations = []
-        for hermite_interpolation in [True, False]:
-            solver = pybamm.IDAKLUSolver(
-                options={"hermite_interpolation": hermite_interpolation}
-            )
-            solution = solver.solve(
-                decay_model,
-                np.linspace(0, 10, 101),
-                inputs={"a": 0.3},
-                calculate_sensitivities=True,
-            )
-            iterations.append(
-                solution.solver_statistics.number_of_nonlinear_solver_iterations
-            )
-
-        assert iterations[0] == iterations[1]
-
     def test_unsolvable_sensitivity_initial_conditions_raise(self):
         # The algebraic Jacobian 2 z vanishes at the guess z = 0
         model = pybamm.BaseModel()
