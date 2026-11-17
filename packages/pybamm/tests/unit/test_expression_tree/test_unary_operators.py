@@ -759,6 +759,9 @@ class TestUnaryOperators:
         assert pybamm.BoundaryGradient(c**2, "left").to_equation() == sympy.Symbol(
             r"\nabla {c^{2.0}}^{\mathtt{\text{left}}}"
         )
+        assert pybamm.BoundaryValue(a**2, "right").to_equation() == sympy.Symbol(
+            r"{a^{2.0}}^{surf}"
+        )
 
         # Test Integral
         xn = pybamm.SpatialVariable("xn", ["negative electrode"])
