@@ -17,6 +17,8 @@ pub enum ObservableKind {
     Outputs,
     /// Event functions `g(t, y; p)`.
     Events,
+    /// The scalar `u(t, y; p)` that IDAKLU adds output times to resolve, by linear interpolation.
+    Upsampling,
 }
 
 /// Write a parameter-space tangent into `dp`; `sens_params[i]` is the registration index of `v[i]`.

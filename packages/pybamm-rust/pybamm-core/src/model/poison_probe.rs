@@ -85,7 +85,11 @@ fn entry_points<'a>(model: &'a CompiledModel, y: &'a [f64], inputs: &'a [f64]) -
             model.sens_action(ws, T, y, inputs, &wave(k, 0.4), out);
         });
     }
-    for kind in [ObservableKind::Outputs, ObservableKind::Events] {
+    for kind in [
+        ObservableKind::Outputs,
+        ObservableKind::Events,
+        ObservableKind::Upsampling,
+    ] {
         let len = model.observables(kind).total_len();
         if len == 0 {
             continue;
@@ -93,7 +97,7 @@ fn entry_points<'a>(model: &'a CompiledModel, y: &'a [f64], inputs: &'a [f64]) -
         entries.add(format!("eval_observables {kind:?}"), len, move |ws, out| {
             model.eval_observables(ws, kind, T, y, inputs, out);
         });
-        // Events carry no tangents.
+        // Only outputs carry tangents.
         if k > 0 && kind == ObservableKind::Outputs {
             entries.add(
                 format!("observable_sens_action {kind:?}"),
@@ -288,5 +292,8 @@ fn a_dae_with_every_artifact_ignores_a_poisoned_workspace() {
     model
         .set_observables(ObservableKind::Events, &arena, &[crossing, output])
         .expect("valid events");
+    model
+        .set_observables(ObservableKind::Upsampling, &arena, &[output])
+        .expect("a valid upsampling output");
     assert_poison_changes_nothing("every artifact", &model, &[0.4, 1.3, -0.8], &[2.5]);
 }

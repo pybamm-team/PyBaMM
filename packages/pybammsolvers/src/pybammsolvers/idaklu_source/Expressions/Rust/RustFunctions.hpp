@@ -158,6 +158,22 @@ public:
     }
 };
 
+/** Upsampling output; ABI: m_arg[0]=t, m_arg[1]=y, m_arg[2]=inputs, m_res[0]=output */
+class RustUpsamplingExpression : public RustExpression {
+public:
+    explicit RustUpsamplingExpression(void* model)
+        : RustExpression(model, 1) {}
+
+    void operator()() override {
+        PYBAMM_RUST_CALL(upsampling_eval, *m_arg[0], m_arg[1], m_arg[2], m_res[0], m_model);
+    }
+
+    void operator()(const std::vector<sunrealtype*>& inputs,
+                    const std::vector<sunrealtype*>& results) override {
+        PYBAMM_RUST_CALL(upsampling_eval, *inputs[0], inputs[1], inputs[2], results[0], m_model);
+    }
+};
+
 /** Forward sensitivities; ABI: m_arg[0]=t, m_arg[1]=y, m_arg[2]=inputs; m_res[i]=∂f/∂p_i */
 class RustSensExpression : public RustExpression {
 public:
@@ -429,6 +445,12 @@ public:
             m_output_fcns.emplace_back(std::make_unique<RustOutputExpression>(output_lens[i]));
             var_fcns.push_back(static_cast<Expression*>(m_output_fcns.back().get()));
         }
+
+        // Left null without one, which turns IDAKLU's upsampling off.
+        if (checked_upsampling_len(rust_model) > 0) {
+            m_upsampling = std::make_unique<RustUpsamplingExpression>(rust_model);
+            upsampling_fcn = static_cast<Expression*>(m_upsampling.get());
+        }
     }
 
     sunrealtype* get_tmp_state_vector() override {
@@ -489,6 +511,7 @@ private:
     RustAlgJacExpression m_alg_jac;
     // unique_ptr keeps each Expression heap-stable, so the pointers in `var_fcns` stay valid.
     std::vector<std::unique_ptr<RustOutputExpression>> m_output_fcns;
+    std::unique_ptr<RustUpsamplingExpression> m_upsampling;
 
     // Rust borrows every buffer sized from these at its own counts, so a mismatch would overrun.
     static int checked_dims(void* rust_model, int n_states, int n_inputs, int nnz,
@@ -512,6 +535,17 @@ private:
                 " components; every termination event must be scalar.");
         }
         return n_events;
+    }
+
+    // IDAKLU evaluates the upsampling output into one scalar, so Rust must write at most one.
+    static int checked_upsampling_len(void* rust_model) {
+        const int len = PYBAMM_RUST_VALUE(upsampling_len, rust_model);
+        if (len > 1) {
+            throw std::invalid_argument(
+                "pybammsolvers: the Rust model's upsampling output has " + std::to_string(len) +
+                " components; it must be scalar.");
+        }
+        return len;
     }
 
     // Output buffers are sized from `output_lens`, so each must match what Rust writes.

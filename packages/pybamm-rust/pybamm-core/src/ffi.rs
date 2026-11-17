@@ -40,6 +40,9 @@ pub const ERROR_NO_ALG: c_int = -8;
 /// Error: caller invoked an event FFI on a model with no events.
 pub const ERROR_NO_EVENTS: c_int = -9;
 
+/// Error: caller invoked an upsampling FFI on a model with no upsampling output.
+pub const ERROR_NO_UPSAMPLING: c_int = -10;
+
 /// ABI contract version, bumped with `PYBAMM_RUST_ABI_VERSION` on any exported signature change.
 ///
 /// `pybamm_rust_abi_version` must keep its no-argument `-> u32` signature: it is the probe.
@@ -52,7 +55,7 @@ pub const extern "C" fn pybamm_rust_abi_version() -> u32 {
 }
 
 /// Golden hash of the exported signatures, pinned by the `test_ffi_abi_contract` drift test.
-pub const EXPECTED_ABI_HASH: u64 = 0x6cf3_3677_1895_2241;
+pub const EXPECTED_ABI_HASH: u64 = 0xc90e_a069_2afc_b96b;
 
 /// Run `body` on the model behind `user_data`, rejecting nulls and containing panics.
 ///
@@ -716,6 +719,56 @@ pub unsafe extern "C" fn pybamm_rust_events_eval(
     }
 }
 
+/// Length of the upsampling output: 0 if the model has none.
+///
+/// # Safety
+///
+/// `user_data` must point to a live `ModelEvaluator`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn pybamm_rust_upsampling_len(user_data: *const c_void) -> c_int {
+    // SAFETY: the caller keeps `user_data` live, and `with_model` null-checks it.
+    unsafe { with_model(user_data, [], |model| c_count(model.upsampling_len())) }
+}
+
+/// Evaluate the upsampling output, or return `ERROR_NO_UPSAMPLING` without one.
+///
+/// # Safety
+///
+/// `y` must hold `n_states` elements and `output` `upsampling_len`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn pybamm_rust_upsampling_eval(
+    t: f64,
+    y: *const f64,
+    inputs: *const f64,
+    output: *mut f64,
+    user_data: *mut c_void,
+) -> c_int {
+    // SAFETY: the `# Safety` counts size every borrow, and the guard null-checks each pointer.
+    unsafe {
+        with_model_and_inputs(
+            user_data,
+            [y.cast(), output.cast()],
+            inputs,
+            |model, ws, inputs| {
+                let len = model.upsampling_len();
+                if len == 0 {
+                    return ERROR_NO_UPSAMPLING;
+                }
+                let n_states = model.n_states();
+                model.eval_observables(
+                    ws,
+                    ObservableKind::Upsampling,
+                    t,
+                    borrow_slice(y, n_states),
+                    inputs,
+                    borrow_slice_mut(output, len),
+                );
+                SUCCESS
+            },
+        )
+    }
+}
+
 #[cfg(test)]
 // Each test owns the pointers it passes, so its setup is the safety argument.
 #[allow(clippy::undocumented_unsafe_blocks)]
@@ -1040,6 +1093,14 @@ mod tests {
         })
     }
 
+    fn create_upsampling_test_model() -> Box<ModelEvaluator> {
+        observed_test_model(ObservableKind::Upsampling, |arena, y| {
+            let y1 = element(arena, y, 1);
+            let three = arena.alloc(Node::Scalar(3.0));
+            arena.alloc(Node::Mul(three, y1))
+        })
+    }
+
     /// `f(y) = y` on two states, with the root `build` returns as its only observable of `kind`.
     fn observed_test_model(
         kind: ObservableKind,
@@ -1060,19 +1121,22 @@ mod tests {
         type CountQuery = unsafe extern "C" fn(*const c_void) -> c_int;
         let (plain, sens) = (create_test_model(), create_sens_test_model());
         let (outputs, events) = (create_output_test_model(), create_event_test_model());
+        let upsampling = create_upsampling_test_model();
         let algebraic = evaluator(split_algebraic_model());
-        let queries: [(&str, CountQuery, &ModelEvaluator, c_int); 10] = [
+        let queries: [(&str, CountQuery, &ModelEvaluator, c_int); 12] = [
             ("n_states", pybamm_rust_n_states, &plain, 2),
             ("jac_nnz", pybamm_rust_jac_nnz, &plain, 2),
             ("n_inputs", pybamm_rust_n_inputs, &sens, 1),
             ("n_sens_params", pybamm_rust_n_sens_params, &sens, 1),
             ("n_outputs", pybamm_rust_n_outputs, &outputs, 1),
             ("total_event_len", pybamm_rust_total_event_len, &events, 1),
+            ("upsampling_len", pybamm_rust_upsampling_len, &upsampling, 1),
             ("n_algebraic", pybamm_rust_n_algebraic, &algebraic, 2),
             ("alg_jac_nnz", pybamm_rust_alg_jac_nnz, &algebraic, 4),
             // Without a block there is nothing to size, rather than an error.
             ("n_algebraic", pybamm_rust_n_algebraic, &plain, 0),
             ("alg_jac_nnz", pybamm_rust_alg_jac_nnz, &plain, 0),
+            ("upsampling_len", pybamm_rust_upsampling_len, &plain, 0),
         ];
         for (name, query, model, expected) in queries {
             let user_data: *const c_void = std::ptr::from_ref(model).cast();
@@ -1186,6 +1250,43 @@ mod tests {
     }
 
     #[test]
+    fn upsampling_eval_without_an_upsampling_output_is_an_error() {
+        let mut model = create_event_test_model();
+        let user_data: *mut c_void = std::ptr::from_mut(model.as_mut()).cast();
+        let y = [1.0, 2.0];
+        let mut out = [0.0];
+        let result = unsafe {
+            pybamm_rust_upsampling_eval(
+                0.0,
+                y.as_ptr(),
+                std::ptr::null(),
+                out.as_mut_ptr(),
+                user_data,
+            )
+        };
+        assert_eq!(result, ERROR_NO_UPSAMPLING);
+    }
+
+    #[test]
+    fn upsampling_eval_writes_the_upsampling_output() {
+        let mut model = create_upsampling_test_model();
+        let user_data: *mut c_void = std::ptr::from_mut(model.as_mut()).cast();
+        let y = [7.0, 1.5];
+        let mut out = [f64::NAN];
+        let result = unsafe {
+            pybamm_rust_upsampling_eval(
+                0.0,
+                y.as_ptr(),
+                std::ptr::null(),
+                out.as_mut_ptr(),
+                user_data,
+            )
+        };
+        assert_eq!(result, SUCCESS);
+        assert_eq!(out[0].to_bits(), 4.5_f64.to_bits());
+    }
+
+    #[test]
     fn guard_maps_a_panicking_body_to_error_panic() {
         let model = create_test_model();
         let shared: *const c_void = std::ptr::from_ref(model.as_ref()).cast();
@@ -1264,7 +1365,7 @@ mod tests {
     fn statuses_for_null_user_data(
         input: *const f64,
         output: *mut f64,
-    ) -> [(&'static str, c_int); 20] {
+    ) -> [(&'static str, c_int); 22] {
         let nil_data = std::ptr::null_mut::<c_void>();
         [
             ("pybamm_rust_eval_rhs", unsafe {
@@ -1328,6 +1429,12 @@ mod tests {
             }),
             ("pybamm_rust_events_eval", unsafe {
                 pybamm_rust_events_eval(0.0, input, input, output, nil_data)
+            }),
+            ("pybamm_rust_upsampling_len", unsafe {
+                pybamm_rust_upsampling_len(std::ptr::null())
+            }),
+            ("pybamm_rust_upsampling_eval", unsafe {
+                pybamm_rust_upsampling_eval(0.0, input, input, output, nil_data)
             }),
         ]
     }

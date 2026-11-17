@@ -90,6 +90,7 @@ pub struct Workspace {
     sens_scratch: Option<Vec<f64>>,
     output_scratch: ObservableScratch,
     event_scratch: ObservableScratch,
+    upsampling_scratch: ObservableScratch,
     algebraic: Option<AlgebraicScratch>,
     sens_dp_buffer: Vec<f64>,
     /// Lane-minor tangent region of the batched `df/dp` walks; empty when they never batch.
@@ -111,6 +112,7 @@ impl Workspace {
         }
         self.output_scratch.poison(value);
         self.event_scratch.poison(value);
+        self.upsampling_scratch.poison(value);
         if let Some(scratch) = &mut self.algebraic {
             scratch.poison(value);
         }
@@ -169,6 +171,8 @@ pub struct CompiledModel {
     outputs: ObservableSet,
     /// Event functions g(t, y; p), fused into one tape when there are two or more.
     events: ObservableSet,
+    /// The upsampling output u(t, y; p), with no tangent tapes.
+    upsampling: ObservableSet,
     algebraic: Option<AlgebraicBlock>,
 }
 
@@ -251,6 +255,7 @@ impl CompiledModel {
             sens_param_indices: Vec::new(),
             outputs: ObservableSet::default(),
             events: ObservableSet::default(),
+            upsampling: ObservableSet::default(),
             algebraic: None,
         };
         model.compile_sensitivities(simplified.as_ref(), options.sensitivities)?;
@@ -278,6 +283,7 @@ impl CompiledModel {
             sens_scratch: self.sens_expr.as_ref().map(|e| vec![0.0; e.scratch_len()]),
             output_scratch: self.outputs.create_scratch(),
             event_scratch: self.events.create_scratch(),
+            upsampling_scratch: self.upsampling.create_scratch(),
             algebraic: self.algebraic.as_ref().map(AlgebraicScratch::new),
             // `dp` is indexed by `ParamIdx`: registration extent, not packed width.
             sens_dp_buffer: vec![0.0; self.param_extent.max(1)],
