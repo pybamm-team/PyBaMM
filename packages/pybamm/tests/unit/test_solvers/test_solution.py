@@ -1201,9 +1201,7 @@ class TestSolution:
         sol.cycles[2].steps = [sol5]
 
         data = sol.get_data_dict("c")
-        # check that the length of the data is correct
         assert len(data["Step"]) == len(data["Cycle"]) == len(data["c"])
-        # check that the cycle and step numbers are correct
         np.testing.assert_array_equal(
             data["Cycle"],
             np.concatenate(
@@ -1230,7 +1228,6 @@ class TestSolution:
         # test that the data can be saved to csv and read back in correctly
         csv_str = sol.save_data(variables=["c"], to_format="csv")
         df = pd.read_csv(io.StringIO(csv_str))
-        # check that the cycle and step numbers are correct in the csv
         np.testing.assert_array_equal(df["Cycle"], data["Cycle"])
         np.testing.assert_array_equal(df["Step"], data["Step"])
         np.testing.assert_allclose(df["c"], data["c"], rtol=1e-7, atol=1e-6)
