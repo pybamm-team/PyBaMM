@@ -1,4 +1,5 @@
-//! Observables of a compiled model: output variables and events, and their derivatives.
+//! Observables of a compiled model: output variables, events and the upsampling output, and
+//! their derivatives.
 
 use std::sync::Arc;
 
@@ -18,6 +19,7 @@ impl Workspace {
         let scratch = match kind {
             ObservableKind::Outputs => &mut self.output_scratch,
             ObservableKind::Events => &mut self.event_scratch,
+            ObservableKind::Upsampling => &mut self.upsampling_scratch,
         };
         (scratch, &mut self.sens_dp_buffer)
     }
@@ -57,13 +59,15 @@ impl CompiledModel {
                 index: index.index(),
             });
         }
-        // Output sensitivities need `dH/dy` and `dH/dp`; events only locate roots, so they get none.
+        // Output sensitivities need `dH/dy` and `dH/dp`; events only locate roots and the
+        // upsampling output only places output times, so they get none.
         let with_tangents = kind == ObservableKind::Outputs && self.has_sensitivities();
         let set = ObservableSet::compile(arena, roots, with_tangents);
         self.param_extent = self.param_extent.max(registry.index_extent());
         match kind {
             ObservableKind::Outputs => self.outputs = set,
             ObservableKind::Events => self.events = set,
+            ObservableKind::Upsampling => self.upsampling = set,
         }
         Ok(())
     }
@@ -74,6 +78,7 @@ impl CompiledModel {
         match kind {
             ObservableKind::Outputs => &self.outputs,
             ObservableKind::Events => &self.events,
+            ObservableKind::Upsampling => &self.upsampling,
         }
     }
 
@@ -110,6 +115,12 @@ impl CompiledModel {
     #[inline]
     pub const fn total_event_len(&self) -> usize {
         self.events.total_len()
+    }
+
+    /// Length of the upsampling observables concatenated: 0 until they are set.
+    #[inline]
+    pub const fn upsampling_len(&self) -> usize {
+        self.upsampling.total_len()
     }
 
     /// Evaluate every observable of `kind` into `output`, concatenated.
@@ -242,7 +253,11 @@ mod tests {
         let unsupported = arena.alloc(Node::MatMul(y, y));
 
         let mut model = compile(&arena, rhs, identity_mass_matrix(1), 1, 0);
-        for kind in [ObservableKind::Outputs, ObservableKind::Events] {
+        for kind in [
+            ObservableKind::Outputs,
+            ObservableKind::Events,
+            ObservableKind::Upsampling,
+        ] {
             let err = model
                 .set_observables(kind, &arena, &[y, unsupported])
                 .expect_err("an unsupported observable must be refused, not lowered");
@@ -636,6 +651,53 @@ mod tests {
     #[test]
     fn output_actions_match_finite_differences() {
         check_observable_actions_against_finite_differences(ObservableKind::Outputs);
+    }
+
+    #[test]
+    fn set_upsampling_compiles_and_evaluates() {
+        let mut arena = Arena::new();
+        let y_full = arena.alloc(Node::StateVector { start: 0, end: 2 });
+        let k = input(&mut arena, "k", 0, 0, 1);
+        let y1 = element(&mut arena, y_full, 1);
+        let scaled = arena.alloc(Node::Mul(k, y1));
+
+        let mut model = compile_with_sens(
+            &arena,
+            y_full,
+            identity_mass_matrix(2),
+            2,
+            1,
+            &[ParamIdx::new(0)],
+        );
+        assert_eq!(model.upsampling_len(), 0);
+        model
+            .set_observables(ObservableKind::Upsampling, &arena, &[scaled])
+            .expect("a valid upsampling output");
+        assert_eq!(model.upsampling_len(), 1);
+        assert_eq!((model.n_outputs(), model.n_events()), (0, 0));
+
+        let mut ws = model.create_workspace();
+        let mut out = [0.0; 1];
+        let upsampling = ObservableKind::Upsampling;
+        model.eval_observables(&mut ws, upsampling, 0.0, &[3.0, 4.0], &[2.5], &mut out);
+        assert_eq!(out[0].to_bits(), 10.0_f64.to_bits());
+    }
+
+    #[test]
+    #[should_panic(expected = "observable tangents are compiled only for outputs")]
+    fn the_upsampling_output_carries_no_tangents_even_with_sensitivities() {
+        let model = build_test_model_with_observable_and_sens(ObservableKind::Upsampling, 1.0);
+        let mut ws = model.create_workspace();
+        let mut out = [0.0; 1];
+        model.observable_jac_action(
+            &mut ws,
+            ObservableKind::Upsampling,
+            0.3,
+            &[3.0; 2],
+            &[2.0],
+            &[1.0, 0.0],
+            &mut out,
+        );
     }
 
     #[test]

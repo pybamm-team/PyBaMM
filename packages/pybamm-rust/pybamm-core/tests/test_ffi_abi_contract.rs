@@ -311,6 +311,7 @@ fn status_codes_match_the_consumer_header() {
         ("PYBAMM_ERROR_NO_OUTPUTS", ffi::ERROR_NO_OUTPUTS),
         ("PYBAMM_ERROR_NO_ALG", ffi::ERROR_NO_ALG),
         ("PYBAMM_ERROR_NO_EVENTS", ffi::ERROR_NO_EVENTS),
+        ("PYBAMM_ERROR_NO_UPSAMPLING", ffi::ERROR_NO_UPSAMPLING),
     ];
     for (define, status) in statuses {
         assert_eq!(

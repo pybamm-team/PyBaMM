@@ -13,6 +13,7 @@
 #define PYBAMM_ERROR_NO_OUTPUTS    (-7)
 #define PYBAMM_ERROR_NO_ALG        (-8)
 #define PYBAMM_ERROR_NO_EVENTS     (-9)
+#define PYBAMM_ERROR_NO_UPSAMPLING (-10)
 
 /* ABI contract version: must equal RUST_ABI_VERSION in ffi.rs, checked at resolve time. */
 #define PYBAMM_RUST_ABI_VERSION 1
@@ -64,6 +65,7 @@ using rust_output_eval_batch_t =
 using rust_alg_res_t = int (*)(double, const double*, const double*, double*, void*);
 using rust_alg_jac_assemble_t = int (*)(double, const double*, const double*, double*, void*);
 using rust_events_eval_t = int (*)(double, const double*, const double*, double*, void*);
+using rust_upsampling_eval_t = int (*)(double, const double*, const double*, double*, void*);
 using rust_abi_version_t = uint32_t (*)();
 
 struct RustFfi {
@@ -87,6 +89,8 @@ struct RustFfi {
     rust_alg_jac_assemble_t alg_jac_assemble;
     rust_count_t total_event_len;
     rust_events_eval_t events_eval;
+    rust_count_t upsampling_len;
+    rust_upsampling_eval_t upsampling_eval;
     rust_abi_version_t abi_version;
 };
 
@@ -141,6 +145,7 @@ inline const char* status_name(int status) {
         case PYBAMM_ERROR_NO_OUTPUTS: return "ERROR_NO_OUTPUTS";
         case PYBAMM_ERROR_NO_ALG: return "ERROR_NO_ALG";
         case PYBAMM_ERROR_NO_EVENTS: return "ERROR_NO_EVENTS";
+        case PYBAMM_ERROR_NO_UPSAMPLING: return "ERROR_NO_UPSAMPLING";
         default: return "unrecognised status";
     }
 }
@@ -222,6 +227,8 @@ inline const RustFfi& rust_ffi() {
         t.alg_jac_assemble = load_symbol<rust_alg_jac_assemble_t>("pybamm_rust_alg_jac_assemble");
         t.total_event_len = load_symbol<rust_count_t>("pybamm_rust_total_event_len");
         t.events_eval = load_symbol<rust_events_eval_t>("pybamm_rust_events_eval");
+        t.upsampling_len = load_symbol<rust_count_t>("pybamm_rust_upsampling_len");
+        t.upsampling_eval = load_symbol<rust_upsampling_eval_t>("pybamm_rust_upsampling_eval");
         return t;
     }();
     return table;
