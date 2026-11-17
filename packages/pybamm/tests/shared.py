@@ -437,17 +437,19 @@ def get_base_model_with_battery_geometry(**kwargs):
     return model
 
 
-def get_broken_input_model(convert_to_format="casadi"):
+def get_broken_input_model(convert_to_format=None):
     """Return the discretised model ``dv/dt = -sqrt(k) * v``.
 
-    Its residual is NaN for any input ``k < 0``, whatever the state.
+    Its residual is NaN for any input ``k < 0``, whatever the state. Without
+    ``convert_to_format`` it keeps the model's default format.
     """
     model = pybamm.BaseModel()
     v = pybamm.Variable("v")
     model.rhs = {v: -pybamm.sqrt(pybamm.InputParameter("k")) * v}
     model.initial_conditions = {v: 1.0}
     model.variables = {"v": v}
-    model.convert_to_format = convert_to_format
+    if convert_to_format is not None:
+        model.convert_to_format = convert_to_format
     pybamm.Discretisation().process_model(model)
     return model
 

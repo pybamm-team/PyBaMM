@@ -363,6 +363,7 @@ class CompiledModel:
         algebraic_expr: Expr | None = None,
         algebraic_variable_indices: Sequence[int] = ...,
         event_exprs: Sequence[Expr] = ...,
+        upsampling_expr: Expr | None = None,
     ) -> CompiledModel:
         """Build from an rhs expression and a CSR mass matrix."""
 
@@ -372,6 +373,7 @@ class CompiledModel:
         rhs_root: int,
         output_roots: Sequence[int],
         event_roots: Sequence[int],
+        upsampling_root: int | None,
         algebraic_root: int | None,
         algebraic_variable_indices: Sequence[int],
         mass_data: Sequence[float],
@@ -389,6 +391,7 @@ class CompiledModel:
             int,
             list[int],
             list[int],
+            int | None,
             int | None,
             list[int],
             list[float],
@@ -410,6 +413,10 @@ class CompiledModel:
     def outputs(self) -> list[CompiledFunction]: ...
     @property
     def events(self) -> list[CompiledFunction]: ...
+    @property
+    def upsampling(self) -> CompiledFunction | None:
+        """The upsampling output as a shareable view, or ``None`` without one."""
+
     @property
     def algebraic_residual(self) -> CompiledFunction | None:
         """``g(t, y, p)`` as a shareable view, or ``None`` for ODEs."""
@@ -487,6 +494,8 @@ class CompiledModel:
     def n_outputs(self) -> int: ...
     @property
     def n_events(self) -> int: ...
+    @property
+    def upsampling_len(self) -> int: ...
     @property
     def output_len(self) -> int: ...
     @property

@@ -42,6 +42,7 @@ class RustModelLowering:
         self._output_exprs: list = []
         self._output_lens: list[int] = []
         self._event_exprs: list = []
+        self._upsampling_expr = None
         self._algebraic_expr = None
         self._algebraic_var_indices: list[int] = []
         self._sens_param_indices: list[int] = []
@@ -95,6 +96,22 @@ class RustModelLowering:
             shape = getattr(symbol, "shape", ())
             self._output_lens.append(int(np.prod(shape)) if shape else 1)
         return self._output_exprs, self._output_lens
+
+    def upsampling(self, name: str, symbol: pybamm.Symbol):
+        """Lower ``symbol``, the upsampling output read from the variable ``name``.
+
+        Raises
+        ------
+        pybamm.SolverError
+            If ``symbol`` is not scalar.
+        """
+        # A shape-only walk, as for the termination events
+        if np.prod(np.shape(symbol.evaluate_for_shape())) != 1:
+            raise pybamm.SolverError(
+                f"upsampling_tolerance needs a scalar variable, got '{name}'"
+            )
+        self._upsampling_expr = self.lower(symbol)
+        return self._upsampling_expr
 
     def termination_events(self):
         """Lower every termination event expression, for root-finding.
@@ -226,4 +243,5 @@ class RustModelLowering:
             algebraic_expr=self._algebraic_expr,
             algebraic_variable_indices=self._algebraic_var_indices,
             event_exprs=self._event_exprs,
+            upsampling_expr=self._upsampling_expr,
         )
