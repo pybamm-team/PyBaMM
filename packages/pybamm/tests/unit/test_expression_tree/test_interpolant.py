@@ -462,9 +462,7 @@ class TestInterpolant:
             third.to_casadi(y=casadi_y)
 
     def test_2d_cubic_to_casadi_matches_rect_bivariate_spline(self):
-        # Regression for #4877: the 2D cubic CasADi conversion passed scipy's
-        # row-major FITPACK coefficients straight to CasADi, which expects
-        # column-major order, silently returning wrong values (~23% off).
+        # Coefficient order regression (#4877)
         sto = np.linspace(0, 1, 8)
         temp = np.linspace(273, 313, 6)
         data = (
@@ -481,12 +479,10 @@ class TestInterpolant:
         f = casadi.Function("f", [casadi_y], [interp.to_casadi(y=casadi_y)])
         reference = interpolate.RectBivariateSpline(sto, temp, data)
 
-        # At the knots an interpolating spline must reproduce the table
         knot_points = np.array([[s, t] for s in sto for t in temp], dtype=np.float64)
         got = np.array([float(f(p)) for p in knot_points])
         np.testing.assert_allclose(got, data.flatten(), rtol=1e-12, atol=0)
 
-        # Off the knots it must match scipy's spline, not just the table
         rng = np.random.default_rng(0)
         off_knot = np.column_stack([rng.uniform(0, 1, 25), rng.uniform(273, 313, 25)])
         got = np.array([float(f(p)) for p in off_knot])
