@@ -33,9 +33,6 @@ class ReactionDriven(BaseModel):
                 SEI_option = getattr(self.options, dom)["SEI"]
                 phases_option = getattr(self.options, dom)["particle phases"]
                 phases = self.options.phases[dom]
-                size_distribution = (
-                    getattr(self.options, dom)["particle size"] == "distribution"
-                )
                 for phase in phases:
                     if phases_option == "1" and phase == "primary":
                         # `domain` has one phase
@@ -66,11 +63,6 @@ class ReactionDriven(BaseModel):
                     roughness_k = variables[
                         f"{Domain} {phase_name}electrode roughness ratio"
                     ]
-                    if size_distribution:
-                        # SEI thicknesses are resolved in particle size; the
-                        # area-weighted average gives the volume lost per unit a_k
-                        L_sei_k = pybamm.size_average(L_sei_k)
-                        L_sei_cr_k = pybamm.size_average(L_sei_cr_k)
 
                     L_tot = (
                         (L_sei_k - L_sei_0)

@@ -29,7 +29,7 @@
 
 ## Bug fixes
 
-- The DFN with a particle-size distribution now builds with `"SEI porosity change"` or `"lithium plating porosity change"`; the porosity uses the size-averaged SEI thickness. SPM and MPM raise an `OptionError` for this combination. ([#6054](https://github.com/pybamm-team/PyBaMM/pull/6054))
+- The DFN with a particle-size distribution now builds with `"SEI porosity change"` or `"lithium plating porosity change"`; the SEI concentration is now always size-averaged. SPM and MPM raise an `OptionError` for this combination. ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417), [#6054](https://github.com/pybamm-team/PyBaMM/pull/6054))
 - The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))
 - One-state hysteresis models now take their initial potentials from the OCP at the initial hysteresis state, not the equilibrium OCP, so an inconsistent equilibrium OCP no longer stops them starting. ([#6042](https://github.com/pybamm-team/PyBaMM/pull/6042))
 - An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
