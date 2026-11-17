@@ -149,35 +149,6 @@ class RectilinearGrid:
         return self._increasing[name]
 
 
-def interpolate_on_grid(
-    values: npt.ArrayLike,
-    coords: Mapping[str, npt.ArrayLike],
-    queries: Mapping[str, Any],
-    fill_value: Any = np.nan,
-) -> npt.NDArray[np.float64]:
-    """
-    Linearly interpolate values on the grid ``coords``, as
-    :meth:`RectilinearGrid.interpolate` does.
-
-    Parameters
-    ----------
-    values : array_like
-        The values on the grid, whose axes follow the order of ``coords``.
-    coords : mapping of str to array_like
-        The 1D grid points of each axis, by coordinate name.
-    queries : mapping of str to array_like
-        The points to interpolate at, by coordinate name.
-    fill_value : float, (float, float), "extrapolate" or None, optional
-        The value outside the grid. Default is NaN.
-
-    Returns
-    -------
-    numpy.ndarray
-        The interpolated values, as a new array.
-    """
-    return RectilinearGrid(coords).interpolate(values, queries, fill_value)
-
-
 class _AxisQuery(NamedTuple):
     """The points to interpolate at along one axis, and that axis's grid."""
 
@@ -241,9 +212,11 @@ def _interpolate_axis(
     # In place, so a large result costs two arrays of its size, not several
     values_lower = np.take(values, lower, axis=axis)
     result = np.take(values, lower + 1, axis=axis)
-    result -= values_lower
-    result *= fraction.reshape(shape)
-    result += values_lower
+    # An inf gives NaN without warning, as np.interp does
+    with np.errstate(invalid="ignore"):
+        result -= values_lower
+        result *= fraction.reshape(shape)
+        result += values_lower
 
     # A grid point keeps its stored value, as np.interp gives it. That already
     # holds for finite values; a NaN or inf in the next interval would spoil it

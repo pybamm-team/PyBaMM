@@ -12,6 +12,7 @@ import os
 import pickle
 import subprocess
 import sys
+import tempfile
 from unittest import mock
 
 import numpy as np
@@ -1240,12 +1241,45 @@ class TestSolution:
         with opener(path, "rt", newline="", encoding="utf-8") as file:
             assert file.read() == _write_csv(data)
 
+    @pytest.mark.parametrize("suffix", [".csv.zip", ".csv.ZST", ".tar", ".tar.gz"])
+    def test_write_csv_rejects_other_compressions(self, tmp_path, suffix):
+        path = tmp_path / f"data{suffix}"
+        with pytest.raises(ValueError, match=r"compressed only as \.gz, \.bz2 or \.xz"):
+            _write_csv({"a": np.array([1.0])}, path)
+        assert not path.exists()
+
+    @pytest.mark.parametrize("chunk_cells", [1, 7, 12])
+    def test_write_csv_in_chunks(self, monkeypatch, chunk_cells):
+        data = {
+            "a": np.array([np.nan, 1.0, 2.5, -0.0, 1e16]),
+            "Cycle": np.float64(1.0),
+            "n": np.arange(5),
+        }
+        in_one_chunk = _write_csv(data)
+        # With 3 columns: 1, 2 and 4 rows a chunk
+        monkeypatch.setattr("pybamm.solvers.solution._CSV_CHUNK_CELLS", chunk_cells)
+        assert _write_csv(data) == in_one_chunk
+
     def test_write_csv_to_a_text_file_and_object_columns(self):
         # None in an object column is missing, like NaN
         data = {"a": np.array([1.5, None, "x,y"], dtype=object)}
         buffer = io.StringIO()
         assert _write_csv(data, buffer) is None
         assert buffer.getvalue() == os.linesep.join(["a", "1.5", '""', '"x,y"', ""])
+
+    def test_write_csv_to_a_binary_file(self, tmp_path):
+        data = {"Voltage [V]": np.array([4.2, 3.0]), "µ": np.array([1.0, 2.0])}
+        expected = _write_csv(data).encode("utf-8")
+        buffer = io.BytesIO()
+        assert _write_csv(data, buffer) is None
+        # getvalue fails on a closed buffer, so this also checks it stays open
+        assert buffer.getvalue() == expected
+
+        # Not an io class, so binary by its mode
+        with tempfile.NamedTemporaryFile(dir=tmp_path) as file:
+            _write_csv(data, file)
+            file.seek(0)
+            assert file.read() == expected
 
     def test_get_data_cycles_steps(self):
         model = pybamm.BaseModel()

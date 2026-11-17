@@ -111,6 +111,12 @@ class ProcessedVariable(BaseProcessedVariable):
         self._entries_for_interp_raw = None
         self._coords_raw = None
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Rebuilt on use, so saved files do not depend on the grid's class
+        state.pop("_grid_raw", None)
+        return state
+
     def __setstate__(self, state):
         state = dict(state)
         # Pickled before observers existed: the leaves are a bare attribute.

@@ -172,6 +172,15 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             self._interp_args = (values, grid)
         return values, grid
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        if state.get("_interp_args") is not None:
+            values, grid = state["_interp_args"]
+            # Saved as coordinates, so saved files do not depend on the grid's class
+            if isinstance(grid, RectilinearGrid):
+                state["_interp_args"] = (values, grid.coords)
+        return state
+
     def __setstate__(self, state):
         # A variable pickled by 26.10 or earlier holds xarray caches this ignores
         for name in ("_xr_data_array_cache", "_xr_interp_args"):

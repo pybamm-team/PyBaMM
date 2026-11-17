@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import gc
 import importlib.metadata
 import importlib.util
 import numbers
@@ -8,6 +9,7 @@ import os
 import pathlib
 import pickle
 import timeit
+import weakref
 from warnings import warn
 
 import pybamm
@@ -330,30 +332,81 @@ class TimerTime:
 
 
 def load(filename):
-    """Load a saved object. Only load files you trust: unpickling can run code."""
+    """
+    Load a saved object. Only load files you trust: unpickling can run code.
+
+    Parameters
+    ----------
+    filename : str or path-like
+        The file to load.
+
+    Returns
+    -------
+    object
+        The loaded object.
+
+    Raises
+    ------
+    ImportError
+        If a module the object needs cannot be imported. An xarray or pandas
+        object that loading discards is not needed.
+    """
     with open(filename, "rb") as f:
-        obj = _Unpickler(f).load()
+        unpickler = _Unpickler(f)
+        obj = unpickler.load()
+    stand_ins = [weakref.ref(cls) for cls in unpickler.stand_ins.values()]
+    # Its memo holds every stand-in until it is gone
+    del unpickler
+    if stand_ins:
+        # Classes are in reference cycles, so only a collection frees them
+        gc.collect()
+        kept = sorted(cls.origin for ref in stand_ins if (cls := ref()) is not None)
+        if kept:
+            packages = sorted({origin.partition(".")[0] for origin in kept})
+            raise ImportError(
+                f"The loaded object holds {', '.join(kept)}, which could not be "
+                f"imported. Install a version of {' and '.join(packages)} that "
+                "provides them."
+            )
     return obj
 
 
 class _Unpickler(pickle.Unpickler):
     """
-    Unpickler that, when xarray or pandas is not installed, loads their objects
-    as :class:`_DroppedObject`. PyBaMM 26.10 and earlier cached such objects in
-    processed variables, which discard them on loading.
+    Unpickler that loads an xarray or pandas object it cannot import as an empty
+    :class:`_DroppedObject`, made from a stand-in class kept in ``stand_ins``.
     """
+
+    def __init__(self, file):
+        super().__init__(file)
+        self.stand_ins: dict[str, type[_DroppedObject]] = {}
 
     def find_class(self, module, name):
         try:
             return super().find_class(module, name)
-        except ImportError:
-            if module.partition(".")[0] in ("xarray", "pandas"):
-                return _DroppedObject
-            raise
+        except (ImportError, AttributeError):
+            # Their versions also rename or remove classes
+            if module.partition(".")[0] not in ("xarray", "pandas"):
+                raise
+        origin = f"{module}.{name}"
+        if origin not in self.stand_ins:
+            self.stand_ins[origin] = type(
+                "_DroppedObject", (_DroppedObject,), {"origin": origin}
+            )
+        return self.stand_ins[origin]
 
 
 class _DroppedObject:
-    """Stands in for an object whose package is not installed, holding nothing."""
+    """
+    Stands in for an object that could not be imported, holding nothing.
+
+    Attributes
+    ----------
+    origin : str or None
+        The full name of the class or function it stands in for.
+    """
+
+    origin: str | None = None
 
     def __new__(cls, *args, **kwargs):
         return super().__new__(cls)

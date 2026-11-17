@@ -1,8 +1,17 @@
+import warnings
+
 import numpy as np
 import pytest
+from hypothesis import given
+from scipy.interpolate import RegularGridInterpolator
 
 import pybamm
-from pybamm.solvers.grid_interpolation import RectilinearGrid, interpolate_on_grid
+from pybamm.solvers.grid_interpolation import RectilinearGrid
+from tests.strategies.grids import grid_interpolation_cases
+
+
+def interpolate_on_grid(values, coords, queries, fill_value=np.nan):
+    return RectilinearGrid(coords).interpolate(values, queries, fill_value)
 
 
 def _bilinear_grid():
@@ -15,7 +24,7 @@ def _bilinear(x, t):
     return 1.0 + 2.0 * x - 0.5 * t + 0.25 * x * t
 
 
-class TestInterpolateOnGrid:
+class TestRectilinearGrid:
     def test_1D_matches_np_interp(self):
         rng = np.random.default_rng(0)
         grid = np.sort(rng.uniform(0, 10, 12))
@@ -26,6 +35,43 @@ class TestInterpolateOnGrid:
         result = interpolate_on_grid(values, {"t": grid}, {"t": points})
         expected = np.interp(points, grid, values, left=np.nan, right=np.nan)
         np.testing.assert_array_equal(result, expected)
+
+    @given(grid_interpolation_cases())
+    def test_matches_scipy_regular_grid_interpolator(self, case):
+        values, coords, queries, fill_value = case
+        result = interpolate_on_grid(values, coords, queries, fill_value)
+
+        # scipy needs each axis increasing; it extrapolates and fills come after
+        grids = []
+        for axis, points in enumerate(coords.values()):
+            order = np.argsort(points)
+            grids.append(points[order])
+            values = np.take(values, order, axis=axis)
+        interpolator = RegularGridInterpolator(
+            grids, values, bounds_error=False, fill_value=None
+        )
+        # An axis without a query keeps its own order
+        axis_points = [
+            np.atleast_1d(queries.get(name, coords[name])) for name in coords
+        ]
+        expected = interpolator(np.stack(np.meshgrid(*axis_points, indexing="ij"), -1))
+        for axis, (name, grid) in enumerate(zip(coords, grids, strict=True)):
+            if name in queries and not isinstance(fill_value, str):
+                points = axis_points[axis]
+                index = [slice(None)] * expected.ndim
+                index[axis] = (points < grid[0]) | (points > grid[-1])
+                expected[tuple(index)] = fill_value
+        scalar_axes = tuple(
+            axis
+            for axis, name in enumerate(coords)
+            if name in queries and np.ndim(queries[name]) == 0
+        )
+        expected = expected.squeeze(axis=scalar_axes)
+
+        assert result.shape == expected.shape
+        np.testing.assert_allclose(
+            result, expected, rtol=1e-12, atol=1e-12 * np.abs(values).max()
+        )
 
     def test_multilinear_is_exact_and_keeps_axis_order(self):
         values, coords = _bilinear_grid()
@@ -127,6 +173,18 @@ class TestInterpolateOnGrid:
         np.testing.assert_array_equal(
             result, [[1.0, np.nan, np.nan, 3.0], [1.0, 1.5, 2.0, np.inf]]
         )
+
+    def test_inf_beside_a_grid_point_does_not_warn(self):
+        # With "extrapolate", this takes the N-D route rather than np.interp
+        values = np.array([0.0, np.inf, 2.0])
+        # The suite ignores RuntimeWarning, so make it an error here
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            result = interpolate_on_grid(
+                values, {"t": np.arange(3.0)}, {"t": [0.0, 1.0, 1.5]}, "extrapolate"
+            )
+        # Grid points keep their stored values; between inf and 2 is NaN
+        np.testing.assert_array_equal(result, [0.0, np.inf, np.nan])
 
     def test_decreasing_grid(self):
         grid = np.array([3.0, 2.0, 1.0, 0.0])

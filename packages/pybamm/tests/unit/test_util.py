@@ -233,6 +233,97 @@ class TestUtil:
         with pytest.raises(ImportError):
             pybamm.load(path)
 
+    @staticmethod
+    def _cache_holder_class():
+        class Holder:
+            def __setstate__(self, state):
+                # Discards its cache on loading, as processed variables do
+                state.pop("cache", None)
+                self.__dict__.update(state)
+
+        return Holder
+
+    def test_load_tolerates_classes_the_installed_package_lacks(
+        self, tmp_path, monkeypatch
+    ):
+        class DataFrame:
+            pass
+
+        class Index:
+            pass
+
+        Holder = self._cache_holder_class()
+        self._fake_module(monkeypatch, "pandas", DataFrame=DataFrame, Index=Index)
+        self._fake_module(monkeypatch, "older_package", Holder=Holder)
+        holder = Holder()
+        holder.cache, holder.frame = Index(), DataFrame()
+        cache_discarded = pickle.dumps(holder)
+        holder.kept = Index()
+        index_kept = pickle.dumps(holder)
+
+        # A newer pandas that renamed or removed Index
+        newer_pandas = types.ModuleType("pandas")
+        newer_pandas.DataFrame = DataFrame
+        monkeypatch.setitem(sys.modules, "pandas", newer_pandas)
+        with pytest.raises(AttributeError):
+            pickle.loads(cache_discarded)
+        path = tmp_path / "holder.pkl"
+        path.write_bytes(cache_discarded)
+        loaded = pybamm.load(path)
+        assert isinstance(loaded.frame, DataFrame)
+        assert "cache" not in vars(loaded)
+        path.write_bytes(index_kept)
+        with pytest.raises(ImportError, match=r"holds pandas\.Index, which could not"):
+            pybamm.load(path)
+
+        # Any other package lacking a class still fails to load
+        class Other:
+            pass
+
+        self._fake_module(monkeypatch, "some_package", Other=Other)
+        path.write_bytes(pickle.dumps(Other()))
+        monkeypatch.setitem(sys.modules, "some_package", types.ModuleType("x"))
+        with pytest.raises(AttributeError):
+            pybamm.load(path)
+
+    def test_load_raises_if_the_object_keeps_what_it_cannot_import(
+        self, tmp_path, monkeypatch
+    ):
+        class DataFrame:
+            pass
+
+        class Index:
+            pass
+
+        Holder = self._cache_holder_class()
+        self._fake_module(monkeypatch, "pandas", DataFrame=DataFrame, Index=Index)
+        self._fake_module(monkeypatch, "older_package", Holder=Holder)
+        holder = Holder()
+        # A cache in a reference cycle outlives loading until garbage collection
+        holder.cache = [Index()]
+        holder.cache.append(holder.cache)
+        cache_only = pickle.dumps(holder)
+        holder.frames = [DataFrame(), DataFrame()]
+        frames_kept = pickle.dumps(holder)
+        del holder.frames
+        holder.kind = Index
+        class_kept = pickle.dumps(holder)
+
+        monkeypatch.setitem(sys.modules, "pandas", None)
+        path = tmp_path / "holder.pkl"
+        path.write_bytes(cache_only)
+        assert vars(pybamm.load(path)) == {}
+        for kept, name in [(frames_kept, "DataFrame"), (class_kept, "Index")]:
+            path.write_bytes(kept)
+            with pytest.raises(
+                ImportError,
+                match=(
+                    rf"^The loaded object holds pandas\.{name}, which could not be "
+                    r"imported\. Install a version of pandas that provides them\.$"
+                ),
+            ):
+                pybamm.load(path)
+
     def test_import_defers_heavy_dependencies(self):
         deferred = ["black", "pandas", "pooch", "posthog", "sympy", "xarray"]
         code = (

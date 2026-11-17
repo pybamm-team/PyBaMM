@@ -1,3 +1,5 @@
+import pickle
+
 import casadi
 import numpy as np
 import pytest
@@ -218,6 +220,16 @@ class TestProcessedVariable:
         processed_var([0.5, 0.75])
         assert processed_var._grid_raw is grid
         assert grid._increasing["t"] is checked
+
+    def test_pickling_leaves_out_the_grid(self):
+        processed_var = self._build_0D_var()
+        expected = processed_var([0.25, 0.5])
+        assert "_grid_raw" in vars(processed_var)
+        pickled = pickle.dumps(processed_var)
+        assert b"RectilinearGrid" not in pickled
+        restored = pickle.loads(pickled)
+        assert "_grid_raw" not in vars(restored)
+        np.testing.assert_array_equal(restored([0.25, 0.5]), expected)
 
     def test_0D_call_fill_value(self):
         processed_var = self._build_0D_var()

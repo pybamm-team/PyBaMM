@@ -16,6 +16,7 @@ import pytest
 
 import pybamm
 import tests
+from pybamm.solvers.grid_interpolation import RectilinearGrid
 from pybamm.solvers.processed_variable import (
     ProcessedVariable0D,
     ProcessedVariable1D,
@@ -1021,6 +1022,17 @@ class TestProcessedVariableComputed:
         assert "_xr_data_array_cache" not in vars(restored)
         assert "_xr_interp_args" not in vars(restored)
         np.testing.assert_array_equal(restored(0.5), expected)
+
+    def test_pickling_saves_the_grid_as_coordinates(self):
+        variable = self._build_0D_var()
+        expected = variable([0.25, 0.5])
+        assert isinstance(variable._interp_args[1], RectilinearGrid)
+        pickled = pickle.dumps(variable)
+        assert b"RectilinearGrid" not in pickled
+        # The variable itself keeps its grid
+        assert isinstance(variable._interp_args[1], RectilinearGrid)
+        restored = pickle.loads(pickled)
+        np.testing.assert_array_equal(restored([0.25, 0.5]), expected)
 
     @pytest.mark.parametrize("read_before_pickling", [False, True])
     def test_variable_pickled_by_v26_9_reads_and_joins(self, read_before_pickling):

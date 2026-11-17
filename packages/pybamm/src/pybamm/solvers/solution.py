@@ -37,6 +37,19 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
+# Rows are formatted this many cells at a time, as pandas does, to bound memory
+_CSV_CHUNK_CELLS = 100_000
+# Compressions pandas inferred from these extensions, which this writer lacks
+_UNSUPPORTED_CSV_COMPRESSION = (
+    ".zip",
+    ".zst",
+    ".tar",
+    ".tar.gz",
+    ".tar.bz2",
+    ".tar.xz",
+)
+
+
 def _write_csv(data: dict, filename=None) -> str | None:
     """
     Write columns of data as CSV: a header row of their names, then one row per
@@ -48,9 +61,10 @@ def _write_csv(data: dict, filename=None) -> str | None:
     data : dict
         1D arrays of equal length by column name. A scalar is repeated down its
         column.
-    filename : str, path-like or text file, optional
+    filename : str, path-like or file, optional
         The file to write, compressed if its name ends in ``.gz``, ``.bz2`` or
-        ``.xz``. If None, the CSV is returned as a string.
+        ``.xz``. A binary file is written as UTF-8. If None, the CSV is returned
+        as a string.
 
     Returns
     -------
@@ -60,7 +74,9 @@ def _write_csv(data: dict, filename=None) -> str | None:
     Raises
     ------
     ValueError
-        If a column is not 1D, the columns differ in length, or all are scalars.
+        If a column is not 1D, the columns differ in length, or all are scalars,
+        or if the file's name ends in an extension of another compression, such
+        as ``.zip``.
     """
     columns = {name: np.asarray(values) for name, values in data.items()}
     if any(values.ndim > 1 for values in columns.values()):
@@ -71,39 +87,63 @@ def _write_csv(data: dict, filename=None) -> str | None:
     if columns and not lengths:
         raise ValueError("At least one column must be an array, not a scalar")
     n_rows = lengths.pop() if lengths else 0
-
-    text_columns = []
-    for values in columns.values():
-        values = np.broadcast_to(values, (n_rows,))
-        # Python and numpy both write a float64 in its shortest round-trip form;
-        # Python is faster, but float32 and complex need numpy's own form
-        if values.dtype == np.float64 or values.dtype.kind in "biuO":
-            column = values.tolist()
-        else:
-            column = values.astype(str).tolist()
-        missing = _is_missing(values)
-        if missing.any():
-            column = [
-                "" if is_missing else entry
-                for entry, is_missing in zip(column, missing, strict=True)
-            ]
-        text_columns.append(column)
+    columns = {
+        name: np.broadcast_to(values, (n_rows,)) for name, values in columns.items()
+    }
+    chunk_rows = max(1, _CSV_CHUNK_CELLS // max(1, len(columns)))
 
     def write(file):
         writer = csv.writer(file, lineterminator=os.linesep)
         writer.writerow(columns)
-        writer.writerows(zip(*text_columns, strict=True))
+        for start in range(0, n_rows, chunk_rows):
+            chunk = [
+                _csv_fields(values[start : start + chunk_rows])
+                for values in columns.values()
+            ]
+            writer.writerows(zip(*chunk, strict=True))
 
     if filename is None:
         buffer = io.StringIO()
         write(buffer)
         return buffer.getvalue()
     if hasattr(filename, "write"):
-        write(filename)
+        if _is_binary_file(filename):
+            # A binary file takes UTF-8, as pandas wrote it; detach leaves it open
+            text_file = io.TextIOWrapper(filename, encoding="utf-8", newline="")
+            try:
+                write(text_file)
+            finally:
+                text_file.detach()
+        else:
+            write(filename)
         return None
     with _open_for_text(filename) as file:
         write(file)
     return None
+
+
+def _csv_fields(values):
+    """Return the CSV fields of a 1D array, with an empty field where missing."""
+    # Python and numpy both write a float64 in its shortest round-trip form;
+    # Python is faster, but float32 and complex need numpy's own form
+    if values.dtype == np.float64 or values.dtype.kind in "biuO":
+        fields = values.tolist()
+    else:
+        fields = values.astype(str).tolist()
+    missing = _is_missing(values)
+    if missing.any():
+        fields = [
+            "" if is_missing else field
+            for field, is_missing in zip(fields, missing, strict=True)
+        ]
+    return fields
+
+
+def _is_binary_file(file) -> bool:
+    """Return whether a file object takes bytes: a binary io class, or a mode with b."""
+    return isinstance(file, io.RawIOBase | io.BufferedIOBase) or "b" in str(
+        getattr(file, "mode", "")
+    )
 
 
 def _is_missing(values):
@@ -123,7 +163,13 @@ def _is_missing(values):
 
 def _open_for_text(filename):
     """Open a file to write text to, compressed as its extension asks."""
-    suffix = os.path.splitext(os.fspath(filename))[1].lower()
+    name = os.fsdecode(filename)
+    if name.lower().endswith(_UNSUPPORTED_CSV_COMPRESSION):
+        raise ValueError(
+            f"Cannot write CSV to {name!r}: it can be compressed only as .gz, .bz2 "
+            "or .xz"
+        )
+    suffix = os.path.splitext(name)[1].lower()
     if suffix == ".gz":
         import gzip
 
