@@ -30,6 +30,7 @@
 ## Bug fixes
 
 - `latexify` no longer produces invalid LaTeX ("Double superscript") for the boundary value or boundary gradient of an expression that already has a superscript, such as a Bruggeman-corrected solid volume fraction in the DFN model. ([#6043](https://github.com/pybamm-team/PyBaMM/pull/6043))
+- The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))
 - One-state hysteresis models now take their initial potentials from the OCP at the initial hysteresis state, not the equilibrium OCP, so an inconsistent equilibrium OCP no longer stops them starting. ([#6042](https://github.com/pybamm-team/PyBaMM/pull/6042))
 - An SOC start of a composite electrode with a one-state hysteresis phase now puts its phases in equilibrium on the OCP at the initial hysteresis state, and `cache_esoh` re-solves when that state changes. ([#6034](https://github.com/pybamm-team/PyBaMM/pull/6034))
 - `pybamm.parameter_sets` and `pybamm.dispatch.models` now list names in sorted order. Before, the order depended on which installed package was found first. ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
@@ -142,6 +143,7 @@
 
 ## Bug fixes
 
+- Fixed a second `Discretisation` on a reused mesh failing with `FiniteVolumeUnstructured`: interface discovery paired the combined submesh left by the first `Discretisation` with its own components. ([#5866](https://github.com/pybamm-team/PyBaMM/pull/5866))
 - The total surface area to volume ratio of an electrode with several particle phases is now the sum of the phases' ratios. It was computed as `sum(eps_k * R_k**2) / (3 * sum(R_k**3))`, which weights each phase by its volume fraction instead of its particle number density and puts the factor of 3 in the denominator, so it came out 18 times too small for two identical phases. It sets the double-layer charging of a composite electrode under `"surface form": "differential"`. ([#5802](https://github.com/pybamm-team/PyBaMM/issues/5802), [#5805](https://github.com/pybamm-team/PyBaMM/pull/5805))
 - `BasicDFN2D` now reports `"Voltage [V]"` as the z-average of the positive electrode potential over the positive face, rather than its value at the top-right corner. The old value depended on the z mesh whenever properties vary with z. ([#5865](https://github.com/pybamm-team/PyBaMM/pull/5865))
 - A single `IDAKLUSolver` solve no longer runs inside a one-thread OpenMP parallel region. OpenMP code the model calls during the solve, such as a CasADi external function, now runs at the top level instead of nested, so it takes the top-level thread count rather than the nested-level one (for example 8, not 1, under `OMP_NUM_THREADS=8,1`). ([#5837](https://github.com/pybamm-team/PyBaMM/pull/5837))
