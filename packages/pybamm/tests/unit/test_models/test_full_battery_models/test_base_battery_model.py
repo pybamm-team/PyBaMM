@@ -363,13 +363,6 @@ class TestBaseBatteryModel:
                     "plating porosity change"
                 }
             )
-        with pytest.raises(pybamm.OptionError, match=r"distributions"):
-            pybamm.BaseBatteryModel(
-                {
-                    "particle size": "distribution",
-                    "lithium plating porosity change": "true",
-                }
-            )
 
         # contact resistance
         with pytest.raises(pybamm.OptionError, match=r"contact resistance"):
@@ -967,12 +960,6 @@ class TestElectrodeCompatibility:
     @pytest.mark.parametrize(
         ("options", "error", "match"),
         [
-            ({"SEI porosity change": "true"}, NotImplementedError, "SEI porosity"),
-            (
-                {"lithium plating porosity change": "true"},
-                pybamm.OptionError,
-                "Lithium plating porosity",
-            ),
             ({"heat of mixing": "true"}, NotImplementedError, "Heat of mixing"),
             ({"thermal": "x-full"}, NotImplementedError, "X-full thermal"),
         ],

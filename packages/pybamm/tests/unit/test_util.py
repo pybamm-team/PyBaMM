@@ -91,7 +91,12 @@ class TestUtil:
             == d["Positive electrode diffusivity [m2.s-1]"]
         )
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(
+            DeprecationWarning,
+            match=r"'Positive electrode diffusivity \[m2.s-1\]' has been renamed to "
+            r"'Positive particle diffusivity \[m2.s-1\]'.*Using "
+            r"'Positive particle diffusivity \[m2.s-1\]'",
+        ):
             assert (
                 d["Positive electrode diffusivity [m2.s-1]"]
                 == d["Positive particle diffusivity [m2.s-1]"]
