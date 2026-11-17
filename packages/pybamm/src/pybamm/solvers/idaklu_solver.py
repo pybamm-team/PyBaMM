@@ -419,17 +419,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         Raises
         ------
         pybamm.SolverError
-            If the model does not use the Jacobian, a sensitivity input is a
-            vector, or ``upsampling_tolerance`` is set.
+            If the model does not use the Jacobian, or a sensitivity input is a
+            vector.
         """
         if not model.use_jacobian:
             raise pybamm.SolverError("KLU requires the Jacobian")
-        if self._options["upsampling_tolerance"] is not None:
-            raise pybamm.SolverError(
-                "upsampling_tolerance is not supported with "
-                "convert_to_format='rust'. Use convert_to_format='casadi' to "
-                "upsample the solution."
-            )
         if self._options["compile"]:
             pybamm.logger.warning(
                 "options['compile'] has no effect with convert_to_format='rust', "
@@ -617,6 +611,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             self.output_variables, time_integral_vars=self._time_integral_vars
         )
 
+        upsampling = self._upsampling_variable(model)
+        if upsampling is not None:
+            lowering.upsampling(*upsampling)
+
         lowering.algebraic_block()
         lowering.termination_events()
 
@@ -689,7 +687,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # Same keys as the CasADi setup, for `_post_process_solution`
             "num_of_events": rust_model.n_events,
             "events_read_yp": [False] * rust_model.n_events,
-            "upsampling": False,
+            "upsampling": rust_model.upsampling_len > 0,
         }
 
         self._setup["solver"] = idaklu.create_rust_solver_group(
@@ -1021,32 +1019,41 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return base_set_up_return
 
-    def _upsampling_fcn(self, model, inputs_dict):
-        """``g(t, y, p)``: the model's scalar ``upsampling_variable`` divided
-        by its scale, or by 1 if it has none.
+    def _upsampling_variable(self, model) -> tuple[str, pybamm.Symbol] | None:
+        """The name of the model's ``upsampling_variable`` and ``g(t, y, p)``,
+        that variable divided by its scale, or by 1 if it has none.
 
-        Empty if upsampling is off, or the variable is missing or an algebraic
+        None if upsampling is off, or the variable is missing or an algebraic
         state, which the integrator's error test already resolves.
         """
-        empty = casadi.Function("empty_upsampling", [], [])
         name = getattr(model, "upsampling_variable", "Voltage [V]")
         if self._options["upsampling_tolerance"] is None:
-            return empty
+            return None
         if name not in model.variables:
             pybamm.logger.warning(
                 f"upsampling_tolerance is set but model '{model.name}' has no "
                 f"'{name}' variable, so no points are added. Set the model's "
                 "`upsampling_variable` to the name of a scalar variable."
             )
-            return empty
+            return None
         variable = model.variables[name]
         if model.is_algebraic_state(variable):
-            return empty
+            return None
         scale = getattr(variable, "scale", None)
         if not (isinstance(scale, pybamm.Symbol) and scale.is_constant()):
             scale = 1
+        return name, model.get_processed_variable_or_event(name) / scale
+
+    def _upsampling_fcn(self, model, inputs_dict):
+        """``g(t, y, p)`` from :meth:`_upsampling_variable` as a CasADi function,
+        empty without one.
+        """
+        upsampling = self._upsampling_variable(model)
+        if upsampling is None:
+            return casadi.Function("empty_upsampling", [], [])
+        name, symbol = upsampling
         upsampling_fcn = process(
-            model.get_processed_variable_or_event(name) / scale,
+            symbol,
             pybamm.BaseSolver._wrangle_name(name),
             self._get_vars_for_processing(model, inputs_dict),
             use_jacobian=False,

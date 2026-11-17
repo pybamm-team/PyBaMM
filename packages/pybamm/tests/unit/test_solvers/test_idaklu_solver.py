@@ -100,6 +100,13 @@ def _hermite_wrms(sol_base, sol_reduced, atol, rtol) -> list[tuple[int, float]]:
     return wrms_values
 
 
+@pytest.fixture(params=["casadi", "rust"])
+def model_format(request, monkeypatch):
+    """Give every model the test builds each backend's format by default."""
+    monkeypatch.setattr(pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", request.param)
+    return request.param
+
+
 @pytest.fixture
 def decay_model():
     """Discretised ``du/dt = -a u``, with ``a`` as the only input parameter."""
@@ -560,6 +567,7 @@ class TestIDAKLUSolver:
             atol=1e-6,
         )
 
+    @pytest.mark.usefixtures("model_format")
     @pytest.mark.parametrize("output_variables", [None, ["y", "2y", "y sum"]])
     def test_sensitivities_with_vector_input_not_differentiated(self, output_variables):
         # dy_i/dt = -a_i c y_i, y_i(0) = d, with a vector-valued input a
@@ -635,6 +643,7 @@ class TestIDAKLUSolver:
             ),
         ],
     )
+    @pytest.mark.usefixtures("model_format")
     @pytest.mark.parametrize("calculate_sensitivities", [False, True])
     def test_output_variables_with_special_characters(
         self, calculate_sensitivities, compile_functions, caplog, monkeypatch, tmp_path
@@ -720,6 +729,21 @@ class TestIDAKLUSolver:
                 inputs={"b": np.array([0.2, 0.3])},
                 calculate_sensitivities=["b"],
             )
+
+    def test_rust_set_up_refuses_sensitivities_for_a_vector_width_input(self):
+        # solve() refuses these first; a direct set_up reaches the Rust check
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        b = pybamm.InputParameter("b", expected_size=2)
+        model.rhs = {u: -(pybamm.Index(b, 0) + pybamm.Index(b, 1)) * u}
+        model.initial_conditions = {u: 1}
+        model.convert_to_format = "rust"
+        pybamm.Discretisation().process_model(model)
+        model.calculate_sensitivities = ["b"]
+        with pytest.raises(
+            pybamm.SolverError, match=r"vector-width input parameters.*'b'"
+        ):
+            pybamm.IDAKLUSolver().set_up(model, inputs={"b": np.array([0.2, 0.3])})
 
     @pytest.mark.parametrize(
         ("convert_to_format", "error", "message"),
@@ -1093,18 +1117,6 @@ class TestIDAKLUSolver:
         pybamm.Discretisation().process_model(model)
         with pytest.raises(pybamm.SolverError, match=r"KLU requires the Jacobian"):
             pybamm.IDAKLUSolver().solve(model, np.array([0.0, 1.0]))
-
-    def test_rust_rejects_upsampling(self):
-        model = pybamm.BaseModel()
-        u = pybamm.Variable("u")
-        model.rhs = {u: -u}
-        model.initial_conditions = {u: 1}
-        model.variables = {"Voltage [V]": 2 * u}
-        model.convert_to_format = "rust"
-        pybamm.Discretisation().process_model(model)
-        solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3})
-        with pytest.raises(pybamm.SolverError, match=r"upsampling_tolerance"):
-            solver.solve(model, np.array([0.0, 1.0]))
 
     def test_dae_solver_algebraic_model(self):
         model = pybamm.BaseModel()
@@ -2502,6 +2514,26 @@ class TestIDAKLUSolver:
         with pytest.raises(ValueError, match=r"termination event must be scalar"):
             pybamm.IDAKLUSolver().solve(model, [0, 1])
 
+    def test_rust_backend_rejects_a_vector_upsampling_output_past_the_lowering(
+        self, monkeypatch
+    ):
+        # IDAKLU evaluates the upsampling output into one scalar, so a vector would overrun it
+        from pybamm.solvers.rust_lowering import RustModelLowering
+
+        def lower_without_the_scalar_check(lowering, name, symbol):
+            lowering._upsampling_expr = lowering.lower(symbol)
+            return lowering._upsampling_expr
+
+        monkeypatch.setattr(
+            RustModelLowering, "upsampling", lower_without_the_scalar_check
+        )
+        model = self._rust_model_with_a_vector_event()
+        model.events = []
+        model.upsampling_variable = "v"
+        solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3})
+        with pytest.raises(ValueError, match=r"upsampling output has 4 components"):
+            solver.solve(model, [0, 1])
+
     def test_rust_backend_rejects_output_lengths_rust_disagrees_with(self, monkeypatch):
         from pybamm.solvers.rust_lowering import RustModelLowering
 
@@ -2715,6 +2747,40 @@ class TestIDAKLUSolver:
         after = [np.asarray(fn(t, y, p)).ravel() for fn in restored.events]
         for a, b in zip(before, after, strict=True):
             np.testing.assert_array_equal(a, b)
+
+    def test_rust_upsamples_at_the_times_casadi_does(self):
+        # Through the C ABI and IDAKLU, against the CasADi path
+        t_additive = {}
+        for convert_to_format in ["casadi", "rust"]:
+            model = pybamm.BaseModel()
+            x = pybamm.Variable("x")
+            model.rhs = {x: -x}
+            model.initial_conditions = {x: 20}
+            # The input reaches only the upsampling variable
+            model.variables = {"x": x, "kx": pybamm.InputParameter("k") * x}
+            model.upsampling_variable = "kx"
+            model.convert_to_format = convert_to_format
+            solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-4})
+            solution = solver.solve(model, [0, 3], inputs={"k": 0.3})
+            t_additive[convert_to_format] = solution.t_additive
+        assert t_additive["rust"].size > 0
+        np.testing.assert_allclose(t_additive["rust"], t_additive["casadi"], rtol=1e-12)
+
+    def test_rust_upsampling_survives_compiled_model_pickle(self):
+        import pickle
+
+        model = pybamm.lithium_ion.SPM()
+        model.convert_to_format = "rust"
+        solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3})
+        sim = pybamm.Simulation(model, solver=solver)
+        sim.solve([0, 600])
+
+        rust_model = sim._solver._setup["rust_model"]
+        assert rust_model.upsampling_len == 1
+        restored = pickle.loads(pickle.dumps(rust_model))
+        assert restored.upsampling_len == 1
+        # Past the graph, the rebuild arguments name the same roots, upsampling's included
+        assert restored.__reduce__()[1][1:] == rust_model.__reduce__()[1][1:]
 
     def test_simulation_period(self):
         model = pybamm.lithium_ion.DFN()
@@ -4216,6 +4282,7 @@ class TestIDAKLUSolverStatistics:
         assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
 
 
+@pytest.mark.usefixtures("model_format")
 class TestUpsampling:
     @staticmethod
     def _solve(options=None, **solver_kwargs):
@@ -4282,6 +4349,29 @@ class TestUpsampling:
             rtol=1e-5,
         )
 
+    def test_each_thread_upsamples_its_own_input_set(self):
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values["Current function [A]"] = "[input]"
+        inputs = [{"Current function [A]": current} for current in (5.0, 10.0)]
+
+        def solve(inputs, num_threads):
+            solver = pybamm.IDAKLUSolver(
+                options={"upsampling_tolerance": 1e-4, "num_threads": num_threads}
+            )
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPM(),
+                parameter_values=parameter_values,
+                solver=solver,
+            )
+            return sim.solve([0, 3600], inputs=inputs)
+
+        together = solve(inputs, num_threads=2)
+        alone = [solve(one, num_threads=1) for one in inputs]
+        # The two currents place different points, so swapped evaluators would show
+        assert not np.array_equal(alone[0].t_additive, alone[1].t_additive)
+        for parallel, serial in zip(together, alone, strict=True):
+            np.testing.assert_array_equal(parallel.t_additive, serial.t_additive)
+
     def test_resolves_voltage_linear_interpolant(self):
         reference = self._solve(rtol=1e-10, atol=1e-12)
         errors = []
@@ -4298,23 +4388,25 @@ class TestUpsampling:
         assert errors[1] < 1.5e-3
         assert errors[2] < 1.5e-4
 
-    def test_scale(self):
+    def test_scale(self, model_format):
         model = pybamm.BaseModel()
         x = pybamm.Variable("x", scale=10)
         model.rhs = {x: -x}
         model.initial_conditions = {x: 20}
         model.variables = {"x": x, "2x": 2 * x}
-        model.upsampling_variable = "x"
-        solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3})
-        solver.solve(model, [0, 1])
-        upsampling_fcn = solver._upsampling_fcn(model, {})
-        y0 = model.concatenated_initial_conditions.evaluate()
-        np.testing.assert_allclose(float(upsampling_fcn(0, y0, [])), 2.0)
-
         # A variable without a scale is used as is
-        model.upsampling_variable = "2x"
-        upsampling_fcn = solver._upsampling_fcn(model, {})
-        np.testing.assert_allclose(float(upsampling_fcn(0, y0, [])), 40.0)
+        for name, expected in [("x", 2.0), ("2x", 40.0)]:
+            model.upsampling_variable = name
+            solver = pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-3})
+            solver.solve(model, [0, 1])
+            y0 = model.concatenated_initial_conditions.evaluate()
+            # The function the backend compiled, not the symbol it was given
+            if model_format == "rust":
+                upsampling = solver._setup["rust_model"].upsampling
+                value = upsampling(0.0, y0.ravel(), np.zeros(0))
+            else:
+                value = solver._upsampling_fcn(model, {})(0, y0, [])
+            np.testing.assert_allclose(np.asarray(value).item(), expected)
 
     def test_sensitivities(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
@@ -4388,17 +4480,17 @@ class TestUpsampling:
         charge, hold = experiment.steps
         solver = sim._get_built_experiment_solver(charge)
         model = sim._get_built_experiment_model(charge)
-        assert solver._upsampling_fcn(model, {}).n_out() == 1
+        assert solver._upsampling_variable(model) is not None
         model.upsampling_variable = "Not a variable"
         with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
-            assert solver._upsampling_fcn(model, {}).n_out() == 0
+            assert solver._upsampling_variable(model) is None
         assert "no 'Not a variable' variable" in caplog.text
 
         # In a voltage hold the current is an algebraic state
         solver = sim._get_built_experiment_solver(hold)
         model = sim._get_built_experiment_model(hold)
         assert model.upsampling_variable == "Current [A]"
-        assert solver._upsampling_fcn(model, {}).n_out() == 0
+        assert solver._upsampling_variable(model) is None
 
     def test_t_additive_survives_saving_and_joining(self, tmp_path):
         experiment = pybamm.Experiment(
@@ -4495,6 +4587,7 @@ def _inconsistent_dae_model():
     return model
 
 
+@pytest.mark.usefixtures("model_format")
 class TestIDAKLUNonFiniteResiduals:
     """A NaN or inf residual makes IDAS cut the step rather than accept it."""
 
@@ -4603,6 +4696,7 @@ class TestIDAKLUNonFiniteResiduals:
             )
 
 
+@pytest.mark.usefixtures("model_format")
 class TestIDAKLUFullNewtonIterativeLinearSolver:
     """``newton_mode="full"`` with an iterative linear solver, which IDA must
     set up before its linear solver can be driven."""
@@ -4654,6 +4748,7 @@ class TestIDAKLUFullNewtonIterativeLinearSolver:
             )
 
 
+@pytest.mark.usefixtures("model_format")
 class TestIDAKLUSensitivityErrorControl:
     """The ``sensitivity_error_control`` option."""
 

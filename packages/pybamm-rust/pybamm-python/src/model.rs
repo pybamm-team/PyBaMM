@@ -29,6 +29,7 @@ type RebuildArgs = (
     Vec<u32>,
     Vec<u32>,
     Option<u32>,
+    Option<u32>,
     Vec<usize>,
     Vec<f64>,
     Vec<usize>,
@@ -85,6 +86,7 @@ pub struct CompiledModel {
     rhs_root: NodeId,
     output_roots: Vec<NodeId>,
     event_roots: Vec<NodeId>,
+    upsampling_root: Option<NodeId>,
     /// The algebraic block's root and its strictly-ascending global state indices.
     algebraic: Option<(NodeId, Vec<usize>)>,
     // Cached so every accessor hands back the same prepared artifact.
@@ -92,6 +94,7 @@ pub struct CompiledModel {
     jac_view: PyOnceLock<Py<CompiledJacobian>>,
     outputs_view: PyOnceLock<Vec<Py<CompiledFunction>>>,
     events_view: PyOnceLock<Vec<Py<CompiledFunction>>>,
+    upsampling_view: PyOnceLock<Option<Py<CompiledFunction>>>,
     algebraic_residual_view: PyOnceLock<Option<Py<CompiledFunction>>>,
     algebraic_jacobian_view: PyOnceLock<Option<Py<CompiledJacobian>>>,
 }
@@ -204,6 +207,7 @@ impl CompiledModel {
         rhs_root: NodeId,
         output_roots: Vec<NodeId>,
         event_roots: Vec<NodeId>,
+        upsampling_root: Option<NodeId>,
         algebraic: Option<(NodeId, Vec<usize>)>,
         mass_data: Vec<f64>,
         mass_indptr: &[i64],
@@ -260,8 +264,9 @@ impl CompiledModel {
         )
         .map_err(core_err_to_py)?;
         let families = [
-            (ObservableKind::Outputs, &output_roots),
-            (ObservableKind::Events, &event_roots),
+            (ObservableKind::Outputs, output_roots.as_slice()),
+            (ObservableKind::Events, event_roots.as_slice()),
+            (ObservableKind::Upsampling, upsampling_root.as_slice()),
         ];
         for (kind, roots) in families {
             compiled
@@ -277,11 +282,13 @@ impl CompiledModel {
             rhs_root,
             output_roots,
             event_roots,
+            upsampling_root,
             algebraic,
             rhs_view: PyOnceLock::new(),
             jac_view: PyOnceLock::new(),
             outputs_view: PyOnceLock::new(),
             events_view: PyOnceLock::new(),
+            upsampling_view: PyOnceLock::new(),
             algebraic_residual_view: PyOnceLock::new(),
             algebraic_jacobian_view: PyOnceLock::new(),
         })
@@ -306,6 +313,7 @@ impl CompiledModel {
         algebraic_expr = None,
         algebraic_variable_indices = vec![],
         event_exprs = vec![],
+        upsampling_expr = None,
     ))]
     #[allow(clippy::too_many_arguments)] // PyO3 keyword args, all distinct concerns
     fn from_expr(
@@ -321,6 +329,7 @@ impl CompiledModel {
         algebraic_expr: Option<&Expr>,
         algebraic_variable_indices: Vec<usize>,
         event_exprs: Vec<PyRef<'_, Expr>>,
+        upsampling_expr: Option<&Expr>,
     ) -> PyResult<Self> {
         let mass_data: Vec<f64> = mass_data.as_slice()?.to_vec();
         let mass_indptr = mass_indptr.as_slice()?;
@@ -335,6 +344,7 @@ impl CompiledModel {
             .iter()
             .map(|e| e.node_id_in(&graph))
             .collect::<PyResult<_>>()?;
+        let upsampling_root = upsampling_expr.map(|e| e.node_id_in(&graph)).transpose()?;
         let algebraic_root = algebraic_expr
             .as_ref()
             .map(|e| e.node_id_in(&graph))
@@ -347,6 +357,7 @@ impl CompiledModel {
             rhs_root,
             output_roots,
             event_roots,
+            upsampling_root,
             algebraic,
             mass_data,
             mass_indptr,
@@ -366,6 +377,7 @@ impl CompiledModel {
         rhs_root: u32,
         output_roots: Vec<u32>,
         event_roots: Vec<u32>,
+        upsampling_root: Option<u32>,
         algebraic_root: Option<u32>,
         algebraic_variable_indices: Vec<usize>,
         mass_data: Vec<f64>,
@@ -374,7 +386,7 @@ impl CompiledModel {
         n_inputs: usize,
         sens_param_indices: Vec<usize>,
     ) -> PyResult<Self> {
-        let (rhs_root, output_roots, event_roots, algebraic_root) = {
+        let (rhs_root, output_roots, event_roots, upsampling_root, algebraic_root) = {
             let g = graph.try_borrow(py).map_err(|_| {
                 PyValueError::new_err("CompiledModel._rebuild: graph borrow conflict")
             })?;
@@ -385,6 +397,7 @@ impl CompiledModel {
                 g.checked_root(rhs_root)?,
                 checked(output_roots)?,
                 checked(event_roots)?,
+                upsampling_root.map(|raw| g.checked_root(raw)).transpose()?,
                 algebraic_root.map(|raw| g.checked_root(raw)).transpose()?,
             )
         };
@@ -396,6 +409,7 @@ impl CompiledModel {
             rhs_root,
             output_roots,
             event_roots,
+            upsampling_root,
             algebraic,
             mass_data,
             &mass_indptr,
@@ -426,6 +440,7 @@ impl CompiledModel {
                 this.rhs_root.raw(),
                 this.output_roots.iter().map(|r| r.raw()).collect(),
                 this.event_roots.iter().map(|r| r.raw()).collect(),
+                this.upsampling_root.map(NodeId::raw),
                 algebraic_root,
                 algebraic_variable_indices,
                 mass.data().to_vec(),
@@ -493,6 +508,17 @@ impl CompiledModel {
             self.observable_views(py, ObservableKind::Events, &self.event_roots, "event")
         })?;
         Ok(views.iter().map(|f| f.clone_ref(py)).collect())
+    }
+
+    /// The upsampling output as a shareable `CompiledFunction` view, or `None` without one.
+    #[getter]
+    fn upsampling(&self, py: Python<'_>) -> PyResult<Option<Py<CompiledFunction>>> {
+        let view = self.upsampling_view.get_or_try_init(py, || {
+            let roots: Vec<NodeId> = self.upsampling_root.into_iter().collect();
+            self.observable_views(py, ObservableKind::Upsampling, &roots, "upsampling")
+                .map(|mut views| views.pop())
+        })?;
+        Ok(view.as_ref().map(|f| f.clone_ref(py)))
     }
 
     /// Algebraic residual g(t, y, p) as a shareable view, or `None` for ODEs.
@@ -671,6 +697,12 @@ impl CompiledModel {
     #[getter]
     fn n_events(&self) -> usize {
         self.compiled.n_events()
+    }
+
+    /// Length of the compiled upsampling output: 0 without one.
+    #[getter]
+    fn upsampling_len(&self) -> usize {
+        self.compiled.upsampling_len()
     }
 
     /// Get the output length of f(t, y).
