@@ -293,13 +293,15 @@ class SEIGrowth(BaseModel):
             c_sei = variables[
                 f"X-averaged {domain} {self.reaction_name}concentration [mol.m-3]"
             ]
-            c_sei_0 = L_sei_0 * self.phase_param.a_typ / V_bar_sei
-            c_sei_cr0 = self.phase_param.L_sei_cr0 * self.phase_param.a_typ / V_bar_sei
+            a_init = pybamm.x_average(self.phase_param.a_init)
+            c_sei_0 = L_sei_0 * a_init / V_bar_sei
+            c_sei_cr0 = self.phase_param.L_sei_cr0 * a_init / V_bar_sei
         else:
             # c_sei is a bulk quantity [mol.m-3]
             c_sei = variables[f"{Domain} {self.reaction_name}concentration [mol.m-3]"]
-            c_sei_0 = L_sei_0 * self.phase_param.a_typ / V_bar_sei
-            c_sei_cr0 = self.phase_param.L_sei_cr0 * self.phase_param.a_typ / V_bar_sei
+            a_init = self.phase_param.a_init
+            c_sei_0 = L_sei_0 * a_init / V_bar_sei
+            c_sei_cr0 = self.phase_param.L_sei_cr0 * a_init / V_bar_sei
 
         if self.reaction == "SEI on cracks":
             self.initial_conditions = {c_sei: c_sei_cr0}

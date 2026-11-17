@@ -29,6 +29,7 @@
 
 ## Bug fixes
 
+- The initial SEI concentration now uses the initial surface area of each electrode, so the SEI starts at `"Initial SEI thickness [m]"` when the particle size or active material fraction varies (e.g. with a size distribution). ([#6054](https://github.com/pybamm-team/PyBaMM/pull/6054))
 - The DFN with a particle-size distribution now builds with `"SEI porosity change"` or `"lithium plating porosity change"`; the SEI concentration is now always size-averaged. SPM and MPM raise an `OptionError` for this combination. ([#5417](https://github.com/pybamm-team/PyBaMM/pull/5417), [#6054](https://github.com/pybamm-team/PyBaMM/pull/6054))
 - The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))
 - One-state hysteresis models now take their initial potentials from the OCP at the initial hysteresis state, not the equilibrium OCP, so an inconsistent equilibrium OCP no longer stops them starting. ([#6042](https://github.com/pybamm-team/PyBaMM/pull/6042))

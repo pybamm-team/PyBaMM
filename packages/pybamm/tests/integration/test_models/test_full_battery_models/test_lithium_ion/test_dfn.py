@@ -333,8 +333,15 @@ class TestDFNWithSizeDistribution:
         solution = sim.solve([0, 3600])
 
         t = solution.t
+        eps_n_init = parameter_values["Negative electrode porosity"]
         eps_n = solution["X-averaged negative electrode porosity"](t)
-        assert np.all(eps_n[1:] < parameter_values["Negative electrode porosity"])
+        np.testing.assert_allclose(eps_n[0], eps_n_init, rtol=1e-12)
+        assert np.all(eps_n[1:] < eps_n_init)
+        np.testing.assert_allclose(
+            solution["X-averaged negative SEI thickness [m]"](0.0),
+            parameter_values["Initial SEI thickness [m]"],
+            rtol=1e-12,
+        )
         np.testing.assert_allclose(
             solution["X-averaged positive electrode porosity"](t),
             parameter_values["Positive electrode porosity"],
