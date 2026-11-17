@@ -216,15 +216,18 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Multiply by gradient matrix
         out = self._apply_matrix(gradient_matrix, discretised_symbol)
 
-        # Add Neumann boundary conditions, if defined
+        # Extrapolate to the boundary edges to ensure gradient has the expected length
+        not_dirichlet_type_bc = [
+            side for side in ["left", "right"] if side not in dirichlet_type_bc
+        ]
+        if not_dirichlet_type_bc:
+            out = self._extrapolate_gradient_to_boundaries(
+                symbol, out, not_dirichlet_type_bc, domain
+            )
+
+        # Replace extrapolation with Neumann boundary conditions, if defined
         if neumann_type_bc:
             out = self.add_neumann_values(symbol, out, bcs, domain)
-
-        # Extrapolate to the boundary edges to ensure gradient has the expected length
-        if flux_type_bc:
-            out = self._extrapolate_gradient_to_boundaries(
-                symbol, out, flux_type_bc, domain
-            )
 
         return out
 
@@ -975,23 +978,23 @@ class FiniteVolume(pybamm.SpatialMethod):
         # get relevant grid points
         submesh = self.mesh[domain]
 
-        # Prepare sizes and empty bcs_vector
-        n = submesh.npts - 1
-        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
-
         lbc_value, lbc_type = bcs.get("left", (None, None))
         rbc_value, rbc_type = bcs.get("right", (None, None))
 
-        # Count number of Neumann boundary conditions
+        # Count the number of ghost nodes
         n_bcs = 0
-        if lbc_type == "Neumann":
+        if lbc_type == "Dirichlet":
             n_bcs += 1
-        if rbc_type == "Neumann":
+        if rbc_type == "Dirichlet":
             n_bcs += 1
+
+        # Prepare sizes
+        n = submesh.npts - n_bcs + 1
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Add any values from Neumann boundary conditions to the bcs vector
         if lbc_type == "Neumann" and lbc_value != 0:
-            lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n + n_bcs, 1))
+            lbc_sub_matrix = coo_matrix(([1.0], ([0], [0])), shape=(n, 1))
             lbc_matrix = self._block_diagonal(lbc_sub_matrix, second_dim_repeats)
             if lbc_value.evaluates_to_number():
                 left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
@@ -999,11 +1002,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
         else:
-            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
+            lbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
         if rbc_type == "Neumann" and rbc_value != 0:
-            rbc_sub_matrix = coo_matrix(
-                ([1.0], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
-            )
+            rbc_sub_matrix = coo_matrix(([1.0], ([n - 1], [0])), shape=(n, 1))
             rbc_matrix = self._block_diagonal(rbc_sub_matrix, second_dim_repeats)
             if rbc_value.evaluates_to_number():
                 right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
@@ -1011,7 +1012,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
         else:
-            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
+            rbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
 
         bcs_vector = lbc_vector + rbc_vector
         # Need to match the domain. E.g. in the case of the boundary condition
@@ -1019,19 +1020,13 @@ class FiniteVolume(pybamm.SpatialMethod):
         # has domain electrode, since it is a function of the macroscopic variables
         bcs_vector = bcs_vector.with_domains(discretised_gradient)
 
-        # Make matrix which makes "gaps" in the the discretised gradient into
-        # which the known Neumann values will be added. E.g. in 1D if the left
-        # boundary condition is Dirichlet and the right Neumann, this matrix will
-        # act to append a zero to the end of the discretised gradient
+        # Remove the placeholder at any boundary dge with a Neumann condition
+        diag_entries = np.ones(n, dtype=np.float64)
         if lbc_type == "Neumann":
-            left_vector = csr_matrix((1, n))
-        else:
-            left_vector = None
+            diag_entries[0] = 0
         if rbc_type == "Neumann":
-            right_vector = csr_matrix((1, n))
-        else:
-            right_vector = None
-        sub_matrix = vstack([left_vector, eye(n, dtype=np.float64), right_vector])
+            diag_entries[n - 1] = 0
+        sub_matrix = diags(diag_entries, shape=(n, n), dtype=np.float64)
 
         # repeat matrix for secondary dimensions
         matrix = self._block_diagonal(sub_matrix, second_dim_repeats)
@@ -1743,22 +1738,32 @@ class FiniteVolume(pybamm.SpatialMethod):
         edges.
         See :meth:`pybamm.SpatialMethod.concatenation`
         """
+        # If all children evaluate on edges, assume it is a concatenation of fluxes
+        evaluate_on_edges = []
+        for child in disc_children:
+            submesh = self.mesh[child.domain]
+            repeats = self._get_auxiliary_domain_repeats(child.domains)
+            n_edges = len(submesh.edges) * repeats
+            evaluate_on_edges.append(child.size == n_edges)
+        if np.all(evaluate_on_edges):
+            # raise Exception(f"Creating a flux concatenation from {disc_children}")
+            return pybamm.flux_concatenation(disc_children, self.mesh)
+
+        # Otherwise, average any children that evaluate on the edges (size n_edges)
         for idx, child in enumerate(disc_children):
             submesh = self.mesh[child.domain]
             repeats = self._get_auxiliary_domain_repeats(child.domains)
             n_nodes = len(submesh.nodes) * repeats
             n_edges = len(submesh.edges) * repeats
             child_size = child.size
-            if child_size != n_nodes:
-                # Average any children that evaluate on the edges (size n_edges) to
-                # evaluate on nodes instead, so that concatenation works properly
-                if child_size == n_edges:
-                    disc_children[idx] = self.edge_to_node(child)
-                else:
-                    raise pybamm.ShapeError(
-                        "child must have size n_nodes (number of nodes in the mesh) "
-                        "or n_edges (number of edges in the mesh)"
-                    )
+            if child_size == n_edges:
+                # Evaluate on nodes instead, so that concatenation works properly
+                disc_children[idx] = self.edge_to_node(child)
+            elif child_size != n_nodes:
+                raise pybamm.ShapeError(
+                    f"child has size ({child_size}) but this size must match the "
+                    f"number of nodes ({n_nodes}) or edges ({n_edges}) in the mesh."
+                )
         return pybamm.domain_concatenation(disc_children, self.mesh)
 
     def edge_to_node(self, discretised_symbol, method="arithmetic"):
