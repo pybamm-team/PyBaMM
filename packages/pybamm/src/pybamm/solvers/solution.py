@@ -3,6 +3,7 @@ from __future__ import annotations
 #
 # Solution class
 #
+import codecs
 import csv
 import io
 import json
@@ -108,12 +109,9 @@ def _write_csv(data: dict, filename=None) -> str | None:
         return buffer.getvalue()
     if hasattr(filename, "write"):
         if _is_binary_file(filename):
-            # A binary file takes UTF-8, as pandas wrote it; detach leaves it open
-            text_file = io.TextIOWrapper(filename, encoding="utf-8", newline="")
-            try:
-                write(text_file)
-            finally:
-                text_file.detach()
+            # UTF-8, as pandas wrote. Unbuffered, so an error leaves nothing to
+            # flush and nothing to close the caller's file
+            write(codecs.getwriter("utf-8")(filename))
         else:
             write(filename)
         return None

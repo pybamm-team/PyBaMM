@@ -3,6 +3,7 @@
 #
 import bz2
 import copyreg
+import gc
 import gzip
 import io
 import json
@@ -1280,6 +1281,23 @@ class TestSolution:
             _write_csv(data, file)
             file.seek(0)
             assert file.read() == expected
+
+    def test_write_csv_to_a_binary_file_raises_the_first_error(self):
+        class UnwritableField:
+            def __str__(self):
+                raise RuntimeError("cannot write this field")
+
+        class UnflushableFile(io.BytesIO):
+            def flush(self):
+                raise OSError("cannot flush")
+
+        data = {"x": np.array([1.0, UnwritableField()], dtype=object)}
+        file = UnflushableFile()
+        with pytest.raises(RuntimeError, match="cannot write this field"):
+            _write_csv(data, file)
+        # Nothing left holding the file closes it later
+        gc.collect()
+        assert not file.closed
 
     def test_get_data_cycles_steps(self):
         model = pybamm.BaseModel()
