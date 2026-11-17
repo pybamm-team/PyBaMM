@@ -1349,10 +1349,10 @@ class TestSolution:
 
         # test that the data can be saved to csv and read back in correctly
         csv_str = sol.save_data(variables=["c"], to_format="csv")
-        df = pd.read_csv(io.StringIO(csv_str))
-        np.testing.assert_array_equal(df["Cycle"], data["Cycle"])
-        np.testing.assert_array_equal(df["Step"], data["Step"])
-        np.testing.assert_allclose(df["c"], data["c"], rtol=1e-7, atol=1e-6)
+        csv_data = np.genfromtxt(io.StringIO(csv_str), delimiter=",", names=True)
+        np.testing.assert_array_equal(csv_data["Cycle"], data["Cycle"])
+        np.testing.assert_array_equal(csv_data["Step"], data["Step"])
+        np.testing.assert_allclose(csv_data["c"], data["c"], rtol=1e-7, atol=1e-6)
 
     def test_pickle_first_states_across_processes(self, tmp_path):
         # Regression test for #5444: a Solution pickled in one process and
