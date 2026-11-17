@@ -56,7 +56,7 @@ whose job never reported, not a pass.
 
 | Model | Results | Last passing |
 | --- | --- | --- |
-| dual_continuum | not yet run | — |
+| dual_continuum | `26.10.1.0`: pass, `26.10.1.1`: pass, `main`: pass | 26.10.1.1 |
 | linearised_spm | `26.10.1.0`: pass, `26.10.1.1`: pass, `main`: pass | 26.10.1.1 |
 | multilayer_3d_thermal | `26.10.1.0`: pass, `26.10.1.1`: pass, `main`: pass | 26.10.1.1 |
 
