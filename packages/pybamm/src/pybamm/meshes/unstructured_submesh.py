@@ -908,6 +908,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         self.merge_tolerance = merge_tolerance
         self._cached_mesh = None
         self._cached_cells = None
+        self._cached_cells_source = None
 
     def __call__(self, lims, npts):
         meshio = pybamm.import_optional_dependency("meshio")
@@ -922,9 +923,10 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         domain_name = self._domain_name_from_lims(lims)
 
         # Extract (and validate) supported cells once per loaded mesh
-        if self._cached_cells is None or self._cached_cells[0] is not mesh:
-            self._cached_cells = (mesh, *self._extract_supported_cells(mesh))
-        _, cells, cell_type = self._cached_cells
+        if self._cached_cells_source is not mesh:
+            self._cached_cells = self._extract_supported_cells(mesh)
+            self._cached_cells_source = mesh
+        cells, cell_type = self._cached_cells
 
         if domain_name and domain_name in self.subdomain_mapping:
             tag_value = self.subdomain_mapping[domain_name]
