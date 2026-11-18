@@ -95,9 +95,8 @@ def composite_parameter_values(options=None):
             "Secondary: Negative electrode OCP [V]": (
                 lambda sto: (lithiation(sto) + delithiation(sto)) / 2
             ),
-            "Negative electrode density [kg.m-3]": parameter_values[
-                "Primary: Negative electrode density [kg.m-3]"
-            ],
+            # Chen2020_composite's electrode-level density, for older pybamm
+            "Negative electrode density [kg.m-3]": 1657.0,
         },
         check_already_exists=False,
     )
@@ -796,7 +795,8 @@ class TestPhysics:
 
         def stack(options):
             model = MultiLayer3DThermalSPM(2, options=options)
-            parameter_values = cooled(model)
+            # Hold the stack at ambient so the contact heat does not shift the voltage
+            parameter_values = cooled(model, h=1e6)
             parameter_values["Contact resistance [Ohm]"] = resistance
             return solve(model, parameter_values, 600)
 
