@@ -88,7 +88,9 @@ class SEIThickness(BaseModel):
             if crack_option == "false":
                 L_sei = c_sei * c_to_L
             else:
-                roughness = variables[f"{Domain} electrode roughness ratio"]
+                roughness = variables[
+                    f"{Domain} {self.phase_name}electrode roughness ratio"
+                ]
                 L_sei = c_sei * c_to_L / (roughness - 1)  # SEI on cracks thickness
             if self.size_distribution:
                 L_sei_sav = pybamm.size_average(L_sei)
