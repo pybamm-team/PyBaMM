@@ -31,6 +31,7 @@
 
 ## Bug fixes
 
+- With `"sensitivity_error_control"`, `Solution.solver_statistics` and the `IDAKLUSolver` `"print_stats"` output now count the sensitivity corrector's nonlinear iterations, nonlinear convergence failures, linear solver setups and error test failures. ([#6069](https://github.com/pybamm-team/PyBaMM/pull/6069))
 - `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
 - The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))
 - One-state hysteresis models now take their initial potentials from the OCP at the initial hysteresis state, not the equilibrium OCP, so an inconsistent equilibrium OCP no longer stops them starting. ([#6042](https://github.com/pybamm-team/PyBaMM/pull/6042))

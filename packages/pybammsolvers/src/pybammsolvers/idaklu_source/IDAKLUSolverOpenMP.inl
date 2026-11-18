@@ -274,6 +274,17 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
     // Set once: IDASensReInit leaves it as it is
     CheckErrors(IDASetSensErrCon(ida_mem, solver_opts.sensitivity_error_control),
                 "IDASetSensErrCon");
+    if (solver_opts.sensitivity_error_control) {
+      // IDAS 7.6 counts staggered sensitivity error test failures as the
+      // quadrature's; left out of the error test, this one never changes a step
+      yyQ = N_VNew_Serial(1, sunctx);
+      N_VConst(SUN_RCONST(0.0), yyQ);
+      auto const zero_rhs = [](sunrealtype, N_Vector, N_Vector, N_Vector rhsQ, void *) {
+        N_VConst(SUN_RCONST(0.0), rhsQ);
+        return 0;
+      };
+      CheckErrors(IDAQuadInit(ida_mem, zero_rhs, yyQ), "IDAQuadInit");
+    }
   }
 
   CheckErrors(SUNLinSolInitialize(LS), "SUNLinSolInitialize");
@@ -327,6 +338,9 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
   if (sensitivity) {
     N_VDestroyVectorArray(yyS, number_of_parameters);
     N_VDestroyVectorArray(yypS, number_of_parameters);
+  }
+  if (yyQ != nullptr) {
+    N_VDestroy(yyQ);
   }
 
   IDAFree(&ida_mem);
@@ -988,6 +1002,10 @@ void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const sunrealtype& t_va
     CheckErrors(IDASensReInit(ida_mem, SensitivityMethod(), yyS, yypS), "IDASensReInit");
     ApplySensitivityScales();
   }
+  if (yyQ != nullptr) {
+    // Resets the quadrature counters along with the others
+    CheckErrors(IDAQuadReInit(ida_mem, yyQ), "IDAQuadReInit");
+  }
 }
 
 template <class ExprSet>
@@ -1335,6 +1353,34 @@ PendingStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
   ), "IDAGetIntegratorStats");
 
   CheckErrors(IDAGetNonlinSolvStats(ida_mem, &stats.nniters, &stats.nncfails), "IDAGetNonlinSolvStats");
+
+  if (sensitivity) {
+    // Only the staggered corrector uses these counters, for work that the
+    // state counters leave out
+    long sens_nniters = 0;
+    long sens_nncfails = 0;
+    long sens_nlinsetups = 0;
+    CheckErrors(IDAGetSensNonlinSolvStats(ida_mem, &sens_nniters, &sens_nncfails),
+                "IDAGetSensNonlinSolvStats");
+    CheckErrors(IDAGetSensNumLinSolvSetups(ida_mem, &sens_nlinsetups),
+                "IDAGetSensNumLinSolvSetups");
+    stats.nniters += sens_nniters;
+    stats.nncfails += sens_nncfails;
+    stats.nlinsetups += sens_nlinsetups;
+
+    // IDAS 7.6 counts sensitivity error test failures as the quadrature's;
+    // adding both stays right if it later counts them as the sensitivities'
+    long sens_netfails = 0;
+    CheckErrors(IDAGetSensNumErrTestFails(ida_mem, &sens_netfails),
+                "IDAGetSensNumErrTestFails");
+    stats.netfails += sens_netfails;
+    if (yyQ != nullptr) {
+      long quadrature_netfails = 0;
+      CheckErrors(IDAGetQuadNumErrTestFails(ida_mem, &quadrature_netfails),
+                  "IDAGetQuadNumErrTestFails");
+      stats.netfails += quadrature_netfails;
+    }
+  }
 
   CheckErrors(IDAGetNumJacEvals(ida_mem, &stats.njevals), "IDAGetNumJacEvals");
   if (setup_opts.using_iterative_solver) {

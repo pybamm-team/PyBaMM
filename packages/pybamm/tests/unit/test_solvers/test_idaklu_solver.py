@@ -2722,6 +2722,38 @@ def _van_der_pol_model():
     return model
 
 
+def _forced_decay_model():
+    """Discretised decay forced by an input ``p``, whose sensitivity oscillates."""
+    model = pybamm.BaseModel()
+    u = pybamm.Variable("u")
+    model.rhs = {u: -u / 10 + pybamm.InputParameter("p") * pybamm.sin(2 * pybamm.t)}
+    model.initial_conditions = {u: 1}
+    model.variables = {"u": u}
+    pybamm.Discretisation().process_model(model)
+    return model
+
+
+def _printed_statistics(printed):
+    """The ``SolverStatistics`` in one block printed by ``print_stats``."""
+
+    def printed_count(label):
+        return int(re.search(rf"\t{label} = (\d+)", printed)[1])
+
+    return pybamm.SolverStatistics(
+        number_of_steps=printed_count("Number of steps"),
+        number_of_linear_solver_setups=printed_count(
+            "Number of linear solver setup calls"
+        ),
+        number_of_nonlinear_solver_iterations=printed_count(
+            "Number of nonlinear iterations performed"
+        ),
+        number_of_nonlinear_solver_fails=printed_count(
+            "Number of nonlinear convergence failures"
+        ),
+        number_of_error_test_failures=printed_count("Number of error test failures"),
+    )
+
+
 class TestIDAKLUSolverStatistics:
     def test_statistics_match_the_printed_statistics(self):
         # A cap of two Newton iterations makes every counter nonzero
@@ -2732,27 +2764,71 @@ class TestIDAKLUSolverStatistics:
         with redirect_stdout(printed):
             solution = solver.solve(_van_der_pol_model(), [0, 3000])
 
-        def printed_count(label):
-            return int(re.search(rf"\t{label} = (\d+)", printed.getvalue())[1])
-
         stats = solution.solver_statistics
-        assert stats == pybamm.SolverStatistics(
-            number_of_steps=printed_count("Number of steps"),
-            number_of_linear_solver_setups=printed_count(
-                "Number of linear solver setup calls"
-            ),
-            number_of_nonlinear_solver_iterations=printed_count(
-                "Number of nonlinear iterations performed"
-            ),
-            number_of_nonlinear_solver_fails=printed_count(
-                "Number of nonlinear convergence failures"
-            ),
-            number_of_error_test_failures=printed_count(
-                "Number of error test failures"
-            ),
-        )
+        assert stats == _printed_statistics(printed.getvalue())
         assert all(count > 0 for count in dataclasses.astuple(stats))
         assert stats.number_of_nonlinear_solver_iterations >= stats.number_of_steps
+
+    def test_statistics_count_the_staggered_sensitivity_corrector(self):
+        # With one Newton iteration allowed, the sensitivity corrector fails on
+        # most steps here, the state corrector on few
+        solver = pybamm.IDAKLUSolver(
+            options={
+                "print_stats": True,
+                "max_nonlinear_iterations": 1,
+                "sensitivity_error_control": True,
+            }
+        )
+        printed = io.StringIO()
+        with redirect_stdout(printed):
+            solution = solver.solve(
+                _forced_decay_model(),
+                [0, 1],
+                inputs={"p": 0.0},
+                calculate_sensitivities=True,
+            )
+
+        stats = solution.solver_statistics
+        assert stats == _printed_statistics(printed.getvalue())
+        # Each step converges the states and then the sensitivities
+        assert stats.number_of_nonlinear_solver_iterations >= 2 * stats.number_of_steps
+        assert stats.number_of_nonlinear_solver_fails >= stats.number_of_steps / 2
+
+    def test_statistics_count_sensitivity_error_test_failures(self):
+        # p = 0 leaves the state a smooth decay that passes the error test, so
+        # every failure here is the sensitivity's
+        solver = pybamm.IDAKLUSolver(
+            options={"print_stats": True, "sensitivity_error_control": True}
+        )
+        printed = io.StringIO()
+        with redirect_stdout(printed):
+            solution = solver.solve(
+                _forced_decay_model(),
+                [0, 100],
+                inputs={"p": 0.0},
+                calculate_sensitivities=True,
+            )
+
+        stats = solution.solver_statistics
+        assert stats == _printed_statistics(printed.getvalue())
+        assert stats.number_of_error_test_failures > 10
+
+    def test_sensitivity_error_test_failures_restart_with_the_integrator(self):
+        solver = pybamm.IDAKLUSolver(options={"sensitivity_error_control": True})
+        model = _forced_decay_model()
+
+        def error_test_failures(t_eval):
+            solution = solver.solve(
+                model, t_eval, inputs={"p": 0.0}, calculate_sensitivities=True
+            )
+            return solution.solver_statistics.number_of_error_test_failures
+
+        first = error_test_failures([0, 100])
+        assert error_test_failures([0, 100]) == first
+        # The breakpoint at t = 100 restarts the count, so the short tail after
+        # it adds its own few failures and not the first segment's again
+        both = error_test_failures(np.array([0.0, 100.0, 101.0]))
+        assert first <= both < 2 * first
 
     def test_statistics_accumulate_across_a_breakpoint(self, decay_model):
         solver = pybamm.IDAKLUSolver()
