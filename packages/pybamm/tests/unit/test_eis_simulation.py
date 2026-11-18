@@ -194,6 +194,33 @@ class TestEISSolution:
 class TestEISSimulationSolve:
     """Tests for EIS frequency-domain solving."""
 
+    @pytest.mark.parametrize("reverse_first", [False, True])
+    def test_repeated_solve_with_reordered_inputs(self, reverse_first):
+        model = pybamm.lithium_ion.SPM({"surface form": "differential"})
+        values = {
+            "Negative electrode double-layer capacity [F.m-2]": 0.1,
+            "Positive electrode double-layer capacity [F.m-2]": 0.4,
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(values)
+        frequencies = np.logspace(-2, 2, 5)
+        reference = (
+            pybamm.EISSimulation(model, parameter_values=parameter_values)
+            .solve(frequencies)
+            .impedance
+        )
+        parameter_values.update({name: "[input]" for name in values})
+        simulation = pybamm.EISSimulation(model, parameter_values=parameter_values)
+        reordered = dict(reversed(list(values.items())))
+        inputs_sequence = [values, reordered, values]
+        if reverse_first:
+            inputs_sequence = [reordered, values, reordered]
+        for inputs in inputs_sequence:
+            result = simulation.solve(frequencies, inputs=inputs)
+            np.testing.assert_allclose(
+                result.impedance, reference, rtol=1e-10, atol=1e-12
+            )
+
     def test_impedance_is_independent_of_algebraic_state_order(self):
         model = pybamm.lithium_ion.SPM(options={"surface form": "differential"})
         frequencies = np.logspace(-2, 4, 12)
