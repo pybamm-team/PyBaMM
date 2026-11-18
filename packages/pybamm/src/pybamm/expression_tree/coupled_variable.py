@@ -37,6 +37,10 @@ class CoupledVariable(pybamm.Symbol):
         """
         return pybamm.evaluate_for_shape_using_domain(self._domains)
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """Creates a new copy of the coupled variable."""
         return CoupledVariable(self.name, self._domains["primary"])

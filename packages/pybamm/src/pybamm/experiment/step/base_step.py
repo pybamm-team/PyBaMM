@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numbers
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 import numpy as np
 
@@ -11,7 +11,7 @@ import pybamm
 from .step_termination import _read_termination
 
 
-class ControlKind(str, Enum):
+class ControlKind(StrEnum):
     """The control-law shape of a step (the quantity its residual fixes)."""
 
     CURRENT = "current"
@@ -296,6 +296,10 @@ class BaseStep:
     #: their target value collapse to one unified-mode branch.
     control_kind = None
 
+    #: The scalar output the solver's ``upsampling_tolerance`` resolves. An
+    #: algebraic state adds no points, as the integrator already resolves it.
+    upsampling_variable = "Voltage [V]"
+
     def get_control_residual(self, variables, target=None):
         """Control residual. ``target`` is the per-step input that collapsible steps
         share; when it is ``None`` the step falls back to its own ``_default_target``."""
@@ -457,11 +461,13 @@ class BaseStep:
             new_parameter_values["Ambient temperature [K]"] = self.temperature
 
         # Parameterise the model
-        return new_parameter_values.process_model(
+        processed_model = new_parameter_values.process_model(
             new_model,
             inplace=inplace,
             delayed_variable_processing=delayed_variable_processing,
         )
+        processed_model.upsampling_variable = self.upsampling_variable
+        return processed_model
 
     def get_termination_events(self, variables):
         events = []
@@ -684,13 +690,19 @@ def _convert_time_to_seconds(time_and_units):
             "time units must be 'seconds', 'minutes' or 'hours'. "
             f"For example: {_examples}"
         )
+    # Strings like "-5 minutes" must fail like the number -300 does
+    if time_in_seconds <= 0:
+        raise ValueError("time must be positive")
     return time_in_seconds
 
 
 def _convert_temperature_to_kelvin(temperature_and_units):
     """Convert a temperature in Celsius or Kelvin to a temperature in Kelvin"""
     # If the temperature is a number, assume it is in Kelvin
-    if isinstance(temperature_and_units, int | float) or temperature_and_units is None:
+    if (
+        isinstance(temperature_and_units, numbers.Number)
+        or temperature_and_units is None
+    ):
         return temperature_and_units
 
     # Split number and units

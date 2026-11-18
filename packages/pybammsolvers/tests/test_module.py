@@ -70,3 +70,19 @@ class TestPackageStructure:
         assert callable(idaklu_module.create_casadi_solver_group)
         assert callable(idaklu_module.generate_function)
         assert callable(idaklu_module.create_idaklu_jax)
+
+    @pytest.mark.parametrize(
+        ("flag", "name"),
+        [
+            (-9, "IDA_REP_RES_ERR"),
+            (-41, "IDA_SRES_FAIL"),
+            (-42, "IDA_REP_SRES_ERR"),
+        ],
+    )
+    def test_residual_failure_messages(self, idaklu_module, flag, name):
+        """
+        Verify the residual failures the solver can raise have named messages,
+        as non-finite residuals fail recoverably until IDAS gives up.
+        """
+        message = idaklu_module.sundials_error_message(flag)
+        assert message.startswith(f"{name}: ")

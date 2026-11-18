@@ -7,6 +7,24 @@ PyBaMM's.
 
 ### Added
 
+- `dual_continuum`: the dual-continuum model of Paten et al. (2026), a DFN with a homogenised active-material balance (DC0, DC1, transient DC1t or Yang closures), closure fitting, and the `Paten2026_DC`, `Paten2026_DFN` and `Paten2026_3D_NMC` parameter sets ([#5911](https://github.com/pybamm-team/PyBaMM/pull/5911))
+
+### Changed
+
+- Require `pybamm[plot]` so that every model's examples and README snippets can
+  plot results in a clean install ([#5926](https://github.com/pybamm-team/PyBaMM/pull/5926))
+
+## [0.1.1] - 2026-10-14
+
+### Fixed
+
+- Require `pybamm[cite]` so `pybamm.print_citations()` credits a zoo model's
+  authors in a clean install ([#5910](https://github.com/pybamm-team/PyBaMM/pull/5910))
+
+## [0.1.0] - 2026-10-14
+
+### Added
+
 - The model zoo: per-model manifests, a registry, a ten-check contract suite, a
   template and generator, generated docs pages and status badges, and the
   `linearised_spm` reference entry ([#5727](https://github.com/pybamm-team/PyBaMM/pull/5727))

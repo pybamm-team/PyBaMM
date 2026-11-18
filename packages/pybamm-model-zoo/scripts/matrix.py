@@ -25,7 +25,7 @@ PYPI_URL = "https://pypi.org/pypi/pybamm/json"
 
 def released_versions() -> list[str]:
     """Every final PyBaMM release on PyPI, oldest first."""
-    with urllib.request.urlopen(PYPI_URL) as response:  # nosec B310 - literal https URL
+    with urllib.request.urlopen(PYPI_URL) as response:
         releases = json.load(response)["releases"]
     return sorted_releases(version for version, files in releases.items() if files)
 
