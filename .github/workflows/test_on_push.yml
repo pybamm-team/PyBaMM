@@ -41,13 +41,16 @@ jobs:
       full_push: ${{ github.event_name == 'push' && steps.queue.outputs.validated != 'true' }}
       # Routing decisions, resolved once here rather than repeated in every job's `if`.
       run_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
+      # macOS and Windows legs skip the merge queue: the pull request already ran them
+      # on the same change, and their runners are the scarcest.
+      run_platform_tests: ${{ (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
       run_docs_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
       # A core change runs the zoo too, so an upstream regression shows up here
       # rather than in a contributor's next pull request.
       run_zoo_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.model_zoo == 'true' }}
-      # Solver-wheel platforms each scenario's downstream jobs actually consume.
-      platforms: ${{ steps.route.outputs.platforms }}
-      macos_runners: ${{ steps.route.outputs.macos_runners }}
+      # Solver wheels each scenario's downstream jobs actually consume.
+      macos_archs: ${{ steps.route.outputs.macos_archs }}
+      windows_wheels: ${{ steps.route.outputs.windows_wheels }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -121,7 +124,7 @@ jobs:
               - 'docs/source/model_zoo/**'
 
       # Map "what changed" to the solver wheels to build: solver PRs validate every
-      # platform; pybamm/push need the sparse matrix's runners; docs-only needs Linux.
+      # platform; pybamm/push need the sparse matrix's runners; the rest need Linux only.
       - id: route
         env:
           EVENT: ${{ github.event_name }}
@@ -129,18 +132,18 @@ jobs:
           PYBAMM: ${{ steps.filter.outputs.pybamm }}
         run: |
           if [ "$SOLVER" = true ]; then
-            platforms='["linux", "windows"]'
-            macos='["macos-15-intel", "macos-latest"]'
-          elif [ "$EVENT" != pull_request ] || [ "$PYBAMM" = true ]; then
-            platforms='["linux", "windows"]'
-            macos='["macos-latest"]'
+            macos='["x86_64", "arm64"]'
+            windows=true
+          elif [ "$EVENT" = push ] || [ "$PYBAMM" = true ]; then
+            macos='["arm64"]'
+            windows=true
           else
-            platforms='["linux"]'
             macos='[]'
+            windows=false
           fi
           {
-            echo "platforms=$platforms"
-            echo "macos_runners=$macos"
+            echo "macos_archs=$macos"
+            echo "windows_wheels=$windows"
           } >> "$GITHUB_OUTPUT"
 
   rust_msrv:
@@ -244,16 +247,12 @@ jobs:
       - name: Check uv.lock is up to date
         run: uv lock --check
 
-  # Build the in-repo solver once per platform (cibuildwheel, incl. Windows via
-  # vcpkg) and cache the wheels on the solver source hash. PyBaMM's matrix below
-  # installs these prebuilt wheels instead of rebuilding the solver per cell.
-  # The reusable workflow's CIBW_TEST_COMMAND also runs the solver's own pytest
-  # on every platform, which (with the PyBaMM matrix) supersedes the solver's
-  # old standalone unit/integration workflows.
-  build_solver:
+  # Cached solver wheels (each build also runs the solver's own tests). One call per
+  # platform, so a Linux job never waits for a macOS runner.
+  build_solver_linux:
     needs: changes
     if: ${{ github.event_name == 'push' || needs.changes.outputs.run_docs_tests == 'true' || needs.changes.outputs.run_zoo_tests == 'true' }}
-    name: Solver wheels
+    name: Solver wheels (Linux)
     # Pass contents:read down to the called workflow (this workflow's top-level
     # permissions are {}, so the reusable workflow's checkout would otherwise
     # get no token scope).
@@ -263,15 +262,39 @@ jobs:
     with:
       cache_wheels: true
       build_sdist: false
-      # Build only the wheels the triggered jobs consume (see the changes job's route step).
-      platforms: ${{ needs.changes.outputs.platforms }}
-      macos_runners: ${{ needs.changes.outputs.macos_runners }}
+      platforms: '["linux"]'
+      macos_archs: '[]'
 
-  # Gated by ci_gate. Full Python on x86 Linux + min/max endpoints on ARM Linux and
-  # macOS; interior versions run nightly (run_periodic_tests.yml). ubuntu-latest/3.13
-  # is absent here because it runs the coverage and integration jobs below instead.
+  build_solver_macos:
+    needs: changes
+    if: ${{ needs.changes.outputs.macos_archs != '[]' }}
+    name: Solver wheels (macOS)
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: true
+      build_sdist: false
+      platforms: '[]'
+      macos_archs: ${{ needs.changes.outputs.macos_archs }}
+
+  build_solver_windows:
+    needs: changes
+    if: ${{ needs.changes.outputs.windows_wheels == 'true' }}
+    name: Solver wheels (Windows)
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_build_solver_wheels.yml
+    with:
+      cache_wheels: true
+      build_sdist: false
+      platforms: '["windows"]'
+      macos_archs: '[]'
+
+  # x86 Linux runs every Python but 3.13, which runs coverage instead; ARM Linux
+  # runs the min/max, with interior versions nightly.
   run_unit_tests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Tests
     permissions:
@@ -285,15 +308,27 @@ jobs:
          {"os": "ubuntu-latest", "python": "3.14"},
          {"os": "ubuntu-latest", "python": "3.15"},
          {"os": "ubuntu-24.04-arm", "python": "3.11"},
-         {"os": "ubuntu-24.04-arm", "python": "3.15"},
-         {"os": "macos-latest", "python": "3.11"},
-         {"os": "macos-latest", "python": "3.15"}]
+         {"os": "ubuntu-24.04-arm", "python": "3.15"}]
+
+  # Gated, but on pull requests only (see the changes job's run_platform_tests).
+  run_unit_tests_macos:
+    needs: [changes, build_solver_macos]
+    if: ${{ needs.changes.outputs.run_platform_tests == 'true' }}
+    name: Tests
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: unit
+      legs: >-
+        [{"os": "${{ vars.MACOS_ARM64_RUNNER || 'macos-latest' }}", "python": "3.11"},
+         {"os": "${{ vars.MACOS_ARM64_RUNNER || 'macos-latest' }}", "python": "3.15"}]
 
   # Advisory: reports red on failure but is deliberately absent from ci_gate's
   # needs, so a flaky Windows run never blocks a merge.
   run_unit_tests_advisory:
-    needs: [changes, build_solver]
-    if: ${{ needs.changes.outputs.run_tests == 'true' }}
+    needs: [changes, build_solver_windows]
+    if: ${{ needs.changes.outputs.run_platform_tests == 'true' }}
     name: Tests
     permissions:
       contents: read
@@ -305,7 +340,7 @@ jobs:
          {"os": "windows-latest", "python": "3.15"}]
 
   run_coverage:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ github.event_name == 'push' || needs.changes.outputs.run_tests == 'true' }}
     name: Coverage
     permissions:
@@ -319,7 +354,7 @@ jobs:
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_integration_tests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Integration tests
     permissions:
@@ -369,7 +404,7 @@ jobs:
           uv run python -m pytest packages/pybamm/tests/unit/test_solvers/test_idaklu_solver.py -q
 
   run_doctests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
     name: Doctests
     permissions:
@@ -382,7 +417,7 @@ jobs:
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_example_tests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_docs_tests == 'true' }}
     name: Example notebooks
     permissions:
@@ -393,7 +428,7 @@ jobs:
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_scripts_tests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Example scripts
     permissions:
@@ -404,7 +439,7 @@ jobs:
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_type_check:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Type check
     permissions:
@@ -415,7 +450,7 @@ jobs:
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
   run_memory_tests:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_tests == 'true' }}
     name: Memory tests
     permissions:
@@ -428,7 +463,7 @@ jobs:
   # The `core` tier: models the maintainers have adopted, so a failure blocks a
   # merge exactly as a core test failure would.
   run_zoo_gating:
-    needs: [changes, build_solver]
+    needs: [changes, build_solver_linux]
     if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
     name: Model zoo (core tier)
     permissions:
@@ -439,11 +474,11 @@ jobs:
       timeout_minutes: 30
       legs: '[{"os": "ubuntu-latest", "python": "3.13"}]'
 
-  # Advisory like run_unit_tests_advisory above: `community` reports red without
-  # blocking. The gate above covers `core`, so this runs only what it does not.
+  # Advisory, so skipped in the merge queue, where it could block nothing. The gate
+  # above covers `core`, so this runs only what it does not.
   run_zoo_tests_advisory:
-    needs: [changes, build_solver]
-    if: ${{ needs.changes.outputs.run_zoo_tests == 'true' }}
+    needs: [changes, build_solver_linux]
+    if: ${{ github.event_name != 'merge_group' && needs.changes.outputs.run_zoo_tests == 'true' }}
     name: Model zoo
     permissions:
       contents: read
@@ -462,8 +497,11 @@ jobs:
       - style
       - rust_msrv
       - rust_tests
-      - build_solver
+      - build_solver_linux
+      - build_solver_macos
+      - build_solver_windows
       - run_unit_tests
+      - run_unit_tests_macos
       - run_coverage
       - run_integration_tests
       - from_source_smoke
