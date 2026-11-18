@@ -29,6 +29,8 @@ jobs:
     with:
       target: ${{ matrix.target }}
       cache_wheels: false
+      # A forgotten shortage override must not reach PyPI.
+      runner_overrides: false
       save_vcpkg_logs: ${{ github.event_name == 'workflow_dispatch' && inputs.save_vcpkg_logs }}
 
   build_sdist:

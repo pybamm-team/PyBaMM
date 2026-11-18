@@ -74,7 +74,7 @@ jobs:
     runs-on: >-
       ${{ (inputs.target == 'linux-x64' && (vars.RUNNER_LINUX_X64 || 'ubuntu-latest'))
       || (inputs.target == 'linux-arm64' && (vars.RUNNER_LINUX_ARM64 || 'ubuntu-24.04-arm'))
-      || (inputs.target == 'windows-x64' && (vars.RUNNER_WINDOWS_X64 || 'windows-latest'))
+      || (inputs.target == 'windows-x64' && (vars.RUNNER_WINDOWS_X64 || 'windows-2025'))
       || (inputs.target == 'macos-arm64' && (vars.RUNNER_MACOS_ARM64 || 'macos-latest'))
       || (inputs.target == 'macos-x64' && (vars.RUNNER_MACOS_X64 || 'macos-15-intel')) }}
     timeout-minutes: ${{ inputs.timeout_minutes }}

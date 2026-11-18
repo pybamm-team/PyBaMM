@@ -121,8 +121,8 @@ jobs:
               - '.github/workflows/model_zoo_status.yml'
               - 'docs/source/model_zoo/**'
 
-      # Scarce targets never run in the merge queue. A queued push only warms the caches
-      # PRs restore; macos-x64 tests nightly, so only solver PRs build its wheel.
+      # Scarce targets skip the merge queue and queued pushes (solver_wheel_cache.yml warms
+      # main); macos-x64 tests nightly, so only solver PRs build its wheel.
       - id: route
         env:
           EVENT: ${{ github.event_name }}
@@ -137,7 +137,7 @@ jobs:
           elif [ "$EVENT" = pull_request ] && [ "$PYBAMM" != true ] && [ "$SOLVER" != true ]; then
             targets='[]'
           elif [ "$EVENT" = push ] && [ "$VALIDATED" = true ]; then
-            pythons='[]'
+            targets='[]'
           fi
           platforms=$(jq -nc --argjson t "$targets" --argjson p "$pythons" '[$t[] | {target: ., pythons: ($p | tojson)}]')
           if [ "$SOLVER" = true ]; then

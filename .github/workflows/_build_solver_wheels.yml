@@ -23,6 +23,11 @@ on:
         default: false
         required: false
         type: boolean
+      runner_overrides:
+        description: "Honour the RUNNER_<TARGET> repo variables; releases pass false to build on the defaults."
+        default: true
+        required: false
+        type: boolean
       save_vcpkg_logs:
         description: "Upload vcpkg build logs for Windows (useful for debugging CI failures)."
         default: false
@@ -51,13 +56,14 @@ jobs:
     outputs:
       key: ${{ steps.key.outputs.key }}
       build: ${{ steps.cache.outputs.cache-hit != 'true' }}
-      # The same map as _nox.yml's runs-on.
+      # The same map as _nox.yml's runs-on. Windows stays pinned, as its image's
+      # MSVC sets the runtime the wheels need.
       runner: >-
-        ${{ (inputs.target == 'linux-x64' && (vars.RUNNER_LINUX_X64 || 'ubuntu-latest'))
-        || (inputs.target == 'linux-arm64' && (vars.RUNNER_LINUX_ARM64 || 'ubuntu-24.04-arm'))
-        || (inputs.target == 'windows-x64' && (vars.RUNNER_WINDOWS_X64 || 'windows-latest'))
-        || (inputs.target == 'macos-arm64' && (vars.RUNNER_MACOS_ARM64 || 'macos-latest'))
-        || (inputs.target == 'macos-x64' && (vars.RUNNER_MACOS_X64 || 'macos-15-intel')) }}
+        ${{ (inputs.target == 'linux-x64' && (inputs.runner_overrides && vars.RUNNER_LINUX_X64 || 'ubuntu-latest'))
+        || (inputs.target == 'linux-arm64' && (inputs.runner_overrides && vars.RUNNER_LINUX_ARM64 || 'ubuntu-24.04-arm'))
+        || (inputs.target == 'windows-x64' && (inputs.runner_overrides && vars.RUNNER_WINDOWS_X64 || 'windows-2025'))
+        || (inputs.target == 'macos-arm64' && (inputs.runner_overrides && vars.RUNNER_MACOS_ARM64 || 'macos-latest'))
+        || (inputs.target == 'macos-x64' && (inputs.runner_overrides && vars.RUNNER_MACOS_X64 || 'macos-15-intel')) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
