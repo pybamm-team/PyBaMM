@@ -31,6 +31,7 @@
 
 ## Bug fixes
 
+- `latexify` no longer produces invalid LaTeX ("Double superscript") for the boundary value or boundary gradient of an expression that already has a superscript, such as a Bruggeman-corrected solid volume fraction in the DFN model. ([#6043](https://github.com/pybamm-team/PyBaMM/pull/6043))
 - `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
 - The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))
 - One-state hysteresis models now take their initial potentials from the OCP at the initial hysteresis state, not the equilibrium OCP, so an inconsistent equilibrium OCP no longer stops them starting. ([#6042](https://github.com/pybamm-team/PyBaMM/pull/6042))
