@@ -2,8 +2,6 @@
 # Method for plotting voltage components
 #
 
-from scipy.integrate import cumulative_trapezoid
-
 from pybamm.simulation import BaseSimulation
 from pybamm.solvers.solution import Solution
 from pybamm.util import import_optional_dependency
@@ -35,6 +33,8 @@ def plot_thermal_components(
         Keyword arguments, passed to ax.fill_between
 
     """
+    from scipy.integrate import cumulative_trapezoid
+
     # Check if the input is a Simulation and extract Solution
     if isinstance(input_data, BaseSimulation):
         solution = input_data.solution
