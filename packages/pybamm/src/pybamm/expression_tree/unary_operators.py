@@ -718,7 +718,7 @@ class Integral(SpatialOperator):
 
     Parameters
     ----------
-    function : :class:`pybamm.Symbol`
+    child : :class:`pybamm.Symbol`
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
@@ -839,7 +839,7 @@ class BaseIndefiniteIntegral(Integral):
 
     Parameters
     ----------
-    function : :class:`pybamm.Symbol`
+    child : :class:`pybamm.Symbol`
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
@@ -884,7 +884,7 @@ class IndefiniteIntegral(BaseIndefiniteIntegral):
 
     Parameters
     ----------
-    function : :class:`pybamm.Symbol`
+    child : :class:`pybamm.Symbol`
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
@@ -905,7 +905,7 @@ class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
 
     Parameters
     ----------
-    function : :class:`pybamm.Symbol`
+    child : :class:`pybamm.Symbol`
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
@@ -928,7 +928,7 @@ class DefiniteIntegralVector(SpatialOperator):
 
     Parameters
     ----------
-    variable : :class:`pybamm.Symbol`
+    child : :class:`pybamm.Symbol`
         The variable whose basis will be integrated over the entire domain (will
         become self.children[0])
     vector_type : str, optional
@@ -967,7 +967,7 @@ class BoundaryIntegral(SpatialOperator):
 
     Parameters
     ----------
-    function : :class:`pybamm.Symbol`
+    child : :class:`pybamm.Symbol`
         The function to be integrated (will become self.children[0])
     region : str, optional
         The region of the boundary over which to integrate. If region is `entire`
