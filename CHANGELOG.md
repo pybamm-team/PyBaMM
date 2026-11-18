@@ -87,6 +87,7 @@
 - Half-cell models with `"surface form"` and a non-isothermal `"thermal"` option now build, instead of failing with a `ShapeError`. ([#5540](https://github.com/pybamm-team/PyBaMM/pull/5540))
 - Input-dependent geometry limits on a submesh that needs numbers, such as the default `Uniform1DSubMesh`, raise a `GeometryError` pointing to `pybamm.SymbolicUniform1DSubMesh` instead of an `IndexError`, and input-dependent tab positions raise one instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 - `output_variables` with `/` in their names, such as `"Entropic change [V/K]"`, or with names that differ only in punctuation now work, including with the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `"SEI film resistance": "average"` now works with `"particle size": "distribution"` in SPMe, DFN and Newman-Tobias, which raised a `DomainError` when building the model. ([#5892](https://github.com/pybamm-team/PyBaMM/pull/5892))
 
 ## Optimizations
 
