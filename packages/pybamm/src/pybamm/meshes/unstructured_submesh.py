@@ -1,6 +1,6 @@
 import hashlib
 import itertools
-from enum import Enum
+from enum import StrEnum
 
 import numpy as np
 
@@ -17,15 +17,18 @@ _CONTAINS_POINTS_INFLATION = 1e-9
 # containment masks remembered per mesh, keyed by the query-point array
 _CONTAINS_POINTS_CACHE_SIZE = 8
 # hex faces whose diagonals miss each other by more than this fraction of the
-# face size are warped; loose enough for welding/round-off on thin cells
+# face size are warped; leaves headroom for round-off on micron-scale faces
 _HEX_FACE_PLANARITY_TOLERANCE = 1e-6
+# quad faces with |diag1 x diag2| below this fraction of the squared face size
+# have zero area (collapsed, e.g. repeated nodes)
+_HEX_FACE_DEGENERACY_TOLERANCE = 1e-12
 
 
-class ElementType(str, Enum):
+class ElementType(StrEnum):
     """Element types supported by :class:`UnstructuredSubMesh`.
 
-    The ``str`` mixin keeps plain strings (``element_type="quad"``)
-    working everywhere an ``ElementType`` is expected.
+    Members are strings, so plain strings (``element_type="quad"``)
+    work everywhere an ``ElementType`` is expected.
     """
 
     TRIANGLE = "triangle"
@@ -111,13 +114,16 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_cell_geometry(self):
-        verts = self.vertices[self.elements]  # (n_cells, n_verts, d)
+        # Contiguous (n_cells, d) array per local vertex
+        verts = [
+            self.vertices[self.elements[:, i]] for i in range(self.elements.shape[1])
+        ]
         # Vertex mean is the exact centroid for simplices (triangles, tets);
         # quads and hexes overwrite it with the true area/volume centroid.
-        self.cell_centroids = verts.mean(axis=1)
+        self.cell_centroids = np.mean(verts, axis=0)
 
         if self.element_type == ElementType.TRIANGLE:
-            v0, v1, v2 = verts[:, 0], verts[:, 1], verts[:, 2]
+            v0, v1, v2 = verts
             cross = (v1[:, 0] - v0[:, 0]) * (v2[:, 1] - v0[:, 1]) - (
                 v1[:, 1] - v0[:, 1]
             ) * (v2[:, 0] - v0[:, 0])
@@ -125,8 +131,8 @@ class UnstructuredSubMesh(SubMesh):
         elif self.element_type == ElementType.QUAD:
             # Shoelace formula for arbitrary simple quadrilaterals
             # Vertices ordered: v0, v1, v2, v3 (counterclockwise or clockwise)
-            x = verts[:, :, 0]  # (n_cells, 4)
-            y = verts[:, :, 1]  # (n_cells, 4)
+            x = np.column_stack([v[:, 0] for v in verts])  # (n_cells, 4)
+            y = np.column_stack([v[:, 1] for v in verts])  # (n_cells, 4)
             # shoelace: sum_i (x_i * y_{i+1} - x_{i+1} * y_i)
             x_next = np.roll(x, -1, axis=1)
             y_next = np.roll(y, -1, axis=1)
@@ -139,7 +145,7 @@ class UnstructuredSubMesh(SubMesh):
             cy = np.sum((y + y_next) * cross, axis=1) / (6.0 * signed_area)
             self.cell_centroids = np.column_stack([cx, cy])
         elif self.element_type == ElementType.TETRAHEDRON:
-            v0, v1, v2, v3 = verts[:, 0], verts[:, 1], verts[:, 2], verts[:, 3]
+            v0, v1, v2, v3 = verts
             d1 = v1 - v0
             d2 = v2 - v0
             d3 = v3 - v0
@@ -150,20 +156,18 @@ class UnstructuredSubMesh(SubMesh):
             )
             self.cell_volumes = np.abs(det) / 6.0
         elif self.element_type == ElementType.HEXAHEDRON:
-            # 5-tet decomposition, exact only for planar-faced hexes (warped
-            # faces are rejected in _compute_face_geometry). Tet volumes are
-            # summed signed so a degenerate or inverted cell cannot cancel
-            # into a plausible positive volume.
-            t = verts[:, self._HEX_TETS]  # (n_cells, 5, 4, d)
-            d1 = t[:, :, 1] - t[:, :, 0]
-            d2 = t[:, :, 2] - t[:, :, 0]
-            d3 = t[:, :, 3] - t[:, :, 0]
-            tet_vols = np.einsum("ijk,ijk->ij", d1, np.cross(d2, d3)) / 6.0
-            vol = tet_vols.sum(axis=1)
+            # 5-tet split, exact for planar-faced hexes; signed sum so an
+            # inverted cell cannot cancel into a plausible positive volume
+            vol = np.zeros(len(self.elements))
+            moment = np.zeros((len(self.elements), 3))
+            for tet in self._HEX_TETS:
+                p0, p1, p2, p3 = (verts[i] for i in tet)
+                tet_vol = _dot(p1 - p0, _cross(p2 - p0, p3 - p0)) / 6.0
+                vol += tet_vol
+                # Volume-weighted tet centroids: exact for planar-faced hexes
+                # such as frusta, where the vertex mean is not
+                moment += tet_vol[:, None] * (p0 + p1 + p2 + p3) / 4.0
             self.cell_volumes = np.abs(vol)
-            # Volume-weighted tet centroids: exact for planar-faced hexes
-            # such as frusta, where the vertex mean is not
-            moment = np.einsum("ij,ijk->ik", tet_vols, t.mean(axis=2))
             safe_vol = np.where(vol == 0.0, 1.0, vol)
             nonzero = (vol != 0.0)[:, None]
             self.cell_centroids = np.where(
@@ -182,7 +186,6 @@ class UnstructuredSubMesh(SubMesh):
             n_verts_per_face = self.dimension
 
         elems = self.elements
-        n_cells = len(elems)
 
         # Build all faces at once using local face definitions
         if self.element_type == ElementType.QUAD:
@@ -197,18 +200,10 @@ class UnstructuredSubMesh(SubMesh):
         n_fpc = len(local)
 
         all_faces = elems[:, local].reshape(-1, n_verts_per_face)
-        cell_ids = np.repeat(np.arange(n_cells), n_fpc)
 
-        # Canonical keys: sort vertex indices within each face
-        sorted_faces = np.sort(all_faces, axis=1)
-
-        # Find unique faces and which are shared (internal) vs single (boundary)
-        _, inverse, counts = np.unique(
-            sorted_faces, axis=0, return_inverse=True, return_counts=True
-        )
-        # numpy 2.0.0 (the declared floor) returns inverse with shape (n, 1);
-        # 2.0.1+ returns (n,). Flatten so masks below stay 1-D everywhere.
-        inverse = inverse.reshape(-1)
+        # Canonical keys: sort vertex indices within each face, then group
+        # duplicates; shared faces are internal, single faces boundary
+        order, counts = _group_rows(np.sort(all_faces, axis=1))
 
         # A manifold mesh shares each face between at most two cells. A count of
         # three or more means overlapping or non-conforming elements; such faces
@@ -220,28 +215,18 @@ class UnstructuredSubMesh(SubMesh):
                 "elements in the input mesh."
             )
 
-        is_internal = counts[inverse] == 2
-        is_boundary = counts[inverse] == 1
+        # The grouping is stable, so each internal face's two rows are adjacent
+        # with the lower-numbered (owner) cell first
+        internal_rows = order[counts == 2]
+        owner_rows = internal_rows[0::2]
+        internal_owner = owner_rows // n_fpc
+        internal_neighbor = internal_rows[1::2] // n_fpc
+        internal_face_verts = all_faces[owner_rows]
 
-        # For internal faces, we need owner/neighbor pairs.
-        # Group by unique face index; first occurrence is owner, second is neighbor.
-        internal_mask = is_internal
-        int_inv = inverse[internal_mask]
-        int_cells = cell_ids[internal_mask]
-        int_faces_raw = all_faces[internal_mask]
-
-        # Sort by unique-face-id to pair them up: [owner0, neighbor0, owner1, neighbor1, ...]
-        order = np.argsort(int_inv, kind="stable")
-        int_cells_sorted = int_cells[order]
-        int_faces_sorted = int_faces_raw[order]
-
-        internal_owner = int_cells_sorted[0::2]
-        internal_neighbor = int_cells_sorted[1::2]
-        internal_face_verts = int_faces_sorted[0::2]
-
-        # Boundary faces
-        bnd_face_verts = all_faces[is_boundary]
-        bnd_owners = cell_ids[is_boundary]
+        # Boundary faces keep their original (cell-major) order
+        boundary_rows = np.sort(order[counts == 1])
+        bnd_face_verts = all_faces[boundary_rows]
+        bnd_owners = boundary_rows // n_fpc
 
         n_internal = len(internal_owner)
         n_boundary = len(bnd_owners)
@@ -276,26 +261,31 @@ class UnstructuredSubMesh(SubMesh):
     # ------------------------------------------------------------------
 
     def _compute_face_geometry(self):
-        face_verts = self.vertices[self.faces]
-
-        self.face_centroids = face_verts.mean(axis=1)
+        # Contiguous (n_faces, d) array per local vertex
+        face_verts = [
+            self.vertices[self.faces[:, i]] for i in range(self.faces.shape[1])
+        ]
+        self.face_centroids = np.mean(face_verts, axis=0)
 
         if self.dimension == 2:
-            v0, v1 = face_verts[:, 0], face_verts[:, 1]
+            v0, v1 = face_verts
             edge = v1 - v0
             self.face_areas = np.linalg.norm(edge, axis=1)
             normals = np.column_stack([edge[:, 1], -edge[:, 0]])
         elif self.element_type == ElementType.HEXAHEDRON:
             # Face = quad: 4 vertices. Area via cross product of diagonals.
-            v0 = face_verts[:, 0]
-            v1 = face_verts[:, 1]
-            v2 = face_verts[:, 2]
-            v3 = face_verts[:, 3]
+            v0, v1, v2, v3 = face_verts
 
             # Quad areas, normals, and the 5-tet cell volumes are only
             # well-defined when all four vertices of a face are coplanar,
             # so warped (non-planar) faces are rejected outright.
-            warp = _quad_face_warp(face_verts)
+            warp, degenerate = _quad_face_warp(v0, v1, v2, v3)
+            if degenerate.any():
+                raise pybamm.GeometryError(
+                    f"{int(degenerate.sum())} hexahedral face(s) are "
+                    "degenerate (zero area), e.g. from repeated hexahedron "
+                    "nodes. Fix the mesh, or use tetrahedra."
+                )
             warped = warp > _HEX_FACE_PLANARITY_TOLERANCE
             if warped.any():
                 raise pybamm.GeometryError(
@@ -305,23 +295,23 @@ class UnstructuredSubMesh(SubMesh):
                     "and face fluxes are ill-defined on warped hexahedra. Fix "
                     "the mesh, or use tetrahedra."
                 )
-            plane_normal = np.cross(v1 - v0, v2 - v0)
-            plane_norm = np.linalg.norm(plane_normal, axis=1)
-            safe_norm = np.where(plane_norm < 1e-30, 1.0, plane_norm)
 
             diag1 = v2 - v0
             diag2 = v3 - v1
-            cross = np.cross(diag1, diag2)
-            self.face_areas = 0.5 * np.linalg.norm(cross, axis=1)
+            cross = _cross(diag1, diag2)
+            self.face_areas = 0.5 * np.sqrt(_dot(cross, cross))
             normals = cross
 
             # Area-weighted centroid over the (0,1,2)/(0,2,3) triangle split:
             # exact for planar non-parallelogram quads (e.g. trapezoids),
             # where the vertex mean is not. Signed areas taken along the face
             # normal keep non-convex planar quads exact too.
+            plane_normal = _cross(v1 - v0, v2 - v0)
+            plane_norm = np.sqrt(_dot(plane_normal, plane_normal))
+            safe_norm = np.where(plane_norm < 1e-30, 1.0, plane_norm)
             n_hat = plane_normal / safe_norm[:, None]
-            area1 = 0.5 * np.einsum("ij,ij->i", np.cross(v1 - v0, v2 - v0), n_hat)
-            area2 = 0.5 * np.einsum("ij,ij->i", np.cross(v2 - v0, v3 - v0), n_hat)
+            area1 = 0.5 * _dot(plane_normal, n_hat)
+            area2 = 0.5 * _dot(_cross(v2 - v0, v3 - v0), n_hat)
             total = area1 + area2
             safe_total = np.where(np.abs(total) < 1e-30, 1.0, total)
             weighted = (
@@ -331,7 +321,7 @@ class UnstructuredSubMesh(SubMesh):
             self.face_centroids[nonzero] = weighted[nonzero]
         else:
             # Face = triangle: 3 vertices
-            v0, v1, v2 = face_verts[:, 0], face_verts[:, 1], face_verts[:, 2]
+            v0, v1, v2 = face_verts
             cross = np.cross(v1 - v0, v2 - v0)
             self.face_areas = 0.5 * np.linalg.norm(cross, axis=1)
             normals = cross
@@ -917,6 +907,7 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         self.coord_sys = coord_sys
         self.merge_tolerance = merge_tolerance
         self._cached_mesh = None
+        self._cached_cells = None
 
     def __call__(self, lims, npts):
         meshio = pybamm.import_optional_dependency("meshio")
@@ -930,8 +921,10 @@ class UserSuppliedUnstructuredMesh(MeshGenerator):
         # Determine which domain is being requested from the lims keys
         domain_name = self._domain_name_from_lims(lims)
 
-        # Extract supported cells (triangles/quads or tets/hexes)
-        cells, cell_type = self._extract_supported_cells(mesh)
+        # Extract (and validate) supported cells once per loaded mesh
+        if self._cached_cells is None or self._cached_cells[0] is not mesh:
+            self._cached_cells = (mesh, *self._extract_supported_cells(mesh))
+        _, cells, cell_type = self._cached_cells
 
         if domain_name and domain_name in self.subdomain_mapping:
             tag_value = self.subdomain_mapping[domain_name]
@@ -1339,36 +1332,42 @@ def _is_volume_cell_type(meshio_type):
     return name.startswith(("tetra", "hexahedron", "wedge", "pyramid", "polyhedron"))
 
 
-def _quad_face_warp(face_verts):
+def _quad_face_warp(v0, v1, v2, v3):
     """Relative non-planarity of quadrilateral faces.
+
+    The deviation is measured relative to the longer diagonal, so on a long,
+    thin face it bounds the out-of-plane offset by a fraction of the long
+    side, not the short one.
 
     Parameters
     ----------
-    face_verts : numpy.ndarray
-        Face vertex coordinates, shape ``(n_faces, 4, 3)``, ordered around
-        each face.
+    v0, v1, v2, v3 : numpy.ndarray
+        Face vertex coordinates in order around each face, each of shape
+        ``(n_faces, 3)``.
 
     Returns
     -------
-    numpy.ndarray
+    warp : numpy.ndarray
         Distance between the lines through the two face diagonals, divided
         by the longer diagonal: zero for a planar face.
+    degenerate : numpy.ndarray
+        True where the face has (numerically) zero area, so it has no
+        plane; its ``warp`` is reported as zero.
     """
-    v0, v1, v2, v3 = (face_verts[:, i] for i in range(4))
     diag1 = v2 - v0
     diag2 = v3 - v1
-    normal = np.cross(diag1, diag2)
-    normal_norm = np.linalg.norm(normal, axis=1)
-    size = np.maximum(np.linalg.norm(diag1, axis=1), np.linalg.norm(diag2, axis=1))
-    # Parallel diagonals only occur on degenerate faces, which other checks
-    # reject; report them as planar here
-    safe_norm = np.where(normal_norm < 1e-300, 1.0, normal_norm)
-    offset = np.abs(np.einsum("ij,ij->i", v1 - v0, normal)) / safe_norm
-    return np.where(normal_norm < 1e-300, 0.0, offset / np.maximum(size, 1e-300))
+    normal = _cross(diag1, diag2)
+    normal_norm = np.sqrt(_dot(normal, normal))
+    size = np.sqrt(np.maximum(_dot(diag1, diag1), _dot(diag2, diag2)))
+    degenerate = normal_norm <= _HEX_FACE_DEGENERACY_TOLERANCE * size**2
+    safe_norm = np.where(degenerate, 1.0, normal_norm)
+    offset = np.abs(_dot(v1 - v0, normal)) / safe_norm
+    warp = np.where(degenerate, 0.0, offset / np.where(degenerate, 1.0, size))
+    return warp, degenerate
 
 
 def _check_hexahedra_planar(points, hexahedra):
-    """Raise if any hexahedron has a face warped beyond the planarity tolerance.
+    """Raise if any hexahedron has a degenerate or warped face.
 
     Parameters
     ----------
@@ -1380,10 +1379,19 @@ def _check_hexahedra_planar(points, hexahedra):
     Raises
     ------
     pybamm.GeometryError
-        If any face of any hexahedron is non-planar.
+        If any face of any hexahedron has zero area or is non-planar.
     """
-    faces = hexahedra[:, UnstructuredSubMesh._HEX_FACES]  # (n_cells, 6, 4)
-    warp = _quad_face_warp(points[faces.reshape(-1, 4)]).reshape(-1, 6).max(axis=1)
+    faces = hexahedra[:, UnstructuredSubMesh._HEX_FACES].reshape(-1, 4)
+    warp, degenerate = _quad_face_warp(*(points[faces[:, i]] for i in range(4)))
+    degenerate = degenerate.reshape(-1, 6).any(axis=1)
+    if degenerate.any():
+        raise pybamm.GeometryError(
+            f"{int(degenerate.sum())} of {len(hexahedra)} hexahedral cells in "
+            "the mesh file have degenerate (zero-area) faces, e.g. from "
+            "repeated nodes. Collapsed hexahedra are not supported: mesh "
+            "without them or convert to tetrahedra."
+        )
+    warp = warp.reshape(-1, 6).max(axis=1)
     warped = warp > _HEX_FACE_PLANARITY_TOLERANCE
     if warped.any():
         raise pybamm.GeometryError(
@@ -1623,3 +1631,39 @@ def _hex_to_tet(x_edges, y_edges, z_edges):
     elements = hex_verts[:, kuhn_tets].reshape(-1, 4)
 
     return nodes, elements
+
+
+def _cross(a, b):
+    """Row-wise cross product of two ``(n, 3)`` arrays, faster than ``np.cross``."""
+    a0, a1, a2 = a[:, 0], a[:, 1], a[:, 2]
+    b0, b1, b2 = b[:, 0], b[:, 1], b[:, 2]
+    return np.column_stack([a1 * b2 - a2 * b1, a2 * b0 - a0 * b2, a0 * b1 - a1 * b0])
+
+
+def _dot(a, b):
+    """Row-wise dot product of two ``(n, d)`` arrays."""
+    return np.einsum("ij,ij->i", a, b)
+
+
+def _group_rows(rows):
+    """
+    Stably sort the rows of a 2D array so equal rows are adjacent, and count them.
+
+    Parameters
+    ----------
+    rows : numpy.ndarray
+        2D array whose rows are compared.
+
+    Returns
+    -------
+    order : numpy.ndarray
+        Row indices in lexicographic order, ties kept in input order.
+    counts : numpy.ndarray
+        Multiplicity of the row at each position of ``order``.
+    """
+    order = np.lexsort(rows.T[::-1])
+    sorted_rows = rows[order]
+    starts_group = np.ones(len(rows), dtype=bool)
+    starts_group[1:] = (sorted_rows[1:] != sorted_rows[:-1]).any(axis=1)
+    group = np.cumsum(starts_group) - 1
+    return order, np.bincount(group)[group]

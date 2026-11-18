@@ -7,6 +7,7 @@ from pybamm.meshes.unstructured_submesh import (
     UnstructuredMeshGenerator,
     UnstructuredSubMesh,
     UserSuppliedUnstructuredMesh,
+    _group_rows,
     _hex_grid,
     _hex_to_tet,
     _quad_to_tri,
@@ -503,6 +504,16 @@ class TestUnstructuredSubMesh:
         assert len(spatial_vars) == 2
         assert len(spatial_lims) == 2
 
+    def test_group_rows_matches_unique(self):
+        rng = np.random.default_rng(0)
+        rows = np.sort(rng.integers(0, 6, size=(200, 3)), axis=1)
+        order, counts = _group_rows(rows)
+        _, inverse, unique_counts = np.unique(
+            rows, axis=0, return_inverse=True, return_counts=True
+        )
+        np.testing.assert_array_equal(order, np.lexsort(rows.T[::-1]))
+        np.testing.assert_array_equal(counts, unique_counts[inverse[order]])
+
 
 # ======================================================================
 # TestUnstructuredMeshGenerator
@@ -867,8 +878,6 @@ class TestFileGenerators:
 
     def test_user_supplied_planar_hexahedra_load(self, tmp_path):
         """Planar-faced hex file meshes load with region and quad facet tags."""
-        import pytest
-
         pytest.importorskip("meshio")
         path = tmp_path / "hex.msh"
         regions = self._write_two_region_hex_msh(path)
@@ -924,8 +933,6 @@ class TestFileGenerators:
 
     def test_user_supplied_warped_hexahedra_raise(self, tmp_path):
         """A hex file mesh with a warped cell is rejected, naming the count."""
-        import pytest
-
         pytest.importorskip("meshio")
         path = tmp_path / "warped.msh"
         self._write_two_region_hex_msh(path, warp_corner=True)
@@ -936,10 +943,24 @@ class TestFileGenerators:
         ):
             gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
 
+    def test_user_supplied_degenerate_hexahedra_raise(self):
+        """A hex with a collapsed (zero-area) face is rejected on loading."""
+        meshio = pytest.importorskip("meshio")
+        points, _ = _hex_grid([0.0, 1.0], [0.0, 1.0], [0.0, 1.0])
+        # Repeated nodes collapse the bottom face to an edge
+        collapsed = np.array([[0, 0, 3, 3, 4, 5, 6, 7]])
+        gen = UserSuppliedUnstructuredMesh("unused.vtu")
+        gen._cached_mesh = meshio.Mesh(points, [("hexahedron", collapsed)])
+        with pytest.raises(
+            pybamm.GeometryError, match=r"1 of 1 hexahedral cells .* degenerate"
+        ):
+            gen({"x_n": {"min": 0.0, "max": 1.0}}, {})
+
+        with pytest.raises(pybamm.GeometryError, match=r"degenerate \(zero area\)"):
+            UnstructuredSubMesh(points, collapsed)
+
     def test_user_supplied_mixed_volume_cells_raise(self):
         """Mixed or unsupported volume cells raise instead of being dropped."""
-        import pytest
-
         meshio = pytest.importorskip("meshio")
         points, hexes = _hex_grid([0.0, 1.0], [0.0, 1.0], [0.0, 1.0])
         points = np.vstack([points, [[2.0, 0.0, 0.0], [2.0, 0.0, 1.0]]])

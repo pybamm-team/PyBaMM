@@ -44,6 +44,7 @@ uv run --group dev pytest -m integration packages/pybamm/tests # integration sui
 uv run --group dev pytest packages/pybamm/tests/unit/test_solvers/test_solution.py   # one file
 uv run --group dev pytest "packages/pybamm/tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model"  # one test
 nox -s unit | nox -s tests | nox -s integration | nox -s doctests   # sessions used in CI
+nox -s type-check   # Pyrefly type check of packages/pybamm/src
 ```
 
 Lint/format is Ruff via pre-commit; this is the source of truth for style.
@@ -137,7 +138,7 @@ gets wrong:
 - Naming is descriptive: prefer full words over abbreviations (`mean`, not `mu`); avoid
   abbreviating class/argument names.
 - Imports are absolute (relative imports are linted out), ruff-sorted (don't reorder by hand), and
-  use Python 3.10+ syntax (`X | Y`, `dict[...]`). No bare `assert` in `packages/pybamm/src/`; validate and raise.
+  use Python 3.11+ syntax and stdlib (`X | Y`, `dict[...]`, `typing.Self`, `tomllib`). No bare `assert` in `packages/pybamm/src/`; validate and raise.
 - Type-hint public functions; start new modules with `from __future__ import annotations`, type
   arrays as `npt.NDArray[np.float64]`, and reuse the aliases in `type_definitions.py`.
 - **Raise PyBaMM's own exceptions for framework errors** — `OptionError`, `ModelError`,
@@ -151,6 +152,8 @@ gets wrong:
   `pybamm.X`) and get a `docs/source/api/*.rst` entry.
 - Every feature or fix adds a `CHANGELOG.md` bullet under `# [Unreleased]` (Keep a Changelog
   format), ending with the PR link, e.g. `([#1234](https://github.com/pybamm-team/PyBaMM/pull/1234))`.
+  Get a prediction from `uv run --no-project scripts/next_pr_number.py`. If another issue, pull
+  request, or discussion takes that number before the PR opens, update the entry manually.
 
 ### Tests
 

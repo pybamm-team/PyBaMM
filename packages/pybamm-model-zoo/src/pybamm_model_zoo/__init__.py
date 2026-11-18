@@ -16,6 +16,7 @@ True
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from pybamm_model_zoo._citations import read_citations
@@ -39,6 +40,7 @@ __all__ = [
     "ModelUnavailableError",
     "Registry",
     "ZooError",
+    "__version__",
     "all_entries",
     "info",
     "list_models",
@@ -47,7 +49,14 @@ __all__ = [
     "refresh",
     "register_citation",
     "registry",
+    "require",
 ]
+
+try:
+    __version__ = version("pybamm-model-zoo")
+except PackageNotFoundError:
+    # The zoo's scripts and pre-commit hook import it from an uninstalled tree.
+    __version__ = "unknown"
 
 # Not `_registry`: that name is the submodule imported above, and rebinding it
 # here would leave `pybamm_model_zoo._registry` pointing at this cache.
@@ -104,9 +113,28 @@ def load(name: str) -> type:
     KeyError
         If ``name`` is not registered.
     ModelUnavailableError
-        If the model's code or its declared extra is unavailable.
+        If the model's extra or its code is unavailable.
     """
     return registry()[name].load()
+
+
+def require(slug: str) -> None:
+    """Check that a zoo model's ``zoo-<slug>`` extra is installed.
+
+    Call this first in a model's ``__init__``, so that a model imported directly
+    rather than through :func:`load` fails before any work, naming its extra.
+
+    Parameters
+    ----------
+    slug : str
+        The model's folder name.
+
+    Raises
+    ------
+    ModelUnavailableError
+        If any requirement of the model's extra is not installed.
+    """
+    registry().by_slug(slug).require()
 
 
 def register_citation(slug: str, *keys: str) -> None:

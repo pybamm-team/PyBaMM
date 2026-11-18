@@ -102,7 +102,11 @@ class SummaryVariables:
     @property
     def esoh_variables(self) -> list[str] | None:
         """Return names of all eSOH variables."""
-        if self.calc_esoh and self._esoh_variables is None:
+        if (
+            self.calc_esoh
+            and self.esoh_solver is not None
+            and self._esoh_variables is None
+        ):
             # assume direction is None
             esoh_model = self.esoh_solver._get_electrode_soh_sims_full(
                 direction=None
@@ -111,7 +115,7 @@ class SummaryVariables:
             self._esoh_variables = esoh_vars
         return self._esoh_variables
 
-    def __getitem__(self, key: str) -> float | list[float]:
+    def __getitem__(self, key: str) -> float | list[float] | np.ndarray:
         """
         Access or compute a summary variable by its name.
 
@@ -122,7 +126,7 @@ class SummaryVariables:
 
         Returns
         -------
-        float or list[float]
+        float, list[float] or numpy.ndarray
         """
 
         if key in self._variables:
@@ -135,7 +139,8 @@ class SummaryVariables:
             raise KeyError(f"Variable '{key}' is not a summary variable.")
         else:
             # otherwise create it, save it and then return it
-            if self.calc_esoh and key in self._esoh_variables:
+            esoh_variables = self.esoh_variables
+            if esoh_variables is not None and key in esoh_variables:
                 self.update_esoh()
             else:
                 base_key = key.removeprefix("Change in ")
@@ -148,16 +153,16 @@ class SummaryVariables:
         """Compute and store a variable and its change."""
         var_lowercase = var[0].lower() + var[1:]
         if self.cycles:
-            self._update_multiple_cycles(var, var_lowercase)
+            self._update_multiple_cycles(self.cycles, var, var_lowercase)
         else:
             self._update(var, var_lowercase)
 
-    def _update_multiple_cycles(self, var: str, var_lowercase: str):
+    def _update_multiple_cycles(
+        self, cycles: list[SummaryVariables], var: str, var_lowercase: str
+    ):
         """Creates aggregated summary variables for where more than one cycle exists."""
-        var_cycle = [cycle[var] for cycle in self.cycles]
-        change_var_cycle = [
-            cycle[f"Change in {var_lowercase}"] for cycle in self.cycles
-        ]
+        var_cycle = [cycle[var] for cycle in cycles]
+        change_var_cycle = [cycle[f"Change in {var_lowercase}"] for cycle in cycles]
         self._variables[var] = var_cycle
         self._variables[f"Change in {var_lowercase}"] = change_var_cycle
 
@@ -182,6 +187,8 @@ class SummaryVariables:
 
     def _get_esoh_variables(self) -> dict[str, float]:
         """Compute eSOH variables for a single solution."""
+        if self.esoh_solver is None:
+            raise pybamm.SolverError("eSOH summary variables need an eSOH solver")
         Q_n = self.last_state["Negative electrode capacity [A.h]"].data[0]
         Q_p = self.last_state["Positive electrode capacity [A.h]"].data[0]
         Q_Li = self.last_state["Total lithium capacity in particles [A.h]"].data[0]

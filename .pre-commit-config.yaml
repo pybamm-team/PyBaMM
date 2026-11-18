@@ -2,12 +2,12 @@ ci:
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autofix_commit_msg: "style: pre-commit fixes"
   autoupdate_schedule: "weekly"
-  # No base ref here, so comment-slop would scan nothing; `style` gates it.
-  skip: [comment-slop]
+  # No base ref or Rust toolchain here; the `style` CI job gates these.
+  skip: [comment-slop, cargo-fmt, cargo-clippy]
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.16.10"
+    rev: "v0.17.5"
     hooks:
       - id: ruff-check
         args: [--fix, --show-fixes]
@@ -48,7 +48,7 @@ repos:
         - id: sp-repo-review
 
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.30.1
+    rev: v1.32.0
     hooks:
       - id: zizmor
 
@@ -65,14 +65,13 @@ repos:
         name: Report comment slop on changed lines
         entry: python .github/scripts/check_comment_slop.py
         language: python
-        additional_dependencies: ["comment-slop==0.1.0"]
+        additional_dependencies: ["comment-slop==0.3.0"]
         require_serial: true
 
       - id: model-zoo-docs
         name: Regenerate model zoo docs pages and badges from the manifests
         entry: python packages/pybamm-model-zoo/scripts/generate.py
         language: python
-        additional_dependencies: ["tomli; python_version < '3.11'"]
         files: ^(packages/pybamm-model-zoo/(src/pybamm_model_zoo/.*|scripts/generate\.py|status\.json|badges/.*)|docs/source/model_zoo/.*)$
         pass_filenames: false
 
@@ -83,3 +82,19 @@ repos:
         additional_dependencies: [pyyaml]
         files: ^\.github/(workflows/test_on_push\.yml|scripts/check_ci_gate\.py)$
         pass_filenames: false
+      # Skipped, saying so, where cargo is not installed.
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: python .github/scripts/run_cargo.py fmt --manifest-path packages/pybamm-rust/Cargo.toml --all
+        language: python
+        types: [rust]
+        pass_filenames: false
+        verbose: true
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: python .github/scripts/run_cargo.py clippy --quiet --manifest-path packages/pybamm-rust/Cargo.toml --all-targets --all-features
+        language: python
+        types: [rust]
+        pass_filenames: false
+        verbose: true
+        args: ["--", "-D", "warnings"]

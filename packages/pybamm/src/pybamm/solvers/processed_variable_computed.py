@@ -3,12 +3,10 @@
 #
 from __future__ import annotations
 
-import casadi
 import numpy as np
-import xarray as xr
-from scipy.integrate import cumulative_trapezoid
 
 import pybamm
+from pybamm.solvers.grid_interpolation import RectilinearGrid
 
 from .base_processed_variable import BaseProcessedVariable
 
@@ -45,7 +43,15 @@ class ProcessedVariableComputed(BaseProcessedVariable):
     time_indep : bool, optional
         Whether the variable is time-independent. Default is False. Used for
         time integral or sum variables
+    time_integral : :class:`pybamm.ProcessedVariableTimeIntegral`, optional
+        The time integral or sum whose value the variable holds. Setting it makes
+        the variable time-independent.
     """
+
+    # Defaults for a variable pickled before __init__ set these
+    time_integral = None
+    _unjoinable = False
+    _interp_args = None
 
     def __init__(
         self,
@@ -55,6 +61,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         solution,
         cumtrapz_ic=None,
         time_indep=False,
+        time_integral=None,
     ):
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
@@ -69,11 +76,14 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.domain = base_variables[0].domain
         self.domains = base_variables[0].domains
         self.cumtrapz_ic = cumtrapz_ic
-        self.time_indep = time_indep
+        self.time_integral = time_integral
+        self.time_indep = time_indep or time_integral is not None
 
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
+        # Set by a join that has no value; reading the variable then raises
+        self._unjoinable = False
 
         # Store time
         self.t_pts = solution.t
@@ -83,8 +93,10 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.base_eval_size = self.base_variables[0].size
         self.unroll_params = {}
 
-        # initialise_* runs lazily on first read of `entries` / `_xr_data_array`.
+        # initialise_* runs lazily on the first read of the data
         self._initialised = False
+        # The (values, coords) grid that initialise_* sets for interpolation
+        self._interp_args = None
         self._initialise_method, self.dimensions = self._resolve_initialise_method()
 
     def _resolve_initialise_method(self):
@@ -137,6 +149,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         # Not thread-safe: concurrent first reads may run initialise twice.
         # Instances are constructed and read on the same thread in the standard
         # solve flow, so callers parallelising reads must serialise them.
+        self._raise_if_unjoinable()
         if not self._initialised:
             self._initialise_method()
             self._initialised = True
@@ -146,53 +159,54 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self._materialise()
         return self._entries
 
-    @property
-    def _xr_data_array(self):
+    def _interpolation_grid(self):
+        """Return the values the variable interpolates and the grid they are on."""
         self._materialise()
-        return self._xr_data_array_cache
+        if self._interp_args is None:
+            # A variable pickled by 26.10 or earlier has no grid stored here
+            self._initialise_method()
+        values, grid = self._interp_args
+        if not isinstance(grid, RectilinearGrid):
+            # Kept, so each axis is checked only once
+            grid = RectilinearGrid(grid)
+            self._interp_args = (values, grid)
+        return values, grid
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        if state.get("_interp_args") is not None:
+            values, grid = state["_interp_args"]
+            # Saved as coordinates, so saved files do not depend on the grid's class
+            if isinstance(grid, RectilinearGrid):
+                state["_interp_args"] = (values, grid.coords)
+        return state
+
+    def __setstate__(self, state):
+        # A variable pickled by 26.10 or earlier holds xarray caches this ignores
+        for name in ("_xr_data_array_cache", "_xr_interp_args"):
+            state.pop(name, None)
+        self.__dict__.update(state)
 
     def as_computed(self) -> ProcessedVariableComputed:
         return self
 
     def add_sensitivity(self, param, data):
-        # unroll from sparse representation into n-d matrix
-        # then flatten for consistency with full state-vector
-        # ProcessedVariable sensitivities
+        # Flat, like the sensitivities of a full state-vector ProcessedVariable
         self._sensitivities[param] = self.unroll(data).flatten()
 
-    def _unroll_nnz(self, realdata=None):
-        # unroll in nnz != numel, otherwise copy
+    def _concatenate(self, realdata=None):
+        # Each segment holds every entry of each of its time points, time-major
         if realdata is None:
             realdata = self.base_variables_data
-        if isinstance(self.base_variables_casadi[0], casadi.Function):  # casadi fcn
-            sp = self.base_variables_casadi[0](0, 0, 0).sparsity()
-            nnz = sp.nnz()
-            numel = sp.numel()
-            row = sp.row()
-        if nnz != numel:
-            data = [None] * len(realdata)
-            for datak in range(len(realdata)):
-                data[datak] = np.zeros(self.base_eval_shape[0] * len(self.t_pts))
-                var_data = realdata[0].flatten()
-                k = 0
-                for t_i in range(len(self.t_pts)):
-                    base = t_i * numel
-                    for r in row:
-                        data[datak][base + r] = var_data[k]
-                        k = k + 1
-        else:
-            data = realdata
-        return data
+        return np.concatenate(realdata, axis=0)
 
     def unroll_0D(self, realdata=None):
-        if realdata is None:
-            realdata = self.base_variables_data
-        return np.concatenate(realdata, axis=0).flatten()
+        return self._concatenate(realdata).flatten()
 
     def unroll_1D(self, realdata=None):
         len_space = self.base_eval_shape[0]
         return (
-            np.concatenate(self._unroll_nnz(realdata), axis=0)
+            self._concatenate(realdata)
             .reshape((len(self.t_pts), len_space))
             .transpose()
         )
@@ -210,9 +224,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             n_dim1 = self.unroll_params["n_dim1"]
             n_dim2 = self.unroll_params["n_dim2"]
             axis_swaps = self.unroll_params["axis_swaps"]
-        entries = np.concatenate(self._unroll_nnz(realdata), axis=0).reshape(
-            (len(self.t_pts), n_dim1, n_dim2)
-        )
+        entries = self._concatenate(realdata).reshape((len(self.t_pts), n_dim1, n_dim2))
         for a, b in axis_swaps:
             entries = np.moveaxis(entries, a, b)
         return entries
@@ -232,12 +244,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             n_dim2 = self.unroll_params["n_dim2"]
             n_dim3 = self.unroll_params["n_dim3"]
             axis_swaps = self.unroll_params["axis_swaps"]
-        entries = (
-            np.concatenate(self._unroll_nnz(realdata), axis=0)
-            .transpose()
-            .reshape(
-                (len(self.t_pts), n_dim1, n_dim2, n_dim3),
-            )
+        # time-major (n_t, output), like unroll_1D/2D
+        entries = self._concatenate(realdata).reshape(
+            (len(self.t_pts), n_dim1, n_dim2, n_dim3)
         )
         for a, b in axis_swaps:
             entries = np.moveaxis(entries, a, b)
@@ -257,9 +266,11 @@ class ProcessedVariableComputed(BaseProcessedVariable):
 
     def initialise_time_independent(self):
         self._entries = self.unroll_0D()
-        self._xr_data_array_cache = None
+        self._interp_args = None
 
     def initialise_0D(self):
+        from scipy.integrate import cumulative_trapezoid
+
         entries = self.unroll_0D()
 
         if self.cumtrapz_ic is not None:
@@ -268,7 +279,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
             )
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(entries, coords=[("t", self.t_pts)])
+        self._interp_args = (entries, {"t": self.t_pts})
 
         self._entries = entries
 
@@ -323,9 +334,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.first_dim_pts = edges
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(
+        self._interp_args = (
             entries_for_interp,
-            coords=[(self.first_dimension, pts_for_interp), ("t", self.t_pts)],
+            {self.first_dimension: pts_for_interp, "t": self.t_pts},
         )
 
     def initialise_2D(self):
@@ -452,9 +463,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.second_dim_pts = second_dim_edges
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(
+        self._interp_args = (
             entries_for_interp,
-            coords={
+            {
                 self.first_dimension: first_dim_pts_for_interp,
                 self.second_dimension: second_dim_pts_for_interp,
                 "t": self.t_pts,
@@ -483,9 +494,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.second_dim_pts = z_sol
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(
+        self._interp_args = (
             entries,
-            coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
+            {"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
 
     def initialise_3D(self):
@@ -628,9 +639,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.third_dim_pts = third_dim_edges
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(
+        self._interp_args = (
             entries_for_interp,
-            coords={
+            {
                 self.first_dimension: first_dim_pts_for_interp,
                 self.second_dimension: second_dim_pts_for_interp,
                 self.third_dimension: third_dim_pts_for_interp,
@@ -651,12 +662,13 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         len_x = len(x_sol)
         len_y = len(y_sol)
         len_z = len(z_sol)
+        # x varies fastest, then the current-collector nodes, which run z-fastest
         entries = self.unroll_3D(
             realdata=None,
-            n_dim1=len_z,
-            n_dim2=len_y,
+            n_dim1=len_y,
+            n_dim2=len_z,
             n_dim3=len_x,
-            axis_swaps=[(0, 3), (0, 2), (0, 1)],
+            axis_swaps=[(0, 3), (2, 0)],
         )
 
         # assign attributes for reference
@@ -672,9 +684,9 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self.third_dim_pts = z_sol
 
         # set up interpolation
-        self._xr_data_array_cache = xr.DataArray(
+        self._interp_args = (
             entries,
-            coords={"x": x_sol, "y": y_sol, "z": z_sol, "t": self.t_pts},
+            {"x": x_sol, "y": y_sol, "z": z_sol, "t": self.t_pts},
         )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None):
@@ -684,11 +696,10 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         """
         if self.time_indep:
             return self.entries
-        kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
-        # Remove any None arguments
-        kwargs = {key: value for key, value in kwargs.items() if value is not None}
-        # Use xarray interpolation, return numpy array
-        return self._xr_data_array.interp(**kwargs).values
+        queries = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
+        queries = {key: value for key, value in queries.items() if value is not None}
+        values, grid = self._interpolation_grid()
+        return grid.interpolate(values, queries)
 
     @property
     def data(self):
@@ -703,6 +714,7 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
         points, and n_p is the size of the input parameter
         """
+        self._raise_if_unjoinable()
         # No sensitivities if there are no inputs
         if len(self.all_inputs[0]) == 0:
             return {}
@@ -712,9 +724,12 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self, other: pybamm.ProcessedVariableComputed, new_sol: pybamm.Solution
     ) -> pybamm.ProcessedVariableComputed:
         """
-        Returns a new ProcessedVariableComputed object that is the result of appending
-        the data from other to this object. Used exclusively in running experiments, to
-        append the data from one cycle to the next.
+        Returns a new ProcessedVariableComputed object holding the data from this
+        object followed by the data from other. A first time point of other that
+        repeats the last time point of this object is dropped, and an
+        ``ExplicitTimeIntegral`` becomes the sum of the integrals over each, so
+        a gap between them adds nothing. Any other time integral gives a
+        variable that raises ``NotImplementedError`` when read.
 
         Parameters
         ----------
@@ -723,19 +738,88 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         new_sol : :class:`pybamm.Solution`
             The new solution object to be used to create the processed variables
         """
+        # Solution.__add__ drops other's first time point when it repeats self's last
+        n_repeated = int(other.t_pts[0] == self.t_pts[-1])
+        joins_time_integrals = self.time_indep or other.time_indep
+        unjoinable = (
+            self._unjoinable
+            or other._unjoinable
+            or (joins_time_integrals and not self._time_integrals_joinable(other))
+        )
 
-        bv = self.base_variables + other.base_variables
-        bvc = self.base_variables_casadi + other.base_variables_casadi
-        bvd = self.base_variables_data + other.base_variables_data
+        if unjoinable:
+            # Raise on read rather than here, so the rest of the solution still joins
+            base_variables_data = self.base_variables_data + other.base_variables_data
+            sensitivities = None
+        elif joins_time_integrals:
+            base_variables_data, sensitivities = self._join_time_integral(other)
+        else:
+            base_variables_data, sensitivities = self._join_samples(other, n_repeated)
 
-        new_var = self.__class__(bv, bvc, bvd, new_sol)
-
-        self_sensitivities = self.sensitivities or {}
-        other_sensitivities = other.sensitivities or {}
-        if self_sensitivities or other_sensitivities:
-            new_var._sensitivities = {
-                k: np.concatenate((self_sensitivities[k], other_sensitivities[k]))
-                for k in self_sensitivities
-            }
-
+        new_var = self.__class__(
+            self.base_variables + other.base_variables,
+            self.base_variables_casadi + other.base_variables_casadi,
+            base_variables_data,
+            new_sol,
+            time_indep=joins_time_integrals,
+            time_integral=self.time_integral,
+        )
+        # Not new_sol.t: from_sub_solutions passes the final solution to every join
+        new_var.t_pts = np.concatenate((self.t_pts, other.t_pts[n_repeated:]))
+        new_var._sensitivities = sensitivities
+        new_var._unjoinable = unjoinable
         return new_var
+
+    def _join_samples(self, other, n_repeated):
+        """
+        Return the data and sensitivities of this variable's time points followed
+        by other's, leaving out other's first ``n_repeated`` time points.
+        """
+        # Data and sensitivities are time-major, so the repeat is their first rows
+        first_data, *later_data = other.base_variables_data
+        base_variables_data = [
+            *self.base_variables_data,
+            first_data[n_repeated:],
+            *later_data,
+        ]
+        other_sensitivities = other.sensitivities or {}
+        sensitivities = {}
+        for k, value in (self.sensitivities or {}).items():
+            later = other_sensitivities[k]
+            rows_repeated = n_repeated * len(later) // len(other.t_pts)
+            sensitivities[k] = np.concatenate((value, later[rows_repeated:]))
+        return base_variables_data, sensitivities
+
+    def _join_time_integral(self, other):
+        """
+        Return the data and sensitivities of the time integral over this
+        variable's segments plus the one over other's.
+        """
+        other_sensitivities = other.sensitivities or {}
+        sensitivities = {
+            k: value + other_sensitivities[k]
+            for k, value in (self.sensitivities or {}).items()
+        }
+        # other's integral starts again from its initial condition
+        initial_condition = float(other.time_integral.initial_condition)
+        return [self.entries + other.entries - initial_condition], sensitivities
+
+    def _time_integrals_joinable(self, other):
+        """Return whether this variable and other are joinable time integrals."""
+        # Every segment samples its end points, so a DiscreteTimeSum would count the
+        # boundary twice; a function of an integral cannot be split across segments
+        return all(
+            time_integral is not None
+            and time_integral.method == "continuous"
+            and time_integral.post_sum_node is None
+            for time_integral in (self.time_integral, other.time_integral)
+        )
+
+    def _raise_if_unjoinable(self):
+        if self._unjoinable:
+            raise NotImplementedError(
+                "This variable joins solution segments (multi-step experiments or "
+                "solution addition), which only an ExplicitTimeIntegral output "
+                "variable supports; a DiscreteTimeSum or an expression of a time "
+                "integral has no value over the joined segments."
+            )

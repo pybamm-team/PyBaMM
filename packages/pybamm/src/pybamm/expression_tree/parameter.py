@@ -4,13 +4,15 @@
 from __future__ import annotations
 
 import sys
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-import sympy
 
 import pybamm
 from pybamm.expression_tree.symbol import _ImmutableSequence
+
+if TYPE_CHECKING:  # pragma: no cover
+    import sympy
 
 
 class InputNames(_ImmutableSequence):
@@ -63,6 +65,8 @@ class Parameter(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -249,6 +253,8 @@ class FunctionParameter(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
