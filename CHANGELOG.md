@@ -37,6 +37,7 @@
 
 ## Bug fixes
 
+- `Experiment.search_tag` now searches the processed steps, allowing tagged steps to be mixed with string instructions when selecting cycles. ([#6073](https://github.com/pybamm-team/PyBaMM/pull/6073))
 - Reading a 0D variable at its stored times, `var(solution.t)`, no longer raises when the solution repeats a time. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
 - The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))

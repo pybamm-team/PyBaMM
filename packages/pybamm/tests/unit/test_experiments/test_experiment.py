@@ -166,6 +166,20 @@ class TestExperiment:
         assert experiment.search_tag("tag5") == [3]
         assert experiment.search_tag("no_tag") == []
 
+    def test_search_tag_with_string_steps(self):
+        experiment = pybamm.Experiment(
+            [
+                "Rest for 1 minute",
+                (
+                    pybamm.step.current(1, duration=60, tags="measurement"),
+                    "Rest for 1 minute",
+                ),
+                "Discharge at 1 C for 1 minute",
+            ]
+        )
+        assert experiment.search_tag("measurement") == [1]
+        assert experiment.search_tag("missing") == []
+
     def test_no_initial_start_time(self):
         s = pybamm.step.string
         with pytest.raises(ValueError, match=r"first step must have a `start_time`"):

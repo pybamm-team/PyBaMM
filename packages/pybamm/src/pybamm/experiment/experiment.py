@@ -255,11 +255,12 @@ class Experiment:
             A list of cycles in which the tag appears
         """
         cycles = []
-        for i, cycle in enumerate(self.cycles):
-            for step in cycle:
-                if tag in step.tags:
-                    cycles.append(i)
-                    break
+        step_index = 0
+        for i, cycle_length in enumerate(self.cycle_lengths):
+            cycle_steps = self.steps[step_index : step_index + cycle_length]
+            if any(tag in step.tags for step in cycle_steps):
+                cycles.append(i)
+            step_index += cycle_length
 
         return cycles
 
