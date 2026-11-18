@@ -1,7 +1,5 @@
 import pathlib
 
-import pooch
-
 
 class DataLoader:
     """
@@ -81,6 +79,8 @@ class DataLoader:
         """
         Create a pooch registry with the following data files available upstream at https://github.com/pybamm-team/pybamm-data/
         """
+        import pooch
+
         self.version = "v1.0.2"  # Version of pybamm-data release
         self.path = pooch.os_cache("pybamm")
         self.files = {

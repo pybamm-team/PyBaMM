@@ -5,7 +5,6 @@
 import numbers
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import pybamm
@@ -28,12 +27,8 @@ class TestCurrentFunctions:
     def test_get_current_data(self):
         # test process parameters
         data_loader = pybamm.DataLoader()
-        current_data = pd.read_csv(
-            data_loader.get_data("US06.csv"),
-            comment="#",
-            names=["Time [s]", "Current [A]"],
-        )
-        t, I = current_data["Time [s]"].values, current_data["Current [A]"].values
+        current_data = np.loadtxt(data_loader.get_data("US06.csv"), delimiter=",")
+        t, I = current_data[:, 0], current_data[:, 1]
         parameter_values = pybamm.ParameterValues(
             {"Current function [A]": pybamm.Interpolant(t, I, pybamm.t, "US06")}
         )

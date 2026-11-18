@@ -27,7 +27,25 @@ class TestThermal:
             "dimensionality": 2,
         }
         spme_2p1D = pybamm.lithium_ion.SPMe(options=options)
-        models = {"SPMe 1D": spme_1D, "SPMe 1+1D": spme_1p1D, "SPMe 2+1D": spme_2p1D}
+        options = {
+            "thermal": "lumped",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
+        spme_1p1D_lumped = pybamm.lithium_ion.SPMe(options=options)
+        options = {
+            "thermal": "lumped",
+            "current collector": "potential pair",
+            "dimensionality": 2,
+        }
+        spme_2p1D_lumped = pybamm.lithium_ion.SPMe(options=options)
+        models = {
+            "SPMe 1D": spme_1D,
+            "SPMe 1+1D": spme_1p1D,
+            "SPMe 2+1D": spme_2p1D,
+            "SPMe 1+1D lumped": spme_1p1D_lumped,
+            "SPMe 2+1D lumped": spme_2p1D_lumped,
+        }
 
         # Set up parameter values
         parameter_values = pybamm.ParameterValues("NCA_Kim2011")
@@ -103,6 +121,8 @@ class TestThermal:
             return np.max(np.abs(a - b)) / np.max(np.abs(a))
 
         assert 1e-5 > err(solutions["SPMe 1+1D"], solutions["SPMe 2+1D"])
+        assert 1e-5 > err(solutions["SPMe 1+1D"], solutions["SPMe 1+1D lumped"])
+        assert 1e-5 > err(solutions["SPMe 2+1D"], solutions["SPMe 2+1D lumped"])
 
     def test_surface_temperature_models(self):
         models = {
@@ -212,8 +232,10 @@ class TestThermal:
         )
         sol_fn = sim_fn.solve([0, 3600])
 
-        dphi_const = sol_const["Contact overpotential [V]"].entries
-        dphi_fn = sol_fn["Contact overpotential [V]"].entries
+        # Compare on a common time grid: the two solves take different steps
+        t = np.linspace(0, 3600, 100)
+        dphi_const = sol_const["Contact overpotential [V]"](t)
+        dphi_fn = sol_fn["Contact overpotential [V]"](t)
 
         if thermal == "isothermal":
             # temperature is fixed at the reference, so the two agree
@@ -457,3 +479,64 @@ class TestThermal:
             np.mean(heat_of_mixing["Fickian diffusion"]),
             rtol=rtol,
         )
+
+    @pytest.mark.parametrize(
+        "thermal, extra_options",
+        [
+            ("lumped", {}),
+            ("x-full", {}),
+            (
+                "x-lumped",
+                {"current collector": "potential pair", "dimensionality": 1},
+            ),
+            (
+                "x-lumped",
+                {"current collector": "potential pair", "dimensionality": 2},
+            ),
+        ],
+    )
+    def test_contact_resistance_energy_balance(self, thermal, extra_options):
+        # At ambient temperature, the extra heat must equal the I^2 R_c dissipation
+        R_c = 0.05
+        t_end = 600
+        t = np.linspace(0, t_end, 61)
+
+        parameter_values = pybamm.ParameterValues("NCA_Kim2011")
+        parameter_values.update(
+            {
+                "Current function [A]": 1,
+                # Hold the temperature at ambient for every thermal option
+                "Total heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Negative tab heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Positive tab heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Edge heat transfer coefficient [W.m-2.K-1]": 1e6,
+            }
+        )
+
+        heating, current = {}, {}
+        for R in [0, R_c]:
+            params = parameter_values.copy()
+            params.update({"Contact resistance [Ohm]": R})
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPMe(
+                    {
+                        "thermal": thermal,
+                        "contact resistance": "true",
+                        **extra_options,
+                    }
+                ),
+                parameter_values=params,
+            )
+            sol = sim.solve([0, t_end])
+            heating[R] = sol["Total heating [W]"](t)
+            current[R] = sol["Current [A]"](t)
+            np.testing.assert_allclose(
+                sol["Contact resistance heating [W]"](t), current[R] ** 2 * R
+            )
+
+        extra_heat = np.trapezoid(heating[R_c] - heating[0], t)
+        expected = np.trapezoid(current[R_c] ** 2 * R_c, t)
+        assert extra_heat > 0
+        np.testing.assert_allclose(extra_heat, expected, rtol=1e-2)
