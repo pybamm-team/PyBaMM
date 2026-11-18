@@ -356,6 +356,28 @@ class TestBasicDFNUnstructuredVoltage:
     @pytest.mark.parametrize(
         "dimensionality", [1, 2], ids=["2d_unstructured", "3d_unstructured"]
     )
+    def test_voltage_matches_corner_with_uniform_properties(self, dimensionality):
+        # phi_s_p is uniform over the face, so the average equals the corner value
+        model = pybamm.lithium_ion.BasicDFNUnstructured(
+            {"dimensionality": dimensionality}
+        )
+        phi_s_p = model.variables["Positive electrode potential [V]"]
+        model.variables["Corner voltage [V]"] = pybamm.boundary_value(
+            phi_s_p, "top-right"
+        )
+        t_eval = np.linspace(0, 3000, 11)
+        sim = pybamm.Simulation(model, var_pts=COARSE_UNSTRUCTURED_VAR_PTS)
+        solution = sim.solve([0, 3000])
+        np.testing.assert_allclose(
+            solution["Voltage [V]"](t=t_eval),
+            solution["Corner voltage [V]"](t=t_eval),
+            rtol=0,
+            atol=1e-9,
+        )
+
+    @pytest.mark.parametrize(
+        "dimensionality", [1, 2], ids=["2d_unstructured", "3d_unstructured"]
+    )
     def test_voltage_independent_of_in_plane_mesh(self, dimensionality):
         parameter_values = pybamm.ParameterValues("Marquis2019")
         L_y = parameter_values["Electrode width [m]"]
