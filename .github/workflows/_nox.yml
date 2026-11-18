@@ -11,7 +11,7 @@
 # Naming: a check is "<caller job name> / <this job's name>", so a caller without
 # `name:` leaks its job id, e.g. "run_unit_tests / ubuntu-latest / Python 3.13".
 #
-# The caller must build the solver wheels first (build_solver) — this workflow
+# The caller must build the solver wheels first (_build_solver_wheels.yml) — this workflow
 # downloads the per-platform artifact rather than building from source.
 name: Run nox sessions (reusable)
 
@@ -23,7 +23,7 @@ on:
         required: true
         type: string
       legs:
-        description: 'JSON array of runner/Python pairs, e.g. [{"os": "ubuntu-latest", "python": "3.13"}].'
+        description: 'JSON array of runner/Python pairs, e.g. [{"os": "ubuntu-latest", "python": "3.13"}]. "macos-arm64" and "macos-x86_64" use the MACOS_*_RUNNER repo variables, so check names survive an image change.'
         required: true
         type: string
       fetch_depth:
@@ -61,7 +61,7 @@ env:
 
 jobs:
   nox:
-    runs-on: ${{ matrix.leg.os }}
+    runs-on: ${{ matrix.leg.os == 'macos-arm64' && (vars.MACOS_ARM64_RUNNER || 'macos-latest') || matrix.leg.os == 'macos-x86_64' && (vars.MACOS_X86_64_RUNNER || 'macos-15-intel') || matrix.leg.os }}
     timeout-minutes: ${{ inputs.timeout_minutes }}
     permissions:
       contents: read

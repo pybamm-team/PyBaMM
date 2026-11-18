@@ -1,12 +1,8 @@
 # Reusable workflow: build pybammsolvers wheels (+ optional sdist) from the
 # in-repo source.
 #
-# Single definition of "how to build the solver", called by:
-#   * release_solvers.yml   — on a pybammsolvers-v* release (build + sdist, no
-#                             cache, then the caller publishes to PyPI).
-#   * test_on_push.yml      — on PRs (build + cache so PyBaMM's matrix can test
-#                             against the in-repo solver without rebuilding it
-#                             per cell).
+# Releases build fresh, uncached wheels from this workflow, so a cache can never
+# leak into PyPI; the test and benchmark workflows use the cache.
 #
 # Platform selection: callers pass `platforms` / `macos_archs` to build only the
 # wheels their downstream jobs consume; both default to all platforms.
@@ -89,7 +85,7 @@ jobs:
         id: key
         run: |
           solver=$(git rev-parse HEAD:packages/pybammsolvers)
-          recipe=$(git rev-parse --short HEAD:.github/workflows/_build_solver_wheels.yml)
+          recipe=$(git rev-parse HEAD:.github/workflows/_build_solver_wheels.yml)
           echo "key=$solver-$recipe" >> "$GITHUB_OUTPUT"
 
       # One cache entry per target, so a caller that wants only some platforms can
@@ -344,6 +340,16 @@ jobs:
         with:
           submodules: 'recursive'
           persist-credentials: false
+
+      # A repo variable can point a label at the other architecture; stop before
+      # building the wrong wheels under this target's name.
+      - name: Check the runner architecture
+        if: runner.arch != (matrix.arch == 'arm64' && 'ARM64' || 'X64')
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          echo "::error::The $ARCH build got a $RUNNER_ARCH runner; check the MACOS_*_RUNNER repo variables."
+          exit 1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.13
@@ -444,6 +450,9 @@ jobs:
     if: ${{ !cancelled() && inputs.cache_wheels && needs.resolve.result == 'success' && needs.resolve.outputs.targets != '[]' }}
     runs-on: ubuntu-latest
     permissions: {}
+    defaults:
+      run:
+        working-directory: .
     strategy:
       fail-fast: false
       matrix:
@@ -463,6 +472,12 @@ jobs:
         with:
           path: wheelhouse/${{ matrix.target }}
           key: solver-wheels-${{ matrix.target }}-${{ needs.resolve.outputs.key }}
+
+      - name: Warn that the wheels were not cached
+        if: steps.download.outcome == 'failure'
+        env:
+          TARGET: ${{ matrix.target }}
+        run: echo "::warning::No wheels_$TARGET artifact to cache, so the next run rebuilds it natively."
 
   build_sdist:
     name: Build SDist

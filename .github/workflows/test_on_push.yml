@@ -41,8 +41,8 @@ jobs:
       full_push: ${{ github.event_name == 'push' && steps.queue.outputs.validated != 'true' }}
       # Routing decisions, resolved once here rather than repeated in every job's `if`.
       run_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
-      # macOS and Windows legs skip the merge queue: the pull request already ran them
-      # on the same change, and their runners are the scarcest.
+      # macOS and Windows legs skip the merge queue, where their scarce runners hurt most:
+      # the PR ran them on its own base, and the nightly runs them on main.
       run_platform_tests: ${{ (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' }}
       run_docs_tests: ${{ github.event_name == 'merge_group' || (github.event_name == 'push' && steps.queue.outputs.validated != 'true') || steps.filter.outputs.pybamm == 'true' || steps.filter.outputs.solver == 'true' || steps.filter.outputs.docs == 'true' }}
       # A core change runs the zoo too, so an upstream regression shows up here
@@ -321,8 +321,8 @@ jobs:
     with:
       sessions: unit
       legs: >-
-        [{"os": "${{ vars.MACOS_ARM64_RUNNER || 'macos-latest' }}", "python": "3.11"},
-         {"os": "${{ vars.MACOS_ARM64_RUNNER || 'macos-latest' }}", "python": "3.15"}]
+        [{"os": "macos-arm64", "python": "3.11"},
+         {"os": "macos-arm64", "python": "3.15"}]
 
   # Advisory: reports red on failure but is deliberately absent from ci_gate's
   # needs, so a flaky Windows run never blocks a merge.
