@@ -16,6 +16,7 @@
 - `pybamm.Magnitude` is deprecated and will be removed in 27.1; use `pybamm.Component(symbol, 0)` / `pybamm.Component(symbol, 1)` for the lr/tb components of a `VectorField`. ([#5943](https://github.com/pybamm-team/PyBaMM/pull/5943))
 - The `evaluation_array` argument of `StateVector` and `StateVectorDot` is deprecated and ignored; drop the argument. ([#5994](https://github.com/pybamm-team/PyBaMM/pull/5994))
 - `Solution.y` and `Solution.yp` are deprecated and will be removed in 27.2: they hold only the stored states, which need not match `Solution.t`. Use `solution[name]` for variables, or `all_ys` and `all_yps` for the raw states. ([#6005](https://github.com/pybamm-team/PyBaMM/pull/6005))
+- `"{Negative/Positive} electrode charge transfer coefficient"` is deprecated in favour of `"{Negative/Positive} electrode Butler-Volmer transfer coefficient"`. `ParameterValues` maps the old name to the new one with a `DeprecationWarning` when it is loaded, updated, set or read, so existing code and custom parameter sets keep working; rename the key to silence the warning. ([#5843](https://github.com/pybamm-team/PyBaMM/pull/5843))
 
 ## Features
 
@@ -80,6 +81,7 @@
 - Half-cell models with `"surface form"` and a non-isothermal `"thermal"` option now build, instead of failing with a `ShapeError`. ([#5540](https://github.com/pybamm-team/PyBaMM/pull/5540))
 - Input-dependent geometry limits on a submesh that needs numbers, such as the default `Uniform1DSubMesh`, raise a `GeometryError` pointing to `pybamm.SymbolicUniform1DSubMesh` instead of an `IndexError`, and input-dependent tab positions raise one instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 - `output_variables` with `/` in their names, such as `"Entropic change [V/K]"`, or with names that differ only in punctuation now work, including with the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- Parameter sets now store the transfer coefficient as `"{Negative/Positive} electrode Butler-Volmer transfer coefficient"`, the name asymmetric Butler-Volmer kinetics read, instead of the unused `"... electrode charge transfer coefficient"`. `Ecker2015`, which had no transfer coefficient, now has 0.5 for both electrodes, so `{"intercalation kinetics": "asymmetric Butler-Volmer"}` works with every shipped lithium-ion and sodium-ion parameter set. ([#5843](https://github.com/pybamm-team/PyBaMM/pull/5843))
 
 ## Optimizations
 

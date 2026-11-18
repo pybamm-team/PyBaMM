@@ -566,6 +566,7 @@ def get_parameter_values():
         "Negative particle radius [m]": 1.37e-05,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.6372789338386007,
         "Negative electrode Bruggeman coefficient (electrode)": 0.0,
+        "Negative electrode Butler-Volmer transfer coefficient": 0.5,
         "Negative electrode exchange-current density [A.m-2]"
         "": graphite_electrolyte_exchange_current_density_Ecker2015,
         "Negative electrode density [kg.m-3]": 1555.0,
@@ -582,6 +583,7 @@ def get_parameter_values():
         "Positive particle radius [m]": 6.5e-06,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5442267190786427,
         "Positive electrode Bruggeman coefficient (electrode)": 0.0,
+        "Positive electrode Butler-Volmer transfer coefficient": 0.5,
         "Positive electrode exchange-current density [A.m-2]"
         "": nco_electrolyte_exchange_current_density_Ecker2015,
         "Positive electrode density [kg.m-3]": 2895.0,
