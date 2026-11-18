@@ -85,40 +85,29 @@ class OneStateDifferentialCapacityHysteresisOpenCircuitPotential(
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        c_max = self.phase_param.c_max
-        eps = self.phase_param.epsilon_s
+        h, rate, sto_surf, T = self._get_hysteresis_rhs_inputs(variables)
         if self.x_average is False:
-            i_vol = variables[
-                f"{Domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
-            ]
-            sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
-            T = variables[f"{Domain} electrode temperature [K]"]
-            h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
             dQdU = variables[
                 f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
             ]
         else:
-            i_vol = variables[
-                f"X-averaged {domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
-            ]
-            sto_surf = variables[
-                f"X-averaged {domain} {phase_name}particle surface stoichiometry"
-            ]
-            T = variables[f"X-averaged {domain} electrode temperature [K]"]
-            h = variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"]
             dQdU = variables[
                 f"X-averaged {domain} electrode {phase_name}differential capacity [A.s.V-1]"
             ]
-            eps = pybamm.x_average(eps)
+        if getattr(self.options, domain)["particle size"] == "distribution":
+            # dQdU is electrode-level; broadcast it to the per-size rate's shape
+            if dQdU.domain != rate.domains["secondary"]:
+                dQdU = pybamm.PrimaryBroadcast(dQdU, rate.domains["secondary"])
+            dQdU = pybamm.PrimaryBroadcast(dQdU, rate.domain)
 
         Gamma = self.phase_param.hysteresis_decay(sto_surf, T)
         x = self.phase_param.hysteresis_switch
 
-        i_vol_sign = pybamm.sign(i_vol)
-        signed_h = (1 - i_vol_sign * h) / 2
+        rate_sign = pybamm.sign(rate)
+        signed_h = (1 - rate_sign * h) / 2
         C_diff = dQdU
         C_ref_vol = 1  # [F]
         gamma = Gamma * ((C_diff / C_ref_vol) ** (-x))
-        dhdt = gamma * i_vol / (self.param.F * c_max * eps) * signed_h
+        dhdt = gamma * rate / (self.param.F * self.phase_param.c_max) * signed_h
 
         self.rhs[h] = dhdt

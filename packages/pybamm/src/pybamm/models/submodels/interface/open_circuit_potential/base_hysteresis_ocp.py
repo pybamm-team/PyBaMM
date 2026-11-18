@@ -39,6 +39,9 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
         domain_options = getattr(self.options, domain)
         phase_name = self.phase_name
 
+        if domain_options["particle size"] == "distribution":
+            return self._get_hysteresis_state_distribution_variables()
+
         if self.x_average is False:
             h = pybamm.Variable(
                 f"{Domain} electrode {phase_name}hysteresis state",
@@ -56,20 +59,94 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
                 },
             )
             h = pybamm.PrimaryBroadcast(h_x_av, [f"{domain} electrode"])
-        variables = {
+        return {
             f"{Domain} electrode {phase_name}hysteresis state": h,
             f"X-averaged {domain} electrode {phase_name}hysteresis state": h_x_av,
         }
-        if domain_options["particle size"] == "distribution":
-            h_dist = pybamm.PrimaryBroadcast(h, [f"{domain} {phase_name}particle size"])
-            h_dist_x_av = pybamm.x_average(h_dist)
-            variables.update(
-                {
-                    f"{Domain} electrode {phase_name}hysteresis state distribution": h_dist,
-                    f"X-averaged {domain} electrode {phase_name}hysteresis state distribution": h_dist_x_av,
-                }
+
+    def _get_hysteresis_state_distribution_variables(self):
+        """
+        Under a particle-size distribution each particle size carries its own
+        hysteresis state, so particles can sit on different branches (e.g. at
+        rest, when lithium redistributes between sizes). The electrode-level
+        state is the (area-weighted) size average.
+        """
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+        size = f"{domain} {phase_name}particle size"
+
+        if self.x_average is False:
+            h_dist = pybamm.Variable(
+                f"{Domain} electrode {phase_name}hysteresis state distribution",
+                domains={
+                    "primary": size,
+                    "secondary": f"{domain} electrode",
+                    "tertiary": "current collector",
+                },
             )
-        return variables
+            h_dist_x_av = pybamm.x_average(h_dist)
+            h = pybamm.size_average(h_dist)
+            h_x_av = pybamm.x_average(h)
+        else:
+            h_dist_x_av = pybamm.Variable(
+                f"X-averaged {domain} electrode {phase_name}"
+                "hysteresis state distribution",
+                domains={"primary": size, "secondary": "current collector"},
+            )
+            h_dist = pybamm.SecondaryBroadcast(h_dist_x_av, [f"{domain} electrode"])
+            h_x_av = pybamm.size_average(h_dist_x_av)
+            h = pybamm.PrimaryBroadcast(h_x_av, [f"{domain} electrode"])
+        return {
+            f"{Domain} electrode {phase_name}hysteresis state": h,
+            f"X-averaged {domain} electrode {phase_name}hysteresis state": h_x_av,
+            f"{Domain} electrode {phase_name}hysteresis state distribution": h_dist,
+            f"X-averaged {domain} electrode {phase_name}"
+            "hysteresis state distribution": h_dist_x_av,
+        }
+
+    def _get_hysteresis_rhs_inputs(self, variables):
+        """
+        Return the hysteresis state, the rate of change of stoichiometry it is
+        driven by (``i_vol / eps`` in [A.m-3], or ``3 j / R`` per particle size
+        under a particle-size distribution), and the surface stoichiometry and
+        temperature at the same shape.
+        """
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+        prefix = "" if self.x_average is False else "X-averaged "
+        dom = Domain if self.x_average is False else domain
+        T = variables[f"{prefix}{dom} electrode temperature [K]"]
+
+        if getattr(self.options, domain)["particle size"] == "distribution":
+            j = variables[
+                f"{prefix}{dom} electrode {phase_name}"
+                "interfacial current density distribution [A.m-2]"
+            ]
+            R = pybamm.SpatialVariable(
+                f"R_{domain[0]}", domains=j.domains, coord_sys="cartesian"
+            )
+            sto_surf = variables[
+                f"{prefix}{dom} {phase_name}particle surface stoichiometry distribution"
+            ]
+            T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
+            h = variables[
+                f"{prefix}{dom} electrode {phase_name}hysteresis state distribution"
+            ]
+            rate = 3 * j / R
+        else:
+            i_vol = variables[
+                f"{prefix}{dom} electrode {phase_name}"
+                "volumetric interfacial current density [A.m-3]"
+            ]
+            eps = self.phase_param.epsilon_s
+            if self.x_average:
+                eps = pybamm.x_average(eps)
+            sto_surf = variables[
+                f"{prefix}{dom} {phase_name}particle surface stoichiometry"
+            ]
+            h = variables[f"{prefix}{dom} electrode {phase_name}hysteresis state"]
+            rate = i_vol / eps
+        return h, rate, sto_surf, T
 
     def _get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
@@ -155,14 +232,14 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
         return variables
 
     def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
+        domain = self.domain
+        h, *_ = self._get_hysteresis_rhs_inputs(variables)
         h_init = self.phase_param.h_init
-        if self.x_average is False:
-            h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-        else:
-            h = variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"]
+        if self.x_average:
             h_init = pybamm.x_average(h_init)
+        if getattr(self.options, domain)["particle size"] == "distribution":
+            h_init = pybamm.PrimaryBroadcast(
+                h_init, [f"{domain} {self.phase_name}particle size"]
+            )
 
         self.initial_conditions[h] = h_init

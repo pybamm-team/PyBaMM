@@ -54,37 +54,16 @@ class OneStateHysteresisOpenCircuitPotential(BaseHysteresisOpenCircuitPotential)
         return self._get_coupled_variables(variables)
 
     def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
-        c_max = self.phase_param.c_max
-        eps = self.phase_param.epsilon_s
-        if self.x_average is False:
-            i_vol = variables[
-                f"{Domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
-            ]
-            sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
-            T = variables[f"{Domain} electrode temperature [K]"]
-            h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-        else:
-            i_vol = variables[
-                f"X-averaged {domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
-            ]
-            sto_surf = variables[
-                f"X-averaged {domain} {phase_name}particle surface stoichiometry"
-            ]
-            T = variables[f"X-averaged {domain} electrode temperature [K]"]
-            h = variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"]
-            eps = pybamm.x_average(eps)
+        h, rate, sto_surf, T = self._get_hysteresis_rhs_inputs(variables)
         gamma_lith = self.phase_param.hysteresis_decay(sto_surf, T, "lithiation")
         gamma_delith = self.phase_param.hysteresis_decay(sto_surf, T, "delithiation")
 
-        i_vol_sign = pybamm.sign(i_vol)
-        signed_h = (1 - i_vol_sign * h) / 2
+        rate_sign = pybamm.sign(rate)
+        signed_h = (1 - rate_sign * h) / 2
         gamma = (
-            0.5 * (1 - i_vol_sign) * gamma_lith + 0.5 * (1 + i_vol_sign) * gamma_delith
+            0.5 * (1 - rate_sign) * gamma_lith + 0.5 * (1 + rate_sign) * gamma_delith
         )
 
-        dhdt = gamma * i_vol / (self.param.F * c_max * eps) * signed_h
+        dhdt = gamma * rate / (self.param.F * self.phase_param.c_max) * signed_h
 
         self.rhs[h] = dhdt
