@@ -261,10 +261,8 @@ Package                                                             Supported ve
 `NumPy <https://numpy.org>`__                                         Whatever recent versions work. >= 2.0.0
 `SciPy <https://docs.scipy.org/doc/scipy/>`__                         Whatever recent versions work. >= 1.11.4
 `CasADi <https://web.casadi.org/docs/>`__                             Whatever recent versions work (transitive via pybammsolvers)
-`Xarray <https://docs.xarray.dev/en/stable/>`__                       Whatever recent versions work. >= 2022.6.0
 `Anytree <https://anytree.readthedocs.io/en/stable/>`__               Whatever recent versions work. >= 2.8.0
 `SymPy <https://docs.sympy.org/latest/index.html>`__                  Whatever recent versions work. >= 1.12
-`pandas <https://pypi.org/project/pandas/>`__                         Whatever recent versions work. >= 1.5.0
 `pooch <https://www.fatiando.org/pooch/>`__                           Whatever recent versions work. >= 1.8.1
 `posthog <https://posthog.com/>`__                                    Whatever recent versions work
 `black <https://black.readthedocs.io/en/stable/>`__
@@ -335,6 +333,7 @@ Installable with ``pip install "pybamm[examples]"``
 Dependency                                                                       Minimum Version    pip extra          Notes
 ================================================================================ ================== ================== ================================
 `jupyter <https://docs.jupyter.org/en/latest/>`__                                \-                 examples           For example notebooks rendering.
+`pandas <https://pypi.org/project/pandas/>`__                                    1.5.0              examples           For reading data in examples.
 ================================================================================ ================== ================== ================================
 
 .. _install.dev_dependencies:

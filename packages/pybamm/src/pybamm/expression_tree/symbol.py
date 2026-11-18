@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Self, cast
 
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
@@ -1594,6 +1593,8 @@ class Symbol:
         self._print_name = prettify_print_name(name)
 
     def to_equation(self):
+        import sympy
+
         return sympy.Symbol(str(self.name))
 
     def to_json(self):

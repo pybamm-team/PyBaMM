@@ -3,8 +3,13 @@ from __future__ import annotations
 #
 # Solution class
 #
+import codecs
+import csv
+import io
 import json
+import math
 import numbers
+import os
 import pickle
 import warnings
 from dataclasses import astuple, dataclass
@@ -12,8 +17,6 @@ from itertools import chain
 
 import casadi
 import numpy as np
-import pandas as pd
-from scipy.io import savemat
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
@@ -33,6 +36,154 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         # won't be called since we only need to convert numpy arrays
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
+
+
+# Rows are formatted this many cells at a time, as pandas does, to bound memory
+_CSV_CHUNK_CELLS = 100_000
+# Compressions pandas inferred from these extensions, which this writer lacks
+_UNSUPPORTED_CSV_COMPRESSION = (
+    ".zip",
+    ".zst",
+    ".tar",
+    ".tar.gz",
+    ".tar.bz2",
+    ".tar.xz",
+)
+
+
+def _write_csv(data: dict, filename=None) -> str | None:
+    """
+    Write columns of data as CSV: a header row of their names, then one row per
+    entry. Floats are written in their shortest round-trip form, a missing value
+    as an empty field, and names are quoted only where needed.
+
+    Parameters
+    ----------
+    data : dict
+        1D arrays of equal length by column name. A scalar is repeated down its
+        column.
+    filename : str, path-like or file, optional
+        The file to write, compressed if its name ends in ``.gz``, ``.bz2`` or
+        ``.xz``. A binary file is written as UTF-8. If None, the CSV is returned
+        as a string.
+
+    Returns
+    -------
+    str or None
+        The CSV, if ``filename`` is None.
+
+    Raises
+    ------
+    ValueError
+        If a column is not 1D, the columns differ in length, or all are scalars,
+        or if the file's name ends in an extension of another compression, such
+        as ``.zip``.
+    """
+    columns = {name: np.asarray(values) for name, values in data.items()}
+    if any(values.ndim > 1 for values in columns.values()):
+        raise ValueError("Per-column arrays must each be 1-dimensional")
+    lengths = {len(values) for values in columns.values() if values.ndim == 1}
+    if len(lengths) > 1:
+        raise ValueError("All arrays must be of the same length")
+    if columns and not lengths:
+        raise ValueError("At least one column must be an array, not a scalar")
+    n_rows = lengths.pop() if lengths else 0
+    columns = {
+        name: np.broadcast_to(values, (n_rows,)) for name, values in columns.items()
+    }
+    chunk_rows = max(1, _CSV_CHUNK_CELLS // max(1, len(columns)))
+
+    def write(file):
+        writer = csv.writer(file, lineterminator=os.linesep)
+        writer.writerow(columns)
+        for start in range(0, n_rows, chunk_rows):
+            chunk = [
+                _csv_fields(values[start : start + chunk_rows])
+                for values in columns.values()
+            ]
+            writer.writerows(zip(*chunk, strict=True))
+
+    if filename is None:
+        buffer = io.StringIO()
+        write(buffer)
+        return buffer.getvalue()
+    if hasattr(filename, "write"):
+        if _is_binary_file(filename):
+            # UTF-8, as pandas wrote. Unbuffered, so an error leaves nothing to
+            # flush and nothing to close the caller's file
+            write(codecs.getwriter("utf-8")(filename))
+        else:
+            write(filename)
+        return None
+    with _open_for_text(filename) as file:
+        write(file)
+    return None
+
+
+def _csv_fields(values):
+    """Return the CSV fields of a 1D array, with an empty field where missing."""
+    # Python and numpy both write a float64 in its shortest round-trip form;
+    # Python is faster, but float32 and complex need numpy's own form
+    if values.dtype == np.float64 or values.dtype.kind in "biuO":
+        fields = values.tolist()
+    else:
+        fields = values.astype(str).tolist()
+    missing = _is_missing(values)
+    if missing.any():
+        fields = [
+            "" if is_missing else field
+            for field, is_missing in zip(fields, missing, strict=True)
+        ]
+    return fields
+
+
+def _is_binary_file(file) -> bool:
+    """Return whether a file object takes bytes: a binary io class, or a mode with b."""
+    return isinstance(file, io.RawIOBase | io.BufferedIOBase) or "b" in str(
+        getattr(file, "mode", "")
+    )
+
+
+def _is_missing(values):
+    """Return where a 1D array holds NaN, or None in an object array."""
+    if values.dtype.kind in "fc":
+        return np.isnan(values)
+    if values.dtype.kind == "O":
+        return np.array(
+            [
+                entry is None or (isinstance(entry, float) and math.isnan(entry))
+                for entry in values.tolist()
+            ],
+            dtype=bool,
+        )
+    return np.zeros(values.shape, dtype=bool)
+
+
+def _open_for_text(filename):
+    """Open a file to write text to, compressed as its extension asks."""
+    name = os.fsdecode(filename)
+    if name.lower().endswith(_UNSUPPORTED_CSV_COMPRESSION):
+        raise ValueError(
+            f"Cannot write CSV to {name!r}: it can be compressed only as .gz, .bz2 "
+            "or .xz"
+        )
+    suffix = os.path.splitext(name)[1].lower()
+    if suffix == ".gz":
+        import gzip
+
+        opener = gzip.open
+    elif suffix == ".bz2":
+        import bz2
+
+        opener = bz2.open
+    elif suffix == ".xz":
+        import lzma
+
+        opener = lzma.open
+    else:
+        opener = open
+    mode = "w" if opener is open else "wt"
+    return opener(filename, mode, newline="", encoding="utf-8")
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,9 +330,7 @@ class SolutionBase:
             data = {short_names.get(k, k): v for k, v in data.items()}
 
         if to_format == "csv":
-            import pandas as _pd
-
-            _pd.DataFrame(data).to_csv(filename, index=False)
+            _write_csv(data, filename)
         elif to_format == "json":
             with open(filename, "w") as f:
                 json.dump(data, f, cls=NumpyEncoder)
@@ -1151,16 +1300,20 @@ class Solution(SolutionBase):
 
         # Save cycle number and step number if the solution has them
         if cycles_and_steps and len(self.cycles) > 0:
-            data_short_names["Cycle"] = np.array([])
-            data_short_names["Step"] = np.array([])
+            cycle_numbers, step_numbers, previous_last_t = [], [], None
             for i, cycle in enumerate(self.cycles):
-                data_short_names["Cycle"] = np.concatenate(
-                    [data_short_names["Cycle"], i * np.ones_like(cycle.t)]
-                )
                 for j, step in enumerate(cycle.steps):
-                    data_short_names["Step"] = np.concatenate(
-                        [data_short_names["Step"], j * np.ones_like(step.t)]
+                    # a step's first point is dropped when it repeats the previous
+                    # step's last point, so don't number it twice
+                    repeated = (
+                        previous_last_t is not None and step.t[0] == previous_last_t
                     )
+                    previous_last_t = step.t[-1]
+                    length = len(step.t) - repeated
+                    cycle_numbers.append(np.full(length, i, dtype=float))
+                    step_numbers.append(np.full(length, j, dtype=float))
+            data_short_names["Cycle"] = np.concatenate(cycle_numbers)
+            data_short_names["Step"] = np.concatenate(step_numbers)
 
         return data_short_names
 
@@ -1230,6 +1383,8 @@ class Solution(SolutionBase):
                             "['Electrolyte concentration'], to_format='matlab, "
                             "short_names={'Electrolyte concentration': 'c_e'})"
                         )
+            from scipy.io import savemat
+
             savemat(filename, data)
         elif to_format == "csv":
             for name, var in data.items():
@@ -1237,8 +1392,7 @@ class Solution(SolutionBase):
                     raise ValueError(
                         f"only 0D variables can be saved to csv, but '{name}' is {var.ndim - 1}D"
                     )
-            df = pd.DataFrame(data)
-            return df.to_csv(filename, index=False)
+            return _write_csv(data, filename)
         elif to_format == "json":
             if filename is None:
                 return json.dumps(data, cls=NumpyEncoder)

@@ -2,9 +2,9 @@ import functools
 import warnings
 
 import numpy as np
-import xarray as xr
 
 import pybamm
+from pybamm.solvers.grid_interpolation import RectilinearGrid
 from pybamm.solvers.variable_observer import as_observer
 
 from .base_processed_variable import BaseProcessedVariable
@@ -107,10 +107,15 @@ class ProcessedVariable(BaseProcessedVariable):
         self.base_eval_shape = self.base_variables[0].shape
         self.base_eval_size = self.base_variables[0].size
 
-        self._xr_array_raw = None
         self._entries_raw = None
         self._entries_for_interp_raw = None
         self._coords_raw = None
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Rebuilt on use, so saved files do not depend on the grid's class
+        state.pop("_grid_raw", None)
+        return state
 
     def __setstate__(self, state):
         state = dict(state)
@@ -118,6 +123,8 @@ class ProcessedVariable(BaseProcessedVariable):
         leaves = state.pop("base_variables_casadi", None)
         if "_observer" not in state:
             state["_observer"] = as_observer(leaves)
+        # A variable pickled by 26.10 or earlier may hold an unused xarray cache
+        state.pop("_xr_array_raw", None)
         self.__dict__.update(state)
 
     @property
@@ -256,25 +263,22 @@ class ProcessedVariable(BaseProcessedVariable):
             a is not None for a in [x, r, y, z, R, *spatial_coordinates.values()]
         )
 
-        xr_interp = spatial_interp or not hermite_time_interp
+        grid_interp = spatial_interp or not hermite_time_interp
 
-        if xr_interp:
+        if grid_interp:
             if hermite_time_interp:
                 # Already interpolated in time
                 t = None
                 entries_for_interp, coords = self._interp_setup(entries, t_observe)
+                grid = RectilinearGrid(coords)
             else:
                 self.initialise()
-                entries_for_interp, coords = (
-                    self._entries_for_interp_raw,
-                    self._coords_raw,
-                )
+                entries_for_interp, grid = self._entries_for_interp_raw, self._grid_raw
 
             if self.time_integral is None:
-                processed_entries = self._xr_interpolate(
+                processed_entries = self._interpolate(
                     entries_for_interp,
-                    coords,
-                    observe_raw,
+                    grid,
                     t,
                     x,
                     r,
@@ -289,7 +293,7 @@ class ProcessedVariable(BaseProcessedVariable):
         else:
             processed_entries = entries
 
-        # Only the Hermite route sorts t; the xarray route keeps the caller's order
+        # Only the Hermite route sorts t; the grid route keeps the caller's order
         if not is_sorted and hermite_time_interp:
             idxs_unsort = np.empty_like(idxs_sort)
             idxs_unsort[idxs_sort] = np.arange(len(t_observe))
@@ -302,11 +306,10 @@ class ProcessedVariable(BaseProcessedVariable):
 
         return processed_entries
 
-    def _xr_interpolate(
+    def _interpolate(
         self,
         entries_for_interp,
-        coords,
-        observe_raw,
+        grid,
         t=None,
         x=None,
         r=None,
@@ -318,24 +321,25 @@ class ProcessedVariable(BaseProcessedVariable):
     ):
         """
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z, R and/or
-        other named spatial coordinates), using interpolation
+        other named spatial coordinates), using linear interpolation
         """
-        if observe_raw:
-            if not self.xr_array_raw_initialized:
-                self._xr_array_raw = xr.DataArray(entries_for_interp, coords=coords)
-            xr_data_array = self._xr_array_raw
-        else:
-            xr_data_array = xr.DataArray(entries_for_interp, coords=coords)
+        queries = {
+            "t": t,
+            "x": x,
+            "r": r,
+            "y": y,
+            "z": z,
+            "R": R,
+            **spatial_coordinates,
+        }
+        queries = {key: value for key, value in queries.items() if value is not None}
+        return grid.interpolate(entries_for_interp, queries, fill_value)
 
-        kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R, **spatial_coordinates}
-
-        # Remove any None arguments
-        kwargs = {key: value for key, value in kwargs.items() if value is not None}
-
-        # Use xarray interpolation, return numpy array
-        out = xr_data_array.interp(**kwargs, kwargs={"fill_value": fill_value}).values
-
-        return out
+    @functools.cached_property
+    def _grid_raw(self):
+        """The grid of the raw entries, kept so each axis is checked only once."""
+        self.initialise()
+        return RectilinearGrid(self._coords_raw)
 
     def _check_observe_raw(self, t):
         """
@@ -396,10 +400,6 @@ class ProcessedVariable(BaseProcessedVariable):
     @property
     def entries_raw_initialized(self):
         return self._entries_raw is not None
-
-    @property
-    def xr_array_raw_initialized(self):
-        return self._xr_array_raw is not None
 
     @property
     def sensitivities(self):
