@@ -12,7 +12,6 @@ from typing import Any
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import issparse, vstack
 
 import pybamm
@@ -194,6 +193,8 @@ class Concatenation(pybamm.Symbol):
 
     def _sympy_operator(self, *children):
         """Apply appropriate SymPy operators."""
+        import sympy
+
         concat_latex = tuple(map(sympy.latex, children))
 
         if self.print_name is not None:

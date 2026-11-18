@@ -2,7 +2,6 @@ import warnings
 
 import casadi
 import numpy as np
-from scipy.interpolate import interp1d
 
 import pybamm
 
@@ -348,6 +347,8 @@ class CasadiSolver(pybamm.BaseSolver):
         event state using interpolation. The solution is then truncated
         so that only the times up to the event are returned
         """
+        from scipy.interpolate import interp1d
+
         pybamm.logger.debug("Solving for events")
 
         model = coarse_solution.all_models[-1]
