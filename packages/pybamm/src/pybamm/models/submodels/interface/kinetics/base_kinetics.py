@@ -152,11 +152,7 @@ class BaseKinetics(BaseInterface):
             eta_sei = pybamm.Scalar(0)
         eta_r += eta_sei
 
-        # Broadcast j0 to match eta_r's domain, if necessary
-        if j0.secondary_domain == ["current collector"] and eta_r.secondary_domain == [
-            f"{domain} electrode"
-        ]:
-            j0 = pybamm.SecondaryBroadcast(j0, [f"{domain} electrode"])
+        j0 = self._broadcast_to_eta_r_domain(j0, eta_r)
 
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
@@ -234,6 +230,14 @@ class BaseKinetics(BaseInterface):
             )
 
         return variables
+
+    def _broadcast_to_eta_r_domain(self, symbol, eta_r):
+        """Broadcast an x-averaged symbol onto the electrode if eta_r is not."""
+        if symbol.secondary_domain == [
+            "current collector"
+        ] and eta_r.secondary_domain == [f"{self.domain} electrode"]:
+            symbol = pybamm.SecondaryBroadcast(symbol, [f"{self.domain} electrode"])
+        return symbol
 
     def set_algebraic(self, variables):
         domain, Domain = self.domain_Domain
