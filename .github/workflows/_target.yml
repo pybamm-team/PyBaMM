@@ -1,0 +1,50 @@
+# Reusable workflow: one target's solver wheels, then its nox sessions. Callers run
+# it as a matrix over targets, so a shortage in one runner pool delays only its entry.
+name: Test a target (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: "linux-x64, linux-arm64, windows-x64, macos-arm64 or macos-x64."
+        required: true
+        type: string
+      pythons:
+        description: 'JSON array of Python versions to test; "[]" only builds the wheels.'
+        required: true
+        type: string
+      sessions:
+        description: "Nox session(s) to run, space-separated and in order."
+        default: unit
+        required: false
+        type: string
+      max_parallel:
+        description: "Most legs to run at once, to leave this pool's runners for others."
+        default: 256
+        required: false
+        type: number
+
+permissions: {}
+
+jobs:
+  wheels:
+    name: Solver wheels
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_build_solver_wheels.yml
+    with:
+      target: ${{ inputs.target }}
+      cache_wheels: true
+
+  tests:
+    needs: wheels
+    if: inputs.pythons != '[]'
+    name: Tests
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      target: ${{ inputs.target }}
+      pythons: ${{ inputs.pythons }}
+      sessions: ${{ inputs.sessions }}
+      max_parallel: ${{ inputs.max_parallel }}
