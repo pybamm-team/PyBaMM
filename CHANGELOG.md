@@ -34,6 +34,7 @@
 - When every sub-solver of `CompositeSolver` fails, their errors are chained to the raised `SolverError` as an `ExceptionGroup`, so each failure's traceback is kept. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - Added `pybamm-core` (`packages/pybamm-rust`), a Rust expression compiler: an arena DAG with simplification, CSE and zero propagation, a typed IR, scalar and lane-batched interpreters, and forward-mode AD. CI runs `cargo test`, an MSRV check, `cargo fmt`, `cargo clippy` and CodeQL. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
 - `pybamm-core` evaluates transcendentals through the platform C library, as CasADi does: bitwise identical across evaluation paths, last-bit differences across platforms. `pow` is exact for exponents `0`, `1`, `2` and `-1`; `erf`, `asinh` and IEEE 754-2019 `minimum`/`maximum` use `libm`. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
+- `pybamm.UserSuppliedUnstructuredMesh` loads hexahedral mesh files with planar faces, such as structured gmsh meshes of thin pouch-cell layers, with quad boundary tags. Warped or collapsed hexahedra, mixed volume cell types and wedges, pyramids or polyhedra raise `GeometryError`. ([#5850](https://github.com/pybamm-team/PyBaMM/pull/5850))
 
 ## Bug fixes
 
@@ -88,6 +89,7 @@
 - Half-cell models with `"surface form"` and a non-isothermal `"thermal"` option now build, instead of failing with a `ShapeError`. ([#5540](https://github.com/pybamm-team/PyBaMM/pull/5540))
 - Input-dependent geometry limits on a submesh that needs numbers, such as the default `Uniform1DSubMesh`, raise a `GeometryError` pointing to `pybamm.SymbolicUniform1DSubMesh` instead of an `IndexError`, and input-dependent tab positions raise one instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 - `output_variables` with `/` in their names, such as `"Entropic change [V/K]"`, or with names that differ only in punctuation now work, including with the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `UnstructuredSubMesh.combine` and `compute_interface_data` size their node-welding tolerance by the shortest element edge, not the first edge, which on thin hexahedra exceeded the cell thickness and welded distinct layers together. ([#5850](https://github.com/pybamm-team/PyBaMM/pull/5850))
 
 ## Optimizations
 
