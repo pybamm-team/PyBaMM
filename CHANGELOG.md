@@ -37,6 +37,7 @@
 
 ## Bug fixes
 
+- `EISSimulation.solve` now orders input parameters consistently when reusing its compiled Jacobian, so changing dictionary insertion order no longer changes the impedance. ([#6072](https://github.com/pybamm-team/PyBaMM/pull/6072))
 - Reading a 0D variable at its stored times, `var(solution.t)`, no longer raises when the solution repeats a time. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
 - The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))
