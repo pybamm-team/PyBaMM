@@ -42,10 +42,8 @@ jobs:
       contents: read
     uses: $/.github/workflows/_build_solver_wheels.yml
     with:
+      target: linux-x64
       cache_wheels: true
-      build_sdist: false
-      platforms: '["linux"]'
-      macos_runners: '[]'
 
   build_image:
     name: Build benchmark image
@@ -63,7 +61,7 @@ jobs:
       - name: Download in-repo solver wheels
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: wheels_manylinux
+          name: wheels-linux-x64
           path: solver-wheels
 
       - name: Set up Docker Buildx
