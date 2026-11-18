@@ -12,8 +12,6 @@ from itertools import chain
 
 import casadi
 import numpy as np
-import pandas as pd
-from scipy.io import savemat
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
@@ -1234,6 +1232,8 @@ class Solution(SolutionBase):
                             "['Electrolyte concentration'], to_format='matlab, "
                             "short_names={'Electrolyte concentration': 'c_e'})"
                         )
+            from scipy.io import savemat
+
             savemat(filename, data)
         elif to_format == "csv":
             for name, var in data.items():
@@ -1241,6 +1241,8 @@ class Solution(SolutionBase):
                     raise ValueError(
                         f"only 0D variables can be saved to csv, but '{name}' is {var.ndim - 1}D"
                     )
+            import pandas as pd
+
             df = pd.DataFrame(data)
             return df.to_csv(filename, index=False)
         elif to_format == "json":

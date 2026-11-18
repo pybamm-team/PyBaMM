@@ -136,11 +136,49 @@ class TestProcessedVariable:
 
         data_t1 = processed_var(sol.t)
 
-        assert processed_var.xr_array_raw_initialized
+        # Reading at the solution's own times skips xarray
+        assert not processed_var.xr_array_raw_initialized
 
         data_t2 = processed_var(sol.t)
 
         np.testing.assert_array_equal(data_t1, data_t2)
+
+    @pytest.mark.parametrize("hermite_interp", _hermite_args)
+    def test_processed_variable_0D_at_solution_times(self, hermite_interp):
+        y = pybamm.StateVector(slice(0, 1))
+        var = pybamm.t * y
+        t_sol = np.linspace(0, 1, 7)
+        y_sol = np.array([np.linspace(0, 5, 7)])
+        yp_sol = self._get_yps(y_sol, hermite_interp)
+        processed_var = pybamm.process_variable(
+            "test",
+            [var],
+            [to_casadi(var, y_sol)],
+            self._sol_default(t_sol, y_sol, yp_sol),
+        )
+
+        for t in [None, t_sol, list(t_sol)]:
+            data = processed_var(t)
+            np.testing.assert_array_equal(data, processed_var.entries)
+            assert data is not processed_var.entries
+        assert not processed_var.xr_array_raw_initialized
+
+        # A spatial coordinate is still rejected for a 0D variable
+        with pytest.raises(ValueError, match=r"x"):
+            processed_var(t_sol, x=0.5)
+
+    def _build_0D_var(self, t_sol=None):
+        # No Hermite data, and entries are 5 * t, so linear interpolation is exact
+        if t_sol is None:
+            t_sol = np.linspace(0, 1)
+        y_sol = 5 * t_sol[np.newaxis, :]
+        var = pybamm.StateVector(slice(0, 1))
+        return pybamm.process_variable(
+            "test",
+            [var],
+            [to_casadi(var, y_sol)],
+            self._sol_default(t_sol, y_sol, model=pybamm.BaseModel()),
+        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_discrete_data(self, hermite_interp):
@@ -242,6 +280,26 @@ class TestProcessedVariable:
         # test no sensitivity raises error
         with pytest.raises(ValueError, match=r"Cannot compute sensitivities"):
             print(processed_var.sensitivities)
+
+    def test_0D_call_at_repeated_solution_times(self):
+        # A repeated time, e.g. at a step boundary, keeps both stored values
+        t_sol = np.array([0.0, 0.5, 0.5, 1.0])
+        y_sol = np.array([[0.0, 1.0, 2.0, 3.0]])
+        var = pybamm.StateVector(slice(0, 1))
+        processed_var = pybamm.process_variable(
+            "test",
+            [var],
+            [to_casadi(var, y_sol)],
+            self._sol_default(t_sol, y_sol, model=pybamm.BaseModel()),
+        )
+        for t in [None, t_sol, list(t_sol)]:
+            np.testing.assert_array_equal(processed_var(t), y_sol[0])
+
+    def test_0D_call_fill_value_below_the_first_time(self):
+        # Only the first queried time must not be before the solution starts
+        processed_var = self._build_0D_var()
+        values = processed_var(np.array([0.5, -0.5, 2.0]), fill_value=-1.0)
+        np.testing.assert_array_equal(values, [2.5, -1.0, -1.0])
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_1D(self, hermite_interp):

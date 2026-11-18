@@ -8,7 +8,6 @@ from typing import Literal
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 
 import pybamm
 from pybamm.type_definitions import Numeric
@@ -112,6 +111,8 @@ class Scalar(pybamm.Symbol):
 
     def to_equation(self):
         """Returns the value returned by the node when evaluated."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:

@@ -6,8 +6,6 @@ from __future__ import annotations
 from functools import cached_property
 
 import numpy as np
-import xarray as xr
-from scipy.integrate import cumulative_trapezoid
 
 import pybamm
 
@@ -167,6 +165,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
     def _xr_data_array(self):
         self._materialise()
         if self._xr_data_array_cache is None and self._xr_interp_args is not None:
+            import xarray as xr
+
             data, coords = self._xr_interp_args
             self._xr_data_array_cache = xr.DataArray(data, coords=coords)
             self._xr_interp_args = None
@@ -259,6 +259,8 @@ class ProcessedVariableComputed(BaseProcessedVariable):
         self._xr_interp_args = None
 
     def initialise_0D(self):
+        from scipy.integrate import cumulative_trapezoid
+
         entries = self.unroll_0D()
 
         if self.cumtrapz_ic is not None:

@@ -2,7 +2,6 @@ import functools
 import warnings
 
 import numpy as np
-import xarray as xr
 
 import pybamm
 from pybamm.solvers.variable_observer import as_observer
@@ -262,7 +261,16 @@ class ProcessedVariable(BaseProcessedVariable):
                     self._coords_raw,
                 )
 
-            if self.time_integral is None:
+            if self.time_integral is not None:
+                processed_entries = entries_for_interp
+            elif (
+                observe_raw
+                and not spatial_interp
+                and isinstance(self, ProcessedVariable0D)
+            ):
+                # The stored times need no interpolation, nor xarray's import
+                processed_entries = entries_for_interp.copy()
+            else:
                 processed_entries = self._xr_interpolate(
                     entries_for_interp,
                     coords,
@@ -275,8 +283,6 @@ class ProcessedVariable(BaseProcessedVariable):
                     R,
                     fill_value,
                 )
-            else:
-                processed_entries = entries_for_interp
         else:
             processed_entries = entries
 
@@ -310,6 +316,8 @@ class ProcessedVariable(BaseProcessedVariable):
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
+        import xarray as xr
+
         if observe_raw:
             if not self.xr_array_raw_initialized:
                 self._xr_array_raw = xr.DataArray(entries_for_interp, coords=coords)
