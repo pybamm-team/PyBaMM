@@ -1,13 +1,5 @@
-# Build and publish pybammsolvers wheels + sdist to PyPI.
-#
-# Monorepo notes:
-# - The wheel/sdist build logic lives in the reusable workflow
-#   `_build_solver_wheels.yml`, shared with PR-time CI (test_on_push.yml). This
-#   workflow only adds the release trigger, the tag-namespace guard, and the
-#   PyPI publish step.
-# - Releases are discriminated by tag namespace (`pybammsolvers-v*`); the old
-#   `github.repository == 'pybamm-team/pybammsolvers'` guard no longer works now
-#   that pybamm and pybammsolvers share a repository.
+# Build and publish pybammsolvers wheels + sdist to PyPI. Releases are picked out by
+# tag namespace (`pybammsolvers-v*`), as pybamm shares this repository.
 name: Build solver wheels
 
 on:
@@ -23,17 +15,47 @@ on:
 
 jobs:
   build:
-    name: Build wheels + sdist
+    name: Wheels (${{ matrix.target }})
     # On release events, only build for the solver tag namespace. Always build
     # on workflow_dispatch (manual testing). A fresh build (no cache) for release.
     if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybammsolvers-v') }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [linux-x64, linux-arm64, windows-x64, macos-arm64, macos-x64]
     uses: $/.github/workflows/_build_solver_wheels.yml
     with:
+      target: ${{ matrix.target }}
       cache_wheels: false
-      build_sdist: true
       save_vcpkg_logs: ${{ github.event_name == 'workflow_dispatch' && inputs.save_vcpkg_logs }}
+
+  build_sdist:
+    name: Build SDist
+    if: ${{ github.event_name != 'release' || startsWith(github.event.release.tag_name, 'pybammsolvers-v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: 'recursive'
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: 3.13
+
+      - name: Build SDist
+        run: pipx run build --sdist
+        working-directory: packages/pybammsolvers
+
+      - name: Upload SDist
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sdist
+          path: packages/pybammsolvers/dist/*.tar.gz
+          if-no-files-found: error
 
   check_version:
     # Guard against tag/version.py desync: the published version comes from
@@ -70,7 +92,7 @@ jobs:
   publish_pypi:
     if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'pybammsolvers-v') }}
     name: Upload package to PyPI
-    needs: [ build, check_version ]
+    needs: [ build, build_sdist, check_version ]
     runs-on: ubuntu-latest
     environment:
       name: pypi
