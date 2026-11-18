@@ -16,8 +16,11 @@ def iterate_solvers(func):
             try:
                 return getattr(solver, func.__name__)(*args, **kwargs)
             except pybamm.SolverError as e:
-                errors.append(str(e))
-        raise pybamm.SolverError(f"All sub_solvers failed: {errors}") from None
+                errors.append(e)
+        messages = [str(e) for e in errors]
+        raise pybamm.SolverError(
+            f"All sub_solvers failed: {messages}"
+        ) from ExceptionGroup("sub_solver failures", errors)
 
     return wrapper
 

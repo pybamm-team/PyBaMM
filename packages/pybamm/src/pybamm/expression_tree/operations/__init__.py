@@ -1,2 +1,2 @@
-__all__ = ['evaluate_python', 'jacobian', 'latexify',
+__all__ = ['evaluate_python', 'input_jacobian', 'jacobian', 'latexify',
            'regularise', 'serialise', 'unpack_symbols']

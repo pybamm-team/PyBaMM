@@ -117,3 +117,41 @@ class TestHysteresisOCPFixes:
         dist_to_delith = abs(ocp_bulk_mid - U_delith_expected)
         if h_state[mid_idx] < -0.1:
             assert dist_to_lith < dist_to_delith
+
+    def test_initial_potential_uses_hysteresis_ocp(self):
+        """
+        Guards against: the initial potentials of a one-state hysteresis model
+        being set from the equilibrium OCP instead of the OCP at the initial
+        hysteresis state, which fails to start when the two disagree.
+        """
+        model = pybamm.lithium_ion.DFN(
+            {"open-circuit potential": ("single", "one-state hysteresis")}
+        )
+        param = pybamm.ParameterValues("Chen2020")
+        U_eq_pos = param["Positive electrode OCP [V]"]
+        param.update(
+            {
+                "Positive electrode lithiation OCP [V]": lambda sto: (
+                    U_eq_pos(sto) - 0.02
+                ),
+                "Positive electrode delithiation OCP [V]": lambda sto: (
+                    U_eq_pos(sto) + 0.02
+                ),
+                # Equilibrium OCP that diverges at low stoichiometry (high SOC)
+                "Positive electrode OCP [V]": lambda sto: (
+                    U_eq_pos(sto) + 1e10 * np.exp(-50 * sto)
+                ),
+                "Positive particle lithiation hysteresis decay rate": 10,
+                "Positive particle delithiation hysteresis decay rate": 10,
+                "Initial hysteresis state in positive electrode": 0.0,
+                "Current function [A]": 0,
+            },
+            check_already_exists=False,
+        )
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1], initial_soc=1)
+
+        np.testing.assert_allclose(
+            sol["Voltage [V]"](0), sol["Surface open-circuit voltage [V]"](0), atol=1e-3
+        )

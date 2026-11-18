@@ -17,6 +17,13 @@ def has_bc_of_form(symbol, side, bcs, form):
     return (symbol in bcs) and (bcs[symbol][side][1] == form)
 
 
+def _evaluate_bound(bound, unbounded):
+    """The value of a variable bound, or ``unbounded`` if it depends on inputs."""
+    if bound.has_symbol_of_classes(pybamm.InputParameter):
+        return unbounded
+    return bound.evaluate()
+
+
 # legacy current-collector tab BC side names, converted to left/right for
 # 1D meshes by Discretisation.check_tab_conditions
 LEGACY_TAB_SIDES = frozenset({"negative tab", "positive tab", "no tab"})
@@ -48,7 +55,7 @@ class Discretisation:
         Default is False.
     resolve_coupled_variables : bool, optional
         If True, resolve CoupledVariables in rhs, algebraic, initial_conditions,
-        and boundary_conditions before processing. Default is False.
+        and boundary_conditions before processing. Default is True.
     """
 
     def __init__(
@@ -57,7 +64,7 @@ class Discretisation:
         spatial_methods=None,
         check_model=True,
         remove_independent_variables_from_rhs=False,
-        resolve_coupled_variables=False,
+        resolve_coupled_variables=True,
     ):
         self._mesh = mesh
         if mesh is None:
@@ -192,6 +199,10 @@ class Discretisation:
                         f"for variable {var.name} with domain {var.domain}"
                     )
 
+        # resolve before boundary conditions are discretised below
+        if self._resolve_coupled_variables:
+            model = self._resolve_coupled_variables_in_model(model, inplace)
+
         # Set the y split for variables
         pybamm.logger.verbose(f"Set variable slices for {model.name}")
         self.set_variable_slices(itertools.chain(model.rhs, model.algebraic))
@@ -210,9 +221,6 @@ class Discretisation:
         else:
             # create a copy of the original model
             model_disc = model.new_copy()
-
-        if self._resolve_coupled_variables:
-            self._resolve_coupled_variables_in_model(model)
 
         # Keep a record of y_slices in the model
         model_disc.y_slices = self.y_slices_explicit
@@ -304,31 +312,68 @@ class Discretisation:
         model_disc.is_discretised = True
         return model_disc
 
-    def _resolve_coupled_variables_in_model(self, model):
-        """Resolve CoupledVariables in rhs, algebraic, initial_conditions, and boundary_conditions."""
+    def _resolve_coupled_variables_in_model(self, model, inplace):
+        """
+        Resolve CoupledVariables in rhs, algebraic, initial_conditions, and
+        boundary_conditions.
 
-        resolve_symbol = model._resolve_coupled_variables
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose equations are resolved.
+        inplace : bool
+            If False, resolve into a copy of ``model`` and leave ``model`` unchanged.
 
-        for var, expr in model.rhs.items():
-            resolved = resolve_symbol(expr)
-            if resolved is not expr:
-                model.rhs[var] = resolved
+        Returns
+        -------
+        :class:`pybamm.BaseModel`
+            The model with resolved equations: ``model`` itself if nothing needed
+            resolving or ``inplace`` is True, otherwise a copy.
+        """
+        cache = {}
 
-        for var, expr in model.algebraic.items():
-            resolved = resolve_symbol(expr)
-            if resolved is not expr:
-                model.algebraic[var] = resolved
+        def resolve(expr):
+            return model._resolve_coupled_variables(expr, cache)
 
-        for var, expr in model.initial_conditions.items():
-            resolved = resolve_symbol(expr)
-            if resolved is not expr:
-                model.initial_conditions[var] = resolved
+        rhs = {var: resolve(expr) for var, expr in model.rhs.items()}
+        algebraic = {var: resolve(expr) for var, expr in model.algebraic.items()}
+        initial_conditions = {
+            var: resolve(expr) for var, expr in model.initial_conditions.items()
+        }
+        boundary_conditions = {
+            var: {
+                side: (resolve(expr), bc_type) for side, (expr, bc_type) in bcs.items()
+            }
+            for var, bcs in model.boundary_conditions.items()
+        }
 
-        for var, bcs in model.boundary_conditions.items():
-            for side, (expr, bc_type) in bcs.items():
-                resolved = resolve_symbol(expr)
-                if resolved is not expr:
-                    model.boundary_conditions[var][side] = (resolved, bc_type)
+        # the shared cache may return an equal node from another equation, so
+        # compare by equality rather than identity
+        unchanged = (
+            all(rhs[var] == expr for var, expr in model.rhs.items())
+            and all(algebraic[var] == expr for var, expr in model.algebraic.items())
+            and all(
+                initial_conditions[var] == expr
+                for var, expr in model.initial_conditions.items()
+            )
+            and all(
+                boundary_conditions[var][side][0] == expr
+                for var, bcs in model.boundary_conditions.items()
+                for side, (expr, _) in bcs.items()
+            )
+        )
+        if unchanged:
+            return model
+
+        if not inplace:
+            model = model.new_copy()
+        # assign new dicts: the inner boundary condition dicts may be shared with
+        # the model this one was copied from
+        model.rhs = rhs
+        model.algebraic = algebraic
+        model.initial_conditions = initial_conditions
+        model.boundary_conditions = boundary_conditions
+        return model
 
     def set_variable_slices(self, variables):
         """
@@ -409,22 +454,13 @@ class Discretisation:
             y_slices_explicit[variable].append(slice(start, end))
 
             # Add to bounds
-            def evaluate_bound(bound, side):
-                if bound.has_symbol_of_classes(pybamm.InputParameter):
-                    if side == "lower":
-                        return -np.inf
-                    elif side == "upper":
-                        return np.inf
-                else:
-                    return bound.evaluate()
-
             # symbols without physical bounds (e.g. constants) are unbounded
             bounds = getattr(variable, "bounds", None)
             if bounds is None:
                 lower, upper = -np.inf, np.inf
             else:
-                lower = evaluate_bound(bounds[0], "lower")
-                upper = evaluate_bound(bounds[1], "upper")
+                lower = _evaluate_bound(bounds[0], -np.inf)
+                upper = _evaluate_bound(bounds[1], np.inf)
             lower_bounds.extend([lower] * (end - start))
             upper_bounds.extend([upper] * (end - start))
             # Increment start
@@ -916,6 +952,8 @@ class Discretisation:
 
     # classes whose handler discretises what it needs itself (see is_leaf)
     _self_discretising: tuple[type, ...] = ()
+    # assigned after the class body, once the handler methods exist
+    _handlers: dict[type, Callable]
 
     @classmethod
     @functools.cache
@@ -1182,7 +1220,7 @@ class Discretisation:
             raise pybamm.DiscretisationError(
                 "Component can only be applied to a VectorField"
             )
-        if symbol.index >= disc_child.n_components:
+        if not 0 <= symbol.index < disc_child.n_components:
             raise pybamm.DiscretisationError(
                 f"Component index {symbol.index} is out of range for a "
                 f"VectorField with {disc_child.n_components} components"
@@ -1381,15 +1419,15 @@ class Discretisation:
                     f"they are {type(ic_eval)} for variable '{var}'."
                 )
 
-            # Check that the initial condition is within the bounds
-            # Skip this check if there are input parameters in the initial conditions
-            bounds = var.bounds
-            if not eqn.has_symbol_of_classes(pybamm.InputParameter) and not (
-                all(bounds[0].value <= ic_eval) and all(ic_eval <= bounds[1].value)
-            ):
+            # Initial conditions and bounds that depend on inputs are not known yet
+            if eqn.has_symbol_of_classes(pybamm.InputParameter):
+                continue
+            lower = _evaluate_bound(var.bounds[0], -np.inf)
+            upper = _evaluate_bound(var.bounds[1], np.inf)
+            if not (np.all(lower <= ic_eval) and np.all(ic_eval <= upper)):
                 raise pybamm.ModelError(
                     "initial condition is outside of variable bounds "
-                    f"{bounds} for variable '{var}'."
+                    f"{var.bounds} for variable '{var}'."
                 )
 
         # Check initial conditions and model equations have the same shape
