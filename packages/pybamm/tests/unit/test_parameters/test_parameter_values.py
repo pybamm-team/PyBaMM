@@ -9,7 +9,6 @@ import warnings
 
 import casadi
 import numpy as np
-import pandas as pd
 import pytest
 
 import pybamm
@@ -823,7 +822,7 @@ class TestParameterValues:
         filename, name = pybamm.parameters.process_parameter_data._process_name(
             name, path, ".csv"
         )
-        raw_df = pd.read_csv(filename)
+        raw_data = np.loadtxt(filename, delimiter=",", skiprows=1)
 
         # It's also helpful to check the casadi conversion here aswell
         # We check elsewhere but this helps catch additional bugs
@@ -832,7 +831,7 @@ class TestParameterValues:
         casadi_f = casadi.Function("f", [casadi_y], [interp_casadi])
 
         # check that passing the input columns give the correct output
-        for values in raw_df.values:
+        for values in raw_data:
             y = np.array([values[0], values[1], values[2]])
             f = values[3]
             casadi_sol = casadi_f(y)
@@ -869,10 +868,10 @@ class TestParameterValues:
         filename, name = pybamm.parameters.process_parameter_data._process_name(
             name, path, ".csv"
         )
-        raw_df = pd.read_csv(filename)
+        raw_data = np.loadtxt(filename, delimiter=",", skiprows=1)
 
         # check that passing the input columns give the correct output
-        for values in raw_df.values:
+        for values in raw_data:
             y = np.array([values[0], values[1]])
             f = values[2]
 

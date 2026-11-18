@@ -1,3 +1,5 @@
+import pickle
+
 import casadi
 import numpy as np
 import pytest
@@ -136,9 +138,6 @@ class TestProcessedVariable:
 
         data_t1 = processed_var(sol.t)
 
-        # Reading at the solution's own times skips xarray
-        assert not processed_var.xr_array_raw_initialized
-
         data_t2 = processed_var(sol.t)
 
         np.testing.assert_array_equal(data_t1, data_t2)
@@ -161,10 +160,9 @@ class TestProcessedVariable:
             data = processed_var(t)
             np.testing.assert_array_equal(data, processed_var.entries)
             assert data is not processed_var.entries
-        assert not processed_var.xr_array_raw_initialized
 
-        # A spatial coordinate is still rejected for a 0D variable
-        with pytest.raises(ValueError, match=r"x"):
+        # A spatial coordinate is rejected for a 0D variable
+        with pytest.raises(ValueError, match=r"Cannot interpolate in \['x'\]"):
             processed_var(t_sol, x=0.5)
 
     def _build_0D_var(self, t_sol=None):
@@ -178,6 +176,84 @@ class TestProcessedVariable:
             [var],
             [to_casadi(var, y_sol)],
             self._sol_default(t_sol, y_sol, model=pybamm.BaseModel()),
+        )
+
+    @pytest.mark.parametrize(
+        ("t_query", "shape"),
+        [
+            (0.5, ()),
+            (np.float64(0.5), ()),
+            (np.array(0.5), ()),
+            ([0.9, 0.3], (2,)),
+            (np.array([0.9, 0.3, 0.6]), (3,)),
+            (np.array([0.0, 0.5, 1.0, 2.0]), (4,)),
+            (np.array([0.5, -0.5, 2.0]), (3,)),
+        ],
+    )
+    def test_0D_call_interpolates_in_time(self, t_query, shape):
+        processed_var = self._build_0D_var()
+        values = processed_var(t_query)
+
+        assert isinstance(values, np.ndarray)
+        assert values.shape == shape
+        t_array = np.asarray(t_query)
+        in_range = (t_array >= 0) & (t_array <= 1)
+        np.testing.assert_allclose(values[in_range], 5 * t_array[in_range])
+        np.testing.assert_array_equal(
+            values,
+            np.interp(
+                t_query,
+                processed_var.t_pts,
+                processed_var.entries,
+                left=np.nan,
+                right=np.nan,
+            ),
+        )
+        # out-of-range queries take the fill value
+        assert np.isnan(values[~in_range]).all()
+
+    def test_0D_call_checks_its_time_grid_once(self):
+        processed_var = self._build_0D_var()
+        processed_var(0.25)
+        grid = processed_var._grid_raw
+        checked = grid._increasing["t"]
+        processed_var([0.5, 0.75])
+        assert processed_var._grid_raw is grid
+        assert grid._increasing["t"] is checked
+
+    def test_pickling_leaves_out_the_grid(self):
+        processed_var = self._build_0D_var()
+        expected = processed_var([0.25, 0.5])
+        assert "_grid_raw" in vars(processed_var)
+        pickled = pickle.dumps(processed_var)
+        assert b"RectilinearGrid" not in pickled
+        restored = pickle.loads(pickled)
+        assert "_grid_raw" not in vars(restored)
+        np.testing.assert_array_equal(restored([0.25, 0.5]), expected)
+
+    def test_0D_call_fill_value(self):
+        processed_var = self._build_0D_var()
+        t_query = np.array([0.5, 2.0])
+
+        np.testing.assert_array_equal(
+            processed_var(t_query, fill_value=-1.0), [2.5, -1.0]
+        )
+        np.testing.assert_allclose(
+            processed_var(t_query, fill_value="extrapolate"), [2.5, 10.0]
+        )
+
+    def test_0D_call_errors(self):
+        processed_var = self._build_0D_var()
+        with pytest.raises(ValueError, match=r"must be a scalar or 1D, not 2D"):
+            processed_var(np.array([[0.1], [0.2]]))
+
+        # a repeated solution time has no single value to interpolate from
+        processed_var = self._build_0D_var(np.array([0.0, 0.5, 0.5, 1.0]))
+        with pytest.raises(ValueError, match=r"repeats a point"):
+            processed_var(0.25)
+        # but reading at the stored times needs no interpolation
+        np.testing.assert_array_equal(
+            processed_var(processed_var.t_pts), processed_var.entries
         )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
