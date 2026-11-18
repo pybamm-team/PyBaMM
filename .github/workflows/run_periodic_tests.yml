@@ -55,11 +55,23 @@ jobs:
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
-      sessions: "coverage integration"
+      sessions: coverage
       target: linux-x64
       pythons: '["3.13"]'
       upload_coverage: true
       install_latex: true
+
+  # Its own job, as in test_on_push.yml, so a failure here can't skip the upload.
+  run_integration_tests:
+    needs: build_solver
+    name: Integration tests
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_nox.yml
+    with:
+      sessions: integration
+      target: linux-x64
+      pythons: '["3.13"]'
 
   # One leg at a time per pool, so the sweep never holds more than one runner of
   # any scarce pool, wherever GitHub's schedule delay lands it.
