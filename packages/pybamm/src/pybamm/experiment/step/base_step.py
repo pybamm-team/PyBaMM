@@ -178,6 +178,8 @@ class BaseStep:
             description,
             direction,
         )
+        if not skip_ok:
+            self.repr_args += f", skip_ok={skip_ok}"
 
         self.description = description
 
