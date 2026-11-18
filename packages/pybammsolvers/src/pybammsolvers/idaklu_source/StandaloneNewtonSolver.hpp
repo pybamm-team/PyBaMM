@@ -35,8 +35,8 @@ public:
    * @brief Casadi convenience constructor; delegates to the Expression ctor.
    */
   StandaloneAlgebraicSystem(
-    casadi::Function res_fn,
-    casadi::Function jac_fn,
+    const casadi::Function &res_fn,
+    const casadi::Function &jac_fn,
     bool use_sparse,
     sunrealtype klu_pivot_tolerance);
 
@@ -58,8 +58,8 @@ private:
   void BuildSparseResources(int jac_nnz);
   void BuildDenseResources();
 
-  std::unique_ptr<Expression> res_;  // cppcheck-suppress unusedStructMember
-  std::unique_ptr<Expression> jac_;  // cppcheck-suppress unusedStructMember
+  std::unique_ptr<Expression> res_;
+  std::unique_ptr<Expression> jac_;
   int n_vars_;
   bool use_sparse_;
   sunrealtype klu_pivot_tolerance_;
@@ -87,8 +87,8 @@ private:
 class StandaloneNewtonSolver {
 public:
   StandaloneNewtonSolver(
-    casadi::Function residual_fn,
-    casadi::Function jacobian_fn,
+    const casadi::Function &residual_fn,
+    const casadi::Function &jacobian_fn,
     const std::vector<sunrealtype>& atol,
     sunrealtype rtol,
     sunrealtype step_tol,
