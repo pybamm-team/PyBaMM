@@ -12,7 +12,6 @@ import itertools
 
 import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix, diags, eye, kron
-from scipy.spatial import cKDTree
 
 import pybamm
 
@@ -127,6 +126,8 @@ class FiniteVolumeUnstructured(pybamm.SpatialMethod):
         ``(a_idx, b_idx, matched)`` where ``matched`` is True iff at least
         one pair was found.
         """
+        from scipy.spatial import cKDTree
+
         a_idx = (
             np.concatenate(list(a_mesh.boundary_faces.values()))
             if a_mesh.boundary_faces

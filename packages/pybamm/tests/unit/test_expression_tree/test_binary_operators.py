@@ -910,6 +910,12 @@ class TestBinaryOperators:
         # Test NotEqualHeaviside
         assert pybamm.NotEqualHeaviside(2, 4).to_equation()
 
+        # Test Hypot
+        a, b = pybamm.Symbol("a"), pybamm.Symbol("b")
+        assert pybamm.Hypot(a, b).to_equation() == sympy.sqrt(
+            sympy.Symbol("a") ** 2 + sympy.Symbol("b") ** 2
+        )
+
     def test_to_json(self, mocker):
         # Test Addition
         add_json = {
