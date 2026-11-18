@@ -1336,6 +1336,21 @@ PendingStats IDAKLUSolverOpenMP<ExprSet>::GetStats() {
 
   CheckErrors(IDAGetNonlinSolvStats(ida_mem, &stats.nniters, &stats.nncfails), "IDAGetNonlinSolvStats");
 
+  if (sensitivity) {
+    // Only the staggered corrector uses these counters, for work that the
+    // state counters leave out
+    long sens_nniters = 0;
+    long sens_nncfails = 0;
+    long sens_nlinsetups = 0;
+    CheckErrors(IDAGetSensNonlinSolvStats(ida_mem, &sens_nniters, &sens_nncfails),
+                "IDAGetSensNonlinSolvStats");
+    CheckErrors(IDAGetSensNumLinSolvSetups(ida_mem, &sens_nlinsetups),
+                "IDAGetSensNumLinSolvSetups");
+    stats.nniters += sens_nniters;
+    stats.nncfails += sens_nncfails;
+    stats.nlinsetups += sens_nlinsetups;
+  }
+
   CheckErrors(IDAGetNumJacEvals(ida_mem, &stats.njevals), "IDAGetNumJacEvals");
   if (setup_opts.using_iterative_solver) {
     CheckErrors(IDAGetNumLinIters(ida_mem, &stats.nliters), "IDAGetNumLinIters");
