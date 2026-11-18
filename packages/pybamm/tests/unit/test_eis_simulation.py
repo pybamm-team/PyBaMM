@@ -194,8 +194,7 @@ class TestEISSolution:
 class TestEISSimulationSolve:
     """Tests for EIS frequency-domain solving."""
 
-    @pytest.mark.parametrize("reverse_first", [False, True])
-    def test_repeated_solve_with_reordered_inputs(self, reverse_first):
+    def test_solve_with_reordered_and_extra_inputs(self):
         model = pybamm.lithium_ion.SPM({"surface form": "differential"})
         values = {
             "Negative electrode double-layer capacity [F.m-2]": 0.1,
@@ -212,10 +211,9 @@ class TestEISSimulationSolve:
         parameter_values.update({name: "[input]" for name in values})
         simulation = pybamm.EISSimulation(model, parameter_values=parameter_values)
         reordered = dict(reversed(list(values.items())))
-        inputs_sequence = [values, reordered, values]
-        if reverse_first:
-            inputs_sequence = [reordered, values, reordered]
-        for inputs in inputs_sequence:
+        # an inputs dict shared across simulations can hold keys this model does not use
+        with_unused = {"Unused input": 1.0, **values}
+        for inputs in (values, reordered, with_unused):
             result = simulation.solve(frequencies, inputs=inputs)
             np.testing.assert_allclose(
                 result.impedance, reference, rtol=1e-10, atol=1e-12
