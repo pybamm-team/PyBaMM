@@ -82,6 +82,9 @@ public:
   N_Vector yy, yyp, y_cache, avtol;  // y, y', y cache vector, and absolute tolerance
   N_Vector *yyS;
   N_Vector *yypS;
+  // Zero quadrature, set only with sensitivity error control to read the
+  // sensitivity error test failures that IDAS counts as the quadrature's
+  N_Vector yyQ = nullptr;
   N_Vector id;              // rhs_alg_id
   sunrealtype rtol;
   int const jac_times_cjmass_nnz;

@@ -37,7 +37,8 @@ class NumpyEncoder(json.JSONEncoder):
 
 @dataclass(frozen=True, slots=True)
 class SolverStatistics:
-    """Counts of the work an integrator did to produce a solution.
+    """Counts of the work an integrator did to produce a solution, including
+    its work on any forward sensitivities.
 
     Attributes
     ----------

@@ -2794,6 +2794,42 @@ class TestIDAKLUSolverStatistics:
         assert stats.number_of_nonlinear_solver_iterations >= 2 * stats.number_of_steps
         assert stats.number_of_nonlinear_solver_fails >= stats.number_of_steps / 2
 
+    def test_statistics_count_sensitivity_error_test_failures(self):
+        # p = 0 leaves the state a smooth decay that passes the error test, so
+        # every failure here is the sensitivity's
+        solver = pybamm.IDAKLUSolver(
+            options={"print_stats": True, "sensitivity_error_control": True}
+        )
+        printed = io.StringIO()
+        with redirect_stdout(printed):
+            solution = solver.solve(
+                _forced_decay_model(),
+                [0, 100],
+                inputs={"p": 0.0},
+                calculate_sensitivities=True,
+            )
+
+        stats = solution.solver_statistics
+        assert stats == _printed_statistics(printed.getvalue())
+        assert stats.number_of_error_test_failures > 10
+
+    def test_sensitivity_error_test_failures_restart_with_the_integrator(self):
+        solver = pybamm.IDAKLUSolver(options={"sensitivity_error_control": True})
+        model = _forced_decay_model()
+
+        def error_test_failures(t_eval):
+            solution = solver.solve(
+                model, t_eval, inputs={"p": 0.0}, calculate_sensitivities=True
+            )
+            return solution.solver_statistics.number_of_error_test_failures
+
+        first = error_test_failures([0, 100])
+        assert error_test_failures([0, 100]) == first
+        # The breakpoint at t = 100 restarts the count, so the short tail after
+        # it adds its own few failures and not the first segment's again
+        both = error_test_failures(np.array([0.0, 100.0, 101.0]))
+        assert first <= both < 2 * first
+
     def test_statistics_accumulate_across_a_breakpoint(self, decay_model):
         solver = pybamm.IDAKLUSolver()
         inputs = {"a": 50.0}
