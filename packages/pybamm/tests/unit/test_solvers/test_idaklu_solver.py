@@ -13,7 +13,6 @@ import warnings
 from contextlib import redirect_stdout
 
 import numpy as np
-import pandas as pd
 import pytest
 from scipy.integrate import quad_vec
 from scipy.interpolate import CubicHermiteSpline
@@ -2078,12 +2077,10 @@ class TestIDAKLUSolver:
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
         data_loader = pybamm.DataLoader()
-        drive_cycle = pd.read_csv(
+        drive_cycle = np.loadtxt(
             pybamm.get_parameters_filepath(data_loader.get_data("US06.csv")),
-            comment="#",
-            skip_blank_lines=True,
-            header=None,
-        ).to_numpy()
+            delimiter=",",
+        )
         current_interpolant = pybamm.Interpolant(
             drive_cycle[:, 0], drive_cycle[:, 1], pybamm.t
         )
