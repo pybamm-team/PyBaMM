@@ -273,8 +273,8 @@ class BasicDFNUnstructured(BaseModel):
         ######################
         # (Some) variables
         ######################
-        # Area-weighted mean of phi_s_p over the positive face, where the current
-        # leaves; phi_s_n is pinned to 0 on the negative face by its Dirichlet BC
+        # Area-weighted mean of phi_s_p over the positive face: the current density
+        # there is uniform, so this gives the right power; phi_s_n is 0 on the left
         positive_face_area = pybamm.BoundaryIntegral(
             pybamm.PrimaryBroadcast(1, "positive electrode"), "right"
         )
