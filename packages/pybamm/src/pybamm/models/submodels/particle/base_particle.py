@@ -97,6 +97,12 @@ class BaseParticle(pybamm.BaseSubModel):
         if c_s_av is None:
             c_s_av = pybamm.r_average(c_s_xav)
 
+        # c_s only holds cell-centre values, so include the surface value, where the
+        # extremes usually are during (dis)charge
+        c_s_surf_bc = pybamm.PrimaryBroadcast(c_s_surf, c_s.domain)
+        c_s_min = pybamm.min(pybamm.minimum(c_s, c_s_surf_bc))
+        c_s_max = pybamm.max(pybamm.maximum(c_s, c_s_surf_bc))
+
         variables = {
             # Dimensional concentration
             f"{Domain} {phase_name}particle concentration [mol.m-3]": c_s,
@@ -108,10 +114,8 @@ class BaseParticle(pybamm.BaseSubModel):
             f"{Domain} {phase_name}particle surface concentration [mol.m-3]": c_s_surf,
             f"X-averaged {domain} {phase_name}particle "
             "surface concentration [mol.m-3]": c_s_surf_av,
-            f"Minimum {domain} {phase_name}particle concentration [mol.m-3]"
-            "": pybamm.min(c_s),
-            f"Maximum {domain} {phase_name}particle concentration [mol.m-3]"
-            "": pybamm.max(c_s),
+            f"Minimum {domain} {phase_name}particle concentration [mol.m-3]": c_s_min,
+            f"Maximum {domain} {phase_name}particle concentration [mol.m-3]": c_s_max,
             f"Minimum {domain} {phase_name}particle "
             "surface concentration [mol.m-3]": pybamm.min(c_s_surf),
             f"Maximum {domain} {phase_name}particle "
@@ -126,10 +130,8 @@ class BaseParticle(pybamm.BaseSubModel):
             f"{Domain} {phase_name}particle surface concentration": c_s_surf / c_scale,
             f"X-averaged {domain} {phase_name}particle "
             "surface concentration": c_s_surf_av / c_scale,
-            f"Minimum {domain} {phase_name}particle concentration": pybamm.min(c_s)
-            / c_scale,
-            f"Maximum {domain} {phase_name}particle concentration": pybamm.max(c_s)
-            / c_scale,
+            f"Minimum {domain} {phase_name}particle concentration": c_s_min / c_scale,
+            f"Maximum {domain} {phase_name}particle concentration": c_s_max / c_scale,
             f"Minimum {domain} {phase_name}particle surface concentration": pybamm.min(
                 c_s_surf
             )
@@ -148,10 +150,8 @@ class BaseParticle(pybamm.BaseSubModel):
             f"{Domain} {phase_name}particle surface stoichiometry": c_s_surf / c_scale,
             f"X-averaged {domain} {phase_name}particle "
             "surface stoichiometry": c_s_surf_av / c_scale,
-            f"Minimum {domain} {phase_name}particle stoichiometry": pybamm.min(c_s)
-            / c_scale,
-            f"Maximum {domain} {phase_name}particle stoichiometry": pybamm.max(c_s)
-            / c_scale,
+            f"Minimum {domain} {phase_name}particle stoichiometry": c_s_min / c_scale,
+            f"Maximum {domain} {phase_name}particle stoichiometry": c_s_max / c_scale,
             f"Minimum {domain} {phase_name}particle surface stoichiometry": pybamm.min(
                 c_s_surf
             )

@@ -30,6 +30,13 @@ far cheaper.
 
 ## Usage
 
+Each zone's 3D mesh needs PyBaMM's finite-element extra, which the model's extra
+installs:
+
+```bash
+pip install "pybamm-model-zoo[zoo-multilayer-3d-thermal]"
+```
+
 ```python
 import pybamm
 import pybamm_model_zoo as zoo

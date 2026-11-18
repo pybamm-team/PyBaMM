@@ -50,6 +50,9 @@ class ThermalSubModel(pybamm.BaseSubModel):
         for i in range(number_of_elements):
             Q_irr += variables[f"Element-{i} irreversible heat generation [W]"]
 
+        current = variables["Current [A]"]
+        Q_irr += -current * variables["Diffusion overpotential [V]"]
+
         Q_rev = variables["Reversible heat generation [W]"]
 
         variables.update(

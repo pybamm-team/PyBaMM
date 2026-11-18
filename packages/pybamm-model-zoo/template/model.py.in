@@ -33,6 +33,7 @@ class ${ModelName}(pybamm.lithium_ion.SPM):
         name: str = "${ModelName}",
         build: bool = True,
     ) -> None:
+        pybamm_model_zoo.require(SLUG)
         super().__init__(
             options=_compat.spm_default_options(options), name=name, build=build
         )

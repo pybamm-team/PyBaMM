@@ -5,7 +5,6 @@ title = "Multilayer pouch cell stack with a 3D temperature field in every zone"
 summary = "A pouch cell stack resolved through its thickness into SPM, SPMe, or DFN zones that each carry their own 3D temperature, for through-stack gradients and the current redistribution they drive."
 class = "pybamm_model_zoo.multilayer_3d_thermal:MultiLayer3DThermalSPM"
 tier = "community"
-pybamm_requires = ">=26.8"
 added = "2026-09-28"
 license = "BSD-3-Clause"
 

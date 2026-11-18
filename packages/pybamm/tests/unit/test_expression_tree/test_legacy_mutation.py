@@ -43,7 +43,6 @@ def run_compatibility_script(source):
 
 # writes to attributes named like symbol slots whose receiver is not a symbol
 _NON_SYMBOL_WRITES = {
-    ("pybamm/solvers/idaklu_solver.py", "sol.y"),
     ("pybamm/spatial_methods/scikit_finite_element_3d.py", "M._shape"),
     (
         (
@@ -415,7 +414,7 @@ class TestLegacyMutation:
         assert binary.children == [child, pybamm.Scalar(2)]
         assert json.loads(json.dumps(names)) == names
         for sequence in (names, binary.children, binary.children[0].domains):
-            assert pickle.loads(pickle.dumps(sequence)) == sequence  # nosec B301
+            assert pickle.loads(pickle.dumps(sequence)) == sequence
             assert copy.deepcopy(sequence) == sequence
             assert type(copy.copy(sequence)) is type(sequence)
 

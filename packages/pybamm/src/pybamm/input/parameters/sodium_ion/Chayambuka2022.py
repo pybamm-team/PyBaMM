@@ -159,7 +159,7 @@ def NVPF_diffusivity_Chayambuka2022(sto, T):
     """
 
     name, (x, y) = D_p_data
-    c_max = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
+    c_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
     return pybamm.Interpolant(x, y, sto * c_max, name)
 
 

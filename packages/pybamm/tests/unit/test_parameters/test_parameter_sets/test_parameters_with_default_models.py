@@ -25,6 +25,7 @@ class TestParameterValuesWithModel:
                         "swelling only",
                     ),
                     "loss of active material": "stress-driven",
+                    "thermal": "lumped",
                 }
             ),
             "Chen2020": pybamm.lithium_ion.DFN(),
@@ -32,6 +33,7 @@ class TestParameterValuesWithModel:
                 {
                     "particle phases": ("2", "1"),
                     "open-circuit potential": (("single", "current sigmoid"), "single"),
+                    "thermal": "lumped",
                 }
             ),
             "Ecker2015": pybamm.lithium_ion.DFN(),
