@@ -1415,8 +1415,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         evaluates on nodes onto the edges when the other child evaluates on edges, so
         that discretised sizes match up. A coefficient multiplying a bare gradient
         takes the harmonic mean [1], as does a coefficient multiplying a signed sum of
-        gradient terms when the "harmonic flux coefficients" option is True; anything
-        else, including a divisor of a gradient, takes the arithmetic mean.
+        gradient terms when the "harmonic flux coefficients" option is True. A divisor
+        of such a gradient takes the series mean, the reciprocal of the harmonic mean
+        of its reciprocal; anything else takes the arithmetic mean.
 
         [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
         the diffusion equation." (2012).
@@ -1478,7 +1479,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         ``edge_child``. A coefficient multiplying a bare gradient takes the harmonic
         mean, as does, if ``gradient_combinations`` is True, a coefficient multiplying a
         signed sum of gradient terms, such as ``K`` in
-        ``K * (grad(u) - a * grad(v))``; anything else takes the arithmetic mean.
+        ``K * (grad(u) - a * grad(v))``. A divisor of the same gradients takes the
+        series mean, so ``grad(u) / w`` matches ``grad(u) * (1 / w)``; anything else
+        takes the arithmetic mean.
 
         Parameters
         ----------
@@ -1487,22 +1490,27 @@ class FiniteVolume(pybamm.SpatialMethod):
         edge_child : :class:`pybamm.Symbol`
             The child of ``bin_op`` that evaluates on edges
         gradient_combinations : bool, optional
-            Whether a coefficient of a sum of gradient terms takes the harmonic
-            mean. Default is True.
+            Whether a coefficient or divisor of a sum of gradient terms takes the
+            harmonic or series mean. Default is True.
 
         Returns
         -------
         str
-            ``"harmonic"`` or ``"arithmetic"``
+            ``"harmonic"``, ``"series"`` or ``"arithmetic"``
         """
-        # a coefficient of a flux is a conductance in series between two cells;
-        # a divisor is a resistance in series, whose mean is arithmetic
-        if not isinstance(bin_op, pybamm.Multiplication):
-            return "arithmetic"
-        if isinstance(edge_child, pybamm.Gradient) or (
+        is_flux = isinstance(edge_child, pybamm.Gradient) or (
             gradient_combinations and FiniteVolume._is_gradient_combination(edge_child)
-        ):
+        )
+        # a coefficient of a flux is a conductance in series between two cells,
+        # and a divisor of one is a resistance in series
+        if is_flux and isinstance(bin_op, pybamm.Multiplication):
             return "harmonic"
+        if (
+            is_flux
+            and isinstance(bin_op, pybamm.Division)
+            and not bin_op.right.evaluates_on_edges("primary")
+        ):
+            return "series"
         return "arithmetic"
 
     @staticmethod
@@ -1622,7 +1630,8 @@ class FiniteVolume(pybamm.SpatialMethod):
     def shift(self, discretised_symbol, shift_key, method):
         """
         Convert a discretised symbol evaluated at edges/nodes, to a discretised symbol
-        evaluated at nodes/edges. Can be the arithmetic mean or the harmonic mean.
+        evaluated at nodes/edges. Can be the arithmetic mean or the harmonic mean, or,
+        from nodes to edges, the series mean.
 
         Note: when computing fluxes at cell edges it is better to take the
         harmonic mean based on [1].
@@ -1640,7 +1649,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             Whether to shift from nodes to edges ("node to edge"), or from edges to
             nodes ("edge to node")
         method : str
-            Whether to use the "arithmetic" or "harmonic" mean
+            Whether to use the "arithmetic", "harmonic" or "series" mean. On an edge
+            between cells of widths :math:`\\Delta x_1` and :math:`\\Delta x_2`, with
+            :math:`\\beta = \\Delta x_1 / (\\Delta x_1 + \\Delta x_2)`, the arithmetic
+            mean interpolates, :math:`(1 - \\beta) D_1 + \\beta D_2`, while the series
+            mean weights each cell by its width, :math:`\\beta D_1 + (1 - \\beta) D_2`,
+            as for resistances in series.
 
         Returns
         -------
@@ -1669,8 +1683,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 ),
             )
 
-        def arithmetic_mean(array):
-            """Calculate the arithmetic mean of an array using matrix multiplication"""
+        def arithmetic_mean(array, series=False):
+            """Calculate the arithmetic mean of an array using matrix multiplication,
+            weighted by cell width if ``series`` is True"""
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh[array.domain]
 
@@ -1682,6 +1697,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # non-uniform mesh, so weight by the true distances.
                 d_edges = submesh.d_edges
                 weight = d_edges[:-1] / (d_edges[:-1] + d_edges[1:])
+                if series:
+                    weight = 1 - weight
                 sub_matrix_center = diags(
                     [1 - weight, weight], [0, 1], shape=(n - 1, n), dtype=None
                 )
@@ -1871,6 +1888,10 @@ class FiniteVolume(pybamm.SpatialMethod):
             out = arithmetic_mean(discretised_symbol)
         elif method == "harmonic":
             out = harmonic_mean(discretised_symbol)
+        elif method == "series":
+            if shift_key != "node to edge":
+                raise ValueError("the series mean only maps nodes to edges")
+            out = arithmetic_mean(discretised_symbol, series=True)
         else:
             raise ValueError(f"method '{method}' not recognised")
         return out
