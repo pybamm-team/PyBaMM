@@ -14,6 +14,16 @@ import pybamm
 
 
 class TestExperiment:
+    @pytest.mark.parametrize("skip_values", [(True, False), (False, True)])
+    def test_repeated_steps_keep_skip_ok(self, skip_values):
+        steps = [
+            pybamm.step.current(-5, termination="4.2 V", skip_ok=skip_ok)
+            for skip_ok in skip_values
+        ]
+        experiment = pybamm.Experiment(steps)
+        assert [step.skip_ok for step in experiment.steps] == list(skip_values)
+        assert len(experiment.unique_steps) == 1
+
     def test_cycle_unpacking(self):
         experiment = pybamm.Experiment(
             [

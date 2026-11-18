@@ -1219,6 +1219,24 @@ class TestSimulationExperiment:
         sol = sim.solve()
         assert sol.termination == "Event exceeded in initial conditions"
 
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_repeated_charge_keeps_skip_ok(self, experiment_model_mode):
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.current(-5, termination="4.2 V", skip_ok=True),
+                "Rest for 1 second",
+                pybamm.step.current(-5, termination="4.2 V", skip_ok=False),
+            ]
+        )
+        simulation = pybamm.Simulation(
+            pybamm.lithium_ion.SPMe(),
+            parameter_values=pybamm.ParameterValues("Chen2020"),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+        )
+        with pytest.raises(pybamm.SolverError, match="infeasible"):
+            simulation.solve()
+
     def test_skip_ok_with_multiple_infeasible_terminations_in_unified_model(self):
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment(
