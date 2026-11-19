@@ -338,14 +338,12 @@ class ParameterSubstitutor:
         placeholders = {pybamm.Parameter(arg): child for arg, child in inputs.items()}
 
         # Rebuild the expression with the inputs' domains, leaves first, so the
-        # stored template is never modified.
+        # stored template is never modified. rebuild re-derives the other domains.
         def rebind_domains(node, new_leaves):
             new_node = pybamm.rebuild(node, new_leaves, simplify=False)
             if node in placeholders:
                 return new_node.with_domains(placeholders[node])
-            return new_node.with_domains(
-                new_node._combine_children_domains(new_node.children)
-            )
+            return new_node
 
         expression = pybamm.tree_map(rebind_domains, expression)
 
