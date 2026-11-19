@@ -1040,7 +1040,7 @@ class FiniteVolume(pybamm.SpatialMethod):
     ):
         """
         Extrapolate the discretised gradient to the boundary edges.
-        This is mainly for plotting before flux boundary conditions are applied.
+        This enables more accurate plotting before flux boundary conditions are applied.
 
         Parameters
         ----------
