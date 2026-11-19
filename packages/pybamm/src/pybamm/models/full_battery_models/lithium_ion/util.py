@@ -133,6 +133,31 @@ def _initial_hysteresis_state(phase_param, electrode):
     )
 
 
+def _default_initial_hysteresis_states(parameter_values, options):
+    """Return ``parameter_values``, copied with each unset initial hysteresis state
+    set to 0 if any is unset, as :func:`set_initial_state` starts it."""
+    unset = []
+    for electrode in ["negative", "positive"]:
+        phases = (
+            ["primary", "secondary"]
+            if check_if_composite(options, electrode)
+            else [None]
+        )
+        for phase in phases:
+            prefix = f"{phase.capitalize()}: " if phase else ""
+            name = f"{prefix}Initial hysteresis state in {electrode} electrode"
+            if (
+                _has_hysteresis(electrode, options, phase)
+                and name not in parameter_values
+            ):
+                unset.append(name)
+    if not unset:
+        return parameter_values
+    parameter_values = parameter_values.copy()
+    parameter_values.update(dict.fromkeys(unset, 0))
+    return parameter_values
+
+
 def get_initial_ocp(phase_param, sto, T, direction, electrode, options, phase=None):
     """
     Open-circuit potential [V] an electrode phase starts on.
