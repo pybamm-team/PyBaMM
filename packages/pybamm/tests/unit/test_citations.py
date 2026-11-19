@@ -1,9 +1,11 @@
 import contextlib
+import importlib.util
 import io
+import os
 import warnings
 
 import pytest
-from pybtex.database import Entry
+from pybtex.database import Entry, parse_file
 
 import pybamm
 
@@ -81,6 +83,49 @@ class TestCitations:
             pybamm.citations._parse_citation(new_citation)
         assert "NotACitation" in pybamm.citations._papers_to_cite
         assert pybamm.citations._all_citations["NotACitation"] != old_citation
+
+    def test_stored_citations_match_bibtex_format(self):
+        citations = pybamm.Citations()
+        bib_data = parse_file(
+            os.path.join(pybamm.__path__[0], "CITATIONS.bib"), bib_format="bibtex"
+        )
+        assert bib_data.entries
+        # Keys are read without pybtex, so both must find the same entries
+        assert citations._citation_keys == set(bib_data.entries.keys())
+        for key, entry in bib_data.entries.items():
+            assert citations._all_citations[key] == entry.to_string("bibtex")
+
+    def test_register_known_key_defers_parsing(self):
+        citations = pybamm.Citations()
+        citations.register("Marquis2019")
+        assert "Marquis2019" in citations._papers_to_cite
+        assert "_all_citations" not in vars(citations)
+
+    def test_read_citations_rereads_the_bibtex_file(self):
+        citations = pybamm.Citations()
+        entries = dict(citations._all_citations)
+        # The same entries again, so nothing is replaced (a warning would fail)
+        citations.read_citations()
+        assert citations._all_citations == entries
+        assert citations._citation_keys == set(entries)
+
+    def test_without_pybtex(self, monkeypatch):
+        find_spec = importlib.util.find_spec
+        monkeypatch.setattr(
+            importlib.util,
+            "find_spec",
+            lambda name, *args: None if name == "pybtex" else find_spec(name, *args),
+        )
+        citations = pybamm.Citations()
+        assert citations._module_import_error
+        assert citations._citation_keys == set()
+        assert citations._all_citations == {}
+        citations.read_citations()
+        assert citations._all_citations == {}
+        # Without the keys, a CITATIONS.bib key is held back as unknown
+        citations.register("Marquis2019")
+        assert "Marquis2019" in citations._unknown_citations
+        assert "Marquis2019" not in citations._papers_to_cite
 
     def test_input_validation(self):
         """Test type validation of ``_add_citation``"""

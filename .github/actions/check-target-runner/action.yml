@@ -1,0 +1,22 @@
+name: Check the runner matches the target
+description: >-
+  Fail when a RUNNER_<TARGET> repo variable points a target at another OS or
+  architecture, before it builds or caches wheels under the wrong name.
+inputs:
+  target:
+    description: "linux-x64, linux-arm64, windows-x64, macos-arm64 or macos-x64."
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Check the runner matches ${{ inputs.target }}
+      shell: bash
+      env:
+        TARGET: ${{ inputs.target }}
+      run: |
+        actual=$(echo "$RUNNER_OS-$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')
+        if [ "$actual" != "$TARGET" ]; then
+          variable=$(echo "RUNNER_$TARGET" | tr 'a-z-' 'A-Z_')
+          echo "::error::$TARGET got a $actual runner; check the $variable repo variable."
+          exit 1
+        fi
