@@ -34,10 +34,12 @@
 - When every sub-solver of `CompositeSolver` fails, their errors are chained to the raised `SolverError` as an `ExceptionGroup`, so each failure's traceback is kept. ([#5895](https://github.com/pybamm-team/PyBaMM/pull/5895))
 - Added `pybamm-core` (`packages/pybamm-rust`), a Rust expression compiler: an arena DAG with simplification, CSE and zero propagation, a typed IR, scalar and lane-batched interpreters, and forward-mode AD. CI runs `cargo test`, an MSRV check, `cargo fmt`, `cargo clippy` and CodeQL. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
 - `pybamm-core` evaluates transcendentals through the platform C library, as CasADi does: bitwise identical across evaluation paths, last-bit differences across platforms. `pow` is exact for exponents `0`, `1`, `2` and `-1`; `erf`, `asinh` and IEEE 754-2019 `minimum`/`maximum` use `libm`. ([#5956](https://github.com/pybamm-team/PyBaMM/pull/5956))
+- `pybamm.UserSuppliedUnstructuredMesh` loads hexahedral mesh files with planar faces, such as structured gmsh meshes of thin pouch-cell layers, with quad boundary tags. Warped or collapsed hexahedra, mixed volume cell types and wedges, pyramids or polyhedra raise `GeometryError`. ([#5850](https://github.com/pybamm-team/PyBaMM/pull/5850))
 
 ## Bug fixes
 
 - Preserve the latest completed experiment state and avoid a duplicate cycle callback when a solver fails before the first step of an unsaved cycle. ([#5898](https://github.com/pybamm-team/PyBaMM/pull/5898))
+- `BasicDFNUnstructured` reports `"Voltage [V]"` as the area-weighted mean of the positive electrode potential over the positive face, instead of one corner cell's value, which depended on the in-plane mesh. ([#5822](https://github.com/pybamm-team/PyBaMM/pull/5822))
 - Reading a 0D variable at its stored times, `var(solution.t)`, no longer raises when the solution repeats a time. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
 - The deprecation warning for an old "electrode diffusivity" parameter name now names the old and new parameter the right way round. ([#6062](https://github.com/pybamm-team/PyBaMM/pull/6062))
@@ -88,9 +90,11 @@
 - Half-cell models with `"surface form"` and a non-isothermal `"thermal"` option now build, instead of failing with a `ShapeError`. ([#5540](https://github.com/pybamm-team/PyBaMM/pull/5540))
 - Input-dependent geometry limits on a submesh that needs numbers, such as the default `Uniform1DSubMesh`, raise a `GeometryError` pointing to `pybamm.SymbolicUniform1DSubMesh` instead of an `IndexError`, and input-dependent tab positions raise one instead of a `KeyError`. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
 - `output_variables` with `/` in their names, such as `"Entropic change [V/K]"`, or with names that differ only in punctuation now work, including with the `compile` option. ([#5917](https://github.com/pybamm-team/PyBaMM/pull/5917))
+- `UnstructuredSubMesh.combine` and `compute_interface_data` size their node-welding tolerance by the shortest element edge, not the first edge, which on thin hexahedra exceeded the cell thickness and welded distinct layers together. ([#5850](https://github.com/pybamm-team/PyBaMM/pull/5850))
 
 ## Optimizations
 
+- Shortages of ARM Linux, Windows and macOS runners no longer block merges: only `linux-x64` jobs gate a merge or run in the merge queue, other targets are advisory and isolated per runner pool, and cached solver wheels restore on Ubuntu. ([#6071](https://github.com/pybamm-team/PyBaMM/pull/6071))
 - Reading a 0D variable at its stored times, `var()` or `var(solution.t)`, returns the stored values without importing xarray or interpolating through it. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - `import pybamm` is about six times faster, so importing and running a first DFN takes about a quarter of the time. Citations are parsed only when printed, and SymPy, Black, PostHog, pooch and most of SciPy load on first use. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - Interpolating a variable in space or time no longer builds an xarray `DataArray`; interpolation is 1.3 to 266 times faster, with at most a third of the peak memory, from QuickPlot sliders to large resampling. ([#6049](https://github.com/pybamm-team/PyBaMM/pull/6049))
