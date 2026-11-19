@@ -625,7 +625,9 @@ UNVERSIONED_CONFIG_OPTIONS = frozenset(
 )
 
 
-def restore_saved_options(options: dict, version: str | None) -> dict:
+def restore_saved_options(
+    options: dict, version: str | None, legacy: bool = False
+) -> dict:
     """Mark options loaded from a file with the rules they were saved under.
 
     Parameters
@@ -634,17 +636,20 @@ def restore_saved_options(options: dict, version: str | None) -> dict:
         The saved options.
     version : str or None
         The PyBaMM version that saved them, or None if it was not recorded.
+    legacy : bool, optional
+        Whether the options were saved as legacy options. Default is False.
 
     Returns
     -------
     dict
-        ``options`` as a :class:`LegacyOptions` if ``version`` is unknown or
-        predates per-electrode option checks, otherwise ``options`` unchanged.
+        ``options`` as a :class:`LegacyOptions` if ``legacy`` is True or
+        ``version`` is unknown or predates per-electrode option checks,
+        otherwise ``options`` unchanged.
     """
     # the leading YY.MM, so pre-releases such as "26.11rc0" count as their release
     match = re.match(r"(\d+)\.(\d+)", str(version))
     release = (int(match[1]), int(match[2])) if match else ()
-    if release < _PER_ELECTRODE_OPTIONS_RELEASE:
+    if legacy or release < _PER_ELECTRODE_OPTIONS_RELEASE:
         return LegacyOptions(options)
     return options
 
@@ -907,6 +912,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
     """
 
     def __init__(self, extra_options: Mapping | None, legacy: bool = False) -> None:
+        self.legacy = legacy
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
             "calculate heat source for isothermal models": ["false", "true"],

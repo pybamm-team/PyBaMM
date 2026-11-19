@@ -2325,6 +2325,12 @@ class BaseModel:
         # Build a pristine reference with the same options.
         model_cls = type(self)
         options = model_config.get("options", {})
+        if model_config.get("legacy_options"):
+            from pybamm.models.full_battery_models.battery_model_options import (
+                LegacyOptions,
+            )
+
+            options = LegacyOptions(options)
         # Only models whose constructor takes options have them in their config
         ref = model_cls(options=options) if options else model_cls()  # pyrefly: ignore[unexpected-keyword]
 
@@ -2402,6 +2408,8 @@ class BaseModel:
             }
             if hasattr(self, "options"):
                 model_config["options"] = dict(self.options)
+                if getattr(self.options, "legacy", False):
+                    model_config["legacy_options"] = True
 
             # Detect user modifications to variables and events.
             # A fresh reference model is instantiated with the same options
@@ -2547,8 +2555,13 @@ class BaseModel:
                 version = data.get("pybamm_version")
                 # without a version, only a full to_config dump is a saved config;
                 # a partial one is hand-written and checked as given
-                if version is not None or UNVERSIONED_CONFIG_OPTIONS <= set(options):
-                    options = restore_saved_options(options, version)
+                legacy = data.get("legacy_options", False)
+                if (
+                    legacy
+                    or version is not None
+                    or UNVERSIONED_CONFIG_OPTIONS <= set(options)
+                ):
+                    options = restore_saved_options(options, version, legacy)
             model = model_cls(options=options) if options else model_cls()
             BaseModel.apply_builtin_overrides(model, data)
             return model

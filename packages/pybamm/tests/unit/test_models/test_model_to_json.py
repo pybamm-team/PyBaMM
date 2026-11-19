@@ -575,6 +575,27 @@ class TestSavedOptionsVersion:
         with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
             pybamm.BaseModel.from_json(data)
 
+    def test_legacy_options_survive_resave(self, monkeypatch, tmp_path):
+        config = pybamm.lithium_ion.SPM(self.OPTIONS).to_config()
+        config["options"] = self._as_saved(config["options"])
+        config["pybamm_version"] = "26.10"
+        monkeypatch.setattr(pybamm, "__version__", "26.11.0")
+        model = pybamm.BaseModel.from_config(config)
+
+        resaved = json.loads(json.dumps(model.to_config()))
+        assert resaved["legacy_options"] is True
+        loaded = pybamm.BaseModel.from_config(resaved)
+        assert loaded.options.positive["stress-induced diffusion"] == "true"
+
+        model.to_json(tmp_path / "model.json")
+        loaded = pybamm.BaseModel.from_json(tmp_path / "model.json")
+        assert loaded.options.positive["stress-induced diffusion"] == "true"
+
+    def test_current_options_not_marked_legacy(self):
+        model = pybamm.lithium_ion.SPM(self.OPTIONS)
+        assert "legacy_options" not in model.to_config()
+        assert "legacy_options" not in model.to_json()["model"]
+
     def test_to_config_records_version(self):
         config = pybamm.lithium_ion.SPM().to_config()
         assert config["pybamm_version"] == pybamm.__version__

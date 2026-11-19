@@ -895,6 +895,26 @@ class TestSerialise:
             with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
                 Serialise().load_model(data)
 
+    def test_save_model_keeps_legacy_options(self, tmp_path, monkeypatch):
+        options = {
+            "particle mechanics": ("swelling only", "none"),
+            "stress-induced diffusion": "true",
+        }
+        model = pybamm.lithium_ion.SPM(
+            pybamm.models.full_battery_models.battery_model_options.LegacyOptions(
+                options
+            )
+        )
+        sim = pybamm.Simulation(
+            model, parameter_values=pybamm.ParameterValues("Ai2020")
+        )
+        sim.build()
+        monkeypatch.setattr(pybamm, "__version__", "26.11.0")
+        sim.built_model.save_model(str(tmp_path / "model"))
+        loaded = Serialise().load_model(str(tmp_path / "model.json"))
+        assert loaded.options.legacy
+        assert loaded.options.positive["stress-induced diffusion"] == "true"
+
     def test_load_legacy_payload_without_base_class_mro(self, tmp_path):
         model = pybamm.BaseModel(name="DummyModel")
         a = pybamm.Variable("a")
