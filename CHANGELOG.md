@@ -25,7 +25,7 @@
 
 ## Features
 
-- `Solution.save_vtu(filename, variables, t=None)` exports variables on unstructured finite-volume meshes to ParaView: one `.vtu` per output time plus a `.pvd` collection indexing them by time. Variables over several regions or only some of them share one mesh (NaN where a variable is undefined), vector fields are written as 3-component cell data and 0D variables as field data. Requires `vtk`. ([#5853](https://github.com/pybamm-team/PyBaMM/pull/5853))
+- Added `Solution.save_vtu`, which exports variables on unstructured finite-volume meshes to ParaView as one `.vtu` per output time plus a `.pvd` time index. Requires `vtk`. ([#5853](https://github.com/pybamm-team/PyBaMM/pull/5853))
 - `IDAKLUSolver`'s new `"sensitivity_error_control"` option, off by default, puts forward sensitivities in IDAS's local error test, so they also meet the solver's tolerances, at the cost of a longer solve. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 - Added the `IDAKLUSolver` option `upsampling_tolerance`, which adds times within each step until linear interpolation of the voltage is within tolerance (voltage-controlled steps add none). They go in `Solution.t_additive` and `Solution.t`. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
 - `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
