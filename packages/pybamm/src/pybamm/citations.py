@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import importlib.util
 import os
+import re
 import warnings
+from functools import cached_property
 from sys import _getframe
 from types import ModuleType
 
 import pybamm
 from pybamm.util import import_optional_dependency
+
+# The key of each entry, e.g. "Sulzer2021" in "@article{Sulzer2021,"
+_BIBTEX_KEY = re.compile(r"^@\w+\s*\{\s*([^,\s]+)\s*,", re.MULTILINE)
 
 
 class Citations:
@@ -35,16 +41,16 @@ class Citations:
 
     def __init__(self):
         self._check_for_bibtex()
-        # Dict mapping citations keys to BibTex entries
-        self._all_citations: dict[str, str] = {}
-
+        self._citations_file = os.path.join(pybamm.__path__[0], "CITATIONS.bib")
+        # Registering needs only the keys; entries are parsed when first needed
+        self._citation_keys: set[str] = set()
+        if not self._module_import_error:
+            with open(self._citations_file, encoding="utf-8") as file:
+                self._citation_keys.update(_BIBTEX_KEY.findall(file.read()))
         self._reset()
-        self.read_citations()
 
     def _check_for_bibtex(self):
-        try:
-            import_optional_dependency("pybtex")
-        except ModuleNotFoundError:
+        if importlib.util.find_spec("pybtex") is None:
             self._module_import_error = True
 
     def _reset(self):
@@ -71,15 +77,35 @@ class Citations:
             Database to load. Defaults to PyBaMM's bundled ``CITATIONS.bib``.
         """
         if not self._module_import_error:
-            parse_file = import_optional_dependency("pybtex.database", "parse_file")
-            if filename is None:
-                filename = os.path.join(pybamm.__path__[0], "CITATIONS.bib")
-            bib_data = parse_file(filename, bib_format="bibtex")
-            for key, entry in bib_data.entries.items():
+            for key, entry in self._parse_citations_file(filename).items():
                 self._add_citation(key, entry)
                 if key in self._unknown_citations:
                     self._papers_to_cite.add(key)
                     self._unknown_citations.discard(key)
+
+    def _parse_citations_file(self, filename=None):
+        """Parse a BibTeX file, defaulting to the bundled bibliography."""
+        parse_file = import_optional_dependency("pybtex.database", "parse_file")
+        if filename is None:
+            filename = self._citations_file
+        return parse_file(filename, bib_format="bibtex").entries
+
+    @cached_property
+    def _all_citations(self) -> dict[str, str]:
+        """BibTeX entries by citation key, read from ``CITATIONS.bib`` on first use."""
+        if self._module_import_error:
+            return {}
+        return {
+            key: entry.to_string(self._bibtex_writer_class)
+            for key, entry in self._parse_citations_file().items()
+        }
+
+    @cached_property
+    def _bibtex_writer_class(self):
+        """The pybtex BibTeX writer plugin class."""
+        # Resolving by name scans installed distribution metadata on every call
+        find_plugin = import_optional_dependency("pybtex.plugin", "find_plugin")
+        return find_plugin("pybtex.database.output", "bibtex")
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
@@ -92,12 +118,13 @@ class Citations:
                 raise TypeError()
 
             # Warn if overwriting a previous citation
-            new_citation = entry.to_string("bibtex")
+            new_citation = entry.to_string(self._bibtex_writer_class)
             if key in self._all_citations and new_citation != self._all_citations[key]:
                 warnings.warn(f"Replacing citation for {key}", stacklevel=2)
 
             # Add to database
             self._all_citations[key] = new_citation
+            self._citation_keys.add(key)
 
     def _add_citation_tag(self, key, entry):
         """Add a distinct reason for citing a key or deferred BibTeX string."""
@@ -143,7 +170,7 @@ class Citations:
             self._add_citation_tag(key, reason)
 
         # Check if citation is a known key
-        if key in self._all_citations:
+        if key in self._citation_keys:
             self._papers_to_cite.add(key)
             self._unknown_citations.discard(key)
         else:

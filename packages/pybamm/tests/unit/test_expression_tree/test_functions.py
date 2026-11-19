@@ -98,6 +98,18 @@ class TestFunction:
         value = 10
         assert pybamm.Function(np.log, value).to_equation() == value
 
+        # Test RegPower, against its own evaluation either side of zero
+        x = pybamm.Symbol("x")
+        for scale in [None, 2.0]:
+            equation = pybamm.RegPower(x, 0.5, scale=scale, delta=0.1).to_equation()
+            for value in [-3.0, -0.01, 0.0, 0.05, 4.0]:
+                expected = pybamm.RegPower(
+                    pybamm.Scalar(value), 0.5, scale=scale, delta=0.1
+                ).evaluate()
+                assert float(equation.subs(sympy.Symbol("x"), value)) == pytest.approx(
+                    float(expected), rel=1e-12, abs=1e-15
+                )
+
     def test_to_from_json_error(self):
         a = pybamm.Symbol("a")
         funca = pybamm.Function(function_test, a)

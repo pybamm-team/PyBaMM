@@ -1,0 +1,48 @@
+[package]
+name = "pybamm-core"
+version = "0.1.0"
+edition = "2024"
+rust-version.workspace = true
+# `benches/helpers.rs` is a shared module, not a bench target.
+autobenches = false
+
+[dependencies]
+rustc-hash = "2"
+thiserror = "2"
+# `erf`, which `f64` lacks; `asinh`, as `f64`'s overflows past `f64::MAX / 2`; and IEEE
+# 754-2019 `minimumNumber`/`maximumNumber`, as `f64::min`/`max` leave signed zeros unordered.
+libm = "0.2"
+serde = { version = "1", features = ["derive"], optional = true }
+bincode = { version = "1", optional = true }
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+# Compiles matrix products for the detected instruction set, so `accumulate` needs no `unsafe`.
+pulp = "0.22"
+
+[dev-dependencies]
+criterion = { version = "0.8", features = ["html_reports"] }
+proptest = "1"
+
+[features]
+serialize = ["dep:serde", "dep:bincode"]
+
+[[bench]]
+name = "compile"
+harness = false
+
+[[bench]]
+name = "eval"
+harness = false
+
+[[bench]]
+name = "sparsity"
+harness = false
+required-features = ["serialize"]
+
+[[bench]]
+name = "derivatives"
+harness = false
+required-features = ["serialize"]
+
+[lints]
+workspace = true

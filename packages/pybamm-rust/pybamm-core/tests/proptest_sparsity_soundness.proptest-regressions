@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 597e8b287b286e224bda1a19997f321f4450d4289b33759b4840bf603130be91 # shrinks to case = TangentCase { arena: Arena { nodes: [InputParameter { name: "p1", index: 1, offset: 1, width: 2 }, StateVector { start: 0, end: 2 }, Concat([NodeId(0), NodeId(1)]), InputParameter { name: "p1", index: 1, offset: 1, width: 2 }, StateVector { start: 0, end: 2 }, Concat([NodeId(3), NodeId(4)]), Minimum(NodeId(2), NodeId(5))] }, root: NodeId(6), y: [0.0, 0.0], seeds: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, -1.0], [-0.8181818181818181, -1.0]], n_states: 2, inputs: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5] }
+cc d479088b97472865e89493e527bb9b2455e5a8d76f5744dcbfa03b60e27ade01 # shrinks to case = TangentCase { arena: Arena { nodes: [Scalar(2.0), StateVector { start: 0, end: 2 }, ZeroVector { len: 3 }, InputParameter { name: "p1", index: 1, offset: 1, width: 2 }, Concat([NodeId(0), NodeId(1), NodeId(2), NodeId(3)]), Sin(NodeId(4)), Sinh(NodeId(5))] }, root: NodeId(6), y: [0.1, 0.1], seeds: [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, -1.0], [-1.0, -0.9895287958115183]], n_states: 2, inputs: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5] }
+cc 1d19e45946cded48caab6a61376a303f9547975802fc1f4cadd70dc9aa0b5efc # shrinks to case = DagCase { arena: Arena { nodes: [InputParameter { name: "p1", index: 1, offset: 1, width: 2 }, Neg(NodeId(0)), Sin(NodeId(1)), Sinh(NodeId(2))] }, root: NodeId(3), y: [6.452103390146087, 4.577698105553086], n_states: 2, inputs: [0.9273837760043045, 0.5701795391449281, 0.6739492693335809, 1.7945306090253565, 0.7783635193302805, 0.6500175546937954] }

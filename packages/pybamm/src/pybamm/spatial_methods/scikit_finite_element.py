@@ -3,7 +3,6 @@
 #
 import numpy as np
 from scipy.sparse import csc_matrix, csr_matrix
-from scipy.sparse.linalg import inv
 
 import pybamm
 from pybamm.util import import_optional_dependency
@@ -82,6 +81,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             to the y-component of the gradient and the second column corresponds
             to the z component of the gradient.
         """
+        from scipy.sparse.linalg import inv
+
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]
         mesh = self.mesh[domain]

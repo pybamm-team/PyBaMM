@@ -2340,6 +2340,65 @@ class TestProcessModelConcatenation:
         rhs = model_disc.concatenated_rhs.evaluate(t=0, y=u).flatten()
         np.testing.assert_allclose(rhs, 0.0, atol=1e-10)
 
+    def test_reused_mesh_with_combined_submesh(self):
+        """A second Discretisation on a mesh that already holds a combined
+        submesh must not pair the combined mesh with its own components."""
+        domains = ["negative electrode", "separator", "positive electrode"]
+        x_vars = {
+            domain: pybamm.SpatialVariable(
+                f"x_{domain[0]}", domain=[domain], coord_sys="cartesian"
+            )
+            for domain in domains
+        }
+        z = pybamm.SpatialVariable(
+            "z_2d", domain=domains, coord_sys="cartesian", direction="tb"
+        )
+        x_bounds = [(0.0, 0.4), (0.4, 0.6), (0.6, 1.0)]
+        geometry = {
+            domain: {
+                x_vars[domain]: {"min": x_min, "max": x_max},
+                z: {"min": 0.0, "max": 1.0},
+            }
+            for domain, (x_min, x_max) in zip(domains, x_bounds, strict=True)
+        }
+        gen = pybamm.meshes.unstructured_submesh.UnstructuredMeshGenerator(
+            element_type="quad"
+        )
+        mesh = pybamm.Mesh(
+            geometry,
+            dict.fromkeys(domains, gen),
+            {**dict.fromkeys(x_vars.values(), 3), z: 3},
+        )
+
+        def build_model():
+            var = pybamm.concatenation(
+                *[
+                    pybamm.Variable(f"c_{domain[0]}", domain=[domain])
+                    for domain in domains
+                ]
+            )
+            model = pybamm.BaseModel()
+            model.rhs = {var: pybamm.div(pybamm.grad(var))}
+            model.initial_conditions = {var: pybamm.Scalar(1)}
+            model.boundary_conditions = {
+                var: {
+                    "left": (pybamm.Scalar(0), "Dirichlet"),
+                    "right": (pybamm.Scalar(1), "Dirichlet"),
+                }
+            }
+            return model
+
+        u = np.concatenate([mesh[domain].cell_centroids[:, 0] for domain in domains])
+        for _ in range(2):
+            disc = pybamm.Discretisation(
+                mesh, {domain: FiniteVolumeUnstructured() for domain in domains}
+            )
+            model_disc = disc.process_model(build_model(), inplace=False)
+            rhs = model_disc.concatenated_rhs.evaluate(t=0, y=u).flatten()
+            np.testing.assert_allclose(rhs, 0.0, atol=1e-10)
+        assert tuple(domains) in mesh
+        assert "left" in mesh["negative electrode"].boundary_faces
+
 
 class TestDiscretisationDispatchLifting:
     def _disc_var_grad(self):
