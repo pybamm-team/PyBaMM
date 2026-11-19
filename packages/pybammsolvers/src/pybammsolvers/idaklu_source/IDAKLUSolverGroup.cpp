@@ -7,13 +7,13 @@
 #include <optional>
 
 std::vector<Solution> IDAKLUSolverGroup::solve(
-    np_array t_eval_np,
-    np_array t_interp_np,
-    np_array y0_np,
-    np_array yp0_np,
-    np_array inputs,
-    py::object logger,
-    np_array pbar) {
+    const np_array &t_eval_np,
+    const np_array &t_interp_np,
+    const np_array &y0_np,
+    const np_array &yp0_np,
+    const np_array &inputs,
+    const py::object &logger,
+    const np_array &pbar) {
   DEBUG("IDAKLUSolverGroup::solve");
 
   // If t_interp is empty, save all adaptive steps
@@ -131,17 +131,14 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
   // may log directly or must buffer until flush_logs().
   set_loggers(logger);
 
-  // cppcheck-suppress unreadVariable
   const int team_size = std::max<int>(1, std::min<int>(m_solvers.size(), number_of_groups));
   // Emulates schedule(dynamic) with an atomic counter: the macOS wheels' libomp
   // lacks __kmpc_dispatch_deinit, and MSVC needs -openmp:llvm for omp atomic capture.
   std::atomic<int> next_group{1};
   std::atomic<bool> interrupted{false};
-  #pragma omp parallel num_threads(team_size)
-  {
+  auto run_thread = [&](const int thread) {
     // Thread 0 is the calling thread, which holds the GIL, so it always takes a
     // set and streams that set's diagnostics instead of buffering them.
-    const int thread = omp_get_thread_num();
     int i = thread == 0 ? 0 : next_group.fetch_add(1, std::memory_order_relaxed);
     while (i < number_of_groups && !interrupted.load(std::memory_order_relaxed)) {
       const sunrealtype *y = y0 + i * y0_np.shape(1);
@@ -165,6 +162,14 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
       }
       i = next_group.fetch_add(1, std::memory_order_relaxed);
     }
+  };
+  if (team_size == 1) {
+    // No one-thread region either: OpenMP code the model calls would then run
+    // nested, at level 1, and take nested-level settings such as OMP_NUM_THREADS=8,1
+    run_thread(0);
+  } else {
+    #pragma omp parallel num_threads(team_size)
+    run_thread(omp_get_thread_num());
   }
 
   // Drain before the rethrow below, so a solve that throws still emits its log
@@ -182,8 +187,9 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     std::string failures;
     for (int i = 0; i < number_of_groups; i++) {
       std::string error;
-      if (errors[i].has_value()) {
-        error = *errors[i];
+      const auto &thrown = errors[i];
+      if (thrown.has_value()) {
+        error = *thrown;
       } else if (results[i].get_flag() < 0) {
         error = sundials_error_message(results[i].get_flag());
       } else {
@@ -212,7 +218,7 @@ void IDAKLUSolverGroup::flush_logs() {
   }
 }
 
-void IDAKLUSolverGroup::set_loggers(py::object logger) {
+void IDAKLUSolverGroup::set_loggers(const py::object &logger) {
   for (const auto& solver : m_solvers) {
     solver->set_logger(logger);
   }

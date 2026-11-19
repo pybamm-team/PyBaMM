@@ -3,21 +3,26 @@ from __future__ import annotations
 #
 # Solution class
 #
+import codecs
+import csv
+import io
 import json
+import math
 import numbers
 import os
 import pickle
+import warnings
 from dataclasses import astuple, dataclass
 from itertools import chain
 
 import casadi
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
-from scipy.io import savemat
 
 import pybamm
 from pybamm.codegen.compilation import aot_compile
+from pybamm.solvers.base_solver import flatten_inputs
+from pybamm.solvers.observation import build_variable
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -32,6 +37,154 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         # won't be called since we only need to convert numpy arrays
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
+
+
+# Rows are formatted this many cells at a time, as pandas does, to bound memory
+_CSV_CHUNK_CELLS = 100_000
+# Compressions pandas inferred from these extensions, which this writer lacks
+_UNSUPPORTED_CSV_COMPRESSION = (
+    ".zip",
+    ".zst",
+    ".tar",
+    ".tar.gz",
+    ".tar.bz2",
+    ".tar.xz",
+)
+
+
+def _write_csv(data: dict, filename=None) -> str | None:
+    """
+    Write columns of data as CSV: a header row of their names, then one row per
+    entry. Floats are written in their shortest round-trip form, a missing value
+    as an empty field, and names are quoted only where needed.
+
+    Parameters
+    ----------
+    data : dict
+        1D arrays of equal length by column name. A scalar is repeated down its
+        column.
+    filename : str, path-like or file, optional
+        The file to write, compressed if its name ends in ``.gz``, ``.bz2`` or
+        ``.xz``. A binary file is written as UTF-8. If None, the CSV is returned
+        as a string.
+
+    Returns
+    -------
+    str or None
+        The CSV, if ``filename`` is None.
+
+    Raises
+    ------
+    ValueError
+        If a column is not 1D, the columns differ in length, or all are scalars,
+        or if the file's name ends in an extension of another compression, such
+        as ``.zip``.
+    """
+    columns = {name: np.asarray(values) for name, values in data.items()}
+    if any(values.ndim > 1 for values in columns.values()):
+        raise ValueError("Per-column arrays must each be 1-dimensional")
+    lengths = {len(values) for values in columns.values() if values.ndim == 1}
+    if len(lengths) > 1:
+        raise ValueError("All arrays must be of the same length")
+    if columns and not lengths:
+        raise ValueError("At least one column must be an array, not a scalar")
+    n_rows = lengths.pop() if lengths else 0
+    columns = {
+        name: np.broadcast_to(values, (n_rows,)) for name, values in columns.items()
+    }
+    chunk_rows = max(1, _CSV_CHUNK_CELLS // max(1, len(columns)))
+
+    def write(file):
+        writer = csv.writer(file, lineterminator=os.linesep)
+        writer.writerow(columns)
+        for start in range(0, n_rows, chunk_rows):
+            chunk = [
+                _csv_fields(values[start : start + chunk_rows])
+                for values in columns.values()
+            ]
+            writer.writerows(zip(*chunk, strict=True))
+
+    if filename is None:
+        buffer = io.StringIO()
+        write(buffer)
+        return buffer.getvalue()
+    if hasattr(filename, "write"):
+        if _is_binary_file(filename):
+            # UTF-8, as pandas wrote. Unbuffered, so an error leaves nothing to
+            # flush and nothing to close the caller's file
+            write(codecs.getwriter("utf-8")(filename))
+        else:
+            write(filename)
+        return None
+    with _open_for_text(filename) as file:
+        write(file)
+    return None
+
+
+def _csv_fields(values):
+    """Return the CSV fields of a 1D array, with an empty field where missing."""
+    # Python and numpy both write a float64 in its shortest round-trip form;
+    # Python is faster, but float32 and complex need numpy's own form
+    if values.dtype == np.float64 or values.dtype.kind in "biuO":
+        fields = values.tolist()
+    else:
+        fields = values.astype(str).tolist()
+    missing = _is_missing(values)
+    if missing.any():
+        fields = [
+            "" if is_missing else field
+            for field, is_missing in zip(fields, missing, strict=True)
+        ]
+    return fields
+
+
+def _is_binary_file(file) -> bool:
+    """Return whether a file object takes bytes: a binary io class, or a mode with b."""
+    return isinstance(file, io.RawIOBase | io.BufferedIOBase) or "b" in str(
+        getattr(file, "mode", "")
+    )
+
+
+def _is_missing(values):
+    """Return where a 1D array holds NaN, or None in an object array."""
+    if values.dtype.kind in "fc":
+        return np.isnan(values)
+    if values.dtype.kind == "O":
+        return np.array(
+            [
+                entry is None or (isinstance(entry, float) and math.isnan(entry))
+                for entry in values.tolist()
+            ],
+            dtype=bool,
+        )
+    return np.zeros(values.shape, dtype=bool)
+
+
+def _open_for_text(filename):
+    """Open a file to write text to, compressed as its extension asks."""
+    name = os.fsdecode(filename)
+    if name.lower().endswith(_UNSUPPORTED_CSV_COMPRESSION):
+        raise ValueError(
+            f"Cannot write CSV to {name!r}: it can be compressed only as .gz, .bz2 "
+            "or .xz"
+        )
+    suffix = os.path.splitext(name)[1].lower()
+    if suffix == ".gz":
+        import gzip
+
+        opener = gzip.open
+    elif suffix == ".bz2":
+        import bz2
+
+        opener = bz2.open
+    elif suffix == ".xz":
+        import lzma
+
+        opener = lzma.open
+    else:
+        opener = open
+    mode = "w" if opener is open else "wt"
+    return opener(filename, mode, newline="", encoding="utf-8")
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,9 +331,7 @@ class SolutionBase:
             data = {short_names.get(k, k): v for k, v in data.items()}
 
         if to_format == "csv":
-            import pandas as _pd
-
-            _pd.DataFrame(data).to_csv(filename, index=False)
+            _write_csv(data, filename)
         elif to_format == "json":
             with open(filename, "w") as f:
                 json.dump(data, f, cls=NumpyEncoder)
@@ -262,6 +413,40 @@ class EISSolution(SolutionBase):
 
         return nyquist_plot(self.impedance, **kwargs)
 
+    def bode_plot(self, **kwargs):
+        """Generate a Bode plot from the impedance data.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments forwarded to :func:`pybamm.bode_plot`.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure or None
+        ax : tuple of matplotlib.axes.Axes
+        """
+        from pybamm.plotting.bode_plot import bode_plot
+
+        return bode_plot(self.frequencies, self.impedance, **kwargs)
+
+    def plot(self, **kwargs):
+        """Plot Nyquist and Bode plots side by side.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments forwarded to :func:`pybamm.eis_plot`.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+        axes : tuple of matplotlib.axes.Axes
+        """
+        from pybamm.plotting.eis_plot import eis_plot
+
+        return eis_plot(self, **kwargs)
+
 
 _DEFAULT_SOLUTION_OPTIONS = {
     "compile": False,
@@ -326,6 +511,9 @@ class Solution(SolutionBase):
         Solvers should forward the user's selection so observed variables use
         the same backend as the integration.
 
+    t_additive : :class:`numpy.array`, optional
+        Sorted times between the stored states, included in ``t`` and evaluated by
+        Hermite interpolation of the states.
     """
 
     # Solvers, Simulation and make_cycle_solution set all_first_states, closest_event_idx,
@@ -350,13 +538,17 @@ class Solution(SolutionBase):
         "_sub_solutions",
         "_summary_variables",
         "_t",
+        "_t_additive",
         "_t_eval",
         "_t_event",
         "_termination",
         "_user_options",
         "_variables",
         "_y",
+        "_y0",
+        "_y0_sensitivities",
         "_y_event",
+        "_y_event_sensitivities",
         "_yp",
         "all_first_states",
         "all_inputs",
@@ -385,6 +577,7 @@ class Solution(SolutionBase):
         variables_returned=False,
         check_solution=True,
         options=None,
+        t_additive=None,
         _validate_time_structure=True,
     ):
         if not isinstance(all_ts, list):
@@ -446,6 +639,11 @@ class Solution(SolutionBase):
         self._y_event = y_event
         self._termination = termination
         self.closest_event_idx = None
+        # Initial state of an output_variables solve, which stores no states
+        self._y0 = None
+        # Such a solve's state sensitivities at its first and last time points
+        self._y0_sensitivities = None
+        self._y_event_sensitivities = None
 
         super().__init__()
         self.integration_time = None
@@ -466,6 +664,7 @@ class Solution(SolutionBase):
 
         # Initialize empty inputs
         self._t = None
+        self._t_additive = t_additive
         self._t_eval = None
         self._y = None
         self._yp = None
@@ -493,6 +692,10 @@ class Solution(SolutionBase):
         self.solver_statistics = None
         self._first_state = None
         self._last_state = None
+        self._t_additive = None
+        self._y0 = None
+        self._y0_sensitivities = None
+        self._y_event_sensitivities = None
         if isinstance(state, dict):
             state = {
                 f"_{name}" if name in ("first_state", "last_state") else name: value
@@ -502,6 +705,14 @@ class Solution(SolutionBase):
 
     def has_sensitivities(self) -> bool:
         return len(self._all_sensitivities) > 0
+
+    @property
+    def sensitivity_names(self) -> list[str]:
+        """
+        Names of the inputs this solution has sensitivities for, in the column
+        order of ``sensitivities["all"]``.
+        """
+        return [key for key in self._all_sensitivities if key != "all"]
 
     @staticmethod
     def _ensure_t_evals(all_ts, all_t_evals):
@@ -525,7 +736,7 @@ class Solution(SolutionBase):
                 )
 
     @staticmethod
-    def _ensure_sorted_t(ts: list[np.ndarray | casadi.DM | casadi.MX], name: str):
+    def _ensure_sorted_t(ts: list[np.ndarray], name: str):
         t_f_previous = None
         for t in ts:
             if len(t) == 0:
@@ -546,10 +757,25 @@ class Solution(SolutionBase):
 
     @property
     def t(self) -> np.ndarray:
-        """Times at which the solution is evaluated"""
+        """Times at which the solution is evaluated, including ``t_additive``"""
         if self._t is None:
             self._t = np.concatenate(self.all_ts)
+            t_additive = self.t_additive
+            if t_additive is not None:
+                self._t = np.union1d(self._t, t_additive)
         return self._t
+
+    @property
+    def t_additive(self) -> np.ndarray | None:
+        """Times between the stored states that resolve the solver's upsampled
+        output variable, or None if the solver did not upsample"""
+        return self._t_additive
+
+    @staticmethod
+    def _join_t_additive(solutions):
+        """The solutions' ``t_additive`` joined, or None if none has any."""
+        parts = [s._t_additive for s in solutions if s._t_additive is not None]
+        return np.concatenate(parts) if parts else None
 
     @property
     def t_eval(self) -> np.ndarray:
@@ -560,14 +786,28 @@ class Solution(SolutionBase):
 
     @property
     def y(self):
-        """Values of the solution"""
+        """The stored states, concatenated (deprecated)."""
+        warnings.warn(
+            "`Solution.y` is deprecated and will be removed in 27.2; "
+            "it holds only the stored states, which need not match `Solution.t`. "
+            "Use `solution[name]` for variables, or `all_ys` for the raw states.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if self._y is None:
             self._y = self._concatenate_states(self.all_ys)
         return self._y
 
     @property
     def yp(self):
-        """Time derivatives of the solution"""
+        """The stored state time derivatives, concatenated (deprecated)."""
+        warnings.warn(
+            "`Solution.yp` is deprecated and will be removed in 27.2; "
+            "it holds only the stored states, which need not match `Solution.t`. "
+            "Use `all_yps` for the raw state derivatives.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if self.hermite_interpolation and self._yp is None:
             self._yp = self._concatenate_states(self.all_yps)
         return self._yp
@@ -636,11 +876,11 @@ class Solution(SolutionBase):
                 )
 
     @property
-    def all_ts(self) -> list[np.ndarray | casadi.DM | casadi.MX]:
+    def all_ts(self) -> list[np.ndarray]:
         return self._all_ts
 
     @property
-    def all_t_evals(self) -> list[np.ndarray | casadi.DM | casadi.MX]:
+    def all_t_evals(self) -> list[np.ndarray]:
         return self._all_t_evals
 
     @property
@@ -655,9 +895,7 @@ class Solution(SolutionBase):
     @property
     def all_inputs_stacked(self) -> list[np.ndarray]:
         if self._all_inputs_stacked is None:
-            self._all_inputs_stacked = [
-                np.asarray(list(inp.values())).reshape(-1) for inp in self.all_inputs
-            ]
+            self._all_inputs_stacked = [flatten_inputs(inp) for inp in self.all_inputs]
         return self._all_inputs_stacked
 
     @property
@@ -738,21 +976,24 @@ class Solution(SolutionBase):
         return self._first_state
 
     def _build_first_state(self):
-        sensitivities = {}
         n_states = self.all_models[0].len_rhs_and_alg
-        for key in self._all_sensitivities:
-            sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
+        if self._y0_sensitivities is None:
+            sensitivities = {
+                key: value[0][:n_states, :]
+                for key, value in self._all_sensitivities.items()
+            }
+        else:
+            sensitivities = self._y0_sensitivities
 
         if self.all_yps is None:
             all_yps = None
         else:
             all_yps = self.all_yps[0][:, :1]
 
-        if not self.variables_returned:
+        if self._y0 is None:
             all_ys = self.all_ys[0][:, :1]
         else:
-            # Get first state from initial conditions as all_ys is empty
-            all_ys = self.all_models[0].y0full[0].reshape(-1, 1)
+            all_ys = self._y0.reshape(-1, 1)
 
         new_sol = Solution(
             self.all_ts[0][:1],
@@ -788,10 +1029,14 @@ class Solution(SolutionBase):
         return self._last_state
 
     def _build_last_state(self):
-        sensitivities = {}
         n_states = self.all_models[-1].len_rhs_and_alg
-        for key in self._all_sensitivities:
-            sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
+        if self._y_event_sensitivities is None:
+            sensitivities = {
+                key: value[-1][-n_states:, :]
+                for key, value in self._all_sensitivities.items()
+            }
+        else:
+            sensitivities = self._y_event_sensitivities
 
         if self.all_yps is None:
             all_yps = None
@@ -862,79 +1107,8 @@ class Solution(SolutionBase):
         for variable in variables:
             self._update_variable(variable)
 
-    def _update_model_variable(
-        self,
-        model: pybamm.BaseModel,
-        var_pybamm: pybamm.Symbol,
-        time_integral: pybamm.ProcessedVariableTimeIntegral | None,
-        inputs: dict,
-        ys_shape: tuple,
-        cache_key,
-    ):
-        _var_casadi = model._variables_casadi.get(cache_key)
-        if _var_casadi is not None:
-            return _var_casadi, var_pybamm, time_integral
-
-        var_casadi, var_pybamm, time_integral = self._convert_to_casadi(
-            var_pybamm, inputs, ys_shape
-        )
-
-        # Only cache if it's not a time integral
-        if time_integral is None:
-            model._variables_casadi[cache_key] = var_casadi
-        return var_casadi, var_pybamm, time_integral
-
     def _update_variable(self, name: str):
-        time_integral = None
-        pybamm.logger.debug(f"Post-processing {name}")
-
-        # Iterate through all models, some may be in the list several times and
-        # therefore only get set up once
-        vars_pybamm = [
-            model.get_processed_variable_or_event(name) for model in self.all_models
-        ]
-        vars_casadi = [None] * len(self.all_models)
-        for i, (model, ys, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, strict=True)
-        ):
-            _var_pybamm = vars_pybamm[i]
-            if self.variables_returned and _var_pybamm.has_symbol_of_classes(
-                pybamm.expression_tree.state_vector.StateVector
-            ):
-                raise KeyError(
-                    f"Cannot process variable '{name}' as it was not part of the "
-                    "solve. Please re-run the solve with `output_variables` set to "
-                    "include this variable."
-                )
-            if isinstance(_var_pybamm, pybamm.VectorField):
-                comp_casadi = []
-                for k, comp in enumerate(_var_pybamm.components):
-                    cc, _, _ = self._update_model_variable(
-                        model,
-                        comp,
-                        inputs=inputs,
-                        ys_shape=ys.shape,
-                        time_integral=None,
-                        cache_key=f"{name}[{k}]",
-                    )
-                    comp_casadi.append(cc)
-                vars_casadi[i] = comp_casadi
-            else:
-                var_casadi, var_pybamm, time_integral = self._update_model_variable(
-                    model,
-                    _var_pybamm,
-                    inputs=inputs,
-                    ys_shape=ys.shape,
-                    time_integral=time_integral,
-                    cache_key=name,
-                )
-                vars_pybamm[i] = var_pybamm
-                vars_casadi[i] = var_casadi
-        var = pybamm.process_variable(
-            name, vars_pybamm, vars_casadi, self, time_integral=time_integral
-        )
-
-        self._variables[name] = var
+        self._variables[name] = build_variable(self, name)
 
     def observe(self, symbol: pybamm.Symbol) -> pybamm.ProcessedVariable:
         """
@@ -1127,20 +1301,25 @@ class Solution(SolutionBase):
 
         # Save cycle number and step number if the solution has them
         if cycles_and_steps and len(self.cycles) > 0:
-            data_short_names["Cycle"] = np.array([])
-            data_short_names["Step"] = np.array([])
+            cycle_numbers, step_numbers, previous_last_t = [], [], None
             for i, cycle in enumerate(self.cycles):
-                data_short_names["Cycle"] = np.concatenate(
-                    [data_short_names["Cycle"], i * np.ones_like(cycle.t)]
-                )
                 for j, step in enumerate(cycle.steps):
-                    data_short_names["Step"] = np.concatenate(
-                        [data_short_names["Step"], j * np.ones_like(step.t)]
+                    # a step's first point is dropped when it repeats the previous
+                    # step's last point, so don't number it twice
+                    repeated = (
+                        previous_last_t is not None and step.t[0] == previous_last_t
                     )
+                    previous_last_t = step.t[-1]
+                    length = len(step.t) - repeated
+                    cycle_numbers.append(np.full(length, i, dtype=float))
+                    step_numbers.append(np.full(length, j, dtype=float))
+            data_short_names["Cycle"] = np.concatenate(cycle_numbers)
+            data_short_names["Step"] = np.concatenate(step_numbers)
 
         return data_short_names
 
-    def save_data(
+    # `variables` stays second for existing positional callers
+    def save_data(  # pyrefly: ignore[bad-override]
         self, filename=None, variables=None, to_format="pickle", short_names=None
     ):
         """
@@ -1205,6 +1384,8 @@ class Solution(SolutionBase):
                             "['Electrolyte concentration'], to_format='matlab, "
                             "short_names={'Electrolyte concentration': 'c_e'})"
                         )
+            from scipy.io import savemat
+
             savemat(filename, data)
         elif to_format == "csv":
             for name, var in data.items():
@@ -1212,8 +1393,7 @@ class Solution(SolutionBase):
                     raise ValueError(
                         f"only 0D variables can be saved to csv, but '{name}' is {var.ndim - 1}D"
                     )
-            df = pd.DataFrame(data)
-            return df.to_csv(filename, index=False)
+            return _write_csv(data, filename)
         elif to_format == "json":
             if filename is None:
                 return json.dumps(data, cls=NumpyEncoder)
@@ -1278,13 +1458,32 @@ class Solution(SolutionBase):
         return ts, ys, yps, tev
 
     @staticmethod
-    def _merge_sensitivities(acc, s):
-        """Fold one segment's sensitivities into the running dict ``acc``."""
-        for key, val in s._all_sensitivities.items():
-            acc.setdefault(key, []).extend(val)
+    def _merge_sensitivities(acc, s, repeated):
+        """Fold one segment's sensitivities into the running dict ``acc``,
+        dropping the leading time point's rows when ``repeated``."""
+        for key, (first, *rest) in s._all_sensitivities.items():
+            # Rows are time-major, one block per time point, as in _segment_series
+            rows_repeated = len(first) // len(s.all_ts[0]) if repeated else 0
+            acc.setdefault(key, []).extend([first[rows_repeated:], *rest])
 
     def __add__(self, other):
-        """Adds two solutions together, e.g. when stepping"""
+        """Join ``other`` onto the end of this solution, e.g. when stepping.
+
+        If ``other`` starts after this solution ends, an ``ExplicitTimeIntegral``
+        integrates across the gap, interpolating its integrand linearly there. If
+        either solution returned output variables only, the integral is instead
+        the sum of the integrals over each solution, so the gap adds nothing.
+
+        Parameters
+        ----------
+        other : :class:`pybamm.Solution` or None
+            The solution to append.
+
+        Returns
+        -------
+        :class:`pybamm.Solution`
+            The joined solution.
+        """
         if other is None or isinstance(other, EmptySolution):
             return self.copy()
         if not isinstance(other, Solution):
@@ -1340,7 +1539,7 @@ class Solution(SolutionBase):
         all_sensitivities = {
             key: list(value) for key, value in self._all_sensitivities.items()
         }
-        self._merge_sensitivities(all_sensitivities, other)
+        self._merge_sensitivities(all_sensitivities, other, repeated)
 
         options = self.user_options | other.user_options
 
@@ -1357,10 +1556,14 @@ class Solution(SolutionBase):
             all_t_evals=all_t_evals,
             variables_returned=other.variables_returned,
             options=options,
+            t_additive=self._join_t_additive([self, other]),
             _validate_time_structure=False,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
+        new_sol._y0 = self._y0
+        new_sol._y0_sensitivities = self._y0_sensitivities
+        new_sol._y_event_sensitivities = other._y_event_sensitivities
         new_sol._all_inputs_stacked = self.all_inputs_stacked + other.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
@@ -1443,8 +1646,8 @@ class Solution(SolutionBase):
 
         # sensitivities: fresh dict, no aliasing of any input solution's dict
         all_sensitivities = {}
-        for s in segments:
-            cls._merge_sensitivities(all_sensitivities, s)
+        for s, repeated in kept:
+            cls._merge_sensitivities(all_sensitivities, s, repeated)
 
         options = {}
         for s in segments:
@@ -1466,14 +1669,17 @@ class Solution(SolutionBase):
             all_t_evals=all_t_evals if t_evals_present else None,
             variables_returned=any(s.variables_returned for s in segments),
             options=options,
+            t_additive=cls._join_t_additive(sols),
             # validates the joined series once (O(N), not O(N^2))
             _validate_time_structure=True,
         )
 
-        # last kept segment, not sols[-1]: __add__'s single-sample short-circuit
-        # keeps the running closest_event_idx, so a trailing duplicate must not
-        # overwrite it.
+        # last kept segment, not sols[-1]: __add__'s short-circuit keeps these from
+        # self, and a trailing last_state duplicate has no event sensitivities.
         new_sol.closest_event_idx = segments[-1].closest_event_idx
+        new_sol._y_event_sensitivities = segments[-1]._y_event_sensitivities
+        new_sol._y0 = segments[0]._y0
+        new_sol._y0_sensitivities = segments[0]._y0_sensitivities
         # leave stacked/casadi unset; built lazily from all_inputs (casadi is costly)
         new_sol._sub_solutions = sub_sols
 
@@ -1512,12 +1718,16 @@ class Solution(SolutionBase):
             all_t_evals=self._all_t_evals,
             variables_returned=self.variables_returned,
             options=self.user_options,
+            t_additive=self._t_additive,
             _validate_time_structure=False,
         )
         new_sol._all_inputs_stacked = self.all_inputs_stacked
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
         new_sol.closest_event_idx = self.closest_event_idx
+        new_sol._y0 = self._y0
+        new_sol._y0_sensitivities = self._y0_sensitivities
+        new_sol._y_event_sensitivities = self._y_event_sensitivities
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time

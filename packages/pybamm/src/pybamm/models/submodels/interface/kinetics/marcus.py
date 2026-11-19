@@ -33,12 +33,14 @@ class Marcus(BaseKinetics):
         pybamm.citations.register("Sripad2020")
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        RT = self.param.R * T
-        Feta_RT = self.param.F * eta_r / RT
         mhc_lambda = self.phase_param.mhc_lambda
 
-        exp_arg_ox = -((mhc_lambda + Feta_RT) ** 2) / (4 * mhc_lambda * RT)
-        exp_arg_red = -((mhc_lambda - Feta_RT) ** 2) / (4 * mhc_lambda * RT)
+        F_RT = self.param.F / (self.param.R * T)
+        Feta_RT = F_RT * eta_r
+        lambda_T = F_RT * mhc_lambda
+
+        exp_arg_ox = -((lambda_T - Feta_RT) ** 2) / (4 * lambda_T)
+        exp_arg_red = -((lambda_T + Feta_RT) ** 2) / (4 * lambda_T)
         return u * j0 * (pybamm.exp(exp_arg_ox) - pybamm.exp(exp_arg_red))
 
 
