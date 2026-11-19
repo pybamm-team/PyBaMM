@@ -292,9 +292,18 @@ class Simulation(BaseSimulation):
         upsampling_steps = list(unique_steps)
         if padding_rest_step is not None:
             upsampling_steps.append(padding_rest_step)
+        names = [
+            pybamm.step.base_step._upsampling_variable_name(
+                step, self._model, variables
+            )
+            for step in upsampling_steps
+        ]
+        if all(name is None for name in names):
+            # Leave the model's own setting, so the solver warns that it is missing
+            return
         upsampling_branches = []
-        for step in upsampling_steps:
-            variable = variables[step.upsampling_variable]
+        for name in names:
+            variable = pybamm.Scalar(0) if name is None else variables[name]
             if new_model.is_algebraic_state(variable):
                 variable = pybamm.Scalar(0)
             upsampling_branches.append(variable)
@@ -398,29 +407,36 @@ class Simulation(BaseSimulation):
         if self._experiment_uses_ambient_input:
             new_parameter_values[self._AMBIENT_TEMPERATURE_INPUT] = "[input]"
 
-        # Controls other than the current become algebraic variables, registered
-        # before any residual is built so that every residual can read them
+        # A battery model's external circuit owns the current; any other control,
+        # including the current of other models, becomes an algebraic variable
+        circuit_controls_current = self._CURRENT_CONTROL in controls and isinstance(
+            self._model, pybamm.BaseBatteryModel
+        )
+        # Register the control variables before any residual is built, so that every
+        # residual can read them
         variables = new_model.variables
         control_variables = {}
         for control in controls:
-            if control != self._CURRENT_CONTROL:
-                control_variables[control] = (
-                    pybamm.step.base_step._adjusted_control_variable(
-                        control, default(control)
-                    )
-                )
-                variables[control] = control_variables[control]
+            if control == self._CURRENT_CONTROL and circuit_controls_current:
+                continue
+            name = "Current [A]" if control == self._CURRENT_CONTROL else control
+            control_variables[control] = (
+                pybamm.step.base_step._adjusted_control_variable(name, default(control))
+            )
+            variables[name] = control_variables[control]
+
+        padding_rest_step = None
+        if self._experiment_includes_padding_rest:
+            padding_rest_step = pybamm.step.Rest(duration=1)
 
         # One conditional control residual per control selects the active step's
         # control law via the experiment step index input
         switching_control_variables = set()
-        padding_rest_step = None
-        if self._CURRENT_CONTROL in controls:
+        if circuit_controls_current:
             step_control_builders = [
                 control_builder(step, self._CURRENT_CONTROL) for step in unique_steps
             ]
-            if self._experiment_includes_padding_rest:
-                padding_rest_step = pybamm.step.Rest(duration=1)
+            if padding_rest_step is not None:
                 step_control_builders.append(padding_rest_step.get_control_residual)
             submodel = pybamm.external_circuit.ExperimentFunctionControl(
                 new_model.param,
@@ -444,7 +460,9 @@ class Simulation(BaseSimulation):
         )
         for control, variable in control_variables.items():
             builders = [control_builder(step, control) for step in unique_steps]
-            if self._experiment_includes_padding_rest:
+            if padding_rest_step is not None and control == self._CURRENT_CONTROL:
+                builders.append(padding_rest_step.get_control_residual)
+            elif padding_rest_step is not None:
                 builders.append(hold_residual(control, self._PADDING_REST_KEY))
             new_model.algebraic[variable] = pybamm.Conditional(
                 pybamm.InputParameter(self._STEP_INDEX_INPUT),
@@ -458,7 +476,7 @@ class Simulation(BaseSimulation):
                 )
             )
             new_parameter_values[control] = variable
-            switching_control_variables.add(control)
+            switching_control_variables.add(variable.name)
         # The solver builds the jacobian rows of these switched residuals sparsely,
         # see BaseModel.build_casadi_jacobian
         new_model.switching_control_variables = switching_control_variables

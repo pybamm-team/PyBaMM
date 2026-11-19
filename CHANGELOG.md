@@ -25,7 +25,7 @@
 
 ## Features
 
-- `pybamm.step.ControlStep` lets experiment steps drive any model parameter, setting it to a value or adjusting it to zero a residual, in both experiment modes. The unified mode reads `"Ambient temperature [K]"` only if the model does. ([#6015](https://github.com/pybamm-team/PyBaMM/issues/6015), [#6016](https://github.com/pybamm-team/PyBaMM/pull/6016))
+- `pybamm.step.ControlStep` lets experiment steps drive any model parameter, setting it to a value or adjusting it to zero a residual, in both experiment modes. The unified mode reads `"Ambient temperature [K]"` only if the model does, and runs battery steps on models that are not battery models. Experiment steps upsample the model's own `upsampling_variable` when it has no variable of the step's. ([#6015](https://github.com/pybamm-team/PyBaMM/issues/6015), [#6016](https://github.com/pybamm-team/PyBaMM/pull/6016))
 - `IDAKLUSolver`'s new `"sensitivity_error_control"` option, off by default, puts forward sensitivities in IDAS's local error test, so they also meet the solver's tolerances, at the cost of a longer solve. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 - Added the `IDAKLUSolver` option `upsampling_tolerance`, which adds times within each step until linear interpolation of the voltage is within tolerance (voltage-controlled steps add none). They go in `Solution.t_additive` and `Solution.t`. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
 - `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))

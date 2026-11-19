@@ -2884,7 +2884,8 @@ class TestSimulationExperiment:
         model.variables = {"Temperature [K]": temperature}
         return model
 
-    def test_experiment_on_model_without_summary_variables(self):
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_experiment_on_model_without_summary_variables(self, experiment_model_mode):
         current = pybamm.FunctionParameter(
             "Current function [A]", {"Time [s]": pybamm.t}
         )
@@ -2896,6 +2897,7 @@ class TestSimulationExperiment:
             model,
             parameter_values=pybamm.ParameterValues({"Current function [A]": 1}),
             experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
         )
         solution = sim.solve()
 
@@ -3147,7 +3149,55 @@ class TestSimulationExperiment:
             atol=1e-8,
         )
 
-    def test_experiment_on_model_that_reads_only_the_ambient_temperature(self):
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    @pytest.mark.parametrize("start_times", [False, True])
+    def test_control_steps_upsample_the_model_upsampling_variable(
+        self, experiment_model_mode, start_times
+    ):
+        start_time = {"start_time": datetime(2026, 1, 1)} if start_times else {}
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.control(
+                    {"Heating power [W]": 200}, duration=100, **start_time
+                ),
+                pybamm.step.control({"Heating power [W]": 0}, duration=100),
+            ]
+        )
+        model = self._cooled_body()
+        model.upsampling_variable = "Temperature [K]"
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+            solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-6}),
+        )
+        solution = sim.solve()
+        assert len(solution.t_additive) > 0
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_control_steps_upsampling_without_a_variable(
+        self, experiment_model_mode, caplog
+    ):
+        experiment = pybamm.Experiment(
+            [pybamm.step.control({"Heating power [W]": 200}, duration=100)]
+        )
+        sim = pybamm.Simulation(
+            self._cooled_body(),
+            parameter_values=self._cooled_body_parameter_values(),
+            experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
+            solver=pybamm.IDAKLUSolver(options={"upsampling_tolerance": 1e-6}),
+        )
+        with caplog.at_level(logging.WARNING, logger="pybamm.logger"):
+            solution = sim.solve()
+        assert "has no 'Voltage [V]' variable" in caplog.text
+        assert solution.t_additive is None
+
+    @pytest.mark.parametrize("experiment_model_mode", ["legacy", "unified"])
+    def test_experiment_on_model_that_reads_only_the_ambient_temperature(
+        self, experiment_model_mode
+    ):
         model = pybamm.BaseModel()
         temperature = pybamm.Variable("Temperature [K]")
         ambient_temperature = pybamm.Parameter("Ambient temperature [K]")
@@ -3164,6 +3214,7 @@ class TestSimulationExperiment:
             model,
             parameter_values=pybamm.ParameterValues({"Ambient temperature [K]": 300}),
             experiment=experiment,
+            experiment_model_mode=experiment_model_mode,
         )
         solution = sim.solve()
 

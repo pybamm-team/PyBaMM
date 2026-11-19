@@ -280,7 +280,8 @@ class BaseStep:
         return {CURRENT_CONTROL: self.control_target_value(parameter_values)}
 
     #: The scalar output the solver's ``upsampling_tolerance`` resolves. An
-    #: algebraic state adds no points, as the integrator already resolves it.
+    #: algebraic state adds no points, as the integrator already resolves it. If the
+    #: model has no such variable, its own ``upsampling_variable`` is used instead.
     upsampling_variable = "Voltage [V]"
 
     def get_control_residual(self, variables, target=None):
@@ -449,7 +450,11 @@ class BaseStep:
             inplace=inplace,
             delayed_variable_processing=delayed_variable_processing,
         )
-        processed_model.upsampling_variable = self.upsampling_variable
+        upsampling_variable = _upsampling_variable_name(
+            self, model, processed_model.variables
+        )
+        if upsampling_variable is not None:
+            processed_model.upsampling_variable = upsampling_variable
         return processed_model
 
     def get_termination_events(self, variables):
@@ -647,6 +652,22 @@ def _control_parameters(model):
         for parameter in model.parameters
         if isinstance(parameter, pybamm.Parameter | pybamm.FunctionParameter)
     }
+
+
+def _upsampling_variable_name(step, model, variables):
+    """
+    Name of the variable to upsample during ``step``: the step's own, else the
+    model's ``upsampling_variable``, else the voltage, or ``None`` if ``variables``
+    has none of them.
+    """
+    names = (
+        step.upsampling_variable,
+        getattr(model, "upsampling_variable", None),
+        "Voltage [V]",
+    )
+    return next(
+        (name for name in names if name is not None and name in variables), None
+    )
 
 
 def _control_variable(variables, control):

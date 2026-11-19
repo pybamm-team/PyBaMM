@@ -540,6 +540,9 @@ class ControlStep(BaseStep):
     ... )
     """
 
+    # Upsample the model's own upsampling variable, or else the voltage
+    upsampling_variable = None
+
     def __init__(self, explicit=None, implicit=None, **kwargs):
         explicit = dict(explicit or {})
         implicit = dict(implicit or {})
