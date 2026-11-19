@@ -71,6 +71,8 @@ class BaseSolver:
 
     #: Whether the solver uses the jacobian of the rhs on its own
     uses_rhs_jacobian = True
+    # Set by solvers integrating a whole-model CompiledModel, to skip per-group lowering
+    _integrates_via_compiled_model = False
 
     def __init__(
         self,
@@ -181,10 +183,11 @@ class BaseSolver:
             raise ValueError("on_failure must be 'warn', 'error', or 'ignore'")
         self._on_failure = value
 
-        # Keep root solver's failure policy in sync with the parent's
-        root_method = getattr(self, "_root_method", None)
-        if isinstance(root_method, pybamm.BaseSolver):
-            root_method.on_failure = value
+        # Keep root solvers' failure policy in sync with the parent's
+        for attribute in ("_root_method", "_rust_root_method"):
+            root_method = getattr(self, attribute, None)
+            if isinstance(root_method, pybamm.BaseSolver):
+                root_method.on_failure = value
 
     @property
     def root_method(self):
@@ -193,12 +196,7 @@ class BaseSolver:
     @root_method.setter
     def root_method(self, method):
         if method == "nonlinear_solver":
-            # use the tighter of the two tolerances; a per-state atol contributes
-            # its tightest entry, since the root solver takes a single tolerance
-            atol = min(self.root_tol, float(np.min(self.atol)))
-            method = pybamm.NonlinearSolver(
-                atol=atol, rtol=self.rtol, on_failure=self.on_failure
-            )
+            method = self._nonlinear_root_solver()
         elif method == "casadi":
             warnings.warn(
                 "root_method='casadi' is deprecated and will be removed in a future "
@@ -222,6 +220,40 @@ class BaseSolver:
         ):
             raise pybamm.SolverError("Root method must be an algebraic solver")
         self._root_method = method
+        self._rust_root_method = None
+
+    def _nonlinear_root_solver(self):
+        """Build the root method that ``"nonlinear_solver"`` selects."""
+        # use the tighter of the two tolerances; a per-state atol contributes
+        # its tightest entry, since the root solver takes a single tolerance
+        atol = min(self.root_tol, float(np.min(self.atol)))
+        return pybamm.NonlinearSolver(
+            atol=atol, rtol=self.rtol, on_failure=self.on_failure
+        )
+
+    def _root_method_for(self, model: pybamm.BaseModel):
+        """Return the root method that finds consistent states for ``model``.
+
+        A CasADi root method cannot evaluate a rust model, which gets a
+        ``NonlinearSolver`` instead, kept until ``root_method`` is set again.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose consistent states are needed.
+
+        Returns
+        -------
+        :class:`pybamm.BaseSolver` or None
+            The algebraic solver, or None if there is no root method.
+        """
+        if model.convert_to_format != "rust" or not isinstance(
+            self.root_method, pybamm.CasadiAlgebraicSolver
+        ):
+            return self.root_method
+        if getattr(self, "_rust_root_method", None) is None:
+            self._rust_root_method = self._nonlinear_root_solver()
+        return self._rust_root_method
 
     def copy(self):
         """Returns a copy of the solver"""
@@ -229,6 +261,10 @@ class BaseSolver:
         # clear _model_set_up
         new_solver._model_set_up = {}
         return new_solver
+
+    def _lowers_via_compiled_model(self, model) -> bool:
+        """Whether one shared Rust lowering serves every evaluator of this solve."""
+        return self._integrates_via_compiled_model and model.convert_to_format == "rust"
 
     def set_up(
         self,
@@ -285,35 +321,41 @@ class BaseSolver:
             pybamm.logger.info("Finish solver set-up")
             return
 
-        # Process rhs, algebraic, residual and event expressions
-        # and wrap in callables
-        rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(
-            model.concatenated_rhs,
-            "RHS",
-            vars_for_processing,
-            use_jacobian=model.use_jacobian and self.uses_rhs_jacobian,
-        )
-
-        algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
-            model.concatenated_algebraic, "algebraic", vars_for_processing
-        )
-
-        # combine rhs and algebraic functions
-        if len(model.rhs) == 0:
-            rhs_algebraic = model.concatenated_algebraic
-        elif len(model.algebraic) == 0:
-            rhs_algebraic = model.concatenated_rhs
+        skip_per_group = self._lowers_via_compiled_model(model)
+        if skip_per_group:
+            rhs = jac_rhs = jacp_rhs = jac_rhs_action = None
+            algebraic = jac_algebraic = jacp_algebraic = jac_algebraic_action = None
+            rhs_algebraic = jac_rhs_algebraic = jacp_rhs_algebraic = (
+                jac_rhs_algebraic_action
+            ) = None
         else:
-            rhs_algebraic = pybamm.NumpyConcatenation(
-                model.concatenated_rhs, model.concatenated_algebraic
+            rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(
+                model.concatenated_rhs,
+                "RHS",
+                vars_for_processing,
+                use_jacobian=model.use_jacobian and self.uses_rhs_jacobian,
             )
 
-        (
-            rhs_algebraic,
-            jac_rhs_algebraic,
-            jacp_rhs_algebraic,
-            jac_rhs_algebraic_action,
-        ) = process(rhs_algebraic, "rhs_algebraic", vars_for_processing)
+            algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
+                model.concatenated_algebraic, "algebraic", vars_for_processing
+            )
+
+            # combine rhs and algebraic functions
+            if len(model.rhs) == 0:
+                rhs_algebraic = model.concatenated_algebraic
+            elif len(model.algebraic) == 0:
+                rhs_algebraic = model.concatenated_rhs
+            else:
+                rhs_algebraic = pybamm.NumpyConcatenation(
+                    model.concatenated_rhs, model.concatenated_algebraic
+                )
+
+            (
+                rhs_algebraic,
+                jac_rhs_algebraic,
+                jacp_rhs_algebraic,
+                jac_rhs_algebraic_action,
+            ) = process(rhs_algebraic, "rhs_algebraic", vars_for_processing)
 
         (
             casadi_switch_events,
@@ -350,10 +392,17 @@ class BaseSolver:
         # Save CasADi functions for the CasADi solver
         # Save CasADi functions for solvers that use CasADi
         # Note: when we pass to casadi the ode part of the problem must be in
-        if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
+        if isinstance(
+            self._root_method_for(model), pybamm.CasadiAlgebraicSolver
+        ) or isinstance(
             self,
             pybamm.CasadiSolver | pybamm.CasadiAlgebraicSolver,
         ):
+            # Only skipped above for a rust model on IDAKLUSolver, which never gets here
+            rhs, algebraic = (
+                cast(casadi.Function, rhs),
+                cast(casadi.Function, algebraic),
+            )
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
                 t_casadi = vars_for_processing["t_casadi"]
@@ -384,19 +433,23 @@ class BaseSolver:
         self._time_integral_vars = {}
         function_names = BaseSolver._wrangle_names(self.output_variables)
         for key in self.output_variables:
-            # Check for any ExplicitTimeIntegral or DiscreteTimeSum variables
+            # Check for any ExplicitTimeIntegral or DiscreteTimeSum variables.
+            # We will evaluate the sum node in the solver and sum it afterwards
             processed_time_integral = (
                 pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
                     model.get_processed_variable_or_event(key),
                     model.len_rhs_and_alg,
                 )
             )
-            # We will evaluate the sum node in the solver and sum it afterwards
+            if processed_time_integral is not None:
+                self._time_integral_vars[key] = processed_time_integral
+            if model.convert_to_format == "rust":
+                # Rust outputs come from CompiledModel.outputs, not computed_var_fcns
+                continue
             if processed_time_integral is None:
                 var = model.get_processed_variable_or_event(key)
             else:
                 var = processed_time_integral.sum_node
-                self._time_integral_vars[key] = processed_time_integral
 
             # Generate Casadi function to calculate variable and derivates
             # to enable sensitivites to be computed within the solver
@@ -548,14 +601,17 @@ class BaseSolver:
                 f"Converting {model.name} to CasADi for solving with CasADi solver"
             )
             model.convert_to_format = "casadi"
-        if (
-            isinstance(self.root_method, pybamm.CasadiAlgebraicSolver)
-            and model.convert_to_format != "casadi"
-        ):
-            pybamm.logger.warning(
-                f"Converting {model.name} to CasADi for calculating ICs with CasADi"
-            )
-            model.convert_to_format = "casadi"
+        if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver):
+            if model.convert_to_format == "rust":
+                pybamm.logger.warning(
+                    f"Calculating ICs of rust model {model.name} with NonlinearSolver "
+                    "instead of the CasADi root method"
+                )
+            elif model.convert_to_format != "casadi":
+                pybamm.logger.warning(
+                    f"Converting {model.name} to CasADi for calculating ICs with CasADi"
+                )
+                model.convert_to_format = "casadi"
 
     @staticmethod
     def _get_vars_for_processing(model, inputs: dict):
@@ -682,6 +738,7 @@ class BaseSolver:
         terminate_events = []
         interpolant_extrapolation_events = []
         discontinuity_events = []
+        skip_event_lowering = self._lowers_via_compiled_model(model)
         for n, event in enumerate(model.events):
             if event.event_type == pybamm.EventType.DISCONTINUITY:
                 # Evaluated before the solver is called, for each input set
@@ -722,6 +779,9 @@ class BaseSolver:
                 )[0]
                 # use the actual casadi object as this will go into the rhs
                 casadi_switch_events.append(event_casadi)
+            elif skip_event_lowering:
+                # Served by the solver's own lowering; nothing reads extrapolation
+                continue
             else:
                 # use the function call
                 event_call = process(
@@ -826,10 +886,11 @@ class BaseSolver:
         pybamm.logger.debug("Start calculating consistent states")
         inputs = inputs or [{}]
 
-        if self.root_method is None:
+        root_method = self._root_method_for(model)
+        if root_method is None:
             return model.y0_list
         try:
-            root_sols = self.root_method._integrate(model, np.array([time]), inputs)
+            root_sols = root_method._integrate(model, np.array([time]), inputs)
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
                 f"Could not find consistent states: {e.args[0]}"
