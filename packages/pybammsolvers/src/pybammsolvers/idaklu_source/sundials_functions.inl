@@ -157,6 +157,8 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
 
   // create pointer to jac data, column pointers, and row values
   sunrealtype *jac_data;
+  // Dense SUNMatrix with a sparse-emitting (Rust) expression: eval to tmp, then scatter below.
+  bool dense_needs_scatter = false;
   if (p_python_functions->setup_opts.using_sparse_matrix)
   {
     jac_data = SUNSparseMatrix_Data(JJ);
@@ -166,7 +168,11 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
   }
   else
   {
-    jac_data = SUNDenseMatrix_Data(JJ);
+    const sunindextype n_dense = SUNDenseMatrix_Rows(JJ) * SUNDenseMatrix_Columns(JJ);
+    dense_needs_scatter = p_python_functions->jac_times_cjmass->nnz_out() < n_dense;
+    jac_data = dense_needs_scatter
+        ? p_python_functions->get_tmp_sparse_jacobian_data()
+        : SUNDenseMatrix_Data(JJ);
   }
 
   DEBUG_VECTORn(yy, 100);
@@ -254,6 +260,21 @@ int jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
     } else
       throw std::runtime_error("Unknown matrix format detected (Expected CSC or CSR)");
   }
+  else if (dense_needs_scatter)
+  {
+    auto jac_colptrs = p_python_functions->jac_times_cjmass_colptrs.data();
+    auto jac_rowvals = p_python_functions->jac_times_cjmass_rowvals.data();
+    sunrealtype *dense = SUNDenseMatrix_Data(JJ);
+    const sunindextype n_rows = SUNDenseMatrix_Rows(JJ);
+    const sunindextype n_cols = SUNDenseMatrix_Columns(JJ);
+    std::memset(dense, 0, static_cast<size_t>(n_rows) * n_cols * sizeof(sunrealtype));
+    for (sunindextype col_ij = 0; col_ij < n_cols; col_ij++) {
+      for (auto data_i = jac_colptrs[col_ij]; data_i < jac_colptrs[col_ij + 1]; data_i++) {
+        const auto row_ij = jac_rowvals[data_i];
+        dense[static_cast<size_t>(col_ij) * n_rows + row_ij] = jac_data[data_i];
+      }
+    }
+  }
 
   return (0);
 }
@@ -321,18 +342,28 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
 
   const int ns = p_python_functions->number_of_states;
   bool finite = true;
+  if constexpr (T::kNativeBatchedJacActions) {
+    // Every (∂F/∂y)s i (t) at once, sharing one primal pass; bitwise the per-i products.
+    const sunrealtype *jac_yS =
+      p_python_functions->jac_action_sensitivities(t, NV_DATA(yy), yS);
+    for (int i = 0; i < np; i++) {
+      axpy(ns, 1., jac_yS + static_cast<size_t>(i) * ns, NV_DATA(resvalS[i]));
+    }
+  }
+
   for (int i = 0; i < np; i++)
   {
-    // put (∂F/∂y)s i (t) in tmp
     sunrealtype *tmp = p_python_functions->get_tmp_state_vector();
-    p_python_functions->jac_action->m_arg[0] = &t;
-    p_python_functions->jac_action->m_arg[1] = NV_DATA(yy);
-    p_python_functions->jac_action->m_arg[2] = p_python_functions->inputs.data();
-    p_python_functions->jac_action->m_arg[3] = NV_DATA(yS[i]);
-    p_python_functions->jac_action->m_res[0] = tmp;
-    (*p_python_functions->jac_action)();
-
-    axpy(ns, 1., tmp, NV_DATA(resvalS[i]));
+    if constexpr (!T::kNativeBatchedJacActions) {
+      // put (∂F/∂y)s i (t) in tmp
+      p_python_functions->jac_action->m_arg[0] = &t;
+      p_python_functions->jac_action->m_arg[1] = NV_DATA(yy);
+      p_python_functions->jac_action->m_arg[2] = p_python_functions->inputs.data();
+      p_python_functions->jac_action->m_arg[3] = NV_DATA(yS[i]);
+      p_python_functions->jac_action->m_res[0] = tmp;
+      (*p_python_functions->jac_action)();
+      axpy(ns, 1., tmp, NV_DATA(resvalS[i]));
+    }
 
     // put -(∂F/∂ ẏ) ṡ i (t) in tmp2
     p_python_functions->mass_action->m_arg[0] = NV_DATA(ypS[i]);
@@ -350,4 +381,79 @@ int sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
 
   // Recoverable, as in residual_eval: IDAS cuts the step
   return finite ? 0 : 1;
+}
+
+// IDA calls these through C frames, which a C++ exception must not unwind: the guarded
+// versions store it for the solver to rethrow once IDA returns, and fail the call instead.
+template<class T, class Body>
+int guard_callback(void *user_data, Body &&body) noexcept
+{
+  try {
+    return body();
+  } catch (...) {
+    auto &error = static_cast<T *>(user_data)->callback_error;
+    if (!error) {
+      error = std::current_exception();
+    }
+    return -1;
+  }
+}
+
+template<class T>
+int guarded_residual_eval(sunrealtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
+                          void *user_data)
+{
+  return guard_callback<T>(user_data, [&] {
+    return residual_eval<T>(tres, yy, yp, rr, user_data);
+  });
+}
+
+template<class T>
+int guarded_residual_eval_approx(sunindextype Nlocal, sunrealtype tt, N_Vector yy,
+                                 N_Vector yp, N_Vector gval, void *user_data)
+{
+  return guard_callback<T>(user_data, [&] {
+    return residual_eval_approx<T>(Nlocal, tt, yy, yp, gval, user_data);
+  });
+}
+
+template<class T>
+int guarded_jtimes_eval(sunrealtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+                        N_Vector v, N_Vector Jv, sunrealtype cj, void *user_data,
+                        N_Vector tmp1, N_Vector tmp2)
+{
+  return guard_callback<T>(user_data, [&] {
+    return jtimes_eval<T>(tt, yy, yp, rr, v, Jv, cj, user_data, tmp1, tmp2);
+  });
+}
+
+template<class T>
+int guarded_jacobian_eval(sunrealtype tt, sunrealtype cj, N_Vector yy, N_Vector yp,
+                          N_Vector resvec, SUNMatrix JJ, void *user_data,
+                          N_Vector tempv1, N_Vector tempv2, N_Vector tempv3)
+{
+  return guard_callback<T>(user_data, [&] {
+    return jacobian_eval<T>(tt, cj, yy, yp, resvec, JJ, user_data, tempv1, tempv2, tempv3);
+  });
+}
+
+template<class T>
+int guarded_events_eval(sunrealtype t, N_Vector yy, N_Vector yp, sunrealtype *events_ptr,
+                        void *user_data)
+{
+  return guard_callback<T>(user_data, [&] {
+    return events_eval<T>(t, yy, yp, events_ptr, user_data);
+  });
+}
+
+template<class T>
+int guarded_sensitivities_eval(int Ns, sunrealtype t, N_Vector yy, N_Vector yp,
+                               N_Vector resval, N_Vector *yS, N_Vector *ypS,
+                               N_Vector *resvalS, void *user_data, N_Vector tmp1,
+                               N_Vector tmp2, N_Vector tmp3)
+{
+  return guard_callback<T>(user_data, [&] {
+    return sensitivities_eval<T>(Ns, t, yy, yp, resval, yS, ypS, resvalS, user_data,
+                                 tmp1, tmp2, tmp3);
+  });
 }
