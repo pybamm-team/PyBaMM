@@ -60,6 +60,15 @@ class TestBinaryOperators:
         summ2 = pybamm.Scalar(1) + pybamm.Scalar(3)
         assert summ2 == pybamm.Scalar(4)
 
+    def test_addition_preserves_domain_from_constant_zero(self):
+        matrix = pybamm.Matrix(coo_matrix((3, 3)))
+        state = pybamm.StateVector(slice(0, 3), domain="test")
+        zero = matrix @ state
+
+        result = zero + pybamm.Vector(np.ones(3))
+
+        assert result.domain == ["test"]
+
     def test_addition_numpy_array(self):
         a = pybamm.Symbol("a")
         # test adding symbol and numpy array
