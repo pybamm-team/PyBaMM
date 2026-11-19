@@ -2,7 +2,8 @@
 
 Expression compiler and evaluator for PyBaMM models, filling the role CasADi plays on
 PyBaMM's other backends. Python hands over a discretised model as an expression DAG;
-this workspace turns it into flat instruction tapes it can evaluate and differentiate.
+this workspace turns it into flat instruction tapes it can evaluate, differentiate and
+solve.
 
 Models opt in with `model.convert_to_format = "rust"`.
 
@@ -25,6 +26,10 @@ module, and explains how the Jacobian is assembled (see
 
 ## Who consumes it
 
+Two paths, and they differ in how they reach the crate:
+
+- **diffsol**, in-process. The `solver` module implements one operator trait per
+  callback diffsol needs and runs the integration entirely in Rust.
 - **IDAKLU**, through the C ABI in `ffi.rs`. `pybammsolvers` cannot link against this
   crate, because PyBaMM depends on `pybammsolvers` and not the reverse. So the FFI entry
   points are compiled into the Python extension, and the C++ side resolves them at
@@ -97,5 +102,6 @@ doc comments are the reference; this README only orients you.
 - **MSRV and dependency versions** live in the workspace `Cargo.toml`. The Rust floor is
   declared there rather than implied by the edition, so check it before assuming
   a newer language feature is available.
-- **Feature flags**: `serialize` enables snapshot support that some tests and benches require.
-  A `required-features` error means the target needs it.
+- **Feature flags**: `diffsol` (on by default) pulls in the integrator and its matrix
+  backend; `serialize` enables snapshot support that some tests and benches require. A
+  `required-features` error means the target needs one of these.

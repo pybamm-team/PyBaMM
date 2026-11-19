@@ -4,6 +4,8 @@
 //! diverge once any input is vector-valued, so each is its own type.
 
 use std::collections::{BTreeMap, HashMap};
+#[cfg(feature = "diffsol")]
+use std::sync::Arc;
 
 use crate::arena::Arena;
 use crate::error::CoreError;
@@ -285,6 +287,116 @@ pub const fn resolve_input_width(
         }),
         Some(width) => Ok(width),
         None => Ok(extent),
+    }
+}
+
+/// What a solve's parameter vector stands for.
+///
+/// Either the packed input array itself, or one entry per differentiated parameter.
+#[cfg(feature = "diffsol")]
+#[derive(Clone, Debug)]
+pub struct ParamBinding {
+    kind: Binding,
+}
+
+#[cfg(feature = "diffsol")]
+#[derive(Clone, Debug)]
+enum Binding {
+    PackedInputs {
+        width: PackedWidth,
+    },
+    /// Where each sensitivity column's parameter sits in the packed input array.
+    Sensitivities {
+        packed_offsets: Arc<[InputOffset]>,
+    },
+}
+
+#[cfg(feature = "diffsol")]
+impl ParamBinding {
+    /// The vector is the packed input array itself.
+    pub const fn packed_inputs(width: PackedWidth) -> Self {
+        Self {
+            kind: Binding::PackedInputs { width },
+        }
+    }
+
+    /// One entry per differentiated parameter, in sensitivity-column order.
+    ///
+    /// # Panics
+    /// If a column names no registered input, which a compiled model has already refused.
+    pub fn sensitivities(params: &ParamRegistry, columns: &[ParamIdx]) -> Self {
+        let packed_offsets: Arc<[InputOffset]> = columns
+            .iter()
+            .map(|&param| {
+                params
+                    .slot(param)
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "sensitivity column {} names no input parameter",
+                            param.get()
+                        )
+                    })
+                    .offset
+            })
+            .collect();
+        Self {
+            kind: Binding::Sensitivities { packed_offsets },
+        }
+    }
+
+    /// How many entries the parameter vector carries.
+    pub fn len(&self) -> usize {
+        match &self.kind {
+            Binding::PackedInputs { width } => width.get(),
+            Binding::Sensitivities { packed_offsets } => packed_offsets.len(),
+        }
+    }
+
+    /// Whether the parameter vector carries no entries.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Write the parameter vector into the packed input array, leaving other inputs as given.
+    ///
+    /// # Panics
+    /// If `values` does not hold [`len`](Self::len) entries, or `inputs` is too short for them.
+    pub fn splice_into(&self, inputs: &mut [f64], values: &[f64]) {
+        self.check_vector(values.len());
+        match &self.kind {
+            Binding::PackedInputs { .. } => inputs.copy_from_slice(values),
+            Binding::Sensitivities { packed_offsets } => {
+                for (&offset, &value) in packed_offsets.iter().zip(values) {
+                    inputs[offset.index()] = value;
+                }
+            },
+        }
+    }
+
+    /// Read the parameter vector out of the packed input array.
+    ///
+    /// # Panics
+    /// If `values` does not hold [`len`](Self::len) entries, or `inputs` is too short for them.
+    pub fn gather_from(&self, inputs: &[f64], values: &mut [f64]) {
+        self.check_vector(values.len());
+        match &self.kind {
+            Binding::PackedInputs { .. } => values.copy_from_slice(inputs),
+            Binding::Sensitivities { packed_offsets } => {
+                for (dst, &offset) in values.iter_mut().zip(packed_offsets.iter()) {
+                    *dst = inputs[offset.index()];
+                }
+            },
+        }
+    }
+
+    #[track_caller]
+    fn check_vector(&self, len: usize) {
+        assert_eq!(
+            len,
+            self.len(),
+            "a parameter vector of {len} entries for a binding of {}",
+            self.len()
+        );
     }
 }
 
@@ -588,6 +700,34 @@ mod tests {
         let registry = registry_of(&arena);
         assert_eq!(registry.n_registered(), 2);
         assert_eq!(registry.packed_width(), PackedWidth::new(5));
+    }
+
+    #[test]
+    #[cfg(feature = "diffsol")]
+    fn a_sens_binding_splices_at_packed_offsets() {
+        let registry = registry_of(&wide_then_scalar());
+
+        let binding = ParamBinding::sensitivities(&registry, &[ParamIdx::new(1)]);
+        assert_eq!(binding.len(), 1);
+
+        let mut inputs = vec![1.0, 2.0, 3.0, 4.0];
+        binding.splice_into(&mut inputs, &[9.0]);
+        assert_eq!(inputs, vec![1.0, 2.0, 3.0, 9.0]);
+
+        let mut values = vec![0.0];
+        binding.gather_from(&inputs, &mut values);
+        assert_eq!(values, vec![9.0]);
+    }
+
+    #[test]
+    #[cfg(feature = "diffsol")]
+    fn a_packed_binding_is_the_whole_input_array() {
+        let binding = ParamBinding::packed_inputs(PackedWidth::new(4));
+        assert_eq!(binding.len(), 4);
+
+        let mut inputs = vec![0.0; 4];
+        binding.splice_into(&mut inputs, &[1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(inputs, vec![1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]

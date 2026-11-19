@@ -13,7 +13,7 @@ default = ["serialize"]
 serialize = ["pybamm-core/serialize", "dep:bincode"]
 
 [dependencies]
-pybamm-core = { path = "../pybamm-core" }
+pybamm-core = { path = "../pybamm-core", default-features = false }
 pyo3 = { version = "0.30" }
 numpy = "0.30"
 bincode = { version = "1", optional = true }
