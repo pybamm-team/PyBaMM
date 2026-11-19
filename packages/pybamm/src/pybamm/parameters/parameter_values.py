@@ -35,6 +35,10 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
+_PARAMETER_VALUES_METADATA_KEY = "__pybamm_metadata__"
+_PARAMETER_VALUES_METADATA_TAG = "pybamm.ParameterValuesMetadata"
+
+
 class ParameterValues:
     """
     The parameter values for a simulation.
@@ -75,6 +79,8 @@ class ParameterValues:
         "Electron charge [C]": "pybamm.constants.q_e",
     }
 
+    _citation_default_reason: str | None = None
+
     def __init__(self, values: dict[str, Any] | str | ParameterValues) -> None:
         # Initialize the store
         self._store = ParameterStore({})
@@ -89,6 +95,7 @@ class ParameterValues:
             # Copy to avoid mutating input
             if isinstance(values, ParameterValues):
                 values_dict = dict(values._store._data)
+                self._citation_default_reason = values._citation_default_reason
             else:
                 values_dict = dict(values)
             # Remove the "chemistry" key if it exists
@@ -98,6 +105,7 @@ class ParameterValues:
             # Check if values is a named parameter set
             if isinstance(values, str) and values in pybamm.parameter_sets:
                 values_dict = dict(pybamm.parameter_sets[values])
+                self._citation_default_reason = f"{values} parameter set"
                 chemistry = values_dict.pop("chemistry", None)
                 self.update(values_dict)
             else:
@@ -112,35 +120,36 @@ class ParameterValues:
         else:
             self._set_initial_state = pybamm.lithium_ion.set_initial_state
 
-        # Save citations
         if "citations" in self._store:
-            default_reason = values if isinstance(values, str) else None
-            citations = []
-            for citation in self._store["citations"]:
-                if isinstance(citation, str):
-                    citation = (
-                        (citation, default_reason) if default_reason else citation
-                    )
-                elif (
-                    isinstance(citation, list | tuple)
-                    and len(citation) == 2
-                    and all(isinstance(member, str) for member in citation)
-                ):
-                    citation = (
-                        citation.copy() if isinstance(citation, list) else citation
-                    )
-                else:
-                    raise ValueError(
-                        f"Invalid citation {citation!r}: expected a key string or "
-                        "a (key, reason) pair of strings"
-                    )
+            self._register_citations(self._store["citations"])
+
+    def _register_citations(self, metadata: Any) -> None:
+        citations: list[str | list[str] | tuple[str, str]] = []
+        for citation in metadata:
+            if isinstance(citation, str):
                 citations.append(citation)
-            self._store["citations"] = citations
-            for citation in citations:
-                if isinstance(citation, list | tuple):
-                    pybamm.citations.register(citation[0], reason=citation[1])
-                else:
-                    pybamm.citations.register(citation)
+            elif (
+                isinstance(citation, list | tuple)
+                and len(citation) == 2
+                and all(isinstance(member, str) for member in citation)
+            ):
+                citations.append(
+                    citation.copy() if isinstance(citation, list) else citation
+                )
+            else:
+                raise ValueError(
+                    f"Invalid citation {citation!r}: expected a key string or "
+                    "a (key, reason) pair of strings"
+                )
+
+        self._store["citations"] = citations
+        for citation in citations:
+            if isinstance(citation, str):
+                pybamm.citations.register(
+                    citation, reason=self._citation_default_reason
+                )
+            else:
+                pybamm.citations.register(citation[0], reason=citation[1])
 
     @property
     def store(self) -> ParameterStore:
@@ -383,12 +392,51 @@ class ParameterValues:
         else:
             raise TypeError("Input must be a filename (str or pathlib.Path) or a dict")
 
+        reason = ParameterValues._extract_serialized_citation_reason(
+            parameter_values_dict
+        )
         for key, value in parameter_values_dict.items():
             parameter_values_dict[key] = deserialize_parameter_value(value)
 
-        return ParameterValues(parameter_values_dict)
+        return ParameterValues._from_deserialized_parameters(
+            parameter_values_dict, reason
+        )
 
     from_config = from_json
+
+    @staticmethod
+    def _extract_serialized_citation_reason(values: dict[str, Any]) -> str | None:
+        metadata = values.get(_PARAMETER_VALUES_METADATA_KEY)
+        if (
+            not isinstance(metadata, dict)
+            or metadata.get("$type") != _PARAMETER_VALUES_METADATA_TAG
+        ):
+            return None
+        reason = metadata.get("citation_default_reason")
+        if not isinstance(reason, str):
+            raise ValueError(
+                "Invalid PyBaMM parameter metadata: expected a citation reason"
+            )
+        if "parameter_value" in metadata:
+            values[_PARAMETER_VALUES_METADATA_KEY] = metadata["parameter_value"]
+        else:
+            del values[_PARAMETER_VALUES_METADATA_KEY]
+        return reason
+
+    @classmethod
+    def _from_deserialized_parameters(
+        cls, values: dict[str, Any], reason: str | None
+    ) -> ParameterValues:
+        if reason is None:
+            return cls(values)
+
+        missing = object()
+        citations = values.pop("citations", missing)
+        parameters = cls(values)
+        parameters._citation_default_reason = reason
+        if citations is not missing:
+            parameters._register_citations(citations)
+        return parameters
 
     def to_json(self, filename: str | None = None) -> dict:
         """
@@ -611,7 +659,7 @@ class ParameterValues:
         >>> params_copy = params.copy()
         >>> params_copy["Current function [A]"] = 10.0  # Original unchanged
         """
-        new_copy = ParameterValues(dict(self._store._data))
+        new_copy = ParameterValues(self)
         new_copy._set_initial_state = self._set_initial_state
         new_copy._hysteresis_states_from_direction = dict(
             self._hysteresis_states_from_direction
@@ -1754,6 +1802,22 @@ def convert_parameter_values_to_json(
     parameter_values_dict = {
         k: serialize_parameter_value(k, v) for k, v in parameter_values.items()
     }
+
+    citation_default_reason = (
+        parameter_values._citation_default_reason
+        if isinstance(parameter_values, ParameterValues)
+        else None
+    )
+    if citation_default_reason is not None:
+        metadata = {
+            "$type": _PARAMETER_VALUES_METADATA_TAG,
+            "citation_default_reason": citation_default_reason,
+        }
+        if _PARAMETER_VALUES_METADATA_KEY in parameter_values_dict:
+            metadata["parameter_value"] = parameter_values_dict[
+                _PARAMETER_VALUES_METADATA_KEY
+            ]
+        parameter_values_dict[_PARAMETER_VALUES_METADATA_KEY] = metadata
 
     if filename is not None:
         with open(filename, "w") as f:

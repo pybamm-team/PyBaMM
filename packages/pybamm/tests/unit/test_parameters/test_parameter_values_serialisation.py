@@ -729,6 +729,7 @@ class TestSerializeParameterValue:
         pybamm.citations._reset()
         restored = pybamm.ParameterValues.from_json(data)
         assert restored["a"] == 1
+        assert restored["citations"] == metadata
         assert pybamm.citations._citation_tags["Chen2020"] == {"ParameterValues"}
         assert pybamm.citations._citation_tags["Nyman2008"] == {
             "Electrolyte transport",
@@ -747,8 +748,14 @@ class TestSerializeParameterValue:
         parameters = pybamm.ParameterValues("Chen2020")
         data = json.loads(json.dumps(parameters.to_json()))
         pybamm.citations._reset()
-        pybamm.ParameterValues.from_json(data).copy()
-        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020"}
+        restored = pybamm.ParameterValues.from_json(data)
+        assert data["citations"] == parameters["citations"]
+        assert restored["citations"] == parameters["citations"]
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
+
+        pybamm.citations._reset()
+        restored.copy()
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
 
     def test_citation_file_roundtrip(self, tmp_path):
         parameters = pybamm.ParameterValues("Chen2020")
@@ -756,8 +763,9 @@ class TestSerializeParameterValue:
         filename = tmp_path / "parameters.json"
         pybamm.Serialise.save_parameters(parameters, filename)
         pybamm.citations._reset()
-        pybamm.Serialise.load_parameters(filename).copy()
-        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020"}
+        restored = pybamm.Serialise.load_parameters(filename).copy()
+        assert restored["citations"] == parameters["citations"]
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
         assert pybamm.citations._citation_tags["Nyman2008"] == {"Electrolyte transport"}
 
     def test_roundtrip_nested_list(self):
@@ -765,6 +773,29 @@ class TestSerializeParameterValue:
         wire = json.loads(json.dumps(pybamm.serialize_parameter_value("a", value)))
         restored = pybamm.deserialize_parameter_value(wire)
         assert restored == value
+
+    @pytest.mark.parametrize("named_set", [False, True])
+    def test_roundtrip_parameter_named_like_metadata(self, tmp_path, named_set):
+        parameters = pybamm.ParameterValues("Chen2020" if named_set else {})
+        parameters.update({"__pybamm_metadata__": 42})
+        if named_set:
+            parameters["citations"].append(["Nyman2008", "Custom reason"])
+        citations = pybamm.citations
+        filename = tmp_path / "parameters.json"
+        parameters.to_json(filename)
+        for load in (
+            pybamm.ParameterValues.from_json,
+            pybamm.Serialise.load_parameters,
+        ):
+            citations._reset()
+            restored = load(filename)
+            assert restored["__pybamm_metadata__"] == 42
+            if named_set:
+                assert restored["citations"] == parameters["citations"]
+                assert citations._citation_tags["Chen2020"] == {
+                    "Chen2020 parameter set"
+                }
+                assert citations._citation_tags["Nyman2008"] == {"Custom reason"}
 
     @pytest.mark.parametrize("value", [{}, {"$type": "unknown.Type"}])
     @pytest.mark.parametrize("nested", [False, True])

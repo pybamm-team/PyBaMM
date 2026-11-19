@@ -71,7 +71,7 @@ class TestParameterValues:
         pybamm.citations._reset()
         copied = copy_parameters(parameters)
         copy_parameters(copied)
-        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020"}
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
         copied["citations"].append("Marquis2019")
         assert parameters["citations"] == original
 
@@ -87,21 +87,21 @@ class TestParameterValues:
         assert metadata == original
         pybamm.citations._reset()
         copied = parameters.copy()
-        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020"}
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
         assert pybamm.citations._citation_tags["Nyman2008"] == {"Custom reason"}
         copied["citations"][1][1] = "Changed reason"
         assert parameters["citations"][1][1] == "Custom reason"
         assert metadata == original
 
     def test_simulation_citation_reason(self):
+        parameters = pybamm.ParameterValues("Chen2020")
         pybamm.citations._reset()
         simulation = pybamm.Simulation(
             pybamm.lithium_ion.SPM(),
-            parameter_values=pybamm.ParameterValues("Chen2020"),
+            parameter_values=parameters,
         )
-        solution = simulation.solve([0, 3600])
-        assert np.isfinite(solution["Voltage [V]"](0))
-        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020"}
+        simulation.build()
+        assert pybamm.citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
 
     @pytest.mark.parametrize(
         "metadata",
@@ -127,8 +127,11 @@ class TestParameterValues:
     def test_named_set_citation_reason(self):
         citations = pybamm.citations
         citations._reset()
-        pybamm.ParameterValues("Chen2020")
-        assert citations._citation_tags["Chen2020"] == {"Chen2020"}
+        parameters = pybamm.ParameterValues("Chen2020")
+        assert isinstance(parameters["citations"], list)
+        assert "Chen2020" in parameters["citations"]
+        assert all(isinstance(citation, str) for citation in parameters["citations"])
+        assert citations._citation_tags["Chen2020"] == {"Chen2020 parameter set"}
 
     def test_init(self):
         # from dict

@@ -214,8 +214,7 @@ class Citations:
         output_format : str, optional
             Bibliography format: ``"text"`` (default) or ``"bibtex"``.
         verbose: bool, optional
-            If True, append reasons to text output or BibTeX note fields, for both
-            terminal and file output. Existing notes are preserved. Defaults to False.
+            If True, append citation reasons to text output. Defaults to False.
 
         Examples
         --------
@@ -254,7 +253,7 @@ class Citations:
                     self._citation_tags.pop(key, None)
                 self._unknown_citations.discard(key)
 
-            cite_list = self.format_citations(output_format, pybtex, verbose)
+            cite_list = self.format_citations(output_format, pybtex)
             self.write_citations(
                 cite_list, filename, verbose and output_format == "text"
             )
@@ -272,54 +271,13 @@ class Citations:
             with open(filename, "w") as f:
                 f.write(cite_list)
 
-    def format_citations(
-        self, output_format: str, pybtex: ModuleType, verbose: bool = False
-    ) -> str:
+    def format_citations(self, output_format: str, pybtex: ModuleType) -> str:
         if output_format == "text":
             cite_list = pybtex.format_from_strings(
                 self._cited, style="plain", output_backend="plaintext"
             )
         elif output_format == "bibtex":
             cite_list = "\n".join(self._cited)
-            if verbose:
-                parse_string = import_optional_dependency(
-                    "pybtex.database", "parse_string"
-                )
-                Writer = import_optional_dependency(
-                    "pybtex.database.output.bibtex", "Writer"
-                )
-
-                class CitationWriter(Writer):
-                    def _encode(self, text):
-                        # Parsed fields already contain LaTeX escapes.
-                        return text
-
-                bibliography = parse_string(cite_list, "bibtex")
-                for key, entry in bibliography.entries.items():
-                    reasons = self._citation_tags.get(key)
-                    if reasons:
-                        annotation = "Cited for: " + "; ".join(sorted(reasons))
-                        annotation = annotation.translate(
-                            str.maketrans(
-                                {
-                                    "\\": r"\textbackslash{}",
-                                    "{": r"\textbraceleft{}",
-                                    "}": r"\textbraceright{}",
-                                    "&": r"\&",
-                                    "%": r"\%",
-                                    "_": r"\_",
-                                    "#": r"\#",
-                                    "$": r"\$",
-                                    "^": r"\textasciicircum{}",
-                                    "~": r"\textasciitilde{}",
-                                }
-                            )
-                        )
-                        note = entry.fields.get("note")
-                        entry.fields["note"] = (
-                            f"{note}. {annotation}" if note else annotation
-                        )
-                cite_list = CitationWriter().to_string(bibliography)
         else:
             raise pybamm.OptionError(
                 f"Output format {output_format} not recognised."
