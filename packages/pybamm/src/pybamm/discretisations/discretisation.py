@@ -616,7 +616,7 @@ class Discretisation:
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
-            Model to check. Must have attributes rhs, initial_conditions and
+            Model to check. Must have attributes rhs, algebraic and
             boundary_conditions (all dicts of {variable: equation})
 
         Raises
