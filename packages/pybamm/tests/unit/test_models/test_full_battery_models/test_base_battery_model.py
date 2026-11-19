@@ -43,6 +43,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'particle phases': '1' (possible: ['1', '2'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
 'particle size': 'single' (possible: ['single', 'distribution'])
+'PE degradation': 'none' (possible: ['none', 'phase transition'])
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'reaction limited (asymmetric)', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited', 'ec reaction limited (asymmetric)', 'VonKolzenberg2020', 'tunnelling limited'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
 'SEI on cracks': 'false' (possible: ['false', 'true'])
@@ -498,6 +499,68 @@ class TestBaseBatteryModel:
                     "number of MSMR reactions": ("6", "none"),
                 }
             )
+
+    def test_pe_phase_transition_option_conflicts(self):
+        with pytest.raises(pybamm.OptionError, match=r"total interfacial current"):
+            pybamm.BaseBatteryModel(
+                {
+                    "PE degradation": "phase transition",
+                    "total interfacial current density as a state": "false",
+                }
+            )
+        with pytest.raises(pybamm.OptionError, match=r"single size"):
+            pybamm.BaseBatteryModel(
+                {
+                    "PE degradation": "phase transition",
+                    "particle size": "distribution",
+                }
+            )
+        with pytest.raises(pybamm.OptionError, match=r"full cells"):
+            pybamm.BaseBatteryModel(
+                {
+                    "PE degradation": "phase transition",
+                    "working electrode": "positive",
+                }
+            )
+        # Two positive phases are rejected, given globally or per electrode
+        with pytest.raises(pybamm.OptionError, match=r"single-phase positive"):
+            pybamm.BaseBatteryModel(
+                {
+                    "PE degradation": "phase transition",
+                    "particle phases": "2",
+                    "open-circuit potential": (
+                        ("single", "current sigmoid"),
+                        ("single", "current sigmoid"),
+                    ),
+                }
+            )
+        with pytest.raises(pybamm.OptionError, match=r"single-phase positive"):
+            pybamm.BaseBatteryModel(
+                {
+                    "PE degradation": "phase transition",
+                    "particle phases": ("1", "2"),
+                    "open-circuit potential": (
+                        "single",
+                        ("single", "current sigmoid"),
+                    ),
+                }
+            )
+
+    def test_pe_phase_transition_default_meshing(self):
+        # default_var_pts, default_submesh_types and default_spatial_methods
+        # must include the new core/shell domains when PE degradation is on.
+        model = pybamm.BaseBatteryModel({"PE degradation": "phase transition"})
+        var_pts = model.default_var_pts
+        assert "r_co" in var_pts and var_pts["r_co"] == 20
+        assert "r_sh" in var_pts and var_pts["r_sh"] == 20
+        submeshes = model.default_submesh_types
+        assert "positive core" in submeshes
+        assert "positive shell" in submeshes
+        spatial_methods = model.default_spatial_methods
+        assert "positive core" in spatial_methods
+        assert "positive shell" in spatial_methods
+        assert isinstance(spatial_methods["positive core"], pybamm.FiniteVolume)
+        assert isinstance(spatial_methods["positive shell"], pybamm.FiniteVolume)
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build

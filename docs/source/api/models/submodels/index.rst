@@ -16,6 +16,7 @@ Submodels
     oxygen_diffusion/index
     particle/index
     particle_mechanics/index
+    pe_degradation/index
     porosity/index
     thermal/index
     transport_efficiency/index
