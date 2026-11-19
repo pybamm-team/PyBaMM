@@ -1,0 +1,49 @@
+[workspace]
+resolver = "3"
+members = [
+    "pybamm-core",
+]
+
+[workspace.package]
+rust-version = "1.89"
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+missing_debug_implementations = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unused_lifetimes = "warn"
+unused_qualifications = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+
+undocumented_unsafe_blocks = "warn"
+unnecessary_safety_comment = "warn"
+# The core runs inside the host's Python process, so it must not exit or panic on a stub.
+exit = "warn"
+todo = "warn"
+unimplemented = "warn"
+dbg_macro = "warn"
+# Results reproduce bitwise, so no float literal may round and no hash order may leak.
+lossy_float_literal = "warn"
+iter_over_hash_type = "warn"
+clone_on_ref_ptr = "warn"
+
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+# Numerics: `usize` counts become `f64`, and maths reads in single-letter names.
+cast_precision_loss = "allow"
+many_single_char_names = "allow"
+# Baseline x86-64 wheels lower mul_add to a libm call (no FMA), and its single
+# rounding breaks CasADi parity.
+suboptimal_flops = "allow"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

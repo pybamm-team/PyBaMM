@@ -38,7 +38,7 @@ class SEIGrowth(BaseModel):
             self.reaction_loc = "x-average"
         else:
             self.reaction_loc = "full electrode"
-        SEI_option = getattr(getattr(self.options, domain), phase)["SEI"]
+        SEI_option = self.options.resolve("SEI", domain, phase)
         if SEI_option == "ec reaction limited":
             pybamm.citations.register("Yang2017")
         elif SEI_option == "VonKolzenberg2020":

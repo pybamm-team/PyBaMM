@@ -23,10 +23,6 @@ class MPM(SPM):
     fixed_options = {**SPM.fixed_options, "particle size": "distribution"}
     default_options = {"surface form": "algebraic"}
 
-    def _dependent_default_options(self, supplied):
-        # the surface form is already part of the model's own defaults
-        return {}
-
     def __init__(self, options=None, name="Many-Particle Model", build=True):
         super().__init__(options, name, build)
 

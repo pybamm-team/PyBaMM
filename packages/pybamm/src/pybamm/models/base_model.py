@@ -6,7 +6,7 @@ import numbers
 import warnings
 from collections import OrderedDict
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 from itertools import chain
 from pathlib import Path
 from typing import Any, TypeVar, cast
@@ -23,7 +23,16 @@ from pybamm.models.symbol_processor import SymbolProcessor
 _SymbolT = TypeVar("_SymbolT", bound="pybamm.Symbol")
 
 
-class ModelSolutionObservability(str, Enum):
+def _prefer_restored(override: property, attribute: str) -> property:
+    """Wrap ``override`` so it returns ``attribute`` on the instance when set."""
+
+    def getter(self):
+        return getattr(self, attribute, None) or override.fget(self)
+
+    return property(getter, override.fset, override.fdel, override.__doc__)
+
+
+class ModelSolutionObservability(StrEnum):
     """
     Enum to specify the observability states for a PyBaMM model's solution.
 
@@ -97,6 +106,20 @@ class BaseModel:
 
     _DEFAULT_CONVERT_TO_FORMAT = "casadi"
     _VALID_CONVERT_TO_FORMATS = ("python", "casadi", "jax")
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Serialise restores a saved discretisation onto ``_default_*`` when the
+        # saved class can't be imported; it must win over an ancestor's override
+        for name in (
+            "default_geometry",
+            "default_var_pts",
+            "default_submesh_types",
+            "default_spatial_methods",
+        ):
+            override = cls.__dict__.get(name)
+            if isinstance(override, property):
+                setattr(cls, name, _prefer_restored(override, f"_{name}"))
 
     # Set by discretisation, deserialisation and BaseSolver.set_up. Evaluators are
     # CasADi functions or pybamm.EvaluatorPython/EvaluatorJax, by convert_to_format.
@@ -427,6 +450,15 @@ class BaseModel:
         self.process_and_register_variable(name, value)
         return self._variables_processed[name]
 
+    def is_algebraic_state(self, symbol: pybamm.Symbol) -> bool:
+        """Whether ``symbol`` is one of the model's algebraic state variables.
+
+        Matched by name, since a model copy keeps a state's name but not its id.
+        """
+        return isinstance(symbol, pybamm.Variable) and symbol.name in {
+            state.name for state in self.algebraic
+        }
+
     def get_processed_variable_or_event(self, name: str) -> pybamm.Symbol:
         """
         Get a processed variable or event by name.
@@ -493,8 +525,29 @@ class BaseModel:
         value = self.symbol_processor(name=name, symbol=symbol)
         self._variables_processed[name] = value
 
-    def _resolve_coupled_variables(self, symbol: pybamm.Symbol) -> pybamm.Symbol:
-        """Resolve CoupledVariables by looking up their targets in self._variables."""
+    def _resolve_coupled_variables(
+        self,
+        symbol: pybamm.Symbol,
+        cache: dict[pybamm.Symbol, pybamm.Symbol] | None = None,
+    ) -> pybamm.Symbol:
+        """
+        Resolve CoupledVariables by looking up their targets in self._variables.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The expression to resolve.
+        cache : dict, optional
+            Memo of ``{original node: resolved node}``. Pass the same dict across
+            calls to resolve shared subtrees only once.
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            The resolved expression.
+        """
+        if cache is None:
+            cache = {}
 
         def resolve(node, new_leaves):
             if not isinstance(node, pybamm.CoupledVariable):
@@ -503,9 +556,9 @@ class BaseModel:
                 raise ValueError(
                     f"CoupledVariable '{node.name}' not found in model.variables"
                 )
-            return self._resolve_coupled_variables(self._variables[node.name])
+            return self._resolve_coupled_variables(self._variables[node.name], cache)
 
-        return pybamm.tree_map(resolve, symbol)
+        return pybamm.tree_map(resolve, symbol, cache=cache)
 
     def update_processed_variables(self, processed_vars: dict[str, pybamm.Symbol]):
         """
@@ -1425,7 +1478,8 @@ class BaseModel:
 
         def _extract_from_y_slices(var, solution_var, solution_model, solution):
             solution_y_slice = solution_model.y_slices[solution_var][0]
-            y_last = solution.y[:, -1] if solution.y.ndim > 1 else solution.y
+            y = solution.all_ys[-1]
+            y_last = y[:, -1] if y.ndim > 1 else y
 
             # Validate slice bounds
             slice_stop = (
@@ -2210,9 +2264,8 @@ class BaseModel:
             with open(filename, "w") as f:
                 json.dump(data, f, indent=2, default=Serialise._json_encoder)
         except OSError as file_err:
-            raise OSError(
-                f"Failed to write {label} to file '{filename}': {file_err}"
-            ) from file_err
+            file_err.add_note(f"Failed to write {label} to file '{filename}'")
+            raise
 
     @staticmethod
     def _find_builtin_module(model_class):
@@ -2272,6 +2325,12 @@ class BaseModel:
         # Build a pristine reference with the same options.
         model_cls = type(self)
         options = model_config.get("options", {})
+        if model_config.get("legacy_options"):
+            from pybamm.models.full_battery_models.battery_model_options import (
+                LegacyOptions,
+            )
+
+            options = LegacyOptions(options)
         # Only models whose constructor takes options have them in their config
         ref = model_cls(options=options) if options else model_cls()  # pyrefly: ignore[unexpected-keyword]
 
@@ -2349,6 +2408,8 @@ class BaseModel:
             }
             if hasattr(self, "options"):
                 model_config["options"] = dict(self.options)
+                if getattr(self.options, "legacy", False):
+                    model_config["legacy_options"] = True
 
             # Detect user modifications to variables and events.
             # A fresh reference model is instantiated with the same options
@@ -2487,16 +2548,20 @@ class BaseModel:
             options = Serialise._convert_options(data.get("options", {}))
             if options and issubclass(model_cls, pybamm.BaseBatteryModel):
                 from pybamm.models.full_battery_models.battery_model_options import (
+                    UNVERSIONED_CONFIG_OPTIONS,
                     restore_saved_options,
                 )
 
                 version = data.get("pybamm_version")
                 # without a version, only a full to_config dump is a saved config;
                 # a partial one is hand-written and checked as given
-                if version is not None or set(pybamm.BatteryModelOptions({})) <= set(
-                    options
+                legacy = data.get("legacy_options", False)
+                if (
+                    legacy
+                    or version is not None
+                    or UNVERSIONED_CONFIG_OPTIONS <= set(options)
                 ):
-                    options = restore_saved_options(options, version)
+                    options = restore_saved_options(options, version, legacy)
             model = model_cls(options=options) if options else model_cls()
             BaseModel.apply_builtin_overrides(model, data)
             return model

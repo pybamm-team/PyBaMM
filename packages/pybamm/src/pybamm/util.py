@@ -59,7 +59,7 @@ class FuzzyDict(dict):
 
                 if old_term == "electrode":
                     warn(
-                        f"The parameter '{alternative_key}' has been renamed to '{key}' and will be removed in a future release. Using '{key}'",
+                        f"The parameter '{key}' has been renamed to '{alternative_key}' and will be removed in a future release. Using '{alternative_key}'",
                         DeprecationWarning,
                         stacklevel=2,
                     )

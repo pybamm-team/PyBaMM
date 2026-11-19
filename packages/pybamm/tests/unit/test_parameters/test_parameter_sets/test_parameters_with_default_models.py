@@ -32,6 +32,7 @@ class TestParameterValuesWithModel:
                     "SEI film resistance": "distributed",
                     "total interfacial current density as a state": "true",
                     "stress-induced diffusion": "true",
+                    "thermal": "lumped",
                 }
             ),
             "Chen2020": pybamm.lithium_ion.DFN(),
@@ -40,6 +41,7 @@ class TestParameterValuesWithModel:
                     "particle phases": ("2", "1"),
                     "open-circuit potential": (("single", "current sigmoid"), "single"),
                     "surface form": "algebraic",
+                    "thermal": "lumped",
                 }
             ),
             "Ecker2015": pybamm.lithium_ion.DFN(),

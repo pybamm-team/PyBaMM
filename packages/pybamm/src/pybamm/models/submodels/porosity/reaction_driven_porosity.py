@@ -33,7 +33,7 @@ class ReactionDriven(BaseModel):
                 phases_option = getattr(self.options, dom)["particle phases"]
                 phases = self.options.phases[dom]
                 for phase in phases:
-                    SEI_option = getattr(getattr(self.options, dom), phase)["SEI"]
+                    SEI_option = self.options.resolve("SEI", dom, phase)
                     if phases_option == "1" and phase == "primary":
                         # `domain` has one phase
                         phase_name = ""

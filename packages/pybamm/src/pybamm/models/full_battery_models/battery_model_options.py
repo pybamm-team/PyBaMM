@@ -1,8 +1,13 @@
 #
 # Battery model options: resolution and validation
 #
+from __future__ import annotations
+
 import os
+import re
+from collections.abc import Mapping
 from functools import cached_property
+from typing import Any
 
 import pybamm
 
@@ -54,7 +59,10 @@ def _warn_legacy_defaults(fired):
     pybamm.util.warn_outside_pybamm(message, pybamm.OptionDefaultDeprecationWarning)
 
 
-def represents_positive_integer(s):
+OptionPath = tuple[str, ...]
+
+
+def represents_positive_integer(s: Any) -> bool:
     """Check if a string represents a positive integer"""
     try:
         val = int(s)
@@ -107,7 +115,7 @@ _NEGATIVE_ONLY_SHORTHAND = {
 }
 
 
-def _option_location(path):
+def _option_location(path: OptionPath) -> str:
     """Describe an electrode/phase path for an error, e.g. ``" at negative.primary"``.
 
     Parameters
@@ -123,7 +131,7 @@ def _option_location(path):
     return f" at {'.'.join(path)}" if path else ""
 
 
-def iter_option_leaves(option, value):
+def iter_option_leaves(option: str, value: Any) -> list[tuple[OptionPath, Any]]:
     """Validate the tuple shape of an option value and return its leaves.
 
     Parameters
@@ -156,7 +164,7 @@ def iter_option_leaves(option, value):
             f"\n'{value}' is not recognized in option '{option}'. Values must be "
             "strings or (in some cases) 2-tuples of strings"
         )
-    leaves = []
+    leaves: list[tuple[OptionPath, Any]] = []
     for domain, electrode_value in zip(_ELECTRODES, value, strict=True):
         if not isinstance(electrode_value, (tuple, list)):
             leaves.append(((domain,), electrode_value))
@@ -183,7 +191,13 @@ def iter_option_leaves(option, value):
     return leaves
 
 
-def resolve_option(option, value, domain, phase=None, working_electrode="both"):
+def resolve_option(
+    option: str,
+    value: Any,
+    domain: str,
+    phase: str | None = None,
+    working_electrode: str = "both",
+) -> Any:
     """Resolve an option value for one electrode and, optionally, one phase.
 
     Parameters
@@ -221,7 +235,9 @@ def resolve_option(option, value, domain, phase=None, working_electrode="both"):
     return value
 
 
-def validate_option_value(option, value, possible_values, path=()):
+def validate_option_value(
+    option: str, value: Any, possible_values: list, path: OptionPath = ()
+) -> None:
     """Check that one option leaf is an allowed value.
 
     Parameters
@@ -253,7 +269,7 @@ def validate_option_value(option, value, possible_values, path=()):
     )
 
 
-def replace_option_leaf(value, old, new):
+def replace_option_leaf(value: Any, old: Any, new: Any) -> Any:
     """Replace every leaf equal to ``old`` with ``new``, keeping tuple structure.
 
     Parameters
@@ -273,7 +289,9 @@ def replace_option_leaf(value, old, new):
     return new if value == old else value
 
 
-def join_electrode_values(option, negative, positive, working_electrode="both"):
+def join_electrode_values(
+    option: str, negative: Any, positive: Any, working_electrode: str = "both"
+) -> Any:
     """Store per-electrode values in the shortest form that resolves to them.
 
     Parameters
@@ -299,7 +317,7 @@ def join_electrode_values(option, negative, positive, working_electrode="both"):
     return negative if resolves_to_both else (negative, positive)
 
 
-def active_electrodes(working_electrode):
+def active_electrodes(working_electrode: str) -> tuple[str, ...]:
     """Return the electrodes present in a cell.
 
     Parameters
@@ -315,7 +333,9 @@ def active_electrodes(working_electrode):
     return _ELECTRODES if working_electrode == "both" else ("positive",)
 
 
-def option_values_match(option, first, second, working_electrode="both"):
+def option_values_match(
+    option: str, first: Any, second: Any, working_electrode: str = "both"
+) -> bool:
     """Check whether two values of an option resolve the same everywhere.
 
     Parameters
@@ -347,7 +367,9 @@ def option_values_match(option, first, second, working_electrode="both"):
     )
 
 
-def dependency_error(option, value, companion, requirement, path=()):
+def dependency_error(
+    option: str, value: Any, companion: str, requirement: str, path: OptionPath = ()
+) -> pybamm.OptionError:
     """Build the error for an option whose companion option is incompatible.
 
     Parameters
@@ -374,7 +396,7 @@ def dependency_error(option, value, companion, requirement, path=()):
     )
 
 
-def _apply_legacy_defaults(options, supplied):
+def _apply_legacy_defaults(options: pybamm.FuzzyDict, supplied: set[str]) -> None:
     """Fill options whose default depends on other options.
 
     Parameters
@@ -475,7 +497,7 @@ def _apply_legacy_defaults(options, supplied):
     return fired
 
 
-def _check_electrode_compatibility(options):
+def _check_electrode_compatibility(options: pybamm.FuzzyDict) -> None:
     """Check options that depend on each other within one electrode or phase.
 
     Parameters
@@ -580,7 +602,9 @@ def _check_electrode_compatibility(options):
                 )
 
 
-def _rename_option(options_dict, option_name, old_name, new_name):
+def _rename_option(
+    options_dict: dict, option_name: str, old_name: str, new_name: str
+) -> None:
     """Rename every leaf equal to ``old_name`` in ``options_dict[option_name]``.
 
     Parameters
@@ -617,7 +641,56 @@ class LegacyOptions(dict):
     """
 
 
-def restore_saved_options(options, version):
+# Option keys of every to_config dump made before configs recorded a version; never
+# add to this, as those dumps lack any key introduced later.
+UNVERSIONED_CONFIG_OPTIONS = frozenset(
+    {
+        "calculate discharge energy",
+        "calculate heat source for isothermal models",
+        "cell geometry",
+        "contact resistance",
+        "convection",
+        "current collector",
+        "diffusivity",
+        "dimensionality",
+        "electrolyte conductivity",
+        "exchange-current density",
+        "heat of mixing",
+        "hydrolysis",
+        "intercalation kinetics",
+        "interface utilisation",
+        "lithium plating",
+        "lithium plating porosity change",
+        "loss of active material",
+        "number of MSMR reactions",
+        "open-circuit potential",
+        "operating mode",
+        "particle",
+        "particle mechanics",
+        "particle phases",
+        "particle shape",
+        "particle size",
+        "SEI",
+        "SEI film resistance",
+        "SEI on cracks",
+        "SEI porosity change",
+        "stress-induced diffusion",
+        "surface form",
+        "surface temperature",
+        "thermal",
+        "total interfacial current density as a state",
+        "transport efficiency",
+        "voltage as a state",
+        "working electrode",
+        "x-average side reactions",
+        "use lumped thermal capacity",
+    }
+)
+
+
+def restore_saved_options(
+    options: dict, version: str | None, legacy: bool = False
+) -> dict:
     """Mark options loaded from a file with the rules they were saved under.
 
     Parameters
@@ -626,19 +699,21 @@ def restore_saved_options(options, version):
         The saved options.
     version : str or None
         The PyBaMM version that saved them, or None if it was not recorded.
+    legacy : bool, optional
+        Whether the options were saved as legacy options. Default is False.
 
     Returns
     -------
     dict
-        ``options`` as a :class:`LegacyOptions` if ``version`` is unknown or
-        predates per-electrode option checks, otherwise ``options`` unchanged.
+        ``options`` as a :class:`LegacyOptions` if ``legacy`` is True or
+        ``version`` is unknown or predates per-electrode option checks,
+        otherwise ``options`` unchanged.
     """
-    try:
-        release = tuple(int(part) for part in str(version).split(".")[:2])
-    except ValueError:
-        release = ()
-    if release < _PER_ELECTRODE_OPTIONS_RELEASE:
-        return LegacyOptions(options or {})
+    # the leading YY.MM, so pre-releases such as "26.11rc0" count as their release
+    match = re.match(r"(\d+)\.(\d+)", str(version))
+    release = (int(match[1]), int(match[2])) if match else ()
+    if legacy or release < _PER_ELECTRODE_OPTIONS_RELEASE:
+        return LegacyOptions(options)
     return options
 
 
@@ -686,10 +761,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 parameters not needed by the electrochemical model.
             * "contact resistance" : str
                 Whether to include an additional series resistance, added to the
-                terminal voltage and contributing Ohmic (I^2 R) heating. Can be
-                "false" (default) or "true". Set via the parameter "Contact
-                resistance [Ohm]", which may be a constant or a function of the
-                volume-averaged cell temperature.
+                terminal voltage and contributing Ohmic (I^2 R) heating. It is a
+                lumped term for any resistance the model does not resolve, such as
+                tabs, welds, contacts or wiring, so its heat is spread uniformly
+                over the electrode stack. Can be "false" (default) or "true". Set
+                via the parameter "Contact resistance [Ohm]", which may be a
+                constant or a function of the volume-averaged cell temperature.
             * "convection" : str
                 Whether to include the effects of convection in the model. Can be
                 "none" (default), "uniform transverse" or "full transverse".
@@ -719,6 +796,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Model for intercalation kinetics. Can be "symmetric Butler-Volmer"
                 (default), "asymmetric Butler-Volmer", "linear", "Marcus",
                 "Marcus-Hush-Chidsey" (which uses the asymptotic form from Zeng 2014),
+                "coupled ion-electron transfer" (which uses the form from Fraggedakis
+                2021),
                 or "MSMR" (which uses the form from Baker 2018). A 2-tuple can be
                 provided for different behaviour in negative and positive electrodes.
             * "interface utilisation": str
@@ -915,7 +994,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         checks are skipped. Default is False.
     """
 
-    def __init__(self, extra_options, legacy=False, warn_legacy_defaults=True):
+    def __init__(
+        self,
+        extra_options: Mapping | None,
+        legacy: bool = False,
+        warn_legacy_defaults: bool = True,
+    ) -> None:
+        self.legacy = legacy
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
             "calculate heat source for isothermal models": ["false", "true"],
@@ -945,6 +1030,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "linear",
                 "Marcus",
                 "Marcus-Hush-Chidsey",
+                "coupled ion-electron transfer",
                 "MSMR",
             ],
             "interface utilisation": ["full", "constant", "current-driven"],
@@ -1190,16 +1276,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             == "distribution"
         ]
         if distribution_electrodes:
-            if options["lithium plating porosity change"] != "false":
-                raise pybamm.OptionError(
-                    "Lithium plating porosity change not yet supported for particle-size"
-                    " distributions."
-                )
-            if options["SEI porosity change"] == "true":
-                raise NotImplementedError(
-                    "SEI porosity change submodels do not yet support particle-size "
-                    "distributions."
-                )
             if options["heat of mixing"] != "false":
                 raise NotImplementedError(
                     "Heat of mixing submodels do not yet support particle-size "
@@ -1343,6 +1419,27 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         Print the docstring for Options
         """
         print(self.__doc__)
+
+    def resolve(self, option: str, domain: str, phase: str | None = None) -> Any:
+        """Return an option's value for one electrode and, optionally, one phase.
+
+        Parameters
+        ----------
+        option : str
+            The option name.
+        domain : str
+            ``"negative"`` or ``"positive"``.
+        phase : str, optional
+            ``"primary"`` or ``"secondary"``.
+
+        Returns
+        -------
+        object
+            The resolved value.
+        """
+        return resolve_option(
+            option, self[option], domain, phase, self["working electrode"]
+        )
 
     @property
     def negative(self):

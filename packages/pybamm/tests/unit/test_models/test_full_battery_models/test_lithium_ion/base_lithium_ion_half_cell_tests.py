@@ -50,6 +50,25 @@ class BaseUnitTestLithiumIonHalfCell:
         options = {"intercalation kinetics": "Marcus-Hush-Chidsey"}
         self.check_well_posedness(options)
 
+    def test_well_posed_kinetics_coupled_ion_electron_transfer(self):
+        options = {
+            "intercalation kinetics": (
+                "Marcus-Hush-Chidsey",
+                "coupled ion-electron transfer",
+            ),
+            "surface form": "algebraic",
+        }
+        self.check_well_posedness(options)
+
+    def test_coupled_ion_electron_transfer_lithium_metal_not_supported(self):
+        options = {
+            "intercalation kinetics": "coupled ion-electron transfer",
+            "surface form": "algebraic",
+        }
+        if self.model is not None:
+            with pytest.raises(pybamm.OptionError, match=r"lithium metal electrode"):
+                self.check_well_posedness(options)
+
     def test_well_posed_constant_sei(self):
         options = {
             "SEI": "constant",
@@ -61,6 +80,15 @@ class BaseUnitTestLithiumIonHalfCell:
     def test_well_posed_reaction_limited_sei(self):
         options = {
             "SEI": "reaction limited",
+            "SEI film resistance": "distributed",
+            "total interfacial current density as a state": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_reaction_limited_sei_lumped_thermal(self):
+        options = {
+            "SEI": "reaction limited",
+            "thermal": "lumped",
             "SEI film resistance": "distributed",
             "total interfacial current density as a state": "true",
         }

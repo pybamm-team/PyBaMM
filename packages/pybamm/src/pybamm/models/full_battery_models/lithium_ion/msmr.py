@@ -20,7 +20,7 @@ class MSMR(DFN):
         super()._check_fixed_options(options)
 
     def __init__(self, options=None, name="MSMR", build=True):
-        super().__init__(options=options, name=name)
+        super().__init__(options=options, name=name, build=build)
 
     @property
     def default_parameter_values(self):

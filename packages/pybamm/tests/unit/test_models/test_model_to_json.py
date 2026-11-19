@@ -12,7 +12,7 @@ import pybamm
 
 def _assert_solution_y_almost_equal(sol_orig, sol_loaded, key_output="Voltage [V]"):
     """Assert solution state vector has same shape and key output is almost equal."""
-    np.testing.assert_array_equal(sol_orig.y.shape, sol_loaded.y.shape)
+    np.testing.assert_array_equal(sol_orig.all_ys[0].shape, sol_loaded.all_ys[0].shape)
     v_orig = sol_orig[key_output].data
     v_loaded = sol_loaded[key_output].data
     np.testing.assert_allclose(v_orig, v_loaded, rtol=5e-3, atol=1e-4)
@@ -75,6 +75,21 @@ class TestBaseModelToJson:
         model = _minimal_custom_model()
         with pytest.raises(ValueError, match=r"must end with '\.json' extension"):
             model.to_json("model.txt")
+
+    def test_to_json_write_error_keeps_its_type(self, monkeypatch):
+        """A failed write re-raises the original OSError, noting the file."""
+        model = _minimal_custom_model()
+
+        def deny(*args, **kwargs):
+            raise PermissionError(13, "Permission denied")
+
+        monkeypatch.setattr("builtins.open", deny)
+        with pytest.raises(PermissionError) as exc_info:
+            model.to_json("model.json")
+        assert exc_info.value.errno == 13
+        assert exc_info.value.__notes__ == [
+            "Failed to write model JSON to file 'model.json'"
+        ]
 
     @pytest.mark.parametrize(
         "compress", [False, True], ids=["uncompressed", "compressed"]
@@ -595,6 +610,27 @@ class TestSavedOptionsVersion:
         with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
             pybamm.BaseModel.from_json(data)
 
+    def test_legacy_options_survive_resave(self, monkeypatch, tmp_path):
+        config = pybamm.lithium_ion.SPM(self.OPTIONS).to_config()
+        config["options"] = self._as_saved(config["options"])
+        config["pybamm_version"] = "26.10"
+        monkeypatch.setattr(pybamm, "__version__", "26.11.0")
+        model = pybamm.BaseModel.from_config(config)
+
+        resaved = json.loads(json.dumps(model.to_config()))
+        assert resaved["legacy_options"] is True
+        loaded = pybamm.BaseModel.from_config(resaved)
+        assert loaded.options.positive["stress-induced diffusion"] == "true"
+
+        model.to_json(tmp_path / "model.json")
+        loaded = pybamm.BaseModel.from_json(tmp_path / "model.json")
+        assert loaded.options.positive["stress-induced diffusion"] == "true"
+
+    def test_current_options_not_marked_legacy(self):
+        model = pybamm.lithium_ion.SPM(self.OPTIONS)
+        assert "legacy_options" not in model.to_config()
+        assert "legacy_options" not in model.to_json()["model"]
+
     def test_to_config_records_version(self):
         config = pybamm.lithium_ion.SPM().to_config()
         assert config["pybamm_version"] == pybamm.__version__
@@ -616,6 +652,21 @@ class TestSavedOptionsVersion:
         config["pybamm_version"] = "26.11.0.0"
         with pytest.raises(pybamm.OptionError, match="stress-induced diffusion"):
             pybamm.BaseModel.from_config(config)
+
+    def test_from_config_unversioned_dump_ignores_later_option_keys(self):
+        from pybamm.models.full_battery_models.battery_model_options import (
+            UNVERSIONED_CONFIG_OPTIONS,
+        )
+
+        config = pybamm.lithium_ion.SPM(self.OPTIONS).to_config()
+        del config["pybamm_version"]
+        config["options"] = {
+            key: value
+            for key, value in self._as_saved(config["options"]).items()
+            if key in UNVERSIONED_CONFIG_OPTIONS
+        }
+        loaded = pybamm.BaseModel.from_config(config)
+        assert loaded.options.positive["stress-induced diffusion"] == "true"
 
     def test_from_config_checks_partial_options_without_version(self):
         config = {

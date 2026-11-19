@@ -49,7 +49,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'exchange-current density': 'single' (possible: ['single', 'current sigmoid'])
 'heat of mixing': 'false' (possible: ['false', 'true'])
 'hydrolysis': 'false' (possible: ['false', 'true'])
-'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey', 'MSMR'])
+'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey', 'coupled ion-electron transfer', 'MSMR'])
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'partially reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
@@ -369,13 +369,6 @@ class TestBaseBatteryModel:
                 {
                     "lithium plating porosity change": "bad lithium "
                     "plating porosity change"
-                }
-            )
-        with pytest.raises(pybamm.OptionError, match=r"distributions"):
-            pybamm.BaseBatteryModel(
-                {
-                    "particle size": "distribution",
-                    "lithium plating porosity change": "true",
                 }
             )
 
@@ -1000,12 +993,6 @@ class TestElectrodeCompatibility:
     @pytest.mark.parametrize(
         ("options", "error", "match"),
         [
-            ({"SEI porosity change": "true"}, NotImplementedError, "SEI porosity"),
-            (
-                {"lithium plating porosity change": "true"},
-                pybamm.OptionError,
-                "Lithium plating porosity",
-            ),
             ({"heat of mixing": "true"}, NotImplementedError, "Heat of mixing"),
             ({"thermal": "x-full"}, NotImplementedError, "X-full thermal"),
         ],

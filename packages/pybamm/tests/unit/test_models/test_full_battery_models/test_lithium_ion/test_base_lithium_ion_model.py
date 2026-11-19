@@ -1,7 +1,7 @@
 #
 # Tests for the base lead acid model class
 #
-import os
+import contextlib
 
 import pytest
 
@@ -20,11 +20,9 @@ class TestBaseLithiumIonModel:
 
         # change path and try again
 
-        cwd = os.getcwd()
-        os.chdir("..")
-        model = pybamm.lithium_ion.BaseModel()
-        assert model.default_parameter_values["Reference temperature [K]"] == 298.15
-        os.chdir(cwd)
+        with contextlib.chdir(".."):
+            model = pybamm.lithium_ion.BaseModel()
+            assert model.default_parameter_values["Reference temperature [K]"] == 298.15
 
     def test_insert_reference_electrode(self):
         model = pybamm.lithium_ion.SPM()

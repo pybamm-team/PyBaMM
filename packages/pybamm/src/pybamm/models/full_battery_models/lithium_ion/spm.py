@@ -38,13 +38,27 @@ class SPM(BaseModel):
 
         super().__init__(options, name)
 
+        if (
+            not isinstance(self, pybamm.lithium_ion.SPMe)
+            and "distribution" in self.options["particle size"]
+            and "true"
+            in [
+                self.options["SEI porosity change"],
+                self.options["lithium plating porosity change"],
+            ]
+        ):
+            raise pybamm.OptionError(
+                "SEI and lithium plating porosity change are not yet supported for "
+                f"{self.__class__.__name__} with particle-size distributions."
+            )
+
         self.set_submodels(build)
 
         if not isinstance(self, pybamm.lithium_ion.MPM):
             pybamm.citations.register("Marquis2019")
 
         if any(
-            getattr(getattr(self.options, domain), phase)[option] not in values
+            self.options.resolve(option, domain, phase) not in values
             for option, values in [
                 ("SEI", ("none", "constant")),
                 ("lithium plating", ("none",)),

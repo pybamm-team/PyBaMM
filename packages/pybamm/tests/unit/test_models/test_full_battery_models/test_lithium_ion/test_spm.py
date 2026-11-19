@@ -4,6 +4,7 @@
 import pytest
 
 import pybamm
+from pybamm.models.full_battery_models import battery_model_options
 from tests import BaseUnitTestLithiumIon
 
 
@@ -44,6 +45,37 @@ class TestSPM(BaseUnitTestLithiumIon):
             match=r"SPM requires 'x-average side reactions' to be 'true'",
         ):
             pybamm.lithium_ion.SPM(options)
+
+    @pytest.mark.parametrize(
+        "particle_size", ["distribution", ("single", "distribution")]
+    )
+    def test_distribution_porosity_change_not_implemented(self, particle_size):
+        class MySPM(pybamm.lithium_ion.SPM):
+            pass
+
+        options = {
+            "particle size": particle_size,
+            "SEI porosity change": "true",
+            "surface form": "algebraic",
+        }
+        for model_class in [pybamm.lithium_ion.SPM, MySPM]:
+            with pytest.raises(pybamm.OptionError, match=r"distributions"):
+                model_class(options)
+
+    def test_dependent_defaults_use_declared_options(self, monkeypatch):
+        monkeypatch.setattr(
+            battery_model_options, "_FORBID_LEGACY_OPTION_DEFAULTS", False
+        )
+
+        class MySPM(pybamm.lithium_ion.SPM):
+            default_options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
+
+        with pytest.warns(pybamm.OptionDefaultDeprecationWarning):
+            assert MySPM(build=False).options["surface form"] == "algebraic"
+        model = MySPM({"surface form": "differential"}, build=False)
+        assert model.options["surface form"] == "differential"
+        model = pybamm.lithium_ion.MPM(build=False)
+        assert model.options["surface form"] == "algebraic"
 
     def test_distribution_options(self):
         options = {"particle size": "distribution", "surface form": "algebraic"}

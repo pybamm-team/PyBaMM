@@ -29,7 +29,25 @@ class TestThermal:
             "cell geometry": "pouch",
         }
         spme_2p1D = pybamm.lithium_ion.SPMe(options=options)
-        models = {"SPMe 1D": spme_1D, "SPMe 1+1D": spme_1p1D, "SPMe 2+1D": spme_2p1D}
+        options = {
+            "thermal": "lumped",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
+        spme_1p1D_lumped = pybamm.lithium_ion.SPMe(options=options)
+        options = {
+            "thermal": "lumped",
+            "current collector": "potential pair",
+            "dimensionality": 2,
+        }
+        spme_2p1D_lumped = pybamm.lithium_ion.SPMe(options=options)
+        models = {
+            "SPMe 1D": spme_1D,
+            "SPMe 1+1D": spme_1p1D,
+            "SPMe 2+1D": spme_2p1D,
+            "SPMe 1+1D lumped": spme_1p1D_lumped,
+            "SPMe 2+1D lumped": spme_2p1D_lumped,
+        }
 
         # Set up parameter values
         parameter_values = pybamm.ParameterValues("NCA_Kim2011")
@@ -105,6 +123,8 @@ class TestThermal:
             return np.max(np.abs(a - b)) / np.max(np.abs(a))
 
         assert 1e-5 > err(solutions["SPMe 1+1D"], solutions["SPMe 2+1D"])
+        assert 1e-5 > err(solutions["SPMe 1+1D"], solutions["SPMe 1+1D lumped"])
+        assert 1e-5 > err(solutions["SPMe 2+1D"], solutions["SPMe 2+1D lumped"])
 
     def test_surface_temperature_models(self):
         models = {
@@ -216,8 +236,10 @@ class TestThermal:
         )
         sol_fn = sim_fn.solve([0, 3600])
 
-        dphi_const = sol_const["Contact overpotential [V]"].entries
-        dphi_fn = sol_fn["Contact overpotential [V]"].entries
+        # Compare on a common time grid: the two solves take different steps
+        t = np.linspace(0, 3600, 100)
+        dphi_const = sol_const["Contact overpotential [V]"](t)
+        dphi_fn = sol_fn["Contact overpotential [V]"](t)
 
         if thermal == "isothermal":
             # temperature is fixed at the reference, so the two agree
@@ -226,3 +248,299 @@ class TestThermal:
             # cell heats up above the reference, so R (and hence the contact
             # overpotential magnitude) is larger than the constant case
             np.testing.assert_array_less(np.abs(dphi_const[1:]), np.abs(dphi_fn[1:]))
+
+    @pytest.mark.parametrize(
+        "model, options, parameter_set, current",
+        [
+            (
+                pybamm.lithium_ion.SPMe,
+                {"SEI film resistance": "distributed"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.SPMe,
+                {"SEI film resistance": "average"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.DFN,
+                {"SEI film resistance": "distributed"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.MPM,
+                {"SEI film resistance": "distributed"},
+                "OKane2022",
+                5,
+            ),
+            (
+                pybamm.lithium_ion.SPMe,
+                {"working electrode": "positive", "SEI film resistance": "distributed"},
+                "Xu2019",
+                2.4e-3,
+            ),
+        ],
+    )
+    def test_sei_film_heating(self, model, options, parameter_set, current):
+        # With the temperature held at ambient, the extra heat generated when the SEI
+        # film resistance is switched on must match the extra electrical energy lost
+        parameter_values = pybamm.ParameterValues(parameter_set)
+        # Xu2019 has no current collector or thermal parameters, so take them from
+        # Chen2020
+        chen2020 = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {k: chen2020[k] for k in chen2020 if k not in parameter_values},
+            check_already_exists=False,
+        )
+        if model is pybamm.lithium_ion.MPM:
+            parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        parameter_values.update(
+            {
+                "Current function [A]": current,
+                "Initial SEI thickness [m]": 5e-8,
+                "Total heat transfer coefficient [W.m-2.K-1]": 1e6,
+            }
+        )
+        t = np.linspace(0, 600, 61)
+
+        voltage, heating = {}, {}
+        for film in ["none", options["SEI film resistance"]]:
+            sim = pybamm.Simulation(
+                model(
+                    {
+                        **options,
+                        "SEI": "constant",
+                        "SEI film resistance": film,
+                        "thermal": "lumped",
+                    }
+                ),
+                parameter_values=parameter_values,
+            )
+            sol = sim.solve([0, 600])
+            voltage[film] = sol["Voltage [V]"](t)
+            heating[film] = sol["Total heating [W]"](t)
+
+        film = options["SEI film resistance"]
+        electrical_loss = np.trapezoid(current * (voltage["none"] - voltage[film]), t)
+        extra_heat = np.trapezoid(heating[film] - heating["none"], t)
+        assert electrical_loss > 0
+        np.testing.assert_allclose(extra_heat, electrical_loss, rtol=1e-2)
+
+    @pytest.mark.parametrize("composite", [False, True], ids=["one-phase", "composite"])
+    def test_heat_of_mixing_energy_balance(self, composite):
+        """
+        Electrical work plus heat must equal the fall in stored chemical energy,
+        -F * sum over the particles of int_0^c U_eq dc, where U_eq is the OCP the
+        hysteresis heat is referenced to. The SPM keeps the electrolyte uniform and
+        the isothermal model with zero entropic change keeps the stored energy
+        independent of temperature, so the particles are the only energy store
+        """
+        options = {
+            "thermal": "isothermal",
+            "calculate heat source for isothermal models": "true",
+            "heat of mixing": "true",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        if composite:
+            # Tilted hysteresis branches and a direction-dependent diffusivity make
+            # the second phase's equilibrium OCP and flux differ from the first's
+            options["particle phases"] = ("1", "2")
+            options["open-circuit potential"] = (
+                "single",
+                ("single", "current sigmoid"),
+            )
+            options["diffusivity"] = ("single", ("single", "current sigmoid"))
+            for name in [
+                "Positive electrode OCP [V]",
+                "Positive electrode OCP entropic change [V.K-1]",
+                "Maximum concentration in positive electrode [mol.m-3]",
+                "Initial concentration in positive electrode [mol.m-3]",
+                "Positive particle radius [m]",
+                "Positive particle diffusivity [m2.s-1]",
+                "Positive electrode exchange-current density [A.m-2]",
+                "Positive electrode active material volume fraction",
+            ]:
+                value = parameter_values[name]
+                if name.endswith("volume fraction"):
+                    value = value / 2
+                parameter_values.update(
+                    {f"Primary: {name}": value, f"Secondary: {name}": value}
+                )
+                del parameter_values[name]
+            mean_ocp = parameter_values["Secondary: Positive electrode OCP [V]"]
+            diffusivity = parameter_values[
+                "Secondary: Positive particle diffusivity [m2.s-1]"
+            ]
+            parameter_values.update(
+                {
+                    "Secondary: Positive electrode lithiation OCP [V]": lambda sto: (
+                        mean_ocp(sto) - 0.005 - 0.1 * sto
+                    ),
+                    "Secondary: Positive electrode delithiation OCP [V]": lambda sto: (
+                        mean_ocp(sto) + 0.005 + 0.1 * sto
+                    ),
+                    "Secondary: Positive particle lithiation diffusivity [m2.s-1]": (
+                        diffusivity / 2
+                    ),
+                    "Secondary: Positive particle delithiation diffusivity [m2.s-1]": (
+                        diffusivity * 2
+                    ),
+                },
+                check_already_exists=False,
+            )
+            particles = [
+                ("negative", ""),
+                ("positive", "primary "),
+                ("positive", "secondary "),
+            ]
+        else:
+            particles = [("negative", ""), ("positive", "")]
+
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(options),
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(rtol=1e-9, atol=1e-11),
+        )
+        solution = sim.solve([0, 3000])
+        t = np.linspace(0, solution.t[-1], 2001)
+
+        F = pybamm.constants.F.value
+        area = (
+            parameter_values["Electrode width [m]"]
+            * parameter_values["Electrode height [m]"]
+        )
+        stored_energy = 0
+        for domain, phase in particles:
+            Domain = domain.capitalize()
+            prefix = phase.strip().capitalize() + ": " if phase else ""
+            c_max = parameter_values[
+                f"{prefix}Maximum concentration in {domain} electrode [mol.m-3]"
+            ]
+            # int_0^sto U_eq, avoiding the OCP asymptotes at the ends
+            sto_table = np.linspace(1e-4, 1 - 1e-4, 4001)
+            ocp = parameter_values[f"{prefix}{Domain} electrode OCP [V]"]
+            ocp_table = np.ravel(ocp(pybamm.Vector(sto_table)).evaluate())
+            integral_table = np.concatenate(
+                [
+                    [0],
+                    np.cumsum(
+                        (ocp_table[1:] + ocp_table[:-1]) / 2 * np.diff(sto_table)
+                    ),
+                ]
+            )
+            c = solution[
+                f"X-averaged {domain} {phase}particle concentration [mol.m-3]"
+            ](t=t)
+            energy_density = (
+                -F * c_max * np.interp(c / c_max, sto_table, integral_table)
+            )
+            # finite volume cells are spherical shells
+            edges = sim.mesh[f"{domain} {phase}particle"].edges
+            shell_fraction = (edges[1:] ** 3 - edges[:-1] ** 3) / edges[-1] ** 3
+            solid_volume = (
+                parameter_values[
+                    f"{prefix}{Domain} electrode active material volume fraction"
+                ]
+                * parameter_values[f"{Domain} electrode thickness [m]"]
+                * area
+            )
+            stored_energy += solid_volume * (shell_fraction @ energy_density)
+
+        released = stored_energy[0] - stored_energy[-1]
+        work = np.trapezoid(solution["Current [A]"](t) * solution["Voltage [V]"](t), t)
+        heat = np.trapezoid(solution["Total heating [W]"](t), t)
+        heat_of_mixing = np.trapezoid(solution["Heat of mixing [W]"](t), t)
+        np.testing.assert_allclose(released, work + heat, rtol=0, atol=5e-3 * heat)
+        # without the heat of mixing the balance fails, so the check has teeth
+        assert abs(released - (work + heat - heat_of_mixing)) > 0.2 * heat
+
+    @pytest.mark.parametrize(
+        "model_class", [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN]
+    )
+    @pytest.mark.parametrize(
+        "particle, rtol", [("quadratic profile", 0.15), ("quartic profile", 0.05)]
+    )
+    def test_heat_of_mixing_polynomial_profile(self, model_class, particle, rtol):
+        # The polynomial profiles approximate Fickian diffusion, so once the initial
+        # transient has passed their heat of mixing should be close to it
+        t = np.linspace(600, 3000, 25)
+        heat_of_mixing = {}
+        for option in ["Fickian diffusion", particle]:
+            model = model_class(
+                {"particle": option, "thermal": "lumped", "heat of mixing": "true"}
+            )
+            solution = pybamm.Simulation(
+                model, parameter_values=pybamm.ParameterValues("Chen2020")
+            ).solve([0, 3000])
+            heat_of_mixing[option] = solution["Heat of mixing [W]"](t)
+
+        assert np.all(heat_of_mixing[particle] > 0)
+        np.testing.assert_allclose(
+            np.mean(heat_of_mixing[particle]),
+            np.mean(heat_of_mixing["Fickian diffusion"]),
+            rtol=rtol,
+        )
+
+    @pytest.mark.parametrize(
+        "thermal, extra_options",
+        [
+            ("lumped", {}),
+            ("x-full", {}),
+            (
+                "x-lumped",
+                {"current collector": "potential pair", "dimensionality": 1},
+            ),
+            (
+                "x-lumped",
+                {"current collector": "potential pair", "dimensionality": 2},
+            ),
+        ],
+    )
+    def test_contact_resistance_energy_balance(self, thermal, extra_options):
+        # At ambient temperature, the extra heat must equal the I^2 R_c dissipation
+        R_c = 0.05
+        t_end = 600
+        t = np.linspace(0, t_end, 61)
+
+        parameter_values = pybamm.ParameterValues("NCA_Kim2011")
+        parameter_values.update(
+            {
+                "Current function [A]": 1,
+                # Hold the temperature at ambient for every thermal option
+                "Total heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Negative tab heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Positive tab heat transfer coefficient [W.m-2.K-1]": 1e6,
+                "Edge heat transfer coefficient [W.m-2.K-1]": 1e6,
+            }
+        )
+
+        heating, current = {}, {}
+        for R in [0, R_c]:
+            params = parameter_values.copy()
+            params.update({"Contact resistance [Ohm]": R})
+            sim = pybamm.Simulation(
+                pybamm.lithium_ion.SPMe(
+                    {
+                        "thermal": thermal,
+                        "contact resistance": "true",
+                        **extra_options,
+                    }
+                ),
+                parameter_values=params,
+            )
+            sol = sim.solve([0, t_end])
+            heating[R] = sol["Total heating [W]"](t)
+            current[R] = sol["Current [A]"](t)
+            np.testing.assert_allclose(
+                sol["Contact resistance heating [W]"](t), current[R] ** 2 * R
+            )
+
+        extra_heat = np.trapezoid(heating[R_c] - heating[0], t)
+        expected = np.trapezoid(current[R_c] ** 2 * R_c, t)
+        assert extra_heat > 0
+        np.testing.assert_allclose(extra_heat, expected, rtol=1e-2)

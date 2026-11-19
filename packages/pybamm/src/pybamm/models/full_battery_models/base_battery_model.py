@@ -54,7 +54,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         # append the model name with _saved to differentiate
         instance = cls(
             options=restore_saved_options(
-                properties["options"], properties.get("pybamm_version")
+                properties["options"],
+                properties.get("pybamm_version"),
+                properties.get("legacy_options", False),
             ),
             name=properties["name"] + "_saved",
         )
@@ -182,12 +184,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         Parameters
         ----------
         supplied : dict
-            The options given by the caller.
+            The model's default and fixed options, updated with the options
+            given by the caller.
 
         Returns
         -------
         dict
-            Defaults for options the caller did not give.
+            Defaults for options not in ``supplied``.
         """
         return {}
 
@@ -228,7 +231,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         if extra_options is None or type(extra_options) in (dict, LegacyOptions):
             supplied = dict(extra_options or {})
             self._check_fixed_options(supplied)
-            model_legacy_defaults = self._dependent_default_options(supplied)
+            model_legacy_defaults = self._dependent_default_options(
+                {**self.default_options, **self.fixed_options, **supplied}
+            )
             options = BatteryModelOptions(
                 {
                     **self.default_options,
@@ -435,6 +440,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             return pybamm.kinetics.Marcus
         elif options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
             return pybamm.kinetics.MarcusHushChidsey
+        elif options["intercalation kinetics"] == "coupled ion-electron transfer":
+            return pybamm.kinetics.CoupledIonElectronTransfer
         elif options["intercalation kinetics"] == "MSMR":
             return pybamm.kinetics.MSMRButlerVolmer
 
