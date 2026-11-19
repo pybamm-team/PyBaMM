@@ -749,7 +749,7 @@ private:
      * entries. New entries are zero-initialized
      */
     void LeastSquaresEnsureArrays() {
-        const size_t kp1 = static_cast<size_t>(ls_knot_count_ + 1);
+        const size_t kp1 = static_cast<size_t>(ls_knot_count_) + 1;
         ls_diag_.resize(kp1, 0.0);
         ls_rhs_.resize(kp1 * n_states_, 0.0);
         if (ls_knot_count_ > 0) {

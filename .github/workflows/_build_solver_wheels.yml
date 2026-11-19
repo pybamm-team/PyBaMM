@@ -1,38 +1,31 @@
-# Reusable workflow: build pybammsolvers wheels (+ optional sdist) from the
-# in-repo source.
+# Reusable workflow: build one target's pybammsolvers wheels from the in-repo source.
 #
-# Single definition of "how to build the solver", called by:
-#   * release_solvers.yml   — on a pybammsolvers-v* release (build + sdist, no
-#                             cache, then the caller publishes to PyPI).
-#   * test_on_push.yml      — on PRs (build + cache so PyBaMM's matrix can test
-#                             against the in-repo solver without rebuilding it
-#                             per cell).
-#
-# Platform selection: callers pass `platforms` / `macos_runners` to build only the
-# wheels their downstream jobs consume; both default to all platforms.
+# A target is the runner's lowercased OS-arch; RUNNER_<TARGET> repo variables
+# override its label, e.g. RUNNER_MACOS_ARM64=macos-15.
 #
 # Windows is built here via cibuildwheel + vcpkg — the ONLY way this solver has
 # ever been built on Windows. PyBaMM's matrix must not invent a from-source
 # Windows build; it consumes these wheels.
 #
-# Caching (cache_wheels=true): each platform job keys actions/cache on the solver
-# subtree's git-tree hash (`git rev-parse HEAD:packages/pybammsolvers`), which
-# captures every tracked file AND the SUNDIALS/SuiteSparse submodule pin SHAs.
-# On a cache hit (e.g. a PyBaMM-only PR whose solver source equals main's) the
-# build is skipped and the cached wheels are uploaded as-is.
+# Caching: `resolve` restores on Ubuntu so a hit needs no native runner, and
+# `save_cache` stores a miss from Ubuntu, the only OS family that can restore it.
 name: Build solver wheels (reusable)
 
 on:
   workflow_call:
     inputs:
+      target:
+        description: "linux-x64, linux-arm64, windows-x64, macos-arm64 or macos-x64."
+        required: true
+        type: string
       cache_wheels:
-        description: "Restore/save per-platform wheels keyed on the solver source hash, skipping the build on a cache hit."
+        description: "Restore/save the wheels keyed on the solver source hash, skipping the build on a cache hit."
         default: false
         required: false
         type: boolean
-      build_sdist:
-        description: "Also build the sdist (needed for release publishing; not needed for PR testing)."
-        default: false
+      runner_overrides:
+        description: "Honour the RUNNER_<TARGET> repo variables; releases pass false to build on the defaults."
+        default: true
         required: false
         type: boolean
       save_vcpkg_logs:
@@ -40,16 +33,6 @@ on:
         default: false
         required: false
         type: boolean
-      platforms:
-        description: 'JSON array of non-macOS targets to build, subset of ["linux", "windows"]. Lets a caller build only the wheels its downstream jobs consume.'
-        default: '["linux", "windows"]'
-        required: false
-        type: string
-      macos_runners:
-        description: 'JSON array of macOS runner labels to build on (e.g. ["macos-latest"]); empty [] skips macOS entirely.'
-        default: '["macos-15-intel", "macos-latest"]'
-        required: false
-        type: string
 
 defaults:
   run:
@@ -62,10 +45,60 @@ env:
   FORCE_COLOR: 3
 
 jobs:
-  build_windows_wheels:
-    name: Wheels (Windows)
-    if: ${{ contains(fromJSON(inputs.platforms), 'windows') }}
-    runs-on: windows-2025
+  resolve:
+    name: Resolve cached wheels
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+      build: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      # The same map as _nox.yml's runs-on. Windows stays pinned, as its image's
+      # MSVC sets the runtime the wheels need.
+      runner: >-
+        ${{ (inputs.target == 'linux-x64' && (inputs.runner_overrides && vars.RUNNER_LINUX_X64 || 'ubuntu-latest'))
+        || (inputs.target == 'linux-arm64' && (inputs.runner_overrides && vars.RUNNER_LINUX_ARM64 || 'ubuntu-24.04-arm'))
+        || (inputs.target == 'windows-x64' && (inputs.runner_overrides && vars.RUNNER_WINDOWS_X64 || 'windows-2025'))
+        || (inputs.target == 'macos-arm64' && (inputs.runner_overrides && vars.RUNNER_MACOS_ARM64 || 'macos-latest'))
+        || (inputs.target == 'macos-x64' && (inputs.runner_overrides && vars.RUNNER_MACOS_X64 || 'macos-15-intel')) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The solver tree hash covers its submodule pins; this file's hash makes a
+      # change to the build recipe rebuild too.
+      - name: Compute cache key
+        id: key
+        run: |
+          solver=$(git rev-parse HEAD:packages/pybammsolvers)
+          recipe=$(git rev-parse HEAD:.github/workflows/_build_solver_wheels.yml)
+          echo "key=$solver-$recipe" >> "$GITHUB_OUTPUT"
+
+      - name: Restore cached wheels
+        id: cache
+        if: inputs.cache_wheels
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: wheelhouse
+          key: solver-wheels-${{ inputs.target }}-${{ steps.key.outputs.key }}
+
+      - name: Upload cached wheels
+        if: steps.cache.outputs.cache-hit == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wheels-${{ inputs.target }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  build_windows:
+    name: Build (Windows)
+    needs: resolve
+    if: needs.resolve.outputs.build == 'true' && inputs.target == 'windows-x64'
+    runs-on: ${{ needs.resolve.outputs.runner }}
     permissions:
       contents: read
     env:
@@ -77,23 +110,12 @@ jobs:
         with:
           submodules: 'recursive'
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: $/.github/actions/check-target-runner
+        with:
+          target: ${{ inputs.target }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.13
-
-      - name: Compute solver source hash
-        id: solverhash
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: echo "hash=$(git rev-parse HEAD:packages/pybammsolvers)" >> "$GITHUB_OUTPUT"
-
-      - name: Restore cached wheels
-        id: cache
-        if: inputs.cache_wheels
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: packages/pybammsolvers/wheelhouse
-          key: solver-wheels-windows-${{ steps.solverhash.outputs.hash }}
 
       # Persist vcpkg's binary cache (built ports: casadi, sundials, suitesparse,
       # openblas) across runs, so a PR that only changes solver source rebuilds
@@ -102,7 +124,7 @@ jobs:
       # main's ports — vcpkg rebuilds only ABI-mismatched ones.
       - name: Cache vcpkg binary artifacts
         id: vcpkgcache
-        if: ${{ inputs.cache_wheels && steps.cache.outputs.cache-hit != 'true' }}
+        if: inputs.cache_wheels
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: C:\vcpkg-archives
@@ -113,7 +135,6 @@ jobs:
       # vcpkg (see VCPKG_TAG): sundials comes from the pybamm-team registry; its
       # klu feature needs only suitesparse-klu (no LAPACK/Fortran/MSYS2 chain).
       - name: Install vcpkg on Windows
-        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
@@ -125,7 +146,6 @@ jobs:
           New-Item -ItemType Directory -Force -Path C:\vcpkg-archives | Out-Null
 
       - name: Build wheels on Windows
-        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           # VCPKG_DEFAULT_BINARY_CACHE points vcpkg's default files cache at a
@@ -157,74 +177,45 @@ jobs:
             C:\vcpkg\buildtrees\sundials\*.log
             C:\vcpkg\buildtrees\detect_compiler\*.log
           if-no-files-found: ignore
-      - name: Upload Windows wheels
+      - name: Upload wheels
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: wheels_windows
+          name: wheels-${{ inputs.target }}
           path: packages/pybammsolvers/wheelhouse/*.whl
           if-no-files-found: error
 
-  build_manylinux_wheels:
-    name: Wheels (Linux ${{ matrix.arch }})
-    if: ${{ contains(fromJSON(inputs.platforms), 'linux') }}
-    runs-on: ${{ matrix.runner }}
+  build_linux:
+    name: Build (Linux)
+    needs: resolve
+    if: needs.resolve.outputs.build == 'true' && startsWith(inputs.target, 'linux-')
+    runs-on: ${{ needs.resolve.outputs.runner }}
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # x86_64 uses the default manylinux2014; CasADi's x86_64 wheel is
-          # built with the legacy libstdc++ ABI (CentOS 7, EPEL disabled).
-          - arch: x86_64
-            runner: ubuntu-latest
-            artifact: wheels_manylinux
-            before_all: >
-              yum -y --disablerepo=epel install openblas-devel lapack-devel &&
-              python install_KLU_Sundials.py
-          # aarch64 needs manylinux_2_34: CasADi's aarch64 wheel is built with
-          # the C++11 ABI and requires a GCC>=11 libstdc++, which manylinux2014
-          # and manylinux_2_28 lack. openblas/lapack live in AlmaLinux 9's CRB.
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-            artifact: wheels_manylinux_aarch64
-            before_all: >
-              dnf config-manager --set-enabled crb &&
-              dnf -y install openblas-devel lapack-devel &&
-              python install_KLU_Sundials.py
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: 'recursive'
           persist-credentials: false
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: $/.github/actions/check-target-runner
+        with:
+          target: ${{ inputs.target }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.13
 
-      - name: Compute solver source hash
-        id: solverhash
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: echo "hash=$(git rev-parse HEAD:packages/pybammsolvers)" >> "$GITHUB_OUTPUT"
-
-      - name: Restore cached wheels
-        id: cache
-        if: inputs.cache_wheels
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: packages/pybammsolvers/wheelhouse
-          key: solver-wheels-linux-${{ matrix.arch }}-${{ steps.solverhash.outputs.hash }}
-
       - name: Build wheels on Linux
-        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_ARCHS_LINUX: ${{ matrix.arch }}
+          CIBW_ARCHS_LINUX: ${{ inputs.target == 'linux-arm64' && 'aarch64' || 'x86_64' }}
           # aarch64 requires GCC>=11 libstdc++ for CasADi's C++11-ABI wheel;
           # ignored for the x86_64 build (which uses the default manylinux2014).
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
-          CIBW_BEFORE_ALL_LINUX: ${{ matrix.before_all }}
+          # x86_64 is CentOS 7 with EPEL disabled (CasADi's wheel uses the legacy
+          # libstdc++ ABI); aarch64 is AlmaLinux 9, with openblas/lapack in CRB.
+          CIBW_BEFORE_ALL_LINUX: >-
+            ${{ inputs.target == 'linux-arm64'
+            && 'dnf config-manager --set-enabled crb && dnf -y install openblas-devel lapack-devel && python install_KLU_Sundials.py'
+            || 'yum -y --disablerepo=epel install openblas-devel lapack-devel && python install_KLU_Sundials.py' }}
           # libcasadi ships as a pip dep (resolved at runtime via $ORIGIN/../casadi).
           # The soname stayed at 3.7 in CasADi 3.8; it does not track the release.
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --exclude libcasadi.so.3.7 -w {dest_dir} {wheel}
@@ -233,48 +224,33 @@ jobs:
             set -e -x
             python -m pytest {project}/tests
 
-      - name: Upload wheels for Linux
+      - name: Upload wheels
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ matrix.artifact }}
+          name: wheels-${{ inputs.target }}
           path: packages/pybammsolvers/wheelhouse/*.whl
           if-no-files-found: error
 
-  build_macos_wheels:
-    name: Wheels (${{ matrix.os }})
-    if: ${{ inputs.macos_runners != '[]' }}
-    runs-on: ${{ matrix.os }}
+  build_macos:
+    name: Build (macOS)
+    needs: resolve
+    if: needs.resolve.outputs.build == 'true' && startsWith(inputs.target, 'macos-')
+    runs-on: ${{ needs.resolve.outputs.runner }}
     permissions:
       contents: read
-    strategy:
-      matrix:
-        os: ${{ fromJSON(inputs.macos_runners) }}
-      fail-fast: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: 'recursive'
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: $/.github/actions/check-target-runner
+        with:
+          target: ${{ inputs.target }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.13
 
-      - name: Compute solver source hash
-        id: solverhash
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: echo "hash=$(git rev-parse HEAD:packages/pybammsolvers)" >> "$GITHUB_OUTPUT"
-
-      - name: Restore cached wheels
-        id: cache
-        if: inputs.cache_wheels
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: packages/pybammsolvers/wheelhouse
-          key: solver-wheels-${{ matrix.os }}-${{ steps.solverhash.outputs.hash }}
-
       - name: Install Fortran compiler
-        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         env:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
@@ -286,11 +262,9 @@ jobs:
           brew reinstall gcc
 
       - name: Install cibuildwheel
-        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         run: python -m pip install cibuildwheel
 
       - name: Build wheels on macOS
-        if: ${{ !(inputs.cache_wheels && steps.cache.outputs.cache-hit == 'true') }}
         shell: bash
         run: |
             set -e -x
@@ -337,8 +311,8 @@ jobs:
             python install_KLU_Sundials.py
             python -m cibuildwheel --output-dir wheelhouse
         env:
-          # 10.13 for Intel (macos-15-intel), 11.0 for Apple Silicon (macos-latest)
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-latest' && '11.0' || '10.13' }}
+          # 10.13 for Intel, 11.0 for Apple Silicon
+          MACOSX_DEPLOYMENT_TARGET: ${{ inputs.target == 'macos-arm64' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install delocate
           # libcasadi ships as a pip dep (resolved at runtime via
@@ -357,35 +331,31 @@ jobs:
             set -e -x
             python -m pytest {project}/tests
 
-      - name: Upload wheels for macOS (amd64, arm64)
+      - name: Upload wheels
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: wheels_${{ matrix.os }}
+          name: wheels-${{ inputs.target }}
           path: packages/pybammsolvers/wheelhouse/*.whl
           if-no-files-found: error
 
-  build_sdist:
-    name: Build SDist
-    if: inputs.build_sdist
+  # Saves from Ubuntu, the OS `resolve` restores on.
+  save_cache:
+    name: Cache wheels
+    needs: [resolve, build_windows, build_linux, build_macos]
+    if: >-
+      ${{ !cancelled() && inputs.cache_wheels && (needs.build_windows.result == 'success'
+      || needs.build_linux.result == 'success' || needs.build_macos.result == 'success') }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
+    permissions: {}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Download built wheels
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          submodules: 'recursive'
-          persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: 3.13
+          name: wheels-${{ inputs.target }}
+          path: wheelhouse
 
-      - name: Build SDist
-        run: pipx run build --sdist
-
-      - name: Upload SDist
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - name: Save wheels to the cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          name: sdist
-          path: packages/pybammsolvers/dist/*.tar.gz
-          if-no-files-found: error
+          path: wheelhouse
+          key: solver-wheels-${{ inputs.target }}-${{ needs.resolve.outputs.key }}

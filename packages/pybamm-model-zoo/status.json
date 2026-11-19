@@ -1,19 +1,29 @@
 {
-  "generated": "2026-10-19T09:30:27Z",
+  "generated": "2026-11-16T12:30:59Z",
   "models": {
+    "dual_continuum": {
+      "results": {
+        "26.10.1.0": "pass",
+        "26.10.1.1": "pass",
+        "main": "pass"
+      },
+      "last_pass": "26.10.1.1"
+    },
     "linearised_spm": {
       "results": {
         "26.10.1.0": "pass",
+        "26.10.1.1": "pass",
         "main": "pass"
       },
-      "last_pass": "26.10.1.0"
+      "last_pass": "26.10.1.1"
     },
     "multilayer_3d_thermal": {
       "results": {
         "26.10.1.0": "pass",
+        "26.10.1.1": "pass",
         "main": "pass"
       },
-      "last_pass": "26.10.1.0"
+      "last_pass": "26.10.1.1"
     }
   }
 }

@@ -6,7 +6,6 @@ from __future__ import annotations
 import numbers
 
 import numpy as np
-import sympy
 
 import pybamm
 from pybamm.type_definitions import (
@@ -86,8 +85,8 @@ class VariableBase(pybamm.Symbol):
         domains: DomainsType = None,
         bounds: tuple[Numeric, Numeric] | None = None,
         print_name: str | None = None,
-        scale: Numeric | None = None,
-        reference: Numeric | None = None,
+        scale: Numeric | pybamm.Symbol | None = None,
+        reference: Numeric | pybamm.Symbol | None = None,
     ):
         if scale is None:
             scale = 1
@@ -142,6 +141,8 @@ class VariableBase(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
