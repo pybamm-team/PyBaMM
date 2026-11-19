@@ -689,14 +689,14 @@ class TestFiniteVolume:
         assert disc_upwind.size == nodes.size + 1
         assert disc_downwind.size == nodes.size + 1
 
-        y_test = 2 * np.ones_like(nodes)
+        # The inflow face takes the Dirichlet value itself
+        y_test = nodes**2
         np.testing.assert_array_equal(
-            disc_upwind.evaluate(y=y_test),
-            np.concatenate([np.array([8]), 2 * np.ones(n)])[:, np.newaxis],
+            disc_upwind.evaluate(y=y_test), np.concatenate([[5], y_test])[:, np.newaxis]
         )
         np.testing.assert_array_equal(
             disc_downwind.evaluate(y=y_test),
-            np.concatenate([2 * np.ones(n), np.array([4])])[:, np.newaxis],
+            np.concatenate([y_test, [3]])[:, np.newaxis],
         )
 
         # Remove boundary conditions and check error is raised
@@ -716,6 +716,45 @@ class TestFiniteVolume:
             disc.process_symbol(upwind)
         with pytest.raises(pybamm.ModelError, match=r"Dirichlet boundary conditions"):
             disc.process_symbol(downwind)
+
+    def test_upwind_downwind_auxiliary_domains(self):
+        mesh = get_p2d_mesh_for_testing()
+        sp_meth = pybamm.FiniteVolume()
+        sp_meth.build(mesh)
+        disc = pybamm.Discretisation(
+            mesh,
+            {"macroscale": pybamm.FiniteVolume(), "negative particle": sp_meth},
+        )
+
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        bc_var = pybamm.Variable("bc_var", domain=["negative electrode"])
+        disc.set_variable_slices([var, bc_var])
+        disc_var = pybamm.StateVector(*disc.y_slices[var])
+        disc_bc_var = pybamm.StateVector(*disc.y_slices[bc_var])
+
+        n_prim = mesh["negative particle"].npts
+        n_sec = mesh["negative electrode"].npts
+        y_var = np.arange(1, n_prim * n_sec + 1, dtype=float)
+        y_bc = -np.arange(1, n_sec + 1, dtype=float)
+        y_test = np.concatenate([y_var, y_bc])
+        y_var = y_var.reshape(n_sec, n_prim)
+
+        # Symbolic boundary value, one per secondary point, and a constant one
+        for value, expected in [(disc_bc_var, y_bc), (pybamm.Scalar(7), 7)]:
+            bcs = {var: {"left": (value, "Dirichlet"), "right": (value, "Dirichlet")}}
+            for direction in ["upwind", "downwind"]:
+                faces = sp_meth.upwind_or_downwind(var, disc_var, bcs, direction)
+                faces = faces.evaluate(None, y_test).reshape(n_sec, n_prim + 1)
+                if direction == "upwind":
+                    inflow, interior = faces[:, 0], faces[:, 1:]
+                else:
+                    inflow, interior = faces[:, -1], faces[:, :-1]
+                np.testing.assert_array_equal(inflow, expected)
+                np.testing.assert_array_equal(interior, y_var)
 
     def test_grad_div_with_bcs_on_tab(self):
         # Create discretisation
