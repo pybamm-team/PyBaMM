@@ -25,6 +25,7 @@
 
 ## Features
 
+- `pybamm.QuickPlot` takes `x_axis="capacity"` to plot 0D variables against `"Discharge capacity [A.h]"` instead of time. The slider still sets the time, and the dashed line marks the first solution's discharge capacity at that time. ([#6035](https://github.com/pybamm-team/PyBaMM/pull/6035))
 - `IDAKLUSolver`'s new `"sensitivity_error_control"` option, off by default, puts forward sensitivities in IDAS's local error test, so they also meet the solver's tolerances, at the cost of a longer solve. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 - Added the `IDAKLUSolver` option `upsampling_tolerance`, which adds times within each step until linear interpolation of the voltage is within tolerance (voltage-controlled steps add none). They go in `Solution.t_additive` and `Solution.t`. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
 - `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
