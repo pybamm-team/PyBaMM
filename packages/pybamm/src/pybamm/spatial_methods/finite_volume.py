@@ -1746,7 +1746,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             n_edges = len(submesh.edges) * repeats
             evaluate_on_edges.append(child.size == n_edges)
         if np.all(evaluate_on_edges):
-            # raise Exception(f"Creating a flux concatenation from {disc_children}")
             return pybamm.flux_concatenation(disc_children, self.mesh)
 
         # Otherwise, average any children that evaluate on the edges (size n_edges)
