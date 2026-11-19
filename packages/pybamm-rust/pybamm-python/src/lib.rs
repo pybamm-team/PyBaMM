@@ -12,7 +12,11 @@ mod expr;
 mod function_metadata;
 mod jacobian;
 mod model;
+#[cfg(feature = "diffsol")]
+mod rayon_pool;
 mod scratch_pool;
+#[cfg(feature = "diffsol")]
+mod solver;
 
 #[pymodule]
 #[pyo3(name = "_core")]
@@ -23,6 +27,15 @@ fn core_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<jacobian::CompiledJacobian>()?;
     m.add_class::<model::CompiledModel>()?;
     m.add_class::<evaluator_pool::EvaluatorPool>()?;
+
+    #[cfg(feature = "diffsol")]
+    {
+        m.add_class::<solver::PreparedSolver>()?;
+        m.add_class::<solver::SolverStatistics>()?;
+        m.add_class::<solver::SolveOutcome>()?;
+        m.add_function(wrap_pyfunction!(solver::default_solver_options, m)?)?;
+        m.add_function(wrap_pyfunction!(rayon_pool::pool_ids, m)?)?;
+    }
 
     Ok(())
 }

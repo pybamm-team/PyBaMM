@@ -28,6 +28,10 @@ with _global_symbol_visibility():
         EvaluatorPool,
         Expr,
         ExprGraph,
+        PreparedSolver,
+        SolveOutcome,
+        SolverStatistics,
+        default_solver_options,
     )
 
 __all__ = [
@@ -37,4 +41,8 @@ __all__ = [
     "EvaluatorPool",
     "Expr",
     "ExprGraph",
+    "PreparedSolver",
+    "SolveOutcome",
+    "SolverStatistics",
+    "default_solver_options",
 ]

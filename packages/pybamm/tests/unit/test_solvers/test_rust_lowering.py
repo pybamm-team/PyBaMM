@@ -54,6 +54,17 @@ class TestOutputLengths:
         with pytest.raises(pybamm.SolverError, match=r"'field' is a tensor field"):
             lowering.outputs(["field"])
 
+    def test_idaklu_and_diffsol_agree_on_output_lengths(self):
+        t_eval = np.linspace(0, 100, 5)
+
+        idaklu = pybamm.IDAKLUSolver(output_variables=_OUTPUTS)
+        idaklu.solve(_built_model(), t_eval)
+
+        diffsol = pybamm.DiffsolSolver(output_variables=_OUTPUTS)
+        diffsol.solve(_built_model(), t_eval)
+
+        assert idaklu._setup["output_assembly"]._rows == diffsol._output_assembly._rows
+
 
 class TestInputRegistration:
     def test_graph_input_order_follows_the_inputs_dict(self):
@@ -193,7 +204,9 @@ class TestGenericEvaluators:
                 rtol=1e-12,
             )
 
-    @pytest.mark.parametrize("solver_class", [pybamm.IDAKLUSolver])
+    @pytest.mark.parametrize(
+        "solver_class", [pybamm.IDAKLUSolver, pybamm.DiffsolSolver]
+    )
     def test_every_native_solver_binds_both_slots(self, solver_class):
         """An unbound events slot would silently skip the event-violation check."""
         model = _built_model()
@@ -245,7 +258,9 @@ class TestOneGraphPerSetUp:
         solver.set_up(model, inputs={}, t_eval=np.linspace(0, 100, 3))
         return len(built)
 
-    @pytest.mark.parametrize("solver_class", [pybamm.IDAKLUSolver])
+    @pytest.mark.parametrize(
+        "solver_class", [pybamm.IDAKLUSolver, pybamm.DiffsolSolver]
+    )
     def test_native_set_up_builds_one_graph_beside_the_initial_conditions(
         self, monkeypatch, solver_class
     ):

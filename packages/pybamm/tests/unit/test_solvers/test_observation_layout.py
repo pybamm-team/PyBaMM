@@ -148,6 +148,25 @@ class TestOutputAssembly:
         with pytest.raises(pybamm.SolverError, match=r"Output layout mismatch"):
             OutputAssembly.dense(["Voltage [V]", "Current [A]"], [1])
 
+    def test_parameter_blocks_stack_into_the_attachable_layout(self, solution):
+        assembly, _ = self._assembly(solution, ["Voltage [V]"])
+        n_t = len(solution.t)
+        blocks = [np.arange(n_t, dtype=float), np.arange(n_t, dtype=float) * -1.0]
+
+        stacked = assembly.stack_parameter_blocks(blocks, n_t, ["a", "b"])
+
+        assert stacked.shape == (n_t, 1, 2)
+        np.testing.assert_allclose(stacked[:, 0, 0], blocks[0])
+        np.testing.assert_allclose(stacked[:, 0, 1], blocks[1])
+
+    def test_one_block_per_parameter_is_required(self, solution):
+        assembly, _ = self._assembly(solution, ["Voltage [V]"])
+        n_t = len(solution.t)
+        with pytest.raises(
+            pybamm.SolverError, match=r"Sensitivity block count mismatch"
+        ):
+            assembly.stack_parameter_blocks([np.zeros(n_t)], n_t, ["a", "b"])
+
     def test_a_solve_without_sensitivities_leaves_an_empty_mapping(self, solution):
         # Empty, not None: an outputs-only solve keeps no state to compute them from
         assembly, data = self._assembly(solution, ["Voltage [V]"])

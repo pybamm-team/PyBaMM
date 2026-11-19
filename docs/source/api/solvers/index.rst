@@ -4,6 +4,7 @@ Solvers
 .. toctree::
 
   base_solver
+  diffsol_solver
   dummy_solver
   scipy_solver
   jax_solver
