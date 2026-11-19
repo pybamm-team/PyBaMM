@@ -1056,11 +1056,13 @@ class BaseModel:
                 parameter_info[submodel_name] = submodel_info
 
         else:
-            parameters = self._find_symbols(pybamm.Parameter)
+            parameters = self._find_symbols(pybamm.Parameter, include_geometry=True)
             for param in parameters:
                 parameter_info[param.name] = (param, "Parameter")
 
-            input_parameters = self._find_symbols(pybamm.InputParameter)
+            input_parameters = self._find_symbols(
+                pybamm.InputParameter, include_geometry=True
+            )
             for input_param in input_parameters:
                 if not input_param.domain:
                     parameter_info[input_param.name] = (input_param, "InputParameter")
@@ -1070,7 +1072,9 @@ class BaseModel:
                         f"InputParameter in {input_param.domain}",
                     )
 
-            function_parameters = self._find_symbols(pybamm.FunctionParameter)
+            function_parameters = self._find_symbols(
+                pybamm.FunctionParameter, include_geometry=True
+            )
             for func_param in function_parameters:
                 if func_param.name not in parameter_info:
                     input_names = "', '".join(func_param.input_names)
@@ -1247,8 +1251,10 @@ class BaseModel:
         self,
         typ: type[_SymbolT] | tuple[type[_SymbolT], ...],
         fixed_input_parameters=None,
+        include_geometry=False,
     ) -> list[_SymbolT]:
-        """Find all the instances of `typ` in the model"""
+        """Find all the instances of `typ` in the model (and, optionally, in its
+        default geometry)"""
         if fixed_input_parameters is None:
             fixed_input_parameters = self.fixed_input_parameters
         all_items = chain(
@@ -1264,6 +1270,10 @@ class BaseModel:
             fixed_input_parameters,
             (event.expression for event in self.events),
         )
+        if include_geometry:
+            all_items = chain(
+                all_items, pybamm.Geometry(self.default_geometry).parameters
+            )
         symbols = pybamm.SymbolUnpacker(typ).unpack_list_of_symbols(all_items)
         # The unpacker only returns instances of `typ`
         return cast(list[_SymbolT], list(symbols))
