@@ -125,6 +125,50 @@ class TestRoundtripValueTypes:
             pv, pv2, "D", {"sto": _sv(0, n), "T": _sv(n, n)}, y
         )
 
+    def test_callable_with_spatial_variable_keeps_domain(self):
+        size = {
+            "primary": ["negative particle size"],
+            "secondary": ["current collector"],
+        }
+
+        def j0(c_s):
+            R = pybamm.SpatialVariable("R_n", domains=size, coord_sys="cartesian")
+            return c_s * R
+
+        pv = pybamm.ParameterValues({"j0": j0})
+        pv2 = _roundtrip(pv)
+
+        c_s = pybamm.Variable("c_s", domains=size)
+        for values in (pv, pv2):
+            out = values.process_symbol(pybamm.FunctionParameter("j0", {"c_s": c_s}))
+            (R,) = [n for n in out.pre_order() if isinstance(n, pybamm.SpatialVariable)]
+            assert R.domain == ["negative particle size"]
+            assert R.domains["secondary"] == ["current collector"]
+
+    def test_callable_with_domain_changing_operator_keeps_domains(self):
+        size = {
+            "primary": ["negative particle size"],
+            "secondary": ["current collector"],
+        }
+
+        def f(c):
+            R = pybamm.SpatialVariable("R_n", domains=size, coord_sys="cartesian")
+            return pybamm.boundary_value(R, "right") * c
+
+        pv = pybamm.ParameterValues({"f": f})
+        pv2 = _roundtrip(pv)
+
+        c = pybamm.Variable("c", domain="current collector")
+        fp = pybamm.FunctionParameter("f", {"c": c})
+
+        def nodes(values):
+            return [
+                (type(n).__name__, n.name, n.domains)
+                for n in values.process_symbol(fp).pre_order()
+            ]
+
+        assert nodes(pv2) == nodes(pv)
+
     def test_callable_with_keyword_args(self):
         def func_no_kwargs(x):
             return 2 * x
