@@ -323,10 +323,7 @@ class TestExperimentMemory:
         assert live_sums_at_experiment_end(6) == live_sums_at_experiment_end(3)
 
     def test_processed_variable_computed_initialise_is_lazy(self):
-        # initialise_* (np.concatenate / flatten / xr.DataArray build) must
-        # defer until the data is actually read, otherwise per-step
-        # ProcessedVariableComputed instances in discarded cycles do work nobody
-        # ever reads.
+        # Variables of discarded cycles are never read, so initialise_* waits for a read
         unroll_calls = 0
         original = pybamm.ProcessedVariableComputed.unroll_0D
 
