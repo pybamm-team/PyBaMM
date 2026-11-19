@@ -19,6 +19,7 @@ class TestCompareOutputs:
         param = models[0].default_parameter_values
         param.update({"Current function [A]": 1})
         for model in models:
+            model.convert_to_format = "casadi"
             param.process_model(model)
 
         # set mesh
@@ -61,6 +62,7 @@ class TestCompareOutputs:
             param = models[0].default_parameter_values
             param.update({"Current function [A]": 1})
             for model in models:
+                model.convert_to_format = "casadi"
                 param.process_model(model)
 
             # set mesh

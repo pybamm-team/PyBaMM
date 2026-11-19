@@ -114,6 +114,7 @@ class TestStoreFirstLast:
 
     def test_non_idaklu_warns_and_no_ops(self):
         model = _build_simple_dae_model()
+        model.convert_to_format = "casadi"
         solver = pybamm.CasadiSolver(store_first_last=True)
 
         t_eval = np.linspace(0, 1, 11)
@@ -125,6 +126,7 @@ class TestStoreFirstLast:
 
     def test_non_idaklu_warning_fires_once_per_instance(self):
         model = _build_simple_dae_model()
+        model.convert_to_format = "casadi"
         solver = pybamm.CasadiSolver(store_first_last=True)
         t_eval = np.linspace(0, 1, 5)
 

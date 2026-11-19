@@ -56,6 +56,8 @@ def _decay_model(factor):
     model.initial_conditions = {u: 1}
     model.variables = {"u": u, "w": factor * u}
     pybamm.Discretisation().process_model(model)
+    # CasADi whatever the default, since most of these tests read CasADi leaves
+    model.convert_to_format = "casadi"
     return model
 
 
@@ -128,6 +130,7 @@ class TestObserverCache:
             "Q squared": pybamm.ExplicitTimeIntegral(u, pybamm.Scalar(0)) ** 2,
         }
         pybamm.Discretisation().process_model(model)
+        model.convert_to_format = "casadi"
         solver = pybamm.IDAKLUSolver()
         convert = pybamm.Solution._convert_to_casadi
 
