@@ -1,7 +1,5 @@
 import sys
 
-from posthog import Posthog
-
 import pybamm
 
 
@@ -14,23 +12,38 @@ class MockTelemetry:
         pass
 
 
-if pybamm.config.check_opt_out():
-    _posthog = MockTelemetry()
-else:  # pragma: no cover
-    _posthog = Posthog(
-        # this is the public, write only API key, so it's ok to include it here
-        project_api_key="phc_acTt7KxmvBsAxaE0NyRd5WfJyNxGvBq1U9HnlQSztmb",
-        host="https://us.i.posthog.com",
-    )
-    _posthog.log.setLevel("CRITICAL")
+# Created on first use: importing PostHog would slow every `import pybamm`
+_posthog = None
+
+
+def _client():
+    """Return the telemetry client, creating it on first use."""
+    global _posthog
+    if _posthog is None:
+        if pybamm.config.check_opt_out():
+            _posthog = MockTelemetry()
+        else:  # pragma: no cover
+            from posthog import Posthog
+
+            _posthog = Posthog(
+                # this is the public, write only API key, so it's ok to include it here
+                project_api_key="phc_acTt7KxmvBsAxaE0NyRd5WfJyNxGvBq1U9HnlQSztmb",
+                host="https://us.i.posthog.com",
+            )
+            _posthog.log.setLevel("CRITICAL")
+    return _posthog
 
 
 def disable():
-    _posthog.disabled = True
+    global _posthog
+    if _posthog is None:
+        _posthog = MockTelemetry()
+    else:
+        _posthog.disabled = True
 
 
 def capture(event):  # pragma: no cover
-    if pybamm.config.is_running_tests() or _posthog.disabled:
+    if pybamm.config.is_running_tests() or (_posthog is not None and _posthog.disabled):
         return
 
     if pybamm.config.check_opt_out():
@@ -44,4 +57,4 @@ def capture(event):  # pragma: no cover
             "pybamm_version": pybamm.__version__,
         }
         user_id = config["uuid"]
-        _posthog.capture(distinct_id=user_id, event=event, properties=properties)
+        _client().capture(distinct_id=user_id, event=event, properties=properties)

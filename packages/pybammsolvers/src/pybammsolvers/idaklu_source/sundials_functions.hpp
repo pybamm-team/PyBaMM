@@ -2,6 +2,7 @@
 #define PYBAMM_SUNDIALS_FUNCTIONS_HPP
 
 #include "common.hpp"
+#include <cmath>
 
 template<typename T>
 void axpy(int const n, T alpha, const T* x, T* y) {
@@ -11,6 +12,19 @@ void axpy(int const n, T alpha, const T* x, T* y) {
   for (int i=0; i<n; ++i) {
       *y++ += alpha**x++;
   }
+}
+
+/**
+ * @brief Whether every entry of x is finite, i.e. neither NaN nor inf
+ */
+template<typename T>
+bool all_finite(int const n, const T* x) {
+  // No early exit, so the compiler can vectorise the scan
+  bool finite = true;
+  for (int i = 0; i < n; ++i) {
+    finite &= std::isfinite(x[i]);
+  }
+  return finite;
 }
 
 int residual_eval(sunrealtype tres, N_Vector yy, N_Vector yp, N_Vector rr,

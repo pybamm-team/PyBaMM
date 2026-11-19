@@ -7,6 +7,8 @@
 
 [tool.uv.workspace]
 members = ["packages/*"]
+# uv would glob the Rust crate and error on its absent pyproject.
+exclude = ["packages/pybamm-rust"]
 
 [tool.uv.sources]
 pybammsolvers = { workspace = true }
@@ -37,10 +39,9 @@ dev = [
 # config by walking up from each file, so it must live at the repo root.
 # The C/C++ solver package keeps its own packages/pybammsolvers/ruff.toml. ---
 [tool.ruff]
-# Match the packages' requires-python floor (>=3.10). On main this was inferred
-# from [project].requires-python; the workspace root has no [project], so set it
-# explicitly (this also satisfies repo-review's RF002).
-target-version = "py310"
+# The workspace root has no [project] to infer this from, so keep it in step
+# with the packages' requires-python floor.
+target-version = "py311"
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]
 
