@@ -461,6 +461,34 @@ class TestInterpolant:
         with pytest.raises(NotImplementedError, match="degree-0"):
             third.to_casadi(y=casadi_y)
 
+    def test_2d_cubic_to_casadi_matches_rect_bivariate_spline(self):
+        # Coefficient order regression (#4877)
+        sto = np.linspace(0, 1, 8)
+        temp = np.linspace(273, 313, 6)
+        data = (
+            1e-14
+            * (1 + 0.3 * sto[:, None] ** 2)
+            * (1 + 0.02 * (temp[None, :] - 293) / 10)
+        )
+        var1 = pybamm.StateVector(slice(0, 1))
+        var2 = pybamm.StateVector(slice(1, 2))
+        interp = pybamm.Interpolant(
+            (sto, temp), data, (var1, var2), interpolator="cubic"
+        )
+        casadi_y = casadi.MX.sym("y", 2)
+        f = casadi.Function("f", [casadi_y], [interp.to_casadi(y=casadi_y)])
+        reference = interpolate.RectBivariateSpline(sto, temp, data)
+
+        knot_points = np.array([[s, t] for s in sto for t in temp], dtype=np.float64)
+        got = np.array([float(f(p)) for p in knot_points])
+        np.testing.assert_allclose(got, data.flatten(), rtol=1e-12, atol=0)
+
+        rng = np.random.default_rng(0)
+        off_knot = np.column_stack([rng.uniform(0, 1, 25), rng.uniform(273, 313, 25)])
+        got = np.array([float(f(p)) for p in off_knot])
+        want = np.array([reference(p[0], p[1])[0, 0] for p in off_knot])
+        np.testing.assert_allclose(got, want, rtol=1e-12, atol=0)
+
     def test_processing(self):
         x = np.linspace(0, 1, 200)
         y = pybamm.StateVector(slice(0, 2))
