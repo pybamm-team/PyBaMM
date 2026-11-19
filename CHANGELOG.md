@@ -38,7 +38,7 @@
 
 ## Bug fixes
 
-- `FiniteVolume` now averages a node-valued divisor of a gradient, as in `grad(u) / w`, onto faces as a resistance in series, so it gives the same result as `grad(u) * (1 / w)`, and takes the arithmetic mean of a node-valued term added to a gradient, as in `w + grad(u)`. Before, these took the harmonic mean, which is wrong for a resistivity in a denominator. No built-in model uses these forms, so their results are unchanged; results of user models written this way change. ([#5863](https://github.com/pybamm-team/PyBaMM/issues/5863), [#5940](https://github.com/pybamm-team/PyBaMM/pull/5940))
+- `FiniteVolume` now averages a node-valued divisor of a gradient, as in `grad(u) / w`, onto faces as a series resistance, matching `grad(u) * (1 / w)`, and a term added to a gradient arithmetically; both took the harmonic mean. ([#5863](https://github.com/pybamm-team/PyBaMM/issues/5863), [#5940](https://github.com/pybamm-team/PyBaMM/pull/5940))
 - `BasicDFNUnstructured` reports `"Voltage [V]"` as the area-weighted mean of the positive electrode potential over the positive face, instead of one corner cell's value, which depended on the in-plane mesh. ([#5822](https://github.com/pybamm-team/PyBaMM/pull/5822))
 - Reading a 0D variable at its stored times, `var(solution.t)`, no longer raises when the solution repeats a time. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
