@@ -192,13 +192,12 @@ class Discretisation:
         if self._remove_independent_variables_from_rhs_flag:
             model = self.remove_independent_variables_from_rhs(model)
         # Find those RHS's that are constant
-        if self.spatial_methods == {}:
-            for var in itertools.chain(model.rhs, model.algebraic):
-                if var.domain != []:
-                    raise pybamm.DiscretisationError(
-                        "Spatial method has not been given "
-                        f"for variable {var.name} with domain {var.domain}"
-                    )
+        for var in itertools.chain(model.rhs, model.algebraic):
+            if var.domain and var.domain[0] not in self.spatial_methods:
+                raise pybamm.DiscretisationError(
+                    "Spatial method has not been given "
+                    f"for variable {var.name} with domain '{var.domain[0]}'"
+                )
 
         # resolve before boundary conditions are discretised below
         if self._resolve_coupled_variables:

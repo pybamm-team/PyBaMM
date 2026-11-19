@@ -65,12 +65,45 @@ class Mesh(dict):
         # Save geometry
         self.geometry = geometry
 
+        missing_domains = set(geometry) - set(submesh_types)
+        if missing_domains:
+            domains = ", ".join(sorted(missing_domains))
+            raise pybamm.GeometryError(
+                f"No submesh type provided for domain(s): {domains}"
+            )
         # Preprocess var_pts
         var_pts_input = var_pts
         var_pts = {}
         for key, value in var_pts_input.items():
             if isinstance(key, str):
-                key = getattr(pybamm.standard_spatial_vars, key)
+                try:
+                    key = getattr(pybamm.standard_spatial_vars, key)
+                except AttributeError as error:
+                    raise pybamm.GeometryError(
+                        f"Unknown spatial variable '{key}' in 'var_pts'"
+                    ) from error
+            if not isinstance(key, pybamm.SpatialVariable):
+                raise pybamm.GeometryError(
+                    f"'var_pts' keys must be spatial variables, got {key!r}"
+                )
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, numbers.Integral)
+                or value <= 0
+            ):
+                raise pybamm.GeometryError(
+                    f"The number of points for variable '{key.name}' in 'var_pts' "
+                    "must be a positive integer"
+                )
+            if (
+                value is not None
+                and key.domain[0] in {"negative particle", "positive particle"}
+                and value < 2
+            ):
+                raise pybamm.GeometryError(
+                    f"The number of points for particle variable '{key.name}' in "
+                    "'var_pts' must be at least 2"
+                )
             var_pts[key] = value
 
         # convert var_pts to an id dict
