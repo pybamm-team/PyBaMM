@@ -8,7 +8,6 @@ import warnings
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
@@ -162,6 +161,8 @@ class UnaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -845,6 +846,8 @@ class Integral(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.Integral(child, sympy.Symbol("xn"))
 
 
@@ -1230,6 +1233,8 @@ class BoundaryValue(BoundaryOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        import sympy
+
         if (
             self.child._domains["primary"][0]
             in ["negative particle", "positive particle"]
@@ -1319,6 +1324,8 @@ class BoundaryGradient(BoundaryOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        import sympy
+
         latex_child = (
             r"\nabla " + sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
         )

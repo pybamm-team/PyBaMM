@@ -12,12 +12,11 @@ from functools import cache
 
 import casadi
 import numpy as np
-import pandas as pd
 import pytest
-import xarray as xr
 
 import pybamm
 import tests
+from pybamm.solvers.grid_interpolation import RectilinearGrid
 from pybamm.solvers.processed_variable import (
     ProcessedVariable0D,
     ProcessedVariable1D,
@@ -334,39 +333,46 @@ class TestProcessedVariableComputed:
             (np.array([-0.5, 0.0, 0.5, 1.0, 2.0]), (5,)),
         ],
     )
-    def test_0D_call_matches_the_xarray_route(self, t_query, shape):
+    def test_0D_call_interpolates_in_time(self, t_query, shape):
         processed_var = self._build_0D_var()
         values = processed_var(t_query)
-        expected = processed_var._xr_data_array.interp(t=t_query).values
+        expected = np.interp(
+            t_query,
+            processed_var.t_pts,
+            processed_var.entries,
+            left=np.nan,
+            right=np.nan,
+        )
 
         assert isinstance(values, np.ndarray)
         assert values.shape == shape
-        np.testing.assert_allclose(values, expected, rtol=1e-14)
+        np.testing.assert_array_equal(values, expected)
         t_array = np.asarray(t_query)
         in_range = (t_array >= 0) & (t_array <= 1)
         np.testing.assert_allclose(values[in_range], 5 * t_array[in_range])
-        # out-of-range queries are NaN, as xarray fills them
+        # out-of-range queries are NaN
         assert np.isnan(values[~in_range]).all()
 
-    def test_0D_call_keeps_xarray_errors(self):
-        # a multi-dimensional t is rejected, as for every other dimension
+    def test_0D_call_checks_its_time_grid_once(self):
         processed_var = self._build_0D_var()
-        with pytest.raises(IndexError, match=r"multi-dimensional"):
+        processed_var(0.25)
+        _, grid = processed_var._interpolation_grid()
+        checked = grid._increasing["t"]
+        processed_var([0.5, 0.75])
+        assert processed_var._interpolation_grid()[1] is grid
+        assert grid._increasing["t"] is checked
+
+    def test_0D_call_errors(self):
+        processed_var = self._build_0D_var()
+        with pytest.raises(ValueError, match=r"must be a scalar or 1D, not 2D"):
             processed_var(np.array([[0.1, 0.2], [0.3, 0.4]]))
 
         # a repeated solution time has no single value to interpolate from
         processed_var = self._build_0D_var(np.array([0.0, 0.5, 0.5, 1.0]))
-        with pytest.raises(pd.errors.InvalidIndexError):
+        with pytest.raises(ValueError, match=r"repeats a point"):
             processed_var(0.25)
 
-    def test_data_array_is_built_on_first_interpolation(self):
-        # .data, .entries and 0D time-only reads never build the xr.DataArray
-        processed_var = self._build_0D_var()
-        processed_var.data
-        processed_var.entries
-        processed_var(np.array([0.25, 0.75]))
-        assert processed_var._xr_data_array_cache is None
-
+    def test_1D_call_interpolates_in_space_and_time(self):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
         disc = tests.get_discretisation_for_testing()
@@ -374,19 +380,26 @@ class TestProcessedVariableComputed:
         x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
-        y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
+        # Time-major data, 5 * t at every x
+        data = 5 * t_sol[:, np.newaxis] * np.ones_like(x_sol)
         processed_var = pybamm.ProcessedVariableComputed(
             [var_sol],
-            [to_casadi(var_sol, y_sol)],
-            [y_sol],
-            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            [to_casadi(var_sol, data.T)],
+            [data],
+            pybamm.Solution(t_sol, data.T, pybamm.BaseModel(), {}),
         )
-        processed_var.entries
-        assert processed_var._xr_data_array_cache is None
 
-        processed_var(t_sol, x_sol)
-        assert isinstance(processed_var._xr_data_array_cache, xr.DataArray)
-        assert processed_var._xr_interp_args is None
+        # the stored points come back exactly
+        np.testing.assert_array_equal(
+            processed_var(t_sol, x_sol), processed_var.entries
+        )
+        # between them, a scalar drops its axis and an array keeps it
+        x_mid = 0.5 * (x_sol[:-1] + x_sol[1:])
+        values = processed_var(0.25, x_mid)
+        assert values.shape == (len(x_mid),)
+        np.testing.assert_allclose(values, 1.25)
+        values = processed_var([0.25, 0.75], x_mid[0])
+        np.testing.assert_allclose(values, [1.25, 3.75])
 
     # check empty sensitivity works
     def test_processed_variable_0D_no_sensitivity(self):
@@ -998,6 +1011,29 @@ class TestProcessedVariableComputed:
             + ", ".join(sorted(set(methods) - covered_methods))
         )
 
+    def test_unpickling_drops_xarray_caches_of_older_versions(self):
+        variable = self._build_0D_var()
+        expected = variable(0.5)
+        # 26.10 or earlier pickled these, and no grid of its own
+        variable._xr_data_array_cache = ["stand-in for an xarray.DataArray"]
+        variable._xr_interp_args = None
+        del variable._interp_args
+        restored = pickle.loads(pickle.dumps(variable))
+        assert "_xr_data_array_cache" not in vars(restored)
+        assert "_xr_interp_args" not in vars(restored)
+        np.testing.assert_array_equal(restored(0.5), expected)
+
+    def test_pickling_saves_the_grid_as_coordinates(self):
+        variable = self._build_0D_var()
+        expected = variable([0.25, 0.5])
+        assert isinstance(variable._interp_args[1], RectilinearGrid)
+        pickled = pickle.dumps(variable)
+        assert b"RectilinearGrid" not in pickled
+        # The variable itself keeps its grid
+        assert isinstance(variable._interp_args[1], RectilinearGrid)
+        restored = pickle.loads(pickled)
+        np.testing.assert_array_equal(restored([0.25, 0.5]), expected)
+
     @pytest.mark.parametrize("read_before_pickling", [False, True])
     def test_variable_pickled_by_v26_9_reads_and_joins(self, read_before_pickling):
         sim = pybamm.Simulation(
@@ -1008,11 +1044,10 @@ class TestProcessedVariableComputed:
         later = sim.solve([600, 1200])
         variable = first["Voltage [V]"]
         if read_before_pickling:
-            # v26.9 built the DataArray on the first read
-            variable._xr_data_array
+            variable.entries
         loaded = pickle.loads(pickle.dumps(variable))
-        # v26.9 pickled the variable without these attributes
-        for name in ("time_integral", "_unjoinable", "_xr_interp_args"):
+        # v26.9 pickled the variable without these; v26.10 also lacks _interp_args
+        for name in ("time_integral", "_unjoinable", "_interp_args"):
             delattr(loaded, name)
         np.testing.assert_array_equal(loaded.entries, variable.entries)
         np.testing.assert_array_equal(loaded(t=300.0), variable(t=300.0))
