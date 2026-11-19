@@ -25,6 +25,7 @@
 
 ## Features
 
+- `pybamm.step.ControlStep` lets experiment steps drive any model parameter, setting it to a value or adjusting it to zero a residual, in both experiment modes. The unified mode reads `"Ambient temperature [K]"` only if the model does. ([#6015](https://github.com/pybamm-team/PyBaMM/issues/6015), [#6016](https://github.com/pybamm-team/PyBaMM/pull/6016))
 - `IDAKLUSolver`'s new `"sensitivity_error_control"` option, off by default, puts forward sensitivities in IDAS's local error test, so they also meet the solver's tolerances, at the cost of a longer solve. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 - Added the `IDAKLUSolver` option `upsampling_tolerance`, which adds times within each step until linear interpolation of the voltage is within tolerance (voltage-controlled steps add none). They go in `Solution.t_additive` and `Solution.t`. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
 - `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
@@ -39,6 +40,7 @@
 ## Bug fixes
 
 - Experiments run on models without summary variables, such as a `pybamm.BaseModel`, and `Simulation` raises a `ModelError` when the model reads neither `"Current function [A]"` nor, for steps with a temperature, `"Ambient temperature [K]"`, rather than ignoring the steps. ([#6013](https://github.com/pybamm-team/PyBaMM/issues/6013), [#6014](https://github.com/pybamm-team/PyBaMM/pull/6014))
+- Experiment steps with drive cycles of over 500 rows that differ only away from their ends are now different steps. Before, the second ran the first's drive cycle. ([#6017](https://github.com/pybamm-team/PyBaMM/issues/6017), [#6018](https://github.com/pybamm-team/PyBaMM/pull/6018))
 - `BasicDFNUnstructured` reports `"Voltage [V]"` as the area-weighted mean of the positive electrode potential over the positive face, instead of one corner cell's value, which depended on the in-plane mesh. ([#5822](https://github.com/pybamm-team/PyBaMM/pull/5822))
 - Reading a 0D variable at its stored times, `var(solution.t)`, no longer raises when the solution repeats a time. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
