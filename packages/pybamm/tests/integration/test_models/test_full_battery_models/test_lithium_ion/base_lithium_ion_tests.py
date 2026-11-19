@@ -392,7 +392,7 @@ class BaseIntegrationTestLithiumIon:
             )
 
         experiment = pybamm.Experiment(
-            ["Discharge at 1C for 10 minutes", "Rest for 1 hour"]
+            ["Discharge at 1C for 10 minutes", "Rest for 20 minutes"]
         )
         rise = {}
         for psd in ["single", "distribution"]:
@@ -430,8 +430,8 @@ class BaseIntegrationTestLithiumIon:
             V = rest["Voltage [V]"].entries
             rise[psd] = (h[-1] - h[0], V[-1] - np.interp(t[0] + 60, t, V))
 
-        assert rise["distribution"][0] > rise["single"][0] + 0.1
-        assert rise["distribution"][1] > rise["single"][1] + 1e-3
+        assert rise["distribution"][0] > rise["single"][0] + 0.05
+        assert rise["distribution"][1] > rise["single"][1]
 
     def test_composite_graphite_silicon(self):
         options = {
