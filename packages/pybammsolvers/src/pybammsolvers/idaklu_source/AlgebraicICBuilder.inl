@@ -13,10 +13,8 @@ int IDAKLUSolverOpenMP<ExprSet>::SolveICLinearSystem(
     N_Vector yy_ptr, N_Vector yyp_ptr,
     const sunrealtype* y_in, sunrealtype* res, sunrealtype* delta) {
 
-  // Reuses IDA's J and LS — no extra full-size matrix or solver allocation.
-  // Direct LS (J != nullptr): refill J at cj=1, then SUNLinSolSetup/Solve.
-  // Iterative LS (J == nullptr): SUNLinSolSetup runs the registered
-  // preconditioner setup; SUNLinSolSolve uses IDA's installed ATimes/PSolve.
+  // Reuses IDA's direct LS and J (refilled at cj=1), with no extra allocation;
+  // BuildAlgebraicSolver leaves iterative LSs to IDACalcIC instead
   auto& fs = *this->alg_state_->full;
 
   sunrealtype* yy_data = NV_DATA(yy_ptr);
@@ -208,6 +206,14 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
 
   // Discretisation makes M zero in the algebraic rows (id 0); the sub-block
   // functions are only passed for standard-form DAEs
+  auto* funcs = functions.get();
+  bool has_alg_fns = (funcs->alg_res->nnz_out() > 0 && funcs->alg_jac->nnz_out() > 0);
+
+  // FULL mode drives IDA's linear solver outside IDA, which an iterative one
+  // cannot survive (its ATimes reads IDA's unset ycur); IDACalcIC is used instead
+  if (!has_alg_fns && setup_opts.using_iterative_solver) {
+    return;
+  }
 
   alg_state_ = std::make_unique<AlgSolverState>();
   auto& as = *alg_state_;
@@ -219,13 +225,11 @@ void IDAKLUSolverOpenMP<ExprSet>::BuildAlgebraicSolver(const sunrealtype* id_val
       as.diff_idx.push_back(i);
   }
 
-  auto* funcs = functions.get();
   auto* yy_ptr = yy;
   auto* yyp_ptr = yyp;
   const sunrealtype* atol_data = N_VGetArrayPointer(avtol);
 
   using Mode = typename AlgSolverState::Mode;
-  bool has_alg_fns = (funcs->alg_res->nnz_out() > 0 && funcs->alg_jac->nnz_out() > 0);
   as.mode = has_alg_fns ? Mode::SUBBLOCK : Mode::FULL;
 
   int n_solve_vars;

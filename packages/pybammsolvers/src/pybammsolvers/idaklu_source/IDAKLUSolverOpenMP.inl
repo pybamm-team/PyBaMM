@@ -157,6 +157,11 @@ void IDAKLUSolverOpenMP<ExprSet>::SetSolverOptions() {
 
   // Maximum number of nonlinear solver iterations at one step
   CheckErrors(IDASetMaxNonlinIters(ida_mem, solver_opts.max_nonlinear_iterations), "IDASetMaxNonlinIters");
+  if (sensitivity && SensitivityMethod() == IDA_STAGGERED) {
+    // The staggered corrector solves the sensitivities with a solver of its own
+    CheckErrors(IDASetSensMaxNonlinIters(ida_mem, solver_opts.max_nonlinear_iterations),
+                "IDASetSensMaxNonlinIters");
+  }
 
   // Maximum number of nonlinear solver convergence failures at one step
   CheckErrors(IDASetMaxConvFails(ida_mem, solver_opts.max_convergence_failures), "IDASetMaxConvFails");
@@ -263,9 +268,12 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   }
 
   if (sensitivity) {
-    CheckErrors(IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
+    CheckErrors(IDASensInit(ida_mem, number_of_parameters, SensitivityMethod(),
       sensitivities_eval<ExprSet>, yyS, yypS), "IDASensInit");
     CheckErrors(IDASensEEtolerances(ida_mem), "IDASensEEtolerances");
+    // Set once: IDASensReInit leaves it as it is
+    CheckErrors(IDASetSensErrCon(ida_mem, solver_opts.sensitivity_error_control),
+                "IDASetSensErrCon");
   }
 
   CheckErrors(SUNLinSolInitialize(LS), "SUNLinSolInitialize");
@@ -383,11 +391,12 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   // first step
   // Progress one step before the loop to ensure IDAGetDky works at t0 for dky = 1
   int n_steps = 0;
-  int retval = IDASolve(ida_mem, tf_perturbed, &t_val, yy, yyp, IDA_ONE_STEP);
+  int retval = Step(tf_perturbed, t_val);
+  // Before IDAGetDky, which fails on a step that was never taken
+  CheckErrors(retval, "IDASolve at t0");
   GetSolutionFull(t0);
 
   log_.log_step(++n_steps, t_val);
-  CheckErrors(retval, "IDASolve at t0");
 
   NoProgressGuard no_progression(solver_opts.num_steps_no_progress, solver_opts.t_no_progress);
   no_progression.Initialize();
@@ -435,9 +444,10 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     }
 
     t_prev = t_val;
-    retval = IDASolve(ida_mem, tf_perturbed, &t_val, yy, yyp, IDA_ONE_STEP);
+    retval = Step(tf_perturbed, t_val);
     GetSolutionStates(t_val);
-    if (save_hermite) {
+    // A failed first step after a restart leaves no derivative to read back
+    if (save_hermite && retval >= 0) {
       GetSolutionDerivatives(t_val);
     }
 
@@ -451,6 +461,28 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 }
 
 template <class ExprSet>
+int IDAKLUSolverOpenMP<ExprSet>::Step(sunrealtype tout, sunrealtype &t_val) {
+  // Only while stepping: IDACalcIC's line search backtracks from a NaN trial
+  // point by itself, where a recoverable failure would abandon the search
+  struct RejectNonfinite {
+    bool &reject;
+    RejectNonfinite(bool &flag, bool on) : reject(flag) { reject = on; }
+    // Also cleared if a callback throws, so the next IDACalcIC never rejects
+    ~RejectNonfinite() { reject = false; }
+    RejectNonfinite(const RejectNonfinite &) = delete;
+    RejectNonfinite &operator=(const RejectNonfinite &) = delete;
+  };
+  // Only the simultaneous corrector's norm drops a NaN state; the staggered one
+  // retries a failed residual at a converged state without restoring the step
+  RejectNonfinite const residual(functions->reject_nonfinite_residual,
+                                 sensitivity && SensitivityMethod() == IDA_SIMULTANEOUS);
+  // IDAS's sensitivity norm drops a NaN for any parameter after the first
+  RejectNonfinite const sensitivities(functions->reject_nonfinite_sensitivities,
+                                      sensitivity);
+  return IDASolve(ida_mem, tout, &t_val, yy, yyp, IDA_ONE_STEP);
+}
+
+template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
   int n_evals, int n_interps
 ) {
@@ -461,6 +493,9 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
     solver_opts.hermite_interpolation &&
     save_adaptive_steps_ &&
     !save_outputs_only
+  );
+  save_hermite_sensitivities_ = (
+    solver_opts.hermite_sensitivities && save_hermite && sensitivity
   );
 
   use_knot_reduction_ = (
@@ -496,7 +531,7 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeSolveStorage(
   if (save_hermite)  init_vec(yp, est * number_of_states);
   if (sensitivity) {
     init_vec(yS, est * number_of_parameters * length_of_return_vector);
-    if (save_hermite)  init_vec(ypS, est * number_of_parameters * number_of_states);
+    if (save_hermite_sensitivities_)  init_vec(ypS, est * number_of_parameters * number_of_states);
   }
 
   // Allocate scratch buffers for save_outputs_only mode
@@ -610,7 +645,7 @@ void IDAKLUSolverOpenMP<ExprSet>::GetSolutionStates(sunrealtype t) {
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::GetSolutionDerivatives(sunrealtype t) {
   CheckErrors(IDAGetDky(ida_mem, t, 1, yyp), "IDAGetDky");
-  if (sensitivity) {
+  if (save_hermite_sensitivities_) {
     CheckErrors(IDAGetSensDky(ida_mem, t, 1, yypS), "IDAGetSensDky");
   }
 }
@@ -791,6 +826,10 @@ void IDAKLUSolverOpenMP<ExprSet>::HandleBreakpoint(
   // Save stats before reinitializing (reinit resets IDA counters)
   SaveStats();
 
+  // The guess IDASensReInit starts from, unless hermite_sensitivities fetched it
+  if (sensitivity && !save_hermite_sensitivities_) {
+    CheckErrors(IDAGetSensDky(ida_mem, t_val, 1, yypS), "IDAGetSensDky");
+  }
   // Reinitialize the solver to deal with the discontinuity at t = t_val
   ReinitializeIntegrator(t_val);
   // Algebraic states can jump here, so the next step starts afresh
@@ -861,7 +900,6 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::BuildSolutionData(int retval) {
     arg_sens0,
     arg_sens1,
     arg_sens2,
-    save_hermite,
     accumulated_stats
   );
 }
@@ -902,7 +940,7 @@ void IDAKLUSolverOpenMP<ExprSet>::ReorderSensitivities(
     }
   }
 
-  if (save_hermite) {
+  if (save_hermite_sensitivities_) {
     size_t const ns = number_of_states;
     ypS.resize(nt * np * ns);
     ypS_out.resize(nt * np * ns);
@@ -936,7 +974,7 @@ void IDAKLUSolverOpenMP<ExprSet>::ExtendAdaptiveArrays() {
   }
   if (save_hermite) {
     yp.resize(yp.size() + number_of_states, 0.0);
-    if (sensitivity) {
+    if (save_hermite_sensitivities_) {
       ypS.resize(ypS.size() + number_of_parameters * number_of_states, 0.0);
     }
   }
@@ -947,9 +985,16 @@ void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const sunrealtype& t_va
   DEBUG("IDAKLUSolver::ReinitializeIntegrator");
   CheckErrors(IDAReInit(ida_mem, t_val, yy, yyp), "IDAReInit");
   if (sensitivity) {
-    CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, yypS), "IDASensReInit");
+    CheckErrors(IDASensReInit(ida_mem, SensitivityMethod(), yyS, yypS), "IDASensReInit");
     ApplySensitivityScales();
   }
+}
+
+template <class ExprSet>
+int IDAKLUSolverOpenMP<ExprSet>::SensitivityMethod() const {
+  // IDAS only applies the sensitivity error test in its staggered corrector;
+  // the simultaneous one, faster per step, leaves them to its Newton test
+  return solver_opts.sensitivity_error_control ? IDA_STAGGERED : IDA_SIMULTANEOUS;
 }
 
 template <class ExprSet>
@@ -1234,7 +1279,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepHermite(
   sunrealtype* yp_dest = &yp[i_save_ * number_of_states];
   std::copy(yp_val_, yp_val_ + number_of_states, yp_dest);
 
-  if (sensitivity) {
+  if (save_hermite_sensitivities_) {
     SetStepHermiteSensitivities(tval);
   }
 }

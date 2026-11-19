@@ -11,7 +11,6 @@ from typing import cast
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
@@ -257,6 +256,8 @@ class BinaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -602,6 +603,8 @@ class MatrixMultiplication(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         left = sympy.Matrix(left)
         right = sympy.Matrix(right)
         return left * right
@@ -1080,6 +1083,8 @@ class Minimum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.Min(left, right)
 
 
@@ -1130,6 +1135,8 @@ class Maximum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.Max(left, right)
 
 
@@ -1179,6 +1186,8 @@ class Hypot(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.sqrt(left**2 + right**2)
 
 

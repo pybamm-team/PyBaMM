@@ -1,5 +1,3 @@
-import asyncio
-
 import numpy as onp
 
 import pybamm
@@ -226,6 +224,8 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        import asyncio
+
         inputs = inputs_list or [{}]
 
         y0_list = model.y0_list

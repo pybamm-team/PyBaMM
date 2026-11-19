@@ -42,6 +42,7 @@ public:
   np_array yp;
   np_array t_additive;
   np_array yS;
+  // Empty unless the hermite_sensitivities option is set
   np_array ypS;
   np_array y_init;
   np_array y_term;
