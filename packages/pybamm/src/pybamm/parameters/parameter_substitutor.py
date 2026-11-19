@@ -8,6 +8,7 @@ import numpy as np
 
 import pybamm
 from pybamm.models.base_model import ModelSolutionObservability
+from pybamm.util import _is_flux_boundary_condition
 
 if TYPE_CHECKING:
     from pybamm.type_definitions import Numeric
@@ -337,14 +338,12 @@ class ParameterSubstitutor:
         placeholders = {pybamm.Parameter(arg): child for arg, child in inputs.items()}
 
         # Rebuild the expression with the inputs' domains, leaves first, so the
-        # stored template is never modified.
+        # stored template is never modified. rebuild re-derives the other domains.
         def rebind_domains(node, new_leaves):
             new_node = pybamm.rebuild(node, new_leaves, simplify=False)
             if node in placeholders:
                 return new_node.with_domains(placeholders[node])
-            return new_node.with_domains(
-                new_node._combine_children_domains(new_node.children)
-            )
+            return new_node
 
         expression = pybamm.tree_map(rebind_domains, expression)
 
@@ -577,6 +576,9 @@ class ParameterSubstitutor:
                 pybamm.logger.verbose(
                     f"Processing parameters for {variable!r} ({side} bc)"
                 )
+                if _is_flux_boundary_condition(typ):
+                    # Flux boundary conditions are specified as a tuple ("Flux", symbol)
+                    typ = (typ[0], self.process_symbol(typ[1]))
                 new_boundary_conditions[processed_variable][side] = (
                     self.process_symbol(bc),
                     typ,
