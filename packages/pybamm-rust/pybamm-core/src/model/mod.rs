@@ -22,7 +22,7 @@ use crate::jacobian::{CscPattern, JacobianData, JacobianLayout, JacobianScratch,
 use crate::node::CsrData;
 use crate::observable::{ObservableScratch, ObservableSet};
 use crate::params::{PackedWidth, ParamIdx, ParamRegistry, resolve_input_width};
-use crate::simplify::{dce, simplify_pipeline};
+use crate::simplify::simplify_family;
 use crate::sparsity::CsrPattern;
 use crate::tangent_batch::{self, LanePlan};
 
@@ -179,8 +179,8 @@ pub struct CompiledModel {
 impl CompiledModel {
     /// Compile `M y' = f(t, y; p)` with `rhs` as `f`, plus what `options` asks for.
     ///
-    /// `rhs` is simplified once, and the residual, its Jacobian and `df/dp` all derive from that
-    /// graph, so they agree with each other.
+    /// `rhs` and any algebraic residual are simplified together, once, and every tape, Jacobian
+    /// and `df/dp` derives from that graph, so they agree with each other.
     ///
     /// Refuses a graph [`validate`] rejects, declared sizes below what the graph reads, a mass
     /// matrix that is not a canonical `n_states x n_states` CSR, and sensitivity or algebraic
@@ -195,6 +195,9 @@ impl CompiledModel {
         let residual = options.algebraic.as_ref().map(|spec| spec.residual);
         validate(rhs.arena(), std::iter::once(rhs.root()).chain(residual))?;
         let params = verify_widths(rhs, n_states, input_width)?;
+        if let Some(residual) = residual {
+            verify_state_extent(DagRef::new(rhs.arena(), residual), n_states)?;
+        }
         let mass_shape = mass_matrix.shape();
         if mass_shape.rows != n_states || mass_shape.cols != n_states {
             return Err(CoreError::MassMatrixShape {
@@ -206,8 +209,11 @@ impl CompiledModel {
         // Up front, so a mass row whose column indices repeat or are unsorted fails before the
         // Jacobian build; the CSR/CSC slot maps need them strictly ascending.
         let mass_sparsity = CsrPattern::try_from(&mass_matrix)?;
-        let simplified = simplify_pipeline(dce(rhs));
-        let primal_ir = TypedIr::from_dag(simplified.as_ref());
+        // The algebraic residual mostly reuses the rhs's nodes, so both simplify in one pass.
+        let roots: Vec<NodeId> = std::iter::once(rhs.root()).chain(residual).collect();
+        let (family, members) = simplify_family(rhs.arena(), &roots);
+        let simplified = DagRef::new(family.arena(), members[0]);
+        let primal_ir = TypedIr::from_dag(simplified);
         let n_outputs = primal_ir.output_len();
         if n_outputs != n_states {
             return Err(CoreError::ResidualLength {
@@ -217,9 +223,7 @@ impl CompiledModel {
         }
 
         let jac = Arc::new(JacobianData::new_wrt_states(
-            simplified.as_ref(),
-            n_outputs,
-            n_states,
+            simplified, n_outputs, n_states,
         ));
 
         let mut sparsity = jac.sparsity().clone();
@@ -258,13 +262,10 @@ impl CompiledModel {
             upsampling: ObservableSet::default(),
             algebraic: None,
         };
-        model.compile_sensitivities(simplified.as_ref(), options.sensitivities)?;
-        if let Some(AlgebraicBlockSpec {
-            residual,
-            variable_indices,
-        }) = options.algebraic
-        {
-            model.compile_algebraic_block(DagRef::new(rhs.arena(), residual), variable_indices)?;
+        model.compile_sensitivities(simplified, options.sensitivities)?;
+        if let Some(spec) = options.algebraic {
+            let residual = DagRef::new(family.arena(), members[1]);
+            model.compile_algebraic_block(residual, spec.variable_indices)?;
         }
         Ok(model)
     }

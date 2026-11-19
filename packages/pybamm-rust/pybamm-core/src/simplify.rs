@@ -398,6 +398,12 @@ fn cse_tracking(dag: DagRef<'_>, tracked: &mut [NodeId]) -> Dag {
     Dag::new(new_arena, old_to_new.rebuilt(root))
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Runs of the compile-prep pipeline on this thread, so tests can pin how often it runs.
+    pub static PIPELINE_RUNS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 /// Compile-prep pipeline: simplify -> zero propagation -> CSE.
 ///
 /// The result is dead-code free: CSE keeps only what the root reaches.
@@ -430,6 +436,8 @@ pub fn simplify_family(arena: &Arena, roots: &[NodeId]) -> (Dag, Vec<NodeId>) {
 /// [`simplify_pipeline`], keeping each of `tracked` as a further root and moving it to its node
 /// in the result.
 fn simplify_pipeline_tracking(mut dag: Dag, tracked: &mut [NodeId]) -> Dag {
+    #[cfg(test)]
+    PIPELINE_RUNS.with(|runs| runs.set(runs.get() + 1));
     dag.rewrite_in_place(|arena, root| simplify_tracking(arena, root, tracked));
     let propagated = zero_propagate_tracking(dag.as_ref(), tracked);
     // The largest of the three arenas, so free it before `cse` builds its own.

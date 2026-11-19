@@ -7,9 +7,8 @@ use crate::error::CoreError;
 use crate::eval::CompiledExpr;
 use crate::ir::TypedIr;
 use crate::jacobian::{JacobianData, JacobianScratch};
-use crate::simplify::{dce, simplify_pipeline};
 
-use super::{CompiledModel, FOREIGN_WORKSPACE, Workspace, verify_state_extent};
+use super::{CompiledModel, FOREIGN_WORKSPACE, Workspace};
 
 /// The compiled algebraic residual `g(t, y)` and `dg/dy_alg`, for consistent initialisation.
 #[derive(Debug)]
@@ -103,19 +102,17 @@ impl AlgebraicScratch {
 }
 
 impl CompiledModel {
-    /// Compile `residual` and its Jacobian over the `variable_indices` columns.
+    /// Compile `residual`, already simplified, and its Jacobian over the `variable_indices`
+    /// columns.
     ///
-    /// `residual` is simplified once, and its tape and Jacobian derive from that graph. The block
-    /// must be square: the Newton drivers factorise `dg/dy_alg` as `n_alg x n_alg`.
+    /// The block must be square: the Newton drivers factorise `dg/dy_alg` as `n_alg x n_alg`.
     pub(super) fn compile_algebraic_block(
         &mut self,
         residual: DagRef<'_>,
         variable_indices: &[usize],
     ) -> Result<(), CoreError> {
-        verify_state_extent(residual, self.n_states)?;
         self.verify_algebraic_indices(variable_indices)?;
-        let simplified = simplify_pipeline(dce(residual));
-        let residual_ir = TypedIr::from_dag(simplified.as_ref());
+        let residual_ir = TypedIr::from_dag(residual);
         let n_rows = residual_ir.output_len();
         if n_rows != variable_indices.len() {
             return Err(CoreError::AlgebraicBlockNotSquare {
@@ -124,7 +121,7 @@ impl CompiledModel {
             });
         }
         let jac = Arc::new(JacobianData::new_wrt_state_subset(
-            simplified.as_ref(),
+            residual,
             n_rows,
             self.n_states,
             variable_indices,
@@ -177,6 +174,7 @@ mod tests {
     use crate::model::CompiledModelOptions;
     use crate::node::{CsrData, Node, Shape};
     use crate::params::{PackedWidth, ParamIdx};
+    use crate::simplify::PIPELINE_RUNS;
     use crate::test_support::bits;
 
     /// Assemble `jac` directly, through its own canonical layout.
@@ -458,6 +456,36 @@ mod tests {
         block.assemble_jacobian_into(&mut ws, 0.0, &[10.0, 2.0, 3.0], &[], &mut jac);
         // dg/d(y1, y2) = [[y2, y1], [1, 2*y2]] at (y1, y2) = (2, 3).
         assert_eq!(jac, vec![3.0, 1.0, 2.0, 6.0]);
+    }
+
+    #[test]
+    fn the_algebraic_residual_simplifies_with_the_rhs() {
+        let mut arena = Arena::new();
+        let y = arena.alloc(Node::StateVector { start: 0, end: 3 });
+        let y0 = element(&mut arena, y, 0);
+        let y1 = element(&mut arena, y, 1);
+        let y2 = element(&mut arena, y, 2);
+        let sum = arena.alloc(Node::Add(y1, y2));
+        let product = arena.alloc(Node::Mul(y1, y2));
+        let algebraic = arena.alloc(Node::Concat(vec![sum, product]));
+        let rhs = arena.alloc(Node::Concat(vec![y0, algebraic]));
+        let mass = CsrData {
+            shape: Shape::matrix(3, 3),
+            indptr: vec![0, 1, 1, 1],
+            indices: vec![0],
+            data: vec![1.0],
+        };
+        let pipeline_runs = |options| {
+            PIPELINE_RUNS.with(|runs| runs.set(0));
+            compile_with(&arena, rhs, mass.clone(), 3, 0, options);
+            PIPELINE_RUNS.with(std::cell::Cell::get)
+        };
+
+        // The block's only pass of its own simplifies its `dg/dy_alg` tangent.
+        assert_eq!(
+            pipeline_runs(algebraic_options(algebraic, &[1, 2])),
+            pipeline_runs(CompiledModelOptions::default()) + 1
+        );
     }
 
     #[test]
