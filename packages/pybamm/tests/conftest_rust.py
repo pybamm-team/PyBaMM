@@ -6,6 +6,13 @@ import pytest
 import pybamm
 
 
+@pytest.fixture
+def rust_backend(monkeypatch):
+    """Make newly constructed models default to the Rust backend."""
+    monkeypatch.setattr(pybamm.BaseModel, "_DEFAULT_CONVERT_TO_FORMAT", "rust")
+    yield
+
+
 def evaluate_with_rust(expr, t=0.0, y=None, y_dot=None, inputs=None):
     """Evaluate a PyBaMM expression using the Rust backend."""
     from pybamm.rust import ExprGraph
