@@ -6,7 +6,6 @@ from typing import Literal
 import casadi
 import numpy as np
 import numpy.typing as npt
-from scipy.integrate import trapezoid
 
 import pybamm
 
@@ -22,6 +21,8 @@ class ProcessedVariableTimeIntegral:
 
     def _sum_over_time(self, entries, t_pts) -> np.ndarray:
         """Sum or integrate the entries over the time points."""
+        from scipy.integrate import trapezoid
+
         if self.method == "discrete":
             return np.sum(entries, axis=0, keepdims=True)
         else:

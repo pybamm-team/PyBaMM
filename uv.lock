@@ -3066,7 +3066,6 @@ dependencies = [
     { name = "black" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "pandas" },
     { name = "platformdirs" },
     { name = "pooch" },
     { name = "posthog" },
@@ -3075,7 +3074,6 @@ dependencies = [
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "sympy" },
-    { name = "xarray" },
 ]
 
 [package.optional-dependencies]
@@ -3084,6 +3082,7 @@ all = [
     { name = "jupyter" },
     { name = "matplotlib" },
     { name = "meshio" },
+    { name = "pandas" },
     { name = "pillow" },
     { name = "pybtex" },
     { name = "scikit-fem" },
@@ -3098,6 +3097,7 @@ cite = [
 ]
 examples = [
     { name = "jupyter" },
+    { name = "pandas" },
 ]
 fem = [
     { name = "meshio" },
@@ -3182,7 +3182,8 @@ requires-dist = [
     { name = "meshio", marker = "extra == 'all'", specifier = ">=5.3.0" },
     { name = "meshio", marker = "extra == 'fem'", specifier = ">=5.3.0" },
     { name = "numpy", specifier = ">=2.0.0" },
-    { name = "pandas", specifier = ">=1.5.0" },
+    { name = "pandas", marker = "extra == 'all'", specifier = ">=1.5.0" },
+    { name = "pandas", marker = "extra == 'examples'", specifier = ">=1.5.0" },
     { name = "pillow", marker = "extra == 'all'" },
     { name = "pillow", marker = "extra == 'vtk'" },
     { name = "platformdirs" },
@@ -3201,7 +3202,6 @@ requires-dist = [
     { name = "tqdm", marker = "extra == 'tqdm'" },
     { name = "vtk", marker = "python_full_version < '3.15' and extra == 'all'", specifier = ">=9.3.1" },
     { name = "vtk", marker = "python_full_version < '3.15' and extra == 'vtk'", specifier = ">=9.3.1" },
-    { name = "xarray", specifier = ">=2022.6.0" },
 ]
 provides-extras = ["all", "bpx", "cite", "examples", "fem", "jax", "plot", "pydiffsol", "tqdm", "vtk"]
 
@@ -5147,19 +5147,4 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bf/60/bc7a980fc78837d6ef8f5940cca4cadc433364503a4c4d42e2a7a0de3231/widgetsnbextension-4.0.16.tar.gz", hash = "sha256:adeea0ae78f0856ee4945f413299801b82a0a01416303301f39a704282a37b73", size = 1111094, upload-time = "2026-08-18T08:52:55.859Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/34/95/40e17e20046b7bc820d29d09ae84ec157ec8dd6e6f6cd722626292c31b2e/widgetsnbextension-4.0.16-py3-none-any.whl", hash = "sha256:a31a8774885b96fe825462f5d6496166f0c7cae111195b6465c801d230eb5a4e", size = 2225148, upload-time = "2026-08-18T08:52:53.736Z" },
-]
-
-[[package]]
-name = "xarray"
-version = "2026.9.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "packaging" },
-    { name = "pandas" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ff/f5/781c70b234f54e0401f4f7c4427a7486da38d50dbb138c7d7c55144b3d86/xarray-2026.9.0.tar.gz", hash = "sha256:6abc69694c22fa1f0fb2f357ff4e41d88beb4477ed71091f944b7dbf67ed54fe", size = 3176922, upload-time = "2026-09-29T23:06:25.807Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/44/3159af4fb3c868970a412e294320ed6bb1a9fbdfa6431050eda8e0b34b6e/xarray-2026.9.0-py3-none-any.whl", hash = "sha256:fe349fa871628b1a0a5217af3fe1283a2862d5485156e6eda354fffb81c3bb7c", size = 1445445, upload-time = "2026-09-29T23:06:23.686Z" },
 ]

@@ -14,7 +14,6 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-import black
 import numpy as np
 
 import pybamm
@@ -78,6 +77,8 @@ class ExpressionFunctionParameter(pybamm.UnaryOperator):
         """
         Creates python source code for the function.
         """
+        import black
+
         src = f"def {self.func_name}({', '.join(self.func_args)}):\n"
 
         # Fix printing of parameters so they print as Parameter('name'). Do this on a
