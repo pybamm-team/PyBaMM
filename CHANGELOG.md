@@ -38,6 +38,7 @@
 
 ## Bug fixes
 
+- `IDAKLUSolver` solves forward sensitivities with IDAS's staggered corrector instead of the simultaneous one, so sensitivity solves at tight tolerances no longer fail with `IDA_CONV_FAIL`. ([#6045](https://github.com/pybamm-team/PyBaMM/pull/6045))
 - `BaseModel.get_parameter_info` now also lists parameters used only in the model's default geometry, such as the minimum and maximum particle radii of a particle-size distribution. ([#6065](https://github.com/pybamm-team/PyBaMM/pull/6065))
 - `BasicDFNUnstructured` reports `"Voltage [V]"` as the area-weighted mean of the positive electrode potential over the positive face, instead of one corner cell's value, which depended on the in-plane mesh. ([#5822](https://github.com/pybamm-team/PyBaMM/pull/5822))
 - Reading a 0D variable at its stored times, `var(solution.t)`, no longer raises when the solution repeats a time. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
