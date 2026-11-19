@@ -11,7 +11,6 @@ from typing import cast
 import casadi
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import csr_matrix, issparse, kron
 
 import pybamm
@@ -257,6 +256,8 @@ class BinaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        import sympy
+
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -602,6 +603,8 @@ class MatrixMultiplication(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         left = sympy.Matrix(left)
         right = sympy.Matrix(right)
         return left * right
@@ -1080,6 +1083,8 @@ class Minimum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.Min(left, right)
 
 
@@ -1130,6 +1135,8 @@ class Maximum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.Max(left, right)
 
 
@@ -1179,6 +1186,8 @@ class Hypot(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        import sympy
+
         return sympy.sqrt(left**2 + right**2)
 
 
@@ -1741,33 +1750,31 @@ def matmul(
         new_mul = new_mul.with_domains(right)
         return new_mul
 
-    elif left.is_constant() and isinstance(right, Addition | Subtraction):
-        # Simplify A @ (b +- c) to (A @ b) +- (A @ c) if (A @ b) or (A @ c) is constant
-        # This is a common construction that appears from discretisation of spatial
-        # operators
-        # Or simplify A @ (B @ b +- C @ c) to (A @ B @ b) +- (A @ C @ c) if (A @ B)
-        # and (A @ C) are constant
-        # Don't do this if either b or c is a number as this will lead to matmul errors
-        if (
-            (right.left.is_constant() or right.right.is_constant())
-            # these lines should work but don't, possibly because of poorly
-            # conditioned model?
+    # Simplify A @ (b +- c) to (A @ b) +- (A @ c), or A @ (B @ b +- C @ c) to
+    # (A @ B @ b) +- (A @ C @ c), when the distributed products are constant
+    if (
+        left.is_constant()
+        and isinstance(right, Addition | Subtraction)
+        and (
+            right.left.is_constant()
+            or right.right.is_constant()
             or (
                 isinstance(right.left, MatrixMultiplication)
                 and right.left.left.is_constant()
                 and isinstance(right.right, MatrixMultiplication)
                 and right.right.left.is_constant()
             )
-        ) and not (
-            right.left.size_for_testing == 1 or right.right.size_for_testing == 1
-        ):
-            r_left, r_right = right.orphans
-            r_left = r_left.with_domains(right)
-            r_right = r_right.with_domains(right)
-            if isinstance(right, Addition):
-                return (left @ r_left) + (left @ r_right)
-            elif isinstance(right, Subtraction):
-                return (left @ r_left) - (left @ r_right)
+        )
+        # A scalar b or c would lead to matmul shape errors
+        and not (right.left.size_for_testing == 1 or right.right.size_for_testing == 1)
+    ):
+        r_left, r_right = right.orphans
+        r_left = r_left.with_domains(right)
+        r_right = r_right.with_domains(right)
+        if isinstance(right, Addition):
+            return (left @ r_left) + (left @ r_right)
+        elif isinstance(right, Subtraction):
+            return (left @ r_left) - (left @ r_right)
 
     return pybamm.simplify_if_constant(MatrixMultiplication(left, right))
 

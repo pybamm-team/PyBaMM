@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.sparse import csc_matrix
-from scipy.sparse.linalg import inv
 
 import pybamm
 from pybamm.util import import_optional_dependency
@@ -82,6 +81,7 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         :class:`pybamm.Concatenation`
             The 3D gradient as concatenation of x, y, z or z, r, theta components
         """
+        from scipy.sparse.linalg import inv
 
         skfem = import_optional_dependency("skfem")
         domain = symbol.domain[0]
@@ -228,6 +228,8 @@ class ScikitFiniteElement3D(pybamm.SpatialMethod):
         :class:`pybamm.Symbol`
             The divergence of the vector field
         """
+        from scipy.sparse.linalg import inv
+
         domain_key = symbol.domain[0]
 
         if not (

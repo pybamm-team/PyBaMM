@@ -6,11 +6,10 @@ from __future__ import annotations
 import numbers
 import warnings
 from collections.abc import Iterator, Sequence
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Self, cast
 
 import numpy as np
 import numpy.typing as npt
-import sympy
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
@@ -653,7 +652,7 @@ class Symbol:
         "_tertiary_mesh", "Use symbol = symbol.with_mesh(...)."
     )
 
-    def _replace(self, **changes) -> Symbol:
+    def _replace(self, **changes) -> Self:
         """
         Build a new symbol of the same class from this symbol's state with some
         fields changed, via the same state protocol pickling uses. The result has
@@ -662,9 +661,9 @@ class Symbol:
         tree_util = pybamm.expression_tree.tree_util
         leaves, treedef = tree_util.tree_flatten(self)
         treedef.state.update(changes)
-        return tree_util.tree_unflatten(treedef, leaves)
+        return cast(Self, tree_util.tree_unflatten(treedef, leaves))
 
-    def with_domains(self, domains: Symbol | dict[str, list[str] | str]) -> Symbol:
+    def with_domains(self, domains: Symbol | dict[str, list[str] | str]) -> Self:
         """
         Return a copy of this symbol carrying the validated domains.
 
@@ -687,7 +686,7 @@ class Symbol:
             return self
         return self._replace(_domains=domains)
 
-    def without_domains(self) -> Symbol:
+    def without_domains(self) -> Self:
         """Return a copy of this symbol with all domains cleared."""
         return self.with_domains(_EMPTY_DOMAINS)
 
@@ -696,7 +695,7 @@ class Symbol:
         mesh: pybamm.SubMesh | None,
         secondary_mesh: pybamm.SubMesh | None = None,
         tertiary_mesh: pybamm.SubMesh | None = None,
-    ) -> Symbol:
+    ) -> Self:
         """
         Return a copy carrying the given submeshes, readable as ``mesh``,
         ``secondary_mesh`` and ``tertiary_mesh``.
@@ -709,7 +708,7 @@ class Symbol:
         self,
         mesh: pybamm.Mesh,
         domains: dict[str, list[str]] | Domains | None = None,
-    ) -> Symbol:
+    ) -> Self:
         """
         Return a copy carrying the meshes of ``domains`` (default: own domains),
         readable as ``mesh``, ``secondary_mesh`` and ``tertiary_mesh``.
@@ -1594,6 +1593,8 @@ class Symbol:
         self._print_name = prettify_print_name(name)
 
     def to_equation(self):
+        import sympy
+
         return sympy.Symbol(str(self.name))
 
     def to_json(self):
