@@ -1366,6 +1366,8 @@ def add(left: ChildSymbol, right: ChildSymbol):
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
             for dim in left._domains
         ):
+            if not right.domain:
+                return right.with_domains(left)
             return right
 
     # Return constant if both sides are constant
