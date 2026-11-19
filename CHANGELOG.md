@@ -25,6 +25,7 @@
 
 ## Features
 
+- Added flux boundary conditions for 1D finite volume method. This is an alternative way to apply Neumann boundary conditions without specifying them as an explicit expression for the gradient. ([#5524](https://github.com/pybamm-team/PyBaMM/pull/5524))
 - `IDAKLUSolver`'s new `"sensitivity_error_control"` option, off by default, puts forward sensitivities in IDAS's local error test, so they also meet the solver's tolerances, at the cost of a longer solve. ([#5947](https://github.com/pybamm-team/PyBaMM/pull/5947))
 - Added the `IDAKLUSolver` option `upsampling_tolerance`, which adds times within each step until linear interpolation of the voltage is within tolerance (voltage-controlled steps add none). They go in `Solution.t_additive` and `Solution.t`. ([#5998](https://github.com/pybamm-team/PyBaMM/pull/5998))
 - `pybamm.Discretisation` resolves `pybamm.CoupledVariable`s in model equations by default (`resolve_coupled_variables=True`), once per shared subexpression. A missing target now raises `ValueError` instead of `DiscretisationError`. ([#6002](https://github.com/pybamm-team/PyBaMM/pull/6002))
@@ -39,6 +40,9 @@
 ## Bug fixes
 
 - `ElectrodeSOHSolver` and the electrode SOH functions that use it, such as `get_min_max_stoichiometries` and `get_initial_stoichiometries`, now accept model options as a plain `dict`, as documented. Before, a `dict` without an `"open-circuit potential"` entry raised `KeyError: 'open-circuit potential'`. ([#6022](https://github.com/pybamm-team/PyBaMM/pull/6022))
+- Experiments run on models without summary variables, such as a `pybamm.BaseModel`, and `Simulation` raises a `ModelError` when the model reads neither `"Current function [A]"` nor, for steps with a temperature, `"Ambient temperature [K]"`, rather than ignoring the steps. ([#6013](https://github.com/pybamm-team/PyBaMM/issues/6013), [#6014](https://github.com/pybamm-team/PyBaMM/pull/6014))
+- `IDAKLUSolver` solves forward sensitivities with IDAS's staggered corrector instead of the simultaneous one, so sensitivity solves at tight tolerances no longer fail with `IDA_CONV_FAIL`. ([#6045](https://github.com/pybamm-team/PyBaMM/pull/6045))
+- `BaseModel.get_parameter_info` now also lists parameters used only in the model's default geometry, such as the minimum and maximum particle radii of a particle-size distribution. ([#6065](https://github.com/pybamm-team/PyBaMM/pull/6065))
 - `BasicDFNUnstructured` reports `"Voltage [V]"` as the area-weighted mean of the positive electrode potential over the positive face, instead of one corner cell's value, which depended on the in-plane mesh. ([#5822](https://github.com/pybamm-team/PyBaMM/pull/5822))
 - Reading a 0D variable at its stored times, `var(solution.t)`, no longer raises when the solution repeats a time. ([#6048](https://github.com/pybamm-team/PyBaMM/pull/6048))
 - `Solution.get_data_dict` and `save_data` now give the "Cycle" and "Step" columns the same length as the data when a step or cycle repeats the previous one's last time point. ([#5724](https://github.com/pybamm-team/PyBaMM/pull/5724))
@@ -53,6 +57,7 @@
 - A battery model loaded with `Serialise.load_custom_model` keeps its saved geometry, mesh points, submesh types and spatial methods when its own class can't be imported. Before, the built-in ancestor's defaults silently replaced them. ([#5995](https://github.com/pybamm-team/PyBaMM/pull/5995))
 - `from pybamm.models.submodels.interface.kinetics import *` no longer raises an `AttributeError` ([#5970](https://github.com/pybamm-team/PyBaMM/pull/5970))
 - `pybamm.step.string` now ignores extra whitespace and raises a clear `ValueError` for malformed steps (missing `at`, repeated `until`/`for`, or a duration after `until`) instead of an unpacking or units error. ([#5969](https://github.com/pybamm-team/PyBaMM/issues/5969), [#5971](https://github.com/pybamm-team/PyBaMM/pull/5971))
+- A parameter function loaded from JSON keeps the domains of the symbols it builds itself, such as a `SpatialVariable` or a `boundary_value`. Before, a `SpatialVariable` lost its domain and discretisation failed. ([#6029](https://github.com/pybamm-team/PyBaMM/pull/6029))
 - Step and experiment times given as strings, such as `"Rest for -5 minutes"` or `"0 seconds"`, now raise `ValueError: time must be positive`, as numeric times already did. Before, they gave a negative or zero duration or period. Step temperatures can now be NumPy scalars (e.g. `np.int64(298)`), which used to raise an `AttributeError`. ([#5920](https://github.com/pybamm-team/PyBaMM/issues/5920), [#5923](https://github.com/pybamm-team/PyBaMM/pull/5923))
 - `IDAKLUSolver.jaxify` now returns correct derivatives at any requested time. Before, it dropped negative tangents and scalar-time cotangents, and read sensitivities from the wrong solver step, or from the nearest `t_eval` point at off-grid times. ([#5916](https://github.com/pybamm-team/PyBaMM/pull/5916))
   - Inputs are looked up by name, so key order or an `OrderedDict` no longer swaps their values, and a call with other keys no longer breaks earlier `jax.jit` functions. Missing inputs raise a `SolverError`.
